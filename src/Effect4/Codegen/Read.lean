@@ -646,6 +646,61 @@ def splitFunction (n : Nat) (x : Expr) : Option (Expr × Expr) :=
   (lastArgument? x).bind fun split =>
     (Effect4.Codegen.Binders.read n [0] split.2).map fun body => (split.1, body)
 
+/-- A row call without the type arguments on its head, and those arguments: `s<T…>(args)` as
+`s(args)`, and a method call `r.s<T…>(args)` as `r.s(args)`. The place where the printer writes
+an operation's type arguments (`withHeadTypes`, `Codegen/PrintLeaf.lean`). `none` for a call
+whose head carries none, an empty list included, and for any tree that is no call. -/
+def splitHeadTypes : Expr → Option (Expr × List TypeScript.TypeRef)
+  | .call (.generic (.ident s) (target :: targets)) args =>
+    some (.call (.ident s) args, target :: targets)
+  | .call (.generic (.member receiver s) (target :: targets)) args =>
+    some (.method receiver s args, target :: targets)
+  | _ => none
+
+/-- A row call read at its face, with the type arguments its head carried installed in the
+operation (`Signature.withTypeArgs`). They are as many as the operation carries, and each is
+read by the checked type reader (`Classes.readTysChecked`): an answer is kept only when the type
+printer prints it back as the spelling read. A call with another count is refused by its row's
+spelling, as an argument list the row does not print: an operation that carries none takes none
+(`E4-CHECK-CE-013`). A type argument with no reading is refused as an annotation, named by the
+row's spelling. -/
+def installTypeArgs (sig : Signature Op) (targets : List TypeScript.TypeRef) :
+    Eff Op → Except ReadRefusal (Eff Op)
+  | .perform op r =>
+    if (sig.typeArgsOf op).length = targets.length then
+      match Effect4.Codegen.Classes.readTysChecked targets with
+      | some tys => .ok (.perform (sig.withTypeArgs op tys) r)
+      | none => .error (.annotation ((sig.rowOf op).spelling ++ " type argument"))
+    else .error (.arity (sig.rowOf op).spelling)
+  | _ => .error (.shape "operation data")
+
+/-- A row call read at its face with no type argument of the operation's on its head: an
+operation that carries none. An operation that carries type arguments and is called without
+them is refused by its spelling, never read at the face's placeholder types: `Deferred.make()`
+is never typed at a default (`E4-CHECK-CE-013`). -/
+def typeFree (sig : Signature Op) : Eff Op → Except ReadRefusal (Eff Op)
+  | .perform op r =>
+    if (sig.typeArgsOf op).isEmpty then .ok (.perform op r)
+    else .error (.arity (sig.rowOf op).spelling)
+  | _ => .error (.shape "operation data")
+
+/-- **A row call with the type arguments of its head read** (the state plan's T5, part B). A
+call whose head carries type arguments is first read without them, at its face
+(`readPerformFace`). Where that names an operation, the type arguments are the operation's:
+they are read and installed (`installTypeArgs`). Where it names none, the type arguments are the
+row's own declared ones (`Row.typeArgs`): the whole call is read at its face, as a call with no
+type argument is, and must name an operation that carries none (`typeFree`). The two readings
+do not overlap: a row's declared type arguments are checked in the same arm of the face reader
+with or without them on the head (`readRowCall_typeArgs_ne`, `Laws/Codegen/ReadLeaf.lean`). -/
+def readCall (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
+  match splitHeadTypes x with
+  | some (bare, targets) =>
+    match readPerformFace classes sig spell n bare with
+    | .ok face => installTypeArgs sig targets face
+    | .error _ => (readPerformFace classes sig spell n x).bind (typeFree sig)
+  | none => (readPerformFace classes sig spell n x).bind (typeFree sig)
+
 /-- A row call read at its face, with the function that followed its arguments installed as the
 operation's binder term (`Signature.withTerm`). An operation that carries no term takes no
 function: the call is refused by its row's spelling, as an argument list the row does not
@@ -670,35 +725,37 @@ def termFree (sig : Signature Op) : Eff Op → Except ReadRefusal (Eff Op)
 a parameter, or the return). It is not the arity refusal that the face reader gives the whole
 call: an annotation and a wrong argument list are two refusals a consumer routes on
 (`E4-CHECK-CE-017`, `Test/contracts/faces.contract.md`). `none` unless the call before the last
-argument reads at its face to an operation that carries a term, and the last argument is a
+argument reads (`readCall`) to an operation that carries a term, and the last argument is a
 function with such an annotation. -/
 def functionAnnotation (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Option ReadRefusal :=
   (lastArgument? x).bind fun split =>
     (annotationSite split.2).bind fun site =>
-      match readPerformFace classes sig spell n split.1 with
+      match readCall classes sig spell n split.1 with
       | .ok (.perform op _) =>
         if (sig.termOf op).isSome then some (.annotation ((sig.rowOf op).spelling ++ " " ++ site))
         else none
       | _ => none
 
 /-- The row call at a node of level `n`. A call whose last argument is the function of the
-current value is a term row's: the call before it is read at its face (`readPerformFace`), the
-function's body as a term one level up, where the current value is the binder at `n`
-(`ScopedOp`'s convention), and the term is installed in the spelled operation. Any other tree is
-read at its face and must name an operation that carries no term. Where that reading refuses and
-the tree is a term row with an annotated function, the refusal is the annotation's
-(`functionAnnotation`): what is accepted does not change. -/
+current value is a term row's: the call before it is read with its head's type arguments
+(`readCall`, over the face reader `readPerformFace`), the function's body as a term one level
+up, where the current value is the binder at `n` (`ScopedOp`'s convention), and the term is
+installed in the operation read. Any other tree is read the same way and must name an operation
+that carries no term. The type arguments are installed before the term, and the two updates are
+independent (`LawfulTypeArgs`). Where the reading refuses and the tree is a term row with an
+annotated function, the refusal is the annotation's (`functionAnnotation`): what is accepted
+does not change. -/
 def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match splitFunction n x with
   | some (call, body) => do
-    let face ← readPerformFace classes sig spell n call
+    let typed ← readCall classes sig spell n call
     let f ← readTerm classes (n + 1) body
-    installTerm sig f face
+    installTerm sig f typed
   | none =>
-    match readPerformFace classes sig spell n x with
-    | .ok face => termFree sig face
+    match readCall classes sig spell n x with
+    | .ok typed => termFree sig typed
     | .error why => .error ((functionAnnotation classes sig spell n x).getD why)
 
 /-- The refusal of a tree that no row of its family matches, named by the family. -/
@@ -1055,8 +1112,8 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
 
 /-- A row's printed head reads back (`printRowHead`): a value row prints none, and another
 row's declared type arguments have a legacy spelling (`rowTypeArgs`). A row the printer refuses
-by name (`PrintRefusal.typeSpelling`) is outside: `Deferred.make` at an instance other than the
-faces' (`NativeOp.deferredTypeArgs`). -/
+by name (`PrintRefusal.typeSpelling`) is outside: a row whose declared type argument has no
+legacy reading. An operation's own type arguments are not the row's (`typeArgsReadable`). -/
 def rowHeadReadable (row : Row) : Bool :=
   decide (row.shape = .value) || (rowTypeArgs row).isSome
 
@@ -1071,16 +1128,78 @@ def termReadable (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (row : Ro
   | some f =>
     f.scoped (n + 1) && f.covers classes && f.unannotated && !decide (row.shape = .value)
 
+/-- An operation's type arguments read back on its row: each is a readable type
+(`Classes.ReadableTy`: the checked type reader answers it from its own printed spelling), and
+the row prints a call that declares no type argument of its own, which carries them on its head
+(`withHeadTypes`). An operation that carries none reads back. A type outside `ReadableTy` is
+outside this domain, whatever it prints as: `Deferred.make` at `int` prints
+`Deferred.make<number, …>()`, which reads at `nat`. -/
+def typeArgsReadable (row : Row) : List Ty → Bool
+  | [] => true
+  | ty :: tys =>
+    (ty :: tys).all Effect4.Codegen.Classes.ReadableTy && !decide (row.shape = .value) &&
+      row.typeArgs.isEmpty
+
 /-! ## What the reader needs of a signature -/
 
+/-- **What a reader needs of an operation's type arguments** (`Signature.typeArgsOf`,
+`Signature.withTypeArgs`; the state plan's T5, part B). The row does depend on them: its answer
+and error columns hold them. So the first law is stated on the columns that stay fixed
+(`Row.callColumns`), and the restored operation owns the rest. The next four say that replacing
+the type arguments is an exact update at the operation's own arity. The last three say that this
+update and the binder term's (`Signature.withTerm`) are independent: they commute, and each
+leaves the other's reading as it is. The laws hold for any signature; nothing here rests on how
+the native constructors happen to separate the two. -/
+structure LawfulTypeArgs (sig : Signature Op) : Prop where
+  /-- The columns of the row that a printed call shows do not depend on the operation's type
+  arguments: the spelling, the shape, the trailing names, the request and the declared type
+  arguments. -/
+  call : ∀ op tys, (sig.rowOf (sig.withTypeArgs op tys)).callColumns = (sig.rowOf op).callColumns
+  /-- Replacing the type arguments by a list of the operation's own arity installs the list. -/
+  typeArgsOf_withTypeArgs : ∀ op tys, tys.length = (sig.typeArgsOf op).length →
+    sig.typeArgsOf (sig.withTypeArgs op tys) = tys
+  /-- The arity is fixed: an operation carries as many type arguments after any replacement. -/
+  length_typeArgsOf : ∀ op tys,
+    (sig.typeArgsOf (sig.withTypeArgs op tys)).length = (sig.typeArgsOf op).length
+  /-- Replacing an operation's type arguments by themselves is the operation. -/
+  withTypeArgs_typeArgsOf : ∀ op, sig.withTypeArgs op (sig.typeArgsOf op) = op
+  /-- Replacing the type arguments twice is replacing them once. -/
+  withTypeArgs_withTypeArgs : ∀ op tys tys',
+    sig.withTypeArgs (sig.withTypeArgs op tys) tys' = sig.withTypeArgs op tys'
+  /-- The two updates commute. -/
+  withTypeArgs_withTerm : ∀ op tys f,
+    sig.withTypeArgs (sig.withTerm op f) tys = sig.withTerm (sig.withTypeArgs op tys) f
+  /-- Replacing the type arguments leaves the binder term's reading as it is. -/
+  termOf_withTypeArgs : ∀ op tys,
+    (sig.termOf (sig.withTypeArgs op tys)).map (·.term) = (sig.termOf op).map (·.term)
+  /-- Replacing the binder term leaves the type arguments' reading as it is. -/
+  typeArgsOf_withTerm : ∀ op f, sig.typeArgsOf (sig.withTerm op f) = sig.typeArgsOf op
+
+/-- A signature whose operations carry no type argument meets the laws: the default hooks, for
+one, by `LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)`. -/
+theorem LawfulTypeArgs.ofNone {sig : Signature Op} (hnone : ∀ op, sig.typeArgsOf op = [])
+    (hfixed : ∀ op tys, sig.withTypeArgs op tys = op) : LawfulTypeArgs sig where
+  call := fun op tys => by rw [hfixed]
+  typeArgsOf_withTypeArgs := fun op tys h => by
+    rw [hfixed, hnone]
+    rw [hnone] at h
+    exact (List.eq_nil_of_length_eq_zero h).symm
+  length_typeArgsOf := fun op tys => by rw [hfixed]
+  withTypeArgs_typeArgsOf := fun op => hfixed op _
+  withTypeArgs_withTypeArgs := fun op tys tys' => by rw [hfixed, hfixed, hfixed]
+  withTypeArgs_withTerm := fun op tys f => by rw [hfixed, hfixed]
+  termOf_withTypeArgs := fun op tys => by rw [hfixed]
+  typeArgsOf_withTerm := fun op f => by rw [hnone, hnone]
+
 /-- `spell` inverts the row table on (spelling, trailing names) at every row whose head reads
-back (`rowHeadReadable`), up to the operation's binder term: it answers the operation's face
-(`Signature.face`), since a row's key does not show the term. A value row has no trailing names
-(the printer drops them), and no spelling or trailing name is a binder name, `undefined`, or a
-reserved head. The last five laws are what a reader needs of an operation's binder term
-(`Signature.termOf`, `Signature.withTerm`): the row does not depend on it, and replacing it is
-an exact update. A signature with the default hooks, which carries no term, meets each by
-computation. -/
+back (`rowHeadReadable`), up to the operation's binder term and its type arguments: it answers
+the operation's face (`Signature.face`), since a row's key shows neither. A value row has no
+trailing names (the printer drops them), and no spelling or trailing name is a binder name,
+`undefined`, or a reserved head. The next five laws are what a reader needs of an operation's
+binder term (`Signature.termOf`, `Signature.withTerm`): the row does not depend on it, and
+replacing it is an exact update. A signature with the default hooks, which carries no term,
+meets each by computation. The last field is what a reader needs of an operation's type
+arguments (`LawfulTypeArgs`). -/
 structure LawfulSpelling (sig : Signature Op) (spell : String → List String → Option Op) :
     Prop where
   spell_row : ∀ op, sig.dom op = true → rowHeadReadable (sig.rowOf op) = true →
@@ -1105,15 +1224,18 @@ structure LawfulSpelling (sig : Signature Op) (spell : String → List String �
   withTerm_withTerm : ∀ op f g, sig.withTerm (sig.withTerm op f) g = sig.withTerm op g
   /-- An operation that carries no term is fixed. -/
   withTerm_none : ∀ op f, sig.termOf op = none → sig.withTerm op f = op
+  /-- The laws of an operation's type arguments, and their independence of the term's. -/
+  typeArgs : LawfulTypeArgs sig
 
 /-! ## The native profile
 
 `nativeSpell` inverts `NativeOp.row` on (spelling, trailing names) over one representative per
 key (`NativeOp.spelled`): each of the eight read-modify-write rows at its face, whose term the
 reader replaces by the function it read (`NativeOp.withTerm`), the two `Scope.make` rows told
-apart by the `"parallel"` strategy, and `Deferred.make` as the one instance whose type arguments
-the faces spell. `nativeLawful` is the receipt that the native table meets `LawfulSpelling`; the
-two theorems specialise to it below. -/
+apart by the `"parallel"` strategy, and `Deferred.make` at its face, the instance `(nat, nat)`,
+whose type arguments the reader replaces by the two it read on the call's head
+(`NativeOp.withTypeArgs`). `nativeLawful` is the receipt that the native table meets
+`LawfulSpelling`; the two theorems specialise to it below. -/
 
 /-- The four table requirements: unique keys, no built-in collision, no dropped
 trailing names on a value row, and names outside the reserved/binder alphabets.

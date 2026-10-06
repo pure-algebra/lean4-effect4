@@ -419,8 +419,8 @@ name for an all-nullary inductive. A field name here that disagrees with the env
 the decode at import. -/
 
 /-- The 23 built-in rows, one per spelling key: the core's `NativeOp.spelled`
-(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell and each
-read-modify-write row at its face, the unit literal for its binder term. External indices are
+(`src/Effect4/Program/Native.lean`), `Deferred.make` at its face, the instance `(nat, nat)`, and
+each read-modify-write row at its face, the unit literal for its binder term. External indices are
 supplied by row tables and are not enumerated. -/
 def allNativeOps : List Effect4.Program.NativeOp := Effect4.Program.NativeOp.spelled
 

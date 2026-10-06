@@ -104,12 +104,15 @@ theorem readClass_size (e : Expr) (tag : String) (names : List String) (values :
 
 /-- A named type at its arguments' readings, at one choice per spelling: `number` reads as `nat`,
 and `Readonly<Record<string, V>>` as a map. A class name reads as nothing: a class's field naming
-another class has no reading here. -/
+another class has no reading here. `never` reads as the empty type (the state plan's T5, part B):
+the error column of `Deferred.make<A, never>()` is spelled so. A handle's name (`Ref.Ref<A>`,
+`Deferred.Deferred<A, E>`) and `unknown` read as nothing. -/
 def readNamed : List String → List Ty → Option Ty
   | ["number"], [] => some .nat
   | ["string"], [] => some .string
   | ["boolean"], [] => some .bool
   | ["void"], [] => some .unit
+  | ["never"], [] => some .never
   | ["null"], [] => some .null
   | ["undefined"], [] => some .undefined
   | ["Uint8Array"], [] => some .bytes
@@ -167,6 +170,58 @@ mutual
       if readonly then some (name, optional, x) else none
   termination_by structural f => f
 end
+
+/-! ## The checked type reader
+
+One reader for the places where the faces print a program type (the state plan's T5, part B):
+the type arguments an operation carries on its call's head (`Deferred.make<A, E>()`), a loop's
+stated cursor type, and a list fold's stated accumulator type. A place reads its type back only
+through this reader. The class reader below checks a whole declaration by the same re-print. -/
+
+/-- **The checked type reader**: a program type from its printed spelling (`readTy`), kept only
+when the type printer prints that type as this spelling (`Types.ofTy`). What it accepts is exact
+by its definition (`readTyChecked_exact`, `Laws/Codegen/Classes.lean`). The check does not make
+the printer injective: two types can share one spelling, and the reader answers one of them
+(`ReadableTy`). -/
+def readTyChecked (x : TypeRef) : Option Ty :=
+  (readTy x).bind fun ty => if Types.ofTy ty = some x then some ty else none
+
+/-- **The readable types**: a type that the checked reader answers from its own printed spelling.
+It is the premise of every retraction through `readTyChecked`
+(`readTyChecked_of_readable`, `Laws/Codegen/Classes.lean`), decided by running the round trip.
+A type is outside it for one of four reasons, and each stays visible here.
+
+* **No printed form** (`Types.ofTy` answers `none`): a row template's parameter, a nominal
+  application at arguments, a map whose key is no string, and a handle whose legacy name does
+  not parse.
+* **A collision**: `int` and `number` print as `number`, which reads as `nat`; a union whose
+  members collapse in the target prints as one member.
+* **A spelling with no reading**: `unknown`; `Ref.Ref<A>`, `Deferred.Deferred<A, E>`,
+  `Exit.Exit<A, E>`, `Cause.Cause<E>` and `Fiber.Fiber<A, E>`; the scope handle and every other
+  handle; a tagged payload record, which prints as the name of its class.
+* **Not the reader's choice for its spelling**: `readonly [A, B]` reads as a product, never as
+  a tuple of two items, and a type outside normal form prints as its normal form (a union in
+  another order of members, for one).
+
+A type that holds one of these is outside too. -/
+def ReadableTy (ty : Ty) : Bool :=
+  decide ((Types.ofTy ty).bind readTyChecked = some ty)
+
+/-- The printed forms of a list of types, in order; `none` when one has no printed form. -/
+def writeTys : List Ty → Option (List TypeRef)
+  | [] => some []
+  | ty :: tys => do
+    let x ← Types.ofTy ty
+    let xs ← writeTys tys
+    some (x :: xs)
+
+/-- A list of types from their printed spellings, each through the checked reader. -/
+def readTysChecked : List TypeRef → Option (List Ty)
+  | [] => some []
+  | x :: xs => do
+    let ty ← readTyChecked x
+    let tys ← readTysChecked xs
+    some (ty :: tys)
 
 /-! ## The class declaration -/
 

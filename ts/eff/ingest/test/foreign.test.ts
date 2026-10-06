@@ -282,6 +282,58 @@ test("a term row with explicit type arguments is refused alike, and its positive
   }
 })
 
+// Seat T5, part B (the coordinator's addenda 6 and 7): an operation's type arguments.
+// `Deferred.make<A, E>()` carries two on its head. Both engines read each through the one
+// checked type reader (`readTypeText` of read.ts) and install the two types read, so they lift
+// the same program. A bare call is no invocation in either: no instance is read at a default
+// (`E4-CHECK-CE-013`). Neither drops the arguments. The parity is of admission and refusal: no
+// target typing is claimed.
+test("both engines read Deferred.make's type arguments alike, and refuse a bare call alike", () => {
+  const deferredModule = (call: string) => `import { Effect, Deferred, Option, Ref } from "effect"\nexport const program = ${call}\n`
+  const natTy = { _tag: "nat" } as const, neverTy = { _tag: "never" } as const
+  const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
+    ["Deferred.make<void, never>()", { _tag: "unit" }, neverTy],
+    ["Deferred.make<boolean, never>()", { _tag: "bool" }, neverTy],
+    ["Deferred.make<number, number>()", natTy, natTy],
+    ["Deferred.make<Option.Option<number>, never>()", { _tag: "option", inner: natTy }, neverTy],
+    // layout is no part of a type
+    ["Deferred.make< void ,never >()", { _tag: "unit" }, neverTy],
+  ]
+  for (const [call, value, error] of cases) {
+    const source = deferredModule(call)
+    const left = ck(source, "deferred.ts"), right = oxc(source, "deferred.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    for (const verdicts of [left, right]) {
+      expect(verdicts.map(v => v.kind)).toEqual(["lifted"])
+      const [v] = verdicts
+      if (v?.kind !== "lifted") throw new Error("expected a lifted program")
+      expect(v.eff).toEqual({ _tag: "perform", op: { _tag: "deferredMakeOf", value, error },
+        request: { _tag: "lit", value: { _tag: "unit" } } } as Eff)
+    }
+  }
+  // A bare call and another count are no invocation of the row, in both: the refusal names the
+  // row. Before part B the compiler-backed reader answered `E-ARG-DYNAMIC` on
+  // `Deferred.make<string>()` where the oxc reader answered `E-NODE`.
+  for (const call of ["Deferred.make()", "Deferred.make<number>()", "Deferred.make<string>()", "Deferred.make<number, number, number>()"]) {
+    const source = deferredModule(call)
+    const left = ck(source, "deferred.ts"), right = oxc(source, "deferred.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    for (const verdicts of [left, right]) {
+      expect(verdicts.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", "fragment node: Deferred.make"]])
+    }
+  }
+  // A type with no reading (a handle, `unknown`, a name that is no type of the fragment) is
+  // refused by both, alike.
+  for (const call of ["Deferred.make<Ref.Ref<number>, never>()", "Deferred.make<unknown, never>()", "Deferred.make<Foo, never>()"]) {
+    const source = deferredModule(call)
+    const left = ck(source, "deferred.ts"), right = oxc(source, "deferred.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    for (const verdicts of [left, right]) {
+      expect(verdicts.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", "fragment node: shape"]])
+    }
+  }
+})
+
 // Seat J2, step 1b: DI-72 (763187e1) in both engines. A bare value (a literal, `undefined`, a
 // binder) or an application of a name that is no head and no row is no program; the ck engine
 // lifted each as `fail(…)` from 2026-09-13 until step 1b, while the fragment reader refused it.

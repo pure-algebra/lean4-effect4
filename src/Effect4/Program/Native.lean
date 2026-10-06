@@ -27,7 +27,9 @@ parameters (decisions row 42, the state plan's T3a): `Ref<A>` is `refOf (var 0)`
 `Deferred<A, E>` is `deferredOf (var 0) (var 1)`, and the checker instantiates them at the
 request's type (`checkRow`, `Typing/Rules.lean`). `Deferred.make`'s request fixes no parameter,
 so its operation carries its type arguments (`deferredMakeOf`), as rc.112's
-`Deferred.make<A, E>()` does. The eight read-modify-write rows carry their function as a binder
+`Deferred.make<A, E>()` does. The faces print them on the call's head, each through the type
+printer, and read them back (`NativeOp.typeArgs`, `NativeOp.withTypeArgs`; the state plan's T5,
+part B): the row spells none. The eight read-modify-write rows carry their function as a binder
 term *in the operation* (decisions row 43, the state plan's T3b): rc.112 takes a JavaScript
 function, and DB-02 forbids storing one. The term runs at `env ++ [current]`, in the one store
 step `syncOpOf` decodes the row to, and the checker types it at the instance's element type
@@ -175,6 +177,104 @@ theorem withTerm_of_none {op : NativeOp} (h : op.binder? = none) (t : Term) :
     op.withTerm t = op := by
   cases op <;> cases h <;> rfl
 
+/-- The type arguments an operation carries on its printed call's head: the two types of
+`Deferred.make<A, E>()` (decisions row 42). `Deferred.make` must be *called* with them: the
+export's own parameters have defaults (`Deferred<unknown, never>`), so without them the host
+types the cell at those defaults and rejects every later use (`E4-CHECK-CE-013`,
+`vendor/effect-4.0.0-rc.112/src/Deferred.ts:171`). No other operation carries one: every other
+row's parameters are fixed by its request or by its binder term. With `withTypeArgs`, the one
+place that names the operations that carry type arguments by case. -/
+def typeArgs : NativeOp → List Ty
+  | deferredMakeOf value error => [value, error]
+  | refMake | refGet | refSet | refGetAndSet | refSetAndGet | deferredIsDone | deferredPoll
+  | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
+  | refUpdateWith _ | refGetAndUpdateWith _ | refUpdateAndGetWith _ | refUpdateSomeWith _
+  | refGetAndUpdateSomeWith _ | refUpdateSomeAndGetWith _ | refModifyWith _
+  | refModifySomeWith _ => []
+
+/-- The operation at other type arguments; an operation that carries none is unchanged.
+`Deferred.make` takes a list of two. At a list of another length it answers the instance that
+`NativeOp.spelled` holds for the row's key, `(nat, nat)`: the face a reader's `spell` answers
+(`Signature.face`). No reading yields that face as it stands: a reader installs two type
+arguments read from the call's head, and refuses a call that carries another count
+(`installTypeArgs`, `typeFree`, `Codegen/Read.lean`). -/
+def withTypeArgs : NativeOp → List Ty → NativeOp
+  | deferredMakeOf _ _, [value, error] => deferredMakeOf value error
+  | deferredMakeOf _ _, _ => deferredMakeOf .nat .nat
+  | refMake, _ => refMake
+  | refGet, _ => refGet
+  | refSet, _ => refSet
+  | refGetAndSet, _ => refGetAndSet
+  | refSetAndGet, _ => refSetAndGet
+  | refUpdateWith f, _ => refUpdateWith f
+  | refGetAndUpdateWith f, _ => refGetAndUpdateWith f
+  | refUpdateAndGetWith f, _ => refUpdateAndGetWith f
+  | refUpdateSomeWith f, _ => refUpdateSomeWith f
+  | refGetAndUpdateSomeWith f, _ => refGetAndUpdateSomeWith f
+  | refUpdateSomeAndGetWith f, _ => refUpdateSomeAndGetWith f
+  | refModifyWith f, _ => refModifyWith f
+  | refModifySomeWith f, _ => refModifySomeWith f
+  | deferredIsDone, _ => deferredIsDone
+  | deferredPoll, _ => deferredPoll
+  | deferredSucceed, _ => deferredSucceed
+  | deferredFail, _ => deferredFail
+  | deferredAwait, _ => deferredAwait
+  | scopeMake strategy, _ => scopeMake strategy
+  | sleep, _ => sleep
+  | clockNow, _ => clockNow
+  | external index, _ => external index
+
+/-- Replacing the type arguments by a list of the operation's own arity installs the list. -/
+theorem typeArgs_withTypeArgs (op : NativeOp) (tys : List Ty)
+    (h : tys.length = op.typeArgs.length) : (op.withTypeArgs tys).typeArgs = tys := by
+  cases op with
+  | deferredMakeOf value error =>
+    rcases tys with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩
+    · cases h
+    · cases h
+    · rfl
+    · exact absurd (Nat.succ.inj (Nat.succ.inj h)) (Nat.succ_ne_zero _)
+  | _ => exact (List.eq_nil_of_length_eq_zero h).symm
+
+/-- The arity is fixed: an operation carries as many type arguments after any replacement. -/
+theorem length_typeArgs_withTypeArgs (op : NativeOp) (tys : List Ty) :
+    (op.withTypeArgs tys).typeArgs.length = op.typeArgs.length := by
+  cases op with
+  | deferredMakeOf value error => rcases tys with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;> rfl
+  | _ => rfl
+
+/-- Replacing an operation's type arguments by themselves is the operation. -/
+theorem withTypeArgs_typeArgs (op : NativeOp) : op.withTypeArgs op.typeArgs = op := by
+  cases op <;> rfl
+
+/-- Replacing the type arguments twice is replacing them once. -/
+theorem withTypeArgs_withTypeArgs (op : NativeOp) (tys tys' : List Ty) :
+    (op.withTypeArgs tys).withTypeArgs tys' = op.withTypeArgs tys' := by
+  cases op with
+  | deferredMakeOf value error =>
+    rcases tys with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;>
+      rcases tys' with _ | ⟨a', _ | ⟨b', _ | ⟨c', rest'⟩⟩⟩ <;> rfl
+  | _ => rfl
+
+/-- The two updates commute: no native operation carries both a binder term and type arguments,
+and the law is stated for every operation. -/
+theorem withTypeArgs_withTerm (op : NativeOp) (tys : List Ty) (t : Term) :
+    (op.withTerm t).withTypeArgs tys = (op.withTypeArgs tys).withTerm t := by
+  cases op with
+  | deferredMakeOf value error => rcases tys with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;> rfl
+  | _ => rfl
+
+/-- Replacing the type arguments leaves the binder term as it is. -/
+theorem binder?_withTypeArgs (op : NativeOp) (tys : List Ty) :
+    (op.withTypeArgs tys).binder? = op.binder? := by
+  cases op with
+  | deferredMakeOf value error => rcases tys with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;> rfl
+  | _ => rfl
+
+/-- Replacing the binder term leaves the type arguments as they are. -/
+theorem typeArgs_withTerm (op : NativeOp) (t : Term) : (op.withTerm t).typeArgs = op.typeArgs := by
+  cases op <;> rfl
+
 end NativeOp
 
 /-- The scope of a native operation's own data (`Program/ScopedOp.lean`): the binder term of a
@@ -182,7 +282,9 @@ read-modify-write row, checked at `n + 1` by `ScopedOp`'s convention, the curren
 `n` and an outer capture below it. An operation that carries no term is in scope at every level:
 `Deferred.make`'s type arguments are types, which bind no term variable. The term map replaces
 the term (`NativeOp.withTerm`), so weakening shifts it with the rest of the program. The term's
-reading view is the same term, so the raw annotation collector reads what the row runs. -/
+reading view is the same term, so the raw annotation collector reads what the row runs. The type
+arguments' reading view is the operation's own (`NativeOp.typeArgs`), so the collector reads the
+types that the faces print on the call's head. -/
 instance : ScopedOp NativeOp where
   scopedAt op n := op.binder?.all fun b => b.2.scoped (n + 1)
   mapTerm g op :=
@@ -190,6 +292,7 @@ instance : ScopedOp NativeOp where
     | some (_, t) => op.withTerm (g t)
     | none => op
   term? op := op.binder?.map (·.2)
+  typeArgs op := op.typeArgs
 
 /-- A native operation that carries no term is in scope at every level: the hypothesis the
 operation lift's scope lemma (`Authoring.perform_scoped`) asks of an operation, discharged once
@@ -212,17 +315,6 @@ theorem NativeOp.scopedAt_of_binder {op : NativeOp} {s : FnShape} {t : Term}
 abbrev RowTable := List Row
 
 namespace NativeOp
-
-/-- The type arguments `Deferred.make` is printed with, as legacy target spellings
-(`Row.typeArgs`), until T5 derives them from the instance. `Deferred.make` must be *called* with
-them: the export's own parameters have defaults (`Deferred<unknown, never>`), so without them the
-host types the cell at those defaults and rejects every later use (`E4-CHECK-CE-013`,
-`Deferred.ts:171`). Only today's instance, `(nat, nat)`, has a spelling the readers read back.
-Another instance carries the empty spelling, which no reading parses (`parseLegacy_empty`), so the
-printer refuses the row by name (`PrintRefusal.typeSpelling "Deferred.make"`) and no reader yields
-it (the state plan's T3a). -/
-def deferredTypeArgs (value error : Ty) : List String :=
-  if value = .nat ∧ error = .nat then ["number", "number"] else [""]
 
 /-- The two external service handles of the host rows slice (service type codes 8 and 9,
 `nativeServiceTy`; the package tables of `Program/Packages`): a SQL client and a key-value
@@ -279,7 +371,10 @@ nothing answer `unit` and the three that answer the cell's value answer `var 0`.
 and `Ref.modifySome` answer `var 1`, the parameter `B` their request does not mention: the
 checker binds it from the binder term's type (`bindTerm`, `Typing/Rules.lean`). A term row
 does not depend on its term: the faces print the term as a function after the request
-(`Codegen/Templates.lean`), so the row carries no trailing name for it. -/
+(`Codegen/Templates.lean`), so the row carries no trailing name for it. `Deferred.make`'s row
+does depend on its operation's type arguments, in its answer column alone. It declares none
+(`Row.typeArgs`): the faces derive them from the operation (`NativeOp.typeArgs`) and print each
+through the type printer, so no instance is spelled by hand (the state plan's T5, part B). -/
 def row (op : NativeOp) : Row :=
   match op with
   | refMake =>
@@ -331,8 +426,7 @@ def row (op : NativeOp) : Row :=
       [], .deferred⟩
   | deferredMakeOf value error =>
     ⟨"deferredMakeOf", "Deferred.make", .call, [], kind op, .unit, .deferredOf value error,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs value error,
-      .deferred⟩
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", [], .deferred⟩
   | deferredIsDone =>
     ⟨"deferredIsDone", "Deferred.isDone", .call, [], kind op, .deferredOf (.var 0) (.var 1),
       .bool, .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366", [], .deferred⟩
@@ -452,11 +546,13 @@ def NativeOp.termRows : List ((Term → NativeOp) × FnShape) :=
    (.refModifySomeWith, .modifySome)]
 
 /-- One native operation per spelling key (`rowKey`, `Program/Table.lean`): every operation
-whose row carries no type argument, each read-modify-write row at its face (row by row, the
-order the tools' profiles print), and `Deferred.make` at the one instance the faces spell
-(`deferredTypeArgs`). A term row's face holds the unit literal for its term
+that carries no type argument, each read-modify-write row at its face (row by row, the order
+the tools' profiles print), and `Deferred.make` at its face, the instance `(nat, nat)`
+(`NativeOp.withTypeArgs`). A term row's face holds the unit literal for its term
 (`Signature.face`, `Program/Typing/Rules.lean`): the row's key does not show the term, and a
-reader installs the function it read (`NativeOp.withTerm`). No list holds every operation, since
+reader installs the function it read (`NativeOp.withTerm`). `Deferred.make`'s key does not show
+its type arguments either: a reader installs the two it read from the call's head, and no
+reading yields the face as it stands. No list holds every operation, since
 `deferredMakeOf` ranges over `Ty` and a term row over `Term`; these are the operations the rows
 spell, so the built-in keys are this list's (`NativeOp.rowKey_mem`). The table's collision
 check, the reader's `nativeSpell` and the tools' enumerations read it. -/
@@ -484,7 +580,10 @@ def nativeSignature (table : RowTable := []) : Signature NativeOp :=
     -- a read-modify-write row's binder term, at its shape's parameter and result templates
     termOf := fun op => op.binder?.map fun b => ⟨b.2, b.1.param, b.1.result⟩,
     -- a reader installs the function it read in the operation its row spells
-    withTerm := NativeOp.withTerm }
+    withTerm := NativeOp.withTerm,
+    -- and the type arguments it read on the call's head (`Deferred.make<A, E>()`)
+    typeArgsOf := NativeOp.typeArgs,
+    withTypeArgs := NativeOp.withTypeArgs }
 
 /-- **The native signature types an operation alike once its binder term is weakened**
 (`Signature.WeakenNatural`, `Program/Typing.lean`): weakening replaces a term row's term and

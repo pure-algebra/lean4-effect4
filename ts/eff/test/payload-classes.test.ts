@@ -63,6 +63,17 @@ describe("payload classes through the TypeScript reader", () => {
       .toEqual({ _tag: "succeed", value: notFound })
   })
 
+  test("a declared field of type `never` reads, as the Lean class reader reads it", () => {
+    // The field-type reader reads `never` since the state plan's T5, part B (Lean `readNamed`:
+    // the error column of `Deferred.make<A, never>()` is spelled so), and a class's field types
+    // go through it. `Test/Codegen/TypeReader.lean` pins the same declaration. `unknown` has no
+    // reading, in either reader.
+    expect(reads(header + 'export class X extends Data.TaggedError("X")<{ readonly a: never }> {}\n' +
+      "export const main = Effect.succeed(0)\n")).toEqual({ _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 0 } } })
+    expect(refused(header + 'export class X extends Data.TaggedError("X")<{ readonly a: unknown }> {}\n' +
+      "export const main = Effect.succeed(0)\n")).toBe('{"_tag":"shape","what":"class"}')
+  })
+
   test("red controls: no class, another tag, a member, a structural record in the class form", () => {
     expect(refused("Effect.fail(new NotFound({ id: 9 }))")).toBe('{"_tag":"unknownIdent","name":"NotFound"}')
     expect(refused(header + 'export class NotFound extends Data.TaggedError("Other")<{ readonly id: number }> {}\n' +

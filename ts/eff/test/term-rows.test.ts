@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Result } from "effect"
-import type { Eff, Term } from "../eff.gen.ts"
-import { readTypeScript } from "../read.ts"
+import type { Eff, Term, Ty } from "../eff.gen.ts"
+import { readTypeScript, readTypeText } from "../read.ts"
 
 const nat = (value: number): Term => ({ _tag: "lit", value: { _tag: "nat", value } })
 const v = (index: number): Term => ({ _tag: "var", index })
@@ -69,3 +69,60 @@ describe("an operation's binder term, read from its function", () => {
       { _tag: "shape", what: "fold accumulator annotation" })
   })
 })
+
+const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
+const natTy: Ty = { _tag: "nat" }
+const neverTy: Ty = { _tag: "never" }
+const make = (value: Ty, error: Ty): Eff =>
+  ({ _tag: "perform", op: { _tag: "deferredMakeOf", value, error }, request: unit })
+
+/** Finite controls for an operation's type arguments (the state plan's T5, part B): this reader
+ * against the texts Lean prints (`Test/Codegen/TermRows.lean`, section 5, pins the same texts).
+ * `Deferred.make<A, E>()` carries its two types on the call's head. The reader takes them off,
+ * reads the call at its face, reads each type by the checked type reader and installs them
+ * (Lean `readCall`, `installTypeArgs`). */
+describe("an operation's type arguments, read from the call's head", () => {
+  test("Deferred.make reads its two types at every readable instance", () => {
+    const cases: ReadonlyArray<readonly [string, Ty, Ty]> = [
+      ["Deferred.make<void, never>()", { _tag: "unit" }, neverTy],
+      ["Deferred.make<boolean, never>()", { _tag: "bool" }, neverTy],
+      ["Deferred.make<number, number>()", natTy, natTy],
+      ["Deferred.make<string, number>()", { _tag: "string" }, natTy],
+      ["Deferred.make<Option.Option<number>, never>()", { _tag: "option", inner: natTy }, neverTy],
+      ["Deferred.make<ReadonlyArray<string>, never>()", { _tag: "list", inner: { _tag: "string" } }, neverTy],
+      ["Deferred.make<readonly [number, boolean], never>()", { _tag: "prod", left: natTy, right: { _tag: "bool" } }, neverTy],
+      ['Deferred.make<"x", never>()', { _tag: "lit", value: "x" }, neverTy],
+      ["Deferred.make<{ readonly a: number; readonly b?: string }, never>()",
+        { _tag: "record", fields: [["a", [false, natTy]], ["b", [true, { _tag: "string" }]]] }, neverTy],
+    ]
+    for (const [source, value, error] of cases) expect(read(source)).toEqual(make(value, error))
+  })
+  test("a bare call and another count are refused by the spelling: no instance is read at a default", () => {
+    expect(read("Deferred.make()")).toEqual({ _tag: "arity", head: "Deferred.make" })
+    expect(read("Deferred.make<void>()")).toEqual({ _tag: "arity", head: "Deferred.make" })
+    expect(read("Deferred.make<void, never, never>()")).toEqual({ _tag: "arity", head: "Deferred.make" })
+    // a row whose operation carries no type argument takes none
+    expect(read("Effect.flatMap(Ref.make(0), (a0) => Ref.get<number>(a0))")).toEqual({ _tag: "arity", head: "Ref.get" })
+  })
+  test("a spelling with no reading is refused by name", () => {
+    // Lean names it `annotation "Deferred.make type argument"`: a handle, `unknown` and a class's
+    // name have no reading (`Classes.ReadableTy`).
+    for (const type of ["Ref.Ref<number>", "Deferred.Deferred<void, never>", "unknown", "Short"]) {
+      expect(read(`Deferred.make<${type}, never>()`)).toEqual({ _tag: "shape", what: "Deferred.make type argument annotation" })
+    }
+  })
+  test("the checked type reader keeps only what the type printer prints back", () => {
+    expect(readTypeText("void")).toEqual({ _tag: "unit" })
+    expect(readTypeText("never")).toEqual(neverTy)
+    expect(readTypeText("Option.Option<number>")).toEqual({ _tag: "option", inner: natTy })
+    // layout is no part of a type: the text is parsed, and its printed form compared
+    expect(readTypeText("Option.Option< number >")).toEqual({ _tag: "option", inner: natTy })
+    // `number` reads as `nat`: the printer spells `int` and `number` alike, so neither reads back
+    expect(readTypeText("number")).toEqual(natTy)
+    // no reading: a handle, `unknown`, a mutable tuple, a union of one printed member twice
+    for (const text of ["Ref.Ref<number>", "unknown", "[number, number]", "number | number", "number; type U = string"]) {
+      expect(readTypeText(text)).toBeUndefined()
+    }
+  })
+})
+
