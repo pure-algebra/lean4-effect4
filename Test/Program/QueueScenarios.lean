@@ -33,7 +33,15 @@ namespace Test.Program.QueueScenarios
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 
-/-! ## The operations, as the probe writes them -/
+/-! ## The operations, as the probe writes them
+
+Each operation writes its step's row with a fixed name for the cell's current value:
+`Ref.modify "s" (step … (var "s")) q`. A row elaborates its whole term under that binder, so a
+caller's term that read a variable named `s` would read the cell's value instead. Here every
+other term under the binder is closed or is this battery's own: the identity and the hint that
+the operation binds itself, and a message that each scenario writes as a literal. The module
+exports no row: each step takes the current value's source (addendum 2 of the seat's brief).
+The public wrapper will mint the name. -/
 
 /-- Decisions row 238: a detached fork with a deferred start, uninterruptible. -/
 def posted : Effect4.Supervision.ForkOptions := ⟨false, true, .uninterruptible⟩

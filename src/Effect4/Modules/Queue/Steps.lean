@@ -39,10 +39,14 @@ The model is `src/Effect4/Laws/Modules/Queue/Model.lean`. The rules of a step (t
 The term language has no local binding, so a step repeats its passes (decisions row 255). Every
 builder takes the message type `A` first, and a builder that writes no declaration does not read
 it. Nothing here performs an effect: `Queue.make`, `Queue.offer` and `Queue.take` come with the
-wrapper, after the mask. The typing statements are in
-`src/Effect4/Laws/Modules/Queue/Typing.lean`. The batteries are `Test/Program/QueueSteps.lean`
-(types, sizes and the hygiene controls) and `Test/Program/QueueScenarios.lean` (eight runs on
-the machine).
+wrapper, after the mask.
+
+The laws are in `src/Effect4/Laws/Modules/Queue/`: the typing statements (`Typing.lean`), the
+relation to the model (`Relation.lean`) and the six step goals with the connector to the store
+(`Steps.lean`). The batteries are under `Test/Program/`: `QueueSteps.lean` (types, sizes and the
+hygiene controls), `QueueScenarios.lean` (runs on the machine), `QueueAgreement.lean` (each step
+against the model, on every state of a finite universe) and `QueueRelation.lean` (each goal's
+conclusion on that universe).
 -/
 
 @[expose] public section
