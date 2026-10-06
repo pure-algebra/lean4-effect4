@@ -51,6 +51,7 @@ namespace Effect4.Queue.Model
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Typed
 open Effect4.Modules
+open Effect4.Constructive.List (foldl_snoc_map foldl_or_any)
 
 /-! ## The connector to the store -/
 
@@ -350,23 +351,6 @@ theorem poll_consumes {s : State} (h : FirstProfile s) {c : Nat}
   rw [step, consumed, quiet, List.map_nil, List.append_nil]
 
 /-! ## The take step's passes and the model's `take`, in closed form -/
-
-/-- A fold that appends one image of each element is the list with the images. -/
-theorem foldl_snoc_map {α β : Type} (g : α → β) :
-    ∀ (xs : List α) (init : List β),
-      xs.foldl (fun out x => out ++ [g x]) init = init ++ xs.map g
-  | [], init => by rw [List.foldl_nil, List.map_nil, List.append_nil]
-  | x :: xs, init => by
-    rw [List.foldl_cons, foldl_snoc_map g xs, List.map_cons, List.append_assoc]
-    rfl
-
-/-- A fold that keeps a flag is the flag, or any element's test. -/
-theorem foldl_or_any {α : Type} (p : α → Bool) :
-    ∀ (xs : List α) (found : Bool), xs.foldl (fun found x => found || p x) found =
-      (found || xs.any p)
-  | [], found => by rw [List.foldl_nil, List.any_nil, Bool.or_false]
-  | x :: xs, found => by
-    rw [List.foldl_cons, foldl_or_any p xs, List.any_cons, Bool.or_assoc]
 
 /-- The request's stored record, through the table that holds the step's hint. -/
 theorem takerVal_renewed (tb : Table) (id : Nat) (hint : DeferredKey) {t : Taker}

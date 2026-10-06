@@ -57,6 +57,7 @@ namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
+open Effect4.Constructive.List (fromFirst_find? decide_length_zero)
 
 /-! ## The model's side, in closed form
 
@@ -84,11 +85,6 @@ theorem takeIfAvailable_stays {s : State} {n : Nat} (tooMany : ¬ n ≤ free s) 
     takeIfAvailable s n = (s, false) := by
   unfold takeIfAvailable
   rw [if_neg tooMany]
-
-/-- Whether a list has no entry, as a step tests it: by its length. -/
-theorem decide_length_zero {α : Type} : ∀ (l : List α), decide (l.length = 0) = l.isEmpty
-  | [] => rfl
-  | _ :: _ => rfl
 
 /-- **The model's visit where a permit is free, from the waiters that start at the first
 fitting one.** The reply is the first of those waiters, if any. The next state holds the

@@ -1,5 +1,5 @@
 import Effect4.Laws.Modules.Semaphore.Relation
-import Effect4.Laws.Modules.Queue.Reading
+import Effect4.Laws.Modules.Reading
 
 /-!
 # Reading Semaphore's step terms: the values of its records, words and passes (row 265)
@@ -22,8 +22,10 @@ Semaphore's steps need beside them.
 - **The passes** of `src/Effect4/Modules/Semaphore/Steps.lean` on the encoding of a model
   state: the free count, the fit, the fold that starts at the first fitting waiter, and a
   visit's reply and stored value.
-- **Three facts of lists** for that fold: it is `dropWhile`, the first entry that it keeps is
-  what `find?` answers, and the list around that entry is the list without it.
+- **Three facts of lists** serve that fold: it is `dropWhile`, the first entry that it keeps is
+  what `find?` answers, and the list around that entry is the list without it. They are in
+  `Effect4.Constructive.List` (`src/Effect4/Data/Constructive.lean`), with the fact of a test
+  on two numbers (`not_decide_lt`, in `Effect4.Constructive.Decidable`).
 
 Placement. Concept `translation-simulation`, requirement R10. Every lemma here is a helper of
 the five step goals (`src/Effect4/Laws/Modules/Semaphore/Steps.lean`), parts of the proposed
@@ -37,8 +39,8 @@ namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
--- a fact of lists that waits in the Queue's folder for its move to `Effect4.Constructive.List`
-open Effect4.Queue.Model (foldl_keep)
+open Effect4.Constructive.List (foldl_keep foldl_fromFirst)
+open Effect4.Constructive.Decidable (not_decide_lt)
 
 /-! ## The two records: what a read answers and what an overwrite stores -/
 
@@ -87,15 +89,6 @@ theorem reads_isZero {n : TermSrc} {x : Nat} (hn : Reads n env path vals (Val.na
 theorem reads_unit : Reads unit env path vals Val.unit := reads_lit .unit env path vals rfl
 
 end Words
-
-/-- A number is not below another exactly when the other is at most it: the test that a step
-writes with `not` and `lt`. -/
-theorem not_decide_lt (a b : Nat) : (!decide (a < b)) = decide (b ≤ a) := by
-  by_cases below : a < b
-  · rw [decide_eq_true below, decide_eq_false (Nat.not_le_of_lt below)]
-    rfl
-  · rw [decide_eq_false below, decide_eq_true (Nat.le_of_not_lt below)]
-    rfl
 
 /-! ## The removal by identity, on the encoding of any list of entries -/
 
@@ -169,97 +162,6 @@ theorem waiterVal_renewed (tb : Table) (id n stamp : Nat) (hint : DeferredKey) :
   show waiterOf (Val.promise (if id = id then hint else tb.hint id))
     (Val.promise (tb.handle id)) (.nat n) (.nat stamp) = _
   rw [if_pos rfl]
-
-/-! ## Three facts of lists, for the fold that starts at the first fitting waiter -/
-
-/-- A fold that keeps every entry from the first one that satisfies a test is `dropWhile`. With
-entries already kept, it keeps every later entry. -/
-theorem foldl_fromFirst {α : Type} (p : α → Bool) :
-    ∀ (xs kept : List α),
-      xs.foldl
-          (fun kept x => if (!decide (kept.length = 0) || p x) = true then kept ++ [x] else kept)
-          kept =
-        if kept.length = 0 then xs.dropWhile (fun x => !p x) else kept ++ xs
-  | [], kept => by
-    rw [List.foldl_nil, List.dropWhile_nil, List.append_nil]
-    by_cases empty : kept.length = 0
-    · rw [if_pos empty]
-      exact List.eq_nil_of_length_eq_zero empty
-    · rw [if_neg empty]
-  | x :: xs, kept => by
-    rw [List.foldl_cons, foldl_fromFirst p xs]
-    by_cases empty : kept.length = 0
-    · have none : kept = [] := List.eq_nil_of_length_eq_zero empty
-      subst none
-      rw [List.dropWhile_cons]
-      cases holds : p x with
-      | true => rfl
-      | false => rfl
-    · have keeps : (!decide (kept.length = 0) || p x) = true := by
-        rw [decide_eq_false empty]
-        rfl
-      have more : ¬ (kept ++ [x]).length = 0 := by
-        rw [List.length_append]
-        exact Nat.succ_ne_zero _
-      rw [keeps, if_pos rfl, if_neg more, if_neg empty, List.append_assoc]
-      rfl
-
-/-- What `dropWhile` keeps is no longer than the list. -/
-theorem length_dropWhile_le {α : Type} (q : α → Bool) :
-    ∀ (xs : List α), (xs.dropWhile q).length ≤ xs.length
-  | [] => Nat.le_refl 0
-  | x :: xs => by
-    rw [List.dropWhile_cons]
-    by_cases drops : q x = true
-    · rw [if_pos drops]
-      exact Nat.le_succ_of_le (length_dropWhile_le q xs)
-    · rw [if_neg drops]
-      exact Nat.le_refl _
-
-/-- **The entries from the first one that satisfies a test, against `find?` and `erase`.** The
-first kept entry is what `find?` answers. The entries before the kept ones, then the kept ones
-without their first, are the list without that entry, or the whole list where no entry
-satisfies the test. The removal compares no entry with another in the term: an earlier entry
-that is equal to the found one would satisfy the test too, so `find?` would have answered
-it. -/
-theorem fromFirst_find? {α : Type} [DecidableEq α] (p : α → Bool) :
-    ∀ (xs : List α),
-      (xs.dropWhile (fun x => !p x))[0]? = xs.find? p ∧
-        xs.take (xs.length - (xs.dropWhile (fun x => !p x)).length) ++
-            (xs.dropWhile (fun x => !p x)).drop 1 =
-          (match xs.find? p with
-            | some w => xs.erase w
-            | none => xs)
-  | [] => ⟨rfl, rfl⟩
-  | x :: xs => by
-    obtain ⟨head, around⟩ := fromFirst_find? p xs
-    rw [List.dropWhile_cons, List.find?_cons]
-    cases holds : p x with
-    | true =>
-      rw [if_neg (by decide : ¬ ((!true) = true))]
-      refine ⟨rfl, ?_⟩
-      show (x :: xs).take ((x :: xs).length - (x :: xs).length) ++ xs = (x :: xs).erase x
-      rw [Nat.sub_self, List.take_zero, List.nil_append, List.erase_cons,
-        show (x == x) = true from decide_eq_true rfl, if_pos rfl]
-    | false =>
-      rw [if_pos (by decide : (!false) = true)]
-      refine ⟨head, ?_⟩
-      have shorter := length_dropWhile_le (fun x => !p x) xs
-      have longer : (x :: xs).length - (xs.dropWhile (fun x => !p x)).length =
-          (xs.length - (xs.dropWhile (fun x => !p x)).length) + 1 := by
-        rw [List.length_cons]
-        omega
-      rw [longer, List.take_succ_cons, List.cons_append, around]
-      cases found : xs.find? p with
-      | none => rfl
-      | some w =>
-        have other : ¬ x = w := fun same => by
-          have fitsW := List.find?_some found
-          rw [← same, holds] at fitsW
-          cases fitsW
-        show x :: xs.erase w = (x :: xs).erase w
-        rw [List.erase_cons, show (x == w) = false from decide_eq_false other,
-          if_neg Bool.false_ne_true]
 
 /-! ## The passes, on the encoding of a model state -/
 

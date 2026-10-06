@@ -13,8 +13,9 @@ them.
   field of the cell, of a taker and of an offer.
 - **The passes** of `src/Effect4/Modules/Queue/Steps.lean` on the encoding of a model's lists:
   the two records, the wake, the identity tests, the two removals and the accept pass.
-- **Two facts of lists** for those passes: a fold that keeps is a filter (`foldl_keep`), and a
-  fold that appends each element's gift is `flatMap` (`foldl_append_flatMap`).
+- **Two facts of lists** serve those passes: a fold that keeps is a filter (`foldl_keep`), and
+  a fold that appends each element's gift is `flatMap` (`foldl_append_flatMap`). They are in
+  `Effect4.Constructive.List` (`src/Effect4/Data/Constructive.lean`).
 
 Placement. Concept `translation-simulation`, requirement R10. Every lemma here is a helper of
 the six step goals (`src/Effect4/Laws/Modules/Queue/Steps.lean`), parts of the proposed claim
@@ -28,6 +29,7 @@ namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
+open Effect4.Constructive.List (foldl_keep foldl_append_flatMap)
 
 /-! ## The cell's records: what a read answers and what an overwrite stores -/
 
@@ -62,20 +64,6 @@ theorem offer_build (i h b r : Val) :
 section Passes
 
 variable {env : Env} {path : List Nat} {vals : List Val}
-
-/-- A fold that appends the elements it keeps is a filter. -/
-theorem foldl_keep {α : Type} (p : α → Prop) [DecidablePred p] :
-    ∀ (xs kept : List α),
-      xs.foldl (fun kept x => if p x then kept else kept ++ [x]) kept =
-        kept ++ xs.filter (fun x => !decide (p x))
-  | [], kept => by rw [List.foldl_nil, List.filter_nil, List.append_nil]
-  | x :: xs, kept => by
-    rw [List.foldl_cons, foldl_keep p xs, List.filter_cons]
-    by_cases holds : p x
-    · rw [if_pos holds, decide_eq_true holds]
-      rfl
-    · rw [if_neg holds, decide_eq_false holds, List.append_assoc]
-      rfl
 
 /-- A waiting taker's record, built from an identity and a hint. -/
 theorem reads_mkTaker {id hint : TermSrc} {i h : Val} (hid : Reads id env path vals i)
@@ -195,14 +183,6 @@ theorem reads_removeOffer {offers id : TermSrc} (tb : Table) (msg : Nat → Val)
         · rw [decide_eq_false same, if_neg Bool.false_ne_true, if_neg same, List.map_append]
           rfl
   exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
-
-/-- A fold that appends what each element gives is the list with the elements' gifts. -/
-theorem foldl_append_flatMap {α β : Type} (f : α → List β) :
-    ∀ (xs : List α) (init : List β),
-      xs.foldl (fun acc x => acc ++ f x) init = init ++ xs.flatMap f
-  | [], init => by rw [List.foldl_nil, List.flatMap_nil, List.append_nil]
-  | x :: xs, init => by
-    rw [List.foldl_cons, foldl_append_flatMap f xs, List.flatMap_cons, List.append_assoc]
 
 /-- `fitting`: how many pending offers enter the room. -/
 theorem reads_fitting {room offers : TermSrc} {r : Nat} {os : List Val}
