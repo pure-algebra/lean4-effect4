@@ -428,8 +428,9 @@ Open at this landing:
   - the host half: a scenario's whole observation on the printed module, on the keyed lane.
     The four programs print and read back (`Test/Dogfood/Scenario/Faces.lean`). The keyed
     recorder needs one extension, an operation that completes after its cancellation.
-    [Its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md) is written ahead.
-    It goes to the next free seat;
+    Seat HOST has it since 2026-10-06 (branch `seat/host`;
+    [its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md)). It took the slot
+    that seat QTYPES freed;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
