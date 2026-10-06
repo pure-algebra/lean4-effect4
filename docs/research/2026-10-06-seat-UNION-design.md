@@ -285,6 +285,35 @@ last statement gives the claim's parts as one, for the claim's pointer.
 3. **The claim** `union-rule-lift`, concept `subtyping-algebra`, at R14. The receipt gives the
    row's text.
 
+## What changed after this note was sent (2026-10-06)
+
+The coordinator accepted the design, with both corrections of finding 6. Five things moved
+before the hand-back. The receipt, `docs/research/2026-10-06-seat-UNION-receipt.md`, gives each
+statement as Lean compiles it.
+
+1. **A member fact is stated at a normal union member.** The member premises of
+   `lift_transfer` and `ReadsUnion.lift_sound` now give `Ty.Normal m` and `m.isMember = true`
+   too, as `Below`, `lift_upper` and `lift_least` did. An instance may ignore them.
+2. **One law more, `lift_all`**, at the coordinator's request, for seat FORM's `check_closed`.
+   Take a property of answers that the least answer has, and that the join of two answers with
+   it has. It holds of the lifted answer where each union member's answer has it.
+   `lift_transfer` does not give it: its property is kept on one side of a join. `lift_closed`
+   and `lift_closed_pair` are the instances at closed types.
+3. **The law module imports `Effect4.Laws.Program.Template`**, and not `TypeAlgebra` alone as
+   finding 3 says. The closed instances read `Ty.closed_normalize` and `Ty.closed_members`
+   there. `Typing/TermIntro.lean` gains that module in its import closure. No cycle arises
+   (tested: the import script).
+4. **Proposal 2 landed**, with one more lemma. `below_of_upper` gives the monotone premise from
+   the member facts of the upper form. `Eliminator.monotone` is its use, and a rule that reads
+   two heads can use it without the structure. The field `closed` of the scratch structure is named
+   `reads`, and it reads `Ty.subN`.
+5. **The fold and the adjoint form**, relayed from the owner as optional. `lift_union` and
+   `lift_union_eq` say that the lifted rule keeps joins, for a member rule that is monotone in
+   the order. `lift_unique` says that a map with the four properties of the lifted rule is the
+   lifted rule, at the carrier `Ty`. `Eliminator.adjoint` is the upper form, its least half and
+   `reads` as one statement. `Tuple.typeAt` of finding 8 is proved equal to the lifted
+   projection in the battery, by `lift_unique` (`typeAt_eq_lift`).
+
 ## What this does not establish
 
 - No rule of the checker changes, and no by-shape rule is converted. `fiberTy` still refuses a
