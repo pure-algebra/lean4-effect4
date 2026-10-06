@@ -2,6 +2,7 @@ import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Codegen.TermRows
 import Test.Program.MaskContract
 import Test.Program.QueueMask
+import Test.Program.SemaphoreScenarios
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -623,12 +624,105 @@ def pQueueOrder : Api.Program :=
   | .ok p => p
   | .error _ => .fail (.lit (.str "pQueueOrder: the source does not elaborate"))
 
+/-! ### Semaphore's first operations (decisions rows 259 to 261 and 276)
+
+Eight programs over the library's operations (`src/Effect4/Modules/Semaphore/Ops.lean`): the
+first host runs of Semaphore's expansion. Each is a scenario of
+`Test/Program/SemaphoreScenarios.lean`, so the program that rc.112 runs is the program that the
+batteries run on the Lean machine. An operation prints as its expansion: the mask's getter, the
+request's `Deferred` cells, one `Ref.modify` for each step, and one `Effect.forkDetach` for a
+release's helper, whose body is the walk. The pin's own `Semaphore` is not printed (decisions
+row 235). The case P9 has no host run: its yield is a decision of a tape. A source that does not
+elaborate is a failure with a text, never a patched program.
+
+**The cases P1 and P4 run in their joined forms.** In both, a child's hook releases, so the
+helper is posted on that child's dispatcher. The sync entry flushes the root's dispatcher alone
+(`runSyncExit`, `src/Effect4/Machine/Fibers.lean`). A root that yields four times therefore
+settles under the sync entry before the walk, on another exit than the fork run's. The runner's
+exit column compares the fork run's exit with rc.112's sync exit whenever the sync run settles
+(`main`, `harness/truth/run-truth.ts`). So that column is red for the two cases as the batteries
+write them, while the two faces give one exit on each entry. The two red rows, their four
+exits and the command that reproduces them are in
+`docs/research/2026-10-06-seat-semw-evidence/README.md`. In a joined form the root joins the
+waiting fibers. Its sync entry ends in the `AsyncFiberError` defect, and the runner compares the
+fork entry. -/
+
+/-- The program of a scenario of Semaphore's battery, or a failure with a text. -/
+def semaphoreProgram (name : String) (source : Effect4.Program.Authoring.Src NativeOp) :
+    Api.Program :=
+  match Effect4.Program.Authoring.elaborate source with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str (name ++ ": the source does not elaborate")))
+
+/-- **A waiter takes inside the walk, and the walk stops at no free permit** (the case P1, in
+its joined form). A total of 2. A holds 2 in a protected body. B asks for 2 and C for 1: both
+wait. A's body ends, and its hook releases 2 and posts one helper. The walk's first visit
+selects B, which takes 2 inside the helper's task. B's exit resumes the root's join there too.
+The next visit reads no free permit and stops, so C is not visited. The program answers the
+counts before the release, the counts after B's exit and the marks:
+`[[2, 2, [2, 1], [0, 1]], [2, 1, [1], [1]], [22]]`. -/
+def pSemaphoreProtectedJoined : Api.Program :=
+  semaphoreProgram "pSemaphoreProtectedJoined" Test.Program.SemaphoreScenarios.p1Joined
+
+/-- **The walk passes a waiter that does not fit, and resumes a later one** (the case P2). The
+root holds 1 and 1. B asks for 2 and C for 1. The root releases 1: the release answers 1 free.
+The visit passes B, whose count does not fit, and it selects C, which takes 1. B's entry stays.
+The program answers `[[2, 2, [2, 1], [0, 1]], 1, [2, 1, [2], [0]], [31]]`. -/
+def pSemaphoreScan : Api.Program :=
+  semaphoreProgram "pSemaphoreScan" Test.Program.SemaphoreScenarios.p2
+
+/-- **A resumed caller's next request takes inside the walk** (the case P3). The root holds 2. B
+asks for 1 and then for 1 again, with no yield between. C asks for 1. The root releases 2. B
+takes 1 and takes 1 again inside the walk, and C waits. The program answers
+`[[2, 2, [1, 1], [0, 1]], [2, 1, [1], [1]], [21, 22]]`. -/
+def pSemaphoreOvertake : Api.Program :=
+  semaphoreProgram "pSemaphoreOvertake" Test.Program.SemaphoreScenarios.p3
+
+/-- **Two protected bodies run and release inside one walk** (the case P4, in its joined
+form). A holds 2, protected. B and C wait in the protected form, for 2 and for 1. B's body and
+its release run inside the walk, and then C's body runs. The root joins B and then C. Nothing
+stays taken. B's release posts a second helper, which runs after the root's exit and finds
+nobody. The program answers `[[2, 2, [2, 1], [0, 1]], [0, 0, [], []], [22, 31]]`. -/
+def pSemaphoreBodiesJoined : Api.Program :=
+  semaphoreProgram "pSemaphoreBodiesJoined" Test.Program.SemaphoreScenarios.p4Joined
+
+/-- **An interrupted waiter withdraws, raw and protected** (the case P7). A total of 1, held by
+the root. A raw waiter is interrupted, and then a protected waiter: each one's entry leaves, and
+`taken` does not change. The root's release then answers 1 free and posts no helper. The program
+answers the six readings. -/
+def pSemaphoreInterrupted : Api.Program :=
+  semaphoreProgram "pSemaphoreInterrupted" Test.Program.SemaphoreScenarios.p7
+
+/-- **The two forms that never wait, on both answers.** A protected body takes 2 of 2, runs and
+releases. The root takes 1. A second protected form asks for 2 and does not take: it answers the
+empty option, its body does not run, and nothing is released. Two takes of 1 follow: the first
+takes, and the second does not. The program answers
+`[some 7, [0, 0, [], []], none, true, false, [2, 0, [], []], [2]]`. -/
+def pSemaphoreIfAvailable : Api.Program :=
+  semaphoreProgram "pSemaphoreIfAvailable" Test.Program.SemaphoreScenarios.ifAvailable
+
+/-- **The protected permit under a masked caller** (decisions row 222). The root holds the one
+permit. A child asks for it in the protected form under `Effect.uninterruptible`, and a second
+child requests its interruption while it waits. The caller is masked, so the restore is the
+identity: the request stays enrolled. The root releases: the child takes, its body runs inside
+its caller's mask, its hook releases, and it is interrupted when that mask ends. The program
+answers `[[1, 1, [1], [0]], 11, true, [0, 0, [], []]]`. -/
+def pSemaphoreMasked : Api.Program :=
+  semaphoreProgram "pSemaphoreMasked" Test.Program.SemaphoreScenarios.maskedCaller
+
+/-- **The README's example.** The root takes the one permit. A worker asks for it in the
+protected form, and it waits. The root releases, which answers 1 free, and joins the worker: the
+walk resumes the worker, which runs its body and releases. The program answers `[1, 7]`. -/
+def pSemaphoreHandoff : Api.Program :=
+  semaphoreProgram "pSemaphoreHandoff" Test.Program.SemaphoreScenarios.handoff
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the two programs
 of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
-interrupt wakes, the two programs of the mask that restores, and the five programs of the
-Queue's first operations. Every listed program contributes one manifest entry. -/
+interrupt wakes, the two programs of the mask that restores, the five programs of the
+Queue's first operations, and the eight programs of Semaphore's first operations. Every listed
+program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -645,7 +739,13 @@ def corpus : List (String × Api.Program) :=
     ("pInterruptedWait", pInterruptedWait), ("pMaskWait", pMaskWait),
     ("pMaskedRestore", pMaskedRestore), ("pLateSeen", pLateSeen), ("pQueueWake", pQueueWake),
     ("pQueueFull", pQueueFull), ("pQueueInterrupted", pQueueInterrupted),
-    ("pQueueMasked", pQueueMasked), ("pQueueOrder", pQueueOrder)]
+    ("pQueueMasked", pQueueMasked), ("pQueueOrder", pQueueOrder),
+    ("pSemaphoreProtectedJoined", pSemaphoreProtectedJoined),
+    ("pSemaphoreScan", pSemaphoreScan), ("pSemaphoreOvertake", pSemaphoreOvertake),
+    ("pSemaphoreBodiesJoined", pSemaphoreBodiesJoined),
+    ("pSemaphoreInterrupted", pSemaphoreInterrupted),
+    ("pSemaphoreIfAvailable", pSemaphoreIfAvailable), ("pSemaphoreMasked", pSemaphoreMasked),
+    ("pSemaphoreHandoff", pSemaphoreHandoff)]
 
 /-! ## The value wire -/
 
@@ -1360,7 +1460,9 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
    "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
    "pInterruptedWait", "pMaskWait", "pMaskedRestore", "pLateSeen", "pQueueWake", "pQueueFull",
-   "pQueueInterrupted", "pQueueMasked", "pQueueOrder"]
+   "pQueueInterrupted", "pQueueMasked", "pQueueOrder", "pSemaphoreProtectedJoined",
+   "pSemaphoreScan", "pSemaphoreOvertake", "pSemaphoreBodiesJoined", "pSemaphoreInterrupted",
+   "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -1641,6 +1743,126 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard reduce (Api.run pQueueWake 1000).trace = reduce (Api.run pQueueFull 1000).trace
 #guard ([pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].map fun p =>
   reduce (Api.run p 1000).trace).eraseDups.length = 4
+-- Semaphore's first operations (decisions rows 259 to 261 and 276). Each program is the program
+-- that Semaphore's battery builds from the same scenario, so rc.112 runs what the battery runs
+-- on the Lean machine.
+#guard [(Test.Program.SemaphoreScenarios.p1Joined, pSemaphoreProtectedJoined),
+    (Test.Program.SemaphoreScenarios.p2, pSemaphoreScan),
+    (Test.Program.SemaphoreScenarios.p3, pSemaphoreOvertake),
+    (Test.Program.SemaphoreScenarios.p4Joined, pSemaphoreBodiesJoined),
+    (Test.Program.SemaphoreScenarios.p7, pSemaphoreInterrupted),
+    (Test.Program.SemaphoreScenarios.ifAvailable, pSemaphoreIfAvailable),
+    (Test.Program.SemaphoreScenarios.maskedCaller, pSemaphoreMasked),
+    (Test.Program.SemaphoreScenarios.handoff, pSemaphoreHandoff)].all fun (source, program) =>
+  ((Effect4.Api.Author.build (Test.Program.SemaphoreScenarios.mk source)).toOption.map
+    (·.program)) == some program
+-- Each source elaborates (its first node makes the semaphore's cell; a source that did not
+-- elaborate is a `fail`), types with no failure and no requirement, answers on the machine, and
+-- reads back whole.
+#guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
+    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].all
+  fun p => match p with
+    | .bind (.perform .refMake _) _ => true
+    | _ => false
+#guard [pSemaphoreProtectedJoined, pSemaphoreOvertake, pSemaphoreBodiesJoined].all fun p =>
+  decide (Api.typeOf p = some ⟨.tuple [.tuple [.nat, .nat, .list .nat, .list .nat],
+    .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never, Env.Requirement.empty⟩)
+#guard Api.typeOf pSemaphoreScan = some ⟨.tuple [.tuple [.nat, .nat, .list .nat, .list .nat],
+  .nat, .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never, Env.Requirement.empty⟩
+#guard Api.typeOf pSemaphoreIfAvailable = some ⟨.tuple [.option .nat,
+  .tuple [.nat, .nat, .list .nat, .list .nat], .option .nat, .bool, .bool,
+  .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never, Env.Requirement.empty⟩
+#guard Api.typeOf pSemaphoreMasked = some ⟨.tuple [.tuple [.nat, .nat, .list .nat, .list .nat],
+  .nat, .bool, .tuple [.nat, .nat, .list .nat, .list .nat]], .never, Env.Requirement.empty⟩
+#guard Api.typeOf pSemaphoreHandoff = some ⟨.prod .nat .nat, .never, Env.Requirement.empty⟩
+#guard (Api.typeOf pSemaphoreInterrupted).map (·.error) = some .never
+#guard (Api.run pSemaphoreProtectedJoined 1000).exit = some (.success (.list
+  [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1],
+   Test.Program.SemaphoreScenarios.count 2 [1] [1], Test.Program.SemaphoreScenarios.marks [22]]))
+#guard (Api.run pSemaphoreScan 1000).exit = some (.success (.list
+  [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1], .nat 1,
+   Test.Program.SemaphoreScenarios.count 2 [2] [0], Test.Program.SemaphoreScenarios.marks [31]]))
+#guard (Api.run pSemaphoreOvertake 1000).exit = some (.success (.list
+  [Test.Program.SemaphoreScenarios.count 2 [1, 1] [0, 1],
+   Test.Program.SemaphoreScenarios.count 2 [1] [1],
+   Test.Program.SemaphoreScenarios.marks [21, 22]]))
+#guard (Api.run pSemaphoreBodiesJoined 1000).exit = some (.success (.list
+  [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1],
+   Test.Program.SemaphoreScenarios.count 0 [] [],
+   Test.Program.SemaphoreScenarios.marks [22, 31]]))
+#guard (Api.run pSemaphoreInterrupted 1000).exit = some (.success (.list
+  [Test.Program.SemaphoreScenarios.count 1 [1] [0], Test.Program.SemaphoreScenarios.count 1 [] [],
+   Test.Program.SemaphoreScenarios.count 1 [1] [1], Test.Program.SemaphoreScenarios.count 1 [] [],
+   .nat 1, Test.Program.SemaphoreScenarios.count 0 [] []]))
+#guard (Api.run pSemaphoreIfAvailable 1000).exit = some (.success (.list
+  [.some (.nat 7), Test.Program.SemaphoreScenarios.count 0 [] [], .none, .bool true, .bool false,
+   Test.Program.SemaphoreScenarios.count 2 [] [], Test.Program.SemaphoreScenarios.marks [2]]))
+#guard (Api.run pSemaphoreMasked 1000).exit = some (.success (.list
+  [Test.Program.SemaphoreScenarios.count 1 [1] [0], .nat 11, .bool true,
+   Test.Program.SemaphoreScenarios.count 0 [] []]))
+#guard (Api.run pSemaphoreHandoff 1000).exit = some (.success (.list [.nat 1, .nat 7]))
+#guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
+    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].all
+  fun p => decide (Api.roundTrip p = .ok p)
+-- The sync entry settles six of the eight, on the fork run's exit: in each the root releases,
+-- or nobody waits.
+#guard [pSemaphoreScan, pSemaphoreOvertake, pSemaphoreInterrupted, pSemaphoreIfAvailable,
+    pSemaphoreMasked, pSemaphoreHandoff].all fun p =>
+  !isAsyncFiberDefect (Api.runSync p 1000).2 &&
+    some (Api.runSync p 1000).2 == (Api.run p 1000).exit
+-- The two joined forms end the sync entry in the `AsyncFiberError` defect. The root waits in
+-- its join, and the helper is on a child's dispatcher, which the sync entry does not flush.
+#guard [pSemaphoreProtectedJoined, pSemaphoreBodiesJoined].all fun p =>
+  isAsyncFiberDefect (Api.runSync p 1000).2
+-- The cases P1 and P4 as the batteries write them are no programs of this lane. Their sync run
+-- settles, on another exit than their fork run's: the release is in the cell, both waiters
+-- still wait, and no mark is written. The runner's exit column compares the fork run's exit
+-- with rc.112's sync exit whenever the sync run settles, so it cannot hold such a program. On
+-- its fork run, each joined form gives its case's exit.
+#guard [Test.Program.SemaphoreScenarios.p1, Test.Program.SemaphoreScenarios.p4].all fun source =>
+  let p := semaphoreProgram "a case as the batteries write it" source
+  (Api.runSync p 1000).2 == .success (.list
+    [Test.Program.SemaphoreScenarios.count 2 [2, 1] [0, 1],
+     Test.Program.SemaphoreScenarios.count 0 [2, 1] [0, 1],
+     Test.Program.SemaphoreScenarios.marks []]) &&
+  some (Api.runSync p 1000).2 != (Api.run p 1000).exit
+#guard [(Test.Program.SemaphoreScenarios.p1, pSemaphoreProtectedJoined),
+    (Test.Program.SemaphoreScenarios.p4, pSemaphoreBodiesJoined)].all fun (source, joined) =>
+  (Api.run (semaphoreProgram "a case as the batteries write it" source) 1000).exit ==
+    (Api.run joined 1000).exit
+-- The README's example. Its compared rows are the rows of the Queue's taker that waits and is
+-- woken: one fiber waits, the root posts one helper and joins. The alphabet erases what the
+-- helper does, one `Deferred.succeed` there and a walk of one visit here.
+#guard reduce (Api.run pSemaphoreHandoff 1000).trace = reduce (Api.run pQueueWake 1000).trace
+-- The protected case: A's hook posts the helper on A's dispatcher (`scheduled 1 0`), and A
+-- exits. The helper, fiber 4, resumes B. B's exit resumes the root inside the helper's task.
+-- The root reads the cell and ends, and C is interrupted at the root's end. The helper exits
+-- last, after the root.
+#guard reduce (Api.run pSemaphoreProtectedJoined 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
+   "forked 0 3", "started 3", "parked 3", "parked 0", "ran 0", "resumed 0", "started 0",
+   "resumed 1", "started 1", "scheduled 1 0", "exited 1 success", "parked 0", "ran 1",
+   "started 4", "resumed 2", "started 2", "exited 2 success", "resumed 0", "started 0",
+   "resumed 3", "started 3", "exited 3 interrupt", "exited 0 success", "exited 4 success"]
+-- The sync run of the same program stops where the root waits in its join: A has exited, and
+-- the helper's task has not run.
+#guard reduce (Api.runSync pSemaphoreProtectedJoined 1000).1.trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
+   "forked 0 3", "started 3", "parked 3", "parked 0", "ran 0", "resumed 0", "started 0",
+   "resumed 1", "started 1", "scheduled 1 0", "exited 1 success", "parked 0"]
+-- red control: the eight programs have eight answers and eight lists of compared rows. The
+-- rows of the scan and of the overtaking differ only in which waiter the helper resumes.
+#guard ([pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
+    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].map
+  fun p => (Api.run p 1000).exit).eraseDups.length = 8
+#guard ([pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
+    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].map
+  fun p => reduce (Api.run p 1000).trace).eraseDups.length = 8
+-- Each of the eight is numbered in the allocation order: no fiber is forked between a helper's
+-- post and its first run. The guard over the whole corpus above holds them there.
+#guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
+    pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].all
+  fun p => moved (Api.run p 1000).trace == [] && moved (Api.runSync p 1000).1.trace == []
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
