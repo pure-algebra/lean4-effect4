@@ -265,3 +265,42 @@ An invariant is not progress.
 
 **The stop rule.** Part A is proved in scratch. Part B's statements are not proved yet. If the
 step's proof fails at a command, that statement lands as a planned goal with its missing fact.
+
+## 11. Addendum, at the landing (2026-10-06)
+
+Part A and part B are proved in place, and the stop rule did not apply. The receipt
+(`docs/research/2026-10-06-seat-LIFT-receipt.md`) holds the commands and their results. The
+landed tree differs from this note in eight places.
+
+- **The two relations have longer names:** `MaskLater` and `MaskAged`, for `Later` and `Aged`.
+  The pending fact's helpers are `noClear`, `CmdKeepsMask` and `IterKeepsMask`.
+- **The statements over a command take one premise.** `driveStep` takes its evaluator as an
+  instance, and `Api.replay` runs the native evaluator `evaluateNative`
+  (`src/Effect4/Program/Compile.lean`), not `evaluatePrim`. So `driveStep_maskRuns`,
+  `maskRuns_stepKeeps`, `maskRuns_decisionLift` and `replayEval_maskRuns` take
+  `EvaluatorKeepsMask interp`: each evaluation keeps the machine and the fiber. `evaluatePrim`
+  meets it (`evaluatePrim_keepsMask`).
+- **There are two placed theorems.** `saved_mask_chain_runs` holds the statements of section 6
+  at the frame evaluator, as the fields of a structure. A second module,
+  `src/Effect4/Laws/Program/MaskRuns.lean`, gives the native evaluator's premise
+  (`evaluateNative_keepsMask`) and the statement at the compiled program's interpreter,
+  `compiled_mask_chain_runs`. The coordinator asked for that module after step 2.
+- **The program interface has the law with no premise:** `Api.load_maskRuns` and
+  `Api.replay_maskRuns`.
+- **Section 7's statements are over `IterKeepsMask`:** `IterKeepsMask.finished_stack` and
+  `IterKeepsMask.finished_flag`. The flag's statement asks that the finished fiber has not
+  exited. The placed structure holds both at `evaluatePrim`.
+- **One statement is new:** `MaskRuns.entry_eq`. A live fiber has one entry in each table that
+  holds the invariant, by `MaskChain.base_eq`.
+- **Section 2's last sentence is a theorem:** `MaskRuns.flag_eq`, the field `sameFlag` of the
+  placed structure. Two machines hold the invariant at tables in the prefix order. One fiber is
+  live in both with one stack. Then it has one flag.
+- **Each entry that returns a machine has its statement.** A third module,
+  `src/Effect4/Laws/Api/MaskRuns.lean`, covers the session, the runner and the run API. The
+  other two modules cover `Machine.runSyncExit`, `Program.steppedBy`, the checked replay and
+  `Api.runSync`. No entry owes a premise for the command condition. The command loop discharges
+  it, and an entry's first commands hold no `Cmd.exitDone`. The coordinator asked for these
+  statements after step 6.
+
+Section 8's sentence "each proof takes no `first`, no `try` and no `simp_all`" holds for the
+landed proofs. They take no `simp` without `only`.
