@@ -493,12 +493,18 @@ Open at this landing:
       readers and with each reader alone, and it compares the recordings byte for byte;
     - timeout's whole observation waits on `timers` in 5 scripts, where a timer's fiber has no
       call to name it. One atomic script has no host run for the same reason;
-    - **the host driver restates each control's script**, because a battery holds the script
-      inside a Boolean expression. A changed script of a battery does not reach the host
-      runs, and the lane stays green on the old script. The repair makes a control carry its
-      script as data (row 266). Seat CONTROLS has it since 2026-10-06 (branch
-      `seat/controls`;
-      [its brief](research/2026-10-05-claude-lead/briefs/seat-controls-brief.md));
+    - the host driver restated each control's script, because a battery held the script
+      inside a Boolean expression. A changed script of a battery did not reach the host
+      runs. **The repair is merged** (`4ffdf83f`, row 266;
+      [the receipt](research/2026-10-06-seat-CONTROLS-receipt.md),
+      [the brief](research/2026-10-05-claude-lead/briefs/seat-controls-brief.md)). A
+      scenario's record lists each script once, as a named run, and a control names the runs
+      that it reads. The gate plays each run once. The host driver and the engine's lane take
+      their runs from the records, so one name has one script on every lane. Five runs of the
+      engine's fixtures took the batteries' scripts: two were stale copies that the retry
+      repair had missed. The lane's red control reads the last decision that moves the view.
+      The seat has three follow-ups. The run `timeout/parked` gets a control. The gate then
+      refuses a run that no control reads. The script of `timeout/before` keeps one name;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
