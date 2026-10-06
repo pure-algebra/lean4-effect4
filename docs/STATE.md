@@ -615,8 +615,10 @@ Open at this landing:
     candidate invariant has a finite probe since 2026-10-06
     (`research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`). On each fiber's stack the
     mask frames alternate from the negation of its flag, and the flag under them is constant.
-    The probe covers 16 scenarios of the mask and of the Queue, with cuts at scheduling
-    points. No goal states the invariant yet;
+    The probe runs 16 scenarios of the mask and of the Queue, with cuts at scheduling
+    points. It compares a fiber's base only while the fiber is live, so it says nothing of
+    the flag at a fiber's exit. It is no check that the cuts cover a whole run. No goal
+    states the invariant yet;
   - a row of the runtime census for `uninterruptibleMask` is proposed and not applied. A
     permission check denied the seat's edit of the census generator, and the row waits for
     the owner;

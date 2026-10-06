@@ -32,6 +32,15 @@ cuts: at the budgets 1 and 2 the runs made no progress on this tape.
 `wrong reading` is the red control: the top frame saves the flag itself. It fails wherever a
 mask frame is on a stack, and holds only for `s6Masked`, where no mask frame is ever pushed.
 
+Two words of the report say less than they may seem to (Codex's review, 2026-10-06).
+
+* `base constant while live` compares a fiber's base over the cuts in which the fiber has not
+  exited. It leaves out a fiber once it has exited. So it says nothing of the flag at a fiber's
+  exit, and it is no check that an exit puts the flag back.
+* `last two cuts equal` compares the projection of the last bounded cut with the projection at
+  the full budget: each fiber's flag, its mask frames and whether it has exited. It is no check
+  that the run is complete, and no check that the cuts cover every state of the run.
+
 Every line is a finite check on one schedule. It proves nothing.
 -/
 
@@ -88,7 +97,8 @@ def baseConstant (states : List (List Seen)) : Bool :=
     | b :: rest => rest.all (· == b)
 
 /-- A report: states, fibers, the deepest stack of mask frames, the count of states that differ
-from the one before, whether the bound covers the run, and the three checks. -/
+from the one before, whether the last bounded cut shows what the full budget shows, and the
+three checks. -/
 def report (name : String) (src : Src NativeOp) (upTo : Nat := 160) : String :=
   let states := statesOf src upTo
   let depth := (states.flatMap fun fibers => fibers.map (·.frames.length)).foldl max 0
@@ -98,7 +108,7 @@ def report (name : String) (src : Src NativeOp) (upTo : Nat := 160) : String :=
     | last :: before :: _ => last == before
     | _ => false
   let masked := (states.flatMap id).countP fun s => !s.flag
-  s!"{name}: states {states.length}, fibers {fibers}, depth {depth}, moves {moves}, masked {masked}, covered {covered}, alternates {allOf alternates states}, base constant {baseConstant states}, wrong reading {allOf wrong states}"
+  s!"{name}: states {states.length}, fibers {fibers}, depth {depth}, moves {moves}, masked {masked}, last two cuts equal {covered}, alternates {allOf alternates states}, base constant while live {baseConstant states}, wrong reading {allOf wrong states}"
 
 open Test.Program.MaskContract in
 #eval IO.println (String.intercalate "\n"

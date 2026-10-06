@@ -586,6 +586,23 @@ with its clause and gives 8 rows. A hypothesis named `under` elaborates beside t
   it. Seat SEM's receipt names it already.
 - Main moved after `023dc609`. This branch holds none of that change.
 
+### A coordinator's note on the two removal wrappers (2026-10-06, after Codex's review)
+
+The comparison holds `Effect4.Queue.removeTaker` and `Effect4.Queue.removeOffer` by their
+types only. Each stands among the planned differences, and the tool does not read the body of
+a planned difference. So two kinds of evidence stand apart here.
+
+- **The comparison** (tested): every other moved or staying declaration has an equal type,
+  and every other proof term is equal after the renames.
+- **The two wrappers' bodies** (reading, then tested): the seat read both sources. The
+  coordinator then checked both at `b199c15f`, in a scratch file. `@Effect4.Queue.removeTaker`
+  equals `@Effect4.Modules.removeById` by `rfl`, and so does `@Effect4.Queue.removeOffer`. A
+  pass of the same type that removes nothing gives another term at one input: the red
+  control.
+
+No battery holds the two lines yet. The Queue's batteries are seat PUB's files in its slice,
+and the seat adds them there. No wrapper was found faulty.
+
 ## 5. Axiom output and plan status
 
 The axiom gate holds every declaration at `[propext, Quot.sound]` on each build above.
