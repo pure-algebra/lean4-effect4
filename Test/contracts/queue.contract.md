@@ -10,7 +10,7 @@ It authorizes no additional runtime behaviour.
 | `Test/Program/QueueModel.lean` | tested: it builds under the battery's options |
 | `Test/Program/QueueContract.lean` | tested: its guard checks hold |
 | `acceptLoop_length_le` in `Test/Program/QueueCapacity.lean` | proved, at `[propext, Quot.sound]` |
-| `positive_suspend_step_capacity` in the same file | a planned goal: stated, not proved |
+| `positive_suspend_step_capacity` in the same file | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 
 ## Authority and owned surface
 
@@ -84,13 +84,18 @@ The capacity helper itself requires neither identity freshness nor a scheduler.
 | Prerequisite | Freeze the exact model and place the goal before proving the helper |
 | Exclusions | No signal delivery, liveness, FIFO progress, typed store preservation, target execution or native Queue agreement |
 
-`Test/Program/QueueCapacity.lean` holds a placed `proof_goal` for the step proposition.
-It uses the existing `ProofGraph.Plan` status reader.
+`Test/Program/QueueCapacity.lean` holds the step proposition with its placement.
+It was a placed `proof_goal`, and the coordinator proved it on 2026-10-05.
+Its steps are the helper and one lemma for each operation of the model.
 The helper is proved there. The coordinator rewrote its proof: Codex's draft did not compile.
 The draft is kept beside Codex's packet, as `QueueCapacity.lean.candidate`.
 
-Before landing a proof, retain its full statement, `#plan_status` output and exact axiom output.
-Use the existing semantic ceiling and actual proof dependencies.
+The step's proof does not use the premise of a positive capacity.
+The statement holds at capacity zero too, and it stays as this packet froze it.
+A proposal to drop the premise waits for review.
+
+The file pins the full statement, the `#plan_status` output and the exact axiom output.
+They use the existing semantic ceiling and the actual proof dependencies.
 Do not count placement metadata as a proved dependency.
 
 ## Controls and falsifiers
@@ -108,6 +113,8 @@ The capacity proof's future acceptance includes an empty offer list and zero rem
 It also includes partial acceptance, several fully accepted offers, and a full-buffer positive control.
 A variant that appends despite zero room must fail the capacity check.
 These Lean acceptance controls are in `Test/Program/QueueCapacity.lean`, one input each.
+The step's statement has five more there: three steps that keep the bound, and two red controls.
+One red control starts above the bound. The other runs `sliding` at capacity zero.
 An independent Python mirror covers six named cases and 3,744 grid cases, and rejects the deliberate append mutation.
 It does not establish source agreement or a Lean proof.
 The mirror and the extraction validator are kept in

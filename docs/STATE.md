@@ -228,8 +228,9 @@ Landed later on 2026-10-05:
 - **The Queue's abstract contract is in the tree** (`9abf99b6`): the packet
   `Test/contracts/queue.contract.md`, the model and its small controls, and the first general
   statement. Codex prepared them, and the coordinator built them. `acceptLoop_length_le`
-  (`Test/Program/QueueCapacity.lean`) is proved. `positive_suspend_step_capacity` is a planned
-  goal.
+  (`Test/Program/QueueCapacity.lean`) is proved. `positive_suspend_step_capacity` is proved too:
+  one step of the model under `suspend` keeps the configuration and the buffer's bound. Its
+  proof does not use the positive capacity.
 - **Seventeen worktrees of finished seats are removed,** on the owner's word. Their unique
   notes and one uncommitted patch are kept under
   `research/recovered-worktrees/2026-10-05/` (on disk, not tracked).
@@ -240,9 +241,10 @@ Open at this landing:
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   The Queue's path lands in three parts:
-  1. **The pure contract and its first capacity proof.** Landed on 2026-10-05 (`9abf99b6`).
-     Open: the step's capacity goal. The registry's join waits until the Queue's laws enter
-     the law graph: the registry's roots do not load a battery. Codex keeps the proof's route
+  1. **The pure contract and its capacity proof.** Landed on 2026-10-05 (`9abf99b6`), and the
+     step's capacity statement is proved since. The registry's join waits until the Queue's
+     laws enter the law graph: the registry's roots do not load a battery. Codex keeps the
+     proof's route
      ([its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md));
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
      The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
