@@ -28,6 +28,14 @@ by the position law. An arbitrary progressed run is too broad for that consumer.
    `proofs/proposals.md` (the section "Journal cut and positions": the four statements, not
    compiled), `proofs/review.md` (priority 2: the existing helpers and the limits), and
    `recommendations.md`, section 2.
+   Codex's later support, at main `601ed7c5`, under
+   `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-1306-cuts/cuts/`:
+   `candidate.md` and `review.md`. They keep the four statements and add one structural
+   helper, `tapeFrom_position_prefix`: a prefix of the journal reaches exactly
+   `position.after`, and its tape is the first `i + 1` positions with no rest. Then
+   `tape_replays` gives the position law and the cut's replay law, with no second induction
+   over replies. They also give the consumer's exact statement, `shown_views_opened`. Keep
+   the skipped journal commands in the full-run equality. None of it is compiled.
 3. `Test/Dogfood/Scenario.lean`: `tapeFrom`, `tape_replays`, and the helpers
    `tapeFrom_frontier`, `tapeFrom_skip`, `tapeFrom_take`, `tapeFrom_stop`.
 4. `src/Effect4/Laws/Run.lean`: `Run.play_append`, `play_cons`, `step_built`, `step_budget`,

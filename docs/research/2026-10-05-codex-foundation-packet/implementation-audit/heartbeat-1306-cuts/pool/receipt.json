@@ -1,0 +1,75 @@
+{
+  "role": "bounded advisory source and retained-result review",
+  "main": "601ed7c5830d22154fdd68e0b7e062c67407b9dc",
+  "seat_open": "685d60f433586c3079e63f224dd201c7821f46f9",
+  "seat_close": "af7f6099be28021e67408245120652c056f33556",
+  "closing_fixture_bytes_match": true,
+  "design_choice": "borrowed Bool plus latest lease Nat accepted; optional representation not reopened",
+  "new_actionable_defects": [],
+  "advisory_needed": false,
+  "optional_proof_guidance": [
+    "Keep resource map noninjective; item and lease stamps own returns",
+    "Return of unmatched current lease frames whole state; use existing foldl_or_any/foldl_snoc_map, then step_updates and step_keeps_cell with distinct premises"
+  ],
+  "retained_seat_evidence": {
+    "probe3": "14 built programs; named finite positive and changed-policy observations",
+    "final_build": "exit=0; 991 jobs; 741 modules/87857 declarations; 24 planned goals/11 dependents",
+    "provenance": "Claude POOL seat, not monitor rerun"
+  },
+  "monitor_checks": {
+    "manifest_entries": 22,
+    "byte_match_against_closing_commit": 2,
+    "retained_output_consistency_assertions": 8,
+    "result": "PASS"
+  },
+  "scope_limits": [
+    "No public make/use implementation acceptance",
+    "No generic model/profile/step proof acceptance",
+    "No host/target agreement",
+    "No delivery, liveness, cleanup-completion or whole-close proof"
+  ],
+  "monitor_actions": [
+    "git/source reads",
+    "public command/result extraction",
+    "snapshot and hash verification",
+    "eight pure JSON checks of saved finite output"
+  ],
+  "forbidden_actions_performed": [],
+  "artifacts": [
+    {
+      "path": "review.md",
+      "sha256": "8e731fc5326a2d12963c6f8626fde9ea2e76085c63b3a966efcc73171709f8f7",
+      "bytes": 7756
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "d87b300abb26f4464ea8c37a285b00726fb5a354f84f0ce7da5c91132bbe231a",
+      "bytes": 7301
+    },
+    {
+      "path": "state.json",
+      "sha256": "abe840d2c08f8a91b6b12ee47f9b39610a09ba9e53e69d204c868c3e5b40dc67",
+      "bytes": 239
+    },
+    {
+      "path": "closing.json",
+      "sha256": "1e1af3e22ec96212003312e71085023fca8983e9810f064b17aa1abe4c13db0e",
+      "bytes": 166
+    },
+    {
+      "path": "integration-byte-check.json",
+      "sha256": "78998dfff84c92b6288929222852eec6d9152b22bf335b5029d557ab79d58e4d",
+      "bytes": 149
+    },
+    {
+      "path": "check-retained.py",
+      "sha256": "bb07b374d879df696b7af56f6297e1f5de33c88992c9ff789957ec1ccbb293b9",
+      "bytes": 1367
+    },
+    {
+      "path": "retained-check-results.json",
+      "sha256": "4d1e0b531dabd7d1a4ffe8028a21765dbe678a2bf082c9ab9362f4706554eaa4",
+      "bytes": 552
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "task": "PUB faces and engine integration review",
+  "finished_at_utc": "2026-10-06T13:12:25.804224+00:00",
+  "frozen_head": "41be5ef3a1a4e4eca00c4289fcd57de0d96b11ca",
+  "main_comparison": "601ed7c5",
+  "reviewed_seat_commits": [
+    "0338b004",
+    "f9f24092"
+  ],
+  "verdict": "no new actionable mismatch",
+  "advisory_sent": false,
+  "repository_writes": false,
+  "project_execution": false,
+  "source_and_log_copies_verified": 31,
+  "source_merge_identities_verified": 6,
+  "fixture_observations": {
+    "previous_runs_unchanged": [
+      "r1",
+      "r4"
+    ],
+    "added_runs": [
+      "r2",
+      "r5",
+      "masked"
+    ],
+    "fuel": 20000,
+    "lean_engine_relation": "root exit and finished status only",
+    "fast_ref_relation": "outcome, exits, fibers, trace, store"
+  },
+  "retained_acceptance": {
+    "seat_narrow_faces_jobs": 350,
+    "seat_narrow_engine_jobs": 170,
+    "engine_pass_lines_per_saved_run": 1754,
+    "engine_fail_lines_per_saved_run": 0,
+    "queue_checks_per_saved_run": 47,
+    "coordinator_build_jobs": 990,
+    "coordinator_gate_modules": 740,
+    "coordinator_gate_declarations": 87690,
+    "planned_goals": 24,
+    "goal_dependents": 11,
+    "coordinator_gate_exit_codes_all_zero": true
+  },
+  "final_pub_receipt_present": false,
+  "limitations": [
+    "No monitor Lean or runtime rerun",
+    "Finite syntax round-trips and rendered text pins do not prove target execution",
+    "Full report equality is Fast versus Ref, not Lean versus engine",
+    "One engine drive schedule per fixture, no delivery/liveness claim",
+    "Later PUB typing and final receipt remain open"
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/pub/review.md",
+      "sha256": "6c98b3452eec044b9e277395dc2e5e13e3353468f21d50ff0e2cb9ae06c3b14b"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/pub/verification.json",
+      "sha256": "7ebf4164460a7482a6c734b1bc46ec907476a1e26ffdf6f665ef042f1718cdfb"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/pub/source-and-evidence-hashes.json",
+      "sha256": "9f3269e9235d725fae449786fb25b8b376a8c09595ad4b95b72cb126bd67b6a3"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/pub/activity-addendum.md",
+      "sha256": "8e40cbd6e38583d8b43872ddd393b8b00fd05bb0fd5d1ab6cfd76ec223d6c11e"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/pub/evidence/pub-current-activity.json",
+      "sha256": "c886d9efcf44f5d32a8483752f46c7d9868252952e985df25a4dad006fbc55bd"
+    }
+  ],
+  "activity_addendum": {
+    "agent": "a84e4ef772d0afeb1",
+    "session": "acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+    "latest_retained_call": "2026-10-06T13:13:24.252Z",
+    "status": "Recent same-agent activity confirmed; typing remains outside frozen acceptance",
+    "os_process_identity_verified": false
+  }
+}

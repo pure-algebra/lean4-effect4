@@ -1,0 +1,59 @@
+{
+  "task": "Read-only compatibility recovery and partial mask census audit",
+  "frozen_head": "601ed7c5830d22154fdd68e0b7e062c67407b9dc",
+  "prior_head": "3a2616f1b01a8fcfb22caf993a425f9306f4cc8a",
+  "reviewed_commits": [
+    "6b2b5cdaec07be36bcdbbe5b5ec4b42f319e8f08",
+    "25b1627234afdfab781bab6dbc72be9e94593884"
+  ],
+  "finished_at_utc": "2026-10-06T13:12:17.458087+00:00",
+  "verdict": "No new actionable issue; source and retained acceptance match the stated scope",
+  "repo_writes": false,
+  "project_execution": false,
+  "ui_actions": false,
+  "implementation_permission_inferred": false,
+  "requirements_unchanged": 13,
+  "open_parts_added": 0,
+  "open_parts_removed": 0,
+  "proof_statements_changed": 0,
+  "verified_file_hashes": 29,
+  "verified_result_line_hashes": 38,
+  "verified_transcript_line_hashes": 29,
+  "result_line_hash_recipe": "SHA256 of read_text().splitlines()[one_based_line - 1].encode(); no newline",
+  "limits": [
+    "No new build or gate execution by monitor",
+    "Census remains partial; no compiled/native mask agreement or arbitrary-body run restoration theorem",
+    "MASKPOP dispatch is Claude allocation only, with no Codex implementation permission",
+    "Later seat work and engine comparison excluded"
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/review.md",
+      "sha256": "c2199d289bd24003215320c3726f43f6accfb314c164444d270d9e35444de7e6"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/manifest.json",
+      "sha256": "c146d1977bf74b533143f92b94d8acbd0256a2124ff60290de731024294c637c"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/tool-evidence.json",
+      "sha256": "1d690a1e8b5bad23447a9034debc0410aaa86ddc18093fa46d6409fd40306cab"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/result-lines.json",
+      "sha256": "a632fe604fbdbd6db1c94371f95dbb6a47eb338ae0baff0ca2a63b8d89e5d995"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/requirements.json",
+      "sha256": "d89b018c404392b2e7e107e6910d2b43441fba58ac0748a0d6036b1b5d7eeda4"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/results.json",
+      "sha256": "19027b16f2dde405c230e5911a50cd3f464888d4f3fc166b3090971fafdba513"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/integration/inspect.py",
+      "sha256": "adbb1b215bd71b330b365fa8c792eaa9db4f85a339b51dc7c0ad7da407538a0e"
+    }
+  ]
+}

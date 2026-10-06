@@ -1,0 +1,27 @@
+{
+  "heartbeat": "2026-10-06T13:06:39.344Z",
+  "frozen_main": "601ed7c5830d22154fdd68e0b7e062c67407b9dc",
+  "reviewed_merges": [
+    "41be5ef3",
+    "6b2b5cda",
+    "25b16272"
+  ],
+  "pool_reviewed_head": "af7f6099",
+  "result": "No new actionable implementation defect; new CUTS proof reuse guidance delivered",
+  "parent_comparisons": 502,
+  "support_comparisons": 23,
+  "retained_pool_controls": 8,
+  "monitor_repo_edits": false,
+  "monitor_project_execution": false,
+  "implementation_authority_lifted": false,
+  "advisory_message": 38,
+  "advisory_status": "queued, unread at delivery, empty composer verified",
+  "monitor_status": "ACTIVE",
+  "handoff": false,
+  "limits": [
+    "retained producer results, no monitor build rerun",
+    "CUTS sketches uncompiled",
+    "local mask proof not whole-run restoration",
+    "later staged PUB acceptance excluded"
+  ]
+}

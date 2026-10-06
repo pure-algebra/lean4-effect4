@@ -1,0 +1,32 @@
+[
+  {
+    "source": "git:601ed7c5830d22154fdd68e0b7e062c67407b9dc:AGENTS.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/cuts/source/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+  },
+  {
+    "source": "git:601ed7c5830d22154fdd68e0b7e062c67407b9dc:docs/research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/cuts/source/docs/research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md",
+    "sha256": "41e137892bf7d12ea4d5510f531e49067bc36a1a974489fff2af07366d2ecd0f"
+  },
+  {
+    "source": "git:601ed7c5830d22154fdd68e0b7e062c67407b9dc:Test/Dogfood/Scenario.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/cuts/source/Test/Dogfood/Scenario.lean",
+    "sha256": "0364b3f70154eebbbf51b57677901983e83ee2767bbfe78f1a1ef17b5deacc5d"
+  },
+  {
+    "source": "git:601ed7c5830d22154fdd68e0b7e062c67407b9dc:Test/Dogfood/Scenario/Tape.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/cuts/source/Test/Dogfood/Scenario/Tape.lean",
+    "sha256": "cff3e3c7faf606d76b2914f1a9b4744331afcb262f08044ddca32ae32cc04728"
+  },
+  {
+    "source": "git:601ed7c5830d22154fdd68e0b7e062c67407b9dc:src/Effect4/Laws/Run.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/cuts/source/src/Effect4/Laws/Run.lean",
+    "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25"
+  },
+  {
+    "source": "git:601ed7c5830d22154fdd68e0b7e062c67407b9dc:docs/research/2026-10-05-codex-foundation-packet/implementation-audit/roadmap-audit/proofs/proposals.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T130639Z/cuts/source/docs/research/2026-10-05-codex-foundation-packet/implementation-audit/roadmap-audit/proofs/proposals.md",
+    "sha256": "e2930ca3a9ad0fa60e4e37aabdbdd7dba04ed2f6e6e45bf6d1dc3ad9e6f5c702"
+  }
+]

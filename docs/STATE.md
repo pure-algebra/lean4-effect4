@@ -278,13 +278,13 @@ either module exists yet):
   abandoned lookup's cleanup starts a new lookup (row 271);
 - Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
-In work since 2026-10-06, two seats at once (row 237):
+In work since 2026-10-06, three seats at once since the owner's word of that day (row 237):
 
 - **Seat PUB has the Queue's first public operations** (branch `seat/pub`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
   become library programs that capture no name of a caller. Each runs on the Lean machine, on
-  the generated engine and on rc.112. The slice states no law of a whole run. **Five steps
-  are merged** (`f046975b`, `c957bfab`, `5701a5dc` and `41be5ef3`):
+  the generated engine and on rc.112. The slice states no law of a whole run. **Six steps
+  are merged** (`f046975b`, `c957bfab`, `5701a5dc`, `41be5ef3` and `c46e3ca1`):
   - the shared pieces of a module that waits (`src/Effect4/Modules/Waiting.lean`), and the
     five operations (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`,
     `poll`, `size`), each with its scope law. The wrapper has two forms over one `Waiter`: a
@@ -308,14 +308,25 @@ In work since 2026-10-06, two seats at once (row 237):
     on the generated engine on both carriers (`ocaml/engine/test/queue/`): R1, R4, a taker
     that waits, an interrupted taker and a masked caller.
 
-  The typing of each operation at every scope, the documents and the receipt are the seat's
-  next steps.
+  - each operation is typed at every scope, for every message type and every kept term of a
+    caller (`bounded_types`, `size_types`, `poll_types`, `offer_types`, `take_types`; R4;
+    merged `c46e3ca1`). A string literal is not covered. The contract's seven connectors,
+    the README's example and the architecture rows came with it.
+
+  The receipt and the last acceptance runs are the seat's next step.
 - **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice.
+  that waits and the finalizers' runs are a later slice. On its branch, not merged: every
+  case of the card gives the profile's answer on the Lean machine, one schedule each
+  (`af7f6099`), and the model's profile is closed under its five transitions, with no
+  planned goal (`7f76f0b9`).
+- **Seat MASKPOP has the mask's pop discipline** (branch `seat/maskpop`), the third seat, on
+  the owner's word. Codex's predicate and statements elaborate as written. On its branch,
+  not merged: the placed theorem `saved_mask_pop_discipline` is proved in place of its
+  planned goal (`12d7703d`). Its controls, documents and receipt are next.
 
 Merged on 2026-10-06, after the seats above began:
 
@@ -353,8 +364,9 @@ Candidates with no seat, each with its place:
   exploration holds it today, with two mutations red;
 - the journal's cut and position connectors (Codex's audit of the roadmap, priority 2).
   [Its brief](research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md) is written, one
-  page that points at Codex's statements. It waits for a seat. The scenario driver's general
-  laws in the law graph are a later step;
+  page that points at Codex's statements and at its later helper
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-1306-cuts/`).
+  It waits for a seat. The scenario driver's general laws in the law graph are a later step;
 - Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
   The case P9 on the generated engine goes with it;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
