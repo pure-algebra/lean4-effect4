@@ -381,8 +381,12 @@ In work since the suspension of the handover:
   judgment states each rule through the checker's own function, so a conversion changes no
   statement of it, and one inversion lemma becomes an inequality. tsgo 7 accepts `never` at
   every printed eliminator. It refuses a proper union at a generic call unless the type
-  arguments are written at the join. So a conversion at a proper union has a target side,
-  and its interim form is open for the owner (row 285).
+  arguments are written at the join. So a conversion at a proper union has a target side.
+  The owner ruled its interim form on 2026-10-06 (row 292): a guard keeps today's refusal
+  at a proper union until the printer writes the type arguments. The traced check comes
+  forward for that. The owner also approved two more statements of the combinator, its
+  universal property and its adjoint form, and the reading of one more paper for the rule
+  of a repeated type parameter.
 - **Seat LATTICE is merged** ([its receipt](research/2026-10-06-seat-LATTICE-receipt.md);
   row 286). `src/Effect4/Laws/Slice/Lattice.lean` holds the generic theory of type slices. A
   type slice is the list of its kept sites. A view is a monotone map from the type slices of

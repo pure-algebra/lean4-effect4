@@ -25,6 +25,7 @@ The neighbouring collection is [program graphs](../program-graphs/README.md). It
 | [Abstracting Gradual Typing](garcia-abstracting-gradual-typing-popl16.pdf) | Garcia, Clark and Tanter, POPL 2016; the first author's copy | A recipe that derives the gap's rules from an existing static type system. |
 | [The Derivative of a Regular Type is its Type of One-Hole Contexts](mcbride-derivative-regular-type.pdf) | McBride, extended abstract; the author's copy | One-hole contexts computed from a signature. |
 | [Bidirectional Typing](dunfield-bidirectional-typing-1908.05839v2.pdf) | Dunfield and Krishnaswami, ACM Computing Surveys; arXiv v2 | The survey of synthesis and analysis that the slicing paper takes as its setting. |
+| [Polymorphism, Subtyping, and Type Inference in MLsub](dolan-mycroft-mlsub-popl17.pdf) | Dolan and Mycroft, POPL 2017; the accepted version in the University of Cambridge repository | Type inference with subtyping by polarity. It is the input for the rule of a type parameter that a template uses at two places (decisions row 292). The owner approved it on 2026-10-06, after the first seven. |
 
 ## What was checked
 
