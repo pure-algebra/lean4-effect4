@@ -1,0 +1,23 @@
+{
+  "time": "2026-10-06T11:47:19.218393+00:00",
+  "repositories": [
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4",
+      "head": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+      "branch": "refactor/phase1-phase3",
+      "status": ""
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4-mask",
+      "head": "6d83dd31a7d2674294f3e4429ea250a98a79e22d",
+      "branch": "seat/pub",
+      "status": "M Test/Program/QueueOps.lean\n?? Test/Program/QueueTraces.lean"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4-qtypes",
+      "head": "52a1a35a6963387b67cac05b2e6a4fc44e614c84",
+      "branch": "seat/refs",
+      "status": "M src/Effect4/Laws/Program/ReferenceExpansion.lean\n M src/Effect4/Laws/Program/ReferenceTyping.lean"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "source_commit": "818a73ce6d3f65a328829b1280440e06c70f4afc",
+  "role": "source audit plus scratch implementation candidate",
+  "finding": "Plan node explicit placement is ignored by graph model",
+  "status": "scratch candidate tested; not applied or landed",
+  "source_files_verified": 29,
+  "artifact_provenance": "artifact-provenance.json",
+  "node_count": 204,
+  "newly_recovered_placements": 27,
+  "affected_by_status": {
+    "goal": 10,
+    "modulo": 4,
+    "proved": 13
+  },
+  "total_explicit_nonclaim_placements_checked": 60,
+  "candidate_allowlist": [
+    "tools/Tools/ProofGraphView.js",
+    "scripts/check-proofgraph-input.mjs"
+  ],
+  "patch": "placement.patch",
+  "commands": "commands.json",
+  "original_red": "outputs/baseline.stdout",
+  "candidate_green": "outputs/candidate.stdout",
+  "mutant_red": "outputs/placement-omission-mutant.stderr",
+  "mutant_required_diagnostic": "the model lost the plan's concept translation-simulation",
+  "evidence_limits": [
+    "Retained generated JSON; no current-head extraction rerun.",
+    "No browser rendering test.",
+    "No Lean compilation, compiler, build, generator, install or host execution.",
+    "No repository edit, branch change, dispatch or advisory submission by this agent.",
+    "No change to statements, proof status, nearest edges, axiom policy, requirements or open parts."
+  ],
+  "review_sha256": "b04952cd5a2dfea37fbb448240f37dc9f0969aa6363a6f82a27719ef0888a3db",
+  "patch_sha256": "3da6f69dc236258abcb253a87fd303f9c5404023625c50cfb8650d8b0346e26a"
+}

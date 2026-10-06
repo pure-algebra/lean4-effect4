@@ -1,0 +1,71 @@
+[
+  {
+    "label": "node-version",
+    "argv": [
+      "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+      "--version"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph",
+    "exit_code": 0,
+    "expected": 0
+  },
+  {
+    "label": "baseline",
+    "argv": [
+      "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/probe.mjs",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/sources",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/inputs/semantics.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph",
+    "exit_code": 1,
+    "expected": 1
+  },
+  {
+    "label": "candidate",
+    "argv": [
+      "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/probe.mjs",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/candidate",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/inputs/semantics.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph",
+    "exit_code": 0,
+    "expected": 0
+  },
+  {
+    "label": "candidate-checker",
+    "argv": [
+      "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+      "scripts/check-proofgraph-input.mjs",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/inputs/semantics.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/candidate",
+    "exit_code": 0,
+    "expected": 0
+  },
+  {
+    "label": "placement-omission-mutant",
+    "argv": [
+      "/Users/pooks/.local/share/mise/installs/node/22.23.2/bin/node",
+      "scripts/check-proofgraph-input.mjs",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/inputs/semantics.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/mutant",
+    "exit_code": 1,
+    "expected": 1,
+    "required_diagnostic": "model lost the plan's concept"
+  },
+  {
+    "label": "patch-check",
+    "argv": [
+      "git",
+      "apply",
+      "--check",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/placement.patch"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-deeper-proof-support/graph/sources",
+    "exit_code": 0,
+    "expected": 0
+  }
+]

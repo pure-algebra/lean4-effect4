@@ -1,0 +1,712 @@
+{
+  "passed": 175,
+  "checks": [
+    {
+      "check": "pub copy 6d83dd31:AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Store.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Store.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Checking.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Checking.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Laws/Modules/Reading.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Laws/Modules/Reading.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:src/Effect4/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:src/Effect4/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:Test/Program/QueueOps.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:Test/Program/QueueOps.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:Test/Program/QueueSteps.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:Test/Program/QueueSteps.lean",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:docs/research/2026-10-06-seat-PUB-design.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:docs/research/2026-10-06-seat-PUB-design.md",
+      "pass": true
+    },
+    {
+      "check": "pub copy 6d83dd31:docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit 6d83dd31:docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+      "pass": true
+    },
+    {
+      "check": "pub copy 2ee2aa91:docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit 2ee2aa91:docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "pass": true
+    },
+    {
+      "check": "pub evidence source",
+      "pass": true
+    },
+    {
+      "check": "pub evidence copy",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/src/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original src/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/src/Effect4/Laws/Program/PathOrder.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original src/Effect4/Laws/Program/PathOrder.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/src/Effect4/Laws/Program/PathFold.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original src/Effect4/Laws/Program/PathFold.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/src/Effect4/Program/Refs.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original src/Effect4/Program/Refs.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/525c78b3/Test/fixtures/proof-style/baseline.tsv",
+      "pass": true
+    },
+    {
+      "check": "refs original Test/fixtures/proof-style/baseline.tsv",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/8a5352dc/Test/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original Test/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/8a5352dc/Test/All.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original Test/All.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/8aaf5460/Test/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original Test/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/ca41bd6a/AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "refs original AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/ca41bd6a/docs/research/2026-10-05-claude-lead/briefs/seat-refs-brief.md",
+      "pass": true
+    },
+    {
+      "check": "refs original docs/research/2026-10-05-claude-lead/briefs/seat-refs-brief.md",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/ca41bd6a/docs/research/2026-10-06-seat-REFS-design.md",
+      "pass": true
+    },
+    {
+      "check": "refs original docs/research/2026-10-06-seat-REFS-design.md",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/ca41bd6a/tools/Tools/SemanticsRegistry.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original tools/Tools/SemanticsRegistry.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/ca41bd6a/tools/Conform/Effect4/cases.json",
+      "pass": true
+    },
+    {
+      "check": "refs original tools/Conform/Effect4/cases.json",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/ca41bd6a/tools/Conform/Effect4/cases-policy.json",
+      "pass": true
+    },
+    {
+      "check": "refs original tools/Conform/Effect4/cases-policy.json",
+      "pass": true
+    },
+    {
+      "check": "refs copy source/active-seat-receipt.md",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/build-step3-exact.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/build-step3-exact.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/build-step4.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/build-step4.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/build-step4b.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/build-step4b.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/census.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/census.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/census.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/census.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/battery-red-all.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/battery-red-all.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/battery-red-all.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/battery-red-all.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/check-cases.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/check-cases.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/check-docs.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/check-docs.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/f1/Plain.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/Plain.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/f1/Plain.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/Plain.log",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/f1/WithAesop.lean",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/WithAesop.lean",
+      "pass": true
+    },
+    {
+      "check": "refs copy evidence/f1/WithAesop.log",
+      "pass": true
+    },
+    {
+      "check": "refs original /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/WithAesop.log",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 349",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 351",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 353",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 354",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 362",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 364",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 367",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 368",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 555",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 556",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 558",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 559",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 561",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 562",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 563",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 564",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 568",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 569",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 571",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 572",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 574",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 575",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 580",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 581",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 586",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 587",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 589",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 590",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 592",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 593",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 595",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 596",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 598",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 599",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 600",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 601",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 603",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 604",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 612",
+      "pass": true
+    },
+    {
+      "check": "refs transcript line 613",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp ddf2981a-0970-4ed5-8752-e64cbcd28d50",
+      "pass": true
+    },
+    {
+      "check": "pub content ddf2981a-0970-4ed5-8752-e64cbcd28d50",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 86b2d3f9-f704-44ac-8224-ef46f2cf448a",
+      "pass": true
+    },
+    {
+      "check": "pub content 86b2d3f9-f704-44ac-8224-ef46f2cf448a",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 098c6e39-0b8f-452c-8006-eaabf2aac17f",
+      "pass": true
+    },
+    {
+      "check": "pub content 098c6e39-0b8f-452c-8006-eaabf2aac17f",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp fa0de1c6-4508-440d-9b98-64fc93c1aa6c",
+      "pass": true
+    },
+    {
+      "check": "pub content fa0de1c6-4508-440d-9b98-64fc93c1aa6c",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp bfa5980f-c2c0-4b02-bee4-b43e94186c5f",
+      "pass": true
+    },
+    {
+      "check": "pub content bfa5980f-c2c0-4b02-bee4-b43e94186c5f",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp dac63401-7707-4bda-a9a3-ee560b4f71c8",
+      "pass": true
+    },
+    {
+      "check": "pub content dac63401-7707-4bda-a9a3-ee560b4f71c8",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp e871c55b-884c-404c-a458-bb2c2e57455c",
+      "pass": true
+    },
+    {
+      "check": "pub content e871c55b-884c-404c-a458-bb2c2e57455c",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 15a41c0d-252e-4925-8437-4d04b8947fb6",
+      "pass": true
+    },
+    {
+      "check": "pub content 15a41c0d-252e-4925-8437-4d04b8947fb6",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 2d9237f2-a704-4a26-8c02-ffa0d866a9c9",
+      "pass": true
+    },
+    {
+      "check": "pub content 2d9237f2-a704-4a26-8c02-ffa0d866a9c9",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 145ecb48-819a-4f43-a8b9-42d59e4b72f8",
+      "pass": true
+    },
+    {
+      "check": "pub content 145ecb48-819a-4f43-a8b9-42d59e4b72f8",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp ed93c21c-02c1-4051-8c66-a467662e7ed3",
+      "pass": true
+    },
+    {
+      "check": "pub content ed93c21c-02c1-4051-8c66-a467662e7ed3",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 8e2ed064-f71f-45ee-aa84-8ee95cb0823c",
+      "pass": true
+    },
+    {
+      "check": "pub content 8e2ed064-f71f-45ee-aa84-8ee95cb0823c",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 288f5816-e770-4611-9ddd-bad18501a51b",
+      "pass": true
+    },
+    {
+      "check": "pub content 288f5816-e770-4611-9ddd-bad18501a51b",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp b265c4ca-8352-4bf8-add3-1b5c5e8152da",
+      "pass": true
+    },
+    {
+      "check": "pub content b265c4ca-8352-4bf8-add3-1b5c5e8152da",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 7ae66a6f-fcb6-4b5c-a733-69a9bccd8322",
+      "pass": true
+    },
+    {
+      "check": "pub content 7ae66a6f-fcb6-4b5c-a733-69a9bccd8322",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 2c30992b-d308-489d-b804-da6ea370da0c",
+      "pass": true
+    },
+    {
+      "check": "pub content 2c30992b-d308-489d-b804-da6ea370da0c",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp b9f95bcd-9d9a-42ca-9226-c9c9661e98f0",
+      "pass": true
+    },
+    {
+      "check": "pub content b9f95bcd-9d9a-42ca-9226-c9c9661e98f0",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 28764ab7-471d-4c21-a409-5a47c87d2e6d",
+      "pass": true
+    },
+    {
+      "check": "pub content 28764ab7-471d-4c21-a409-5a47c87d2e6d",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 789435c0-f49f-4dc0-8059-f9b6ac301bde",
+      "pass": true
+    },
+    {
+      "check": "pub content 789435c0-f49f-4dc0-8059-f9b6ac301bde",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 5ee9f9a3-dd65-4de3-9142-82a21edc4753",
+      "pass": true
+    },
+    {
+      "check": "pub content 5ee9f9a3-dd65-4de3-9142-82a21edc4753",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp 235d2da0-4dc6-4748-9dee-8c0e52da28f6",
+      "pass": true
+    },
+    {
+      "check": "pub content 235d2da0-4dc6-4748-9dee-8c0e52da28f6",
+      "pass": true
+    },
+    {
+      "check": "pub timestamp d37f8ffd-7e6d-4826-b75b-72d08b8cbd94",
+      "pass": true
+    },
+    {
+      "check": "pub content d37f8ffd-7e6d-4826-b75b-72d08b8cbd94",
+      "pass": true
+    }
+  ],
+  "excluded": [
+    {
+      "excluded": "active draft has no closing acceptance",
+      "path": "/Users/pooks/Dev/lean4-effect4-qtypes/docs/research/2026-10-06-seat-REFS-receipt.md"
+    }
+  ],
+  "execution": "read/hash/git show and JSON only; no project command"
+}

@@ -6,6 +6,13 @@ Ordering facts for the existing layer-target insertion sort. The runtime sorting
 definitions are unchanged. Strict sorting needs distinct inputs; permutation and
 duplicate preservation do not. Reversing the descending hoist order yields the
 ascending order used to restore the captured layers.
+
+Two facts of the strict order serve the reference expansion
+(`Laws/Program/ReferenceExpansion.lean`, `expanded_refs_nil_of_wf`). A path that precedes
+another, and is no prefix of it, precedes it under every extension (`lt_append_of_lt`). The
+rank of a path in a finite list counts the list's paths before it (`rank`), and it is strictly
+monotone at a member (`rank_lt_rank`). A descent along `lt` over all paths does not end:
+`[1]`, `[0, 1]`, `[0, 0, 1]` and so on descend. Over the members of one finite list it ends.
 -/
 
 set_option autoImplicit false
@@ -124,6 +131,26 @@ theorem lt_total {a b : List Nat} (hne : a ≠ b) : lt a b = true ∨ lt b a = t
   · exact Or.inl h
   · exact False.elim (hne h)
   · exact Or.inr h
+
+/-- A path that precedes another, and is no prefix of it, precedes it under every extension: the
+two paths differ at an index of the shorter one. A step of `expanded_refs_nil_of_wf`
+(`Laws/Program/ReferenceExpansion.lean`). Its consumer is `target_refs_prior` there, at a
+reference's target and at the sites inside the target. By `fun_induction`, so the cases are the
+arms of `lt`. -/
+theorem lt_append_of_lt {a b : List Nat} (hab : lt a b = true) (hpre : properPrefix a b = false)
+    (c : List Nat) : lt (a ++ c) b = true := by
+  fun_induction lt a b with
+  | case1 => exact Bool.noConfusion hab
+  | case2 => exact Bool.noConfusion hpre
+  | case3 => exact Bool.noConfusion hab
+  | case4 a as b bs hlt => simp only [List.cons_append, lt, hlt, if_true]
+  | case5 => exact Bool.noConfusion hab
+  | case6 a as b bs hlt hgt ih =>
+    have heq : a = b := by omega
+    subst heq
+    simp only [properPrefix, decide_true, Bool.true_and] at hpre
+    simp only [List.cons_append, lt, hlt, if_false]
+    exact ih hab hpre
 
 /-- Insertion retains every element and its multiplicity, for any comparator. -/
 theorem insertBy_perm (before : List Nat → List Nat → Bool) (x : List Nat)
@@ -249,5 +276,51 @@ theorem reverse_sortBy_flip_lt_pairwise {xs : List (List Nat)} (hx : xs.Nodup) :
   exact sortBy_pairwise (fun a b => lt b a)
     (fun _ _ _ hab hbc => lt_trans hbc hab)
     (fun a b hne => (lt_total hne).symm) hx
+
+/-! ## The rank of a path in a finite list
+
+Each fact is a step of `expanded_refs_nil_of_wf` (`Laws/Program/ReferenceExpansion.lean`). The
+consumer is the budget of the expansion there (`RefsWithin`), over the sites of a program's
+original references. -/
+
+/-- Counting is strictly monotone in its predicate at a witness: one member passes the larger
+predicate and fails the smaller one. A step of `rank_lt_length` and of `rank_lt_rank`. -/
+private theorem countP_lt_countP {α : Type} {p q : α → Bool} {xs : List α} {a : α}
+    (hpq : ∀ x ∈ xs, p x = true → q x = true) (ha : a ∈ xs) (hp : p a = false)
+    (hq : q a = true) : xs.countP p < xs.countP q := by
+  induction xs with
+  | nil => cases ha
+  | cons x xs ih =>
+    have hmono : xs.countP p ≤ xs.countP q :=
+      List.countP_mono_left fun y hy => hpq y (List.mem_cons_of_mem x hy)
+    have hhead := hpq x List.mem_cons_self
+    rw [List.countP_cons, List.countP_cons]
+    rcases List.mem_cons.mp ha with rfl | hmem
+    · simp only [hp, hq, Bool.false_eq_true, if_false, if_true]
+      omega
+    · have hrest := ih (fun y hy => hpq y (List.mem_cons_of_mem x hy)) hmem
+      cases hpx : p x with
+      | false =>
+        simp only [Bool.false_eq_true, if_false]
+        omega
+      | true =>
+        simp only [hhead hpx, if_true]
+        omega
+
+/-- The rank of a path in a finite list of paths: how many of them precede it. -/
+def rank (xs : List (List Nat)) (a : List Nat) : Nat := xs.countP (fun x => lt x a)
+
+/-- A member's rank is below the list's length: a path does not precede itself. -/
+theorem rank_lt_length {xs : List (List Nat)} {a : List Nat} (ha : a ∈ xs) :
+    rank xs a < xs.length := by
+  have h := countP_lt_countP (p := fun x => lt x a) (q := fun _ => true) (fun _ _ _ => rfl) ha
+    (lt_irrefl a) rfl
+  rwa [List.countP_true] at h
+
+/-- The rank is strictly monotone at a member: a member that precedes a path has the smaller
+rank. -/
+theorem rank_lt_rank {xs : List (List Nat)} {a b : List Nat} (ha : a ∈ xs) (hab : lt a b = true) :
+    rank xs a < rank xs b :=
+  countP_lt_countP (fun _ _ h => lt_trans h hab) ha (lt_irrefl a) hab
 
 end Effect4.Program.Path

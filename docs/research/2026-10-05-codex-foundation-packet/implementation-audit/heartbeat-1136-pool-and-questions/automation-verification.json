@@ -1,0 +1,7 @@
+{
+  "id": "support-effect4-overnight-proof-work",
+  "status": "ACTIVE",
+  "rrule": "FREQ=MINUTELY;INTERVAL=30",
+  "carryforward_present": true,
+  "prompt_sha256": "724bcfc653030ef82484af0da1b5e238ecdb9af1a4717e11be74dc3c1a3a33a2"
+}

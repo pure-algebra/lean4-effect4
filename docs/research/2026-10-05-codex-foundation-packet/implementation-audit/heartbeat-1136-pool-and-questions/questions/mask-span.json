@@ -1,0 +1,14 @@
+{
+  "anchor": "export const uninterruptibleMask = <A, E, R>(",
+  "anchor_occurrences": 1,
+  "offsets": [
+    0,
+    12
+  ],
+  "line_span": [
+    4340,
+    4352
+  ],
+  "sha256": "276d40c762a093ac1d675da7e1a2b6146abc697e589bef4bebf10348c19b3691",
+  "source_sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0"
+}

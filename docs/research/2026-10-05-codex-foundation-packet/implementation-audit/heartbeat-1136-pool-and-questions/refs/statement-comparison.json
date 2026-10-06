@@ -1,0 +1,67 @@
+{
+  "before_revision": "00a37ffc",
+  "after_revision": "525c78b3",
+  "comparisons": [
+    {
+      "path": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "name": "typeOfProgram_expandRefs",
+      "before": "theorem typeOfProgram_expandRefs {Op : Type} (sig : Signature Op) (p : Eff Op)\n    (hwf : p.layerRefsWF = true)\n    (hempty : (p.expandRefs.refSites []).isEmpty = true) :\n    typeOfProgram sig p.expandRefs = typeOfProgram sig p",
+      "after": "theorem typeOfProgram_expandRefs {Op : Type} (sig : Signature Op) (p : Eff Op)\n    (hwf : p.layerRefsWF = true) :\n    typeOfProgram sig p.expandRefs = typeOfProgram sig p",
+      "only_deleted_premise": "(hempty : (p.expandRefs.refSites []).isEmpty = true)",
+      "expected_statement_change_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "name": "checkTypedProgram_of_hasTy",
+      "before": "theorem checkTypedProgram_of_hasTy {ty : EffTy}\n    (references : program.layerRefsWF = true)\n    (expanded : program.expandRefs.refSites [] = [])\n    (typed : Conform.Effect4.Typing.HasTy sig [] program.expandRefs ty) :\n    \u2203 checked, checkTypedProgram sig program = some checked \u2227 checked.ty = ty",
+      "after": "theorem checkTypedProgram_of_hasTy {ty : EffTy}\n    (references : program.layerRefsWF = true)\n    (typed : Conform.Effect4.Typing.HasTy sig [] program.expandRefs ty) :\n    \u2203 checked, checkTypedProgram sig program = some checked \u2227 checked.ty = ty",
+      "only_deleted_premise": "(expanded : program.expandRefs.refSites [] = [])",
+      "expected_statement_change_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "name": "expanded_refs_nil_of_wf",
+      "before": "theorem expanded_refs_nil_of_wf {Op : Type} (root : Eff Op)\n    (valid : root.layerRefsWF = true) : root.expandRefs.refSites [] = []",
+      "after": "theorem expanded_refs_nil_of_wf {Op : Type} (root : Eff Op)\n    (valid : root.layerRefsWF = true) : root.expandRefs.refSites [] = []",
+      "only_deleted_premise": null,
+      "expected_statement_change_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "name": "lt_append_of_lt",
+      "before": "theorem lt_append_of_lt {a b : List Nat} (hab : lt a b = true) (hpre : properPrefix a b = false)\n    (c : List Nat) : lt (a ++ c) b = true",
+      "after": "theorem lt_append_of_lt {a b : List Nat} (hab : lt a b = true) (hpre : properPrefix a b = false)\n    (c : List Nat) : lt (a ++ c) b = true",
+      "only_deleted_premise": null,
+      "expected_statement_change_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "name": "countP_lt_countP",
+      "before": "private theorem countP_lt_countP {\u03b1 : Type} {p q : \u03b1 \u2192 Bool} {xs : List \u03b1} {a : \u03b1}\n    (hpq : \u2200 x \u2208 xs, p x = true \u2192 q x = true) (ha : a \u2208 xs) (hp : p a = false)\n    (hq : q a = true) : xs.countP p < xs.countP q",
+      "after": "private theorem countP_lt_countP {\u03b1 : Type} {p q : \u03b1 \u2192 Bool} {xs : List \u03b1} {a : \u03b1}\n    (hpq : \u2200 x \u2208 xs, p x = true \u2192 q x = true) (ha : a \u2208 xs) (hp : p a = false)\n    (hq : q a = true) : xs.countP p < xs.countP q",
+      "only_deleted_premise": null,
+      "expected_statement_change_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "name": "rank_lt_length",
+      "before": "theorem rank_lt_length {xs : List (List Nat)} {a : List Nat} (ha : a \u2208 xs) :\n    rank xs a < xs.length",
+      "after": "theorem rank_lt_length {xs : List (List Nat)} {a : List Nat} (ha : a \u2208 xs) :\n    rank xs a < xs.length",
+      "only_deleted_premise": null,
+      "expected_statement_change_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "name": "rank_lt_rank",
+      "before": "theorem rank_lt_rank {xs : List (List Nat)} {a b : List Nat} (ha : a \u2208 xs) (hab : lt a b = true) :\n    rank xs a < rank xs b",
+      "after": "theorem rank_lt_rank {xs : List (List Nat)} {a b : List Nat} (ha : a \u2208 xs) (hab : lt a b = true) :\n    rank xs a < rank xs b",
+      "only_deleted_premise": null,
+      "expected_statement_change_matches": true
+    }
+  ],
+  "controls": {
+    "changed_assumption_refused": true,
+    "changed_conclusion_refused": true
+  },
+  "method": "Starts at declaration keyword, excludes body assignment; every binder and complete conclusion retained."
+}

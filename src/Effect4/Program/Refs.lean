@@ -20,7 +20,8 @@ layer of the same program that is not itself a reference, and the target precede
 reference in program order (lexicographically on paths), which makes the references
 acyclic without a cycle walk. Typing resolves references by expansion (`expandRefs`): each
 reference is replaced by the term at its target, round after round, and a well-formed
-program is reference-free after at most as many rounds as it has reference sites; the
+program is reference-free after at most as many rounds as it has reference sites
+(`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`); the
 compile does not expand — it redirects (`Compile.lean` `resolveLayer`), which is what gives
 two references one memo key.
 
@@ -185,7 +186,9 @@ def LayerTerms.layerPaths {Op : Type} (p : List Nat) (ls : LayerTerms Op) : List
   foldMapAt_layers [] (· ++ ·) p ls (f_layer := fun _ q => [q])
 
 /-- The program with every reference expanded to its target's term, `refSites + 1` rounds:
-each round resolves one hop, and a well-formed program's hops are bounded by its sites. -/
+each round resolves one hop, and a well-formed program's hops are bounded by its sites. The
+bound is a theorem: the expansion of a well-formed program has no reference site
+(`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`). -/
 def Eff.expandRefs {Op : Type} (root : Eff Op) : Eff Op :=
   let orig := Node.eff root
   (List.range ((root.refSites []).length + 1)).foldl (fun acc _ => Eff.expandRound orig acc) root

@@ -1,0 +1,63 @@
+/-!
+UNCOMPILED proof-support sketch. No declaration below has been checked in this review.
+Read review.md for the five-part placement and the consumers before using this file.
+The active REFS seat owns its rank and expansion proof. These names are illustrative.
+-/
+import Effect4.Laws.Program.Size
+import Effect4.Laws.Program.PathFold
+
+set_option autoImplicit false
+namespace Effect4.Program.RefSupportSketch
+
+/-- A reusable view induction principle, using the existing generated child relation. -/
+theorem family_induction {Op : Type}
+    (P : (fam : EffFam) → EffSelfCarrier Op fam → Prop)
+    (step : ∀ fam e,
+      (∀ fam' c, ArgF.child fam' c ∈ (view fam e).2 → P fam' c) → P fam e)
+    (fam : EffFam) (e : EffSelfCarrier Op fam) : P fam e := by
+  have bounded : ∀ k fam (e : EffSelfCarrier Op fam),
+      cataFam sizeAlg fam e ≤ k → P fam e := by
+    intro k
+    induction k with
+    | zero =>
+        intro fam e small
+        have positive := size_pos fam e
+        omega
+    | succ k ih =>
+        intro fam e small
+        apply step
+        intro fam' c member
+        apply ih fam' c
+        have smaller := size_child_lt fam e fam' c member
+        omega
+  exact bounded (cataFam sizeAlg fam e) fam e (Nat.le_refl _)
+
+/-- This repeats the active seat's rank expression only to make the proposal readable. -/
+def siteRank {Op : Type} (root : Eff Op) (source : List Nat) : Nat :=
+  ((root.refSites []).map Prod.fst).countP (fun path => Path.lt path source)
+
+/-- The output path may move. The witness remains an original reference occurrence. -/
+def RankBound {Op : Type} (root : Eff Op) (k : Nat) (e : Eff Op) : Prop :=
+  ∀ current target, (current, target) ∈ e.refSites [] →
+    ∃ source, (source, target) ∈ root.refSites [] ∧ siteRank root source < k
+
+/-- Proposed statement only, not a theorem or planned goal. -/
+def RankStepStatement : Prop :=
+  ∀ {Op : Type} (root e : Eff Op) (k : Nat),
+    root.layerRefsWF = true → RankBound root (k + 1) e →
+    RankBound root k (Eff.expandRound (.eff root) e)
+
+/-- Proposed statement only. The list elements are unused, as in the implementation. -/
+def RankFoldStatement : Prop :=
+  ∀ {Op : Type} (root e : Eff Op) (k : Nat) (steps : List Nat),
+    root.layerRefsWF = true → RankBound root (k + steps.length) e →
+    RankBound root k
+      (steps.foldl (fun acc _ => Eff.expandRound (.eff root) acc) e)
+
+/-- Proposed bounded conclusion; it implies the public implementation's bound. -/
+def ExactBoundStatement : Prop :=
+  ∀ {Op : Type} (root : Eff Op) (n : Nat),
+    root.layerRefsWF = true → (root.refSites []).length ≤ n →
+    ((List.range n).foldl (fun acc _ => Eff.expandRound (.eff root) acc) root).refSites [] = []
+
+end Effect4.Program.RefSupportSketch

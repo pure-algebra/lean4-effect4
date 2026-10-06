@@ -1,0 +1,75 @@
+{
+  "reviewed_revisions": {
+    "00a37ffc": "00a37ffc89f3660892142ba52ebd4ae127eca489",
+    "525c78b3": "525c78b30e6900be5555715c9e9d09af78ba4423",
+    "8a5352dc": "8a5352dceb1e220b98b0d4d30f76f9018c6c9586",
+    "8aaf5460": "8aaf546000fa28d21776f841be0d2d810566efb0",
+    "ca41bd6a": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  "main_context_from_parent": "2ee2aa91; no REFS merge claimed",
+  "mode": "read-only sources and retained results; scratch outputs only",
+  "disposition": "no new semantic defect; scoped integration recommendations",
+  "source_manifest": "source-hashes.json",
+  "source_manifest_sha256": "da5be9e7e06fa4f8223acc3399110b7c68a8fc6ca33b0597d8c3345c58e8ce83",
+  "tool_evidence": "tool-evidence.json",
+  "tool_evidence_sha256": "26a4242e0758b95d85b0a7e965b12a973d58575e06fc74b3d7cc2a845652a02a",
+  "transcript_hash_recipe": "sha256(read_text().splitlines()[one_based_line - 1].encode()); no newline",
+  "statement_comparison": "statement-comparison.json",
+  "statement_comparison_sha256": "904b3830a84119fb3edc2ffec42e0f99b3d71abd1a89651297e4d80c45a17cbc",
+  "comparison_script_sha256": "707c3a98405d14f8809e893b165cba929f94f00ba24692f6380ab6156511832a",
+  "acceptance": {
+    "consumer_build": {
+      "result_line": 556,
+      "jobs": 983,
+      "exit": 0
+    },
+    "battery_build": {
+      "result_line": 562,
+      "jobs": 984,
+      "exit": 0
+    },
+    "joint_status_build": {
+      "result_line": 599,
+      "jobs": 984,
+      "exit": 0
+    },
+    "axioms": {
+      "result_line": 590,
+      "queries": 21,
+      "ceiling": [
+        "propext",
+        "Quot.sound"
+      ]
+    },
+    "plan": {
+      "result_line": 590,
+      "proved_statements": 4,
+      "next_goals": 0
+    },
+    "mutated_battery": {
+      "result_line": 596,
+      "changed_checks": 19,
+      "errors": 19,
+      "exit": 1
+    },
+    "import_control": {
+      "result_line": 587,
+      "plain_exit": 0,
+      "with_aesop_exit": 1,
+      "source_difference_verified": "exact prefix import Aesop newline"
+    },
+    "cases": {
+      "result_line": 581,
+      "pass": 231,
+      "refused": 0,
+      "scope": "current configured runtime-root policy population; not all new law/test splits"
+    }
+  },
+  "review_sha256": "5a8278d3b629b9a7b305f5076de4a010b882be8a64685f750caece5374263aa3",
+  "exclusions": [
+    "no newly executed proof or project test",
+    "no main integration acceptance",
+    "no receipt final-commit claim",
+    "no runtime/sharing/lowering equivalence claim"
+  ]
+}

@@ -162,7 +162,8 @@ def registry : Registry where
       defaultModules := [
         `Effect4.Laws.Program.Folds.Ty,
         `Effect4.Laws.Machine.Folds.Val,
-        `Effect4.Laws.Machine.Folds.Stores
+        `Effect4.Laws.Machine.Folds.Stores,
+        `Effect4.Laws.Program.ReferenceExpansion
       ] },
     { id := "context-requirements"
       title := "Context Requirements: Graded coeffects, requirement rows, and layer discharge"
@@ -562,6 +563,9 @@ def registry : Registry where
     { id := "operation-data-scoped", concept := "initial-algebras-folds", role := .decidability
       title := "The scope fold decides a perform node: scoped exactly when its operation's own data (the alphabet's ScopedOp) and its request are"
       pointer := .witness `Effect4.Program.Eff.perform_scoped_iff },
+    { id := "reference-expansion-complete", concept := "initial-algebras-folds", role := .substitution
+      title := "A program with well-formed layer references expands to a program with no reference site, at the bound of expandRefs"
+      pointer := .witness `Effect4.Program.expanded_refs_nil_of_wf },
 
     -- 8. context-requirements
     { id := "satisfies-empty", concept := "context-requirements", role := .compatibility
@@ -908,6 +912,7 @@ def registry : Registry where
         "stability over the allowed internal decisions, with a named progress observation (not stated)",
         "divergence by compatible prefixes (DB-03; not stated)",
         "driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)",
+        "embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, trace 7); no bound is claimed",
         "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean)",
         "posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)",
         "posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)"] },

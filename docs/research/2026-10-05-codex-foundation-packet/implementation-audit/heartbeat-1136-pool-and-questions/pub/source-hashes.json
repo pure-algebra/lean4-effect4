@@ -1,0 +1,107 @@
+[
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/AGENTS.md",
+    "git": "6d83dd31:AGENTS.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Queue/Ops.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Queue/Ops.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Queue/Ops.lean",
+    "sha256": "e1fb862dbb2df1ed8b38c31551ec17acba0f05fe1f944e36c0964b18a021a58c",
+    "bytes": 37409
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Waiting.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Waiting.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Waiting.lean",
+    "sha256": "830fc852d55430aa259a55693a1eeb31966045348bb60b9acc2da68c69b715d0",
+    "bytes": 14804
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Store.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Store.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Store.lean",
+    "sha256": "8cc1842ea6e1b53383ebc44f425f658bcd3ee638ea0bc87afbb0a0bf9c2cb547",
+    "bytes": 5348
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Checking.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Checking.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Checking.lean",
+    "sha256": "6435969db62e742200637067bcefb66d244e9c5636c9d03247e27b782c045d6b",
+    "bytes": 31036
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "sha256": "6b4ed73c940482dc1e2d0c1b3f88b32a4bcc37b288cad8f1011a8082d21847e9",
+    "bytes": 47444
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Queue/Typing.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Queue/Typing.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Queue/Typing.lean",
+    "sha256": "678eedff2908b6b76729cac1401d9b46ec6fac466051f98a6680ab939239ede0",
+    "bytes": 39813
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Reading.lean",
+    "git": "6d83dd31:src/Effect4/Laws/Modules/Reading.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Reading.lean",
+    "sha256": "ea2503c1da3cb8b91e06f8da4635ddff1f656c121aee2bf7e5cad92c96b1ff7f",
+    "bytes": 37492
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Modules/Queue/Ops.lean",
+    "git": "6d83dd31:src/Effect4/Modules/Queue/Ops.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Modules/Queue/Ops.lean",
+    "sha256": "ead7d4dca2f54778b0035eda23b629f9f0392885e937b7686e7888a19a0d3e03",
+    "bytes": 6103
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Modules/Waiting.lean",
+    "git": "6d83dd31:src/Effect4/Modules/Waiting.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Modules/Waiting.lean",
+    "sha256": "1705d1b8c102e559b36f5291e4e399621da2d9f5037272fd18ce2720512222d1",
+    "bytes": 7865
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Program/QueueOps.lean",
+    "git": "6d83dd31:Test/Program/QueueOps.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/Test/Program/QueueOps.lean",
+    "sha256": "b682b93aaa2f7842f3638a1fc0d83eb77919d3d45ac1ef3c107b193a65a2d636",
+    "bytes": 32844
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Program/QueueSteps.lean",
+    "git": "6d83dd31:Test/Program/QueueSteps.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/Test/Program/QueueSteps.lean",
+    "sha256": "6c6c61fc4f6884c93a891d34dfef58270b0cfcbfcbc4a8486ab2d93f3b4ecd86",
+    "bytes": 17309
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-06-seat-PUB-design.md",
+    "git": "6d83dd31:docs/research/2026-10-06-seat-PUB-design.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/docs/research/2026-10-06-seat-PUB-design.md",
+    "sha256": "95dd8bda692c3e6241df9029c8ff4f5cdfd51dd677315e89211937fd092ecf39",
+    "bytes": 8614
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+    "git": "6d83dd31:docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+    "sha256": "1585c79da480b74bc5ec8572f168599dd4ae154aed21a86c14d778422fdd7e26",
+    "bytes": 17691
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+    "git": "2ee2aa91:docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+    "sha256": "c218cc17bc98c065aac7fb30c34b658e7200dbb2ec7fe0234c731ce1e4df5af7",
+    "bytes": 18326
+  }
+]

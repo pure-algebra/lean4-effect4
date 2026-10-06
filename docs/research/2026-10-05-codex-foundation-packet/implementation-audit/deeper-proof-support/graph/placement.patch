@@ -1,0 +1,118 @@
+--- a/tools/Tools/ProofGraphView.js
++++ b/tools/Tools/ProofGraphView.js
+@@ -36,6 +36,9 @@
+   if (!isArr(plan.requirements)) problems.push('plan.requirements is not a list');
+   if (!isArr(plan.nodes)) problems.push('plan.nodes is not a list');
+   if (problems.length) return problems;
++  const conceptNames = new Set((isArr(report.concepts) ? report.concepts : [])
++    .filter((c) => c && isStr(c.id)).map((c) => c.id));
++  const requirementIds = new Set(plan.requirements.filter((r) => r && isStr(r.id)).map((r) => r.id));
+   const names = new Set();
+   for (const n of plan.nodes) {
+     if (!n || !isStr(n.name)) { problems.push('a plan node has no name'); continue; }
+@@ -69,6 +72,19 @@
+     if (typeof n.statement !== 'string') problems.push(`${n.name}'s statement is missing`);
+     if (typeof n.module !== 'string') problems.push(`${n.name}'s module is missing`);
+     list(`${n.name}'s axioms`, n.axioms);
++    // The plan retains explicit placement even for goals and modules outside the population.
++    // Validate it before the model uses it as a fallback for a node with no named claim.
++    const placed = n.placement;
++    if (placed !== null) {
++      if (!placed || typeof placed !== 'object' || isArr(placed)) {
++        problems.push(`${n.name}'s placement is missing or is not an object or null`);
++      } else {
++        if (!isStr(placed.concept) || !conceptNames.has(placed.concept))
++          problems.push(`${n.name}'s placement names unknown concept ${placed.concept}`);
++        if (placed.requirement !== null && (!isStr(placed.requirement) || !requirementIds.has(placed.requirement)))
++          problems.push(`${n.name}'s placement names unknown requirement ${placed.requirement}`);
++      }
++    }
+     const brought = n.broughtIn;
+     if (!brought || typeof brought !== 'object') problems.push(`${n.name}'s dependency summary is missing`);
+     else {
+@@ -107,6 +123,7 @@
+ const CW = 214, CH = 30, REQW = 250, GAPX = 14, GAPY = 92, FRAME = REQW + 140, HUB = 6, LANEHEAD = 34;
+ 
+ // ---------------------------------------------------------------- the model
++// pg-model:begin
+ const conceptIds = (report.concepts || []).map((c) => c.id);
+ const conceptTitle = Object.fromEntries((report.concepts || []).map((c) => [c.id, c.title]));
+ // ten hues spaced around the wheel in the concepts' document order, muted for paper and ink
+@@ -140,7 +157,7 @@
+     area: areaOf(n.module || ''), statement: n.statement || '', axioms: n.axioms || [], restsOn: n.restsOn || [],
+     out: ((n.broughtIn || {}).nearest || []), lemmas: (n.broughtIn || {}).lemmas || 0,
+     definitions: (n.broughtIn || {}).definitions || 0, claims,
+-    concept: (claims[0] && claims[0].concept) || placement[n.name] || null,
++    concept: (claims[0] && claims[0].concept) || (n.placement && n.placement.concept) || placement[n.name] || null,
+     role: claims[0] ? claims[0].role : null });
+ }
+ const parentsOf = new Map([...nodes.keys()].map((k) => [k, []]));
+@@ -155,6 +172,8 @@
+ const theorems = [...nodes.values()].filter((n) => n.kind !== 'requirement');
+ const statusOf = (n) => (n.kind === 'requirement' ? (n.status === 'proved' ? 'proved' : 'req') : n.status);
+ const statusWord = (s) => (s === 'goal' ? 'planned goal' : s === 'modulo' ? 'modulo its goals' : s);
++
++// pg-model:end
+ 
+ // ---------------------------------------------------------------- the controls
+ const bar = root.querySelector('.pg-bar');
+
+--- a/scripts/check-proofgraph-input.mjs
++++ b/scripts/check-proofgraph-input.mjs
+@@ -94,3 +94,56 @@
+   if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
+ }
+ console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${fields.length} absent fields refused, and the same fields accepted when empty; ${shapes.length} references in the wrong shape refused`);
++
++
++// The model must retain a plan node's explicit concept when no named claim or population
++// entry supplies it. Goals and tagged theorems outside the concept-named modules use this path.
++const modelBegin = source.indexOf('// pg-model:begin');
++const modelEnd = source.indexOf('// pg-model:end');
++if (modelBegin < 0 || modelEnd < modelBegin) fail('the view has no pg-model block');
++const model = new Function('report', 'areaRows', 'short',
++  `const plan = report.plan;\n${source.slice(modelBegin, modelEnd)}\nreturn { nodes, reqs };`);
++const makeModel = (r) => model(r, [], (n) => n.split('.').pop());
++const claimFor = (r, name) => (r.claims || []).find((c) => {
++  const s = c.status || {};
++  const w = s.witness || s.goal || (s.counterexample && s.counterexample.witness);
++  return w && w.name === name;
++});
++const explicit = report.plan.nodes.filter((n) => n.placement && !claimFor(report, n.name));
++if (!explicit.length) fail('the report has no explicit non-claim placement to check');
++const drawn = makeModel(report);
++for (const n of explicit) if (drawn.nodes.get(n.name).concept !== n.placement.concept)
++  fail(`${n.name}: the model lost the plan's concept ${n.placement.concept}`);
++const sample = explicit.find((n) => n.kind === 'goal') || explicit[0];
++const cleanSample = () => {
++  const r = copy();
++  r.claims = r.claims.filter((c) => c !== claimFor(r, sample.name));
++  r.placement.declarations = r.placement.declarations.filter((n) => n.name !== sample.name);
++  return r;
++};
++const atSample = (r) => r.plan.nodes.find((n) => n.name === sample.name);
++const concept = (r) => makeModel(r).nodes.get(sample.name).concept;
++const tagOnly = cleanSample();
++if (concept(tagOnly) !== sample.placement.concept) fail('the explicit placement alone was lost');
++const inheritedOnly = cleanSample();
++atSample(inheritedOnly).placement = null;
++inheritedOnly.placement.declarations.push({ name: sample.name, concept: sample.placement.concept });
++if (concept(inheritedOnly) !== sample.placement.concept) fail('the population fallback was lost');
++const unplaced = cleanSample();
++atSample(unplaced).placement = null;
++if (concept(unplaced) !== null) fail('a node with no placement acquired a concept');
++const claimed = cleanSample();
++const otherConcept = report.concepts.find((c) => c.id !== sample.placement.concept).id;
++claimed.claims.unshift({ concept: otherConcept, status: { witness: { name: sample.name } } });
++if (concept(claimed) !== otherConcept) fail('the existing named-claim precedence changed');
++const placementCases = [
++  ['missing placement', (r) => { delete atSample(r).placement; }, 'placement is missing'],
++  ['wrong placement shape', (r) => { atSample(r).placement = []; }, 'placement is missing'],
++  ['unknown placement concept', (r) => { atSample(r).placement.concept = 'Unknown.concept'; }, 'Unknown.concept'],
++  ['unknown placement requirement', (r) => { atSample(r).placement.requirement = 'Unknown.requirement'; }, 'Unknown.requirement'],
++];
++for (const [label, mutate, expected] of placementCases) {
++  const broken = copy(); mutate(broken);
++  if (!validatePlan(broken).some((p) => p.includes(expected))) fail(`${label}: expected ${expected}`);
++}
++console.log(`PASS check-proofgraph-placement: ${explicit.length} explicit non-claim placements retained; 4 precedence/fallback controls; ${placementCases.length} malformed placements refused`);

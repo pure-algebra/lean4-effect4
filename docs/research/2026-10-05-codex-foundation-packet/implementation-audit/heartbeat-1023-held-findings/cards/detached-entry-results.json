@@ -1,0 +1,198 @@
+{
+  "evidence": "finite design model; not Lean or Effect execution",
+  "cases": [
+    {
+      "detach": "none",
+      "readers": 1,
+      "expected_interrupts": [
+        true
+      ],
+      "current_only": [
+        true
+      ],
+      "retained_entry": [
+        true
+      ]
+    },
+    {
+      "detach": "none",
+      "readers": 2,
+      "expected_interrupts": [
+        false,
+        true
+      ],
+      "current_only": [
+        false,
+        true
+      ],
+      "retained_entry": [
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "none",
+      "readers": 3,
+      "expected_interrupts": [
+        false,
+        false,
+        true
+      ],
+      "current_only": [
+        false,
+        false,
+        true
+      ],
+      "retained_entry": [
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "evict",
+      "readers": 1,
+      "expected_interrupts": [
+        true
+      ],
+      "current_only": [
+        null
+      ],
+      "retained_entry": [
+        true
+      ]
+    },
+    {
+      "detach": "evict",
+      "readers": 2,
+      "expected_interrupts": [
+        false,
+        true
+      ],
+      "current_only": [
+        null,
+        null
+      ],
+      "retained_entry": [
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "evict",
+      "readers": 3,
+      "expected_interrupts": [
+        false,
+        false,
+        true
+      ],
+      "current_only": [
+        null,
+        null,
+        null
+      ],
+      "retained_entry": [
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "invalidate",
+      "readers": 1,
+      "expected_interrupts": [
+        true
+      ],
+      "current_only": [
+        null
+      ],
+      "retained_entry": [
+        true
+      ]
+    },
+    {
+      "detach": "invalidate",
+      "readers": 2,
+      "expected_interrupts": [
+        false,
+        true
+      ],
+      "current_only": [
+        null,
+        null
+      ],
+      "retained_entry": [
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "invalidate",
+      "readers": 3,
+      "expected_interrupts": [
+        false,
+        false,
+        true
+      ],
+      "current_only": [
+        null,
+        null,
+        null
+      ],
+      "retained_entry": [
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "replace",
+      "readers": 1,
+      "expected_interrupts": [
+        true
+      ],
+      "current_only": [
+        null
+      ],
+      "retained_entry": [
+        true
+      ]
+    },
+    {
+      "detach": "replace",
+      "readers": 2,
+      "expected_interrupts": [
+        false,
+        true
+      ],
+      "current_only": [
+        null,
+        null
+      ],
+      "retained_entry": [
+        false,
+        true
+      ]
+    },
+    {
+      "detach": "replace",
+      "readers": 3,
+      "expected_interrupts": [
+        false,
+        false,
+        true
+      ],
+      "current_only": [
+        null,
+        null,
+        null
+      ],
+      "retained_entry": [
+        false,
+        false,
+        true
+      ]
+    }
+  ],
+  "completed_lookup_positive": true
+}

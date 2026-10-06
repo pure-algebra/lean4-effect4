@@ -284,17 +284,36 @@ In work since 2026-10-06, two seats at once (row 237):
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
   become library programs that capture no name of a caller. Each atomic attempt is to be
   proved the model's step, at the operation's own scope. Each runs on the Lean machine, on
-  the generated engine and on rc.112. The slice states no law of a whole run.
+  the generated engine and on rc.112. The slice states no law of a whole run. **Its first
+  part is merged** (`f046975b`). It holds the shared pieces of a module that waits
+  (`src/Effect4/Modules/Waiting.lean`). It holds the five operations
+  (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`, `poll`, `size`),
+  and each one's scope law. The wrapper has two forms over one `Waiter`: a wake invites
+  another attempt, or the wake carries the decided answer. Every binder is minted, and the
+  batteries keep every answer. The typing at every scope, the attempt laws, the acceptance
+  traces and the truth programs are the seat's next steps.
 - **Seat REFS has the independent foundation proof** of the owner's roadmap, as Codex's audit
   corrected it (branch `seat/refs`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-refs-brief.md)). A program whose
   layer references are well formed expands to a program with no reference, at the bound of
-  `Eff.expandRefs`. Two theorems then lose a premise.
+  `Eff.expandRefs`. Two theorems then lose a premise. The seat reports the top theorem
+  proved on its branch (`00a37ffc`), both consumers without their premise (`525c78b3`) and a
+  battery of nine real programs (`8a5352dc`). Its receipt is committed, and its last checks
+  run. Nothing of it is merged yet.
 
 Candidates with no seat, each with its place:
 
 - the mask's invariant of runs, an open part of R11. Its finite probe is
-  `research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`;
+  `research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`. **Its first slice is placed
+  and has no owner yet.** It is the proposed helper claim `saved-mask-pop-discipline`, a
+  local law of the frame machine through a pop of the stack. Codex wrote its statements,
+  which are not compiled. The filing note gives its branch, its two files and its anchors
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/deeper-proof-support/coordinator-filing-note.md`).
+  The coordinator allocated it to Codex first. Codex answers that it edits and builds nothing
+  until the owner says so to Codex directly. A seat of the coordinator takes the slice when
+  one is free, unless the owner lifts Codex's limits first.
+  [Its brief](research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md) is written and
+  not dispatched. Its lift to runs is a later slice;
 - the Queue model's run invariant on the first profile: each operation keeps `quiet` and
   `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
   `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
@@ -315,6 +334,45 @@ Three repairs of 2026-10-06, outside any seat:
 - the slow lane's fixture names `Term.fold` (`3f4cba07`). The census battery had not built
   since seat FOLD's append, and no sweep had run. The rest of the slow lane is not built;
 - the dictionary gains "scenario" and "named run" (`c33d1b7d`).
+
+Two relays of Codex came on 2026-10-06, after the owner asked it for deeper proof support and
+for a watch on the proof graph. Both packets are filed with a coordinator's note, under
+`research/2026-10-05-codex-foundation-packet/implementation-audit/`
+(`heartbeat-1023-held-findings/` and `deeper-proof-support/`).
+
+- Cache's card is corrected. An entry that left the map while its lookup was pending keeps
+  an owner for its count: the detached records of the cell. The probe's new case CP9 gives
+  one answer on both builds (`8b471a8a`). No ruling changed;
+- the keyed lane's checked result has two aggregates: no entry waits, and the host itself
+  measures every entry. The second is false for all four scenarios (`34db7582`);
+- three evidence labels are narrowed. The minted builders promise a variable's reading
+  (`1b2679f6`). The mask probe and seat MOVE's receipt say what each check holds
+  (`d61522d3`);
+- the proof graph shows a node's own placement: Codex's patch, applied unchanged
+  (`27f6e5d6`). 27 placed nodes had no concept in the drawing before.
+
+A third relay came later on 2026-10-06, at main `2ee2aa91` (`heartbeat-1136-pool-and-questions/`
+under the same folder, with a coordinator's note).
+
+- **Two actions wait for the owner's own word.** Codex recommends on each, and its relay says
+  that a recommendation is no approval. The coordinator applied neither:
+  - the census row `interrupt.uninterruptible-mask`. Codex recommends the coverage `partial`.
+    The row's comment then keeps two missing connections. No law relates a compiled mask to
+    the native one. No law of runs gives the restoration after a nested body;
+  - the install that seat CONTROLS's `make` made by mistake, kept untouched in that seat's
+    scratch folder (95 MB). Codex recommends deleting that copy alone. The incident's record,
+    the package's identity and the runs' logs stay;
+- **Pool's brief is corrected before any dispatch.** It asked for an invariant that is
+  false: no waiter while an item is idle and the pool is open. A return makes its item idle
+  at once, and its helper selects later. The host's output shows two waiters at that point on
+  both builds. The brief now asks for the rule of the step. Lease or enrol adds a waiter only
+  when the pool is open and no item is idle. The case PP5 is no public schedule of the first
+  profile, because `make` acquires every item first (row 267). It stays as a control whose
+  state and count are premises, beside a public case. The card has both corrections. No
+  ruling changed;
+- Codex's reviews of the two running seats name no blocker. One label is to keep at seat
+  PUB's merge. The facts about names hold for every caller environment. The comparison with
+  the actual operation trees is a finite battery.
 
 Landed later on 2026-10-05:
 
@@ -621,7 +679,7 @@ Open at this landing:
     states the invariant yet;
   - a row of the runtime census for `uninterruptibleMask` is proposed and not applied. A
     permission check denied the seat's edit of the census generator, and the row waits for
-    the owner;
+    the owner. Codex recommends the coverage `partial` (the third relay of 2026-10-06);
   - no law relates the compiled form to a release's own mask;
   - the truth lane's row `resumed k` means a parked fiber that runs again, whatever woke it.
     Lean's reduction wrote it for a token's resume alone. The repair moved no corpus row;

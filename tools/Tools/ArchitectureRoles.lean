@@ -97,6 +97,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Program/Authoring", .laws, 3, "Laws/Program/Authoring", "the authoring surface's laws; the mask's builders keep the scope judgment (`Mask.lean`)", true, true⟩,
   ⟨"src/Effect4/Laws/Program/Typed", .laws, 3, "Laws/Program/Typed", "the typed-state invariant: the vocabulary, the source table, the skeleton, the frames; the mask that restores: its image, its body and its boundaries (`Mask.lean`)", true, true⟩,
   ⟨"src/Effect4/Laws/Program/Folds", .laws, 3, "Laws/Program/Folds", "fold connectors for the denotations", true, true⟩,
+  ⟨"src/Effect4/Laws/Program/ReferenceExpansion.lean", .laws, 3, "Laws/Program/ReferenceExpansion", "the reference expansion leaves no reference: one law of the generated folds at the seven sorts, the budget of the rounds, and `expanded_refs_nil_of_wf` at the bound of `Eff.expandRefs`", true, true⟩,
   ⟨"src/Effect4/Laws/Schema", .laws, 4, "Laws/Schema", "the Schema boundary's laws", false, true⟩,
   ⟨"src/Effect4/Laws/Codegen", .laws, 4, "Laws/Codegen", "printer and reader laws over the template table; module admission and checked production; the mask's two rows and its printed form (`Mask.lean`)", false, true⟩,
   ⟨"src/Effect4/Laws/Api", .laws, 5, "Laws/Api", "the runner, host session, supervision, frontier and fuel laws", false, true⟩,

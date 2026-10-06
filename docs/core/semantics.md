@@ -803,6 +803,16 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   program (`ScopedOp.mapTerm`, `src/Effect4/Program/ScopedOp.lean`).
   The checker's weakening law holds at every signature that is natural in that term
   (`check_weaken` and `Signature.WeakenNatural`, `src/Effect4/Program/Typing.lean`).
+- **Reference expansion leaves no reference (`reference-expansion-complete`)**: a program
+  whose layer references are well formed (`Eff.layerRefsWF`) expands to a program with no
+  reference site. The bound is that of `Eff.expandRefs`: one more round than the program has
+  reference sites (`expanded_refs_nil_of_wf`
+  (`src/Effect4/Laws/Program/ReferenceExpansion.lean`)). The one premise is the formation of
+  the references. Scope, type formation and typing are not conclusions. So the second test
+  of the whole-program checker follows from its first (`typeOfProgram_eq_if_refsWF`,
+  `src/Effect4/Laws/Program/ReferenceTyping.lean`). The property is about the expansion that
+  typing reads. The compile does not expand: it redirects a reference to its target, and a
+  run shares the layer by its path.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

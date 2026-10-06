@@ -81,6 +81,7 @@ import Test.Program.H2PartOne
 import Test.Program.TypedDenotation
 import Test.Program.LayerDenotation
 import Test.Program.LayerRefs
+import Test.Program.ReferenceExpansion
 import Test.Program.TyTables
 import Test.Program.TyWave
 import Test.Program.GuardFoldLift

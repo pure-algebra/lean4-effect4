@@ -1,0 +1,135 @@
+[
+  {
+    "path": "AGENTS.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254,
+    "working_matches": true
+  },
+  {
+    "path": "docs/STATE.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "b93e84b5080b327e340f95616072a63e1d681d11d81b509c054befa2710c5ec0",
+    "bytes": 125490,
+    "working_matches": true
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "3f35e4e079fe1cef47e2e5f427ed826d2a65cfed01b637481be73c0d3f016802",
+    "bytes": 357805,
+    "working_matches": true
+  },
+  {
+    "path": "docs/RUNTIME-COVERAGE.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "6d62216b39bf8bf677340c54a590d913f2b9b21a68fe1a7ac018dd8629115e9b",
+    "bytes": 8597,
+    "working_matches": true
+  },
+  {
+    "path": "docs/research/2026-10-05-seat-MASK-receipt.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "5d9208178798ee117800b6713dac1add832ff716f989d25c9f8b8fbf377b0ce1",
+    "bytes": 48229,
+    "working_matches": true
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "c218cc17bc98c065aac7fb30c34b658e7200dbb2ec7fe0234c731ce1e4df5af7",
+    "bytes": 18326,
+    "working_matches": true
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-cards/pool.md",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "1f9a69b47ae9576a385cb79ad2a738cb00c51ca5476b4408e8e16327317c37f7",
+    "bytes": 17373,
+    "working_matches": true
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-lifecycle.ts",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "44498aa66e5fe3bda3ac596dbdb70328e3811ec47a9f06d39cbfd74df36d9fe7",
+    "bytes": 10284,
+    "working_matches": true
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-lifecycle.rc112.out",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "6eca56d0672134ee92457ef562ce05903a1db9a5d275c83b349f702e15416eae",
+    "bytes": 2520,
+    "working_matches": true
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-lifecycle.v401.out",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "99626ebd009703c926d021a10f735f8b70669589e299e96a049cd3ff969662fc",
+    "bytes": 2505,
+    "working_matches": true
+  },
+  {
+    "path": "scripts/generate-effect-runtime-census.sh",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "9045a4d7272a189b1fc63d4e322be79365aa58db5be7436e403d473b30a3ae7c",
+    "bytes": 51112,
+    "working_matches": true
+  },
+  {
+    "path": "scripts/check-effect-runtime-census.sh",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "1055304058799c35cb249260e0b6b233a6273ec76176191a3ed7018907ee0666",
+    "bytes": 5927,
+    "working_matches": true
+  },
+  {
+    "path": "generated/effect-runtime-census.tsv",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "f9c648b4b329793b42e4f9991307787829d6523483717821b89b19c5b9256317",
+    "bytes": 39990,
+    "working_matches": true
+  },
+  {
+    "path": "Test/Audit/RuntimeCoverage.lean",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "9200945f80ac887ff21f8ef2cc3be7cdb613a0fc6d274eb91f8e8d16b6c286c6",
+    "bytes": 66511,
+    "working_matches": true
+  },
+  {
+    "path": "src/Effect4/Machine/Frames.lean",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "d63071625c8018e33547cb79915a2fec2da9147c8a8afc017f6ba315fa74f117",
+    "bytes": 194412,
+    "working_matches": true
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Mask.lean",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "2a67c04751c87bf29e97f93fce3c84d987aaecff4f63c8e90c11a5ba5009e843",
+    "bytes": 37681,
+    "working_matches": true
+  },
+  {
+    "path": "Test/Program/MaskContract.lean",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "e52d6b9ce0d38f6cc15aa81f9c51ec83079a63ca5c1157e3630fafa9f4b34578",
+    "bytes": 27006,
+    "working_matches": true
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "bytes": 212712,
+    "working_matches": true
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/Pool.ts",
+    "commit": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+    "sha256": "ebf56ba3ddc4288fc193183d131aceff7ce8b9fa79a0d087ab4fe0f35c9e7b16",
+    "bytes": 40051,
+    "working_matches": true
+  }
+]
