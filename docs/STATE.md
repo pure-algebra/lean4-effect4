@@ -290,9 +290,21 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md)), in the seat that
   seat POOL freed. It follows seat PUB's procedure for the Queue. It first lands the
   wrapper's form at a caller's restore, which a protected body needs (row 276, point 1). The
-  Queue's trees must not move. Its first two steps are merged (`aa70b078`, `4b57609c`): the
-  two forms `waitRetryAt` and `protectedBy` (`src/Effect4/Modules/Waiting.lean`), and the six
-  operations as library programs (`src/Effect4/Modules/Semaphore/Ops.lean`).
+  Queue's trees must not move. Its first five steps are merged (`aa70b078`, `4b57609c`,
+  `ea036307`). The two forms are `waitRetryAt` and `protectedBy`
+  (`src/Effect4/Modules/Waiting.lean`). The six operations are library programs
+  (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope,
+  and nine attempt laws relate one store step to the model's step, with no planned goal
+  (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
+  machine, with the two red controls of the protected permit
+  (`Test/Program/SemaphoreTraces.lean`). The faces, the truth programs, the engine's case and
+  the receipt come next.
+- **Seat WORKQ has the workers over the public Queue** (branch `seat/workq`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)), in the seat that
+  seat CHECK freed. It is the first recommendation of Codex's dogfood review. The two-worker
+  crew takes its jobs from the Queue's public operations, as a second scenario. The first
+  scenario stays as the control of the host protocol. The slice also shares one `note`
+  through `Ref.updateWith`, and it gives the typed empty cell one home with two laws.
 
 Merged on 2026-10-06, after the seats above began:
 
@@ -398,12 +410,9 @@ Candidates with no seat, each with its place:
 - the run-level law of the Queue's wrapper (row 275, point 2);
 - Pool's public slice: `make`, `use` by the protected form, and the close that waits, with
   the closer as a request (row 276);
-- four points of Codex's dogfood review of 2026-10-06
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`):
-  - the next application runs Workers over the public Queue. Workers still takes its jobs
-    from a host row;
-  - the three `note` helpers of the scenarios bind a fixed name. They go through
-    `Ref.updateWith`, and one shared helper gives a typed empty cell;
+- two points of Codex's dogfood review of 2026-10-06
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`).
+  Seat WORKQ has the review's other two points:
   - the exact Routing example has no printed twin in the host lane. Two errors of tsgo 7
     keep it out. The repair carries the checked types of the branches to the printed
     Boolean select, with the reader's laws;
