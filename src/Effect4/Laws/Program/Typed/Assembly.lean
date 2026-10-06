@@ -1347,14 +1347,14 @@ theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compil
   ⟨_, typedState_of_load root ty fuel compileFuel noMarker (code _)⟩
 
 /-- **A checked program's layer references are well formed** (decisions row 170):
-`typeOfProgram` answers only under `layerRefsWF` (`Program/Typing.lean:61-64`), so the load's
-checker premise discharges `DenotesTyped`'s. -/
+`typeOfProgram` (`Program/Typing.lean`) answers only under `layerRefsWF`, its one test, so the
+load's checker premise discharges `DenotesTyped`'s. -/
 theorem layerRefsWF_of_typeOf {Op : Type} {sig : Signature Op} {program : Eff Op} {ty : EffTy}
     (h : Program.typeOfProgram sig program = some ty) : program.layerRefsWF = true := by
   unfold Program.typeOfProgram at h
   split at h
   · rename_i hc
-    exact ((Bool.and_eq_true _ _).mp hc).1
+    exact hc
   · cases h
 
 /-- **M5 from row 148's fundamental property**, for a loaded head that is not a race marker
@@ -1372,10 +1372,8 @@ theorem load_typed_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel
   have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
-    unfold Program.typeOfProgram at checked
-    split at checked
-    · exact checked
-    · cases checked
+    rw [typeOfProgram_eq_if_refsWF, if_pos wf] at checked
+    exact checked
   exact ⟨_, machineTyped_load root rootTy fuel compileFuel wf noMarker
     (denotes wf _ rfl (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,

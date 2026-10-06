@@ -2164,7 +2164,7 @@ flowchart LR
 | `termMaps_of_typed` | proved | — | `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 468 | 420 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 135 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1051 | 1534 |
-| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1167 |
+| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 107 | 1167 |
 | `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1218 |
 | `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1361 |
 | `mono` | proved | — | `order_trans` | 57 | 271 |
@@ -2925,7 +2925,7 @@ flowchart LR
 | `control_retires` | proved | — | — | 69 | 858 |
 | `receipt_inert` | proved | — | — | 77 | 951 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1051 | 1534 |
-| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1167 |
+| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 107 | 1167 |
 | `order_trans` | proved | — | — | 57 | 206 |
 | `order_refl` | proved | — | — | 57 | 205 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
@@ -3258,7 +3258,7 @@ flowchart LR
 | `m7_proved` | proved | — | `decision_preserves`, `loadsTyped`, `m7_of_ledger` | 0 | 3 |
 | `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` | 54 | 380 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1051 | 1534 |
-| `loadsTyped` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 107 | 1169 |
+| `loadsTyped` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 108 | 1169 |
 | `m7_of_ledger` | proved | — | `order_trans`, `order_refl` | 921 | 1439 |
 | `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 147 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |

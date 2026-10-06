@@ -52,10 +52,8 @@ theorem load_typed_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
   have wf := layerRefsWF_of_typeOf checked
   have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
     rw [Eff.expandIn_self]
-    unfold Program.typeOfProgram at checked
-    split at checked
-    · exact checked
-    · cases checked
+    rw [typeOfProgram_eq_if_refsWF, if_pos wf] at checked
+    exact checked
   have rootTyped := denotes wf (initialWorld rootTy root.sig.serviceTy) rfl (rootPoint compileFuel)
     root.program rootTy rfl
     ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
