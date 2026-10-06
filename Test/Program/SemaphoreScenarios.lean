@@ -49,7 +49,9 @@ operation, tree for tree.
   holds an injected yield.
 - A child is forked with the default options: it starts at once. The helper is posted: a
   detached fork with a deferred start, uninterruptible.
-- The root yields four times after it releases, and then it reads the cell.
+- The root yields four times after it releases, and then it reads the cell. The joined forms of
+  P1 and P4 join the waiting fibers instead: they are the truth lane's programs of those two
+  cases (the section on the two entries).
 
 A count is `[taken, the number of waiters, their counts, their stamps]`. A stamp tells one
 enrolment from another: a waiter that waits again has a new stamp.
@@ -693,6 +695,132 @@ def maskedCallerWith (ops : Ops) : Src NativeOp := eff do
 
 /-- The masked caller over the library's operations. -/
 def maskedCaller : Src NativeOp := maskedCallerWith library
+
+/-! ## The two entries, and the joined forms of P1 and P4
+
+`Api.run` is the fork entry: the root evaluated, then every armed dispatcher flushed, round after
+round. `Api.runSync` is the sync entry: the root evaluated, then the root's own dispatcher flushed,
+and no dispatcher of another fiber (`runSyncExit`, `src/Effect4/Machine/Fibers.lean`, which
+transcribes `runSyncExitWith`, `vendor/effect-4.0.0-rc.112/src/internal/effect.ts`).
+
+A release posts its helper on the dispatcher of the fiber that releases. In P1 and P4 that fiber
+is a child: A's hook releases. So the sync entry ends before the walk, and the root answers what
+it reads between the release and the walk. Where the root releases, the two entries give one
+answer.
+
+The truth lane's exit column compares the fork run's exit with the pin's sync exit whenever the
+sync run settles (`harness/truth/run-truth.ts`). So P1 and P4 are no programs of that lane: on
+each entry the two faces give one exit, and the column is red
+(`docs/research/2026-10-06-seat-semw-evidence/README.md`). The lane runs the joined forms
+instead. A joined form's root joins the waiting fibers and does not yield four times. Its sync
+entry cannot settle, because the helper is on a child's dispatcher, and the lane then compares
+the fork entry. -/
+
+/-- The root's exit under the sync entry, at the truth lane's fuel. -/
+def syncExitOf (src : Src NativeOp) : Option ExitV :=
+  (Effect4.Api.Author.build (mk src)).toOption.map fun b => (Api.runSync b.program 1000).2
+
+/-- Whether an exit is the sync entry's defect: the root has not exited when its dispatcher is
+empty. -/
+def notSettled : ExitV → Bool
+  | .failure c => c.reasons.any fun
+      | .die .asyncFiber _ => true
+      | _ => false
+  | _ => false
+
+-- P1 and P4 under the sync entry: the release is in the cell, both waiters still wait, and no
+-- mark is written. The sync entry settles, on another exit than the fork entry's.
+#guard [p1, p4].map syncExitOf = List.replicate 2 (some (.success (.list
+  [count 2 [2, 1] [0, 1], count 0 [2, 1] [0, 1], marks []])))
+#guard [p1, p4].all fun src =>
+  !(syncExitOf src).any notSettled && syncExitOf src != exitAt 1000 src
+-- Where the root releases, and where nobody waits, the two entries give one exit.
+#guard [p2, p3, p7, t1, ifAvailable, handoff, maskedCaller].all fun src =>
+  (syncExitOf src).isSome && syncExitOf src == exitAt 1000 src
+
+/-- P1 with a join: the root joins B and does not yield four times. -/
+def p1JoinedWith (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 2
+  let log ← Ref.make noNumbers
+  let gate ← Deferred.make .unit .never
+  let _ ← fork (ops.withPermits q (nat 2) (Deferred.await gate))
+  let b ← fork (eff do
+    let _ ← ops.take q (nat 2)
+    mark log (nat 22))
+  let _ ← fork (eff do
+    let _ ← ops.take q (nat 1)
+    mark log (nat 31))
+  let before ← counts q
+  let _ ← yieldNow 0
+  let _ ← Deferred.succeed gate unit
+  let _ ← join b
+  let after ← counts q
+  let l ← Ref.get log
+  return tuple [before, after, l]
+
+/-- P4 with two joins: the root joins B and then C. -/
+def p4JoinedWith (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 2
+  let log ← Ref.make noNumbers
+  let gate ← Deferred.make .unit .never
+  let _ ← fork (ops.withPermits q (nat 2) (Deferred.await gate))
+  let b ← fork (ops.withPermits q (nat 2) (eff do
+    let s ← Ref.get q
+    mark log (app "add" [nat 20, field s "taken"])))
+  let c ← fork (ops.withPermits q (nat 1) (eff do
+    let s ← Ref.get q
+    mark log (app "add" [nat 30, field s "taken"])))
+  let before ← counts q
+  let _ ← Deferred.succeed gate unit
+  let _ ← join b
+  let _ ← join c
+  let after ← counts q
+  let l ← Ref.get log
+  return tuple [before, after, l]
+
+def p1Joined : Src NativeOp := p1JoinedWith library
+def p4Joined : Src NativeOp := p4JoinedWith library
+
+-- Each joined form builds, at its case's types, and it is another tree than its case.
+#guard [p1Joined, p4Joined].map verdict = ["built", "built"]
+#guard [p1Joined, p4Joined].map typesOf == [p1, p4].map typesOf
+#guard (bytesOf p1Joined).isSome && (bytesOf p4Joined).isSome &&
+  bytesOf p1Joined != bytesOf p1 && bytesOf p4Joined != bytesOf p4 &&
+  bytesOf p1Joined != bytesOf p4Joined
+-- Each gives its case's answer on the fork entry: on the checked session, and at the truth
+-- lane's fuel.
+#guard exitOf p1Joined = some (.success (.list
+  [count 2 [2, 1] [0, 1], count 2 [1] [1], marks [22]]))
+#guard exitOf p4Joined = some (.success (.list
+  [count 2 [2, 1] [0, 1], count 0 [] [], marks [22, 31]]))
+#guard exitOf p1Joined == exitOf p1 && exitOf p4Joined == exitOf p4
+#guard [p1Joined, p4Joined].all fun src =>
+  (exitAt 1000 src).isSome && exitAt 1000 src == exitOf src
+-- Red control of the fuel: at a fuel of 5 neither has an exit.
+#guard [p1Joined, p4Joined].all fun src => (exitAt 5 src).isNone
+-- The sync entry does not settle either: the root waits in its join, and the helper is on A's
+-- dispatcher.
+#guard [p1Joined, p4Joined].all fun src => (syncExitOf src).any notSettled
+-- Red control of that reading: the README's example joins too, and its root releases. Its sync
+-- entry settles.
+#guard (syncExitOf handoff).any (!notSettled ·)
+-- A join returns inside the helper's task: the root exits before the helper does. In the joined
+-- P4, B's own release posts a second helper (fiber 5), which runs after the root's exit.
+#guard exitsOn plain p1Joined = some [1, 2, 3, 0, 4]
+#guard exitsOn plain p4Joined = some [1, 2, 3, 0, 4, 5]
+-- The written forms give the same two answers.
+#guard [p1JoinedWith Written.ops, p4JoinedWith Written.ops].map exitOf ==
+  [exitOf p1Joined, exitOf p4Joined]
+-- P9's tape on the joined P1. B yields at its resume, C takes, and B waits again. So the join
+-- does not return: the run is a frontier, with the root and B parked and no exit of either. The
+-- case P9 keeps the form that yields.
+#guard exitOn yieldAtResume p1Joined = none
+#guard exitsOn yieldAtResume p1Joined = some [1, 3, 4]
+#guard ((runOn yieldAtResume p1Joined).map fun r =>
+    (decide (r.inspect.outcome = .frontier), r.machine.fibers.map fun f =>
+      (f.id.value, decide (f.parked = .notParked), f.exit.isSome))) =
+  some (true, [(0, false, false), (1, true, true), (2, false, false), (3, true, true),
+    (4, true, true)])
 
 /-! ## The engine's fixture
 

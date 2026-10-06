@@ -57,5 +57,13 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pQueueInterrupted | success [5,0] | success [5,0] | yes | yes | yes | runSyncExit | same value |
 | pQueueMasked | success [1,9,true,0,0] | success [1,9,true,0,0] | yes | yes | yes | runSyncExit | same value |
 | pQueueOrder | success [1,101,2] | success [1,101,2] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [1,101,2]; same value |
+| pSemaphoreProtectedJoined | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]]; same value |
+| pSemaphoreScan | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreOvertake | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreBodiesJoined | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]]; same value |
+| pSemaphoreInterrupted | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreIfAvailable | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreMasked | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreHandoff | success [1,7] | success [1,7] | yes | yes | yes | runSyncExit | same value |
 
-PASS: 52 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 60 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

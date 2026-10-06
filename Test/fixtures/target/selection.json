@@ -52,7 +52,15 @@
     "pQueueFull",
     "pQueueInterrupted",
     "pQueueMasked",
-    "pQueueOrder"
+    "pQueueOrder",
+    "pSemaphoreProtectedJoined",
+    "pSemaphoreScan",
+    "pSemaphoreOvertake",
+    "pSemaphoreBodiesJoined",
+    "pSemaphoreInterrupted",
+    "pSemaphoreIfAvailable",
+    "pSemaphoreMasked",
+    "pSemaphoreHandoff"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
