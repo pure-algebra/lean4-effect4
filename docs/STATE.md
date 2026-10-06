@@ -375,9 +375,17 @@ Landed later on 2026-10-05:
   names. The registry places the two new modules under `store-typing`. Not proved: a string
   literal as a caller's term, and the wrapper's law at its own scope.
 - **Two tooling repairs** (`e6d63ddb`, `db54a849`, `d5b4d9cb`, `34e9423a`). The engine's
-  fixtures are a generated group: a fixture that changes alone is written again, and the check
-  form refuses an output that aliases a lane and a fixture folder with no writer. The plan's
+  fixtures are a generated group, and a fixture that changes alone is written again. The check
+  form refuses an output that aliases a lane, and a fixture folder with no writer. The plan's
   dependency walk gives no answer from an unfinished stack.
+- **The retry form of the first acceptance program sleeps its base first** (2026-10-06; seat
+  DOGFOOD's finding). It doubled its delay before its first sleep. The builds rc.112 and 4.0.1
+  sleep 100, 200 and 400 ms at a base of 100
+  (`research/2026-10-05-claude-lead/retry-probe/`, one host run each). `Test/Dogfood/P1HttpCache.lean` now pins the sleeps' deadlines, which no guard
+  read before. The timeout scenario's scripts and its engine fixture follow.
+- **The fixtures group runs while the build is red on a stale fixture** (2026-10-06). Its
+  marker depended on traces whose rule is `build`. A changed program then made the build
+  fail on the old fixture, and the group could not write the new one.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
