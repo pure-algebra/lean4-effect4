@@ -207,7 +207,11 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
         return { entry, evidence: word, scripts: scripts.map(run => run.name), limits }
       })
     })
-    return { scenario, scripts: runs.length, evidence, wholeObservationOnHost: !evidence.some(row => row.evidence === "replay only") }
+    // Two aggregates, kept apart. `noEntryWaits`: no entry is replay only, so each entry has a
+    // source in every script. `wholeObservationOnHost`: the host itself measures every entry in
+    // every script. A ledger's prediction and a reader's value are not the host's measurement.
+    return { scenario, scripts: runs.length, evidence, noEntryWaits: !evidence.some(row => row.evidence === "replay only"),
+      wholeObservationOnHost: evidence.every(row => row.evidence === "host") }
   })
   const controls = { comparator: changed, hostMeasurement: faulty.map(host => `${host.name}: ${host.fault}, at ${host.field}`),
     replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted,
