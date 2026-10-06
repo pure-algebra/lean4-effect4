@@ -45,3 +45,41 @@ const zero = find("two-AB")
 controls.push({ name: "zero-application", recording: zero, fuel: 0 }); expectations.push({ name: "zero-application", expected: "zero" })
 await writeFile(resolve(directory, "controls.json"), JSON.stringify(controls) + "\n")
 await writeFile(resolve(directory, "control-expectations.json"), JSON.stringify(expectations) + "\n")
+// The scenarios' recordings (decisions row 254): the red controls of Lean's replay. Each is a
+// recording of the host with one moved record. Lean's replay must show another observation, or
+// give a record another verdict than the ledger predicted.
+//  - In one recording of each scenario the first reply application moves before its reply
+//    receipt. Where no script of a scenario applies a reply, the second record moves before the
+//    first.
+//  - In each recording with a late reply, a reply that the recorder's ledger predicted as
+//    `noCall`, that reply moves to stand right after its call, where the call is still live.
+const scenarios = await readFile(resolve(directory, "scenario-cases.json"), "utf8").then(
+  text => JSON.parse(text) as Array<{ name: string; recording: KeyedRecording }>, () => undefined)
+if (scenarios) {
+  const hosts = JSON.parse(await readFile(resolve(directory, "scenario-host.json"), "utf8")) as
+    Array<{ name: string; predictions: Array<{ at: number; row: string; reason: string }> }>
+  // A moved record keeps the ledger's prediction: each prediction is indexed again.
+  const moved: Array<{ name: string; recording: KeyedRecording; predictions: typeof hosts[number]["predictions"] }> = []
+  const move = (name: string, recording: KeyedRecording, from: number, to: number): void => {
+    const [record] = recording.records.splice(from, 1)
+    recording.records.splice(to, 0, record!)
+    const predictions = hosts.find(host => host.name === name)!.predictions.map(prediction =>
+      ({ ...prediction, at: prediction.at === from ? to : prediction.at >= to && prediction.at < from ? prediction.at + 1 : prediction.at }))
+    moved.push({ name, recording, predictions })
+  }
+  for (const scenario of new Set(scenarios.map(run => run.name.split("/")[0]!))) {
+    const runs = scenarios.filter(run => run.name.startsWith(`${scenario}/`))
+    const { name, recording } = structuredClone(runs.find(run => run.recording.records.some(record => record.kind === "apply")) ?? runs[0]!)
+    const apply = recording.records.findIndex(record => record.kind === "apply")
+    move(name, recording, apply > 0 ? apply : 1, apply > 0 ? apply - 1 : 0)
+  }
+  for (const { name, predictions } of hosts) {
+    const late = predictions.find(prediction => prediction.row === "submit" && prediction.reason === "noCall")
+    if (!late) continue
+    const recording = structuredClone(scenarios.find(run => run.name === name)!.recording), reply = recording.records[late.at]!
+    const call = recording.records.findIndex(record => record.kind === "call" && record.fiber === reply.fiber && record.token === reply.token)
+    if (call < 0) throw Error(`${name}: a late reply has no call record`)
+    move(name, recording, late.at, call + 1)
+  }
+  await writeFile(resolve(directory, "scenario-controls.json"), JSON.stringify(moved) + "\n")
+}
