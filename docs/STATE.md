@@ -238,8 +238,12 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   2026-10-06 (branch `seat/semaphore`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-sem-brief.md)). Its first step ran
   the card's cases on our machine, where no Semaphore program had run before the ruling. The
-  cases P1 to P4, P7 and P9 give the pin's answers, and three changed walks are red. That is
-  the seat's report of 2026-10-06, on its branch at `daecfbc9`, and it is not merged.
+  cases P1 to P4, P7 and P9 give the pin's answers, and three changed walks are red
+  (`Test/Program/SemaphoreScenarios.lean`). Its first three steps are merged (`c685aa71`):
+  that battery, the packet `Test/contracts/semaphore.contract.md`, the model and its profile
+  (`src/Effect4/Laws/Modules/Semaphore/`). Three theorems are proved there: `profile_closed`,
+  `visit_selects_earliest` and `visit_stops_iff`. The cell, the step terms and their
+  agreement follow.
 
 Landed later on 2026-10-05:
 
