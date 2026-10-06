@@ -111,7 +111,11 @@ def registry : Registry where
         `Effect4.Laws.Program.Typed.Membership,
         `Effect4.Laws.Program.Typed.World,
         `Effect4.Laws.Program.Typed.Validity,
-        `Effect4.Laws.Modules.Queue.Typing
+        `Effect4.Laws.Modules.Queue.Typing,
+        -- the typing judgment of a builder's term and the term checker's rules in their
+        -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257)
+        `Effect4.Laws.Modules.Queue.Checking,
+        `Effect4.Laws.Program.Typing.TermIntro
       ] },
     { id := "residual-program-typing"
       title := "Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs"

@@ -325,8 +325,10 @@ A wrapper binds a request's identity with `bindWith`, whose name is minted. `var
 minted name, so `captured_var` does not cover it. A minted name keeps its level under a fold's
 two binders where it differs from both of the fold's names. The name that `bindWith` mints
 differs from both at every pair of scopes: the stem `answer` is no prefix of `acc` or of
-`item`, and neither is a prefix of it. No statement here says that two stems and two depths
-give two names in general.
+`item`, and neither is a prefix of it. One stem at two depths gives two names
+(`mint_depth_inj`), and a name that an author wrote is no minted name (`written_ne_mint`). No
+statement here says that two stems and two depths give two names in general: the stems `a` at
+depth 12 and `a1` at depth 2 give one name.
 
 Placement. Concept `translation-simulation`, requirement R10: a helper of the step statements'
 use by the wrapper, the open part `queue-expansion-agrees`. Reach: one read under a fold's two
@@ -388,6 +390,22 @@ theorem mint_item_ne_answer (env outer : Env) : env.mint "item" ≠ outer.mint "
   rw [h1, h2, h3] at bytes
   simp only [List.cons_append, List.nil_append, List.cons.injEq] at bytes
   exact absurd bytes.2.2.1 (by decide)
+
+/-- A name that an author wrote is no minted name. A step of the resolution premise: a row's
+binder that an author wrote leaves a minted name's level. -/
+theorem written_ne_mint {x : String} (written : Name.reserved x = false) (env : Env)
+    (stem : String) : x ≠ env.mint stem := by
+  intro same
+  rw [same, mint_reserved] at written
+  exact Bool.noConfusion written
+
+/-- **The names that one stem mints at two depths are two names**: a minted name ends in its
+depth's decimal digits (`repr_inj`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`). It relates no
+two stems. A step of the resolution premise: a second `bindWith` leaves the level of the name
+that a first one minted. -/
+theorem mint_depth_inj {env outer : Env} {stem : String}
+    (same : env.mint stem = outer.mint stem) : env.names.length = outer.names.length :=
+  repr_inj (String.append_right_inj _ |>.mp same)
 
 /-- **The name that `bindWith` mints is a caller's term under a step's folds**, at every scope
 where it is bound: `outer` is the scope of the `bindWith`, and `env` the scope of the step. -/

@@ -1606,7 +1606,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 29; inherited (provisional): 1615; unplaced: 0.
+Tagged: 29; inherited (provisional): 1727; unplaced: 0.
 
 ## Plan
 
@@ -2197,11 +2197,11 @@ flowchart LR
 | `offerStep_typed` | proved | — | `offerStep_types` | 42 | 149 |
 | `offerStep_types` | proved | — | `sub_antisymm_canonical`, `normalize_idem` | 211 | 152 |
 | `pollStep_typed` | proved | — | `pollStep_types` | 42 | 155 |
-| `pollStep_types` | proved | — | `sub_antisymm_canonical`, `normalize_idem`, `subN_refl` | 220 | 166 |
+| `pollStep_types` | proved | — | `sub_antisymm_canonical`, `normalize_idem`, `subN_refl` | 221 | 166 |
 | `sizeStep_typed` | proved | — | — | 87 | 140 |
 | `step_keeps_cell` | proved | — | `fold_typed_atomic_update` | 56 | 384 |
 | `takeStep_typed` | proved | — | `takeStep_types` | 49 | 168 |
-| `takeStep_types` | proved | — | `sub_antisymm_canonical`, `subN_refl`, `normalize_idem` | 255 | 180 |
+| `takeStep_types` | proved | — | `sub_antisymm_canonical`, `subN_refl`, `normalize_idem` | 256 | 180 |
 | `withdrawOffer_typed` | proved | — | `withdrawOffer_types` | 49 | 151 |
 | `withdrawOffer_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 182 | 162 |
 | `withdrawTake_typed` | proved | — | `withdrawTake_types` | 49 | 151 |
