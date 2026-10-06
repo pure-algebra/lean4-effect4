@@ -1,12 +1,12 @@
 import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
-import Effect4.Modules.Semaphore.Steps
+import Effect4.Modules.Semaphore.Ops
 import Effect4.Store.Carrier.Fold
 import Effect4.Store.Domain.ProgramWire
 
 /-!
-# Semaphore on the machine: the wake's first check (decisions rows 259 to 261 and 265)
+# Semaphore's operations on the machine: the host probe's cases (rows 259 to 261, 265 and 276)
 
 Decisions row 259 rules the live scan. It rests on a reading of the machine: a waiter runs
 inside the task that resolves its hint (`DeferredStore.complete`,
@@ -24,14 +24,21 @@ compares each answer with the pinned Effect's, case by case. The pin's answers a
 | P7 | A total of 1, held. A raw waiter is interrupted, then a protected waiter | Each waiter's entry leaves, and `taken` does not change |
 | P9 | P1, with B told to yield once, at its resume | The walk goes on, and C takes 1. B then reads 1 free and waits again with a new entry |
 
-**The operations here are test fixtures.** `take` wraps the take step with a wait and a
-withdrawal on interruption. `release` posts one helper, whose body is the walk (decisions row
-238). `withPermits` is a protected body by `onExit`. `uninterruptible` stands for the mask and
-`interruptible` for its restore, which is right under an interruptible caller only. The public
-operations come with the wrapper's slice, after the mask.
+**The operations are the library's** (`src/Effect4/Modules/Semaphore/Ops.lean`).
+`Semaphore.make`, `take`, `release`, `withPermits` and `takeIfAvailable` wrap the step terms with
+the shared wrapper (`src/Effect4/Modules/Waiting.lean`): the mask that restores, one posted
+helper for a release, and a withdrawal on interruption. Every binder of an operation is minted.
+One more run, T1, is the take that never waits.
 
-**The steps are the library's** (`src/Effect4/Modules/Semaphore/Steps.lean`): the take step, the
-release step, the visit and the withdrawal. One more run, T1, is the take that never waits.
+**The fixtures of the earlier slice stay here as written forms** (the namespace `Written`), as
+that slice wrote them. Each writes its binders by name. `uninterruptible` stands for the mask
+and `interruptible` for its restore, which is right under an interruptible caller only. They
+give the library's answer on each case, and each program over them is another tree. They are the
+red controls of the hygiene controls (`Test/Program/SemaphoreOps.lean`).
+
+**A changed policy is a variant of Semaphore's part** (`Policy`): another visit, a retry that
+takes with no second check, or a walk that grants. The policy with no change is the library's
+operation, tree for tree.
 
 **The settings of every run.**
 
@@ -48,11 +55,11 @@ A count is `[taken, the number of waiters, their counts, their stamps]`. A stamp
 enrolment from another: a waiter that waits again has a new stamp.
 
 Placement. Each scenario is a finite control of the proposed claim `semaphore-expansion-agrees`
-(concept `translation-simulation`, requirement R10), on the side of the steps' use in a
+(concept `translation-simulation`, requirement R10), on the side of the operations' use in a
 program. The cases P1, P3 and P9 are the finite controls of row 259's reading of the machine
 (concept `reactive-scheduling`, requirement R12). Every guard is one run on one schedule. None
 proves delivery, a cancellation law, a law of the wake across visits or liveness, and none is a
-host run.
+host run: the host runs are the truth lane's (`harness/truth/Truth.lean`).
 -/
 
 set_option autoImplicit false
@@ -62,34 +69,38 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.SemaphoreScenarios
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Modules (nilT noneT len snoc notT ifT noneOf)
+open Effect4.Modules
 open Effect4.Semaphore (takeStep takeIfAvailableStep releaseStep visitStep withdrawStep visitFrom
   eligibleT)
 
-/-! ## The operations, as fixtures
+/-! ## The operations of a scenario -/
 
-Each operation writes its step's row with a fixed name for the cell's current value:
-`Ref.modify "s" (step … (var "s")) q`. A row elaborates its whole term under that binder. Here
-every other term under the binder is closed or is this battery's own: a count that each
-scenario writes as a literal, and the identity, the hint and the cursor that the operation
-binds itself. The public wrapper will mint the name. -/
-
-/-- Decisions row 238: a detached fork with a deferred start, uninterruptible. -/
-def posted : Effect4.Supervision.ForkOptions := ⟨false, true, .uninterruptible⟩
-
-/-- The pin's `onInterrupt`: `onExit` with a test of the exit. -/
-def onInterrupt (body cleanup : Src NativeOp) : Src NativeOp :=
-  onExit "e" body (ifElse (app "causeIsInterrupt" [var "e"]) cleanup (succeed unit))
-
-/-- A policy: the take and the release that a scenario runs. The library's policy is `live`.
-Each red control is one more policy. -/
+/-- The operations that a scenario runs: the handle stands first, as in the library. The
+library's are `library`. A written form and a changed policy are more values. -/
 structure Ops where
   take : TermSrc → TermSrc → Src NativeOp
   release : TermSrc → TermSrc → Src NativeOp
+  withPermits : TermSrc → TermSrc → Src NativeOp → Src NativeOp
 
-/-- The walk, over a visit step: one visit at a time. A visit that selects a waiter resolves
-its hint, and the walk continues at that waiter's stamp plus one. The loop's cursor is an
-option: none ends the walk. -/
+/-- The library's operations. -/
+def library : Ops :=
+  { take := Semaphore.take, release := Semaphore.release, withPermits := Semaphore.withPermits }
+
+/-! ## The written forms: the fixtures of the earlier slice
+
+Each operation writes its step's row with a fixed name for the cell's current value:
+`Ref.modify "s" (step … (var "s")) q`. A row elaborates its whole term under that binder. So a
+caller's variable named `s` would read the cell's value there, and the same holds of `id`,
+`hint`, `took`, `r`, `w` and `e` at their binders. The texts are the earlier slice's
+(`git:59241284:Test/Program/SemaphoreScenarios.lean`), with the count before the handle. -/
+
+namespace Written
+
+/-- The pin's `onInterrupt`, with the exit under the written name `e`. -/
+def onInterrupt (body cleanup : Src NativeOp) : Src NativeOp :=
+  onExit "e" body (ifElse (app "causeIsInterrupt" [var "e"]) cleanup (succeed unit))
+
+/-- The walk, over a visit step, with the names `s`, `r` and `w` written. -/
 def walkWith (visit : TermSrc → TermSrc → TermSrc) (q : TermSrc) : Src NativeOp :=
   iterateWith (app "some" [nat 0])
     { cursorTy := some (.option .nat)
@@ -103,7 +114,7 @@ def walkWith (visit : TermSrc → TermSrc → TermSrc) (q : TermSrc) : Src Nativ
       result := fun _ => unit }
 
 /-- `release`, over a walk: the release step, then one posted helper where a waiter is
-enrolled. Answer: the free count. -/
+enrolled. -/
 def releaseWith (walker : TermSrc → Src NativeOp) (count q : TermSrc) : Src NativeOp := eff do
   let r ← Ref.modify "s" (releaseStep count (var "s")) q
   let _ ← ifElse (tupleAt r 1)
@@ -114,9 +125,7 @@ def releaseWith (walker : TermSrc → Src NativeOp) (count q : TermSrc) : Src Na
 def withdraw (id q : TermSrc) : Src NativeOp :=
   andThen (Ref.modify "s" (withdrawStep id (var "s")) q) (succeed unit)
 
-/-- `take`: the take step, and a wait on the request's hint where it does not take. A resumed
-request runs the take step again, which checks the count again. An interrupted wait withdraws
-the request. -/
+/-- `take`, as the fixture writes it: the stand-in mask, and a loop whose cursor is a Boolean. -/
 def take (count q : TermSrc) : Src NativeOp :=
   uninterruptible (eff do
     let id ← Deferred.make .unit .never
@@ -131,16 +140,85 @@ def take (count q : TermSrc) : Src NativeOp :=
         step := fun _ a => a
         result := fun _ => unit })
 
-/-- The live scan (decisions row 259). -/
-def live : Ops := { take := take, release := releaseWith (walkWith visitStep) }
+/-- The protected form, as the fixture writes it: the take, then the body under the stand-in
+restore, with the release at every exit. -/
+def withPermits (count q : TermSrc) (body : Src NativeOp) : Src NativeOp :=
+  uninterruptible (andThen (take count q)
+    (onExit "e" (interruptible body)
+      (andThen (releaseWith (walkWith visitStep) count q) (succeed unit))))
 
-/-- The protected form: the take, then the body under the restore, with the release at every
-exit. The take and the hook's installation are one masked region. -/
-def withPermits (ops : Ops) (count q : TermSrc) (body : Src NativeOp) : Src NativeOp :=
-  uninterruptible (andThen (ops.take count q)
-    (onExit "e" (interruptible body) (andThen (ops.release count q) (succeed unit))))
+/-- The written forms, as the operations of a scenario. -/
+def ops : Ops :=
+  { take := fun q count => take count q
+    release := fun q count => releaseWith (walkWith visitStep) count q
+    withPermits := fun q count body => withPermits count q body }
 
-/-! ## The three changed policies of the red controls -/
+end Written
+
+/-! ## A policy: Semaphore's part, with its knobs
+
+The library's operations are the shared forms over three pieces of Semaphore's own: the take's
+loop at a restore site, the helper's body, and the release around that helper. A policy holds
+the first two. Each red control changes one. -/
+
+/-- The walk over a visit step. The library's walk is the walk over `visitStep`. -/
+def walkOver (visit : TermSrc → TermSrc → TermSrc) (q : TermSrc) : Src NativeOp :=
+  iterateWith (app "some" [nat 0])
+    { while_ := fun cursor => app "isSome" [cursor]
+      body := fun cursor =>
+        bindWith (Ref.modifyWith q (visit (app "getOrElse" [cursor, nat 0]))) fun selected =>
+          selectOptionWith selected (succeed noneT) fun waiter =>
+            andThen (Deferred.succeed (field waiter "hint") unit)
+              (succeed (app "some" [app "add" [field waiter "stamp", nat 1]]))
+      step := fun _ next => next
+      result := fun _ => unit }
+
+/-- `release` over a helper's body. The library's release is the release over `Semaphore.walk`. -/
+def releaseOver (helper : TermSrc → Src NativeOp) (q count : TermSrc) : Src NativeOp :=
+  uninterruptible
+    (bindWith (Ref.modifyWith q (releaseStep count)) fun reply =>
+      andThen
+        (ifElse (tupleAt reply 1)
+          (andThen (withFiber (Action.fork (helper q) posted)) (succeed unit))
+          (succeed unit))
+        (succeed (tupleAt reply 0)))
+
+/-- A policy: the take's loop at a restore site, and the body of a release's helper. -/
+structure Policy where
+  takeAt : (Src NativeOp → Src NativeOp) → TermSrc → TermSrc → Src NativeOp :=
+    fun restore q count => waitRetryAt restore .nat Semaphore.ended (Semaphore.taker q count)
+  helper : TermSrc → Src NativeOp := Semaphore.walk
+
+/-- The operations of a policy: the take under its own mask, the release over the policy's
+helper, and the protected form over both. -/
+def opsOf (p : Policy) : Ops :=
+  { take := fun q count => uninterruptibleMaskWith fun restore => p.takeAt restore q count
+    release := releaseOver p.helper
+    withPermits := fun q count body =>
+      protectedBy (fun restore => p.takeAt restore q count)
+        (fun _ => releaseOver p.helper q count) (fun _ => body) }
+
+/-- The tree of a source at a caller's scope of names. -/
+def treeAt (names : List String) (src : Src NativeOp) : Option (Eff NativeOp) :=
+  (src { names := names } []).toOption
+
+-- The policy with no change is the library's operation, tree for tree, at a caller's scope.
+#guard treeAt ["q", "n"] ((opsOf {}).take (var "q") (var "n")) ==
+  treeAt ["q", "n"] (Semaphore.take (var "q") (var "n"))
+#guard treeAt ["q", "n"] ((opsOf {}).release (var "q") (var "n")) ==
+  treeAt ["q", "n"] (Semaphore.release (var "q") (var "n"))
+#guard treeAt ["q", "n"] ((opsOf {}).withPermits (var "q") (var "n") (succeed (nat 1))) ==
+  treeAt ["q", "n"] (Semaphore.withPermits (var "q") (var "n") (succeed (nat 1)))
+#guard (treeAt ["q", "n"] (Semaphore.take (var "q") (var "n"))).isSome &&
+  (treeAt ["q", "n"] (Semaphore.release (var "q") (var "n"))).isSome &&
+  (treeAt ["q", "n"] (Semaphore.withPermits (var "q") (var "n") (succeed (nat 1)))).isSome
+-- The walk over the library's visit is the library's walk.
+#guard treeAt ["q"] (walkOver visitStep (var "q")) == treeAt ["q"] (Semaphore.walk (var "q"))
+-- Red control of the comparison: a changed policy is another tree.
+#guard treeAt ["q", "n"] ((opsOf { helper := walkOver (fun _ s => visitStep (nat 0) s) }).release
+    (var "q") (var "n")) != treeAt ["q", "n"] (Semaphore.release (var "q") (var "n"))
+
+/-! ### The three changed policies of the red controls -/
 
 /-- A visit that looks at the head of the list alone (the card's section 9). -/
 def visitHeadStep (cursor s : TermSrc) : TermSrc :=
@@ -150,60 +228,59 @@ def visitHeadStep (cursor s : TermSrc) : TermSrc :=
       ifT (eligibleT cursor s w) waiters (noneOf waiters))
     s
 
-def headOnly : Ops := { take := take, release := releaseWith (walkWith visitHeadStep) }
+def headOnly : Ops := opsOf { helper := walkOver visitHeadStep }
 
-/-- A retry that takes with no second check (the card's section 9). -/
-def takeNoCheck (count q : TermSrc) : Src NativeOp :=
-  uninterruptible (eff do
-    let id ← Deferred.make .unit .never
-    let hint ← Deferred.make .unit .never
-    let took ← Ref.modify "s" (takeStep count id hint (var "s")) q
-    ifElse took (succeed unit)
-      (andThen (onInterrupt (interruptible (Deferred.await hint)) (withdraw id q))
-        (Ref.update "s"
-          (recordSet (var "s") "taken" (app "add" [field (var "s") "taken", count])) q)))
+/-- A retry that takes with no second check (the card's section 9): one attempt, and after the
+wait the request adds its count. -/
+def takeNoCheckAt (restore : Src NativeOp → Src NativeOp) (q count : TermSrc) : Src NativeOp :=
+  bindWith (Deferred.make .unit .never) fun id =>
+    bindWith (Deferred.make .unit .never) fun hint =>
+      bindWith (Ref.modifyWith q (takeStep count id hint)) fun took =>
+        ifElse took (succeed count)
+          (andThen (waitAt restore hint (Ref.modifyWith q (withdrawStep id)))
+            (andThen
+              (Ref.updateWith q fun s =>
+                recordSet s "taken" (app "add" [field s "taken", count]))
+              (succeed count)))
 
-def noSecondCheck : Ops :=
-  { take := takeNoCheck, release := releaseWith (walkWith visitStep) }
+def noSecondCheck : Ops := opsOf { takeAt := takeNoCheckAt }
 
 /-- A walk that commits a count for every waiter that fits, before any of them runs: the grant
 at the wake, which row 259 rejects. It resolves the hints afterwards. -/
-def grantWalk (q : TermSrc) : Src NativeOp := eff do
-  let first ← Deferred.make .unit .never
-  let granted ← Ref.make (app "take" [app "cons" [first, nilT], nat 0])
-  let _ ← iterateWith (app "some" [nat 0])
-    { cursorTy := some (.option .nat)
-      while_ := fun c => app "isSome" [c]
-      body := fun c => eff do
-        let r ← Ref.modify "s" (visitStep (app "getOrElse" [c, nat 0]) (var "s")) q
-        selectOption "w" r (succeed noneT)
-          (andThen
-            (Ref.update "s"
-              (recordSet (var "s") "taken"
-                (app "add" [field (var "s") "taken", field (var "w") "need"]))
-              q)
-            (andThen (Ref.update "g" (snoc (var "g") (field (var "w") "hint")) granted)
-              (succeed (app "some" [app "add" [field (var "w") "stamp", nat 1]]))))
-      step := fun _ a => a
-      result := fun _ => unit }
-  let hints ← Ref.get granted
-  iterateWith (nat 0)
-    { while_ := fun i => app "lt" [i, len hints]
-      body := fun i => selectOption "h" (app "get" [hints, i]) (succeed unit)
-        (andThen (Deferred.succeed (var "h") unit) (succeed unit))
-      step := fun i _ => app "succ" [i]
-      result := fun _ => unit }
+def grantWalk (q : TermSrc) : Src NativeOp :=
+  bindWith (Deferred.make .unit .never) fun first =>
+    bindWith (Ref.make (app "take" [app "cons" [first, nilT], nat 0])) fun granted =>
+      andThen
+        (iterateWith (app "some" [nat 0])
+          { while_ := fun cursor => app "isSome" [cursor]
+            body := fun cursor =>
+              bindWith (Ref.modifyWith q (visitStep (app "getOrElse" [cursor, nat 0])))
+                fun selected =>
+                  selectOptionWith selected (succeed noneT) fun waiter =>
+                    andThen
+                      (Ref.updateWith q fun s =>
+                        recordSet s "taken" (app "add" [field s "taken", field waiter "need"]))
+                      (andThen (Ref.updateWith granted fun g => snoc g (field waiter "hint"))
+                        (succeed (app "some" [app "add" [field waiter "stamp", nat 1]])))
+            step := fun _ next => next
+            result := fun _ => unit })
+        (bindWith (Ref.get granted) fun hints =>
+          iterateWith (nat 0)
+            { while_ := fun i => app "lt" [i, len hints]
+              body := fun i => selectOptionWith (app "get" [hints, i]) (succeed unit) fun hint =>
+                andThen (Deferred.succeed hint unit) (succeed unit)
+              step := fun i _ => app "succ" [i]
+              result := fun _ => unit })
 
 /-- A granted request holds its permits when its hint resolves: it does not take again. -/
-def takeGranted (count q : TermSrc) : Src NativeOp :=
-  uninterruptible (eff do
-    let id ← Deferred.make .unit .never
-    let hint ← Deferred.make .unit .never
-    let took ← Ref.modify "s" (takeStep count id hint (var "s")) q
-    ifElse took (succeed unit)
-      (onInterrupt (interruptible (Deferred.await hint)) (withdraw id q)))
+def takeGrantedAt (restore : Src NativeOp → Src NativeOp) (q count : TermSrc) : Src NativeOp :=
+  bindWith (Deferred.make .unit .never) fun id =>
+    bindWith (Deferred.make .unit .never) fun hint =>
+      bindWith (Ref.modifyWith q (takeStep count id hint)) fun took =>
+        ifElse took (succeed count)
+          (andThen (waitAt restore hint (Ref.modifyWith q (withdrawStep id))) (succeed count))
 
-def grant : Ops := { take := takeGranted, release := releaseWith grantWalk }
+def grant : Ops := opsOf { takeAt := takeGrantedAt, helper := grantWalk }
 
 /-! ## What a scenario observes -/
 
@@ -260,6 +337,19 @@ def exitOn (tape : List Api.Decision) (src : Src NativeOp) : Option ExitV :=
 
 def exitOf (src : Src NativeOp) : Option ExitV := exitOn plain src
 
+/-- The root's exit of the ordinary run at a fuel: the root evaluated, then one flush. The truth
+lane runs each program so, at the fuel 1000. -/
+def exitAt (fuel : Nat) (src : Src NativeOp) : Option ExitV :=
+  (Effect4.Api.Author.build (mk src)).toOption.bind fun b => (Api.run b.program fuel).exit
+
+/-- The answer and error types of a built source. -/
+def typesOf (src : Src NativeOp) : Option (Ty × Ty) :=
+  (Effect4.Api.Author.build (mk src)).toOption.map fun b => (b.ty.answer, b.ty.error)
+
+/-- The canonical bytes of a source's built program. -/
+def bytesOf (src : Src NativeOp) : Option Store.Bytes :=
+  (Effect4.Api.Author.build (mk src)).toOption.map fun b => Api.bytesOf b.program
+
 /-- The fibers that exited, in the order of their exits. -/
 def exitsOn (tape : List Api.Decision) (src : Src NativeOp) : Option (List Nat) :=
   (runOn tape src).map fun r => r.machine.trace.filterMap fun
@@ -276,16 +366,16 @@ def yieldsOn (tape : List Api.Decision) (src : Src NativeOp) : Option (List (Nat
 
 /-- P1 and P9, the protected case. A is fiber 1, B fiber 2 and C fiber 3. The root yields once
 before it opens the gate: P9's tape tells B to yield there. -/
-def p1 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (Semaphore.empty 2)
+def p1With (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 2
   let log ← Ref.make noNumbers
   let gate ← Deferred.make .unit .never
-  let _ ← fork (withPermits ops (nat 2) q (Deferred.await gate))
+  let _ ← fork (ops.withPermits q (nat 2) (Deferred.await gate))
   let _ ← fork (eff do
-    let _ ← ops.take (nat 2) q
+    let _ ← ops.take q (nat 2)
     mark log (nat 22))
   let _ ← fork (eff do
-    let _ ← ops.take (nat 1) q
+    let _ ← ops.take q (nat 1)
     mark log (nat 31))
   let before ← counts q
   let _ ← yieldNow 0
@@ -296,19 +386,19 @@ def p1 (ops : Ops) : Src NativeOp := eff do
   return tuple [before, after, l]
 
 /-- P2, the scan case. B is fiber 1 and C fiber 2. -/
-def p2 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (Semaphore.empty 2)
+def p2With (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 2
   let log ← Ref.make noNumbers
-  let _ ← ops.take (nat 1) q
-  let _ ← ops.take (nat 1) q
+  let _ ← ops.take q (nat 1)
+  let _ ← ops.take q (nat 1)
   let _ ← fork (eff do
-    let _ ← ops.take (nat 2) q
+    let _ ← ops.take q (nat 2)
     mark log (nat 22))
   let _ ← fork (eff do
-    let _ ← ops.take (nat 1) q
+    let _ ← ops.take q (nat 1)
     mark log (nat 31))
   let before ← counts q
-  let answer ← ops.release (nat 1) q
+  let answer ← ops.release q (nat 1)
   let _ ← settle
   let after ← counts q
   let l ← Ref.get log
@@ -316,20 +406,20 @@ def p2 (ops : Ops) : Src NativeOp := eff do
 
 /-- P3, the overtaking case. B is fiber 1 and C fiber 2. B writes 21 after its first take and
 22 after its second. -/
-def p3 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (Semaphore.empty 2)
+def p3With (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 2
   let log ← Ref.make noNumbers
-  let _ ← ops.take (nat 2) q
+  let _ ← ops.take q (nat 2)
   let _ ← fork (eff do
-    let _ ← ops.take (nat 1) q
+    let _ ← ops.take q (nat 1)
     let _ ← mark log (nat 21)
-    let _ ← ops.take (nat 1) q
+    let _ ← ops.take q (nat 1)
     mark log (nat 22))
   let _ ← fork (eff do
-    let _ ← ops.take (nat 1) q
+    let _ ← ops.take q (nat 1)
     mark log (nat 31))
   let before ← counts q
-  let _ ← ops.release (nat 2) q
+  let _ ← ops.release q (nat 2)
   let _ ← settle
   let after ← counts q
   let l ← Ref.get log
@@ -337,15 +427,15 @@ def p3 (ops : Ops) : Src NativeOp := eff do
 
 /-- P4, two protected waiters whose bodies do not wait. A body writes its mark with the taken
 count that it reads: 20 or 30, plus the count. -/
-def p4 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (Semaphore.empty 2)
+def p4With (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 2
   let log ← Ref.make noNumbers
   let gate ← Deferred.make .unit .never
-  let _ ← fork (withPermits ops (nat 2) q (Deferred.await gate))
-  let _ ← fork (withPermits ops (nat 2) q (eff do
+  let _ ← fork (ops.withPermits q (nat 2) (Deferred.await gate))
+  let _ ← fork (ops.withPermits q (nat 2) (eff do
     let s ← Ref.get q
     mark log (app "add" [nat 20, field s "taken"])))
-  let _ ← fork (withPermits ops (nat 1) q (eff do
+  let _ ← fork (ops.withPermits q (nat 1) (eff do
     let s ← Ref.get q
     mark log (app "add" [nat 30, field s "taken"])))
   let before ← counts q
@@ -357,18 +447,18 @@ def p4 (ops : Ops) : Src NativeOp := eff do
 
 /-- P7, the withdrawal. The root holds the one permit. A raw waiter is interrupted, then a
 protected waiter. The root then releases. -/
-def p7 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (Semaphore.empty 1)
-  let _ ← ops.take (nat 1) q
-  let b ← fork (ops.take (nat 1) q)
+def p7With (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 1
+  let _ ← ops.take q (nat 1)
+  let b ← fork (ops.take q (nat 1))
   let whileB ← counts q
   let _ ← withFiber (Action.interrupt b)
   let afterB ← counts q
-  let c ← fork (withPermits ops (nat 1) q (succeed unit))
+  let c ← fork (ops.withPermits q (nat 1) (succeed unit))
   let whileC ← counts q
   let _ ← withFiber (Action.interrupt c)
   let afterC ← counts q
-  let answer ← ops.release (nat 1) q
+  let answer ← ops.release q (nat 1)
   let _ ← settle
   let afterRelease ← counts q
   return tuple [whileB, afterB, whileC, afterC, answer, afterRelease]
@@ -376,11 +466,21 @@ def p7 (ops : Ops) : Src NativeOp := eff do
 /-- T1, the take that never waits: it takes 2 of 2, and a second request for 1 does not take
 and does not enrol. -/
 def t1 : Src NativeOp := eff do
-  let q ← Ref.make (Semaphore.empty 2)
-  let first ← Ref.modify "s" (takeIfAvailableStep (nat 2) (var "s")) q
-  let second ← Ref.modify "s" (takeIfAvailableStep (nat 1) (var "s")) q
+  let q ← Semaphore.make 2
+  let first ← Semaphore.takeIfAvailable q (nat 2)
+  let second ← Semaphore.takeIfAvailable q (nat 1)
   let after ← counts q
   return tuple [first, second, after]
+
+/-- The five cases over one set of operations, in order. -/
+def casesWith (ops : Ops) : List (Src NativeOp) :=
+  [p1With ops, p2With ops, p3With ops, p4With ops, p7With ops]
+
+def p1 : Src NativeOp := p1With library
+def p2 : Src NativeOp := p2With library
+def p3 : Src NativeOp := p3With library
+def p4 : Src NativeOp := p4With library
+def p7 : Src NativeOp := p7With library
 
 /-- A count as a value. -/
 def count (taken : Nat) (needs stamps : List Nat) : Val :=
@@ -388,38 +488,49 @@ def count (taken : Nat) (needs stamps : List Nat) : Val :=
 
 def marks (ks : List Nat) : Val := .list (ks.map .nat)
 
--- Each scenario builds under the live scan: the checker types every step inside its
--- `Ref.modify`.
-#guard [p1 live, p2 live, p3 live, p4 live, p7 live].map verdict = List.replicate 5 "built"
+-- Each scenario builds over the library's operations: the checker types every step inside its
+-- `Ref.modify`, and the mask's saved state at each restore site.
+#guard [p1, p2, p3, p4, p7].map verdict = List.replicate 5 "built"
+-- P2's types: the counts, the release's answer, the counts and the marks, and no failure.
+#guard typesOf p2 =
+  some (.tuple [.tuple [.nat, .nat, .list .nat, .list .nat], .nat,
+    .tuple [.nat, .nat, .list .nat, .list .nat], .list .nat], .never)
 
 /-! ### The pin's answers, on the machine -/
 
 -- P1. B took 2 inside the walk. The next visit read no free permit and stopped. C still waits,
 -- with its first entry: the stamp 1.
-#guard exitOf (p1 live) = some (.success (.list
+#guard exitOf p1 = some (.success (.list
   [count 2 [2, 1] [0, 1], count 2 [1] [1], marks [22]]))
 -- P2. The release answered 1. The walk passed B and resumed C, which took 1. B's entry stays
 -- in its place: the stamp 0.
-#guard exitOf (p2 live) = some (.success (.list
+#guard exitOf p2 = some (.success (.list
   [count 2 [2, 1] [0, 1], .nat 1, count 2 [2] [0], marks [31]]))
 -- P3. B took 1 and took 1 again, inside the walk. C waits with its first entry.
-#guard exitOf (p3 live) = some (.success (.list
+#guard exitOf p3 = some (.success (.list
   [count 2 [1, 1] [0, 1], count 2 [1] [1], marks [21, 22]]))
 -- P4. B's body saw 2 taken, then C's body saw 1. Nothing stays taken, and nobody waits.
-#guard exitOf (p4 live) = some (.success (.list
+#guard exitOf p4 = some (.success (.list
   [count 2 [2, 1] [0, 1], count 0 [] [], marks [22, 31]]))
 -- P7. Each interrupted waiter's entry leaves, and `taken` stays 1. The release then answers 1
 -- free and posts no helper.
-#guard exitOf (p7 live) = some (.success (.list
+#guard exitOf p7 = some (.success (.list
   [count 1 [1] [0], count 1 [] [], count 1 [1] [1], count 1 [] [], .nat 1, count 0 [] []]))
 -- P9. B yielded at its resume. The walk went on and resumed C, which took 1. B then found 1
 -- free, and it waits again with a new entry: the stamp 2.
-#guard exitOn yieldAtResume (p1 live) = some (.success (.list
+#guard exitOn yieldAtResume p1 = some (.success (.list
   [count 2 [2, 1] [0, 1], count 1 [2] [2], marks [31]]))
 
 -- T1. The take that never waits answers true, then false, and nobody is enrolled.
 #guard verdict t1 = "built" &&
   exitOf t1 = some (.success (.list [.bool true, .bool false, count 2 [] []]))
+
+-- The ordinary run gives each answer too, at the truth lane's fuel: the root evaluated, then
+-- one flush. So no case needs a flush of its own.
+#guard (t1 :: casesWith library).all fun src =>
+  (exitAt 1000 src).isSome && exitAt 1000 src == exitOf src
+-- Red control of the fuel: at a fuel of 5 no case has an exit.
+#guard (t1 :: casesWith library).all fun src => (exitAt 5 src).isNone
 
 /-! ### The reading of the machine, on the trace
 
@@ -427,63 +538,91 @@ A waiter that a visit resumes runs inside the helper's task: it exits before the
 does. -/
 
 -- P1. The exits, in order: A, then B, then the helper (fiber 4), then C at the root's end.
-#guard exitsOn plain (p1 live) = some [1, 2, 4, 3, 0]
+#guard exitsOn plain p1 = some [1, 2, 4, 3, 0]
 -- P3. B (fiber 1) exits before the helper (fiber 3).
-#guard exitsOn plain (p3 live) = some [1, 3, 2, 0]
+#guard exitsOn plain p3 = some [1, 3, 2, 0]
 -- P4. B and C both run to their exits inside the first helper (fiber 4). B's own release
 -- posts a second helper (fiber 5), which finds nobody.
-#guard exitsOn plain (p4 live) = some [1, 2, 3, 4, 5, 0]
+#guard exitsOn plain p4 = some [1, 2, 3, 4, 5, 0]
 -- P9. C exits inside the walk, the helper next, and B only at the root's end.
-#guard exitsOn yieldAtResume (p1 live) = some [1, 3, 4, 2, 0]
+#guard exitsOn yieldAtResume p1 = some [1, 3, 4, 2, 0]
 -- P9's one injected yield is B's, at its first operation after the resume. No other run
 -- holds an injected yield: the budget of 2048 operations is not reached.
-#guard yieldsOn yieldAtResume (p1 live) = some [(2, 1)]
-#guard [p1 live, p2 live, p3 live, p4 live, p7 live].map (yieldsOn plain) =
-  List.replicate 5 (some [])
+#guard yieldsOn yieldAtResume p1 = some [(2, 1)]
+#guard [p1, p2, p3, p4, p7].map (yieldsOn plain) = List.replicate 5 (some [])
 -- The settings: each fiber's budget of operations before a yield, at the end of P1.
-#guard ((runOn plain (p1 live)).map fun r => r.machine.fibers.map (·.maxOpsBeforeYield)) =
+#guard ((runOn plain p1).map fun r => r.machine.fibers.map (·.maxOpsBeforeYield)) =
   some (List.replicate 5 2048)
 -- Before P9's verdict, the four fibers are parked and none has exited: B's next check is its
 -- resume.
-#guard ((runOn [Api.evaluate] (p1 live)).map fun r =>
+#guard ((runOn [Api.evaluate] p1).map fun r =>
     r.machine.fibers.map fun f => (f.id.value, decide (f.parked = .notParked), f.exit.isSome)) =
   some [(0, false, false), (1, false, false), (2, false, false), (3, false, false)]
 -- Each run finishes, and each row of each tape is played: no decision is refused.
-#guard ([p1 live, p2 live, p3 live, p4 live, p7 live].map fun src =>
+#guard ([p1, p2, p3, p4, p7].map fun src =>
     (runOn plain src).map fun r => (decide (r.inspect.outcome = .finished), r.phases)) =
   List.replicate 5 (some (true, [.progressed, .progressed]))
-#guard ((runOn yieldAtResume (p1 live)).map fun r =>
+#guard ((runOn yieldAtResume p1).map fun r =>
     (decide (r.inspect.outcome = .finished), r.phases)) =
   some (true, [.progressed, .progressed, .progressed])
 -- One flush is every flush: two more change nothing.
-#guard exitOn [Api.evaluate, Api.flush, Api.flush, Api.flush] (p1 live) = exitOf (p1 live)
+#guard exitOn [Api.evaluate, Api.flush, Api.flush, Api.flush] p1 = exitOf p1
 
 /-! ### The red controls: each changed policy fails its own case
 
 Each changed policy builds, so typing does not catch it. -/
 
-#guard [p2 headOnly, p3 grant, p1 noSecondCheck].map verdict = List.replicate 3 "built"
+#guard [p2With headOnly, p3With grant, p1With noSecondCheck].map verdict =
+  List.replicate 3 "built"
 
 -- A walk that wakes the head alone fails P2: B does not fit, so C never proceeds. One permit
 -- stays free while C waits.
-#guard exitOf (p2 headOnly) = some (.success (.list
+#guard exitOf (p2With headOnly) = some (.success (.list
   [count 2 [2, 1] [0, 1], .nat 1, count 1 [2, 1] [0, 1], marks []]))
-#guard exitOf (p2 headOnly) != exitOf (p2 live)
+#guard exitOf (p2With headOnly) != exitOf p2
 -- The head-only walk still gives P1's answer: P2 is the case that tells the two apart.
-#guard exitOf (p1 headOnly) = exitOf (p1 live)
+#guard exitOf (p1With headOnly) = exitOf p1
 
 -- A walk that commits for every fitting waiter before any of them runs fails P3: C holds a
 -- permit, and B's second request waits (a new entry, the stamp 2).
-#guard exitOf (p3 grant) = some (.success (.list
+#guard exitOf (p3With grant) = some (.success (.list
   [count 2 [1, 1] [0, 1], count 2 [1] [2], marks [21, 31]]))
-#guard exitOf (p3 grant) != exitOf (p3 live)
+#guard exitOf (p3With grant) != exitOf p3
 
 -- A retry with no second check fails the accounting on P9: C takes 1 while B has yielded, and
 -- B then takes 2. Three permits of two are taken.
-#guard exitOn yieldAtResume (p1 noSecondCheck) = some (.success (.list
+#guard exitOn yieldAtResume (p1With noSecondCheck) = some (.success (.list
   [count 2 [2, 1] [0, 1], count 3 [] [], marks [31, 22]]))
 -- With no yield the same retry gives P1's answer: P9's path is the one that shows the fault.
-#guard exitOf (p1 noSecondCheck) = exitOf (p1 live)
+#guard exitOf (p1With noSecondCheck) = exitOf p1
+
+/-! ## The trees: the library's programs against the written forms
+
+A tree holds no name: a binder is a level. The library's operations are other trees than the
+earlier fixture's, in five places:
+
+- the mask that restores stands where the fixture wrote `uninterruptible` and `interruptible`;
+- `take` is the shared wrapper: its loop's cursor is an option of the result, with a defect on
+  the arm that never runs, and it answers the count;
+- `release` runs under `uninterruptible`, and the walk's cursor states no type;
+- the protected form is one `protectedBy`, whose hook is the release itself;
+- a withdrawal is its row alone.
+
+So each case's program has other bytes over the written forms, and it gives the same answer. -/
+
+-- Each case over the written forms builds, and it gives the library's answer: on these
+-- schedules no caller is masked, so the stand-ins are right.
+#guard (casesWith Written.ops).map verdict = List.replicate 5 "built"
+#guard (casesWith Written.ops).map exitOf == (casesWith library).map exitOf
+#guard exitOn yieldAtResume (p1With Written.ops) == exitOn yieldAtResume p1
+-- Each is another tree, and the five programs of each kind are five byte strings.
+#guard (List.zip (casesWith library) (casesWith Written.ops)).all fun pair =>
+  bytesOf pair.1 != bytesOf pair.2
+#guard ((casesWith library).map bytesOf).all Option.isSome &&
+  ((casesWith library).map bytesOf).eraseDups.length = 5
+-- The construction is one `Ref.make` of the initial value: the fixtures' tree.
+#guard elaborate (Semaphore.make 2) ==
+  elaborate (Ref.make (Semaphore.empty 2) : Src NativeOp)
 
 /-! ## The engine's fixture
 
@@ -495,7 +634,7 @@ the cases that row 259's reading rests on. The writer beside the engine's test w
 def fuel : Nat := 20000
 
 /-- The runs of the engine's fixture, by name. -/
-def engineRuns : List (String × Src NativeOp) := [("p1", p1 live), ("p3", p3 live)]
+def engineRuns : List (String × Src NativeOp) := [("p1", p1), ("p3", p3)]
 
 /-- A value's spelling as the engine's `show_val` writes it (`ocaml/engine/e4_engine.ml`), as an
 algebra of the value fold: a Boolean, a number, and a list of such values at any depth. Every

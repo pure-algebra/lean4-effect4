@@ -4,7 +4,8 @@ import Test.Program.SemaphoreScenarios
 # Two of Semaphore's cases on the generated engine: the fixture's binding (row 265)
 
 The engine's test `ocaml/engine/test/semaphore/test_semaphore.ml` runs the cases P1 and P3 of
-`Test/Program/SemaphoreScenarios.lean` on the generated engine, on both carriers. Each program
+`Test/Program/SemaphoreScenarios.lean` on the generated engine, on both carriers. The programs
+are over the library's operations (`src/Effect4/Modules/Semaphore/Ops.lean`). Each program
 crosses as its canonical bytes. The fixture `ocaml/engine/test/semaphore/semaphore.txt` holds
 them, with the fuel and the root's exit of Lean's machine. The writer is `write.lean`, in that
 folder.
@@ -56,9 +57,9 @@ def committed : String := include_str "../../ocaml/engine/test/semaphore/semapho
 -- They are the pin's answers of the scenarios battery, in that spelling.
 #guard showExit (.success (.list [count 2 [2, 1] [0, 1], count 2 [1] [1], marks [22]])) =
   some "success list[list[2,2,list[2,1],list[0,1]],list[2,1,list[1],list[1]],list[22]]"
-#guard (exitOf (p1 live)).bind showExit =
+#guard (exitOf p1).bind showExit =
   some "success list[list[2,2,list[2,1],list[0,1]],list[2,1,list[1],list[1]],list[22]]"
-#guard (exitOf (p3 live)).bind showExit =
+#guard (exitOf p3).bind showExit =
   some "success list[list[2,2,list[1,1],list[0,1]],list[2,1,list[1],list[1]],list[21,22]]"
 
 -- The bytes read back as the program: the wire's round trip on the two programs.
@@ -68,7 +69,7 @@ def committed : String := include_str "../../ocaml/engine/test/semaphore/semapho
 -- Red controls of the binding. The two programs are two byte strings, and the fixture holds
 -- no third program. The two runs answer two exits, so a swapped run fails the first guard.
 #guard ((engineRuns.filterMap fun (_, src) => (buildOf src).map Wire.hexOf).eraseDups).length = 2
-#guard exitOf (p1 live) != exitOf (p3 live)
+#guard exitOf p1 != exitOf p3
 #guard ((committed.splitOn "\n").filter fun line => line.startsWith "program ").length = 2
 -- A value with no spelling here is refused, never spelled loosely: a handle, and a list that
 -- holds one.
