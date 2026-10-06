@@ -177,6 +177,38 @@ The printed program agrees with Effect 4.0.0-rc.112 on its exit and on its compa
 That run is the program `pQueueWake` of `harness/truth/Truth.lean`.
 `Test/Program/QueueOps.lean` holds this example, and `Test/contracts/queue.contract.md` states what is proved and what is open.
 
+## A semaphore
+
+`Semaphore.make permits` makes a semaphore with a positive total of permits.
+Its handle is the `Ref` of the semaphore's cell.
+`Semaphore.take`, `Semaphore.release` and `Semaphore.withPermits` are library programs over that handle.
+A take waits while its count does not fit, and it answers the count.
+A release answers the free count, and its posted helper visits the waiters in the order of enrolment.
+`Semaphore.withPermits handle count body` runs the body with the permits, and it releases them at every exit of the body.
+`Semaphore.takeIfAvailable` and `Semaphore.withPermitsIfAvailable` never wait.
+
+```lean
+import Effect4
+open Effect4 Effect4.Program Effect4.Program.Authoring
+
+def handoff : Src NativeOp := eff do
+  let gate ← Semaphore.make 1
+  let _ ← Semaphore.take gate (nat 1)
+  let worker ← fork (Semaphore.withPermits gate (nat 1) (succeed (nat 7)))
+  let free ← Semaphore.release gate (nat 1)
+  let x ← join worker
+  return tuple [free, x]
+```
+
+`Effect4.Api.author handoff` checks this program at the answer type of a pair of numbers, and its run answers `[1, 7]`.
+The worker waits first, and the release's posted helper resumes it.
+The protected form is one mask over the take, the hook and the body.
+An operation mints the name of each of its binders, so it captures no name of its caller.
+Each operation prints as its expansion over `Ref.modify`, `Deferred` and `Effect.forkDetach`, and reads back.
+The printed program agrees with Effect 4.0.0-rc.112 on its exit and on its compared schedule rows.
+That run is the program `pSemaphoreHandoff` of `harness/truth/Truth.lean`.
+`Test/Program/SemaphoreOps.lean` holds this example, and `Test/contracts/semaphore.contract.md` states what is proved and what is open.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact

@@ -104,7 +104,7 @@ Remove that folder after the run.
 The manifest is a record.
 It holds the two programs' text at this slice's head, and a later change of an operation does not reach it.
 
-## How a later slice admits the two programs again
+## How a later slice adds the two programs again
 
 The slice that changes the runner's rule does these steps.
 
