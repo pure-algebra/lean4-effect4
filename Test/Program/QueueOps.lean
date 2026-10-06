@@ -1,4 +1,5 @@
 import Test.Program.QueueScenarios
+import Test.Program.QueueSteps
 import Effect4.Laws.Modules.Queue.Ops
 import ProofGraph.Plan
 
@@ -23,13 +24,19 @@ controls of the operations that those do not run, and of the module's laws.
 5. **Hygiene.** The fixtures wrote the names `id`, `hint`, `r`, `e` and `s` around a caller's
    variable. For each name, a caller's variable of that name keeps its reading in the library's
    operation, and the fixture's written form is the red control.
-6. **The pinned outputs**: each law's axioms, and its standing in the plan.
+6. **Typing at every scope.** Each operation's typing statement, read at a caller's variables,
+   and the checker's own answer on each operation's tree: at 27 message types and three scopes.
+   The red controls are a message of another type, a handle of another type and a cell of
+   another message type.
+7. **The pinned outputs**: each law's axioms, and its standing in the plan.
 
 Placement. Each run is a finite control of the proposed claim `queue-expansion-agrees` (concept
 `translation-simulation`, requirement R10), on the side of the operations' use in a program.
 Every guard is one run on one schedule. None proves delivery, a cancellation law or liveness,
 and none is a host run. The theorems of section 4 are helpers of the same claim: they discharge
-the scope premises of the attempt laws, and they state nothing of a run.
+the scope premises of the attempt laws, and they state nothing of a run. Section 6 is the finite
+control of the typing statements (concept `store-typing`, requirement R4): each guard is the
+checker's answer on one tree, and it states no run.
 -/
 
 set_option autoImplicit false
@@ -674,7 +681,105 @@ can write such a name through `var`, which refuses the reserved prefix. -/
 
 end Hygiene
 
-/-! ## 6. The pinned outputs
+/-! ## 6. Typing at every scope
+
+`take_types` and its four siblings type each operation at every typed scope, for every message
+type with `MessageTy` (`src/Effect4/Laws/Modules/Queue/Ops.lean`). The examples read each at a
+caller's variables: a variable that an author wrote is a kept term, at every scope that binds
+it. The guards run the checker on each operation's tree, so each statement has a finite control
+with the checker's own answer. -/
+
+section Typing
+
+open Effect4.Queue.Model
+open Effect4.Machine.Env (Requirement)
+
+-- `take` at a caller's variable `q`, at every typed scope that binds it to a queue's handle.
+example (table : RowTable) (A : Ty) (message : MessageTy A) (s : TypedScope) (i : Nat)
+    (bound : s.env.names.resolve "q" = some i)
+    (held : s.types[i]? = some (.refOf (Queue.cellTy A))) :
+    Answers (nativeSignature table) (Queue.take A (var "q")) s A :=
+  Queue.take_types A message (kept_var rfl bound held)
+
+-- `offer` at two variables: the handle and the message.
+example (table : RowTable) (A : Ty) (message : MessageTy A) (s : TypedScope) (i j : Nat)
+    (bound : s.env.names.resolve "q" = some i)
+    (held : s.types[i]? = some (.refOf (Queue.cellTy A)))
+    (boundM : s.env.names.resolve "m" = some j) (heldM : s.types[j]? = some A) :
+    Answers (nativeSignature table) (Queue.offer A (var "q") (var "m")) s .bool :=
+  Queue.offer_types A message (kept_var rfl bound held) (kept_var rfl boundM heldM)
+
+-- `offer` of a number literal, at a queue of numbers.
+example (table : RowTable) (s : TypedScope) (i : Nat)
+    (bound : s.env.names.resolve "q" = some i)
+    (held : s.types[i]? = some (.refOf (Queue.cellTy .nat))) (n : Nat) :
+    Answers (nativeSignature table) (Queue.offer .nat (var "q") (nat n)) s .bool :=
+  Queue.offer_types .nat (by decide) (kept_var rfl bound held) fun _ _ _ => types_nat n
+
+-- `poll` and `size` read the handle at their own scope.
+example (table : RowTable) (A : Ty) (message : MessageTy A) (s : TypedScope) (i : Nat)
+    (bound : s.env.names.resolve "q" = some i)
+    (held : s.types[i]? = some (.refOf (Queue.cellTy A))) :
+    Answers (nativeSignature table) (Queue.poll A (var "q")) s (.option A) ∧
+      Answers (nativeSignature table) (Queue.size A (var "q")) s .nat :=
+  ⟨Queue.poll_types A message (kept_var rfl bound held).here,
+    Queue.size_types A message (kept_var rfl bound held).here⟩
+
+-- The construction, at every typed scope and every positive capacity.
+example (table : RowTable) (A : Ty) (message : MessageTy A) (s : TypedScope) :
+    Answers (nativeSignature table) (Queue.bounded A 3) s (.refOf (Queue.cellTy A)) :=
+  Queue.bounded_types A message 3 (by decide) s
+
+/-- The checker's answer on a source's tree, at a scope of names and their types. -/
+def answerAt (names : List String) (types : List Ty) (src : Src NativeOp) : Option EffTy :=
+  (src { names := names } []).toOption.bind (effTy nativeSignature types)
+
+/-- Each operation at one message type and one scope of a handle and a message, with other
+names around them: the checker answers the operation's type, with no failure and no
+requirement. -/
+def operationsTyped (names : List String) (others : Ty → List Ty) (A : Ty) : Bool :=
+  decide (answerAt names (others A) (Queue.take A (var "q")) = some (EffTy.pure A)) &&
+  decide (answerAt names (others A) (Queue.offer A (var "q") (var "m")) =
+    some (EffTy.pure .bool)) &&
+  decide (answerAt names (others A) (Queue.poll A (var "q")) = some (EffTy.pure (.option A))) &&
+  decide (answerAt names (others A) (Queue.size A (var "q")) = some (EffTy.pure .nat)) &&
+  decide (answerAt names (others A) (Queue.bounded A 2) =
+    some (EffTy.pure (.refOf (Queue.cellTy A))))
+
+-- At each of the 27 message types of `Test/Program/QueueSteps.lean`, at three scopes: the two
+-- names alone, the two names between others, and a scope that holds names under the reserved
+-- prefix.
+#guard Test.Program.QueueSteps.messageTypes.length = 27
+#guard Test.Program.QueueSteps.messageTypes.all
+  (operationsTyped ["q", "m"] fun A => [.refOf (Queue.cellTy A), A])
+#guard Test.Program.QueueSteps.messageTypes.all
+  (operationsTyped ["x", "q", "m", "y"] fun A => [.nat, .refOf (Queue.cellTy A), A, .bool])
+#guard Test.Program.QueueSteps.messageTypes.all
+  (operationsTyped ["q", "_%answer1", "m", "_%restore3", "_%current4"] fun A =>
+    [.refOf (Queue.cellTy A), .nat, A, .bool, .unit])
+-- Red control: a message of another type has no answer.
+#guard answerAt ["q", "m"] [.refOf (Queue.cellTy .nat), .bool]
+  (Queue.offer .nat (var "q") (var "m")) = none
+-- Red control: a handle that is no cell's handle has no answer, at each reading operation.
+#guard [Queue.take .nat (var "q"), Queue.poll .nat (var "q"), Queue.size .nat (var "q"),
+    Queue.offer .nat (var "q") (nat 1)].all fun operation =>
+  decide (answerAt ["q"] [.nat] operation = none)
+-- Red control: a cell of another message type has no answer at `take`: the step's type is no
+-- pair of a reply and that cell's type.
+#guard answerAt ["q"] [.refOf (Queue.cellTy .bool)] (Queue.take .nat (var "q")) = none
+-- A number literal and a Boolean literal are messages of the statements.
+#guard answerAt ["q"] [.refOf (Queue.cellTy .nat)] (Queue.offer .nat (var "q") (nat 7)) =
+  some (EffTy.pure .bool)
+#guard answerAt ["q"] [.refOf (Queue.cellTy .bool)] (Queue.offer .bool (var "q") (bool true)) =
+  some (EffTy.pure .bool)
+-- The limit of the statements: a string literal is no kept term, so no statement covers it.
+-- The checker types this one tree: tested, on one tree, and not proved.
+#guard answerAt ["q"] [.refOf (Queue.cellTy .string)]
+  (Queue.offer .string (var "q") (str "a")) = some (EffTy.pure .bool)
+
+end Typing
+
+/-! ## 7. The pinned outputs
 
 Each attempt law's axioms, and its standing as the plan derives it from its proof. No law rests
 on a planned goal. The counts are of this battery's tree, which holds no step of a proof. -/
@@ -777,5 +882,72 @@ next goals: 0
   Effect4.Queue.bounded_makes Effect4.Queue.take_attempt_minted
   Effect4.Queue.take_withdrawal_minted Effect4.Queue.offer_attempt_minted
   Effect4.Queue.offer_withdrawal_minted
+
+-- The typing statements of section 6, and three of the rules that they are proved through.
+/--
+info: 'Effect4.Queue.bounded_types' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Queue.bounded_types
+
+/--
+info: 'Effect4.Queue.size_types' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Queue.size_types
+
+/--
+info: 'Effect4.Queue.poll_types' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Queue.poll_types
+
+/--
+info: 'Effect4.Queue.offer_types' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Queue.offer_types
+
+/--
+info: 'Effect4.Queue.take_types' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Queue.take_types
+
+/--
+info: 'Effect4.Modules.postAll_answers' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Modules.postAll_answers
+
+/--
+info: 'Effect4.Modules.waitAt_answers' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Modules.waitAt_answers
+
+/--
+info: 'Effect4.Modules.answers_refModifyWith' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Modules.answers_refModifyWith
+
+/--
+info: 'Effect4.Modules.kept_var' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Modules.kept_var
+
+/--
+info: Effect4.Queue.bounded_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.size_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.poll_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.offer_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.take_types: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status Effect4.Queue.bounded_types Effect4.Queue.size_types Effect4.Queue.poll_types
+  Effect4.Queue.offer_types Effect4.Queue.take_types
 
 end Test.Program.QueueOps
