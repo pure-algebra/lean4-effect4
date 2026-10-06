@@ -327,3 +327,10 @@ statement of the ten changed.
 The dump also finds six proof terms that section 3 does not name. Three batteries prove the
 field `typed` of a certificate by `cbv`, which evaluates through the definition's equation. The
 answer is the same, and each proof passes.
+
+Two more sentences of this note were wrong, and the receipt has the measure.
+
+- **Proposal P2's reason.** The counts of R5's two placed nodes do not move: the plan gives
+  both the report's own counts after the change. Other rows of the report are not measured.
+- **Section 7's red controls.** The battery has four guards that state that a different value
+  is not the answer, not one beside each new check. A falsified copy covers each new check.

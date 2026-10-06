@@ -282,21 +282,28 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
 
 - **Seat LIFT has the lift of the mask's chain to runs** (branch `seat/lift`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the seat that
-  seat CUTS freed. Part A is two statements of the frame machine. Part B is the
-  machine's invariant and its lift, with a condition just before a command clears a fiber.
-  Nothing is compiled yet.
+  seat CUTS freed. Part A is two statements of the frame machine, and it is merged
+  (`3475c065`). Part B is the machine's invariant and its lift, with a condition just before
+  a command clears a fiber. Part B and its instance at a compiled program are proved on the
+  seat's branch. Its battery and its receipt come next.
 - **Seat SEMW has Semaphore's public operations** (branch `seat/semw`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md)), in the seat that
   seat POOL freed. It follows seat PUB's procedure for the Queue. It first lands the
   wrapper's form at a caller's restore, which a protected body needs (row 276, point 1). The
-  Queue's trees must not move.
-- **Seat CHECK has the checker's second test** (branch `seat/check`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-check-brief.md)), in the seat that
-  seat QINV freed. `typeOfProgram` then tests the references' formation only, and the dead
-  arm of `Api.explain` goes (row 273, point 2). No program's answer changes.
+  Queue's trees must not move. Its first two steps are merged (`aa70b078`, `4b57609c`): the
+  two forms `waitRetryAt` and `protectedBy` (`src/Effect4/Modules/Waiting.lean`), and the six
+  operations as library programs (`src/Effect4/Modules/Semaphore/Ops.lean`).
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat CHECK is merged** (`0c4f9774`;
+  [its receipt](research/2026-10-06-seat-CHECK-receipt.md)), in the seat that seat QINV
+  freed. `typeOfProgram` tests the references' formation only
+  (`src/Effect4/Program/Typing.lean`). `Api.explain` has no arm for a kept reference site
+  (`src/Effect4/Api.lean`; row 273, point 2). No statement changed, and no program's answer
+  changes. One statement is new: `Api.explain_eq_if_refsWF`
+  (`src/Effect4/Laws/Api/Codegen.lean`). The seat proved it against the old definitions
+  first, so it records that no refusal changed. The runtime root still imports no law.
 - **Seat POOL is merged: Pool's cell and steps** (branch `seat/pool`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
