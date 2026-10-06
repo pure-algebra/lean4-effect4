@@ -14,6 +14,7 @@ holds the pieces of a step term that name no module.
 - **The words** are one application of a native atom each. `minT` is a selection over one.
 - **`removeById`** is the removal pass: the entries of a list without the entries of one
   identity. An entry is a record with an `id` field.
+- **`single`, `front` and `listOf`** write a list out from terms, with no fold.
 
 A module's own records, passes and steps stay in the module's folder. The laws of the words are
 in `src/Effect4/Laws/Modules/`: what each word reads (`Reading.lean`), and what each word types
@@ -61,5 +62,24 @@ inside the body. The body reads the field `id` of an entry and no other. -/
 def removeById (entries id : TermSrc) : TermSrc :=
   foldWith entries (noneOf entries) fun kept entry =>
     ifT (same (field entry "id") id) kept (snoc kept entry)
+
+/-! ## Lists that a term writes out
+
+`single`, `front` and `listOf` build a list from terms, with no fold. Their first consumer is
+Pool (`src/Effect4/Modules/Pool/`): the items of the initial value, and a returned item at the
+front of the idle items. -/
+
+/-- The list of one element. -/
+def single (x : TermSrc) : TermSrc := app "cons" [x, nilT]
+
+/-- `xs` with `x` in front of it. -/
+def front (x xs : TermSrc) : TermSrc := app "append" [single x, xs]
+
+/-- The list of the given terms, in order. The empty list is `nilT`, at the empty element
+type. -/
+def listOf : List TermSrc → TermSrc
+  | [] => nilT
+  | [x] => single x
+  | x :: xs => front x (listOf xs)
 
 end Effect4.Modules

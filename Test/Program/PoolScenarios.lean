@@ -3,6 +3,7 @@ import Effect4.Run
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Mask
 import Effect4.Modules.Waiting
+import Effect4.Modules.Pool.Steps
 import Effect4.Store.Carrier.Fold
 import Effect4.Store.Domain.ProgramWire
 
@@ -43,8 +44,10 @@ The fixtures use `posted`, `onInterrupt` and `waitAt` of `src/Effect4/Modules/Wa
 and the mask's builder. They do not use `waitRetry`: its own mask ends before the body's hook
 is installed. The public `make` and `use` come with a later slice.
 
-**The steps are in their first form here**, and so is the cell. The library's module replaces
-them (`src/Effect4/Modules/Pool/`).
+**The steps are the library's** (`src/Effect4/Modules/Pool/Steps.lean`): the lease step, the
+return step, the selection, the withdrawal and the close's first step. The cell is the
+library's too (`src/Effect4/Modules/Pool/Cell.lean`), at a resource type of numbers. Each red
+control changes one step or one fixture.
 
 **The settings of every run.**
 
@@ -87,125 +90,7 @@ namespace Test.Program.PoolScenarios
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
-
-/-! ## The cell and the steps, in their first form -/
-
-def itemFields (A : Ty) : List (String × Bool × Ty) :=
-  [("stamp", false, .nat), ("resource", false, A), ("borrowed", false, .bool),
-   ("lease", false, .nat)]
-
-def itemTy (A : Ty) : Ty := .record
-  [("borrowed", false, .bool), ("lease", false, .nat), ("resource", false, A),
-   ("stamp", false, .nat)]
-
-def waiterFields : List (String × Bool × Ty) := [("id", false, idTy), ("hint", false, idTy)]
-
-def waiterTy : Ty := .record [("hint", false, idTy), ("id", false, idTy)]
-
-def cellFields (A : Ty) : List (String × Bool × Ty) :=
-  [("items", false, .list (itemTy A)), ("available", false, .list .nat),
-   ("waiters", false, .list waiterTy), ("closing", false, .bool), ("next", false, .nat)]
-
-def cellTy (A : Ty) : Ty := .record
-  [("available", false, .list .nat), ("closing", false, .bool),
-   ("items", false, .list (itemTy A)), ("next", false, .nat),
-   ("waiters", false, .list waiterTy)]
-
-def mkItem (A : Ty) (stamp resource : TermSrc) : TermSrc :=
-  record (itemFields A)
-    [("stamp", stamp), ("resource", resource), ("borrowed", bool false), ("lease", nat 0)]
-
-/-- The list of one element. -/
-def single (x : TermSrc) : TermSrc := app "cons" [x, nilT]
-
-/-- `xs` with `x` in front of it. -/
-def front (x xs : TermSrc) : TermSrc := app "append" [single x, xs]
-
-/-- The list of the given terms, in order. -/
-def listOf : List TermSrc → TermSrc
-  | [] => nilT
-  | [x] => single x
-  | x :: xs => front x (listOf xs)
-
-/-- The initial value at the acquired resources: each has the stamp of its position, and every
-item is idle. -/
-def initial (A : Ty) (resources : List TermSrc) : TermSrc :=
-  record (cellFields A)
-    [("items", listOf (resources.zipIdx.map fun (r, i) => mkItem A (nat i) r)),
-     ("available", listOf ((List.range resources.length).map nat)),
-     ("waiters", nilT), ("closing", bool false), ("next", nat 0)]
-
-def mkWaiter (id hint : TermSrc) : TermSrc := record waiterFields [("id", id), ("hint", hint)]
-
-/-- The cell without the request's own entry. -/
-def withdrawn (id s : TermSrc) : TermSrc :=
-  recordSet s "waiters" (removeById (field s "waiters") id)
-
-/-- No item, at the type of an option of an item. -/
-def noItem (s : TermSrc) : TermSrc := app "get" [noneOf (field s "items"), nat 0]
-
-/-- The stamp at the front of the idle items, or zero. -/
-def headStamp (s : TermSrc) : TermSrc :=
-  foldWith (app "take" [field s "available", nat 1]) (nat 0) fun _ i => i
-
-/-- An item as a lease of a stamp holds it. -/
-def leasedAs (lease it : TermSrc) : TermSrc :=
-  recordSet (recordSet it "borrowed" (bool true)) "lease" lease
-
-/-- The items, with the front idle item leased at the stamp `next`. -/
-def marked (s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (noneOf (field s "items")) fun out it =>
-    snoc out (ifT (app "eq" [field it "stamp", headStamp s]) (leasedAs (field s "next") it) it)
-
-/-- The front idle item as its new lease holds it: a list of at most one item. -/
-def leasedOf (s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (noneOf (field s "items")) fun kept it =>
-    ifT (app "eq" [field it "stamp", headStamp s]) (snoc kept (leasedAs (field s "next") it)) kept
-
-/-- Lease or enrol. Reply: `[closed, the leased item's record, if any]`. -/
-def leaseStep (id hint s : TermSrc) : TermSrc :=
-  ifT (field s "closing")
-    (app "pair" [tuple [bool true, noItem s], withdrawn id s])
-    (ifT (isEmpty (field s "available"))
-      (app "pair" [tuple [bool false, noItem s],
-        recordSet s "waiters" (snoc (removeById (field s "waiters") id) (mkWaiter id hint))])
-      (app "pair" [tuple [bool false, app "get" [leasedOf s, nat 0]],
-        recordSet
-          (recordSet (recordSet (withdrawn id s) "items" (marked s)) "available"
-            (app "drop" [field s "available", nat 1]))
-          "next" (app "add" [field s "next", nat 1])]))
-
-/-- Whether the lease `l` holds the item `i`, at one item's record. -/
-def holdsT (i l it : TermSrc) : TermSrc :=
-  andT (app "eq" [field it "stamp", i])
-    (andT (field it "borrowed") (app "eq" [field it "lease", l]))
-
-def heldBy (i l s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (bool false) fun found it => orT found (holdsT i l it)
-
-def freed (i l s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (noneOf (field s "items")) fun out it =>
-    snoc out (ifT (holdsT i l it) (recordSet it "borrowed" (bool false)) it)
-
-/-- Return. Reply: `[returned, a wake is owed]`. -/
-def returnStep (i l s : TermSrc) : TermSrc :=
-  ifT (heldBy i l s)
-    (app "pair" [tuple [bool true, notT (isEmpty (field s "waiters"))],
-      recordSet (recordSet s "items" (freed i l s)) "available" (front i (field s "available"))])
-    (app "pair" [tuple [bool false, bool false], s])
-
-/-- One selection of the wake at a count. Reply: the selected waiters' records, in order. -/
-def selectStep (count s : TermSrc) : TermSrc :=
-  app "pair" [app "take" [field s "waiters", count],
-    recordSet s "waiters" (app "drop" [field s "waiters", count])]
-
-/-- Withdraw. Reply: nothing. -/
-def withdrawStep (id s : TermSrc) : TermSrc := app "pair" [unit, withdrawn id s]
-
-/-- The close's first step. Reply: `[this step began the close, the count of the waiters]`. -/
-def closeStep (s : TermSrc) : TermSrc :=
-  app "pair" [tuple [notT (field s "closing"), len (field s "waiters")],
-    recordSet s "closing" (bool true)]
+open Effect4.Pool
 
 /-! ## The operations, as fixtures
 
