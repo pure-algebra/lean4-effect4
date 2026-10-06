@@ -358,6 +358,17 @@ that rests on one schedule.
 
 In work since the suspension of the handover:
 
+- **Seat BOUNDS probes the match by bounds** (branch `seat/bounds`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-bounds-brief.md); row 292, point
+  4). A template binds a type parameter at its first occurrence today, so a verdict depends
+  on the order of the arguments. The probe measures the rule by polarity against it on the
+  two corpora, proves what scratch allows, and runs tsgo on the prelude's signatures. It
+  edits no tracked source.
+  [The design input](research/2026-10-06-repeated-parameter-by-polarity.md) reads the paper.
+- **Seat LANES repairs the two lanes that the sweep found red** (branch `seat/lanes`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-lanes-brief.md); row 289). The
+  diagnostics lane measures again on its branch: no program that the checker admits is
+  refused by tsgo. The ingest's census is in work.
 - **Seat SKETCH's hole table is merged**
   ([its receipt](research/2026-10-06-seat-SKETCH-receipt.md); rows 288 and 291). A sketch is
   data, and three claims are in the registry: `sketch-conservative`, `sketch-weakening` and
