@@ -214,14 +214,16 @@ The engine's session clause waits: the engine has no session to compare.
 
 To write the fixtures again, follow these steps from the repository's root.
 
-1. Build `Test.Dogfood.Scenario.Tape`.
-2. Run `lake env lean --run ocaml/engine/test/scenarios/write.lean`.
-3. Build `Test.Dogfood.Scenario.Lowered`, which binds the files.
-4. Run `dune test --force engine/test/scenarios` in `ocaml/`, through `opam exec --switch=effect4`.
+1. Run `make gen-fixtures`. It builds `Test.Dogfood.Scenario.Tape` and runs the writer,
+   `ocaml/engine/test/scenarios/write.lean`. It writes a file only where its bytes differ.
+2. Build `Test.Dogfood.Scenario.Lowered`, which binds the files.
+3. Run `dune test --force engine/test/scenarios` in `ocaml/`, through `opam exec --switch=effect4`.
 
 Lake does not see a fixture as an input of the battery. So after a change of a fixture alone,
-`lake build` takes the battery from its cache and binds nothing. To bind the files then, run
-`lake env lean Test/Dogfood/Scenario/Lowered.lean`: it elaborates the battery afresh.
+`lake build` takes the battery from its cache and binds nothing. The group `fixtures` closes
+that gap (`docs/GENERATED.md`). Its marker depends on the fixtures themselves, so
+`make gen-fixtures` writes a changed fixture again from Lean. `make check-gen` refuses a
+committed fixture that Lean does not write, and `make check-ocaml` runs after the group.
 
 ## The earlier dogfood programs
 

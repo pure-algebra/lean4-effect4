@@ -389,9 +389,10 @@ Open at this landing:
     `play_controls_eq_replay` and the session's laws (its receipt, item 9.5);
   - a fixture edited alone is not bound by `lake build`: Lake does not take an `include_str`
     file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it.
-    The Queue's engine fixture has the same gap (`Test/Program/QueueEngine.lean`). The
-    coordinator wires both into the generation graph as side work: a fixture that changes
-    alone must force fresh evidence, with no new stamp;
+    The Queue's engine fixture had the same gap (`Test/Program/QueueEngine.lean`). The
+    generated group `fixtures` closes it for both lanes (`docs/GENERATED.md`). Its marker
+    depends on the fixtures themselves. `make gen-fixtures` writes a changed fixture again
+    from Lean, and `make check-gen` refuses a committed fixture that Lean does not write;
   - two controls are not written: a cleanup replayed under one registration, and a timer that
     fires inside a masked region;
 - the faces of an operation's type arguments, part B of the state plan's T5, are with seat T5

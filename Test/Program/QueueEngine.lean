@@ -15,7 +15,9 @@ fixture's fuel, in the engine's spelling.
 
 The binding holds where this battery is elaborated. Lake does not see the fixture as an input:
 it reads `include_str` as part of this file. So a fixture that changes alone does not rebuild
-the battery. `lake env lean Test/Program/QueueEngine.lean` elaborates it afresh.
+the battery. The generated group `fixtures` closes that gap (`docs/GENERATED.md`): its marker
+depends on the fixture itself, `make gen-fixtures` writes a changed fixture again from Lean,
+and `make check-gen` refuses a committed fixture that Lean does not write.
 
 Placement. A finite control of the proposed claim `queue-expansion-agrees` (concept
 `translation-simulation`, requirement R10) on the lowered code: two runs, one schedule each,

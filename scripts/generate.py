@@ -53,7 +53,8 @@ def install(source, destination, checking):
 # vendored rc.112 sources and is an INPUT of `derived`, so it is first; `derived` writes the
 # Lean projections the rest import; `eff`, `wire` and `cas` cut the OCaml estate from them;
 # `ts` cuts the TypeScript estate; `readme` renders the ingest tables out of three files `ts`
-# just wrote. `lcnf` is the explicit Phase 1 route and is requested by name.
+# just wrote. `lcnf` is the explicit Phase 1 route and is requested by name. `fixtures` reads
+# no other family's output and builds test modules, so it is requested by name too.
 ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
 
 # The variance table, its producer and its landing path (tooling plan 1.4a), and the core
@@ -62,6 +63,54 @@ ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
 VARIANCES = 'tools/Effect4Gen/variances.json'
 MANIFEST = 'tools/Effect4Gen/manifest.json'
 TY_VARIANCE = 'src/Effect4/Program/TyVariance.lean'
+
+# The engine's fixtures (decisions rows 254 and 255). A lane is a folder under
+# `ocaml/engine/test/` that holds a writer, `write.lean`: a Lean script that writes the lane's
+# `*.txt` fixtures from the programs `Api.Author.build` admits. The engine's dune test reads the
+# files, and a Lean battery binds each one by `include_str`. Lake does not take such a file as
+# an input, so a fixture that changed alone left that battery's evidence stale. This family is
+# what holds a committed fixture to Lean's text: it runs each writer into a temporary folder and
+# installs or compares. The writer is the one hand input: its imports are the modules built
+# first, and the files it writes are the lane's fixtures.
+FIXTURE_LANES = 'ocaml/engine/test'
+
+
+def fixture_lanes():
+    """Each lane's folder and the modules its writer imports, read from the writer's header."""
+    lanes = []
+    for writer in sorted((ROOT / FIXTURE_LANES).glob('*/write.lean')):
+        modules = [line.split()[1] for line in writer.read_text().splitlines()
+                   if line.startswith('import ')]
+        if not modules:
+            raise ValueError(f'{writer.relative_to(ROOT)}: the writer imports no module')
+        lanes.append((writer.parent.relative_to(ROOT).as_posix(), modules))
+    if not lanes:
+        raise ValueError(f'{FIXTURE_LANES}: no lane holds a writer')
+    return lanes
+
+
+def fixtures(out, checking):
+    """Write each lane's fixtures from Lean, then install them or refuse a difference.
+
+    A committed `*.txt` that the lane's writer does not write is refused in both modes.
+    """
+    for folder, modules in fixture_lanes():
+        temp = out / folder
+        temp.mkdir(parents=True, exist_ok=True)
+        for stale in temp.glob('*.txt'):
+            stale.unlink()
+        run(['lake', 'build', *modules])
+        run(['lake', 'env', 'lean', '-M4096', '--run', folder + '/write.lean', str(temp)])
+        written = sorted(path.name for path in temp.glob('*.txt'))
+        if not written:
+            raise ValueError(f'{folder}/write.lean wrote no fixture')
+        unwritten = sorted(path.name for path in (ROOT / folder).glob('*.txt')
+                           if path.name not in written)
+        if unwritten:
+            raise ValueError(f'{folder}: no writer writes ' + ', '.join(unwritten))
+        for name in written:
+            install(temp / name, ROOT / folder / name, checking)
+
 
 # The LCNF artefacts and their arguments. Until 2026-09-19 this list held the four paths and
 # the command came out of each file's own `Regenerate with:` header -- a generated file was its
@@ -189,6 +238,8 @@ def generate(families, output):
                     for source in sorted(engine_out.iterdir()):
                         if source.is_file():
                             install(source, ROOT / 'ocaml/engine' / source.name, False)
+        if 'fixtures' in families:
+            fixtures(out, checking)
         if 'readme' in families:
             # A host producer, not a Lean one: it reads profile/forms/taxonomy `.gen.ts` and
             # writes `ts/eff/ingest/README.md` in place. Its own `--check` is the drift form,
@@ -208,7 +259,7 @@ def generate(families, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--only', choices=ALL + ['lcnf'])
+    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures'])
     parser.add_argument('--all', action='store_true',
                         help='every family of the named order: ' + ', '.join(ALL))
     parser.add_argument('--output-dir')
