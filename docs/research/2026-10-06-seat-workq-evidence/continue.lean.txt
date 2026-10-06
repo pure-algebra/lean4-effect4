@@ -1,0 +1,71 @@
+import Test.Dogfood.Scenario.QueueWorkers
+
+/-!
+The run `dropped`, continued by every script of an alphabet up to a length. The probe counts
+the scripts after which the root has an exit, and the scripts after which the machine's view is
+no longer the view of `dropped`. The alphabet is the search's 28 moves with raw rows and raw
+controls, and the root's start.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace After2
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def alphabet : List Move :=
+  [ .start, .flush, .cancel ⟨0⟩, .cancel ⟨1⟩, .cancel ⟨2⟩, .cancel ⟨3⟩
+  , .hold feederCall, .hold w1, .hold w2
+  , .receive feederCall (ok (.nat 7)), .receive feederCall (ok (.nat 8))
+  , .receive w1 (ok .unit), .receive w2 (ok .unit)
+  , .receive w1 (failed "JobFailed" "bad payload"), .receive w2 (failed "Boom" "other")
+  , .apply feederCall, .apply w1, .apply w2
+  , .control (.fire ⟨0⟩), .control (.fire ⟨1⟩), .control (.fire ⟨2⟩), .control (.fire ⟨3⟩)
+  , .control (.evaluate ⟨1⟩), .control (.evaluate ⟨2⟩), .control (.evaluate ⟨3⟩), .tick 10
+  , .row (.submit (forged 0 3 3 (ok (.nat 9))))
+  , .row (.apply ⟨⟨3⟩, 3⟩), .row (.apply ⟨⟨1⟩, 5⟩) ]
+
+#guard alphabet.length == 29
+
+structure Tally where
+  nodes : Nat := 0
+  exited : Nat := 0
+  moved : Nat := 0
+  notAtRest : Nat := 0
+  firstExited : List (List Nat) := []
+  firstMoved : List (List Nat) := []
+
+def keep (xs : List (List Nat)) (path : List Nat) : List (List Nat) :=
+  if xs.length < 3 then path :: xs else xs
+
+def judge (base : MachineView) (s : Run) (path : List Nat) (t : Tally) : Tally :=
+  let t := { t with nodes := t.nodes + 1 }
+  let t := if s.exit.isSome then { t with exited := t.exited + 1, firstExited := keep t.firstExited path } else t
+  let t := if machineView s != base then { t with moved := t.moved + 1, firstMoved := keep t.firstMoved path } else t
+  if atRest s then t else { t with notAtRest := t.notAtRest + 1 }
+
+def search (base : MachineView) : Nat → Run → List Nat → Tally → Tally
+  | 0, s, path, t => judge base s path t
+  | depth + 1, s, path, t =>
+    let t := judge base s path t
+    (List.range alphabet.length).foldl (fun t i =>
+      match alphabet[i]? with
+      | some move => search base depth (step s move) (path ++ [i]) t
+      | none => t) t
+
+def report : String :=
+  match (Effect4.Api.Author.build (crew 3)).toOption with
+  | none => "no build"
+  | some b =>
+    let dropped := _root_.Test.Dogfood.Scenario.play (openedAt 80 b) (script [running, cancelWaiting, afterWaiting])
+    let t := search (machineView dropped) 3 dropped [] {}
+    s!"scripts={t.nodes} rootHasAnExit={t.exited} viewMoved={t.moved} notAtRest={t.notAtRest} firstWithAnExit={t.firstExited} firstWithAnotherView={t.firstMoved}"
+
+#eval IO.println report
+
+end After2

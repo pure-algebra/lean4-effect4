@@ -17,10 +17,14 @@ Status: evidence of a receipt (history, not authority). The receipt is
 | `rows.out.txt` | its output: one line for each row that gives the machine a decision | tested, on the Lean machine |
 | `after.lean.txt` | the run `dropped`, then seven continuations by a host's acts | a finite probe |
 | `after.out.txt` | its output: one line for each continuation | tested, on the Lean machine |
+| `continue.lean.txt` | the run `dropped`, then every script of 29 moves up to length 3 | a finite probe |
+| `continue.out.txt` | its output: one line of counts | tested, on the Lean machine |
+| `onerow.lean.txt` | a budget for one row: nine middle rows, each at every fuel below its least one | a finite probe, outside the goals' domain |
+| `onerow.out.txt` | its output: one line for each row | tested, on the Lean machine |
 | `host-evidence.md` | the keyed lane's table of each entry's source of evidence, as the check wrote it in its work folder | tested, on rc.112 under bun 1.4.2 |
 | `semantics-report.diff.txt` | what the semantics report gains at its next writing: the committed `generated/semantics.md` against the report tool's output in a scratch folder | tested: one run of the report tool; the committed file is not written |
 
-The six Lean files are not modules of the tree, and no gate runs them. To run one again,
+The eight Lean files are not modules of the tree, and no gate runs them. To run one again,
 follow these steps from the repository's root.
 
 1. Build `Test.Dogfood.Scenario.QueueWorkers`.
@@ -113,9 +117,27 @@ sufficient one. The answer is monotone in the budget at each row: no line says o
 A line gives the verdicts of the added rows and the root's exit. It also says whether the
 machine's view is still the view of `dropped`.
 
+## The run that lost its work, under every short script
+
+`continue.out.txt` plays the run `dropped` and then every script of an alphabet up to length 3.
+The alphabet has 29 moves: the search's 28 with raw controls and raw rows, and the root's start.
+The line gives three counts. The first is the scripts. The second is the scripts after which
+the root has an exit. The third is the scripts after which the machine's view has moved.
+
+## A budget for one row
+
+The goals range over runs with one command budget. `onerow.out.txt` is outside that domain. The
+probe plays a script at the battery's budget, and it sets the run's command fuel for one row.
+It plays that row at each fuel from 1 to 69. A line reads the fuels below the first one at
+which the row's view is the whole run's. It gives the fuels at which the machine is at rest
+and those at which an observation fails. Then it gives the same after two more flushes at the
+battery's fuel.
+
 ## The semantics report
 
 `semantics-report.diff.txt` is the output of `diff` on two files. The first is the committed
-`generated/semantics.md`. The second is the file that `lake exe semantics-report` wrote into a
-scratch folder at the seat's head. The seat did not run `make gen-semantics`, and it did not
-write the committed file.
+`generated/semantics.md` at the seat's head `e1e3959c`. The second is the file that
+`lake exe semantics-report` wrote into a scratch folder there. The seat did not run
+`make gen-semantics`, and it did not write the committed file. The coordinator wrote the report
+again at the merge `c67fa03c`. A second scratch run at the merged head gives the committed
+file's bytes.
