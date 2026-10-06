@@ -13,7 +13,8 @@ host answer carries.
   over any repository row and any two handler tests, so a red control changes one part. The
   instance at p2's row and tests elaborates to p2's own program (a control pins it).
 * **Script.** The host answers the configuration, then each repository lookup. A script offers a
-  repository answer even where the program must not ask for one.
+  repository answer even where the program must not ask for one. `runsOf` lists each script
+  once, as a named run.
 * **Observation.** `Observation`, three fields: the exact response or the failure that escapes,
   the repository's calls, and the refused rows with the session's reason.
 * **Claim.** `routing` assembles three clauses. The handler's test is exact on the pair spelling
@@ -21,7 +22,8 @@ host answer carries.
   `unauthorized_calls_nothing`. One law stands beside them as an associated law: a stored
   successful reply fits its row (`submit_success_prepared_fits`, a theorem of the law graph). It
   has controls, and the claim's proof does not use it.
-* **Controls.** `controls`: for each entry a green control and at least one red control.
+* **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
+  control names the runs that its comparison reads.
 * **Lowered runs.** The program prints and reads back (`Test/Dogfood/Scenario/Faces.lean`). The
   host run waits on the keyed lane.
 
@@ -212,7 +214,7 @@ theorem routing :
     InfrastructureEscapes ∧ UnauthorizedCallsNothing :=
   ⟨tagIs_pair, infrastructure_escapes, unauthorized_calls_nothing⟩
 
-/-! ## 5. The controls -/
+/-! ## 5. The runs and the controls -/
 
 /-- A `Response` value, and a tagged failure at the root. -/
 def responded (status : Nat) (body : String) : Option ExitV :=
@@ -224,48 +226,83 @@ def escaped (tag message : String) : Option ExitV :=
 def wide : Val :=
   .some (recordVal ["id", "name", "role", "createdAt"] [.nat 1, .str "ada", .str "admin", .nat 0])
 
-/-- Whether a script on a built program shows an observation. -/
-def shows (b : Api.Built) (moves : List Move) (expected : Observation) : Bool :=
-  observe (Scenario.play (opened b) moves) == expected
+/-- Whether a run shows an observation. -/
+def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 
-/-- The controls, from one build of each program. -/
-def controlsOf (bob missing denied misnamed catchAll eager exact : Api.Built) : List Control :=
+/-- The scenario's named runs: each script of a control, once, from one build of each program.
+The first six are on the scenario's own program `request`. The others are on the variants of the
+red controls. The host lane performs them in this order. -/
+def runsOf (bob missing denied misnamed catchAll eager exact : Api.Built) : List NamedRun :=
+  [ ⟨"200", opened bob, lookups 2⟩
+  , ⟨"404", opened missing, lookups 9⟩
+  , ⟨"401", opened denied, lookups 2⟩
+  , ⟨"escape", opened bob, failing "SqlError" "connection lost"⟩
+  , ⟨"business-tag", opened bob, failing "NotFound" "db"⟩
+  , ⟨"wide", opened bob,
+      script [[.start], answer cfg (ok (configOf "secret" 20)), answer repo (ok wide)]⟩
+  , ⟨"misnamed", opened misnamed, lookups 2⟩
+  , ⟨"catch-all", opened catchAll, failing "SqlError" "connection lost"⟩
+  , ⟨"eager", opened eager, lookups 2⟩
+  , ⟨"exact-business-tag", opened exact, failing "NotFound" "db"⟩
+  , ⟨"exact-escape", opened exact, failing "SqlError" "connection lost"⟩ ]
+
+/-- The controls. Each names the runs of `runsOf` that its comparison reads, and the gate hands
+them over as played. -/
+def controlsOf : List Control :=
   [ -- each handler catches only its named failure
     green "exact" "the three requests of run-p2.ts get rc.112's three responses"
-      (shows bob (lookups 2) ⟨responded 200 "bob", [.nat 1, .nat 2], []⟩ &&
-        shows missing (lookups 9) ⟨responded 404 "no user 9", [.nat 1, .nat 9], []⟩ &&
-        shows denied (lookups 2) ⟨responded 401 "bad token", [], []⟩)
+      ["200", "404", "401"] fun
+      | [served, missing, denied] =>
+        shows served ⟨responded 200 "bob", [.nat 1, .nat 2], []⟩ &&
+          shows missing ⟨responded 404 "no user 9", [.nat 1, .nat 9], []⟩ &&
+          shows denied ⟨responded 401 "bad token", [], []⟩
+      | _ => false
   , red "exact" "a handler that names another tag lets the business failure escape"
-      (shows misnamed (lookups 2) ⟨escaped "Unauthorized" "bad token", [], []⟩)
+      ["misnamed"] fun
+      | [misnamed] => shows misnamed ⟨escaped "Unauthorized" "bad token", [], []⟩
+      | _ => false
   , red "exact" "a handler that catches every failure answers 401 to an infrastructure failure"
-      (shows catchAll (failing "SqlError" "connection lost")
-        ⟨responded 401 "connection lost", [.nat 1], []⟩)
+      ["catch-all"] fun
+      | [caught] => shows caught ⟨responded 401 "connection lost", [.nat 1], []⟩
+      | _ => false
     -- an infrastructure failure escapes the business handlers
   , green "escape" "a repository failure with another tag reaches the root unchanged"
-      (shows bob (failing "SqlError" "connection lost")
-        ⟨escaped "SqlError" "connection lost", [.nat 1], []⟩)
+      ["escape"] fun
+      | [escaping] => shows escaping ⟨escaped "SqlError" "connection lost", [.nat 1], []⟩
+      | _ => false
   , red "escape" "a repository failure that wears a business tag is routed as that failure"
-      (shows bob (failing "NotFound" "db") ⟨responded 404 "no user db", [.nat 1], []⟩)
+      ["business-tag"] fun
+      | [tagged] => shows tagged ⟨responded 404 "no user db", [.nat 1], []⟩
+      | _ => false
   , red "escape" "with the exact error column the session refuses the business tag"
-      (shows exact (failing "NotFound" "db")
-          ⟨none, [.nat 1], [("submit", .envelope), ("apply", .noCall)]⟩ &&
-        shows exact (failing "SqlError" "connection lost")
-          ⟨escaped "SqlError" "connection lost", [.nat 1], []⟩)
+      ["exact-business-tag", "exact-escape"] fun
+      | [tagged, escaping] =>
+        shows tagged ⟨none, [.nat 1], [("submit", .envelope), ("apply", .noCall)]⟩ &&
+          shows escaping ⟨escaped "SqlError" "connection lost", [.nat 1], []⟩
+      | _ => false
     -- an unauthorized request makes no call of the repository
   , green "no call" "a request with a wrong token holds no repository call, though offered"
-      (shows denied (lookups 2) ⟨responded 401 "bad token", [], []⟩)
-  , red "no call" "a handler that looks the caller up first calls the repository"
-      (shows eager (lookups 2)
-        ⟨responded 401 "bad token", [.nat 1], [("submit", .noCall), ("apply", .noCall)]⟩)
+      ["401"] fun
+      | [denied] => shows denied ⟨responded 401 "bad token", [], []⟩
+      | _ => false
+  , red "no call" "a handler that looks the caller up first calls the repository" ["eager"] fun
+      | [eager] =>
+        shows eager
+          ⟨responded 401 "bad token", [.nat 1], [("submit", .noCall), ("apply", .noCall)]⟩
+      | _ => false
     -- a stored successful reply fits its row
-  , green "admission" "the exact records are stored and applied: no row is refused"
-      (shows bob (lookups 2) ⟨responded 200 "bob", [.nat 1, .nat 2], []⟩)
+  , green "admission" "the exact records are stored and applied: no row is refused" ["200"] fun
+      | [served] => shows served ⟨responded 200 "bob", [.nat 1, .nat 2], []⟩
+      | _ => false
   , red "admission" "a wider record is refused at the reply receipt, and the root does not move"
-      (shows bob (script [[.start], answer cfg (ok (configOf "secret" 20)), answer repo (ok wide)])
-        ⟨none, [.nat 1], [("submit", .envelope), ("apply", .noCall)]⟩) ]
+      ["wide"] fun
+      | [widened] => shows widened ⟨none, [.nat 1], [("submit", .envelope), ("apply", .noCall)]⟩
+      | _ => false ]
 
-/-- The scenario's controls. The first control pins that the scenario's program is p2's own. -/
-def controls : List Control :=
+/-- The scenario's runs and its controls, from one build of each program. The first control pins
+that the scenario's program is p2's own. A program that does not build leaves no run and one
+failing control. -/
+def runsAndControls : List NamedRun × List Control :=
   let build := fun (m : Module NativeOp) => (Effect4.Api.Author.build m).toOption
   match build (request "secret" 2 "2"), build (request "secret" 9 "9"), build (request "wrong" 2 "2"),
     build (routed false findById (named "NotFound") (named "Unauthorised") "wrong" 2 "2"),
@@ -275,9 +312,11 @@ def controls : List Control :=
     build (caseModule "secret" 2 "2") with
   | some bob, some missing, some denied, some misnamed, some catchAll, some eager, some exact,
       some p2 =>
-    green "exact" "the scenario's program is p2's own handler" (decide (bob.program = p2.program)) ::
-      controlsOf bob missing denied misnamed catchAll eager exact
-  | _, _, _, _, _, _, _, _ => [green "exact" "the handler and its variants build" false]
+    (runsOf bob missing denied misnamed catchAll eager exact,
+      green "exact" "the scenario's program is p2's own handler" []
+        (fun _ => decide (bob.program = p2.program)) :: controlsOf)
+  | _, _, _, _, _, _, _, _ =>
+    ([], [green "exact" "the handler and its variants build" [] fun _ => false])
 
 /-! ## 6. The record -/
 
@@ -294,7 +333,8 @@ def scenario : Scenario :=
       , ⟨"escape", ``infrastructure_escapes⟩
       , ⟨"no call", ``unauthorized_calls_nothing⟩ ]
     laws := [⟨"admission", ``Effect4.Api.HostSession.submit_success_prepared_fits⟩]
-    controls := controls }
+    runs := runsAndControls.1
+    controls := runsAndControls.2 }
 
 #scenario_gate scenario
 

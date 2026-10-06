@@ -14,6 +14,7 @@ answers by key.
   makes the count `total` completes the gate, and the gate's completion ends the pool's scope.
 * **Script.** Both workers park on `Jobs.take`, and the host holds both calls. The session
   receives both replies and applies them in both orders. Then the host cancels one worker.
+  `runsOf` lists each script once, as a named run.
 * **Observation.** `Observation`, seven fields: the assignment of jobs to workers, the accepted
   reply receipts, the reply applications, the retired calls, the cleanup identities, the root's
   exit and the work left.
@@ -21,9 +22,10 @@ answers by key.
   proved in `Test/Dogfood/Scenario.lean`. The fourth, `releases_once`, is a planned goal: under
   every script the crew releases no connection twice. The driver's law `replays` stands beside
   them as an associated law: it has controls, and the claim's proof does not use it.
-* **Controls.** `controls`: for each entry a green control and at least one red control. One
-  green control of the cleanup clause is the lowest-fiber schedule of today: the driver of
-  `P3WorkerQueue.lean` plays it on the same program, and the journals agree row for row.
+* **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
+  control names the runs that its comparison reads. One green control of the cleanup clause is
+  the lowest-fiber schedule of today: the driver of `P3WorkerQueue.lean` plays it on the same
+  program, and the journals agree row for row.
 * **Lowered runs.** The crew's logs are `Ref.update` rows whose binder terms no name images. The
   program prints and reads back since the state plan's T5, part A
   (`Test/Dogfood/Scenario/Faces.lean`). The host run waits on the keyed lane.
@@ -223,7 +225,7 @@ the retirement edge of the host protocol (R6). -/
 theorem workers : ReceiptInert ∧ AppliedSelects ∧ ControlRetires ∧ ReleasesOnce :=
   ⟨receipt_inert, applied_selects, control_retires, releases_once⟩
 
-/-! ## 5. The controls -/
+/-! ## 5. The runs and the controls -/
 
 /-- A `Jobs.take` call and a `Jobs.run` call, as the host sees them at a key. -/
 def takeAt (fiber token : Nat) : Seen := ⟨"Jobs.take", .unit, ⟨⟨fiber⟩, token⟩⟩
@@ -261,115 +263,171 @@ def done (released : List Val) : Option ExitV := some (.success (.list [.list re
 /-- Whether a run shows an observation. -/
 def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 
-/-- The controls, computed from one build of each program. Every control compares `observe`. A
-control of a refusal compares the refused rows beside it. -/
-def controlsOf (b faulty : Api.Built) : List Control :=
-  let run := fun (parts : List (List Move)) => Scenario.play (opened b) (script parts)
-  let received := run [parked, takes]
-  let duplicate := run [parked, takes, [.receive w1 (ok (.nat 1))]]
-  let crossed := run [parked, [.row (.submit (forged 0 2 2 (ok (.nat 1))))]]
-  let unreceived := run [parked, [.apply w2]]
-  let applied := run [parked, takes, [.apply w1]]
-  let stale := run [parked, takes,
-    [.apply w1, .row (.submit (forged 0 1 1 (ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
-  let early := run [parked, [.cancel ⟨2⟩, .receive w2 (ok (.nat 2))]]
-  let between := run [parked, takes, [.cancel ⟨2⟩, .apply w2, .apply w1]]
-  let scripted := run [lowest]
-  let driven := (P3WorkerQueue.drive 300 { run := (opened b).play Rows.start }).run
+/-- The scenario's named runs: each script of a control, once, from one build of each program.
+Every run but the last is on the crew. The last plays the lowest-fiber schedule on the crew that
+registers each release twice. The order is the order in which the controls first read the runs,
+and the host lane performs them in it. -/
+def runsOf (b faulty : Api.Built) : List NamedRun :=
+  let run := fun (name : String) (parts : List (List Move)) =>
+    (⟨name, opened b, script parts⟩ : NamedRun)
+  [ run "parked" [parked]
+  , run "received" [parked, takes]
+  , run "received-reversed" [parked, takes.reverse]
+  , run "duplicate" [parked, takes, [.receive w1 (ok (.nat 1))]]
+  , run "applied-2" [parked, takes, [.apply w2]]
+  , run "applied-1-2" [parked, takes, [.apply w1, .apply w2]]
+  , run "applied-2-1" [parked, takes, [.apply w2, .apply w1]]
+  , run "crossed" [parked, [.row (.submit (forged 0 2 2 (ok (.nat 1))))]]
+  , run "unreceived" [parked, [.apply w2]]
+  , run "applied-1" [parked, takes, [.apply w1]]
+  , run "stale" [parked, takes,
+      [.apply w1, .row (.submit (forged 0 1 1 (ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
+  , run "cancelled-running" [running, [.cancel ⟨2⟩]]
+  , run "cancelled-early" [parked, [.cancel ⟨2⟩, .receive w2 (ok (.nat 2))]]
+  , run "cancelled-between" [parked, takes, [.cancel ⟨2⟩, .apply w2, .apply w1]]
+  , run "cancelled-root" [parked, [.cancel ⟨0⟩]]
+  , run "lowest" [lowest]
+  , run "cancelled" [running, [.cancel ⟨2⟩], finish]
+  , ⟨"twice", opened faulty, lowest⟩ ]
+
+/-- The controls. Each names the runs of `runsOf` that its comparison reads, and the gate hands
+them over as played. Every control compares `observe`. A control of a refusal compares the
+refused rows beside it. Three comparisons need the crew's build: one makes the run that
+`P3WorkerQueue.drive` drives, and two play a journal again from the opened program. -/
+def controlsOf (b : Api.Built) : List Control :=
   [ -- a reply receipt does not advance the machine
     green "receipt" "two reply receipts store two replies and move nothing else"
-      (shows received atReceived && received.machine.state == (run [parked]).machine.state)
+      ["parked", "received"] fun
+      | [waiting, received] =>
+        shows received atReceived && received.machine.state == waiting.machine.state
+      | _ => false
   , green "receipt" "the other order of the reply receipts stores the same replies"
-      (shows (run [parked, takes.reverse])
-        { atReceived with receipts := [takeAt 2 2, takeAt 1 1] })
-  , red "receipt" "a duplicate reply is refused and changes nothing"
-      (refused duplicate [("submit", .pendingReply)] && shows duplicate atReceived)
+      ["received-reversed"] fun
+      | [reversed] => shows reversed { atReceived with receipts := [takeAt 2 2, takeAt 1 1] }
+      | _ => false
+  , red "receipt" "a duplicate reply is refused and changes nothing" ["duplicate"] fun
+      | [duplicate] => refused duplicate [("submit", .pendingReply)] && shows duplicate atReceived
+      | _ => false
     -- a reply application consumes the selected call only
   , green "selection" "the reply application at worker 2's key advances worker 2 alone"
-      (shows (run [parked, takes, [.apply w2]])
-        { atReceived with
-          assignment := [gave 2 2]
-          applications := [takeAt 2 2]
-          workLeft := ⟨[], [], [waitTake 1 1, waitRun 2 2 3], [⟨⟨1⟩, 1⟩], []⟩ })
+      ["applied-2"] fun
+      | [applied] =>
+        shows applied
+          { atReceived with
+            assignment := [gave 2 2]
+            applications := [takeAt 2 2]
+            workLeft := ⟨[], [], [waitTake 1 1, waitRun 2 2 3], [⟨⟨1⟩, 1⟩], []⟩ }
+      | _ => false
   , red "selection" "the two orders of the reply applications leave different assignments"
-      (shows (run [parked, takes, [.apply w1, .apply w2]]) atRunning &&
-        shows (run [parked, takes, [.apply w2, .apply w1]])
-          { atRunning with
-            assignment := [gave 2 2, gave 1 1]
-            applications := [takeAt 2 2, takeAt 1 1]
-            workLeft := ⟨[], [], [waitRun 1 1 4, waitRun 2 2 3], [], []⟩ })
-  , red "selection" "worker 1's reply under worker 2's key is refused"
-      (refused crossed [("submit", .callOrder)] && shows crossed atParked)
-  , red "selection" "a reply application with no stored reply is refused"
-      (refused unreceived [("apply", .noCall)] && shows unreceived atParked)
+      ["applied-1-2", "applied-2-1"] fun
+      | [oneFirst, twoFirst] =>
+        shows oneFirst atRunning &&
+          shows twoFirst
+            { atRunning with
+              assignment := [gave 2 2, gave 1 1]
+              applications := [takeAt 2 2, takeAt 1 1]
+              workLeft := ⟨[], [], [waitRun 1 1 4, waitRun 2 2 3], [], []⟩ }
+      | _ => false
+  , red "selection" "worker 1's reply under worker 2's key is refused" ["crossed"] fun
+      | [crossed] => refused crossed [("submit", .callOrder)] && shows crossed atParked
+      | _ => false
+  , red "selection" "a reply application with no stored reply is refused" ["unreceived"] fun
+      | [unreceived] => refused unreceived [("apply", .noCall)] && shows unreceived atParked
+      | _ => false
   , red "selection" "a stale reply and a second reply application are refused"
-      (refused stale [("submit", .noCall), ("apply", .noCall)] && shows stale (observe applied))
+      ["applied-1", "stale"] fun
+      | [applied, stale] =>
+        refused stale [("submit", .noCall), ("apply", .noCall)] && shows stale (observe applied)
+      | _ => false
     -- a control retires the held calls whose guard it removed
   , green "retirement" "cancelled after the reply applications, worker 2's call is retired alone"
-      (shows (run [running, [.cancel ⟨2⟩]])
-        { atRunning with
-          retired := [(runAt 2 2 4, false)]
-          cleanups := [.nat 2]
-          workLeft := ⟨[], [], [waitRun 1 1 3], [], []⟩ })
+      ["cancelled-running"] fun
+      | [cancelled] =>
+        shows cancelled
+          { atRunning with
+            retired := [(runAt 2 2 4, false)]
+            cleanups := [.nat 2]
+            workLeft := ⟨[], [], [waitRun 1 1 3], [], []⟩ }
+      | _ => false
   , green "retirement"
       "cancelled before the reply receipt, the call is retired and a late reply is refused"
-      (refused early [("submit", .noCall)] &&
-        shows early
-          { atParked with
-            retired := [(takeAt 2 2, false)]
-            cleanups := [.nat 2]
-            workLeft := ⟨[], [], [waitTake 1 1], [], []⟩ })
+      ["cancelled-early"] fun
+      | [early] =>
+        refused early [("submit", .noCall)] &&
+          shows early
+            { atParked with
+              retired := [(takeAt 2 2, false)]
+              cleanups := [.nat 2]
+              workLeft := ⟨[], [], [waitTake 1 1], [], []⟩ }
+      | _ => false
   , green "retirement"
       "cancelled between reply receipt and reply application, the reply is kept and never applied"
-      (refused between [("apply", .noCall)] &&
-        shows between
-          { atReceived with
-            assignment := [gave 1 1]
-            applications := [takeAt 1 1]
-            retired := [(takeAt 2 2, true)]
-            cleanups := [.nat 2]
-            workLeft := ⟨[], [], [waitRun 1 1 3], [], []⟩ })
-  , red "retirement" "cancelling the root retires both workers' calls"
-      ((observe (run [parked, [.cancel ⟨0⟩]])).retired ==
-        [(takeAt 1 1, false), (takeAt 2 2, false)])
+      ["cancelled-between"] fun
+      | [between] =>
+        refused between [("apply", .noCall)] &&
+          shows between
+            { atReceived with
+              assignment := [gave 1 1]
+              applications := [takeAt 1 1]
+              retired := [(takeAt 2 2, true)]
+              cleanups := [.nat 2]
+              workLeft := ⟨[], [], [waitRun 1 1 3], [], []⟩ }
+      | _ => false
+  , red "retirement" "cancelling the root retires both workers' calls" ["cancelled-root"] fun
+      | [cancelled] =>
+        (observe cancelled).retired == [(takeAt 1 1, false), (takeAt 2 2, false)]
+      | _ => false
     -- each registration cleans up at most once
   , green "cleanup" "the lowest-fiber schedule of today releases each connection once"
-      (shows scripted
-          { assignment := [gave 1 1, gave 2 1]
-            receipts := [takeAt 1 1, runAt 1 1 3, takeAt 1 4, runAt 2 1 5]
-            applications := [takeAt 1 1, runAt 1 1 3, takeAt 1 4, runAt 2 1 5]
-            retired := [(takeAt 2 2, false)]
-            cleanups := [.nat 2, .nat 1]
-            rootExit := done [.nat 2, .nat 1]
-            workLeft := ⟨[], [], [], [], []⟩ } &&
-        driven.journal.take scripted.journal.length == scripted.journal &&
-        shows driven (observe scripted))
+      ["lowest"] fun
+      | [scripted] =>
+        let driven := (P3WorkerQueue.drive 300 { run := (opened b).play Rows.start }).run
+        shows scripted
+            { assignment := [gave 1 1, gave 2 1]
+              receipts := [takeAt 1 1, runAt 1 1 3, takeAt 1 4, runAt 2 1 5]
+              applications := [takeAt 1 1, runAt 1 1 3, takeAt 1 4, runAt 2 1 5]
+              retired := [(takeAt 2 2, false)]
+              cleanups := [.nat 2, .nat 1]
+              rootExit := done [.nat 2, .nat 1]
+              workLeft := ⟨[], [], [], [], []⟩ } &&
+          driven.journal.take scripted.journal.length == scripted.journal &&
+          shows driven (observe scripted)
+      | _ => false
   , green "cleanup"
       "a cancelled worker's connection stays released once when the pool closes"
-      (shows (run [running, [.cancel ⟨2⟩], finish])
-        { assignment := [gave 1 1, gave 2 2, gave 2 1]
-          receipts := [takeAt 1 1, takeAt 2 2, runAt 1 1 3, takeAt 1 5, runAt 2 1 6]
-          applications := [takeAt 1 1, takeAt 2 2, runAt 1 1 3, takeAt 1 5, runAt 2 1 6]
-          retired := [(runAt 2 2 4, false)]
-          cleanups := [.nat 2, .nat 1]
-          rootExit := done [.nat 2, .nat 1]
-          workLeft := ⟨[], [], [], [], []⟩ })
+      ["cancelled"] fun
+      | [closed] =>
+        shows closed
+          { assignment := [gave 1 1, gave 2 2, gave 2 1]
+            receipts := [takeAt 1 1, takeAt 2 2, runAt 1 1 3, takeAt 1 5, runAt 2 1 6]
+            applications := [takeAt 1 1, takeAt 2 2, runAt 1 1 3, takeAt 1 5, runAt 2 1 6]
+            retired := [(runAt 2 2 4, false)]
+            cleanups := [.nat 2, .nat 1]
+            rootExit := done [.nat 2, .nat 1]
+            workLeft := ⟨[], [], [], [], []⟩ }
+      | _ => false
   , red "cleanup" "a crew that registers each release twice releases each connection twice"
-      ((observe (Scenario.play (opened faulty) lowest)).cleanups ==
-        [.nat 2, .nat 2, .nat 1, .nat 1])
+      ["twice"] fun
+      | [twice] => (observe twice).cleanups == [.nat 2, .nat 2, .nat 1, .nat 1]
+      | _ => false
     -- a script's run replays from its journal
   , green "journal" "the journal alone reaches the scripted run again, verdict for verdict"
-      (shows ((opened b).play scripted.journal) (observe scripted) &&
-        ((opened b).play scripted.journal).phases == scripted.phases)
+      ["lowest"] fun
+      | [scripted] =>
+        shows ((opened b).play scripted.journal) (observe scripted) &&
+          ((opened b).play scripted.journal).phases == scripted.phases
+      | _ => false
   , red "journal" "a journal that drops one reply application reaches another run"
-      (!shows ((opened b).play (scripted.journal.eraseIdx 5)) (observe scripted)) ]
+      ["lowest"] fun
+      | [scripted] => !shows ((opened b).play (scripted.journal.eraseIdx 5)) (observe scripted)
+      | _ => false ]
 
-/-- The scenario's controls: the crew and its faulty twin, each built once. A program that does
-not build leaves one failing control. -/
-def controls : List Control :=
+/-- The scenario's runs and its controls: the crew and its faulty twin, each built once. A
+program that does not build leaves no run and one failing control. -/
+def runsAndControls : List NamedRun × List Control :=
   match P3WorkerQueue.built? (crew 2), P3WorkerQueue.built? (crewWith true 2) with
-  | some b, some faulty => controlsOf b faulty
-  | _, _ => [green "receipt" "the crew and its faulty twin build" false]
+  | some b, some faulty => (runsOf b faulty, controlsOf b)
+  | _, _ => ([], [green "receipt" "the crew and its faulty twin build" [] fun _ => false])
 
 /-! ## 6. The record -/
 
@@ -386,7 +444,8 @@ def scenario : Scenario :=
       , ⟨"retirement", ``control_retires⟩
       , ⟨"cleanup", ``releases_once⟩ ]
     laws := [⟨"journal", ``replays⟩]
-    controls := controls }
+    runs := runsAndControls.1
+    controls := runsAndControls.2 }
 
 /-- Red control of the gate's dependency check (decisions rows 203 and 254): the workers record
 under a claim that assembles none of its other clauses. Each placement and each control of the

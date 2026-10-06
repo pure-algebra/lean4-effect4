@@ -16,7 +16,7 @@ finalizer.
   attempt's number and whether an interruption ended it.
 * **Script.** The host holds the first attempt's call. Its reply comes before the timeout, or
   after it, or its reply receipt comes before and its reply application after. Then the second
-  attempt gets its own reply.
+  attempt gets its own reply. `runsOf` lists each script once, as a named run.
 * **Observation.** `Observation`, nine fields: what became of each held call, the accepted reply
   receipts, the reply applications, the retired calls, the stored replies, the attempts started,
   the cleanup log, the root's ending and the timer work.
@@ -25,10 +25,11 @@ finalizer.
   associated laws: an application at budget zero stops at a frontier (`applyReply_zero`), the
   session refuses a direct answer decision (`advance_answer_refuses`), and a script's run
   replays from its journal (`replays`).
-* **Controls.** `controls`: for each entry a green control and at least one red control. The red
-  controls are a failure that must not retry, a client that retries every failure, a reply after
-  the timeout, a reply application after the timeout, the first attempt's reply under the second
-  attempt's key, and a finalizer that resets the count.
+* **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
+  control names the runs that its comparison reads. The red controls are a failure that must not
+  retry, a client that retries every failure, a reply after the timeout, a reply application
+  after the timeout, the first attempt's reply under the second attempt's key, and a finalizer
+  that resets the count.
 * **Lowered runs.** The attempt's cells are `Ref.update` rows whose binder terms no name images,
   and the retry loop states its cursor's type. The program prints since the state plan's T5,
   part A, and reads back since part B's second step (`Test/Dogfood/Scenario/Faces.lean`). The
@@ -338,7 +339,7 @@ deadline fairness or a physical clock. -/
 theorem timeout : RetriesDeclared ∧ StaleNeverApplies ∧ CleanupKeeps :=
   ⟨retries_declared, stale_never_applies, cleanup_keeps⟩
 
-/-! ## 5. The controls -/
+/-! ## 5. The runs and the controls -/
 
 /-- A `[count seen, interrupted]` entry of the cleanup log. -/
 def ended (attempt : Nat) (interrupted : Bool) : Val := .list [.nat attempt, .bool interrupted]
@@ -370,122 +371,190 @@ def atSecond : Observation :=
 /-- Whether a run shows an observation. -/
 def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 
-/-- The controls, from one build of each program. Every control compares `observe`. A control of
-a refusal compares the refused rows beside it. -/
-def controlsOf (b eager resetting : Api.Built) : List Control :=
-  let run := fun (parts : List (List Move)) => Scenario.play (opened b) (script parts)
+/-- The scenario's named runs: each script of a control, once, from one build of each program.
+The first fifteen are on the fetch. The last two are on the client that retries every failure
+and on the client whose finalizer resets the count. The host lane performs them in this order.
+The first run, `parked`, is the part that every other script starts with: no control reads it
+alone, and the gate reports it. -/
+def runsOf (b eager resetting : Api.Built) : List NamedRun :=
+  let run := fun (name : String) (parts : List (List Move)) =>
+    (⟨name, opened b, script parts⟩ : NamedRun)
   let notFound := [parked, answer http (failed "HttpError" "404"), [.tick 100, .flush, .hold http]]
-  let late := run [timedOut, answer first (ok body1)]
-  let kept := run [parked, [.receive http (ok body1), .tick 2000, .apply first]]
-  let crossed := run [timedOut, [.row (.submit (forged 0 key2 (ok body1)))]]
-  let direct := run [timedOut, [.control (.answerAsync ⟨5⟩ 7 (ok body1))]]
-  let received := run [parked, [.receive http (ok body1)]]
-  let starved : Run := { received with budget := { budget with fuel := 0 } }
-  let recorded := run [timedOut, answer second (ok body2)]
+  [ run "parked" [parked]
+  , run "503" [parked, answer http (failed "HttpError" "503"), [.tick 100, .hold http],
+      answer http (ok body2)]
+  , run "timed-out" [timedOut]
+  , run "four" [[.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400,
+      .tick 2000]]
+  , run "404" notFound
+  , run "before" [parked, answer http (ok body1)]
+  , run "second" [timedOut, answer second (ok body2)]
+  , run "late" [timedOut, answer first (ok body1)]
+  , run "kept" [parked, [.receive http (ok body1), .tick 2000, .apply first]]
+  , run "crossed" [timedOut, [.row (.submit (forged 0 key2 (ok body1)))]]
+  , run "direct" [timedOut, [.control (.answerAsync ⟨5⟩ 7 (ok body1))]]
+  , run "timer-interrupt" [parked, [.tick 2000]]
+  , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
+  , run "received" [parked, [.receive http (ok body1)]]
+  , run "applied" [parked, [.receive http (ok body1), .apply http]]
+  , ⟨"eager", opened eager, script notFound⟩
+  , ⟨"resetting", opened resetting, script [parked, [.tick 2000]]⟩ ]
+
+/-- The controls. Each names the runs of `runsOf` that its comparison reads, and the gate hands
+them over as played. Every control compares `observe`. A control of a refusal compares the
+refused rows beside it. Two comparisons need the fetch's build: they play a journal again from
+the opened program. The frontier control's comparison sets the fuel of a played run to zero and
+plays one reply application: a script holds no budget, so that one move stays in the
+comparison. -/
+def controlsOf (b : Api.Built) : List Control :=
   [ -- only the declared failures retry
     green "declared" "a 503 is declared: after the delay the second attempt calls, and its reply answers"
-      (shows (run [parked, answer http (failed "HttpError" "503"), [.tick 100, .hold http],
-          answer http (ok body2)])
-        { atSecond with
-          calls := [.failed "HttpError" "503", .answered body2]
-          receipts := [key1, key2]
-          applications := [key1, key2]
-          retired := []
-          cleanups := [ended 1 false, ended 2 false] })
+      ["503"] fun
+      | [retried] =>
+        shows retried
+          { atSecond with
+            calls := [.failed "HttpError" "503", .answered body2]
+            receipts := [key1, key2]
+            applications := [key1, key2]
+            retired := []
+            cleanups := [ended 1 false, ended 2 false] }
+      | _ => false
   , green "declared" "a timeout is declared: the second attempt calls under its own key"
-      (shows (run [timedOut]) atTimedOut && (observe (run [timedOut])).retriesDeclared)
+      ["timed-out"] fun
+      | [retrying] => shows retrying atTimedOut && (observe retrying).retriesDeclared
+      | _ => false
   , green "declared" "four timeouts end the retries: the root fails with the timeout"
-      (shows (Scenario.play (opened b)
-          [.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400, .tick 2000])
-        { atParked with
-          calls := []
-          attempts := 4
-          cleanups := [ended 1 true, ended 2 true, ended 3 true, ended 4 true]
-          root := .failed "Timeout" "2000 ms"
-          timers := [] })
+      ["four"] fun
+      | [exhausted] =>
+        shows exhausted
+          { atParked with
+            calls := []
+            attempts := 4
+            cleanups := [ended 1 true, ended 2 true, ended 3 true, ended 4 true]
+            root := .failed "Timeout" "2000 ms"
+            timers := [] }
+      | _ => false
   , red "declared" "a 404 is not declared: the root fails with it, and no second attempt comes"
-      (shows (run notFound)
-        { atParked with
-          calls := [.failed "HttpError" "404"]
-          receipts := [key1]
-          applications := [key1]
-          cleanups := [ended 1 false]
-          root := .failed "HttpError" "404"
-          timers := [] })
+      ["404"] fun
+      | [notFound] =>
+        shows notFound
+          { atParked with
+            calls := [.failed "HttpError" "404"]
+            receipts := [key1]
+            applications := [key1]
+            cleanups := [ended 1 false]
+            root := .failed "HttpError" "404"
+            timers := [] }
+      | _ => false
   , red "declared" "a client that retries every failure calls again after the 404"
-      (!(observe (Scenario.play (opened eager) (script notFound))).retriesDeclared &&
-        (observe (Scenario.play (opened eager) (script notFound))).calls ==
-          [.failed "HttpError" "404", .live])
+      ["eager"] fun
+      | [eager] =>
+        !(observe eager).retriesDeclared &&
+          (observe eager).calls == [.failed "HttpError" "404", .live]
+      | _ => false
     -- a reply of a timed-out attempt never applies to a later attempt
   , green "stale" "a reply before the timeout is applied, and the root answers it"
-      (shows (run [parked, answer http (ok body1)])
-        { atParked with
-          calls := [.answered body1]
-          receipts := [key1]
-          applications := [key1]
-          cleanups := [ended 1 false]
-          root := .answered body1
-          timers := [] })
-  , green "stale" "the second attempt's reply at its own key answers the root"
-      (shows recorded atSecond && (observe recorded).staleNeverApplies)
-  , red "stale" "a reply after the timeout is refused twice, and the second attempt still waits"
-      (refused late [("submit", .noCall), ("apply", .noCall)] && shows late atTimedOut)
-  , red "stale" "received before the timeout and applied after it: the reply is kept, never applied"
-      (refused kept [("apply", .noCall)] &&
-        shows kept
+      ["before"] fun
+      | [early] =>
+        shows early
           { atParked with
-            calls := [.retired true]
+            calls := [.answered body1]
             receipts := [key1]
-            retired := [(key1, true)]
-            cleanups := [ended 1 true]
-            timers := [(0, 2100)] })
+            applications := [key1]
+            cleanups := [ended 1 false]
+            root := .answered body1
+            timers := [] }
+      | _ => false
+  , green "stale" "the second attempt's reply at its own key answers the root" ["second"] fun
+      | [recorded] => shows recorded atSecond && (observe recorded).staleNeverApplies
+      | _ => false
+  , red "stale" "a reply after the timeout is refused twice, and the second attempt still waits"
+      ["late"] fun
+      | [late] => refused late [("submit", .noCall), ("apply", .noCall)] && shows late atTimedOut
+      | _ => false
+  , red "stale" "received before the timeout and applied after it: the reply is kept, never applied"
+      ["kept"] fun
+      | [kept] =>
+        refused kept [("apply", .noCall)] &&
+          shows kept
+            { atParked with
+              calls := [.retired true]
+              receipts := [key1]
+              retired := [(key1, true)]
+              cleanups := [ended 1 true]
+              timers := [(0, 2100)] }
+      | _ => false
   , red "stale" "the first attempt's reply under the second attempt's key is refused"
-      (refused crossed [("submit", .callOrder)] && shows crossed atTimedOut)
+      ["crossed"] fun
+      | [crossed] => refused crossed [("submit", .callOrder)] && shows crossed atTimedOut
+      | _ => false
     -- cleanup keeps the committed count
   , green "cleanup" "the timer interrupts the first attempt: it is cleaned once, and its count stays"
-      (shows (run [parked, [.tick 2000]])
-        { atParked with
-          calls := [.retired false]
-          retired := [(key1, false)]
-          cleanups := [ended 1 true]
-          timers := [(0, 2100)] })
+      ["timer-interrupt"] fun
+      | [interrupted] =>
+        shows interrupted
+          { atParked with
+            calls := [.retired false]
+            retired := [(key1, false)]
+            cleanups := [ended 1 true]
+            timers := [(0, 2100)] }
+      | _ => false
   , green "cleanup" "the host interrupts the first attempt: it is cleaned once, and no attempt follows"
-      (shows (run [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]])
-        { atParked with
-          calls := [.retired false]
-          retired := [(key1, false)]
-          cleanups := [ended 1 true]
-          root := .interrupted
-          timers := [] })
+      ["host-interrupt"] fun
+      | [cancelled] =>
+        shows cancelled
+          { atParked with
+            calls := [.retired false]
+            retired := [(key1, false)]
+            cleanups := [ended 1 true]
+            root := .interrupted
+            timers := [] }
+      | _ => false
   , red "cleanup" "a finalizer that resets the count loses the committed attempt"
-      (!(observe (Scenario.play (opened resetting) (script [parked, [.tick 2000]]))).cleanupKeeps &&
-        (observe (Scenario.play (opened resetting) (script [parked, [.tick 2000]]))).attempts == 0)
+      ["resetting"] fun
+      | [resetting] => !(observe resetting).cleanupKeeps && (observe resetting).attempts == 0
+      | _ => false
     -- an application at budget zero stops at a frontier
   , green "frontier" "at budget zero the reply application stops at a frontier, and the reply stays stored"
-      ((Scenario.play starved [.apply http]).phases.getLast? == some .frontier &&
-        shows (Scenario.play starved [.apply http])
-          { atParked with receipts := [key1], stored := [key1] })
+      ["received"] fun
+      | [received] =>
+        let starved : Run := { received with budget := { budget with fuel := 0 } }
+        (Scenario.play starved [.apply http]).phases.getLast? == some .frontier &&
+          shows (Scenario.play starved [.apply http])
+            { atParked with receipts := [key1], stored := [key1] }
+      | _ => false
   , red "frontier" "with its budget the same row applies the reply and stores none"
-      ((Scenario.play received [.apply http]).phases.getLast? == some .applied &&
-        (observe (Scenario.play received [.apply http])).stored == [])
+      ["applied"] fun
+      | [applied] =>
+        applied.phases.getLast? == some .applied && (observe applied).stored == []
+      | _ => false
     -- the session refuses a direct answer decision
-  , green "direct" "a reply receipt and a reply application move the run"
-      (shows recorded atSecond)
+  , green "direct" "a reply receipt and a reply application move the run" ["second"] fun
+      | [recorded] => shows recorded atSecond
+      | _ => false
   , red "direct" "an answer decision at the second attempt's key is refused, and nothing moves"
-      (refused direct [("control", .directAnswer)] && shows direct atTimedOut)
+      ["direct"] fun
+      | [direct] => refused direct [("control", .directAnswer)] && shows direct atTimedOut
+      | _ => false
     -- a script's run replays from its journal
   , green "journal" "the journal alone reaches the timed-out run again, verdict for verdict"
-      (shows ((opened b).play recorded.journal) (observe recorded) &&
-        ((opened b).play recorded.journal).phases == recorded.phases)
+      ["second"] fun
+      | [recorded] =>
+        shows ((opened b).play recorded.journal) (observe recorded) &&
+          ((opened b).play recorded.journal).phases == recorded.phases
+      | _ => false
   , red "journal" "a journal that drops the timeout's clock row reaches another run"
-      (!shows ((opened b).play (recorded.journal.eraseIdx 3)) (observe recorded)) ]
+      ["second"] fun
+      | [recorded] => !shows ((opened b).play (recorded.journal.eraseIdx 3)) (observe recorded)
+      | _ => false ]
 
-/-- The scenario's controls. A program that does not build leaves one failing control. -/
-def controls : List Control :=
+/-- The scenario's runs and its controls, from one build of each program. A program that does
+not build leaves no run and one failing control. -/
+def runsAndControls : List NamedRun × List Control :=
   let build := fun (m : Module NativeOp) => (Effect4.Api.Author.build m).toOption
   match build fetch, build (client (fun _ => bool true) false), build (client retryable true) with
-  | some b, some eager, some resetting => controlsOf b eager resetting
-  | _, _, _ => [green "declared" "the client and its variants build" false]
+  | some b, some eager, some resetting => (runsOf b eager resetting, controlsOf b)
+  | _, _, _ => ([], [green "declared" "the client and its variants build" [] fun _ => false])
 
 /-! ## 6. The record -/
 
@@ -504,8 +573,13 @@ def scenario : Scenario :=
       [ ⟨"frontier", ``Effect4.Api.HostSession.applyReply_zero⟩
       , ⟨"direct", ``Effect4.Api.HostSession.advance_answer_refuses⟩
       , ⟨"journal", ``replays⟩ ]
-    controls := controls }
+    runs := runsAndControls.1
+    controls := runsAndControls.2 }
 
+-- One run of the gate. It reports the one named run that no control reads, and this guard pins
+-- the report: a new unread run fails the build until its line stands here.
+/-- info: timeout: no control reads the run "parked" -/
+#guard_msgs (info) in
 #scenario_gate scenario
 
 end Test.Dogfood.Scenario.Timeout

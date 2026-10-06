@@ -45,7 +45,8 @@ def committed : List (String × String) :=
   , ("atomic.txt", include_str "../../../ocaml/engine/test/scenarios/atomic.txt")
   , ("timeout.txt", include_str "../../../ocaml/engine/test/scenarios/timeout.txt") ]
 
-/-- The controls of the machine clause. -/
+/-- The controls of the machine clause. Each reads no named run of a record: the lowered runs are
+the tape module's own table, `fixtures`, and `shownFixtures` plays each one. -/
 def controls : List Control :=
   match shownFixtures, (Effect4.Api.Author.build (Workers.crew 2)).toOption with
   | some all, some crew =>
@@ -54,15 +55,15 @@ def controls : List Control :=
       ⟨"workers/starved", Run.open crew "workers" { fuel := 7, compileFuel := 2000 }, Workers.lowest⟩
     [ green "machine"
         "every tape reads every row, and its raw replay shows the session machine at every position"
-        (runs.all fun run => run.2.agrees)
+        [] fun _ => runs.all fun run => run.2.agrees
     , green "machine" "each committed fixture is the text Lean writes for the admitted programs"
-        (all.all fun entry =>
-          (committed.find? (·.1 == entry.1)).map (·.2) == fixture entry.2)
+        [] fun _ =>
+          all.all fun entry => (committed.find? (·.1 == entry.1)).map (·.2) == fixture entry.2
     , red "machine" "a tape without its last decision ends at another machine view"
-        (runs.all fun run => run.2.lastCounts)
+        [] fun _ => runs.all fun run => run.2.lastCounts
     , red "machine" "at a small budget the tape stops at the frontier and leaves the rows unread"
-        (starved.left != 0 && !starved.agrees && starved.raw.map (·.2) == starved.views) ]
-  | _, _ => [green "machine" "the scenarios' programs build" false]
+        [] fun _ => starved.left != 0 && !starved.agrees && starved.raw.map (·.2) == starved.views ]
+  | _, _ => [green "machine" "the scenarios' programs build" [] fun _ => false]
 
 /-- The lowered runs as a scenario: its claim is the machine clause. -/
 def scenario : Scenario :=

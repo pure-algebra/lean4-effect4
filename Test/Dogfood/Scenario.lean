@@ -32,6 +32,12 @@ and the lowered runs. This module holds what the scenarios share.
   have controls only. `#scenario_gate`, at the foot of a battery, refuses a name that does not
   resolve, a claim that is no theorem or has no placement, a clause that the claim's proof does
   not reach, an entry without its green control or its red control, and a control that fails.
+* **The named runs.** A scenario's record lists each of its scripts once, as a `NamedRun`: a
+  name, the built program opened for a run, and the script. A control holds no script. It names
+  the runs that its comparison reads, and the gate plays each named run once. The host lane
+  (`harness/truth/session/Keyed.lean`) and the engine's lane
+  (`Test/Dogfood/Scenario/Tape.lean`) take their scripts from the same list, so no script is
+  written twice.
 
 The laws of section 4 are the driver's contract, each with its placement (decisions row 207).
 They hold for every run and every session. A scenario cites them as clauses, and adds the planned
@@ -816,8 +822,24 @@ structure Clause where
   /-- The theorem or the planned goal that states the entry. It has a placement. -/
   claim : Lean.Name
 
+/-- One named run of a scenario: one script on one program. A scenario's record lists each one
+once, and every consumer of a script takes it from that list: the gate, the host lane
+(`harness/truth/session/Keyed.lean`) and the engine's lane (`Test/Dogfood/Scenario/Tape.lean`).
+A lane quotes a run as the scenario's name, a slash and the run's name. -/
+structure NamedRun where
+  /-- The run's name in its scenario. -/
+  name : String
+  /-- The built program, opened as its battery opens it: under its name and its budgets. -/
+  opened : Run
+  /-- The script. -/
+  moves : List Move
+
+/-- A named run, played: the run that its script reaches from the opened program. -/
+def NamedRun.played (run : NamedRun) : Run := play run.opened run.moves
+
 /-- One control of an entry. A green control is a run that the entry allows. A red control is a
-fault made on purpose, which the session must refuse or the observation must tell apart. -/
+fault made on purpose, which the session must refuse or the observation must tell apart. A
+control holds no script: it names the runs that its comparison reads. -/
 structure Control where
   /-- The clause or the law this run controls, by its name. -/
   clause : String
@@ -825,14 +847,21 @@ structure Control where
   isRed : Bool
   /-- What the run shows. -/
   name : String
-  /-- Whether the run shows it: a comparison on the scenario's observation, decided by running. -/
-  holds : Bool
+  /-- The named runs that the comparison reads, by their names in the scenario's record, in the
+  order the comparison takes them. Empty for a control that compares no script's run. -/
+  reads : List String
+  /-- Whether the runs show it: a comparison on the scenario's observation, decided by running.
+  The gate plays each named run once and hands the comparison the runs that `reads` names, in
+  that order. -/
+  holds : List Run → Bool
 
 /-- A green control of an entry. -/
-def green (clause name : String) (holds : Bool) : Control := ⟨clause, false, name, holds⟩
+def green (clause name : String) (reads : List String) (holds : List Run → Bool) : Control :=
+  ⟨clause, false, name, reads, holds⟩
 
 /-- A red control of an entry. -/
-def red (clause name : String) (holds : Bool) : Control := ⟨clause, true, name, holds⟩
+def red (clause name : String) (reads : List String) (holds : List Run → Bool) : Control :=
+  ⟨clause, true, name, reads, holds⟩
 
 /-- A scenario's record. The program, the observation and the claims are named as declarations,
 so a name that no longer resolves fails where the record is written. -/
@@ -852,13 +881,35 @@ structure Scenario where
   /-- The associated laws: laws that the scenario's runs control. The record claims no dependency
   of the claim on them, and the gate measures none. -/
   laws : List Clause := []
+  /-- The named runs: each script of the scenario, once, on the program it runs on. A name
+  stands once. The order is the order in which a lane performs the runs. -/
+  runs : List NamedRun := []
   /-- The controls: for each clause and each law a green control and at least one red control. -/
   controls : List Control
 
+/-- The named run of a record with this name. -/
+def Scenario.run? (s : Scenario) (name : String) : Option NamedRun :=
+  s.runs.find? (·.name == name)
+
+/-- The names that a record lists more than once, each once, in the record's order. -/
+def Scenario.repeated (s : Scenario) : List String :=
+  (s.runs.foldl (fun (state : List String × List String) run =>
+    if !state.1.contains run.name then (state.1 ++ [run.name], state.2)
+    else if state.2.contains run.name then state
+    else (state.1, state.2 ++ [run.name])) ([], [])).2
+
+/-- The named runs that no control reads, by name, in the record's order. The gate allows such a
+run and reports it: a lane performs it, and no control of the battery compares it. -/
+def Scenario.unread (s : Scenario) : List String :=
+  (s.runs.map (·.name)).filter fun name => !s.controls.any (·.reads.contains name)
+
 /-- What is wrong with a record as data, each finding in a sentence: a clause or a law with no
-green control or no red control, a control that names no entry, a control that fails. Empty for
-a sound record. -/
+green control or no red control, a run's name listed twice, a control that names no entry, a
+control that reads a run which the record does not list, a control that fails. It plays each
+named run once, and it hands each control the runs that the control reads. Empty for a record
+with no finding. -/
 def Scenario.problems (s : Scenario) : List String :=
+  let played := s.runs.map fun run => (run.name, run.played)
   let missing := fun (kind : String) (entries : List Clause) =>
     entries.flatMap fun entry =>
       [false, true].filterMap fun isRed =>
@@ -867,11 +918,19 @@ def Scenario.problems (s : Scenario) : List String :=
         else some (s.name ++ ": the " ++ kind ++ " \"" ++ entry.name ++ "\" has no " ++
           (if isRed then "red control" else "green control"))
   missing "clause" s.clauses ++ missing "law" s.laws ++
+  s.repeated.map (fun name => s.name ++ ": the record lists the run \"" ++ name ++ "\" twice") ++
   s.controls.filterMap fun control =>
     if !(s.clauses ++ s.laws).any (·.name == control.clause) then
       some (s.name ++ ": the control \"" ++ control.name ++ "\" names no clause and no law")
-    else if !control.holds then some (s.name ++ ": the control \"" ++ control.name ++ "\" fails")
-    else none
+    else
+      match control.reads.find? (fun name => !played.any (·.1 == name)) with
+      | some name =>
+        some (s.name ++ ": the control \"" ++ control.name ++ "\" reads the run \"" ++ name ++
+          "\", which the record does not list")
+      | none =>
+        let runs := control.reads.filterMap fun name => (played.find? (·.1 == name)).map (·.2)
+        if !control.holds runs then some (s.name ++ ": the control \"" ++ control.name ++ "\" fails")
+        else none
 
 /-- The declarations a record names besides its claims. -/
 def Scenario.declarations (s : Scenario) : List Lean.Name := [s.program, s.observation]
@@ -894,7 +953,8 @@ def registered (name module : Lean.Name) : Bool :=
     registry.concepts.any (·.defaultModules.contains module)
 
 /-- `#scenario_gate S₁ … Sₙ`, at the foot of a battery, checks each scenario's record against the
-environment and runs its controls once. It fails, naming every finding, when:
+environment. It plays each named run once and judges each control on the runs that the control
+reads. It fails, naming every finding, when:
 
 * the program or the observation does not resolve to a declaration;
 * the claim, a clause's claim or a law's claim does not resolve to a theorem or a planned goal;
@@ -908,7 +968,12 @@ environment and runs its controls once. It fails, naming every finding, when:
   (`Node.nearest`);
 * the claim rests on a planned goal that no clause names;
 * a clause or a law has no green control, or no red control (`Scenario.problems`);
-* a control names no clause and no law of its scenario, or fails (`Scenario.problems`).
+* the record lists one run's name twice (`Scenario.problems`);
+* a control names no clause and no law of its scenario, reads a run that the record does not
+  list, or fails (`Scenario.problems`).
+
+A named run that no control reads is allowed. The command reports each one in an information
+message, by its name (`Scenario.unread`): a battery pins that line with `#guard_msgs (info)`.
 
 An associated law gets no dependency check: the record claims none. A claim with no placement
 stays out of the plan, and the gate measures no dependency of it or on it. The plan refuses a
@@ -966,6 +1031,10 @@ open Lean in
               findings := findings.push
                 s!"{scenario.name}: the claim {scenario.claim} rests on the planned goal {goal}, which no clause names"
         findings := findings ++ scenario.problems.toArray
+      let unread := scenarios.flatMap fun scenario =>
+        scenario.unread.map fun name => s!"{scenario.name}: no control reads the run \"{name}\""
+      unless unread.isEmpty do
+        Lean.logInfo (String.intercalate "\n" unread)
       unless findings.isEmpty do
         throwError (String.intercalate "\n" findings.toList))
 
