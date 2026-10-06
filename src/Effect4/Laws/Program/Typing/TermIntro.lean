@@ -18,14 +18,17 @@ types to the whole's type. Each rule is stated once, and it names no module.
   atoms that a step term uses. `ite` has two rules: its second arm above the first, and below
   it.
 - **Nodes.** One rule for each node of `argTy`: an application, a field's read, an overwrite, a
-  construction and a fold. Each keeps the literal flag of the checker.
+  positional read, a construction and a fold. Each keeps the literal flag of the checker.
 - **Records.** `Record.fieldType`, `Record.setType` and `Record.check` at a record type in
   normal form. The field list is a parameter, and each side condition is decidable or a named
   premise, so a new cell's instance is one application.
+- **Tuples.** `Tuple.typeAt` at a tuple type in normal form, for a reply that is read by
+  position.
 
 Placement. Concept `store-typing`, requirement R4. Every rule here is a helper of the five
 typing statements of the Queue's steps (`src/Effect4/Laws/Modules/Queue/Typing.lean`), and each
-docstring names a step that uses it. Their consumers are the judgment `Types` and its builder
+docstring names a step that uses it. The two rules of a positional read are the exception:
+their consumer is the wrapper's law, which reads a step's reply by position. Their consumers are the judgment `Types` and its builder
 lemmas (`src/Effect4/Laws/Modules/Queue/Checking.lean`). A second composed module takes the
 same rules.
 
@@ -487,6 +490,17 @@ theorem argTy_recordSet_intro (const : Bool) {target value : Term} {name : Strin
   rw [htarget, Option.bind_some, hvalue]
   exact hset
 
+/-- **A positional read**: the target outside a const-generic position, then the tuple rule.
+Its consumer is the wrapper's law, which reads a step's reply by position. -/
+theorem argTy_tupleAt_intro (const : Bool) {target : Term} {index : Nat} {tuple answer : Ty}
+    (htarget : argTy sig env false target = some tuple)
+    (hitem : Tuple.typeAt tuple index = some answer) :
+    argTy sig env const (.tupleAt target index) = some answer := by
+  show (argTy sig env false target).bind
+    (fun targetType => Tuple.typeAt targetType index) = some answer
+  rw [htarget]
+  exact hitem
+
 /-- **A construction**: the raw declaration is formed, the values are typed inside a
 const-generic position, and the record rule answers. -/
 theorem argTy_record_intro (const : Bool) {fields : List (String × Bool × Ty)}
@@ -718,5 +732,18 @@ theorem check_declared {fields : Fields} (distinct : (fields.map Prod.fst).Nodup
   exact if_pos ⟨distinct, distinct, fit⟩
 
 end Record
+
+/-! ## A positional read at a tuple type in normal form -/
+
+/-- **A positional read at a tuple type in normal form** answers the item at the position: a
+tuple's item, or one of a product's two. The position is a lookup that `rfl` decides. Its
+consumer is the wrapper's law: a take's reply is a tuple of three, and an offer's and a poll's
+are products. -/
+theorem Tuple.typeAt_normal {target : Ty} {index : Nat} {answer : Ty}
+    (normal : target.normalize = target) (item : Tuple.project index target = some answer) :
+    Tuple.typeAt target index = some answer := by
+  unfold Tuple.typeAt
+  rw [normal]
+  exact item
 
 end Effect4.Program

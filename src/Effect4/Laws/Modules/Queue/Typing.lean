@@ -266,6 +266,18 @@ theorem offer_checkTy {A : Ty} (canonical : A.normalize = A) :
 An arm of a step that answers no message answers `none`, whose type is an option of the empty
 union. So a step's two arms have two types, and `ite` answers the greater one. -/
 
+/-- A take's reply type is its own normal form. -/
+theorem takeReplyTy_normal {A : Ty} (canonical : A.normalize = A) :
+    (takeReplyTy A).normalize = takeReplyTy A :=
+  Ty.normalize_triple_canonical (Ty.normalize_option_canonical canonical)
+    (Ty.normalize_list_canonical (offerTy_normal canonical)) rfl
+
+/-- A poll's reply type is its own normal form. -/
+theorem pollReplyTy_normal {A : Ty} (canonical : A.normalize = A) :
+    (pollReplyTy A).normalize = pollReplyTy A :=
+  Ty.normalize_prod_canonical (Ty.normalize_option_canonical canonical)
+    (Ty.normalize_list_canonical (offerTy_normal canonical)) rfl rfl
+
 /-- A reply of two parts that answers no message is below the reply that answers one, each
 beside the stored value's type. Used by the poll step and the offer step. -/
 theorem idlePair_sub (T L C : Ty) :
@@ -566,8 +578,7 @@ theorem pollStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
   have test := types_andT atoms (types_notT atoms (types_isEmpty atoms msgs))
     (types_isEmpty atoms takers)
   exact types_ifT_below atoms test yes no
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_prod_canonical optionNormal offersNormal rfl rfl) cellNormal rfl rfl)
+    (Ty.normalize_prod_canonical (pollReplyTy_normal canonical) cellNormal rfl rfl)
     (Ty.normalize_prod_canonical
       (Ty.normalize_prod_canonical rfl offersNormal rfl rfl) cellNormal rfl rfl)
     (idlePair_sub A _ _)
@@ -671,8 +682,7 @@ theorem takeStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
       (types_noneOf atoms takers) rfl offersNormal takersNormal)
     waiting
   exact types_ifT_below atoms test yes no
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_triple_canonical optionNormal offersNormal takersNormal) cellNormal rfl rfl)
+    (Ty.normalize_prod_canonical (takeReplyTy_normal canonical) cellNormal rfl rfl)
     (Ty.normalize_prod_canonical
       (Ty.normalize_triple_canonical rfl offersNormal takersNormal) cellNormal rfl rfl)
     (idleTriple_sub A _ _ _)

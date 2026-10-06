@@ -10,7 +10,7 @@ statements are proved through, beside `Reads`
 (`src/Effect4/Laws/Modules/Queue/Relation.lean`), and what each builder of a step types at, from
 what its arguments type at. The order is that of `Reading.lean`: a literal, an application, a
 field's read, an overwrite, a construction, a fold with minted binders, and the words of a step
-term.
+term. A positional read is here for the wrapper, which reads a step's reply by position.
 
 - **`Types`** ties a source term to its elaboration and to the checker's `argTy`, under one
   literal flag. A string literal has two types: its literal type inside a const-generic
@@ -168,6 +168,18 @@ theorem types_recordSet {target replacement : TermSrc} {name : String} {R V T : 
   show (target env path >>= fun x => replacement env path >>= fun y =>
     Except.ok (Term.recordSet x name y)) = _
   rw [tree, tree']
+  rfl
+
+/-- A positional read types at what the tuple rule answers at the position. Its consumer is the
+wrapper's law, which reads a step's reply by position. -/
+theorem types_tupleAt {target : TermSrc} {index : Nat} {R T : Ty} {const : Bool}
+    (htarget : Types sig target env path types false R)
+    (item : Tuple.typeAt R index = some T) :
+    Types sig (tupleAt target index) env path types const T := by
+  obtain ⟨t, tree, typed⟩ := htarget
+  refine ⟨.tupleAt t index, ?_, argTy_tupleAt_intro const typed item⟩
+  show (target env path >>= fun x => Except.ok (Term.tupleAt x index)) = _
+  rw [tree]
   rfl
 
 /-- A construction types at what the record rule answers: the raw declaration is formed, and
