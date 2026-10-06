@@ -4,66 +4,68 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 
 | program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
 |---|---|---|---|---|---|---|---|
-| p42 | success 42 | success 42 | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value |
-| pBind | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
+| p42 | success 42 | success 42 | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value |
+| pBind | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
 | pFork | success {"success":7} | success {"success":7} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":7}; same value |
 | pAwait | parked (frontier, root parked) | parked (deadline) | yes | yes | yes | runPromiseExit | both park (deadline 300 ms on rc.112); rc.112: no exit before the deadline; the fiber was then interrupted |
-| pGen | success false | success false | yes | yes | yes | runSyncExit | same value |
-| pLoop | success null | success null | yes | yes | yes | runSyncExit | same value |
-| pCatch | success null | success null | yes | yes | yes | runSyncExit | same value |
-| pScope | success null | success null | yes | yes | yes | runSyncExit | same value |
+| pGen | success false | success false | yes | yes | yes | runPromiseExit | same value |
+| pLoop | success null | success null | yes | yes | yes | runPromiseExit | same value |
+| pCatch | success null | success null | yes | yes | yes | runPromiseExit | same value |
+| pScope | success null | success null | yes | yes | yes | runPromiseExit | same value |
 | pTwo | success {"success":2} | success {"success":2} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":2}; same value |
-| pAcquire | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
-| pAcquireClosed | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
-| pProvide | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
-| pProvideMerge | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
-| pProvideTwice | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
-| pDiamond | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
-| pMergeAll | success 3 | success 3 | yes | yes | yes | runSyncExit | same value |
-| pAcquireHandle | success [{"external":0},1] | success [{"external":0},1] | yes | yes | yes | runSyncExit | same value |
-| pFailTagged | fail [{"fail":["SqlError","boom"]}] | fail [{"fail":["SqlError","boom"]}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
-| pSqlite | success [[["a","7"],["b","\"x\""]]] | success [[["a","7"],["b","\"x\""]]] | yes | yes | yes | runSyncExit | same value; tape: 5 calls |
-| pKv | success [{"some":"1"},true] | success [{"some":"1"},true] | yes | yes | yes | runSyncExit | same value; tape: 5 calls |
-| pSqlFail | fail [{"fail":["UnknownError","no such table: missing"]}] | fail [{"fail":["UnknownError","no such table: missing"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads; tape: 3 calls |
-| pSqlCatch | success "recovered" | success "recovered" | yes | yes | yes | runSyncExit | same value; tape: 3 calls |
-| pSqlExit | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | yes | yes | yes | runSyncExit | same value; tape: 3 calls |
-| pSqlOrDie | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | yes | yes | yes | runSyncExit | same represented-defect cause; tape: 3 calls |
-| pFailText | fail [{"fail":"lost"}] | fail [{"fail":"lost"}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
-| pFailBoomText | fail [{"fail":"boom"}] | fail [{"fail":"boom"}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
-| pTextOrDie | die [{"die":{"error":"lost"}}] | die [{"die":{"error":"lost"}}] | yes | yes | yes | runSyncExit | same represented-defect cause |
-| pCatchError | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
-| pCatchIfHit | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
-| pCatchIfMiss | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
-| pCatchIfRetained | success 9 | success 9 | yes | yes | yes | runSyncExit | same value |
-| pTagHit | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
-| pTagMiss | fail [{"fail":["A","m"]}] | fail [{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
-| pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
-| pOptionSome | success [true,7] | success [true,7] | yes | yes | yes | runSyncExit | same value |
-| pOptionNone | success [false,9] | success [false,9] | yes | yes | yes | runSyncExit | same value |
-| pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
-| pTagPayload | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
+| pAcquire | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pAcquireClosed | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pProvide | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pProvideMerge | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pProvideTwice | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pDiamond | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pMergeAll | success 3 | success 3 | yes | yes | yes | runPromiseExit | same value |
+| pAcquireHandle | success [{"external":0},1] | success [{"external":0},1] | yes | yes | yes | runPromiseExit | same value |
+| pFailTagged | fail [{"fail":["SqlError","boom"]}] | fail [{"fail":["SqlError","boom"]}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pSqlite | success [[["a","7"],["b","\"x\""]]] | success [[["a","7"],["b","\"x\""]]] | yes | yes | yes | runPromiseExit | same value; tape: 5 calls |
+| pKv | success [{"some":"1"},true] | success [{"some":"1"},true] | yes | yes | yes | runPromiseExit | same value; tape: 5 calls |
+| pSqlFail | fail [{"fail":["UnknownError","no such table: missing"]}] | fail [{"fail":["UnknownError","no such table: missing"]}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads; tape: 3 calls |
+| pSqlCatch | success "recovered" | success "recovered" | yes | yes | yes | runPromiseExit | same value; tape: 3 calls |
+| pSqlExit | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | yes | yes | yes | runPromiseExit | same value; tape: 3 calls |
+| pSqlOrDie | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | yes | yes | yes | runPromiseExit | same represented-defect cause; tape: 3 calls |
+| pFailText | fail [{"fail":"lost"}] | fail [{"fail":"lost"}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pFailBoomText | fail [{"fail":"boom"}] | fail [{"fail":"boom"}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pTextOrDie | die [{"die":{"error":"lost"}}] | die [{"die":{"error":"lost"}}] | yes | yes | yes | runPromiseExit | same represented-defect cause |
+| pCatchError | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pCatchIfHit | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pCatchIfMiss | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads |
+| pCatchIfRetained | success 9 | success 9 | yes | yes | yes | runPromiseExit | same value |
+| pTagHit | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pTagMiss | fail [{"fail":["A","m"]}] | fail [{"fail":["A","m"]}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads |
+| pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads |
+| pOptionSome | success [true,7] | success [true,7] | yes | yes | yes | runPromiseExit | same value |
+| pOptionNone | success [false,9] | success [false,9] | yes | yes | yes | runPromiseExit | same value |
+| pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pTagPayload | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
 | pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
-| pFold | success 8 | success 8 | yes | yes | yes | runSyncExit | same value |
-| pModifyFold | success [21,7] | success [21,7] | yes | yes | yes | runSyncExit | same value |
-| pQueueOffer | success [false,2,0] | success [false,2,0] | yes | yes | yes | runSyncExit | same value |
-| pRateRequest | success [true,false,3,1,3] | success [true,false,3,1,3] | yes | yes | yes | runSyncExit | same value |
-| pDeferredGate | success [false,true,false,7] | success [false,true,false,7] | yes | yes | yes | runSyncExit | same value |
-| pInterruptedWait | success [true,1] | success [true,1] | yes | yes | yes | runSyncExit | same value |
-| pMaskWait | success [true,1] | success [true,1] | yes | yes | yes | runSyncExit | same value |
-| pMaskedRestore | success [1,true,18] | success [1,true,18] | yes | yes | yes | runSyncExit | same value |
-| pLateSeen | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | yes | yes | yes | runSyncExit | same value |
-| pQueueWake | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
-| pQueueFull | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runSyncExit | same value |
-| pQueueInterrupted | success [5,0] | success [5,0] | yes | yes | yes | runSyncExit | same value |
-| pQueueMasked | success [1,9,true,0,0] | success [1,9,true,0,0] | yes | yes | yes | runSyncExit | same value |
+| pFold | success 8 | success 8 | yes | yes | yes | runPromiseExit | same value |
+| pModifyFold | success [21,7] | success [21,7] | yes | yes | yes | runPromiseExit | same value |
+| pQueueOffer | success [false,2,0] | success [false,2,0] | yes | yes | yes | runPromiseExit | same value |
+| pRateRequest | success [true,false,3,1,3] | success [true,false,3,1,3] | yes | yes | yes | runPromiseExit | same value |
+| pDeferredGate | success [false,true,false,7] | success [false,true,false,7] | yes | yes | yes | runPromiseExit | same value |
+| pInterruptedWait | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value |
+| pMaskWait | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value |
+| pMaskedRestore | success [1,true,18] | success [1,true,18] | yes | yes | yes | runPromiseExit | same value |
+| pLateSeen | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | yes | yes | yes | runPromiseExit | same value |
+| pQueueWake | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pQueueFull | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runPromiseExit | same value |
+| pQueueInterrupted | success [5,0] | success [5,0] | yes | yes | yes | runPromiseExit | same value |
+| pQueueMasked | success [1,9,true,0,0] | success [1,9,true,0,0] | yes | yes | yes | runPromiseExit | same value |
 | pQueueOrder | success [1,101,2] | success [1,101,2] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [1,101,2]; same value |
 | pSemaphoreProtectedJoined | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]]; same value |
-| pSemaphoreScan | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | yes | yes | yes | runSyncExit | same value |
-| pSemaphoreOvertake | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreScan | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreOvertake | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | yes | yes | yes | runPromiseExit | same value |
 | pSemaphoreBodiesJoined | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]]; same value |
-| pSemaphoreInterrupted | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | yes | yes | yes | runSyncExit | same value |
-| pSemaphoreIfAvailable | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | yes | yes | yes | runSyncExit | same value |
-| pSemaphoreMasked | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | yes | yes | yes | runSyncExit | same value |
-| pSemaphoreHandoff | success [1,7] | success [1,7] | yes | yes | yes | runSyncExit | same value |
+| pSemaphoreInterrupted | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreIfAvailable | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreMasked | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreHandoff | success [1,7] | success [1,7] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreProtected | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[2,2,[2,1],[0,1]],[0,2,[2,1],[0,1]],[]] |
+| pSemaphoreBodies | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[2,2,[2,1],[0,1]],[0,2,[2,1],[0,1]],[]] |
 
-PASS: 60 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 62 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

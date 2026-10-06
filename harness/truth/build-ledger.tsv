@@ -67,3 +67,5 @@ pSemaphoreInterrupted	yes	yes	yes	yes	yes	yes
 pSemaphoreIfAvailable	yes	yes	yes	yes	yes	yes		
 pSemaphoreMasked	yes	yes	yes	yes	yes	yes		
 pSemaphoreHandoff	yes	yes	yes	yes	yes	yes		
+pSemaphoreProtected	yes	yes	yes	yes	yes	yes		
+pSemaphoreBodies	yes	yes	yes	yes	yes	yes		

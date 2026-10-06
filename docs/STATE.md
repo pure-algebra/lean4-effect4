@@ -291,7 +291,9 @@ the state at the handover point and the integration procedure as practiced.
 
 - the workers over the public Queue (seat WORKQ);
 - the bracket of a region, the next proof slice of R11 (row 278, point 3);
-- the exit column of the truth lane's runner (row 279, point 1), by the coordinator;
+- the exit column of the truth lane's runner (row 279, point 1): **landed** by the
+  coordinator. The column compares the fork entry on both faces. The lane has 63 programs,
+  with Semaphore's cases P1 and P4 as the batteries write them;
 - Pool's public operations (rows 276 and 279), after the owner's ruling on a closed pool;
 - two small repairs of proofs: the Queue's typing through the shared rule, and the scenario
   driver's laws in the law graph.
@@ -331,8 +333,8 @@ Merged on 2026-10-06, after the seats above began:
   scope. Nine attempt laws relate one store step to the model's step, with no planned goal
   (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
   machine, with the two red controls of the protected permit
-  (`Test/Program/SemaphoreTraces.lean`). Each operation prints and reads back. Eight programs
-  agree with rc.112 in the truth lane, which has 61 programs. The case P9 replays on the
+  (`Test/Program/SemaphoreTraces.lean`). Each operation prints and reads back. Ten programs
+  agree with rc.112 in the truth lane, which has 63 programs. The case P9 replays on the
   generated engine, with its tape as data. No law of a run is stated: the wrapper's run, the
   walk across visits and the protected form's run stay open. Row 279 records what the
   receipt leaves open, with the runner's rule of the truth lane.
@@ -460,12 +462,6 @@ Candidates with no seat, each with its place:
   - Atomic makes two commits and no transaction. A control of an interruption between them
     needs a reachable checkpoint first. The controls of a timeout under a mask and of one
     registration's cleanup are missing too;
-- the exit column of the truth lane's runner (row 279, point 1). It compares the Lean
-  machine's fork exit with rc.112's sync exit whenever the sync entry settles. Semaphore's
-  cases P1 and P4 are the first programs whose two entries settle on two exits, on both
-  faces. They stay out of the lane, with their evidence filed
-  (`research/2026-10-06-seat-semw-evidence/`). The accepted rule compares the fork entry on
-  both faces, always. A slice changes the runner and adds both programs again;
 - the bracket of a region, the next proof slice of R11 (row 278, point 3);
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);

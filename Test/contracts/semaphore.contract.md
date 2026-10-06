@@ -27,7 +27,7 @@ change. The packet states no law of a whole run.
 | `Test/Program/SemaphoreOps.lean` | tested: the forms that never wait, each operation's own binders, the hygiene controls and the typing examples, each with a red control |
 | `Test/Program/SemaphoreTraces.lean` | tested: eight traces on the Lean machine, each with its positive control and a fault that fails the promised property |
 | `Test/Program/SemaphoreFaces.lean` | tested: each scenario, one use of each operation and each step term print and read back |
-| eight programs of `harness/truth/Truth.lean` | tested on rc.112 under bun 1.4.2: each agrees with the Lean machine on its exit, its compared rows and its sync exit. Each module type-checks under tsgo 7.0.0-dev.20260629.1 |
+| ten programs of `harness/truth/Truth.lean` | tested on rc.112 under bun 1.4.2: each agrees with the Lean machine on its exit, its compared rows and its sync exit. Each module type-checks under tsgo 7.0.0-dev.20260629.1 |
 
 ## Authority and owned surface
 
@@ -144,14 +144,15 @@ run as programs over the library's operations on the Lean machine, in
 Effect's answer
 (`docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.rc112.out`).
 
-**The cases on the pinned host.** The truth lane runs eight programs of the operations on
-rc.112 (`harness/truth/Truth.lean`). They are P2, P3 and P7, the joined forms of P1 and P4, and
+**The cases on the pinned host.** The truth lane runs ten programs of the operations on
+rc.112 (`harness/truth/Truth.lean`). They are P2, P3 and P7, P1 and P4 in two forms each, and
 three more scenarios. The three are the forms that never wait, the masked caller and the
-README's example. P9 has no host run: its yield is a decision of a tape. P1 and P4 run in a
-joined form, where the root joins the waiting fibers. As the batteries write them, the two
-entries of a run settle on two exits. The runner's exit column compares the fork run's exit
-with the pin's sync exit. The two faces give one exit on each entry. The records are in
-`docs/research/2026-10-06-seat-semw-evidence/README.md`.
+README's example. P9 has no host run: its yield is a decision of a tape. P1 and P4 run as
+the batteries write them, and in a joined form, where the root joins the waiting fibers. As
+the batteries write them, the two entries of a run settle on two exits. The two faces give
+one exit on each entry. The runner's exit column compares the fork entry on both faces, and
+its sync column compares the sync entry (decisions row 279, point 1). The records of the
+runner's former rule are in `docs/research/2026-10-06-seat-semw-evidence/README.md`.
 
 **The named control of the machine's reading.** A waiter that a visit resumes runs inside the
 helper's task. On the trace of P1 the fibers exit in this order: A, B, the helper, C, the root.
@@ -237,8 +238,6 @@ identities (`visit_fromFirst`, `src/Effect4/Laws/Modules/Semaphore/Steps.lean`).
 5. Supply the embedded budget for the work that a visit reaches, or restrict the callers
    (decisions row 226). Trace 7 measures the least fuel at eight lengths, and it claims no
    bound.
-6. Change the runner's rule for a program whose two entries settle on two exits. Then add P1
-   and P4 to the truth lane's corpus as the batteries write them.
 
 These connectors remain open. The profile's closure proves none of them. The packet states no
 order of service, no fairness and no progress of a waiter.

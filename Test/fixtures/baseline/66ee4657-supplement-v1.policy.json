@@ -81,7 +81,16 @@
     "each in one column, and no verdict column moved. g102 moved in its Lean schedule: fifteen",
     "rows take other fiber numbers, and the row was a registered difference before. g246 moved in",
     "its Lean exit, from `{\"fiber\":1}` to `{\"fiber\":2}`: the program is ill typed, and the host",
-    "does not run it. g246 was named before, for its note."
+    "does not run it. g246 was named before, for its note.",
+    "",
+    "The exit column of the truth lane's runner (decisions row 279, point 1). The column compares",
+    "the fork entry on both faces, and no longer rc.112's sync exit where the sync run settles. The",
+    "host lane's table followed at that change: six rows moved, each named before, and no outcome",
+    "moved. Five moved in the host's answer: the program is `Effect.fiberId`, and the host's fiber",
+    "counter stands at 8 on the fork entry where it stands at 7 on the sync entry (g81, g144, g250,",
+    "g289, g313). The note of each now gives the sync entry's exit. g102 moved in its note alone: it",
+    "loses the sentence on the fork entry. Each of the six was a registered difference before, on",
+    "both dimensions, and it is the same difference (DI-73)."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",

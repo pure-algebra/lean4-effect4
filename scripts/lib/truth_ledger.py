@@ -6,7 +6,7 @@ compared field, what the comparison of the Lean machine with that build's host r
 
     program | <pin> exit | <pin> schedule | <pin> sync | <release> exit | ... | reason | slice
 
-The compared fields are the runner's three (`harness/truth/run-truth.ts`): `exit`, the verdict
+The compared fields are the runner's three (`harness/truth/run-truth.ts`): `exit`, the fork
 entry's exit; `schedule`, the fork entry's schedule without its `scheduled` rows; `sync`, the
 exit of `runSyncExit`. An entry of the ledger is one of
 

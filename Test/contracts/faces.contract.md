@@ -287,7 +287,10 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    outcome in `harness/truth/corpus-known-differences.md` with the design issue that explains
    it. That register is the list of the language's known differences from rc.112.
 5. **It is a differential, not a bisimulation.** Exits are compared exactly for a success
-   value, a `fail` payload and a represented defect, and by kind otherwise; schedules are
+   value, a `fail` payload and a represented defect, and by kind otherwise. Each entry's exit
+   is compared with the same entry's. The fork run's exit is compared with rc.112's fork
+   run's, and the sync run's with rc.112's sync run's (amended 2026-10-06, decisions row
+   279). Schedules are
    compared row by row with `scheduled` rows dropped on both faces, over the reduced alphabet
    `harness/truth/Truth.lean` (`reduce`) states: a fork appears when the runner can observe it
    (an immediate child at its first step, a scheduled non-daemon child at the parent's next
@@ -701,3 +704,33 @@ What this changes in the packet above, and nothing else:
   programs, with 25 registered disagreements. *Tested* by guards of
   `harness/truth/Truth.lean`: an exchange of two fiber numbers is no difference, and two
   rows that change places differ after the renaming.
+
+## Amendment, 2026-10-06: each entry's exit is compared with the same entry's (decisions row 279)
+
+What this changes in the packet above, and nothing else:
+
+- **Quantifier 5 of §4, amended.** The runner's exit column compares the fork entry on both
+  faces: the exit of `Api.run` with the exit of rc.112's fork run. Its sync column compares
+  the sync entry on both faces, as before. Until this amendment the exit column took rc.112's
+  sync exit whenever the Lean sync run settled (`main`, `harness/truth/run-truth.ts`). That
+  rule is right only for a program whose two entries give one exit. It also reported a
+  disagreement of the fork entry as a note.
+- **The truth claim (§4) gains two programs**: `pSemaphoreProtected` and
+  `pSemaphoreBodies`. They are Semaphore's cases P1 and P4 as its batteries write them, and
+  the lane's first programs whose two entries settle on two exits. A child's hook releases,
+  so the helper is posted on the child's dispatcher. The sync entry flushes the root's
+  dispatcher alone. Each face gives one
+  exit on the fork entry and another on the sync entry, and the two faces agree on both.
+- **What moves.** The cell `entry` of the lane's table is `runPromiseExit` on every row. A
+  row whose two entries settle on two exits carries a note with the sync entry's exit. No
+  verdict of the lane moves. In the generated corpus six rows move in one cell each, and no
+  outcome moves. Five move in the host's answer. Their program is `Effect.fiberId`, and
+  rc.112's counter stands at 8 on the fork entry and at 7 on the sync entry. One moves in its
+  note. Each was a registered difference before (DI-73).
+- **Evidence.** *Tested*, on rc.112 under bun 1.4.2, with tsgo 7.0.0-dev.20260629.1 for the
+  modules: 62 programs agree on exits, schedules and sync exits, with 1 signed divergence.
+  *Tested*: the generated corpus matches its results on 400 programs, with 25 registered
+  disagreements. *Tested*: the build ledger holds 63 programs, and the two new ones agree
+  with Lean on every field, on rc.112 and on 4.0.1. *Reproduced before the change*: the two
+  programs were red in the exit column alone
+  (`docs/research/2026-10-06-seat-semw-evidence/README.md`).

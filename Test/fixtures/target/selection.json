@@ -60,7 +60,9 @@
     "pSemaphoreInterrupted",
     "pSemaphoreIfAvailable",
     "pSemaphoreMasked",
-    "pSemaphoreHandoff"
+    "pSemaphoreHandoff",
+    "pSemaphoreProtected",
+    "pSemaphoreBodies"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

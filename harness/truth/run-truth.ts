@@ -917,15 +917,18 @@ const main = async (): Promise<number> => {
     // The fork entry always: `Api.run` is `runFork` (Fibers.lean:339-340, `RunDecision.evaluate`)
     // plus the event loop's flush rounds, so its schedule is compared with this observation.
     const hostFork = await runPromiseEntry(program, entry.scenario)
-    // The verdict entry for the exit column: the one the Lean verdict names.
+    // The exit column compares one entry on both faces: the fork entry. `leanVerdict(entry.run)`
+    // is the exit of `Api.run`, and `hostFork` is rc.112's run of the same entry. The sync pair
+    // has its own column, above (`Test/contracts/faces.contract.md` §4; decisions row 279,
+    // point 1). Until 2026-10-06 the host side here was the sync entry's exit whenever the Lean
+    // sync run settled. That is right only for a program whose two entries give one exit, and
+    // it reported a disagreement of the fork entry as a note.
     const lean = leanVerdict(entry.run)
-    const host = entry.runSync.sync ? hostSync : hostFork
+    const host = hostFork
     const exits = compareExits(lean, host)
     notes.push(exits.note)
-    if (host !== hostFork) {
-      const forkExits = compareExits(lean, hostFork)
-      if (!forkExits.agree) notes.push(`runFork entry disagrees too: ${forkExits.note}`)
-      else if (!deepEqual(host.exit, hostFork.exit)) notes.push(`runSyncExit and runFork exits differ: ${renderExit(hostFork.exit)}`)
+    if (entry.runSync.sync && !hostSync.parked && !deepEqual(hostSync.exit, hostFork.exit)) {
+      notes.push(`the two entries settle on two exits: runSyncExit gives ${renderExit(hostSync.exit)}`)
     }
     const schedule = compareSchedules(entry.run.schedule, hostFork.schedule)
     if (!schedule.agree) notes.push(`schedule ${schedule.note}`)
@@ -959,7 +962,7 @@ const main = async (): Promise<number> => {
   ].join("\n")
   console.log(table)
 
-  // Every compared dimension counts: the verdict entry's exit, the fork entry's schedule, and
+  // Every compared dimension counts: the fork entry's exit, the fork entry's schedule, and
   // the sync entry's exit (a program whose `runSyncExit` disagrees is a disagreement, whatever
   // the other two say).
   const disagreements = rows.filter((r) => r.exception !== "U-01" &&
