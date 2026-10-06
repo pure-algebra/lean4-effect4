@@ -72,8 +72,7 @@ exited fiber as not running. It is the second fact of the bracket, and its own s
 
 So no compiled program reaches a machine where the command loop steps an exited fiber. The
 invariant `MaskRuns` ranges over the live fibers for that machine's sake
-(`Laws/Machine/MaskRuns.lean`). Decisions row 278, point 1, records this fact as read, not
-proved.
+(`Laws/Machine/MaskRuns.lean`).
 
 Reach: every program and row table, and each machine and pending commands that hold the guard's
 state and the guard's queue. `Guard.driveStep_invariants` keeps both along a command loop, and

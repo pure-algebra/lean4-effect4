@@ -20,14 +20,16 @@ cuts of real command loops.
   that goes on keeps the frames under the region. Each pop of the own frames that answers
   nothing ends the region at the entry's stack and at the entry flag, and the pop goes on from
   the region's end.
-- Six red controls: the end is no cut between two steps; a pop that an own frame answers; the
-  own frames at the fiber's base; two bases; the ending step with its code unchanged; a pair of
-  cuts with two stacks.
+- Five red controls: the end is no cut between two steps; a pop that an own frame answers; the
+  own frames at the fiber's base; two bases; the ending step with its code unchanged.
 
 ## Part B: the machine
 
-- A toy interpreter's run steps an exited fiber: two cuts of one command loop. The second fact
-  is false there, and so is the bracket for a fiber that has exited at the second cut.
+- Two red controls on constructed machines, one for each fact: a pair of cuts with two stacks
+  has two flags, and a fiber that has exited at the second cut has the entry's stack and
+  another flag.
+- A toy interpreter's run steps an exited fiber, at two cuts of one command loop. The second
+  fact is false there.
 
 ## Part C: compiled programs
 
