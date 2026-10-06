@@ -1,0 +1,15 @@
+; lane QSTEPS -- two of the Queue's scenarios on the generated engine, through the wire
+; (decisions row 255; Test/Program/QueueScenarios.lean).
+;   test_queue  the fixture beside this file (queue.txt, written by Lean from the programs
+;               that `Api.Author.build` admits: write.lean) run on BOTH instances (Fast and
+;               Ref).  Each program crosses as its canonical bytes.  On each instance the
+;               root's exit must be the exit Lean wrote, and the two reports must be one.
+;               Red controls: the other run's exit, a program cut by one byte, a small fuel.
+;               It is its own directory so that no other lane's dune file changes.
+
+(test
+ (name test_queue)
+ (modules test_queue)
+ (deps
+  (glob_files *.txt))
+ (libraries effect4_engine effect4_eff))
