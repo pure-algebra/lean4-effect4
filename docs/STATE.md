@@ -227,7 +227,10 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   `0acec081`);
 - a TypeScript compiler client stays inside `tools/target`, and no package is published (row
   264);
-- Semaphore's cell and steps start now, as a third seat (row 265).
+- Semaphore's cell and steps start now, as a third seat (row 265). Seat SEM has them since
+  2026-10-06 (branch `seat/semaphore`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-sem-brief.md)). Its first step runs
+  the card's cases on our machine: no Semaphore program ran there before the ruling.
 
 Landed later on 2026-10-05:
 
