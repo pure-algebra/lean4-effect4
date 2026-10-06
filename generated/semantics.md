@@ -2046,7 +2046,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 276; inherited (provisional): 2295; unplaced: 0.
+Tagged: 276; inherited (provisional): 2297; unplaced: 0.
 
 ## Plan
 
@@ -2589,22 +2589,23 @@ flowchart LR
   n79["protectedBy_has<br/>proved"]
   n80["errOf_payload<br/>proved"]
   n81["isPayload_of_hasTy_record<br/>proved"]
-  n82["unsuspended_runs<br/>proved"]
-  n83["cleans_once<br/>goal"]
-  n84["checkInput_eq_none_iff<br/>proved"]
-  n85["provideLayerArm<br/>proved"]
-  n86["catchGuard_typed<br/>proved"]
-  n87["onExit_typed<br/>proved"]
-  n88["guardBind_typed<br/>proved"]
-  n89["fits_scope_inv<br/>proved"]
-  n90["allGuard_typed<br/>proved"]
-  n91["saved_mask_restoration<br/>proved"]
-  n92["read_print<br/>proved"]
-  n93["handles_of_payloadFieldTy<br/>proved"]
-  n94["run_agrees<br/>proved"]
-  n95["seq_typed<br/>proved"]
-  n96["close_typed<br/>proved"]
-  n97["run_eq_meaning<br/>proved"]
+  n82["rowTy_instantiated_formed<br/>proved"]
+  n83["unsuspended_runs<br/>proved"]
+  n84["cleans_once<br/>goal"]
+  n85["checkInput_eq_none_iff<br/>proved"]
+  n86["provideLayerArm<br/>proved"]
+  n87["catchGuard_typed<br/>proved"]
+  n88["onExit_typed<br/>proved"]
+  n89["guardBind_typed<br/>proved"]
+  n90["fits_scope_inv<br/>proved"]
+  n91["allGuard_typed<br/>proved"]
+  n92["saved_mask_restoration<br/>proved"]
+  n93["read_print<br/>proved"]
+  n94["handles_of_payloadFieldTy<br/>proved"]
+  n95["run_agrees<br/>proved"]
+  n96["seq_typed<br/>proved"]
+  n97["close_typed<br/>proved"]
+  n98["run_eq_meaning<br/>proved"]
   n5 --> n65
   n5 --> n0
   n5 --> n30
@@ -2701,12 +2702,13 @@ flowchart LR
   n43 --> n31
   n43 --> n75
   n43 --> n76
+  n44 --> n40
   n44 --> n75
   n44 --> n76
-  n44 --> n40
   n44 --> n68
   n44 --> n73
   n44 --> n33
+  n44 --> n82
   n44 --> n78
   n45 --> n75
   n45 --> n76
@@ -2715,12 +2717,13 @@ flowchart LR
   n45 --> n35
   n46 --> n75
   n46 --> n76
+  n47 --> n42
   n47 --> n75
   n47 --> n76
   n47 --> n68
-  n47 --> n42
   n47 --> n73
   n47 --> n38
+  n47 --> n77
   n47 --> n78
   n50 --> n68
   n51 --> n68
@@ -2765,20 +2768,20 @@ flowchart LR
   n60 --> n52
   n60 --> n77
   n60 --> n79
-  n61 --> n82
   n61 --> n83
+  n61 --> n84
   n61 --> n63
   n61 --> n64
   n61 --> n62
-  n61 --> n84
-  n62 --> n84
-  n63 --> n84
-  n64 --> n84
+  n61 --> n85
+  n62 --> n85
+  n63 --> n85
+  n64 --> n85
   n66 --> n69
   n66 --> n67
   n67 --> n69
   n67 --> n68
-  n72 --> n85
+  n72 --> n86
   n72 --> n66
   n72 --> n67
   n72 --> n68
@@ -2787,60 +2790,60 @@ flowchart LR
   n72 --> n71
   n72 --> n1
   n72 --> n73
-  n72 --> n86
   n72 --> n87
   n72 --> n88
   n72 --> n89
+  n72 --> n90
   n72 --> n29
   n72 --> n80
   n72 --> n81
-  n72 --> n90
+  n72 --> n91
   n77 --> n75
   n77 --> n76
   n77 --> n68
-  n78 --> n91
   n78 --> n92
+  n78 --> n93
   n78 --> n76
   n78 --> n75
   n79 --> n68
   n79 --> n76
   n79 --> n75
   n79 --> n78
-  n81 --> n93
-  n82 --> n94
-  n83 --> n84
-  n85 --> n66
-  n85 --> n0
-  n85 --> n70
-  n85 --> n69
-  n85 --> n67
-  n85 --> n29
-  n85 --> n68
-  n85 --> n80
-  n85 --> n81
-  n85 --> n1
-  n85 --> n73
-  n85 --> n87
-  n85 --> n88
-  n85 --> n71
-  n85 --> n89
-  n85 --> n95
-  n85 --> n86
+  n81 --> n94
+  n83 --> n95
+  n84 --> n85
   n86 --> n66
+  n86 --> n0
+  n86 --> n70
+  n86 --> n69
+  n86 --> n67
+  n86 --> n29
+  n86 --> n68
+  n86 --> n80
+  n86 --> n81
+  n86 --> n1
+  n86 --> n73
   n86 --> n88
+  n86 --> n89
+  n86 --> n71
+  n86 --> n90
+  n86 --> n96
+  n86 --> n87
   n87 --> n66
-  n87 --> n71
-  n87 --> n86
-  n87 --> n73
-  n87 --> n88
-  n87 --> n90
-  n88 --> n96
-  n90 --> n88
-  n92 --> n65
-  n94 --> n97
-  n95 --> n73
-  n95 --> n66
-  n95 --> n88
+  n87 --> n89
+  n88 --> n66
+  n88 --> n71
+  n88 --> n87
+  n88 --> n73
+  n88 --> n89
+  n88 --> n91
+  n89 --> n97
+  n91 --> n89
+  n93 --> n65
+  n95 --> n98
+  n96 --> n73
+  n96 --> n66
+  n96 --> n89
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2889,10 +2892,10 @@ flowchart LR
 | `withdrawTake_typed` | proved | — | `withdrawTake_types` | 49 | 152 |
 | `withdrawTake_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 180 | 163 |
 | `bounded_types` | proved | — | `empty_typed`, `check_complete`, `check_sound` | 86 | 307 |
-| `offer_types` | proved | — | `check_complete`, `check_sound`, `withdrawOffer_types`, `normalize_idem`, `subN_refl`, `offerStep_types`, `mask_printed_form_profile` | 242 | 403 |
+| `offer_types` | proved | — | `withdrawOffer_types`, `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `offerStep_types`, `rowTy_instantiated_formed`, `mask_printed_form_profile` | 253 | 403 |
 | `poll_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `pollStep_types` | 246 | 380 |
 | `size_types` | proved | — | `check_complete`, `check_sound` | 173 | 334 |
-| `Queue.take_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `withdrawTake_types`, `subN_refl`, `Queue.Model.takeStep_types`, `mask_printed_form_profile` | 319 | 427 |
+| `Queue.take_types` | proved | — | `withdrawTake_types`, `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `Queue.Model.takeStep_types`, `waitRetryAt_answers`, `mask_printed_form_profile` | 246 | 418 |
 | `empty_types` | proved | — | — | 64 | 126 |
 | `Semaphore.Model.profile_closed` | proved | — | — | 12 | 18 |
 | `releaseStep_types` | proved | — | `normalize_idem` | 156 | 137 |
@@ -2927,6 +2930,7 @@ flowchart LR
 | `protectedBy_has` | proved | — | `normalize_idem`, `check_sound`, `check_complete`, `mask_printed_form_profile` | 138 | 322 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
+| `rowTy_instantiated_formed` | proved | — | — | 54 | 101 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1446 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |

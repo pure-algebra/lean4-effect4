@@ -353,7 +353,10 @@ In work since the suspension of the handover:
   `take_types` and `offer_types` go through the shared typing of the waiting wrapper, with
   one new rule for the wrapper's answer form (row 279, point 5). Two general statements move
   from the mask's lift to `src/Effect4/Laws/Machine/Lift.lean` (row 278, point 5). No
-  statement that a consumer reads changes.
+  statement that a consumer reads changes. Its first part is merged: `take_types` is one
+  application of `waitRetry_answers`, and `offer_types` one of the new rule
+  `waitAnswer_answers` (`src/Effect4/Laws/Modules/Waiting.lean`). `Waiter.Typed` served both
+  forms with no change.
 - **Seat WORKQ has the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
