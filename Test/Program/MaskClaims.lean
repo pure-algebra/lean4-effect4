@@ -1,0 +1,152 @@
+import Effect4.Laws.Program.Typed.Mask
+import Effect4.Laws.Codegen.Mask
+import Effect4.Laws.Program.Authoring.Mask
+import Test.Program.MaskContract
+import TypeScript.Render
+import ProofGraph.Plan
+
+/-!
+# The mask's five claims: their standing, their axioms, and the printed form
+
+The five registry claims of the mask (`tools/Tools/SemanticsRegistry.lean`) have their
+statements in `src/Effect4/Laws/Program/Typed/Mask.lean` and
+`src/Effect4/Laws/Codegen/Mask.lean`. This battery pins each top node's axioms and its plan
+status, and it holds the finite controls of the printed form: a mask around one wait prints
+as the note's F5 shows, and it reads back.
+
+Every pin of rendered text is inside a `#guard`: a definition that folds over a rendered
+string reaches `Classical.choice`.
+
+It establishes no agreement with a target. tsgo 7 checks the printed modules in the truth
+lane (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`).
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace Test.Program.MaskClaims
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Typed Effect4.Program.Authoring
+open Test.Program.MaskContract
+open TypeScript (house0)
+open TypeScript.Render (expr)
+
+/-! ## The printed form (the note's F5) -/
+
+/-- A mask around one wait, by the surface's builder. -/
+def maskAroundWait : Src NativeOp := eff do
+  let d ← Deferred.make .nat .never
+  uninterruptibleMaskWith fun restore => restore (Deferred.await d)
+
+-- The builder is the program's own expansion: the getter under a `bind`, the body under
+-- `uninterruptible`, the restore site with its body at child 0.
+#guard buildOf (mk maskAroundWait) = some
+  (.bind (.perform (.deferredMakeOf .nat .never) (.lit .unit))
+    (.bind (.withFiber .getInterruptible)
+      (.uninterruptible (.restore (.var 1) (.perform .deferredAwait (.var 0))))))
+
+-- It prints row by row, in the public API, as F5 shows.
+#guard ((buildOf (mk maskAroundWait)).map fun p => (Api.print p).map (expr house0 0)) = some (.ok
+  "Effect.flatMap(Deferred.make<number, never>(), (a0) => Effect.flatMap(Effect.uninterruptibleMask((a1) => Effect.succeed(a1)), (a1) => Effect.uninterruptible(pipe(Deferred.await(a0), a1))))")
+
+-- It is readable, and what it prints reads back to it.
+#guard (buildOf (mk maskAroundWait)).all fun p =>
+  Api.readable p && decide (Api.roundTrip p = .ok p)
+
+-- An annotated position prints the alias's name: the type's target names the prelude's alias
+-- for the restore function's type (`harness/truth/prelude.ts`, `MaskRestore`).
+#guard ((buildOf (mk s1)).bind fun p => (Api.printModule "main" p).map fun m =>
+    String.join (m.decls.map (TypeScript.Render.decl house0))) = some
+  "export const main: Effect.Effect<readonly [MaskRestore, MaskRestore], never, never> = Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.flatMap(Effect.uninterruptible(Effect.uninterruptibleMask((a1) => Effect.succeed(a1))), (a1) => Effect.succeed(tuple(a0, a1))))\n"
+
+-- Every scenario of the fixture is readable and reads back: the two rows, in ten programs.
+#guard engineRuns.all fun (_, src) => (buildOf (mk src)).all fun p =>
+  Api.readable p && decide (Api.roundTrip p = .ok p)
+
+-- Red controls. A restore site of a Boolean reads back as well: the equations are about
+-- program syntax, and typing is another judgment. A restore site whose saved term is out of
+-- scope is not readable.
+#guard Api.readable (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) &&
+  decide (Api.roundTrip (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) =
+    .ok (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))))
+#guard Api.typeOf (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) [] = none
+#guard !Api.readable (.restore (.var 0) (.succeed (.lit (.nat 1))))
+
+/-! ## The five claims -/
+
+/--
+info: 'Effect4.Program.Typed.saved_mask_image_membership' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms saved_mask_image_membership
+
+/--
+info: 'Effect4.Program.Typed.scoped_body_substitution_boundary' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms scoped_body_substitution_boundary
+
+/--
+info: 'Effect4.Program.Typed.saved_mask_restoration' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms saved_mask_restoration
+
+/--
+info: 'Effect4.Program.mask_rows_table_premises' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Program.mask_rows_table_premises
+
+/--
+info: 'Effect4.Program.mask_printed_form_profile' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Program.mask_printed_form_profile
+
+-- The standing is derived from each proof. The counts are of this battery's tree, which holds
+-- no step of a proof: the steps are in the law graph. The profile's nearest node is the
+-- restoration claim, whose statements its two checkpoints cite.
+/--
+info: Effect4.Program.Typed.saved_mask_image_membership: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.Typed.scoped_body_substitution_boundary: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.Typed.saved_mask_restoration: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.mask_rows_table_premises: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.mask_printed_form_profile: proved; nearest [Effect4.Program.Typed.saved_mask_restoration]; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status saved_mask_image_membership scoped_body_substitution_boundary saved_mask_restoration
+  Effect4.Program.mask_rows_table_premises Effect4.Program.mask_printed_form_profile
+
+/-! ## The claims' statements, read at one input each
+
+Each line reads one field of a top node at a concrete input. They are no new evidence: they
+show that the statement is the one the fixture's guards test. -/
+
+-- Membership at the saved state's type is the two images, at the empty world's shape check.
+example : Val.hasTy (Val.savedMask true) Ty.maskRestore [] = true :=
+  (saved_mask_image_membership.shape [] _).mpr ⟨true, rfl⟩
+example (w : Typed.World) : ¬ Fits w (Val.bool true) Ty.maskRestore :=
+  saved_mask_image_membership.boolNot w true
+example (w : Typed.World) : ¬ Fits w (Val.savedMask false) .bool :=
+  saved_mask_image_membership.notBool w false
+
+-- A restore site binds nothing, and its body is child 0.
+example (saved : Term) (body : NativeEff) :
+    (Node.eff (.restore saved body) : Node NativeOp).child 0 = some (.eff body) :=
+  (scoped_body_substitution_boundary.child saved body).1
+
+-- The saved frame returns the flag it holds, on any exit.
+example (fr : Effect4.Program.Sched.FFiber) :
+    ((Prim.setInterruptible true : NCode).ensure fr).fst.interruptible = true :=
+  (saved_mask_restoration.returned true fr).1
+
+-- The derived form is readable exactly when its body is, one level up.
+example (body : NativeEff) :
+    Readable [] (nativeSignature []) 0 (maskForm body) =
+      Readable [] (nativeSignature []) 1 body :=
+  Effect4.Program.mask_printed_form_profile.readable [] (nativeSignature []) 0 body
+
+end Test.Program.MaskClaims

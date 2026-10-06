@@ -51,6 +51,8 @@ import Test.Program.FormationContract
 import Test.Program.FoldContract
 import Test.Program.MaskContract
 import Test.Program.MaskEngine
+import Test.Program.MaskClaims
+import Test.Program.QueueMask
 import Test.Program.FoldHygiene
 import Test.Program.RecordValues
 import Test.Program.MapValues
