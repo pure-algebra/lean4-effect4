@@ -643,7 +643,9 @@ def corpus : List (String × Api.Program) :=
     ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer),
     ("pRateRequest", pRateRequest), ("pDeferredGate", pDeferredGate),
     ("pInterruptedWait", pInterruptedWait), ("pMaskWait", pMaskWait),
-    ("pMaskedRestore", pMaskedRestore)]
+    ("pMaskedRestore", pMaskedRestore), ("pLateSeen", pLateSeen), ("pQueueWake", pQueueWake),
+    ("pQueueFull", pQueueFull), ("pQueueInterrupted", pQueueInterrupted),
+    ("pQueueMasked", pQueueMasked), ("pQueueOrder", pQueueOrder)]
 
 /-! ## The value wire -/
 
@@ -1348,7 +1350,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
    "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
-   "pInterruptedWait", "pMaskWait", "pMaskedRestore"]
+   "pInterruptedWait", "pMaskWait", "pMaskedRestore", "pLateSeen", "pQueueWake", "pQueueFull",
+   "pQueueInterrupted", "pQueueMasked", "pQueueOrder"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -1495,7 +1498,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard moved (Api.run pFold 1000).trace = [] && lateSights.lookup "pFold" = none
 -- The recorder sees every fiber of every lane program, so no number comes from the allocation
 -- order's tail, and the trace's forks give the machine's own list of fibers.
-#guard (corpus ++ [("pQueueOrder", pQueueOrder), ("pLateSeen", pLateSeen)]).all fun (name, p) =>
+#guard corpus.all fun (name, p) =>
   let (table, answers) := hostInputs name
   let run := fixtureRun name p 1000 table answers
   allocated run.trace == run.machine.fibers.map (·.id.value) &&
@@ -1577,6 +1580,58 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
   ["started 0", "scheduled 0 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2",
    "resumed 1", "started 1", "exited 1 interrupt", "exited 2 success", "parked 0", "ran 0",
    "started 3", "exited 3 success", "ran 0", "resumed 0", "started 0", "exited 0 success"]
+-- The Queue's first operations (decisions rows 219 to 222, 233, 238 and 240). Each program is
+-- the program that the Queue's batteries build from the same scenario, so rc.112 runs what the
+-- batteries run on the Lean machine.
+#guard [(Test.Program.QueueScenarios.r2, pQueueWake), (Test.Program.QueueScenarios.r4, pQueueFull),
+    (Test.Program.QueueScenarios.r5, pQueueInterrupted),
+    (Test.Program.QueueMask.maskedCaller, pQueueMasked),
+    (Test.Program.QueueScenarios.r8, pQueueOrder)].all fun (source, program) =>
+  ((Effect4.Api.Author.build (Test.Program.QueueScenarios.mk source)).toOption.map
+    (·.program)) == some program
+-- Each source elaborates (its first node makes the queue's cell; a source that did not
+-- elaborate is a `fail`), types with no failure and no requirement, answers on the machine, and
+-- reads back whole.
+#guard [pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].all fun p =>
+  match p with
+  | .bind (.perform .refMake _) _ => true
+  | _ => false
+#guard Api.typeOf pQueueWake = some ⟨.nat, .never, Env.Requirement.empty⟩
+#guard Api.typeOf pQueueFull =
+  some ⟨.tuple [.bool, .nat, .bool, .nat], .never, Env.Requirement.empty⟩
+#guard Api.typeOf pQueueInterrupted = some ⟨.prod .nat .nat, .never, Env.Requirement.empty⟩
+#guard Api.typeOf pQueueMasked =
+  some ⟨.tuple [.nat, .nat, .bool, .nat, .nat], .never, Env.Requirement.empty⟩
+#guard Api.typeOf pQueueOrder = some ⟨.list .nat, .never, Env.Requirement.empty⟩
+#guard (Api.run pQueueWake 1000).exit = some (.success (.nat 7))
+#guard (Api.run pQueueFull 1000).exit =
+  some (.success (.list [.bool true, .nat 1, .bool true, .nat 2]))
+#guard (Api.run pQueueInterrupted 1000).exit = some (.success (.list [.nat 5, .nat 0]))
+#guard (Api.run pQueueMasked 1000).exit =
+  some (.success (.list [.nat 1, .nat 9, .bool true, .nat 0, .nat 0]))
+#guard (Api.run pQueueOrder 1000).exit = some (.success (.list [.nat 1, .nat 101, .nat 2]))
+#guard [pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].all fun p =>
+  decide (Api.roundTrip p = .ok p)
+-- The sync entry settles the first four. It does not settle the fifth: the root is parked
+-- when its dispatcher has run once, which is the `AsyncFiberError` defect on both faces.
+#guard [pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked].all fun p =>
+  !isAsyncFiberDefect (Api.runSync p 1000).2
+#guard isAsyncFiberDefect (Api.runSync pQueueOrder 1000).2
+-- The taker that waits and is woken. Its compared rows are the rows that the recorder wrote on
+-- rc.112 (`harness/truth/result.json`). The posted helper is the fiber `2`: it has no `forked`
+-- row, the root's dispatcher starts it after the root parks, and its task resumes the taker.
+#guard reduce (Api.run pQueueWake 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "scheduled 0 0", "parked 0", "ran 0",
+   "started 2", "resumed 1", "started 1", "exited 1 success", "resumed 0", "started 0",
+   "exited 0 success", "exited 2 success"]
+-- red control: the five programs have five answers. The first two have the same rows: one
+-- fiber waits, one helper is posted, and the root joins. The alphabet erases what the helper
+-- carries, a wake in the first and the offer's answer in the second.
+#guard ([pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].map fun p =>
+  (Api.run p 1000).exit).eraseDups.length = 5
+#guard reduce (Api.run pQueueWake 1000).trace = reduce (Api.run pQueueFull 1000).trace
+#guard ([pQueueWake, pQueueFull, pQueueInterrupted, pQueueMasked, pQueueOrder].map fun p =>
+  reduce (Api.run p 1000).trace).eraseDups.length = 4
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))

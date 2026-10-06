@@ -51,5 +51,11 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pInterruptedWait | success [true,1] | success [true,1] | yes | yes | yes | runSyncExit | same value |
 | pMaskWait | success [true,1] | success [true,1] | yes | yes | yes | runSyncExit | same value |
 | pMaskedRestore | success [1,true,18] | success [1,true,18] | yes | yes | yes | runSyncExit | same value |
+| pLateSeen | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | yes | yes | yes | runSyncExit | same value |
+| pQueueWake | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pQueueFull | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runSyncExit | same value |
+| pQueueInterrupted | success [5,0] | success [5,0] | yes | yes | yes | runSyncExit | same value |
+| pQueueMasked | success [1,9,true,0,0] | success [1,9,true,0,0] | yes | yes | yes | runSyncExit | same value |
+| pQueueOrder | success [1,101,2] | success [1,101,2] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [1,101,2]; same value |
 
-PASS: 46 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 52 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
