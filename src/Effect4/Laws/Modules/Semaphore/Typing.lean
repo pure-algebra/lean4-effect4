@@ -30,8 +30,8 @@ Placement. Concept `store-typing`, requirement R4: each is a part of the propose
 `semaphore-accounting-preserved`, on the side of the cell's type. Reach: the checker's `argTy`
 on the step's tree under each literal flag, at every scope; the signature's atoms are the
 native table's. Their consumer is the public law, in the slice of the operations that wait:
-with a step's typing, `step_keeps_cell` (`src/Effect4/Laws/Modules/Queue/Steps.lean`) gives
-that one `Ref.modify` of the step keeps the cell a member of the cell's type.
+with a step's typing, `step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) gives that one
+`Ref.modify` of the step keeps the cell a member of the cell's type.
 
 The statements establish no agreement with the model, no typing of a wrapper and nothing about
 a target. The checker's typing of a step is not program admission. The cell's type is closed,
@@ -141,36 +141,9 @@ theorem empty_checkTy :
   rw [if_pos ⟨named, named, fits⟩]
   rfl
 
-/-! ## The words that the Queue's steps do not use
-
-`add`, `isZero` at a number, and the literal of nothing. Their consumers are the passes and the
-steps below. -/
-
-/-- `add` on two numbers. A fixed signature at its own parameters. -/
-theorem nativeAtomTy_add : nativeAtomTy "add" [.nat, .nat] = some .nat :=
-  NativeAtom.monoApply_self [.nat, .nat] .nat
-
 section Builders
 
 variable {Op : Type} {sig : Signature Op} {env : Env} {path : List Nat} {types : List Ty}
-
-/-- The literal of nothing. -/
-theorem types_unit : TypesEach sig unit env path types .unit :=
-  fun const => types_lit .unit const
-
-variable (atoms : sig.atomOf = nativeAtomTy)
-include atoms
-
-theorem types_add {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
-    (hb : TypesEach sig b env path types .nat) :
-    TypesEach sig (app "add" [a, b]) env path types .nat :=
-  fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_add)
-
-theorem types_isZero {n : TermSrc} (hn : TypesEach sig n env path types .nat) :
-    TypesEach sig (app "isZero" [n]) env path types .bool :=
-  fun _ => types_app (.cons (hn _) .nil) (atomOf_native atoms nativeAtomTy_isZero)
-
-omit atoms
 
 /-! ## The cell's fields and overwrites, at a source of the cell's type -/
 
@@ -216,6 +189,7 @@ theorem types_mkWaiter {id need hint stamp : TermSrc}
     (.cons (hid true) (.cons (hneed true) (.cons (hhint true) (.cons (hstamp true) .nil))))
     waiter_checkTy
 
+variable (atoms : sig.atomOf = nativeAtomTy)
 include atoms
 
 /-! ## The passes, typed once -/

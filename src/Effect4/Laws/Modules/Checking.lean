@@ -106,6 +106,10 @@ theorem types_nat (n : Nat) : TypesEach sig (nat n) env path types .nat :=
 theorem types_bool (b : Bool) : TypesEach sig (bool b) env path types .bool :=
   fun const => types_lit (.bool b) const
 
+/-- The literal of nothing. -/
+theorem types_unit : TypesEach sig unit env path types .unit :=
+  fun const => types_lit .unit const
+
 /-- The sources have the types, one by one, under one literal flag. -/
 abbrev TypesAll (sig : Signature Op) (srcs : List TermSrc) (env : Env) (path : List Nat)
     (types : List Ty) (const : Bool) (Ts : List Ty) : Prop :=
@@ -448,6 +452,15 @@ theorem types_sub {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     TypesEach sig (app "sub" [a, b]) env path types .nat :=
   fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_sub)
 
+theorem types_add {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
+    (hb : TypesEach sig b env path types .nat) :
+    TypesEach sig (app "add" [a, b]) env path types .nat :=
+  fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_add)
+
+theorem types_isZero {n : TermSrc} (hn : TypesEach sig n env path types .nat) :
+    TypesEach sig (app "isZero" [n]) env path types .bool :=
+  fun _ => types_app (.cons (hn _) .nil) (atomOf_native atoms nativeAtomTy_isZero)
+
 theorem types_minT {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     (hb : TypesEach sig b env path types .nat) :
     TypesEach sig (minT a b) env path types .nat :=
@@ -548,8 +561,8 @@ theorem typeAt_of_types {sig : Signature NativeOp} {names : List String} {types 
 names, and the checker types its tree: the elaborated tree, its elaboration equation and its
 `termTy` equation. Placement: concept `store-typing`, requirement R4, a helper of the wrapper's
 law. Its consumer is the typing premise of `step_keeps_cell`
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`). It reads `typeAt`'s definition, and it
-establishes nothing of a wrapper. -/
+(`src/Effect4/Laws/Modules/Store.lean`). It reads `typeAt`'s definition, and it establishes
+nothing of a wrapper. -/
 theorem typeAt_tree {sig : Signature NativeOp} {names : List String} {types : List Ty}
     {src : TermSrc} {T : Ty} (typed : typeAt sig names types src = some T) :
     ∃ t, src { names := names } [] = .ok t ∧ termTy sig types t = some T := by

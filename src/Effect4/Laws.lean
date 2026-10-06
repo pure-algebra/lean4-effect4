@@ -183,6 +183,7 @@ import Effect4.Laws.Program.Typing.FoldAgreement
 import Effect4.Laws.Modules.Table
 import Effect4.Laws.Modules.Reading
 import Effect4.Laws.Modules.Checking
+import Effect4.Laws.Modules.Store
 import Effect4.Laws.Modules.Queue.Capacity
 import Effect4.Laws.Modules.Queue.Profile
 import Effect4.Laws.Modules.Queue.Typing

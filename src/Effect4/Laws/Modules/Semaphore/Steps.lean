@@ -32,10 +32,10 @@ operations that wait. Reach, for each goal:
 - the statement holds at every scope, for every caller's term that reads the step's arguments
   (`Reads`, `Captured`, `src/Effect4/Laws/Modules/Reading.lean`).
 
-The Queue's connectors join a goal to the store, as they are
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`). With `step_updates`, a step term that reads the
-pair of a reply and a next value is one atomic update of the cell. `step_keeps_cell` gives the
-typed half, with a step's typing (`src/Effect4/Laws/Modules/Semaphore/Typing.lean`).
+The shared connectors join a goal to the store (`src/Effect4/Laws/Modules/Store.lean`). With
+`step_updates`, a step term that reads the pair of a reply and a next value is one atomic
+update of the cell. `step_keeps_cell` gives the typed half, with a step's typing
+(`src/Effect4/Laws/Modules/Semaphore/Typing.lean`).
 
 The five statements are proved, each in place of its planned goal and with its statement
 unchanged (decisions row 203). The proofs read each builder of a step through the shared

@@ -1,4 +1,5 @@
 import Effect4.Modules.Words
+import Effect4.Laws.Modules.Table
 import Effect4.Laws.Program.Authoring.Folds
 import Effect4.Laws.Program.Typed.ListFold
 
@@ -19,6 +20,9 @@ It names no module.
   and a fold with minted binders (`reads_foldWith`, `reads_foldWith_model`).
 - **The atoms**: the value of each native atom that a step term uses (`atom_…`).
 - **The words** of `src/Effect4/Modules/Words.lean`: what each reads (`reads_…`).
+- **The removal by identity** (`reads_removeById`): the pass `removeById` reads the filter by
+  identity, on the encoding of every list of entries whose `id` field reads the table's handle
+  (`src/Effect4/Laws/Modules/Table.lean`).
 
 The rules of a fold's two binders are the scope reader's. The two names that `foldWith` mints
 at a scope are two names (`mint_acc_ne_item`), so under the binders the accumulator's name
@@ -39,6 +43,7 @@ set_option autoImplicit false
 namespace Effect4.Modules
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Constructive.List (foldl_keep)
 
 /-! ## Reading a source term -/
 
@@ -526,6 +531,8 @@ theorem atom_lt (a b : Nat) :
     nativeAtom "lt" [Val.nat a, Val.nat b] = some (Val.bool (decide (a < b))) := rfl
 theorem atom_sub (a b : Nat) :
     nativeAtom "sub" [Val.nat a, Val.nat b] = some (Val.nat (a - b)) := rfl
+theorem atom_add (a b : Nat) :
+    nativeAtom "add" [Val.nat a, Val.nat b] = some (Val.nat (a + b)) := rfl
 theorem atom_get (xs : List Val) (i : Nat) :
     nativeAtom "get" [Val.list xs, Val.nat i] =
       some (match xs[i]? with
@@ -658,6 +665,57 @@ theorem reads_tuple3 {a b c : TermSrc} {x y z : Val} (ha : Reads a env path vals
     Reads (tuple [a, b, c]) env path vals (Val.tuple [x, y, z]) :=
   reads_app (.cons ha (.cons hb (.cons hc .nil))) (atom_tuple [x, y, z])
 
+theorem reads_add {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.nat x))
+    (hb : Reads b env path vals (Val.nat y)) :
+    Reads (app "add" [a, b]) env path vals (Val.nat (x + y)) :=
+  reads_app (.cons ha (.cons hb .nil)) (atom_add x y)
+
+theorem reads_isZero {n : TermSrc} {x : Nat} (hn : Reads n env path vals (Val.nat x)) :
+    Reads (app "isZero" [n]) env path vals (Val.bool (decide (x = 0))) :=
+  reads_app (.cons hn .nil) (atom_isZero x)
+
+theorem reads_unit : Reads unit env path vals Val.unit := reads_lit .unit env path vals rfl
+
 end Words
+
+/-! ## The removal by identity, on the encoding of any list of entries -/
+
+section Removal
+
+variable {env : Env} {path : List Nat} {vals : List Val}
+
+/-- **The removal pass reads the filter by identity.** The entries are the encoding of a list,
+and each entry's `id` field reads the table's handle of the entry's identity. On an injective
+table the pass `removeById` reads the encoding of the entries of another identity. The
+statement names no type of a module: the Queue's two removals and Semaphore's are its
+instances (`reads_removeTaker`, `reads_removeOffer`, `reads_removeWaiter`). -/
+theorem reads_removeById {α : Type} {entries id : TermSrc} (tb : Table)
+    (injective : tb.Injective) (encode : α → Val) (identity : α → Nat)
+    (hasId : ∀ x, Machine.Record.read false (encode x) "id" =
+      some (Val.promise (tb.handle (identity x))))
+    (witness : α) (xs : List α) (i : Nat) (depth : vals.length = env.names.length)
+    (hentries : Reads entries env path vals (Val.list (xs.map encode)))
+    (hid : Captured id env path vals (Val.promise (tb.handle i))) :
+    Reads (removeById entries id) env path vals
+      (Val.list ((xs.filter (fun x => identity x != i)).map encode)) := by
+  have folded : Reads (removeById entries id) env path vals
+      (Val.list ((xs.foldl (fun kept x => if identity x = i then kept else kept ++ [x]) []).map
+        encode)) :=
+    reads_foldWith_model encode (fun kept : List α => Val.list (kept.map encode))
+      (fun kept x => if identity x = i then kept else kept ++ [x]) xs [] witness hentries
+      (reads_noneOf hentries) fun kept x => by
+        refine (reads_ifT
+          ((reads_same (reads_field (reads_minted_item depth path _ (encode x)) (hasId x))
+            (hid.underFold _ (encode x))).to (by rw [injective.decides]))
+          (reads_minted_acc depth path _ (encode x))
+          (reads_snoc (reads_minted_acc depth path _ (encode x))
+            (reads_minted_item depth path _ (encode x)))).to ?_
+        by_cases same : identity x = i
+        · rw [decide_eq_true same, if_pos rfl, if_pos same]
+        · rw [decide_eq_false same, if_neg Bool.false_ne_true, if_neg same, List.map_append]
+          rfl
+  exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
+
+end Removal
 
 end Effect4.Modules

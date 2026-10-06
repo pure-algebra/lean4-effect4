@@ -12,10 +12,11 @@ them.
 - **The cell's records**: what a read answers and what an overwrite stores, one `rfl` for each
   field of the cell, of a taker and of an offer.
 - **The passes** of `src/Effect4/Modules/Queue/Steps.lean` on the encoding of a model's lists:
-  the two records, the wake, the identity tests, the two removals and the accept pass.
-- **Two facts of lists** serve those passes: a fold that keeps is a filter (`foldl_keep`), and
-  a fold that appends each element's gift is `flatMap` (`foldl_append_flatMap`). They are in
-  `Effect4.Constructive.List` (`src/Effect4/Data/Constructive.lean`).
+  the two records, the wake, the identity tests, the two removals and the accept pass. Each
+  removal is one application of the shared rule of the pass `removeById` (`reads_removeById`).
+- **One fact of lists** serves the accept pass: a fold that appends each element's gift is
+  `flatMap` (`foldl_append_flatMap`, in `Effect4.Constructive.List`,
+  `src/Effect4/Data/Constructive.lean`).
 
 Placement. Concept `translation-simulation`, requirement R10. Every lemma here is a helper of
 the six step goals (`src/Effect4/Laws/Modules/Queue/Steps.lean`), parts of the proposed claim
@@ -29,7 +30,7 @@ namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
-open Effect4.Constructive.List (foldl_keep foldl_append_flatMap)
+open Effect4.Constructive.List (foldl_append_flatMap)
 
 /-! ## The cell's records: what a read answers and what an overwrite stores -/
 
@@ -124,29 +125,16 @@ theorem reads_isHead {takers id : TermSrc} (tb : Table) (injective : tb.Injectiv
     (reads_bool false env path vals) fun found t =>
       reads_sameTaker tb injective i depth hid (Val.bool found) t
 
-/-- `removeTaker`: the takers without the request. -/
+/-- `removeTaker`: the takers without the request. One application of the shared rule of the
+pass `removeById`. -/
 theorem reads_removeTaker {takers id : TermSrc} (tb : Table) (injective : tb.Injective)
     (ts : List Taker) (i : Nat) (depth : vals.length = env.names.length)
     (htakers : Reads takers env path vals (Val.list (ts.map (takerVal tb))))
     (hid : Captured id env path vals (Val.promise (tb.handle i))) :
     Reads (Queue.removeTaker takers id) env path vals
-      (Val.list ((ts.filter (fun t => t.id != i)).map (takerVal tb))) := by
-  have folded : Reads (Queue.removeTaker takers id) env path vals
-      (Val.list ((ts.foldl (fun kept t => if t.id = i then kept else kept ++ [t]) []).map
-        (takerVal tb))) :=
-    reads_foldWith_model (takerVal tb)
-    (fun kept : List Taker => Val.list (kept.map (takerVal tb)))
-    (fun kept t => if t.id = i then kept else kept ++ [t]) ts [] ⟨0, 1, 1⟩ htakers
-    (reads_noneOf htakers) fun kept t => by
-      refine (reads_ifT (reads_sameTaker tb injective i depth hid _ t)
-        (reads_minted_acc depth path _ (takerVal tb t))
-        (reads_snoc (reads_minted_acc depth path _ (takerVal tb t))
-          (reads_minted_item depth path _ (takerVal tb t)))).to ?_
-      by_cases same : t.id = i
-      · rw [decide_eq_true same, if_pos rfl, if_pos same]
-      · rw [decide_eq_false same, if_neg Bool.false_ne_true, if_neg same, List.map_append]
-        rfl
-  exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
+      (Val.list ((ts.filter (fun t => t.id != i)).map (takerVal tb))) :=
+  reads_removeById tb injective (takerVal tb) (·.id) (fun _ => taker_id _ _) ⟨0, 1, 1⟩ ts i depth
+    htakers hid
 
 /-- The identity of a folded offer against the request's, under the fold's binders. -/
 theorem reads_sameOffer {id : TermSrc} (tb : Table) (msg : Nat → Val) (injective : tb.Injective)
@@ -159,30 +147,17 @@ theorem reads_sameOffer {id : TermSrc} (tb : Table) (msg : Nat → Val) (injecti
     (reads_field (reads_minted_item depth path acc (offerVal tb msg o)) (offer_id _ _ _ _))
     (hid.underFold acc (offerVal tb msg o))).to (by rw [injective.decides])
 
-/-- `removeOffer`: the pending offers without the request. -/
+/-- `removeOffer`: the pending offers without the request. One application of the shared rule
+of the pass `removeById`. -/
 theorem reads_removeOffer {offers id : TermSrc} (tb : Table) (msg : Nat → Val)
     (injective : tb.Injective) (os : List Offer) (i : Nat)
     (depth : vals.length = env.names.length)
     (hoffers : Reads offers env path vals (Val.list (os.map (offerVal tb msg))))
     (hid : Captured id env path vals (Val.promise (tb.handle i))) :
     Reads (Queue.removeOffer offers id) env path vals
-      (Val.list ((os.filter (fun o => o.id != i)).map (offerVal tb msg))) := by
-  have folded : Reads (Queue.removeOffer offers id) env path vals
-      (Val.list ((os.foldl (fun kept o => if o.id = i then kept else kept ++ [o]) []).map
-        (offerVal tb msg))) :=
-    reads_foldWith_model (offerVal tb msg)
-      (fun kept : List Offer => Val.list (kept.map (offerVal tb msg)))
-      (fun kept o => if o.id = i then kept else kept ++ [o]) os [] ⟨0, false, []⟩ hoffers
-      (reads_noneOf hoffers) fun kept o => by
-        refine (reads_ifT (reads_sameOffer tb msg injective i depth hid _ o)
-          (reads_minted_acc depth path _ (offerVal tb msg o))
-          (reads_snoc (reads_minted_acc depth path _ (offerVal tb msg o))
-            (reads_minted_item depth path _ (offerVal tb msg o)))).to ?_
-        by_cases same : o.id = i
-        · rw [decide_eq_true same, if_pos rfl, if_pos same]
-        · rw [decide_eq_false same, if_neg Bool.false_ne_true, if_neg same, List.map_append]
-          rfl
-  exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
+      (Val.list ((os.filter (fun o => o.id != i)).map (offerVal tb msg))) :=
+  reads_removeById tb injective (offerVal tb msg) (·.id) (fun _ => offer_id _ _ _ _)
+    ⟨0, false, []⟩ os i depth hoffers hid
 
 /-- `fitting`: how many pending offers enter the room. -/
 theorem reads_fitting {room offers : TermSrc} {r : Nat} {os : List Val}

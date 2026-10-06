@@ -11,13 +11,8 @@ Semaphore's steps need beside them.
 
 - **The two records**: what a read answers and what an overwrite stores, one `rfl` for each
   field of the cell and of a waiter.
-- **Three words** that the Queue's steps do not use: `add`, `isZero` at a number, and the
-  literal of nothing.
-- **The removal by identity, stated once** (`reads_removeById`). The shared pass `removeById`
-  (`src/Effect4/Modules/Words.lean`) reads the filter by identity on the encoding of every list
-  of entries whose `id` field reads the table's handle of the entry's identity. The Queue's own
-  two lemmas, `reads_removeTaker` and `reads_removeOffer`, are its instances at a taker and at
-  an offer. They stay where they are until the helpers move.
+- **The removal by identity** (`reads_removeWaiter`): one application of the shared rule of
+  the pass `removeById` (`reads_removeById`, `src/Effect4/Laws/Modules/Reading.lean`).
 - **The table's one change frames every other request** (`waiters_renew`).
 - **The passes** of `src/Effect4/Modules/Semaphore/Steps.lean` on the encoding of a model
   state: the free count, the fit, the fold that starts at the first fitting waiter, and a
@@ -39,7 +34,7 @@ namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
-open Effect4.Constructive.List (foldl_keep foldl_fromFirst)
+open Effect4.Constructive.List (foldl_fromFirst)
 open Effect4.Constructive.Decidable (not_decide_lt)
 
 /-! ## The two records: what a read answers and what an overwrite stores -/
@@ -68,64 +63,11 @@ theorem waiter_build (i n h s : Val) :
     Machine.Record.build ["id", "need", "hint", "stamp"] [i, n, h, s] = some (waiterOf h i n s) :=
   rfl
 
-/-! ## Three words that the Queue's steps do not use -/
-
-theorem atom_add (a b : Nat) :
-    nativeAtom "add" [Val.nat a, Val.nat b] = some (Val.nat (a + b)) := rfl
-
-section Words
-
-variable {env : Env} {path : List Nat} {vals : List Val}
-
-theorem reads_add {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.nat x))
-    (hb : Reads b env path vals (Val.nat y)) :
-    Reads (app "add" [a, b]) env path vals (Val.nat (x + y)) :=
-  reads_app (.cons ha (.cons hb .nil)) (atom_add x y)
-
-theorem reads_isZero {n : TermSrc} {x : Nat} (hn : Reads n env path vals (Val.nat x)) :
-    Reads (app "isZero" [n]) env path vals (Val.bool (decide (x = 0))) :=
-  reads_app (.cons hn .nil) (atom_isZero x)
-
-theorem reads_unit : Reads unit env path vals Val.unit := reads_lit .unit env path vals rfl
-
-end Words
-
-/-! ## The removal by identity, on the encoding of any list of entries -/
+/-! ## The removal by identity, on the encoding of the model's waiters -/
 
 section Removal
 
 variable {env : Env} {path : List Nat} {vals : List Val}
-
-/-- **The removal pass reads the filter by identity.** The entries are the encoding of a list,
-and each entry's `id` field reads the table's handle of the entry's identity. On an injective
-table the pass `removeById` reads the encoding of the entries of another identity. The
-statement names no type of the Queue and none of Semaphore. -/
-theorem reads_removeById {α : Type} {entries id : TermSrc} (tb : Table)
-    (injective : tb.Injective) (encode : α → Val) (identity : α → Nat)
-    (hasId : ∀ x, Machine.Record.read false (encode x) "id" =
-      some (Val.promise (tb.handle (identity x))))
-    (witness : α) (xs : List α) (i : Nat) (depth : vals.length = env.names.length)
-    (hentries : Reads entries env path vals (Val.list (xs.map encode)))
-    (hid : Captured id env path vals (Val.promise (tb.handle i))) :
-    Reads (removeById entries id) env path vals
-      (Val.list ((xs.filter (fun x => identity x != i)).map encode)) := by
-  have folded : Reads (removeById entries id) env path vals
-      (Val.list ((xs.foldl (fun kept x => if identity x = i then kept else kept ++ [x]) []).map
-        encode)) :=
-    reads_foldWith_model encode (fun kept : List α => Val.list (kept.map encode))
-      (fun kept x => if identity x = i then kept else kept ++ [x]) xs [] witness hentries
-      (reads_noneOf hentries) fun kept x => by
-        refine (reads_ifT
-          ((reads_same (reads_field (reads_minted_item depth path _ (encode x)) (hasId x))
-            (hid.underFold _ (encode x))).to (by rw [injective.decides]))
-          (reads_minted_acc depth path _ (encode x))
-          (reads_snoc (reads_minted_acc depth path _ (encode x))
-            (reads_minted_item depth path _ (encode x)))).to ?_
-        by_cases same : identity x = i
-        · rw [decide_eq_true same, if_pos rfl, if_pos same]
-        · rw [decide_eq_false same, if_neg Bool.false_ne_true, if_neg same, List.map_append]
-          rfl
-  exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
 
 /-- `removeWaiter`: the waiters without the request, on the encoding of the model's waiters. -/
 theorem reads_removeWaiter {waiters id : TermSrc} (tb : Table) (injective : tb.Injective)

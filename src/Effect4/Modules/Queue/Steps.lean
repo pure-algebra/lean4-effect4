@@ -42,8 +42,9 @@ it. Nothing here performs an effect: `Queue.make`, `Queue.offer` and `Queue.take
 wrapper, after the mask.
 
 The laws are in `src/Effect4/Laws/Modules/Queue/`: the typing statements (`Typing.lean`), the
-relation to the model (`Relation.lean`) and the six step goals with the connector to the store
-(`Steps.lean`). The batteries are under `Test/Program/`: `QueueSteps.lean` (types, sizes and the
+relation to the model (`Relation.lean`) and the six step goals (`Steps.lean`). The connectors
+of a step to the store are shared (`src/Effect4/Laws/Modules/Store.lean`). The batteries are
+under `Test/Program/`: `QueueSteps.lean` (types, sizes and the
 hygiene controls), `QueueScenarios.lean` (runs on the machine), `QueueAgreement.lean` (each step
 against the model, on every state of a finite universe) and `QueueRelation.lean` (each goal's
 conclusion on that universe).
@@ -72,7 +73,7 @@ def mkOffer (A : Ty) (id hint batch rest : TermSrc) : TermSrc :=
 /-! ## The passes
 
 Each helper that folds uses `foldWith`: its two names are minted, so a caller's term keeps its
-reading inside the body. -/
+reading inside the body. The two removals are the shared pass `removeById`. -/
 
 /-- Whether the request `id` waits among the takers. -/
 def enrolled (takers id : TermSrc) : TermSrc :=
@@ -82,20 +83,16 @@ def enrolled (takers id : TermSrc) : TermSrc :=
 def isHead (takers id : TermSrc) : TermSrc :=
   foldWith (app "take" [takers, nat 1]) (bool false) fun _ t => same (field t "id") id
 
-/-- The takers without the request `id`. -/
-def removeTaker (takers id : TermSrc) : TermSrc :=
-  foldWith takers (noneOf takers) fun kept t =>
-    ifT (same (field t "id") id) kept (snoc kept t)
+/-- The takers without the request `id`: the shared removal pass. -/
+def removeTaker (takers id : TermSrc) : TermSrc := removeById takers id
 
 /-- The takers, with the hint of the request `id` replaced. -/
 def renewHint (takers id hint : TermSrc) : TermSrc :=
   foldWith takers (noneOf takers) fun out t =>
     snoc out (ifT (same (field t "id") id) (mkTaker id hint) t)
 
-/-- The pending offers without the request `id`. -/
-def removeOffer (offers id : TermSrc) : TermSrc :=
-  foldWith offers (noneOf offers) fun kept o =>
-    ifT (same (field o "id") id) kept (snoc kept o)
+/-- The pending offers without the request `id`: the shared removal pass. -/
+def removeOffer (offers id : TermSrc) : TermSrc := removeById offers id
 
 /-- The model's `wake` in the first profile: the earliest taker, when a message is buffered. A
 list of at most one taker. -/

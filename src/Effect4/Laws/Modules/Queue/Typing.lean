@@ -27,8 +27,8 @@ typing.
   form at its own scope, with no second elaboration.
 
 Their consumer is the wrapper's law, in the public path's slice: with a step's typing,
-`step_keeps_cell` (`src/Effect4/Laws/Modules/Queue/Steps.lean`) gives that one `Ref.modify` of
-the step keeps the cell a member of the cell's type. `typeAt_tree` recovers the tree and its
+`step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) gives that one `Ref.modify` of the
+step keeps the cell a member of the cell's type. `typeAt_tree` recovers the tree and its
 `termTy` equation from a statement at the step's own scope. Reach: the signature's atoms are the
 native table's, and no premise names `sig.constAtom`, because no step holds a string literal. A
 caller's term has its type under each literal flag, so a string literal is no caller's term

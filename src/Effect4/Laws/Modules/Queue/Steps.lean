@@ -26,9 +26,10 @@ path's slice. Reach, for each goal:
 - the statement holds at every scope, for every caller's term that reads the step's arguments
   (`Reads`, `Captured`, `src/Effect4/Laws/Modules/Reading.lean`).
 
-`step_updates` joins a goal to the store: a step term that reads the pair of a reply and a next
-value is one atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed
-half (`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` is its store law
+The connectors to the store are shared (`src/Effect4/Laws/Modules/Store.lean`). `step_updates`
+joins a goal to the store: a step term that reads the pair of a reply and a next value is one
+atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed half
+(`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` is its store law
 (`refStep_get`).
 
 The six statements are proved, each in place of its planned goal (decisions row 203). The
@@ -52,64 +53,6 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Typed
 open Effect4.Modules
 open Effect4.Constructive.List (foldl_snoc_map foldl_or_any)
-
-/-! ## The connector to the store -/
-
-/-- **One atomic update.** A step term that reads the pair of a reply and a next value, under
-the cell's current value as its last binder, is one `Ref.modify`: the store step reads the cell
-once, answers the reply and writes the next value. Stated once, for the five steps of a
-`Ref.modify`. Consumer: the wrapper's law, which runs each step so. It is the census clause
-`refStep_modify`, and it needs no typing. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem step_updates {step : TermSrc} {env : Env} {path : List Nat} {current : String}
-    {captured : List Val} {stores : Stores} {q : RefKey} {cell reply next : Val}
-    (held : refPeek stores.refs q = some cell)
-    (reads : Reads step (env.push [current]) path (captured ++ [cell])
-      (Val.tuple [reply, next])) :
-    ∃ f, step (env.push [current]) path = .ok f ∧
-      syncOpStep (.refModify q f captured) stores =
-        some ({ stores with refs := refPoke stores.refs q next }, reply) := by
-  obtain ⟨f, elaborated, value⟩ := reads
-  refine ⟨f, elaborated, ?_⟩
-  show (refStep (.refModify q f captured) stores.refs).map
-    (fun step => ({ stores with refs := step.2 }, step.1)) = _
-  rw [refStep_modify stores.refs q f captured cell reply next held value]
-  rfl
-
-/-- **The typed half of the connector.** A step term that the checker types at the pair of a
-reply type and the cell's type keeps the cell a member of its type, and its reply is a member
-of the reply type. It is `ListFoldRules.step`, read at the value that the step answers.
-Consumer: the wrapper's law, with a step's typing statement
-(`src/Effect4/Laws/Modules/Queue/Typing.lean`). -/
-@[semantics "store-typing" (requirement := R4)]
-theorem step_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    {w : Typed.World} {tys : TyEnv} {captured : List Val} (typedEnv : EnvTyped w tys captured)
-    {f : Term} {C B : Ty} (typed : termTy sig (tys ++ [C]) f = some (.prod B C))
-    {stores : Stores} {q : RefKey} {cell reply next : Val}
-    (held : refPeek stores.refs q = some cell) (member : Fits w cell C)
-    (value : evalTerm (captured ++ [cell]) f = some (Val.tuple [reply, next])) :
-    Fits w reply B ∧ Fits w next C := by
-  obtain ⟨b, a, answered, -, fitsReply, fitsNext⟩ :=
-    (fold_typed_atomic_update sig).step atoms w tys captured typedEnv f C B typed stores q cell
-      held member
-  rw [value] at answered
-  have same : Val.tuple [reply, next] = Val.tuple [b, a] := Option.some.inj answered
-  have parts : [reply, next] = [b, a] := Store.Val.list.inj same
-  obtain ⟨rfl, rest⟩ := List.cons.inj parts
-  obtain ⟨rfl, -⟩ := List.cons.inj rest
-  exact ⟨fitsReply, fitsNext⟩
-
-/-- **The read law of `size`.** A `Ref.get` of the cell answers its value and leaves the
-stores: the size step is a term over that value, and it writes nothing. It is the census clause
-`refStep_get`. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem cell_read {stores : Stores} {q : RefKey} {cell : Val}
-    (held : refPeek stores.refs q = some cell) :
-    syncOpStep (.refGet q) stores = some (stores, cell) := by
-  show (refStep (.refGet q) stores.refs).map
-    (fun step => ({ stores with refs := step.2 }, step.1)) = _
-  rw [refStep_get stores.refs q cell held]
-  rfl
 
 /-! ## The model's side, in closed form
 

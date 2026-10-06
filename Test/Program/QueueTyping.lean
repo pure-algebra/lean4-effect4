@@ -2,6 +2,7 @@ import Effect4.Modules.Queue.Steps
 import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Store
 import ProofGraph.Plan
 
 /-!

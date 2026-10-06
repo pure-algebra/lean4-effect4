@@ -16,8 +16,8 @@ holds the pieces of a step term that name no module.
   identity. An entry is a record with an `id` field.
 
 A module's own records, passes and steps stay in the module's folder. The laws of the words are
-under `src/Effect4/Laws/Modules/`: what each word reads, and what each word types at. Nothing
-here performs an effect.
+in `src/Effect4/Laws/Modules/`: what each word reads (`Reading.lean`), and what each word types
+at (`Checking.lean`). Nothing here performs an effect.
 -/
 
 @[expose] public section

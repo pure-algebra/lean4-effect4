@@ -1,7 +1,7 @@
 import Effect4.Modules.Semaphore.Steps
 import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Modules.Semaphore.Typing
-import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Store
 import Test.Program.QueueSteps
 import ProofGraph.Plan
 
@@ -36,7 +36,6 @@ namespace Test.Program.SemaphoreSteps
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
-open Effect4.Queue.Model (step_keeps_cell)
 open Effect4.Semaphore.Model
 open Test.Program.QueueSteps (termAt measure)
 
@@ -286,8 +285,8 @@ def visitingTree : Option (Eff NativeOp) := do
 
 /-! ## 6. The connector to the store
 
-`step_keeps_cell` (`src/Effect4/Laws/Modules/Queue/Steps.lean`) reads a step's `termTy`
-equation: one `Ref.modify` of the step keeps the cell a member of the cell's type. The tree
+`step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) reads a step's `termTy` equation:
+one `Ref.modify` of the step keeps the cell a member of the cell's type. The tree
 that a step's reading evaluates is the tree that the step's theorem types (`Types.tree`). The
 cell's value is the scope's last name. -/
 

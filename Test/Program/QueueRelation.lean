@@ -1,4 +1,5 @@
 import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Store
 import Test.Program.QueueAgreement
 import ProofGraph.Plan
 
@@ -247,15 +248,15 @@ Each proved statement's axioms, and its standing as the plan derives it from the
 goal that is still planned has no pin here: the goal gate counts it. The counts are of this
 battery's tree, which holds no step of a proof: the steps are in the law graph. -/
 
-/-- info: 'Effect4.Queue.Model.step_updates' depends on axioms: [propext] -/
+/-- info: 'Effect4.Modules.step_updates' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms step_updates
 
-/-- info: 'Effect4.Queue.Model.step_keeps_cell' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.step_keeps_cell' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms step_keeps_cell
 
-/-- info: 'Effect4.Queue.Model.cell_read' depends on axioms: [propext] -/
+/-- info: 'Effect4.Modules.cell_read' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms cell_read
 
