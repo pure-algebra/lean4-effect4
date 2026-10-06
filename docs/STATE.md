@@ -483,13 +483,20 @@ Open at this landing:
     recorder needs one extension, an operation that completes after its cancellation.
     Seat HOST has it since 2026-10-06 (branch `seat/host`;
     [its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md)). It took the slot
-    that seat QTYPES freed. **Routing and workers are merged** (`11616581`;
+    that seat QTYPES freed. **The seat is finished, and all four scenarios run on a host**
+    (`11616581` and `aef8f049`; [the receipt](research/2026-10-05-seat-HOST-receipt.md),
     [the design note](research/2026-10-05-seat-HOST-design.md)). Each script of a battery is
     performed on the scenario's printed module on rc.112, and Lean replays the host's
-    recording. Routing has 8 scripts and workers 16, and no entry of either observation
-    waits. Workers reads five entries through a reader: a spy in the harness that changes no
-    recording, which the lane checks by running each script twice. The recorder takes an
-    operation that completes after its cancellation. Timeout and atomic follow;
+    recording. The receipt's table gives each entry of each observation with its source of
+    evidence: the host, the ledger, a reader, or the replay alone. Three limits stand:
+    - a reader is a spy in the harness. The lane runs each script with no reader, with its
+      readers and with each reader alone, and it compares the recordings byte for byte;
+    - timeout's whole observation waits on `timers` in 5 scripts, where a timer's fiber has no
+      call to name it. One atomic script has no host run for the same reason;
+    - **the host driver restates each control's script**, because a battery holds the script
+      inside a Boolean expression. A changed script of a battery does not reach the host
+      runs, and the lane stays green on the old script. The repair makes a control carry its
+      script as data (row 266);
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
