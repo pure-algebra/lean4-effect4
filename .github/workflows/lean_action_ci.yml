@@ -169,7 +169,7 @@ jobs:
           git diff --exit-code --stat -- ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml
       - name: The OCaml lane (the eff goldens and wire tests, the engine tests, the three-engine differential over the printed corpus, the seam check)
         run: make build check-ocaml OCAML="opam exec --"
-      - name: The compiler conformance profile (Lean-emitted OCaml for normalization, compiled and run, plus one emitted-code mutation)
+      - name: The compiler conformance profile (Lean-emitted OCaml for normalization, compiled and run, plus its emitted-code mutations)
         run: python3 scripts/check-conform.py compiler
 
   # ---------------------------------------------------------------- nightly, one job each

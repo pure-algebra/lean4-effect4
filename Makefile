@@ -346,13 +346,13 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots proof-style cases native ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots proof-style cases native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
 check: build check-roots check-proof-style check-gen check-tsgo check-docs ## after every change: the build with its axiom gate, the fresh root elaboration, the proof-style ratchet, the generated-file drift, no TypeScript below 7, the authority documents' references
-check-full: check check-slow check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
+check-full: check check-slow check-cases check-native check-compiler check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -465,6 +465,14 @@ $(CHK)/cases: $(CORE) $(CONFORM_SOURCES)
 
 $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
+	@mkdir -p $(CHK) && touch $@
+
+# The compiler checkpoint (decisions row 263): the OCaml that the LCNF route emits for
+# normalization, compiled and run, with its emitted-code mutations. It is the command of CI's
+# OCaml job (`check-ocaml`), joined to the local sweep. It needs `ocamlopt` of the effect4 switch.
+CONFORM_COMPILER_SOURCES := $(shell find src/OCaml5/Lcnf src/OCaml5/Ml -name '*.lean')
+$(CHK)/compiler: $(CORE) $(CONFORM_SOURCES) $(CONFORM_COMPILER_SOURCES)
+	$(PY) scripts/check-conform.py compiler
 	@mkdir -p $(CHK) && touch $@
 
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
@@ -699,7 +707,7 @@ status: ## one screen, measured: HEAD and dirty paths, build and check freshness
 help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
-	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, truth-release, target,'
+	@echo '  check-<name>       one check: roots, cases, native, compiler, ts-reader, truth, truth-release, target,'
 	@echo '                     schema-codec, ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts,'
 	@echo '                     corpus, schema-pins, tools, tsgo, semantics, docs, language'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
