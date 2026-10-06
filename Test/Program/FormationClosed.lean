@@ -168,16 +168,18 @@ example (table : RowTable) {e : NativeEff} {t : EffTy}
     t.answer.closed = true ∧ t.error.closed = true :=
   check_closed _ (closedSig_native table) ClosedEnv.nil formed h
 
-/-- The checker's answer alone: its rendering, and whether it is closed. -/
-def answer (e : NativeEff) (table : RowTable := []) : Option (String × Bool) :=
-  (Effect4.Api.typeOf e table).map fun (t : EffTy) => (t.answer.renderRaw, t.answer.closed)
+/-- The checker's answer alone, and whether it is closed. -/
+def answer (e : NativeEff) (table : RowTable := []) : Option (Ty × Bool) :=
+  (Effect4.Api.typeOf e table).map fun (t : EffTy) => (t.answer, t.answer.closed)
 
 -- **The formation premise.** The checker alone types a stated cursor and a stated accumulator
--- at the stated type. It is formation that refuses the two programs above.
-#guard answer cursorOpen = some ("number | T2", false)
-#guard answer accumulatorOpen = some ("number | T2", false)
--- An operation's type argument is closed to `never` by the row's instance, without a word.
-#guard answer typeArgOpen = some ("Deferred.Deferred<never, number>", true)
+-- at the stated type, `number | T2`. It is formation that refuses the two programs above.
+#guard answer cursorOpen = some (openTy, false)
+#guard answer accumulatorOpen = some (openTy, false)
+#guard openTy.renderRaw = "number | T2"
+-- An operation's type argument is closed to `never` by the row's instance, without a word:
+-- `Deferred.make<T5, number>()` is typed at `Deferred<never, number>`.
+#guard answer typeArgOpen = some (.deferredOf .never .nat, true)
 
 -- **The environment premise.** A variable of a term has the environment's type.
 #guard (effTy (nativeSignature []) [.var 0] (.succeed (.var 0))).map (·.answer.closed) =
@@ -207,12 +209,49 @@ def openCarrier : SigApp := { services := [(cellKey, .refOf (.var 3))] }
 #guard admitSig openCarrier = .ok ()
 #guard (Formation.checkInput (.service cellKey : NativeEff) openCarrier.rows).isNone
 #guard (typeOfProgram openCarrier.signature (.service cellKey)).map
-  (fun t => (t.answer.renderRaw, t.answer.closed)) = some ("Ref.Ref<T3>", false)
+  (fun t => (t.answer, t.answer.closed)) = some (.refOf (.var 3), false)
+#guard (Ty.refOf (.var 3)).renderRaw = "Ref.Ref<T3>"
 #guard (admitProgram (.service cellKey) openCarrier).isOk
 
 /-- The signature of `openCarrier` has no closed carriers. -/
 theorem openCarrier_not_closed : ¬ ClosedSig openCarrier.signature := fun closed =>
   Bool.noConfusion (closed.service cellKey (.refOf (.var 3)) (by decide +kernel))
+
+/-! ## A layer reference: the expansion states what the program states
+
+The whole-program checker types a program's expansion, and formation reads the stored program.
+`typeOfProgram_closed` asks formation of the stored program alone. -/
+
+/-- The service key of a number. -/
+def numberKey : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+
+/-- A layer whose body states a list fold's accumulator at the given type. -/
+def stating (ty : Ty) : LayerTerm NativeOp :=
+  .effect numberKey (.succeed (.fold (some ty) (.app "nil" .nil) (.lit (.nat 0)) (.var 0)))
+
+/-- A program whose second layer refers to its first: the reference at `[0, 1]` names the layer
+at `[0, 0]`. -/
+def referring (ty : Ty) : NativeEff :=
+  .provideLayer (.merge (stating ty) (.ref [0, 0])) false (.service numberKey)
+
+-- The stored program states the type once, and its expansion states it twice.
+#guard (referring .nat).layerRefsWF
+#guard (Formation.programAnnotations (referring .nat)).map (·.2) = [.nat]
+#guard (Formation.programAnnotations (referring .nat).expandRefs).map (·.2) = [.nat, .nat]
+-- Green: the program is formed and admitted, at closed types.
+#guard (admitProgram (referring .nat) {}).isOk
+#guard answer (referring .nat) = some (.nat, true)
+-- Red: a variable in the one stored annotation is refused, at the layer's path.
+#guard refusal (referring openTy) =
+  some (["program", "0", "0", "0", "argument", "0", "term", "accTy", "type", "2"], .var 2,
+    .typeVariable)
+
+/-- `typeOfProgram_closed` at a program with a layer reference: the formation premise is the
+stored program's. -/
+example {t : EffTy} (h : typeOfProgram (nativeSignature []) (referring .nat) = some t) :
+    t.answer.closed = true ∧ t.error.closed = true :=
+  typeOfProgram_closed _ (closedSig_native [])
+    ((Formation.check_eq_none_iff _).mp (by decide +kernel)) h
 
 /-! ## A count: no program of the two corpora holds a variable in an annotation -/
 
@@ -231,6 +270,8 @@ def holdsVariable (e : NativeEff) : Bool :=
   !(refusal e).any fun why => why.2.2 == .typeVariable
 
 #print axioms check_closed
+#print axioms typeOfProgram_closed
+#print axioms Formation.annotationsAll_expandRefs
 #print axioms closedSig_native
 #print axioms hasTy_closed
 #print axioms Formation.closed_of_formed
