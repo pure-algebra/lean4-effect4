@@ -33,19 +33,43 @@ profile admits. So every run of the model from the empty queue has both flags.
    `Test/Program/QueueCapacity.lean`. Find the bounded exploration and its two mutations.
 5. `Test/contracts/queue.contract.md`: the model's transitions and the connectors.
 6. The registry's open parts under R12 in `generated/semantics.md`.
+7. Codex's support for this slice, not compiled:
+   `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-1336-qinv-pool-maskpop/next/review.md`,
+   with five finite witnesses in `witnesses.py` beside it (a Python mirror; do not run it in
+   place).
 
 ## The assignment
 
 1. **A short design note first**, `docs/research/2026-10-06-seat-QINV-design.md`: the exact
    statements; the operations that the first profile admits; the invariant that the proof
    needs if the two flags alone are not inductive. Send its path, and go on.
-2. **State the step law as a planned goal, placed, and prove it in place.** One statement for
-   the state's three properties and one for `accounted`, or one bundle. If `quiet` is not
-   inductive by itself, strengthen the invariant and say why. Do not weaken `quiet` or
+2. **State the step law as a planned goal, placed, and prove it in place.** Start from
+   Codex's statement, which is not compiled:
+
+   ```lean
+   def FirstRunInv (r : Run) : Prop :=
+     FirstProfile r.s ∧ within r.s = true ∧ tidy r.s = true ∧
+     quiet r.s r.signalled = true ∧ r.ok = true ∧ r.named = true
+
+   theorem first_step_inv (r : Run) (op : Op) (h : FirstRunInv r)
+       (first : firstOp op = true) (requested : Requested r.s op) :
+       FirstRunInv (step .none r op)
+   ```
+
+   `FirstProfile` leaves the buffer free, so it gives none of `within`, `tidy` and `quiet`.
+   The flags `ok` and `named` are a run's history, and they certify nothing of its state. So
+   the invariant carries all of them. Reuse `first_profile_closed` for the profile and
+   `positive_suspend_step_capacity` for the capacity. Both speak of a run with a default
+   history: one short equation of the state's projection carries them to any run. The new
+   work is the connector for `tidy`, `quiet` and `accounted`. Do not weaken `quiet` or
    `accounted`, and change no definition of the model.
-3. **The run law** follows by induction over the list of operations.
-4. **Controls**: the two existing mutations stay red, each at its own flag. Add one control
-   for each fault of `Fault`: the faulty step breaks the law at a named state.
+3. **The run law** follows by induction over the list of operations. It asks `firstOp` and
+   `Requested` at each prefix.
+4. **Controls.** One control for each premise of the invariant: Codex's five witnesses, as
+   Lean guards, each with its positive control. `firstOp` excludes `close` and `shutdown`,
+   and those are the only arms that a `Fault` changes. So the two existing mutations stay
+   red as controls of the broader model. They are no falsifiers of this theorem: say so
+   beside them.
 5. Pin the axioms and the plan status.
 
 A new file is yours: `src/Effect4/Laws/Modules/Queue/Invariant.lean`, with one import in

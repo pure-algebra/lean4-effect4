@@ -1,0 +1,20 @@
+diff --git a/tools/Tools/SemanticsRegistry.lean b/tools/Tools/SemanticsRegistry.lean
+index bb355eb5..4002a618 100644
+--- a/tools/Tools/SemanticsRegistry.lean
++++ b/tools/Tools/SemanticsRegistry.lean
+@@ -116,6 +116,7 @@ def registry : Registry where
+         -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257).
+         -- The judgment's file names no module since seat MOVE
+         `Effect4.Laws.Modules.Checking,
++        `Effect4.Laws.Modules.Waiting,
+         `Effect4.Laws.Program.Typing.TermIntro,
+         -- Semaphore's typing statements, and its model's profile: the closure is this
+         -- concept's node, and the two facts of a visit carry their own tag (seat SEM's
+@@ -194,6 +195,7 @@ def registry : Registry where
+         `Effect4.Laws.Modules.Queue.Relation,
+         `Effect4.Laws.Modules.Queue.Reading,
+         `Effect4.Laws.Modules.Queue.Steps,
++        `Effect4.Laws.Modules.Queue.Ops,
+         `Effect4.Laws.Modules.Semaphore.Relation,
+         `Effect4.Laws.Modules.Semaphore.Reading,
+         `Effect4.Laws.Modules.Semaphore.Steps

@@ -1,0 +1,50 @@
+{
+  "scope": "Pool merged steps 1\u20133, read-only review",
+  "main_snapshot": "d4ea8243826e2d5e5b3750007df009d80c4b8741",
+  "merge": "e212766fc0a2989f7d00957e107652fa12886d91",
+  "seat_parent": "7f76f0b9",
+  "scenario_matches_prior_commit": "af7f6099",
+  "source_review": "No model or proof defect found in this bounded pass.",
+  "new_actionable": [
+    {
+      "kind": "contract wording",
+      "path": "Test/contracts/pool.contract.md",
+      "section": "PP5 low-level control",
+      "claim": "No public schedule reaches it",
+      "correction": "The state is reachable via PP3; only the open-pool count-two posting is outside the public profile.",
+      "evidence": "PoolScenarios.pp3 guard has idle [0] with two enrolled waiters before helper selection.",
+      "status": "Sent to parent; no coordinator message by this seat."
+    }
+  ],
+  "proof_reuse": "Successful-lease reply witness from Profile.idle/stamps and eq_of_stamp for the owned R10 lease-step connector; proposed, not independently compiled.",
+  "saved_acceptance": {
+    "producer": "Claude coordinator merge-pool-1",
+    "build_jobs": 994,
+    "modules": 744,
+    "declarations": 88303,
+    "planned_goals": 24,
+    "goal_dependents": 11,
+    "gates_all_exit_zero": true,
+    "conservativity": "4/4; 27/27 self-test controls expected",
+    "monitor_rerun": false
+  },
+  "limitations": [
+    "Active step-four sources excluded.",
+    "No final Pool acceptance claimed.",
+    "Atomic model selection is separate from callback delivery.",
+    "Immediate repeated return is separate from arbitrary-history release.",
+    "Structural profile is separate from positive-size public admission.",
+    "No host, target, liveness or whole-run agreement established."
+  ],
+  "verification": {
+    "source_count": 13,
+    "evidence_count": 12,
+    "all_retained_hashes_match": true
+  },
+  "artifacts": {
+    "review.md": "4896af55fad3d39dd9eed117ee07ccefec94257d550d1f4047045e76c8dc650f",
+    "manifest.json": "77d1f55e2cb2ee65e484085c7d9d17c8b6fc4a473a8d8496b9e2bc56c6a57020",
+    "evidence-manifest.json": "ce1aaab2e8c72f4ebe4fa6964fb5f236264da409cf864a9e985f6141e8a9e363",
+    "verification.json": "bcf5ac675c7f48893df8516ce7493a7813d2ac10230c12df0252bc979c46671c"
+  }
+}

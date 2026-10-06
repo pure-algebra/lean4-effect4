@@ -1,0 +1,40 @@
+{
+  "main": "d4ea8243826e2d5e5b3750007df009d80c4b8741",
+  "maskpop": "e925a8d6c6d497b6e4d44dd04c399a0f4fd5e371",
+  "maskpop_status": "local proof/battery/docs committed; final receipt and main integration pending at frozen cut",
+  "pub_receipt": "040fde77cd34bffd1e131e4957f1b40b76de0be4",
+  "pub_merge": "bc0ee4c19c833f751aec357558fe4620993b1059",
+  "findings": [],
+  "verification_checks": 15,
+  "source_and_evidence_files": 37,
+  "evidence": "saved seat output and committed-source comparisons; no monitor Lean/build/runtime execution",
+  "excluded": [
+    "live uncommitted design changes",
+    "later heads and receipts",
+    "whole-run mask restoration",
+    "general public Queue run agreement",
+    "runtime/compiler proof"
+  ],
+  "files": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/maskpop/review.md",
+      "sha256": "02630061cdba50efee62f10fb4939e1cc4391b0224a813cf4faa874e523e4af1"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/maskpop/manifest.json",
+      "sha256": "05e2b1b5a09a9e578c96dd26deef73e7c32801a49ce524a58469de0d7b8d2262"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/maskpop/verification.json",
+      "sha256": "a498ec175aa4c36f46bec213438fc3a4c8bf8709ff079867bcf7670597c04fa8"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/maskpop/tool-evidence.json",
+      "sha256": "26f1e4b001f1f5cba4c0238af9e6d85a9f4dd46967678d25a0e3317811cc13ce"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/maskpop/retain.py",
+      "sha256": "0874a9370ebdc2477694c5b90897081be89d3d003c8af54f8061490c5f4d40c5"
+    }
+  ]
+}

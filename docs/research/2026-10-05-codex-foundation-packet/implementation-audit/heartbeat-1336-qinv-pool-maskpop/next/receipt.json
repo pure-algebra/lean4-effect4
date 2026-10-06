@@ -1,0 +1,202 @@
+{
+  "head": "d4ea8243826e2d5e5b3750007df009d80c4b8741",
+  "scope": "Read-only frozen-source and retained allocation evidence review; scratch-only Python branch mirrors",
+  "project_commands_run": [],
+  "repo_edits": false,
+  "axiom_queries_run": false,
+  "proof_claims": "None; candidate remains UNCOMPILED",
+  "cuts": {
+    "observed_utc": "2026-10-06T13:46:14.403419+00:00",
+    "head": "bc0ee4c19c833f751aec357558fe4620993b1059",
+    "branch": "seat/cuts",
+    "status": "",
+    "design_exists": false,
+    "names_present": {
+      "tapeFrom_append": false,
+      "tapeFrom_cut": false,
+      "tapeFrom_cut_replays": false,
+      "tapeFrom_position_replays": false,
+      "tapeFrom_position_prefix": false,
+      "shown_views_opened": false
+    },
+    "note": "Active source snapshot only; no compilation or acceptance inferred."
+  },
+  "qinv": "Brief only at frozen HEAD; stronger invariant explicitly permitted",
+  "requirements": {
+    "compared": 13,
+    "all_exact_titles_and_openParts_unchanged": true,
+    "registry_report_agree": true,
+    "new_openParts": []
+  },
+  "commands": [
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/next/audit_snapshot.py",
+      "result": "Successful source capture and 13 requirement comparisons. Ran under its former name inspect.py before rename."
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T133639Z/next/witnesses.py",
+      "exit_code": 0,
+      "result": "PASS: 5 omitted-premise witnesses and 2 out-of-profile fault controls; every case has a passing positive control."
+    },
+    {
+      "command": "Inline Python verifies manifest copies and original transcript line hashes",
+      "exit_code": 0,
+      "result": "24 retained file hashes and 14 transcript line hashes verified"
+    }
+  ],
+  "scratch_repairs": [
+    "Fixed an excerpt end-marker lookup; no model result was produced by that failed attempt.",
+    "Renamed inspect.py to audit_snapshot.py to avoid shadowing Python standard-library inspect when dataclasses imports it."
+  ],
+  "evidence_limits": [
+    "Seven selected branch mirrors, each with a positive control; no universal model proof.",
+    "No Lean, project runtime, compiler, generator, install, UI, dispatch, or seat messaging.",
+    "Close and shutdown faults are outside firstOp, retained as broader-model controls."
+  ],
+  "files": {
+    "requirements.json": {
+      "sha256": "1f7d9ef398e901d3aaf0629b650b4a883913597ee2aa3b9843c20a125f919c70",
+      "bytes": 19198
+    },
+    "witnesses.py": {
+      "sha256": "6a3bb59c87e4d466c459090c298f6dca297f01329829cf1ed2c98c76400b1c2a",
+      "bytes": 6697
+    },
+    "witness-results.json": {
+      "sha256": "2a4b3d6482c8c4fc00bcd68f0e32126a708227d8abb2f5fc234259e474fdcf01",
+      "bytes": 13501
+    },
+    "witness-output.txt": {
+      "sha256": "de1440d00b7594ab0c0a547b34dac831913b5900af635c34cdee19ab2e288d80",
+      "bytes": 114
+    },
+    "cuts-snapshot.json": {
+      "sha256": "d584ea908cf4669241121704e98b18c6c317be3f32a69f5e9aba2b114c420bc9",
+      "bytes": 488
+    },
+    "audit_snapshot.py": {
+      "sha256": "23af301f712fc511f70c6a694b4ad5071b7d69e1604a15e659f163504b901eb5",
+      "bytes": 6132
+    },
+    "tool-evidence.json": {
+      "sha256": "b7b86469e4eee8b002a740ce7e27dfe0287dd934d6d94dfc774109f24d3b382b",
+      "bytes": 30887
+    },
+    "manifest.json": {
+      "sha256": "1ebac0e74261bef953129edd05a345d35743b479a675f1f26b2b0e025becb4c3",
+      "bytes": 9537
+    },
+    "review.md": {
+      "sha256": "3df958e3bcbc8d322e4b7916050d7ee85e9c736527eaedbfaa1c0c91f1b56eed",
+      "bytes": 6891
+    },
+    "evidence/registry.patch": {
+      "sha256": "9743512270df850b03a4788ac1a9641fefa10a5ef57523a51e8ccdf1e997bdeb",
+      "bytes": 1092
+    },
+    "evidence/prior-requirements.json": {
+      "sha256": "d89b018c404392b2e7e107e6910d2b43441fba58ac0748a0d6036b1b5d7eeda4",
+      "bytes": 19252
+    },
+    "seat-source/AGENTS.md": {
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    "source/AGENTS.md": {
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    "definitions/operation-domain.lean.txt": {
+      "sha256": "30c2084e6378c2534af34b73f8b0899225398c62c7d6605bb171c3892a354f62",
+      "bytes": 530
+    },
+    "definitions/FirstProfile.lean.txt": {
+      "sha256": "15e67d59f2b687fa94399f6cc6067165a5bf8869307a504d069953b8ca3e0fee",
+      "bytes": 726
+    },
+    "definitions/Run-through-step.lean.txt": {
+      "sha256": "20c319b82b9a727b4077daf24aa2f3893664dcf6c2b14c13b5f57ce0f1634f94",
+      "bytes": 3110
+    },
+    "source/generated/semantics.md": {
+      "sha256": "e7a87f2b727dfa6fbe4b40be4ca3d7caffc9b1e7ae2e4e0bc2b3101d417980cb",
+      "bytes": 171888
+    },
+    "source/docs/STATE.md": {
+      "sha256": "7be918c694adf6e80e3847692f30374a03455e18f15f973e834dfe8c8c919e4f",
+      "bytes": 132910
+    },
+    "source/src/Effect4/Laws/Run.lean": {
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+      "bytes": 51982
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Profile.lean": {
+      "sha256": "087064aca1eda9808642ad69ca949c07ff3735331e4f1e5821d5013dfe007c0b",
+      "bytes": 19028
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Model.lean": {
+      "sha256": "cedc4e7cf129ee7da9c122251f3ebccbc506f5cfa9b025571e9d07fa70ca246d",
+      "bytes": 17180
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Capacity.lean": {
+      "sha256": "07f8d6a54d2bff23eccc33ccec18455c2870530dc483013f2812e6234f877a9b",
+      "bytes": 8977
+    },
+    "source/docs/core/semantics.md": {
+      "sha256": "fd42265c52ffecca1c03ba3176afb5c785b1c1fa77ab7e76965113f9519d37c3",
+      "bytes": 78269
+    },
+    "source/docs/core/system-map.md": {
+      "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65",
+      "bytes": 45403
+    },
+    "source/docs/core/decisions.md": {
+      "sha256": "9a929f97d767e3f7d04423963c98213b6f65fe5bb77e062736064a1186ee9120",
+      "bytes": 363781
+    },
+    "source/docs/research/2026-10-05-claude-lead/queue-contract/QueueLargeControls.lean": {
+      "sha256": "07734aec8f78c157f0ebd2e2b5d66f64ef981e0cbed198c616bd63983ed7baaa",
+      "bytes": 5078
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md": {
+      "sha256": "59ad03116d17a081f575feefc75673c2b28b7561cfab73b54cc66fddf3d671bd",
+      "bytes": 6230
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md": {
+      "sha256": "3a6f6a6c8a290716957da2db162dc5687cd33c3adff653e901d0eadf40851886",
+      "bytes": 5546
+    },
+    "source/Test/contracts/queue.contract.md": {
+      "sha256": "d26e0a2803cab06c2fd90d4b3ee5e1e521b94053c2f8047b60adf611d3b41604",
+      "bytes": 13118
+    },
+    "source/Test/Program/QueueContract.lean": {
+      "sha256": "56ebf61551e8ca6b6d1f5ce31882b0997259138f49710c47e06a0e2791445232",
+      "bytes": 15408
+    },
+    "source/Test/Program/QueueCapacity.lean": {
+      "sha256": "6aeaf8b5cf8c537e8be3759cd2e1fe5ec89416d1ba90476a56b0694da59c3886",
+      "bytes": 3766
+    },
+    "source/Test/Dogfood/Scenario.lean": {
+      "sha256": "0364b3f70154eebbbf51b57677901983e83ee2767bbfe78f1a1ef17b5deacc5d",
+      "bytes": 52726
+    },
+    "source/Test/Dogfood/Scenario/Tape.lean": {
+      "sha256": "cff3e3c7faf606d76b2914f1a9b4744331afcb262f08044ddca32ae32cc04728",
+      "bytes": 17258
+    },
+    "source/tools/Tools/SemanticsRegistry.lean": {
+      "sha256": "982a2832e712fbfd63f17381eb404dc5be565258e26f41cadc64a522ac61961b",
+      "bytes": 77557
+    },
+    "seat-source/Test/Dogfood/Scenario.lean": {
+      "sha256": "0364b3f70154eebbbf51b57677901983e83ee2767bbfe78f1a1ef17b5deacc5d",
+      "bytes": 52726
+    },
+    "seat-source/Test/Dogfood/Scenario/Tape.lean": {
+      "sha256": "cff3e3c7faf606d76b2914f1a9b4744331afcb262f08044ddca32ae32cc04728",
+      "bytes": 17258
+    }
+  }
+}
