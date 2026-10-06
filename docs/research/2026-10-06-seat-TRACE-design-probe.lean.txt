@@ -1,0 +1,585 @@
+import Effect4.Laws.Program.Sketch
+import Test.Program.SketchControls
+
+/-! Seat SKETCH, slice TRACE (first half), probe 2 (scratch): the step with the environment
+fact in each case, the path theorem, and the laws of the focus function. -/
+
+set_option autoImplicit false
+
+namespace Effect4.Program
+
+open Conform.Effect4.Typing
+
+variable {Op : Type}
+
+/-- What a node's typing judgment reads from the nodes above it. -/
+inductive NodeEnv where
+  | env (env : TyEnv)
+  | body (env : TyEnv) (inLoop : Bool)
+  | closed
+deriving DecidableEq, Repr
+
+namespace NodeEnv
+
+def tyEnv : NodeEnv → TyEnv
+  | .env e => e
+  | .body e _ => e
+  | .closed => []
+
+def inLoop : NodeEnv → Bool
+  | .body _ b => b
+  | _ => false
+
+end NodeEnv
+
+/-- The step. -/
+def Node.childEnv (s : Signature Op) (ctx : NodeEnv) : Node Op → Nat → Option NodeEnv
+  | .eff (.suspend _), 0 => some (.env ctx.tyEnv)
+  | .eff (.bind _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.bind a0 _), 1 => (effTy s ctx.tyEnv a0).map fun f => .env (ctx.tyEnv ++ [f.answer])
+  | .eff (.gen _), 0 => some (.body ctx.tyEnv false)
+  | .eff (.catchCause _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.catchCause a0 _), 1 =>
+    (effTy s ctx.tyEnv a0).map fun b => .env (ctx.tyEnv ++ [.causeOf b.error])
+  | .eff (.matchCause _ _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.matchCause a0 _ _), 1 =>
+    (effTy s ctx.tyEnv a0).map fun b => .env (ctx.tyEnv ++ [b.answer])
+  | .eff (.matchCause a0 _ _), 2 =>
+    (effTy s ctx.tyEnv a0).map fun b => .env (ctx.tyEnv ++ [.causeOf b.error])
+  | .eff (.onExit _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.onExit a0 _), 1 =>
+    (effTy s ctx.tyEnv a0).map fun b => .env (ctx.tyEnv ++ [.exitOf b.answer b.error])
+  | .eff (.exit _), 0 => some (.env ctx.tyEnv)
+  | .eff (.uninterruptible _), 0 => some (.env ctx.tyEnv)
+  | .eff (.interruptible _), 0 => some (.env ctx.tyEnv)
+  | .eff (.withFiber _), 0 => some (.env ctx.tyEnv)
+  | .eff (.scoped _), 0 => some (.env ctx.tyEnv)
+  | .eff (.acquireRelease _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.acquireRelease a0 _), 1 =>
+    (effTy s ctx.tyEnv a0).map fun a =>
+      .env (ctx.tyEnv ++ [a.answer, .exitOf .unknown .unknown])
+  | .eff (.provideLayer _ _ _), 0 => some .closed
+  | .eff (.provideLayer _ _ _), 1 => some (.env ctx.tyEnv)
+  | .eff (.provideService _ _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.catchIf _ _ _), 0 => some (.env ctx.tyEnv)
+  | .eff (.catchIf _ a1 _), 1 =>
+    (effTy s ctx.tyEnv a1).map fun b => .env (ctx.tyEnv ++ [b.error])
+  | .eff (.select t d _ _), 0 =>
+    ((termTy s ctx.tyEnv t).bind d.arms).map fun arms => .env (ctx.tyEnv ++ arms.1)
+  | .eff (.select t d _ _), 1 =>
+    ((termTy s ctx.tyEnv t).bind d.arms).map fun arms => .env (ctx.tyEnv ++ arms.2)
+  | .eff (.iterate cursorTy initial _ _ _ _), 0 =>
+    (termTy s ctx.tyEnv initial).map fun c0 => .env (ctx.tyEnv ++ [cursorTy.getD c0])
+  | .eff (.restore _ _), 0 => some (.env ctx.tyEnv)
+  | .action (.fork _ _), 0 => some (.env ctx.tyEnv)
+  | .action (.forkIn _ _ _), 0 => some (.env ctx.tyEnv)
+  | .action (.forkScoped _ _), 0 => some (.env ctx.tyEnv)
+  | .action (.raceAll _), 0 => some (.env ctx.tyEnv)
+  | .layer (.effect _ _), 0 => some (.env [])
+  | .layer (.effectDiscard _), 0 => some (.env [])
+  | .layer (.provide _ _), 0 => some .closed
+  | .layer (.provide _ _), 1 => some .closed
+  | .layer (.provideMerge _ _), 0 => some .closed
+  | .layer (.provideMerge _ _), 1 => some .closed
+  | .layer (.merge _ _), 0 => some .closed
+  | .layer (.merge _ _), 1 => some .closed
+  | .layer (.fresh _), 0 => some .closed
+  | .layer (.orDie _), 0 => some .closed
+  | .layer (.mergeAll _), 0 => some .closed
+  | .stmts (.cons _ _), 0 => some (.body ctx.tyEnv ctx.inLoop)
+  | .stmts (.cons (.bindYield e) _), 1 =>
+    (effTy s ctx.tyEnv e).map fun t => .body (ctx.tyEnv ++ [t.answer]) ctx.inLoop
+  | .stmts (.cons _ _), 1 => some (.body ctx.tyEnv ctx.inLoop)
+  | .stmt (.bindYield _), 0 => some (.env ctx.tyEnv)
+  | .stmt (.yieldDiscard _), 0 => some (.env ctx.tyEnv)
+  | .stmt (.ifElse _ _ _), 0 => some (.body ctx.tyEnv ctx.inLoop)
+  | .stmt (.ifElse _ _ _), 1 => some (.body ctx.tyEnv ctx.inLoop)
+  | .stmt (.whileTrue _), 0 => some (.body ctx.tyEnv true)
+  | .effs (.cons _ _), 0 => some (.env ctx.tyEnv)
+  | .effs (.cons _ _), 1 => some (.env ctx.tyEnv)
+  | .layers (.cons _ _), 0 => some .closed
+  | .layers (.cons _ _), 1 => some .closed
+  | _, _ => none
+
+/-- The fold of the step along a path. -/
+def Node.envAt (s : Signature Op) : NodeEnv → Node Op → List Nat → Option NodeEnv
+  | ctx, _, [] => some ctx
+  | ctx, n, i :: rest =>
+    (n.child i).bind fun c => (n.childEnv s ctx i).bind fun ctx' => Node.envAt s ctx' c rest
+
+/-- What stands at an address of a program. -/
+structure Focus (Op : Type) where
+  program : Eff Op
+  env : TyEnv
+  ty : EffTy
+deriving DecidableEq
+
+def focusAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
+    Option (Focus Op) :=
+  match (Node.eff p).at_ path, (Node.eff p).envAt s (.env env0) path with
+  | some (.eff q), some (.env env) => (effTy s env q).map fun t => ⟨q, env, t⟩
+  | _, _ => none
+
+
+open Effect4.Machine.Env (Requirement)
+
+/-- The environment of a node's typing judgment. -/
+def NodeTy.env : NodeTy Op → NodeEnv
+  | .eff env _ => .env env
+  | .stmts env inLoop _ => .body env inLoop
+  | .stmt env inLoop _ _ => .body env inLoop
+  | .effs env _ => .env env
+  | .action env _ => .env env
+  | .layer _ => .closed
+  | .layers _ => .closed
+
+/-- A typed sibling's type is the checker's answer, under the map that a step applies to it. -/
+theorem _root_.Conform.Effect4.Typing.HasTy.effTy_map {α : Type} {s : Signature Op} {env : TyEnv}
+    {e : Eff Op} {t : EffTy} (h : HasTy s env e t) (g : EffTy → α) :
+    (effTy s env e).map g = some (g t) :=
+  Option.map_eq_some_iff.mpr ⟨t, effTy_complete s e env t h, rfl⟩
+
+theorem NodeHasTy.child_step_env {s : Signature Op} {n c : Node Op} {τ : NodeTy Op} {i : Nat}
+    (hn : NodeHasTy s n τ) (hc : n.child i = some c)
+    (hlead : ∃ rest q, c.at_ rest = some (.eff q)) :
+    ∃ τc, NodeHasTy s c τc ∧ n.childEnv s τ.env i = some τc.env ∧
+      ∀ {s' : Signature Op} {c' n' : Node Op}, SigExtends s s' → NodeHasTy s' c' τc →
+        n.setChild i c' = some n' → NodeHasTy s' n' τ := by
+  unfold Node.child at hc
+  split at hc <;> cases hc
+  -- eff (.suspend a0), 0
+  · cases hn with | eff hp => cases hp with | suspend hb =>
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.suspend hx)⟩
+  -- eff (.bind a0 _), 0
+  · cases hn with | eff hp => cases hp with | bind hf hr =>
+    exact ⟨_, .eff hf, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.bind hx (hasTy_ext h hr))⟩
+  -- eff (.bind _ a1), 1
+  · cases hn with | eff hp => cases hp with | bind hf hr =>
+    exact ⟨_, .eff hr, hf.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.bind (hasTy_ext h hf) hx)⟩
+  -- eff (.gen a0), 0
+  · cases hn with | eff hp => cases hp with | gen hb =>
+    exact ⟨_, .stmts hb, rfl, fun _ hc' hs => by
+      cases hc' with | stmts hx => cases hs; exact .eff (.gen hx)⟩
+  -- eff (.catchCause a0 _), 0
+  · cases hn with | eff hp => cases hp with | catchCause hb hh hj =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.catchCause hx (hasTy_ext h hh) hj)⟩
+  -- eff (.catchCause _ a1), 1
+  · cases hn with | eff hp => cases hp with | catchCause hb hh hj =>
+    exact ⟨_, .eff hh, hb.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.catchCause (hasTy_ext h hb) hx hj)⟩
+  -- eff (.matchCause a0 _ _), 0
+  · cases hn with | eff hp => cases hp with | matchCause hb hv hk hj =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.matchCause hx (hasTy_ext h hv) (hasTy_ext h hk) hj)⟩
+  -- eff (.matchCause _ a1 _), 1
+  · cases hn with | eff hp => cases hp with | matchCause hb hv hk hj =>
+    exact ⟨_, .eff hv, hb.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.matchCause (hasTy_ext h hb) hx (hasTy_ext h hk) hj)⟩
+  -- eff (.matchCause _ _ a2), 2
+  · cases hn with | eff hp => cases hp with | matchCause hb hv hk hj =>
+    exact ⟨_, .eff hk, hb.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.matchCause (hasTy_ext h hb) (hasTy_ext h hv) hx hj)⟩
+  -- eff (.onExit a0 _), 0
+  · cases hn with | eff hp => cases hp with | onExit hb hf =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.onExit hx (hasTy_ext h hf))⟩
+  -- eff (.onExit _ a1), 1
+  · cases hn with | eff hp => cases hp with | onExit hb hf =>
+    exact ⟨_, .eff hf, hb.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.onExit (hasTy_ext h hb) hx)⟩
+  -- eff (.exit a0), 0
+  · cases hn with | eff hp => cases hp with | exit hb =>
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.exit hx)⟩
+  -- eff (.uninterruptible a0), 0
+  · cases hn with | eff hp => cases hp with | uninterruptible hb =>
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.uninterruptible hx)⟩
+  -- eff (.interruptible a0), 0
+  · cases hn with | eff hp => cases hp with | interruptible hb =>
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.interruptible hx)⟩
+  -- eff (.withFiber a0), 0
+  · cases hn with | eff hp => cases hp with | withFiber ha =>
+    exact ⟨_, .action ha, rfl, fun _ hc' hs => by
+      cases hc' with | action hx => cases hs; exact .eff (.withFiber hx)⟩
+  -- eff (.scoped a0), 0
+  · cases hn with | eff hp => cases hp with | «scoped» hb =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; rw [← h.bodyRequires]; exact .eff (.scoped hx)⟩
+  -- eff (.acquireRelease a0 _), 0
+  · cases hn with | eff hp => cases hp with | acquireRelease ha hr hne =>
+    exact ⟨_, .eff ha, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; rw [← h.scopeKey]; exact .eff (.acquireRelease hx (hasTy_ext h hr) hne)⟩
+  -- eff (.acquireRelease _ a1), 1
+  · cases hn with | eff hp => cases hp with | acquireRelease ha hr hne =>
+    exact ⟨_, .eff hr, ha.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; rw [← h.scopeKey]; exact .eff (.acquireRelease (hasTy_ext h ha) hx hne)⟩
+  -- eff (.provideLayer a0 _ _), 0
+  · cases hn with | eff hp => cases hp with | provideLayer isLocal hl hb =>
+    exact ⟨_, .layer hl, rfl, fun h hc' hs => by
+      cases hc' with | layer hx =>
+        cases hs; exact .eff (.provideLayer _ hx (hasTy_ext h hb))⟩
+  -- eff (.provideLayer _ _ a2), 1
+  · cases hn with | eff hp => cases hp with | provideLayer isLocal hl hb =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.provideLayer _ (layerHasTy_ext h hl) hx)⟩
+  -- eff (.provideService _ _ a2), 0
+  · cases hn with | eff hp => cases hp with | provideService hk hv hsub hb =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs
+        exact .eff (.provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub hx)⟩
+  -- eff (.catchIf _ a1 _), 0
+  · cases hn with | eff hp => cases hp with | catchIf hb ht hh hj =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.catchIf hx ((h.termTy _ _).trans ht) (hasTy_ext h hh) hj)⟩
+  -- eff (.catchIf _ _ a2), 1
+  · cases hn with | eff hp => cases hp with | catchIf hb ht hh hj =>
+    exact ⟨_, .eff hh, hb.effTy_map _, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) hx hj)⟩
+  -- eff (.select _ _ a2 _), 0
+  · cases hn with | eff hp => cases hp with | select ht hd h0 h1 hj =>
+    exact ⟨_, .eff h0,
+      Option.map_eq_some_iff.mpr ⟨_, Option.bind_eq_some_iff.mpr ⟨_, ht, hd⟩, rfl⟩,
+      fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd hx (hasTy_ext h h1) hj)⟩
+  -- eff (.select _ _ _ a3), 1
+  · cases hn with | eff hp => cases hp with | select ht hd h0 h1 hj =>
+    exact ⟨_, .eff h1,
+      Option.map_eq_some_iff.mpr ⟨_, Option.bind_eq_some_iff.mpr ⟨_, ht, hd⟩, rfl⟩,
+      fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd (hasTy_ext h h0) hx hj)⟩
+  -- eff (.iterate _ _ _ _ _ a5), 0
+  · cases hn with | eff hp => cases hp with | iterate hi ht hb hst hr hs0 hs1 =>
+    exact ⟨_, .eff hb, Option.map_eq_some_iff.mpr ⟨_, hi, rfl⟩, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs
+        exact .eff (.iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) hx
+          ((h.termTy _ _).trans hst) ((h.termTy _ _).trans hr) hs0 hs1)⟩
+  -- eff (.restore _ a1), 0
+  · cases hn with | eff hp => cases hp with | restore hsv hb =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .eff (.restore ((h.termTy _ _).trans hsv) hx)⟩
+  -- action (.fork a0 _), 0
+  · cases hn with | action ha => cases ha with | fork options hp =>
+    exact ⟨_, .eff hp, rfl, fun _ hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .action (.fork _ hx)⟩
+  -- action (.forkIn a0 _ _), 0
+  · cases hn with | action ha => cases ha with | forkIn options hp hsc =>
+    exact ⟨_, .eff hp, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .action (.forkIn _ hx ((h.termTy _ _).trans hsc))⟩
+  -- action (.forkScoped a0 _), 0
+  · cases hn with | action ha => cases ha with | forkScoped options hp =>
+    exact ⟨_, .eff hp, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; rw [← h.scopeKey]; exact .action (.forkScoped _ hx)⟩
+  -- action (.raceAll a0), 0
+  · cases hn with | action ha => cases ha with | raceAll he =>
+    exact ⟨_, .effs he, rfl, fun _ hc' hs => by
+      cases hc' with | effs hx => cases hs; exact .action (.raceAll hx)⟩
+  -- layer (.effect _ a1), 0
+  · cases hn with | layer hl => cases hl with | effect hb hk hsub =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; rw [← h.bodyRequires]; exact .layer (.effect hx (h.service _ _ hk) hsub)⟩
+  -- layer (.effectDiscard a0), 0
+  · cases hn with | layer hl => cases hl with | effectDiscard hb =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; rw [← h.bodyRequires]; exact .layer (.effectDiscard hx)⟩
+  -- layer (.provide a0 _), 0
+  · cases hn with | layer hl => cases hl with | provide ha hb =>
+    exact ⟨_, .layer ha, rfl, fun h hc' hs => by
+      cases hc' with | layer hx => cases hs; exact .layer (.provide hx (layerHasTy_ext h hb))⟩
+  -- layer (.provide _ a1), 1
+  · cases hn with | layer hl => cases hl with | provide ha hb =>
+    exact ⟨_, .layer hb, rfl, fun h hc' hs => by
+      cases hc' with | layer hx => cases hs; exact .layer (.provide (layerHasTy_ext h ha) hx)⟩
+  -- layer (.provideMerge a0 _), 0
+  · cases hn with | layer hl => cases hl with | provideMerge ha hb =>
+    exact ⟨_, .layer ha, rfl, fun h hc' hs => by
+      cases hc' with | layer hx =>
+        cases hs; exact .layer (.provideMerge hx (layerHasTy_ext h hb))⟩
+  -- layer (.provideMerge _ a1), 1
+  · cases hn with | layer hl => cases hl with | provideMerge ha hb =>
+    exact ⟨_, .layer hb, rfl, fun h hc' hs => by
+      cases hc' with | layer hx =>
+        cases hs; exact .layer (.provideMerge (layerHasTy_ext h ha) hx)⟩
+  -- layer (.merge a0 _), 0
+  · cases hn with | layer hl => cases hl with | merge ha hb =>
+    exact ⟨_, .layer ha, rfl, fun h hc' hs => by
+      cases hc' with | layer hx => cases hs; exact .layer (.merge hx (layerHasTy_ext h hb))⟩
+  -- layer (.merge _ a1), 1
+  · cases hn with | layer hl => cases hl with | merge ha hb =>
+    exact ⟨_, .layer hb, rfl, fun h hc' hs => by
+      cases hc' with | layer hx => cases hs; exact .layer (.merge (layerHasTy_ext h ha) hx)⟩
+  -- layer (.fresh a0), 0
+  · cases hn with | layer hl => cases hl with | fresh hi =>
+    exact ⟨_, .layer hi, rfl, fun _ hc' hs => by
+      cases hc' with | layer hx => cases hs; exact .layer (.fresh hx)⟩
+  -- layer (.orDie a0), 0
+  · cases hn with | layer hl => cases hl with | orDie hi =>
+    exact ⟨_, .layer hi, rfl, fun _ hc' hs => by
+      cases hc' with | layer hx => cases hs; exact .layer (.orDie hx)⟩
+  -- layer (.mergeAll a0), 0
+  · cases hn with | layer hl => cases hl with | mergeAll hls =>
+    exact ⟨_, .layers hls, rfl, fun _ hc' hs => by
+      cases hc' with | layers hx => cases hs; exact .layer (.mergeAll hx)⟩
+  -- stmts (.cons a0 _), 0: the statement, typed with the statements after it
+  · cases hn with | stmts hb =>
+    exact ⟨_, .stmt hb, rfl, fun _ hc' hs => by
+      cases hc' with | stmt hx => cases hs; exact .stmts hx⟩
+  -- stmts (.cons _ a1), 1: the statements after the head, by the head's rule
+  · cases hn with | stmts hb =>
+    cases hb with
+    | bindYield he hr =>
+      exact ⟨_, .stmts hr, he.effTy_map _, fun h hc' hs => by
+        cases hc' with | stmts hx => cases hs; exact .stmts (.bindYield (hasTy_ext h he) hx)⟩
+    | yieldDiscard he hr =>
+      exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
+        cases hc' with | stmts hx => cases hs; exact .stmts (.yieldDiscard (hasTy_ext h he) hx)⟩
+    | ret ht =>
+      obtain ⟨rest, q, hat⟩ := hlead
+      exact absurd hat (Node.at_stmts_nil rest q)
+    | ifElse ht ha hb hr hab hg =>
+      exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
+        cases hc' with | stmts hx =>
+          cases hs
+          exact .stmts (.ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha)
+            (stmtsHasTy_ext h hb) hx hab hg)⟩
+    | whileTrue hb hr hg =>
+      exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
+        cases hc' with | stmts hx =>
+          cases hs; exact .stmts (.whileTrue (stmtsHasTy_ext h hb) hx hg)⟩
+    | breakLoop hr =>
+      exact ⟨_, .stmts hr, rfl, fun _ hc' hs => by
+        cases hc' with | stmts hx => cases hs; exact .stmts (.breakLoop hx)⟩
+  -- stmt (.bindYield a0), 0
+  · cases hn with | stmt hb => cases hb with | bindYield he hr =>
+    exact ⟨_, .eff he, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .stmt (.bindYield hx (stmtsHasTy_ext h hr))⟩
+  -- stmt (.yieldDiscard a0), 0
+  · cases hn with | stmt hb => cases hb with | yieldDiscard he hr =>
+    exact ⟨_, .eff he, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .stmt (.yieldDiscard hx (stmtsHasTy_ext h hr))⟩
+  -- stmt (.ifElse _ a1 _), 0
+  · cases hn with | stmt hb => cases hb with | ifElse ht ha hb hr hab hg =>
+    exact ⟨_, .stmts ha, rfl, fun h hc' hs => by
+      cases hc' with | stmts hx =>
+        cases hs
+        exact .stmt (.ifElse ((h.termTy _ _).trans ht) hx (stmtsHasTy_ext h hb)
+          (stmtsHasTy_ext h hr) hab hg)⟩
+  -- stmt (.ifElse _ _ a2), 1
+  · cases hn with | stmt hb => cases hb with | ifElse ht ha hb hr hab hg =>
+    exact ⟨_, .stmts hb, rfl, fun h hc' hs => by
+      cases hc' with | stmts hx =>
+        cases hs
+        exact .stmt (.ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha) hx
+          (stmtsHasTy_ext h hr) hab hg)⟩
+  -- stmt (.whileTrue a0), 0
+  · cases hn with | stmt hb => cases hb with | whileTrue hb hr hg =>
+    exact ⟨_, .stmts hb, rfl, fun h hc' hs => by
+      cases hc' with | stmts hx =>
+        cases hs; exact .stmt (.whileTrue hx (stmtsHasTy_ext h hr) hg)⟩
+  -- effs (.cons a0 _), 0
+  · cases hn with | effs he => cases he with | cons hh ht hj =>
+    exact ⟨_, .eff hh, rfl, fun h hc' hs => by
+      cases hc' with | eff hx => cases hs; exact .effs (.cons hx (effsHasTy_ext h ht) hj)⟩
+  -- effs (.cons _ a1), 1
+  · cases hn with | effs he => cases he with | cons hh ht hj =>
+    exact ⟨_, .effs ht, rfl, fun h hc' hs => by
+      cases hc' with | effs hx => cases hs; exact .effs (.cons (hasTy_ext h hh) hx hj)⟩
+  -- layers (.cons a0 _), 0
+  · cases hn with | layers hl =>
+    cases hl with
+    | one hh =>
+      exact ⟨_, .layer hh, rfl, fun _ hc' hs => by
+        cases hc' with | layer hx => cases hs; exact .layers (.one hx)⟩
+    | cons hh hr =>
+      exact ⟨_, .layer hh, rfl, fun h hc' hs => by
+        cases hc' with | layer hx => cases hs; exact .layers (.cons hx (layersHasTy_ext h hr))⟩
+  -- layers (.cons _ a1), 1
+  · cases hn with | layers hl =>
+    cases hl with
+    | one hh =>
+      obtain ⟨rest, q, hat⟩ := hlead
+      exact absurd hat (Node.at_layers_nil rest q)
+    | cons hh hr =>
+      exact ⟨_, .layers hr, rfl, fun h hc' hs => by
+        cases hc' with | layers hx =>
+          cases hs; exact .layers (layersHasTy_cons (layerHasTy_ext h hh) hx)⟩
+
+theorem NodeHasTy.replace_envAt {s : Signature Op} (path : List Nat) {n : Node Op}
+    {τ : NodeTy Op} {q : Eff Op} (hn : NodeHasTy s n τ) (hat : n.at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), n.envAt s τ.env path = some (.env env) ∧ HasTy s env q t ∧
+      ∀ {s' : Signature Op} {q' : Eff Op} {n' : Node Op}, SigExtends s s' → HasTy s' env q' t →
+        n.replaceAt path (.eff q') = some n' → NodeHasTy s' n' τ := by
+  induction path generalizing n τ with
+  | nil =>
+    have hnq : n = .eff q := by simpa only [Node.at_, Option.some.injEq] using hat
+    subst hnq
+    cases hn with
+    | eff hq =>
+      refine ⟨_, _, rfl, hq, fun {s' q' n'} _ hq' hrep => ?_⟩
+      have hidx : (Node.eff q').ctorIdx = (Node.eff q).ctorIdx := rfl
+      simp only [Node.replaceAt, if_pos hidx, Option.some.injEq] at hrep
+      subst hrep
+      exact .eff hq'
+  | cons i rest ih =>
+    cases hci : n.child i with
+    | none => simp only [Node.at_, hci, Option.bind_none, reduceCtorEq] at hat
+    | some c =>
+      have hat' : c.at_ rest = some (.eff q) := by
+        simpa only [Node.at_, hci, Option.bind_some] using hat
+      obtain ⟨τc, hc, henv, hstep⟩ := hn.child_step_env hci ⟨rest, q, hat'⟩
+      obtain ⟨env, t, hpath, hq, hfill⟩ := ih hc hat'
+      refine ⟨env, t, ?_, hq, fun {s' q' n'} hext hq' hrep => ?_⟩
+      · simpa only [Node.envAt, hci, henv, Option.bind_some] using hpath
+      · cases hrc : c.replaceAt rest (.eff q') with
+        | none =>
+          simp only [Node.replaceAt, hci, Option.bind_some, hrc, Option.bind_none,
+            reduceCtorEq] at hrep
+        | some c' =>
+          have hset : n.setChild i c' = some n' := by
+            simpa only [Node.replaceAt, hci, Option.bind_some, hrc] using hrep
+          exact hstep hext (hfill hext hq' hrc) hset
+
+/-! ## The focus function -/
+
+theorem focusAt_eq_some {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {path : List Nat}
+    {f : Focus Op} :
+    focusAt s env0 p path = some f ↔
+      (Node.eff p).at_ path = some (.eff f.program) ∧
+        (Node.eff p).envAt s (.env env0) path = some (.env f.env) ∧
+        effTy s f.env f.program = some f.ty := by
+  obtain ⟨q, env, t⟩ := f
+  unfold focusAt
+  constructor
+  · intro h
+    split at h
+    · rename_i q1 env1 hat henv
+      obtain ⟨t1, ht, hf⟩ := Option.map_eq_some_iff.mp h
+      cases hf
+      exact ⟨hat, henv, ht⟩
+    · cases h
+  · rintro ⟨hat, henv, ht⟩
+    simp only [hat, henv, ht, Option.map_some]
+
+theorem focusAt_nil (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
+    focusAt s env0 p [] = (effTy s env0 p).map fun t => ⟨p, env0, t⟩ := rfl
+
+theorem focusAt_typed {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {path : List Nat}
+    {f : Focus Op} (hf : focusAt s env0 p path = some f) :
+    (Node.eff p).at_ path = some (.eff f.program) ∧ HasTy s f.env f.program f.ty :=
+  ⟨(focusAt_eq_some.mp hf).1, effTy_sound s _ _ _ (focusAt_eq_some.mp hf).2.2⟩
+
+theorem hasTy_focusAt {s : Signature Op} {env0 : TyEnv} {p q : Eff Op} {T : EffTy}
+    {path : List Nat} (hp : HasTy s env0 p T) (hat : (Node.eff p).at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), focusAt s env0 p path = some ⟨q, env, t⟩ := by
+  obtain ⟨env, t, henv, hq, -⟩ := NodeHasTy.replace_envAt path (.eff hp) hat
+  exact ⟨env, t, focusAt_eq_some.mpr ⟨hat, henv, effTy_complete s q env t hq⟩⟩
+
+theorem hasTy_replace_focusAt {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {T : EffTy}
+    {path : List Nat} {f : Focus Op} (hp : HasTy s env0 p T)
+    (hf : focusAt s env0 p path = some f) {s' : Signature Op} {q' p' : Eff Op}
+    (hext : SigExtends s s') (hq' : HasTy s' f.env q' f.ty)
+    (hrep : (Node.eff p).replaceAt path (.eff q') = some (.eff p')) : HasTy s' env0 p' T := by
+  obtain ⟨hat, henv, hty⟩ := focusAt_eq_some.mp hf
+  obtain ⟨env, t, henv', hq, hfill⟩ := NodeHasTy.replace_envAt path (.eff hp) hat
+  have he : env = f.env := by
+    have := henv'.symm.trans henv
+    simpa only [Option.some.injEq, NodeEnv.env.injEq] using this
+  subst he
+  have ht : t = f.ty := Option.some.inj ((effTy_complete s _ _ _ hq).symm.trans hty)
+  subst ht
+  cases hfill hext hq' hrep with | eff h => exact h
+
+theorem check_focusAt {s : Signature Op} {env0 : TyEnv} {p0 : List Nat} {p q : Eff Op}
+    {T : EffTy} {path : List Nat} (hp : Checker.check s env0 p0 p = .ok T)
+    (hat : (Node.eff p).at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), focusAt s env0 p path = some ⟨q, env, t⟩ :=
+  hasTy_focusAt (check_sound s p env0 p0 T hp) hat
+
+theorem check_replace_focusAt {s : Signature Op} {env0 : TyEnv} {p0 : List Nat} {p : Eff Op}
+    {T : EffTy} {path : List Nat} {f : Focus Op} (hp : Checker.check s env0 p0 p = .ok T)
+    (hf : focusAt s env0 p path = some f) {s' : Signature Op} {q' : Eff Op} {pq : List Nat}
+    (hext : SigExtends s s') (hq' : Checker.check s' f.env pq q' = .ok f.ty) :
+    ∃ p', (Node.eff p).replaceAt path (.eff q') = some (.eff p') ∧
+      ∀ p1, Checker.check s' env0 p1 p' = .ok T := by
+  obtain ⟨p', hrep⟩ := Node.replaceAt_eff q' (focusAt_typed hf).1
+  exact ⟨p', hrep, check_complete s' p' env0 T
+    (hasTy_replace_focusAt (check_sound s p env0 p0 T hp) hf hext
+      (check_sound s' q' f.env pq f.ty hq') hrep)⟩
+
+/-! ## At a sketch -/
+
+def Sketch.focusAt (s : Sketch) (app : SigApp) (path : List Nat) : Option (Focus NativeOp) :=
+  Effect4.Program.focusAt (app.withHoles s.holes).signature [] s.program path
+
+theorem Sketch.check_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {q : NativeEff} (hs : s.check app = .ok T)
+    (hat : (Node.eff s.program).at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), s.focusAt app path = some ⟨q, env, t⟩ :=
+  Effect4.Program.check_focusAt hs hat
+
+theorem Sketch.check_fill_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
+    (more : RowTable) {q' : NativeEff} {pq : List Nat}
+    (hq' : Checker.check (app.withHoles (s.holes ++ more)).signature f.env pq q' = .ok f.ty) :
+    ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
+      s'.check app = .ok T := by
+  have hext : SigExtends (app.withHoles s.holes).signature
+      (app.withHoles (s.holes ++ more)).signature := by
+    rw [← SigApp.withHoles_withHoles]
+    exact SigApp.withHoles_extends _ more
+  obtain ⟨p', hrep, hT⟩ := check_replace_focusAt hs hf hext hq'
+  exact ⟨{ s with holes := s.holes ++ more, program := p' },
+    Sketch.fillAt_of_replaceAt hrep, hT []⟩
+
+theorem Sketch.check_omit_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
+    (name : String) (hans : f.ty.answer.closed = true) (herr : f.ty.error.closed = true)
+    (hansN : f.ty.answer.normalize = f.ty.answer) (herrN : f.ty.error.normalize = f.ty.error)
+    (formed : Formation.Formed (Formation.instantiatedSites
+      (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems).normalizeTypes [])) :
+    ∃ s', s.omitAt app path (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems) = some s' ∧
+      s'.check app = .ok T := by
+  have hhole := Sketch.hole_hasTy app (s.holes ++ [Row.hole name f.ty.answer f.ty.error
+    f.ty.requires.elems]) s.holes.length f.env List.getElem?_concat_length hans herr formed
+  have hreq : Requirement.ofList f.ty.requires.elems = f.ty.requires :=
+    Row.normalize_of_ascending f.ty.requires.elems f.ty.requires.ascending
+  rw [hansN, herrN, hreq] at hhole
+  exact Sketch.check_fill_focusAt s app hs hf [_] (pq := [])
+    (check_complete _ _ _ _ hhole [])
+
+end Effect4.Program
+
+open Effect4.Program in
+#print axioms Effect4.Program.NodeHasTy.child_step_env
+#print axioms Effect4.Program.NodeHasTy.replace_envAt
+#print axioms Effect4.Program.focusAt_eq_some
+#print axioms Effect4.Program.focusAt_typed
+#print axioms Effect4.Program.hasTy_focusAt
+#print axioms Effect4.Program.hasTy_replace_focusAt
+#print axioms Effect4.Program.check_focusAt
+#print axioms Effect4.Program.check_replace_focusAt
+#print axioms Effect4.Program.Sketch.check_focusAt
+#print axioms Effect4.Program.Sketch.check_fill_focusAt
+#print axioms Effect4.Program.Sketch.check_omit_focusAt
