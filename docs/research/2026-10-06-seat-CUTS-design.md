@@ -223,3 +223,26 @@ holds the same sentence, and it is not my file: the receipt proposes its new wor
 - `Shown.agrees`. It also needs a tape that reads every row.
 - Anything about a lowered engine. The engine's finite comparisons stay as they are.
 - The consumer at a run that is not a fresh open.
+
+## 8. Addendum: what changed after this note
+
+The statements of §2 are in the tree as written, and each is a theorem. Sections 5 and 6
+changed during the work. The receipt, `docs/research/2026-10-06-seat-CUTS-receipt.md`, holds
+the measured results.
+
+- **The coordinator accepted both choices of §5** in its message of 2026-10-06. It also let me
+  correct the one matching sentence of `Test/Dogfood/README.md`.
+- **The record has four entries, not three.** The claim stands as its own clause, `views`,
+  with the two controls that §5 lists under `position`. The clause `position` has two controls
+  of its own. The green one reads the journal `stopped` from the run after its first two rows.
+  The red one replays one decision fewer at each position.
+- **The record has ten controls and one red fixture.** The fixture `unstopped` is the same
+  record at the workers' own budgets, where no journal stops. The gate refuses seven of its
+  controls by name.
+- **Two names differ.** The budget is `cutBudget`, and the completed prefix is
+  `completedPrefix`.
+- **The consumer's plan status is not pinned.** Step 6 pinned it. Its count of definitions
+  walks through the driver, so a new helper of the driver would stop the module that the
+  fixtures' writer imports. The gate of the record `cuts` measures the same standing, and the
+  receipt holds the output. The axioms of the consumer stay pinned.
+- **The steps keep their numbers.** The commits call this note step 0.
