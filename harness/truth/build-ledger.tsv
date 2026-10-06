@@ -48,3 +48,5 @@ pInterruptEscape	no: machine interrupt [{"interrupt":0}], host fail [{"fail":42}
 pFold	yes	yes	yes	yes	yes	yes		
 pModifyFold	yes	yes	yes	yes	yes	yes		
 pQueueOffer	yes	yes	yes	yes	yes	yes		
+pRateRequest	yes	yes	yes	yes	yes	yes		
+pDeferredGate	yes	yes	yes	yes	yes	yes		

@@ -432,9 +432,44 @@ def pModifyFold : Api.Program :=
         (.bind (.perform .refGet (.var 1))
           (.succeed (call "pair" [.var 2, .var 3])))))
 
+/-- The state plan's T5: the rate limiter's request as a truth program (the first that the
+slice's brief names). The program is `Test.Codegen.TermRows.fourRequests`: the request of
+`Test/Dogfood/P4RateLimiter.lean`, four times on one window cell that admits three. Each request
+is one `Ref.modify` whose term pairs the decision with the new window: one arm pairs `true`, and
+the other `false`. Until the literal rule of decisions row 256 the pinned compiler refused the
+module at those two arms, and the lane held the program out. It answers `[first decision,
+fourth decision, admitted, rejected, used]`, which is `[true, false, 3, 1, 3]`. A source that
+does not elaborate is a failure with a text, never a patched program. -/
+def pRateRequest : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Codegen.TermRows.fourRequests with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pRateRequest: the source does not elaborate"))
+
+/-- The state plan's T5, part B: a gate at `Deferred<void, never>`. The faces print
+`Deferred.make`'s type arguments from the operation, so the module holds
+`Deferred.make<void, never>()`. `a0` is the gate, and `a1` is a fiber that waits at the gate
+and then answers `7`. The main fiber yields once, so the waiter is parked at the gate. Then the
+main fiber reads whether the gate is done, opens it, opens it again, and joins the waiter. The
+program answers `[done before, the first opening, the second opening, the waiter's answer]`,
+which is `[false, true, false, 7]`: the first opening completes the gate and releases the
+waiter, and the second finds the gate complete. -/
+def pDeferredGate : Api.Program :=
+  let call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+  .bind (.perform (.deferredMakeOf .unit .never) (.lit .unit))
+    (.bind (.withFiber (.fork
+        (.bind (.perform .deferredAwait (.var 0)) (.succeed (.lit (.nat 7)))) Wire.Corpus.forkOptions))
+      (.bind (.yieldNow 0)
+        (.bind (.perform .deferredIsDone (.var 0))
+          (.bind (.perform .deferredSucceed (call "pair" [.var 0, .lit .unit]))
+            (.bind (.perform .deferredSucceed (call "pair" [.var 0, .lit .unit]))
+              (.bind (.awaitFiber (.var 1) .joinEffect)
+                (.succeed (call "tuple" [.var 3, .var 4, .var 5, .var 6]))))))))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
-the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, and the two programs
-of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe). Every listed program contributes one manifest entry. -/
+the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the two programs
+of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
+the rate limiter's request, and a gate at `Deferred<void, never>`. Every listed program
+contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -446,7 +481,8 @@ def corpus : List (String × Api.Program) :=
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
     ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
-    ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer)]
+    ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer),
+    ("pRateRequest", pRateRequest), ("pDeferredGate", pDeferredGate)]
 
 /-! ## The value wire -/
 
@@ -934,7 +970,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
-   "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer"]
+   "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -955,6 +991,31 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard Api.typeOf pQueueOffer = some ⟨.tuple [.bool, .nat, .nat], .never, Env.Requirement.empty⟩
 #guard (Api.run pQueueOffer 1000).exit = some (.success (.list [.bool false, .nat 2, .nat 0]))
 #guard Api.roundTrip pQueueOffer = .ok pQueueOffer
+-- The rate limiter's request, four times: the source elaborates (its first node makes the
+-- window's cell), types at the five answers, answers on the machine, and reads back whole.
+#guard match pRateRequest with | .bind (.perform .refMake _) _ => true | _ => false
+#guard Api.typeOf pRateRequest =
+  some ⟨.tuple [.bool, .bool, .nat, .nat, .nat], .never, Env.Requirement.empty⟩
+#guard (Api.run pRateRequest 1000).exit =
+  some (.success (.list [.bool true, .bool false, .nat 3, .nat 1, .nat 3]))
+#guard Api.roundTrip pRateRequest = .ok pRateRequest
+-- The gate at `Deferred<void, never>` types at the four answers with no failure, answers on
+-- the machine, and reads back whole: its type arguments are read from the call's head.
+#guard Api.typeOf pDeferredGate =
+  some ⟨.tuple [.bool, .bool, .bool, .nat], .never, Env.Requirement.empty⟩
+#guard (Api.run pDeferredGate 1000).exit =
+  some (.success (.list [.bool false, .bool true, .bool false, .nat 7]))
+#guard Api.roundTrip pDeferredGate = .ok pDeferredGate
+-- its printed expression: the gate's two types stand on the call's head
+#guard (Api.print pDeferredGate).toOption.map (TypeScript.Render.expr house0 0) = some
+  "Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))"
+-- red control: a bare `Deferred.make()` in the gate's place is refused by its spelling
+#guard match Api.print pDeferredGate with
+  | .ok (.call f [.call (.generic head _) [], rest]) =>
+    (match Api.read (.call f [.call head [], rest]) with
+      | .error (.arity "Deferred.make") => true
+      | _ => false)
+  | _ => false
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))

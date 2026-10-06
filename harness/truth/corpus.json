@@ -1512,7 +1512,92 @@
    "declInferred":
    "export const main = Effect.flatMap(Ref.make(recordValue<{ readonly mHead: number; readonly msgs: ReadonlyArray<number>; readonly tHead: number; readonly takers: ReadonlyArray<Deferred.Deferred<void, never>>; readonly withdrawn: number }>([10, [20], [[4, [[5, [3, \"msgs\"], [5, [1, false], [10, [8], [[10, [2], []]]]]], [5, [3, \"mHead\"], [5, [1, false], [10, [2], []]]], [5, [3, \"takers\"], [5, [1, false], [10, [8], [[10, [17], [[10, [1], []], [10, [], []]]]]]]], [5, [3, \"tHead\"], [5, [1, false], [10, [2], []]]], [5, [3, \"withdrawn\"], [5, [1, false], [10, [2], []]]]]]]], { msgs: nil(), mHead: 0, takers: nil(), tHead: 0, withdrawn: 0 })), (a0) => Effect.flatMap(Ref.modify(a0, (a1) => pair(ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil()))))), none()), recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil()))))), (a1) => Effect.flatMap(Ref.modify(a0, (a2) => pair(ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil()))))), none()), recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil()))))), (a2) => Effect.flatMap(Ref.get(a0), (a3) => Effect.succeed(tuple(isSome(a1), length(recordRequired<\"msgs\">(\"msgs\")(a3)), recordRequired<\"mHead\">(\"mHead\")(a3)))))))\n",
    "decl":
-   "export const main: Effect.Effect<readonly [boolean, number, number], never, never> = Effect.flatMap(Ref.make(recordValue<{ readonly mHead: number; readonly msgs: ReadonlyArray<number>; readonly tHead: number; readonly takers: ReadonlyArray<Deferred.Deferred<void, never>>; readonly withdrawn: number }>([10, [20], [[4, [[5, [3, \"msgs\"], [5, [1, false], [10, [8], [[10, [2], []]]]]], [5, [3, \"mHead\"], [5, [1, false], [10, [2], []]]], [5, [3, \"takers\"], [5, [1, false], [10, [8], [[10, [17], [[10, [1], []], [10, [], []]]]]]]], [5, [3, \"tHead\"], [5, [1, false], [10, [2], []]]], [5, [3, \"withdrawn\"], [5, [1, false], [10, [2], []]]]]]]], { msgs: nil(), mHead: 0, takers: nil(), tHead: 0, withdrawn: 0 })), (a0) => Effect.flatMap(Ref.modify(a0, (a1) => pair(ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil()))))), none()), recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil()))))), (a1) => Effect.flatMap(Ref.modify(a0, (a2) => pair(ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil()))))), none()), recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil()))))), (a2) => Effect.flatMap(Ref.get(a0), (a3) => Effect.succeed(tuple(isSome(a1), length(recordRequired<\"msgs\">(\"msgs\")(a3)), recordRequired<\"mHead\">(\"mHead\")(a3)))))))\n"}],
+   "export const main: Effect.Effect<readonly [boolean, number, number], never, never> = Effect.flatMap(Ref.make(recordValue<{ readonly mHead: number; readonly msgs: ReadonlyArray<number>; readonly tHead: number; readonly takers: ReadonlyArray<Deferred.Deferred<void, never>>; readonly withdrawn: number }>([10, [20], [[4, [[5, [3, \"msgs\"], [5, [1, false], [10, [8], [[10, [2], []]]]]], [5, [3, \"mHead\"], [5, [1, false], [10, [2], []]]], [5, [3, \"takers\"], [5, [1, false], [10, [8], [[10, [17], [[10, [1], []], [10, [], []]]]]]]], [5, [3, \"tHead\"], [5, [1, false], [10, [2], []]]], [5, [3, \"withdrawn\"], [5, [1, false], [10, [2], []]]]]]]], { msgs: nil(), mHead: 0, takers: nil(), tHead: 0, withdrawn: 0 })), (a0) => Effect.flatMap(Ref.modify(a0, (a1) => pair(ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil())))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil()))))), none()), recordSet<\"msgs\">(\"msgs\")(a1)(append(recordRequired<\"msgs\">(\"msgs\")(a1), cons(1, nil()))))), (a1) => Effect.flatMap(Ref.modify(a0, (a2) => pair(ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil())))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil()))))), none()), recordSet<\"msgs\">(\"msgs\")(a2)(append(recordRequired<\"msgs\">(\"msgs\")(a2), cons(2, nil()))))), (a2) => Effect.flatMap(Ref.get(a0), (a3) => Effect.succeed(tuple(isSome(a1), length(recordRequired<\"msgs\">(\"msgs\")(a3)), recordRequired<\"mHead\">(\"mHead\")(a3)))))))\n"},
+  {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "never",
+    "answer": "readonly [boolean, boolean, number, number, number]"},
+   "straight": true,
+   "scenario": null,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [true, false, 3, 1, 3]}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 21,
+    "fibers":
+    [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": [true, false, 3, 1, 3]}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": [true, false, 3, 1, 3]},
+    "events": ["started 0", "exited 0 {\"success\":[true,false,3,1,3]}"]},
+   "name": "pRateRequest",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Ref.make(recordValue<{ readonly admitted: number; readonly rejected: number; readonly used: number }>([10, [20], [[4, [[5, [3, \"used\"], [5, [1, false], [10, [2], []]]], [5, [3, \"admitted\"], [5, [1, false], [10, [2], []]]], [5, [3, \"rejected\"], [5, [1, false], [10, [2], []]]]]]]], { used: 0, admitted: 0, rejected: 0 })), (a0) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a1) => Ref.modify(a0, (a2) => ite(lt(recordRequired<\"used\">(\"used\")(a2), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a2)(succ(recordRequired<\"used\">(\"used\")(a2))))(succ(recordRequired<\"admitted\">(\"admitted\")(a2)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a2)(succ(recordRequired<\"rejected\">(\"rejected\")(a2))))))), (a1) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a2) => Ref.modify(a0, (a3) => ite(lt(recordRequired<\"used\">(\"used\")(a3), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a3)(succ(recordRequired<\"used\">(\"used\")(a3))))(succ(recordRequired<\"admitted\">(\"admitted\")(a3)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a3)(succ(recordRequired<\"rejected\">(\"rejected\")(a3))))))), (a2) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a3) => Ref.modify(a0, (a4) => ite(lt(recordRequired<\"used\">(\"used\")(a4), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a4)(succ(recordRequired<\"used\">(\"used\")(a4))))(succ(recordRequired<\"admitted\">(\"admitted\")(a4)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a4)(succ(recordRequired<\"rejected\">(\"rejected\")(a4))))))), (a3) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a4) => Ref.modify(a0, (a5) => ite(lt(recordRequired<\"used\">(\"used\")(a5), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a5)(succ(recordRequired<\"used\">(\"used\")(a5))))(succ(recordRequired<\"admitted\">(\"admitted\")(a5)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a5)(succ(recordRequired<\"rejected\">(\"rejected\")(a5))))))), (a4) => Effect.flatMap(Ref.get(a0), (a5) => Effect.succeed(tuple(a1, a4, recordRequired<\"admitted\">(\"admitted\")(a5), recordRequired<\"rejected\">(\"rejected\")(a5), recordRequired<\"used\">(\"used\")(a5)))))))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Ref.make(recordValue<{ readonly admitted: number; readonly rejected: number; readonly used: number }>([10, [20], [[4, [[5, [3, \"used\"], [5, [1, false], [10, [2], []]]], [5, [3, \"admitted\"], [5, [1, false], [10, [2], []]]], [5, [3, \"rejected\"], [5, [1, false], [10, [2], []]]]]]]], { used: 0, admitted: 0, rejected: 0 })), (a0) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a1) => Ref.modify(a0, (a2) => ite(lt(recordRequired<\"used\">(\"used\")(a2), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a2)(succ(recordRequired<\"used\">(\"used\")(a2))))(succ(recordRequired<\"admitted\">(\"admitted\")(a2)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a2)(succ(recordRequired<\"rejected\">(\"rejected\")(a2))))))), (a1) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a2) => Ref.modify(a0, (a3) => ite(lt(recordRequired<\"used\">(\"used\")(a3), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a3)(succ(recordRequired<\"used\">(\"used\")(a3))))(succ(recordRequired<\"admitted\">(\"admitted\")(a3)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a3)(succ(recordRequired<\"rejected\">(\"rejected\")(a3))))))), (a2) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a3) => Ref.modify(a0, (a4) => ite(lt(recordRequired<\"used\">(\"used\")(a4), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a4)(succ(recordRequired<\"used\">(\"used\")(a4))))(succ(recordRequired<\"admitted\">(\"admitted\")(a4)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a4)(succ(recordRequired<\"rejected\">(\"rejected\")(a4))))))), (a3) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a4) => Ref.modify(a0, (a5) => ite(lt(recordRequired<\"used\">(\"used\")(a5), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a5)(succ(recordRequired<\"used\">(\"used\")(a5))))(succ(recordRequired<\"admitted\">(\"admitted\")(a5)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a5)(succ(recordRequired<\"rejected\">(\"rejected\")(a5))))))), (a4) => Effect.flatMap(Ref.get(a0), (a5) => Effect.succeed(tuple(a1, a4, recordRequired<\"admitted\">(\"admitted\")(a5), recordRequired<\"rejected\">(\"rejected\")(a5), recordRequired<\"used\">(\"used\")(a5)))))))))\n",
+   "decl":
+   "export const main: Effect.Effect<readonly [boolean, boolean, number, number, number], never, never> = Effect.flatMap(Ref.make(recordValue<{ readonly admitted: number; readonly rejected: number; readonly used: number }>([10, [20], [[4, [[5, [3, \"used\"], [5, [1, false], [10, [2], []]]], [5, [3, \"admitted\"], [5, [1, false], [10, [2], []]]], [5, [3, \"rejected\"], [5, [1, false], [10, [2], []]]]]]]], { used: 0, admitted: 0, rejected: 0 })), (a0) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a1) => Ref.modify(a0, (a2) => ite(lt(recordRequired<\"used\">(\"used\")(a2), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a2)(succ(recordRequired<\"used\">(\"used\")(a2))))(succ(recordRequired<\"admitted\">(\"admitted\")(a2)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a2)(succ(recordRequired<\"rejected\">(\"rejected\")(a2))))))), (a1) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a2) => Ref.modify(a0, (a3) => ite(lt(recordRequired<\"used\">(\"used\")(a3), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a3)(succ(recordRequired<\"used\">(\"used\")(a3))))(succ(recordRequired<\"admitted\">(\"admitted\")(a3)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a3)(succ(recordRequired<\"rejected\">(\"rejected\")(a3))))))), (a2) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a3) => Ref.modify(a0, (a4) => ite(lt(recordRequired<\"used\">(\"used\")(a4), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a4)(succ(recordRequired<\"used\">(\"used\")(a4))))(succ(recordRequired<\"admitted\">(\"admitted\")(a4)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a4)(succ(recordRequired<\"rejected\">(\"rejected\")(a4))))))), (a3) => Effect.flatMap(Effect.flatMap(Effect.succeed(undefined), (a4) => Ref.modify(a0, (a5) => ite(lt(recordRequired<\"used\">(\"used\")(a5), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a5)(succ(recordRequired<\"used\">(\"used\")(a5))))(succ(recordRequired<\"admitted\">(\"admitted\")(a5)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a5)(succ(recordRequired<\"rejected\">(\"rejected\")(a5))))))), (a4) => Effect.flatMap(Ref.get(a0), (a5) => Effect.succeed(tuple(a1, a4, recordRequired<\"admitted\">(\"admitted\")(a5), recordRequired<\"rejected\">(\"rejected\")(a5), recordRequired<\"used\">(\"used\")(a5)))))))))\n"},
+  {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "never",
+    "answer": "readonly [boolean, boolean, boolean, number]"},
+   "straight": false,
+   "scenario": null,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [false, true, false, 7]}},
+   "run":
+   {"schedule":
+    ["started 0",
+     "forked 0 1",
+     "scheduled 0 0",
+     "parked 0",
+     "ran 0",
+     "started 1",
+     "parked 1",
+     "ran 0",
+     "resumed 0",
+     "started 0",
+     "resumed 1",
+     "started 1",
+     "exited 1 success",
+     "exited 0 success"],
+    "outcome": "finished",
+    "internal": ["observerFired 1"],
+    "frames": 22,
+    "fibers":
+    [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": [false, true, false, 7]}},
+     {"parkedToken": null, "id": 1, "exited": true, "exit": {"success": 7}}],
+    "fiberCount": 2,
+    "exitKind": "success",
+    "exit": {"success": [false, true, false, 7]},
+    "events":
+    ["started 0",
+     "forked 0->1",
+     "scheduledTask owner=0 prio=0",
+     "parkedOn 0 token=0",
+     "ranTask owner=0",
+     "started 1",
+     "parkedOn 1 token=1",
+     "ranTask owner=0",
+     "resumedWith 0 token=0",
+     "started 0",
+     "resumedWith 1 token=1",
+     "started 1",
+     "exited 1 {\"success\":7}",
+     "exited 0 {\"success\":[false,true,false,7]}"]},
+   "name": "pDeferredGate",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))\n",
+   "decl":
+   "export const main: Effect.Effect<readonly [boolean, boolean, boolean, number], never, never> = Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],

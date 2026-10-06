@@ -3099,13 +3099,13 @@ The rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/
 | `P1HttpCache` | yes | differs | yes | yes | a Quote record in the key-value cache (typing: requestNotSubtype) | R3, R6, R7, R10 |
 | `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); a number in a template string (typing: term) | R3, R5, R7, R10, R13 |
 | `P3WorkerQueue` | yes | differs | yes | yes | the log's append at Ref<never[]> (typing: resultNotSubtype) | R3, R4, R10, R11 |
-| `P4RateLimiter` | yes | rc112 | yes | yes | — | R4, R10 |
+| `P4RateLimiter` | yes | rc112 | yes | yes | — | R10 |
 | `P5LedgerService` | no | notRun | no | no | a signed number (admission) | R3, R4, R6, R7, R10 |
 
 The programs each requirement keeps waiting:
 
 - R3: `P1HttpCache`, `P2HandlerLayers`, `P3WorkerQueue`, `P5LedgerService`
-- R4: `P3WorkerQueue`, `P4RateLimiter`, `P5LedgerService`
+- R4: `P3WorkerQueue`, `P5LedgerService`
 - R5: `P2HandlerLayers`
 - R6: `P1HttpCache`, `P5LedgerService`
 - R7: `P1HttpCache`, `P2HandlerLayers`, `P5LedgerService`
