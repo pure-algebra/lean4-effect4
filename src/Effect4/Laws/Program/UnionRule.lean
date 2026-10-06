@@ -33,7 +33,14 @@ The laws, in order:
 - **The claim as one statement** (`lift_laws`).
 - **The eliminator of one covariant constructor** (`Eliminator`): three facts of a member rule
   that reads one constructor give the monotone law and the upper form with its least half
-  (`Eliminator.lift_mono`, `Eliminator.lift_upper`, `Eliminator.lift_least`).
+  (`Eliminator.lift_mono`, `Eliminator.lift_upper`, `Eliminator.lift_least`). In one statement,
+  the lifted rule is the constructor's lower adjoint (`Eliminator.adjoint`).
+- **Join and uniqueness** (`lift_union`, `lift_union_eq`, `lift_unique`): the lifted rule keeps
+  joins where the member rule is monotone in the order, and it is the one map that does.
+
+`UnionRule.lift` is the fold of a union: the unique map that answers the least answer at
+`never`, the member rule at one union member and the join at a union (`lift_unique`, at the
+carrier `Ty`). `UnionRule.Answer` is its algebra: a least answer and a join.
 
 Three parts carry the proofs: a list read element by element (`mapM_answer`, `mapM_source`,
 `mapM_total`), the join of a list (`joinAll_keeps`, `joinAll_all`), and the order of a carrier
@@ -568,6 +575,304 @@ theorem Eliminator.lift_least (e : Eliminator rule C) {t : Ty} {a b : α}
     (fun _ _ answered upper => by rw [e.shape answered] at upper; exact e.embeds.mp upper)
     typed upper
 
+/-- **The adjoint form.** The lifted rule of a covariant constructor is that constructor's lower
+adjoint, and it answers exactly below the constructor's image. First, the lifted rule answers at
+a target exactly when the target is below some `C b`. Second, where it answers `a`, an answer
+`b` is above `a` exactly when the target is below `C b`. It is one statement for the upper form,
+its least half and the fact `reads`. A part of the claim `union-rule-lift`. Its consumers are a
+converted rule's monotone law with no further premise, the type arguments that a printer writes
+at a proper union, and the expected type of a hole under an eliminator. It says nothing at an
+invariant constructor or about a target. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.adjoint (e : Eliminator rule C) (t : Ty) :
+    ((lift rule t).isSome = true ↔ ∃ b, Ty.subN t (C b) = true) ∧
+    ∀ {a : α}, lift rule t = some a → ∀ b : α, le a b ↔ Ty.subN t (C b) = true := by
+  refine ⟨⟨fun answered => ?_, fun ⟨b, upper⟩ => ?_⟩,
+    fun typed b => ⟨fun below => ?_, fun upper => e.lift_least typed upper⟩⟩
+  · obtain ⟨a, typed⟩ := Option.isSome_iff_exists.mp answered
+    exact ⟨a, e.lift_upper typed⟩
+  · obtain ⟨answers, hanswers, -⟩ := mapM_total (f := rule) (P := fun _ => True)
+      (xs := t.normalize.members) fun x hx => by
+        have hnormal := (Ty.normal_normalize t).members hx
+        have hmember : Ty.subN x t = true := by
+          unfold Ty.subN
+          rw [hnormal.fixed]
+          exact Ty.OrderProof.member_sub_self hx
+        obtain ⟨a, ha⟩ := e.reads hnormal (Ty.members_isMember hx) (Ty.subN_trans hmember upper)
+        exact ⟨a, ha, trivial⟩
+    exact Option.isSome_iff_exists.mpr
+      ⟨joinAll answers, Option.map_eq_some_iff.mpr ⟨answers, hanswers, rfl⟩⟩
+  · exact Ty.subN_trans (e.lift_upper typed) (e.embeds.mpr below)
+
 end Eliminator
+
+/-! ## The lifted rule is the fold of a union
+
+A type's normal form is a join of its union members, and `never` is the empty join. The lifted
+rule is the map out of that structure that the member rule determines: it answers the least
+answer at `never`, the member rule at one union member, and the join at a union. `Answer` is its
+algebra. Two statements say so. The lifted rule keeps joins, where the member rule is monotone
+in the order (`lift_union`, and `lift_union_eq` at the carrier `Ty`). And a map with those four
+properties is the lifted rule (`lift_unique`, at the carrier `Ty`). So two rules that read a
+union agree when they agree at `never`, at one union member and at a normal union: no proof
+compares two recursions. -/
+
+/-- The union members of a union's normal form are union members of the two sides' normal
+forms, and each union member of a side is below one of them. A normal form keeps maximal
+members only. A step of `lift_union`, its one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem members_union (s t : Ty) :
+    (∀ k ∈ (Ty.union s t).normalize.members,
+      k ∈ s.normalize.members ∨ k ∈ t.normalize.members) ∧
+    (∀ m, m ∈ s.normalize.members ∨ m ∈ t.normalize.members →
+      ∃ k ∈ (Ty.union s t).normalize.members, Ty.sub m k = true) := by
+  rw [Ty.OrderProof.members_normalize_union]
+  constructor
+  · intro k hk
+    exact List.mem_append.mp ((Ty.mem_normalizeRow k _).mp hk).1
+  · intro m hm
+    exact Ty.normalizeRow_coverage _ m (List.mem_append.mpr hm)
+
+/-- **Join.** Take a member rule that is monotone in the order: `Below rule rule`. The lifted
+rule answers at a union exactly when it answers at both sides: a refusal on either side refuses
+the union. Where it answers, its answer at the union is the join of the two answers, up to the
+order: each is below the other. The premise is used at a member that the union's normal form
+drops: it is below a kept member, so the rule answers it, below the kept member's answer. A part
+of the claim `union-rule-lift`. Its consumers are `lift_union_eq`, and each rule that reads the
+join of two branch types. Without the premise the first half still holds one way, and the
+second fails (`Test/Program/UnionRule.lean`). -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem lift_union [AnswerOrder α] {rule : Ty → Option α} (mono : Below rule rule) (s t : Ty) :
+    (∀ {a b : α}, lift rule s = some a → lift rule t = some b →
+      ∃ c, lift rule (.union s t) = some c ∧ le c (Answer.join a b) ∧ le (Answer.join a b) c) ∧
+    (∀ {c : α}, lift rule (.union s t) = some c →
+      ∃ a b, lift rule s = some a ∧ lift rule t = some b) := by
+  obtain ⟨hkept, hcover⟩ := members_union s t
+  have hnormalS := fun m (hm : m ∈ s.normalize.members) => (Ty.normal_normalize s).members hm
+  have hnormalT := fun m (hm : m ∈ t.normalize.members) => (Ty.normal_normalize t).members hm
+  have hnormalK := fun k (hk : k ∈ (Ty.union s t).normalize.members) =>
+    (Ty.normal_normalize (.union s t)).members hk
+  constructor
+  · intro a b typedS typedT
+    obtain ⟨as, has, rfl⟩ := Option.map_eq_some_iff.mp typedS
+    obtain ⟨bs, hbs, rfl⟩ := Option.map_eq_some_iff.mp typedT
+    -- each kept member is answered, below the join of the two sides
+    obtain ⟨cs, hcs, hbelow⟩ := mapM_total (f := rule)
+      (P := fun c => le c (Answer.join (joinAll as) (joinAll bs)))
+      (xs := (Ty.union s t).normalize.members) fun k hk => by
+        rcases hkept k hk with hk | hk
+        · obtain ⟨x, hx, hrule⟩ := mapM_answer has k hk
+          exact ⟨x, hrule, AnswerOrder.trans (le_joinAll hx) (AnswerOrder.le_join_left _ _)⟩
+        · obtain ⟨x, hx, hrule⟩ := mapM_answer hbs k hk
+          exact ⟨x, hrule, AnswerOrder.trans (le_joinAll hx) (AnswerOrder.le_join_right _ _)⟩
+    refine ⟨joinAll cs, Option.map_eq_some_iff.mpr ⟨cs, hcs, rfl⟩, joinAll_le hbelow, ?_⟩
+    -- each side's answer is below the union's: a dropped member is below a kept one
+    have side : ∀ (xs : List α) (ms : List Ty), ms.mapM rule = some xs →
+        (∀ m ∈ ms, Ty.Normal m ∧ (m ∈ s.normalize.members ∨ m ∈ t.normalize.members)) →
+        le (joinAll xs) (joinAll cs) := by
+      intro xs ms hxs hms
+      refine joinAll_le fun x hx => ?_
+      obtain ⟨m, hm, hrule⟩ := mapM_source hxs x hx
+      obtain ⟨k, hk, hmk⟩ := hcover m (hms m hm).2
+      obtain ⟨y, hy, hruleK⟩ := mapM_answer hcs k hk
+      obtain ⟨x', hx', hle⟩ := mono (hms m hm).1 (hnormalK k hk)
+        ((hms m hm).2.elim Ty.members_isMember Ty.members_isMember) (Ty.members_isMember hk)
+        hmk hruleK
+      rw [hrule] at hx'
+      cases hx'
+      exact AnswerOrder.trans hle (le_joinAll hy)
+    exact AnswerOrder.join_le
+      (side as _ has fun m hm => ⟨hnormalS m hm, Or.inl hm⟩)
+      (side bs _ hbs fun m hm => ⟨hnormalT m hm, Or.inr hm⟩)
+  · intro c typed
+    obtain ⟨cs, hcs, rfl⟩ := Option.map_eq_some_iff.mp typed
+    have side : ∀ (ms : List Ty),
+        (∀ m ∈ ms, Ty.Normal m ∧ (m ∈ s.normalize.members ∨ m ∈ t.normalize.members)) →
+        ∃ xs, ms.mapM rule = some xs := by
+      intro ms hms
+      obtain ⟨xs, hxs, -⟩ := mapM_total (f := rule) (P := fun _ => True) (xs := ms)
+        fun m hm => by
+          obtain ⟨k, hk, hmk⟩ := hcover m (hms m hm).2
+          obtain ⟨y, -, hruleK⟩ := mapM_answer hcs k hk
+          obtain ⟨x, hx, -⟩ := mono (hms m hm).1 (hnormalK k hk)
+            ((hms m hm).2.elim Ty.members_isMember Ty.members_isMember) (Ty.members_isMember hk)
+            hmk hruleK
+          exact ⟨x, hx, trivial⟩
+      exact ⟨xs, hxs⟩
+    obtain ⟨as, has⟩ := side s.normalize.members fun m hm => ⟨hnormalS m hm, Or.inl hm⟩
+    obtain ⟨bs, hbs⟩ := side t.normalize.members fun m hm => ⟨hnormalT m hm, Or.inr hm⟩
+    exact ⟨joinAll as, joinAll bs, Option.map_eq_some_iff.mpr ⟨as, has, rfl⟩,
+      Option.map_eq_some_iff.mpr ⟨bs, hbs, rfl⟩⟩
+
+/-- A fold of joins from a normal start is its own normal form: each step is a join. The general
+form of `joinAll_normalize`, its one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem foldl_join_normalize : ∀ (types : List Ty) (acc : Ty), acc.normalize = acc →
+    (types.foldl Ty.join acc).normalize = types.foldl Ty.join acc
+  | [], _, hacc => hacc
+  | x :: rest, acc, _ => foldl_join_normalize rest (Ty.join acc x) (Ty.normalize_join acc x)
+
+/-- The join of a list of types is its own normal form. So a lifted rule that answers a type
+answers a normal type. A step of `lift_union_eq`, its one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem joinAll_normalize (types : List Ty) : (joinAll types).normalize = joinAll types :=
+  foldl_join_normalize types .never rfl
+
+/-- **Join, at the carrier `Ty`.** For a member rule that answers a type and is monotone in the
+order, the lifted rule at a union is the join of the lifted rule at the two sides, as an
+equation: `Option` joins strictly. Two normal types that are each below the other are one type
+(`Ty.subN_equiv_iff`). A part of the claim `union-rule-lift`, as `lift_union` at a carrier whose
+joins are canonical. At a pair the equation is not stated: `lift_union` gives it up to the
+order. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem lift_union_eq {rule : Ty → Option Ty} (mono : Below rule rule) (s t : Ty) :
+    lift rule (.union s t) = (lift rule s).bind fun a => (lift rule t).map (Ty.join a) := by
+  obtain ⟨some_some, inverse⟩ := lift_union mono s t
+  cases hs : lift rule s with
+  | none =>
+    cases hu : lift rule (.union s t) with
+    | none => rfl
+    | some c =>
+      obtain ⟨a, b, ha, -⟩ := inverse hu
+      rw [hs] at ha
+      exact nomatch ha
+  | some a =>
+    cases ht : lift rule t with
+    | none =>
+      cases hu : lift rule (.union s t) with
+      | none => rfl
+      | some c =>
+        obtain ⟨a', b, -, hb⟩ := inverse hu
+        rw [ht] at hb
+        exact nomatch hb
+    | some b =>
+      obtain ⟨c, hc, hle, hge⟩ := some_some hs ht
+      rw [hc]
+      show some c = some (Ty.join a b)
+      obtain ⟨cs, -, rfl⟩ := Option.map_eq_some_iff.mp hc
+      have same : (joinAll cs).normalize = (Ty.join a b).normalize :=
+        (Ty.subN_equiv_iff _ _).mp ⟨hle, hge⟩
+      rw [joinAll_normalize, Ty.normalize_join] at same
+      rw [same]
+
+/-- The join reads its right side's normal form. A step of `foldl_join_start`, its one
+consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem join_normalize_right (a b : Ty) : Ty.join a b.normalize = Ty.join a b := by
+  rw [Ty.join_eq_ofMembers, Ty.join_eq_ofMembers, Ty.normalize_idem]
+
+/-- A fold of joins from a normal start is the join of the start with the fold from `never`: the
+join is associative, and `never` is its unit up to the normal form. It relates the fold of
+`joinAll`, which starts at the left, to a rule that joins a union's head with its rest. A step
+of `lift_unique`, its one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem foldl_join_start : ∀ (types : List Ty) (acc : Ty), acc.normalize = acc →
+    types.foldl Ty.join acc = Ty.join acc (types.foldl Ty.join .never)
+  | [], acc, hacc => by
+    show acc = Ty.join acc .never
+    rw [Ty.join_never_right, hacc]
+  | y :: rest, acc, _ => by
+    show rest.foldl Ty.join (Ty.join acc y) = Ty.join acc (rest.foldl Ty.join (Ty.join .never y))
+    rw [foldl_join_start rest (Ty.join acc y) (Ty.normalize_join acc y),
+      foldl_join_start rest (Ty.join .never y) (Ty.normalize_join .never y), Ty.join_never,
+      ← Ty.join_assoc, join_normalize_right]
+
+/-- A list of normal union members in the row order, none below another, is the member list of
+a normal type. A step of `lift_unique`, its one consumer: each tail of a normal union is
+normal. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem normal_ofMembers {ms : List Ty} (normal : ∀ m ∈ ms, Ty.Normal m)
+    (atoms : ∀ m ∈ ms, m.isMember = true) (ascending : Effect4.Ascending ms)
+    (maximal : ∀ x ∈ ms, ∀ y ∈ ms, Ty.sub x y = true → Ty.sub y x = true) :
+    Ty.Normal (Ty.ofMembers ms) := by
+  have h := Ty.normal_row ms normal atoms
+  rw [Ty.normalizeRow_fixed ms ascending maximal] at h
+  exact h
+
+/-- **Uniqueness, at the carrier `Ty`.** Take a member rule that answers a type, and a map `f`
+from types to answers with four properties. It reads the normal form. It answers `never` at
+`never`. At a normal union member it is the member rule, up to the answer's normal form. At a
+normal union of a union member `m` and a rest `r`, it is the join of its answers at `m` and at
+`r`, and a refusal on either side refuses. Then `f` is the lifted rule. The lifted rule has the
+four properties (`lift_congr`, `lift_never`, `lift_member`, and `lift_union_eq` for a monotone
+member rule), so it is the one map that has them. A part of the claim `union-rule-lift`. Its
+consumer is each rule that reads a union by its own recursion: `Tuple.typeAt`
+(`src/Effect4/Program/Tuple.lean`) is one (`Test/Program/UnionRule.lean`), and each later
+conversion states one equation with no induction of its own. It asks the join at normal unions
+only, so it needs no monotone member rule. At another carrier it is not stated: it would need
+the carrier's joins to be associative as an equation. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem lift_unique {rule f : Ty → Option Ty}
+    (normal : ∀ t, f t = f t.normalize)
+    (never : f .never = some .never)
+    (member : ∀ {m : Ty}, Ty.Normal m → m.isMember = true → f m = (rule m).map Ty.normalize)
+    (union : ∀ {m r : Ty}, Ty.Normal m → m.isMember = true → Ty.Normal r →
+      Ty.Normal (.union m r) → f (.union m r) = (f m).bind fun a => (f r).map (Ty.join a))
+    (t : Ty) : f t = lift rule t := by
+  have row : ∀ (ms : List Ty), (∀ m ∈ ms, Ty.Normal m) → (∀ m ∈ ms, m.isMember = true) →
+      Effect4.Ascending ms →
+      (∀ x ∈ ms, ∀ y ∈ ms, Ty.sub x y = true → Ty.sub y x = true) →
+      f (Ty.ofMembers ms) = (ms.mapM rule).map joinAll := by
+    intro ms
+    induction ms with
+    | nil => intro _ _ _ _; exact never
+    | cons m rest ih =>
+      intro hn ha hs hm
+      have hnm := hn m List.mem_cons_self
+      have ham := ha m List.mem_cons_self
+      cases rest with
+      | nil =>
+        show f m = Option.map joinAll (rule m >>= fun a => List.mapM.loop rule [] [a])
+        rw [member hnm ham]
+        cases rule m with
+        | none => rfl
+        | some x =>
+          show some x.normalize = some (Ty.join .never x)
+          rw [Ty.join_never]
+      | cons m' rest' =>
+        have hnTail := fun x hx => hn x (List.mem_cons_of_mem m hx)
+        have haTail := fun x hx => ha x (List.mem_cons_of_mem m hx)
+        have hmTail := fun x hx y hy =>
+          hm x (List.mem_cons_of_mem m hx) y (List.mem_cons_of_mem m hy)
+        have tail := ih hnTail haTail (List.Pairwise.tail hs) hmTail
+        show f (.union m (Ty.ofMembers (m' :: rest'))) = _
+        rw [union hnm ham (normal_ofMembers hnTail haTail (List.Pairwise.tail hs) hmTail)
+          (normal_ofMembers hn ha hs hm), member hnm ham, tail]
+        cases hrule : rule m with
+        | none =>
+          have refused : (m :: m' :: rest').mapM rule = none := by
+            cases hall : (m :: m' :: rest').mapM rule with
+            | none => rfl
+            | some ys =>
+              obtain ⟨y, _, hy, -, -⟩ := mapM_cons_eq_some.mp hall
+              rw [hrule] at hy
+              exact nomatch hy
+          rw [refused]
+          rfl
+        | some x =>
+          cases hrest : (m' :: rest').mapM rule with
+          | none =>
+            have refused : (m :: m' :: rest').mapM rule = none := by
+              cases hall : (m :: m' :: rest').mapM rule with
+              | none => rfl
+              | some ys =>
+                obtain ⟨_, zs, -, hzs, -⟩ := mapM_cons_eq_some.mp hall
+                rw [hrest] at hzs
+                exact nomatch hzs
+            rw [refused]
+            rfl
+          | some xs =>
+            rw [mapM_cons_eq_some.mpr ⟨x, xs, hrule, hrest, rfl⟩]
+            show some (Ty.join x.normalize (xs.foldl Ty.join .never)) =
+              some (xs.foldl Ty.join (Ty.join .never x))
+            rw [foldl_join_start xs (Ty.join .never x) (Ty.normalize_join .never x), Ty.join_never]
+  have hN := Ty.normal_normalize t
+  rw [normal t, lift_congr rule (Ty.normalize_idem t).symm]
+  have hrow := row t.normalize.members (fun m hm => hN.members hm)
+    (fun m hm => Ty.members_isMember hm) hN.members_ascending hN.members_maximal
+  rw [hN.ofMembers_members] at hrow
+  rw [hrow]
+  unfold lift
+  rw [Ty.normalize_idem]
 
 end Effect4.Program.UnionRule

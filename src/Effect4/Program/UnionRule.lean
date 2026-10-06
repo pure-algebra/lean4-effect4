@@ -26,16 +26,25 @@ member that is below another member.
 A type is an answer, with `never` and `Ty.join`. A pair of answers is an answer, component by
 component: a fiber rule answers a value type and an error type.
 
+**The fold of a union.** `UnionRule.lift` is the fold of a union: the one map that answers the
+least answer at `never`, the member rule at one union member and the join at a union
+(`lift_unique`, at the carrier `Ty`). `UnionRule.Answer` is its algebra: a least answer and a
+join.
+
 **Depends on.** `Ty` alone: its normal form, its union members and its join. The module holds no
 `match` on a type.
 
-**Properties.** The laws are in `src/Effect4/Laws/Program/UnionRule.lean`:
+**Properties.** The laws are in `src/Effect4/Laws/Program/UnionRule.lean`, and its head lists
+them:
 * the answer at `never` (`lift_never`) and at one union member (`lift_member`);
 * one answer for one normal form (`lift_congr`);
 * the order: a smaller target has a smaller answer, where the member rule keeps the order
   (`lift_mono`);
-* a property that holds at each union member holds at the lifted rule (`lift_transfer`). The
-  soundness of the two record rules against `Fits` and against `Val.hasTy` is an instance.
+* a property that holds at each union member holds at the lifted rule (`lift_transfer`,
+  `lift_all`). The soundness of the two record rules against `Fits` and against `Val.hasTy` is
+  an instance;
+* for a rule that reads one constructor, the lifted rule is the constructor's lower adjoint
+  (`Eliminator`).
 
 An instance is one line here, and the facts of its member rule there.
 -/

@@ -2,6 +2,7 @@ import Effect4.Laws.Program.UnionRule
 import Effect4.Laws.Program.Typing.TermIntro
 import Effect4.Program.Checker
 import Effect4.Program.Native
+import Effect4.Program.Tuple
 
 /-!
 # Controls of the rule that reads a union member by member
@@ -31,7 +32,9 @@ Red controls, each red for its stated reason:
 - the cause rule against `Eliminator`: it reads two heads (`causeInput_no_eliminator`).
 
 The last sections give `fiberTy` and `Checker.listOf?` as instances of `Eliminator`, each as a
-member rule, and a finite probe of the cause rule's upper form.
+member rule, and a finite probe of the cause rule's upper form. Then the adjoint form at
+`fiberTy`, the join law at `Checker.listOf?` with its red control, and uniqueness at its consumer:
+`Tuple.typeAt` is the lifted projection (`typeAt_eq_lift`).
 
 The battery converts no rule of the checker.
 -/
@@ -314,5 +317,73 @@ def causeUpper (error : Ty) : Ty := .union (.causeOf error) (.exitOf .unknown er
   | some error => Ty.subN target (causeUpper error)
   | none => false
 #guard lift causeInputError? (.union (.causeOf .nat) .nat) = none
+
+/-! ## The adjoint form, the join law and uniqueness -/
+
+/-- The lifted `fiberTy` answers exactly at the targets below a fiber type, and its answer is
+the least pair of columns: the adjoint form at the fiber constructor. -/
+theorem lift_fiberTy_adjoint (t : Ty) :
+    ((lift fiberTy t).isSome = true ↔ ∃ b : Ty × Ty, Ty.subN t (.fiberOf b.1 b.2) = true) ∧
+    ∀ {a : Ty × Ty}, lift fiberTy t = some a → ∀ b : Ty × Ty,
+      (Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true) ↔
+        Ty.subN t (.fiberOf b.1 b.2) = true :=
+  fiberTy_eliminator.adjoint t
+
+/-- The lifted `Checker.listOf?` at a union is the join of its answers at the two sides. -/
+theorem lift_listOf_union (s t : Ty) :
+    lift Checker.listOf? (.union s t) =
+      (lift Checker.listOf? s).bind fun a => (lift Checker.listOf? t).map (Ty.join a) :=
+  lift_union_eq listOf_eliminator.monotone s t
+
+-- Red: the join law fails at a member rule that is not monotone. The union's normal form drops
+-- the literal, so the lifted rule answers at the union and refuses one side.
+#guard lift stringOnly (.union (.lit "a") .string) = some .nat
+#guard lift stringOnly (.lit "a") = none
+
+/-- A normal union member's positional read answers a normal type. -/
+theorem project_normal {m a : Ty} {index : Nat} (normal : Ty.Normal m)
+    (member : m.isMember = true) (answered : Tuple.project index m = some a) :
+    a.normalize = a := by
+  have children := Ty.OrderProof.normal_args normal member
+  cases m with
+  | tuple items =>
+    exact (children a (List.mem_map.mpr ⟨(.co, a), List.mem_map.mpr
+      ⟨a, List.mem_of_getElem? answered, rfl⟩, rfl⟩)).fixed
+  | prod first second =>
+    have inside : a ∈ [first, second] := List.mem_of_getElem? answered
+    rcases List.mem_cons.mp inside with rfl | inside
+    · exact (children a (List.mem_cons_self)).fixed
+    · rcases List.mem_cons.mp inside with rfl | inside
+      · exact (children a (List.mem_cons_of_mem _ List.mem_cons_self)).fixed
+      · exact absurd inside List.not_mem_nil
+  | never => exact Bool.noConfusion member
+  | union _ _ => exact Bool.noConfusion member
+  | _ => exact nomatch answered
+
+/-- **The positional read is the lifted projection.** `Tuple.typeAt` reads a union by its own
+recursion over the normal form (`src/Effect4/Program/Tuple.lean`). It has the four properties of
+`lift_unique`, so it is `UnionRule.lift` at the projection of one member. The proof compares no
+two recursions. The rule is not converted here: the theorem is the equation that its conversion
+states. -/
+theorem typeAt_eq_lift (target : Ty) (index : Nat) :
+    Tuple.typeAt target index = lift (Tuple.project index) target := by
+  refine lift_unique (f := fun t => Tuple.typeAt t index) (fun t => ?_) rfl
+    (fun {m} normal member => ?_) (fun {m r} normalM _ normalR normalU => ?_) target
+  · show Tuple.project index t.normalize = Tuple.project index t.normalize.normalize
+    rw [Ty.normalize_idem]
+  · show Tuple.project index m.normalize = (Tuple.project index m).map Ty.normalize
+    rw [normal.fixed]
+    cases answered : Tuple.project index m with
+    | none => rfl
+    | some a =>
+      show some a = some a.normalize
+      rw [project_normal normal member answered]
+  · show Tuple.project index (Ty.normalize (.union m r)) =
+      (Tuple.project index m.normalize).bind fun a =>
+        (Tuple.project index r.normalize).map (Ty.join a)
+    rw [normalU.fixed, normalM.fixed, normalR.fixed]
+    show (Tuple.project index m >>= fun a =>
+      Tuple.project index r >>= fun b => some (Ty.join a b)) = _
+    cases Tuple.project index m <;> cases Tuple.project index r <;> rfl
 
 end Effect4.Test.UnionRule
