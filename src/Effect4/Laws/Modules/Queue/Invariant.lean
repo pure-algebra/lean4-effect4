@@ -7,8 +7,9 @@ import Effect4.Laws.Auto.Semantics
 
 `first_step_inv`: one step of the model (`src/Effect4/Laws/Modules/Queue/Model.lean`) by a first
 operation keeps `FirstRunInv`, from every run that holds it. `FirstRunInv` is the first profile
-with the three properties of the state and the run's two flags. No term, no cell and no machine
-occurs in this file.
+with the three properties of the state and the run's two flags. `first_run_inv` is the same for a
+list of operations. `first_run_flags` starts it at the empty queue: both flags hold after every
+such list. No term, no cell and no machine occurs in this file.
 
 Placement. Concept `reactive-scheduling`: preservation of an explicit state invariant.
 Requirement R12, as the model's half of the proposed claims `wait-registration-no-gap` and
@@ -27,7 +28,8 @@ The proof has three layers. `step_state` carries `first_profile_closed` and
 `positive_suspend_step_capacity` to a run with any history. `Flags` is what the two flags ask of
 one step beside the bound, and each operation of the model has one lemma that states it.
 `bump_inv` joins such a step to a run. The design is
-`docs/research/2026-10-06-seat-QINV-design.md`.
+`docs/research/2026-10-06-seat-QINV-design.md`. The pinned axiom and plan outputs and the finite
+controls are in `Test/Program/QueueInvariant.lean`.
 -/
 
 set_option autoImplicit false
@@ -561,9 +563,9 @@ invariant. So the step keeps both flags. After it no taker stands ready without 
 request that waited still waits, is the step's own, or is named by a signal.
 
 It is the model's half of `wait-registration-no-gap` and of
-`waiting-request-obligation-preserved`. Consumer: the run law over a list of operations, and
-then the run-level law of the Queue's wrapper. The statement is of the model alone: no program,
-no delivery of a signal, no liveness and no fairness. -/
+`waiting-request-obligation-preserved`. Consumer: `first_run_inv`, and then the run-level law of
+the Queue's wrapper. The statement is of the model alone: no program, no delivery of a signal, no
+liveness and no fairness. -/
 @[semantics "reactive-scheduling" (requirement := R12)]
 theorem first_step_inv (r : Run) (op : Op) (h : FirstRunInv r)
     (first : firstOp op = true) (requested : Requested r.s op) :
@@ -594,5 +596,58 @@ theorem first_step_inv (r : Run) (op : Op) (h : FirstRunInv r)
   | dropTake id => exact bump_inv h profile bound (withdrawTake_flags h.profile spent id)
   | dropOffer id => exact bump_inv h profile bound (withdrawOffer_flags h.profile spent id)
   | _ => exact absurd first Bool.false_ne_true
+
+/-! ## The run law -/
+
+/-- The premises of a list of operations, each at the run that the operations before it leave:
+a first operation, whose request keeps `Requested`. A premise at the first run alone says
+nothing of a later step. -/
+def FirstOps (r : Run) : List Op → Prop
+  | [] => True
+  | op :: ops => firstOp op = true ∧ Requested r.s op ∧ FirstOps (step .none r op) ops
+
+/-- A request's premise decides. -/
+instance (s : State) (op : Op) : Decidable (Requested s op) := by
+  cases op <;> unfold Requested <;> infer_instance
+
+/-- The premises of a list decide, so a guard reads the run law's own premise. -/
+instance FirstOps.decidable : (r : Run) → (ops : List Op) → Decidable (FirstOps r ops)
+  | _, [] => .isTrue trivial
+  | r, op :: ops =>
+    have := FirstOps.decidable (step .none r op) ops
+    inferInstanceAs
+      (Decidable (firstOp op = true ∧ Requested r.s op ∧ FirstOps (step .none r op) ops))
+
+/-- **A list of first operations keeps the run invariant.** By induction over the list, with
+`first_step_inv` at each step. It establishes what `first_step_inv` does, and no more. Consumer:
+`first_run_flags`, and then the run-level law of the Queue's wrapper. -/
+@[semantics "reactive-scheduling" (requirement := R12)]
+theorem first_run_inv (r : Run) (ops : List Op) (h : FirstRunInv r) (first : FirstOps r ops) :
+    FirstRunInv (ops.foldl (step .none) r) := by
+  induction ops generalizing r with
+  | nil => exact h
+  | cons op ops ih =>
+    exact ih (step .none r op) (first_step_inv r op h first.1 first.2.1) first.2.2
+
+/-- The empty queue of a positive capacity holds the invariant. -/
+theorem empty_inv (c : Nat) : FirstRunInv { s := { capacity := some (c + 1) } } :=
+  { profile := empty_profile c
+    within := decide_eq_true (Nat.zero_le (c + 1))
+    tidy := rfl
+    quiet := rfl
+    ok := rfl
+    named := rfl }
+
+/-- **From the empty queue both flags hold after every list of first operations.** The
+exploration of the model holds the two flags to a bounded depth, and this statement holds them
+at every length, on the first profile. Consumer: the run-level law of the Queue's wrapper. It
+says nothing of `close` or `shutdown`, and nothing of a delivery. -/
+@[semantics "reactive-scheduling" (requirement := R12)]
+theorem first_run_flags (c : Nat) (ops : List Op)
+    (first : FirstOps { s := { capacity := some (c + 1) } } ops) :
+    (ops.foldl (step .none) { s := { capacity := some (c + 1) } }).ok = true ∧
+      (ops.foldl (step .none) { s := { capacity := some (c + 1) } }).named = true :=
+  have last := first_run_inv _ ops (empty_inv c) first
+  ⟨last.ok, last.named⟩
 
 end Effect4.Queue.Model
