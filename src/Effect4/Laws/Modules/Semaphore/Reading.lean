@@ -13,11 +13,11 @@ and they serve here as they are. This file adds what Semaphore's steps need besi
   field of the cell and of a waiter.
 - **Three words** that the Queue's steps do not use: `add`, `isZero` at a number, and the
   literal of nothing.
-- **The removal by identity, stated once** (`reads_removeById`). The Queue's pass
-  `Queue.removeTaker` reads the filter by identity on the encoding of every list of entries
-  whose `id` field reads the table's handle of the entry's identity. The Queue's own two
-  lemmas, `reads_removeTaker` and `reads_removeOffer`, are its instances at a taker and at an
-  offer. They stay where they are until the helpers move.
+- **The removal by identity, stated once** (`reads_removeById`). The shared pass `removeById`
+  (`src/Effect4/Modules/Words.lean`) reads the filter by identity on the encoding of every list
+  of entries whose `id` field reads the table's handle of the entry's identity. The Queue's own
+  two lemmas, `reads_removeTaker` and `reads_removeOffer`, are its instances at a taker and at
+  an offer. They stay where they are until the helpers move.
 - **The table's one change frames every other request** (`waiters_renew`).
 - **The passes** of `src/Effect4/Modules/Semaphore/Steps.lean` on the encoding of a model
   state: the free count, the fit, the fold that starts at the first fitting waiter, and a
@@ -37,6 +37,7 @@ namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Queue.Model
+open Effect4.Modules
 
 /-! ## The two records: what a read answers and what an overwrite stores -/
 
@@ -103,7 +104,7 @@ variable {env : Env} {path : List Nat} {vals : List Val}
 
 /-- **The removal pass reads the filter by identity.** The entries are the encoding of a list,
 and each entry's `id` field reads the table's handle of the entry's identity. On an injective
-table the pass `Queue.removeTaker` reads the encoding of the entries of another identity. The
+table the pass `removeById` reads the encoding of the entries of another identity. The
 statement names no type of the Queue and none of Semaphore. -/
 theorem reads_removeById {α : Type} {entries id : TermSrc} (tb : Table)
     (injective : tb.Injective) (encode : α → Val) (identity : α → Nat)
@@ -112,9 +113,9 @@ theorem reads_removeById {α : Type} {entries id : TermSrc} (tb : Table)
     (witness : α) (xs : List α) (i : Nat) (depth : vals.length = env.names.length)
     (hentries : Reads entries env path vals (Val.list (xs.map encode)))
     (hid : Captured id env path vals (Val.promise (tb.handle i))) :
-    Reads (Queue.removeTaker entries id) env path vals
+    Reads (removeById entries id) env path vals
       (Val.list ((xs.filter (fun x => identity x != i)).map encode)) := by
-  have folded : Reads (Queue.removeTaker entries id) env path vals
+  have folded : Reads (removeById entries id) env path vals
       (Val.list ((xs.foldl (fun kept x => if identity x = i then kept else kept ++ [x]) []).map
         encode)) :=
     reads_foldWith_model encode (fun kept : List α => Val.list (kept.map encode))

@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Modules.Queue.Cell
+public import Effect4.Modules.Words
 
 /-!
 # Modules.Semaphore.Cell — Semaphore's cell: its type and its initial value (rows 260, 265)
@@ -26,7 +26,8 @@ The cell holds four fields, and a waiter four (the card's section 3,
 | waiter | `stamp` | a number | the enrolment's stamp |
 
 A request's identity is a `Deferred` that nobody resolves, as in the Queue's cell: its type is
-`Queue.idTy`. Two identities are compared by `sameHandle`, and never by a number. A hint is a
+the shared `idTy` (`src/Effect4/Modules/Words.lean`). Two identities are compared by
+`sameHandle`, and never by a number. A hint is a
 `Deferred` of nothing: a visit of the wake's walk resolves it, and the waiter then runs its own
 take step again (decisions row 259). The free count is no field: each step derives it as the
 total less what is taken.
@@ -41,16 +42,17 @@ an effect.
 namespace Effect4.Semaphore
 
 open Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 /-- A waiter as a step writes it: its identity, the count that it needs, its hint and its
 stamp. -/
 def waiterFields : List (String × Bool × Ty) :=
-  [("id", false, Queue.idTy), ("need", false, .nat), ("hint", false, Queue.idTy),
+  [("id", false, idTy), ("need", false, .nat), ("hint", false, idTy),
    ("stamp", false, .nat)]
 
 /-- The type of a waiter: `waiterFields` in the canonical field order. -/
 def waiterTy : Ty := .record
-  [("hint", false, Queue.idTy), ("id", false, Queue.idTy), ("need", false, .nat),
+  [("hint", false, idTy), ("id", false, idTy), ("need", false, .nat),
    ("stamp", false, .nat)]
 
 /-- The cell as the initial value writes it: the total, the permits taken, the waiters and the

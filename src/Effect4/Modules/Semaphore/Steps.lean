@@ -1,7 +1,7 @@
 module
 
 public import Effect4.Modules.Semaphore.Cell
-public import Effect4.Modules.Queue.Steps
+public import Effect4.Program.Authoring.Tuples
 
 /-!
 # Modules.Semaphore.Steps — Semaphore's five steps, each one pure term over the cell
@@ -24,7 +24,7 @@ The model is `src/Effect4/Laws/Modules/Semaphore/Model.lean`. The rules of a ste
 - **A step frames every field that it does not change**: it writes the cell by `recordSet`, or
   it answers the cell as it is.
 - **No fold states its accumulator's type.** The empty list at the type of `xs` is `take xs 0`
-  (`Queue.noneOf`), so every step term is inside the reader's domain.
+  (`noneOf`), so every step term is inside the reader's domain.
 - **Each pass that folds uses `Authoring.foldWith`**, whose two names are minted. A pass places
   its caller's term in the fold's body. With fixed names a caller's variable of the same name
   would read the folded element (`Test/Program/FoldHygiene.lean`).
@@ -33,10 +33,10 @@ The model is `src/Effect4/Laws/Modules/Semaphore/Model.lean`. The rules of a ste
 - **A release is total**: it subtracts by `sub`, the truncated subtraction, so it releases at
   most what is taken (decisions row 261).
 
-The words of a step term are the Queue's (`src/Effect4/Modules/Queue/Steps.lean`): one
-application of a native atom each. The removal by identity is the Queue's pass `removeTaker`,
-whose term reads the field `id` of an entry and no other. The term language has no local
-binding, so a step repeats its passes.
+The words of a step term are shared (`src/Effect4/Modules/Words.lean`): one application of a
+native atom each. The removal by identity is the shared pass `removeById`, whose term reads the
+field `id` of an entry and no other. The term language has no local binding, so a step repeats
+its passes.
 
 Nothing here performs an effect, and the module exports no row: `Semaphore.make`, `take`,
 `release` and `withPermits` come with the wrapper, after the mask. The laws are in
@@ -49,7 +49,7 @@ Nothing here performs an effect, and the module exports no row: `Semaphore.make`
 namespace Effect4.Semaphore
 
 open Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue (len snoc notT andT orT isEmpty ifT noneOf)
+open Effect4.Modules
 
 /-! ## The words and the passes -/
 
@@ -63,9 +63,9 @@ def fitsT (need s : TermSrc) : TermSrc := notT (app "lt" [freeT s, need])
 def mkWaiter (id need hint stamp : TermSrc) : TermSrc :=
   record waiterFields [("id", id), ("need", need), ("hint", hint), ("stamp", stamp)]
 
-/-- The waiters without the request `id`: the Queue's removal pass. It folds with minted names,
+/-- The waiters without the request `id`: the shared removal pass. It folds with minted names,
 and its body reads the field `id` of an entry and the caller's `id`. -/
-def removeWaiter (waiters id : TermSrc) : TermSrc := Queue.removeTaker waiters id
+def removeWaiter (waiters id : TermSrc) : TermSrc := removeById waiters id
 
 /-- Whether a visit at a cursor may select the waiter `w`: its stamp is at or after the cursor,
 and its count fits the free count. -/

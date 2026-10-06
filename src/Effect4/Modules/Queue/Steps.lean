@@ -54,27 +54,13 @@ conclusion on that universe).
 namespace Effect4.Queue
 
 open Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
-/-! ## The words of a step term
+/-! ## The Queue's records
 
-Each is one application of a native atom. Their consumers are the helpers and the steps below. -/
-
-def nilT : TermSrc := app "nil" []
-def noneT : TermSrc := app "none" []
-def len (xs : TermSrc) : TermSrc := app "length" [xs]
-/-- `xs` with `x` behind it. -/
-def snoc (xs x : TermSrc) : TermSrc := app "append" [xs, app "cons" [x, nilT]]
-def notT (b : TermSrc) : TermSrc := app "not" [b]
-def andT (a b : TermSrc) : TermSrc := app "and" [a, b]
-def orT (a b : TermSrc) : TermSrc := app "or" [a, b]
-def isEmpty (xs : TermSrc) : TermSrc := app "isZero" [len xs]
-/-- A selection between two evaluated terms: the atom is strict in both. -/
-def ifT (c t f : TermSrc) : TermSrc := app "ite" [c, t, f]
-/-- The identity of two handles of one kind (decisions row 229). -/
-def same (a b : TermSrc) : TermSrc := app "sameHandle" [a, b]
-/-- The empty list at the type of `xs`: no fold has to state its accumulator's type. -/
-def noneOf (xs : TermSrc) : TermSrc := app "take" [xs, nat 0]
-def minT (a b : TermSrc) : TermSrc := ifT (app "lt" [a, b]) a b
+The words of a step term are shared: one application of a native atom each
+(`src/Effect4/Modules/Words.lean`). Their consumers here are the two records, the passes and the
+steps below. -/
 
 /-- A waiting taker's record. -/
 def mkTaker (id hint : TermSrc) : TermSrc := record takerFields [("id", id), ("hint", hint)]

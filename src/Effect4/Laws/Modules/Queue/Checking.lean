@@ -38,6 +38,7 @@ set_option autoImplicit false
 namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 variable {Op : Type}
 
@@ -331,10 +332,10 @@ theorem atomOf_native (atoms : sig.atomOf = nativeAtomTy) {name : String} {Ts : 
 variable (atoms : sig.atomOf = nativeAtomTy)
 include atoms
 
-theorem types_nilT : TypesEach sig Queue.nilT env path types (.list .never) :=
+theorem types_nilT : TypesEach sig nilT env path types (.list .never) :=
   fun _ => types_app .nil (atomOf_native atoms nativeAtomTy_nil)
 
-theorem types_noneT : TypesEach sig Queue.noneT env path types (.option .never) :=
+theorem types_noneT : TypesEach sig noneT env path types (.option .never) :=
   fun _ => types_app .nil (atomOf_native atoms nativeAtomTy_none)
 
 theorem types_some {a : TermSrc} {T : Ty} (ha : TypesEach sig a env path types T) :
@@ -342,40 +343,40 @@ theorem types_some {a : TermSrc} {T : Ty} (ha : TypesEach sig a env path types T
   fun _ => types_app (.cons (ha _) .nil) (atomOf_native atoms (nativeAtomTy_some T))
 
 theorem types_len {xs : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path types (.list T)) :
-    TypesEach sig (Queue.len xs) env path types .nat :=
+    TypesEach sig (len xs) env path types .nat :=
   fun _ => types_app (.cons (hxs _) .nil) (atomOf_native atoms (nativeAtomTy_length T))
 
 theorem types_isEmpty {xs : TermSrc} {T : Ty}
     (hxs : TypesEach sig xs env path types (.list T)) :
-    TypesEach sig (Queue.isEmpty xs) env path types .bool :=
+    TypesEach sig (isEmpty xs) env path types .bool :=
   fun _ => types_app (.cons (types_len atoms hxs _) .nil) (atomOf_native atoms nativeAtomTy_isZero)
 
 theorem types_notT {b : TermSrc} (hb : TypesEach sig b env path types .bool) :
-    TypesEach sig (Queue.notT b) env path types .bool :=
+    TypesEach sig (notT b) env path types .bool :=
   fun _ => types_app (.cons (hb _) .nil) (atomOf_native atoms nativeAtomTy_not)
 
 theorem types_andT {a b : TermSrc} (ha : TypesEach sig a env path types .bool)
     (hb : TypesEach sig b env path types .bool) :
-    TypesEach sig (Queue.andT a b) env path types .bool :=
+    TypesEach sig (andT a b) env path types .bool :=
   fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_and)
 
 theorem types_orT {a b : TermSrc} (ha : TypesEach sig a env path types .bool)
     (hb : TypesEach sig b env path types .bool) :
-    TypesEach sig (Queue.orT a b) env path types .bool :=
+    TypesEach sig (orT a b) env path types .bool :=
   fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_or)
 
 /-- A selection whose second arm's type is above the first's types at the second's. -/
 theorem types_ifT_above {c t f : TermSrc} {X Y : Ty}
     (hc : TypesEach sig c env path types .bool) (ht : TypesEach sig t env path types X)
     (hf : TypesEach sig f env path types Y) (above : Ty.sub X Y = true) :
-    TypesEach sig (Queue.ifT c t f) env path types Y :=
+    TypesEach sig (ifT c t f) env path types Y :=
   fun _ => types_app (.cons (hc _) (.cons (ht _) (.cons (hf _) .nil)))
     (atomOf_native atoms (nativeAtomTy_ite_above above))
 
 /-- A selection between two arms of one type. -/
 theorem types_ifT {c t f : TermSrc} {X : Ty} (hc : TypesEach sig c env path types .bool)
     (ht : TypesEach sig t env path types X) (hf : TypesEach sig f env path types X) :
-    TypesEach sig (Queue.ifT c t f) env path types X :=
+    TypesEach sig (ifT c t f) env path types X :=
   types_ifT_above atoms hc ht hf (Ty.sub_refl X)
 
 /-- A selection whose second arm's type is below the first's, both in normal form, types at
@@ -383,7 +384,7 @@ the first's. -/
 theorem types_ifT_below {c t f : TermSrc} {X Y : Ty}
     (hc : TypesEach sig c env path types .bool) (ht : TypesEach sig t env path types X)
     (hf : TypesEach sig f env path types Y) (hX : X.normalize = X) (hY : Y.normalize = Y)
-    (below : Ty.sub Y X = true) : TypesEach sig (Queue.ifT c t f) env path types X :=
+    (below : Ty.sub Y X = true) : TypesEach sig (ifT c t f) env path types X :=
   fun _ => types_app (.cons (hc _) (.cons (ht _) (.cons (hf _) .nil)))
     (atomOf_native atoms (nativeAtomTy_ite_below hX hY below))
 
@@ -391,7 +392,7 @@ theorem types_ifT_below {c t f : TermSrc} {X Y : Ty}
 theorem types_same {a b : TermSrc} {A E B F : Ty}
     (ha : TypesEach sig a env path types (.deferredOf A E))
     (hb : TypesEach sig b env path types (.deferredOf B F)) :
-    TypesEach sig (Queue.same a b) env path types .bool :=
+    TypesEach sig (same a b) env path types .bool :=
   fun _ => types_app (.cons (ha _) (.cons (hb _) .nil))
     (atomOf_native atoms (nativeAtomTy_sameHandle_deferred A E B F))
 
@@ -407,7 +408,7 @@ theorem types_drop {xs n : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path ty
 
 /-- The empty list at the type of a list. -/
 theorem types_noneOf {xs : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path types (.list T)) :
-    TypesEach sig (Queue.noneOf xs) env path types (.list T) :=
+    TypesEach sig (noneOf xs) env path types (.list T) :=
   types_take atoms hxs (types_nat 0)
 
 theorem types_append {xs ys : TermSrc} {T : Ty}
@@ -420,14 +421,14 @@ theorem types_append {xs ys : TermSrc} {T : Ty}
 /-- The list of one element, whose type is its own normal form. -/
 theorem types_single {x : TermSrc} {T : Ty} (canonical : T.normalize = T)
     (hx : TypesEach sig x env path types T) :
-    TypesEach sig (app "cons" [x, Queue.nilT]) env path types (.list T) :=
+    TypesEach sig (app "cons" [x, nilT]) env path types (.list T) :=
   fun _ => types_app (.cons (hx _) (.cons (types_nilT atoms _) .nil))
     (atomOf_native atoms (nativeAtomTy_cons_nil canonical))
 
 /-- A list with one element behind it, at the element's type in normal form. -/
 theorem types_snoc {xs x : TermSrc} {T : Ty} (canonical : T.normalize = T)
     (hxs : TypesEach sig xs env path types (.list T)) (hx : TypesEach sig x env path types T) :
-    TypesEach sig (Queue.snoc xs x) env path types (.list T) :=
+    TypesEach sig (snoc xs x) env path types (.list T) :=
   types_append atoms hxs (types_single atoms canonical hx)
 
 theorem types_lt {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
@@ -442,7 +443,7 @@ theorem types_sub {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
 
 theorem types_minT {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     (hb : TypesEach sig b env path types .nat) :
-    TypesEach sig (Queue.minT a b) env path types .nat :=
+    TypesEach sig (minT a b) env path types .nat :=
   types_ifT atoms (types_lt atoms ha hb) ha hb
 
 /-- The first element of a list, as an option. -/

@@ -35,6 +35,7 @@ set_option maxRecDepth 16384
 namespace Test.Program.SemaphoreSteps
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 open Effect4.Queue.Model (typeAt typeAt_of_types Reads TypesEach CapturedTy types_var
   capturedTy_var capturedTy_answer written_ne_mint resolve_last step_keeps_cell)
 open Effect4.Semaphore.Model
@@ -64,7 +65,7 @@ Each guard is the statement of one typing theorem, at the step's own scope, by t
 own answer. -/
 
 #guard decide (typeOf ["need", "id", "hint", "s"]
-    [.nat, Queue.idTy, Queue.idTy, Semaphore.cellTy]
+    [.nat, idTy, idTy, Semaphore.cellTy]
     (Semaphore.takeStep (var "need") (var "id") (var "hint") (var "s")) =
   some (.prod .bool Semaphore.cellTy))
 #guard decide (typeOf ["need", "s"] [.nat, Semaphore.cellTy]
@@ -76,7 +77,7 @@ own answer. -/
 #guard decide (typeOf ["cursor", "s"] [.nat, Semaphore.cellTy]
     (Semaphore.visitStep (var "cursor") (var "s")) =
   some (.prod visitReplyTy Semaphore.cellTy))
-#guard decide (typeOf ["id", "s"] [Queue.idTy, Semaphore.cellTy]
+#guard decide (typeOf ["id", "s"] [idTy, Semaphore.cellTy]
     (Semaphore.withdrawStep (var "id") (var "s")) =
   some (.prod .unit Semaphore.cellTy))
 -- A count that is a literal is typed too: the scenarios write their counts so.
@@ -85,7 +86,7 @@ own answer. -/
 
 -- Red controls of the scope. A request's identity at a number has no type: `sameHandle` takes
 -- two handles of one kind. A count at a Boolean has none, and a cursor at a string has none.
-#guard (typeOf ["need", "id", "hint", "s"] [.nat, .nat, Queue.idTy, Semaphore.cellTy]
+#guard (typeOf ["need", "id", "hint", "s"] [.nat, .nat, idTy, Semaphore.cellTy]
   (Semaphore.takeStep (var "need") (var "id") (var "hint") (var "s"))).isNone
 #guard (typeOf ["need", "s"] [.bool, Semaphore.cellTy]
   (Semaphore.takeIfAvailableStep (var "need") (var "s"))).isNone
@@ -93,7 +94,7 @@ own answer. -/
   (Semaphore.visitStep (var "cursor") (var "s"))).isNone
 -- A hint at a `Deferred` of a number has none: a `Deferred` is invariant in its answer.
 #guard (typeOf ["need", "id", "hint", "s"]
-  [.nat, Queue.idTy, .deferredOf .nat .never, Semaphore.cellTy]
+  [.nat, idTy, .deferredOf .nat .never, Semaphore.cellTy]
   (Semaphore.takeStep (var "need") (var "id") (var "hint") (var "s"))).isNone
 -- A step over a waiter in place of the cell has none.
 #guard (typeOf ["count", "s"] [.nat, Semaphore.waiterTy]
@@ -172,11 +173,11 @@ def clashValues : List Val := [.nat 1, cellOfWaiters [waiter 1 0, waiter 2 1]]
 
 /-- Red control of the hygiene: `fromFirst` with the fold's two names fixed. -/
 def fromFirstFixed (cursor s : TermSrc) : TermSrc :=
-  fold "acc" "item" none (field s "waiters") (Queue.noneOf (field s "waiters"))
-    (Queue.ifT
-      (Queue.orT (Queue.notT (Queue.isEmpty (var "acc")))
+  fold "acc" "item" none (field s "waiters") (noneOf (field s "waiters"))
+    (ifT
+      (orT (notT (isEmpty (var "acc")))
         (Semaphore.eligibleT cursor s (var "item")))
-      (Queue.snoc (var "acc") (var "item")) (var "acc"))
+      (snoc (var "acc") (var "item")) (var "acc"))
 
 -- Under names that the fixed pass does not bind, it answers as the library's pass.
 #guard valueAt (fromFirstFixed (var "cursor") (var "cell")) = some (.list [waiter 2 1])
@@ -194,13 +195,13 @@ Each example is an instance of a theorem, and no evaluation of the checker. -/
 /-- The take step at its own scope: an author's variable is a caller's term under the removal's
 fold (`capturedTy_var`). -/
 example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) :
-    typeAt sig ["need", "id", "hint", "s"] [.nat, Queue.idTy, Queue.idTy, Semaphore.cellTy]
+    typeAt sig ["need", "id", "hint", "s"] [.nat, idTy, idTy, Semaphore.cellTy]
         (Semaphore.takeStep (var "need") (var "id") (var "hint") (var "s")) =
       some (.prod .bool Semaphore.cellTy) := by
   apply typeAt_of_types
   exact takeStep_types sig atoms (needSrc := var "need") (idSrc := var "id")
     (hintSrc := var "hint") (cellSrc := var "s") (env := { names := ["need", "id", "hint", "s"] })
-    (path := []) (types := [.nat, Queue.idTy, Queue.idTy, Semaphore.cellTy]) rfl
+    (path := []) (types := [.nat, idTy, idTy, Semaphore.cellTy]) rfl
     (types_var rfl rfl rfl) (capturedTy_var rfl rfl rfl) (types_var rfl rfl rfl)
     (types_var rfl rfl rfl) false
 
@@ -252,13 +253,13 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) :
 
 /-- The withdrawal, with an identity that `bindWith` bound. -/
 example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) :
-    typeAt sig stepScope.names [.refOf Semaphore.cellTy, Queue.idTy, Semaphore.cellTy]
+    typeAt sig stepScope.names [.refOf Semaphore.cellTy, idTy, Semaphore.cellTy]
         (Semaphore.withdrawStep (minted secondName) (var "s")) =
       some (.prod .unit Semaphore.cellTy) := by
   apply typeAt_of_types
   exact withdrawStep_types sig atoms (idSrc := minted secondName) (cellSrc := var "s")
     (env := stepScope) (path := [])
-    (types := [.refOf Semaphore.cellTy, Queue.idTy, Semaphore.cellTy]) rfl
+    (types := [.refOf Semaphore.cellTy, idTy, Semaphore.cellTy]) rfl
     (capturedTy_answer (outer := { names := [firstName] }) stepScope_second rfl)
     (types_var rfl stepScope_cell rfl) false
 

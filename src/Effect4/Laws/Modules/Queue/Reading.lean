@@ -29,6 +29,7 @@ set_option autoImplicit false
 namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 /-! ## Reading: the base facts -/
 
@@ -519,46 +520,46 @@ section Words
 
 variable {env : Env} {path : List Nat} {vals : List Val}
 
-theorem reads_nilT : Reads Queue.nilT env path vals (Val.list []) := reads_app .nil atom_nil
+theorem reads_nilT : Reads nilT env path vals (Val.list []) := reads_app .nil atom_nil
 
-theorem reads_noneT : Reads Queue.noneT env path vals Store.Val.none := reads_app .nil atom_none
+theorem reads_noneT : Reads noneT env path vals Store.Val.none := reads_app .nil atom_none
 
 theorem reads_some {a : TermSrc} {v : Val} (ha : Reads a env path vals v) :
     Reads (app "some" [a]) env path vals (Store.Val.some v) :=
   reads_app (.cons ha .nil) (atom_some v)
 
 theorem reads_len {xs : TermSrc} {items : List Val} (hxs : Reads xs env path vals (Val.list items)) :
-    Reads (Queue.len xs) env path vals (Val.nat items.length) :=
+    Reads (len xs) env path vals (Val.nat items.length) :=
   reads_app (.cons hxs .nil) (atom_length items)
 
 theorem reads_isEmpty {xs : TermSrc} {items : List Val}
     (hxs : Reads xs env path vals (Val.list items)) :
-    Reads (Queue.isEmpty xs) env path vals (Val.bool (decide (items.length = 0))) :=
+    Reads (isEmpty xs) env path vals (Val.bool (decide (items.length = 0))) :=
   reads_app (.cons (reads_len hxs) .nil) (atom_isZero items.length)
 
 theorem reads_notT {b : TermSrc} {value : Bool} (hb : Reads b env path vals (Val.bool value)) :
-    Reads (Queue.notT b) env path vals (Val.bool (!value)) :=
+    Reads (notT b) env path vals (Val.bool (!value)) :=
   reads_app (.cons hb .nil) (atom_not value)
 
 theorem reads_andT {a b : TermSrc} {x y : Bool} (ha : Reads a env path vals (Val.bool x))
     (hb : Reads b env path vals (Val.bool y)) :
-    Reads (Queue.andT a b) env path vals (Val.bool (x && y)) :=
+    Reads (andT a b) env path vals (Val.bool (x && y)) :=
   reads_app (.cons ha (.cons hb .nil)) (atom_and x y)
 
 theorem reads_orT {a b : TermSrc} {x y : Bool} (ha : Reads a env path vals (Val.bool x))
     (hb : Reads b env path vals (Val.bool y)) :
-    Reads (Queue.orT a b) env path vals (Val.bool (x || y)) :=
+    Reads (orT a b) env path vals (Val.bool (x || y)) :=
   reads_app (.cons ha (.cons hb .nil)) (atom_or x y)
 
 theorem reads_ifT {c t f : TermSrc} {test : Bool} {x y : Val}
     (hc : Reads c env path vals (Val.bool test)) (ht : Reads t env path vals x)
     (hf : Reads f env path vals y) :
-    Reads (Queue.ifT c t f) env path vals (if test then x else y) :=
+    Reads (ifT c t f) env path vals (if test then x else y) :=
   reads_app (.cons hc (.cons ht (.cons hf .nil))) (atom_ite test x y)
 
 theorem reads_same {a b : TermSrc} {k k' : DeferredKey}
     (ha : Reads a env path vals (Val.promise k)) (hb : Reads b env path vals (Val.promise k')) :
-    Reads (Queue.same a b) env path vals (Val.bool (decide (k = k'))) :=
+    Reads (same a b) env path vals (Val.bool (decide (k = k'))) :=
   reads_app (.cons ha (.cons hb .nil)) (atom_sameHandle k k')
 
 theorem reads_take {xs n : TermSrc} {items : List Val} {count : Nat}
@@ -573,7 +574,7 @@ theorem reads_drop {xs n : TermSrc} {items : List Val} {count : Nat}
 
 theorem reads_noneOf {xs : TermSrc} {items : List Val}
     (hxs : Reads xs env path vals (Val.list items)) :
-    Reads (Queue.noneOf xs) env path vals (Val.list []) :=
+    Reads (noneOf xs) env path vals (Val.list []) :=
   reads_take hxs (reads_nat 0 env path vals)
 
 theorem reads_append {xs ys : TermSrc} {front back : List Val}
@@ -583,7 +584,7 @@ theorem reads_append {xs ys : TermSrc} {front back : List Val}
 
 theorem reads_snoc {xs x : TermSrc} {items : List Val} {v : Val}
     (hxs : Reads xs env path vals (Val.list items)) (hx : Reads x env path vals v) :
-    Reads (Queue.snoc xs x) env path vals (Val.list (items ++ [v])) :=
+    Reads (snoc xs x) env path vals (Val.list (items ++ [v])) :=
   reads_append hxs (reads_app (.cons hx (.cons reads_nilT .nil)) (atom_cons v []))
 
 theorem reads_lt {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.nat x))
@@ -598,7 +599,7 @@ theorem reads_sub {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.n
 
 theorem reads_minT {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.nat x))
     (hb : Reads b env path vals (Val.nat y)) :
-    Reads (Queue.minT a b) env path vals (Val.nat (Nat.min x y)) := by
+    Reads (minT a b) env path vals (Val.nat (Nat.min x y)) := by
   refine (reads_ifT (reads_lt ha hb) ha hb).to ?_
   by_cases less : x < y
   · rw [decide_eq_true less, if_pos rfl]
@@ -716,7 +717,7 @@ theorem reads_wake {takers msgs : TermSrc} {ts ms : List Val}
 theorem reads_sameTaker {id : TermSrc} (tb : Table) (injective : tb.Injective) (i : Nat)
     (depth : vals.length = env.names.length)
     (hid : Captured id env path vals (Val.promise (tb.handle i))) (acc : Val) (t : Taker) :
-    Reads (Queue.same (field (minted (env.mint "item")) "id") id)
+    Reads (same (field (minted (env.mint "item")) "id") id)
       (env.push [env.mint "acc", env.mint "item"]) path (vals ++ [acc, takerVal tb t])
       (Val.bool (decide (t.id = i))) :=
   (reads_same (reads_field (reads_minted_item depth path acc (takerVal tb t)) (taker_id _ _))
@@ -774,7 +775,7 @@ theorem reads_removeTaker {takers id : TermSrc} (tb : Table) (injective : tb.Inj
 theorem reads_sameOffer {id : TermSrc} (tb : Table) (msg : Nat → Val) (injective : tb.Injective)
     (i : Nat) (depth : vals.length = env.names.length)
     (hid : Captured id env path vals (Val.promise (tb.handle i))) (acc : Val) (o : Offer) :
-    Reads (Queue.same (field (minted (env.mint "item")) "id") id)
+    Reads (same (field (minted (env.mint "item")) "id") id)
       (env.push [env.mint "acc", env.mint "item"]) path (vals ++ [acc, offerVal tb msg o])
       (Val.bool (decide (o.id = i))) :=
   (reads_same

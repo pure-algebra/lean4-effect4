@@ -34,6 +34,7 @@ namespace Test.Program.SemaphoreAgreement
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Semaphore.Model (State Waiter Profile)
+open Effect4.Modules
 
 /-! ## The encoding
 
@@ -52,7 +53,7 @@ def evalAt (src : TermSrc) : Option Val :=
   (src { names := envNames } []).toOption.bind (evalTerm envVals ·)
 
 def listOf (xs : List TermSrc) : TermSrc :=
-  xs.foldr (fun x acc => app "cons" [x, acc]) Queue.nilT
+  xs.foldr (fun x acc => app "cons" [x, acc]) nilT
 
 /-- The table: a request's current hint. -/
 abbrev Table := Nat → TermSrc
@@ -125,7 +126,7 @@ def visitExpected (mutation : Mutation) (s : State) (cursor : Nat) : TermSrc :=
   let r := Semaphore.Model.visit s cursor
   let reply := match r.2 with
     | some w => app "some" [waiterTerm table0 w]
-    | none => Queue.noneT
+    | none => noneT
   let next := match mutation with
     | .keepSelected => s
     | _ => r.1
@@ -274,8 +275,6 @@ def outside : List State :=
 Each fault is red at its own property. The checker types each changed step at the type of the
 library's step, so typing alone does not catch it. -/
 
-open Effect4.Queue (len notT ifT noneOf)
-
 /-- The checker's type of a source term at a scope, at the native signature. -/
 def typeOf (names : List String) (types : List Ty) (src : TermSrc) : Option Ty :=
   Queue.Model.typeAt nativeSignature names types src
@@ -333,7 +332,7 @@ def late : State := { permits := 2, taken := 1, next := 2 }
   evalAt (takeTerm freed 2 2)
 -- Typing does not catch it.
 #guard decide (typeOf ["need", "id", "hint", "s"]
-    [.nat, Queue.idTy, Queue.idTy, Semaphore.cellTy]
+    [.nat, idTy, idTy, Semaphore.cellTy]
     (takeBlindStep (var "need") (var "id") (var "hint") (var "s")) =
   some (.prod .bool Semaphore.cellTy))
 

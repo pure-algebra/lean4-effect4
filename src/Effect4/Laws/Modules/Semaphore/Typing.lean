@@ -46,6 +46,7 @@ namespace Effect4.Semaphore.Model
 
 open Effect4.Program Effect4.Program.Authoring
 open Effect4.Queue.Model
+open Effect4.Modules
 
 /-! ## The types of the steps' replies -/
 
@@ -86,7 +87,7 @@ theorem cell_waitersTy :
 theorem cell_nextTy : Record.fieldType false Semaphore.cellTy "next" = some .nat :=
   Record.fieldType_normal cellTy_normal rfl
 
-theorem waiter_idTy : Record.fieldType false Semaphore.waiterTy "id" = some Queue.idTy :=
+theorem waiter_idTy : Record.fieldType false Semaphore.waiterTy "id" = some idTy :=
   Record.fieldType_normal waiterTy_normal rfl
 
 theorem waiter_needTy : Record.fieldType false Semaphore.waiterTy "need" = some .nat :=
@@ -113,7 +114,7 @@ theorem cell_setNextTy : Record.setType Semaphore.cellTy "next" .nat = some Sema
 /-- A waiter's construction, each field at its declared type, answers a waiter's type. -/
 theorem waiter_checkTy :
     Record.check Semaphore.waiterFields ["id", "need", "hint", "stamp"]
-        [Queue.idTy, .nat, Queue.idTy, .nat] =
+        [idTy, .nat, idTy, .nat] =
       some Semaphore.waiterTy :=
   Record.check_declared (fields := Semaphore.waiterFields) (by decide)
 
@@ -207,9 +208,9 @@ theorem types_setNext {s v : TermSrc} (hs : TypesEach sig s env path types Semap
 
 /-- A waiter's record, built from an identity, a count, a hint and a stamp. -/
 theorem types_mkWaiter {id need hint stamp : TermSrc}
-    (hid : TypesEach sig id env path types Queue.idTy)
+    (hid : TypesEach sig id env path types idTy)
     (hneed : TypesEach sig need env path types .nat)
-    (hhint : TypesEach sig hint env path types Queue.idTy)
+    (hhint : TypesEach sig hint env path types idTy)
     (hstamp : TypesEach sig stamp env path types .nat) :
     TypesEach sig (Semaphore.mkWaiter id need hint stamp) env path types Semaphore.waiterTy :=
   fun _ => types_record waiterFields_formed
@@ -234,7 +235,7 @@ theorem types_fitsT {need s : TermSrc} (hneed : TypesEach sig need env path type
 /-- `removeWaiter`: the waiters without the request. The Queue's fold, at a waiter's type. -/
 theorem types_removeWaiter {waiters id : TermSrc} (depth : types.length = env.names.length)
     (hwaiters : TypesEach sig waiters env path types (.list Semaphore.waiterTy))
-    (hid : CapturedTy sig id env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy) :
     TypesEach sig (Semaphore.removeWaiter waiters id) env path types
       (.list Semaphore.waiterTy) :=
   types_removeById atoms depth waiterTy_normal waiter_idTy hwaiters hid
@@ -312,8 +313,8 @@ theorem takeStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = na
     {needSrc idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {types : List Ty}
     (depth : types.length = env.names.length)
     (typesNeed : TypesEach sig needSrc env path types .nat)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
-    (typesHint : TypesEach sig hintSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
+    (typesHint : TypesEach sig hintSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.takeStep needSrc idSrc hintSrc cellSrc) env path types
       (.prod .bool Semaphore.cellTy) := by
@@ -375,7 +376,7 @@ fold. -/
 theorem withdrawStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
     {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {types : List Ty}
     (depth : types.length = env.names.length)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.withdrawStep idSrc cellSrc) env path types
       (.prod .unit Semaphore.cellTy) :=

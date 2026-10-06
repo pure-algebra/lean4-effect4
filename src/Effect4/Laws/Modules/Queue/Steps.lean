@@ -48,6 +48,7 @@ namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Typed
+open Effect4.Modules
 
 /-! ## The connector to the store -/
 
@@ -553,7 +554,7 @@ theorem takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (i
   have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
       (Val.list ((s.messages.drop 1).map msg)) :=
     (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
-  have room : Reads (app "sub" [field cellSrc "cap", Queue.len
+  have room : Reads (app "sub" [field cellSrc "cap", len
       (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
       (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
     (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
@@ -649,7 +650,7 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
     (reads_app (.cons readsMessage (.cons reads_nilT .nil)) (atom_cons (msg a) []))
   have pending := (reads_recordSet readsCell (reads_snoc offers newOffer)
     (cell_setOffers _ _ _ _ _)).to (cell_pended tb msg s id a hint foreign fresh).symm
-  have longer : Reads (Queue.snoc (field cellSrc "msgs") messageSrc) env path vals
+  have longer : Reads (snoc (field cellSrc "msgs") messageSrc) env path vals
       (Val.list ((s.messages ++ [a]).map msg)) :=
     (reads_snoc msgs readsMessage).to (by rw [List.map_append]; rfl)
   have accepted := reads_recordSet readsCell longer (cell_setMsgs _ _ _ _ _)
@@ -658,10 +659,10 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
     (reads_tuple2 (reads_some (reads_bool true env path vals)) (reads_wake takers longer))
     accepted
   have full := reads_pair (reads_tuple2 reads_noneT (reads_wake takers msgs)) pending
-  have hasPending : Reads (Queue.notT (Queue.isEmpty (field cellSrc "offers"))) env path vals
+  have hasPending : Reads (notT (isEmpty (field cellSrc "offers"))) env path vals
       (Val.bool (!decide (s.offers.length = 0))) :=
     (reads_notT (reads_isEmpty offers)).to (by rw [List.length_map])
-  have hasRoom : Reads (app "lt" [Queue.len (field cellSrc "msgs"), field cellSrc "cap"]) env
+  have hasRoom : Reads (app "lt" [len (field cellSrc "msgs"), field cellSrc "cap"]) env
       path vals (Val.bool (decide (s.messages.length < c + 1))) :=
     (reads_lt (reads_len msgs) cap).to (by rw [List.length_map, capacity]; rfl)
   have whole := reads_ifT hasPending behind (reads_ifT hasRoom room full)
@@ -728,7 +729,7 @@ theorem pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
   have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
       (Val.list ((s.messages.drop 1).map msg)) :=
     (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
-  have room : Reads (app "sub" [field cellSrc "cap", Queue.len
+  have room : Reads (app "sub" [field cellSrc "cap", len
       (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
       (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
     (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
@@ -740,8 +741,8 @@ theorem pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
     (cell_setOffers _ _ _ _ _)
   have yes := reads_pair (reads_tuple2 (reads_head msgs) entering) consumed
   have no := reads_pair (reads_tuple2 reads_noneT (reads_noneOf offers)) readsCell
-  have test : Reads (Queue.andT (Queue.notT (Queue.isEmpty (field cellSrc "msgs")))
-      (Queue.isEmpty (field cellSrc "takers"))) env path vals
+  have test : Reads (andT (notT (isEmpty (field cellSrc "msgs")))
+      (isEmpty (field cellSrc "takers"))) env path vals
       (Val.bool (!decide (s.messages.length = 0) && decide (s.takers.length = 0))) :=
     (reads_andT (reads_notT (reads_isEmpty msgs)) (reads_isEmpty takers)).to
       (by rw [List.length_map, List.length_map])

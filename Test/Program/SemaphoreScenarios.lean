@@ -62,7 +62,7 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.SemaphoreScenarios
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue (nilT noneT len snoc notT ifT noneOf)
+open Effect4.Modules (nilT noneT len snoc notT ifT noneOf)
 open Effect4.Semaphore (takeStep takeIfAvailableStep releaseStep visitStep withdrawStep visitFrom
   eligibleT)
 
