@@ -311,8 +311,15 @@ tools, authoring, MCP, composing and the lowering, which must start. A region is
 view of the stored program with proof data: no marker is added to the stored program or to
 the machine. The owner also asked for a plan of how the focus meets bidirectional type
 slicing. [The plan](research/2026-10-06-type-slicing-plan.md) reads the vendored paper,
-maps it to the checker and lists ten proposed claims, four probes and six slices. Its three
-questions wait for the owner, and nothing of it is dispatched.
+maps it to the checker and lists ten proposed claims, four probes and six slices. The
+owner said to go ahead with its recommendations and to run its probes, and asked for a deep
+exploration of a true gap with holes. Two research seats have them, and neither edits a
+tracked source: seat CENSUS measures the checker's graduality on the two corpora
+([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)), and seat GAP
+studies what a gap with holes would give, from the papers and from what the algebra already
+gives ([its brief](research/2026-10-05-claude-lead/briefs/seat-gap-brief.md)). Two of the
+plan's questions wait for the owner: a requirement of its own, and the minimal slice as the
+promise at the surface.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -346,8 +353,11 @@ In work since the suspension of the handover:
   and reads back (`Test/Program/PoolFaces.lean`), and ten programs run on rc.112 in the
   truth lane. Three of them settle on two exits under the two entries, and their sync runs
   are pinned apart (`lateSightsSync`, `harness/truth/Truth.lean`). No program is kept out by
-  row 268's signed difference: both faces run the module's expansion. The engine's cases,
-  the documents and the receipt come next.
+  row 268's signed difference: both faces run the module's expansion. Its seventh step is
+  merged: the ten public cases run on the generated engine, and each gives Lean's exit on
+  both carriers (`ocaml/engine/test/pool/`). The fixture is 1.79 MB, the largest of the
+  lanes: a term has no binder, so each step's bytes hold the cell's source many times
+  (row 276, point 3). The documents and the receipt come next.
 - **Seat REPAIR has two small repairs of proofs** (branch `seat/repair`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-repair-brief.md)). The Queue's
   `take_types` and `offer_types` go through the shared typing of the waiting wrapper, with

@@ -1,10 +1,13 @@
-; lane POOL -- two of Pool's cases on the generated engine, through the wire
-; (decisions rows 267 to 269; Test/Program/PoolScenarios.lean).
+; lane POOL -- twelve of Pool's runs on the generated engine, through the wire
+; (decisions rows 267 to 269, 276 and 279; Test/Program/PoolScenarios.lean and
+; Test/Program/PoolPublic.lean).
 ;   test_pool  the fixture beside this file (pool.txt, written by Lean from the programs that
 ;              `Api.Author.build` admits: write.lean) run on BOTH instances (Fast and Ref).
-;              Each program crosses as its canonical bytes.  On each instance the root's exit
-;              must be the exit Lean wrote, and the two reports must be one.
-;              Red controls: the other run's exit, a program cut by one byte, a small fuel.
+;              Two runs are over the first battery's test forms, and ten are the public cases
+;              over the library's `make` and `use`.  Each program crosses as its canonical
+;              bytes.  On each instance the root's exit must be the exit Lean wrote, and the
+;              two reports must be one.
+;              Red controls: the next run's exit, a program cut by one byte, a small fuel.
 ;              It is its own directory so that no other lane's dune file changes.
 
 (test
