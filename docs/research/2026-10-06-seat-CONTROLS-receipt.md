@@ -5,6 +5,10 @@ Status: receipt (history, not authority). Written on 2026-10-06. Brief:
 and the coordinator's messages of 2026-10-06. Design note:
 `docs/research/2026-10-06-seat-CONTROLS-design.md`. Its section 8 holds the coordinator's rulings.
 
+The coordinator merged the slice as `4ffdf83f` the same day, and ruled on its two questions. The
+last section, "Addendum", holds what followed. The sections before it give the slice as it was
+merged, at `d7892c9d`.
+
 **The one thing to know before merging:** the host lane did not move, and the engine's lane
 did. The host lane's work folder is the base's bytes in 285 of 286 files. By the coordinator's
 rulings of 2026-10-06, five runs of the engine's fixtures took the batteries' scripts. The lane's
@@ -48,9 +52,9 @@ Nine more facts stand beside these.
 - **The goal gate's count does not move.** It gives 24 planned goals and 11 declarations that
   rest on goals, on the base and at the head.
 - **One named run has no control.** It is the timeout scenario's `parked`. The gate reports it,
-  and the battery pins the report. The coordinator rules at the merge.
+  and the battery pins the report. The coordinator rules at the merge: see the addendum.
 - **Two names hold one script.** They are `timeout/before` and `timeout/applied`. Both stay, so
-  that the lane's table stays equal. The coordinator rules at the merge.
+  that the lane's table stays equal. The coordinator rules at the merge: see the addendum.
 - **The engine's test has the same count of checks.** The scenarios' test has 183 checks on the
   base and at the head. It compares 101 positions on the base and 102 at the head.
 - **One command is red for a reason outside the slice.** `dune test --force engine` exits with
@@ -583,3 +587,215 @@ I do not edit the register. Each row is a proposal for the coordinator.
 | (d) | Give the dictionary of `docs/core/controlled-english.md` two entries: "script" and "named run", with `Move` and `NamedRun` as anchors. | The README defines both, and this receipt and the design note use them. |
 | (e) | A seat's brief names the corpus folder for `dune test --force engine`, or the dispatch links `.lake/corpus`. | The command is red in a reused worktree, for no fault of the tree. |
 | (f) | Repair the sentence of `Test/Dogfood/Scenario/Faces.lean` that says the host clause waits. | It is stale since seat HOST's merge. |
+
+## Addendum
+
+**The addendum's first line:** after the merge, one script has one name, and each named run has
+a control. The gate refuses a named run that no control reads. The host lane performs 14 timeout
+scripts and no longer 15, and nothing else of the lane moves.
+
+The coordinator merged the slice as `4ffdf83f` on 2026-10-06. It ruled on the two questions of
+this receipt and took its proposal (f). This section holds what followed, on the same branch.
+
+### Base and head
+
+| Item | Value |
+| --- | --- |
+| Base | `4ffdf83f`, the merged head of main, taken by `git merge --ff-only 4ffdf83f` |
+| Addendum 1 | `2cadd3ec`: the gate refuses an unread run, and `parked` gets its control |
+| Addendum 2 | `d53ab29d`: the timeout run `applied` goes |
+| Addendum 3 | `62d6f646`: the sentence of the faces battery |
+| Head of the work | `62d6f646`: each result of this section is measured there |
+| Receipt | the commit that adds this section, on top of `62d6f646` |
+
+Nothing is pushed. `git diff --numstat 4ffdf83f 62d6f646` counts 5 files, 42 added lines and 45
+removed lines.
+
+### The three rulings, and what each changed
+
+| Ruling of 2026-10-06 | What changed | Files |
+| --- | --- | --- |
+| 1. `timeout/parked` gets a green control at the clause "cleanup". The gate refuses a named run that no control reads: an error, and no information line. | The control "the first attempt counts itself before its call, and no finalizer ran" reads `parked`. It compares the run's observation with `atParked`, and it checks `cleanupKeeps`. `Scenario.problems` gives the finding `no control reads the run`. The gate's command logs nothing more. The pinned `#guard_msgs (info)` is gone. The fixture `unread` is a red control. | `Test/Dogfood/Scenario.lean`, `Test/Dogfood/Scenario/Timeout.lean`, `Test/Dogfood/Scenario/Gate.lean`, `Test/Dogfood/README.md` |
+| 2. `timeout/applied` goes, and the red frontier control reads `before`. | `runsOf` of the timeout battery lists 16 named runs and no longer 17. The red control of the law "frontier" names `before`. Its comparison is the same text. | `Test/Dogfood/Scenario/Timeout.lean` |
+| 3. Proposal (f). | The header of the faces battery says that the keyed lane performs the scenarios' named runs. A docstring only. | `Test/Dogfood/Scenario/Faces.lean` |
+
+The four records now list 54 named runs. The timeout record has 16 runs and 20 controls. No
+record has an unread run, and no two names hold one script on one program. A scratch probe gives
+all four facts at the head (`probe/AuditAddendum.lean`): tested. The same probe compares the
+base's 55 runs of the driver, without `timeout/applied`, with the records' 54. Each pair has one
+name, one list of moves and one opening.
+
+The engine's lane does not list the name `applied`. Its table `taken` names six timeout runs:
+`before`, `second`, `late`, `kept`, `404` and `four`. So no fixture of the engine moves.
+
+### Commands and results
+
+`SLOT`, `FLAGS`, `WORK` and `SCRATCH` are as above. Each make command has its three `-o` flags
+written out: typed in the command, or in a bash array (`addendum-run.sh`, in the scratch
+folder). Each of the three runs of the lane's check has the host line
+`keyed host: effect 4.0.0-rc.112 under bun 1.4.2, loaded from /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect`.
+The worktree's two links stand at the end as at the start.
+
+**The default build and the gates.**
+
+```text
+SLOT lake build
+SLOT lake env lean -M6144 -DwarningAsError=true Test/All.lean
+```
+
+| Tree | Build | Modules and declarations at `[propext, Quot.sound]` | Planned goals | Declarations that rest on goals |
+| --- | --- | --- | --- | --- |
+| `4ffdf83f`, the merged head | `Build completed successfully (978 jobs).` | 728 and 87230 | 24 | 11 |
+| `2cadd3ec`, addendum 1 | `Build completed successfully (978 jobs).` | 728 and 87230 | 24 | 11 |
+| `d53ab29d`, addendum 2 | `Build completed successfully (978 jobs).` | 728 and 87230 | 24 | 11 |
+| `62d6f646`, the head | `Build completed successfully (978 jobs).` | 728 and 87230 | 24 | 11 |
+
+The gate lines at the head:
+
+```text
+Effect4 library-root gate: 170 API/utility modules, 296 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+Effect4 module and axiom gate: checked 728 modules and 87230 declarations; [...] semantic/test axioms are [propext, Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx
+```
+
+**The lane's check.**
+
+```text
+SLOT make FLAGS -W scripts/check-host-protocol.py check-host-protocol
+```
+
+It passes at the head, with exit status 0. Two of its lines differ from the merged head's:
+
+```text
+PASS keyed scenarios: 47 scripts performed on actual rc.112 in 167 runs: each with no reader, with its readers, and with each reader alone; 7 scripts with no host run
+PASS keyed scenarios on effect 4.0.0-rc.112 under bun 1.4.2: routing 8 scripts (2 entries measured by the host, 1 predicted by the ledger; no entry waits); workers 17 scripts (6 entries measured by the host, 5 through a reader, 2 of them zero by the run's own wait in 12 scripts; no entry waits); timeout 14 scripts (6 entries measured by the host, 2 through a reader, timers through a reader in 9 scripts; the whole-observation comparison waits on timers in 5 scripts (parked, timed-out, late, received, eager)); atomic 8 scripts (0 entries measured by the host, 5 through a reader; no entry waits); 7 scripts with no host run; 39 red controls
+```
+
+| Count | The merged head | The head | Reason |
+| --- | --- | --- | --- |
+| Scripts performed | 48 | 47 | the one run |
+| Runs | 171 | 167 | the run had four: with no reader, with its readers, with the cells reader alone, with the sleeps reader alone |
+| Timeout scripts | 15 | 14 | the one run |
+| Timeout scripts with `timers` through a reader | 10 | 9 | the run was one of them |
+| Red controls | 40 | 39 | the run's control of the fibers reader's premise. The five other kinds keep their lists. |
+| Scripts with no host run | 7 | 7 | the same seven |
+
+**The lane's table.** `WORK/host/scenario-evidence.md` has 31 lines on both trees. Ten differ,
+each a line of timeout. The other 21 are the same.
+
+```text
+17,26c17,26
+< | timeout | `calls` | host | all 15 |  |
+< | timeout | `receipts` | host | all 15 |  |
+< | timeout | `applications` | host | all 15 |  |
+< | timeout | `retired` | host | all 15 |  |
+< | timeout | `stored` | host | all 15 |  |
+< | timeout | `attempts` | reader: cells | all 15 |  |
+< | timeout | `cleanups` | reader: cells | all 15 |  |
+< | timeout | `root` | host | all 15 |  |
+< | timeout | `timers` | replay only | 5 of 15: parked, timed-out, late, received, eager |  |
+< | timeout | `timers` | reader: sleeps | 10 of 15: 503, four, 404, before, second, kept, timer-interrupt, host-interrupt, applied, resetting |  |
+---
+> | timeout | `calls` | host | all 14 |  |
+> | timeout | `receipts` | host | all 14 |  |
+> | timeout | `applications` | host | all 14 |  |
+> | timeout | `retired` | host | all 14 |  |
+> | timeout | `stored` | host | all 14 |  |
+> | timeout | `attempts` | reader: cells | all 14 |  |
+> | timeout | `cleanups` | reader: cells | all 14 |  |
+> | timeout | `root` | host | all 14 |  |
+> | timeout | `timers` | replay only | 5 of 14: parked, timed-out, late, received, eager |  |
+> | timeout | `timers` | reader: sleeps | 9 of 14: 503, four, 404, before, second, kept, timer-interrupt, host-interrupt, resetting |  |
+```
+
+**The files that leave, and what does not move.** `SCRATCH/addendum-compare.py` compares the two
+work folders. It takes the run out of each value of the merged head, and it compares the rest.
+
+```text
+python3 SCRATCH/addendum-compare.py SCRATCH/addendum/merged/latest SCRATCH/addendum/final/latest timeout/applied
+files: 286 before, 283 after
+3 files leave:
+  host/timeout-applied.json
+  host/timeout-applied.readers.ts
+  host/timeout-applied.ts
+0 files appear:
+9 files of both folders differ; 274 are the same bytes
+  host/scenario-alone-cases.json: the run stands 2 times before and 0 after; with the run taken out, the rest is the same value
+  host/scenario-cases.json: the run stands 1 times before and 0 after; with the run taken out, the rest is the same value
+  host/scenario-checked.json: the run stands 10 times before and 0 after; with the run taken out, the rest is the same value; the count of timeout scripts: 15 -> 14
+  host/scenario-evidence.md: 31 lines before, 31 after
+    10 lines differ, each a line of timeout; 21 lines are the same
+  host/scenario-host.json: the run stands 1 times before and 0 after; with the run taken out, the rest is the same value
+  host/scenario-reader-cases.json: the run stands 1 times before and 0 after; with the run taken out, the rest is the same value
+  scenario-lean.json: the run stands 1 times before and 0 after; with the run taken out, the rest is the same value
+  scenarios.json: the run stands 1 times before and 0 after; with the run taken out, the rest is the same value
+  tsconfig.json: the path of the check's temporary folder, as in every run
+RESULT: nothing moves but the run
+```
+
+| What leaves | Where it stood |
+| --- | --- |
+| The run's fixture | One entry of `WORK/scenarios.json`: the printed module, five acts, one call and the observation |
+| The run's recordings | `WORK/host/timeout-applied.json`, and four entries of three files: one with no reader, one with its readers, and two with one reader alone |
+| The run's two written modules | `WORK/host/timeout-applied.ts` under the plain header, and `WORK/host/timeout-applied.readers.ts` under the cells reader's header |
+| The host's result for the run | One entry of `WORK/host/scenario-host.json` |
+| Lean's replay of the run's recording | One entry of `WORK/scenario-lean.json` |
+
+The script checks each of the ten lines of the table too. Each differs from its old line by the
+count of scripts alone, and the last one by the name `applied` as well. The fixture that leaves
+had the acts, the call, the observation and the module of `timeout/before`: tested, on the merged
+head's fixtures. So the host still performs that script, under its one name.
+
+**The fixtures group, the OCaml estate and the documents.**
+
+```text
+SLOT make FLAGS -W ocaml/engine/test/scenarios/write.lean gen-fixtures
+cd ocaml && opam exec --switch=effect4 -- dune build -j 2
+cd ocaml && E4_LEAN_CORPUS=/Users/pooks/Dev/lean4-effect4/.lake/corpus opam exec --switch=effect4 -- dune test -j 2 --force engine
+SLOT make FLAGS -W scripts/check-docs.py check-docs
+```
+
+| Command | Result at the head |
+| --- | --- |
+| `make gen-fixtures` | `PASS generate: requested producers ran in dependency order`. `git status --short` is empty after it. The four scenario fixtures are the merged head's. |
+| `dune build` | exit status 0 |
+| `dune test --force engine`, with the corpus folder | exit status 0, with 1726 lines `PASS` and no line `FAIL`. The scenarios' test prints 183 checks, 0 failures and 102 positions. Its output is the merged head's bytes. |
+| `make check-docs` | `PASS check-docs: every path, link, citation and make target in 75 documents resolves` |
+
+`python3 scripts/check-language.py --show` gives no finding for this receipt and for the design
+note. It gives the one finding of the base for `Test/Dogfood/README.md`.
+
+### The red controls
+
+| Control | Where it stands | Result |
+| --- | --- | --- |
+| A record with a named run that no control reads | The fixture `unread` of `Test/Dogfood/Scenario/Gate.lean` | The gate refuses it: `unread: no control reads the run "opened"`. A guard pins that the record has this one finding. |
+| The timeout record itself, before `parked` had its control | A run between the two edits of addendum 1 | The battery failed with `timeout: no control reads the run "parked"`: tested. |
+| An unread run added again | A scratch copy of the timeout battery that lists `applied` once more | The copy does not compile: `timeout: no control reads the run "applied"`: tested. |
+| The new control on another script | A scratch copy whose run `parked` is `[.start, .flush]`, so the host holds no call | The copy does not compile: the control "the first attempt counts itself before its call, and no finalizer ran" fails: tested. |
+| The comparison of the two work folders | The same script with the name `timeout/before` | It exits with status 1 and reports 8 differences that it does not expect: tested. |
+
+### What the addendum does not change
+
+- **No theorem, no status.** `#plan_status` gives the same line for each of the eleven nodes as
+  at `d7892c9d`. The ten planned goals keep their statements. The slice advances no requirement.
+- **The open parts.** The counts of `generated/semantics.md` are the ones of the table above,
+  for each of R1 to R13. The merge did not change that file.
+- **The other controls.** Every other control keeps its kind, its clause, its name and its
+  comparison. The timeout battery has one control more, and no control fewer. A script compares
+  the three words of each control at the merged head and at the head: tested.
+- **The engine's lane.** Its fixtures, its test and its red control are as at the merged head.
+
+### Not run
+
+The same commands as above are **not run**: `make check-gen`, `make check-slow`,
+`make check-corpus`, `make check-target`, `make check-truth`, the conservativity script and
+`make gen-semantics`. The coordinator ran its gates at the merge. On 2026-10-06, at the end of
+the addendum, the disk had 22 GiB free.
+
+### Still open, and not mine
+
+- The dictionary's entries for "script" and "named run": the coordinator adds them.
+- Row 266's record: the coordinator's.
+- The mistaken install stays in the scratch folder, for the owner.
+- Proposal (e), the corpus folder of `dune test --force engine`, stands as proposed.
