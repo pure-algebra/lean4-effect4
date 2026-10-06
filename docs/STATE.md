@@ -319,6 +319,11 @@ In work since the suspension of the handover:
   is typed, and it agrees with the model. The closer's step answers true exactly where no
   lease is outstanding, and it enrols the closer otherwise (`drain_waits`, the registry
   claim `pool-drain-waits`). So Pool's model has six transitions and six step terms now.
+  Its second step is merged too: `Pool.make`, `Pool.use` and `Pool.close` are library
+  programs (`src/Effect4/Modules/Pool/Ops.lean`). Ten cases give the profile's answer on the
+  Lean machine, one schedule each, with four changed policies red
+  (`Test/Program/PoolPublic.lean`). A pool is made inside a scope: outside one, the built
+  program requires the scope's service. Scope, typing and the attempt laws come next.
 - **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
   changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a

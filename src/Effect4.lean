@@ -168,9 +168,12 @@ import Effect4.Modules.Semaphore.Cell
 import Effect4.Modules.Semaphore.Steps
 -- Semaphore's first operations, with the protected permit (decisions rows 259 to 261 and 276).
 import Effect4.Modules.Semaphore.Ops
--- Pool's cell and its five steps (decisions rows 267 to 269).
+-- Pool's cell and its six steps (decisions rows 267 to 269 and 276).
 import Effect4.Modules.Pool.Cell
 import Effect4.Modules.Pool.Steps
+-- Pool's first operations: `Pool.make`, `Pool.use` and the close that `make` registers
+-- (decisions rows 267 to 269, 276 and 279).
+import Effect4.Modules.Pool.Ops
 
 /-!
 # Effect4
