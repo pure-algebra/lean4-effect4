@@ -69,6 +69,7 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   const faulty = await read<Array<ScenarioResult & { fault: string; field: string }>>(resolve(runPath, "scenario-faults.json"))
   const plain = await read<Cases>(resolve(runPath, "scenario-cases.json"))
   const withReaders = await read<Cases>(resolve(runPath, "scenario-reader-cases.json"))
+  const aloneCases = await read<Array<Cases[number] & { reader: string }>>(resolve(runPath, "scenario-alone-cases.json"))
   const replays = await read<Replays>(scenarioLeanPath)
   const moved = await read<Replays>(scenarioControlsPath)
   const movedCases = await read<Array<{ name: string; predictions: ScenarioResult["predictions"] }>>(resolve(runPath, "scenario-controls.json"))
@@ -100,15 +101,32 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     const refused = (replay.verdicts ?? []).map(verdict => typeof verdict === "string" ? null : verdict.refused)
     deepStrictEqual(predicted, refused, `${name}: the recorder's predictions are not the session's verdicts`)
   }
-  /** The readers' control. The run with its readers and the exact wait leaves the recording of
-   * the plain run, byte for byte, and the same entries where the plain run measures one. */
-  const compareReaders = (name: string, host: ScenarioResult, without: KeyedRecording, withThem: KeyedRecording): void => {
+  /** The readers' control, in three parts.
+   *  - The run with its readers and the exact wait leaves the recording of the plain run, byte
+   *    for byte, the same entries where the plain run gives one, and the same exit of the root.
+   *  - A run with one reader alone, under the plain run's scheduler and wait, leaves that
+   *    recording and that exit too.
+   *  - What a reader gives alone is what it gives among the other readers and the exact wait.
+   * A script with no call has a recording of its controls alone. The root's exit and the third
+   * part are what sees such a program. A reader's effect on its own entries has no control:
+   * no run without the reader reads them. */
+  const sameRecording = (name: string, what: string, without: KeyedRecording, withThem: KeyedRecording): void => {
     const left = JSON.stringify(without), right = JSON.stringify(withThem)
-    if (left !== right) {
-      const at = without.records.findIndex((record, index) => JSON.stringify(record) !== JSON.stringify(withThem.records[index]))
-      throw new AssertionError({ message: `${name}: the readers change the recording at record ${at < 0 ? without.records.length : at}`, actual: right, expected: left })
-    }
+    if (left === right) return
+    const at = without.records.findIndex((record, index) => JSON.stringify(record) !== JSON.stringify(withThem.records[index]))
+    throw new AssertionError({ message: `${name}: ${what} the recording at record ${at < 0 ? without.records.length : at}`, actual: right, expected: left })
+  }
+  const compareReaders = (name: string, host: ScenarioResult, without: KeyedRecording, withThem: KeyedRecording, only: typeof aloneCases): void => {
+    sameRecording(name, "the readers change", without, withThem)
     deepStrictEqual(host.withReaders, { ...host.measured, ...host.predicted }, `${name}: the readers change an entry that the plain run gives`)
+    deepStrictEqual(host.rootExits[1], host.rootExits[0], `${name}: the readers change the root's exit`)
+    deepStrictEqual(only.map(run => run.reader).sort(), Object.keys(host.alone).sort(), `${name}: each reader has its run alone`)
+    for (const run of only) sameRecording(name, `the ${run.reader} reader alone changes`, without, run.recording)
+    for (const [reader, { rootExit, entries }] of Object.entries(host.alone)) {
+      deepStrictEqual(rootExit, host.rootExits[0], `${name}: the ${reader} reader alone changes the root's exit`)
+      for (const [field, value] of Object.entries(entries))
+        deepStrictEqual(value, host.through[field]?.value, `${name}: the ${reader} reader gives another ${field} alone than among the other readers`)
+    }
   }
   deepStrictEqual(hosts.map(run => run.name), manifest.runs.map(run => run.name), "every script that a host can perform is performed once")
   deepStrictEqual(replays.map(run => run.name), hosts.map(run => run.name), "every recording of a script is replayed once")
@@ -117,7 +135,8 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     compareHost(fixtureOf(host.name), host)
     compareReplay(host.name, replay)
     comparePredictions(host.name, host, replay)
-    compareReaders(host.name, host, byName(plain, host.name).recording, byName(withReaders, host.name).recording)
+    compareReaders(host.name, host, byName(plain, host.name).recording, byName(withReaders, host.name).recording,
+      aloneCases.filter(run => run.name === host.name))
   }
   const named = (name: string, field: string) => (error: unknown): boolean =>
     error instanceof AssertionError && error.message.startsWith(`${name}: `) && error.message.includes(field)
@@ -161,7 +180,7 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   const dropped: string[] = []
   for (const scenario of scenarioNames) {
     const host = hosts.find(run => run.scenario === scenario)!, recording = byName(plain, host.name).recording
-    throws(() => compareReaders(host.name, host, recording, { ...recording, records: recording.records.slice(0, -1) }), named(host.name, "the readers change the recording"))
+    throws(() => compareReaders(host.name, host, recording, { ...recording, records: recording.records.slice(0, -1) }, []), named(host.name, "the readers change the recording"))
     dropped.push(host.name)
   }
   // Red control of the predictions: one prediction taken away is a difference, where a script

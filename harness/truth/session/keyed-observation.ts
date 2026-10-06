@@ -75,6 +75,13 @@ export interface ScenarioResult {
   /** The entries of `measured` and `predicted` again, from the run with its readers and the
    * exact wait. */
   withReaders: Record<string, Json>
+  /** The root fiber's exit in the plain run and in the run with its readers. The readers'
+   * control compares the two. It is no entry of an observation unless a battery reads it. */
+  rootExits: [plain: Json, withReaders: Json]
+  /** What each reader gives in a run that has that reader alone, with the plain run's scheduler
+   * and wait: its entries, and the root's exit. The readers' control compares them with the
+   * run that has every reader. */
+  alone: { [Reader in ReaderName]?: { rootExit: Json; entries: Record<string, Json> } }
   /** The ledger's predictions of a refusal, by the record's index. */
   predictions: LedgerRefusal[]
   records: number
