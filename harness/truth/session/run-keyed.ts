@@ -25,6 +25,15 @@ if (!manifestPath || !outputPath) throw Error("usage: run-keyed.ts LEAN_FIXTURES
 const fixtures = JSON.parse(await readFile(manifestPath, "utf8")) as KeyedFixture[]
 const output = resolve(outputPath)
 await mkdir(output, { recursive: true })
+// The `effect` that a written module loads is the one that bun resolves from the output folder.
+// It must be the runner's own, the pinned package: in a folder with no `node_modules` above it,
+// bun takes a newer build from its cache, and the two builds then run one fiber together.
+const pinned = Bun.resolveSync("effect", import.meta.dir)
+if (Bun.resolveSync("effect", output) !== pinned)
+  throw Error(`the output folder resolves effect to ${Bun.resolveSync("effect", output)}, and the runner loads ${pinned}`)
+const versions = { effect: (JSON.parse(await readFile(resolve(dirname(pinned), "../package.json"), "utf8")) as { version: string }).version, bun: Bun.version }
+await writeFile(resolve(output, "versions.json"), JSON.stringify(versions) + "\n")
+console.log(`keyed host: effect ${versions.effect} under bun ${versions.bun}, loaded from ${dirname(dirname(pinned))}`)
 const receipts = []
 const cases = []
 for (const fixture of fixtures) {

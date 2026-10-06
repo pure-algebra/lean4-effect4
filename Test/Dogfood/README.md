@@ -230,7 +230,7 @@ committed fixture that Lean does not write, and `make check-ocaml` runs after th
 
 The keyed lane (`harness/truth/session/`) performs a scenario's scripts on its printed
 TypeScript module, on effect 4.0.0-rc.112 under bun. `make check-host-protocol` runs it, and its
-last lines print each scenario's counts.
+last lines give each scenario's counts.
 
 - **A host run** is one script of a control, on the program of that control. Lean writes its
   fixture: the printed module, the row table, the journal rows that the script leaves and the

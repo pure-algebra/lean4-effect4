@@ -177,7 +177,8 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   })
   const controls = { comparator: changed, hostMeasurement: faulty.map(host => `${host.name}: ${host.fault}, at ${host.field}`),
     replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted }
-  await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ scenarios, notPerformed: manifest.waiting, controls,
+  const versions = await read<{ effect: string; bun: string }>(resolve(runPath, "versions.json"))
+  await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ host: versions, scenarios, notPerformed: manifest.waiting, controls,
     evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, predicted by the ledger, measured through a reader, or replay only",
     boundary: "no agreement for another script or another entry; no host adequacy; no liveness" }, null, 2) + "\n")
   // An entry with two sources has two rows, each with its scripts by name.
@@ -201,5 +202,5 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     return `${scenario} ${scripts} scripts (${parts.join(", ")}; ${waiting})`
   }).join("; ")
   const count = Object.values(controls).reduce((sum, list) => sum + list.length, 0)
-  console.log(`PASS keyed scenarios: ${line}; ${manifest.waiting.length} scripts with no host run; ${count} red controls`)
+  console.log(`PASS keyed scenarios on effect ${versions.effect} under bun ${versions.bun}: ${line}; ${manifest.waiting.length} scripts with no host run; ${count} red controls`)
 }
