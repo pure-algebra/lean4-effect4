@@ -1,8 +1,10 @@
 == children-probe, on the seat's head
+effect that the reader loads: 4.0.0-rc.112 at <coordinator>/ts/eff/node_modules/effect ; bun 1.4.2
 layer under a restore site: read ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"
 control: the same layer under interruptible: read ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["interruptible",["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"valu
 childrenOf(restore).length = 1 ; childrenOf(interruptible).length = 1
 == children-probe, on the base 6d10fcc0
+effect that the reader loads: 4.0.0-rc.112 at <coordinator>/ts/eff/node_modules/effect ; bun 1.4.2
 layer under a restore site: REFUSED shape module
 control: the same layer under interruptible: read ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["interruptible",["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"valu
 childrenOf(restore).length = 0 ; childrenOf(interruptible).length = 1

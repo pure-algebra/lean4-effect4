@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The four engine and reader probes, on the seat's head and on the base's three files
 # (ts/eff/read.ts, ts/eff/ingest/ck.ts, ts/eff/ingest/oxc.ts at 6d10fcc0). bun only: no Lean.
+# Every run is `bun --no-install`: no probe may make bun resolve a package outside node_modules.
 # Usage: bash probes.sh <worktree> <scratch>
 set -uo pipefail
 W="$1"; S="$2"; B="$S/base-tree"
@@ -9,8 +10,8 @@ rm -rf "$B" && mkdir -p "$B"
 ln -s "$W/ts/eff/node_modules" "$B/ts/eff/node_modules"
 for probe in children-probe mask-layer mask-engines residual; do
   echo "== $probe, on the seat's head"
-  bun "$S/probe/$probe.ts" 2>&1 | cut -c1-400
+  bun --no-install "$S/probe/$probe.ts" 2>&1 | cut -c1-400
   echo "== $probe, on the base 6d10fcc0"
   sed "s|$W|$B|g" "$S/probe/$probe.ts" > "$S/probe/$probe-base.ts"
-  bun "$S/probe/$probe-base.ts" 2>&1 | cut -c1-400
+  bun --no-install "$S/probe/$probe-base.ts" 2>&1 | cut -c1-400
 done

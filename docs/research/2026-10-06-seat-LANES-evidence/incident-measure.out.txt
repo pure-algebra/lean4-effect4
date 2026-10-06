@@ -1,0 +1,16 @@
+== every path under ~/.bun, to depth 2, that changed after the session began
+~/.bun/install/cache
+== the manifest cache of effect
+~/.bun/install/cache/b7c5cc8194df205f.npm  181600 bytes  modified 2026-10-06 17:48:08
+bun-npm-manifest-cache-v0.0.7
+effect
+== the version folders of effect in the cache, newest first (none is from the session)
+Sep 9 05:18:28 2026 3.22.2@@@1
+Oct 1 10:24:01 2026 4.0.0@@@1
+Oct 5 08:27:58 2026 4.0.1@@@1
+== node_modules above the worktree's root and above the scratch folder
+absent
+absent
+absent
+absent
+absent

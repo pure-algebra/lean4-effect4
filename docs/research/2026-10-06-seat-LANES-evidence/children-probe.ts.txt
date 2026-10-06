@@ -1,7 +1,14 @@
 // Probe: a layer declared at a path through a restore site, read by the TypeScript reader.
-import { Result } from "effect"
+// The file takes nothing from a bare specifier: under the scratch folder no node_modules
+// resolves one, and bun would then fetch it. A result is read by its tag.
 import { readTypeScript, showFailure, childrenOf } from "<worktree>/ts/eff/read.ts"
 import { toJson } from "<worktree>/ts/eff/json.gen.ts"
+import { readFileSync } from "node:fs"
+// Which build of `effect` answers: the one that the reader's own folder resolves. The probe
+// imports no package itself, and it runs under `bun --no-install`.
+const resolved = Bun.resolveSync("effect", "<worktree>/ts/eff")
+const packageRoot = resolved.slice(0, resolved.lastIndexOf("/node_modules/effect/") + "/node_modules/effect".length)
+console.log("effect that the reader loads:", JSON.parse(readFileSync(packageRoot + "/package.json", "utf8")).version, "at", packageRoot, "; bun", Bun.version)
 const key = 'Context.Service<"k4_4", number>("k4_4")'
 const moduleUnderRestore = [
   `const L_1_0_0_0_0 = Layer.succeed(${key}, 7)`,
@@ -13,7 +20,7 @@ const moduleUnderInterruptible = [
 ].join("\n") + "\n"
 for (const [name, source] of [["layer under a restore site", moduleUnderRestore], ["control: the same layer under interruptible", moduleUnderInterruptible]] as const) {
   const r = readTypeScript(source, "probe.ts")
-  console.log(name + ":", Result.isFailure(r) ? "REFUSED " + showFailure(r.failure) : "read " + toJson(r.success).slice(0, 150))
+  console.log(name + ":", r._tag === "Failure" ? "REFUSED " + showFailure(r.failure) : "read " + toJson(r.success).slice(0, 150))
 }
 const restore = { _tag: "restore", saved: { _tag: "var", index: 0 }, body: { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 1 } } } } as const
 console.log("childrenOf(restore).length =", childrenOf({ sort: "eff", eff: restore as never }).length, "; childrenOf(interruptible).length =", childrenOf({ sort: "eff", eff: { _tag: "interruptible", body: restore.body } as never }).length)

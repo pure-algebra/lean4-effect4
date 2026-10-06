@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Red controls of part 2, on a copy of ts/eff under the scratch folder. bun and tsgo only.
+# The copy's node_modules is a link to the worktree's, and every bun run is `bun --no-install`.
+# tsgo runs by its path under node_modules/.bin.
 #   A. the corpus's mask files (84 files, 4 probes under 21 styles) through `check-corpus.ts
 #      foreign-batch`: green on the head; red with the base's childrenOf, with a walkProgram
 #      that takes a restore site as a leaf, and with the base's two engines.
@@ -10,8 +12,8 @@ W="$1"; S="$2"; R="$S/ts-eff-red"; M="$S/foreign-mask"
 rm -rf "$M" && mkdir -p "$M" && cp "$S"/foreign/*-mask-* "$M/"
 echo "the corpus's mask files: $(ls "$M" | grep -c '\.ts$') sources"
 fresh() { rm -rf "$R" && mkdir -p "$R" && (cd "$W/ts/eff" && tar cf - --exclude node_modules .) | (cd "$R" && tar xf -) && ln -s "$W/ts/eff/node_modules" "$R/node_modules"; }
-batch() { (cd "$R" && bun ingest/check-corpus.ts foreign-batch "$M" 0 500 2>&1 | grep -E "^error:" | head -1 | cut -c1-330; echo "   exit=${PIPESTATUS[0]}"); }
-tsgo() { (cd "$R" && node node_modules/@typescript/native-preview/bin/tsgo --noEmit --pretty false -p tsconfig.json 2>&1 | cut -c1-260; echo "   exit=${PIPESTATUS[0]}"); }
+batch() { (cd "$R" && bun --no-install ingest/check-corpus.ts foreign-batch "$M" 0 500 2>&1 | grep -E "^error:" | head -1 | cut -c1-330; echo "   exit=${PIPESTATUS[0]}"); }
+tsgo() { (cd "$R" && node_modules/.bin/tsgo --noEmit --pretty false -p tsconfig.json 2>&1 | cut -c1-260; echo "   exit=${PIPESTATUS[0]}"); }
 edit() { python3 - "$R/$1" "$2" "$3" <<'PY'
 import pathlib, sys
 p = pathlib.Path(sys.argv[1]); t = p.read_text()
