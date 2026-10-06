@@ -45,6 +45,8 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- The committed fixtures, read where this battery is elaborated. -/
 def committed : List (String × String) :=
   [ ("workers.txt", include_str "../../../ocaml/engine/test/scenarios/workers.txt")
+  , ("queue-workers.txt",
+      include_str "../../../ocaml/engine/test/scenarios/queue-workers.txt")
   , ("routing.txt", include_str "../../../ocaml/engine/test/scenarios/routing.txt")
   , ("atomic.txt", include_str "../../../ocaml/engine/test/scenarios/atomic.txt")
   , ("timeout.txt", include_str "../../../ocaml/engine/test/scenarios/timeout.txt") ]

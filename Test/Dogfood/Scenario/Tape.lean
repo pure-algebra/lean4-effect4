@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Workers
+import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
@@ -243,9 +244,15 @@ of the runs in the file's order.
   host row, so its table is empty.
 * **Timeout.** A reply before the timeout, the second attempt's reply after it, a late reply, a
   reply kept and never applied, a failure that does not retry, and four timeouts. A refused row
-  gives no decision, so a late reply leaves no step on the tape. -/
+  gives no decision, so a late reply leaves no step on the tape.
+* **Queue workers.** The whole run to the root's exit, and the two cancellations that stand
+  between a reply application and its flush: a host has no run of those two, so the engine is
+  their second machine. The crew's program is large, and a fixture writes it once for each run,
+  so the lane takes three runs. -/
 def taken : List (String × Scenario × List String) :=
   [ ("workers.txt", Workers.scenario, ["lowest", "applied-1-2", "applied-2-1", "cancelled"])
+  , ("queue-workers.txt", QueueWorkers.scenario,
+      ["closed", "cancelled-accepted", "cancelled-selected"])
   , ("routing.txt", Routing.scenario, ["200", "404", "401", "escape"])
   , ("atomic.txt", Atomic.scenario, ["finished", "interrupted", "stopped"])
   , ("timeout.txt", Timeout.scenario, ["before", "second", "late", "kept", "404", "four"]) ]

@@ -14,7 +14,7 @@
  * a reply with no live bound call as `noCall` and a second reply at a key as `pendingReply`,
  * and `applyReply` refuses a key with no bound call or no stored reply as `noCall`. The lane's
  * check compares each prediction with the verdict that Lean's replay gives the same record. */
-import { Cause, Effect, Exit, Option, Result, type Fiber } from "effect"
+import { Cause, Deferred, Effect, Exit, Option, Result, type Fiber } from "effect"
 import { canonicalJson, payloadOf } from "../prelude.ts"
 import { equalJson, type Json } from "./protocol.ts"
 import { decodeKeyed, decodeRecord, hostProtocol, keyText, transition, type DecisionRecord, type Key, type KeyedHeader, type KeyedRecording } from "./keyed-protocol.ts"
@@ -32,32 +32,47 @@ export interface HeldCall extends Key { callId: number; row: number; request: Js
 export interface LedgerRefusal { readonly at: number; readonly row: "submit" | "apply"; readonly reason: "noCall" | "pendingReply" }
 export type Pair = readonly [string, string]
 export interface ExternalHandle { readonly index: number; readonly session: string }
-export const valueJson = (value: unknown): Json => {
-  if (value === undefined || value === null) return null
-  if (typeof value === "boolean" || typeof value === "string") return value
-  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0)) return value
-  if (Array.isArray(value)) return value.map(valueJson)
-  if (Option.isOption(value)) return Option.isNone(value) ? { none: true } : { some: valueJson(value.value) }
-  if (Exit.isExit(value)) {
-    if (Exit.isFailure(value)) throw Error("nested failed Exit requires an explicit cause image")
-    return { ctor: 0, args: [valueJson(value.value)] }
+/** The image of a value, under one choice: whether a `Deferred` has an image. */
+const imageOf = (deferred: boolean): ((value: unknown) => Json) => {
+  const image = (value: unknown): Json => {
+    if (value === undefined || value === null) return null
+    if (typeof value === "boolean" || typeof value === "string") return value
+    if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0)) return value
+    if (Array.isArray(value)) return value.map(image)
+    if (Option.isOption(value)) return Option.isNone(value) ? { none: true } : { some: image(value.value) }
+    if (Exit.isExit(value)) {
+      if (Exit.isFailure(value)) throw Error("nested failed Exit requires an explicit cause image")
+      return { ctor: 0, args: [image(value.value)] }
+    }
+    if (Result.isResult(value)) return Result.isFailure(value)
+      ? { ctor: 0, args: [image(value.failure)] } : { ctor: 1, args: [image(value.success)] }
+    if (typeof value === "object" && value && "index" in value && "session" in value)
+      return { handle: image(value.index) }
+    if (deferred && Deferred.isDeferred(value)) return { handle: "deferred" }
+    // A payload class instance (`Data.TaggedError`, decisions row 120) is the record of its data.
+    const payload = payloadOf(value)
+    if (payload !== null) return image(payload)
+    // A record is the frame of `Effect4.Machine.Record.frame`: its names in UTF-8 byte order,
+    // then its values. A printed module builds a record as a plain object (`recordValue`).
+    if (typeof value === "object" && value && Object.getPrototypeOf(value) === Object.prototype) {
+      const record = value as Record<string, unknown>
+      const names = Object.keys(canonicalJson(Object.fromEntries(Object.keys(record).map(name => [name, null]))) as object)
+      return { ctor: 0, args: [names, names.map(name => image(record[name]))] }
+    }
+    throw Error("value outside the selected transport profile")
   }
-  if (Result.isResult(value)) return Result.isFailure(value)
-    ? { ctor: 0, args: [valueJson(value.failure)] } : { ctor: 1, args: [valueJson(value.success)] }
-  if (typeof value === "object" && value && "index" in value && "session" in value)
-    return { handle: valueJson(value.index) }
-  // A payload class instance (`Data.TaggedError`, decisions row 120) is the record of its data.
-  const payload = payloadOf(value)
-  if (payload !== null) return valueJson(payload)
-  // A record is the frame of `Effect4.Machine.Record.frame`: its names in UTF-8 byte order,
-  // then its values. A printed module builds a record as a plain object (`recordValue`).
-  if (typeof value === "object" && value && Object.getPrototypeOf(value) === Object.prototype) {
-    const record = value as Record<string, unknown>
-    const names = Object.keys(canonicalJson(Object.fromEntries(Object.keys(record).map(name => [name, null]))) as object)
-    return { ctor: 0, args: [names, names.map(name => valueJson(record[name]))] }
-  }
-  throw Error("value outside the selected transport profile")
+  return image
 }
+/** The image of a value of the transport profile: a call's request, a completion, an exit. A
+ * `Deferred` is outside the profile. */
+export const valueJson = imageOf(false)
+/** The image of a cell that the cells reader reads. It is `valueJson`, and a `Deferred` has an
+ * image too. A `Deferred` has no number on the host, so its image holds no identity:
+ * `{"handle": "deferred"}`. Lean writes the same image where a scenario's wire chooses its
+ * writer of the same name (`cellJson`, `Keyed.lean`): for a module's private cell, whose waiting
+ * requests hold `Deferred` handles. The lane then compares such a cell up to its handles. It
+ * does not compare which handle stands where. */
+export const cellJson = imageOf(true)
 /** The inverse of `valueJson` on a scripted completion: unit, a number, a boolean, a string, a
  * list, an option and a record. A record's frame has two columns of one length, and its first
  * column holds its names. Any other frame is refused. */

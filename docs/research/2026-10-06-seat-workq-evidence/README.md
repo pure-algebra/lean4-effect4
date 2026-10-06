@@ -15,6 +15,7 @@ Status: evidence of a receipt (history, not authority). The receipt is
 | `left.out.txt` | its output: one line for each budget | tested, on the Lean machine |
 | `rows.lean.txt` | the least command budget of each row of eight scripts, read at the funded run's machine | a finite probe |
 | `rows.out.txt` | its output: one line for each row that gives the machine a decision | tested, on the Lean machine |
+| `host-evidence.md` | the keyed lane's table of each entry's source of evidence, as the check wrote it in its work folder | tested, on rc.112 under bun 1.4.2 |
 
 The five Lean files are not modules of the tree, and no gate runs them. To run one again,
 follow these steps from the repository's root.
