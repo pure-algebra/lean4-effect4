@@ -1,0 +1,42 @@
+{
+  "head": "0dbb17c32fc7fbc40b1c23769a7d35ae2f93f987",
+  "source_hashes_rechecked": 9,
+  "checked_sources": [
+    "AGENTS.md",
+    "src/Effect4/Laws/Program/Template.lean",
+    "src/Effect4/Data/Constructive.lean",
+    "src/Effect4/Data/Row.lean",
+    "src/Effect4/Program/Ty.lean",
+    "src/Effect4/Laws/Program/Typed/Membership.lean",
+    "docs/research/2026-10-04-seat-T4-receipt.md",
+    "tools/Tools/SemanticsRegistry.lean",
+    "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md"
+  ],
+  "weakening_statements_equal": true,
+  "status_probe_controls": 5,
+  "evidence": "Source comparison and isolated Python only; no Lean runs",
+  "repository_edits": false,
+  "advisory_delivery": {
+    "ui_message": 92,
+    "state": "verified queued, unread at delivery",
+    "composer": "empty afterward",
+    "force_sent": false,
+    "active_seats": [
+      "T5",
+      "DOGFOOD"
+    ]
+  },
+  "artifacts": {
+    "recommendations.md": "fd2a2853871a062b7ad4e88326341cdced459516bde2902ce7c45364fcd0b703",
+    "reuse/sources.json": "656d330d397c68aff122324f07a32c85159afc5d0db3ed1058d2bac354038639",
+    "reuse/source-checks.json": "c2e83ab791bdb31a53a2c23fa48ee236c6f14ed19f3fe0ccfcc990eab0277448",
+    "reuse/review.md": "3cd574a658b02f7b7b5fbc2a2ac162b30b69e85eb0d43816abe26c241ba6d2d1",
+    "reuse/receipt.json": "c3faff7338acdc16e1ef8441e3afc25a87afbd832249b6197c41895e47cdf671",
+    "template/review.md": "e88553e77aea925ecddf81d48d71c25d9838496b21f354bc60aa589f56284e26",
+    "template/receipt.json": "a1f2b3a62aa1c9061633f1a36d0d962191938d6e8e55af82eed6012c4f996131",
+    "status/probe.py": "d5b0ea95e860183d33ecced6d6f901656dadf7b26d9e8e8bbbb1140a59d01e7c",
+    "status/receipt.json": "6f09f416d616b793ac0c9b000837415825a5278ef9d88a1cd3a9e9ffa6f6f0f4",
+    "template/source/src/Effect4/Data/Constructive.lean": "f0d0431d80d4c78ccde04129a294d9988db2a7e55bfa9f09c56a9c57254cdb14",
+    "template/source/src/Effect4/Laws/Program/Template.lean": "9ac7073790ce330a7720cdf8070ad6e102cd18f9bd9ade7bf4eedaaa4416d832"
+  }
+}

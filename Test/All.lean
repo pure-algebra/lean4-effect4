@@ -48,6 +48,7 @@ import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
 import Test.Program.FormationContract
 import Test.Program.FoldContract
+import Test.Program.FoldHygiene
 import Test.Program.RecordValues
 import Test.Program.MapValues
 import Test.Program.MapTyping
@@ -157,9 +158,9 @@ import Test.Program.LoopSoundContract
 import Test.Program.LoopAgreementContract
 import Test.Program.AgreementContract
 import Test.Program.MeaningEqContract
-import Test.Program.QueueModel
 import Test.Program.QueueContract
 import Test.Program.QueueCapacity
+import Test.Program.QueueProfile
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract

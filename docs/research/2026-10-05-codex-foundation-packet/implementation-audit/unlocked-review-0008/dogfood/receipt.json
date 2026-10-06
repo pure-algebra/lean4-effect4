@@ -1,0 +1,88 @@
+{
+  "reviewed_base": "c27d5745",
+  "reviewed_head": "6bfc1649369826237913aeecafe3e6eb69e0ae2e",
+  "head_at_finish": "6bfc1649369826237913aeecafe3e6eb69e0ae2e",
+  "status_at_finish": " M Test/All.lean\n M Test/Dogfood/README.md\n M Test/Dogfood/Scenario.lean\n?? Test/Dogfood/Scenario/Lowered.lean\n?? ocaml/engine/test/scenarios/\n",
+  "evidence": "source inspection; retained outputs; Python predicate mirror",
+  "commands": {
+    "diff_check": {
+      "command": "git diff --check c27d5745..6bfc1649",
+      "exit": 0,
+      "output": ""
+    },
+    "python_mirror": {
+      "command": [
+        "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+        "-B",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-unlocked-review/dogfood/gate-predicate-mirror.py"
+      ],
+      "version": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+      "exit": 0,
+      "script_sha256": "7b7ebd7deadceadd4e663ac92730de78c63be11047399a6ab3fef04174b3f040",
+      "cases": {
+        "positive_workers": [],
+        "wrong_top_drops_cleanup_dependency": [],
+        "bad_name": [
+          "unresolved declaration: Nowhere.program"
+        ],
+        "unplaced_battery_top": [
+          "unplaced: play_id"
+        ],
+        "untagged_law_top_committed_prefix_rule": [],
+        "placed_battery_positive": []
+      }
+    }
+  },
+  "retained": {
+    "claims-routing.out": {
+      "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/dogfood/claims-routing.out",
+      "sha256": "5e5673227b5eb57dece4a7650c6f1ff4d3a34051def2025a2e9aae5cc63cd064",
+      "bytes": 2380
+    },
+    "fuzz-routing.out": {
+      "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/dogfood/fuzz-routing.out",
+      "sha256": "9788f38eec69957ae68ee10ff1a9699b35c364b08995fc86e095235d4b09965f",
+      "bytes": 186
+    },
+    "build-all-slice3b.log": {
+      "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/dogfood/build-all-slice3b.log",
+      "sha256": "e81100b236f6fb9d9cbf8d4b3eb4f3a30931314c7b0b7b1d987a25d5ecf3c74d",
+      "bytes": 12037
+    },
+    "probe/ClaimsRouting.lean": {
+      "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/dogfood/probe/ClaimsRouting.lean",
+      "sha256": "9e38c82ecd9dc884083dad414271e464fbf75e948e3dadfebd663fbc3d513968",
+      "bytes": 518
+    },
+    "probe/FuzzR.lean": {
+      "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/dogfood/probe/FuzzR.lean",
+      "sha256": "2e7aaa77c55ac564254b93171b3464d5ee0f3206d3a5a95cee12bc5c0712198c",
+      "bytes": 17590
+    },
+    "time-Lowered.s4.out": {
+      "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/dogfood/time-Lowered.s4.out",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "findings": [
+    "top theorem connection still unchecked",
+    "law-module prefix acceptance now committed",
+    "active empty-table flag describes observed equality as absence of table reads"
+  ],
+  "exclusions": [
+    "active lower work acceptance",
+    "later handles scenario",
+    "full host observation",
+    "live Lean dependency query"
+  ],
+  "fences": {
+    "repo_edits": false,
+    "builds": false,
+    "generators": false,
+    "installs": false,
+    "target_runtime_probes": false,
+    "ui": false,
+    "claude_messages": false
+  }
+}

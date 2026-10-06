@@ -1,0 +1,182 @@
+[
+  {
+    "path": "AGENTS.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "path": "docs/STATE.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "f09205b52890012a8b0acd97ab615ac69bf5345c57ac8e3cd65e33f31fc2a101",
+    "bytes": 91882
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "a64f413ae8af2798d11c80cafbc88456ad695d7ca76647f1fcf5c28493bd2e6b",
+    "bytes": 320040
+  },
+  {
+    "path": "docs/core/semantics.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "370a640470e329cce2af6551f6d2be2907af951a93ac6758ab619623663399a3",
+    "bytes": 72593
+  },
+  {
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "1c3346a914076b945343660f6a24204842614103f8f7feac25dbfcc2cba792b3",
+    "bytes": 65980
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "15d49c50ad4c434f8fea60f9a75355fb836d17b9bd99890a787401300d69204e",
+    "bytes": 19582
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "4fb23eaa5f1df0263b0bb2264fdfe0df46adaa9acc21e15dd53c0d0112ab80cb",
+    "bytes": 9428
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "58a29a90524fc97cb71e509a219dd99099a19102046975a2148e5e38dba38d13",
+    "bytes": 40431
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "3ec92387d66e9bbef129b2ebb01b01c6511cb89263e0d124952f5a3e3cdc5b99",
+    "bytes": 10369
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "c2303ca86f1f973e947051582f141ee6d4593ccaf51feb38ff49831bca2fc8ce",
+    "bytes": 26698
+  },
+  {
+    "path": "Test/Program/QueueProfile.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "fcef4f35a1c4fe77430fbe183fd0f195d057c76efa270d742f3d23fd71bbb85f",
+    "bytes": 22353
+  },
+  {
+    "path": "src/Effect4/Program/Fragment.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "6f07cef6eb516d58dfbbe9dac28f5ba11d9f55511eea56251059eb54168c98e8",
+    "bytes": 1760
+  },
+  {
+    "path": "src/Effect4/Program/Authoring/Loops.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "db8f346db8540233226e1b86d91b8e445731ef35b4b1bfb815e99c377a661a3a",
+    "bytes": 3240
+  },
+  {
+    "path": "src/Effect4/Laws/Program/DenoteB.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "96e4fc0e142f85296e4226064ac04cce9f5cebbb4e81473b25f475bc694faee3",
+    "bytes": 22927
+  },
+  {
+    "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+    "bytes": 2381
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "a2a7a7be54c308f1071344de71e080d2aabe0da0909421945ac579cf50953d71",
+    "bytes": 45515
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "8d99c997f1e9ad25f5a562e2ab4a22f260ef8aff9ab64d9eb62a148951d64519",
+    "bytes": 96705
+  },
+  {
+    "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+    "bytes": 6647
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Authoring/Loops.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "86ab8b6dd930d2e86907137164925f0da01a37217c198a82a4a60cd3799f6968",
+    "bytes": 2797
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Iter.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "7e96d47319e44efb207ca4449ad4ed2b8d7908ca038cf2c391f15078d2972f62",
+    "bytes": 2720
+  },
+  {
+    "path": "src/Effect4/Laws/Program/LoopSound.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "a7dfda8b59b2231bafac336d2c41e1444a7a47f67b7a604265a4e00efda7c0fd",
+    "bytes": 25749
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Commands/Clauses/Loop.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "0a441040cd11278889d0a2929354503848ae2997f0acaf97d8406cfe476bc564",
+    "bytes": 13362
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+    "bytes": 30908
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "66f1a635b59f7015a4f269f08b70ead0364307376f998156b002667d541bee6d",
+    "bytes": 177144
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "7c965c3f19c89fc004e4de8f8d74f88c6327badaece37d8f8a217037812de873",
+    "bytes": 90219
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "291b79b6bf5d4c24645e39fce9ceeed35c82e2ac0b8f293dedb3293052eea9f0",
+    "bytes": 186262
+  },
+  {
+    "path": "src/Effect4/Laws/Program/InterpR.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "bef167de77485d557d3b1f6ff777889fb5f723e286a4619d4917d9c691509715",
+    "bytes": 21624
+  },
+  {
+    "path": "src/Effect4/Machine/Stores.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "15aaeb7c35fa12a2f605ed5110f7a49a155e7560d287ef847c1f897b0764db7a",
+    "bytes": 137021
+  },
+  {
+    "path": "src/Effect4/Machine/Term.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "4dfebbe9d27217db0d3fca85ef7bf4fd72b437020906189b1818369877fdbff4",
+    "bytes": 29590
+  },
+  {
+    "path": "src/Effect4/Machine/Exit.lean",
+    "git_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+    "sha256": "8a9a78b035deb4d850d535ece9580c89c66940e504690ec029d4eb82effde7d4",
+    "bytes": 10967
+  }
+]

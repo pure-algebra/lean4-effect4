@@ -1,0 +1,58 @@
+{
+  "time_utc": "2026-10-06T00:08:02.152998+00:00",
+  "kind": "unlocked current-state review",
+  "ui": {
+    "app": "Claude",
+    "project": "lean4-effect4",
+    "coordinator": "Queues plan and design decisions",
+    "url": "claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "unlocked": true,
+    "seats": [
+      "T5",
+      "DOGFOOD"
+    ],
+    "transcripts_read": true,
+    "prior_message_94_consumed": true,
+    "advisory_message": 98,
+    "normal_send": true,
+    "composer_empty_after": true,
+    "consumption": "responding; detailed consumption not yet verified"
+  },
+  "heads": {
+    "main": "235ed2941a6299710e3cf8c019d9d93eafaed458",
+    "t5": "d5559a5fd443f2e0e33ce15332ae077a20c79b37",
+    "dogfood": "6c0b477815922aa2923ba3fec13324b5fbf29935"
+  },
+  "evidence": {
+    "source_hashes_verified": 40,
+    "queue_python_controls": 17,
+    "dogfood_python_predicate_controls": 6,
+    "lean": "retained seat logs only; no monitor rerun",
+    "active_source": "DOGFOOD slice4 committed as6c0b4778 during review;14 snapshot hashes match; not full acceptance"
+  },
+  "findings": [
+    "Q1 first-profile restriction and exact notification comparison",
+    "scenario top-to-clause proof association and placement evidence",
+    "T5 annotation refusal diagnostic",
+    "finite empty-table observation wording"
+  ],
+  "resolved": [
+    "previous Queue notification/order/hint/batch/annotation corrections"
+  ],
+  "open": [
+    "T5 target work",
+    "DOGFOOD later scenarios and final receipt",
+    "shared list-lemma consolidation after T5",
+    "mask and effectful Queue implementation"
+  ],
+  "no_handoff": true,
+  "advisory_sha256": "6d6d9bd2d969a7e99c0f4574a8e426b4e06fad64afbee81ef40d5ae283a72f95",
+  "fences": {
+    "repository_edits": false,
+    "builds": false,
+    "generators": false,
+    "installs": false,
+    "seat_interruption": false
+  },
+  "supersedes_pending": "heartbeats/2026-10-05T234132Z pending findings refreshed in Message98"
+}

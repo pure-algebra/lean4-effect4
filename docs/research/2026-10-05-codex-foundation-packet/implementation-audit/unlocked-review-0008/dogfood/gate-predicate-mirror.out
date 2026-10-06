@@ -1,0 +1,15 @@
+{
+  "scope": "Python metadata predicate mirror only; not Lean or a proof-dependency query",
+  "cases": {
+    "positive_workers": [],
+    "wrong_top_drops_cleanup_dependency": [],
+    "bad_name": [
+      "unresolved declaration: Nowhere.program"
+    ],
+    "unplaced_battery_top": [
+      "unplaced: play_id"
+    ],
+    "untagged_law_top_committed_prefix_rule": [],
+    "placed_battery_positive": []
+  }
+}

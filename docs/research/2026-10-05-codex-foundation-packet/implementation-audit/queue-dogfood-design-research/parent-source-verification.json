@@ -1,0 +1,474 @@
+{
+  "summary": {
+    "queue": {
+      "count": 23,
+      "live_match": 15,
+      "committed_match": 23,
+      "retained_or_live": 23
+    },
+    "proof": {
+      "count": 30,
+      "live_match": 23,
+      "committed_match": 30,
+      "retained_or_live": 30
+    },
+    "dogfood": {
+      "count": 22,
+      "live_match": 19,
+      "committed_match": 20,
+      "retained_or_live": 22
+    }
+  },
+  "rows": [
+    {
+      "group": "queue",
+      "path": "AGENTS.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/STATE.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/core/decisions.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/core/machine-state.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.out",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "Test/Program/QueueModel.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "Test/Program/QueueProfile.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "Test/Program/QueueCapacity.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Program/Authoring.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Program/Authoring/Folds.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Program/Authoring/Loops.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/Authoring/Loops.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Program/Fragment.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "queue",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "AGENTS.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/STATE.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/core/decisions.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/core/semantics.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "Test/Program/QueueProfile.lean",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Program/Fragment.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Program/Authoring/Loops.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Authoring/Loops.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Iter.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/LoopSound.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Typed/Commands/Clauses/Loop.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Laws/Program/InterpR.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Machine/Stores.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Machine/Term.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "proof",
+      "path": "src/Effect4/Machine/Exit.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "AGENTS.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Dogfood/README.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Dogfood/Scenario.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Dogfood/P3WorkerQueue.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Dogfood/Scenario/Workers.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Dogfood/Scenario/Tape.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Dogfood/Scenario/Lowered.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "src/Effect4/Laws/Run.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Program/MeaningEqContract.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Program/QueueModel.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "docs/core/decisions.md",
+      "live_match": true,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "docs/STATE.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+      "live_match": false,
+      "committed_match": true
+    },
+    {
+      "group": "dogfood",
+      "path": "src/Effect4/Laws/Modules/Queue/Model.lean",
+      "live_match": true,
+      "committed_match": false
+    },
+    {
+      "group": "dogfood",
+      "path": "Test/Program/QueueProfile.lean",
+      "live_match": true,
+      "committed_match": false
+    }
+  ]
+}

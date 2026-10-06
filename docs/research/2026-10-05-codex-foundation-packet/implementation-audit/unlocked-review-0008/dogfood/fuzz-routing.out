@@ -1,0 +1,4 @@
+14
+some (579194, 541984, 0, 440)
+some (96, true, [false, false])
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -M6144   23.84s user 1.39s system 96% cpu 26.110 total

@@ -1,4 +1,4 @@
-import Test.Program.QueueModel
+import Effect4.Laws.Modules.Queue.Model
 
 /-!
 Retained large controls and the bounded exploration of the Queue's abstract model. No default
@@ -9,7 +9,8 @@ import reaches this file. Run it by hand:
 Its bodies are the research model's, byte for byte (`QueueContract.lean` beside this file).
 -/
 
-namespace QueueContract
+namespace QueueLargeControls
+open Effect4.Queue.Model
 /-! ## Controls: an unbounded queue has no limit
 
 Codex's review of 2026-10-05 found that an earlier version of this model used one million as
@@ -109,4 +110,4 @@ def shutdownNamesNobody : Bool × Bool :=
 
 #guard shutdownNamesNobody = (true, false)
 
-end QueueContract
+end QueueLargeControls

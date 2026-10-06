@@ -1,0 +1,13 @@
+{
+  "/Users/pooks/Dev/lean4-effect4/AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Template.lean": "9ac7073790ce330a7720cdf8070ad6e102cd18f9bd9ade7bf4eedaaa4416d832",
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/ListFold.lean": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Typing/Rules.lean": "62cd540f247ca039174c1fffc9df3e9a64c1038f6b4a6603b6404f2659b8ce23",
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Eff.lean": "6118a369cf30f88ae41e1811d84cdf00fb9158748d9174e6692a048b28bdfb37",
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Data/Constructive.lean": "f0d0431d80d4c78ccde04129a294d9988db2a7e55bfa9f09c56a9c57254cdb14",
+  "/Users/pooks/Dev/lean4-effect4/tools/Tools/SemanticsRegistry.lean": "1c3346a914076b945343660f6a24204842614103f8f7feac25dbfcc2cba792b3",
+  "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean/Init/Data/List/Lemmas.lean": "0724ebc7c72c87ad6d480dba407c43cc60393e7a0facfbaa6670045f66f636ac",
+  "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean/Init/Data/List/Find.lean": "46c8f9f09f6790204446656b8b8cbd62420e83d0da3c6ec727a9862cc19181aa",
+  "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean/Init/Data/List/Basic.lean": "6fe2c8b4db30895cfc240e96d49119a8fb9997c6074e294ba62352a7f9adba72",
+  "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean/Init/Data/List/Nat/InsertIdx.lean": "ab5069dbe27bbe218da5db1e8828769104de17089260c241b62431660d368cb9"
+}

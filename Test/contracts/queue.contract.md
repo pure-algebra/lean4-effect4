@@ -7,10 +7,15 @@ It authorizes no additional runtime behaviour.
 
 | Part | Evidence on 2026-10-05 |
 | --- | --- |
-| `Test/Program/QueueModel.lean` | tested: it builds under the battery's options |
+| `src/Effect4/Laws/Modules/Queue/Model.lean` | tested: it builds in the law graph |
 | `Test/Program/QueueContract.lean` | tested: its guard checks hold |
-| `acceptLoop_length_le` in `Test/Program/QueueCapacity.lean` | proved, at `[propext, Quot.sound]` |
-| `positive_suspend_step_capacity` in the same file | a planned goal: stated, not proved |
+| `acceptLoop_length_le` in `src/Effect4/Laws/Modules/Queue/Capacity.lean` | proved, at `[propext, Quot.sound]` |
+| `positive_suspend_step_capacity` in the same file | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+| `first_profile_closed` in `src/Effect4/Laws/Modules/Queue/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+
+The model and its proved statements moved into the law graph on 2026-10-05 (decisions row 255).
+Their declarations are in the namespace `Effect4.Queue.Model`. No definition changed.
+The batteries keep the pinned outputs and the finite controls.
 
 ## Authority and owned surface
 
@@ -19,7 +24,8 @@ Row 251 orders the public implementation after FOLD, T5 and the mask.
 The corrected research contract remains the detailed API specification:
 `docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md`.
 
-`QueueContract` in `Test/Program/QueueModel.lean` is the abstract transition model.
+`Effect4.Queue.Model` in `src/Effect4/Laws/Modules/Queue/Model.lean` is the abstract transition model.
+The research model names it `QueueContract`.
 Its definition bodies come unchanged from the research model at this packet's base.
 The extraction retains their exact bytes and hashes.
 It adds no program representation or production Queue.
@@ -69,6 +75,17 @@ General request-order and ownership proofs require fresh request identities and 
 The wrapper must establish those premises.
 The capacity helper itself requires neither identity freshness nor a scheduler.
 
+`FirstProfile` in `src/Effect4/Laws/Modules/Queue/Profile.lean` is the first profile's state predicate.
+It has eight conditions: the opened phase, the suspend strategy and a positive capacity.
+Each stored taker has the bounds one and one, and each pending offer is one message and no batch.
+No peeker and no awaiter waits, and no two waiting requests share an identity.
+`first_profile_closed` proves that the first operations keep it.
+The first operations are `take` at the bounds one and one, `offer`, `poll` and the two withdrawals.
+A request's premise is `Requested`: a take names no pending offer, and an offer no waiting taker.
+The later term-to-model step goals quantify over this predicate, and over no other state.
+Two closed forms of the model on the profile are proved beside it, as steps of those goals.
+`acceptLoop_single` names the offers that enter, and `wake_profile` the one taker to wake.
+
 ## Proof placement and first obligation
 
 | Field | Statement |
@@ -84,13 +101,18 @@ The capacity helper itself requires neither identity freshness nor a scheduler.
 | Prerequisite | Freeze the exact model and place the goal before proving the helper |
 | Exclusions | No signal delivery, liveness, FIFO progress, typed store preservation, target execution or native Queue agreement |
 
-`Test/Program/QueueCapacity.lean` holds a placed `proof_goal` for the step proposition.
-It uses the existing `ProofGraph.Plan` status reader.
+`src/Effect4/Laws/Modules/Queue/Capacity.lean` holds the step proposition with its placement.
+It was a placed `proof_goal`, and the coordinator proved it on 2026-10-05.
+Its steps are the helper and one lemma for each operation of the model.
 The helper is proved there. The coordinator rewrote its proof: Codex's draft did not compile.
 The draft is kept beside Codex's packet, as `QueueCapacity.lean.candidate`.
 
-Before landing a proof, retain its full statement, `#plan_status` output and exact axiom output.
-Use the existing semantic ceiling and actual proof dependencies.
+The step's proof does not use the premise of a positive capacity.
+The statement holds at capacity zero too, and it stays as this packet froze it.
+A proposal to drop the premise waits for review.
+
+`Test/Program/QueueCapacity.lean` pins the `#plan_status` output and the exact axiom output.
+They use the existing semantic ceiling and the actual proof dependencies.
 Do not count placement metadata as a proved dependency.
 
 ## Controls and falsifiers
@@ -108,6 +130,8 @@ The capacity proof's future acceptance includes an empty offer list and zero rem
 It also includes partial acceptance, several fully accepted offers, and a full-buffer positive control.
 A variant that appends despite zero room must fail the capacity check.
 These Lean acceptance controls are in `Test/Program/QueueCapacity.lean`, one input each.
+The step's statement has five more there: three steps that keep the bound, and two red controls.
+One red control starts above the bound. The other runs `sliding` at capacity zero.
 An independent Python mirror covers six named cases and 3,744 grid cases, and rejects the deliberate append mutation.
 It does not establish source agreement or a Lean proof.
 The mirror and the extraction validator are kept in

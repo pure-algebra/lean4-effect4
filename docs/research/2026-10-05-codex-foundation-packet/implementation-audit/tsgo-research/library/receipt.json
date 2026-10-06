@@ -1,0 +1,31 @@
+{
+  "scope": "library boundary scout; source inspection only; parent owns compiler-invocation inventory",
+  "effect4_head_at_start": "33a39ca4192079af788e2df2932cce0d7c8103fd",
+  "effect4_head_at_finish": "6acbf7909eceb253d3bec2e713a5fd2d514846e6",
+  "package_head": "f5878bf879bd5712db964c2cd12802748c707605",
+  "package_status": "",
+  "package_origin": "https://github.com/pure-algebra/lean4-typescript",
+  "manifest_pin_matches": true,
+  "package_version": "0.7.0",
+  "evidence": "source declarations and checks only; package tests not rerun",
+  "source_hashes": "sources.json",
+  "recommendation_order": [
+    "compiler request/result and shared session",
+    "lossless diagnostics and source identity",
+    "small existing parse/assignability operations",
+    "optional exact binding algebra extraction"
+  ],
+  "memory_orientation": "MEMORY.md lines 305-333; verified relevant lexical APIs against current sources",
+  "memory_rollout_id": "01a09c61-33cd-7041-9625-890590e5dcd8",
+  "fences": {
+    "repo_edits": false,
+    "builds": false,
+    "compiler_runs": false,
+    "generators": false,
+    "installs": false,
+    "worktree_changes": false,
+    "ui": false,
+    "claude_messages": false
+  },
+  "source_hashes_stable_at_finish": true
+}

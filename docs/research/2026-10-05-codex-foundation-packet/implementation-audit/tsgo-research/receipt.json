@@ -1,0 +1,78 @@
+{
+  "format": "effect4-tsgo-research-receipt-v1",
+  "status": "research completed; recommendations unimplemented",
+  "main_initial": "33a39ca4192079af788e2df2932cce0d7c8103fd",
+  "main_final": "6acbf7909eceb253d3bec2e713a5fd2d514846e6",
+  "main_status": "",
+  "t5_reviewed_head": "f2760046",
+  "t5_active_changes": "excluded; relevant tuple-copy files have no active diff",
+  "scope": "read-only repo/source research; scratch writes only",
+  "executed": [
+    "python3 copy-selection-probe.py"
+  ],
+  "probe_result": {
+    "kind": "pure-source-file-selection",
+    "commands": [
+      "python3 copy-selection-probe.py"
+    ],
+    "compiler_executed": false,
+    "explicit_truth_copyfiles": [
+      "select-controls.ts",
+      "records.typecheck.ts",
+      "folds.typecheck.ts"
+    ],
+    "typecheck_patterns": [
+      "records.typecheck.ts",
+      "tuples.typecheck.ts",
+      "folds.typecheck.ts"
+    ],
+    "current_missing": [
+      "tuples.typecheck.ts"
+    ],
+    "candidate_copy_positive_missing": [],
+    "removed_fold_mutant_missing": [
+      "folds.typecheck.ts"
+    ],
+    "assertions": 6,
+    "source_sha256": {
+      "scripts/check-truth.py": "c70d95b0feb18bc4fd30156913c7831148db7cd0495fc32f1284e5b9c6d578b3",
+      "harness/truth/tsconfig.json": "96e5b73ad73b1a8d3810c7f5dd4009b0f79c898ccbf6796670fbaff7b5b8c2a3",
+      "harness/truth/records.typecheck.ts": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099",
+      "harness/truth/tuples.typecheck.ts": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493",
+      "harness/truth/folds.typecheck.ts": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    }
+  },
+  "prohibited_work_performed": {
+    "repository_edits": false,
+    "lean_build": false,
+    "tsgo_or_compiler_API_run": false,
+    "host_runtime_run": false,
+    "generator": false,
+    "install": false,
+    "branch_change": false,
+    "claude_message": false
+  },
+  "source_count": 58,
+  "sources": "sources.json",
+  "source_verification": "Every saved hash is from a fresh read at packet closure. Parent should compare current files before advising.",
+  "memory_orientation": {
+    "path": "MEMORY.md",
+    "lines": "1-3",
+    "rollout_id": "01a0f5aa-6c67-7851-ba63-85096e2957c7",
+    "use": "Scope orientation only; substantive findings rechecked against current source."
+  },
+  "open": [
+    "No compiler/proof verification of candidate changes",
+    "No upgrade recommendation",
+    "Schema-host installed executable not inspected because installation absent",
+    "Parent owns upstream docs and coordinator synthesis"
+  ],
+  "packet_hashes": {
+    "sources.json": "38ebb4e4acb947edc473eb2fb350f66d7af7ff222471eff1301c3233b79182bd",
+    "copy-selection-probe.py": "e98771590e89d0dd3fea48e28288f71c5e587542f7d8012b10e5b02b2e0366d6",
+    "report.md": "e4906041d53038d5d39d1a645ca8506014d17aebc613f7b6d7466ab2a858c301",
+    "copy-selection-probe.json": "04e269a20920bcf35aa160b089b6d1db5a99d25f785de4fc253ea4fd319e87d9",
+    "inventory.json": "5ab7d411d9a1fece73c1a9563fb39976fc5c2828bd5f760eb2838e7697a38a10"
+  },
+  "followup_source_check": "Parent and seat independently verified Makefile pinned truth omission of tuples.ts and tuples.typecheck.ts; release lane includes both. No make run."
+}

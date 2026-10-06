@@ -1,0 +1,29 @@
+{
+  "python": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+  "source": "/Users/pooks/Dev/lean4-effect4/scripts/status.py",
+  "sha256": "7dcac473c96b25d1a57f4fd0c76dc5ae56d4ddb537b924b381b19b93d493b8ec",
+  "method": "AST-extracted actual lake_cache, isolated environment; no main/report/Lean run",
+  "results": [
+    {
+      "case": "elan absent, no override",
+      "observation": "FileNotFoundError",
+      "filename": "elan"
+    },
+    {
+      "case": "explicit override",
+      "observation": "/test/explicit"
+    },
+    {
+      "case": "explicitly disabled",
+      "observation": null
+    },
+    {
+      "case": "elan present, command fails (mocked)",
+      "observation": "/test/cache/lake"
+    },
+    {
+      "case": "elan resolves toolchain (mocked)",
+      "observation": "/test/toolchain/lake/cache"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "task": "Queue and DOGFOOD source-only design research",
+  "status": "complete as a read-only review; implementation and execution not performed",
+  "finishing_criteria": {
+    "current_sources_and_authorities_inspected": true,
+    "prior_correction_rechecked": true,
+    "one_concrete_straight_loop_consumer_proposed": true,
+    "proof_observation_and_profile_limits_written": true,
+    "source_snapshot_retained": true
+  },
+  "outputs": [
+    "review.md",
+    "source-manifest.json",
+    "sources/"
+  ],
+  "verification": "Read source declarations, current diff/status, and landed correction; checked every written model trace entry against the take/offer/afterConsume source arms. No executable check of the proposed program. The two withdrawal positions were checked against withdrawOffer, including its repeated wake notifications; these remain source-derived expectations.",
+  "repository_edits": false,
+  "lean_builds": false,
+  "generators": false,
+  "hosts_or_target_runs": false,
+  "ui_or_external_messages": false,
+  "source_race": "Main advanced from 6acbf790 to 09d35eaf during review and began the approved model move. The final manifest records that working tree; no draft incompleteness is reported as failure.",
+  "known_open": [
+    "QSTEPS per-step agreement and later wrapper goals are not closed by this review.",
+    "Scenario.tape_replays is a planned goal.",
+    "Scenario.Workers.releases_once is a planned goal.",
+    "Current Atomic draft is not present in the clean DOGFOOD checkout."
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "head": "235ed2941a6299710e3cf8c019d9d93eafaed458",
+  "source_sha256_rechecked": {
+    "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean": true,
+    "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.out": true,
+    "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md": true,
+    "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md": true,
+    "Test/Program/QueueModel.lean": true,
+    "Test/contracts/queue.contract.md": true,
+    "AGENTS.md": true
+  },
+  "controls": 17,
+  "exit": 0,
+  "scope": "source plus finite Python mirror only, no Lean run"
+}

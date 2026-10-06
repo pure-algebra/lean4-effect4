@@ -237,8 +237,11 @@ def lake_cache() -> Path | None:
     toolchain's own cache when elan runs Lake, else the system cache."""
     if "LAKE_CACHE_DIR" in os.environ:
         return Path(os.environ["LAKE_CACHE_DIR"]) if os.environ["LAKE_CACHE_DIR"] else None
-    lake = subprocess.run(["elan", "which", "lake"], cwd=ROOT, capture_output=True, text=True)
-    if lake.returncode == 0 and lake.stdout.strip():
+    try:
+        lake = subprocess.run(["elan", "which", "lake"], cwd=ROOT, capture_output=True, text=True)
+    except FileNotFoundError:
+        lake = None  # no elan on the path: elan does not run Lake, so Lake uses the system cache
+    if lake is not None and lake.returncode == 0 and lake.stdout.strip():
         return Path(lake.stdout.strip()).resolve().parent.parent / "lake" / "cache"
     home = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
     return Path(home) / "lake"

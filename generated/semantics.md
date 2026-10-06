@@ -493,6 +493,8 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | frontier-names-work | inversion | proved | Effect4.Api.frontier_empty_iff_deadlocked | yes |  |
 | decision-keeps-typed | preservation | proved | Effect4.Program.Typed.decision_preserves | yes |  |
 | fair-scheduling | adequacy | absent | Weak fairness progress is open (R12; decisions row 86) | — |  |
+| queue-step-capacity | preservation | proved | Effect4.Queue.Model.positive_suspend_step_capacity | yes |  |
+| queue-first-profile-closed | preservation | proved | Effect4.Queue.Model.first_profile_closed | yes |  |
 
 ### Printed statements
 
@@ -751,6 +753,31 @@ Literature: PFPL, ch. 28, pp. 261–268 — proofTechnique
 ```
 
 Literature: PFPL, chs. 39–41, pp. 371–406 — excludedFeature
+
+**queue-step-capacity**
+
+```lean
+∀ (c : Nat) (s : Effect4.Queue.Model.State) (op : Effect4.Queue.Model.Op),
+  instLTNat.lt 0 c →
+    Eq s.capacity (Option.some c) →
+      Eq s.strategy Effect4.Queue.Model.Strategy.suspend →
+        instLENat.le s.messages.length c →
+          have next := (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none { s := s } op).s;
+          And (Eq next.capacity (Option.some c))
+            (And (Eq next.strategy Effect4.Queue.Model.Strategy.suspend)
+              (instLENat.le next.messages.length c))
+```
+
+**queue-first-profile-closed**
+
+```lean
+∀ (s : Effect4.Queue.Model.State) (op : Effect4.Queue.Model.Op),
+  Effect4.Queue.Model.FirstProfile s →
+    Eq (Effect4.Queue.Model.firstOp op) Bool.true →
+      Effect4.Queue.Model.Requested s op →
+        Effect4.Queue.Model.FirstProfile
+          (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none { s := s } op).s
+```
 
 ## exact-codecs
 
@@ -1565,7 +1592,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 4; inherited (provisional): 1378; unplaced: 0.
+Tagged: 7; inherited (provisional): 1424; unplaced: 0.
 
 ## Plan
 
@@ -1584,7 +1611,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | — | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved) | — |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `positive_suspend_step_capacity` (proved) | — |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | — | — |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — | — |
 | R13 | open | `journal_replays` (proved) | — | — |
@@ -2754,47 +2781,51 @@ flowchart LR
   n17["forkScopedDefault_typed<br/>proved"]
   n18["releaseOne_typed<br/>proved"]
   n19["tagHit_record<br/>proved"]
-  n20["check_sound<br/>proved"]
-  n21["check_complete<br/>proved"]
-  n22["normalize_idem<br/>proved"]
-  n0 --> n20
-  n0 --> n21
-  n1 --> n20
-  n1 --> n21
+  n20["acceptLoop_length_le<br/>proved"]
+  n21["first_profile_closed<br/>proved"]
+  n22["positive_suspend_step_capacity<br/>proved"]
+  n23["check_sound<br/>proved"]
+  n24["check_complete<br/>proved"]
+  n25["normalize_idem<br/>proved"]
+  n0 --> n23
+  n0 --> n24
+  n1 --> n23
+  n1 --> n24
   n2 --> n0
-  n3 --> n20
-  n3 --> n21
+  n3 --> n23
+  n3 --> n24
   n4 --> n3
-  n5 --> n22
-  n5 --> n20
-  n5 --> n21
-  n6 --> n22
-  n6 --> n20
-  n6 --> n21
-  n7 --> n20
-  n7 --> n21
-  n8 --> n21
-  n8 --> n20
-  n9 --> n21
-  n9 --> n20
-  n10 --> n21
-  n10 --> n20
-  n11 --> n20
-  n11 --> n21
-  n12 --> n20
-  n12 --> n21
-  n13 --> n21
-  n13 --> n20
-  n14 --> n20
-  n14 --> n21
-  n15 --> n20
-  n15 --> n21
-  n16 --> n20
-  n16 --> n21
-  n17 --> n20
-  n17 --> n21
-  n18 --> n20
-  n18 --> n21
+  n5 --> n25
+  n5 --> n23
+  n5 --> n24
+  n6 --> n25
+  n6 --> n23
+  n6 --> n24
+  n7 --> n23
+  n7 --> n24
+  n8 --> n24
+  n8 --> n23
+  n9 --> n24
+  n9 --> n23
+  n10 --> n24
+  n10 --> n23
+  n11 --> n23
+  n11 --> n24
+  n12 --> n23
+  n12 --> n24
+  n13 --> n24
+  n13 --> n23
+  n14 --> n23
+  n14 --> n24
+  n15 --> n23
+  n15 --> n24
+  n16 --> n23
+  n16 --> n24
+  n17 --> n23
+  n17 --> n24
+  n18 --> n23
+  n18 --> n24
+  n22 --> n20
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2819,6 +2850,9 @@ flowchart LR
 | `forkScopedDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 243 |
 | `releaseOne_typed` | proved | — | `check_sound`, `check_complete` | 79 | 257 |
 | `tagHit_record` | proved | — | — | 47 | 130 |
+| `acceptLoop_length_le` | proved | — | — | 0 | 6 |
+| `first_profile_closed` | proved | — | — | 29 | 72 |
+| `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
 | `check_sound` | proved | — | — | 135 | 235 |
 | `check_complete` | proved | — | — | 70 | 238 |
 | `normalize_idem` | proved | — | — | 77 | 51 |

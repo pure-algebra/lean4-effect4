@@ -1,0 +1,38 @@
+{
+  "time_utc": "2026-10-06T00:15:51.982856+00:00",
+  "root": "/Users/pooks/Dev/lean4-effect4-lower",
+  "head": "6c0b477815922aa2923ba3fec13324b5fbf29935",
+  "evidence": "source reading only",
+  "files": {
+    "AGENTS.md": {
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    "Test/Dogfood/Scenario/Atomic.lean": {
+      "sha256": "47cbc774cca5c9b38ffb76b98e9fcba5e58214e15dcb8aa54d94a121c75761ca",
+      "bytes": 17669
+    },
+    "Test/Dogfood/Scenario.lean": {
+      "sha256": "1dee3bf153f90443b8aa709f83ea292dd8f6d306af8b13d432880adf806d6c40",
+      "bytes": 34955
+    },
+    "src/Effect4/Laws/Program/Denote.lean": {
+      "sha256": "956b37473ff52de3b284f089ee684e1f9ee0f86832e51819c2a9fa7b5396f9d9",
+      "bytes": 16107
+    },
+    "docs/research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md": {
+      "sha256": "a3e7dc489d1f17870fc43cbc01f9e6ec197ece7334bd0cab8addd4fa27d47b4e",
+      "bytes": 18306
+    }
+  },
+  "review_sha256": "ecd47cb29f004c3610b53797d9d0252592f0a850b688651ae30b7811c04c7f94",
+  "new_finding": "The twice mutation writes twice in one finalizer body; it does not falsify committed-store behavior or replay one registration.",
+  "already_reported": "Message98 top-to-clause proof association",
+  "limits": [
+    "No Lean execution",
+    "No runtime reachability counterexample",
+    "No repository changes",
+    "Draft acceptance remains open"
+  ],
+  "clarification": "Scenario-specific observation is the falsifier target; meaning_onExit is support. Duplicate logs are not registration replay evidence."
+}

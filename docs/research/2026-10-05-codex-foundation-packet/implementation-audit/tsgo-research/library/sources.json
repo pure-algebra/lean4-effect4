@@ -1,0 +1,130 @@
+{
+  "/Users/pooks/Dev/lean4-effect4/AGENTS.md": {
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  "/Users/pooks/Dev/lean4-effect4/lakefile.toml": {
+    "sha256": "cc29730d1d7d00a4fbc42d931bcd97819da4c21cc2ad7163042d49d677a68e47",
+    "bytes": 11217
+  },
+  "/Users/pooks/Dev/lean4-effect4/lake-manifest.json": {
+    "sha256": "448045a73fe9e702e93b255af45592c8bc2ba02d86bac9fbf7b684ba28843afe",
+    "bytes": 1856
+  },
+  "/Users/pooks/Dev/lean4-effect4/docs/ARCHITECTURE.md": {
+    "sha256": "b5b65a24ecee03dc591c5b5f23a751b0e0bdf790602d3170e579b86646af9701",
+    "bytes": 27695
+  },
+  "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md": {
+    "sha256": "a8ec5ead2a249a3684d53db97566120e72a1200765d2580cffa943c8b8b463ed",
+    "bytes": 318217
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Bindings.lean": {
+    "sha256": "7f66edfeebec699c417509d2bff5982cf5cefc349da0ced8946a919c15614138",
+    "bytes": 3105
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/SourceBindings.lean": {
+    "sha256": "23a32d056579ae64983f152a4b1e562520c0847c078ce0f777a2dc1f5be25588",
+    "bytes": 14933
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Names.lean": {
+    "sha256": "843b35fc4adec1378b5af7a3304626a0bd95c5cd97bae1eb9bb17bae1a036f84",
+    "bytes": 862
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Admit.lean": {
+    "sha256": "26785dec9a68d816c6a38a5859a29d74dc81266374600b5d782d7ef7165f163a",
+    "bytes": 7481
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Codegen/Bindings.lean": {
+    "sha256": "01a5d1a1750b141aea630b2efdfde86bafb725b40454109be7711c59d8f409c4",
+    "bytes": 7121
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Codegen/SourceBindings.lean": {
+    "sha256": "33a938e819d607b02bf045e0fa81df0f2c92da9e1bc45d3f6801bfe762abf024",
+    "bytes": 7075
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Api/Codegen.lean": {
+    "sha256": "3fa937d8932947a21afadb985855c929d75a976f368c2dbc5671d4dd532def7c",
+    "bytes": 5266
+  },
+  "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Api/ModuleReadable.lean": {
+    "sha256": "b43893311619e802fa66a223848f55431822a2bf2503c0b40f3208ec325c3b9b",
+    "bytes": 10351
+  },
+  "/Users/pooks/Dev/lean4-effect4/tools/Drivers/TsGen.lean": {
+    "sha256": "c3156595832865f36bc8b21ccdef2ebbab959543308e7d775b23a2212a61965e",
+    "bytes": 75696
+  },
+  "/Users/pooks/Dev/lean4-effect4/tools/target/oracle.ts": {
+    "sha256": "204bcbe5542757a1cf73cd0dd3e446ddb288647d27103a337653515b3405f4d9",
+    "bytes": 11782
+  },
+  "/Users/pooks/Dev/lean4-effect4/tools/target/checker.ts": {
+    "sha256": "ddb8568ee36462006c98623a0486c53dbf9c95e392862e79a2464c2011bb2bb6",
+    "bytes": 24279
+  },
+  "/Users/pooks/Dev/lean4-effect4/ts/eff/check-styles.ts": {
+    "sha256": "93f808dafdec2e215f93fb562e9bbe996079d06433dd43541cf724e15a54af50",
+    "bytes": 6622
+  },
+  "/Users/pooks/Dev/lean4-effect4/ts/eff/ingest/oxc.ts": {
+    "sha256": "546acaef55fc894bfd1cd237a0d0461b7632c9890ae3837990c2e47ba41be66a",
+    "bytes": 68957
+  },
+  "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/dist/api/sync/types.d.ts": {
+    "sha256": "404e1f0924af80ce96eec89866a0df5defaa3a05a7946092ba8ac23710a3c70f",
+    "bytes": 12524
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Structure.lean": {
+    "sha256": "54631186594e0f03608fe400f1e1238d2b208e528030f64c25fbbbbee345b948",
+    "bytes": 7965
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Syntax.lean": {
+    "sha256": "c127a4692df836cf651acdc0eee2b4eaa5d6e6c222d91742b5b23b9b4983bfb4",
+    "bytes": 15789
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/TypeRef.lean": {
+    "sha256": "0fefe0eb79ac19997a8b5d9df408c3cd46c9c0b9177746256a25e4ae9cd9bd57",
+    "bytes": 4672
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Identifier.lean": {
+    "sha256": "963e96b24d7ad70eee9948a205e52eed46f98383e4062c21359a0c4f59c9f9cd",
+    "bytes": 1677
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Render.lean": {
+    "sha256": "7a4f7e9cfb48669a2de19ad70518160e5e33b95566e0804da86e201ebe4ca96b",
+    "bytes": 19695
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/HostPin.lean": {
+    "sha256": "402c6cf138699c26640a006f7fdd6edd8e24c8b2b2d11e940189eac527f2e010",
+    "bytes": 1220
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/TypeRef.lean": {
+    "sha256": "5df35e2baf995ede9e3d5827006b306e47d409de8ab354feb8ad25788870c4e8",
+    "bytes": 4496
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/ObjectForms.lean": {
+    "sha256": "b297d1bd9b0db2366b07981ac5aa4ef6dceb6c8755aecfd5aba74962ef3845c5",
+    "bytes": 15940
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/RenderSmoke.lean": {
+    "sha256": "4c6ca2fd81ef3933e52de6f34afbf18d379e21610b953d58d9b0c3151a9c53a4",
+    "bytes": 6702
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/StructureSmoke.lean": {
+    "sha256": "8136b916bf33e2770738bef8fc2994139cb5c3c3375f70836995a52960f1e6ba",
+    "bytes": 2566
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/README.md": {
+    "sha256": "0514737366d5c59622ae22b54938725aadd137be377ac2ff9702938f09d192e2",
+    "bytes": 4587
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/lakefile.toml": {
+    "sha256": "3c02cff1225cb22b657f0297b3dd51f4c65d2d41081b509315d60392cfbd733c",
+    "bytes": 399
+  },
+  "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript.lean": {
+    "sha256": "79848579dba0738d666c62ac6d4b8a452d55765332ee5091b012ace910504676",
+    "bytes": 651
+  }
+}

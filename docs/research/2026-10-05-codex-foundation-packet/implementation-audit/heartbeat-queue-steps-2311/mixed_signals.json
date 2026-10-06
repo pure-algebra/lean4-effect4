@@ -1,0 +1,179 @@
+{
+  "evidence": "Finite Python mirror plus source comparison; no Lean run or host scheduling",
+  "python": "3.13.14",
+  "checked": [
+    "reachable prefix has ready first taker and one pending offer",
+    "consuming reply is one",
+    "acceptance keeps message two and the second taker",
+    "model signals offer answer before taker wake",
+    "existing probe helper order differs",
+    "swapped postAll groups match model for this first profile",
+    "single taker hint positive",
+    "single offer answer positive",
+    "model repeats ready head hint on first full-buffer offer",
+    "research pending offer omits this signal",
+    "full buffer with no taker positive",
+    "earlier pending offer positive"
+  ],
+  "reachable_prefix": [
+    {
+      "op": "take",
+      "args": [
+        1
+      ],
+      "reply": "wait",
+      "signals": [],
+      "state": {
+        "cap": 1,
+        "messages": [],
+        "takers": [
+          1
+        ],
+        "offers": []
+      }
+    },
+    {
+      "op": "take",
+      "args": [
+        2
+      ],
+      "reply": "wait",
+      "signals": [],
+      "state": {
+        "cap": 1,
+        "messages": [],
+        "takers": [
+          1,
+          2
+        ],
+        "offers": []
+      }
+    },
+    {
+      "op": "offer",
+      "args": [
+        100,
+        1
+      ],
+      "reply": "accepted true",
+      "signals": [
+        {
+          "id": 1,
+          "note": "again"
+        }
+      ],
+      "state": {
+        "cap": 1,
+        "messages": [
+          1
+        ],
+        "takers": [
+          1,
+          2
+        ],
+        "offers": []
+      }
+    },
+    {
+      "op": "offer",
+      "args": [
+        101,
+        2
+      ],
+      "reply": "wait",
+      "signals": [
+        {
+          "id": 1,
+          "note": "again"
+        }
+      ],
+      "state": {
+        "cap": 1,
+        "messages": [
+          1
+        ],
+        "takers": [
+          1,
+          2
+        ],
+        "offers": [
+          [
+            101,
+            2
+          ]
+        ]
+      }
+    }
+  ],
+  "consuming_step": {
+    "request": 1,
+    "reply": {
+      "got": [
+        1
+      ]
+    },
+    "state": {
+      "cap": 1,
+      "messages": [
+        2
+      ],
+      "takers": [
+        2
+      ],
+      "offers": []
+    },
+    "model_signal_order": [
+      {
+        "id": 101,
+        "note": "offered true"
+      },
+      {
+        "id": 2,
+        "note": "again"
+      }
+    ],
+    "research_probe_post_order": [
+      {
+        "id": 2,
+        "note": "again"
+      },
+      {
+        "id": 101,
+        "note": "offered true"
+      }
+    ],
+    "corrected_group_order": [
+      {
+        "id": 101,
+        "note": "offered true"
+      },
+      {
+        "id": 2,
+        "note": "again"
+      }
+    ]
+  },
+  "full_buffer_offer": {
+    "model": [
+      {
+        "id": 1,
+        "note": "again"
+      }
+    ],
+    "probe": []
+  },
+  "positive_controls": {
+    "taker_only": [
+      {
+        "id": 1,
+        "note": "again"
+      }
+    ],
+    "offer_only": [
+      {
+        "id": 101,
+        "note": "offered true"
+      }
+    ]
+  }
+}

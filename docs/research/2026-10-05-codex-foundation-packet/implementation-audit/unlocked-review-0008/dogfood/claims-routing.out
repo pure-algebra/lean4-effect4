@@ -1,0 +1,30 @@
+Test.Dogfood.Scenario.Routing.routing: modulo [Test.Dogfood.Scenario.Routing.infrastructure_escapes, Test.Dogfood.Scenario.Routing.unauthorized_calls_nothing]; nearest []; 0 lemmas, 0 definitions
+next goals: 2
+  goal Test.Dogfood.Scenario.Routing.infrastructure_escapes : InfrastructureEscapes
+  goal Test.Dogfood.Scenario.Routing.unauthorized_calls_nothing : UnauthorizedCallsNothing
+Test.Dogfood.Scenario.Routing.tagIs_pair: proved; nearest []; 0 lemmas, 0 definitions
+Test.Dogfood.Scenario.Routing.infrastructure_escapes: goal; nearest []; 0 lemmas, 0 definitions
+Test.Dogfood.Scenario.Routing.unauthorized_calls_nothing: goal; nearest []; 0 lemmas, 0 definitions
+Effect4.Api.HostSession.submit_success_prepared_fits: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 2
+  goal Test.Dogfood.Scenario.Routing.infrastructure_escapes : InfrastructureEscapes
+  goal Test.Dogfood.Scenario.Routing.unauthorized_calls_nothing : UnauthorizedCallsNothing
+'Test.Dogfood.Scenario.Routing.routing' depends on axioms: [propext, sorryAx, Quot.sound]
+'Test.Dogfood.Scenario.Routing.tagIs_pair' depends on axioms: [propext]
+'Test.Dogfood.Scenario.Routing.infrastructure_escapes' depends on axioms: [propext, sorryAx, Quot.sound]
+'Test.Dogfood.Scenario.Routing.unauthorized_calls_nothing' depends on axioms: [propext, sorryAx, Quot.sound]
+'Effect4.Api.HostSession.submit_success_prepared_fits' depends on axioms: [propext, Quot.sound]
+def Test.Dogfood.Scenario.Routing.InfrastructureEscapes : Prop :=
+∀ (id : Nat) (idText tag message : String) (b : Effect4.Api.Built),
+  Effect4.Api.Author.build (request "secret" id idText) = Except.ok b →
+    tag ≠ "NotFound" →
+      tag ≠ "Unauthorized" →
+        (observe (play (opened b) (failing tag message))).outcome =
+          some (Effect4.Exit.failure (Effect4.Cause.fail (Effect4.Machine.Err.tagged tag message)))
+def Test.Dogfood.Scenario.Routing.UnauthorizedCallsNothing : Prop :=
+∀ (token : String) (id : Nat) (idText : String) (b : Effect4.Api.Built) (moves : List Move),
+  Effect4.Api.Author.build (request token id idText) = Except.ok b →
+    (∀ (reply : Effect4.Api.HostSession.Reply) (pageSize : Nat),
+        Effect4.Api.Runner.Command.submit reply ∈ (play (opened b) moves).journal →
+          reply.completion ≠ ok (configOf token pageSize)) →
+      (observe (play (opened b) moves)).repositoryCalls = []

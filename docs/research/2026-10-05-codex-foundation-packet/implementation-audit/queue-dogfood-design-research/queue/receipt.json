@@ -1,0 +1,39 @@
+{
+  "kind": "source review and finite Python mirror",
+  "start_head": "6acbf7909eceb253d3bec2e713a5fd2d514846e6",
+  "end_head": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+  "end_status": " M Test/All.lean\n M Test/Program/QueueCapacity.lean\n M Test/Program/QueueContract.lean\n M Test/Program/QueueProfile.lean\n M src/Effect4/Laws.lean\nRM Test/Program/QueueModel.lean -> src/Effect4/Laws/Modules/Queue/Model.lean\n?? src/Effect4/Laws/Modules/Queue/Capacity.lean\n?? src/Effect4/Laws/Modules/Queue/Profile.lean\n",
+  "authority": "row255 committed at 09d35eaf; QSTEPS not landed",
+  "evidence": [
+    "sources.json",
+    "scope_mirror.py",
+    "scope_mirror.json",
+    "uncompiled-scope-witness.lean.txt"
+  ],
+  "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-queue-dogfood-design-research/queue/scope_mirror.py",
+  "python": "3.13.14",
+  "mirror_checks": 8,
+  "mirror_exit": 0,
+  "no_runs": [
+    "Lean",
+    "tsgo",
+    "OCaml",
+    "host runtime",
+    "build",
+    "generator"
+  ],
+  "writes": "assigned scratch directory only",
+  "findings": [
+    "public-builder hygiene risk before promotion",
+    "record full-cell payload types before claiming future type stability"
+  ],
+  "not_findings": [
+    "current closed QueueSteps probe is not failed production",
+    "repeated passes remain ratified",
+    "previous profile omissions not reopened",
+    "size remains read-only"
+  ],
+  "resolved_or_in_progress": [
+    "model move into Laws started during final inspection; no duplicate recommendation"
+  ]
+}

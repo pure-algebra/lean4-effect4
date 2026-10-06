@@ -22,4 +22,16 @@ def fold (acc item : String) (accTy : Option Ty) (list init body : TermSrc) : Te
     let bodyTerm ← body (env.push [acc, item]) path
     .ok (.fold accTy listTerm initTerm bodyTerm)
 
+/-- `foldWith list init body`: `fold` with its two binders as Lean functions over names minted
+for this scope, read through `minted`. No name an author writes is a minted name, so a term of
+the caller keeps its reading inside the body (`var_push_minted_pair`,
+`Laws/Program/Authoring/Folds.lean`). A builder that places a caller's term in a fold's body
+uses this form: with `fold`'s fixed names the caller's variable of the same name would read the
+folded element. It emits the same `Term.fold`. `accTy` is `fold`'s. -/
+def foldWith (list init : TermSrc) (body : TermSrc → TermSrc → TermSrc)
+    (accTy : Option Ty := none) : TermSrc :=
+  fun env path =>
+    fold (env.mint "acc") (env.mint "item") accTy list init
+      (body (minted (env.mint "acc")) (minted (env.mint "item"))) env path
+
 end Effect4.Program.Authoring

@@ -1,0 +1,204 @@
+{
+  "base": "6214dcb8",
+  "head": "d5559a5fd443f2e0e33ce15332ae077a20c79b37",
+  "scope": "committed A1 only",
+  "monitor_builds": false,
+  "monitor_runtime_probes": false,
+  "repo_edits": false,
+  "conclusion": "no new capture or read-print proof defect found; one refusal diagnostic mismatch",
+  "unfinished_excluded": [
+    " M Test/Codegen/FormsContract.lean",
+    " M src/Effect4/Codegen/Forms.lean",
+    " M src/Effect4/Codegen/Styles.lean",
+    " M src/Effect4/Laws/Program/Progress.lean",
+    " M src/Effect4/Program/FnName.lean",
+    " M src/OCaml5/Eff/Emit.lean",
+    " M src/OCaml5/Tools/EffGen.lean",
+    " M tools/Drivers/ForeignCorpus.lean",
+    " M tools/Drivers/TsGen.lean"
+  ],
+  "statements": [
+    {
+      "path": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+      "declaration": "read_print",
+      "statement_unchanged": true,
+      "statement": "theorem read_print (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}\n    (hr : Readable classes sig n e = true) {x : Expr} (hp : print sig n e = .ok x) :\n    readEff classes sig spell n x = .ok e"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Read.lean",
+      "declaration": "read_exact",
+      "statement_unchanged": true,
+      "statement": "theorem read_exact (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}\n    (h : readEff classes sig spell n x = .ok e) : print sig n e = .ok x"
+    }
+  ],
+  "retained_results": {
+    "b4.log": "successful 654-job build",
+    "test-build-4.log": "successful 922-job build; gate 675 modules,83420 declarations; semantic/test axioms propext/Quot.sound;14 planned goals,7 dependents,no other sorryAx reach",
+    "limitation": "seat logs retained; no monitor rerun; later all-1.log unfinished and excluded"
+  },
+  "finding": {
+    "id": "T5-A1-annotation-refusal",
+    "kind": "source-derived diagnostic mismatch",
+    "source_path": "Binders.read rejects annotated lambda; splitFunction none; readPerformFace nonreserved Ref.update; readRowCall tuple attempt returns arity",
+    "correction": "reuse annotationSite for recognized term-row callback failure; exact annotation parameter/return controls; no TypeScript diagnostic parity requirement"
+  },
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 21254,
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "path": "Test/Codegen/PrintContract.lean",
+      "bytes": 28496,
+      "sha256": "9bfb31a41d41a70cbce6d23d888d3ffbe843da24fa4b59fd6684a8350071224c"
+    },
+    {
+      "path": "Test/Codegen/ReadContract.lean",
+      "bytes": 54841,
+      "sha256": "8b32abf9b37c1580ace18f7e7b9eef1f0d23fc19c57618af496ee539bf0f1bb6"
+    },
+    {
+      "path": "Test/Dogfood/P3WorkerQueue.lean",
+      "bytes": 21283,
+      "sha256": "db968bc932186c6a06f7f14319f581a6f87b96d271d0f23c0760f44598f894a6"
+    },
+    {
+      "path": "Test/Dogfood/P4RateLimiter.lean",
+      "bytes": 16412,
+      "sha256": "5a39d7d442a5385575c1543e89df01864729effd462c0334e878179de7a8f604"
+    },
+    {
+      "path": "Test/Dogfood/P5LedgerService.lean",
+      "bytes": 14401,
+      "sha256": "3f3ad005236bdf7ebbe4b6bafed4e147f37efb7a7a33540da618bfe9da09a2f0"
+    },
+    {
+      "path": "Test/Dogfood/Stage.lean",
+      "bytes": 10658,
+      "sha256": "655ca5cfba314aee6e5970ec2e29a51da945efd3dcf5921afa5b0da37e63b2bf"
+    },
+    {
+      "path": "Test/Program/AuthorContract.lean",
+      "bytes": 24954,
+      "sha256": "a315462bc68bd8c7d4aaa4d62ad366974269d36dd47bfd21ada538ed33faf5ae"
+    },
+    {
+      "path": "Test/Program/FoldContract.lean",
+      "bytes": 28539,
+      "sha256": "dc178b9640fb0428526f1904932fbfe855eb134c2ad96da417b7107229a35492"
+    },
+    {
+      "path": "Test/Program/InvocationContract.lean",
+      "bytes": 13048,
+      "sha256": "88976e8a3bf2be84666a6ae79c05675dc0b30348dba6b34bb4098a5e57a92d8e"
+    },
+    {
+      "path": "Test/contracts/faces.contract.md",
+      "bytes": 35534,
+      "sha256": "89d4e6cde1a49ce3856553505c86d52544b2c57ec1be826178cbb29e6db3d132"
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md",
+      "bytes": 11504,
+      "sha256": "0c3b61d97c8c6a9b4def21641430a5c6d8639457851681492e85d72abcf3fd4c"
+    },
+    {
+      "path": "src/Effect4/Codegen/Classes.lean",
+      "bytes": 13922,
+      "sha256": "33a02b81a0952eb151a3bf0f3f140d9acf892f4fbb2be0de410ce2c324656ec5"
+    },
+    {
+      "path": "src/Effect4/Codegen/ListFold.lean",
+      "bytes": 5662,
+      "sha256": "4ddcd769c8b94093836c1eb334951200baf43dc2a38c0e77f48f1d7f0ac3092d"
+    },
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "bytes": 13104,
+      "sha256": "07883ce3457e2d433debab76c5c547e38a19bb06527f724bf26b246a6725977d"
+    },
+    {
+      "path": "src/Effect4/Codegen/PrintLeaf.lean",
+      "bytes": 20454,
+      "sha256": "52e029fd0ac6ac957f67fd4e4683b42984eda0becc5e16fa982a8ad7b43eb647"
+    },
+    {
+      "path": "src/Effect4/Codegen/Read.lean",
+      "bytes": 56943,
+      "sha256": "5e339a3054e8f5bdeb16610ecea40bc30d18fc46da69e5de4e8ddd5a92dafbaf"
+    },
+    {
+      "path": "src/Effect4/Codegen/Templates.lean",
+      "bytes": 21780,
+      "sha256": "4360605942836e64493d45730f773b454b726efdd25efd941d5e84d6b456e74d"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ListFold.lean",
+      "bytes": 5542,
+      "sha256": "0ca0e0c07f3719f964d759b17be523b70926af1c127642be62e622ce3d0011f4"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/PrintReadable.lean",
+      "bytes": 32765,
+      "sha256": "95cb2d68152ad7ec549e81b79cdf92eb917182a4517d5c3d5291d4dddead592f"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Read.lean",
+      "bytes": 44424,
+      "sha256": "2793f8d0789adc7ae43f03dcc47c59ebaaabcefe0fade0f4d674bdd0144ad196"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ReadLeaf.lean",
+      "bytes": 86791,
+      "sha256": "58c4ecc1f2a73e9a9fd34aff6b88470a700df0217ad3fc5adcf8c32b1734fbfc"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+      "bytes": 104247,
+      "sha256": "c898ecc2fe7b15cc922caf755e954ab28c9a59985f1e333f033f57580fcae8bb"
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "bytes": 29417,
+      "sha256": "04093eee7f9d7386f18ec5624364a6cf5a8d9cafc3a6d5f1d7b4ca998d0ef7d6"
+    },
+    {
+      "path": "src/Effect4/Program/Table.lean",
+      "bytes": 4903,
+      "sha256": "c68d4457629a595d4bdf27e8048c675e751f9a38d711920e5bc7ba77945e6aeb"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "bytes": 30548,
+      "sha256": "68b0141e99402cb1c384d9236e892dcbe40f09cdebc9ae6502686f19c89731b5"
+    }
+  ],
+  "retained": [
+    {
+      "path": "retained/Cls.lean",
+      "bytes": 1198,
+      "sha256": "9bc81848400bba3567bef88a87a43032c001c76bb122e15c56b78ae9d73dcb93"
+    },
+    {
+      "path": "retained/b4.log",
+      "bytes": 30776,
+      "sha256": "21445e4abc286ab2381ec463145bcfe869a7ad72d2c0b90d4fc9f4cc384a36d8"
+    },
+    {
+      "path": "retained/msg-a1.txt",
+      "bytes": 1679,
+      "sha256": "68d3d65ab659cebd5586034a11296668b97e5b36fd01d9b8f7adeb1770e55788"
+    },
+    {
+      "path": "retained/test-build-4.log",
+      "bytes": 416914,
+      "sha256": "f9a99b5c63e93826b0c1b785a5ef50df178bc643f45fd7a8de3f50ee9bb7383c"
+    }
+  ],
+  "artifact_verification": {
+    "initial_manifest_attempt": "failed because proposed ReadExact.lean path does not exist; located actual Laws/Codegen/Read.lean using rg and repaired; no Lean invocation",
+    "verified_source_hashes": true
+  },
+  "head_after": "d5559a5fd443f2e0e33ce15332ae077a20c79b37"
+}

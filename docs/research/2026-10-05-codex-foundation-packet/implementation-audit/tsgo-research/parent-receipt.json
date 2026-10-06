@@ -1,0 +1,473 @@
+{
+  "recorded_utc": "2026-10-06T00:46:55.465964+00:00",
+  "scope": "source research and finite file-selection checks",
+  "source_checks": [
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/ARCHITECTURE.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/GENERATED.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/controlled-english.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/semantics.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/system-map.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lake-manifest.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Makefile",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.github/workflows/lean_action_ci.yml",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/package.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/tsconfig.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/release/package.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/schema-host/package.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/truth/tsconfig.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/schema-generation/tsconfig.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Diagnostics.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Types.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/SourceBindings.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Drivers/TsGen.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Drivers/Corpus.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/oracle.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/checker.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/input.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/cli.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/oracle.test.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/profile.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/rows.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/corpus.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/assignability.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-truth.py",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-truth-release.py",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-corpus.py",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-host-protocol.py",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-service-identity.py",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-schema-typescript-generation.sh",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/lib/truth_host.py",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/tsdiag/run-tsdiag.mjs",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/check-styles.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/ingest/pins.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/ingest/oxc.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/ingest/ck.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/ingest/census/corpus.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/truth/tuples.typecheck.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/truth/folds.typecheck.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/truth/records.typecheck.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/README.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/lakefile.toml",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/TypeRef.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Syntax.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Render.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/HostPin.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Structure.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/package.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/dist/api/sync/api.d.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lakefile.toml",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lake-manifest.json",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/ARCHITECTURE.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Bindings.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/SourceBindings.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Names.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Admit.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Codegen/Bindings.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Codegen/SourceBindings.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Api/Codegen.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Api/ModuleReadable.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Drivers/TsGen.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/oracle.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/target/checker.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/check-styles.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/ingest/oxc.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/dist/api/sync/types.d.ts",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Structure.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Syntax.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/TypeRef.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Identifier.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Render.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/HostPin.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/TypeRef.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/ObjectForms.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/RenderSmoke.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScriptTest/StructureSmoke.lean",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/README.md",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/lakefile.toml",
+      "matches": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript.lean",
+      "matches": true
+    }
+  ],
+  "source_hash_matches": 90,
+  "source_hash_total": 90,
+  "packet_checks": [
+    {
+      "path": "sources.json",
+      "matches": true
+    },
+    {
+      "path": "copy-selection-probe.py",
+      "matches": true
+    },
+    {
+      "path": "report.md",
+      "matches": true
+    },
+    {
+      "path": "copy-selection-probe.json",
+      "matches": true
+    },
+    {
+      "path": "inventory.json",
+      "matches": true
+    }
+  ],
+  "main_head": "6acbf7909eceb253d3bec2e713a5fd2d514846e6",
+  "main_status": "",
+  "t5_head": "f2760046dcc2a8308d5f460e443e64487f24526d",
+  "t5_status": "M Makefile\n M generated/row-types.tsv\n M harness/truth/prelude.ts\n M harness/truth/run-truth.ts\n M harness/truth/tsconfig.json\n M harness/tsdiag/run-tsdiag.mjs\n M ocaml/eff/eff_native.ml\n M scripts/check-truth.py\n M src/Effect4/Machine/Term.lean\n M src/Effect4/Program/NativeAtom.lean\n M tools/Tools/RowTypes.lean\n M ts/eff/forms.gen.ts\n M ts/eff/ingest/README.md\n M ts/eff/ingest/check-coverage.ts\n M ts/eff/ingest/ck.ts\n M ts/eff/ingest/fidelity/roundtrip.ts\n M ts/eff/ingest/oxc.ts\n M ts/eff/ingest/test/foreign.test.ts\n M ts/eff/profile.gen.ts\n M ts/eff/read.ts\n M ts/eff/test/read.test.ts\n M ts/eff/test/tables.test.ts\n M ts/eff/test/wire.test.ts\n?? harness/truth/term-rows.typecheck.ts\n?? ts/eff/test/term-rows.test.ts",
+  "dogfood_head": "01bc224b55d53b52f5a9269eb442bc42338c55bf",
+  "probe": {
+    "kind": "pure-source-file-selection",
+    "commands": [
+      "python3 copy-selection-probe.py"
+    ],
+    "compiler_executed": false,
+    "explicit_truth_copyfiles": [
+      "select-controls.ts",
+      "records.typecheck.ts",
+      "folds.typecheck.ts"
+    ],
+    "typecheck_patterns": [
+      "records.typecheck.ts",
+      "tuples.typecheck.ts",
+      "folds.typecheck.ts"
+    ],
+    "current_missing": [
+      "tuples.typecheck.ts"
+    ],
+    "candidate_copy_positive_missing": [],
+    "removed_fold_mutant_missing": [
+      "folds.typecheck.ts"
+    ],
+    "assertions": 6,
+    "source_sha256": {
+      "scripts/check-truth.py": "c70d95b0feb18bc4fd30156913c7831148db7cd0495fc32f1284e5b9c6d578b3",
+      "harness/truth/tsconfig.json": "96e5b73ad73b1a8d3810c7f5dd4009b0f79c898ccbf6796670fbaff7b5b8c2a3",
+      "harness/truth/records.typecheck.ts": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099",
+      "harness/truth/tuples.typecheck.ts": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493",
+      "harness/truth/folds.typecheck.ts": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    }
+  },
+  "fences": {
+    "repo_edits": false,
+    "compiler_runs": false,
+    "builds": false,
+    "generators": false,
+    "installs": false,
+    "implementation_dispatch": false
+  },
+  "ui": {
+    "coordinator_verified": true,
+    "effect4_branch": "refactor/phase1-phase3",
+    "active_seats": [
+      "T5",
+      "DOGFOOD"
+    ],
+    "advisory_sent": true,
+    "advisory_attempt": "blocked by user-activity guard; subsequent observation failed with capture error; delivery unverified and pending",
+    "advisory_message": 104,
+    "advisory_status": "normal queued submission verified; unread at send",
+    "composer_empty": true,
+    "interrupt_or_force_send": false
+  },
+  "recommendations": "recommendations.md",
+  "upstream_sources": [
+    {
+      "url": "https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/",
+      "use": "native package and launcher identity; stable API absent at7.0 release; no newest-release claim"
+    },
+    {
+      "url": "https://github.com/microsoft/typescript-go",
+      "use": "archived staging repo points to microsoft/TypeScript"
+    },
+    {
+      "url": "https://www.typescriptlang.org/docs/handbook/type-compatibility",
+      "use": "structural compatibility and deliberate runtime-safety limits"
+    }
+  ],
+  "language_check": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-tsgo-research/recommendations.md",
+    "result": "PASS, no finding in recommendations after wording corrections"
+  },
+  "deliverable_hashes": {
+    "recommendations.md": "f918a78339b1a2fc91cdaa0c6f407b3160298d6b89d7b2fc00fcc0e849a7e4ec",
+    "parent-copy-selection.json": "04e269a20920bcf35aa160b089b6d1db5a99d25f785de4fc253ea4fd319e87d9",
+    "pending-advisory.txt": "78afd58853028aeb5ea68f1b3d04005ff2a4879817e263a958f8b2c388b586fe"
+  }
+}

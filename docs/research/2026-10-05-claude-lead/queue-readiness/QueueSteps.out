@@ -1,0 +1,50 @@
+("built", "built", "built", "built", "built", "built", "built", "built")
+some
+  "(Effect4.Program.Ty.tuple\n   [Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat],\n Effect4.Program.Ty.never)"
+"success (Val.list [(Val.bool true), (Val.bool true), (Val.nat 1), (Val.nat 2)])"
+"success (Val.nat 7)"
+"success (Val.list [(Val.nat 1), (Val.nat 2)])"
+"success (Val.list [(Val.bool true), (Val.nat 1), (Val.bool true), (Val.nat 2)])"
+"success (Val.list [(Val.nat 5), (Val.nat 0)])"
+"success (Val.list [(Val.nat 1), (Val.nat 0), (Val.nat 0)])"
+"success (Val.ctor 1 [(Val.ctor 0 [(Val.list [(Val.ctor 2 [(Val.some (Val.ctor 0 [(Val.nat 0)])), (Val.ctor 0 [(Val.list [(Val.pair (Val.str \"stack1\") Val.unit), (Val.pair (Val.str \"stack0\") Val.unit)])])])])])])"
+"success (Val.list [(Val.nat 1), (Val.nat 101), (Val.nat 2)])"
+"(Effect4.Queue.Model.OfferReply.accepted true,\n Effect4.Queue.Model.OfferReply.accepted true,\n Effect4.Queue.Model.TakeReply.got [1],\n Effect4.Queue.Model.TakeReply.got [2])"
+"(Effect4.Queue.Model.OfferReply.accepted true,\n Effect4.Queue.Model.OfferReply.wait,\n Effect4.Queue.Model.TakeReply.got [1],\n [{ id := 101, note := Effect4.Queue.Model.Note.offered true }],\n Effect4.Queue.Model.TakeReply.got [2])"
+"(Effect4.Queue.Model.TakeReply.got [1],\n [{ id := 101, note := Effect4.Queue.Model.Note.offered true }, { id := 2, note := Effect4.Queue.Model.Note.again }])"
+agrees
+"(Effect4.Queue.Model.OfferReply.wait, [{ id := 1, note := Effect4.Queue.Model.Note.again }])"
+agrees
+"(Effect4.Queue.Model.OfferReply.wait, [])"
+agrees
+"(Effect4.Queue.Model.TakeReply.wait, [])"
+agrees
+agrees
+agrees
+"[{ id := 2, note := Effect4.Queue.Model.Note.again }]"
+agrees
+agrees
+"(some 1, [{ id := 101, note := Effect4.Queue.Model.Note.offered true }])"
+agrees
+agrees
+"(Effect4.Queue.Model.OfferReply.accepted true,\n [{ id := 1, note := Effect4.Queue.Model.Note.again }, { id := 2, note := Effect4.Queue.Model.Note.again }])"
+outside the profile: a peeker waits; after the step, a peeker waits
+no encoding: the wake of request 2 names no stored taker
+"(Effect4.Queue.Model.OfferReply.accepted true, [])"
+outside the profile: a stored taker's bounds are not one and one; after the step, a stored taker's bounds are not one and one
+differs
+outside the profile: the request's identity is not fresh; after the step, two waiting requests share an identity
+differs
+differs
+differs
+(200, 2400, true)
+(0, [])
+true
+20
+20
+some (283, 9)
+some (16, 1)
+some (93, 0)
+some (118, 1)
+(some true, some true, some true, some true, some true, some true)
+("refused: typeSpelling Deferred.make", "refused: typeSpelling Deferred.make", "printed")

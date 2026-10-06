@@ -185,7 +185,10 @@ More rulings of the same day (rows 235 to 248):
 - a second seat lands Codex's follow-ups of the OCaml route (row 252);
 - the migration follows the features: a cut-over runs when a feature needs it, and a release
   case that waits is deferred with its reason (row 253);
-- dogfooding is rigorous, runs through the lowering, and is placed in the proof graph (row 254).
+- dogfooding is rigorous, runs through the lowering, and is placed in the proof graph (row 254);
+- the Queue's cell and steps are a library slice: a composed module lives in a new layer of
+  the runtime root, above `Program`, and its laws in the law graph. The abstract model moves
+  into the law graph, each step has one planned goal, and no binding form is added (row 255).
 
 Landed later on 2026-10-05:
 
@@ -211,6 +214,14 @@ Landed later on 2026-10-05:
   three added, all as proposed claims.
 - **The compatibility policy names two host-lane rows** that the sweep moved (`d226d7a1`), and
   `check-conservativity` passes on the range again.
+- **Seat FOLD is merged** (`87c9b562`;
+  [its receipt](research/2026-10-05-seat-FOLD-receipt.md); rows 228 and 229). `Term.fold` is
+  one constructor of `Term`, and the atoms `take`, `drop` and `sameHandle` are added. Both
+  claims are proved: `fold-typed-atomic-update` and `handle-identity-laws`
+  (`src/Effect4/Laws/Program/Typed/ListFold.lean`). The raw annotation collector reads an
+  operation's binder term. A fold prints and reads back in a term position, and one printed
+  fold agrees with both builds. The coordinator pinned the case policy again and promoted the
+  build ledger.
 - **Seat LOWER is merged** (`c09826c0`;
   [its receipt](research/2026-10-05-seat-LOWER-receipt.md); row 252). The conformance runner
   declares its roles and keeps a refused attempt. The target evaluator runs a list scan with a
@@ -220,8 +231,9 @@ Landed later on 2026-10-05:
 - **The Queue's abstract contract is in the tree** (`9abf99b6`): the packet
   `Test/contracts/queue.contract.md`, the model and its small controls, and the first general
   statement. Codex prepared them, and the coordinator built them. `acceptLoop_length_le`
-  (`Test/Program/QueueCapacity.lean`) is proved. `positive_suspend_step_capacity` is a planned
-  goal.
+  (`src/Effect4/Laws/Modules/Queue/Capacity.lean`) is proved. `positive_suspend_step_capacity` is proved too:
+  one step of the model under `suspend` keeps the configuration and the buffer's bound. Its
+  proof does not use the positive capacity.
 - **Seventeen worktrees of finished seats are removed,** on the owner's word. Their unique
   notes and one uncommitted patch are kept under
   `research/recovered-worktrees/2026-10-05/` (on disk, not tracked).
@@ -232,36 +244,60 @@ Open at this landing:
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   The Queue's path lands in three parts:
-  1. **The pure contract and its first capacity proof.** Landed on 2026-10-05 (`9abf99b6`).
-     Open: the step's capacity goal, and the registry's join, which waits for seat FOLD's
-     merge. Codex keeps the proof's route
+  1. **The pure contract and its capacity proof.** Landed on 2026-10-05 (`9abf99b6`), and the
+     step's capacity statement is proved since. The model and its proved statements are in the
+     law graph since the same day (row 255), and the registry names two of them:
+     `queue-step-capacity` and `queue-first-profile-closed`. Codex keeps the proof's route
      ([its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md));
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
-     It needs the fold and part 1, and neither T5 nor the mask. The coordinator proposes it as
-     a slice beside T5;
+     The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
+     Its design is [written](research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md)
+     and twice revised after Codex's reviews. Its five choices are ruled (row 255). Its step
+     goals quantify
+     over a closed predicate, the first profile's states: `FirstProfile`, with its closure
+     proved (`first_profile_closed`, `src/Effect4/Laws/Modules/Queue/Profile.lean`). Seat QSTEPS has
+     it since 2026-10-05 (branch `seat/qsteps`, from `b52c2b1b`;
+     [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). It runs as a
+     third seat, on the owner's word (row 237's amendment). The owner ruled the design's five
+     proposals as recommended (row 255). Codex's design research
+     ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
+     is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
+     so a step's helper cannot capture its caller's variable
+     (`Test/Program/FoldHygiene.lean`). The accept pass is the model's closed form, and the
+     first cell holds four fields;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
-     its law, and the printed form. It follows T5 and the mask (row 251).
+     its law, and the printed form. It follows T5 and the mask (row 251). Codex's research
+     proposes a private helper for the take's loop, whose last arm never runs.
 
-  A probe ran `take` and `offer` as programs on the machine, with stand-ins for the fold and
-  the mask (`research/2026-10-05-claude-lead/queue-readiness/QueueSkeleton.lean`; a finite
-  probe, fifteen programs). They build and run with the constructs of today: the posted helper
-  of row 238, a wait and a second attempt, strict order with two takers, and a withdrawal that
-  keeps the interruptor. The cleanup is the pin's `onInterrupt`: `onExit` with
-  `causeIsInterrupt` on the exit. Not probed: the generated engine, and the printed module on
-  a host, which waits for T5;
+  Two probes ran `take` and `offer` as programs on the machine
+  ([the note](research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md); finite
+  probes). The second uses the real steps: one `Ref.modify` whose term folds, the posted helper
+  of row 238, strict order, an offer that waits at capacity, and a withdrawal that keeps the
+  interruptor. Eight scenarios answer as expected. Each of the six steps is compared with the
+  model's step: the reply, the stored value and the ordered notifications. The comparison
+  agrees on 200 states of the first profile, and it refuses a state outside it (revised twice
+  after Codex's reviews). The
+  cleanup is the pin's `onInterrupt`: `onExit` with `causeIsInterrupt` on the exit. Not
+  probed: the generated engine, a masked caller, batches, and the printed module on a host,
+  which waits for T5;
 - the acceptance programs gain four scenarios (row 254;
   [Codex's review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md)):
   two workers with two pending replies, exact handler routing, atomic state with failure and
   cleanup, and replies at a timeout's boundary. Seat DOGFOOD has them since 2026-10-05
   (branch `seat/scenarios`, from `c09826c0`;
   [the brief](research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md));
-- the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
-  with its model. Its slice is with seat FOLD since 2026-10-05 (branch `seat/fold`, from
-  `a53e5e15`; [the brief](research/2026-10-05-claude-lead/briefs/seat-fold-brief.md));
-- the faces of an operation's binder term, the state plan's T5, follow the fold. The Queue's
-  printed form needs them, because its step is one `Ref.modify` whose term folds;
+- the faces of an operation's binder term, the state plan's T5, are with seat T5 since
+  2026-10-05 (branch `seat/t5`, from `6214dcb8`;
+  [the brief](research/2026-10-05-claude-lead/briefs/seat-t5-brief.md)). Part A prints a term
+  as a function and reads it back. Part B derives, prints and reads an operation's type
+  arguments. The Queue's printed form needs both;
+- seat FOLD left three points for the owner or for T5
+  ([its receipt](research/2026-10-05-seat-FOLD-receipt.md), item 9): the argument order of
+  `take` and `drop`, the typing of `sameHandle` by the raw head, and a list of number literals
+  on the target, whose literal type does not widen under tsgo 7;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
-  (rows 244 to 246). Its slice follows those two;
+  (rows 244 to 246). Its slice follows T5, and
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md) is written ahead;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
@@ -282,6 +318,15 @@ Open at this landing:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
+- one small cleanup waits for seat T5's merge, from Codex's review of 2026-10-05
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/list-lemma-review/recommendations.md`):
+  - five general list facts move from `src/Effect4/Laws/Program/Template.lean` to
+    `Effect4.Constructive.List` in `src/Effect4/Data/Constructive.lean`, with their statements
+    and proofs unchanged;
+  - `lookup_weaken` of `src/Effect4/Program/Typing/Rules.lean` is exposed, and the copy
+    `getElem?_weaken` in the fold's law module goes.
+
+  The shared data module has many dependents, so the cleanup must not run beside T5;
 - the OCaml route, after seat LOWER's merge:
   - the target evaluator is outside the trust ceiling. Its rules for the length of a string
     and for the order of two strings reach `Classical.choice`. The seat proposes their byte
@@ -293,6 +338,13 @@ Open at this landing:
   - no lane runs the runner's tests or the compiler checkpoint without a person;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
 - the proposed decisions rows of the three seats' receipts (T3b, M0, LOWER), for the owner;
+- Codex's research on the TypeScript compiler boundary is filed
+  ([its recommendations](research/2026-10-05-codex-foundation-packet/implementation-audit/tsgo-research/recommendations.md);
+  source reading, and no compiler run). It proposes an optional compiler client beside the
+  Lean `typescript` package, extracted from the target oracle and its checker. The Effect
+  admission and the comparison of answer, error and requirement types stay in this tree. No
+  seat has it, and the proposal is the owner's to rule. Its one small finding is with seat T5:
+  the pinned truth check does not compile the tuple control;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

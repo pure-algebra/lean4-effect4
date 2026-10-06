@@ -1,73 +1,53 @@
-import Test.Program.QueueModel
+import Effect4.Laws.Modules.Queue.Capacity
 import ProofGraph.Plan
-import Effect4.Laws.Auto.Semantics
-import Lean.Elab.Tactic.Omega
 
 /-!
-# The Queue's abstract capacity invariant: the first general statement (decisions rows 219, 233)
+# The Queue's capacity statements: their pinned outputs and their finite controls
 
-`acceptLoop_length_le` is proved here: pending offers add at most the finite room to the buffer.
-`positive_suspend_step_capacity` is a planned goal: one abstract step of the first profile keeps
-the configuration and the buffer's bound. The helper is a step of that goal, through `accept` and
-`afterConsume` (`Test/Program/QueueModel.lean`).
-
-Placement. Concept `reactive-scheduling`. Requirement R10, as a helper of the proposed claim
-`queue-expansion-agrees`, on the side of its abstract client. Consumer: the later refinement from
-the Queue's `Ref.modify` term to the abstract step. The statements are about lengths in the
-natural-number model. They establish no typed store preservation, no signal delivery, no order of
-service, no cancellation law and no agreement with a target.
-
-Codex prepared the statements and the proof's route (the packet `Test/contracts/queue.contract.md`).
-The coordinator compiled them on 2026-10-05 and rewrote the helper's proof: the draft unfolded
-`fit` under the conditional's instance.
+The statements and their proofs are in `src/Effect4/Laws/Modules/Queue/Capacity.lean`. This
+battery pins each statement's axioms and its plan status, and holds the finite controls of the
+packet `Test/contracts/queue.contract.md`, one input each.
 -/
 
 namespace Test.Program.QueueCapacity
-open QueueContract
+open Effect4.Queue.Model
 
-/-- Abstract positive-capacity suspend steps keep the configuration and buffer bound.
-Consumer: the later Queue term-to-model refinement. No wrapper or host claim. -/
-@[semantics "reactive-scheduling" (requirement := R10)]
-proof_goal positive_suspend_step_capacity
-    (c : Nat) (s : State) (op : Op)
-    (hpos : 0 < c) (hcap : s.capacity = some c)
-    (hstrategy : s.strategy = .suspend)
-    (hwithin : s.messages.length ≤ c) :
-  let next := (step .none { s := s } op).s
-  next.capacity = some c ∧ next.strategy = .suspend ∧ next.messages.length ≤ c
-
-/-- Pending offers add at most the finite room to the buffer.
-A helper of `positive_suspend_step_capacity`, through `accept` and `afterConsume`.
-The statement concerns lengths, not request identities, signal delivery or store membership. -/
-@[semantics "reactive-scheduling" (requirement := R10)]
-theorem acceptLoop_length_le (r : Nat) (ms : List Nat) (os : List Offer) :
-    (acceptLoop (some r) ms os).1.length ≤ ms.length + r := by
-  induction os generalizing r ms with
-  | nil =>
-    simp only [acceptLoop]
-    omega
-  | cons o os ih =>
-    rw [acceptLoop]
-    by_cases hr : (some r : Option Nat) = some 0
-    · rw [if_pos hr]
-      exact Nat.le_add_right _ _
-    · rw [if_neg hr]
-      dsimp only
-      have hfit : fit (some r) o.rest.length ≤ r := Nat.min_le_left r o.rest.length
-      generalize fit (some r) o.rest.length = k at hfit ⊢
-      have takeBound := List.length_take_le k o.rest
-      by_cases hl : (List.drop k o.rest).isEmpty = true
-      · rw [if_pos hl]
-        dsimp only [Option.map_some]
-        have bound := ih (r - k) (ms ++ o.rest.take k)
-        rw [List.length_append] at bound
-        omega
-      · rw [if_neg hl, List.length_append]
-        omega
-
-/-- info: 'Test.Program.QueueCapacity.acceptLoop_length_le' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Queue.Model.acceptLoop_length_le' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms acceptLoop_length_le
+
+/-- info: 'Effect4.Queue.Model.positive_suspend_step_capacity' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms positive_suspend_step_capacity
+
+-- The standing is derived from the proof. The counts are of this battery's tree, which holds
+-- no step of the proof: the steps are in the law graph.
+/--
+info: Effect4.Queue.Model.positive_suspend_step_capacity: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status positive_suspend_step_capacity
+
+/-! ## Controls of the step's statement: finite checks, one input each -/
+
+/-- The step's conclusion on one input, as a Boolean. -/
+def keeps (c : Nat) (s : State) (op : Op) : Bool :=
+  let next := (step .none { s := s } op).s
+  next.capacity == some c && next.strategy == .suspend && decide (next.messages.length ≤ c)
+
+-- A take at a full buffer frees one place, and one of two pending offers enters.
+#guard keeps 2
+  { capacity := some 2, messages := [1, 2], offers := [⟨7, false, [3]⟩, ⟨8, false, [4]⟩] }
+  (.take 1 1 1)
+-- A batch enters as far as the room goes.
+#guard keeps 2 { capacity := some 2, messages := [1] } (.offerAll 7 [3, 4, 5])
+-- Capacity zero: the offer waits, and the buffer stays empty. The positive premise is not used.
+#guard keeps 0 { capacity := some 0 } (.offer 7 5)
+-- Red control: a buffer above its bound stays above it.
+#guard !keeps 1 { capacity := some 1, messages := [1, 2] } (.peek 1)
+-- Red control: outside `suspend`, the unformed configuration `sliding` at capacity zero grows.
+#guard !keeps 0 { capacity := some 0, strategy := .sliding } (.offer 7 5)
 
 /-! ## Controls of the helper: finite checks, one input each -/
 

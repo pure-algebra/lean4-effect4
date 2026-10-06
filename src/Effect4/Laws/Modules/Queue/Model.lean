@@ -1,5 +1,5 @@
 /-!
-# The Queue's abstract transition model (decisions rows 219 to 222 and 240 to 243)
+# The Queue's abstract transition model (decisions rows 219 to 222, 240 to 243 and 255)
 
 The model of the packet `Test/contracts/queue.contract.md`, with its diagnostic runner. No effect,
 no wrapper and no delivery of a signal occurs here: a step answers a state, a reply and the
@@ -7,10 +7,11 @@ signals to post.
 
 Its definitions are the research model's, byte for byte
 (`docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean` at `da41297b`). Codex
-extracted them, and the coordinator built them on 2026-10-05.
+extracted them, and the coordinator built them on 2026-10-05. The file came into the law graph
+from the batteries the same day (decisions row 255): its namespace changed, and no definition.
 -/
 
-namespace QueueContract
+namespace Effect4.Queue.Model
 
 /-- How a queue ended: the clean end (the release's `Done`), a failure with a cause, or the
 interrupt that a shutdown of an open queue leaves. -/
@@ -452,4 +453,4 @@ def step (fault : Fault) (r : Run) : Op → Run
   | .dropPeek id => bump r (withdrawPeek r.s id) (some id) []
   | .dropAwait id => bump r (withdrawAwait r.s id) (some id) []
 
-end QueueContract
+end Effect4.Queue.Model

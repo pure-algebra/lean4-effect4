@@ -39,6 +39,7 @@
     "pFailPayload",
     "pTagPayload",
     "pInterruptEscape",
+    "pFold",
     "pModifyFold",
     "pQueueOffer"
   ],

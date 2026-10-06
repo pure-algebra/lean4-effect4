@@ -1222,7 +1222,8 @@
         "undefined",
         "number",
         "bytes"]}],
-     "note": "Seat FOLD (2026-10-05): the typing rule of the atom `sameHandle` (decisions row 229). It admits two `refOf` heads or two `deferredOf` heads and answers `bool`. Every other head is refused, and so is a union of two handle types.",
+     "note":
+     "Seat FOLD (2026-10-05): the typing rule of the atom `sameHandle` (decisions row 229). It admits two `refOf` heads or two `deferredOf` heads and answers `bool`. Every other head is refused, and so is a union of two handle types.",
      "name": "Effect4.Program.NativeAtom.sameHandleRule"},
     {"name": "Effect4.Program.causeInputError?",
      "mode": "default",
@@ -3428,11 +3429,6 @@
     {"name": "Effect4.Program.tupleRequestReadable",
      "mode": "default",
      "cover": ["nat", "bool", "str"]},
-    {"note":
-     "State plan T3b: under an `add` head the literal `0` tells `zeroWhenPositive` from `takeAndBump` (`FnName.totalAt`); any other literal falls to the head's other arm. The function is read only to prove `FnName.image_injective`.",
-     "name": "Effect4.Machine.FnName.totalName?",
-     "mode": "default",
-     "cover": ["unit", "bool", "str"]},
     {"sites":
      [{"mode": "exhaustive"},
       {"mode": "default", "cover": ["nat", "bool", "str"]},
@@ -3456,8 +3452,9 @@
        "cover":
        ["var", "app", "record", "field", "recordSet", "tupleAt", "fold"]}],
      "name": "Effect4.Program.Provision.docsBody"},
-    {"name": "Effect4.Program.unannotatedNode",
-     "note": "Seat FOLD (2026-10-05): the node function of the generated term fold `Term.unannotated`. Only a list fold can state a type, so every other constructor is unannotated, and the fold reaches its children. A stated type is printed and not read (decisions row 228).",
+    {"note":
+     "Seat FOLD (2026-10-05): the node function of the generated term fold `Term.unannotated`. Only a list fold can state a type, so every other constructor is unannotated, and the fold reaches its children. A stated type is printed and not read (decisions row 228).",
+     "name": "Effect4.Program.unannotatedNode",
      "mode": "default",
      "cover": ["var", "lit", "app", "record", "field", "recordSet", "tupleAt"]},
     {"name": "Effect4.Codegen.codesOf",
@@ -3504,15 +3501,6 @@
        ["var", "lit", "app", "record", "field", "recordSet", "tupleAt"]}],
      "name": "Effect4.Program.instDecidableEqTerm.decEq_1"},
     {"name": "Effect4.Store.ProgramGen.TermC.toValTerm", "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "default",
-       "cover": ["lit", "record", "field", "recordSet", "tupleAt", "fold"]},
-      {"mode": "default",
-       "cover":
-       ["var", "app", "record", "field", "recordSet", "tupleAt", "fold"]}],
-     "note":
-     "State plan T3b: the name the head of an `A → A` image spells (`FnName.totalAt`): a variable, or an atom's head, and under `add` the second argument. A term with another head answers none; under `add` a second argument that is not the literal `0` answers `takeAndBump`. Read only to prove `FnName.image_injective`.",
-     "name": "Effect4.Machine.FnName.totalName?"},
     {"note":
      "Decisions row 120 (part E2): one node's class coverage, the node function of the generated term fold (`Term.covers`); only a record construction can be a class construction, so every other constructor is covered, and the fold reaches its children.",
      "name": "Effect4.Program.coverNode",
@@ -3528,25 +3516,6 @@
      ["var", "lit", "record", "field", "recordSet", "tupleAt", "fold"]},
     {"name": "Effect4.Program.Term.scoped", "mode": "exhaustive"},
     {"name": "Effect4.Program.evalTerm", "mode": "exhaustive"},
-    {"sites":
-     [{"mode": "default",
-       "cover":
-       ["var", "lit", "record", "field", "recordSet", "tupleAt", "fold"]},
-      {"mode": "default",
-       "cover":
-       ["var", "lit", "record", "field", "recordSet", "tupleAt", "fold"]},
-      {"mode": "default",
-       "cover":
-       ["var", "lit", "record", "field", "recordSet", "tupleAt", "fold"]},
-      {"mode": "default",
-       "cover":
-       ["var", "lit", "record", "field", "recordSet", "tupleAt", "fold"]},
-      {"mode": "default",
-       "cover":
-       ["lit", "app", "record", "field", "recordSet", "tupleAt", "fold"]}],
-     "note":
-     "State plan T3b: the name an image spells at each of the four shapes (`FnName.imageAt`), read along the path to its `A → A` part without the term's level. A term off an image's path answers none. Read only to prove `FnName.image_injective`, the step of the retraction `FnName.decode?_image`.",
-     "name": "Effect4.Machine.FnName.headName?"},
     {"name": "Effect4.Program.Terms.names?",
      "mode": "default",
      "cover": ["app", "record", "field", "recordSet", "tupleAt", "fold"]},
