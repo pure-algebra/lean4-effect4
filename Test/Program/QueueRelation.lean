@@ -203,4 +203,44 @@ def shared : Table := { tb0 with handle := fun n => if n = 2 then ⟨1⟩ else �
     (offer { capacity := some 2, takers := [T 1], peekers := [2] } 100 7).1
     (offer { capacity := some 2, takers := [T 1], peekers := [2] } 100 7).2.2 = none
 
+/-! ## The pinned outputs
+
+Each proved statement's axioms, and its standing as the plan derives it from the proof. A step
+goal that is still planned has no pin here: the goal gate counts it. The counts are of this
+battery's tree, which holds no step of a proof: the steps are in the law graph. -/
+
+/-- info: 'Effect4.Queue.Model.step_updates' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms step_updates
+
+/-- info: 'Effect4.Queue.Model.step_keeps_cell' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms step_keeps_cell
+
+/-- info: 'Effect4.Queue.Model.cell_read' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms cell_read
+
+/-- info: 'Effect4.Queue.Model.sizeStep_agrees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms sizeStep_agrees
+
+/--
+info: Effect4.Queue.Model.sizeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status sizeStep_agrees
+
+/-- info: 'Effect4.Queue.Model.withdrawTake_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms withdrawTake_agrees
+
+/--
+info: Effect4.Queue.Model.withdrawTake_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status withdrawTake_agrees
+
 end Test.Program.QueueRelation

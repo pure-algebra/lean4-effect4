@@ -181,6 +181,7 @@ import Effect4.Laws.Modules.Queue.Capacity
 import Effect4.Laws.Modules.Queue.Profile
 import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Laws.Modules.Queue.Relation
+import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Modules.Queue.Steps
 
 /-!
