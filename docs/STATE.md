@@ -302,6 +302,11 @@ question.
 
 In work since the suspension of the handover:
 
+- **Seat POOLOPS has Pool's public operations** (branch `seat/poolops`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-poolops-brief.md)): `make`, `use`
+  by the protected form, and the close that waits, with the closer as a request. It follows
+  seat SEMW's procedure. A borrow at a closed pool interrupts the borrower itself, as both
+  Effect builds do on one schedule each (row 279, point 2).
 - **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
   changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a

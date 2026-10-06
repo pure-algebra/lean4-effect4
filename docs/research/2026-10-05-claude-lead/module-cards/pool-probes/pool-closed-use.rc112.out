@@ -1,0 +1,28 @@
+{
+ "effect": "4.0.0-rc.112",
+ "runtime": "bun 1.4.2",
+ "noBorrower": {
+  "bodyRan": false,
+  "lateExitedBeforeTheReturn": true,
+  "exit": "{\"_id\":\"Exit\",\"_tag\":\"Failure\",\"cause\":{\"_id\":\"Cause\",\"failures\":[{\"_tag\":\"Interrupt\",\"fiberId\":3}]}}",
+  "log": [
+   "acquire 1",
+   "finalize 1",
+   "the pool's scope is closed",
+   "L has exited"
+  ]
+ },
+ "aBorrowerHolds": {
+  "bodyRan": false,
+  "lateExitedBeforeTheReturn": true,
+  "exit": "{\"_id\":\"Exit\",\"_tag\":\"Failure\",\"cause\":{\"_id\":\"Cause\",\"failures\":[{\"_tag\":\"Interrupt\",\"fiberId\":7}]}}",
+  "log": [
+   "acquire 1",
+   "H got 1",
+   "the pool's scope is closed",
+   "L has exited",
+   "H returns 1",
+   "finalize 1"
+  ]
+ }
+}
