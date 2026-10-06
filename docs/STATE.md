@@ -333,8 +333,12 @@ In work since the suspension of the handover:
   (`Test/Program/PoolTraces.lean`). A borrow at a closing pool leaves the items and the idle
   list as they were. Under a masked caller it still exits with the interrupt of its own
   fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
-  the withdrawal as a premise of the wake. The faces, the truth programs and the engine come
-  next.
+  the withdrawal as a premise of the wake. Its sixth step is merged: each operation prints
+  and reads back (`Test/Program/PoolFaces.lean`), and ten programs run on rc.112 in the
+  truth lane. Three of them settle on two exits under the two entries, and their sync runs
+  are pinned apart (`lateSightsSync`, `harness/truth/Truth.lean`). No program is kept out by
+  row 268's signed difference: both faces run the module's expansion. The engine's cases,
+  the documents and the receipt come next.
 - **Seat REPAIR has two small repairs of proofs** (branch `seat/repair`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-repair-brief.md)). The Queue's
   `take_types` and `offer_types` go through the shared typing of the waiting wrapper, with

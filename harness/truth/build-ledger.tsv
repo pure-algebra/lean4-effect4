@@ -69,3 +69,13 @@ pSemaphoreMasked	yes	yes	yes	yes	yes	yes
 pSemaphoreHandoff	yes	yes	yes	yes	yes	yes		
 pSemaphoreProtected	yes	yes	yes	yes	yes	yes		
 pSemaphoreBodies	yes	yes	yes	yes	yes	yes		
+pPoolReuse	yes	yes	yes	yes	yes	yes		
+pPoolOrder	yes	yes	yes	yes	yes	yes		
+pPoolWaiters	yes	yes	yes	yes	yes	yes		
+pPoolLateWake	yes	yes	yes	yes	yes	yes		
+pPoolWake	yes	yes	yes	yes	yes	yes		
+pPoolMakeFails	yes	yes	yes	yes	yes	yes		
+pPoolCloseWaits	yes	yes	yes	yes	yes	yes		
+pPoolWithdrawn	yes	yes	yes	yes	yes	yes		
+pPoolClosed	yes	yes	yes	yes	yes	yes		
+pPoolClosing	yes	yes	yes	yes	yes	yes		

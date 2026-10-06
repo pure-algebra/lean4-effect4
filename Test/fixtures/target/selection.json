@@ -62,7 +62,17 @@
     "pSemaphoreMasked",
     "pSemaphoreHandoff",
     "pSemaphoreProtected",
-    "pSemaphoreBodies"
+    "pSemaphoreBodies",
+    "pPoolReuse",
+    "pPoolOrder",
+    "pPoolWaiters",
+    "pPoolLateWake",
+    "pPoolWake",
+    "pPoolMakeFails",
+    "pPoolCloseWaits",
+    "pPoolWithdrawn",
+    "pPoolClosed",
+    "pPoolClosing"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
