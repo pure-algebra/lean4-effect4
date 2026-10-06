@@ -36,8 +36,9 @@ finalizer, and a refill on the logical clock.
   swapped.
 * **Lowered runs.** The program's rows carry binder terms that no name images. The program
   prints and reads back since the state plan's T5, part A (`Test/Dogfood/Scenario/Faces.lean`).
-  The host run waits on the keyed lane. The engine run is a fixture of
-  `Test/Dogfood/Scenario/Tape.lean`.
+  The host lane and the engine's lane take their scripts from `runsOf`: the keyed lane performs
+  each named run that a host can perform, and `Test/Dogfood/Scenario/Tape.lean` names the runs
+  of the engine's fixture.
 
 One control of the brief is not here: a cleanup replayed under one registration. The cleanup
 log counts writes by identity. It does not count a finalizer's invocations, so no run of this

@@ -51,7 +51,8 @@ def committed : List (String × String) :=
 
 /-- The controls of the lane's names: one name has one script. The lane takes each run that a
 record lists from the record, and it refuses an own run that carries the name of a record's run.
-They stand outside the fixtures' match, so a refused lane fails by this control's own name. -/
+They stand outside the fixtures' match. So a lane that a name keeps from its fixtures fails
+twice: at the control that the lane has its fixtures, and here, where the name is at fault. -/
 def nameControls : List Control :=
   [ green "machine"
       "the lane's names are in order: each taken name is a record's run, and no own run carries one"
@@ -95,9 +96,7 @@ def controls : List Control :=
     , red "machine" "at a small budget the tape stops at the frontier and leaves the rows unread"
         [] fun _ => starved.left != 0 && !starved.agrees && starved.raw.map (·.2) == starved.views ]
       ++ nameControls
-  | _, _ =>
-    green "machine" "the lane has its fixtures: the programs build, and the records list its runs"
-      [] (fun _ => false) :: nameControls
+  | _, _ => green "machine" "the lane has its fixtures" [] (fun _ => false) :: nameControls
 
 /-- The lowered runs as a scenario: its claim is the machine clause. Its record lists no named
 run: the lane's runs are the tape module's table. -/

@@ -25,7 +25,9 @@ host answer carries.
 * **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
   control names the runs that its comparison reads.
 * **Lowered runs.** The program prints and reads back (`Test/Dogfood/Scenario/Faces.lean`). The
-  host run waits on the keyed lane.
+  host lane and the engine's lane take their scripts from `runsOf`: the keyed lane performs each
+  named run that a host can perform, and `Test/Dogfood/Scenario/Tape.lean` names the runs of the
+  engine's fixture.
 
 Two findings stand in the controls. The repository row's error column is a pair of strings, so a
 host failure that wears a business tag is routed as that business failure. With the exact column,

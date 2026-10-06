@@ -33,8 +33,9 @@ finalizer.
 * **Lowered runs.** The attempt's cells are `Ref.update` rows whose binder terms no name images,
   and the retry loop states its cursor's type. The program prints since the state plan's T5,
   part A, and reads back since part B's second step (`Test/Dogfood/Scenario/Faces.lean`). The
-  host run waits on the keyed lane. The engine run is a fixture of
-  `Test/Dogfood/Scenario/Tape.lean`.
+  host lane and the engine's lane take their scripts from `runsOf`: the keyed lane performs each
+  named run that a host can perform, and `Test/Dogfood/Scenario/Tape.lean` names the runs of the
+  engine's fixture.
 
 One case waits and has no control here: a timer that fires while the attempt is inside a masked
 region. The attempt has no such region. That cut depends on the mask's contract (decisions rows

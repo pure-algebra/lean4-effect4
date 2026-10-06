@@ -28,7 +28,9 @@ answers by key.
   program, and the journals agree row for row.
 * **Lowered runs.** The crew's logs are `Ref.update` rows whose binder terms no name images. The
   program prints and reads back since the state plan's T5, part A
-  (`Test/Dogfood/Scenario/Faces.lean`). The host run waits on the keyed lane.
+  (`Test/Dogfood/Scenario/Faces.lean`). The host lane and the engine's lane take their scripts
+  from `runsOf`: the keyed lane performs each named run that a host can perform, and
+  `Test/Dogfood/Scenario/Tape.lean` names the runs of the engine's fixture.
   `Observation.machine` is the machine's part of the observation.
 
 Each run is a finite probe: one script on the Lean machine. The claim's standing is derived from
