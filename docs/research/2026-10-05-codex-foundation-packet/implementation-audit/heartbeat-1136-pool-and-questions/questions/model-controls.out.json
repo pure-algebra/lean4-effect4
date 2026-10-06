@@ -1,0 +1,39 @@
+{
+  "evidence": "finite pure Python model; not a Lean or host result",
+  "assertions": 8,
+  "before": {
+    "items": [
+      1
+    ],
+    "idle": [],
+    "leases": {
+      "1": "H"
+    },
+    "waiters": [
+      "A",
+      "B"
+    ],
+    "closing": false
+  },
+  "after_return_before_helper": {
+    "items": [
+      1
+    ],
+    "idle": [
+      1
+    ],
+    "leases": {},
+    "waiters": [
+      "A",
+      "B"
+    ],
+    "closing": false
+  },
+  "candidate_invariant": false,
+  "item_partition_preserved": true,
+  "selected_after_A_withdraws": [
+    "B"
+  ],
+  "enrol_admission_before": true,
+  "enrol_admission_after": false
+}

@@ -1,0 +1,21 @@
+{
+  "source_blob_matches": [
+    "6d83dd31:AGENTS.md",
+    "6d83dd31:src/Effect4/Laws/Modules/Queue/Ops.lean",
+    "6d83dd31:src/Effect4/Laws/Modules/Waiting.lean",
+    "6d83dd31:src/Effect4/Laws/Modules/Store.lean",
+    "6d83dd31:src/Effect4/Laws/Modules/Checking.lean",
+    "6d83dd31:src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "6d83dd31:src/Effect4/Laws/Modules/Queue/Typing.lean",
+    "6d83dd31:src/Effect4/Laws/Modules/Reading.lean",
+    "6d83dd31:src/Effect4/Modules/Queue/Ops.lean",
+    "6d83dd31:src/Effect4/Modules/Waiting.lean",
+    "6d83dd31:Test/Program/QueueOps.lean",
+    "6d83dd31:Test/Program/QueueSteps.lean",
+    "6d83dd31:docs/research/2026-10-06-seat-PUB-design.md",
+    "6d83dd31:docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+    "2ee2aa91:docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md"
+  ],
+  "count": 15,
+  "project_execution": false
+}

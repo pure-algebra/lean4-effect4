@@ -1,0 +1,26 @@
+{
+  "commit_sources": 19,
+  "paths": [
+    "AGENTS.md",
+    "docs/STATE.md",
+    "docs/core/decisions.md",
+    "docs/RUNTIME-COVERAGE.md",
+    "docs/research/2026-10-05-seat-MASK-receipt.md",
+    "docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+    "docs/research/2026-10-05-claude-lead/module-cards/pool.md",
+    "docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-lifecycle.ts",
+    "docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-lifecycle.rc112.out",
+    "docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-lifecycle.v401.out",
+    "scripts/generate-effect-runtime-census.sh",
+    "scripts/check-effect-runtime-census.sh",
+    "generated/effect-runtime-census.tsv",
+    "Test/Audit/RuntimeCoverage.lean",
+    "src/Effect4/Machine/Frames.lean",
+    "src/Effect4/Laws/Program/Typed/Mask.lean",
+    "Test/Program/MaskContract.lean",
+    "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "vendor/effect-4.0.1/src/Pool.ts"
+  ],
+  "mask_anchor_unique": true,
+  "span_sha256": "276d40c762a093ac1d675da7e1a2b6146abc697e589bef4bebf10348c19b3691"
+}

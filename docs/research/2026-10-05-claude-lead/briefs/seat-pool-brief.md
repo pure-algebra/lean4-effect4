@@ -112,12 +112,30 @@ readings of our machine's rules. Run the cases now, before the model is written.
   a lease with a wait and a withdrawal, a return with one posted helper, and a body under
   `onExit`. Use the shared wrapper and the mask's builder where they fit.
 - A fixture may hold a first form of the steps. Part 4 replaces it with the library's terms.
-- Run the cases PP1 to PP5 and PP8. Each must give the profile's answer of the card's
-  section 9: who holds which item, who still waits, and the cell's lists.
+- Run the cases PP1 to PP4 and PP8 as public schedules of the profile. Each must give the
+  profile's answer of the card's section 9: who holds which item, who still waits, and the
+  cell's lists.
+- **PP5 is not a public schedule of the profile.** Its borrowers ask while the acquisition
+  waits, and row 267's `make` acquires every item before it answers. Run it in two forms,
+  and label each form in the battery:
+  - **The low-level control.** A fixture posts one helper with the count 2 at a stated
+    state. There the pool is open, item 1 is idle, and A and then B wait. The state and the
+    count are premises of the control. No public operation posts that count at an open pool. A
+    return posts 1, and the close posts every waiter only after it refuses new leases. The
+    answer is the pin's: one selection removes A and B, A takes the item and returns it,
+    and B then takes it. Observe the selected identities and the notifications apart from
+    each resumed borrower's own lease.
+  - **The public retry case.** `make` completes at size 1. H leases, A enrols, H returns,
+    the helper selects A at the count 1, and A's own step takes the item. Read the cell
+    after the selection and before A's step. There the item is idle, no waiter is enrolled,
+    and A holds nothing.
 - State the run's settings: the fuel, the flushes and each decision of the tape.
-- Add a red control for each fault of section 9 that a fixture can show. A wake that hands
-  an item to each selected waiter must fail PP5. A selection made when the wake is posted
-  must fail PP4. A return that puts the item at the end must fail PP2.
+- Add a red control for each fault of section 9 that a fixture can show:
+  - a wake that hands an item to each selected waiter must fail both forms of PP5. In the
+    control, the second borrower holds an item that A did not return. In the public case,
+    the item is not idle after the selection;
+  - a selection made when the wake is posted must fail PP4;
+  - a return that puts the item at the end must fail PP2.
 
 **If a case does not give the profile's answer, stop and report with the trace.** Do not
 change the profile, and do not change the machine.
@@ -138,10 +156,15 @@ In the law graph, `src/Effect4/Laws/Modules/Pool/`, in the namespace `Effect4.Po
   predicate holds what the step proofs need:
   - the stamps are distinct;
   - an idle item is an item that no lease holds;
-  - the idle items and the leased items together are the items;
-  - no waiter is enrolled while an item is idle and the pool is open. If that fails, say why.
+  - the idle items and the leased items together are the items.
+- **An idle item beside enrolled waiters is a state of the profile.** Do not state its
+  absence as an invariant. It holds between a return and the selection of its helper. The
+  probe's output shows it on both builds, in PP4: `after H's return and before the task: 2
+  waiting`. It holds again between a selection and the selected borrower's own step.
 - State the model's facts that the public law will use, each as a theorem with its
   placement:
+  - the enrolment rule: lease or enrol adds a waiter only when the pool is open and no item
+    is idle. It is a fact of that one transition, and it states no fairness;
   - the selection takes the first waiters of the state that it finds, at most its count, and
     exactly those;
   - a return puts its item at the front and finalizes nothing;
@@ -227,6 +250,7 @@ State each goal as a planned goal first, with its placement, and then prove towa
 | --- | --- | --- | --- |
 | Each step's typing | `store-typing`, R4 | The cell's type; each step term; every scope of names | No agreement with the model |
 | The profile's closure | `store-typing`, R4 | Every transition of the model, on the profile's states | Nothing about a program, and no progress of a waiter |
+| The enrolment rule of lease or enrol | `store-typing`, R4, beside the profile's closure; its consumers are that step's agreement (R10) and then the public waiting wrapper | One transition of the model, on the profile's states; the enrolment and the stored cell | No fairness and no liveness; nothing about a later selection, a completed cleanup or the target |
 | Each step's agreement with the model | `translation-simulation`, R10; a part of the proposed `pool-expansion-agrees` | The profile's states and an injective table; the reply, the stored value and the selected identities | No wake's order across helpers, no cancellation law, no close that waits, no wrapper |
 | The model's fact of the selection | `reactive-scheduling`, R12; its consumer is the proposed `pool-wake-selection` | One selection of the model | No statement about a run, and no liveness |
 | The model's facts of a return and of the close's first step | `scope-lifetime-finalization`, R11; their consumers are the proposed `pool-lease-return` and `pool-close-waits` | One transition of the model | Nothing about a finalizer's run, and no completed close |
@@ -267,7 +291,8 @@ Send one short message at each of these points, and go on unless the message say
 
 ## Acceptance
 
-1. **Part 1** gives the profile's answers on PP1 to PP5 and PP8, with each red control red.
+1. **Part 1** gives the profile's answers on PP1 to PP4 and PP8, and on both forms of PP5,
+   with each red control red.
 2. **The batteries** of part 7 pass, with each fault red at its own property.
 3. **The engine** replays two cases on both carriers.
 4. **Run these, and give each result in the receipt:**

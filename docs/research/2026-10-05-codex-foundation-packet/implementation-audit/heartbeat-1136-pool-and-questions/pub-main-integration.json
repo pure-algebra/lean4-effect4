@@ -1,0 +1,82 @@
+{
+  "source_comparisons": [
+    "Test/All.lean",
+    "Test/Program/QueueFaces.lean",
+    "Test/Program/QueueMask.lean",
+    "Test/Program/QueueOps.lean",
+    "Test/Program/QueueScenarios.lean",
+    "ocaml/engine/test/queue/queue.txt",
+    "ocaml/engine/test/queue/write.lean",
+    "src/Effect4.lean",
+    "src/Effect4/Laws.lean",
+    "src/Effect4/Laws/Modules/Queue/Ops.lean",
+    "src/Effect4/Laws/Modules/Queue/Reading.lean",
+    "src/Effect4/Laws/Modules/Waiting.lean",
+    "src/Effect4/Modules/Queue/Ops.lean",
+    "src/Effect4/Modules/Waiting.lean"
+  ],
+  "retained_logs": [
+    {
+      "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-pub1-gates.log",
+      "copy": "merge-pub1-gates.log",
+      "sha256": "53d1e1cb483a46e17ae91f98ed03e014dbf4571c0c9b225e25911d496f29f3bb",
+      "selected": [
+        "=== exit 0 (lake build)",
+        "1531:info: Test/All.lean:264:0: Effect4 library-root gate: 173 API/utility modules, 301 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+        "1532:info: Test/All.lean:264:0: Effect4 module and axiom gate: checked 737 modules and 87335 declarations; phases (ms): sources and closure 27, library roots 436, declarations 4490, resolution 1290, axioms 23796, exempti",
+        "1534:info: Test/All.lean:264:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+        "Build completed successfully (147 jobs).",
+        "Build completed successfully (168 jobs).",
+        "Build completed successfully (465 jobs).",
+        "Build completed successfully (155 jobs).",
+        "=== exit 0 (gen-fixtures)",
+        "info: Test/All.lean:264:0: Effect4 library-root gate: 173 API/utility modules, 301 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+        "info: Test/All.lean:264:0: Effect4 module and axiom gate: checked 737 modules and 87335 declarations; phases (ms): sources and closure 27, library roots 436, declarations 4490, resolution 1290, axioms 23796, exemptions 495; semantic/test axioms are [propext,",
+        "info: Test/All.lean:264:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+        "Build completed successfully (987 jobs).",
+        "Build completed successfully (157 jobs).",
+        "=== exit 0 (corpus)",
+        "info: Test/All.lean:264:0: Effect4 library-root gate: 173 API/utility modules, 301 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+        "info: Test/All.lean:264:0: Effect4 module and axiom gate: checked 737 modules and 87335 declarations; phases (ms): sources and closure 27, library roots 436, declarations 4490, resolution 1290, axioms 23796, exemptions 495; semantic/test axioms are [propext,",
+        "info: Test/All.lean:264:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+        "Build completed successfully (987 jobs).",
+        "Build completed successfully (431 jobs).",
+        "=== exit 0 (check-cases)",
+        "info: Test/All.lean:264:0: Effect4 library-root gate: 173 API/utility modules, 301 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+        "info: Test/All.lean:264:0: Effect4 module and axiom gate: checked 737 modules and 87335 declarations; phases (ms): sources and closure 27, library roots 436, declarations 4490, resolution 1290, axioms 23796, exemptions 495; semantic/test axioms are [propext,",
+        "info: Test/All.lean:264:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+        "Build completed successfully (987 jobs).",
+        "=== exit 0 (check-proof-style)",
+        "info: Test/All.lean:264:0: Effect4 library-root gate: 173 API/utility modules, 301 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+        "info: Test/All.lean:264:0: Effect4 module and axiom gate: checked 737 modules and 87335 declarations; phases (ms): sources and closure 27, library roots 436, declarations 4490, resolution 1290, axioms 23796, exemptions 495; semantic/test axioms are [propext,",
+        "info: Test/All.lean:264:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+        "Build completed successfully (987 jobs).",
+        "Build completed successfully (498 jobs).",
+        "=== exit 0 (gen-semantics)",
+        "=== exit 0 (check-docs)",
+        "=== exit 0 (dune build)",
+        "=== exit 0 (dune test engine)"
+      ]
+    },
+    {
+      "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-pub1-build.log",
+      "copy": "merge-pub1-build.log",
+      "sha256": "4a5894274471b64f8d08eb94ea94b50341735e2bde39d89cb66dd6468e30c023",
+      "selected": [
+        "info: Test/All.lean:264:0: Effect4 library-root gate: 173 API/utility modules, 301 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+        "info: Test/All.lean:264:0: Effect4 module and axiom gate: checked 737 modules and 87335 declarations; phases (ms): sources and closure 27, library roots 436, declarations 4490, resolution 1290, axioms 23796, exemptions 495; semantic/test axioms are [propext,",
+        "info: Test/All.lean:264:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+        "Build completed successfully (987 jobs)."
+      ]
+    },
+    {
+      "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-pub1-dune-test.log",
+      "copy": "merge-pub1-dune-test.log",
+      "sha256": "7bce1b69a2684b48fda50150bb1e2f51a334b733dd1ea75a68396d8961131181",
+      "selected": [
+        "test_queue: 19 checks, 0 failures"
+      ]
+    }
+  ],
+  "monitor_rerun": false
+}

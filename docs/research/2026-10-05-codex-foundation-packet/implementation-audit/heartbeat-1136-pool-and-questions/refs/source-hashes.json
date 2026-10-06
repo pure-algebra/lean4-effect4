@@ -1,0 +1,169 @@
+[
+  {
+    "source": "src/Effect4/Laws/Program/CheckedTyping.lean",
+    "snapshot": "source/525c78b3/src/Effect4/Laws/Program/CheckedTyping.lean",
+    "sha256": "16288aa155aea59c37a3c5b1c9f526fcf17b882891aeeed246f55f0f7ae7f64a",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+    "snapshot": "source/525c78b3/src/Effect4/Laws/Program/ReferenceTyping.lean",
+    "sha256": "8a0546059471a47675d7fef1aa5a987e997937a2ab6266e1144e3ab891586a81",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "src/Effect4/Laws/Program/PathOrder.lean",
+    "snapshot": "source/525c78b3/src/Effect4/Laws/Program/PathOrder.lean",
+    "sha256": "e7767eb992b15e77bba9435cedf29b02a324eea640e8a0dc9126d93e7752672c",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "src/Effect4/Laws/Program/PathFold.lean",
+    "snapshot": "source/525c78b3/src/Effect4/Laws/Program/PathFold.lean",
+    "sha256": "993d83476f4d8c7e22fc7c3ae987e3273d1806650fab1f69fc515dc63d2d2bff",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "src/Effect4/Laws/Program/ReferenceExpansion.lean",
+    "snapshot": "source/525c78b3/src/Effect4/Laws/Program/ReferenceExpansion.lean",
+    "sha256": "0a4484be960f99ea6abe311ff78ae6dca9e95887a3bb6d499927f41059dc5e5b",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "src/Effect4/Program/Refs.lean",
+    "snapshot": "source/525c78b3/src/Effect4/Program/Refs.lean",
+    "sha256": "def356715b4c4cacccdcb17aa3b2c2bbb17e7bc3257b59a22bc27bb9e5fc6858",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "Test/fixtures/proof-style/baseline.tsv",
+    "snapshot": "source/525c78b3/Test/fixtures/proof-style/baseline.tsv",
+    "sha256": "57758caed0a70852ebe124cad062463fb5beb83909df58dc99e05cb4366c8985",
+    "revision": "525c78b30e6900be5555715c9e9d09af78ba4423"
+  },
+  {
+    "source": "Test/Program/ReferenceExpansion.lean",
+    "snapshot": "source/8a5352dc/Test/Program/ReferenceExpansion.lean",
+    "sha256": "7414d6315925d5c40bfaef1d5a171a2d107d0bd3877489439158459218396a15",
+    "revision": "8a5352dceb1e220b98b0d4d30f76f9018c6c9586"
+  },
+  {
+    "source": "Test/All.lean",
+    "snapshot": "source/8a5352dc/Test/All.lean",
+    "sha256": "2d7658a1c9eb83b8e2f6f4482176ca2db3ca44218f715f48289dc212c12a91c9",
+    "revision": "8a5352dceb1e220b98b0d4d30f76f9018c6c9586"
+  },
+  {
+    "source": "Test/Program/ReferenceExpansion.lean",
+    "snapshot": "source/8aaf5460/Test/Program/ReferenceExpansion.lean",
+    "sha256": "a99e37e6cf293018379574abd3b2110564de2c865988b8696049c7fc8af16a90",
+    "revision": "8aaf546000fa28d21776f841be0d2d810566efb0"
+  },
+  {
+    "source": "AGENTS.md",
+    "snapshot": "source/ca41bd6a/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "revision": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  {
+    "source": "docs/research/2026-10-05-claude-lead/briefs/seat-refs-brief.md",
+    "snapshot": "source/ca41bd6a/docs/research/2026-10-05-claude-lead/briefs/seat-refs-brief.md",
+    "sha256": "b6e83d792b5cc6a48a078ac2a42c523a7a3a9811441e026789c5150f4e2ee4fc",
+    "revision": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  {
+    "source": "docs/research/2026-10-06-seat-REFS-design.md",
+    "snapshot": "source/ca41bd6a/docs/research/2026-10-06-seat-REFS-design.md",
+    "sha256": "3ef2c64e9bff83865e571055c2587d359d2e09c73d1a23d5724cc147d6cbef54",
+    "revision": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  {
+    "source": "tools/Tools/SemanticsRegistry.lean",
+    "snapshot": "source/ca41bd6a/tools/Tools/SemanticsRegistry.lean",
+    "sha256": "ccfc6136c852cd71a28f4e20cf169fd71bf8b8272d3937b172627bd8c59bb3b3",
+    "revision": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  {
+    "source": "tools/Conform/Effect4/cases.json",
+    "snapshot": "source/ca41bd6a/tools/Conform/Effect4/cases.json",
+    "sha256": "92c1cb81fb457367df4ffaba59617119a5acb44da1091ae4f086eca7f9d98617",
+    "revision": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  {
+    "source": "tools/Conform/Effect4/cases-policy.json",
+    "snapshot": "source/ca41bd6a/tools/Conform/Effect4/cases-policy.json",
+    "sha256": "26ec15fe2bddd33de85f560012f693dddebecaec57981114fe021a0e6bdd6a28",
+    "revision": "ca41bd6af04426a9f2aa0e146000a3a9c61159b3"
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/docs/research/2026-10-06-seat-REFS-receipt.md",
+    "snapshot": "source/active-seat-receipt.md",
+    "sha256": "78ef4ee676238c4dfd1944df11eaa6094f2d2a3ecc1b2bdfde56a8ac78b09f44",
+    "revision": "active draft observed after ca41bd6a; no final receipt commit claimed"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/build-step3-exact.log",
+    "snapshot": "evidence/build-step3-exact.log",
+    "sha256": "283b48e0e8c536ffed8e618c30c34a4f1eae3e9065940e9196c2ddb0f6499f2a"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/build-step4.log",
+    "snapshot": "evidence/build-step4.log",
+    "sha256": "da8142e39838d467c01e78a48596cd602a44c574cd2d00e768d11ac3a905ee82"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/build-step4b.log",
+    "snapshot": "evidence/build-step4b.log",
+    "sha256": "3458844f3561d0b6765f90b5a207dd6ce3771ff7edb869f4f42f46bd04cf40f5"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/census.lean",
+    "snapshot": "evidence/census.lean",
+    "sha256": "eb78df1601bc67d9a2c3d782c31acd61b43b0bd4d0a412e6e9045fcd842729b1"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/census.log",
+    "snapshot": "evidence/census.log",
+    "sha256": "11308f6e313d1d5be74dd86da9fe05e8a89718eab59fa2d40bbfbdbf1c1ac393"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/battery-red-all.lean",
+    "snapshot": "evidence/battery-red-all.lean",
+    "sha256": "2c100b66464835ea6460e54669caa64b3b93f22b1d9ee4924ef4b75c17519334"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/battery-red-all.log",
+    "snapshot": "evidence/battery-red-all.log",
+    "sha256": "31bc17b19063900b841f7ba76a1dadb2616618dbf1cc9fe3b43b44aa0571bd13"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/check-cases.log",
+    "snapshot": "evidence/check-cases.log",
+    "sha256": "654a71a20e836052dffcd912a431f4385ac6136d137c26710c6d66da59b76ffc"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/check-docs.log",
+    "snapshot": "evidence/check-docs.log",
+    "sha256": "2e98502ec04566ccb87466616debef41eeefbf19f18bbfa57bcc68eb098b7773"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/Plain.lean",
+    "snapshot": "evidence/f1/Plain.lean",
+    "sha256": "8a0546059471a47675d7fef1aa5a987e997937a2ab6266e1144e3ab891586a81"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/Plain.log",
+    "snapshot": "evidence/f1/Plain.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/WithAesop.lean",
+    "snapshot": "evidence/f1/WithAesop.lean",
+    "sha256": "a72dcf12a3c1340e76545f7f6596ff1cf7d572d6a04b4793686178a9dbb24f11"
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/refs/f1/WithAesop.log",
+    "snapshot": "evidence/f1/WithAesop.log",
+    "sha256": "c4ad32c5e34b9c10b8f7a254fc00e44d1af2a787b033dfda7e6ee109881137be"
+  }
+]

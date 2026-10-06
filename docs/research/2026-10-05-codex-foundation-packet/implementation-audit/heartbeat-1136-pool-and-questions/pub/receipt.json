@@ -1,0 +1,169 @@
+{
+  "task": "Bounded review of PUB attempt laws",
+  "seat_commit": "6d83dd31a7d2674294f3e4429ea250a98a79e22d",
+  "main_snapshot": "2ee2aa91",
+  "result": "No new actionable semantic defect or owner decision",
+  "laws": {
+    "base": 7,
+    "minted_forms": 4,
+    "scope": "one store step, read or construction; no whole-run claim",
+    "proof_status": "proved according to retained seat compilation and pinned status/axiom guards"
+  },
+  "finite_binding": "3 concrete caller-name lists, nat message type; separate universal unshadowing facts",
+  "saved_default_build": {
+    "jobs": 987,
+    "exit": 0,
+    "modules": 737,
+    "declarations": 87438,
+    "goals": 24,
+    "goal_dependents": 11
+  },
+  "monitor_reruns": false,
+  "source_blob_verifications": 15,
+  "sources": [
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/AGENTS.md",
+      "git": "6d83dd31:AGENTS.md",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "sha256": "e1fb862dbb2df1ed8b38c31551ec17acba0f05fe1f944e36c0964b18a021a58c",
+      "bytes": 37409
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Waiting.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Waiting.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Waiting.lean",
+      "sha256": "830fc852d55430aa259a55693a1eeb31966045348bb60b9acc2da68c69b715d0",
+      "bytes": 14804
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Store.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Store.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Store.lean",
+      "sha256": "8cc1842ea6e1b53383ebc44f425f658bcd3ee638ea0bc87afbb0a0bf9c2cb547",
+      "bytes": 5348
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Checking.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Checking.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Checking.lean",
+      "sha256": "6435969db62e742200637067bcefb66d244e9c5636c9d03247e27b782c045d6b",
+      "bytes": 31036
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "sha256": "6b4ed73c940482dc1e2d0c1b3f88b32a4bcc37b288cad8f1011a8082d21847e9",
+      "bytes": 47444
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "sha256": "678eedff2908b6b76729cac1401d9b46ec6fac466051f98a6680ab939239ede0",
+      "bytes": 39813
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Modules/Reading.lean",
+      "git": "6d83dd31:src/Effect4/Laws/Modules/Reading.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Laws/Modules/Reading.lean",
+      "sha256": "ea2503c1da3cb8b91e06f8da4635ddff1f656c121aee2bf7e5cad92c96b1ff7f",
+      "bytes": 37492
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Modules/Queue/Ops.lean",
+      "git": "6d83dd31:src/Effect4/Modules/Queue/Ops.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Modules/Queue/Ops.lean",
+      "sha256": "ead7d4dca2f54778b0035eda23b629f9f0392885e937b7686e7888a19a0d3e03",
+      "bytes": 6103
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Modules/Waiting.lean",
+      "git": "6d83dd31:src/Effect4/Modules/Waiting.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/src/Effect4/Modules/Waiting.lean",
+      "sha256": "1705d1b8c102e559b36f5291e4e399621da2d9f5037272fd18ce2720512222d1",
+      "bytes": 7865
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Program/QueueOps.lean",
+      "git": "6d83dd31:Test/Program/QueueOps.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/Test/Program/QueueOps.lean",
+      "sha256": "b682b93aaa2f7842f3638a1fc0d83eb77919d3d45ac1ef3c107b193a65a2d636",
+      "bytes": 32844
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Program/QueueSteps.lean",
+      "git": "6d83dd31:Test/Program/QueueSteps.lean",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/Test/Program/QueueSteps.lean",
+      "sha256": "6c6c61fc4f6884c93a891d34dfef58270b0cfcbfcbc4a8486ab2d93f3b4ecd86",
+      "bytes": 17309
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-06-seat-PUB-design.md",
+      "git": "6d83dd31:docs/research/2026-10-06-seat-PUB-design.md",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/docs/research/2026-10-06-seat-PUB-design.md",
+      "sha256": "95dd8bda692c3e6241df9029c8ff4f5cdfd51dd677315e89211937fd092ecf39",
+      "bytes": 8614
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+      "git": "6d83dd31:docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/docs/research/2026-10-05-claude-lead/briefs/seat-pub-brief.md",
+      "sha256": "1585c79da480b74bc5ec8572f168599dd4ae154aed21a86c14d778422fdd7e26",
+      "bytes": 17691
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "git": "2ee2aa91:docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "copy": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source/docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "sha256": "c218cc17bc98c065aac7fb30c34b658e7200dbb2ec7fe0234c731ce1e4df5af7",
+      "bytes": 18326
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/delta.patch",
+      "sha256": "f42393694aff764f9ea7d728145e5cabd47b34110288612bb8dd79acf10dffba",
+      "bytes": 73201
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/evidence/build-3.log",
+      "sha256": "1253be0111d66b2f74f73ce8cdfd80ef12b1ce081dd47a4fa6e0a3ebadea25a5",
+      "bytes": 314546
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/evidence/seat-records.json",
+      "sha256": "b7ecc4746b8c106e4d7972c92b30240c096af92ceceeb3dbadbe2b304e98e0ae",
+      "bytes": 35215
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/evidence-hashes.json",
+      "sha256": "de9bc487b5c3cadcb08c79bffef32a739f9f376cc4c97a3ccabd50efdc224609",
+      "bytes": 370
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/review.md",
+      "sha256": "9116b2f457f8a5e2f71399e37f09b17f5fb287a5c943e74ac23f1d96a56e1c3b",
+      "bytes": 7732
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/source-hashes.json",
+      "sha256": "45cac9c767dd94bc730dc56588fb380a396f25a5cedc69ee45b0d22a77e8763b",
+      "bytes": 6036
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T113637Z/pub/verification.json",
+      "sha256": "d234e7ebecc71e9c933163405879e977ab704f892095d5841358a249351984fb",
+      "bytes": 898
+    }
+  ],
+  "remaining": "Whole-operation typing, remaining acceptance traces/hygiene, truth/engine additions and final receipt; existing run/mask/budget work stays open",
+  "advisory_sent": false
+}

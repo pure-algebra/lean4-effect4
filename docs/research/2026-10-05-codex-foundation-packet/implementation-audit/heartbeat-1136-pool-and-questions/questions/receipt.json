@@ -1,0 +1,90 @@
+{
+  "snapshot": "2ee2aa91ef0edfacf4a2ab30f537b2fccf3b6620",
+  "clean_at_review": true,
+  "role": "advisory source review",
+  "recommendations": [
+    {
+      "id": "MASK-CENSUS",
+      "status": "recommend owner approve bounded addition",
+      "coverage": "partial",
+      "proof_status": "existing local theorems; general mask run/target agreement open"
+    },
+    {
+      "id": "POOL-ENROL",
+      "status": "brief clarification",
+      "finding": "candidate no-idle-plus-waiters invariant fails at posted-return cut",
+      "evidence": "source, retained PP4 host output, eight finite Python assertions"
+    },
+    {
+      "id": "POOL-PP5",
+      "status": "brief domain clarification",
+      "finding": "original pre-make acquisition-wait schedule excluded by row267 eager profile",
+      "evidence": "source comparison; no new host run"
+    }
+  ],
+  "settled_owner_choices": "267-272 not reopened",
+  "pool_dispatch": "brief only at frozen commit",
+  "commands": [
+    {
+      "command": "python3 model-controls.py",
+      "exit_code": 0,
+      "output": "model-controls.out.json",
+      "evidence": "finite pure Python transcription"
+    },
+    {
+      "command": "python3 save-packet.py",
+      "exit_code": 0,
+      "evidence": "19 git-show snapshots, working comparisons and exact source-span hash"
+    }
+  ],
+  "no_runs": [
+    "Lean",
+    "build",
+    "TypeScript compiler",
+    "OCaml compiler",
+    "generator",
+    "host runtime",
+    "install"
+  ],
+  "repository_edits": false,
+  "ui_actions": false,
+  "claude_messages": false,
+  "retained_evidence": "MASK receipt reports earlier command outcomes; Pool outputs are earlier two-version finite host runs. Neither rerun.",
+  "artifacts": [
+    {
+      "path": "mask-span.json",
+      "sha256": "fa4708b6dd67f2d252ecd6b17f944a2e9d90c8c1445d006eb2971507301e42d0",
+      "bytes": 333
+    },
+    {
+      "path": "mask-span.ts.txt",
+      "sha256": "276d40c762a093ac1d675da7e1a2b6146abc697e589bef4bebf10348c19b3691",
+      "bytes": 388
+    },
+    {
+      "path": "model-controls.out.json",
+      "sha256": "5345042415c44fd71672abe38b369945e62d23323497e80637cbc50609dc0f0f",
+      "bytes": 625
+    },
+    {
+      "path": "model-controls.py",
+      "sha256": "701d3bc3bd4959645e357c132c78db46e810b90b64691c397981bf54ebbad272",
+      "bytes": 1566
+    },
+    {
+      "path": "review.md",
+      "sha256": "d07a3ad0c7b770c70f4071bb514a5f3c266c6ce07fed49d81710c1d5cb447738",
+      "bytes": 8031
+    },
+    {
+      "path": "save-packet.py",
+      "sha256": "5996f1bc55087c978cf7e297e4401d034874e83598934bafb5cb3b61ff572584",
+      "bytes": 2324
+    },
+    {
+      "path": "sources.json",
+      "sha256": "686c5ba313e56d8b3dd63392f657ad71a4e2b5319a1f623f7a06d4d039128ec3",
+      "bytes": 4858
+    }
+  ]
+}

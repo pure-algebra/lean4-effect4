@@ -109,6 +109,13 @@ pair of an item's stamp and a lease's stamp.
 Four identities stay apart: the pool, an item, a resource and a lease. Two items may hold
 equal resource values, so a resource's value is no item's identity. The stamp is.
 
+**An idle item may stand beside waiters.** A return makes its item idle at once, and its
+helper selects later. PP4's output shows two waiters at that point, on both builds (tested).
+So no rule of the state excludes it. The rule is on the step: lease or enrol adds a waiter
+only when the pool is open and no item is idle. Codex's review of 2026-10-06 found this, and
+the coordinator checked it against the probe's output
+(`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-1136-pool-and-questions/`).
+
 ## 4. The mandatory questions
 
 | Question | Answer from the source | Our form, proposed |
@@ -208,9 +215,17 @@ The pin's answers are tested (section 1). No case was run on our machine.
 | --- | --- |
 | PP1 | the pin's: the second borrower gets the same resource, and no finalizer runs between |
 | PP2 | 4.0.1's: C gets item 2, then D gets item 1 |
-| PP3, PP4, PP5, PP8 | the pin's |
+| PP3, PP4, PP8 | the pin's |
+| PP5 | the pin's, as a low-level control of one selection at the count 2; see the note below |
 | PP6 | the profile's own: `make` fails with the acquisition's error, after the failed acquisition's cleanup |
 | PP7 | Effect 3's: the close finishes after H returns and after the finalizer |
+
+**PP5 is no public schedule of the profile** (corrected 2026-10-06, after Codex's review).
+Its borrowers ask while the acquisition waits. Row 267's `make` acquires every item before it
+answers, so no public run reaches that schedule. In the profile a return posts the count 1,
+and the close posts every waiter only after it refuses new leases. PP5 stays as a control
+whose state and count are premises. A public case stands beside it: `make` completes, H
+leases, A enrols, H returns, the helper selects A, and A's own step takes the item.
 
 | Fault | The property that must fail |
 | --- | --- |
