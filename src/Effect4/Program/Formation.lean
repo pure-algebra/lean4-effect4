@@ -10,8 +10,9 @@ normalizer can discard syntax. A deferred's error column is an error type the er
 alphabet admits (`admittedErrTy`), since a deferred fails only with a value `errOf`
 carries (decisions rows 42 and 120, the state plan's T3a). Row templates may defer an
 open map key or an open error column until instantiation. Program annotations cannot
-defer either. The generated folds collect raw occurrences; this module supplies their
-local judgment and located check.
+defer either. A type variable is formed in a template only (decisions row 288, point 6 a):
+a row's column may hold a parameter, and a program's annotation may not. The generated
+folds collect raw occurrences; this module supplies their local judgment and located check.
 
 The coordinator places `raw-formation` under decidability of the type algebra.
 Its consumers are runtime admission, checked module reading and production, and
@@ -28,6 +29,11 @@ inductive FormationReason where
   /-- A deferred's error column that the error alphabet does not admit (`admittedErrTy`):
   `Deferred.fail` would fail it with a value `errOf` cannot carry (decisions rows 42, 120). -/
   | deferredError
+  /-- A type variable outside a template (decisions row 288, point 6 a). A row's column may hold
+  a parameter, which the checker instantiates at each use. A program's annotation states a
+  program's type, which holds none: the checker would give the program a type that is not
+  closed, or close the variable to `never` without a word. The refusal keeps the variable. -/
+  | typeVariable
   deriving DecidableEq, Repr
 
 /-- A refusal retains the raw type; its path ends in a preorder occurrence index. -/
@@ -39,11 +45,14 @@ structure FormationRefusal where
 
 namespace Formation
 
-/-- The local formation judgment at one raw type occurrence. -/
+/-- The local formation judgment at one raw type occurrence. A type variable is formed in a
+template only, so a type whose every occurrence is formed outside a template is closed
+(`Formation.closed_of_formed`, `Laws/Program/Typing/Closed.lean`). -/
 def HeadFormed (template : Bool) : Ty → Prop
   | .record fields => (fields.map Prod.fst).Nodup
   | .map key _ => key.normalize = .string ∨ (template = true ∧ key.closed = false)
   | .deferredOf _ error => admittedErrTy error = true ∨ (template = true ∧ error.closed = false)
+  | .var _ => template = true
   | _ => True
 
 instance (template : Bool) (ty : Ty) : Decidable (HeadFormed template ty) := by
@@ -64,6 +73,7 @@ def reason (ty : Ty) : Reason :=
   match ty with
   | .record fields => .repeatedField ((Field.firstRepeated fields).getD "")
   | .deferredOf _ _ => .deferredError
+  | .var _ => .typeVariable
   | _ => .mapKey
 
 /-- Raw occurrences, including the root, collected without normalization. -/

@@ -99,18 +99,21 @@ def shapeDoc : ShapeDoc :=
   ⟨.sum "FormationReason"
      [("repeatedField", 0, [("name", (shape _root_.String).root)]),
       ("mapKey", 1, []),
-      ("deferredError", 2, [])],
+      ("deferredError", 2, []),
+      ("typeVariable", 3, [])],
    (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.FormationReason → Val
   | .repeatedField a0 => .ctor 0 [Canonical.toVal a0]
   | .mapKey => .ctor 1 []
   | .deferredError => .ctor 2 []
+  | .typeVariable => .ctor 3 []
 
 def ofVal : Val → Option (_root_.Effect4.Program.FormationReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .repeatedField
   | .ctor 1 [] => some .mapKey
   | .ctor 2 [] => some .deferredError
+  | .ctor 3 [] => some .typeVariable
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -144,6 +147,8 @@ theorem fits (a : _root_.Effect4.Program.FormationReason) : shapeDoc.accepts (to
     exact accepts_sum _ _ _ 1 "mapKey" [] [] rfl (acceptsFields_nil _)
   | «deferredError» =>
     exact accepts_sum _ _ _ 2 "deferredError" [] [] rfl (acceptsFields_nil _)
+  | «typeVariable» =>
+    exact accepts_sum _ _ _ 3 "typeVariable" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.FormationReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -2507,7 +2512,7 @@ open Effect4 Effect4.Program Effect4.Api
 
 def tables : List TableRefusal := [.notExternal 0, .notAsync 3]
 
-def formationReasons : List FormationReason := [.repeatedField "x", .mapKey]
+def formationReasons : List FormationReason := [.repeatedField "x", .mapKey, .typeVariable]
 
 def formations : List FormationRefusal :=
   [⟨["table", "0", "answer", "type", "0"], .map .nat .string, .mapKey⟩,

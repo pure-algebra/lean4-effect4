@@ -6,7 +6,7 @@ open Effect4 Effect4.Program Effect4.Api
 
 def tables : List TableRefusal := [.notExternal 0, .notAsync 3]
 
-def formationReasons : List FormationReason := [.repeatedField "x", .mapKey]
+def formationReasons : List FormationReason := [.repeatedField "x", .mapKey, .typeVariable]
 
 def formations : List FormationRefusal :=
   [⟨["table", "0", "answer", "type", "0"], .map .nat .string, .mapKey⟩,

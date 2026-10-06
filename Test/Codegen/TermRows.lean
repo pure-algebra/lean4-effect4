@@ -866,9 +866,18 @@ module's representability check and its class table reach them at a located path
   (text.splitOn "export class Short extends Data.TaggedError(\"Short\")<{ readonly available: number; readonly needed: number }> {}").length == 2 &&
     (text.splitOn "Effect.flatMap(Deferred.make<Short, never>(), (a0) => Effect.succeed(0))").length == 2
 -- A type argument with no printed form refuses the module by the type's own rendering: the
--- shared check of stored annotations names the type (`annotationRefusal`).
+-- shared check of stored annotations names the type (`annotationRefusal`). The control is a
+-- nominal application at arguments.
+#guard match Effect4.Api.emitModule "main" (make (.app "Foo" [.nat]) .never) with
+  | .error (.print (.typeSpelling text)) => text == "Foo<number>"
+  | _ => false
+-- A row template's parameter in a type argument is refused before the printer, at formation: a
+-- type variable is formed in a template only (`Formation.HeadFormed`; decisions row 288, point
+-- 6 a). Until that clause this module was refused by the printer, at the rendering `A`.
 #guard match Effect4.Api.emitModule "main" (make (.var 0) .never) with
-  | .error (.print (.typeSpelling text)) => text == "A"
+  | .error (.formation why) =>
+    why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
+      why.ty == .var 0 && why.reason == .typeVariable
   | _ => false
 
 /-! ## 7. An operation that carries a binder term and type arguments
