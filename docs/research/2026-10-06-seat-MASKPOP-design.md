@@ -110,3 +110,14 @@ frames `[setInterruptible false]` and base false, the pop ends at flag true with
 The slice states no law of a run, no bracket of a region and no base of a fiber in a run.
 `Cmd.exitDone` clears a stack and keeps its flag, so the later lift keeps a condition on the
 pending commands.
+
+## 6. Addendum, at the landing (2026-10-06)
+
+The landed tree has every statement of section 2, with its name, its namespace and its binders.
+It differs from this note in two places of the proofs. The receipt
+(`docs/research/2026-10-06-seat-MASKPOP-receipt.md`) holds the commands and their results.
+
+- **The entry of the `interruptible` region** also reads `setFiberInterruptible_flag` and
+  `setFiberInterruptible_pushes`, the two equations of the function that it calls.
+- **`MaskChain.decidable` splits the frame by `cases`**, inside the structural recursion. In a
+  catch-all arm of a plain `match` the frame is a variable, and the chain does not reduce there.
