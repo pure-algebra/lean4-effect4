@@ -9,6 +9,7 @@ import Effect4.Laws.Machine.ContextValue
 import Effect4.Laws.Machine.Handles
 import Effect4.Laws.Machine.LiveStack
 import Effect4.Laws.Machine.MaskDiscipline
+import Effect4.Laws.Machine.MaskRuns
 import Effect4.Laws.Machine.Scheduling
 import Effect4.Laws.Machine.ScopeMachine
 import Effect4.Laws.Machine.ScopeRestoration
