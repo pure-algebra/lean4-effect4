@@ -17,10 +17,11 @@ answers by key.
 * **Observation.** `Observation`, seven fields: the assignment of jobs to workers, the accepted
   reply receipts, the reply applications, the retired calls, the cleanup identities, the root's
   exit and the work left.
-* **Claim.** `workers`: four clauses. Three are laws of the driver and the session, proved in
-  `Test/Dogfood/Scenario.lean`. The fourth, `releases_once`, is a planned goal: under every script
-  the crew releases no connection twice. A fifth clause controls the driver's own law `replays`.
-* **Controls.** `controls`: for each clause a green control and at least one red control. One
+* **Claim.** `workers` assembles four clauses. Three are laws of the driver and the session,
+  proved in `Test/Dogfood/Scenario.lean`. The fourth, `releases_once`, is a planned goal: under
+  every script the crew releases no connection twice. The driver's law `replays` stands beside
+  them as an associated law: it has controls, and the claim's proof does not use it.
+* **Controls.** `controls`: for each entry a green control and at least one red control. One
   green control of the cleanup clause is the lowest-fiber schedule of today: the driver of
   `P3WorkerQueue.lean` plays it on the same program, and the journals agree row for row.
 * **Lowered runs.** The crew's logs are `Ref.update` rows whose binder terms no name images. The
@@ -371,7 +372,8 @@ def controls : List Control :=
 
 /-! ## 6. The record -/
 
-/-- The workers scenario. -/
+/-- The workers scenario. The claim assembles the four clauses. The driver's law `replays` is an
+associated law: the record claims no dependency of `workers` on it. -/
 def scenario : Scenario :=
   { name := "workers"
     program := ``crew
@@ -381,10 +383,24 @@ def scenario : Scenario :=
       [ ⟨"receipt", ``receipt_inert⟩
       , ⟨"selection", ``applied_selects⟩
       , ⟨"retirement", ``control_retires⟩
-      , ⟨"cleanup", ``releases_once⟩
-      , ⟨"journal", ``replays⟩ ]
+      , ⟨"cleanup", ``releases_once⟩ ]
+    laws := [⟨"journal", ``replays⟩]
     controls := controls }
 
-#scenario_gate scenario
+/-- Red control of the gate's dependency check (decisions rows 203 and 254): the workers record
+under a claim that assembles none of its other clauses. Each placement and each control of the
+record still passes. -/
+def wrongTop : Scenario :=
+  { scenario with name := "workers under receipt_inert", claim := ``receipt_inert }
+
+-- One run of the gate over both records. The green control is that no finding names `workers`.
+-- The red control names each clause that the wrong claim's proof does not reach.
+/--
+error: workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Test.Dogfood.Scenario.applied_selects)
+workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Test.Dogfood.Scenario.control_retires)
+workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "cleanup" (Test.Dogfood.Scenario.Workers.releases_once)
+-/
+#guard_msgs (error) in
+#scenario_gate scenario wrongTop
 
 end Test.Dogfood.Scenario.Workers

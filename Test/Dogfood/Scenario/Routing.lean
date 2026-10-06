@@ -16,11 +16,12 @@ host answer carries.
   repository answer even where the program must not ask for one.
 * **Observation.** `Observation`, three fields: the exact response or the failure that escapes,
   the repository's calls, and the refused rows with the session's reason.
-* **Claim.** `routing`: four clauses. The handler's test is exact on the pair spelling
-  (`tagIs_pair`, proved). A stored successful reply fits its row
-  (`submit_success_prepared_fits`, a theorem of the law graph). Two are planned goals:
-  `infrastructure_escapes` and `unauthorized_calls_nothing`.
-* **Controls.** `controls`: for each clause a green control and at least one red control.
+* **Claim.** `routing` assembles three clauses. The handler's test is exact on the pair spelling
+  (`tagIs_pair`, proved). Two are planned goals: `infrastructure_escapes` and
+  `unauthorized_calls_nothing`. One law stands beside them as an associated law: a stored
+  successful reply fits its row (`submit_success_prepared_fits`, a theorem of the law graph). It
+  has controls, and the claim's proof does not use it.
+* **Controls.** `controls`: for each entry a green control and at least one red control.
 * **Lowered runs.** The program prints and reads back, so the host run can use the keyed lane. It
   waits on the coordinator's word that the faces of a binder term are merged.
 
@@ -199,10 +200,10 @@ proof_goal unauthorized_calls_nothing : UnauthorizedCallsNothing
 /-- **The routing scenario's claim.** The handler's test is exact on the pair spelling. An
 infrastructure failure escapes the business handlers. An unauthorized request makes no call of
 the repository. The first is proved, and the other two are planned goals, so this theorem is
-proved modulo them. The fourth clause of the record is a theorem of the law graph: a stored
-successful reply fits its row (`Effect4.Api.HostSession.submit_success_prepared_fits`). It does
-not establish a code-valued service, a layer's lowering, or reply admission beyond that
-theorem. -/
+proved modulo them. The record's associated law is a theorem of the law graph: a stored
+successful reply fits its row (`Effect4.Api.HostSession.submit_success_prepared_fits`). This
+theorem does not use that law. It does not establish a code-valued service, a layer's lowering,
+or reply admission beyond that law. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem routing :
     (∀ (tag other : String) (message : Val),
@@ -280,7 +281,9 @@ def controls : List Control :=
 
 /-! ## 6. The record -/
 
-/-- The routing scenario. -/
+/-- The routing scenario. The claim assembles the three clauses. The session's law of a stored
+successful reply is an associated law: the record claims no dependency of `routing` on it. The
+registry places it by its module, a default module of `host-session-protocol`. -/
 def scenario : Scenario :=
   { name := "routing"
     program := ``request
@@ -289,8 +292,8 @@ def scenario : Scenario :=
     clauses :=
       [ ⟨"exact", ``tagIs_pair⟩
       , ⟨"escape", ``infrastructure_escapes⟩
-      , ⟨"no call", ``unauthorized_calls_nothing⟩
-      , ⟨"admission", ``Effect4.Api.HostSession.submit_success_prepared_fits⟩ ]
+      , ⟨"no call", ``unauthorized_calls_nothing⟩ ]
+    laws := [⟨"admission", ``Effect4.Api.HostSession.submit_success_prepared_fits⟩]
     controls := controls }
 
 #scenario_gate scenario

@@ -20,8 +20,9 @@ of row 204 moves at least one program forward.
   each requirement keeps waiting.
 - `Scenario.lean` holds what the scenarios share: the script alphabet, the driver, the readers of a
   run's session part, the driver's laws and the gate `#scenario_gate`.
-- `Scenario/` holds one battery per scenario, and `Scenario/Lowered.lean` for their lowered runs.
-  `Test/All.lean` imports each one.
+- `Scenario/` holds one battery per scenario. `Scenario/Tape.lean` holds the text of their lowered
+  runs, and `Scenario/Lowered.lean` binds the engine's fixtures to it. `Test/All.lean` imports
+  each one.
 
 ## The reference texts
 
@@ -123,8 +124,8 @@ the semantics where features compose. It is one unit with six parts.
 | Program | One program through `Api.Author.build`, built on the consumer of a battery above |
 | Script | A `List Move` (`Scenario.lean`): control decisions, held calls, reply receipts and reply applications |
 | Observation | One named structure read from the run. Every control compares it |
-| Claim | One theorem that assembles the clauses. Each clause is a theorem or a planned goal with its placement |
-| Controls | For each clause a green control and at least one red control |
+| Claim | One theorem whose proof assembles the clauses. Each clause is a theorem or a planned goal with its placement |
+| Controls | For each clause, and for each associated law, a green control and at least one red control |
 | Lowered runs | The same observation on the generated OCaml engine and on the printed TypeScript module, or the stage that run waits on |
 
 The driver plays a script into the run's own journal. It keeps the reply receipt and the reply
@@ -132,23 +133,38 @@ application apart, and it selects a live call by its key. The run a script reach
 journal reaches (`replays`, `Scenario.lean`), so a replay calls no fixture.
 
 A scenario's record names its program, its observation and its claims as declarations
-(`Scenario`, `Scenario.lean`). `#scenario_gate` stands at the foot of each scenario's battery. It
-checks the record against the environment and runs the controls once. It refuses:
+(`Scenario`, `Scenario.lean`). It lists two kinds of entry.
+
+- An **assembled clause** is a claim that the scenario's claim uses in its proof.
+- An **associated law** has controls only. The record claims no dependency of the claim on it.
+
+`#scenario_gate` stands at the foot of each scenario's battery. It checks the record against the
+environment and runs the controls once. It refuses:
 
 - a program or an observation that does not resolve to a declaration;
 - a claim that is no theorem and no planned goal;
-- a claim with no placement at a requirement (decisions row 207);
-- a clause with no green control, or with no red control;
-- a control that names no clause, or that fails.
+- a claim with no placement (decisions row 207);
+- a claim whose proof does not reach one of its assembled clauses;
+- a claim that rests on a planned goal which no clause names;
+- a clause or a law with no green control, or with no red control;
+- a control that names no clause and no law, or that fails.
+
+A battery's declaration carries its own placement at a requirement. Any other declaration carries
+`@[semantics]`, or the semantics registry places it: as a requirement's top node, as a claim's
+pointer, or by its module.
+
+The gate measures the two dependency findings on the planning graph (`ProofGraph.buildPlan`,
+`tools/ProofGraph/Plan.lean`). A planned goal is reached when the claim rests on it. A theorem is
+reached when the walk from the claim's proof reaches it through the batteries' declarations.
 
 So no control stands outside a scenario, and no scenario stands without a placed claim. Each
 control is a finite probe: one script on the Lean machine. A claim's standing is derived from its
 proof: `#plan_status` prints it, with the planned goals the claim rests on.
 
-| Scenario | Program | Observation | Claim and clauses | Lowered runs |
+| Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
 | --- | --- | --- | --- | --- |
-| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers`. Clauses: `receipt_inert`, `applied_selects`, `control_retires` and `replays` (theorems of `Scenario.lean`), and the planned goal `releases_once`: under every script the crew releases no connection twice. | Waiting. The printer refuses the crew's log rows by name (`binderTerm`) until the state plan's T5. `Observation.machine` is the part a machine replay shows. |
-| routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing`. Clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), `submit_success_prepared_fits` (a theorem of the law graph), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. | Waiting. The program prints and reads back. The host run waits on the coordinator's word for the keyed lane. |
+| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert`, `applied_selects` and `control_retires` (theorems of `Scenario.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: waiting. The printer refuses the crew's log rows by name (`binderTerm`) until the state plan's T5. |
+| routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing` assembles three clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. Associated law: `submit_success_prepared_fits`, a theorem of the law graph. | Engine: `routing.txt`, four runs of the machine clause. Host: waiting on the coordinator's word for the keyed lane. The program prints and reads back. |
 
 ### The lowered runs
 
@@ -161,13 +177,20 @@ So a scenario's observation lands as two clauses.
   exit, the cells, the calls the machine waits on, the armed owners, the runnable fibers and the
   timers.
 
-`Scenario/Lowered.lean` writes the machine clause of each scenario as a fixture under
-`ocaml/engine/test/scenarios/`. A fixture holds the canonical bytes of the admitted program and of
-each row, and the budgets. It also holds the machine tape: each decision that moved the session
-machine, with the view after it. The battery binds each committed fixture to that text.
-`ocaml/engine/test/scenarios/test_scenarios.ml` replays each prefix of each tape through the
+`Scenario/Tape.lean` holds what Lean writes for the machine clause: each scenario's lowered runs,
+their machine tapes and the fixture text. It has no control, so it builds whatever the committed
+files hold. A fixture holds the canonical bytes of the admitted program and of each row, and the
+budgets. It also holds the machine tape: each decision that moved the session machine, with the
+view after it.
+
+`Scenario/Lowered.lean` binds each committed fixture under `ocaml/engine/test/scenarios/` to that
+text. `ocaml/engine/test/scenarios/test_scenarios.ml` replays each prefix of each tape through the
 generated `api_replay`, with the row table read from its wire bytes, on both instances. It compares
 the engine's view with Lean's at every position.
+
+A fixture's line `table differs` or `table same` records one comparison, in one projection. It
+says whether the raw replay with the empty table shows another machine view at some position.
+`table same` does not say that the replay reads no row of the table.
 
 The planned goal `tape_replays` (`Scenario.lean`) states the Lean half: a journal's machine is the
 raw replay of its tape. The battery checks it at every position of every fixture, as finite runs.
@@ -175,9 +198,10 @@ The engine's session clause waits: the engine has no session to compare.
 
 To write the fixtures again, follow these steps from the repository's root.
 
-1. Run `lake env lean --run ocaml/engine/test/scenarios/write.lean`.
-2. Build `Test.Dogfood.Scenario.Lowered`, which binds the files.
-3. Run `dune test --force engine/test/scenarios` in `ocaml/`, through `opam exec --switch=effect4`.
+1. Build `Test.Dogfood.Scenario.Tape`.
+2. Run `lake env lean --run ocaml/engine/test/scenarios/write.lean`.
+3. Build `Test.Dogfood.Scenario.Lowered`, which binds the files.
+4. Run `dune test --force engine/test/scenarios` in `ocaml/`, through `opam exec --switch=effect4`.
 
 ## The earlier dogfood programs
 

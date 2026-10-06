@@ -8,9 +8,9 @@
 
    The fixtures are the *.txt files beside this one, written by Lean from the programs
    `Api.Author.build` admits (Test/Dogfood/Scenario/Lowered.lean; the writer is write.lean,
-   beside this file).  A run of a
-   fixture holds the program's canonical bytes, each row's canonical bytes, the budgets, and
-   the machine tape: each decision that moved Lean's session machine, with the view after it.
+   beside this file).  A run of a fixture holds the program's canonical bytes, each row's
+   canonical bytes, the budgets, and the machine tape: each decision that moved Lean's session
+   machine, with the view after it.
 
    The adapter lives here and changes no production interface.  `E4_engine.INSTANCE` takes no
    row table: api_engine_inst.ml and api_engine_ref.ml fix it to the empty list.  This test
@@ -29,14 +29,15 @@
    S3  A value crosses as its canonical bytes: `decode_val` reads Lean's `Val.encode`, and
        `emit_val` writes the engine's value back in the same frames.  For every value a
        fixture's tape carries, `emit_val (decode_val bytes) = bytes`.       tested
-   S4  The table, and the red controls.  A fixture says whether Lean's raw replay READS the
-       table on a run: whether the replay with the empty table (what the production wrappers
-       supply) shows another view at some position.  The engine must agree, in both
-       directions.  A row whose answer carries no handle is not read: the raw replay passes a
-       fitting value through (`prepareExternalAnswer`, src/Effect4/Program/Compile.lean), so
-       the table matters there to the session's admission, which the engine does not have.
-       A tape with one decision dropped ends at another view.  A row whose bytes are cut is
-       refused, never repaired.                                            tested
+   S4  The table, and the red controls.  A fixture's line `table differs` or `table same`
+       is one observed difference, in one projection: whether Lean's raw replay with the
+       empty table (what the production wrappers supply) shows another machine view
+       (`machineViewOf`) at some position than its replay with the built table.  The engine
+       must show the same answer, in both directions.  `table same` does NOT say that the
+       replay reads no row: `prepareExternalAnswer` (src/Effect4/Program/Compile.lean)
+       consults a nonempty table for each successful reply, and an answer with no handle can
+       come out the same.  A tape with one decision dropped ends at another view.  A row
+       whose bytes are cut is refused, never repaired.                     tested
    S5  A run whose fixture ends at a frontier is compared up to that position only, and its
        unread rows are reported: a frontier is never read as a reply application.
                                                                  by construction
@@ -64,7 +65,8 @@ type run = {
   compile : int;
   program : string;  (* canonical bytes *)
   rows : string list;  (* canonical bytes, in table order *)
-  table_read : bool;  (* whether Lean's raw replay reads the table on this run *)
+  observed_table_difference : bool;
+      (* whether Lean's raw replay with the empty table shows another machine view on this run *)
   first : string;  (* the view line of the loaded machine *)
   steps : (string list * string) list;  (* a decision's words, and the view line after it *)
   ending : string list;  (* ["tape"], or ["frontier"; rows left] *)
@@ -95,8 +97,8 @@ let read_fixture (path : string) : run list =
        | [ "run"; name ] ->
          let run, rest =
            body
-             { name; fuel = 0; compile = 0; program = ""; rows = []; table_read = false; first = "";
-               steps = []; ending = [] }
+             { name; fuel = 0; compile = 0; program = ""; rows = [];
+               observed_table_difference = false; first = ""; steps = []; ending = [] }
              rest
          in
          runs (run :: acc) rest
@@ -109,8 +111,8 @@ let read_fixture (path : string) : run list =
        | [ "compile"; n ] -> body { r with compile = int_of_string n } rest
        | [ "program"; hex ] -> body { r with program = bytes_of_hex "the program" hex } rest
        | [ "row"; hex ] -> body { r with rows = r.rows @ [ bytes_of_hex "a row" hex ] } rest
-       | [ "table"; "read" ] -> body { r with table_read = true } rest
-       | [ "table"; "unread" ] -> body { r with table_read = false } rest
+       | [ "table"; "differs" ] -> body { r with observed_table_difference = true } rest
+       | [ "table"; "same" ] -> body { r with observed_table_difference = false } rest
        | "view" :: _ when r.first = "" -> body { r with first = line } rest
        | "step" :: decision ->
          (match rest with
@@ -522,9 +524,10 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
          if r.rows <> [] && List.length tape >= 2 then begin
            check
              (label
-                (if r.table_read then "with the empty table the views are not Lean's, as in Lean"
-                 else "with the empty table the views are the same, as in Lean"))
-             (differs expected (views program r [] tape) <> [] = r.table_read);
+                (if r.observed_table_difference then
+                   "with the empty table some machine view differs, as in Lean"
+                 else "with the empty table every machine view is the same, as in Lean"))
+             (differs expected (views program r [] tape) <> [] = r.observed_table_difference);
            let dropped = List.filteri (fun i _ -> i <> List.length tape - 1) tape in
            check
              (label "a tape with its last decision dropped ends at another view (red control)")

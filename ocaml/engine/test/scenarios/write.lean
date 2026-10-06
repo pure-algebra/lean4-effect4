@@ -1,13 +1,14 @@
-import Test.Dogfood.Scenario.Lowered
+import Test.Dogfood.Scenario.Tape
 
 /-!
-The writer of the scenario fixtures. Run it from the repository's root:
+The writer of the scenario fixtures. Run it from the repository's root, after a build of
+`Test.Dogfood.Scenario.Tape`:
 
     lake env lean --run ocaml/engine/test/scenarios/write.lean
 
 It writes each fixture of `Test.Dogfood.Scenario.Lowered.fixtures` beside this file. The battery
 `Test/Dogfood/Scenario/Lowered.lean` binds each committed file to the text written here, and
-`ocaml/engine/test/test_scenarios.ml` reads the files.
+`test_scenarios.ml`, beside this file, reads the files.
 -/
 
 def main : IO UInt32 := do
