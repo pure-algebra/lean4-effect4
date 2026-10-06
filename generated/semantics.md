@@ -1618,12 +1618,12 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (goal), `pollStep_agrees` (goal), `positive_suspend_step_capacity` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (goal), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `offerStep_agrees`, `pollStep_agrees`, `takeStep_agrees`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
-**Next goals** (20): `empty_typed`, `offerStep_typed`, `pollStep_typed`, `sizeStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `offerStep_agrees`, `pollStep_agrees`, `takeStep_agrees`, `infrastructure_escapes`
+**Next goals** (17): `empty_typed`, `offerStep_typed`, `pollStep_typed`, `sizeStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -2884,12 +2884,12 @@ flowchart LR
   n20["acceptLoop_length_le<br/>proved"]
   n21["cell_read<br/>proved"]
   n22["first_profile_closed<br/>proved"]
-  n23["offerStep_agrees<br/>goal"]
-  n24["pollStep_agrees<br/>goal"]
+  n23["offerStep_agrees<br/>proved"]
+  n24["pollStep_agrees<br/>proved"]
   n25["positive_suspend_step_capacity<br/>proved"]
   n26["sizeStep_agrees<br/>proved"]
   n27["step_updates<br/>proved"]
-  n28["takeStep_agrees<br/>goal"]
+  n28["takeStep_agrees<br/>proved"]
   n29["withdrawOffer_agrees<br/>proved"]
   n30["withdrawTake_agrees<br/>proved"]
   n31["infrastructure_escapes<br/>goal"]
@@ -2974,12 +2974,12 @@ flowchart LR
 | `acceptLoop_length_le` | proved | — | — | 0 | 6 |
 | `cell_read` | proved | — | — | 10 | 200 |
 | `first_profile_closed` | proved | — | — | 29 | 72 |
-| `offerStep_agrees` | goal | `offerStep_agrees` | — | 10 | 167 |
-| `pollStep_agrees` | goal | `pollStep_agrees` | — | 9 | 178 |
+| `offerStep_agrees` | proved | — | — | 85 | 171 |
+| `pollStep_agrees` | proved | — | — | 97 | 185 |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
 | `sizeStep_agrees` | proved | — | — | 20 | 131 |
 | `step_updates` | proved | — | — | 10 | 210 |
-| `takeStep_agrees` | goal | `takeStep_agrees` | — | 9 | 199 |
+| `takeStep_agrees` | proved | — | — | 135 | 207 |
 | `withdrawOffer_agrees` | proved | — | — | 80 | 173 |
 | `withdrawTake_agrees` | proved | — | — | 77 | 173 |
 | `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 84 | 1417 |

@@ -654,6 +654,58 @@ theorem reads_removeOffer {offers id : TermSrc} (tb : Table) (msg : Nat → Val)
           rfl
   exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
 
+/-- A fold that appends what each element gives is the list with the elements' gifts. -/
+theorem foldl_append_flatMap {α β : Type} (f : α → List β) :
+    ∀ (xs : List α) (init : List β),
+      xs.foldl (fun acc x => acc ++ f x) init = init ++ xs.flatMap f
+  | [], init => by rw [List.foldl_nil, List.flatMap_nil, List.append_nil]
+  | x :: xs, init => by
+    rw [List.foldl_cons, foldl_append_flatMap f xs, List.flatMap_cons, List.append_assoc]
+
+/-- `fitting`: how many pending offers enter the room. -/
+theorem reads_fitting {room offers : TermSrc} {r : Nat} {os : List Val}
+    (hroom : Reads room env path vals (Val.nat r))
+    (hoffers : Reads offers env path vals (Val.list os)) :
+    Reads (Queue.fitting room offers) env path vals (Val.nat (Nat.min r os.length)) :=
+  reads_minT hroom (reads_len hoffers)
+
+/-- `entering`: the offers that enter, on the encoding of the pending offers. -/
+theorem reads_entering {room offers : TermSrc} (tb : Table) (msg : Nat → Val) (r : Nat)
+    (os : List Offer) (hroom : Reads room env path vals (Val.nat r))
+    (hoffers : Reads offers env path vals (Val.list (os.map (offerVal tb msg)))) :
+    Reads (Queue.entering room offers) env path vals
+      (Val.list ((os.take (Nat.min r os.length)).map (offerVal tb msg))) :=
+  (reads_take hoffers (reads_fitting hroom hoffers)).to
+    (by rw [List.length_map, List.map_take])
+
+/-- `staying`: the offers that stay pending. -/
+theorem reads_staying {room offers : TermSrc} (tb : Table) (msg : Nat → Val) (r : Nat)
+    (os : List Offer) (hroom : Reads room env path vals (Val.nat r))
+    (hoffers : Reads offers env path vals (Val.list (os.map (offerVal tb msg)))) :
+    Reads (Queue.staying room offers) env path vals
+      (Val.list ((os.drop (Nat.min r os.length)).map (offerVal tb msg))) :=
+  (reads_drop hoffers (reads_fitting hroom hoffers)).to
+    (by rw [List.length_map, List.map_drop])
+
+/-- `gained`: the buffer with the messages of the offers that enter. -/
+theorem reads_gained {room msgs offers : TermSrc} (tb : Table) (msg : Nat → Val) (r : Nat)
+    (ms : List Nat) (os : List Offer) (depth : vals.length = env.names.length)
+    (hroom : Reads room env path vals (Val.nat r))
+    (hmsgs : Reads msgs env path vals (Val.list (ms.map msg)))
+    (hoffers : Reads offers env path vals (Val.list (os.map (offerVal tb msg)))) :
+    Reads (Queue.gained room msgs offers) env path vals
+      (Val.list ((ms ++ (os.take (Nat.min r os.length)).flatMap (·.rest)).map msg)) := by
+  have folded : Reads (Queue.gained room msgs offers) env path vals
+      (Val.list (((os.take (Nat.min r os.length)).foldl (fun buffer o => buffer ++ o.rest)
+        ms).map msg)) :=
+    reads_foldWith_model (offerVal tb msg) (fun buffer : List Nat => Val.list (buffer.map msg))
+      (fun buffer o => buffer ++ o.rest) (os.take (Nat.min r os.length)) ms ⟨0, false, []⟩
+      (reads_entering tb msg r os hroom hoffers) hmsgs fun buffer o =>
+        (reads_append (reads_minted_acc depth path _ (offerVal tb msg o))
+          (reads_field (reads_minted_item depth path _ (offerVal tb msg o))
+            (offer_rest _ _ _ _))).to (by rw [List.map_append])
+  exact folded.to (by rw [foldl_append_flatMap])
+
 end Passes
 
 end Effect4.Queue.Model
