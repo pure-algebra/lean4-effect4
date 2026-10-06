@@ -5,6 +5,13 @@ and rules nothing. Every Lean statement below is a sketch and is **not compiled*
 is read in full by the coordinator, from the vendored copy. The facts of our tree are read
 only, each with its path. Nothing here is a dispatch.
 
+**Corrected since (2026-10-06).** Seat CENSUS's receipt corrects ten sentences of this plan
+(`docs/research/2026-10-06-seat-CENSUS-receipt.md`, section 13): the domain of candidate A is
+wider, an assumption is a row and not an environment entry, and candidate N has three kinds of
+refusal. Seat GAP's study replaces "fold to an assumption" by "omit to a hole row", and gives
+the staged plan (`docs/research/2026-10-06-seat-GAP-study.md`). Decisions rows 285 to 290 hold
+what is ratified.
+
 ## 1. The question
 
 The owner asked on 2026-10-06 how the program-as-data focus meets bidirectional type

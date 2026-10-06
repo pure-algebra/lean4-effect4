@@ -1,0 +1,299 @@
+ok       | 400 | 128 | 238 | 98 |   [probe1gen.log, probe1termgen.log]
+ok       | 73 | 73 | 4644 | 25202 |   [probe1truth.log, probe1termtruth.log]
+ok       | `Probe1Gen`, `Probe1Truth` | the effect addresses: 238 and 4644 sites; 714 and 10326 fold rows |   [the two logs]
+ok       | `Probe1TermGen`, `Probe1TermTruth` | the term addresses: 98 and 25202 |   [the two logs]
+ok       Its 128 admitted programs hold 238 effect nodes, under two each. The largest holds 9, and no environment in it has more than 1 entry.   [gen-programs.tsv, gen-sites.tsv]
+ok       The truth lane's 25 programs of the modules (the Queue's, Semaphore's and Pool's) hold 4219 of its 4644 effect addresses. The largest, `pPoolOrder`, holds 313, and its largest environment has 21 entries.   [truth-programs.tsv, truth-sites.tsv]
+ok       One program of the truth lane does (`pDiamond`).   [probe1truth.log, harness/truth/Truth.lean]
+ok       The probes take its lines 97 to 883 as text   [build.sh, harness/truth/Truth.lean]
+ok       A program of more than 40 effect nodes runs the row form's full fold at three kinds of site only. Those programs are the 25 of the modules.   [truth-programs.tsv, LibRun.lean]
+ok       holds nine programs with answers known by hand   [SelfTest.tail.lean]
+ok       | `SelfTest` | the probe's own test: nine programs with answers known by hand   [SelfTest.tail.lean]
+ok       `Build completed successfully (1031 jobs)`   [base-build.log]
+ok       All 4882 sites pass the three. The entry check reads every entry at 1276 sites, and the entries that the site adds to its parent's at the other 3606.   [the sites files]
+ok       **The generated corpus: 128 programs, 238 effect addresses.**   [gen-folds.tsv]
+ok       **The truth lane, the 48 programs outside the modules: 425 effect addresses.**   [truth-programs.tsv]
+ok       **The truth lane, the 25 programs of the modules: 4219 effect addresses.**   [truth-programs.tsv]
+ok       No fold whose program is admitted has a column that is larger or unrelated: 0 of 10327.   [the folds files]
+ok       - **Inside the plan's domain: 2085 folds, 0 refused, the answer identical at all of them.**   [the folds files]
+ok       - **The wider premise: 4833 folds, 0 refused, the answer identical at all of them.**   [the folds files]
+ok       It adds 2748 folds under a closed edge. At 2520 sites of the truth lane the first closed edge above is a fork.   [the folds files]
+ok       - **Outside the wider premise: 49 folds, 4 refused.**   [the folds files]
+ok       22 leave the root's answer the same, and 23 change it.   [the folds files]
+ok       The plan's domain holds 1565 of their 4219 addresses. The wider premise holds 4213.   [truth-folds.tsv]
+ok       of the 49 folds outside it, 27 are refused or change the answer.   [the folds files]
+ok       None meets one of the 49 folds.   [the folds files]
+ok       each of the 110 folds of a node that can fail   [the flow files]
+ok       - In the plan's domain: 61 folds. No environment entry and no site's answer changes.   [the flow files]
+ok       - Outside it: 49 folds. 32 change an environment entry, and seven positions read a changed variable:   [the flow files]
+ok       | a `succeed` value | 3 | 0 |   [the flow files]
+ok       | `eq`'s first argument | 2 | 0 |   [the flow files]
+ok       | `tagIs`'s second argument | 10 | 0 |   [the flow files]
+ok       | `causeError`'s argument | 6 | 4 |   [the flow files]
+ok       | `isSome`'s argument | 0 | 4 |   [the flow files]
+ok       | `getOrElse`'s first argument | 0 | 4 |   [the flow files]
+ok       | `causeIsFail`'s argument | 6 | 0 |   [the flow files]
+ok       One position refuses, in all 4 folds that reach it: `getOrElse`'s first argument.   [the flow files]
+ok       | `Probe1Flow` | where a folded error flows: 110 folds of a node that can fail |   [the flow files]
+ok       on the 61 folds of a failing node in the plan's domain   [the flow files]
+ok       It is tested by 4833 single folds and by 1033 whole masks (section 9.3), with no refusal and no changed answer.   [the folds files, probe4premise.log]
+ok       4833 single folds and 1033 whole masks meet it.   [the folds files, probe4premise.log]
+ok       The plan's own domain covers 2085 of those folds.   [the folds files]
+ok       61 addresses lie under a layer, all in 7 of the truth lane's 48 other programs. At 26 the variable is unbound   [truth-folds.tsv]
+ok       At 35 `var 0` names a binder of the layer's own body   [truth-folds.tsv]
+ok       The census leaves all 61 out of the variable form's counts.   [truth-folds.tsv]
+ok       The row form reaches all 61.   [truth-folds.tsv]
+ok       Where both forms ran, 1215 addresses not under a layer, they give the same outcome and the same type at each.   [the folds files]
+ok       And the row's own node has the type `⟨A, never, ∅⟩` at all 4882 sites.   [the sites files]
+ok       Every node's answer is its own normal form, at all 4882 sites.   [the sites files]
+ok       Its own type is the assumption's at all 4882 sites.   [the sites files]
+ok       It checks at all 4882 sites with the assumption's own type.   [the sites files]
+ok       The two agree at all 1215 addresses where both ran.   [the folds files]
+ok       644 of 4882 folds are refused. None is in the generated corpus, 26 are in the truth lane's 48 other programs, and 618 in the modules' 25.   [the folds files]
+ok       612 fold a `bind`'s child: 522 its first, and 90 its second.   [the folds files]
+ok       **Fold N is refused at 644 of 4882 effect addresses and at 5489 of 25300 term addresses.**   [the folds and terms files]
+ok       the search applies all 43 atoms, the field reads and the projections for three rounds. It reaches 45, 2170 and 6426 types.   [probe1closed.log]
+ok       | `Probe1Closed` | the search for a closed term of type `never`: 6426 types reached, and none is `never` |   [probe1closed.log]
+ok       | generated | 98 | 2 | 95 | 1 |   [the terms files]
+ok       | truth lane, the 48 others | 637 | 72 | 565 | 0 |   [the terms files]
+ok       | truth lane, the 25 modules | 24565 | 5415 | 19150 | 0 |   [the terms files]
+ok       The one admitted fold with an unrelated column is in `g158`, `raceAll(refMake("hi") || )`.   [gen-terms.tsv, gen-programs.tsv]
+ok       The positions with the most refusals, of 99 positions (57 have none):   [the terms files]
+ok       Effect addresses and term addresses together, both corpora: 6133 refused folds, 18 rules.   [the folds and terms files]
+ok       Each refusal names one of 18 rules. Uniform eliminators would remove 4148 of the 6133 refusals. 1886 come from a rule that takes its expectation from a part, and 99 from a cell's invariance.   [the folds and terms files]
+ok       The 18 rules are of three kinds   [the folds and terms files]
+ok       | `Probe1Small` | one smallest program for each of the 18 rules that refuse |   [probe1small.log]
+ok       `Probe1Small` holds one smallest program for each of the 18 rules, written by hand.   [probe1small.log]
+ok       Row 14's program refuses under fold A at the same address   [the rank of getOrElse; Probe1Small.tail.lean]
+ok       **The order of a repair is the table of section 6.3.** The first seven rules give 5503 of the 6133 refusals.   [the folds and terms files]
+ok       **Uniform eliminators repair 4148 of the 6133.**   [the folds and terms files]
+ok       - a list fold's list: 1524; - `sameHandle`: 1000; - the decision by an option: 540; - the decision by a Boolean: 442.   [the folds and terms files]
+ok       **1886 refusals are not an eliminator's.**   [the folds and terms files]
+ok       **Invariance stays**: 99 refusals, and an answer that is not ordered. In the two corpora all 99 are at term addresses.   [the folds and terms files]
+ok       **Only a gap serves the 99 invariance refusals**   [the folds and terms files]
+ok       **A gap also serves the 1886 refusals of the second kind**   [the folds and terms files]
+ok       The term hole exists as an atom in the same way (25300 addresses).   [the terms files]
+ok       A guard and 99 refusals confirm it.   [the folds and terms files]
+ok       run the same 30182 addresses   [the folds and terms files]
+ok       The `Ref.make` node itself folds at all 70 of its sites, with every column the same.   [the folds and terms files]
+ok       (`Probe2`, 45 entries); 53 guards hold the claims, with red controls.   [probe2.log, Probe2.tail.lean]
+ok       | `Probe2` | the eliminators: 45 rows of the checker's answers |   [probe2.log]
+ok       at eight rows: the four Boolean tests, `restore`, `forkIn`, `setContext` and the interruptor.   [probe2.log]
+ok       (`Probe3`, 92 guards, reproduced)   [Probe3.tail.lean]
+ok       has 37 reasons. 28 report a type that does not meet an expectation.   [src/Effect4/Program/Typing/Blame.lean]
+ok       The other 9 compare no type:   [src/Effect4/Program/Typing/Blame.lean]
+ok       28 of the 37 reasons report a type that does not meet an expectation   [src/Effect4/Program/Typing/Blame.lean]
+ok       The program has 26 closed masks, of which 11 are valid and 4 minimal.   [probe4.log]
+ok       has 2 minimal masks, each below one of the four.   [probe4.log]
+ok       has 2 minimal masks, one a branch.   [probe4.log]
+ok       The paper's two examples give four and two minimal masks.   [probe4.log]
+ok       | `select[bool](true, bind(fail(1), □), bind(□, fail("d")))` | (   [probe4.log]
+ok       | `select[bool](true, bind(□, fail("c")), bind(fail(2), □))` | (   [probe4.log]
+ok       | `select[bool](true, bind(fail(1), fail("c")), □)` | (   [probe4.log]
+ok       | `select[bool](true, □, bind(fail(2), fail("d")))` | (   [probe4.log]
+ok       23 closed masks, 21 admitted.   [probe4.log]
+ok       Under fold A the same program has 23 admitted masks of 23, and every descent ends minimal.   [probe4.log]
+ok       | from the root down, skipping under a fold | `bind(succeed(5), bind(□, bind(□, fail("E"))))` | 5 | 7 | no |   [probe4.log: the cell under fold N]
+ok       | seat LATTICE's pass, program order | the same | 5 | 7 | no |   [probe4.log: the cell under fold N]
+ok       | from the leaves up | `bind(□, bind(□, bind(□, fail("E"))))` | 4 | 4 | yes |   [probe4.log: the cell under fold N]
+ok       | seat LATTICE's pass, reverse order | the same | 4 | 7 | yes |   [probe4.log: the cell under fold N]
+ok       | restarting (the paper's) | the same | 4 | 14 | yes |   [probe4.log: the cell under fold N]
+ok       165 programs (128 generated, 37 of the truth lane), every closed mask of each: 1230 masks.   [the lattice files]
+ok       | A (row form) | 1230 | 6 | 2 (`pOptionSome`, `pOptionNone`) | 0 | 12 |   [the lattice files]
+ok       | N | 1230 | 36 | 7 | 0 | 0 |   [the lattice files]
+ok       The answer is not, in 12 programs.   [the lattice files]
+ok       1033 of the 1230 masks fold only regions that meet it. All 1033 are admitted, with the full program's answer   [probe4premise.log]
+ok       All 7613 pairs of them are ordered in both columns. Of the 197 other masks 6 are refused.   [probe4premise.log]
+ok       **Under fold N the admitted programs' masks are not closed downwards**, in 7 programs.   [the lattice files]
+ok       | `Probe4`, `Probe4Premise` | the lattice: the two examples, 595 cases of the sweep and 1230 masks |   [the lattice files]
+ok       | A, ends minimal | 64 | 64 | 64 | 64 | 64 | 64 |   [the lattice files]
+ok       | A, calls of `check` | | 154 | 124 | 255 | 170 | 170 |   [the lattice files]
+ok       | N, ends minimal | 201 | 198 | 201 | 201 | 198 | 201 |   [the lattice files]
+ok       | N, calls of `check` | | 519 | 395 | 768 | 584 | 584 |   [the lattice files]
+ok       The three cases of fold N that end at a mask that is not minimal: `pAcquireClosed`, `pOptionSome`, `pOptionNone`   [the lattice files]
+ok       Two cases of fold A have more than one minimal mask (`pSqlite` three, `pKv` four)   [the lattice files]
+ok       over every pair of the 1224 masks whose program is admitted   [the lattice files]
+ok       Outside it the answer of a mask is not ordered (12 programs)   [the lattice files]
+ok       and it is not ordered in 12 programs.   [the lattice files]
+ok       (7 of 37 small programs of the truth lane)   [truth-lattice.tsv]
+ok       It holds at 4833 folds and 1033 masks of the premise. Outside the premise the answer changes at 23 single folds   [the folds files, probe4premise.log]
+ok       60 programs have an error member or a required service at the root. 46 are generated (21 error members, 26 services), and 14 are of the truth lane (17 error members).   [the slices files]
+ok       | generated | plan | 47 | 93 | 87 | 68 | 0 | 47 of 47 |   [the slices files]
+ok       | generated | wide | 47 | 93 | 74 | 81 | 7 | 47 of 47 |   [the slices files]
+ok       | generated | all | 47 | 93 | 69 | 83 | 9 | 47 of 47 |   [the slices files]
+ok       | truth lane | plan | 17 | 77 | 54 | 48 | 0 | 17 of 17 |   [the slices files]
+ok       | truth lane | wide | 17 | 77 | 50 | 52 | 4 | 17 of 17 |   [the slices files]
+ok       | truth lane | all | 17 | 77 | 46 | 71 | 4 | 17 of 17 |   [the slices files]
+ok       The restarting descent folds nothing more from any of the 192 results.   [the slices files]
+ok       It ran 576 completions: 64 queries, three domains, three replacements.   [the slices files]
+ok       The descent leaves the plan's domain in 13 queries when it may: 9 generated, and 4 of the truth lane. The 4 are `pTagHit` and `pTagMiss`, two queries each.   [the slices files]
+ok       | `Probe5` | candidate A at work: 64 queries and   [the slices files]
+ok       at least eight sites: 15 sub-programs, in 14 programs.   [truth-subslices.tsv]
+ok       The node above is a `scoped` at 10 of them, a `provideService` at 4 and an `exit` at 1.   [truth-subslices.tsv, truth-sites.tsv]
+ok       candidate A at work: 64 queries and 15 sub-programs |   [the slices files]
+ok       **The pass from the root asks 157 questions for 2161 addresses.** The pass from the leaves asks 2114. One question a site is 2161 questions.   [truth-subslices.tsv]
+ok       In wall time the first pass takes about 3 seconds, and the second over 30.   [truth-subslices.tsv]
+ok       A call of `check` takes at most 50 milliseconds under the interpreter, in this run.   [truth-subslices.tsv]
+ok       6 kept against 4 on `pPoolOrder`   [truth-subslices.tsv]
+ok       13 against 304 on the largest sub-program   [truth-subslices.tsv]
+ok       13 questions for 304 addresses.   [truth-subslices.tsv]
+ok       The plan's domain allows 82 of 304 sites on `pPoolOrder`   [truth-subslices.tsv]
+ok       On the same sub-program the pass from the root keeps 6 sites. The pass from the leaves keeps 4, for 301 questions.   [truth-subslices.tsv]
+ok       It ran from the 45 results of the pass from the root, and from the 15 of the pass from the leaves.   [truth-subslices.tsv]
+ok       The three domains agree on all 15, in the kept sites, the folded regions and the calls.   [truth-subslices.tsv]
+ok       The third replacement gives an admitted program at all 45 results, with the member. The two that can fail give an admitted program at 15 results each. At the other 30 the checker refuses with `releaseFails`   [truth-subslices.tsv]
+ok       Every count is over 128 and 73 programs.   [the logs]
+ok       | none in the 2085 folds of the plan's domain, and none in the 4833 of the wider premise |   [the folds files]
+ok       | 6133, each named by one of 18 rules |   [the folds and terms files]
+ok       | none by its form, by reading; 1886 refusals come from a rule that is no eliminator, and 99 from invariance |   [the folds and terms files]
+ok       | none under fold A, in 64 cases and the two examples; under fold N the cell's program and 3 of 201 cases, where the checker refuses a mask |   [the lattice files, probe4.log]
+ok       | none in the 576 completions of whole programs, and none in the 75 admitted completions of sub-programs; 60 completions are not admitted |   [the slices files]
+ok       It matters for the modules: 4213 of 4219 addresses against 1565.   [truth-folds.tsv]
+ok       2748 folds, 0 refused.   [the folds files]
+ok       No environment reaches a layer's body (61 addresses).   [truth-folds.tsv]
+ok       The variable form is unbound at 26 of the 61 addresses under a layer. At the other 35 it names a binder of the layer's own body.   [truth-folds.tsv]
+ok       The table has 25 of the 28.   [the receipt's table of section 8]
+ok       **The rules whose answer reads the compared type are the 10 rows marked "yes".**   [the receipt's table of section 8]
+ok       in the 22 rows of section 8   [the receipt's table of section 8]
+ok       10 of the 22 rows read the compared type.   [the receipt's table of section 8]
+ok       | an analysing rule whose answer reads the refused premise | 10 of the 22 rows |   [the receipt's table of section 8]
+ok       **The marking checker needs the gap at 10 rows of section 8**, the rows marked "yes". At the other 12 it can go on with the rule's own answer.   [the receipt's table of section 8]
+ok       The four largest row files are not filed (16 MB).   [the sizes of the four files]
+ok       this receipt, and 78 text files under   [the evidence folder]
+ok       297 checks hold   [this script's own count]
+ok       the rows hold the sites and the folds that the logs count
+ok       the programs files hold the admitted programs
+ok       gen: the site walk agrees with foldMapAt_eff, and the second walk with the first
+ok       truth: the site walk agrees with foldMapAt_eff, and the second walk with the first
+ok       the generated corpus has 400 programs
+ok       the generated programs hold under two effect nodes each
+ok       the largest environment of the truth lane is in its largest program
+ok       no admitted generated program holds a layer reference, and one of the truth lane does: pDiamond
+ok       lines 97 to 883 of Truth.lean run from the namespace to the end of the corpus
+ok       the programs of more than 40 effect nodes are the programs of the modules
+ok       LibRun.lean runs a program of more than 40 effect nodes thrifty
+ok       the base build completed
+ok       every site passes the three checks
+ok       fold A has one fold at each effect address
+ok       inside the plan's domain every fold A is admitted with the answer identical and no column larger
+ok       inside the wider premise every fold A is admitted with the answer identical and no column larger
+ok       outside the wider premise a changed answer is a smaller one
+ok       the four refusals of fold A are getOrElse in pOptionSome and pOptionNone
+ok       the flow probe runs the folds of a node that can fail
+ok       in the plan's domain no environment entry and no site's answer changes
+ok       the positions that read a changed variable are the seven of the table
+ok       the positions that only refused folds reach are getOrElse.0 and isSome.0
+ok       every mask of the wider premise is admitted with the full answer, and every pair of them is ordered
+ok       every address under a layer is in the 48 other programs of the truth lane
+ok       the row form is admitted at every address under a layer, with every column same or smaller
+ok       the two forms give the same outcome and type at every address where both ran
+ok       the row's own type is the assumption's at every site, and every answer is its own normal form
+ok       every refusal of fold N at an effect address sits in a sibling of the folded node
+ok       no admitted fold N at an effect address has a column larger or unrelated
+ok       no fold N is refused in the generated corpus
+ok       the search finds no type that is never, and the control answers never
+ok       the one admitted term fold with an unrelated column is the request of refMake in g158
+ok       the three kinds hold every refused fold
+ok       the smallest programs are one for each rule, each refused
+ok       Probe1Small holds the guard of fold A on the program of getOrElse
+ok       the four largest rules of the first kind
+ok       every invariance refusal of the corpora is at a term address
+ok       the plan's example has an invariance refusal at an effect address: row 12 of the smallest programs
+ok       fold A at every refMake site is admitted with every column the same
+ok       SelfTest holds the plan's example under fold A
+ok       SelfTest: Lean's exit code is 0, and the log holds no error
+ok       Probe1Gen: Lean's exit code is 0, and the log holds no error
+ok       Probe1Truth: Lean's exit code is 0, and the log holds no error
+ok       Probe1Closed: Lean's exit code is 0, and the log holds no error
+ok       Probe1TermGen: Lean's exit code is 0, and the log holds no error
+ok       Probe1TermTruth: Lean's exit code is 0, and the log holds no error
+ok       Probe1Flow: Lean's exit code is 0, and the log holds no error
+ok       Probe1Small: Lean's exit code is 0, and the log holds no error
+ok       Probe2: Lean's exit code is 0, and the log holds no error
+ok       Probe3: Lean's exit code is 0, and the log holds no error
+ok       Probe4: Lean's exit code is 0, and the log holds no error
+ok       Probe4Premise: Lean's exit code is 0, and the log holds no error
+ok       Probe5: Lean's exit code is 0, and the log holds no error
+ok       the eight rows where the raw union of a type with itself is refused
+ok       the nine reasons that compare no type are reasons of the checker
+ok       Probe3 holds a guard for each reason of the checker but four: a layer reference, ill-formed references, an empty mergeAll, an instantiated formation
+ok       page 18: the three folds give the same counts
+ok       page 18: the meet of the minimal masks keeps the root alone, has the error never and is not valid
+ok       page 18 in the answer column: four minimal masks under fold N, and one under fold A, which folds the root
+ok       page 18: a minimal mask of the log: select[bool](true, bind(fail(1), □), bind(□, fail("d")))
+ok       page 18: a minimal mask of the log: select[bool](true, bind(□, fail("c")), bind(fail(2), □))
+ok       page 18: a minimal mask of the log: select[bool](true, bind(fail(1), fail("c")), □)
+ok       page 18: a minimal mask of the log: select[bool](true, □, bind(fail(2), fail("d")))
+ok       the cell under fold A: every descent ends minimal
+ok       the cell under fold N: the minimal mask of the log
+ok       the cell under fold N: the two passes in program order end at the mask 1110101, the three others at 1010101
+ok       a fork whose body fails: the mask that folds the fork answers more than the mask that folds the body
+ok       the sweep holds one row of masks for each program and fold
+ok       the two folds have the same masks
+ok       the two programs with a refused mask under fold A
+ok       the masks refused under fold A are the masks refused outside the wider premise
+ok       under fold N the columns of the masks whose program is admitted are ordered
+ok       the cases of fold N that end at a mask that is not minimal are queries on the answer
+ok       the three programs of those cases
+ok       the cases of fold A with more than one minimal mask
+ok       each of the two has as many calls that can fail with the member as it has minimal masks
+ok       the truth lane has no service query at the root, and no module program has a query
+ok       each result of a whole program is minimal by brute force, and the restart folds nothing more
+ok       each completion of a whole program is admitted and holds the member
+ok       the queries of the truth lane that leave the plan's domain
+ok       the nodes above the sub-programs are scoped, provideService and exit
+ok       the wall times: the pass from the root between 2 and 4 seconds, the pass from the leaves over 30, a call at most 50 milliseconds
+ok       pPoolOrder is the largest sub-program
+ok       the restarting descent folds nothing more from a result of a sub-program
+ok       the three domains agree on every sub-program, in the kept sites, the folded regions and the calls
+ok       no folded region of a sub-program starts outside the plan's domain
+ok       the completions of the sub-programs
+ok       each case of fold N that ends at a mask that is not minimal has a refused mask
+ok       a quote is in the plan: the error and requirement columns, at every address whose er
+ok       a quote is in the plan: none: existing syntax, the existing checker
+ok       a quote is in the plan: `check sig (m.assumed p) [] (m.cut p) = .ok t'`
+ok       a quote is in the plan: Under A the node is not maskable: its type flows into a valu
+ok       a quote is in the plan: Eliminators are of two kinds.
+ok       a quote is in the plan: **The checker analyses at named places**: a request against 
+ok       a quote is in the plan: Most of our refusals are at analysing rules whose answer doe
+ok       a quote is in the plan: Existence of a minimal slice, the descent that finds one, re
+ok       a quote is in the plan: a masked program is admitted with the same answer
+ok       a quote is in the plan: Under N the cell becomes `Ref<never>`, which is no subtype o
+ok       the receipt quotes ten sentences of the plan
+ok       the brief holds the quoted condition of the term addresses
+ok       the plan holds the quoted list of closed edges
+ok       section 8: each refusal that the table names has a guard in Probe3
+ok       section 8: the reasons that the table does not name are the three of a cause's leaf
+ok       section 8: Probe3 holds a guard for each of those three
+ok       every file of the evidence folder is a text file with the suffix .txt
+ok       the second run gave equal rows and logs
+ok       a named file is in the evidence folder: out/base-build.log.txt
+ok       a named file is in the evidence folder: out/probe1-truth.txt
+ok       a named file is in the evidence folder: out/second-run.txt
+ok       a named file is in the evidence folder: out/verify.txt
+ok       a named file is in the evidence folder: rows/SHA256SUMS.txt
+ok       a named file is in the evidence folder: rows/truth-folds-refused.tsv.txt
+ok       a named file is in the evidence folder: rows/truth-terms-refused-counts.tsv.txt
+ok       a named file is in the evidence folder: scripts/build.sh.txt
+ok       a named file is in the evidence folder: scripts/finish.sh.txt
+ok       a named file is in the evidence folder: scripts/receipt.template.md.txt
+ok       a named file is in the evidence folder: scripts/run.sh.txt
+ok       a named path resolves: Test/Program/Gen.lean
+ok       a named path resolves: docs/research/2026-10-05-claude-lead/briefs/seat-census-brief.md
+ok       a named path resolves: docs/research/2026-10-06-seat-LATTICE-design.md
+ok       a named path resolves: docs/research/2026-10-06-type-slicing-plan.md
+ok       a named path resolves: harness/truth/Truth.lean
+ok       a named path resolves: src/Effect4/Api.lean
+ok       a named path resolves: src/Effect4/Program/Checker.lean
+ok       a named path resolves: src/Effect4/Program/Fold.lean
+ok       a named path resolves: src/Effect4/Program/Native.lean
+ok       a named path resolves: src/Effect4/Program/Refs.lean
+ok       a named path resolves: src/Effect4/Program/Ty.lean
+ok       a named path resolves: src/Effect4/Program/Typing/Blame.lean
+ok       a named path resolves: src/Effect4/Program/Typing/Rules.lean
+ok       a named path resolves: vendor/papers/gradual-holes/castagna-gradual-new-perspective-popl19.pdf
+ok       a named path resolves: vendor/papers/gradual-holes/zhao-marking-popl24.pdf
+ok       a named path resolves: vendor/papers/program-graphs/bidirectional-type-slicing-2607.12197v1.pdf
+ok       no marker of the template is left in the receipt
+
+297 checks: 163 texts of the receipt and 134 facts of the rows; 0 failed

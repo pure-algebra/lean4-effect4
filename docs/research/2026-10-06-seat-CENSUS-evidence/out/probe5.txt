@@ -1,0 +1,143 @@
+# probe 5, candidate A at work: the minimal mask of each error member and each required service (fold A, the row form)
+
+=== gen: programs with an error member or a required service: 46; queries: 47 (error members 21, services 26)
+
+## gen: the descent from the root down, by domain
+domain  queries  addresses  allowed  kept  kept share  calls of check  wall ms  queries with a fold outside the plan's domain  queries where the restart folds more  minimal by brute force  completion, replacement 1       completion, replacement 2       completion, replacement 3     
+------  -------  ---------  -------  ----  ----------  --------------  -------  ---------------------------------------------  ------------------------------------  ----------------------  ------------------------------  ------------------------------  ------------------------------
+plan    47       93         69       87    94%         68              2        0                                              0                                     47 of 47                admitted, the member stays: 47  admitted, the member stays: 47  admitted, the member stays: 47
+wide    47       93         87       74    80%         81              2        7                                              0                                     47 of 47                admitted, the member stays: 47  admitted, the member stays: 47  admitted, the member stays: 47
+all     47       93         93       69    74%         83              1        9                                              0                                     47 of 47                admitted, the member stays: 47  admitted, the member stays: 47  admitted, the member stays: 47
+the three passes in the domain `all`: from the root down 83 calls; from the leaves up 71 calls; one question for each site (seat LATTICE's pass) 93 calls
+kept by the three passes: 69, 69, 69 of 93 addresses
+
+## gen: the queries where the domains differ (kept addresses)
+program  query           addresses  plan  wide  all  folds outside the plan's domain (all)
+-------  --------------  ---------  ----  ----  ---  -------------------------------------
+g102     requires k0_0   5          5     4     4    1                                    
+g120     requires k0_0   4          4     4     3    1                                    
+g199     requires k0_0   3          3     1     1    1                                    
+g21      requires k11_4  4          4     3     3    1                                    
+g238     requires k0_0   2          2     1     1    1                                    
+g305     requires k0_0   2          2     1     1    1                                    
+g309     requires k0_0   8          7     2     2    1                                    
+g344     requires k0_0   6          6     4     1    1                                    
+g367     requires k0_0   3          3     3     2    1                                    
+
+## gen: each program
+program  addresses  query           plan: kept  wide: kept  all: kept  calls (plan/wide/all)  ms (plan/wide/all)
+-------  ---------  --------------  ----------  ----------  ---------  ---------------------  ------------------
+g102     5          requires k0_0   5           4           4          2/5/5                  0/0/0             
+g11      1          requires k4_4   1           1           1          1/1/1                  0/0/0             
+g113     1          requires k9_4   1           1           1          1/1/1                  0/0/0             
+g120     4          requires k0_0   4           4           3          3/3/4                  0/1/0             
+g122     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g135     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g137     1          requires k7_4   1           1           1          1/1/1                  0/0/0             
+g146     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g159     3          requires k7_4   3           3           3          3/3/3                  1/0/0             
+g174     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g176     1          requires k7_4   1           1           1          1/1/1                  0/0/0             
+g180     1          requires k6_4   1           1           1          1/1/1                  0/0/0             
+g185     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g189     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g199     3          requires k0_0   3           1           1          1/2/2                  0/0/0             
+g20      1          error has nat   1           1           1          1/1/1                  0/0/0             
+g21      4          requires k11_4  4           3           3          3/4/4                  0/0/1             
+g21      4          requires k8_4   3           3           3          3/4/4                  0/0/0             
+g213     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g219     1          requires k5_4   1           1           1          1/1/1                  0/0/0             
+g238     2          requires k0_0   2           1           1          1/2/2                  0/0/0             
+g243     1          requires k11_4  1           1           1          1/1/1                  0/0/0             
+g252     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g282     1          requires k11_4  1           1           1          1/1/1                  0/0/0             
+g286     1          requires k10_4  1           1           1          1/1/1                  0/0/0             
+g290     3          requires k10_4  3           3           3          1/3/3                  0/0/0             
+g291     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g300     4          error has nat   2           2           2          3/3/3                  0/1/0             
+g305     2          requires k0_0   2           1           1          1/2/2                  0/0/0             
+g309     8          requires k0_0   7           2           2          2/4/4                  0/0/0             
+g325     1          requires k9_4   1           1           1          1/1/1                  0/0/0             
+g33      1          error has nat   1           1           1          1/1/1                  0/0/0             
+g334     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g344     6          requires k0_0   6           4           1          1/2/2                  0/0/0             
+g347     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g358     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g366     3          error has nat   3           3           3          3/3/3                  0/0/0             
+g367     3          requires k0_0   3           3           2          2/2/3                  0/0/0             
+g386     1          error has nat   1           1           1          1/1/1                  0/0/0             
+g388     1          requires k7_4   1           1           1          1/1/1                  0/0/0             
+g49      3          error has nat   2           2           2          3/3/3                  1/0/0             
+g50      2          requires k5_4   2           2           2          2/2/2                  0/0/0             
+g68      1          error has nat   1           1           1          1/1/1                  0/0/0             
+g72      1          error has nat   1           1           1          1/1/1                  0/0/0             
+g74      1          requires k9_4   1           1           1          1/1/1                  0/0/0             
+g83      1          error has nat   1           1           1          1/1/1                  0/0/0             
+g89      4          requires k7_4   3           3           3          4/4/4                  0/0/0             
+
+=== truth: programs with an error member or a required service: 14; queries: 17 (error members 17, services 0)
+
+## truth: the descent from the root down, by domain
+domain  queries  addresses  allowed  kept  kept share  calls of check  wall ms  queries with a fold outside the plan's domain  queries where the restart folds more  minimal by brute force  completion, replacement 1       completion, replacement 2       completion, replacement 3     
+------  -------  ---------  -------  ----  ----------  --------------  -------  ---------------------------------------------  ------------------------------------  ----------------------  ------------------------------  ------------------------------  ------------------------------
+plan    17       77         52       54    70%         48              3        0                                              0                                     17 of 17                admitted, the member stays: 17  admitted, the member stays: 17  admitted, the member stays: 17
+wide    17       77         56       50    65%         52              2        4                                              0                                     17 of 17                admitted, the member stays: 17  admitted, the member stays: 17  admitted, the member stays: 17
+all     17       77         77       46    60%         71              6        4                                              0                                     17 of 17                admitted, the member stays: 17  admitted, the member stays: 17  admitted, the member stays: 17
+the three passes in the domain `all`: from the root down 71 calls; from the leaves up 53 calls; one question for each site (seat LATTICE's pass) 77 calls
+kept by the three passes: 46, 42, 46 of 77 addresses
+
+## truth: the queries where the domains differ (kept addresses)
+program   query                 addresses  plan  wide  all  folds outside the plan's domain (all)
+--------  --------------------  ---------  ----  ----  ---  -------------------------------------
+pTagHit   error has ["A", "m"]  7          6     5     5    1                                    
+pTagHit   error has string      7          6     5     4    2                                    
+pTagMiss  error has ["A", "m"]  7          6     5     3    1                                    
+pTagMiss  error has string      7          6     5     4    2                                    
+
+## truth: each program
+program        addresses  query                                  plan: kept  wide: kept  all: kept  calls (plan/wide/all)  ms (plan/wide/all)
+-------------  ---------  -------------------------------------  ----------  ----------  ---------  ---------------------  ------------------
+pAwait         3          error has nat                          2           2           2          3/3/3                  0/0/1             
+pCatchIfHit    3          error has nat                          2           2           2          2/2/3                  0/0/0             
+pCatchIfMiss   3          error has nat                          2           2           2          2/2/3                  0/0/0             
+pFailBoomText  1          error has string                       1           1           1          1/1/1                  0/0/0             
+pFailPayload   1          error has {_tag: "NotFound", id: nat}  1           1           1          1/1/1                  0/0/0             
+pFailTagged    1          error has ["SqlError", "boom"]         1           1           1          1/1/1                  0/0/0             
+pFailText      1          error has string                       1           1           1          1/1/1                  0/0/0             
+pKv            11         error has [string, string]             6           6           6          11/11/11               1/1/2             
+pSqlFail       6          error has [string, string]             3           3           3          4/4/4                  1/0/0             
+pSqlite        10         error has [string, string]             5           5           5          8/8/8                  1/1/1             
+pTagHit        7          error has ["A", "m"]                   6           5           5          2/3/7                  0/0/1             
+pTagHit        7          error has string                       6           5           4          2/3/7                  0/0/0             
+pTagMiss       7          error has ["A", "m"]                   6           5           3          2/3/5                  0/0/0             
+pTagMiss       7          error has string                       6           5           4          2/3/7                  0/0/1             
+pTagPayload    3          error has {_tag: "NotFound", id: nat}  2           2           2          2/2/3                  0/0/0             
+pTagTwoFail    3          error has ["A", "m"]                   2           2           2          2/2/3                  0/0/0             
+pTagTwoFail    3          error has ["B", "x"]                   2           2           2          2/2/3                  0/0/0             
+
+=== the larger programs: the outermost node that holds a member (the truth lane, programs of more than 12 effect addresses)
+sub-programs with a query: 15, in 14 programs
+
+## each sub-program: the descent from the root down in the three domains (plan/wide/all), and from the leaves up
+program          site         addresses  query          allowed     kept   calls     wall ms      ms per call  up: kept  up: calls  up: ms  completion 1                completion 2                completion 3              
+---------------  -----------  ---------  -------------  ----------  -----  --------  -----------  -----------  --------  ---------  ------  --------------------------  --------------------------  --------------------------
+pPoolOrder       1.1.0.0      304        requires k0_0  82/304/304  6/6/6  13/13/13  470/469/481  37           4         301        6920    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolWaiters     1.1.0.0      253        requires k0_0  84/253/253  5/5/5  11/11/11  313/311/309  28           4         250        4943    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolLateWake    1.1.0.0      248        requires k0_0  79/248/248  5/5/5  11/11/11  332/346/343  31           4         245        4935    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolWithdrawn   1.1.0.0      248        requires k0_0  79/248/248  5/5/5  11/11/11  381/434/387  35           4         245        6730    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolClosing     1.1.1.1.0.0  238        requires k0_0  56/238/238  5/5/5  11/11/11  444/553/441  40           4         235        6690    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolWake        1.1.0.0      187        requires k0_0  71/187/187  5/5/5  11/11/11  237/227/231  21           4         184        2628    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolCloseWaits  1.1.1.0.0    175        requires k0_0  54/175/175  5/5/5  11/11/11  213/211/215  19           4         172        2402    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolReuse       1.1.0.0      166        requires k0_0  50/166/166  5/5/5  11/11/11  192/188/192  17           4         163        1801    not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolMakeFails   1.0.0        111        error has nat  85/111/111  6/6/6  10/10/10  104/104/104  10           6         106        778     admitted, the member stays  admitted, the member stays  admitted, the member stays
+pPoolMakeFails   1.0.0.0      110        requires k0_0  84/110/110  5/5/5  11/11/11  123/119/120  10           4         107        769     not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pPoolClosed      1.1.0.0      52         requires k0_0  42/52/52    4/4/4  9/9/9     25/23/23     2            3         50         202     not admitted (releaseFails  not admitted (releaseFails  admitted, the member stays
+pDiamond         1.0          21         requires k6_7  21/21/21    6/6/6  11/11/11  1/1/1        0            4         18         2       admitted, the member stays  admitted, the member stays  admitted, the member stays
+pMergeAll        1.0          19         requires k6_7  19/19/19    4/4/4  9/9/9     1/0/1        0            4         16         1       admitted, the member stays  admitted, the member stays  admitted, the member stays
+pProvideMerge    1.0          15         requires k6_7  15/15/15    5/5/5  9/9/9     1/1/0        0            5         11         1       admitted, the member stays  admitted, the member stays  admitted, the member stays
+pProvideTwice    1.0          14         requires k6_7  14/14/14    4/4/4  8/8/8     1/1/0        0            4         11         1       admitted, the member stays  admitted, the member stays  admitted, the member stays
+in all: 2161 addresses; from the root down 157 calls, 2848 ms; from the leaves up 2114 calls, 38803 ms; one question for each site would be 2161 calls
+completion1, over the three domains: admitted, the member stays: 15, not admitted (releaseFails): 30
+completion2, over the three domains: admitted, the member stays: 15, not admitted (releaseFails): 30
+completion3, over the three domains: admitted, the member stays: 45
+the restarting descent from each result (no brute force at this size): from the root down 45 results, it folds more at 0, in 225 calls; from the leaves up 15 results, it folds more at 0

@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Seat CENSUS, probe 1: the tables of the graduality census, from a folds TSV and a sites TSV.
+
+usage: agg1.py <prefix> [--where program-prefix,...]
+Reads <prefix>-folds.tsv, <prefix>-sites.tsv and <prefix>-programs.tsv. Prints every table.
+Every number in the receipt's probe 1 section is a line of this output.
+"""
+import csv, sys, collections
+
+def read(path):
+    with open(path, newline='') as f:
+        rows = list(csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE))
+    head, body = rows[0], rows[1:]
+    out = []
+    bad = []
+    for r in body:
+        if len(r) != len(head):
+            bad.append(r)
+        else:
+            out.append(dict(zip(head, r)))
+    return out, bad
+
+def table(title, header, rows):
+    print()
+    print('## ' + title)
+    widths = [max(len(str(x)) for x in col) for col in zip(header, *rows)] if rows else [len(h) for h in header]
+    fmt = '  '.join('{:<%d}' % w for w in widths)
+    print(fmt.format(*header))
+    print(fmt.format(*['-' * w for w in widths]))
+    for r in rows:
+        print(fmt.format(*[str(x) for x in r]))
+
+def node_error(r):
+    return r['nodeType'].strip('<>').split(' ; ')[1]
+
+def node_requires(r):
+    return r['nodeType'].strip('<>').split(' ; ')[2]
+
+def eliminator(r):
+    """The rule that refuses, one level below the checker's reason: for a term's refusal the
+    innermost part of the term that has no type (the `culprit` column)."""
+    reason, node, culprit = r['refusal'], r['refusingNode'], r.get('culprit', '-')
+    if reason in ('term', 'binderTerm', 'cause', 'foldTerm', 'recordTerm', 'tupleTerm'):
+        head = culprit.split('(')[0].strip()
+        if culprit.startswith('fold:'):
+            head = 'fold: the list' if 'the list is' in culprit else ('fold: the accumulator' if 'accumulator' in culprit else culprit)
+        where = 'in a binder term' if reason == 'binderTerm' else ('in a cause' if reason == 'cause' else 'in a term')
+        return '%s (%s)' % (head, where)
+    return '%s at %s' % (reason, node)
+
+def main():
+    prefix = sys.argv[1]
+    keep = None
+    label = ''
+    if '--where' in sys.argv:
+        keep = sys.argv[sys.argv.index('--where') + 1].split(',')
+        label = ' [programs: ' + ','.join(keep) + ']'
+    drop = None
+    if '--not' in sys.argv:
+        drop = sys.argv[sys.argv.index('--not') + 1].split(',')
+        label += ' [not: ' + ','.join(drop) + ']'
+    def sel(name):
+        if keep is not None and not any(name.startswith(k) for k in keep): return False
+        if drop is not None and any(name.startswith(k) for k in drop): return False
+        return True
+    folds, badf = read(prefix + '-folds.tsv')
+    sites, bads = read(prefix + '-sites.tsv')
+    progs, badp = read(prefix + '-programs.tsv')
+    folds = [r for r in folds if sel(r['program'])]
+    # The variable form of fold A does not reach an address under a layer: the layer's body is
+    # checked at the empty environment, so `succeed (var 0)` there reads no assumption (it is
+    # unbound, or it names a variable of the body). Those rows are counted here and left out below.
+    na = [r for r in folds if r['fold'] == 'Avar' and r['inLayer'] == 'true']
+    folds = [r for r in folds if not (r['fold'] == 'Avar' and r['inLayer'] == 'true')]
+    sites = [r for r in sites if sel(r['program'])]
+    progs = [r for r in progs if sel(r['program'])]
+    print('# probe 1, the graduality census: ' + prefix.split('/')[-1] + label)
+    print('programs: %d   effect addresses: %d   fold rows: %d' % (len(progs), len(sites), len(folds)))
+    print('malformed rows: folds %d, sites %d, programs %d' % (len(badf), len(bads), len(badp)))
+    for r in (badf + bads)[:20]:
+        print('  MALFORMED', r[:6])
+    # the checks of the sites against the checker
+    c = collections.Counter((r['levelOk'], r['entriesOk'], r['answerOk']) for r in sites)
+    print('sites by (levelOk, entriesOk, answerOk): ' + ', '.join('%s: %d' % (k, v) for k, v in sorted(c.items())))
+    print('sites under a layer: %d' % sum(1 for r in folds if r['fold'] == 'N' and r['inLayer'] == 'true'))
+    c = collections.Counter(('refused at the fold as an unbound variable' if (r['admitted'] != 'true' and r['refusalPlace'] == 'at-fold')
+                             else 'the variable names a binder of the layer\'s body') for r in na)
+    print('fold Avar under a layer (the form does not reach it; left out of every table below): %d  (%s)'
+          % (len(na), ', '.join('%s: %d' % kv for kv in sorted(c.items()))))
+    c = collections.Counter(r['rowLocal'].split(' ')[0] for r in sites)
+    print('the assumed row\'s own type against <A ; never ; {}>, by site: ' + ', '.join('%s: %d' % kv for kv in sorted(c.items())))
+    print('sites whose answer type is its own normal form: %d of %d' % (sum(1 for r in sites if r['answerNormal'] == 'true'), len(sites)))
+    c = collections.Counter(r['entriesChecked'].split(' ')[0] for r in sites)
+    print('entry checks: every entry at %d sites, the new entries alone at %d sites' % (c['all'], c['from']))
+    print('sites in candidate A\'s domain (no closed edge above): %d' % sum(1 for r in folds if r['fold'] == 'N' and r['columnOpen'] == 'true'))
+
+    c = collections.Counter(r['firstClosed'] for r in folds if r['fold'] == 'N' and r['columnOpen'] != 'true')
+    print('sites outside it, by the first closed edge above: ' + ', '.join('%s: %d' % kv for kv in sorted(c.items())))
+
+    def grad(r):
+        return r['admitted'] == 'true' and all(r[c] in ('same', 'sameNormal', 'smaller') for c in ('answer', 'error', 'requires'))
+
+    for fold in ('Avar', 'Arow', 'N'):
+        rows = [r for r in folds if r['fold'] == fold]
+        by = collections.defaultdict(list)
+        for r in rows:
+            by[r['rule']].append(r)
+        out = []
+        for rule in sorted(by):
+            rs = by[rule]
+            adm = [r for r in rs if r['admitted'] == 'true']
+            ref = [r for r in rs if r['admitted'] != 'true']
+            def cnt(col):
+                c = collections.Counter(r[col] for r in adm)
+                return ' '.join('%s:%d' % (k, c[k]) for k in ('same', 'sameNormal', 'smaller', 'larger', 'bothWays', 'unrelated') if c[k])
+            reasons = collections.Counter(r['refusal'] + '@' + r['refusalPlace'] for r in ref)
+            out.append([rule, len(rs), len(ref), cnt('answer') or '-', cnt('error') or '-', cnt('requires') or '-',
+                        ' '.join('%s:%d' % kv for kv in sorted(reasons.items())) or '-'])
+        tot_ref = sum(1 for r in rows if r['admitted'] != 'true')
+        table('fold %s by rule (the parent\'s constructor and the child\'s index): %d folds, %d refused, %d gradual'
+              % (fold, len(rows), tot_ref, sum(1 for r in rows if grad(r))),
+              ['rule', 'folds', 'refused', 'answer', 'error', 'requires', 'refusals (reason@place)'], out)
+
+    # fold A inside its domain and outside it
+    for fold in ('Avar', 'Arow'):
+        rows = [r for r in folds if r['fold'] == fold]
+        out = []
+        for dom in ('true', 'false'):
+            for lay in ('false', 'true'):
+                rs = [r for r in rows if r['columnOpen'] == dom and r['inLayer'] == lay]
+                if not rs: continue
+                ref = [r for r in rs if r['admitted'] != 'true']
+                adm = [r for r in rs if r['admitted'] == 'true']
+                ans_same = sum(1 for r in adm if r['answer'] == 'same')
+                out.append(['in A\'s domain' if dom == 'true' else 'outside (a closed edge above)',
+                            'under a layer' if lay == 'true' else 'not under a layer',
+                            len(rs), len(ref), sum(1 for r in rs if grad(r)), ans_same,
+                            sum(1 for r in adm if r['answer'] not in ('same',)),
+                            sum(1 for r in adm if r['error'] in ('larger', 'bothWays', 'unrelated')),
+                            sum(1 for r in adm if r['requires'] in ('larger', 'bothWays', 'unrelated'))])
+        table('fold %s against candidate A\'s domain' % fold,
+              ['domain', 'layer', 'folds', 'refused', 'gradual', 'answer same (raw)', 'answer not same', 'error larger', 'requires larger'], out)
+
+    # the premise of column graduality: which folds lower an error column at all
+    for fold in ('Avar', 'Arow'):
+        rows = [r for r in folds if r['fold'] == fold]
+        out = []
+        for dom, dlabel in (('true', 'in the plan\'s domain (no closed edge above)'), ('false', 'outside it (a closed edge above)')):
+            for err, elabel in ((True, 'the node\'s error is never'), (False, 'the node can fail')):
+                rs = [r for r in rows if r['columnOpen'] == dom and (node_error(r) == 'never') == err]
+                if not rs: continue
+                ref = [r for r in rs if r['admitted'] != 'true']
+                adm = [r for r in rs if r['admitted'] == 'true']
+                out.append([dlabel, elabel, len(rs), len(ref), sum(1 for r in rs if grad(r)),
+                            sum(1 for r in adm if r['answer'] != 'same'), sum(1 for r in adm if r['error'] == 'smaller'),
+                            sum(1 for r in adm if r['requires'] == 'smaller'),
+                            ' '.join('%s:%d' % kv for kv in sorted(collections.Counter(eliminator(r) for r in ref).items())) or '-'])
+        table('fold %s: the premise of column graduality, by the address and by the node\'s own error' % fold,
+              ['the address', 'the node', 'folds', 'refused', 'gradual', 'answer not identical', 'error smaller', 'requires smaller', 'the rules that refuse'], out)
+        wide = [r for r in rows if r['columnOpen'] == 'true' or node_error(r) == 'never']
+        rest = [r for r in rows if not (r['columnOpen'] == 'true' or node_error(r) == 'never')]
+        print('the wider premise (no closed edge above, or the node\'s error is never): %d folds, %d refused, %d with the answer identical'
+              % (len(wide), sum(1 for r in wide if r['admitted'] != 'true'), sum(1 for r in wide if r['answer'] == 'same')))
+        print('outside the wider premise (a node that can fail, under a closed edge): %d folds, %d refused; by closed edge: %s'
+              % (len(rest), sum(1 for r in rest if r['admitted'] != 'true'),
+                 ', '.join('%s: %d (refused %d)' % (k, len(v), sum(1 for r in v if r['admitted'] != 'true'))
+                           for k, v in sorted(collections.defaultdict(list, {e: [r for r in rest if r['firstClosed'] == e] for e in set(r['firstClosed'] for r in rest)}).items()))))
+
+    # refusals by the rule that refuses
+    for fold in ('Avar', 'Arow', 'N'):
+        rows = [r for r in folds if r['fold'] == fold and r['admitted'] != 'true']
+        by = collections.defaultdict(list)
+        for r in rows:
+            by[eliminator(r)].append(r)
+        out = []
+        for key in sorted(by, key=lambda k: (-len(by[k]), k)):
+            rs = by[key]
+            rules = collections.Counter(r['rule'] for r in rs)
+            ex = min(rs, key=lambda r: (len(r.get('culprit', '')), len(r['refusalDetail']), r['program']))
+            out.append([key, len(rs), len(set(r['program'] for r in rs)), ' '.join('%s:%d' % kv for kv in sorted(rules.items())),
+                        ex['program'] + '@' + ex['address'], ex.get('culprit', '-')[:100]])
+        table('fold %s: the refusals by the rule that refuses, the largest first (%d refusals, %d rules)' % (fold, len(rows), len(by)),
+              ['the rule that refuses', 'refused folds', 'programs', 'folded at (rule:count)', 'an instance', 'what it read'], out)
+
+    # non-gradual admitted folds
+    rows = [r for r in folds if r['admitted'] == 'true' and not grad(r)]
+    out = [[r['program'], r['address'], r['rule'], r['fold'], r['answer'], r['error'], r['requires'], r['nodeType'], r['foldedType']] for r in rows]
+    table('admitted folds with a column that is not below the full program\'s: %d' % len(rows),
+          ['program', 'address', 'rule', 'fold', 'answer', 'error', 'requires', 'node type', 'folded program type'], out[:60])
+
+    # the two forms of fold A against each other
+    av = {(r['program'], r['address']): r for r in folds if r['fold'] == 'Avar'}
+    ar = {(r['program'], r['address']): r for r in folds if r['fold'] == 'Arow'}
+    cmp = collections.Counter()
+    diff = []
+    both = [k for k in av if k in ar]
+    print()
+    print('fold A, both forms run at %d addresses not under a layer; the row form alone at %d addresses under a layer; the variable form alone at %d addresses'
+          % (len(both), sum(1 for k in ar if k not in av), sum(1 for k in av if k not in ar)))
+    for k in both:
+        a, b = av[k], ar[k]
+        lay = a['inLayer']
+        if a['admitted'] == b['admitted'] == 'true':
+            same = a['foldedType'] == b['foldedType']
+            cmp[(lay, 'both admitted, ' + ('the same type' if same else 'different types'))] += 1
+            if not same: diff.append([a['program'], a['address'], a['rule'], a['nodeType'], a['foldedType'], b['foldedType']])
+        elif a['admitted'] == b['admitted']:
+            samer = (a['refusal'], a['refusalPath']) == (b['refusal'], b['refusalPath'])
+            cmp[(lay, 'both refused, ' + ('the same rule and path' if samer else 'different refusals'))] += 1
+            if not samer: diff.append([a['program'], a['address'], a['rule'], a['nodeType'], a['refusal'] + '@' + a['refusalPath'], b['refusal'] + '@' + b['refusalPath']])
+        else:
+            cmp[(lay, 'variable form %s, row form %s' % ('admitted' if a['admitted'] == 'true' else 'refused (' + a['refusal'] + '@' + a['refusalPlace'] + ')',
+                                                          'admitted' if b['admitted'] == 'true' else 'refused (' + b['refusal'] + '@' + b['refusalPlace'] + ')'))] += 1
+            if lay != 'true':
+                diff.append([a['program'], a['address'], a['rule'], a['nodeType'], a['foldedType'] + ' ' + a['refusalDetail'][:60], b['foldedType'] + ' ' + b['refusalDetail'][:60]])
+    table('fold A: the variable form against the row form, address by address',
+          ['under a layer', 'outcome', 'addresses'], [[k[0], k[1], v] for k, v in sorted(cmp.items())])
+    table('fold A: the addresses where the two forms differ (not under a layer): %d' % len(diff),
+          ['program', 'address', 'rule', 'node type', 'variable form', 'row form'], diff[:60])
+
+    # smallest program for each breaking rule
+    size = {r['program']: int(r['nodes']) for r in progs}
+    text = {r['program']: r['text'] for r in progs}
+    for fold in ('Avar', 'N'):
+        rows = [r for r in folds if r['fold'] == fold and not grad(r) and not (fold == 'Avar' and r['inLayer'] == 'true')]
+        by = collections.defaultdict(list)
+        for r in rows:
+            key = (r['rule'], r['refusal'], r['refusingNode']) if r['admitted'] != 'true' else (r['rule'], 'column', r['answer'] + '/' + r['error'] + '/' + r['requires'])
+            by[key].append(r)
+        print()
+        print('## fold %s: one smallest program for each breaking rule (%d rules)' % (fold, len(by)))
+        for key in sorted(by):
+            r = min(by[key], key=lambda r: (size[r['program']], r['program'], r['address']))
+            print('- rule %s -> %s at %s: %d folds; smallest: %s (%d nodes), fold at %s, refusal at %s (%s)' %
+                  (key[0], key[1], key[2], len(by[key]), r['program'], size[r['program']], r['address'], r['refusalPath'], r['refusalDetail'][:140]))
+            t = text[r['program']]
+            print('    ' + (t if len(t) <= 400 else t[:400] + ' …'))
+
+if __name__ == '__main__':
+    main()

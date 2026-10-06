@@ -1,0 +1,41 @@
+# probe 1, the flow of a folded error: fold A (row form) at every node whose error is not never
+folds: 110 (gen: 39, truth: 71)
+
+## a fold of a node that can fail: does a value type change outside the folded region?
+the address                       folds  an environment entry changes  a site's answer changes  refused
+--------------------------------  -----  ----------------------------  -----------------------  -------
+in the plan's domain              61     0                             0                        0      
+outside it (a closed edge above)  49     32                            27                       4      
+
+## outside the plan's domain, by the closed edge: the positions that read the changed variable (folds with such a use)
+closed edge              folds  refused  an entry changes  the positions that read it                                     
+-----------------------  -----  -------  ----------------  ---------------------------------------------------------------
+ActionTerm.fork.0        7      0        0                                                                                
+ActionTerm.forkScoped.0  6      0        0                                                                                
+Eff.catchCause.0         6      0        6                                                                                
+Eff.catchIf.0            18     0        15                tagIs.1: 10; succeed.value: 3; eq.0: 2                         
+Eff.exit.0               11     4        10                causeError.0: 10; causeIsFail.0: 6; isSome.0: 4; getOrElse.0: 4
+Eff.onExit.0             1      0        1                                                                                
+
+## outside the plan's domain: each position that reads a changed variable
+position       folds admitted  folds refused  the variable's type, before -> after (two instances)                    
+-------------  --------------  -------------  ------------------------------------------------------------------------
+causeError.0   6               4              exit<nat, nat> -> exit<nat, never>; exit<unit, nat> -> exit<unit, never>
+getOrElse.0    0               4              option<nat> -> option<never>                                            
+isSome.0       0               4              option<nat> -> option<never>                                            
+tagIs.1        10              0              (["A", "m"] | ["B", "x"]) -> never; (string | ["A", "m"]) -> ["A", "m"] 
+causeIsFail.0  6               0              exit<unit, nat> -> exit<unit, never>                                    
+succeed.value  3               0              nat -> never                                                            
+eq.0           2               0              nat -> never                                                            
+
+## the refused folds
+program      address  closed edge  node type           refusal  what it read                   uses of the changed variables                  
+-----------  -------  -----------  ------------------  -------  -----------------------------  -----------------------------------------------
+pOptionSome  0.0      Eff.exit.0   <nat ; nat ; {}>    term     getOrElse(option<never>, nat)  causeError.0@1.0; getOrElse.0@1.1; isSome.0@1.1
+pOptionSome  0.0.0    Eff.exit.0   <never ; nat ; {}>  term     getOrElse(option<never>, nat)  causeError.0@1.0; getOrElse.0@1.1; isSome.0@1.1
+pOptionNone  0.0      Eff.exit.0   <nat ; nat ; {}>    term     getOrElse(option<never>, nat)  causeError.0@1.0; getOrElse.0@1.1; isSome.0@1.1
+pOptionNone  0.0.0    Eff.exit.0   <never ; nat ; {}>  term     getOrElse(option<never>, nat)  causeError.0@1.0; getOrElse.0@1.1; isSome.0@1.1
+
+## in the plan's domain: folds that change an environment entry or a site's answer (the domain's definition says none)
+program  address  rule  node type
+-------  -------  ----  ---------

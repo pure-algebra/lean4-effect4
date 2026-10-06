@@ -1,0 +1,12 @@
+self-test: every guard above holds
+catchCause(□:never, succeed(getOrElse(causeError(a0), 9)))
+t3	.	root		true	false	-	Eff.catchCause	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+t3	.	root		true	false	-	Eff.catchCause	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+t3	.	root		true	false	-	Eff.catchCause	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+t3	0	Eff.catchCause.0	Eff.catchCause.0	false	false	Eff.catchCause.0	Eff.fail	<never ; nat ; {}>	N	false	-	-	-	term	1	sibling	Eff.succeed	getOrElse(option<never>, nat)	term getOrElse(causeError(a0), 9)	-
+t3	0	Eff.catchCause.0	Eff.catchCause.0	false	false	Eff.catchCause.0	Eff.fail	<never ; nat ; {}>	Avar	false	-	-	-	term	1	sibling	Eff.succeed	getOrElse(option<never>, nat)	term getOrElse(causeError(a1), 9)	-
+t3	0	Eff.catchCause.0	Eff.catchCause.0	false	false	Eff.catchCause.0	Eff.fail	<never ; nat ; {}>	Arow	false	-	-	-	term	1	sibling	Eff.succeed	getOrElse(option<never>, nat)	term getOrElse(causeError(a0), 9)	-
+t3	1	Eff.catchCause.1	Eff.catchCause.1	true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+t3	1	Eff.catchCause.1	Eff.catchCause.1	true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+t3	1	Eff.catchCause.1	Eff.catchCause.1	true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+wall=2s exit=0

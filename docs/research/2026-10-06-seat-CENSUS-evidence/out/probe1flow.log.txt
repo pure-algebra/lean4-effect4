@@ -1,0 +1,3 @@
+gen: folds at a node whose error is not never: 39
+truth: folds at a node whose error is not never: 71
+wall=18s exit=0

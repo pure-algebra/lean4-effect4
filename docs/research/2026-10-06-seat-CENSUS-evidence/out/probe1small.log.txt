@@ -1,0 +1,21 @@
+SMALLEST	rule	program	effectNodes	folded	refusal	refusalPath	read
+SMALLEST	a list fold's accumulator with no stated type	bind(succeed(0), succeed(fold(cons(1, nil()), a0, add(a1, a2))))	3	0	foldTerm	1	fold: the body nat is not below the accumulator never
+SMALLEST	a list fold's list	bind(succeed(cons(1, nil())), succeed(fold(a0, 0, add(a1, a2))))	3	0	foldTerm	1	fold: the list is never
+SMALLEST	`sameHandle`	bind(deferredMake<unit, never>(()), succeed(sameHandle(a0, a0)))	3	0	term	1	sameHandle(never, never)
+SMALLEST	a decision by an option	bind(succeed(some(1)), select[option](a0, succeed(()), succeed(a1)))	5	0	notSelectable	1	notSelectable option never
+SMALLEST	a Boolean decision	bind(succeed(true), select[bool](a0, succeed(()), succeed(())))	5	0	predicateNotBool	1	predicateNotBool never
+SMALLEST	a restore site	bind(getInterruptible, restore(a0, succeed(())))	4	0	maskRestoreExpected	1	maskRestoreExpected never
+SMALLEST	a loop's test	bind(succeed(true), iterate(0; a0; a1; (); succeed(())))	4	0	predicateNotBool	1	predicateNotBool never
+SMALLEST	`ite` on two branches that are not comparable	bind(succeed(1), succeed(ite(true, pair(some(true), a0), pair(none(), 2))))	3	0	term	1	ite(bool, [option<bool>, never], [option<never>, nat])
+SMALLEST	a fiber (`join`, `await`, `interrupt`)	bind(fork(succeed(())), join(a0))	4	0	notFiber	1	notFiber never
+SMALLEST	a loop's cursor with no stated type	bind(succeed(0), iterate(a0; lt(a1, 3); succ(a1); a1; succeed(())))	4	0	stepNotCursor	1	stepNotCursor step=nat cursor=never
+SMALLEST	the cause atoms	bind(exit(succeed(())), succeed(causeIsInterrupt(a0)))	4	0	term	1	causeIsInterrupt(never)
+SMALLEST	a cell's content (invariance)	bind(succeed(5), bind(refMake(a0), refSet(pair(a1, 7))))	5	0	requestNotSubtype	1.1	requestNotSubtype refSet request=[ref<never>, nat] expected=[ref<'0>, '0]
+SMALLEST	a cause's interruptor	bind(getId, failCause(Interrupt(a0)))	3	0	cause	1	Interrupt(never)
+SMALLEST	`getOrElse`	bind(exit(fail(7)), succeed(getOrElse(causeError(a0), 9)))	4	0.0	term	1	getOrElse(option<never>, nat)
+SMALLEST	a typed failure with a part at `never`	bind(succeed("m"), fail(pair("A", a0)))	3	0	errorNotAdmitted	1	errorNotAdmitted ["A", never]
+SMALLEST	a handler's test	bind(succeed(true), catchIf(a0, fail(1), succeed(())))	5	0	predicateNotBool	1	predicateNotBool never
+SMALLEST	`closeScope`'s scope and exit	bind(scopeMake(()), bind(exit(succeed(())), closeScope(a0, a1)))	6	0	scopeExpected	1.1.0	scopeExpected never
+SMALLEST	a statement's test	bind(succeed(true), gen{if a0 {} else {}; })	3	0	predicateNotBool	1.0.0	predicateNotBool never
+probe 1, the smallest programs: every guard above holds
+wall=2s exit=0

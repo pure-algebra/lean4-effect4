@@ -1,0 +1,35 @@
+
+/-! The instrument of seat LATTICE's follow-up on words, appended to a copy of the module's text:
+`#check` of each authored theorem of this file under `Effect4`, and of each other authored
+declaration there. The population is the tree's own (`ProofGraph.isAuxiliary`). A name after the
+command is listed too: it is for an authored declaration that the population's spelling rule
+skips. Nothing here is in the tree.
+
+To run it: copy `src/Effect4/Laws/Slice/Lattice.lean` at a revision, append this text, and then
+one line: `#check_this_file` at the head, and `#check_this_file Effect4.Slice.below` at the base
+`ea0f584a`. Run `lake env lean` on the copy. -/
+
+open Lean Elab Command in
+elab "#check_this_file" extra:ident* : command => do
+  let env ← getEnv
+  let here := env.mainModule
+  let also : Array Name := extra.map (·.getId)
+  for name in also do
+    unless (env.find? name).isSome do throwError "unknown constant {name}"
+  let authored (theorems : Bool) : Array Name :=
+    (env.constants.toList.filterMap fun (name, ci) =>
+      if Effect4.Laws.Auto.semanticsModule env name != here then none
+      else if !(`Effect4).isPrefixOf name || name.isInternal then none
+      else if ProofGraph.isAuxiliary env name && !also.contains name then none
+      else if (ci matches .thmInfo _) == theorems then some name else none).toArray.qsort
+        (·.toString < ·.toString)
+  let thms := authored true
+  logInfo m!"THEOREMS {thms.size}"
+  for n in thms do
+    logInfo m!"### {n}"
+    elabCommand (← `(#check @$(mkIdent n)))
+  let others := authored false
+  logInfo m!"OTHERS {others.size}"
+  for n in others do
+    logInfo m!"### {n}"
+    elabCommand (← `(#check @$(mkIdent n)))

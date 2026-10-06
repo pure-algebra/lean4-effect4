@@ -1,0 +1,99 @@
+program	address	slot	termPath	role	part	admitted	answer	error	requires	refusal	refusalPath	refusalPlace	refusingNode	culprit	refusalDetail	foldedType	underLayer
+g15	0.0	sync.thunk	.	sync.thunk	lit.bool	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g16	.	sync.thunk	.	sync.thunk	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g20	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g33	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g49	0	failCause.fail	.	failCause.fail	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>	false
+g49	1	succeed.value	.	succeed.value	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<never ; nat ; {}>	false
+g50	.	provideService.value	.	provideService.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {k5_4}>	false
+g53	0.0.0.0.1	fail.error	.	fail.error	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>	false
+g53	0.0.0.1.0	failCause.die	.	failCause.die	app:succ	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>	false
+g53	0.0.0.1.0	failCause.die	0	succ.0	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>	false
+g54	0.0	sync.thunk	.	sync.thunk	lit.str	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g55	.	sync.thunk	.	sync.thunk	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g57	.	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g59	.	sync.thunk	.	sync.thunk	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g68	.	failCause.fail	.	failCause.fail	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g72	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g73	0	sync.thunk	.	sync.thunk	lit.str	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>	false
+g75	.	gen.return	.	gen.return	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g75	0.0.0	gen.return	.	gen.return	lit.nat	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>	false
+g83	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g89	.	provideService.value	.	provideService.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {k7_4}>	false
+g96	.	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g100	.	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g102	1.0.0	provideService.value	.	provideService.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	false
+g102	1.0.0.0.0.0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {k0_0}>	false
+g118	.	gen.return	.	gen.return	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g118	0.0.0.0.0	sync.thunk	.	sync.thunk	lit.nat	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>	false
+g118	0.0.0.1.0.0	succeed.value	.	succeed.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>	false
+g120	0.0.0.0	fail.error	.	fail.error	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>	false
+g121	0.0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g122	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g130	0.0.0.0.0	failCause.die	.	failCause.die	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g135	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g145	0.0.0	fail.error	.	fail.error	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g146	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g158	0.0.0	perform(refMake).request	.	perform(refMake).request	lit.str	true	unrelated	same	same	-	-	-	-	-	-	<ref<never> ; never ; {}>	false
+g160	0.0	succeed.value	.	succeed.value	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g161	.	sync.thunk	.	sync.thunk	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g163	.	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g174	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g179	0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>	false
+g181	.	gen.return	.	gen.return	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g184	0.0	failCause.fail	.	failCause.fail	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g185	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g189	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g193	0.0.0	fail.error	.	fail.error	lit.str	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g199	0.0.0	sync.thunk	.	sync.thunk	app:succ	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>	false
+g199	0.0.0	sync.thunk	0	succ.0	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>	false
+g213	.	failCause.fail	.	failCause.fail	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g218	0	succeed.value	.	succeed.value	lit.bool	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>	false
+g220	.	gen.return	.	gen.return	lit.bool	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g222	0.0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g223	0.0	failCause.fail	.	failCause.fail	lit.str	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g224	.	sync.thunk	.	sync.thunk	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g242	0	failCause.die	.	failCause.die	lit.str	true	same	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>	false
+g247	1.0.0.0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g252	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g263	.	sync.thunk	.	sync.thunk	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g267	.	sync.thunk	.	sync.thunk	lit.str	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g269	.	succeed.value	.	succeed.value	lit.str	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g276	0	succeed.value	.	succeed.value	lit.str	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>	false
+g287	.	gen.return	.	gen.return	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g290	0.0	provideService.value	.	provideService.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k10_4}>	false
+g291	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g300	0	failCause.fail	.	failCause.fail	lit.nat	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>	false
+g300	0	failCause.fail	.	failCause.fail	lit.nat	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>	false
+g305	0.0	sync.thunk	.	sync.thunk	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>	false
+g306	.	sync.thunk	.	sync.thunk	lit.str	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g308	.	succeed.value	.	succeed.value	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g309	0.0.0.0.0	fail.error	.	fail.error	lit.str	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	false
+g309	0.0.0.0.1	perform(deferredAwait).request	.	perform(deferredAwait).request	var	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	false
+g330	.	sync.thunk	.	sync.thunk	lit.str	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g334	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g344	0.0	gen.return	.	gen.return	lit.str	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, nat> ; never ; {k0_0}>	false
+g344	0.0.0.0.0	select.bool.scrutinee	.	select.bool.scrutinee	lit.bool	false	-	-	-	predicateNotBool	0.0.0.0.0	at-fold	Eff.select.bool	predicateNotBool never	predicateNotBool never	-	false
+g344	0.0.0.0.0.0.0	succeed.value	.	succeed.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>	false
+g344	0.0.0.0.0.1	fail.error	.	fail.error	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>	false
+g347	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g353	0.0	succeed.value	.	succeed.value	app:isZero	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g353	0.0	succeed.value	0	isZero.0	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>	false
+g358	.	failCause.fail	.	failCause.fail	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g359	0.0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g363	0	sync.thunk	.	sync.thunk	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g366	0.0	fail.error	.	fail.error	app:succ	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g366	0.0	fail.error	0	succ.0	lit.nat	true	same	same	same	-	-	-	-	-	-	<never ; nat ; {}>	false
+g367	0.0.0	fail.error	.	fail.error	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>	false
+g369	.	sync.thunk	.	sync.thunk	lit.str	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g371	.	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g373	.	sync.thunk	.	sync.thunk	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g375	.	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g382	.	failCause.interruptor	.	failCause.interruptor	app:add	false	-	-	-	cause	.	at-fold	Eff.failCause	Interrupt(never)	cause Interrupt(census.never())	-	false
+g382	.	failCause.interruptor	0	add.0	lit.nat	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g382	.	failCause.interruptor	1	add.1	lit.nat	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g386	.	fail.error	.	fail.error	lit.nat	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>	false
+g390	0.0.1.0	provideService.value	.	provideService.value	lit.nat	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>	false
+g390	0.0.1.0.0	sync.thunk	.	sync.thunk	lit.unit	true	smaller	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	false
+g392	0.0	succeed.value	.	succeed.value	lit.nat	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>	false
+g396	0.0.0.0.0.0	failCause.die	.	failCause.die	lit.nat	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>	false

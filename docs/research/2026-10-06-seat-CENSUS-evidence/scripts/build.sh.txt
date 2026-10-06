@@ -1,0 +1,20 @@
+#!/bin/bash
+# Seat CENSUS: build one probe file from the shared text and its tail.
+#   build.sh <name> <gen|truth> [term|mask]
+# The truth lane's corpus is taken as text from harness/truth/Truth.lean (lines 97 to 883).
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-lower
+name="$1"; corpus="$2"; extra="${3:-}"
+if [ "$corpus" = truth ]; then
+  want=1e890a73c7b66fdcae662c510e9003988170716709b363ed4c994794ccc8a28a
+  have=$(shasum -a 256 "$W/harness/truth/Truth.lean" | cut -d' ' -f1)
+  [ "$want" = "$have" ] || { echo "Truth.lean moved: $have" >&2; exit 1; }
+  { cat "$S/head-truth.lean"; sed -n '97,883p' "$W/harness/truth/Truth.lean"; printf '\nend OCaml5.Truth\n\n'; } > "$S/$name.lean"
+else
+  cat "$S/head-gen.lean" > "$S/$name.lean"
+fi
+cat "$S/Lib.lean" "$S/LibBlame.lean" "$S/LibRun.lean" >> "$S/$name.lean"
+if [ "$extra" = term ]; then cat "$S/LibTerm.lean" >> "$S/$name.lean"; fi
+if [ "$extra" = mask ]; then cat "$S/LibTerm.lean" "$S/LibMask.lean" >> "$S/$name.lean"; fi
+cat "$S/$name.tail.lean" >> "$S/$name.lean"

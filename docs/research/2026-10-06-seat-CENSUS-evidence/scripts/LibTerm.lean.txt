@@ -1,0 +1,208 @@
+/-
+Seat CENSUS: the term addresses. A term is no node of the path language (`Node.replaceAt`:
+"Terms are not nodes in this path language"), so a term address is an effect address, a slot of
+that node, and a path inside the slot's term (the child convention of `TermRefusal`: an
+argument's index; a target at 0 and a replacement at 1; a fold's list at 0, its initial value at
+1 and its body at 2).
+
+No closed term of the existing atom table has the type `never` (the receipt's finding, with
+its enumeration in `Probe1Term.tail.lean`). So fold N at a term address assumes one: the
+signature gains a nullary atom of type `never`, and the sub-term becomes its application. It
+is the term-level form of fold A's row form.
+-/
+namespace Census
+
+/-- A part of a term: its path, the role of its position (who consumes it), the sub-term, and
+the term with that part replaced. -/
+structure TermPart where
+  path : List Nat
+  role : String
+  part : Term
+  rebuild : Term → Term
+
+mutual
+def termParts (role : String) : Term → List TermPart
+  | .var index => [⟨[], role, .var index, id⟩]
+  | .lit value => [⟨[], role, .lit value, id⟩]
+  | .app atom args =>
+    ⟨[], role, .app atom args, id⟩ ::
+      (termsParts atom 0 args).map fun (p : List Nat × String × Term × (Term → Terms)) =>
+        ⟨p.1, p.2.1, p.2.2.1, fun x => .app atom (p.2.2.2 x)⟩
+  | .record fields names values =>
+    ⟨[], role, .record fields names values, id⟩ ::
+      (termsParts "record" 0 values).map fun (p : List Nat × String × Term × (Term → Terms)) =>
+        ⟨p.1, p.2.1, p.2.2.1, fun x => .record fields names (p.2.2.2 x)⟩
+  | .field mode target name =>
+    ⟨[], role, .field mode target name, id⟩ ::
+      (termParts "field.target" target).map fun q =>
+        ⟨0 :: q.path, q.role, q.part, fun x => .field mode (q.rebuild x) name⟩
+  | .recordSet target name value =>
+    ⟨[], role, .recordSet target name value, id⟩ ::
+      ((termParts "recordSet.target" target).map fun q =>
+          ⟨0 :: q.path, q.role, q.part, fun x => .recordSet (q.rebuild x) name value⟩) ++
+        ((termParts "recordSet.value" value).map fun q =>
+          ⟨1 :: q.path, q.role, q.part, fun x => .recordSet target name (q.rebuild x)⟩)
+  | .tupleAt target index =>
+    ⟨[], role, .tupleAt target index, id⟩ ::
+      (termParts "tupleAt.target" target).map fun q =>
+        ⟨0 :: q.path, q.role, q.part, fun x => .tupleAt (q.rebuild x) index⟩
+  | .fold accTy list init body =>
+    ⟨[], role, .fold accTy list init body, id⟩ ::
+      ((termParts "fold.list" list).map fun q =>
+          ⟨0 :: q.path, q.role, q.part, fun x => .fold accTy (q.rebuild x) init body⟩) ++
+        ((termParts "fold.init" init).map fun q =>
+          ⟨1 :: q.path, q.role, q.part, fun x => .fold accTy list (q.rebuild x) body⟩) ++
+        ((termParts "fold.body" body).map fun q =>
+          ⟨2 :: q.path, q.role, q.part, fun x => .fold accTy list init (q.rebuild x)⟩)
+def termsParts (head : String) (k : Nat) : Terms → List (List Nat × String × Term × (Term → Terms))
+  | .nil => []
+  | .cons first rest =>
+    ((termParts (head ++ "." ++ toString k) first).map fun q =>
+        (k :: q.path, q.role, q.part, fun x => Terms.cons (q.rebuild x) rest)) ++
+      ((termsParts head (k + 1) rest).map fun (p : List Nat × String × Term × (Term → Terms)) =>
+        (p.1, p.2.1, p.2.2.1, fun x => Terms.cons first (p.2.2.2 x)))
+end
+
+/-- A term slot of an effect node: its name, its term, and the node with that term replaced. -/
+structure Slot where
+  name : String
+  term : Term
+  rebuild : Term → P
+
+def causeSlots : CauseTerm → List (String × Term × (Term → CauseTerm))
+  | .fail error => [("failCause.fail", error, fun x => .fail x)]
+  | .die defect => [("failCause.die", defect, fun x => .die x)]
+  | .interrupt none => []
+  | .interrupt (some who) => [("failCause.interruptor", who, fun x => .interrupt (some x))]
+  | .both left right =>
+    ((causeSlots left).map fun (s : String × Term × (Term → CauseTerm)) => (s.1, s.2.1, fun x => CauseTerm.both (s.2.2 x) right)) ++
+      ((causeSlots right).map fun (s : String × Term × (Term → CauseTerm)) => (s.1, s.2.1, fun x => CauseTerm.both left (s.2.2 x)))
+
+mutual
+/-- The terms of a statement and of the statements of its blocks: a nested program is another
+effect address and holds its own. -/
+def stmtSlots : Stmt NativeOp → List (String × Term × (Term → Stmt NativeOp))
+  | .ret value => [("gen.return", value, fun x => .ret x)]
+  | .ifElse test a b =>
+    ("gen.if.test", test, fun x => Stmt.ifElse x a b) ::
+      (((stmtsSlots a).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmt.ifElse test (s.2.2 x) b)) ++
+        ((stmtsSlots b).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmt.ifElse test a (s.2.2 x))))
+  | .whileTrue body =>
+    (stmtsSlots body).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmt.whileTrue (s.2.2 x))
+  | .bindYield _ | .yieldDiscard _ | .breakLoop => []
+def stmtsSlots : Stmts NativeOp → List (String × Term × (Term → Stmts NativeOp))
+  | .nil => []
+  | .cons head tail =>
+    ((stmtSlots head).map fun (s : String × Term × (Term → Stmt NativeOp)) => (s.1, s.2.1, fun x => Stmts.cons (s.2.2 x) tail)) ++
+      ((stmtsSlots tail).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmts.cons head (s.2.2 x)))
+end
+
+def actionSlots : ActionTerm NativeOp → List (String × Term × (Term → ActionTerm NativeOp))
+  | .forkIn e o scope => [("forkIn.scope", scope, fun x => .forkIn e o x)]
+  | .runIn target scope =>
+    [("runIn.target", target, fun x => .runIn x scope), ("runIn.scope", scope, fun x => .runIn target x)]
+  | .interrupt target => [("interrupt.target", target, fun x => .interrupt x)]
+  | .interruptScoped target => [("interruptScoped.target", target, fun x => .interruptScoped x)]
+  | .interruptAll targets none => [("interruptAll.targets", targets, fun x => .interruptAll x none)]
+  | .interruptAll targets (some who) =>
+    [("interruptAll.targets", targets, fun x => .interruptAll x (some who)),
+     ("interruptAll.interruptor", who, fun x => .interruptAll targets (some x))]
+  | .awaitAll targets => [("awaitAll.targets", targets, fun x => .awaitAll x)]
+  | .awaitAllFailFast targets => [("awaitAllFailFast.targets", targets, fun x => .awaitAllFailFast x)]
+  | .awaitNewChildren snapshot => [("awaitNewChildren.snapshot", snapshot, fun x => .awaitNewChildren x)]
+  | .setContext context => [("setContext.context", context, fun x => .setContext x)]
+  | .closeScope scope exit =>
+    [("closeScope.scope", scope, fun x => .closeScope x exit), ("closeScope.exit", exit, fun x => .closeScope scope x)]
+  | .fork _ _ | .forkScoped _ _ | .snapshotChildren | .raceAll _ | .getContext | .getId | .getInterruptible => []
+
+/-- The term slots of an effect node itself: its own terms, its operation's binder term, its
+cause's leaves, and the terms of its statements or of its fiber action. -/
+def termSlots : P → List Slot
+  | .succeed v => [⟨"succeed.value", v, fun x => .succeed x⟩]
+  | .fail v => [⟨"fail.error", v, fun x => .fail x⟩]
+  | .failCause c => (causeSlots c).map fun (s : String × Term × (Term → CauseTerm)) => ⟨s.1, s.2.1, fun x => .failCause (s.2.2 x)⟩
+  | .sync v => [⟨"sync.thunk", v, fun x => .sync x⟩]
+  | .perform op r =>
+    ⟨"perform(" ++ (NativeOp.row op).name ++ ").request", r, fun x => .perform op x⟩ ::
+      match op.binder? with
+      | some (_, t) => [⟨"perform(" ++ (NativeOp.row op).name ++ ").binder", t, fun x => .perform (op.withTerm x) r⟩]
+      | none => []
+  | .catchIf t b h => [⟨"catchIf.test", t, fun x => .catchIf x b h⟩]
+  | .select s d a0 a1 => [⟨"select." ++ decisionName d ++ ".scrutinee", s, fun x => .select x d a0 a1⟩]
+  | .iterate c i t s r b =>
+    [⟨"iterate.initial", i, fun x => .iterate c x t s r b⟩, ⟨"iterate.test", t, fun x => .iterate c i x s r b⟩,
+     ⟨"iterate.step", s, fun x => .iterate c i t x r b⟩, ⟨"iterate.result", r, fun x => .iterate c i t s x b⟩]
+  | .awaitFiber f m => [⟨"awaitFiber.fiber", f, fun x => .awaitFiber x m⟩]
+  | .provideService k v b => [⟨"provideService.value", v, fun x => .provideService k x b⟩]
+  | .restore s b => [⟨"restore.saved", s, fun x => .restore x b⟩]
+  | .gen body => (stmtsSlots body).map fun (s : String × Term × (Term → Stmts NativeOp)) => ⟨s.1, s.2.1, fun x => .gen (s.2.2 x)⟩
+  | .withFiber action =>
+    (actionSlots action).map fun (s : String × Term × (Term → ActionTerm NativeOp)) => ⟨s.1, s.2.1, fun x => .withFiber (s.2.2 x)⟩
+  | .suspend _ | .bind _ _ | .catchCause _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
+  | .uninterruptible _ | .interruptible _ | .yieldNow _ | .scoped _ | .acquireRelease _ _
+  | .provideLayer _ _ _ | .service _ => []
+
+/-- The assumed atom of fold N at a term address. -/
+def neverAtom : String := "census.never"
+def neverTerm : Term := .app neverAtom .nil
+
+/-- The native signature with one more atom: `census.never`, nullary, of type `never`. -/
+def sigWithNever (table : RowTable) : Sig :=
+  let sig := nativeSignature table
+  { sig with atomOf := fun name tys => if name == neverAtom && tys.isEmpty then some .never else sig.atomOf name tys }
+
+def termHead : Term → String
+  | .var _ => "var"
+  | .lit (.unit) => "lit.unit"
+  | .lit (.nat _) => "lit.nat"
+  | .lit (.bool _) => "lit.bool"
+  | .lit (.str _) => "lit.str"
+  | .app atom _ => "app:" ++ atom
+  | .record _ _ _ => "record"
+  | .field _ _ _ => "field"
+  | .recordSet _ _ _ => "recordSet"
+  | .tupleAt _ _ => "tupleAt"
+  | .fold _ _ _ _ => "fold"
+
+def termHeader : String :=
+  tsv ["program", "address", "slot", "termPath", "role", "part", "admitted", "answer", "error", "requires",
+    "refusal", "refusalPath", "refusalPlace", "refusingNode", "culprit", "refusalDetail", "foldedType", "underLayer"]
+
+/-- The census of the term addresses of one admitted program under fold N. -/
+def termCensus (name : String) (table : RowTable) (e : P) (full : EffTy) : List String :=
+  let sig := nativeSignature table
+  let sig' := sigWithNever table
+  (sites sig [] e).flatMap fun s =>
+    (termSlots s.node).flatMap fun slot =>
+      (termParts slot.name slot.term).map fun part =>
+        match replaceEff e s.path (slot.rebuild (part.rebuild neverTerm)) with
+        | none => tsv [name, showPath s.path, slot.name, showPath part.path, "REPLACE-FAILED"]
+        | some e' =>
+          let o := outcome full (Checker.check sig' [] [] e')
+          let (reason, detail, rpath, place, rctor, culprit) := match o.refusal with
+            | none => ("-", "-", "-", "-", "-", "-")
+            | some r =>
+              (r.reason.head, reasonDetail r.reason, showPath r.path, refusalPlace s.path r.path,
+                ctorAt e' r.path, blame sig' [] e' r)
+          tsv [name, showPath s.path, slot.name, showPath part.path, part.role, termHead part.part,
+            toString o.admitted, relCell o.ans, relCell o.err, relCell o.req, reason, rpath, place, rctor, culprit,
+            detail, match o.type with | some t => showEffTy t | none => "-", toString s.inLayer]
+
+/-- The number of term addresses of a program. -/
+def termAddressCount (table : RowTable) (e : P) : Nat :=
+  ((sites (nativeSignature table) [] e).map fun s =>
+    ((termSlots s.node).map fun slot => (termParts slot.name slot.term).length).foldl (· + ·) 0).foldl (· + ·) 0
+
+def runTermCorpus (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let adm := admittedOf progs
+  IO.FS.writeFile (outDir ++ label ++ "-terms.tsv") (termHeader ++ "\n")
+  let mut n := 0
+  let t0 ← IO.monoMsNow
+  for (name, table, e, t) in adm do
+    let rows := termCensus name table e t
+    appendLines (outDir ++ label ++ "-terms.tsv") rows
+    n := n + rows.length
+  let t1 ← IO.monoMsNow
+  IO.println s!"{label}: term addresses {n}; wall time {t1 - t0} ms"
+
+end Census

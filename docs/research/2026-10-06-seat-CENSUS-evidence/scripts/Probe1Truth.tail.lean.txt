@@ -1,0 +1,11 @@
+/-
+Seat CENSUS, probe 1 on the truth lane: the 73 programs of `OCaml5.Truth.corpus`, each at the
+row table that the lane gives it (`OCaml5.Truth.hostInputs`).
+-/
+namespace Census
+def truthPrograms : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+#guard truthPrograms.length = 73
+#guard (truthPrograms.map (·.1)).eraseDups.length = 73
+#eval runCorpus "truth" truthPrograms
+end Census

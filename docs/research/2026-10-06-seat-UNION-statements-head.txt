@@ -1,0 +1,251 @@
+theorems whose statement names fieldType, setType or joinResults: 59
+Effect4.Modules.Kept.field {sig : Effect4.Program.Signature Effect4.Program.NativeOp}
+  {target : Effect4.Program.Authoring.TermSrc} {name : String} {s : Effect4.Modules.TypedScope}
+  {R T : Effect4.Program.Ty} (h : Effect4.Modules.Kept sig target s R)
+  (declared : Effect4.Program.Record.fieldType false R name = some T) :
+  Effect4.Modules.Kept sig (Effect4.Program.Authoring.field target name) s T
+Effect4.Modules.capturedTy_field {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {types : List Effect4.Program.Ty}
+  {target : Effect4.Program.Authoring.TermSrc} {name : String} {R T : Effect4.Program.Ty}
+  (htarget : Effect4.Modules.CapturedTy sig target env path types R)
+  (declared : Effect4.Program.Record.fieldType false R name = some T) :
+  Effect4.Modules.CapturedTy sig (Effect4.Program.Authoring.field target name) env path types T
+Effect4.Modules.postAll_answers {table : Effect4.Program.RowTable}
+  {requests answer : Effect4.Program.Authoring.TermSrc} {s : Effect4.Modules.TypedScope}
+  {E H : Effect4.Program.Ty} (hint : Effect4.Modules.HintTy table H) (canonical : E.normalize = E)
+  (hintField :
+    Effect4.Program.Record.fieldType false E "hint" = some (H.deferredOf Effect4.Program.Ty.never))
+  (hrequests : Effect4.Modules.Kept (Effect4.Program.nativeSignature table) requests s E.list)
+  (hanswer : Effect4.Modules.Kept (Effect4.Program.nativeSignature table) answer s H) :
+  Effect4.Modules.Answers (Effect4.Program.nativeSignature table)
+    (Effect4.Modules.postAll requests answer) s Effect4.Program.Ty.nat
+Effect4.Modules.types_field {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {types : List Effect4.Program.Ty}
+  {target : Effect4.Program.Authoring.TermSrc} {name : String} {R T : Effect4.Program.Ty}
+  {const : Bool} (htarget : Effect4.Modules.Types sig target env path types false R)
+  (declared : Effect4.Program.Record.fieldType false R name = some T) :
+  Effect4.Modules.Types sig (Effect4.Program.Authoring.field target name) env path types const T
+Effect4.Modules.types_recordSet {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {types : List Effect4.Program.Ty}
+  {target replacement : Effect4.Program.Authoring.TermSrc} {name : String}
+  {R V T : Effect4.Program.Ty} {const : Bool}
+  (htarget : Effect4.Modules.Types sig target env path types false R)
+  (hreplacement : Effect4.Modules.Types sig replacement env path types true V)
+  (written : Effect4.Program.Record.setType R name V = some T) :
+  Effect4.Modules.Types sig (Effect4.Program.Authoring.recordSet target name replacement) env path
+    types const T
+Effect4.Modules.types_removeById {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {types : List Effect4.Program.Ty}
+  (atoms : sig.atomOf = Effect4.Program.nativeAtomTy)
+  {entries id : Effect4.Program.Authoring.TermSrc} {E a e b f : Effect4.Program.Ty}
+  (depth : types.length = List.length env.names) (canonical : E.normalize = E)
+  (idField : Effect4.Program.Record.fieldType false E "id" = some (a.deferredOf e))
+  (hentries : Effect4.Modules.TypesEach sig entries env path types E.list)
+  (hid : Effect4.Modules.CapturedTy sig id env path types (b.deferredOf f)) :
+  Effect4.Modules.TypesEach sig
+    (Effect4.Program.Authoring.foldWith entries (Effect4.Modules.noneOf entries) fun kept entry =>
+      Effect4.Modules.ifT (Effect4.Modules.same (Effect4.Program.Authoring.field entry "id") id)
+        kept (Effect4.Modules.snoc kept entry))
+    env path types E.list
+Effect4.Modules.types_sameItem {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {types : List Effect4.Program.Ty}
+  (atoms : sig.atomOf = Effect4.Program.nativeAtomTy) {id : Effect4.Program.Authoring.TermSrc}
+  {E accT a e b f : Effect4.Program.Ty} (depth : types.length = List.length env.names)
+  (idField : Effect4.Program.Record.fieldType false E "id" = some (a.deferredOf e))
+  (hid : Effect4.Modules.CapturedTy sig id env path types (b.deferredOf f)) :
+  Effect4.Modules.TypesEach sig
+    (Effect4.Modules.same
+      (Effect4.Program.Authoring.field (Effect4.Program.Authoring.minted (env.mint "item")) "id")
+      id)
+    (env.push [env.mint "acc", env.mint "item"]) path (types ++ [accT, E]) Effect4.Program.Ty.bool
+Effect4.Pool.Model.cell_availableTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.cellTy A) "available" =
+    some Effect4.Program.Ty.nat.list
+Effect4.Pool.Model.cell_closingTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.cellTy A) "closing" =
+    some Effect4.Program.Ty.bool
+Effect4.Pool.Model.cell_itemsTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.cellTy A) "items" =
+    some (Effect4.Pool.itemTy A).list
+Effect4.Pool.Model.cell_nextTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.cellTy A) "next" =
+    some Effect4.Program.Ty.nat
+Effect4.Pool.Model.cell_setAvailableTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.cellTy A) "available" Effect4.Program.Ty.nat.list =
+    some (Effect4.Pool.cellTy A)
+Effect4.Pool.Model.cell_setClosingTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.cellTy A) "closing" Effect4.Program.Ty.bool =
+    some (Effect4.Pool.cellTy A)
+Effect4.Pool.Model.cell_setItemsTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.cellTy A) "items" (Effect4.Pool.itemTy A).list =
+    some (Effect4.Pool.cellTy A)
+Effect4.Pool.Model.cell_setNextTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.cellTy A) "next" Effect4.Program.Ty.nat =
+    some (Effect4.Pool.cellTy A)
+Effect4.Pool.Model.cell_setWaitersTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.cellTy A) "waiters" Effect4.Pool.waiterTy.list =
+    some (Effect4.Pool.cellTy A)
+Effect4.Pool.Model.cell_waitersTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.cellTy A) "waiters" =
+    some Effect4.Pool.waiterTy.list
+Effect4.Pool.Model.item_borrowedTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.itemTy A) "borrowed" =
+    some Effect4.Program.Ty.bool
+Effect4.Pool.Model.item_leaseTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.itemTy A) "lease" =
+    some Effect4.Program.Ty.nat
+Effect4.Pool.Model.item_setBorrowedTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.itemTy A) "borrowed" Effect4.Program.Ty.bool =
+    some (Effect4.Pool.itemTy A)
+Effect4.Pool.Model.item_setLeaseTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Pool.itemTy A) "lease" Effect4.Program.Ty.nat =
+    some (Effect4.Pool.itemTy A)
+Effect4.Pool.Model.item_stampTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.itemTy A) "stamp" =
+    some Effect4.Program.Ty.nat
+Effect4.Pool.Model.waiter_idTy :
+  Effect4.Program.Record.fieldType false Effect4.Pool.waiterTy "id" = some Effect4.Modules.idTy
+Effect4.Pool.item_resourceTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Pool.itemTy A) "resource" = some A
+Effect4.Pool.waiter_hintTy :
+  Effect4.Program.Record.fieldType false Effect4.Pool.waiterTy "hint" =
+    some (Effect4.Program.Ty.unit.deferredOf Effect4.Program.Ty.never)
+Effect4.Program.Record.fieldType_normal {fields : Effect4.Program.Record.Fields} {name : String}
+  {type : Effect4.Program.Ty}
+  (normal : (Effect4.Program.Ty.record fields).normalize = Effect4.Program.Ty.record fields)
+  (declared : Effect4.Field.firstOf name fields = some (false, type)) :
+  Effect4.Program.Record.fieldType false (Effect4.Program.Ty.record fields) name = some type
+Effect4.Program.Record.setType_normal {fields : Effect4.Program.Record.Fields} (name : String)
+  (valueType : Effect4.Program.Ty)
+  (normal : (Effect4.Program.Ty.record fields).normalize = Effect4.Program.Ty.record fields) :
+  Effect4.Program.Record.setType (Effect4.Program.Ty.record fields) name valueType =
+    some
+      (Effect4.Program.Ty.record
+          ((name, false, valueType) ::
+            List.filter (fun field => decide (field.fst ≠ name)) fields)).normalize
+Effect4.Program.Record.setType_same {fields : Effect4.Program.Record.Fields} {name : String}
+  {type valueType : Effect4.Program.Ty}
+  (normal : (Effect4.Program.Ty.record fields).normalize = Effect4.Program.Ty.record fields)
+  (declared : Effect4.Field.firstOf name fields = some (false, type))
+  (same : valueType.normalize = type) :
+  Effect4.Program.Record.setType (Effect4.Program.Ty.record fields) name valueType =
+    some (Effect4.Program.Ty.record fields)
+Effect4.Program.RecordChecks.fieldType {value : Effect4.Machine.Val}
+  {target answer : Effect4.Program.Ty} {optional : Bool} {name : String}
+  (htype : Effect4.Program.Record.fieldType optional target name = some answer)
+  (hfit : Effect4.Program.RecordChecks.Has✝ value target) :
+  ∃ out,
+    Effect4.Machine.Record.read optional value name = some out ∧
+      Effect4.Program.RecordChecks.Has✝ out answer
+Effect4.Program.RecordChecks.joinResults {value : Effect4.Machine.Val}
+  {types : List Effect4.Program.Ty} {type : Effect4.Program.Ty} (ht : type ∈ types)
+  (hfit : Effect4.Program.RecordChecks.Has✝ value type) :
+  Effect4.Program.RecordChecks.Has✝ value (Effect4.Program.Record.joinResults types)
+Effect4.Program.RecordChecks.setType {value replacement : Effect4.Machine.Val}
+  {target answer replacementType : Effect4.Program.Ty} {name : String}
+  (htype : Effect4.Program.Record.setType target name replacementType = some answer)
+  (hfit : Effect4.Program.RecordChecks.Has✝ value target)
+  (hreplacement : Effect4.Program.RecordChecks.Has✝ replacement replacementType) :
+  ∃ out,
+    Effect4.Machine.Record.set value name replacement = some out ∧
+      Effect4.Program.RecordChecks.Has✝ out answer
+Effect4.Program.Typed.fits_joinResults {w : Effect4.Program.Typed.World}
+  {value : Effect4.Machine.Val} {types : List Effect4.Program.Ty} {type : Effect4.Program.Ty}
+  (ht : type ∈ types) (hfit : Effect4.Program.Typed.Fits w value type) :
+  Effect4.Program.Typed.Fits w value (Effect4.Program.Record.joinResults types)
+Effect4.Program.Typed.record_fieldType_fits {w : Effect4.Program.Typed.World}
+  {value : Effect4.Machine.Val} {target answer : Effect4.Program.Ty} {optional : Bool}
+  {name : String} (htype : Effect4.Program.Record.fieldType optional target name = some answer)
+  (hfit : Effect4.Program.Typed.Fits w value target) :
+  ∃ out,
+    Effect4.Machine.Record.read optional value name = some out ∧
+      Effect4.Program.Typed.Fits w out answer
+Effect4.Program.Typed.record_setType_fits {w : Effect4.Program.Typed.World}
+  {value replacement : Effect4.Machine.Val} {target answer replacementType : Effect4.Program.Ty}
+  {name : String} (htype : Effect4.Program.Record.setType target name replacementType = some answer)
+  (hfit : Effect4.Program.Typed.Fits w value target)
+  (hreplacement : Effect4.Program.Typed.Fits w replacement replacementType) :
+  ∃ out,
+    Effect4.Machine.Record.set value name replacement = some out ∧
+      Effect4.Program.Typed.Fits w out answer
+Effect4.Program.argTy_field_intro {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} (const : Bool) {mode : Effect4.Program.FieldReadMode}
+  {target : Effect4.Program.Term} {name : String} {record answer : Effect4.Program.Ty}
+  (htarget : Effect4.Program.argTy sig env false target = some record)
+  (hfield :
+    Effect4.Program.Record.fieldType (decide (mode = Effect4.Program.FieldReadMode.optional)) record
+        name =
+      some answer) :
+  Effect4.Program.argTy sig env const (Effect4.Program.Term.field mode target name) = some answer
+Effect4.Program.argTy_recordSet_intro {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} (const : Bool) {target value : Effect4.Program.Term} {name : String}
+  {record replacement answer : Effect4.Program.Ty}
+  (htarget : Effect4.Program.argTy sig env false target = some record)
+  (hvalue : Effect4.Program.argTy sig env true value = some replacement)
+  (hset : Effect4.Program.Record.setType record name replacement = some answer) :
+  Effect4.Program.argTy sig env const (target.recordSet name value) = some answer
+Effect4.Queue.Model.cell_capTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.cellTy A) "cap" =
+    some Effect4.Program.Ty.nat
+Effect4.Queue.Model.cell_msgsTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.cellTy A) "msgs" = some A.list
+Effect4.Queue.Model.cell_offersTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.cellTy A) "offers" =
+    some (Effect4.Queue.offerTy A).list
+Effect4.Queue.Model.cell_setMsgsTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Queue.cellTy A) "msgs" A.list =
+    some (Effect4.Queue.cellTy A)
+Effect4.Queue.Model.cell_setOffersTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Queue.cellTy A) "offers" (Effect4.Queue.offerTy A).list =
+    some (Effect4.Queue.cellTy A)
+Effect4.Queue.Model.cell_setTakersTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.setType (Effect4.Queue.cellTy A) "takers" Effect4.Queue.takerTy.list =
+    some (Effect4.Queue.cellTy A)
+Effect4.Queue.Model.cell_takersTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.cellTy A) "takers" =
+    some Effect4.Queue.takerTy.list
+Effect4.Queue.Model.offer_idTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.offerTy A) "id" = some Effect4.Modules.idTy
+Effect4.Queue.Model.offer_restTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.offerTy A) "rest" = some A.list
+Effect4.Queue.Model.taker_idTy :
+  Effect4.Program.Record.fieldType false Effect4.Queue.takerTy "id" = some Effect4.Modules.idTy
+Effect4.Queue.offer_hintTy {A : Effect4.Program.Ty} (canonical : A.normalize = A) :
+  Effect4.Program.Record.fieldType false (Effect4.Queue.offerTy A) "hint" =
+    some (Effect4.Program.Ty.bool.deferredOf Effect4.Program.Ty.never)
+Effect4.Queue.taker_hintTy :
+  Effect4.Program.Record.fieldType false Effect4.Queue.takerTy "hint" =
+    some (Effect4.Program.Ty.unit.deferredOf Effect4.Program.Ty.never)
+Effect4.Semaphore.Model.cell_nextTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.cellTy "next" =
+    some Effect4.Program.Ty.nat
+Effect4.Semaphore.Model.cell_permitsTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.cellTy "permits" =
+    some Effect4.Program.Ty.nat
+Effect4.Semaphore.Model.cell_setNextTy :
+  Effect4.Program.Record.setType Effect4.Semaphore.cellTy "next" Effect4.Program.Ty.nat =
+    some Effect4.Semaphore.cellTy
+Effect4.Semaphore.Model.cell_setTakenTy :
+  Effect4.Program.Record.setType Effect4.Semaphore.cellTy "taken" Effect4.Program.Ty.nat =
+    some Effect4.Semaphore.cellTy
+Effect4.Semaphore.Model.cell_setWaitersTy :
+  Effect4.Program.Record.setType Effect4.Semaphore.cellTy "waiters"
+      Effect4.Semaphore.waiterTy.list =
+    some Effect4.Semaphore.cellTy
+Effect4.Semaphore.Model.cell_takenTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.cellTy "taken" =
+    some Effect4.Program.Ty.nat
+Effect4.Semaphore.Model.cell_waitersTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.cellTy "waiters" =
+    some Effect4.Semaphore.waiterTy.list
+Effect4.Semaphore.Model.waiter_idTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.waiterTy "id" = some Effect4.Modules.idTy
+Effect4.Semaphore.Model.waiter_needTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.waiterTy "need" =
+    some Effect4.Program.Ty.nat
+Effect4.Semaphore.Model.waiter_stampTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.waiterTy "stamp" =
+    some Effect4.Program.Ty.nat
+Effect4.Semaphore.waiter_hintTy :
+  Effect4.Program.Record.fieldType false Effect4.Semaphore.waiterTy "hint" =
+    some (Effect4.Program.Ty.unit.deferredOf Effect4.Program.Ty.never)

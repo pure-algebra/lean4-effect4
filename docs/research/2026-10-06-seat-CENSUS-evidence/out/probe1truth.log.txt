@@ -1,0 +1,6 @@
+truth: programs 73; admitted 73; admitted with a reference in the stored program: 1
+truth: the site walk agrees with foldMapAt_eff on every program: true
+truth: envAt agrees with the site walk on every program: true
+truth: sites 4644; fold rows 10326; wall time 647828 ms
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -M6144    640.60s user 8.52s system 99% cpu 10:55.04 total
+exit=0

@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""Seat CENSUS, probe 4: the sweep of the small programs, from <prefix>-lattice.tsv."""
+import csv, sys, collections
+def read(p):
+    rows = list(csv.reader(open(p, newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+    return [dict(zip(rows[0], r)) for r in rows[1:]]
+for prefix in sys.argv[1:]:
+    rows = read(prefix + '-lattice.tsv')
+    print('# probe 4, the sweep: ' + prefix.split('/')[-1])
+    print('cases (program, fold, query): %d over %d programs' % (len(rows), len(set(r['program'] for r in rows))))
+    for fold in ('Arow', 'N'):
+        # the query "answer above never" holds at every admitted mask: its rows count the masks
+        every = [r for r in rows if r['fold'] == fold and r['query'] == 'answer above never']
+        print('fold %s, every program (%d): closed masks %d, admitted %d; programs with a refused mask %d; with a pair a ≤ b where b is admitted and a refused %d; where a is admitted and b refused %d'
+              % (fold, len(every), sum(int(r['closed']) for r in every), sum(int(r['admitted']) for r in every),
+                 sum(1 for r in every if int(r['admitted']) < int(r['closed'])),
+                 sum(1 for r in every if int(r['refusedBelowAdmitted']) > 0), sum(1 for r in every if int(r['refusedAboveAdmitted']) > 0)))
+        print('  programs with a pair of admitted masks a ≤ b and a column of a not below b\'s: answer %d, error %d, requirement %d'
+              % (sum(1 for r in every if int(r['answerNotBelow']) > 0), sum(1 for r in every if int(r['errorNotBelow']) > 0),
+                 sum(1 for r in every if int(r['requiresNotBelow']) > 0)))
+        for r in every:
+            if int(r['admitted']) < int(r['closed']) or int(r['answerNotBelow']) > 0:
+                print('      %s (%s addresses): closed %s, admitted %s, answer pairs %s' % (r['program'], r['addresses'], r['closed'], r['admitted'], r['answerNotBelow']))
+        rs = [r for r in rows if r['fold'] == fold and r['query'] != 'answer above never']
+        if not rs: continue
+        n = len(rs)
+        def cnt(pred): return sum(1 for r in rs if pred(r))
+        print('fold %s: %d cases; closed masks in all %d; admitted %d' % (fold, n, sum(int(r['closed']) for r in rs), sum(int(r['admitted']) for r in rs)))
+        print('  cases with a refused mask (admitted < closed): %d' % cnt(lambda r: int(r['admitted']) < int(r['closed'])))
+        print('  cases with a pair a ≤ b, b admitted and a refused: %d; a admitted and b refused: %d; a valid and b not valid: %d'
+              % (cnt(lambda r: int(r['refusedBelowAdmitted']) > 0), cnt(lambda r: int(r['refusedAboveAdmitted']) > 0),
+                 cnt(lambda r: int(r['validNotUp']) > 0)))
+        print('  cases with a pair a ≤ b, both admitted, and a column of a not below b\'s: answer %d, error %d, requirement %d'
+              % (cnt(lambda r: int(r['answerNotBelow']) > 0), cnt(lambda r: int(r['errorNotBelow']) > 0), cnt(lambda r: int(r['requiresNotBelow']) > 0)))
+        for r in rs:
+            if int(r['answerNotBelow']) > 0 or int(r['errorNotBelow']) > 0 or int(r['requiresNotBelow']) > 0:
+                print('      %s, %s: answer %s, error %s, requirement %s pairs' % (r['program'], r['query'], r['answerNotBelow'], r['errorNotBelow'], r['requiresNotBelow']))
+        print('  cases by the number of minimal masks: ' + ', '.join('%s: %d' % kv for kv in sorted(collections.Counter(r['minimal'] for r in rs).items(), key=lambda kv: int(kv[0]))))
+        for key, label in (('top', 'from the root down, skipping under a fold'), ('up', 'from the leaves up'), ('fix', 'restarting (the paper\'s)'),
+                           ('sweep', 'seat LATTICE\'s pass, program order'), ('sweepRev', 'seat LATTICE\'s pass, reverse order')):
+            notmin = [r for r in rs if r[key + 'Minimal'] != 'true']
+            print('  descent %-45s ends at a minimal mask in %d of %d cases; calls of check in all: %d'
+                  % (label + ':', n - len(notmin), n, sum(int(r[key + 'Calls']) for r in rs)))
+            for r in notmin[:6]:
+                print('      not minimal: %s (%s addresses), %s: kept %s' % (r['program'], r['addresses'], r['query'], r[key + 'Kept']))
+        print('  addresses in all: %d' % sum(int(r['addresses']) for r in rs))

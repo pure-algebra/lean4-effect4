@@ -300,8 +300,12 @@ the state at the handover point and the integration procedure as practiced.
   through the shared rule, with two general statements in the lift module. The second is
   **landed** by seat TAPE: the tape and its laws stand in the library (row 287).
 
-The set is landed. A sweep follows it: the owner approved the coordinator's recommendations
-on 2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
+The set is landed, and the sweep ran on `ea0f584a` (row 289). `make check` and
+`make check-slow` pass, and the release ledger matches. Three targets of `make check-full`
+are red. `check-ingest` is red since seat MASK's merge: the constructed foreign corpus builds
+no `restore` form. `check-tsdiag` is red because its harness drifted, and it measures nothing
+today. `check-schema-ts` asks for an input that is not set. The first two are repairs with no
+seat yet. The law of a whole run for a module's operation is not in the set. It is the
 main open theory, and it starts with a design question. The owner asked for a discussion of
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
@@ -314,9 +318,13 @@ slicing. [The plan](research/2026-10-06-type-slicing-plan.md) reads the vendored
 maps it to the checker and lists ten proposed claims, four probes and six slices. The
 owner said to go ahead with its recommendations and to run its probes, and asked for a deep
 exploration of a true gap with holes. Two research seats took them, and neither edits a
-tracked source. Seat CENSUS measures the checker's graduality on the two corpora
-([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)); its receipt is
-not in yet. Seat GAP studied what a gap with holes would give, from the papers and from what
+tracked source. Seat CENSUS measured the checker's graduality on the two corpora;
+[its receipt](research/2026-10-06-seat-CENSUS-receipt.md) is merged (row 290). An omission
+to an assumed answer keeps the answer and shrinks the error and the requirement at 4833
+single omissions, on a premise wider than the plan's, with none refused. A fold to `never`
+is refused 6133 times by 18 rules: the uniform eliminators repair 4148, a rule that takes
+its expectation from a part gives 1886, and a cell's invariance gives 99. Every count is a
+finite census over 201 programs. Seat GAP studied what a gap with holes would give, from the papers and from what
 the algebra already gives; [its study](research/2026-10-06-seat-GAP-study.md) is merged
 (row 288). Two of the plan's questions were answered under row 282.
 
@@ -327,8 +335,9 @@ where it makes a thing generated, fast or ergonomic. Three answers are ratified.
 is the first stage, and a true gap with holes is the direction. Explanations have a
 requirement of their own, **R14: a partial program checks and explains its types**. A slice
 view promises one minimal slice and never a minimum size. The first groundwork slice is
-landed: the generic theory of type slices (seat LATTICE, row 286). The second is in work: one
-combinator for a rule that reads a union member by member (seat UNION, row 285).
+landed: the generic theory of type slices (seat LATTICE, row 286). The second is landed too:
+one combinator for a rule that reads a union member by member (seat UNION, rows 285 and 293).
+Its first conversion, the fiber rule, is next (seat PILOT).
 
 **What the study found (row 288).** A hole needs no new constructor and no new type. A hole
 is a host row with a declared type, in a hole table that is appended after the row table.
@@ -338,7 +347,10 @@ place, and the whole keeps its type. The true gap is the second step: the type o
 whose type is not stated. It costs one appended leaf of `Ty`, with one name per hole, and it
 pays where a value reaches a cell. The study's plan has nine stages and seven slices. Three
 need no ruling and no append: the hole table (SKETCH), the replacement law (REPLACE) and
-formation at a type variable (FORM). Nothing of the study is a theorem of the tree yet.
+formation at a type variable (FORM). The first of them has landed (row 291): a sketch is a
+program with its hole table (`src/Effect4/Program/Sketch.lean`), and its language is a
+conservative extension of the program's (`src/Effect4/Laws/Program/Sketch.lean`). The
+replacement law is the next slice. Nothing else of the study is a theorem of the tree yet.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -347,18 +359,58 @@ that rests on one schedule.
 
 In work since the suspension of the handover:
 
-- **Seat UNION has the combinator of candidate N** (branch `seat/union`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-union-brief.md); row 285). It
-  names the pattern of `Record.fieldType` once: a member rule, applied to every member of a
-  union's normal form, with the answers joined. It proves the pattern's laws once and writes
-  the two record rules through it. It changes no rule and no admitted program. Each later
-  conversion of a by-shape rule is then an instance. The coordinator probed the conversions
-  beside it ([the note](research/2026-10-06-uniform-eliminators-landing-probe.md)). The
-  judgment states each rule through the checker's own function, so a conversion changes no
-  statement of it, and one inversion lemma becomes an inequality. tsgo 7 accepts `never` at
-  every printed eliminator. It refuses a proper union at a generic call unless the type
-  arguments are written at the join. So a conversion at a proper union has a target side,
-  and its interim form is open for the owner (row 285).
+- **Seat BOUNDS probes the match by bounds** (branch `seat/bounds`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-bounds-brief.md); row 292, point
+  4). A template binds a type parameter at its first occurrence today, so a verdict depends
+  on the order of the arguments. The probe measures the rule by polarity against it on the
+  two corpora, proves what scratch allows, and runs tsgo on the prelude's signatures. It
+  edits no tracked source.
+  [The design input](research/2026-10-06-repeated-parameter-by-polarity.md) reads the paper.
+- **Seat LANES repairs the two lanes that the sweep found red** (branch `seat/lanes`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-lanes-brief.md); row 289). The
+  diagnostics lane measures again on its branch: no program that the checker admits is
+  refused by tsgo. The ingest's census is in work.
+- **Seat SKETCH's hole table is merged**
+  ([its receipt](research/2026-10-06-seat-SKETCH-receipt.md); rows 288 and 291). A sketch is
+  data, and three claims are in the registry: `sketch-conservative`, `sketch-weakening` and
+  `hole-rule`. `Sketch.check` is the checker's answer: it admits no sketch to a later stage.
+  A stored sketch is pinned to the row count of its application, and its renumbering is an
+  open part of R14. The seat has the replacement law next, on the same branch.
+- **Seat FORM has formation at a type variable** (branch `seat/form`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-form-brief.md); row 288, point
+  6 a). A type variable is formed in a template only, and a formed program that the checker
+  admits has closed types. It narrows the admitted programs by those that hold a variable
+  in an annotation.
+- **Seat LATTICE's renaming is merged**
+  ([its receipt](research/2026-10-06-seat-LATTICE-words-receipt.md); row 286, point 5). The
+  slice module says "omitted" where it said "folded", and the dictionary has eight entries
+  for its words: type slice, site, slice view, valid slice, minimal slice, descent,
+  contribution slice and mask. The follow-up also found that the proof graph's population
+  skips eight authored theorems by the spelling of their names: a repair candidate.
+- **Seat UNION is merged** ([its receipt](research/2026-10-06-seat-UNION-receipt.md); rows
+  285 and 293). `src/Effect4/Program/UnionRule.lean` holds one combinator for a rule that
+  reads a type by its union members. A member rule answers at one union member, or refuses
+  it. `UnionRule.lift` asks it at every union member of the target's normal form and joins
+  the answers. The record field read and the overwrite are written through it, and each
+  equals its earlier definition by `rfl`. No statement changed, and no generated file moved.
+  The laws are proved once (`src/Effect4/Laws/Program/UnionRule.lean`; the registry claim
+  `union-rule-lift`). An eliminator of one covariant constructor owes three member facts,
+  and the order laws follow (`Eliminator`). The owner's two more statements are proved. At
+  types, the lifted rule is the one map with its four properties (`lift_unique`). An
+  eliminator's lifted rule answers exactly below the constructor's image
+  (`Eliminator.adjoint`). No eliminator is converted yet.
+- **Seat PILOT has the first conversion** (branch `seat/pilot`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-pilot-brief.md); rows 285, 292
+  and 293). `fiberTy` becomes the guarded lifted rule of its member rule. It answers at
+  `never` and at one union member of the normal form. It keeps today's refusal at a proper
+  union, by the guard that the owner ruled (row 292): tsgo 7 refuses the printed call there
+  until the printer writes the type arguments at the join
+  ([the probe](research/2026-10-06-uniform-eliminators-landing-probe.md)). The judgment
+  states each fiber rule through the checker's own function, so the conversion changes no
+  statement of it, and one inversion lemma becomes an inequality in `Ty.subN`. The seat
+  states the contract of a guarded eliminator once, for every eliminator, and it measures
+  the churn. Under the guard a converted rule is not monotone at a proper union. The traced
+  check comes forward so that the printer can write the type arguments.
 - **Seat LATTICE is merged** ([its receipt](research/2026-10-06-seat-LATTICE-receipt.md);
   row 286). `src/Effect4/Laws/Slice/Lattice.lean` holds the generic theory of type slices. A
   type slice is the list of its kept sites. A view is a monotone map from the type slices of

@@ -854,6 +854,31 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   (`vendor/papers/program-graphs/README.md`).
   It establishes no monotone type map of a real program, no least slice and no minimum-size slice.
   A view takes one column of the checker's type, and it owes one fact, its monotonicity.
+- **A rule that reads a union member by member (`union-rule-lift`)**: The statement fixes a member
+  rule: a function from a type to an optional answer.
+  It fixes a carrier of answers with a least answer and a join: a type, or a pair of types.
+  The lifted rule asks the member rule at every union member of the target's normal form.
+  It joins the answers, and one refusal refuses the target.
+  It answers the least answer at `never`.
+  At one normal union member it is the member rule, up to the join with the least answer.
+  Two types with one normal form have one answer.
+  Where the member rule is monotone on normal union members, a smaller target has an answer
+  where a larger one has, and the answer is smaller.
+  A property of a value and an answer that the join keeps on each side passes from the union
+  members to the lifted rule.
+  It is proved (`UnionRule.lift_laws`, `src/Effect4/Laws/Program/UnionRule.lean`; seat UNION).
+  Three more statements stand beside it, each proved in the same file.
+  An eliminator of one covariant constructor owes three member facts, and the order laws follow
+  (`Eliminator`).
+  Its lifted rule answers exactly below the constructor's image, in `Ty.subN`
+  (`Eliminator.adjoint`).
+  At types, a map with the four properties of the lifted rule is the lifted rule (`lift_unique`).
+  The two record rules are its instances, and each equals its earlier definition by `rfl`
+  (`Test/Program/UnionRule.lean`).
+  It establishes no conversion of an eliminator, no `checker-monotone` and nothing at an
+  invariant position.
+  The upper form is false in the raw order `Ty.sub`, and the field read has no upper form:
+  the order has no width rule (decisions row 178).
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 
@@ -915,6 +940,20 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   `Api.explain_eq_if_refsWF`, `src/Effect4/Laws/Api/Codegen.lean`). The property is about the
   expansion that typing reads. The compile does not expand: it redirects a reference to its
   target, and a run shares the layer by its path.
+- **A sketch is a conservative extension (`sketch-conservative`)**: a program that performs no
+  hole row is checked the same with any hole table, refusals included
+  (`holes_conservative` (`src/Effect4/Laws/Program/Sketch.lean`)). It is the reflection of an
+  extension of the typing signature, at a hole table. It says nothing of a program that
+  performs a hole.
+- **More holes keep a sketch (`sketch-weakening`)**: a sketch that the checker admits stays
+  admitted at its type when more holes are declared. The checker reads the rows of the holes
+  that the sketch performs and no later row
+  (`sketch_weakening` (`src/Effect4/Laws/Program/Sketch.lean`)).
+- **The hole's rule (`hole-rule`)**: a hole has the type that its row declares, in every
+  environment, for a row with a unit request and closed, formed columns
+  (`Sketch.hole_hasTy` (`src/Effect4/Laws/Program/Sketch.lean`)). The typing judgment gains no
+  rule. The three properties establish no admission of a sketch to a later stage, no law of
+  filling a hole and no run.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

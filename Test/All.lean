@@ -45,6 +45,7 @@ import Test.Counterexamples.Machine.Semantics.ValueMembership
 import Test.Counterexamples.Machine.Semantics.FitsOrder
 import Test.Program.TermFits
 import Test.Program.SignatureControls
+import Test.Program.SketchControls
 import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
 import Test.Program.FormationContract
@@ -61,6 +62,7 @@ import Test.Program.MapValues
 import Test.Program.MapTyping
 import Test.Program.MapHandles
 import Test.Program.RecordOperations
+import Test.Program.UnionRule
 import Test.Program.FoldFamilySelection
 import Test.Program.RecordRefusals
 import Test.Program.RecordTerms

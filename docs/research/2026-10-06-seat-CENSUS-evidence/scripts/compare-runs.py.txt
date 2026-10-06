@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Seat CENSUS: the second run of `run.sh` against the first, file by file.
+
+    compare-runs.py <first folder> <second folder>
+
+A row file is compared by its bytes, and then column by column without the wall-time columns.
+A log is compared without its wall times and without the shell's own trailer."""
+import csv, os, re, sys
+A, B = sys.argv[1], sys.argv[2]
+TIME = ('ms', 'upMs', 'sweepMs', 'msPerCall')
+def table(path): return list(csv.reader(open(path, newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+def log_lines(path):
+    out = []
+    for line in open(path).read().split('\n'):
+        if line.startswith('wall=') or line.startswith('exit=') or 'lean-slot.sh lake env lean' in line: continue
+        out.append(re.sub(r'wall time \d+ ms', 'wall time', line))
+    return [l for l in out if l.strip()]
+print('# the second run against the first: every probe of run.sh, run again in a second scratch folder')
+print('# first: %s' % A)
+print('# second: %s' % B)
+differs = 0
+# the sources of the two runs: equal, but for the one line of LibRun.lean that names the folder of the rows
+SOURCES = ['Lib.lean', 'LibBlame.lean', 'LibRun.lean', 'LibTerm.lean', 'LibMask.lean', 'head-gen.lean', 'head-truth.lean', 'build.sh'] + \
+          sorted(f for f in os.listdir(B) if f.endswith('.tail.lean'))
+same_sources, lines_apart = 0, []
+for name in SOURCES:
+    la, lb = open(os.path.join(A, name)).read().split('\n'), open(os.path.join(B, name)).read().split('\n')
+    apart = [(x, y) for x, y in zip(la, lb) if x != y]
+    if la == lb: same_sources += 1
+    elif name == 'LibRun.lean' and len(la) == len(lb) and len(apart) == 1 and apart[0][0].replace('/census/ts/out/', '/census/ts2/out/') == apart[0][1]: lines_apart.append(name)
+    else: print('%-24s the source DIFFERS' % name); differs += 1
+print('the sources of the probes: %d files, %d with equal bytes; one line apart, the path of the rows: %s' % (len(SOURCES), same_sources, ', '.join(lines_apart) or 'none'))
+for name in sorted(f for f in os.listdir(os.path.join(A, 'out')) if f.endswith('.tsv') and 'refused' not in f):
+    a, b = os.path.join(A, 'out', name), os.path.join(B, 'out', name)
+    if not os.path.exists(b): print('%-24s MISSING in the second run' % name); differs += 1; continue
+    if open(a, 'rb').read() == open(b, 'rb').read():
+        print('%-24s equal bytes (%d rows)' % (name, len(table(a)) - 1)); continue
+    ta, tb = table(a), table(b)
+    keep = [i for i, c in enumerate(ta[0]) if c not in TIME]
+    same = ta[0] == tb[0] and len(ta) == len(tb) and all([x[i] for i in keep] == [y[i] for i in keep] for x, y in zip(ta, tb))
+    if same: print('%-24s equal in the %d columns that are no wall time (%d rows; wall-time columns: %s)' % (name, len(keep), len(ta) - 1, ', '.join(c for c in ta[0] if c in TIME)))
+    else: print('%-24s DIFFERS' % name); differs += 1
+LOGS = ('selftest', 'probe1gen', 'probe1truth', 'probe1closed', 'probe1termgen', 'probe1termtruth', 'probe1flow', 'probe1small', 'probe2', 'probe3', 'probe4', 'probe4premise', 'probe5')
+for name in LOGS:
+    a, b = os.path.join(A, name + '.log'), os.path.join(B, name + '.log')
+    if not os.path.exists(b): print('%-24s MISSING in the second run' % (name + '.log')); differs += 1; continue
+    la, lb = log_lines(a), log_lines(b)
+    exits = (re.search(r'exit=0\s*$', open(a).read()) is not None, re.search(r'exit=0\s*$', open(b).read()) is not None)
+    if la == lb and exits == (True, True): print('%-24s equal lines but for the wall times (%d lines); exit 0 in both runs' % (name + '.log', len(la)))
+    else: print('%-24s DIFFERS' % (name + '.log')); differs += 1
+print()
+if differs == 0: print('every row file and every log of the second run equals the first, but for the wall times')
+else: print('%d files differ' % differs)
+sys.exit(1 if differs else 0)

@@ -1,0 +1,208 @@
+import Effect4.Program.Sketch
+import Effect4.Laws.Program.Signature
+import Effect4.Laws.Auto.Semantics
+
+/-!
+# Laws.Program.Sketch — a sketch's language is a conservative extension of the program's
+
+`Program/Sketch.lean` defines a sketch: a program with its hole table, where a hole is a host
+row with a declared type and the hole table stands after the application's rows. This module
+holds its laws. Each one is an instance of a law of Σ_app that had landed
+(`Laws/Program/Signature.lean`, decisions rows 111 to 116): a hole table appended after the rows
+is an extension of the application's typing signature (`SigApp.withHoles_extends`), so the
+checker's two extension theorems apply.
+
+| Statement | In words | From |
+| --- | --- | --- |
+| `Sketch.check_program` | a program is a sketch with no hole: its check is the checker's answer | the definition |
+| `holes_conservative` (H1) | a program that performs no hole is checked the same with any hole table, refusals included | `check_restrict` |
+| `sketch_more_holes` (H2) | a sketch stays admitted, at the same type, when more holes are declared | `check_ext` |
+| `sketch_reads_its_holes` (H3) | the checker reads the rows of the holes that the sketch performs, and no later row | `check_restrict` |
+| `Sketch.hole_hasTy` | a hole has its declared type, in every environment | `HasTy.perform`, `rowTy_closed` |
+
+Each statement is made once, at the typing signature of an application (`SigApp.signature`).
+The form at a row table alone is the instance at `⟨table, []⟩`: `SigApp.signature_nil` holds by
+definition (`Test/Program/SketchControls.lean` has the instance).
+
+## Placement
+
+Concept `initial-algebras-folds`: the checker is one fold of the program, and each law reads
+that fold at two signatures. Requirement R14, under decisions rows 282 and 288.
+
+- **`sketch-conservative`** (proposed claim, role compatibility; pointer `holes_conservative`).
+  Reach: every application, every hole table, every environment and path, for a program that
+  performs only the application's operations and reads only service keys with a carrier
+  (`SigProgram`). It does not establish anything of a program that performs a hole, any
+  behaviour, or that a hole table is lawful. Consumer: a sketch whose holes are all filled is an
+  ordinary program, and the checker decides it.
+- **`sketch-weakening`** (proposed claim, role weakening; pointer `sketch_weakening`, which is H2
+  and H3 as one statement). Reach: the same, with H3's premise at the extended signature. It
+  does not establish an omission or a filling: those are the replacement law's. Consumer:
+  declaring a hole, and composing two sketches.
+- **`hole-rule`** (proposed claim, role compatibility; pointer `Sketch.hole_hasTy`). Reach: a
+  hole row with a unit request, closed columns and formed columns, at any position of any hole
+  table, in every environment. It does not establish a rule for a request that reads the
+  environment, or a run. Consumer: the replacement law, for an omission.
+
+No statement here names a gap, a term hole or a run. The host boundary stays where
+`docs/core/host-boundary.md` puts it.
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Program
+
+open Effect4 (ServiceKey)
+open Effect4.Machine.Env (Requirement)
+open Conform.Effect4.Typing
+
+/-! ## The hole table is an extension -/
+
+/-- A hole table appended after an application's rows extends its typing signature: every
+operation that the application admits is admitted at the same row, and every key keeps its
+carrier. It is `SigApp.rows_append` at the hole table. Every law of a sketch rests on it. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem SigApp.withHoles_extends (app : SigApp) (holes : RowTable) :
+    SigExtends app.signature (app.withHoles holes).signature :=
+  app.rows_append holes
+
+/-- Declaring more holes is appending to the hole table. A step of `sketch_weakening`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem SigApp.withHoles_withHoles (app : SigApp) (holes more : RowTable) :
+    (app.withHoles holes).withHoles more = app.withHoles (holes ++ more) := by
+  simp only [SigApp.withHoles, List.append_assoc]
+
+/-- An empty hole table changes nothing. A step of `Sketch.check_program`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem SigApp.withHoles_nil (app : SigApp) : app.withHoles [] = app := by
+  simp only [SigApp.withHoles, List.append_nil]
+
+/-- The row that the extended signature gives hole `k`: the hole table's row at `k`, with its
+three type columns in normal form. A step of `Sketch.hole_hasTy`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem SigApp.withHoles_rowOf (app : SigApp) (holes : RowTable) (k : Nat) (row : Row)
+    (hk : holes[k]? = some row) :
+    (app.withHoles holes).signature.rowOf (.external (app.rows.length + k)) =
+      row.normalizeTypes := by
+  show (nativeRowOf (app.rows ++ holes) (.external (app.rows.length + k))).normalizeTypes = _
+  simp only [nativeRowOf, List.getElem?_append_right (Nat.le_add_right _ _),
+    Nat.add_sub_cancel_left, hk, Option.getD_some]
+
+/-! ## A program is a sketch with no hole -/
+
+/-- **A program is a sketch with no hole**: the check of a program as a sketch is the checker's
+answer on it, refusals included. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_program (app : SigApp) (e : NativeEff) :
+    Sketch.check (e : Sketch) app = Checker.check app.signature [] [] e := by
+  show Checker.check (app.withHoles []).signature [] [] e = _
+  rw [SigApp.withHoles_nil]
+
+/-! ## H1: conservative -/
+
+/-- **H1, the claim `sketch-conservative`**: a program that performs no hole is checked the
+same with any hole table, refusals included, at every environment and path. The premise is
+`SigProgram` at the application's signature: every operation that the program performs is one of
+the application's, and every service key that it reads has a carrier. It is C3's reflection
+(`check_restrict`) at the hole table. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem holes_conservative (app : SigApp) (holes : RowTable) {e : NativeEff}
+    (hp : SigProgram app.signature e) (env : TyEnv) (p : List Nat) :
+    Checker.check (app.withHoles holes).signature env p e = Checker.check app.signature env p e :=
+  check_restrict (app.withHoles_extends holes) hp env p
+
+/-- H1 on a sketch: a sketch whose program performs no hole is checked as its program. So a
+sketch with every hole filled is an ordinary program, and the checker decides it. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_filled (s : Sketch) (app : SigApp)
+    (hp : SigProgram app.signature s.program) :
+    s.check app = Checker.check app.signature [] [] s.program :=
+  holes_conservative app s.holes hp [] []
+
+/-! ## H2 and H3: weakening -/
+
+/-- **H2**: a sketch that the checker admits stays admitted, at the same type, when more holes
+are declared after its own. It is C3's monotone half (`check_ext`) at the longer hole table. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem sketch_more_holes (app : SigApp) (holes more : RowTable) {e : NativeEff} {env : TyEnv}
+    {p : List Nat} {t : EffTy}
+    (h : Checker.check (app.withHoles holes).signature env p e = .ok t) :
+    Checker.check (app.withHoles (holes ++ more)).signature env p e = .ok t := by
+  rw [← SigApp.withHoles_withHoles]
+  exact check_ext ((app.withHoles holes).withHoles_extends more) h
+
+/-- **H3**: the checker reads the rows of the holes that the sketch performs, and no later row.
+A program that performs only the application's operations and the holes of `holes` is checked
+the same when more holes are declared, refusals included. So a filled hole's row can stay in
+the table: the checker no longer reads it. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem sketch_reads_its_holes (app : SigApp) (holes more : RowTable) {e : NativeEff}
+    (hp : SigProgram (app.withHoles holes).signature e) (env : TyEnv) (p : List Nat) :
+    Checker.check (app.withHoles (holes ++ more)).signature env p e =
+      Checker.check (app.withHoles holes).signature env p e := by
+  rw [← SigApp.withHoles_withHoles]
+  exact check_restrict ((app.withHoles holes).withHoles_extends more) hp env p
+
+/-- **The claim `sketch-weakening`, as one statement**: H2 and H3 for one application and two
+hole tables. It is the pointer that the claim's row needs, and it adds nothing to its two
+parts. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem sketch_weakening (app : SigApp) (holes more : RowTable) :
+    (∀ {e : NativeEff} {env : TyEnv} {p : List Nat} {t : EffTy},
+      Checker.check (app.withHoles holes).signature env p e = .ok t →
+        Checker.check (app.withHoles (holes ++ more)).signature env p e = .ok t) ∧
+    (∀ {e : NativeEff}, SigProgram (app.withHoles holes).signature e →
+      ∀ (env : TyEnv) (p : List Nat),
+        Checker.check (app.withHoles (holes ++ more)).signature env p e =
+          Checker.check (app.withHoles holes).signature env p e) :=
+  ⟨sketch_more_holes app holes more, sketch_reads_its_holes app holes more⟩
+
+/-- H2 on a sketch: declaring more holes keeps the sketch admitted modulo its holes, at the
+same type. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_more_holes (s : Sketch) (app : SigApp) (more : RowTable) {t : EffTy}
+    (h : s.check app = .ok t) :
+    Sketch.check { s with holes := s.holes ++ more } app = .ok t :=
+  sketch_more_holes app s.holes more h
+
+/-! ## The hole's rule -/
+
+/-- **The hole's rule, the claim `hole-rule`**: hole `k` has the type that its row declares, in
+every environment. The row is a hole row with closed columns that pass strict formation, the
+check that the row check runs at each use (`checkRow`). The answer and the error are read in
+normal form, as the checker gives every type.
+
+No rule is added to the typing judgment: this is `HasTy.perform` at a closed row
+(`rowTy_closed`). The row has no parameter, and its request is a unit, which the literal has in
+any environment. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.hole_hasTy (app : SigApp) (holes : RowTable) (k : Nat) {name : String}
+    {answer error : Ty} {requires : List ServiceKey} (env : TyEnv)
+    (hk : holes[k]? = some (Row.hole name answer error requires))
+    (hans : answer.closed = true) (herr : error.closed = true)
+    (formed : Formation.Formed
+      (Formation.instantiatedSites (Row.hole name answer error requires).normalizeTypes [])) :
+    HasTy (app.withHoles holes).signature env (Sketch.hole app k)
+      ⟨answer.normalize, error.normalize, Requirement.ofList requires⟩ := by
+  have hlt : k < holes.length := by
+    cases hlen : holes[k]? with
+    | none => rw [hlen] at hk; exact nomatch hk
+    | some _ => exact (List.getElem?_eq_some_iff.mp hlen).1
+  refine HasTy.perform (requestTy := .unit) ?_ ?_ ?_
+  · show decide (app.rows.length + k < (app.rows ++ holes).length) = true
+    rw [List.length_append]
+    exact decide_eq_true (Nat.add_lt_add_left hlt _)
+  · rfl
+  · show rowTy ((app.withHoles holes).signature.rowOf (.external (app.rows.length + k)))
+        Ty.unit none = _
+    rw [SigApp.withHoles_rowOf app holes k _ hk,
+      rowTy_closed _ _ (by rfl) (Ty.closed_normalize _ hans) (Ty.closed_normalize _ herr) formed]
+    have hunit : Ty.sub Ty.unit.normalize Ty.unit.normalize.normalize = true := by decide +kernel
+    have hsub : Ty.sub Ty.unit.normalize
+        (Row.hole name answer error requires).normalizeTypes.request.normalize = true := hunit
+    rw [if_pos hsub]
+    show some (⟨answer.normalize.normalize, error.normalize.normalize,
+      Requirement.ofList requires⟩ : EffTy) = _
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+
+end Effect4.Program

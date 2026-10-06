@@ -1,0 +1,64 @@
+== 1. The #check listings, up to both rename maps
+$ python3 compare_checks.py base-listing.txt head-listing.txt a b
+THEOREMS: base 59 (listed 59), head 59 (listed 59); only at base []; only at head []; statements that differ []
+OTHERS: base 38 (listed 38), head 38 (listed 38); only at base []; only at head []; statements that differ []
+RESULT: the two listings are equal up to the rename map
+exit 0
+
+== 2. Red control: the same listings with no map
+$ python3 compare_checks.py base-listing.txt head-listing.txt
+THEOREMS: base 59 (listed 59), head 59 (listed 59); only at base ['Effect4.Slice.exists_mem_below', 'Effect4.Slice.folded_anti', 'Effect4.Slice.folded_full', 'Effect4.Slice.folded_subset', 'Effect4.Slice.le_of_mem_below', 'Effect4.SliceView.ofFolded_full', 'Effect4.SliceView.parentFolded_sound']; only at head ['Effect4.Slice.exists_mem_subslices', 'Effect4.Slice.le_of_mem_subslices', 'Effect4.Slice.omitted_anti', 'Effect4.Slice.omitted_full', 'Effect4.Slice.omitted_subset', 'Effect4.SliceView.ofOmitted_full', 'Effect4.SliceView.parentOmitted_sound']; statements that differ ['Effect4.SliceView.descendTree_asks']
+OTHERS: base 38 (listed 38), head 38 (listed 38); only at base ['Effect4.Slice.below', 'Effect4.Slice.folded', 'Effect4.Slice.parentFolded', 'Effect4.SliceView.ofFolded']; only at head ['Effect4.Slice.omitted', 'Effect4.Slice.parentOmitted', 'Effect4.Slice.subslices', 'Effect4.SliceView.ofOmitted']; statements that differ []
+RESULT: THE LISTINGS DIFFER
+exit 1
+
+== 3. The same listings with map A alone: what map B renames is left
+$ python3 compare_checks.py base-listing.txt head-listing.txt a
+THEOREMS: base 59 (listed 59), head 59 (listed 59); only at base ['Effect4.Slice.exists_mem_below', 'Effect4.Slice.le_of_mem_below']; only at head ['Effect4.Slice.exists_mem_subslices', 'Effect4.Slice.le_of_mem_subslices']; statements that differ []
+OTHERS: base 38 (listed 38), head 38 (listed 38); only at base ['Effect4.Slice.below']; only at head ['Effect4.Slice.subslices']; statements that differ []
+RESULT: THE LISTINGS DIFFER
+exit 1
+
+== 4. The code with every comment removed, up to both maps
+$ diff <(code_only --rename-a --rename-b base-Lattice.lean) <(code_only head-Lattice.lean)
+exit 0; lines of code: 570
+
+$ diff <(code_only --rename-a --rename-b base-SliceLattice.lean) <(code_only head-SliceLattice.lean)
+exit 0; lines of code: 415
+
+== 5. Red control: the code with no map, changed lines
+Lattice: 29 changed line(s)
+SliceLattice: 6 changed line(s)
+
+== 6. The maps merge no two names: no target at the base, no source at the head
+$ python3 maps_merge_nothing.py base-listing.txt head-listing.txt
+11 sources and 11 targets; targets at the base: 0 []; sources at the head: 0 []
+RESULT: the maps merge no two names
+exit 0
+
+$ python3 maps_merge_nothing.py base-Lattice.lean head-Lattice.lean
+11 sources and 11 targets; targets at the base: 0 []; sources at the head: 0 []
+RESULT: the maps merge no two names
+exit 0
+
+$ python3 maps_merge_nothing.py base-SliceLattice.lean head-SliceLattice.lean
+11 sources and 11 targets; targets at the base: 0 []; sources at the head: 0 []
+RESULT: the maps merge no two names
+exit 0
+
+== 7. Red control: the same check with the two sides exchanged
+$ python3 maps_merge_nothing.py head-listing.txt base-listing.txt
+11 sources and 11 targets; targets at the base: 11 ['exists_mem_subslices', 'le_of_mem_subslices', 'ofOmitted', 'ofOmitted_full', 'omitted', 'omitted_anti', 'omitted_full', 'omitted_subset', 'parentOmitted', 'parentOmitted_sound', 'subslices']; sources at the head: 11 ['below', 'exists_mem_below', 'folded', 'folded_anti', 'folded_full', 'folded_subset', 'le_of_mem_below', 'ofFolded', 'ofFolded_full', 'parentFolded', 'parentFolded_sound']
+RESULT: A NAME OF THE MAPS IS ON THE WRONG SIDE
+exit 1
+
+$ python3 maps_merge_nothing.py head-Lattice.lean base-Lattice.lean
+11 sources and 11 targets; targets at the base: 11 ['exists_mem_subslices', 'le_of_mem_subslices', 'ofOmitted', 'ofOmitted_full', 'omitted', 'omitted_anti', 'omitted_full', 'omitted_subset', 'parentOmitted', 'parentOmitted_sound', 'subslices']; sources at the head: 11 ['below', 'exists_mem_below', 'folded', 'folded_anti', 'folded_full', 'folded_subset', 'le_of_mem_below', 'ofFolded', 'ofFolded_full', 'parentFolded', 'parentFolded_sound']
+RESULT: A NAME OF THE MAPS IS ON THE WRONG SIDE
+exit 1
+
+$ python3 maps_merge_nothing.py head-SliceLattice.lean base-SliceLattice.lean
+11 sources and 11 targets; targets at the base: 3 ['ofOmitted', 'ofOmitted_full', 'subslices']; sources at the head: 3 ['below', 'ofFolded', 'ofFolded_full']
+RESULT: A NAME OF THE MAPS IS ON THE WRONG SIDE
+exit 1
+

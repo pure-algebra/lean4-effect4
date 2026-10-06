@@ -1,0 +1,8 @@
+Effect4.Slice.below: declared true; matched by spelling true; tagged by Lean false; own declaration range true
+Effect4.Slice.ctorIdx: declared true; matched by spelling true; tagged by Lean false; own declaration range false
+Effect4.Slice.noConfusionType: declared true; matched by spelling true; tagged by Lean false; own declaration range false
+Effect4.Slice.mk.injEq: declared true; matched by spelling true; tagged by Lean false; own declaration range false
+Effect4.Slice.mk.sizeOf_spec: declared true; matched by spelling true; tagged by Lean false; own declaration range false
+Effect4.Slice.ctorElim: declared false; matched by spelling true; tagged by Lean false; own declaration range false
+Effect4.Slice.brecOn: declared false; matched by spelling true; tagged by Lean false; own declaration range false
+Effect4.Slice: recursive false; constructors 1

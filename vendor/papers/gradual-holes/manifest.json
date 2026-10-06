@@ -106,6 +106,21 @@
    "use": "The survey of synthesis and analysis modes that the slicing paper takes as its setting.",
    "title_page_checked": true,
    "original_bytes_preserved": true
+  },
+  {
+   "file": "dolan-mycroft-mlsub-popl17.pdf",
+   "source_url": "https://www.repository.cam.ac.uk/bitstreams/d50b4d1a-a688-46eb-bb4f-9f4e204d0f60/download",
+   "status": "downloaded_valid_pdf",
+   "bytes": 369443,
+   "sha256": "fa4076cf46307ca3733ff3f96d0e79159b4b0a32a1eb6c119969aac1a18a91d0",
+   "accessed_utc": "2026-10-06T22:38:14+00:00",
+   "title": "Polymorphism, Subtyping, and Type Inference in MLsub",
+   "authors": "Stephen Dolan; Alan Mycroft",
+   "version": "POPL 2017; the accepted version in the University of Cambridge repository (record https://www.repository.cam.ac.uk/handle/1810/261583)",
+   "pdf_pages": 13,
+   "use": "Type inference with subtyping by polarity: the input for the rule of a type parameter that an operation's template uses at two places (decisions row 292). Retrieved on the owner's word of 2026-10-06.",
+   "title_page_checked": true,
+   "original_bytes_preserved": true
   }
  ]
 }

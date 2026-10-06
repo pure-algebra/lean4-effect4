@@ -1,0 +1,158 @@
+# probe 1, the graduality census: gen
+programs: 128   effect addresses: 238   fold rows: 714
+malformed rows: folds 0, sites 0, programs 0
+sites by (levelOk, entriesOk, answerOk): ('true', 'true', 'true'): 238
+sites under a layer: 0
+fold Avar under a layer (the form does not reach it; left out of every table below): 0  ()
+the assumed row's own type against <A ; never ; {}>, by site: same: 238
+sites whose answer type is its own normal form: 238 of 238
+entry checks: every entry at 238 sites, the new entries alone at 0 sites
+sites in candidate A's domain (no closed edge above): 176
+sites outside it, by the first closed edge above: ActionTerm.fork.0: 35, ActionTerm.forkScoped.0: 13, Eff.catchCause.0: 1, Eff.exit.0: 7, Eff.onExit.0: 6
+
+## fold Avar by rule (the parent's constructor and the child's index): 238 folds, 0 refused, 238 gradual
+rule                     folds  refused  answer             error                requires             refusals (reason@place)
+-----------------------  -----  -------  -----------------  -------------------  -------------------  -----------------------
+ActionTerm.fork.0        21     0        same:17 smaller:4  same:21              same:19 smaller:2    -                      
+ActionTerm.forkScoped.0  10     0        same:6 smaller:4   same:10              same:10              -                      
+Eff.bind.0               6      0        same:5 smaller:1   same:4 smaller:2     same:6               -                      
+Eff.bind.1               6      0        same:6             same:6               same:5 smaller:1     -                      
+Eff.catchCause.0         1      0        same:1             same:1               smaller:1            -                      
+Eff.catchCause.1         1      0        same:1             same:1               smaller:1            -                      
+Eff.exit.0               8      0        same:8             same:8               same:8               -                      
+Eff.interruptible.0      8      0        same:8             same:8               same:5 smaller:3     -                      
+Eff.matchCause.0         2      0        same:2             same:2               same:2               -                      
+Eff.matchCause.1         2      0        same:1 smaller:1   same:2               same:2               -                      
+Eff.matchCause.2         2      0        same:2             same:2               same:2               -                      
+Eff.onExit.0             1      0        same:1             same:1               smaller:1            -                      
+Eff.onExit.1             1      0        same:1             same:1               same:1               -                      
+Eff.provideLayer.1       2      0        same:2             same:2               same:1 smaller:1     -                      
+Eff.provideService.0     5      0        same:5             same:5               same:1 smaller:4     -                      
+Eff.scoped.0             10     0        same:9 smaller:1   same:9 smaller:1     same:10              -                      
+Eff.select.bool.0        1      0        same:1             same:1               same:1               -                      
+Eff.select.bool.1        1      0        smaller:1          same:1               same:1               -                      
+Eff.suspend.0            10     0        same:10            same:9 smaller:1     same:7 smaller:3     -                      
+Eff.uninterruptible.0    5      0        same:5             same:5               same:5               -                      
+Effs.cons.0              3      0        same:3             same:3               same:3               -                      
+Stmt.bindYield.0         1      0        same:1             same:1               same:1               -                      
+Stmt.yieldDiscard.0      3      0        same:2 smaller:1   same:3               same:3               -                      
+root                     128    0        same:128           same:107 smaller:21  same:103 smaller:25  -                      
+
+## fold Arow by rule (the parent's constructor and the child's index): 238 folds, 0 refused, 238 gradual
+rule                     folds  refused  answer             error                requires             refusals (reason@place)
+-----------------------  -----  -------  -----------------  -------------------  -------------------  -----------------------
+ActionTerm.fork.0        21     0        same:17 smaller:4  same:21              same:19 smaller:2    -                      
+ActionTerm.forkScoped.0  10     0        same:6 smaller:4   same:10              same:10              -                      
+Eff.bind.0               6      0        same:5 smaller:1   same:4 smaller:2     same:6               -                      
+Eff.bind.1               6      0        same:6             same:6               same:5 smaller:1     -                      
+Eff.catchCause.0         1      0        same:1             same:1               smaller:1            -                      
+Eff.catchCause.1         1      0        same:1             same:1               smaller:1            -                      
+Eff.exit.0               8      0        same:8             same:8               same:8               -                      
+Eff.interruptible.0      8      0        same:8             same:8               same:5 smaller:3     -                      
+Eff.matchCause.0         2      0        same:2             same:2               same:2               -                      
+Eff.matchCause.1         2      0        same:1 smaller:1   same:2               same:2               -                      
+Eff.matchCause.2         2      0        same:2             same:2               same:2               -                      
+Eff.onExit.0             1      0        same:1             same:1               smaller:1            -                      
+Eff.onExit.1             1      0        same:1             same:1               same:1               -                      
+Eff.provideLayer.1       2      0        same:2             same:2               same:1 smaller:1     -                      
+Eff.provideService.0     5      0        same:5             same:5               same:1 smaller:4     -                      
+Eff.scoped.0             10     0        same:9 smaller:1   same:9 smaller:1     same:10              -                      
+Eff.select.bool.0        1      0        same:1             same:1               same:1               -                      
+Eff.select.bool.1        1      0        smaller:1          same:1               same:1               -                      
+Eff.suspend.0            10     0        same:10            same:9 smaller:1     same:7 smaller:3     -                      
+Eff.uninterruptible.0    5      0        same:5             same:5               same:5               -                      
+Effs.cons.0              3      0        same:3             same:3               same:3               -                      
+Stmt.bindYield.0         1      0        same:1             same:1               same:1               -                      
+Stmt.yieldDiscard.0      3      0        same:2 smaller:1   same:3               same:3               -                      
+root                     128    0        same:128           same:107 smaller:21  same:103 smaller:25  -                      
+
+## fold N by rule (the parent's constructor and the child's index): 238 folds, 0 refused, 238 gradual
+rule                     folds  refused  answer               error                requires             refusals (reason@place)
+-----------------------  -----  -------  -------------------  -------------------  -------------------  -----------------------
+ActionTerm.fork.0        21     0        same:2 smaller:19    same:21              same:19 smaller:2    -                      
+ActionTerm.forkScoped.0  10     0        same:1 smaller:9     same:10              same:10              -                      
+Eff.bind.0               6      0        same:5 smaller:1     same:4 smaller:2     same:6               -                      
+Eff.bind.1               6      0        same:1 smaller:5     same:6               same:5 smaller:1     -                      
+Eff.catchCause.0         1      0        same:1               same:1               smaller:1            -                      
+Eff.catchCause.1         1      0        same:1               same:1               smaller:1            -                      
+Eff.exit.0               8      0        same:3 smaller:5     same:8               same:8               -                      
+Eff.interruptible.0      8      0        same:3 smaller:5     same:8               same:5 smaller:3     -                      
+Eff.matchCause.0         2      0        same:2               same:2               same:2               -                      
+Eff.matchCause.1         2      0        same:1 smaller:1     same:2               same:2               -                      
+Eff.matchCause.2         2      0        same:1 smaller:1     same:2               same:2               -                      
+Eff.onExit.0             1      0        smaller:1            same:1               smaller:1            -                      
+Eff.onExit.1             1      0        same:1               same:1               same:1               -                      
+Eff.provideLayer.1       2      0        smaller:2            same:2               same:1 smaller:1     -                      
+Eff.provideService.0     5      0        smaller:5            same:5               same:1 smaller:4     -                      
+Eff.scoped.0             10     0        same:1 smaller:9     same:9 smaller:1     same:10              -                      
+Eff.select.bool.0        1      0        same:1               same:1               same:1               -                      
+Eff.select.bool.1        1      0        smaller:1            same:1               same:1               -                      
+Eff.suspend.0            10     0        same:3 smaller:7     same:9 smaller:1     same:7 smaller:3     -                      
+Eff.uninterruptible.0    5      0        same:1 smaller:4     same:5               same:5               -                      
+Effs.cons.0              3      0        smaller:3            same:3               same:3               -                      
+Stmt.bindYield.0         1      0        same:1               same:1               same:1               -                      
+Stmt.yieldDiscard.0      3      0        same:2 smaller:1     same:3               same:3               -                      
+root                     128    0        same:24 smaller:104  same:107 smaller:21  same:103 smaller:25  -                      
+
+## fold Avar against candidate A's domain
+domain                         layer              folds  refused  gradual  answer same (raw)  answer not same  error larger  requires larger
+-----------------------------  -----------------  -----  -------  -------  -----------------  ---------------  ------------  ---------------
+in A's domain                  not under a layer  176    0        176      176                0                0             0              
+outside (a closed edge above)  not under a layer  62     0        62       49                 13               0             0              
+
+## fold Arow against candidate A's domain
+domain                         layer              folds  refused  gradual  answer same (raw)  answer not same  error larger  requires larger
+-----------------------------  -----------------  -----  -------  -------  -----------------  ---------------  ------------  ---------------
+in A's domain                  not under a layer  176    0        176      176                0                0             0              
+outside (a closed edge above)  not under a layer  62     0        62       49                 13               0             0              
+
+## fold Avar: the premise of column graduality, by the address and by the node's own error
+the address                                  the node                   folds  refused  gradual  answer not identical  error smaller  requires smaller  the rules that refuse
+-------------------------------------------  -------------------------  -----  -------  -------  --------------------  -------------  ----------------  ---------------------
+in the plan's domain (no closed edge above)  the node's error is never  151    0        151      0                     0              36                -                    
+in the plan's domain (no closed edge above)  the node can fail          25     0        25       0                     25             0                 -                    
+outside it (a closed edge above)             the node's error is never  48     0        48       0                     0              6                 -                    
+outside it (a closed edge above)             the node can fail          14     0        14       13                    0              0                 -                    
+the wider premise (no closed edge above, or the node's error is never): 224 folds, 0 refused, 224 with the answer identical
+outside the wider premise (a node that can fail, under a closed edge): 14 folds, 0 refused; by closed edge: ActionTerm.fork.0: 7 (refused 0), ActionTerm.forkScoped.0: 6 (refused 0), Eff.onExit.0: 1 (refused 0)
+
+## fold Arow: the premise of column graduality, by the address and by the node's own error
+the address                                  the node                   folds  refused  gradual  answer not identical  error smaller  requires smaller  the rules that refuse
+-------------------------------------------  -------------------------  -----  -------  -------  --------------------  -------------  ----------------  ---------------------
+in the plan's domain (no closed edge above)  the node's error is never  151    0        151      0                     0              36                -                    
+in the plan's domain (no closed edge above)  the node can fail          25     0        25       0                     25             0                 -                    
+outside it (a closed edge above)             the node's error is never  48     0        48       0                     0              6                 -                    
+outside it (a closed edge above)             the node can fail          14     0        14       13                    0              0                 -                    
+the wider premise (no closed edge above, or the node's error is never): 224 folds, 0 refused, 224 with the answer identical
+outside the wider premise (a node that can fail, under a closed edge): 14 folds, 0 refused; by closed edge: ActionTerm.fork.0: 7 (refused 0), ActionTerm.forkScoped.0: 6 (refused 0), Eff.onExit.0: 1 (refused 0)
+
+## fold Avar: the refusals by the rule that refuses, the largest first (0 refusals, 0 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)  an instance  what it read
+---------------------  -------------  --------  ----------------------  -----------  ------------
+
+## fold Arow: the refusals by the rule that refuses, the largest first (0 refusals, 0 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)  an instance  what it read
+---------------------  -------------  --------  ----------------------  -----------  ------------
+
+## fold N: the refusals by the rule that refuses, the largest first (0 refusals, 0 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)  an instance  what it read
+---------------------  -------------  --------  ----------------------  -----------  ------------
+
+## admitted folds with a column that is not below the full program's: 0
+program  address  rule  fold  answer  error  requires  node type  folded program type
+-------  -------  ----  ----  ------  -----  --------  ---------  -------------------
+
+fold A, both forms run at 238 addresses not under a layer; the row form alone at 0 addresses under a layer; the variable form alone at 0 addresses
+
+## fold A: the variable form against the row form, address by address
+under a layer  outcome                       addresses
+-------------  ----------------------------  ---------
+false          both admitted, the same type  238      
+
+## fold A: the addresses where the two forms differ (not under a layer): 0
+program  address  rule  node type  variable form  row form
+-------  -------  ----  ---------  -------------  --------
+
+## fold Avar: one smallest program for each breaking rule (0 rules)
+
+## fold N: one smallest program for each breaking rule (0 rules)

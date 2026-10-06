@@ -1,0 +1,3 @@
+truth: term addresses 25202; wall time 726524 ms
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -M6144    719.08s user 9.41s system 99% cpu 12:09.63 total
+exit=0

@@ -1,0 +1,46 @@
+program	site	node	addresses	query	domain	allowed	kept	foldedRegions	foldedOutsidePlan	calls	ms	msPerCall	moreByRestart	restartCalls	upKept	upCalls	upMs	upMoreByRestart	completion1	completion2	completion3
+pProvideMerge	1.0	Eff.bind	15	requires k6_7	plan	15	5	4	0	9	1	0	0	5	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pProvideMerge	1.0	Eff.bind	15	requires k6_7	wide	15	5	4	0	9	1	0	0	5	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pProvideMerge	1.0	Eff.bind	15	requires k6_7	all	15	5	4	0	9	0	0	0	5	5	11	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pProvideTwice	1.0	Eff.bind	14	requires k6_7	plan	14	4	4	0	8	1	0	0	4	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pProvideTwice	1.0	Eff.bind	14	requires k6_7	wide	14	4	4	0	8	1	0	0	4	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pProvideTwice	1.0	Eff.bind	14	requires k6_7	all	14	4	4	0	8	0	0	0	4	4	11	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pDiamond	1.0	Eff.bind	21	requires k6_7	plan	21	6	5	0	11	1	0	0	6	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pDiamond	1.0	Eff.bind	21	requires k6_7	wide	21	6	5	0	11	1	0	0	6	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pDiamond	1.0	Eff.bind	21	requires k6_7	all	21	6	5	0	11	1	0	0	6	4	18	2	0	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pMergeAll	1.0	Eff.bind	19	requires k6_7	plan	19	4	5	0	9	1	0	0	4	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pMergeAll	1.0	Eff.bind	19	requires k6_7	wide	19	4	5	0	9	0	0	0	4	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pMergeAll	1.0	Eff.bind	19	requires k6_7	all	19	4	5	0	9	1	0	0	4	4	16	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pPoolReuse	1.1.0.0	Eff.bind	166	requires k0_0	plan	50	5	6	0	11	192	17	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolReuse	1.1.0.0	Eff.bind	166	requires k0_0	wide	166	5	6	0	11	188	17	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolReuse	1.1.0.0	Eff.bind	166	requires k0_0	all	166	5	6	0	11	192	17	0	5	4	163	1801	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolOrder	1.1.0.0	Eff.bind	304	requires k0_0	plan	82	6	7	0	13	470	36	0	6	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolOrder	1.1.0.0	Eff.bind	304	requires k0_0	wide	304	6	7	0	13	469	36	0	6	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolOrder	1.1.0.0	Eff.bind	304	requires k0_0	all	304	6	7	0	13	481	37	0	6	4	301	6920	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWaiters	1.1.0.0	Eff.bind	253	requires k0_0	plan	84	5	6	0	11	313	28	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWaiters	1.1.0.0	Eff.bind	253	requires k0_0	wide	253	5	6	0	11	311	28	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWaiters	1.1.0.0	Eff.bind	253	requires k0_0	all	253	5	6	0	11	309	28	0	5	4	250	4943	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolLateWake	1.1.0.0	Eff.bind	248	requires k0_0	plan	79	5	6	0	11	332	30	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolLateWake	1.1.0.0	Eff.bind	248	requires k0_0	wide	248	5	6	0	11	346	31	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolLateWake	1.1.0.0	Eff.bind	248	requires k0_0	all	248	5	6	0	11	343	31	0	5	4	245	4935	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWake	1.1.0.0	Eff.bind	187	requires k0_0	plan	71	5	6	0	11	237	21	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWake	1.1.0.0	Eff.bind	187	requires k0_0	wide	187	5	6	0	11	227	20	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWake	1.1.0.0	Eff.bind	187	requires k0_0	all	187	5	6	0	11	231	21	0	5	4	184	2628	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolMakeFails	1.0.0	Eff.scoped	111	error has nat	plan	85	6	4	0	10	104	10	0	6	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pPoolMakeFails	1.0.0	Eff.scoped	111	error has nat	wide	111	6	4	0	10	104	10	0	6	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pPoolMakeFails	1.0.0	Eff.scoped	111	error has nat	all	111	6	4	0	10	104	10	0	6	6	106	778	0	admitted, the member stays	admitted, the member stays	admitted, the member stays
+pPoolMakeFails	1.0.0.0	Eff.bind	110	requires k0_0	plan	84	5	6	0	11	123	11	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolMakeFails	1.0.0.0	Eff.bind	110	requires k0_0	wide	110	5	6	0	11	119	10	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolMakeFails	1.0.0.0	Eff.bind	110	requires k0_0	all	110	5	6	0	11	120	10	0	5	4	107	769	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolCloseWaits	1.1.1.0.0	Eff.bind	175	requires k0_0	plan	54	5	6	0	11	213	19	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolCloseWaits	1.1.1.0.0	Eff.bind	175	requires k0_0	wide	175	5	6	0	11	211	19	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolCloseWaits	1.1.1.0.0	Eff.bind	175	requires k0_0	all	175	5	6	0	11	215	19	0	5	4	172	2402	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWithdrawn	1.1.0.0	Eff.bind	248	requires k0_0	plan	79	5	6	0	11	381	34	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWithdrawn	1.1.0.0	Eff.bind	248	requires k0_0	wide	248	5	6	0	11	434	39	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolWithdrawn	1.1.0.0	Eff.bind	248	requires k0_0	all	248	5	6	0	11	387	35	0	5	4	245	6730	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolClosed	1.1.0.0	Eff.bind	52	requires k0_0	plan	42	4	5	0	9	25	2	0	4	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolClosed	1.1.0.0	Eff.bind	52	requires k0_0	wide	52	4	5	0	9	23	2	0	4	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolClosed	1.1.0.0	Eff.bind	52	requires k0_0	all	52	4	5	0	9	23	2	0	4	3	50	202	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolClosing	1.1.1.1.0.0	Eff.bind	238	requires k0_0	plan	56	5	6	0	11	444	40	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolClosing	1.1.1.1.0.0	Eff.bind	238	requires k0_0	wide	238	5	6	0	11	553	50	0	5	-	-	-	-	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays
+pPoolClosing	1.1.1.1.0.0	Eff.bind	238	requires k0_0	all	238	5	6	0	11	441	40	0	5	4	235	6690	0	not admitted (releaseFails)	not admitted (releaseFails)	admitted, the member stays

@@ -1,0 +1,60 @@
+program	address	rule	columnOpen	firstClosed	inLayer	nodeType	admitted	refusal	culprit	site	kind	position	before	after
+g20	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g33	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g49	.	root	true	-	false	<unit ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g49	0	Eff.bind.0	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g53	0.0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<exit<never, never> ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g53	0.0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<exit<never, never> ; nat ; {}>	true	-	-	.	answer	Eff.suspend	fiber<exit<never, never>, nat>	fiber<exit<never, never>, never>
+g53	0.0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<exit<never, never> ; nat ; {}>	true	-	-	0	answer	Eff.withFiber	fiber<exit<never, never>, nat>	fiber<exit<never, never>, never>
+g53	0.0.0.0	Eff.bind.0	false	ActionTerm.fork.0	false	<unit ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g53	0.0.0.0	Eff.bind.0	false	ActionTerm.fork.0	false	<unit ; nat ; {}>	true	-	-	.	answer	Eff.suspend	fiber<exit<never, never>, nat>	fiber<exit<never, never>, never>
+g53	0.0.0.0	Eff.bind.0	false	ActionTerm.fork.0	false	<unit ; nat ; {}>	true	-	-	0	answer	Eff.withFiber	fiber<exit<never, never>, nat>	fiber<exit<never, never>, never>
+g53	0.0.0.0.1	Eff.matchCause.1	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g53	0.0.0.0.1	Eff.matchCause.1	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.suspend	fiber<exit<never, never>, nat>	fiber<exit<never, never>, never>
+g53	0.0.0.0.1	Eff.matchCause.1	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	0	answer	Eff.withFiber	fiber<exit<never, never>, nat>	fiber<exit<never, never>, never>
+g68	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g72	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g83	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g120	0.0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g120	0.0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.suspend	fiber<never, nat>	fiber<never, never>
+g120	0.0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	0	answer	Eff.interruptible	fiber<never, nat>	fiber<never, never>
+g120	0.0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	0.0	answer	Eff.withFiber	fiber<never, nat>	fiber<never, never>
+g122	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g135	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g145	0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g145	0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<never, nat>	fiber<never, never>
+g145	0.0.0	Eff.scoped.0	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g145	0.0.0	Eff.scoped.0	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<never, nat>	fiber<never, never>
+g146	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g174	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g184	0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g184	0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<never, nat>	fiber<never, never>
+g185	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g189	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g193	0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; string ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g193	0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; string ; {}>	true	-	-	.	answer	Eff.scoped	fiber<never, string>	fiber<never, never>
+g193	0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; string ; {}>	true	-	-	0	answer	Eff.withFiber	fiber<never, string>	fiber<never, never>
+g213	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g223	0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<never ; string ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g223	0.0	ActionTerm.fork.0	false	ActionTerm.fork.0	false	<never ; string ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<never, string>	fiber<never, never>
+g252	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g291	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g300	.	root	true	-	false	<unit ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g300	0	Eff.bind.0	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g309	0.0.0.0.0	Eff.matchCause.0	false	Eff.onExit.0	false	<never ; string ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+g334	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g344	0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<string ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g344	0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<string ; nat ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<string, nat>	fiber<string, never>
+g344	0.0.0.0.0	Stmt.yieldDiscard.0	false	ActionTerm.forkScoped.0	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g344	0.0.0.0.0	Stmt.yieldDiscard.0	false	ActionTerm.forkScoped.0	false	<nat ; nat ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<string, nat>	fiber<string, never>
+g344	0.0.0.0.0.1	Eff.select.bool.1	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g344	0.0.0.0.0.1	Eff.select.bool.1	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.withFiber	fiber<string, nat>	fiber<string, never>
+g347	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g358	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g366	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g366	0	Eff.scoped.0	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g366	0.0	Eff.suspend.0	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g367	0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+g367	0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.suspend	fiber<never, nat>	fiber<never, never>
+g367	0.0.0	ActionTerm.forkScoped.0	false	ActionTerm.forkScoped.0	false	<never ; nat ; {}>	true	-	-	0	answer	Eff.withFiber	fiber<never, nat>	fiber<never, never>
+g386	.	root	true	-	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-

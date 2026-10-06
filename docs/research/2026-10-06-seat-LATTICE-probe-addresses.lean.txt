@@ -5,11 +5,12 @@ import Effect4.Laws.Program.TypeAlgebra
 # Seat LATTICE, the second instance of the interface test: a mask over addresses (2026-10-06)
 
 A scratch probe: nothing here is in the tree. Run it as `lake env lean <this file, with the
-suffix .lean>` at the head of branch `seat/lattice`.
+suffix .lean>` at the head of branch `seat/lattice-words`. The names are the module's after the
+follow-up on words of the same day: a site that is not kept is omitted.
 
-It shows the shape that a real instance takes, at the tree's own type carriers. The fold and its
-graduality are the instance's work, so here they are fields of a record. No fold of a real
-program is defined, and no graduality is proved.
+It shows the shape that a real instance takes, at the tree's own type carriers. The omission and
+its graduality are the instance's work, so here they are fields of a record. No omission in a
+real program is defined, and no graduality is proved.
 -/
 
 set_option autoImplicit false
@@ -28,21 +29,21 @@ example : Std.IsPreorder ErrTy := inferInstance
 example : DecidableLE ErrTy := inferInstance
 example : Std.LawfulOrderSup ErrTy := inferInstance
 
-/-- What a real instance has: the addresses that may be folded, one column of the check of the
-program with some of them folded, and its graduality: folding more gives less. The graduality is
-owed for the foldable addresses only. -/
+/-- What a real instance has: the addresses that may be omitted, one column of the check of the
+program with some of them omitted, and its graduality: omitting more gives less. The graduality
+is owed for those addresses only. -/
 structure Masked (T : Type) [LE T] where
   sites : List Addr
   column : List Addr → T
   gradual : ∀ {F G : List Addr}, F ⊆ G → G ⊆ sites → column G ≤ column F
 
-/-- The view of a masked check: one line. -/
+/-- The slice view of a masked check: one line. -/
 def Masked.view {T : Type} [LE T] (m : Masked T) : SliceView Addr T :=
-  SliceView.ofFolded m.sites m.column m.gradual
+  SliceView.ofOmitted m.sites m.column m.gradual
 
-/-- The plan's conservativity is one line: the full slice folds nothing. -/
+/-- The plan's conservativity is one line: the full type slice omits nothing. -/
 example {T : Type} [LE T] (m : Masked T) : m.view.typeOf ⟨m.sites⟩ = m.column [] :=
-  SliceView.ofFolded_full m.sites m.column m.gradual
+  SliceView.ofOmitted_full m.sites m.column m.gradual
 
 -- Each statement of the module applies at the error column, with no fact more.
 example (m : Masked ErrTy) (q : ErrTy) (h : m.view.Valid q ⟨m.sites⟩) :
@@ -66,8 +67,8 @@ def parentIn (sites : List Addr) (a : Addr) : Option Addr :=
   | [] => none
   | _ :: _ => if a.dropLast ∈ sites then some a.dropLast else none
 
-/-- The descent over the tree of addresses. With the instance's no-op it gives `explain`'s slice
-and asks no more (`SliceView.descendTree_eq_descend`, `SliceView.descendTree_asks`). -/
+/-- The descent over the tree of addresses. With the instance's no-op it gives `explain`'s type
+slice and asks no more (`SliceView.descendTree_eq_descend`, `SliceView.descendTree_asks`). -/
 def explainTree (m : Masked ErrTy) (q : ErrTy) : Slice Addr :=
   m.view.descendTree (parentIn m.sites) q ⟨m.sites⟩
 

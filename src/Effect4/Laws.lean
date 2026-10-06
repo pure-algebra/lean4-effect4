@@ -44,6 +44,7 @@ import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.ScopedTyping
+import Effect4.Laws.Program.UnionRule
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Provision
 import Effect4.Laws.Program.BuildTotal
@@ -174,6 +175,7 @@ import Effect4.Laws.Program.Typed.HostWalk
 import Effect4.Laws.Program.Typed.LayerArm
 import Effect4.Laws.Program.Typed.Body
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.Sketch
 import Effect4.Laws.Program.SoundAnySignature
 import Effect4.Laws.Program.Typed.AdmittedSource
 import Effect4.Laws.Auto.AnswerGate

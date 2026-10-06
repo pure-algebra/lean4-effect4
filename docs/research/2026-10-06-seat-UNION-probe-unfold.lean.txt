@@ -1,0 +1,55 @@
+import Effect4.Laws.Modules.Queue.Typing
+
+/-! Probe 1: does a proof that unfolds `Record.fieldType` and rewrites the target's normal form
+survive when the rule is written through one combinator? -/
+
+namespace Probe
+open Effect4 Effect4.Program
+
+class Answer (α : Type) where
+  bot : α
+  join : α → α → α
+
+instance : Answer Ty := ⟨.never, Ty.join⟩
+
+def joinAll {α : Type} [Answer α] (answers : List α) : α :=
+  answers.foldl Answer.join Answer.bot
+
+def lift {α : Type} [Answer α] (rule : Ty → Option α) (target : Ty) : Option α :=
+  (target.normalize.members.mapM rule).map joinAll
+
+def fieldType' (optional : Bool) (target : Ty) (name : String) : Option Ty :=
+  lift (Record.fieldOf optional name) target
+
+-- the combinator at `Ty` is the present definition, by `rfl`
+example (o : Bool) (t : Ty) (n : String) : fieldType' o t n = Record.fieldType o t n := rfl
+example : (joinAll : List Ty → Ty) = Record.joinResults := rfl
+
+open Effect4.Queue.Model in
+/-- The proof of `cell_msgsTy` (`Laws/Modules/Queue/Typing.lean`), replayed. -/
+theorem cell_msgsTy' {A : Ty} (canonical : A.normalize = A) :
+    fieldType' false (Queue.cellTy A) "msgs" = some (.list A) := by
+  unfold fieldType'
+  rw [cellTy_normal canonical]
+  show some (Record.joinResults [Ty.list A]) = _
+  show some (Ty.join .never (.list A)) = _
+  rw [Ty.join_never]
+  show some (Ty.list (Ty.normalize A)) = _
+  rw [canonical]
+
+end Probe
+
+/-! ---- the second file of this probe ---- -/
+
+import Effect4.Laws.Modules.Queue.Typing
+
+/-! Probe 2: the proof of `cell_msgsTy` as its siblings are proved, at the base. -/
+
+namespace Probe
+open Effect4 Effect4.Program Effect4.Queue.Model
+
+example {A : Ty} (canonical : A.normalize = A) :
+    Record.fieldType false (Queue.cellTy A) "msgs" = some (.list A) :=
+  Record.fieldType_normal (cellTy_normal canonical) rfl
+
+end Probe

@@ -1,0 +1,149 @@
+import Effect4.Laws.Program.Signature
+import Effect4.Laws.Auto.Semantics
+
+/-!
+Seat SKETCH, design probe (scratch): the types and the statements of the design note, as Lean
+elaborates them against the tree at the base.
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Program
+
+open Effect4 (ServiceKey)
+open Effect4.Machine.Env (Requirement)
+open Conform.Effect4.Typing
+
+/-- A sketch: a program with its hole table. -/
+structure Sketch where
+  program : NativeEff
+  holes : RowTable := []
+
+instance : Coe NativeEff Sketch := ⟨fun program => { program }⟩
+
+/-- The application's tables with a hole table appended after its rows. -/
+def SigApp.withHoles (app : SigApp) (holes : RowTable) : SigApp :=
+  { app with rows := app.rows ++ holes }
+
+/-- A hole row: a host row with a unit request and three declared columns. -/
+def Row.hole (name : String) (answer : Ty) (error : Ty := .never)
+    (requires : List ServiceKey := []) : Row :=
+  { name := name, spelling := name, shape := .call, trailing := [], kind := .async,
+    request := .unit, answer := answer, error := error, requires := requires, cite := "",
+    typeArgs := [], registration := .external }
+
+namespace Sketch
+
+/-- Hole `k` over an application, as a program: it performs the row at position `k` of the
+hole table, which stands after the application's rows. -/
+def hole (app : SigApp) (k : Nat) : NativeEff :=
+  .perform (.external (app.rows.length + k)) (.lit .unit)
+
+/-- The check of a sketch over an application. -/
+def check (s : Sketch) (app : SigApp := {}) : Except TypeRefusal EffTy :=
+  Checker.check (app.withHoles s.holes).signature [] [] s.program
+
+end Sketch
+
+#check @Sketch.check
+#check @Sketch.hole
+#check @Row.hole
+#check @SigApp.withHoles
+
+/-! ## The statements -/
+
+theorem SigApp.withHoles_extends (app : SigApp) (holes : RowTable) :
+    SigExtends app.signature (app.withHoles holes).signature :=
+  app.rows_append holes
+
+theorem SigApp.withHoles_withHoles (app : SigApp) (holes more : RowTable) :
+    (app.withHoles holes).withHoles more = app.withHoles (holes ++ more) := by
+  simp only [SigApp.withHoles, List.append_assoc]
+
+theorem SigApp.withHoles_nil (app : SigApp) : app.withHoles [] = app := by
+  simp only [SigApp.withHoles, List.append_nil]
+
+/-- H1. -/
+theorem holes_conservative (app : SigApp) (holes : RowTable) {e : NativeEff}
+    (hp : SigProgram app.signature e) (env : TyEnv) (p : List Nat) :
+    Checker.check (app.withHoles holes).signature env p e = Checker.check app.signature env p e :=
+  check_restrict (app.withHoles_extends holes) hp env p
+
+/-- H2. -/
+theorem sketch_more_holes (app : SigApp) (holes more : RowTable) {e : NativeEff} {env : TyEnv}
+    {p : List Nat} {t : EffTy}
+    (h : Checker.check (app.withHoles holes).signature env p e = .ok t) :
+    Checker.check (app.withHoles (holes ++ more)).signature env p e = .ok t := by
+  rw [← SigApp.withHoles_withHoles]
+  exact check_ext ((app.withHoles holes).withHoles_extends more) h
+
+/-- H3. -/
+theorem sketch_reads_its_holes (app : SigApp) (holes more : RowTable) {e : NativeEff}
+    (hp : SigProgram (app.withHoles holes).signature e) (env : TyEnv) (p : List Nat) :
+    Checker.check (app.withHoles (holes ++ more)).signature env p e =
+      Checker.check (app.withHoles holes).signature env p e := by
+  rw [← SigApp.withHoles_withHoles]
+  exact check_restrict ((app.withHoles holes).withHoles_extends more) hp env p
+
+/-- The row that the extended signature gives hole `k`. -/
+theorem SigApp.withHoles_rowOf (app : SigApp) (holes : RowTable) (k : Nat) (row : Row)
+    (hk : holes[k]? = some row) :
+    (app.withHoles holes).signature.rowOf (.external (app.rows.length + k)) = row.normalizeTypes := by
+  show (nativeRowOf (app.rows ++ holes) (.external (app.rows.length + k))).normalizeTypes = _
+  simp only [nativeRowOf, List.getElem?_append_right (Nat.le_add_right _ _),
+    Nat.add_sub_cancel_left, hk, Option.getD_some]
+
+/-- The hole's rule. -/
+theorem Sketch.hole_hasTy (app : SigApp) (holes : RowTable) (k : Nat) {name : String}
+    {answer error : Ty} {requires : List ServiceKey} (env : TyEnv)
+    (hk : holes[k]? = some (Row.hole name answer error requires))
+    (hans : answer.closed = true) (herr : error.closed = true)
+    (formed : Formation.Formed
+      (Formation.instantiatedSites (Row.hole name answer error requires).normalizeTypes [])) :
+    HasTy (app.withHoles holes).signature env (Sketch.hole app k)
+      ⟨answer.normalize, error.normalize, Requirement.ofList requires⟩ := by
+  have hlt : k < holes.length := by
+    cases hlen : holes[k]? with
+    | none => rw [hlen] at hk; exact nomatch hk
+    | some _ => exact (List.getElem?_eq_some_iff.mp hlen).1
+  refine HasTy.perform (requestTy := .unit) ?_ ?_ ?_
+  · show decide (app.rows.length + k < (app.rows ++ holes).length) = true
+    rw [List.length_append]
+    exact decide_eq_true (Nat.add_lt_add_left hlt _)
+  · rfl
+  · show rowTy ((app.withHoles holes).signature.rowOf (.external (app.rows.length + k)))
+        Ty.unit none = _
+    rw [SigApp.withHoles_rowOf app holes k _ hk]
+    rw [rowTy_closed _ _ (by rfl) (Ty.closed_normalize _ hans) (Ty.closed_normalize _ herr) formed]
+    have hunit : Ty.sub Ty.unit.normalize Ty.unit.normalize.normalize = true := by decide +kernel
+    have hsub : Ty.sub Ty.unit.normalize
+        (Row.hole name answer error requires).normalizeTypes.request.normalize = true := hunit
+    rw [if_pos hsub]
+    show some (⟨answer.normalize.normalize, error.normalize.normalize,
+      Requirement.ofList requires⟩ : EffTy) = _
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+
+/-- A program is a sketch with no hole. -/
+theorem Sketch.check_program (app : SigApp) (e : NativeEff) :
+    Sketch.check (e : Sketch) app = Checker.check app.signature [] [] e := by
+  show Checker.check (app.withHoles []).signature [] [] e = _
+  rw [SigApp.withHoles_nil]
+
+/-- H1 on a sketch: a sketch whose program performs no hole is checked as its program. -/
+theorem Sketch.check_filled (app : SigApp) (s : Sketch) (hp : SigProgram app.signature s.program) :
+    s.check app = Checker.check app.signature [] [] s.program :=
+  holes_conservative app s.holes hp [] []
+
+#print axioms holes_conservative
+#print axioms sketch_more_holes
+#print axioms sketch_reads_its_holes
+#print axioms Sketch.hole_hasTy
+#print axioms Sketch.check_program
+
+-- the row-table form is the instance at no service declaration, by definition
+example (t H : RowTable) {e : NativeEff} (hp : SigProgram (nativeSignature t) e) (env : TyEnv)
+    (p : List Nat) :
+    Checker.check (nativeSignature (t ++ H)) env p e = Checker.check (nativeSignature t) env p e :=
+  holes_conservative ⟨t, []⟩ H hp env p
+
+end Effect4.Program

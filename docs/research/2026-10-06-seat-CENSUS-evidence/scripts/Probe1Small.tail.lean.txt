@@ -1,0 +1,193 @@
+/-
+Seat CENSUS, probe 1: one smallest program for each rule that breaks graduality. Each rule of
+the census's tables has a program of a few nodes here, with the address that is folded, the
+refusal of the folded program and what the refusing rule read. The corpora's own smallest
+instances are in the tables; these are written by hand, and each is a guard.
+`a0`, `a1`, … are the variables by position.
+-/
+namespace Census.Small
+open Census
+
+def call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+def n (k : Nat) : Term := .lit (.nat k)
+def str (t : String) : Term := .lit (.str t)
+def yes : Term := .lit (.bool true)
+def unit_ : P := .succeed (.lit .unit)
+def opts : Effect4.Supervision.ForkOptions := { startImmediately := false, daemon := false, maskMode := .inherit }
+def fork_ (e : P) : P := .withFiber (.fork e opts)
+
+def admitted (e : P) : Bool := (Checker.check (nativeSignature []) [] [] e).toOption.isSome
+
+/-- Fold N at an address: the refusal's rule, its path and what it read. -/
+def brokenN (e : P) (path : List Nat) : Option (String × List Nat × String) :=
+  (foldedN [] [] e path).bind fun f =>
+    match f.result with
+    | .error r => some (r.reason.head, r.path, blame (nativeSignature f.table) f.rootEnv f.program r)
+    | .ok _ => none
+
+/-- Fold A (the variable form) at an address, with the node's own answer type. -/
+def brokenA (e : P) (path : List Nat) : Option (String × List Nat × String) :=
+  let sig := nativeSignature []
+  ((sites sig [] e).find? (·.path == path)).bind fun s =>
+    (s.type sig).toOption.bind fun t =>
+      (foldedAVar [] [] e path t.answer).bind fun f =>
+        match f.result with
+        | .error r => some (r.reason.head, r.path, blame (nativeSignature f.table) f.rootEnv f.program r)
+        | .ok _ => none
+
+/-! ### Fold N: a head or an equality that `never` does not meet -/
+
+-- a decision by an option
+def p1 : P := .bind (.succeed (call "some" [n 1])) (.select (.var 0) .option unit_ (.succeed (.var 1)))
+#guard admitted p1 && brokenN p1 [0] = some ("notSelectable", [1], "notSelectable option never")
+-- a decision by a Boolean
+def p2 : P := .bind (.succeed yes) (.select (.var 0) .bool unit_ unit_)
+#guard admitted p2 && brokenN p2 [0] = some ("predicateNotBool", [1], "predicateNotBool never")
+-- a loop's test, a handler's test and a statement's test
+def p3 : P := .bind (.succeed yes) (.iterate none (n 0) (.var 0) (.var 1) (.lit .unit) unit_)
+#guard admitted p3 && brokenN p3 [0] = some ("predicateNotBool", [1], "predicateNotBool never")
+def p4 : P := .bind (.succeed yes) (.catchIf (.var 0) (.fail (n 1)) unit_)
+#guard admitted p4 && brokenN p4 [0] = some ("predicateNotBool", [1], "predicateNotBool never")
+def p5 : P := .bind (.succeed yes) (.gen (.cons (.ifElse (.var 0) .nil .nil) .nil))
+#guard admitted p5 && brokenN p5 [0] = some ("predicateNotBool", [1, 0, 0], "predicateNotBool never")
+-- a restore site: the mask's saved state
+def p6 : P := .bind (.withFiber .getInterruptible) (.restore (.var 0) unit_)
+#guard admitted p6 && brokenN p6 [0] = some ("maskRestoreExpected", [1], "maskRestoreExpected never")
+-- a fiber: joined, awaited and interrupted
+def p7 : P := .bind (fork_ unit_) (.awaitFiber (.var 0) .joinEffect)
+#guard admitted p7 && brokenN p7 [0] = some ("notFiber", [1], "notFiber never")
+def p8 : P := .bind (fork_ unit_) (.withFiber (.interrupt (.var 0)))
+#guard admitted p8 && brokenN p8 [0] = some ("notFiber", [1, 0], "notFiber never")
+-- a scope and an exit, at `closeScope`
+def p9 : P := .bind (.perform (.scopeMake .sequential) (.lit .unit))
+  (.bind (.exit unit_) (.withFiber (.closeScope (.var 0) (.var 1))))
+#guard admitted p9 && brokenN p9 [0] = some ("scopeExpected", [1, 1, 0], "scopeExpected never")
+#guard brokenN p9 [1, 0] = some ("exitExpected", [1, 1, 0], "exitExpected never")
+-- a cause's interruptor
+def p10 : P := .bind (.withFiber .getId) (.failCause (.interrupt (some (.var 0))))
+#guard admitted p10 && brokenN p10 [0] = some ("cause", [1], "Interrupt(never)")
+
+/-! ### Fold N: an atom or a term form that `never` does not meet -/
+
+-- the three atoms that read a cause or an exit
+def p11 : P := .bind (.exit unit_) (.succeed (call "causeIsInterrupt" [.var 0]))
+#guard admitted p11 && brokenN p11 [0] = some ("term", [1], "causeIsInterrupt(never)")
+def p12 : P := .bind (.exit unit_) (.succeed (call "causeError" [.var 0]))
+#guard admitted p12 && brokenN p12 [0] = some ("term", [1], "causeError(never)")
+def p13 : P := .bind (.exit unit_) (.succeed (call "causeIsFail" [.var 0]))
+#guard admitted p13 && brokenN p13 [0] = some ("term", [1], "causeIsFail(never)")
+-- the identity of two handles
+def p14 : P := .bind (.perform (.deferredMakeOf .unit .never) (.lit .unit)) (.succeed (call "sameHandle" [.var 0, .var 0]))
+#guard admitted p14 && brokenN p14 [0] = some ("term", [1], "sameHandle(never, never)")
+-- a list fold: its list
+def p15 : P := .bind (.succeed (call "cons" [n 1, call "nil" []]))
+  (.succeed (.fold none (.var 0) (n 0) (call "add" [.var 1, .var 2])))
+#guard admitted p15 && brokenN p15 [0] = some ("foldTerm", [1], "fold: the list is never")
+-- a pair that is a typed failure: a component at `never` is no tag
+def p16 : P := .bind (.succeed (str "m")) (.fail (call "pair" [str "A", .var 0]))
+#guard admitted p16 && brokenN p16 [0] = some ("errorNotAdmitted", [1], "errorNotAdmitted [\"A\", never]")
+
+/-! ### Fold N: a type that a part gives to the rest of its rule -/
+
+-- a list fold with no stated type: the initial value's type is the accumulator's
+def p17 : P := .bind (.succeed (n 0)) (.succeed (.fold none (call "cons" [n 1, call "nil" []]) (.var 0) (call "add" [.var 1, .var 2])))
+#guard admitted p17 && brokenN p17 [0] =
+  some ("foldTerm", [1], "fold: the body nat is not below the accumulator never")
+-- a loop with no stated type: the initial value's type is the cursor's
+def p18 : P := .bind (.succeed (n 0))
+  (.iterate none (.var 0) (call "lt" [.var 1, n 3]) (call "succ" [.var 1]) (.var 1) unit_)
+#guard admitted p18 && brokenN p18 [0] = some ("stepNotCursor", [1], "stepNotCursor step=nat cursor=never")
+-- with the type stated, both are admitted
+def p17' : P := .bind (.succeed (n 0)) (.succeed (.fold (some .nat) (call "cons" [n 1, call "nil" []]) (.var 0) (call "add" [.var 1, .var 2])))
+def p18' : P := .bind (.succeed (n 0))
+  (.iterate (some .nat) (.var 0) (call "lt" [.var 1, n 3]) (call "succ" [.var 1]) (.var 1) unit_)
+#guard admitted p17' && brokenN p17' [0] = none
+#guard admitted p18' && brokenN p18' [0] = none
+-- `getOrElse` keeps its parameter at its first argument: the option of a folded failure
+def p19 : P := .bind (.exit (.fail (n 7))) (.succeed (call "getOrElse" [call "causeError" [.var 0], n 9]))
+#guard admitted p19 && brokenN p19 [0, 0] = some ("term", [1], "getOrElse(option<never>, nat)")
+-- fold A breaks at the same place: the one refusal of fold A in the corpora
+#guard brokenA p19 [0, 0] = some ("term", [1], "getOrElse(option<never>, nat)")
+-- `ite` takes the larger of two comparable branches, and refuses two that are not comparable
+def p20 : P := .bind (.succeed (n 1))
+  (.succeed (call "ite" [yes, call "pair" [call "some" [yes], .var 0], call "pair" [call "none" [], n 2]]))
+#guard admitted p20 && brokenN p20 [0] =
+  some ("term", [1], "ite(bool, [option<bool>, never], [option<never>, nat])")
+
+/-! ### Fold N: a cell is invariant -/
+
+-- the content of a cell folded: the write is refused (the plan's example)
+def p21 : P := .bind (.succeed (n 5)) (.bind (.perform .refMake (.var 0)) (.perform .refSet (call "pair" [.var 1, n 7])))
+#guard admitted p21 && brokenN p21 [0] =
+  some ("requestNotSubtype", [1, 1], "requestNotSubtype refSet request=[ref<never>, nat] expected=[ref<'0>, '0]")
+-- the same content, and an update whose function answers the full type
+def p22 : P := .bind (.succeed (n 5)) (.bind (.perform .refMake (.var 0)) (.perform (.refUpdateWith (call "succ" [.var 2])) (.var 1)))
+#guard admitted p22 && brokenN p22 [0] =
+  some ("resultNotSubtype", [1, 1], "resultNotSubtype refUpdateWith result=nat expected=never")
+-- the cell itself folded: the variable is `never`, below `Ref<A>`, and the write is admitted
+#guard brokenN p21 [1, 0] = none
+-- the plan's example under fold A: the content keeps its type as the assumption, and the
+-- folded program is admitted (`SelfTest`, T2, holds that every column is the same)
+#guard brokenA p21 [0] = none
+#guard brokenA p21 [1, 0] = none
+-- a cell given to a service: the carrier is `Ref<nat>`
+def kRef : ServiceKey := ⟨⟨6⟩, ⟨7⟩⟩
+def p23 : P := .bind (.succeed (n 5)) (.bind (.perform .refMake (.var 0)) (.provideService kRef (.var 1) unit_))
+#guard admitted p23 && brokenN p23 [0] =
+  some ("valueNotSubtype", [1, 1], "valueNotSubtype k6_7 value=ref<never> carrier=ref<nat>")
+
+/-! ### A rule that reads syntax: the tag residual of `catchIf`
+
+`catchIf(tagIs("A", a0), fail(["A", "m"]), succeed(1))` has the error `never`: the test is the
+tag test on the caught variable, and the body's column has no other member (`catchIfError`,
+`tagTest?`, `src/Effect4/Program/Typing/Rules.lean`). With the variable inside the test folded
+the test still has the type `bool`, but it is no tag test: the body's column stays. The folded
+program is admitted, and its error column is larger than the full program's. No program of the
+two corpora has an empty tag residual, so the census did not meet it. -/
+def p24 : P := .catchIf (tagTest "A" 0) (.fail (call "pair" [str "A", str "m"])) (.succeed (n 1))
+def p24folded : P :=
+  .catchIf (call "tagIs" [str "A", neverTerm]) (.fail (call "pair" [str "A", str "m"])) (.succeed (n 1))
+#guard (Checker.check (nativeSignature []) [] [] p24).toOption = some ⟨.nat, .never, Requirement.empty⟩
+#guard (Checker.check (sigWithNever []) [] [] p24folded).toOption =
+  some ⟨.nat, .prod (.lit "A") (.lit "m"), Requirement.empty⟩
+#guard relTy (.prod (.lit "A") (.lit "m")) .never = .larger
+
+/-! ### Red controls: the same programs are not broken by a fold of their last node -/
+#guard [p1, p2, p6, p7, p11, p15, p17, p19, p21].all fun e => brokenN e [1] = none
+
+/-! ### The table of the receipt: each refusing rule of the census with its smallest program
+
+The labels are the rules of the receipt's repair table (`family`, `mdtables.py`). Each row is
+the checker's answer on the folded program: nothing in it is typed by hand. -/
+def tableRows : List (String × P × List Nat) :=
+  [ ("a list fold's accumulator with no stated type", p17, [0])
+  , ("a list fold's list", p15, [0])
+  , ("`sameHandle`", p14, [0])
+  , ("a decision by an option", p1, [0])
+  , ("a Boolean decision", p2, [0])
+  , ("a restore site", p6, [0])
+  , ("a loop's test", p3, [0])
+  , ("`ite` on two branches that are not comparable", p20, [0])
+  , ("a fiber (`join`, `await`, `interrupt`)", p7, [0])
+  , ("a loop's cursor with no stated type", p18, [0])
+  , ("the cause atoms", p11, [0])
+  , ("a cell's content (invariance)", p21, [0])
+  , ("a cause's interruptor", p10, [0])
+  , ("`getOrElse`", p19, [0, 0])
+  , ("a typed failure with a part at `never`", p16, [0])
+  , ("a handler's test", p4, [0])
+  , ("`closeScope`'s scope and exit", p9, [0])
+  , ("a statement's test", p5, [0]) ]
+
+#eval do
+  IO.println (tsv ["SMALLEST", "rule", "program", "effectNodes", "folded", "refusal", "refusalPath", "read"])
+  for (label, e, path) in tableRows do
+    match brokenN e path with
+    | some (reason, rpath, what) =>
+      IO.println (tsv ["SMALLEST", label, showProgram e, toString (effectPaths e).length, showPath path, reason,
+        showPath rpath, what])
+    | none => IO.println (tsv ["SMALLEST", label, showProgram e, "NOT REFUSED"])
+
+#eval IO.println "probe 1, the smallest programs: every guard above holds"
+
+end Census.Small

@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""Seat CENSUS: the Markdown tables of the receipt, from the rows under out/. No number of the
+receipt's tables is typed by hand: each is a cell of this script's output."""
+import csv, sys, collections, os
+S = os.path.dirname(os.path.abspath(__file__))
+MODULES = ('pQueueW', 'pQueueF', 'pQueueI', 'pQueueM', 'pQueueOr', 'pSemaphore', 'pPool')
+def read(name):
+    rows = list(csv.reader(open(os.path.join(S, 'out', name), newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+    return [dict(zip(rows[0], r)) for r in rows[1:] if len(r) == len(rows[0])]
+def md(header, rows):
+    print('| ' + ' | '.join(header) + ' |')
+    print('| ' + ' | '.join('---' for _ in header) + ' |')
+    for r in rows: print('| ' + ' | '.join(str(x).replace('|', '\\|') for x in r) + ' |')
+    print()
+def chunk(name): print('<!-- chunk: %s -->' % name)
+def is_module(p): return any(p.startswith(m) for m in MODULES)
+def node_error(r): return r['nodeType'].strip('<>').split(' ; ')[1]
+BAD = ('larger', 'bothWays', 'unrelated')
+def cnt(rs, col):
+    c = collections.Counter(r[col] for r in rs if r['admitted'] == 'true')
+    return ', '.join('%s %d' % (k, c[k]) for k in ('same', 'sameNormal', 'smaller', 'larger', 'bothWays', 'unrelated') if c[k]) or '-'
+
+gen = read('gen-folds.tsv'); truth = read('truth-folds.tsv')
+parts = [('generated corpus', gen), ('truth lane, the 48 other programs', [r for r in truth if not is_module(r['program'])]),
+         ('truth lane, the 25 programs of the modules', [r for r in truth if is_module(r['program'])])]
+
+def fold_a(folds):
+    """Fold A at each address: the variable form, and the row form at an address under a layer."""
+    return [r for r in folds if (r['fold'] == 'Avar' and r['inLayer'] != 'true') or (r['fold'] == 'Arow' and r['inLayer'] == 'true')]
+
+for (label, folds), cname in zip(parts, ('rule-gen', 'rule-others', 'rule-modules')):
+    chunk(cname)
+    rules = sorted(set(r['rule'] for r in folds))
+    out = []
+    for rule in rules:
+        a = [r for r in fold_a(folds) if r['rule'] == rule]
+        nn = [r for r in folds if r['rule'] == rule and r['fold'] == 'N']
+        assert len(a) == len(nn), (label, rule, len(a), len(nn))   # one fold A and one fold N at each address
+        out.append(['`%s`' % rule, len(nn), sum(1 for r in a if r['admitted'] != 'true'), cnt(a, 'answer'), cnt(a, 'error'), cnt(a, 'requires'),
+                    sum(1 for r in nn if r['admitted'] != 'true'), cnt(nn, 'answer'), cnt(nn, 'error'), cnt(nn, 'requires')])
+    a = fold_a(folds); nn = [r for r in folds if r['fold'] == 'N']
+    assert len(a) == len(nn)
+    out.append(['**all**', len(nn), sum(1 for r in a if r['admitted'] != 'true'), cnt(a, 'answer'), cnt(a, 'error'), cnt(a, 'requires'),
+                sum(1 for r in nn if r['admitted'] != 'true'), cnt(nn, 'answer'), cnt(nn, 'error'), cnt(nn, 'requires')])
+    md(['Rule', 'Folds', 'A: refused', 'A: answer', 'A: error', 'A: requirement', 'N: refused', 'N: answer', 'N: error', 'N: requirement'], out)
+
+chunk('fold-totals')
+allrows = gen + truth
+counted = [r for r in allrows if not (r['fold'] == 'Avar' and r['inLayer'] == 'true')]
+adm = [r for r in counted if r['admitted'] == 'true']
+print('fold rows: %d; left out, the variable form under a layer: %d; counted: %d (fold N %d, the variable form %d, the row form %d)'
+      % (len(allrows), len(allrows) - len(counted), len(counted), sum(1 for r in counted if r['fold'] == 'N'),
+         sum(1 for r in counted if r['fold'] == 'Avar'), sum(1 for r in counted if r['fold'] == 'Arow')))
+print('counted fold rows whose program is admitted: %d; of them with a column larger or unrelated: %d\n'
+      % (len(adm), sum(1 for r in adm if any(r[c] in BAD for c in ('answer', 'error', 'requires')))))
+
+chunk('premise')
+out = []
+tot = collections.Counter()
+for label, folds in parts:
+    av = fold_a(folds)
+    for dom, dl in (('true', 'no closed edge above'), ('false', 'a closed edge above')):
+        for err, el in ((True, 'error `never`'), (False, 'can fail')):
+            rs = [r for r in av if r['columnOpen'] == dom and (node_error(r) == 'never') == err]
+            if not rs: continue
+            adm = [r for r in rs if r['admitted'] == 'true']
+            out.append([label, dl, el, len(rs), sum(1 for r in rs if r['admitted'] != 'true'), sum(1 for r in adm if r['answer'] == 'same'),
+                        sum(1 for r in adm if r['answer'] != 'same'), sum(1 for r in adm if r['error'] == 'smaller'), sum(1 for r in adm if r['requires'] == 'smaller'),
+                        sum(1 for r in adm if any(r[c] in BAD for c in ('answer', 'error', 'requires')))])
+            key = 'wide' if (dom == 'true' or err) else 'rest'
+            tot[key] += len(rs); tot[key + '-refused'] += sum(1 for r in rs if r['admitted'] != 'true')
+            tot[key + '-same'] += sum(1 for r in adm if r['answer'] == 'same')
+            if dom == 'true': tot['plan'] += len(rs); tot['plan-refused'] += sum(1 for r in rs if r['admitted'] != 'true')
+md(['Corpus', 'The address', 'The node', 'Folds', 'Refused', 'Answer identical', 'Answer changed', 'Error smaller', 'Requirement smaller', 'A column larger or unrelated'], out)
+chunk('premise-totals')
+print('the plan\'s domain: %d folds, %d refused; the wider premise: %d folds, %d refused, %d with the answer identical; outside the wider premise: %d folds, %d refused\n'
+      % (tot['plan'], tot['plan-refused'], tot['wide'], tot['wide-refused'], tot['wide-same'], tot['rest'], tot['rest-refused']))
+
+chunk('rowform')
+sites = read('gen-sites.tsv') + read('truth-sites.tsv')
+allf = gen + truth
+ar = [r for r in allf if r['fold'] == 'Arow']; av = {(r['program'], r['address']): r for r in allf if r['fold'] == 'Avar'}
+print('sites: %d; the row\'s own type is <A ; never ; {}> at %d; sites whose answer is its own normal form: %d'
+      % (len(sites), sum(1 for r in sites if r['rowLocal'] == 'same'), sum(1 for r in sites if r['answerNormal'] == 'true')))
+lay = [r for r in ar if r['inLayer'] == 'true']
+print('row form run at %d addresses; under a layer %d: admitted %d, every column same or smaller %d' % (len(ar), len(lay), sum(1 for r in lay if r['admitted'] == 'true'),
+      sum(1 for r in lay if r['admitted'] == 'true' and not any(r[c] in BAD for c in ('answer', 'error', 'requires')))))
+both = [(av[(r['program'], r['address'])], r) for r in ar if r['inLayer'] != 'true']
+print('both forms at %d addresses: the same outcome and type at %d' % (len(both), sum(1 for a, b in both if (a['admitted'], a['foldedType'], a['refusal'], a['refusalPath']) == (b['admitted'], b['foldedType'], b['refusal'], b['refusalPath']))))
+vl = [r for r in allf if r['fold'] == 'Avar' and r['inLayer'] == 'true']
+print('variable form under a layer: %d addresses; refused at the fold as unbound %d; the variable names a binder of the body %d\n'
+      % (len(vl), sum(1 for r in vl if r['admitted'] != 'true' and r['refusalPlace'] == 'at-fold'), sum(1 for r in vl if not (r['admitted'] != 'true' and r['refusalPlace'] == 'at-fold'))))
+
+def family(r):
+    reason, node, culprit = r['refusal'], r['refusingNode'], r.get('culprit', '-')
+    if reason in ('term', 'binderTerm', 'cause', 'foldTerm'):
+        if culprit.startswith('fold: the list'): return ('a list fold\'s list', '`Checker.listOf?`: the head of the raw type')
+        if culprit.startswith('fold: the body'): return ('a list fold\'s accumulator with no stated type', '`argTy`: the initial value\'s type is the accumulator\'s')
+        if culprit.startswith('fold: the initial'): return ('a list fold\'s accumulator with no stated type', '`argTy`: the initial value\'s type is the accumulator\'s')
+        head = culprit.split('(')[0]
+        if head == 'sameHandle': return ('`sameHandle`', '`NativeAtom.sameHandleRule`: two heads')
+        if head in ('causeIsInterrupt', 'causeError', 'causeIsFail', 'causeIsDie'): return ('the cause atoms', '`causeInputError?`: the head')
+        if head == 'getOrElse': return ('`getOrElse`', '`Ty.matchTemplateArgs`, the parameter kept at its first binding')
+        if head == 'ite': return ('`ite` on two branches that are not comparable', '`Ty.matchTemplateArgs` with `join`: no union of the two')
+        if head == 'Interrupt': return ('a cause\'s interruptor', '`causeTy`: equality with `nat`')
+        if head.startswith('Fail at') or head.startswith('Die at'): return ('a typed failure with a part at `never`', '`admittedErrTy`: `never` is no tag')
+        return ('other: ' + head, '-')
+    if reason == 'predicateNotBool':
+        return {'Eff.select.bool': ('a Boolean decision', '`Decision.arms`: equality with `bool`'),
+                'Eff.iterate': ('a loop\'s test', '`Checker.check`: equality with `bool`'),
+                'Eff.catchIf': ('a handler\'s test', '`Checker.check`: equality with `bool`'),
+                'Stmt.ifElse': ('a statement\'s test', '`Checker.checkStmt`: equality with `bool`')}.get(node, (node, '-'))
+    if reason == 'notSelectable': return ('a decision by an option', '`Decision.arms`: the head of the normal form')
+    if reason == 'maskRestoreExpected': return ('a restore site', '`Checker.check`: equality with `Ty.maskRestore`')
+    if reason == 'notFiber': return ('a fiber (`join`, `await`, `interrupt`)', '`fiberTy`: the head')
+    if reason == 'stepNotCursor': return ('a loop\'s cursor with no stated type', '`Checker.check`: the initial value\'s type is the cursor\'s')
+    if reason in ('requestNotSubtype', 'resultNotSubtype', 'valueNotSubtype'): return ('a cell\'s content (invariance)', '`Ty.sub` at `refOf`: both ways')
+    if reason == 'errorNotAdmitted': return ('a typed failure with a part at `never`', '`admittedErrTy`: `never` is no tag')
+    if reason in ('exitExpected', 'scopeExpected'): return ('`closeScope`\'s scope and exit', '`Checker.exitOf?`, equality with `Ty.scope`')
+    return (reason + ' at ' + node, '-')
+
+chunk('repair')
+terms = read('gen-terms.tsv') + read('truth-terms.tsv')
+eff = [r for r in allf if r['fold'] == 'N' and r['admitted'] != 'true']
+ter = [r for r in terms if r['admitted'] != 'true']
+fam = collections.defaultdict(lambda: [0, 0, set(), ''])
+for r in eff:
+    f, owner = family(r); fam[f][0] += 1; fam[f][2].add(r['program']); fam[f][3] = owner
+for r in ter:
+    f, owner = family(r); fam[f][1] += 1; fam[f][2].add(r['program']); fam[f][3] = owner
+out = [[i + 1, f, v[3], v[0], v[1], v[0] + v[1], len(v[2])] for i, (f, v) in enumerate(sorted(fam.items(), key=lambda kv: -(kv[1][0] + kv[1][1])))]
+order = {r[1]: r[0] for r in out}
+out.append(['', '**all**', '', len(eff), len(ter), len(eff) + len(ter), len(set(r['program'] for r in eff + ter))])
+md(['Order', 'The rule that refuses', 'Where it is decided', 'Effect addresses', 'Term addresses', 'Refused folds', 'Programs'], out)
+
+# the three kinds of refusing rule: a rule's kind is typed here, and its count is the table's
+KIND = {'a head or an equality': ("a list fold's list", '`sameHandle`', 'a decision by an option', 'a Boolean decision', 'a restore site',
+                                  "a loop's test", 'a fiber (`join`, `await`, `interrupt`)', 'the cause atoms', "a cause's interruptor",
+                                  'a typed failure with a part at `never`', "a handler's test", "`closeScope`'s scope and exit", "a statement's test"),
+        'an expectation from a part': ("a list fold's accumulator with no stated type", '`ite` on two branches that are not comparable',
+                                       "a loop's cursor with no stated type", '`getOrElse`'),
+        'invariance': ("a cell's content (invariance)",)}
+assert sorted(sum(KIND.values(), ())) == sorted(order), set(sum(KIND.values(), ())) ^ set(order)
+chunk('kinds')
+WHAT = {'a head or an equality': ('A head or an equality that `never` does not meet', 'a uniform eliminator: member by member, total at `never`'),
+        'an expectation from a part': ('A rule that takes its expectation from a part', 'another rule: a stated type, a join, or a gap'),
+        'invariance': ("A cell's invariance", "a gap alone (the plan's section 4.3)")}
+md(['Kind', 'Rules of the table', 'Refused folds', 'What repairs it'],
+   [[WHAT[k][0], ', '.join(str(n) for n in sorted(order[f] for f in fs)), sum(fam[f][0] + fam[f][1] for f in fs), WHAT[k][1]] for k, fs in KIND.items()])
+
+chunk('smallest')
+small = [l.rstrip('\n').split('\t') for l in open(os.path.join(S, 'probe1small.log')) if l.startswith('SMALLEST\t')][1:]
+assert set(r[1] for r in small) == set(order), set(order) ^ set(r[1] for r in small)
+md(['Order', 'The rule that refuses', 'A smallest program', 'Folded at', 'The refusal', 'At', 'What the rule read'],
+   [[order[r[1]], r[1], '`%s`' % r[2], '`%s`' % r[4], '`%s`' % r[5], '`%s`' % r[6], '`%s`' % r[7]] for r in sorted(small, key=lambda r: order[r[1]])])
+chunk('repair-totals')
+print('effect addresses under fold N: %d, refused %d; term addresses: %d, refused %d; admitted with a column larger or unrelated: effect %d, term %d\n'
+      % (sum(1 for r in allf if r['fold'] == 'N'), len(eff), len(terms), len(ter),
+         sum(1 for r in allf if r['fold'] == 'N' and r['admitted'] == 'true' and any(r[c] in BAD for c in ('answer', 'error', 'requires'))),
+         sum(1 for r in terms if r['admitted'] == 'true' and any(r[c] in BAD for c in ('answer', 'error', 'requires')))))
+for label, rs in (('generated corpus', read('gen-terms.tsv')), ('truth lane, the 48 others', [r for r in read('truth-terms.tsv') if not is_module(r['program'])]),
+                  ('truth lane, the 25 modules', [r for r in read('truth-terms.tsv') if is_module(r['program'])])):
+    print('term addresses, %s: %d; refused %d; admitted with a column larger or unrelated %d' % (label, len(rs), sum(1 for r in rs if r['admitted'] != 'true'),
+          sum(1 for r in rs if r['admitted'] == 'true' and any(r[c] in BAD for c in ('answer', 'error', 'requires')))))
+for label, rs in parts:
+    nn = [r for r in rs if r['fold'] == 'N']
+    print('effect addresses, %s: %d; refused %d' % (label, len(nn), sum(1 for r in nn if r['admitted'] != 'true')))
+print()
+
+chunk('positions')
+by = collections.defaultdict(list)
+for r in terms: by[r['role']].append(r)
+out = []
+for role, rs in sorted(by.items(), key=lambda kv: -sum(1 for r in kv[1] if r['admitted'] != 'true'))[:24]:
+    ref = [r for r in rs if r['admitted'] != 'true']
+    c = collections.Counter(family(r)[0] for r in ref)
+    out.append(['`%s`' % role, len(rs), len(ref), '; '.join('%s %d' % kv for kv in c.most_common(3))])
+md(['The folded position', 'Folds', 'Refused', 'The rules that refuse (the three largest)'], out)
+chunk('positions-totals')
+print('positions in all: %d; positions with no refusal: %d\n' % (len(by), sum(1 for rs in by.values() if all(r['admitted'] == 'true' for r in rs))))
+
+chunk('eliminators')
+rows = list(csv.reader(open(os.path.join(S, 'tables', 'probe2-eliminators.tsv'), newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+def short(x): return ('refused' + (' (' + x.split(' ')[1] + ')' if ' ' in x else '')) if x.startswith('REFUSED') else '`' + x + '`'
+def union_cell(r):
+    # one type alone meets an equality: the union's cell then shows the raw union of the type with itself
+    if r[3] == r[5]: return 'one type only; the raw `T | T`: ' + short(r[7])
+    return short(r[8])
+out = [[r[0], '`' + r[1] + '`', r[2], '`' + r[3] + '`: ' + short(r[4]), ('the same' if r[3] == r[5] else '`' + r[5] + '`: ' + short(r[6])), union_cell(r), short(r[9])] for r in rows[1:]]
+md(['Eliminator', 'Owner', 'What it reads', 'At a first type', 'At a second type', 'At the union of the two', 'At `never`'], out)
+
+chunk('baseline')
+sub = read('truth-subslices.tsv')
+by = collections.OrderedDict()
+for r in sub: by.setdefault((r['program'], r['site'], r['query']), {})[r['domain']] = r
+out = []
+for k, v in sorted(by.items(), key=lambda kv: -int(kv[1]['all']['addresses'])):
+    a = v['all']
+    out.append(['`%s`' % k[0], '`%s`' % k[1], a['addresses'], k[2].replace('requires k0_0', 'requires `Scope`'), '/'.join(v[d]['allowed'] for d in ('plan', 'wide', 'all')),
+                '/'.join(v[d]['kept'] for d in ('plan', 'wide', 'all')), a['calls'], a['ms'], a['msPerCall'], a['upKept'], a['upCalls'], a['upMs']])
+md(['Program', 'Site', 'Addresses', 'Query', 'Allowed (plan/wide/all)', 'Kept (plan/wide/all)', 'Calls, root down', 'Wall ms', 'ms a call', 'Kept, leaves up', 'Calls, leaves up', 'Wall ms, leaves up'], out)
+rs = [v['all'] for v in by.values()]
+chunk('baseline-totals')
+print('sub-programs %d; addresses %d; from the root down %d calls, %d ms; from the leaves up %d calls, %d ms'
+      % (len(rs), sum(int(r['addresses']) for r in rs), sum(int(r['calls']) for r in rs), sum(int(r['ms']) for r in rs), sum(int(r['upCalls']) for r in rs), sum(int(r['upMs']) for r in rs)))
+print('the restarting descent from each result: %d results from the root down, it folds more at %d (%d calls); %d results from the leaves up, it folds more at %d'
+      % (len(sub), sum(1 for r in sub if int(r['moreByRestart']) > 0), sum(int(r['restartCalls']) for r in sub), len(rs), sum(1 for r in rs if int(r['upMoreByRestart']) > 0)))
+big = [r for r in rs if int(r['addresses']) > 100]
+print('sub-programs of more than 100 addresses: %d; ms a call from %d to %d\n' % (len(big), min(int(r['msPerCall']) for r in big), max(int(r['msPerCall']) for r in big)))
+
+chunk('runs')
+import re
+RUNS = [('SelfTest', 'selftest'), ('Probe1Gen', 'probe1gen'), ('Probe1Truth', 'probe1truth'), ('Probe1Closed', 'probe1closed'),
+        ('Probe1TermGen', 'probe1termgen'), ('Probe1TermTruth', 'probe1termtruth'), ('Probe1Flow', 'probe1flow'), ('Probe1Small', 'probe1small'),
+        ('Probe2', 'probe2'), ('Probe3', 'probe3'), ('Probe4', 'probe4'), ('Probe4Premise', 'probe4premise'), ('Probe5', 'probe5')]
+out = []
+for name, log in RUNS:
+    guards = sum(1 for l in open(os.path.join(S, name + '.tail.lean')) if l.startswith('#guard'))
+    text = open(os.path.join(S, log + '.log')).read()
+    m = re.search(r'wall=(\d+)s exit=(\d+)', text)
+    if m: wall, code = m.group(1) + ' s', m.group(2)
+    else:   # the two long runs, under the shell's `time`
+        m2 = re.search(r'(\d+):(\d+)\.\d+ total', text)
+        wall, code = '%d min %d s' % (int(m2.group(1)), int(m2.group(2))), re.search(r'exit=(\d+)', text).group(1)
+    out.append(['`%s`' % name, guards if guards else '-', len(re.findall(r': error:', text)), code, wall])
+md(['Probe file', 'Guards', 'Error lines in the log', 'Exit code', 'Wall time'], out)
+
+# the worked examples of probe 5: the program text and each mask, as the probe printed them
+ex = collections.OrderedDict()
+cur = None
+for line in open(os.path.join(S, 'probe5.log')):
+    m = re.match(r'--- (\w+) (\w+); type (.*); query: (.*); domain (\w+)', line)
+    if m: cur = ex.setdefault((m.group(2), m.group(4)), collections.OrderedDict()).setdefault(m.group(5), {'type': m.group(3)}); continue
+    if cur is None: continue
+    m = re.match(r'    kept (\d+) of (\d+) effect addresses; (\d+) calls of check; (\d+) folded regions', line)
+    if m: cur.update(kept=m.group(1), of=m.group(2), calls=m.group(3)); continue
+    for key in ('full', 'slice type', 'slice'):
+        if line.startswith('    %s:' % key): cur[key] = line[len(key) + 5:].strip(); break
+def example(cname, program, query, domains):
+    """The full program, then each mask once, with the domains that give it."""
+    chunk(cname)
+    v = ex[(program, query)]
+    print('full: ' + v[domains[0]]['full'])
+    groups = collections.OrderedDict()
+    for d in domains: groups.setdefault((v[d]['slice'], v[d]['kept'], v[d]['of'], v[d]['calls'], v[d]['slice type']), []).append(d)
+    for (mask, kept, of, calls, ty), ds in groups.items():
+        print('mask, in the domain%s %s:' % ('s' if len(ds) > 1 else '', ', '.join(ds)))
+        print('      ' + mask)
+        print('      kept %s of %s effect addresses; %s calls of check; type %s' % (kept, of, calls, ty))
+    print()
+example('example-sqlite', 'pSqlite', 'error has [string, string]', ['plan', 'wide', 'all'])
+example('example-tagmiss', 'pTagMiss', 'error has string', ['plan', 'wide', 'all'])
+example('example-g309', 'g309', 'requires k0_0', ['plan', 'wide', 'all'])

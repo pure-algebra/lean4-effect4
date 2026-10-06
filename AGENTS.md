@@ -112,8 +112,8 @@ its arrows. Anything else is a leak.
   and a reason. It is complete against the judgment: `explain = none ↔ wellTyped` (§3.2).
 - **Monoid action**: the journal `List Command` acting on the run (`replay_unique`,
   `journal_replays`). A run is data because its journal is (§3.5).
-- **Schema and program**: Schema is a data language. Every effectful slot in it is a hole filled by
-  an `Eff` program with a typing certificate. `Ty` and the schema carriers never mention `Eff`.
+- **Schema and program**: Schema is a data language. Every effectful slot in it is filled by an
+  `Eff` program with a typing certificate. `Ty` and the schema carriers never mention `Eff`.
 - **Foreign transformation**: a name with a type signature. Any operation that needs its meaning
   refuses it.
 - **The seven judgments**: formation, canonical form, membership, inhabitance, profile support,

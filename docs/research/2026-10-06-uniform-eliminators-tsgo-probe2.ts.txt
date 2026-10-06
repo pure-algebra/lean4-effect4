@@ -1,0 +1,22 @@
+// A second probe: a union whose members are comparable. tsgo 7, effect rc.112.
+import { Fiber, Option } from "effect"
+import { get, optionCase, fold } from "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"
+import { Effect } from "effect"
+declare const fa: Fiber.Fiber<"a", string>
+declare const fs: Fiber.Fiber<string, string>
+declare const fn: Fiber.Fiber<never, never>
+declare const la: ReadonlyArray<"a">
+declare const ls: ReadonlyArray<string>
+declare const oa: Option.Option<"a">
+declare const os: Option.Option<string>
+declare const u1: Fiber.Fiber<"a", string> | Fiber.Fiber<string, string>
+declare const u2: Fiber.Fiber<never, never> | Fiber.Fiber<number, string>
+declare const u3: ReadonlyArray<"a"> | ReadonlyArray<string>
+declare const u4: Option.Option<"a"> | Option.Option<string>
+declare const u5: Fiber.Fiber<"a", string> | Fiber.Fiber<"b", string>
+export const C1_join_comparable = Fiber.join(u1)
+export const C2_join_with_never_member = Fiber.join(u2)
+export const C3_get_comparable = get(u3, 0)
+export const C4_optionCase_comparable = optionCase(u4, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1))
+export const C5_join_two_literals = Fiber.join(u5)
+export const C6_fold_comparable = fold(u3, 0, (acc, x) => acc + 1)
