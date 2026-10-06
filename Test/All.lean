@@ -195,6 +195,7 @@ import Test.Program.PoolAgreement
 import Test.Program.PoolRelation
 import Test.Program.PoolEngine
 import Test.Program.PoolPublic
+import Test.Program.PoolOps
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract

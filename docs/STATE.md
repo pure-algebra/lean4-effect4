@@ -323,7 +323,11 @@ In work since the suspension of the handover:
   programs (`src/Effect4/Modules/Pool/Ops.lean`). Ten cases give the profile's answer on the
   Lean machine, one schedule each, with four changed policies red
   (`Test/Program/PoolPublic.lean`). A pool is made inside a scope: outside one, the built
-  program requires the scope's service. Scope, typing and the attempt laws come next.
+  program requires the scope's service. Its third and fourth steps are merged
+  (`src/Effect4/Laws/Modules/Pool/Ops.lean`). Each operation keeps scope and is typed at
+  every scope (`use_types`, `make_types`, `close_answers`). Eleven attempt statements relate
+  one store step to the model's step, with no planned goal. The traces with their red
+  controls come next, then the faces, the truth programs and the engine.
 - **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
   changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a
