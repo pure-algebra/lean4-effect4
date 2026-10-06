@@ -1,0 +1,552 @@
+import Effect4.Laws.Program.Typed.RecordOperations
+import Effect4.Laws.Program.Typing.TermIntro
+import Effect4.Laws.Program.Typed
+import Effect4.Laws.Auto.Semantics
+
+/-! Probe 3: the combinator and its laws, compiled against the base build. The combinator is
+declared here, under `Probe`, so that no module of the tree is touched. -/
+
+set_option autoImplicit false
+
+namespace Probe
+open Effect4 Effect4.Program
+
+namespace UnionRule
+
+class Answer (α : Type) where
+  bot : α
+  join : α → α → α
+
+instance : Answer Ty := ⟨.never, Ty.join⟩
+
+instance {α β : Type} [Answer α] [Answer β] : Answer (α × β) :=
+  ⟨(Answer.bot, Answer.bot), fun a b => (Answer.join a.1 b.1, Answer.join a.2 b.2)⟩
+
+def joinAll {α : Type} [Answer α] (answers : List α) : α :=
+  answers.foldl Answer.join Answer.bot
+
+def lift {α : Type} [Answer α] (rule : Ty → Option α) (target : Ty) : Option α :=
+  (target.normalize.members.mapM rule).map joinAll
+
+/-! ## Lists -/
+
+theorem mapM_cons_eq_some {β γ : Type} {f : β → Option γ} {x : β} {xs : List β} {ys : List γ} :
+    (x :: xs).mapM f = some ys ↔
+      ∃ y rest, f x = some y ∧ xs.mapM f = some rest ∧ ys = y :: rest := by
+  simp only [List.mapM_cons, bind, Option.bind_eq_some_iff, pure, Option.some.injEq]
+  constructor
+  · rintro ⟨y, hy, rest, hrest, rfl⟩
+    exact ⟨y, rest, hy, hrest, rfl⟩
+  · rintro ⟨y, rest, hy, hrest, rfl⟩
+    exact ⟨y, hy, rest, hrest, rfl⟩
+
+theorem mapM_answer {β γ : Type} {f : β → Option γ} :
+    ∀ {xs : List β} {ys : List γ}, xs.mapM f = some ys → ∀ x ∈ xs, ∃ y ∈ ys, f x = some y
+  | [], _, _, _, hx => absurd hx List.not_mem_nil
+  | _ :: _, _, h, x, hx => by
+    obtain ⟨y, rest, hy, hrest, rfl⟩ := mapM_cons_eq_some.mp h
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact ⟨y, List.mem_cons_self, hy⟩
+    · obtain ⟨z, hz, hxz⟩ := mapM_answer hrest x hx
+      exact ⟨z, List.mem_cons_of_mem _ hz, hxz⟩
+
+theorem mapM_source {β γ : Type} {f : β → Option γ} :
+    ∀ {xs : List β} {ys : List γ}, xs.mapM f = some ys → ∀ y ∈ ys, ∃ x ∈ xs, f x = some y
+  | [], _, h, y, hy => by
+    cases h
+    exact absurd hy List.not_mem_nil
+  | _ :: _, _, h, y, hy => by
+    obtain ⟨z, rest, hz, hrest, rfl⟩ := mapM_cons_eq_some.mp h
+    rcases List.mem_cons.mp hy with rfl | hy
+    · exact ⟨_, List.mem_cons_self, hz⟩
+    · obtain ⟨x, hx, hxy⟩ := mapM_source hrest y hy
+      exact ⟨x, List.mem_cons_of_mem _ hx, hxy⟩
+
+theorem mapM_total {β γ : Type} {f : β → Option γ} {P : γ → Prop} :
+    ∀ {xs : List β}, (∀ x ∈ xs, ∃ y, f x = some y ∧ P y) →
+      ∃ ys, xs.mapM f = some ys ∧ ∀ y ∈ ys, P y
+  | [], _ => ⟨[], rfl, fun _ hy => absurd hy List.not_mem_nil⟩
+  | x :: xs, h => by
+    obtain ⟨y, hy, py⟩ := h x List.mem_cons_self
+    obtain ⟨ys, hys, pys⟩ := mapM_total (xs := xs) fun z hz => h z (List.mem_cons_of_mem _ hz)
+    refine ⟨y :: ys, mapM_cons_eq_some.mpr ⟨y, ys, hy, hys, rfl⟩, fun z hz => ?_⟩
+    rcases List.mem_cons.mp hz with rfl | hz
+    · exact py
+    · exact pys z hz
+
+/-! ## The join of a list -/
+
+variable {α : Type} [Answer α]
+
+theorem foldl_keeps {Q : α → Prop} (left : ∀ a b, Q a → Q (Answer.join a b))
+    (right : ∀ a b, Q b → Q (Answer.join a b)) :
+    ∀ (answers : List α) (acc : α), (Q acc ∨ ∃ a ∈ answers, Q a) →
+      Q (answers.foldl Answer.join acc)
+  | [], _, h => h.elim id fun ⟨_, inside, _⟩ => absurd inside List.not_mem_nil
+  | x :: rest, acc, h => by
+    refine foldl_keeps left right rest (Answer.join acc x) ?_
+    rcases h with h | ⟨a, inside, h⟩
+    · exact Or.inl (left acc x h)
+    · rcases List.mem_cons.mp inside with rfl | inside
+      · exact Or.inl (right acc a h)
+      · exact Or.inr ⟨a, inside, h⟩
+
+theorem joinAll_keeps {Q : α → Prop} (left : ∀ a b, Q a → Q (Answer.join a b))
+    (right : ∀ a b, Q b → Q (Answer.join a b)) {answers : List α} {a : α}
+    (inside : a ∈ answers) (holds : Q a) : Q (joinAll answers) :=
+  foldl_keeps left right answers Answer.bot (Or.inr ⟨a, inside, holds⟩)
+
+/-! ## The order of a carrier -/
+
+class AnswerOrder (α : Type) [Answer α] where
+  le : α → α → Prop
+  refl : ∀ a, le a a
+  trans : ∀ {a b c}, le a b → le b c → le a c
+  bot_le : ∀ a, le Answer.bot a
+  le_join_left : ∀ a b, le a (Answer.join a b)
+  le_join_right : ∀ a b, le b (Answer.join a b)
+  join_le : ∀ {a b c}, le a c → le b c → le (Answer.join a b) c
+
+open AnswerOrder (le)
+
+instance : AnswerOrder Ty where
+  le a b := Ty.subN a b = true
+  refl := Ty.subN_refl
+  trans := Ty.subN_trans
+  bot_le a := Ty.OrderProof.sub_never a.normalize
+  le_join_left := Ty.subN_join_left
+  le_join_right := Ty.subN_join_right
+  join_le {a b c} hac hbc := by
+    show Ty.sub (Ty.join a b).normalize c.normalize = true
+    rw [Ty.normalize_join]
+    exact Ty.OrderProof.sub_normalize_union_le Ty.sub_trans a b c.normalize hac hbc
+
+instance {α β : Type} [Answer α] [Answer β] [AnswerOrder α] [AnswerOrder β] :
+    AnswerOrder (α × β) where
+  le a b := le a.1 b.1 ∧ le a.2 b.2
+  refl a := ⟨AnswerOrder.refl a.1, AnswerOrder.refl a.2⟩
+  trans hab hbc := ⟨AnswerOrder.trans hab.1 hbc.1, AnswerOrder.trans hab.2 hbc.2⟩
+  bot_le a := ⟨AnswerOrder.bot_le a.1, AnswerOrder.bot_le a.2⟩
+  le_join_left a b := ⟨AnswerOrder.le_join_left a.1 b.1, AnswerOrder.le_join_left a.2 b.2⟩
+  le_join_right a b := ⟨AnswerOrder.le_join_right a.1 b.1, AnswerOrder.le_join_right a.2 b.2⟩
+  join_le hac hbc := ⟨AnswerOrder.join_le hac.1 hbc.1, AnswerOrder.join_le hac.2 hbc.2⟩
+
+theorem le_joinAll [AnswerOrder α] {answers : List α} {a : α} (inside : a ∈ answers) :
+    le a (joinAll answers) :=
+  joinAll_keeps (Q := le a) (fun x y h => AnswerOrder.trans h (AnswerOrder.le_join_left x y))
+    (fun x y h => AnswerOrder.trans h (AnswerOrder.le_join_right x y)) inside (AnswerOrder.refl a)
+
+theorem foldl_le [AnswerOrder α] {b : α} :
+    ∀ (answers : List α) (acc : α), le acc b → (∀ a ∈ answers, le a b) →
+      le (answers.foldl Answer.join acc) b
+  | [], _, hacc, _ => hacc
+  | x :: rest, acc, hacc, h =>
+    foldl_le rest (Answer.join acc x) (AnswerOrder.join_le hacc (h x List.mem_cons_self))
+      fun a inside => h a (List.mem_cons_of_mem _ inside)
+
+theorem joinAll_le [AnswerOrder α] {answers : List α} {b : α} (below : ∀ a ∈ answers, le a b) :
+    le (joinAll answers) b :=
+  foldl_le answers Answer.bot (AnswerOrder.bot_le b) below
+
+/-! ## The laws -/
+
+theorem lift_never (rule : Ty → Option α) : lift rule .never = some Answer.bot := rfl
+
+theorem lift_member (rule : Ty → Option α) {t : Ty} (normal : Ty.Normal t)
+    (member : t.isMember = true) : lift rule t = (rule t).map (Answer.join Answer.bot) := by
+  unfold lift
+  rw [normal.fixed, Ty.members_atom member]
+  show Option.map joinAll (rule t >>= fun a => List.mapM.loop rule [] [a]) = _
+  cases rule t <;> rfl
+
+theorem lift_congr (rule : Ty → Option α) {s t : Ty}
+    (same : s.normalize = t.normalize) : lift rule s = lift rule t := by
+  unfold lift
+  rw [same]
+
+def Below [AnswerOrder α] (lower upper : Ty → Option α) : Prop :=
+  ∀ ⦃x y : Ty⦄, Ty.Normal x → Ty.Normal y → x.isMember = true → y.isMember = true →
+    Ty.sub x y = true → ∀ ⦃b : α⦄, upper y = some b → ∃ a, lower x = some a ∧ le a b
+
+theorem lift_mono [AnswerOrder α] {lower upper : Ty → Option α} (below : Below lower upper)
+    {s t : Ty} (smaller : Ty.subN s t = true) {b : α} (typed : lift upper t = some b) :
+    ∃ a, lift lower s = some a ∧ le a b := by
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
+  have hmembers := (Ty.OrderProof.sub_iff_members Ty.sub_trans _ _).mp smaller
+  obtain ⟨lowers, hlowers, hbelow⟩ := mapM_total (f := lower)
+    (P := fun a => le a (joinAll answers)) (xs := s.normalize.members) fun x hx => by
+      obtain ⟨y, hy, hxy⟩ := hmembers x hx
+      obtain ⟨c, hc, hrule⟩ := mapM_answer hanswers y hy
+      obtain ⟨a, ha, hac⟩ := below ((Ty.normal_normalize s).members hx)
+        ((Ty.normal_normalize t).members hy) (Ty.members_isMember hx) (Ty.members_isMember hy)
+        hxy hrule
+      exact ⟨a, ha, AnswerOrder.trans hac (le_joinAll hc)⟩
+  exact ⟨joinAll lowers, Option.map_eq_some_iff.mpr ⟨lowers, hlowers, rfl⟩, joinAll_le hbelow⟩
+
+theorem lift_transfer {V : Type} {In : V → Ty → Prop} {P : V → α → Prop}
+    (normal : ∀ {v : V} {t : Ty}, In v t → In v t.normalize)
+    (members : ∀ {v : V} {t : Ty}, In v t → ∃ m ∈ t.members, In v m)
+    (left : ∀ {v : V} (a b : α), P v a → P v (Answer.join a b))
+    (right : ∀ {v : V} (a b : α), P v b → P v (Answer.join a b))
+    {rule : Ty → Option α}
+    (member : ∀ {m : Ty} {a : α} {v : V}, rule m = some a → In v m → P v a)
+    {t : Ty} {a : α} {v : V} (typed : lift rule t = some a) (fit : In v t) : P v a := by
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
+  obtain ⟨m, hm, hfit⟩ := members (normal fit)
+  obtain ⟨c, hc, hrule⟩ := mapM_answer hanswers m hm
+  exact joinAll_keeps (fun a b => left a b) (fun a b => right a b) hc (member hrule hfit)
+
+structure ReadsUnion {V : Type} (M : V → Ty → Prop) : Prop where
+  normalize : ∀ {v : V} {t : Ty}, M v t → M v t.normalize
+  members : ∀ {v : V} {t : Ty}, M v t → ∃ m ∈ t.members, M v m
+  joinLeft : ∀ {v : V} (a b : Ty), M v a → M v (Ty.join a b)
+  joinRight : ∀ {v : V} (a b : Ty), M v b → M v (Ty.join a b)
+
+theorem ReadsUnion.lift_sound {V : Type} {M : V → Ty → Prop} (reads : ReadsUnion M)
+    {rule : Ty → Option Ty} {op : V → Option V}
+    (sound : ∀ {m a : Ty} {v : V}, rule m = some a → M v m → ∃ out, op v = some out ∧ M out a)
+    {t a : Ty} {v : V} (typed : lift rule t = some a) (fit : M v t) :
+    ∃ out, op v = some out ∧ M out a :=
+  lift_transfer (In := M) (P := fun v a => ∃ out, op v = some out ∧ M out a) reads.normalize
+    reads.members
+    (fun a b ⟨out, hop, hout⟩ => ⟨out, hop, reads.joinLeft a b hout⟩)
+    (fun a b ⟨out, hop, hout⟩ => ⟨out, hop, reads.joinRight a b hout⟩) sound typed fit
+
+theorem lift_upper [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+    (mono : ∀ {a b : α}, le a b → Ty.subN (C a) (C b) = true)
+    (member : ∀ {m : Ty} {a : α}, Ty.Normal m → m.isMember = true → rule m = some a →
+      Ty.subN m (C a) = true)
+    {t : Ty} {a : α} (typed : lift rule t = some a) : Ty.subN t (C a) = true := by
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
+  refine (Ty.OrderProof.sub_iff_members Ty.sub_trans _ _).mpr fun x hx => ?_
+  have hnormal := (Ty.normal_normalize t).members hx
+  obtain ⟨c, hc, hrule⟩ := mapM_answer hanswers x hx
+  have hbelow : Ty.subN x (C (joinAll answers)) = true :=
+    Ty.subN_trans (member hnormal (Ty.members_isMember hx) hrule) (mono (le_joinAll hc))
+  have hraw : Ty.sub x (C (joinAll answers)).normalize = true := by
+    have h := hbelow
+    unfold Ty.subN at h
+    rw [hnormal.fixed] at h
+    exact h
+  exact (Ty.OrderProof.sub_member_right_iff x _ (Ty.members_isMember hx)).mp hraw
+
+theorem lift_least [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+    (member : ∀ {m : Ty} {a b : α}, Ty.Normal m → m.isMember = true → rule m = some a →
+      Ty.subN m (C b) = true → le a b)
+    {t : Ty} {a b : α} (typed : lift rule t = some a) (upper : Ty.subN t (C b) = true) :
+    le a b := by
+  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp typed
+  refine joinAll_le fun c hc => ?_
+  obtain ⟨x, hx, hrule⟩ := mapM_source hanswers c hc
+  have hnormal := (Ty.normal_normalize t).members hx
+  have hmember : Ty.subN x t = true := by
+    unfold Ty.subN
+    rw [hnormal.fixed]
+    exact Ty.OrderProof.member_sub_self hx
+  exact member hnormal (Ty.members_isMember hx) hrule (Ty.subN_trans hmember upper)
+
+end UnionRule
+
+/-! ## The record rules through the combinator -/
+
+example (o : Bool) (t : Ty) (n : String) :
+    Record.fieldType o t n = UnionRule.lift (Record.fieldOf o n) t := rfl
+example (t : Ty) (n : String) (v : Ty) :
+    Record.setType t n v = UnionRule.lift (Record.setOf n v) t := rfl
+
+
+/-! ## The two membership relations -/
+
+open Effect4.Machine in
+theorem has_reads : UnionRule.ReadsUnion (fun (v : Val) (t : Ty) => Val.hasTy v t = true) where
+  normalize {v t} h := by rw [hasTy_normalize]; exact h
+  members {v t} h := by
+    have := (hasTy_members v t []).symm ▸ h
+    exact List.any_eq_true.mp this
+  joinLeft a b h := Ty.hasTy_join_left a b _ [] h
+  joinRight a b h := Ty.hasTy_join_right a b _ [] h
+
+open Effect4.Program.Typed in
+theorem fits_reads (w : World) : UnionRule.ReadsUnion (Fits w) where
+  normalize h := (fits_normalize w _ _).mpr h
+  members h := (fits_members w _ _).mpr h
+  joinLeft a b h := fits_join_left w a b _ h
+  joinRight a b h := fits_join_right w a b _ h
+
+/-! ## The four soundness theorems, from the transfer law -/
+
+open Effect4.Program.Typed Effect4.Machine in
+theorem record_fieldType_fits' {w : Typed.World} {value : Val} {target answer : Ty}
+    {optional : Bool} {name : String}
+    (htype : Program.Record.fieldType optional target name = some answer)
+    (hfit : Fits w value target) :
+    ∃ out, Record.read optional value name = some out ∧ Fits w out answer :=
+  (fits_reads w).lift_sound (fun typed fit => record_fieldOf_fits typed fit) htype hfit
+
+open Effect4.Program.Typed Effect4.Machine in
+theorem record_setType_fits' {w : Typed.World} {value replacement : Val}
+    {target answer replacementType : Ty} {name : String}
+    (htype : Program.Record.setType target name replacementType = some answer)
+    (hfit : Fits w value target) (hreplacement : Fits w replacement replacementType) :
+    ∃ out, Record.set value name replacement = some out ∧ Fits w out answer :=
+  (fits_reads w).lift_sound (fun typed fit => record_setOf_fits typed fit hreplacement) htype hfit
+
+open Effect4.Machine in
+theorem fieldType' {value : Val} {target answer : Ty} {optional : Bool} {name : String}
+    (htype : Program.Record.fieldType optional target name = some answer)
+    (hfit : Val.hasTy value target = true) :
+    ∃ out, Record.read optional value name = some out ∧ Val.hasTy out answer = true :=
+  has_reads.lift_sound (fun typed fit => RecordChecks.fieldOf typed fit) htype hfit
+
+open Effect4.Machine in
+theorem setType' {value replacement : Val} {target answer replacementType : Ty} {name : String}
+    (htype : Program.Record.setType target name replacementType = some answer)
+    (hfit : Val.hasTy value target = true)
+    (hreplacement : Val.hasTy replacement replacementType = true) :
+    ∃ out, Record.set value name replacement = some out ∧ Val.hasTy out answer = true :=
+  has_reads.lift_sound (fun typed fit => RecordChecks.setOf typed fit hreplacement) htype hfit
+
+/-! ## The two record rules at one member -/
+
+open Effect4.Program.Record in
+theorem fieldType_normal' {fields : Fields} {name : String} {type : Ty}
+    (normal : Ty.normalize (.record fields) = .record fields)
+    (declared : Field.firstOf name fields = some (false, type)) :
+    fieldType false (.record fields) name = some type := by
+  have typeNormal : type.normalize = type :=
+    (Ty.record_normal_fields normal).2 (name, false, type) (Field.firstOf_mem declared)
+  have read : fieldOf false name (.record fields) = some type := by
+    show (Field.firstOf name fields >>= fun entry =>
+      match entry with
+      | (mayBeAbsent, declaredType) =>
+        if false = true then some (Ty.option declaredType)
+        else if mayBeAbsent = true then none else some declaredType) = some type
+    rw [declared]
+    rfl
+  show UnionRule.lift (fieldOf false name) (.record fields) = some type
+  rw [UnionRule.lift_member _ (Ty.normal_of_canonical normal) rfl, read]
+  show some (Ty.join .never type) = some type
+  rw [Ty.join_never, typeNormal]
+
+open Effect4.Program.Record in
+theorem setType_normal' {fields : Fields} (name : String) (valueType : Ty)
+    (normal : Ty.normalize (.record fields) = .record fields) :
+    setType (.record fields) name valueType =
+      some (Ty.normalize (.record ((name, false, valueType) ::
+        fields.filter (fun field => decide (field.1 ≠ name))))) := by
+  show UnionRule.lift (setOf name valueType) (.record fields) = _
+  rw [UnionRule.lift_member _ (Ty.normal_of_canonical normal) rfl]
+  show some (Ty.join .never (Ty.normalize (.record ((name, false, valueType) ::
+    fields.filter (fun field => decide (field.1 ≠ name)))))) = _
+  rw [Ty.join_never, Ty.normalize_idem]
+
+/-! ## A pair carrier: the present `fiberTy` as a member rule -/
+
+def fiberC (pair : Ty × Ty) : Ty := .fiberOf pair.1 pair.2
+
+theorem subN_fiberOf_iff (a e a' e' : Ty) :
+    Ty.subN (.fiberOf a e) (.fiberOf a' e') = true ↔ Ty.subN a a' = true ∧ Ty.subN e e' = true := by
+  show Ty.sub (.fiberOf a.normalize e.normalize) (.fiberOf a'.normalize e'.normalize) = true ↔ _
+  rw [Ty.sub_args_fiberOf]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, Bool.and_eq_true, Ty.subN]
+
+theorem fiberC_mono {a b : Ty × Ty} (h : UnionRule.AnswerOrder.le a b) :
+    Ty.subN (fiberC a) (fiberC b) = true :=
+  (subN_fiberOf_iff _ _ _ _).mpr h
+
+theorem fiberTy_upper {m : Ty} {a : Ty × Ty} (_ : Ty.Normal m) (_ : m.isMember = true)
+    (h : fiberTy m = some a) : Ty.subN m (fiberC a) = true := by
+  cases m with
+  | fiberOf value error =>
+    cases h
+    exact Ty.subN_refl _
+  | _ => nomatch h
+
+theorem fiberTy_least {m : Ty} {a b : Ty × Ty} (_ : Ty.Normal m) (_ : m.isMember = true)
+    (h : fiberTy m = some a) (upper : Ty.subN m (fiberC b) = true) :
+    UnionRule.AnswerOrder.le a b := by
+  cases m with
+  | fiberOf value error =>
+    cases h
+    exact (subN_fiberOf_iff _ _ _ _).mp upper
+  | _ => nomatch h
+
+theorem lift_fiberTy_upper {t : Ty} {pair : Ty × Ty} (h : UnionRule.lift fiberTy t = some pair) :
+    Ty.subN t (.fiberOf pair.1 pair.2) = true :=
+  UnionRule.lift_upper (C := fiberC) fiberC_mono fiberTy_upper h
+
+theorem lift_fiberTy_least {t : Ty} {pair b : Ty × Ty} (h : UnionRule.lift fiberTy t = some pair)
+    (upper : Ty.subN t (.fiberOf b.1 b.2) = true) : Ty.subN pair.1 b.1 = true ∧ Ty.subN pair.2 b.2 = true :=
+  UnionRule.lift_least (C := fiberC) fiberTy_least h upper
+
+#guard UnionRule.lift fiberTy .never = some (.never, .never)
+#guard fiberTy (.union (.fiberOf .nat .never) (.fiberOf .string .bool)) = none
+#guard UnionRule.lift fiberTy (.union (.fiberOf .nat .never) (.fiberOf .string .bool)) =
+  some (Ty.join .nat .string, .bool)
+#guard UnionRule.lift fiberTy (.union (.fiberOf .nat .never) .nat) = none
+
+#print axioms UnionRule.lift_never
+#print axioms UnionRule.lift_member
+#print axioms UnionRule.lift_congr
+#print axioms UnionRule.lift_mono
+#print axioms UnionRule.lift_transfer
+#print axioms UnionRule.ReadsUnion.lift_sound
+#print axioms UnionRule.lift_upper
+#print axioms UnionRule.lift_least
+#print axioms record_fieldType_fits'
+#print axioms record_setType_fits'
+#print axioms fieldType'
+#print axioms setType'
+#print axioms fieldType_normal'
+#print axioms setType_normal'
+#print axioms lift_fiberTy_upper
+#print axioms lift_fiberTy_least
+#print axioms has_reads
+#print axioms fits_reads
+
+
+/-! ## The monotone premise at `fiberTy` -/
+
+theorem fiberTy_below : UnionRule.Below fiberTy fiberTy := by
+  intro x y _ _ hx hy hxy b hb
+  cases y with
+  | fiberOf value error =>
+    cases hb
+    rw [Ty.sub_eq_args x _ hx hy (Ty.leafRule_of_right_none x _ rfl)
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at hxy
+    cases x with
+    | fiberOf value' error' =>
+      refine ⟨(value', error'), rfl, ?_⟩
+      have hargs := hxy.2
+      simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+        List.all_nil, Bool.and_true, Bool.and_eq_true] at hargs
+      exact ⟨Ty.sub_le_subN hargs.1, Ty.sub_le_subN hargs.2⟩
+    | _ => exact nomatch hxy.1
+  | _ => exact nomatch hb
+
+theorem lift_fiberTy_mono {s t : Ty} (smaller : Ty.subN s t = true) {b : Ty × Ty}
+    (typed : UnionRule.lift fiberTy t = some b) :
+    ∃ a, UnionRule.lift fiberTy s = some a ∧ Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true :=
+  UnionRule.lift_mono fiberTy_below smaller typed
+
+/-! ## Red controls -/
+
+/-- A member rule that answers at `string` and refuses a literal. -/
+def stringOnly (m : Ty) : Option Ty := if m = .string then some .nat else none
+
+theorem stringOnly_not_below : ¬ UnionRule.Below stringOnly stringOnly := by
+  intro below
+  obtain ⟨a, ha, -⟩ := below (x := .lit "a") (y := .string) (.lit "a") .string rfl rfl
+    (Ty.sub_lit_string "a") (b := .nat) rfl
+  exact nomatch ha
+
+#guard Ty.subN (.lit "a") .string
+#guard UnionRule.lift stringOnly .string = some .nat
+#guard UnionRule.lift stringOnly (.lit "a") = none
+
+-- the upper form is false in raw `Ty.sub` at a target that is not its own normal form
+def rawTarget : Ty := .fiberOf (.prod (.union .nat .string) .unit) .never
+#guard (UnionRule.lift fiberTy rawTarget).isSome
+#guard match UnionRule.lift fiberTy rawTarget with
+  | some pair => Ty.subN rawTarget (.fiberOf pair.1 pair.2) && !Ty.sub rawTarget (.fiberOf pair.1 pair.2)
+  | none => false
+
+-- the order has no width rule: a record of two fields is not below the record of one of them
+#guard Record.fieldType false (.record [("a", false, .nat), ("b", false, .string)]) "a" = some .nat
+#guard !Ty.subN (.record [("a", false, .nat), ("b", false, .string)]) (.record [("a", false, .nat)])
+
+-- a member that the normal form drops is not read
+#guard Ty.normalize (.union (.lit "a") .string) = .string
+#guard UnionRule.lift stringOnly (.union (.lit "a") .string) = some .nat
+
+#print axioms fiberTy_below
+#print axioms stringOnly_not_below
+
+
+/-! ## A prototype for the conversions: the eliminator of one covariant constructor -/
+
+namespace UnionRule
+open AnswerOrder (le)
+
+/-- A member rule that reads one constructor: three facts of the member rule. -/
+structure Eliminator {α : Type} [Answer α] [AnswerOrder α] (rule : Ty → Option α) (C : α → Ty) :
+    Prop where
+  /-- the rule answers only at the constructor -/
+  shape : ∀ {m : Ty} {a : α}, rule m = some a → m = C a
+  /-- the constructor reflects and keeps the order -/
+  embeds : ∀ {a b : α}, Ty.subN (C a) (C b) = true ↔ le a b
+  /-- a normal member below the constructor is read -/
+  closed : ∀ {m : Ty} {b : α}, Ty.Normal m → m.isMember = true → Ty.sub m (C b) = true →
+    ∃ a, rule m = some a
+
+variable {α : Type} [Answer α] [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+
+theorem Eliminator.below (e : Eliminator rule C) : Below rule rule := by
+  intro x y nx _ hx _ hxy b hb
+  have hy := e.shape hb
+  subst hy
+  obtain ⟨a, ha⟩ := e.closed nx hx hxy
+  refine ⟨a, ha, e.embeds.mp ?_⟩
+  have hxa := e.shape ha
+  subst hxa
+  exact Ty.sub_le_subN hxy
+
+theorem Eliminator.upper (e : Eliminator rule C) {t : Ty} {a : α} (typed : lift rule t = some a) :
+    Ty.subN t (C a) = true :=
+  lift_upper (fun h => e.embeds.mpr h)
+    (fun _ _ h => by rw [e.shape h]; exact Ty.subN_refl _) typed
+
+theorem Eliminator.least (e : Eliminator rule C) {t : Ty} {a b : α}
+    (typed : lift rule t = some a) (upper : Ty.subN t (C b) = true) : le a b :=
+  lift_least (fun _ _ h hb => by rw [e.shape h] at hb; exact e.embeds.mp hb) typed upper
+
+end UnionRule
+
+theorem fiberTy_eliminator : UnionRule.Eliminator fiberTy fiberC where
+  shape {m a} h := by
+    cases m with
+    | fiberOf value error => cases h; rfl
+    | _ => exact nomatch h
+  embeds := subN_fiberOf_iff _ _ _ _
+  closed {m b} _ hm hsub := by
+    rw [Ty.sub_eq_args m _ hm rfl (Ty.leafRule_of_right_none m _ rfl)
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at hsub
+    cases m with
+    | fiberOf value error => exact ⟨(value, error), rfl⟩
+    | _ => exact nomatch hsub.1
+
+#print axioms UnionRule.Eliminator.below
+#print axioms UnionRule.Eliminator.upper
+#print axioms UnionRule.Eliminator.least
+#print axioms fiberTy_eliminator
+
+
+/-! ## A third rule that reads a union member by member today: the positional read -/
+
+def tupleTargets : List Ty :=
+  [ .never, .tuple [.nat, .string, .bool], .prod .nat .string,
+    .union (.tuple [.nat, .string, .bool]) (.tuple [.string, .nat, .unit]),
+    .union (.prod .nat .string) (.prod .string .nat),
+    .union (.prod .nat .string) (.union (.prod .string .nat) (.prod .bool .unit)),
+    .union (.tuple [.nat, .string, .bool]) .nat, .nat, .tuple [.nat],
+    .prod (.union .nat .string) .unit, .tuple [.union .nat .string, .unit, .unit] ]
+
+#guard tupleTargets.all fun t => [0, 1, 2, 3].all fun i =>
+  Tuple.typeAt t i == UnionRule.lift (Tuple.project i) t
+
+-- the field read and the overwrite at the same shapes, against the present definitions
+def recordTargets : List Ty :=
+  [ .never, .record [("a", false, .nat)], .record [("a", true, .nat), ("b", false, .string)],
+    .union (.record [("a", false, .nat)]) (.record [("a", false, .string)]),
+    .union (.record [("a", false, .nat)]) (.record [("b", false, .string)]),
+    .union (.record [("a", false, .nat)]) .nat, .nat,
+    .union (.record [("a", false, .lit "x")]) (.record [("a", false, .string)]) ]
+
+#guard recordTargets.all fun t => [true, false].all fun o => ["a", "b", "c"].all fun n =>
+  Record.fieldType o t n ==
+    ((Ty.members t.normalize).mapM (Record.fieldOf o n)).map Record.joinResults
+#guard recordTargets.all fun t => ["a", "b"].all fun n => [Ty.nat, Ty.string].all fun v =>
+  Record.setType t n v == UnionRule.lift (Record.setOf n v) t
+
+end Probe
