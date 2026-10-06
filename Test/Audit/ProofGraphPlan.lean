@@ -13,7 +13,9 @@ proved, and the red controls pin each refusal:
 2. a node whose axioms leave the semantic ceiling is refused;
 3. a hand-written `sorry` is not a goal: the plan refuses it as an axiom outside the ceiling, and
    `tagGoal` refuses to tag a theorem whose body is not `sorry`, or a definition;
-4. a sketch whose script reports an error, or closes its statement, is refused.
+4. a sketch whose script reports an error, or closes its statement, is refused;
+5. the dependency walk gives no answer from an unfinished stack: at a budget that cannot empty
+   it, the walk says so, and `buildPlan` refuses such a walk.
 -/
 namespace Test.ProofGraphPlan
 open Lean Meta Elab Command ProofGraph
@@ -35,6 +37,17 @@ next goals: 2
 -/
 #guard_msgs in
 #plan_status top
+
+-- 5. The walk from `top` at one pop leaves its stack unfinished and gives no answer. At the
+-- plan's own budget it answers the two goals, as the status above prints them.
+/-- info: true -/
+#guard_msgs in
+#eval show MetaM Bool from do
+  let isNode (c : Name) : Bool := c == ``leafA || c == ``leafB || c == ``top
+  let short ← walkWithin 1 [`Test] isNode ``top
+  let whole ← walkWithin walkBudget [`Test] isNode ``top
+  return short.isNone &&
+    (whole.map fun w => w.1.size == 2 && w.1.contains ``leafA && w.1.contains ``leafB) == some true
 
 -- The same decomposition over proved leaves is proved.
 theorem provedA : ∀ n, A n := fun _ => rfl

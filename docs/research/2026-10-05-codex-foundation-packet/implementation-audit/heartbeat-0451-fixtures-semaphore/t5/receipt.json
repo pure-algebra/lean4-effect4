@@ -1,0 +1,138 @@
+{
+  "authority": "e6d63ddb",
+  "seat_head_at_cut": "98b56e62bc3621f1d2b44306b8d3766dd0a1bb4f",
+  "evidence_kind": "active source audit; retained prior probe evidence only",
+  "result": "No new actionable source defect found; active repair matches row256; acceptance pending",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "Makefile",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/prelude-atoms.gen.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/run-truth.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/term-rows.typecheck.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/tsconfig.json",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/tuples.typecheck.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/literals.typecheck.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "scripts/check-truth.py",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "src/Effect4/Machine/Term.lean",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "src/Effect4/Program/NativeAtom.lean",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "tools/Effect4Gen/PreludeAtoms.lean",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "docs/research/2026-10-05-seat-T5-receipt.md",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "AGENTS.md",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "docs/STATE.md",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "harness/truth/prelude.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "ts/eff/profile.gen.ts",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/review.md",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/receipt.json",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/runs.json",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/emit-comparison.json",
+      "snapshot_hash_verified": true,
+      "unchanged_at_final_read": true
+    }
+  ],
+  "snapshot_hashes_verified": 23,
+  "changed_after_snapshot": [],
+  "report_sha256": "153fabc48bdfbe4ac243157b646a0622812df845e89dcad0d8dfaec6f0fa6938",
+  "snapshot_manifest_sha256": "19ea71bee8ec4cc0fd61f95b9e876605954322f34d55afe2ede487c70bdfb5c9",
+  "no_repo_edits": true,
+  "no_lean_compiler_runtime_generator_install_or_dispatch": true,
+  "current_acceptance_rerun": false,
+  "six_pins": [
+    "singleton",
+    "pair",
+    "larger",
+    "first",
+    "third",
+    "nested"
+  ]
+}

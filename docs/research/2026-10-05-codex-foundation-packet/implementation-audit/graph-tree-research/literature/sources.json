@@ -1,0 +1,89 @@
+{
+  "book": {
+    "title": "Types for Proofs and Programs",
+    "conference": "TYPES 2003",
+    "series": "LNCS 3085",
+    "editors": [
+      "Stefano Berardi",
+      "Mario Coppo",
+      "Ferruccio Damiani"
+    ],
+    "year": 2004,
+    "url": "https://link.springer.com/book/10.1007/b98246",
+    "local_pdf": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/types-2003-proofs-and-programs.pdf",
+    "sha256": "c96a2965756f8388b1bfc4d8ddf890a415e32b219dc1a7ac9eed7ef6af1c7dfe",
+    "printed_to_pdf_one_based_offset": 8,
+    "chapter_link_verified": "https://link.springer.com/chapter/10.1007/978-3-540-24849-1_14",
+    "scope": "User-supplied source; complete contents inspected; per-chapter read status separate."
+  },
+  "external": [
+    {
+      "id": "Allais2018",
+      "authors": [
+        "Guillaume Allais",
+        "Robert Atkey",
+        "James Chapman",
+        "Conor McBride",
+        "James McKinna"
+      ],
+      "title": "A Type and Scope Safe Universe of Syntaxes with Binding: Their Semantics and Proofs",
+      "year": 2018,
+      "publication": "Proceedings of the ACM on Programming Languages 2 (ICFP), article 90, pages 1–30",
+      "doi": "10.1145/3236785",
+      "primary_pdf": "https://bentnib.org/binding-universe.pdf",
+      "metadata": "https://strathprints.strath.ac.uk/64841/",
+      "read": "Selected parts of §§1–3; §§6,8.1,8.2; selected §8.3 and §§9–10.",
+      "locators": [
+        "§6 Figures 23–25, pages 90:13–14",
+        "§8.1 Figures 41–44, pages 90:21–22",
+        "§8.2 Figure 46, pages 90:23–25",
+        "§9.2 page 90:26; cross-sharing limit"
+      ],
+      "version_warning": "The read version is 2018, not the expanded JFP 2021 paper.",
+      "pdf_bytes_downloaded": false
+    },
+    {
+      "id": "Kahl2011",
+      "authors": [
+        "Wolfram Kahl"
+      ],
+      "title": "Dependently-Typed Formalisation of Typed Term Graphs",
+      "year": 2011,
+      "publication": "EPTCS 48, pages 38–53",
+      "doi": "10.4204/EPTCS.48.6",
+      "primary_pdf": "https://arxiv.org/pdf/1102.2653",
+      "metadata": "https://arxiv.org/abs/1102.2653",
+      "read": "Introduction, parts of §3, §§4–5, selected §6, §7 and conclusion.",
+      "locators": [
+        "§4 pages 44–45: TypedNode and CodeGraph",
+        "§5 pages 46–47: sharing and duplication",
+        "§§6–7 pages 47–52: scoped bindings and composition",
+        "§8 page 52: future proof/toolchain scope"
+      ],
+      "pdf_bytes_downloaded": false
+    },
+    {
+      "id": "Huet1997",
+      "authors": [
+        "Gérard Huet"
+      ],
+      "title": "The Zipper",
+      "year": 1997,
+      "publication": "Journal of Functional Programming 7(5), pages 549–554",
+      "doi": "10.1017/S0956796897002864",
+      "primary_pdf": "https://gallium.inria.fr/~huet/PUBLIC/zip.pdf",
+      "metadata": "https://gallium.inria.fr/~huet/bib.html",
+      "read": "Complete six-page author PDF.",
+      "locators": [
+        "§1.1: focus, path, location",
+        "§1.2: reconstruction",
+        "§2.2: fixed-arity contexts, PDF pages 5–6"
+      ],
+      "version_warning": "Author PDF retains a placeholder 1993 publication header. Bibliographic year and journal pages come from the author's bibliography.",
+      "pdf_bytes_downloaded": false
+    }
+  ],
+  "external_capture": "web-*.json files retain tool-returned metadata and excerpts. No hash of remote PDF bytes is available. Shell DNS failed; browser retrieval worked.",
+  "claim_scope": "Literature techniques and source-grounded design recommendations; no proof, compiler, or runtime execution in this review.",
+  "non_user_source_summary_limit": "Each external paper's derived prose summary in report.md is below 200 words. Project recommendations are separately identified."
+}

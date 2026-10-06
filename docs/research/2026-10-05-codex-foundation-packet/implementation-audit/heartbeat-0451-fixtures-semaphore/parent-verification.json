@@ -1,0 +1,311 @@
+{
+  "source_checks": 76,
+  "all_match": true,
+  "checks": [
+    {
+      "source": "freshness:Makefile",
+      "matches": true
+    },
+    {
+      "source": "freshness:Test/Dogfood/README.md",
+      "matches": true
+    },
+    {
+      "source": "freshness:Test/Dogfood/Scenario/Lowered.lean",
+      "matches": true
+    },
+    {
+      "source": "freshness:Test/Program/QueueEngine.lean",
+      "matches": true
+    },
+    {
+      "source": "freshness:docs/GENERATED.md",
+      "matches": true
+    },
+    {
+      "source": "freshness:docs/STATE.md",
+      "matches": true
+    },
+    {
+      "source": "freshness:docs/core/decisions.md",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/queue/write.lean",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/scenarios/write.lean",
+      "matches": true
+    },
+    {
+      "source": "freshness:scripts/generate.py",
+      "matches": true
+    },
+    {
+      "source": "freshness:AGENTS.md",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/queue/queue.txt",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/scenarios/atomic.txt",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/scenarios/routing.txt",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/scenarios/timeout.txt",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/scenarios/workers.txt",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/scenarios/dune",
+      "matches": true
+    },
+    {
+      "source": "freshness:ocaml/engine/test/queue/dune",
+      "matches": true
+    },
+    {
+      "source": "qtypes:AGENTS.md",
+      "matches": true
+    },
+    {
+      "source": "qtypes:docs/research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md",
+      "matches": true
+    },
+    {
+      "source": "qtypes:src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:src/Effect4/Laws/Modules/Queue/Relation.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:src/Effect4/Laws/Modules/Queue/Reading.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:src/Effect4/Program/Authoring/Sugar.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:Test/Program/QueueSteps.lean",
+      "matches": true
+    },
+    {
+      "source": "qtypes:docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "matches": true
+    },
+    {
+      "source": "qtypes:docs/research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md",
+      "matches": true
+    },
+    {
+      "source": "qtypes:docs/STATE.md",
+      "matches": true
+    },
+    {
+      "source": "qtypes:docs/core/decisions.md",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:AGENTS.md",
+      "matches": true
+    },
+    {
+      "source": "t5-live:AGENTS.md",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:Makefile",
+      "matches": true
+    },
+    {
+      "source": "t5-live:Makefile",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/prelude-atoms.gen.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/prelude-atoms.gen.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/run-truth.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/run-truth.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/term-rows.typecheck.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/term-rows.typecheck.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/tsconfig.json",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/tsconfig.json",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/tuples.typecheck.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/tuples.typecheck.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/literals.typecheck.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/literals.typecheck.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:scripts/check-truth.py",
+      "matches": true
+    },
+    {
+      "source": "t5-live:scripts/check-truth.py",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:src/Effect4/Machine/Term.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-live:src/Effect4/Machine/Term.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:src/Effect4/Program/NativeAtom.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-live:src/Effect4/Program/NativeAtom.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:tools/Effect4Gen/PreludeAtoms.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-live:tools/Effect4Gen/PreludeAtoms.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:src/Effect4/Program/Typing/Rules.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-live:src/Effect4/Program/Typing/Rules.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:docs/research/2026-10-05-seat-T5-receipt.md",
+      "matches": true
+    },
+    {
+      "source": "t5-live:docs/research/2026-10-05-seat-T5-receipt.md",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:harness/truth/prelude.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:harness/truth/prelude.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-saved:ts/eff/profile.gen.ts",
+      "matches": true
+    },
+    {
+      "source": "t5-live:ts/eff/profile.gen.ts",
+      "matches": true
+    },
+    {
+      "source": "semaphore:docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "matches": true
+    },
+    {
+      "source": "semaphore:docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "matches": true
+    },
+    {
+      "source": "semaphore:vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+      "matches": true
+    },
+    {
+      "source": "semaphore:vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+      "matches": true
+    },
+    {
+      "source": "semaphore:docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "matches": true
+    },
+    {
+      "source": "semaphore:src/Effect4/Laws/Program/Denote.lean",
+      "matches": true
+    },
+    {
+      "source": "t5-context:AGENTS.md",
+      "matches": true
+    },
+    {
+      "source": "t5-context:docs/core/decisions.md",
+      "matches": true
+    },
+    {
+      "source": "t5-context:docs/STATE.md",
+      "matches": true
+    },
+    {
+      "source": "t5-context:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/review.md",
+      "matches": true
+    },
+    {
+      "source": "t5-context:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/receipt.json",
+      "matches": true
+    },
+    {
+      "source": "t5-context:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/runs.json",
+      "matches": true
+    },
+    {
+      "source": "t5-context:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/emit-comparison.json",
+      "matches": true
+    }
+  ],
+  "probe": "Parent reran extracted Python fixture checker: nine expectations pass, all subprocesses mocked; no Lean, generator, compiler or runtime"
+}

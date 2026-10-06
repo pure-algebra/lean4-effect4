@@ -1,0 +1,148 @@
+{
+  "seat_head": "98b56e62bc3621f1d2b44306b8d3766dd0a1bb4f",
+  "main_authority": "e6d63ddb",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "kind": "active seat snapshot",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "path": "Makefile",
+      "kind": "active seat snapshot",
+      "sha256": "80b44b3ebcc33530517fc62d7a4215f842ada2277f5c86784675bee4f69a7b86",
+      "bytes": 46580
+    },
+    {
+      "path": "harness/truth/prelude-atoms.gen.ts",
+      "kind": "active seat snapshot",
+      "sha256": "bd25097237e84402be3dbfbf6d962c3afb5d00158b6ec5667c77862d7c871670",
+      "bytes": 12386
+    },
+    {
+      "path": "harness/truth/run-truth.ts",
+      "kind": "active seat snapshot",
+      "sha256": "e13e4c968d9f1ee0f44608f8a31bc9e0b27e49f89d829f8e2899321cb2a0fc69",
+      "bytes": 55360
+    },
+    {
+      "path": "harness/truth/term-rows.typecheck.ts",
+      "kind": "active seat snapshot",
+      "sha256": "ed75d4d9200dd36088e64f11e6010773f67de87cf05b1586babddd1b0a94aaa7",
+      "bytes": 12799
+    },
+    {
+      "path": "harness/truth/tsconfig.json",
+      "kind": "active seat snapshot",
+      "sha256": "3bac32f2cbb639aa5e75f95bbd89e44b3d7bd219518e99cd9f0e966b893d9d44",
+      "bytes": 1245
+    },
+    {
+      "path": "harness/truth/tuples.typecheck.ts",
+      "kind": "active seat snapshot",
+      "sha256": "761a1c494aa04570077de19c4fdeb82adb27c1ea1dc82c89442bd49e7b1fda75",
+      "bytes": 2428
+    },
+    {
+      "path": "harness/truth/literals.typecheck.ts",
+      "kind": "active seat snapshot",
+      "sha256": "27ff42b9928be40b87ebdfcc1b6f60412516ed3dbcf38a0ae22d80c4b4b5f38b",
+      "bytes": 10048
+    },
+    {
+      "path": "scripts/check-truth.py",
+      "kind": "active seat snapshot",
+      "sha256": "61c7354915bf4bbc964a84becbd26f20fe334ecfe8cf4780964291aa7afdeba3",
+      "bytes": 8034
+    },
+    {
+      "path": "src/Effect4/Machine/Term.lean",
+      "kind": "active seat snapshot",
+      "sha256": "b2206480c6de3daabd9ff64ddf6d18fbc6e2e1d079cbaab3b24dd5475ca64bcc",
+      "bytes": 30161
+    },
+    {
+      "path": "src/Effect4/Program/NativeAtom.lean",
+      "kind": "active seat snapshot",
+      "sha256": "d36fe09e511b8e4616a086f12c0c85d65805e508e2772b53b07431fed48cfc98",
+      "bytes": 23132
+    },
+    {
+      "path": "tools/Effect4Gen/PreludeAtoms.lean",
+      "kind": "active seat snapshot",
+      "sha256": "9dfe33380534f5dec2e4edab16b9b2c94752be55a842ab17a82247c6368a192e",
+      "bytes": 7489
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "kind": "active seat snapshot",
+      "sha256": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e",
+      "bytes": 31893
+    },
+    {
+      "path": "docs/research/2026-10-05-seat-T5-receipt.md",
+      "kind": "active seat snapshot",
+      "sha256": "ebe10c54e3ab28eac94e84580086f859317d49145b14997be0c5139d6c4b940a",
+      "bytes": 43322
+    },
+    {
+      "path": "AGENTS.md",
+      "kind": "main authority e6d63ddb",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "kind": "main authority e6d63ddb",
+      "sha256": "f277875bc0466705fcb0b789666cef7e7e8dc19308fd2e7b207b3de7789a6f8a",
+      "bytes": 330495
+    },
+    {
+      "path": "docs/STATE.md",
+      "kind": "main authority e6d63ddb",
+      "sha256": "ae658c893129c640a9f9b4a8acbac71710ace365e8248f475119152ee08f36df",
+      "bytes": 105233
+    },
+    {
+      "path": "harness/truth/prelude.ts",
+      "kind": "active seat snapshot",
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0",
+      "bytes": 30177
+    },
+    {
+      "path": "ts/eff/profile.gen.ts",
+      "kind": "active seat snapshot",
+      "sha256": "b833307a9b822557cf3095d05c5aabefb52298bbf4edabdb8687814d332b2039",
+      "bytes": 21762
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/review.md",
+      "snapshot_path": "prior-probe/review.md",
+      "kind": "retained prior monitor evidence, not current acceptance",
+      "sha256": "57386af88ea461b0236c93a705b5056d628a105dc2e3adf4020ca69e4d807ee1",
+      "bytes": 6301
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/receipt.json",
+      "snapshot_path": "prior-probe/receipt.json",
+      "kind": "retained prior monitor evidence, not current acceptance",
+      "sha256": "3374556b15ce2d9f9f4126edc4ecdac3fe2ff38c6aeb8b16e16e19b23c5bb633",
+      "bytes": 41547
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/runs.json",
+      "snapshot_path": "prior-probe/outputs/runs.json",
+      "kind": "retained prior monitor evidence, not current acceptance",
+      "sha256": "b74370c89964c010df6297ce5299943a088daf0bc726f68ae0db7410195ea861",
+      "bytes": 11246
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/emit-comparison.json",
+      "snapshot_path": "prior-probe/outputs/emit-comparison.json",
+      "kind": "retained prior monitor evidence, not current acceptance",
+      "sha256": "28f94492b689097c0ec8455524dff04c7637b1054d65bfd16474479a6cff21fa",
+      "bytes": 1489
+    }
+  ]
+}

@@ -1606,7 +1606,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 19; inherited (provisional): 1567; unplaced: 0.
+Tagged: 29; inherited (provisional): 1615; unplaced: 0.
 
 ## Plan
 
@@ -1619,7 +1619,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (goal), `pollStep_typed` (goal), `sizeStep_typed` (proved), `step_keeps_cell` (proved), `takeStep_typed` (goal), `withdrawOffer_typed` (goal), `withdrawTake_typed` (goal), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `offerStep_typed`, `pollStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `step_keeps_cell` (proved), `takeStep_typed` (proved), `takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
@@ -1630,7 +1630,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
-**Next goals** (15): `offerStep_typed`, `pollStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
+**Next goals** (10): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -2080,77 +2080,102 @@ flowchart LR
   n11["syncRow_typed<br/>proved"]
   n12["termMaps_of_typed<br/>proved"]
   n13["empty_typed<br/>proved"]
-  n14["offerStep_typed<br/>goal"]
-  n15["pollStep_typed<br/>goal"]
-  n16["sizeStep_typed<br/>proved"]
-  n17["step_keeps_cell<br/>proved"]
-  n18["takeStep_typed<br/>goal"]
-  n19["withdrawOffer_typed<br/>goal"]
-  n20["withdrawTake_typed<br/>goal"]
-  n21["atomic<br/>modulo"]
-  n22["bounded<br/>goal"]
-  n23["committed<br/>goal"]
-  n24["counted<br/>goal"]
-  n25["readTerm_printTerm<br/>proved"]
-  n26["fits_subN<br/>proved"]
-  n27["fits_normalize<br/>proved"]
-  n28["normalize_idem<br/>proved"]
-  n29["subN_trans<br/>proved"]
-  n30["hom_eq_cata_ty<br/>proved"]
-  n31["fits_mono<br/>proved"]
-  n32["errOf_payload<br/>proved"]
-  n33["isPayload_of_hasTy_record<br/>proved"]
-  n34["subN_refl<br/>proved"]
-  n35["unsuspended_runs<br/>proved"]
-  n36["cleans_once<br/>goal"]
-  n37["checkInput_eq_none_iff<br/>proved"]
-  n38["handles_of_payloadFieldTy<br/>proved"]
-  n39["run_agrees<br/>proved"]
-  n40["run_eq_meaning<br/>proved"]
-  n5 --> n25
+  n14["offerStep_typed<br/>proved"]
+  n15["offerStep_types<br/>proved"]
+  n16["pollStep_typed<br/>proved"]
+  n17["pollStep_types<br/>proved"]
+  n18["sizeStep_typed<br/>proved"]
+  n19["step_keeps_cell<br/>proved"]
+  n20["takeStep_typed<br/>proved"]
+  n21["takeStep_types<br/>proved"]
+  n22["withdrawOffer_typed<br/>proved"]
+  n23["withdrawOffer_types<br/>proved"]
+  n24["withdrawTake_typed<br/>proved"]
+  n25["withdrawTake_types<br/>proved"]
+  n26["atomic<br/>modulo"]
+  n27["bounded<br/>goal"]
+  n28["committed<br/>goal"]
+  n29["counted<br/>goal"]
+  n30["readTerm_printTerm<br/>proved"]
+  n31["fits_subN<br/>proved"]
+  n32["fits_normalize<br/>proved"]
+  n33["normalize_idem<br/>proved"]
+  n34["subN_trans<br/>proved"]
+  n35["hom_eq_cata_ty<br/>proved"]
+  n36["fits_mono<br/>proved"]
+  n37["errOf_payload<br/>proved"]
+  n38["isPayload_of_hasTy_record<br/>proved"]
+  n39["subN_refl<br/>proved"]
+  n40["sub_antisymm_canonical<br/>proved"]
+  n41["unsuspended_runs<br/>proved"]
+  n42["cleans_once<br/>goal"]
+  n43["checkInput_eq_none_iff<br/>proved"]
+  n44["handles_of_payloadFieldTy<br/>proved"]
+  n45["run_agrees<br/>proved"]
+  n46["run_eq_meaning<br/>proved"]
+  n5 --> n30
   n5 --> n0
   n5 --> n12
-  n5 --> n26
-  n5 --> n27
-  n5 --> n28
-  n5 --> n29
-  n5 --> n30
-  n6 --> n31
-  n9 --> n28
+  n5 --> n31
+  n5 --> n32
+  n5 --> n33
+  n5 --> n34
+  n5 --> n35
+  n6 --> n36
+  n9 --> n33
   n10 --> n1
-  n11 --> n27
-  n11 --> n29
-  n11 --> n26
-  n11 --> n12
-  n11 --> n30
   n11 --> n32
-  n11 --> n33
-  n11 --> n28
   n11 --> n34
-  n12 --> n26
-  n12 --> n27
-  n12 --> n28
-  n12 --> n29
-  n12 --> n30
+  n11 --> n31
+  n11 --> n12
+  n11 --> n35
+  n11 --> n37
+  n11 --> n38
+  n11 --> n33
+  n11 --> n39
   n12 --> n31
-  n17 --> n5
-  n21 --> n35
-  n21 --> n36
-  n21 --> n23
-  n21 --> n24
-  n21 --> n22
-  n21 --> n37
-  n22 --> n37
-  n23 --> n37
-  n24 --> n37
+  n12 --> n32
+  n12 --> n33
+  n12 --> n34
+  n12 --> n35
+  n12 --> n36
+  n14 --> n15
+  n15 --> n40
+  n15 --> n33
+  n16 --> n17
+  n17 --> n40
+  n17 --> n33
+  n17 --> n39
+  n19 --> n5
+  n20 --> n21
+  n21 --> n40
+  n21 --> n39
+  n21 --> n33
+  n22 --> n23
+  n23 --> n33
+  n23 --> n39
+  n23 --> n40
+  n24 --> n25
+  n25 --> n33
+  n25 --> n39
+  n25 --> n40
+  n26 --> n41
+  n26 --> n42
+  n26 --> n28
   n26 --> n29
   n26 --> n27
-  n27 --> n29
-  n27 --> n28
-  n33 --> n38
-  n35 --> n39
-  n36 --> n37
-  n39 --> n40
+  n26 --> n43
+  n27 --> n43
+  n28 --> n43
+  n29 --> n43
+  n31 --> n34
+  n31 --> n32
+  n32 --> n34
+  n32 --> n33
+  n38 --> n44
+  n41 --> n45
+  n42 --> n43
+  n45 --> n46
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2169,13 +2194,18 @@ flowchart LR
 | `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 388 | 680 |
 | `termMaps_of_typed` | proved | — | `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 468 | 415 |
 | `empty_typed` | proved | — | — | 55 | 132 |
-| `offerStep_typed` | goal | `offerStep_typed` | — | 38 | 147 |
-| `pollStep_typed` | goal | `pollStep_typed` | — | 38 | 153 |
+| `offerStep_typed` | proved | — | `offerStep_types` | 42 | 149 |
+| `offerStep_types` | proved | — | `sub_antisymm_canonical`, `normalize_idem` | 211 | 152 |
+| `pollStep_typed` | proved | — | `pollStep_types` | 42 | 155 |
+| `pollStep_types` | proved | — | `sub_antisymm_canonical`, `normalize_idem`, `subN_refl` | 220 | 166 |
 | `sizeStep_typed` | proved | — | — | 87 | 140 |
 | `step_keeps_cell` | proved | — | `fold_typed_atomic_update` | 56 | 384 |
-| `takeStep_typed` | goal | `takeStep_typed` | — | 38 | 166 |
-| `withdrawOffer_typed` | goal | `withdrawOffer_typed` | — | 38 | 149 |
-| `withdrawTake_typed` | goal | `withdrawTake_typed` | — | 38 | 149 |
+| `takeStep_typed` | proved | — | `takeStep_types` | 49 | 168 |
+| `takeStep_types` | proved | — | `sub_antisymm_canonical`, `subN_refl`, `normalize_idem` | 255 | 180 |
+| `withdrawOffer_typed` | proved | — | `withdrawOffer_types` | 49 | 151 |
+| `withdrawOffer_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 182 | 162 |
+| `withdrawTake_typed` | proved | — | `withdrawTake_types` | 49 | 151 |
+| `withdrawTake_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 180 | 162 |
 | `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 85 | 1470 |
 | `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 85 | 1432 |
 | `committed` | goal | `committed` | `checkInput_eq_none_iff` | 85 | 1438 |
@@ -2190,6 +2220,7 @@ flowchart LR
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
 | `subN_refl` | proved | — | — | 38 | 44 |
+| `sub_antisymm_canonical` | proved | — | — | 144 | 61 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 856 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1431 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
@@ -2989,14 +3020,14 @@ flowchart LR
 | `cell_read` | proved | — | — | 10 | 200 |
 | `first_profile_closed` | proved | — | — | 29 | 72 |
 | `offerStep_agrees` | proved | — | — | 85 | 171 |
-| `pollStep_agrees` | proved | — | — | 97 | 185 |
+| `pollStep_agrees` | proved | — | — | 100 | 185 |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
 | `queue_steps_agree` | proved | — | `withdrawOffer_agrees`, `withdrawTake_agrees`, `sizeStep_agrees`, `pollStep_agrees`, `offerStep_agrees`, `takeStep_agrees` | 10 | 220 |
 | `sizeStep_agrees` | proved | — | — | 20 | 131 |
 | `step_updates` | proved | — | — | 10 | 210 |
-| `takeStep_agrees` | proved | — | — | 135 | 207 |
-| `withdrawOffer_agrees` | proved | — | — | 80 | 173 |
-| `withdrawTake_agrees` | proved | — | — | 77 | 173 |
+| `takeStep_agrees` | proved | — | — | 138 | 207 |
+| `withdrawOffer_agrees` | proved | — | — | 83 | 173 |
+| `withdrawTake_agrees` | proved | — | — | 80 | 173 |
 | `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 84 | 1421 |
 | `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 84 | 1423 |
 | `tagIs_pair` | proved | — | — | 8 | 86 |

@@ -1,0 +1,48 @@
+{
+  "heartbeat": "2026-10-06T04:51:35.119Z",
+  "main_reviewed": [
+    "e6d63ddb",
+    "00a53895",
+    "6a8ee9c2"
+  ],
+  "coordinator": "local_acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+  "consumed_messages": [
+    42,
+    44
+  ],
+  "sent_message": 46,
+  "message46": "consumed; fixture repair active",
+  "source_checks": 76,
+  "all_match": true,
+  "independent_probe": {
+    "controls": 9,
+    "producer_calls": "mocked",
+    "actual_subprocesses": 0
+  },
+  "open": [
+    "cross-lane alias repair",
+    "Semaphore card repair",
+    "procedure wording clarification",
+    "T5 literal repair acceptance",
+    "QTYPES five goals"
+  ],
+  "handoff": false,
+  "repository_writes": false,
+  "builds": false,
+  "runtime_runs": false,
+  "main_closing": "db54a849",
+  "sent_messages": [
+    46,
+    48
+  ],
+  "message48": "verified queued/unread at closing; empty composer",
+  "fixture_repair": {
+    "commit": "db54a849",
+    "original_witnesses": "resolved",
+    "remaining": "cross-lane alias mutation-before-refusal",
+    "independent_controls": 15,
+    "all_expected_outcomes": true,
+    "actual_subprocesses": 0
+  },
+  "automation": "ACTIVE, carry-forward updated"
+}

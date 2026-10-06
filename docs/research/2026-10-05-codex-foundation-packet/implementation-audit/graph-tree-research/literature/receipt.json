@@ -1,0 +1,94 @@
+{
+  "source_revision": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+  "verified_frozen_files": 15,
+  "book_hash_verified": true,
+  "toc_entries": 25,
+  "recommendation_connections": 6,
+  "verification": "Reread every frozen source byte through git show; compare retained copy and SHA-256. Rehash local book. Parse metadata JSON. Check six report sections and complete numbered TOC. No Lean or runtime execution.",
+  "probes_executed": false,
+  "repository_writes": false,
+  "external_pdf_download": "Not available: shell DNS failed. Web tool excerpts are retained instead.",
+  "artifacts": [
+    {
+      "file": "book.txt",
+      "bytes": 1238061,
+      "sha256": "3e8b6eb5d05bf225e5d4e7d3abe855d494008a66af52361d1697d6bd964c47a2"
+    },
+    {
+      "file": "clf.txt",
+      "bytes": 68914,
+      "sha256": "72c022a5e00f65732c0f5102b5b498e8f9f602323e308202504922c280e9c006"
+    },
+    {
+      "file": "contents-and-read-status.json",
+      "bytes": 7197,
+      "sha256": "08b426f61f2f78eb13b006028604f7f3057f784e9ace2499c0247eb65b0fe63c"
+    },
+    {
+      "file": "graphlike.txt",
+      "bytes": 53148,
+      "sha256": "18643f43a4e7506a7ca0a2b32eddb8961090ed1acd49c39e9badd4198e5d11ea"
+    },
+    {
+      "file": "higman.txt",
+      "bytes": 50503,
+      "sha256": "86120aaad109821bccd77336c5905e1456feb530f86432cc24edd798676c7da6"
+    },
+    {
+      "file": "indices.txt",
+      "bytes": 41294,
+      "sha256": "834b056a39bc7335ed3ddc9ee883a4ffc5db4b28e8b1b6c14dd8194ad58a7b4e"
+    },
+    {
+      "file": "induction.txt",
+      "bytes": 53558,
+      "sha256": "55f390fd59934b35311de7c6b76968cd075401aea7612b4a78b8287e92ae1261"
+    },
+    {
+      "file": "mobility.txt",
+      "bytes": 34624,
+      "sha256": "1b9d0e01a71b4cc08fa1abff2270d0b07761de46a78277e2913aa83e8fbb08da"
+    },
+    {
+      "file": "report.md",
+      "bytes": 16465,
+      "sha256": "239d7bafc61b694a426d5b20640db2a1f113b8e6fe46a679af1f4bb3538e6341"
+    },
+    {
+      "file": "source-hashes.json",
+      "bytes": 3918,
+      "sha256": "1ecb3cbd75cebc981dd707ff2f2476ac03a0932052e56da16f3b2ae921c4ace9"
+    },
+    {
+      "file": "sources.json",
+      "bytes": 3810,
+      "sha256": "90303d13df5a04510d507425b8670b43d982559615b1c9ca91fbf36f5c4501b9"
+    },
+    {
+      "file": "web-huet-read.json",
+      "bytes": 14008,
+      "sha256": "e18c57c531a730fdcff38b53264f508d03ff4fb94129501a747f81493bb57371"
+    },
+    {
+      "file": "web-primary-excerpts.json",
+      "bytes": 25056,
+      "sha256": "1303b246387c731c47f6a1bf607bf5aa46ad7b74c75f9bce30ee24910c4a029d"
+    },
+    {
+      "file": "web-primary-metadata.json",
+      "bytes": 27404,
+      "sha256": "580392e93b8df55f0b3891b2292b9ae16437a40858d3f12b747615975de8a4e2"
+    },
+    {
+      "file": "web-publisher-metadata.json",
+      "bytes": 13951,
+      "sha256": "9dd41fa9021dcb2e88dc918a9c62ac39c198452e107d23472ab89f1b34c0726e"
+    },
+    {
+      "file": "wtrees.txt",
+      "bytes": 44069,
+      "sha256": "edbe9f364a2a8dde59afb13f6ff7923eb6caf80fedc66d81f78d4a10ee460f3c"
+    }
+  ],
+  "final_prose_check": "All six control suggestions explicitly proposed and unexecuted; bibliography version/read scope preserved."
+}

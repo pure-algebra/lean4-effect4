@@ -1,0 +1,165 @@
+{
+  "seat_snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+  "coordinator_snapshot": "00a538958d707b891882364abcf71c74936c9291",
+  "dispatch_coordinator_snapshot": "e6d63ddb",
+  "seat_status_porcelain": "",
+  "evidence_kind": "read-only source review",
+  "commands_not_run": [
+    "Lean",
+    "Lake",
+    "compiler",
+    "runtime",
+    "generator",
+    "install",
+    "dispatch"
+  ],
+  "repository_writes": [],
+  "source_hashes": [
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "AGENTS.md",
+      "blob": "607959a5ece23418c8938d9903200d9f73d1f500",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md",
+      "blob": "7599d1284dd5fe021244275da80f3f674dead351",
+      "sha256": "862ffdef5c7cc78b5b481b9d9f61b462ae935a4df5db3d0b37a7289d061c4c6f",
+      "bytes": 14578,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "blob": "8b8afd802322758d0d3b43acd2761701843ac288",
+      "sha256": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+      "bytes": 12361,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "src/Effect4/Laws/Modules/Queue/Relation.lean",
+      "blob": "6267b1941d312eda9aadc276658eb5a9be4ee6f5",
+      "sha256": "b319dfb241d5da0b98458074ce474f8811b819b3360c7eb5fd7a3646338694db",
+      "bytes": 7391,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "src/Effect4/Laws/Modules/Queue/Reading.lean",
+      "blob": "7e20e26f7d430cad35739af14f57ef7d5050d043",
+      "sha256": "b1fdd6c3c4a474bde49e5cf720c14b8ec0ca875819548a2fd61a84508de635eb",
+      "bytes": 39205,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "blob": "a846cd90b4cd846c309e12e38e6545d87b772a33",
+      "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "bytes": 51364,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "blob": "0fc58be9e8d293fdb7be03b91b6db239a943a7d6",
+      "sha256": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+      "bytes": 30908,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "src/Effect4/Program/Authoring/Sugar.lean",
+      "blob": "787d6101e8ac800ba8cbc253390ec5125d654a1e",
+      "sha256": "c949a4f037fec137c086a885af0f8cf250f215fb29d2b012f65ed18a9d51f0e1",
+      "bytes": 7466,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "2f22ad7bb64f58fbcff7225b07651c6770bf9db5",
+      "path": "Test/Program/QueueSteps.lean",
+      "blob": "02fb8b25fbb07bb71af3ef6d4c4e7138ff9fedd1",
+      "sha256": "942c6498f5dce82df4d0b0c74628e38ededc3037bc4f318e70ed213d5cc4dbcc",
+      "bytes": 16188,
+      "working_file_matches_snapshot": true
+    },
+    {
+      "snapshot": "00a538958d707b891882364abcf71c74936c9291",
+      "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "blob": "a9542e587937bc203d15bacdecf863ec86d80cfc",
+      "sha256": "8d59cdc79b4fefd7eb4c66ec08e83e6c682ec8dc3b66d6f007848a11d9e47fc1",
+      "bytes": 8241
+    },
+    {
+      "snapshot": "00a538958d707b891882364abcf71c74936c9291",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md",
+      "blob": "8f273d5636ee67efef87245bdef249b9ec275dc5",
+      "sha256": "e2604e51db74c705de652551df19d4f85a3f323bf73fc7c738e40e00b934b55b",
+      "bytes": 15142
+    },
+    {
+      "snapshot": "00a538958d707b891882364abcf71c74936c9291",
+      "path": "docs/STATE.md",
+      "blob": "dc9eaef3abcf7304e3cdde84493a9e203fa87ec0",
+      "sha256": "3930352f843eabaa0e6fc93f37f1418b15cd109b046bbf00191c6e362a6d24d3",
+      "bytes": 106150
+    },
+    {
+      "snapshot": "00a538958d707b891882364abcf71c74936c9291",
+      "path": "docs/core/decisions.md",
+      "blob": "59877e94d5e1d9cbfdc5eb2384f8bd1215854a5b",
+      "sha256": "f277875bc0466705fcb0b789666cef7e7e8dc19308fd2e7b207b3de7789a6f8a",
+      "bytes": 330495
+    }
+  ],
+  "goal_statements": [
+    {
+      "name": "takeStep_typed",
+      "source_kind": "proof_goal",
+      "statement_sha256": "f51b95d955e81ef4a29686f23070d16fa003e8d8b56787938ea0043b4ce79db5",
+      "statement": "proof_goal takeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"hint\", \"s\"] [Queue.idTy, Queue.idTy, Queue.cellTy A]\n        (Queue.takeStep A (var \"id\") (var \"hint\") (var \"s\")) =\n      some (.prod (takeReplyTy A) (Queue.cellTy A))\n\n/-- **The offer step is typed at the cell's type**: under the request's identity, its hint at\nthe answer's type, the message and the cell's value. -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal offerStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"hint\", \"a\", \"s\"] [Queue.idTy, Queue.answerTy, A, Queue.cellTy A]\n        (Queue.offerStep A (var \"id\") (var \"hint\") (var \"a\") (var \"s\")) =\n      some (.prod offerReplyTy (Queue.cellTy A))\n\n/-- **The poll step is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal pollStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"s\"] [Queue.cellTy A] (Queue.pollStep A (var \"s\")) =\n      some (.prod (pollReplyTy A) (Queue.cellTy A))\n\n/-- **The size step is a number**, over the cell's value. It is no term of a `Ref.modify`. -/\n@[semantics \"store-typing\" (requirement := R4)]\ntheorem sizeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"s\"] [Queue.cellTy A] (Queue.sizeStep A (var \"s\")) = some .nat := by\n  show (termTy sig [Queue.cellTy A]\n    (.app \"length\" (.cons (.field .required (.var 0) \"msgs\") .nil))) = some .nat\n  show ((Record.fieldType false (Queue.cellTy A) \"msgs\").bind fun t =>\n    (some [t])).bind (sig.atomOf \"length\") = some .nat\n  rw [cell_msgsTy message.canonical, atoms]\n  have below : Ty.sub (.list A) (.list .unknown) = true := by\n    rw [Ty.sub_args_list]\n    show (Ty.sub A .unknown && true) = true\n    rw [Ty.sub_unknown]\n    rfl\n  show NativeAtom.monoApply [Ty.list .unknown] .nat [Ty.list A] = some .nat\n  unfold NativeAtom.monoApply\n  exact if_pos \u27e8rfl, by\n    show (Ty.sub (.list A) (.list .unknown) && true) = true\n    rw [below]\n    rfl\u27e9\n\n/-- **The withdrawal of a take is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawTake_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawTake A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))\n\n/-- **The withdrawal of an offer is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawOffer_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawOffer A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))"
+    },
+    {
+      "name": "offerStep_typed",
+      "source_kind": "proof_goal",
+      "statement_sha256": "123192a33f5411cee1c2e627e6332586328b47c949087e99053cb41022fd4bc5",
+      "statement": "proof_goal offerStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"hint\", \"a\", \"s\"] [Queue.idTy, Queue.answerTy, A, Queue.cellTy A]\n        (Queue.offerStep A (var \"id\") (var \"hint\") (var \"a\") (var \"s\")) =\n      some (.prod offerReplyTy (Queue.cellTy A))\n\n/-- **The poll step is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal pollStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"s\"] [Queue.cellTy A] (Queue.pollStep A (var \"s\")) =\n      some (.prod (pollReplyTy A) (Queue.cellTy A))\n\n/-- **The size step is a number**, over the cell's value. It is no term of a `Ref.modify`. -/\n@[semantics \"store-typing\" (requirement := R4)]\ntheorem sizeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"s\"] [Queue.cellTy A] (Queue.sizeStep A (var \"s\")) = some .nat := by\n  show (termTy sig [Queue.cellTy A]\n    (.app \"length\" (.cons (.field .required (.var 0) \"msgs\") .nil))) = some .nat\n  show ((Record.fieldType false (Queue.cellTy A) \"msgs\").bind fun t =>\n    (some [t])).bind (sig.atomOf \"length\") = some .nat\n  rw [cell_msgsTy message.canonical, atoms]\n  have below : Ty.sub (.list A) (.list .unknown) = true := by\n    rw [Ty.sub_args_list]\n    show (Ty.sub A .unknown && true) = true\n    rw [Ty.sub_unknown]\n    rfl\n  show NativeAtom.monoApply [Ty.list .unknown] .nat [Ty.list A] = some .nat\n  unfold NativeAtom.monoApply\n  exact if_pos \u27e8rfl, by\n    show (Ty.sub (.list A) (.list .unknown) && true) = true\n    rw [below]\n    rfl\u27e9\n\n/-- **The withdrawal of a take is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawTake_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawTake A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))\n\n/-- **The withdrawal of an offer is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawOffer_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawOffer A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))"
+    },
+    {
+      "name": "pollStep_typed",
+      "source_kind": "proof_goal",
+      "statement_sha256": "8dd7de1e7fbf25e1ed825479e7c3c60aeccd8408a55c575dbd5b606c69534d00",
+      "statement": "proof_goal pollStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"s\"] [Queue.cellTy A] (Queue.pollStep A (var \"s\")) =\n      some (.prod (pollReplyTy A) (Queue.cellTy A))\n\n/-- **The size step is a number**, over the cell's value. It is no term of a `Ref.modify`. -/\n@[semantics \"store-typing\" (requirement := R4)]\ntheorem sizeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"s\"] [Queue.cellTy A] (Queue.sizeStep A (var \"s\")) = some .nat := by\n  show (termTy sig [Queue.cellTy A]\n    (.app \"length\" (.cons (.field .required (.var 0) \"msgs\") .nil))) = some .nat\n  show ((Record.fieldType false (Queue.cellTy A) \"msgs\").bind fun t =>\n    (some [t])).bind (sig.atomOf \"length\") = some .nat\n  rw [cell_msgsTy message.canonical, atoms]\n  have below : Ty.sub (.list A) (.list .unknown) = true := by\n    rw [Ty.sub_args_list]\n    show (Ty.sub A .unknown && true) = true\n    rw [Ty.sub_unknown]\n    rfl\n  show NativeAtom.monoApply [Ty.list .unknown] .nat [Ty.list A] = some .nat\n  unfold NativeAtom.monoApply\n  exact if_pos \u27e8rfl, by\n    show (Ty.sub (.list A) (.list .unknown) && true) = true\n    rw [below]\n    rfl\u27e9\n\n/-- **The withdrawal of a take is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawTake_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawTake A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))\n\n/-- **The withdrawal of an offer is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawOffer_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawOffer A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))"
+    },
+    {
+      "name": "withdrawTake_typed",
+      "source_kind": "proof_goal",
+      "statement_sha256": "8550fca8e2f63bae0daaf51afa0907c006411ba2954f52953ff5c14c343c6936",
+      "statement": "proof_goal withdrawTake_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawTake A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))\n\n/-- **The withdrawal of an offer is typed at the cell's type.** -/\n@[semantics \"store-typing\" (requirement := R4)]\nproof_goal withdrawOffer_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawOffer A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))"
+    },
+    {
+      "name": "withdrawOffer_typed",
+      "source_kind": "proof_goal",
+      "statement_sha256": "9413e7ad7e304c45ea030a8cb3ebfbd6fb62415a4d82c663012c3843663e4c28",
+      "statement": "proof_goal withdrawOffer_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)\n    (A : Ty) (message : MessageTy A) :\n    typeAt sig [\"id\", \"s\"] [Queue.idTy, Queue.cellTy A]\n        (Queue.withdrawOffer A (var \"id\") (var \"s\")) =\n      some (.prod wakeReplyTy (Queue.cellTy A))"
+    }
+  ],
+  "typing_blob_identical_across_review_cuts": true,
+  "report_sha256": "0eb2c0e2593dd5e570c0526b442dc2622d769fb1639afb6fece16445799fd8a3",
+  "addendum": {
+    "snapshot": "00a538958d707b891882364abcf71c74936c9291",
+    "kind": "plan wording clarification",
+    "sources": [
+      "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "docs/core/decisions.md row 257"
+    ],
+    "findings": [
+      "QTYPES diagram should separate shared helpers from five generic goal completion",
+      "second consumer condition should govern shared extraction, not every module-specific law"
+    ]
+  }
+}

@@ -111,28 +111,18 @@ natural numbers is exact.
 
 ## 6. The public observation
 
-The observation names each request and each protected activation. It is read from the
-program's state and from the run's recorded events. It is a view for a proof or a scenario,
-and it adds no logging to the public surface.
+A client can see four things.
 
-| What is observed | Its parts |
-| --- | --- |
-| A request | the count asked for; whether it committed or withdrew |
-| A `release` | its answer, which is the free count |
-| A protected activation | five things, kept apart: the permit commit, the body's entry and exit, the release commit, the cleanup's completion, and the debt that is still pending |
+- For each request: the count asked for, and whether it committed or withdrew.
+- The answer of a `release`, which is the free count.
+- For a protected form: the body's entry, its exit and the release at that exit.
+- Nothing else of the order in which resumed waiters retry.
 
-A final count of permits is not enough. It cannot tell one completed release from a release
-that was lost and one that ran twice. The pending debt is what clause 3 of section 8 keeps.
-
-Hidden: the waiter list's representation, the hints, and the order in which resumed waiters
-retry beyond what the commits show.
+Hidden: the waiter list's representation and the hints.
 
 ## 7. The reused pieces and the gaps
 
-**Reused as they are.** The protected form is an ordinary builder: `withPermits count body`
-takes its body where the program is written, with minted binders and the body's own typing. It
-needs no value that stores code, so it does not wait for decisions row 234's retained
-behaviour. The authoring surface and `Authoring.foldWith`. One `Ref.modify` whose
+**Reused as they are.** The authoring surface and `Authoring.foldWith`. One `Ref.modify` whose
 term folds. `Deferred` hints and `sameHandle`. The posted helper (row 238). The mask and the
 restore site (rows 244 to 246). `onExit`.
 

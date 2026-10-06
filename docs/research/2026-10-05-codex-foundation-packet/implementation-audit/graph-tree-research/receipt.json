@@ -1,0 +1,50 @@
+{
+  "request": "Graph/tree/reachability/typing/replay literature research, plus contract card API landing guidance",
+  "frozen_head": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+  "closing_head": "1eadc78b4bef0647189d8a39c6824ad6561a865d",
+  "reviewed_paths_changed_at_closing_head": [],
+  "parent_comparisons": 107,
+  "parent_comparisons_passed": true,
+  "controls": {
+    "reference_assignments": 4439,
+    "reference_well_formed": 32,
+    "reference_elimination_failures": 0,
+    "reference_named_controls": "shared, nested, dependency diamond, multiplicity growth, ancestor-exclusion mutant, lexicographic descent",
+    "replay_list_controls": 73,
+    "proof_graph_controls": 8
+  },
+  "literature": {
+    "book": "Types for Proofs and Programs, TYPES 2003, LNCS 3085",
+    "chapter_inventory": 25,
+    "read_extent": "See literature/contents-and-read-status.json; extraction is not full reading",
+    "primary_sources": "See literature/sources.json and literature-addendum.md"
+  },
+  "delivery": {
+    "coordinator": "Queues plan and design decisions (fork)",
+    "url": "claude.ai/epitaxy/local_acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+    "message": 51,
+    "method": "Normal Return submission, queued while responding",
+    "verified": "Message present, unread at observation, composer empty",
+    "consumption": "pending",
+    "interrupted": false,
+    "force_sent": false
+  },
+  "ui": "Coordinator and active QTYPES transcript observed; T5 and QTYPES active during review; no development handoff",
+  "new_proofs": "None; every new theorem shape is proposed and uncompiled",
+  "repository_writes": false,
+  "lean_build_compiler_runtime_generator_install": false,
+  "completed_research_criteria": [
+    "Source and current-path identity verified",
+    "Primary literature and actual book identified and read",
+    "Named proposed consumers and R1-R13 crosswalk retained",
+    "Finite controls parent-rerun with positive controls and mutants",
+    "Contract-card API implications stated",
+    "One normal coordinator note verified queued"
+  ],
+  "follow_up": {
+    "automation": "support-effect4-overnight-proof-work",
+    "status": "ACTIVE",
+    "prompt_updated": true,
+    "checks": "Message51 consumption, adopted card changes, chosen proof slices and reporting repair"
+  }
+}

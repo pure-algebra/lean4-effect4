@@ -1,0 +1,36 @@
+{
+  "main_head_at_cut": "6a8ee9c2b11035d79d373d7717add33b9439e22b",
+  "scope": "draft guidance; active card, not landed defect",
+  "sources": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "sha256": "7d69f6432b75edcd1e45a414d905852c2cea5856379a41f79a615d71df7494b8",
+      "bytes": 12244
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "sha256": "8d59cdc79b4fefd7eb4c66ec08e83e6c682ec8dc3b66d6f007848a11d9e47fc1",
+      "bytes": 8241
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+      "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+      "bytes": 28165
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+      "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+      "bytes": 212712
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "sha256": "c2303ca86f1f973e947051582f141ee6d4593ccaf51feb38ff49831bca2fc8ce",
+      "bytes": 26698
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Denote.lean",
+      "sha256": "956b37473ff52de3b284f089ee684e1f9ee0f86832e51819c2a9fa7b5396f9d9",
+      "bytes": 16107
+    }
+  ]
+}

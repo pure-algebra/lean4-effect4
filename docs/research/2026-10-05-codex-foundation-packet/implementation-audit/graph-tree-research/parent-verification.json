@@ -1,0 +1,558 @@
+{
+  "frozen_head": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+  "checks": [
+    {
+      "source": "structure:AGENTS.md",
+      "matched": true,
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "source": "structure:docs/ARCHITECTURE.md",
+      "matched": true,
+      "sha256": "3b54e44482d1459698ddb2096be3cae0b791bc89e9b5d54a1a5e1a546b2ec738"
+    },
+    {
+      "source": "structure:docs/core/system-map.md",
+      "matched": true,
+      "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca"
+    },
+    {
+      "source": "structure:docs/core/semantics.md",
+      "matched": true,
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32"
+    },
+    {
+      "source": "structure:tools/Tools/SemanticsRegistry.lean",
+      "matched": true,
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Compile.lean",
+      "matched": true,
+      "sha256": "50cac754f8e0e9efd79e13fce92608d358264f8b1c1fe30e6495cb5c3ce9a0a0"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Refs.lean",
+      "matched": true,
+      "sha256": "cb64593e1215807891022dc4435565773c7908dd927b41a34831077dc6cd3d1a"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Node.lean",
+      "matched": true,
+      "sha256": "2e3721dfa23eff4f772c39efc728fb82b1eeccaba8fd8d1cd301cbc6514c8eb1"
+    },
+    {
+      "source": "structure:src/Effect4/Program/NodeLenses.lean",
+      "matched": true,
+      "sha256": "1a1c8c2f967b42bc4fb21f62c3e2509a1006ab39680faa3f1262c536088671aa"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Eff.lean",
+      "matched": true,
+      "sha256": "2e2698ea91882411f215d161b19a1688bbd089691666d2f65ad08d1f70a13051"
+    },
+    {
+      "source": "structure:src/Effect4/Machine/Term.lean",
+      "matched": true,
+      "sha256": "b2206480c6de3daabd9ff64ddf6d18fbc6e2e1d079cbaab3b24dd5475ca64bcc"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Scoped.lean",
+      "matched": true,
+      "sha256": "73ae2eb81a12d0356e177c36e7a75c3cd4d841245afa6c89450555b1d2feb5dd"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Fold.lean",
+      "matched": true,
+      "sha256": "764ddd61a4352730f42e21db691777d975f6ee6bb364c05aef462327f3ffa93f"
+    },
+    {
+      "source": "structure:src/Effect4/Program/Typing.lean",
+      "matched": true,
+      "sha256": "13f10a4775e01c8e2149c3b199260b8c4af1f37cbb6a2cbe7f9f3426a59eb7c4"
+    },
+    {
+      "source": "structure:src/Effect4/Program/CheckedTyping.lean",
+      "matched": true,
+      "sha256": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/PathFold.lean",
+      "matched": true,
+      "sha256": "3b07b6f8ea7d011b262b87c78f4d667a09ef6655f5e5e80dfdab421da61e678b"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/PathOrder.lean",
+      "matched": true,
+      "sha256": "e8cfabfca3ac587209d002e9250ac563efebbcaa7a31b81dabd7ec68e67cb0f7"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/References.lean",
+      "matched": true,
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Hoisting.lean",
+      "matched": true,
+      "sha256": "512fa1ba2c91c2d78a2be507f5471610ebd98e12c1c51158368ecfbd15fd384f"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/HoistingTotal.lean",
+      "matched": true,
+      "sha256": "6094fb71c81cd615fa4b87bf6384b57b2e684e774c75727f4ffeb62286960fc7"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "matched": true,
+      "sha256": "bd98048d469a624ddc92f60ca8c70104a8d16e2aa1ac624ef0271937b045ff76"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/ExpandFix.lean",
+      "matched": true,
+      "sha256": "198600317eb9ff11ebe6bc7073d43e37f8d55953a262b03a33db0fef34d40921"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/CheckedTyping.lean",
+      "matched": true,
+      "sha256": "053667a8a9487078a2e9bea71d042d418d8d3c1f14ac15938f1330890331a361"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/LayerSharing.lean",
+      "matched": true,
+      "sha256": "1cca321993d5eb548a15c39fee8d192b9318e6f84034022df8fde5c86c973e53"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Signature.lean",
+      "matched": true,
+      "sha256": "76c9eed75af3e950fc769f8b56cabd0df10a5f78d5d67bc0acef3a00657c3060"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Agreement.lean",
+      "matched": true,
+      "sha256": "e964146bc39064919baf4ca53da202145ea80ba61ce5b6117c4e3b7212d8c44a"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Intro/Weight.lean",
+      "matched": true,
+      "sha256": "fca0db4024cc5e3aeccb6ecd5c6a1cb3417bee48a875198f5d5016af00f3b6a9"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/MeaningEq.lean",
+      "matched": true,
+      "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Typed/Admission.lean",
+      "matched": true,
+      "sha256": "d01996af609e851088784e32a3396252ca8a83f74551eaeda83fc16e8d43deed"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "matched": true,
+      "sha256": "66f1a635b59f7015a4f269f08b70ead0364307376f998156b002667d541bee6d"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Typed/LayerArm.lean",
+      "matched": true,
+      "sha256": "f3aee5f09580d4187f48746b0501385db773298fcb816989fccdf2b89067f453"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+      "matched": true,
+      "sha256": "021254869881dfd615da74715a435953d33b5df7ce87da8d5f9fa53c3adfa62e"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Typed/World.lean",
+      "matched": true,
+      "sha256": "1f7999fb615cfe1e1b11da097233d51f6d156282e454cc029d9dd1cd1b33aefd"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Program/Typed/ForkSource.lean",
+      "matched": true,
+      "sha256": "125d37233ac85ece9809daec7a70ea13194ae5d0913926ab1ab1c17f6f26a7a1"
+    },
+    {
+      "source": "structure:src/Effect4/Laws/Machine/ForkLedger.lean",
+      "matched": true,
+      "sha256": "b7d9a5045457b10955faf84fe1064463b32ce4d10e177a0538923f7b83c5d4cf"
+    },
+    {
+      "source": "structure-artifact:semaphore-card.md",
+      "matched": true,
+      "sha256": "b306d098f503e969c3c31b9ac0794b7223b3aa8b0094538018e1ab0921059bcb"
+    },
+    {
+      "source": "structure-artifact:report.md",
+      "matched": true,
+      "sha256": "38a31167eb22d2eb4683cbe0eca79a9412d7548a8d50cc8b458809a89961b9f2"
+    },
+    {
+      "source": "structure-artifact:module-factory-plan-active.md",
+      "matched": true,
+      "sha256": "e1c26ebe2216e5872c196e6771eab5453996ebeb59cbbb9f5f904c82256834ac"
+    },
+    {
+      "source": "structure-artifact:reference-model-results.json",
+      "matched": true,
+      "sha256": "953e642ddd44ea63b62a32c38d12547fc223005ceaad8ca8b94413259306eb09"
+    },
+    {
+      "source": "structure-artifact:reference-model.py",
+      "matched": true,
+      "sha256": "ab21ffd7c6a593ac3fc7593324cb3c4155b3986ce3800932a9df6ff1088bb7ab"
+    },
+    {
+      "source": "replay:AGENTS.md",
+      "matched": true,
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "source": "replay:docs/STATE.md",
+      "matched": true,
+      "sha256": "5fccb1684132e7bc37f6787c126029b3bed296a8e67e475a759720fb9e2cdb3c"
+    },
+    {
+      "source": "replay:docs/core/semantics.md",
+      "matched": true,
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32"
+    },
+    {
+      "source": "replay:docs/core/system-map.md",
+      "matched": true,
+      "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca"
+    },
+    {
+      "source": "replay:docs/core/host-boundary.md",
+      "matched": true,
+      "sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe"
+    },
+    {
+      "source": "replay:docs/core/decisions.md",
+      "matched": true,
+      "sha256": "f277875bc0466705fcb0b789666cef7e7e8dc19308fd2e7b207b3de7789a6f8a"
+    },
+    {
+      "source": "replay:src/Effect4/Run.lean",
+      "matched": true,
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844"
+    },
+    {
+      "source": "replay:src/Effect4/Api/Runner.lean",
+      "matched": true,
+      "sha256": "57a2f1a0ecd32bf67cc5c8821df4ad44d857a221e28cdfddf2b02a81688aab5a"
+    },
+    {
+      "source": "replay:src/Effect4/Api/HostSession.lean",
+      "matched": true,
+      "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Run.lean",
+      "matched": true,
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Api/Runner.lean",
+      "matched": true,
+      "sha256": "543b873cf61cf85d8f707ce28db5ff7b8f14fe0fab364a9e981e732292973da8"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Api/RunnerBytes.lean",
+      "matched": true,
+      "sha256": "93a2834d896d7c30f7a2c4a7b26c47a8ea1e55deedd5c12952899c4d6c08891e"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Api/HostSession.lean",
+      "matched": true,
+      "sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Machine/Approximation.lean",
+      "matched": true,
+      "sha256": "eed02bea96ac686c32bd554fa95ef5f8a21813209e8f26de776bd4b66a8afe5c"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Machine/Behaviour.lean",
+      "matched": true,
+      "sha256": "744f6cd68497a0470d126b703a760357c5400d5d00cbe719a77ef5e7c9388cbc"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Machine/Refinement.lean",
+      "matched": true,
+      "sha256": "9183fdd7e13b3492d65d5719774282c927a340dbf61c7adb664534aca85643af"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Machine/ForkLedger.lean",
+      "matched": true,
+      "sha256": "b7d9a5045457b10955faf84fe1064463b32ce4d10e177a0538923f7b83c5d4cf"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Program/Guard/Core.lean",
+      "matched": true,
+      "sha256": "6dd2d430a888af6caad696a5bf84ce530ab16d0539dce2c53d1a239c422fa4ab"
+    },
+    {
+      "source": "replay:src/Effect4/Laws/Program/Guard/Decision.lean",
+      "matched": true,
+      "sha256": "d08dbb7697d91d1f40747aab00723a553068b9447af92f52e0e546a06bb3f86b"
+    },
+    {
+      "source": "replay:Test/Dogfood/Scenario.lean",
+      "matched": true,
+      "sha256": "595a1b2654ecff35c11779592a2acf65f2a6455b9ac3b7e52c3a23b9341cd4bb"
+    },
+    {
+      "source": "replay:Test/Dogfood/Scenario/Tape.lean",
+      "matched": true,
+      "sha256": "842a3710c30359d6cc4bb8a2f0fdc8ce9a78bda374c77784ec64e14e2ab30741"
+    },
+    {
+      "source": "replay:Test/Dogfood/Scenario/Workers.lean",
+      "matched": true,
+      "sha256": "67f5f70fc6e3196c0395a43d56f42a7b69358e88c9b560fe6c19911359762052"
+    },
+    {
+      "source": "replay:Test/Dogfood/Scenario/Timeout.lean",
+      "matched": true,
+      "sha256": "f4ef7bdbb8def55d594e40cdee9203ce16ef08b0c205088d1acfdc7ab6da1ee3"
+    },
+    {
+      "source": "replay:Test/Machine/Runtime/TapeAction.lean",
+      "matched": true,
+      "sha256": "ec68a8cd592e4418b2fa9e9b891ee715a1905e26d9628d017627ef8aa0d15663"
+    },
+    {
+      "source": "replay:Test/Machine/Runtime/BehaviourContract.lean",
+      "matched": true,
+      "sha256": "6deda5c4e84bde195eced8f50bb2f4dd24c27074315e56eef6d9839e365e74de"
+    },
+    {
+      "source": "replay:tools/Tools/SemanticsRegistry.lean",
+      "matched": true,
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5"
+    },
+    {
+      "source": "replay:vendor/effect-4.0.0-rc.112/src/Pool.ts",
+      "matched": true,
+      "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7"
+    },
+    {
+      "source": "replay:vendor/effect-4.0.0-rc.112/src/Cache.ts",
+      "matched": true,
+      "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121"
+    },
+    {
+      "source": "replay:docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "matched": true,
+      "sha256": "b306d098f503e969c3c31b9ac0794b7223b3aa8b0094538018e1ab0921059bcb"
+    },
+    {
+      "source": "replay:docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "matched": true,
+      "sha256": "e1c26ebe2216e5872c196e6771eab5453996ebeb59cbbb9f5f904c82256834ac"
+    },
+    {
+      "source": "root:tools/ProofGraph/Plan.lean",
+      "matched": true,
+      "sha256": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49"
+    },
+    {
+      "source": "root:tools/ProofGraph/Axioms.lean",
+      "matched": true,
+      "sha256": "c7350aff47aa5457ba354cfc7b783fdad63a9ef4bb18e9c7bf911947edab9e0d"
+    },
+    {
+      "source": "root:tools/Tools/Semantics.lean",
+      "matched": true,
+      "sha256": "74cec91a9facf2a1f78553337b689efc737b2acb92cbf2a1f63057d0a52f5ab0"
+    },
+    {
+      "source": "root:tools/Tools/SemanticsRegistry.lean",
+      "matched": true,
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5"
+    },
+    {
+      "source": "root:src/Effect4/Laws/Machine/Refinement.lean",
+      "matched": true,
+      "sha256": "9183fdd7e13b3492d65d5719774282c927a340dbf61c7adb664534aca85643af"
+    },
+    {
+      "source": "literature:AGENTS.md",
+      "matched": true,
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "source": "literature:docs/core/semantics.md",
+      "matched": true,
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32"
+    },
+    {
+      "source": "literature:docs/core/system-map.md",
+      "matched": true,
+      "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca"
+    },
+    {
+      "source": "literature:tools/Tools/SemanticsRegistry.lean",
+      "matched": true,
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5"
+    },
+    {
+      "source": "literature:src/Effect4/Program/Refs.lean",
+      "matched": true,
+      "sha256": "cb64593e1215807891022dc4435565773c7908dd927b41a34831077dc6cd3d1a"
+    },
+    {
+      "source": "literature:src/Effect4/Program/Binders.lean",
+      "matched": true,
+      "sha256": "79478de7f03f080359a0a9143ae07d8d3362a1ee429a49be47f0adb476c41665"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Program/PathFold.lean",
+      "matched": true,
+      "sha256": "3b07b6f8ea7d011b262b87c78f4d667a09ef6655f5e5e80dfdab421da61e678b"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Program/ExpandFix.lean",
+      "matched": true,
+      "sha256": "198600317eb9ff11ebe6bc7073d43e37f8d55953a262b03a33db0fef34d40921"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Program/References.lean",
+      "matched": true,
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Program/Typed/Admission.lean",
+      "matched": true,
+      "sha256": "d01996af609e851088784e32a3396252ca8a83f74551eaeda83fc16e8d43deed"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "matched": true,
+      "sha256": "66f1a635b59f7015a4f269f08b70ead0364307376f998156b002667d541bee6d"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Program/Typed/LayerArm.lean",
+      "matched": true,
+      "sha256": "f3aee5f09580d4187f48746b0501385db773298fcb816989fccdf2b89067f453"
+    },
+    {
+      "source": "literature:src/Effect4/Laws/Run.lean",
+      "matched": true,
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25"
+    },
+    {
+      "source": "literature:Test/Dogfood/Scenario.lean",
+      "matched": true,
+      "sha256": "595a1b2654ecff35c11779592a2acf65f2a6455b9ac3b7e52c3a23b9341cd4bb"
+    },
+    {
+      "source": "literature:docs/research/2026-10-01-semantics/types-2003-scout/book-scout.md",
+      "matched": true,
+      "sha256": "ecb01ad4caa07efada652848c701fac8bd24648a11ce390ce8a60dd6dcf422ab"
+    },
+    {
+      "source": "docs/research/2026-10-01-semantics/sources/types-2003-proofs-and-programs.pdf",
+      "matched": true,
+      "sha256": "c96a2965756f8388b1bfc4d8ddf890a415e32b219dc1a7ac9eed7ef6af1c7dfe"
+    },
+    {
+      "source": "literature-artifact:book.txt",
+      "matched": true,
+      "sha256": "3e8b6eb5d05bf225e5d4e7d3abe855d494008a66af52361d1697d6bd964c47a2"
+    },
+    {
+      "source": "literature-artifact:clf.txt",
+      "matched": true,
+      "sha256": "72c022a5e00f65732c0f5102b5b498e8f9f602323e308202504922c280e9c006"
+    },
+    {
+      "source": "literature-artifact:contents-and-read-status.json",
+      "matched": true,
+      "sha256": "08b426f61f2f78eb13b006028604f7f3057f784e9ace2499c0247eb65b0fe63c"
+    },
+    {
+      "source": "literature-artifact:graphlike.txt",
+      "matched": true,
+      "sha256": "18643f43a4e7506a7ca0a2b32eddb8961090ed1acd49c39e9badd4198e5d11ea"
+    },
+    {
+      "source": "literature-artifact:higman.txt",
+      "matched": true,
+      "sha256": "86120aaad109821bccd77336c5905e1456feb530f86432cc24edd798676c7da6"
+    },
+    {
+      "source": "literature-artifact:indices.txt",
+      "matched": true,
+      "sha256": "834b056a39bc7335ed3ddc9ee883a4ffc5db4b28e8b1b6c14dd8194ad58a7b4e"
+    },
+    {
+      "source": "literature-artifact:induction.txt",
+      "matched": true,
+      "sha256": "55f390fd59934b35311de7c6b76968cd075401aea7612b4a78b8287e92ae1261"
+    },
+    {
+      "source": "literature-artifact:mobility.txt",
+      "matched": true,
+      "sha256": "1b9d0e01a71b4cc08fa1abff2270d0b07761de46a78277e2913aa83e8fbb08da"
+    },
+    {
+      "source": "literature-artifact:report.md",
+      "matched": true,
+      "sha256": "239d7bafc61b694a426d5b20640db2a1f113b8e6fe46a679af1f4bb3538e6341"
+    },
+    {
+      "source": "literature-artifact:source-hashes.json",
+      "matched": true,
+      "sha256": "1ecb3cbd75cebc981dd707ff2f2476ac03a0932052e56da16f3b2ae921c4ace9"
+    },
+    {
+      "source": "literature-artifact:sources.json",
+      "matched": true,
+      "sha256": "90303d13df5a04510d507425b8670b43d982559615b1c9ca91fbf36f5c4501b9"
+    },
+    {
+      "source": "literature-artifact:web-huet-read.json",
+      "matched": true,
+      "sha256": "e18c57c531a730fdcff38b53264f508d03ff4fb94129501a747f81493bb57371"
+    },
+    {
+      "source": "literature-artifact:web-primary-excerpts.json",
+      "matched": true,
+      "sha256": "1303b246387c731c47f6a1bf607bf5aa46ad7b74c75f9bce30ee24910c4a029d"
+    },
+    {
+      "source": "literature-artifact:web-primary-metadata.json",
+      "matched": true,
+      "sha256": "580392e93b8df55f0b3891b2292b9ae16437a40858d3f12b747615975de8a4e2"
+    },
+    {
+      "source": "literature-artifact:web-publisher-metadata.json",
+      "matched": true,
+      "sha256": "9dd41fa9021dcb2e88dc918a9c62ac39c198452e107d23472ab89f1b34c0726e"
+    },
+    {
+      "source": "literature-artifact:wtrees.txt",
+      "matched": true,
+      "sha256": "edbe9f364a2a8dde59afb13f6ff7923eb6caf80fedc66d81f78d4a10ee460f3c"
+    }
+  ],
+  "total": 107,
+  "all_passed": true,
+  "active_documents": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "same_as_reviewed": true,
+      "current_sha256": "b306d098f503e969c3c31b9ac0794b7223b3aa8b0094538018e1ab0921059bcb"
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "same_as_reviewed": true,
+      "current_sha256": "e1c26ebe2216e5872c196e6771eab5453996ebeb59cbbb9f5f904c82256834ac"
+    }
+  ],
+  "execution": "Only source comparison and isolated Python controls; no Lean/compiler/runtime/build/generator.",
+  "closing_head": "1eadc78b4bef0647189d8a39c6824ad6561a865d",
+  "reviewed_paths_changed_at_closing_head": [],
+  "literature_final_refresh": "Reverified against final receipt after the agent prose edit."
+}

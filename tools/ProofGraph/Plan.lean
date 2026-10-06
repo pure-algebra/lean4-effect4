@@ -67,11 +67,20 @@ def goalsIn (env : Environment) (scopes : List Name) : Array Name :=
   (env.constants.toList.filterMap fun (n, _) =>
     if isGoal env n && inScope n then some n else none).toArray.qsort (·.toString < ·.toString)
 
-/-- What the proof of `name` brings in, stopping at the nodes `isNode` selects other than itself. -/
-private def walk (scopes : List Name) (isNode : Name → Bool) (name : Name) :
-    MetaM (Array Name × Nat × Nat) := do
+/-- The plan's bound on the walk's stack pops. It is an engineering limit: no law says that an
+environment stays under it. A repeated dependency entry costs a pop too, before the `seen` test
+skips it. -/
+def walkBudget : Nat := 10000000
+
+/-- What the proof of `name` brings in, stopping at the nodes `isNode` selects other than itself:
+its nearest nodes, and the counts of the theorems and the definitions of the tree that it walks
+through. `none` when `budget` pops did not empty the stack. The answer would then be a part of
+the truth, so the walk gives none, as the axiom collector does (`reachedAxioms`), and
+`buildPlan` refuses. -/
+def walkWithin (budget : Nat) (scopes : List Name) (isNode : Name → Bool) (name : Name) :
+    MetaM (Option (Array Name × Nat × Nat)) := do
   let env ← getEnv
-  let some info := env.find? name | return (#[], 0, 0)
+  let some info := env.find? name | return some (#[], 0, 0)
   let inTree (c : Name) : Bool := match env.getModuleIdxFor? c with
     | some i => scopes.any (·.isPrefixOf env.header.moduleNames[i.toNat]!)
     | none => scopes.any (·.isPrefixOf env.mainModule)
@@ -81,7 +90,7 @@ private def walk (scopes : List Name) (isNode : Name → Bool) (name : Name) :
   let mut seen : Std.HashSet Name := {}
   let mut stack := (info.value? (allowOpaque := true)).map (·.getUsedConstants) |>.getD #[]
   -- each constant is entered once; the bound is a loop bound
-  for _ in [0:10000000] do
+  for _ in [0:budget] do
     let some c := stack.back? | break
     stack := stack.pop
     if seen.contains c then continue
@@ -98,7 +107,8 @@ private def walk (scopes : List Name) (isNode : Name → Bool) (name : Name) :
       | _ => pure ()
     stack := stack ++ ci.type.getUsedConstants ++
       ((ci.value? (allowOpaque := true)).map (·.getUsedConstants) |>.getD #[])
-  return (nearest, lemmas, definitions)
+  -- an unfinished stack is an exhausted walk, never a short answer
+  if stack.isEmpty then return some (nearest, lemmas, definitions) else return none
 
 /-- The plan over the theorems `names` and every goal in `scopes`: each node's standing, checked
 against the ceiling, and its nearest nodes and brought-in counts. -/
@@ -114,7 +124,8 @@ def buildPlan (scopes : List Name) (names : Array Name) (memo : IO.Ref AxiomMemo
     let some (s, axioms) := reached | throwError "plan: axiom collection exhausted its budget at {n}"
     let extra := disallowedAxioms axioms
     unless extra.isEmpty do throwError "plan: {n}: disallowed axioms {extra}"
-    let (nearest, lemmas, definitions) ← walk scopes isNode n
+    let some (nearest, lemmas, definitions) ← walkWithin walkBudget scopes isNode n
+      | throwError "plan: the dependency walk exhausted its budget at {n}"
     nodes := nodes.push { name := n, standing := s, axioms, nearest, lemmas, definitions }
   return { nodes }
 
