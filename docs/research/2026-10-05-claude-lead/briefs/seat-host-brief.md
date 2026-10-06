@@ -1,7 +1,8 @@
 # 2026-10-05 brief for seat HOST: the scenarios on the printed module, on the keyed lane
 
 Status: a brief (history, not authority), written ahead of its dispatch. Base: the head of
-`refactor/phase1-phase3` that the dispatch message names. It is the host half of the scenarios'
+`refactor/phase1-phase3` that the dispatch message names. Its section "Known" was brought up
+to date on 2026-10-06, at the dispatch. It is the host half of the scenarios'
 lowered link (decisions row 254). Seat DOGFOOD handed that half back
 (`docs/research/2026-10-05-seat-DOGFOOD-receipt.md`, items 8 and 9.4). Revised the same day,
 before any dispatch, after Codex's review. A field's evidence is a host measurement or Lean's
@@ -211,12 +212,16 @@ Commit each finished scenario, so that the branch's head is always green.
 
 ## Known, and not yours to repair
 
-- **Literal types on the target.** `pair` and `tuple` keep the literal type of a number and of
-  a boolean. The rate limiter's request does not type-check for that reason
-  (`Test/Codegen/TermRows.lean`, `fourRequests`). `Atomic.shop` uses that request. The repair is
-  the owner's to rule. If a module fails only there, report it and let the scenario wait.
-- **`Timeout.fetch` prints and does not read back:** its retry loop states its cursor's type,
-  which seat T5's part B reads. A host run needs the printed module only.
+- **Literal types on the target are repaired** (decisions row 256, landed 2026-10-06). `pair`
+  and `tuple` widen a number or a Boolean type in an immediate slot. The rate limiter's
+  request type-checks, and the truth program `pRateRequest` agrees with rc.112. `Atomic.shop`
+  uses that request. If its module still fails the type check, report the diagnostics.
+- **The four scenarios' programs print and read back** (`Test/Dogfood/Scenario/Faces.lean`,
+  since seat T5's part B). `Timeout.fetch` is among them.
+- **`retryForm` doubles its delay before its first sleep** (`Test/Dogfood/P1HttpCache.lean`;
+  seat DOGFOOD's receipt, item 7.2, line 5). Its docstring states the base first. Do not
+  repair it. The coordinator repairs it, and sends you the merged head before you start the
+  timeout scenario. Tell the coordinator when you reach that scenario.
 - `make check-tsdiag` and `make check-schema-ts` are red for reasons outside this work.
 
 Report anything else that is red for a reason outside your slice. Do not repair it.
