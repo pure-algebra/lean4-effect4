@@ -290,25 +290,31 @@ party, the coordinator still merges, runs the wide gates and keeps the registers
 In work since 2026-10-06. The owner allowed three seats at once that day (row 237). Two
 run, and the third seat is held:
 
-- **Seat LIFT has the lift of the mask's chain to runs** (branch `seat/lift`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the seat that
-  seat CUTS freed. Part A is two statements of the frame machine, and it is merged
-  (`3475c065`). Part B is the machine's invariant and its lift, with a condition just before
-  a command clears a fiber. Part B and its instance at a compiled program are proved on the
-  seat's branch. Its battery and its receipt come next.
-- **Seat SEMW has Semaphore's public operations** (branch `seat/semw`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md)), in the seat that
-  seat POOL freed. It follows seat PUB's procedure for the Queue. It first lands the
-  wrapper's form at a caller's restore, which a protected body needs (row 276, point 1). The
-  Queue's trees must not move. Its first five steps are merged (`aa70b078`, `4b57609c`,
-  `ea036307`). The two forms are `waitRetryAt` and `protectedBy`
-  (`src/Effect4/Modules/Waiting.lean`). The six operations are library programs
+- **Seat LIFT's code is merged: the mask's chain at every live fiber of a run**
+  (`d734aa6a`; branch `seat/lift`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)). The machine holds
+  one table of start flags, and each live fiber holds the chain at its own flag
+  (`MaskRuns`, `src/Effect4/Laws/Machine/MaskRuns.lean`). Each command keeps the invariant
+  under one condition, just before a command clears a fiber. The command loop discharges the
+  condition. So every decision, tape and fuel keeps the invariant, at the compiled program's
+  interpreter (`compiled_mask_chain_runs`, `src/Effect4/Laws/Program/MaskRuns.lean`; the
+  registry claim `saved-mask-chain-runs`, R11). Each entry of the program interface that
+  returns a machine holds it with no premise (`src/Effect4/Laws/Api/MaskRuns.lean`). No
+  planned goal. The bracket of a region stays open: a body's run returns to the entry's
+  stack. Its receipt comes next.
+- **Seat SEMW's eight steps are merged: Semaphore's public operations** (branch
+  `seat/semw`; [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md);
+  `aa70b078`, `4b57609c`, `ea036307`, `5fc17c3f`, `75ad13b7`, `831a76f3`). The two forms are
+  `waitRetryAt` and `protectedBy` (`src/Effect4/Modules/Waiting.lean`; row 276, point 1), and
+  the Queue's trees did not move. The six operations are library programs
   (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope.
   Nine attempt laws relate one store step to the model's step, with no planned goal
   (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
   machine, with the two red controls of the protected permit
-  (`Test/Program/SemaphoreTraces.lean`). The faces, the truth programs, the engine's case and
-  the receipt come next.
+  (`Test/Program/SemaphoreTraces.lean`). Each operation prints and reads back. Eight programs
+  agree with rc.112 in the truth lane, which has 61 programs. The case P9 replays on the
+  generated engine, with its tape as data. The contract and the README have the operations.
+  Its receipt comes next.
 - **Seat WORKQ is prepared and not dispatched: the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
@@ -430,6 +436,11 @@ Candidates with no seat, each with its place:
   - Atomic makes two commits and no transaction. A control of an interruption between them
     needs a reachable checkpoint first. The controls of a timeout under a mask and of one
     registration's cleanup are missing too;
+- the exit column of the truth lane's runner. It compares the Lean machine's fork exit with
+  rc.112's sync exit whenever the sync entry settles. Semaphore's cases P1 and P4 are the
+  first programs whose two entries settle on two exits, on both faces. They stay out of the
+  lane, with their evidence filed (`research/2026-10-06-seat-semw-evidence/`). A slice
+  changes the rule and adds both programs again;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6).
