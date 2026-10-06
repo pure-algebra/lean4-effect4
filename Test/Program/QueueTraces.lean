@@ -18,10 +18,10 @@ the promised property.
 | 4 | a blocked offerer, cancelled before its message is accepted | `queue-expansion-agrees` |
 | 5 | a blocked offerer, cancelled after its message is accepted | `queue-expansion-agrees` |
 | 6 | the signalling fiber exits before the dispatch | `posted-wake-profile-agrees` |
-| 7 | the receiver's continuation that grows | the budget of `driver-continuation-split` |
+| 7 | the receiver's continuation that grows | `embedded-budget-sufficient` |
 
-The design names the last one `embedded-budget-sufficient`. The registry holds it inside the
-open part `driver-continuation-split`, with decisions row 226.
+The last part is decisions row 226's, under requirement R12: the embedded budget covers the
+registration, the cleanup and the selected delivery, and a cut inside the operation is excluded.
 
 **A fault is a variant of the Queue's part of an operation** (`Variant`): another delivery of a
 signal, a withdrawal that posts nothing, no withdrawal, one hint for every round, or a
@@ -629,8 +629,9 @@ def measured : List (Nat × Nat) :=
 -- At the measured fuel the flush ends the root. The empty continuation is the control: 49.
 #guard measured.all fun (n, least) => afterFlush (grows n) least == some (true, true)
 -- At one less it does not. And five more flushes at the ample fuel do not end it either: the
--- cut inside the dispatch lost the work that remained, and a later flush is no resumption
--- (decisions row 226).
+-- cut inside the dispatch lost the work that remained, and a later flush is no resumption.
+-- Decisions row 226 excludes that cut from the first profile, so this is the excluded case,
+-- and no fault of the wrapper.
 #guard measured.all fun (n, least) => afterFlush (grows n) (least - 1) == some (false, false)
 -- The measured fuel grows with the continuation: three for each step, at these lengths.
 #guard measured.all fun (n, least) => least == 49 + 3 * n
