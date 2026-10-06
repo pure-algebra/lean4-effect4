@@ -615,8 +615,8 @@ Open at this landing:
     and their scope laws. A fixed name around a caller's term can capture a variable:
     `Test.Dogfood.Scenario.Atomic.note` is such a helper, and no present caller meets it. It
     is landed (`0a10ca6d` and `8e9b9736`, 2026-10-06). `Authoring.performTermWith` mints the
-    name, and each of the eight rows of `Ref` that carry a term has a second generated
-    wrapper with the suffix `With`: `Ref.modifyWith cell fun current => …`.
+    name. Each of the eight rows of `Ref` that carry a term has a second generated wrapper,
+    with the suffix `With`: `Ref.modifyWith cell fun current => …`.
     `selectOptionWith` and `onExitWith` are the same form for an option's payload and for an
     exit. Each has its scope law, and `Test/Program/AuthoringContract.lean` holds the
     controls. The checks were narrow builds, and the default build runs at the next merge;
