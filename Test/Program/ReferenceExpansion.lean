@@ -256,20 +256,15 @@ example : ∀ {Op : Type} {sig : Signature Op} {program : Eff Op} {ty : EffTy},
 
 /-! ## The pinned outputs
 
-Each statement's axioms, and its standing as the plan derives it from the proof. The top
-statement was a planned goal, and it is proved in place with its statement unchanged. The counts
-are of this battery's tree, which holds no step of a proof: the steps are in the law graph. -/
+Each statement's axioms, and the four statements' standing as the plan derives it from the
+proofs. The top statement was a planned goal, and it is proved in place with its statement
+unchanged. The plan reads its edges from the proof terms: the equation rests on the top theorem,
+and each consumer rests on the equation. The counts are of this battery's tree, which holds no
+step of a proof: the steps are in the law graph. -/
 
 /-- info: 'Effect4.Program.expanded_refs_nil_of_wf' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms expanded_refs_nil_of_wf
-
-/--
-info: Effect4.Program.expanded_refs_nil_of_wf: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status expanded_refs_nil_of_wf
 
 /-- info: 'Effect4.Program.typeOfProgram_eq_if_refsWF' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
@@ -279,22 +274,19 @@ next goals: 0
 #guard_msgs in
 #print axioms typeOfProgram_expandRefs
 
-/--
-info: Effect4.Program.typeOfProgram_expandRefs: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status typeOfProgram_expandRefs
-
 /-- info: 'Effect4.Program.checkTypedProgram_of_hasTy' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms checkTypedProgram_of_hasTy
 
 /--
-info: Effect4.Program.checkTypedProgram_of_hasTy: proved; nearest []; 0 lemmas, 0 definitions
+info: Effect4.Program.expanded_refs_nil_of_wf: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Program.typeOfProgram_eq_if_refsWF: proved; nearest [Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
+Effect4.Program.typeOfProgram_expandRefs: proved; nearest [Effect4.Program.typeOfProgram_eq_if_refsWF, Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
+Effect4.Program.checkTypedProgram_of_hasTy: proved; nearest [Effect4.Program.typeOfProgram_eq_if_refsWF]; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
-#plan_status checkTypedProgram_of_hasTy
+#plan_status expanded_refs_nil_of_wf typeOfProgram_eq_if_refsWF typeOfProgram_expandRefs
+  checkTypedProgram_of_hasTy
 
 end Test.Program.ReferenceExpansion
