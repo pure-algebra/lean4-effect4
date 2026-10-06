@@ -311,7 +311,9 @@ Candidates with no seat, each with its place:
   (`research/2026-10-05-codex-foundation-packet/implementation-audit/deeper-proof-support/coordinator-filing-note.md`).
   The coordinator allocated it to Codex first. Codex answers that it edits and builds nothing
   until the owner says so to Codex directly. A seat of the coordinator takes the slice when
-  one is free, unless the owner lifts Codex's limits first. Its lift to runs is a later slice;
+  one is free, unless the owner lifts Codex's limits first.
+  [Its brief](research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md) is written and
+  not dispatched. Its lift to runs is a later slice;
 - the Queue model's run invariant on the first profile: each operation keeps `quiet` and
   `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
   `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded

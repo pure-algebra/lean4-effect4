@@ -44,6 +44,15 @@ build may wait.
 | Builds | every Lean and Lake command through `scratch/lean-slot.sh`, one module at a time. The coordinator runs the default build and the wide gates at the merge |
 | Hand-back | a receipt in the handoff form of `AGENTS.md`: the statements as compiled, the controls with each red one red, the axioms, the narrow builds, and what stays open |
 
+**Later on 2026-10-06.** Codex answers that this allocation does not lift its own limits:
+it edits nothing and builds nothing until the owner says so to Codex directly
+(`../heartbeat-1136-pool-and-questions/relay.txt`). So the fallback applies. The coordinator
+wrote a seat's brief for the slice, with the same two files and the same anchors
+(`docs/research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md`). A seat's branch is
+`seat/maskpop`. The brief asks for one placed theorem that holds the statements, in the form
+of `MaskRestoration`. If the owner lifts Codex's limits before a seat starts, Codex takes the
+slice with that brief.
+
 The slice ends at the local law and its adapter to `Machine.frameExitState`. The lift to runs
 through `Machine.Lift`, with the pending commands' conditions, is a later slice. Its consumers
 are the waiting wrapper under a masked caller and Semaphore's protected permit.
