@@ -41,10 +41,6 @@ must be reported
 `catchAll false`, the same match closed by `| _ =>` must be reported `catchAll true`, a
 match on `Term` must not be reported at all, and a private definition must be reported under the
 name it was written with, marked `[private]`.
-
-One control is for the commands' syntax. The clause `under Some.Prefix` of `#traversal_census`,
-`#traversal_class` and `#exhaustive_gate` makes `under` a keyword in that place only. A
-hypothesis named `under` elaborates below, beside a command that uses the clause.
 -/
 
 /--
@@ -62,11 +58,6 @@ info: #traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under T
 -/
 #guard_msgs in
 #traversal_census Effect4.Program.Ty under Test.Audit.TraversalFixture
-
--- The word `under` is a keyword of the three commands and of no other place (`&" under "`,
--- 2026-10-06). This file's environment holds the three syntaxes, and a hypothesis may have the
--- name. With the token reserved, this line did not parse: `unexpected token 'under'`.
-example (under : True) : True := under
 
 /--
 info: #traversal_class Effect4.Program.Ty under Effect4:

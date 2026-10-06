@@ -14,6 +14,14 @@ The red controls scan a fixture. Against an empty baseline, its four uses are re
 and so is the command the scan cannot parse (a tactic local to the fixture): an unread command is
 a gap the baseline must name. Neither the comment nor the `try … catch` of `do` notation is
 counted. Against a baseline with one entry too many, the extra entry is refused as stale.
+
+One control is for a word. `#exhaustive_gate`, `#traversal_census` and `#traversal_class` write
+a clause `under Some.Prefix`, and this module's environment holds the three syntaxes. The word
+is a keyword in that place only (`&" under "`), so the scan reads a theorem with a hypothesis
+named `under`: against the empty baseline it refuses the `first` inside the proof, by kind. With
+the word a reserved token, the scan could not parse such a theorem. It reported the theorem as
+unread, and it counted no use inside it (seat QTYPES's receipt of 2026-10-05, section 10,
+item 5).
 -/
 
 /--
@@ -33,5 +41,12 @@ stale entry: simp_all in plain (Test/fixtures/proof-style/red/Sample.lean): 0 < 
 -/
 #guard_msgs (error) in
 #proof_style_check "Test/fixtures/proof-style/red" "Test/fixtures/proof-style/red-stale.tsv"
+
+/--
+error: proof style: 1 finding(s)
+new use: first in named (Test/fixtures/proof-style/under/Sample.lean, lines [6]); 1 > 0 recorded
+-/
+#guard_msgs (error) in
+#proof_style_check "Test/fixtures/proof-style/under" "Test/fixtures/proof-style/red-baseline.tsv"
 
 #proof_style_check "src/Effect4" "Test/fixtures/proof-style/baseline.tsv"
