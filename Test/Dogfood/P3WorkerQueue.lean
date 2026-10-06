@@ -48,17 +48,19 @@ append is rc.112's `Ref.update(log, lines => [...lines, line])`: with the cell a
 `ReadonlyArray<string>` it builds and runs to its lines, and at `Ref<never[]>` the checker refuses
 the term's result (`resultNotSubtype`). rc.112's `finish`, one `Ref.modify` that counts and decides
 "last" in one store step, builds and answers a boolean over a number cell. Neither term is a name's
-image, so the printer refuses both rows by name until the state plan's T5. The measured pool keeps
-its counters at `n => succ(n)`, the image of `incr`, so its stage does not move.
+image. Since the state plan's T5, part A, the faces print each as a function of the cell's value,
+so both rows print (section 6). The measured pool keeps its counters at `n => succ(n)`, the image
+of `incr`, so its stage does not move.
 
 **What the language refuses** (section 6): the log's append at `Ref<never[]>`
-(`resultNotSubtype`); the gate `Deferred<void, never>` in TypeScript (the printer, by name); the
-forms `forEach` and `catchTag`. A queue has no spelling inside a program: DI-11 rules it a composite
+(`resultNotSubtype`); the forms `forEach` and `catchTag`. The gate `Deferred<void, never>` prints
+and reads back since the state plan's T5, part B. A queue has no spelling inside a program: DI-11 rules it a composite
 over `Ref`, `Deferred` and a wait list. When the scope interrupts a worker parked on the host's
 `take`, the session retires the call; rc.112's take is in-process.
 
-**Waits on:** R4, the faces' part (the log's element type as a type argument, the gate's printing,
-and a binder term printed as a lambda: the state plan's T5); R10 with DI-11 (the queue composite)
+**Waits on:** R4, the faces' part (the log's element type as a type argument, `Ref.make<A>`: a
+slice of its own after the Queue's path; the gate's printing and a binder term printed as a
+function are landed, the state plan's T5); R10 with DI-11 (the queue composite)
 and DI-89 (`forEach`); R3 with row 130 (`catchTag`'s residual over records); row 131 (the log lines
 interpolate numbers); R11 (release on interruption, the whole run). The slice of row 204 that
 moves it next: queues.

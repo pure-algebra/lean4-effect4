@@ -32,9 +32,10 @@ finalizer, and a refill on the logical clock.
   controls are the separate read and write of today, the store update erased while the answer
   stays, a finalizer that takes the deposit back, a finalizer that notes twice, and the answer
   and the state types swapped.
-* **Lowered runs.** The program's rows carry binder terms that no name images, so the printer
-  refuses it by name until the faces of a binder term land (the state plan's T5). The host run
-  waits. The engine run is a fixture of `Test/Dogfood/Scenario/Tape.lean`.
+* **Lowered runs.** The program's rows carry binder terms that no name images. The program
+  prints and reads back since the state plan's T5, part A (`Test/Dogfood/Scenario/Faces.lean`).
+  The host run waits on the keyed lane. The engine run is a fixture of
+  `Test/Dogfood/Scenario/Tape.lean`.
 
 One control of the brief is not here: a cleanup replayed under one registration. The cleanup
 log counts writes by identity. It does not count a finalizer's invocations, so no run of this

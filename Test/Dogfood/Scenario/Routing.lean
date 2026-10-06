@@ -22,8 +22,8 @@ host answer carries.
   successful reply fits its row (`submit_success_prepared_fits`, a theorem of the law graph). It
   has controls, and the claim's proof does not use it.
 * **Controls.** `controls`: for each entry a green control and at least one red control.
-* **Lowered runs.** The program prints and reads back, so the host run can use the keyed lane. It
-  waits on the coordinator's word that the faces of a binder term are merged.
+* **Lowered runs.** The program prints and reads back (`Test/Dogfood/Scenario/Faces.lean`). The
+  host run waits on the keyed lane.
 
 Two findings stand in the controls. The repository row's error column is a pair of strings, so a
 host failure that wears a business tag is routed as that business failure. With the exact column,

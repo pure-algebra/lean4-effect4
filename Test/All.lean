@@ -237,6 +237,7 @@ import Test.Dogfood.Scenario.Timeout
 import Test.Dogfood.Scenario.Tape
 import Test.Dogfood.Scenario.Lowered
 import Test.Dogfood.Scenario.Gate
+import Test.Dogfood.Scenario.Faces
 import Test.Program.ScopedOpContract
 
 /-!

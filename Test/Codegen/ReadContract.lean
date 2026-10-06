@@ -823,12 +823,15 @@ one comes back unchanged, so on this corpus `readable` is exact, not merely suff
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   !Effect4.Api.readable p || decide (Effect4.Api.roundTrip p = .ok p)
 
-/-- Whether a program holds a loop whose cursor is annotated. Its image carries a type, and no
-reader of types exists by design (B19), so the table reader refuses it by name. -/
+/-- Whether a program holds a loop whose cursor is annotated. Its image carries a type. The
+reader reads it by the checked type reader since the state plan's T5, part B, and refuses by
+name a type with no such reading (`Test/Codegen/TermRows.lean`, section 8). -/
 private def holdsAnnotatedLoop (p : Eff NativeOp) : Bool :=
   foldMap_eff false (· || ·) p (f_eff := fun | .iterate (some _) .. => true | _ => false)
 
--- What the reader gives back prints as the program did; it refuses only an annotated loop.
+-- What the reader gives back prints as the program did; it refuses at most an annotated loop.
+-- The seeded corpus holds no annotated loop, so the reader refuses none of its printings.
+#guard (Test.Program.Gen.corpus 400 4).all fun p => !holdsAnnotatedLoop p
 #guard (Test.Program.Gen.corpus 400 4).all fun p =>
   match Effect4.Api.print p, Effect4.Api.roundTrip p with
   | .ok x, .ok q => (Effect4.Api.print q).toOption == some x

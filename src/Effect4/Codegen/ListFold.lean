@@ -8,8 +8,10 @@ import Effect4.Program.Fold
 A list fold (decisions row 228) prints as a call of one prelude function,
 `fold(list, init, (aN, aM) => body)`. The two parameters are the binders at the fold's level `n`
 and at `n + 1`, so the image needs the environment's length. A stated accumulator type prints as
-the call's type argument. It is printed and not read, as a loop's cursor annotation is: no reader
-of types exists (B19).
+the call's type argument. It is printed and not read (B19). A loop's stated cursor type and an
+operation's type arguments are read, by the checked type reader (`Classes.readTyChecked`, the
+state plan's T5, part B); the fold's stated type is the one place that reader does not serve
+yet.
 
 `Binders` is the part a term that binds shares: the function `(a{n + b}, …) => body` over the
 binder slots `bs` above level `n`, with unannotated parameters, and its exact reader. The fold

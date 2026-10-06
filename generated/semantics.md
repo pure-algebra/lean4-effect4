@@ -2570,7 +2570,7 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `read_print` | proved | — | `readTerm_printTerm` | 345 | 551 |
+| `read_print` | proved | — | `readTerm_printTerm` | 346 | 551 |
 | `read_exact` | proved | — | — | 249 | 499 |
 | `run_eq_meaning` | proved | — | — | 310 | 899 |
 | `loopAgreement` | proved | — | — | 339 | 910 |
@@ -3096,7 +3096,7 @@ The rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/
 
 | Program | Admitted | Answer | Printed | Read back | Refused parts | Waits on |
 | --- | --- | --- | --- | --- | --- | --- |
-| `P1HttpCache` | yes | differs | yes | no | a Quote record in the key-value cache (typing: requestNotSubtype) | R3, R6, R7, R10 |
+| `P1HttpCache` | yes | differs | yes | yes | a Quote record in the key-value cache (typing: requestNotSubtype) | R3, R6, R7, R10 |
 | `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); a number in a template string (typing: term) | R3, R5, R7, R10, R13 |
 | `P3WorkerQueue` | yes | differs | yes | yes | the log's append at Ref<never[]> (typing: resultNotSubtype) | R3, R4, R10, R11 |
 | `P4RateLimiter` | yes | rc112 | yes | yes | — | R4, R10 |

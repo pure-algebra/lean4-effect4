@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test"
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { Result } from "effect"
 import type { Eff, Term, Ty } from "../eff.gen.ts"
 import { readTypeScript, readTypeText } from "../read.ts"
+import { encodeProgram } from "../wire.gen.ts"
 
 const nat = (value: number): Term => ({ _tag: "lit", value: { _tag: "nat", value } })
 const v = (index: number): Term => ({ _tag: "var", index })
@@ -123,6 +127,70 @@ describe("an operation's type arguments, read from the call's head", () => {
     for (const text of ["Ref.Ref<number>", "unknown", "[number, number]", "number | number", "number; type U = string"]) {
       expect(readTypeText(text)).toBeUndefined()
     }
+  })
+})
+
+/** The loop image `iterate` prints, with or without its cursor's stated type (Lean
+ * `Templates.iterateTpl`; `Test/Codegen/TermRows.lean`, section 8, pins the annotated text). */
+const loopText = (annotation: string): string =>
+  `Effect.suspend(() => {\n  let a0${annotation} = none()\n  return Effect.map(Effect.whileLoop({\n` +
+  "    while: () => not(isSome(a0)),\n    body: () => Effect.succeed(some(1)),\n" +
+  "    step: (a1) => {\n      a0 = a1\n    },\n  }), () => a0)\n})"
+const loopAt = (cursorTy: Ty | null): Eff => ({
+  _tag: "iterate", cursorTy, initial: app("none"), test: app("not", app("isSome", v(0))),
+  step: v(1), result: v(0), body: { _tag: "succeed", value: app("some", nat(1)) },
+})
+const sha256 = (data: string | Uint8Array): string => createHash("sha256").update(data).digest("hex")
+
+/** Finite controls for a loop's stated cursor type (the state plan's T5, part B): the reader
+ * reads it by the checked type reader, where it refused every annotated loop before. */
+describe("a loop's stated cursor type, read by the checked type reader", () => {
+  test("the stated type is the loop's cursor type, and no stated type is none", () => {
+    expect(read(loopText(": Option.Option<number>"))).toEqual(loopAt({ _tag: "option", inner: natTy }))
+    expect(read(loopText(""))).toEqual(loopAt(null))
+  })
+  test("a stated type with no reading is refused where the declaration stands", () => {
+    // Lean answers `annotation "local const"`; here the declaration never reaches the fragment.
+    for (const type of ["Ref.Ref<number>", "unknown", "Short", "[number, number]"]) {
+      expect(read(loopText(`: ${type}`))).toEqual({ _tag: "node", type: "VariableDeclaration", where: "declarator" })
+    }
+  })
+  test("a yielded constant states no type", () => {
+    expect(Result.isFailure(readTypeScript("Effect.gen(function* () {\n  const a0: number = yield* Effect.succeed(1)\n  return a0\n})"))).toBe(true)
+  })
+})
+
+/** The Queue program `r4` (`Test/Codegen/TermRows.lean`, `Steps.r4`: capacity one, an offer that
+ * waits, two takes), read from the module Lean prints. The fixture is that module's text. Lean
+ * pins the SHA-256 of the text and of the program's canonical bytes; this test holds the fixture
+ * to the first and what the reader reads to the second, so the reader reads back the program
+ * Lean printed. The module holds eight `Deferred.make` calls with their type arguments and two
+ * take loops with a stated cursor type. A finite control on one program: no target typing and no
+ * host run is claimed (tsgo 7 refuses the module's take step, the registered literal
+ * difference). */
+describe("the Queue program r4, read from its printed module", () => {
+  const text = readFileSync(resolve(import.meta.dir, "fixtures/queue-r4.module.txt"), "utf8")
+  test("the fixture is the module Lean prints", () => {
+    expect(text.length).toBe(33585)
+    expect(sha256(text)).toBe("a337704b7826539b3a7837475f97f030e000a929aa1e8ed57a97da3ea9cac5b7")
+    expect(text.split("Deferred.make<void, never>()").length).toBe(7)
+    expect(text.split("Deferred.make<boolean, never>()").length).toBe(3)
+    expect(text.split("Option.Option<number> = none()").length).toBe(3)
+  })
+  test("it reads back to the program Lean printed it from", () => {
+    const parsed = readTypeScript(text)
+    expect(Result.isSuccess(parsed)).toBe(true)
+    if (!Result.isSuccess(parsed)) return
+    expect(sha256(encodeProgram(parsed.success))).toBe("5b21ec39fb424b507cc7f21478f46431911da74e7dd92c46fa214e50afcdb53d")
+  })
+  test("red controls: a bare Deferred.make, and a cursor type with no reading", () => {
+    const bare = readTypeScript(text.replace("Deferred.make<boolean, never>()", "Deferred.make()"))
+    expect(Result.isFailure(bare) ? bare.failure : undefined).toEqual({ _tag: "arity", head: "Deferred.make" })
+    expect(Result.isFailure(readTypeScript(text.replace("let a4: Option.Option<number> = none()", "let a4: unknown = none()")))).toBe(true)
+    // another readable type is another program
+    const other = readTypeScript(text.replace("let a4: Option.Option<number> = none()", "let a4: Option.Option<boolean> = none()"))
+    expect(Result.isSuccess(other)).toBe(true)
+    if (Result.isSuccess(other)) expect(sha256(encodeProgram(other.success))).not.toBe("5b21ec39fb424b507cc7f21478f46431911da74e7dd92c46fa214e50afcdb53d")
   })
 })
 

@@ -402,8 +402,9 @@ local macro "printed% " program:term:max : term =>
 -- A term position prints and reads back.
 #guard Api.roundTrip pFold == .ok pFold
 #guard Api.roundTrip pFoldCapture == .ok pFoldCapture
--- A stated type prints as the call's type argument, and the reader refuses it by name: no
--- reader of types exists (B19).
+-- A stated type prints as the call's type argument, and the reader refuses it by name (B19).
+-- The checked type reader of the state plan's T5, part B, reads an operation's type arguments
+-- and a loop's stated cursor type; the fold's stated type is the place it does not serve yet.
 #guard (printed% pFoldNested).any fun text =>
   (text.splitOn "fold<ReadonlyArray<readonly [number, number]>>(a0, nil(), (a1, a2) => fold(a2, a1, (a3, a4) =>").length == 2
 #guard match Api.roundTrip pFoldNested with

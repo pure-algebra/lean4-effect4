@@ -289,7 +289,7 @@ theorem lookup_of_captured : ∀ (σ : Subst) (i : Nat) (a : Arg) (h : (i, a) �
 /-! ## The leaves: what a leaf reader accepts prints back to what it read -/
 
 attribute [aesop safe forward] readTerm_exact readCause_exact readLiteral_exact readKey_exact
-  readForkOptions_exact
+  readForkOptions_exact Effect4.Codegen.Classes.readTyChecked_exact
 
 set_option maxRecDepth 4096 in
 /-- A leaf read has the sort it was read at, and prints back to what was read at the depth it

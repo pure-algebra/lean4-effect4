@@ -25,8 +25,9 @@ answers by key.
   green control of the cleanup clause is the lowest-fiber schedule of today: the driver of
   `P3WorkerQueue.lean` plays it on the same program, and the journals agree row for row.
 * **Lowered runs.** The crew's logs are `Ref.update` rows whose binder terms no name images. The
-  printer refuses the program by name until the faces of a binder term land (the state plan's
-  T5), so the host run waits. `Observation.machine` is the machine's part of the observation.
+  program prints and reads back since the state plan's T5, part A
+  (`Test/Dogfood/Scenario/Faces.lean`). The host run waits on the keyed lane.
+  `Observation.machine` is the machine's part of the observation.
 
 Each run is a finite probe: one script on the Lean machine. The claim's standing is derived from
 its proof: `#plan_status workers` prints it.

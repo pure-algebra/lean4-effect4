@@ -7,16 +7,17 @@ import TypeScript.Render
 /-!
 # The faces of the Queue's steps: what prints and reads back today (decisions row 255)
 
-Seat T5's part A and the first step of its part B are in the tree. An operation's binder term
-prints as a function of the cell's current value, `Ref.modify(cell, (s) => …)`, and reads back.
-`Deferred.make`'s type arguments print from the operation and read back. A loop that states its
-cursor's type prints, and the module reader refuses it (DI-91): seat T5's next step. So:
+Seat T5's part A and the first two steps of its part B are in the tree. An operation's binder
+term prints as a function of the cell's current value, `Ref.modify(cell, (s) => …)`, and reads
+back. `Deferred.make`'s type arguments print from the operation and read back. A loop's stated
+cursor type reads back through the checked type reader, on the readable types
+(`Classes.ReadableTy`, DI-91). So:
 
-- **Each scenario prints as a module, and the reader refuses it by name.** Each of the eight
-  scenarios of `Test/Program/QueueScenarios.lean` takes, and the take's loop states its
-  cursor's type. The reader's refusal is `annotation "local const"`. Both answers are pinned.
-- **A program that only offers prints and reads back**: it makes two `Deferred` handles and
-  states no cursor type.
+- **Each scenario prints as a module and reads back.** Each of the eight scenarios of
+  `Test/Program/QueueScenarios.lean` takes, and the take's loop states its cursor's type. The
+  module reader gives the built program back. Both answers are pinned.
+- **A program that only takes prints and reads back, and so does a program that only offers.**
+  The second makes two `Deferred` handles and states no cursor type.
 - **Each of the six step terms prints and reads back alone**: one `Ref.modify` over the step,
   on a cell and handles that the node receives as bound values. The size step is a term over
   the value of a `Ref.get`.
@@ -30,8 +31,9 @@ Placement. Finite controls of `read_print` and `read_exact` (R8's top nodes,
 `src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on the
 Queue's step terms. Every guard is one program. None states target typing or a host run. **A
 printed step is not type-checked under tsgo here**: on the target, `pair` and `tuple` keep a
-literal's type, and the take step's two arms then differ. The owner has not ruled on that
-finding, so the check waits. The rendered bytes stay inside each guard.
+literal's type, and the take step's two arms then differ. The repair of that difference is
+decided and not landed (decisions row 256), so the check waits. The rendered bytes stay inside
+each guard.
 -/
 
 set_option autoImplicit false
@@ -90,7 +92,16 @@ def readVerdict (src : Src NativeOp) : String :=
       | .error (.annotation what) => "refused: annotation " ++ what
       | .error _ => "refused"
 
-/-! ## The scenarios' modules: printed, and refused by the reader by name -/
+/-- Whether the printed module of one source reads back as the built program of another. -/
+def readsAs (printed other : Src NativeOp) : Bool :=
+  match Effect4.Api.Author.build (mk printed), Effect4.Api.Author.build (mk other) with
+  | .ok a, .ok b =>
+    match Effect4.Api.printModule "main" a.program a.table with
+    | some m => decide (Effect4.Api.readModule m a.table = .ok b.program)
+    | none => false
+  | _, _ => false
+
+/-! ## The scenarios' modules: printed, and read back -/
 
 open Test.Program.QueueScenarios (offer take) in
 /-- One offer into room, on a cell that the program makes. -/
@@ -108,14 +119,16 @@ def takeOnly : Src NativeOp := eff do
 
 -- Each scenario's module prints: `Deferred.make`'s type arguments print from the operation.
 #guard [r1, r2, r3, r4, r5, r6, r7, r8].map printVerdict = List.replicate 8 "printed"
--- The module reader refuses each, by name: the take's loop states its cursor's type, which
--- prints as an annotated local constant (DI-91).
-#guard [r1, r2, r3, r4, r5, r6, r7, r8].map readVerdict =
-  List.replicate 8 "refused: annotation local const"
--- The refusal is the take's: a program that only takes has it, and a program that only offers
--- prints and reads back.
-#guard printVerdict takeOnly = "printed" && readVerdict takeOnly = "refused: annotation local const"
+-- Each reads back as the built program: the take's loop states its cursor's type, and the
+-- checked type reader reads it (DI-91; the state plan's T5, part B). Before that step the
+-- module reader refused each by name, `annotation "local const"`.
+#guard [r1, r2, r3, r4, r5, r6, r7, r8].map readVerdict = List.replicate 8 "reads back"
+-- A program that only takes reads back, and so does a program that only offers.
+#guard printVerdict takeOnly = "printed" && readVerdict takeOnly = "reads back"
 #guard printVerdict offerOnly = "printed" && readVerdict offerOnly = "reads back"
+-- Red control of the comparison: a scenario's module reads as that scenario's program, and as
+-- no other scenario's.
+#guard readsAs r1 r1 && readsAs r4 r4 && !readsAs r1 r4 && !readsAs r4 r1
 -- The smallest program that makes a request's identity prints and reads back.
 #guard printVerdict (bindName "id" (Deferred.make .unit .never) fun _ => succeed (nat 1)) =
   "printed"

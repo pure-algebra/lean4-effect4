@@ -279,8 +279,10 @@ theorem printArg_ok_leaf {sig : Signature Op} {d : Nat} {daemon : Bool}
       (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = argKind v) ∧
       (argPrints v = false → x = none) := by
   have hl := leafReadable_of_argReadable hleaf hr
+  -- a readable stated type has a printed form (`ofTy_of_readable`)
   cases v <;> aesop (add norm simp [ArgF.fold, printArg, argPrints, argKind, sortKind, argSortOf, Arg.kind,
-    leafReadable, keyReadable, printKey, bind, Except.bind, pure, Except.pure], safe cases Decision)
+    leafReadable, keyReadable, printKey, bind, Except.bind, pure, Except.pure], safe cases Decision,
+    safe forward Effect4.Codegen.Classes.ofTy_of_readable)
 
 /-- A readable argument prints to its capture kind when `argPrints`, and to none otherwise. -/
 theorem printArg_ok {sig : Signature Op} {d : Nat} {daemon : Bool}

@@ -5,9 +5,10 @@ import Effect4.Laws.Codegen.Classes
 
 The faces print a program type at three places: the type arguments an operation carries on its
 call's head (`Deferred.make<A, E>()`), a loop's stated cursor type, and a list fold's stated
-accumulator type. One reader reads such a type back: `Classes.readTyChecked`, the class reader's
-field-type reader (`Classes.readTy`) kept only where the type printer prints its answer as the
-spelling it read (`Types.ofTy`).
+accumulator type. One reader reads such a type back, at the first two places:
+`Classes.readTyChecked`, the class reader's field-type reader (`Classes.readTy`) kept only
+where the type printer prints its answer as the spelling it read (`Types.ofTy`). The fold's
+stated type is printed and not read yet.
 
 The reader is exact on what it accepts (`readTyChecked_exact`). The type printer is not
 injective, so the retraction holds on a domain, `Classes.ReadableTy`, and nowhere else

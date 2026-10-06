@@ -29,9 +29,10 @@ finalizer.
   controls are a failure that must not retry, a client that retries every failure, a reply after
   the timeout, a reply application after the timeout, the first attempt's reply under the second
   attempt's key, and a finalizer that resets the count.
-* **Lowered runs.** The attempt's cells are `Ref.update` rows whose binder terms no name images.
-  The printer refuses the program by name until the faces of a binder term land (the state
-  plan's T5), so the host run waits. The engine run is a fixture of
+* **Lowered runs.** The attempt's cells are `Ref.update` rows whose binder terms no name images,
+  and the retry loop states its cursor's type. The program prints since the state plan's T5,
+  part A, and reads back since part B's second step (`Test/Dogfood/Scenario/Faces.lean`). The
+  host run waits on the keyed lane. The engine run is a fixture of
   `Test/Dogfood/Scenario/Tape.lean`.
 
 One case waits and has no control here: a timer that fires while the attempt is inside a masked

@@ -1,4 +1,5 @@
 import Test.Dogfood.P4RateLimiter
+import Test.Dogfood.Scenario.Timeout
 import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
@@ -35,7 +36,10 @@ Part B of the slice adds the operation's type arguments (the coordinator's adden
 6. an operation's types as program annotations (decisions row 212): raw formation, the integer
    scan and the module's class table reach them;
 7. a fixture alphabet whose one operation carries a binder term and a type argument: the two
-   updates of a reader are independent for any lawful signature (`LawfulTypeArgs`).
+   updates of a reader are independent for any lawful signature (`LawfulTypeArgs`);
+8. a loop's stated cursor type, read back by the same checked type reader. With it the Queue's
+   programs read back as modules, `r4` among them, in Lean and in `ts/eff/read.ts`
+   (`ts/eff/test/term-rows.test.ts` reads the module that this battery pins by its digest).
 
 Every guard is a finite check on one program. None states target typing or a host run: the
 TypeScript reader's twin is `ts/eff/test/term-rows.test.ts`, and the truth lane runs printed
@@ -552,7 +556,9 @@ operation and print each through the type printer, so each program prints as a m
 
 #guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map printVerdict =
   ["printed", "printed", "printed", "printed"]
--- Each module's text, by its length in characters and the SHA-256 of its bytes.
+-- Each module's text, by its length in characters and the SHA-256 of its bytes. `r4`'s text is
+-- the fixture `ts/eff/test/fixtures/queue-r4.module.txt`, which the TypeScript reader's test
+-- holds to the same digest.
 #guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map (fun src =>
     (Effect4.Api.Author.build (mk src)).toOption.bind fun b =>
       (Effect4.Api.printModule "main" b.program b.table).map fun m =>
@@ -571,10 +577,21 @@ operation and print each through the type printer, so each program prints as a m
     (text.splitOn "Deferred.make<boolean, never>()").length == 3 &&
     (text.splitOn "Option.Option<number> = none()").length == 3 &&
     (text.splitOn "Deferred.make()").length == 1
--- The modules do not read back yet: each take loop states its cursor's type, which is printed
--- and not read (`ReadRefusal.annotation "local const"`). The next step of part B reads it.
+-- Each module reads back to its program. Each take loop states its cursor's type, which the
+-- reader reads by the checked type reader (section 8). Before that step the reader refused each
+-- module at the loop's `let`, by name (`ReadRefusal.annotation "local const"`).
 #guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map readsBack =
-  [false, false, false, false]
+  [true, true, true, true]
+-- Each program's canonical bytes, by their SHA-256. A reader that reads the printed module to
+-- these bytes read the program back: the TypeScript reader's test holds its reading of `r4`'s
+-- module to the fourth digest.
+#guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map (fun src =>
+    (Effect4.Api.Author.build (mk src)).toOption.map fun b =>
+      (Effect4.Store.sha256 (Effect4.Api.bytesOf b.program)).hex) =
+  [ some "c7f5906b1d9248b4302203d7e5d9a67ed1fd1789551e95314af3ce6e0c6e2b09"
+  , some "c518eff3441c3c2074143e217e7af27a80d4930be2aab17b205964053d0d19a3"
+  , some "4f22c0bb71884dec589c09fa11b5a0bf43e7e18ec8ceeea6b5288d3e11e31c23"
+  , some "5b21ec39fb424b507cc7f21478f46431911da74e7dd92c46fa214e50afcdb53d" ]
 -- Green control: a step alone, over a cell of the Queue's first state and no `Deferred`, prints
 -- as a module and reads back.
 #guard printVerdict (bindName "q" (Ref.make Skeleton.state0) fun q =>
@@ -1043,6 +1060,58 @@ def castNot : Eff BothOp := .perform (.cast .bool (.app "not" (.cons (.var 1) .n
 #guard readEff [] bothSig bothSpell 1 (.call (.ident "Cell.peek") [.ident "a0"]) =
   .ok (.perform .peek (.var 0))
 
+/-! ## 8. A loop's stated cursor type (part B)
+
+`iterate` may state its cursor's type (DI-91), and the faces print it on the loop's `let`. Until
+part B no reader read it: an annotated loop was printed and refused at reading. The reader now
+reads the stated type through the checked type reader (`readLeaf`, `Classes.readTyChecked`), so
+the loop reads back on the readable types (`Classes.ReadableTy`). -/
+
+/-- A loop whose cursor starts absent and takes the body's answer, at a stated cursor type or
+at none. -/
+def loopAt (cursorTy : Option Ty) : Eff NativeOp :=
+  .iterate cursorTy (.app "none" .nil)
+    (.app "not" (.cons (.app "isSome" (.cons (.var 0) .nil)) .nil))
+    (.var 1) (.var 0) (.succeed (.app "some" (.cons (.lit (.nat 1)) .nil)))
+
+-- The printed text at the Queue's cursor type. `ts/eff/test/term-rows.test.ts` reads the same
+-- text.
+#guard (print nativeSignature 0 (loopAt (some (.option .nat)))).map (expr house0 0) =
+  .ok ("Effect.suspend(() => {\n  let a0: Option.Option<number> = none()\n"
+    ++ "  return Effect.map(Effect.whileLoop({\n"
+    ++ "    while: () => not(isSome(a0)),\n    body: () => Effect.succeed(some(1)),\n"
+    ++ "    step: (a1) => {\n      a0 = a1\n    },\n  }), () => a0)\n})")
+-- It reads back to itself, and so does the loop that states no type.
+#guard roundTrip nativeSignature nativeSpell 0 (loopAt (some (.option .nat))) =
+  .ok (loopAt (some (.option .nat)))
+#guard readable nativeSignature nativeSpell 0 (loopAt (some (.option .nat)))
+#guard roundTrip nativeSignature nativeSpell 0 (loopAt none) = .ok (loopAt none)
+-- Other readable cursor types read back too.
+#guard [Ty.option .bool, .prod .nat (.option .string), .union .nat .string,
+    .list (.option .unit), .record [("a", false, .nat)]].all fun ty =>
+  readable nativeSignature nativeSpell 0 (loopAt (some ty))
+-- Red controls. A collision reads back at the reader's choice for the spelling, another
+-- program: the loop is outside the readable domain.
+#guard roundTrip nativeSignature nativeSpell 0 (loopAt (some (.option .int))) =
+  .ok (loopAt (some (.option .nat)))
+#guard readable nativeSignature nativeSpell 0 (loopAt (some (.option .int))) = false
+-- A spelling with no reading is refused by name, as every annotated loop was before part B.
+#guard [Ty.refOf .nat, .unknown, .option (.deferredOf .unit .never), .record shortFields].all
+  fun ty => decide (roundTrip nativeSignature nativeSpell 0 (loopAt (some ty)) =
+    .error (.annotation "local const"))
+-- A second reader of this step: `Timeout.fetch` (`Test/Dogfood/Scenario/Timeout.lean`), p1's
+-- quote fetch, whose retry loop states its cursor's type. It printed as a module and did not
+-- read back; since this step its module reads back to the program.
+#guard (Effect4.Api.Author.build Test.Dogfood.Scenario.Timeout.fetch).toOption.map
+    (fun b => (Test.Dogfood.printVerdict b, Test.Dogfood.readBackVerdict b)) =
+  some ("printed", true)
+-- A stated type on a yielded constant is still refused by name: the printer writes none there.
+#guard readEff [] nativeSignature nativeSpell 0
+    (.call (.ident "Effect.gen") [.generator
+      [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1])
+        (some (.name ["number"] [])), .ret (.ident "a0")]]) =
+  .error (.annotation "yielded const")
+
 /-! ## The laws this battery reads
 
 `read_print` and `read_exact` (R8's top nodes, `Laws/Codegen/ReadPrint.lean` and
@@ -1120,5 +1189,7 @@ example : ∀ (op : NativeOp) (tys : List Ty) (f : Term),
 #print axioms Effect4.Program.printRow_congr
 #print axioms Effect4.Program.printCall_ok
 #print axioms Test.Codegen.TermRows.bothLawful
+#print axioms Effect4.Program.readLeaf_print
+#print axioms Effect4.Program.readLeaf_exact
 
 end Test.Codegen.TermRows

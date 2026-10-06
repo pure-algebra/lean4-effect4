@@ -12,7 +12,7 @@ import { decodeEff, type Eff, type ForkOptions, type LayerTerm, type ServiceKey,
 import { atomNames, heads, rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
-import { withTable } from "../read.ts"
+import { withTable, readTypeText } from "../read.ts"
 import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, packageTable } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
 import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments } from "./forms.ts"
@@ -741,7 +741,17 @@ class Normalize {
     // The image `iterate` prints (the template table's row): the loop's answer mapped to the
     // result. Without a tail this is the retired whileLoop image, which the fragment reader refuses.
     const value = tail ? call("Effect.map", [whileLoop, this.continuation(tail.result, env, 0, "term")]) : whileLoop
-    return call("Effect.suspend", [{ _tag: "arrowBlock", params: [], body: [{ _tag: "letInit", name: `a${env.length}`, value: this.term(node(d, "init"), env) }, { _tag: "ret", value }] }])
+    // A stated cursor type is read by the checked type reader of read.ts (`readTypeText`, Lean
+    // `Classes.readTyChecked`; the state plan's T5, part B), as the other engine reads it, and
+    // the fragment carries the type read. A type with no such reading refuses the loop. Until
+    // then this engine dropped the annotation.
+    const id = node(d, "id"), annotation = isNode(id.typeAnnotation) ? node(id.typeAnnotation, "typeAnnotation") : undefined
+    const type = annotation === undefined ? undefined
+      : readTypeText(this.source.slice(offset(annotation, "start"), offset(annotation, "end"))) ?? reject("E-NODE", "shape")
+    const cursor: TsStmt = type === undefined
+      ? { _tag: "letInit", name: `a${env.length}`, value: this.term(node(d, "init"), env) }
+      : { _tag: "letInit", name: `a${env.length}`, value: this.term(node(d, "init"), env), type }
+    return call("Effect.suspend", [{ _tag: "arrowBlock", params: [], body: [cursor, { _tag: "ret", value }] }])
   }
   /** The foreign lambda shape a row's function spells, if any (`forms.lambdas`, Lean
    * `LambdaShape`): `(x) => x + 1`, `(x) => x * 2`, `(_) => Option.none()` and
