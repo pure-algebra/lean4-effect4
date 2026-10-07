@@ -31,6 +31,18 @@ least answer at `never`, the member rule at one union member and the join at a u
 (`lift_unique`, at the carrier `Ty`). `UnionRule.Answer` is its algebra: a least answer and a
 join.
 
+**A converted rule of the checker.** A by-shape function of the checker reads the head of the
+raw type. Its conversion is `UnionRule.extend` of that function, as its member rule. The fiber
+rule is the first (`fiberTy`, `src/Effect4/Program/Typing/Rules.lean`). `extend` is the lifted
+rule with two interim parts, and each part goes by one line.
+
+* **The guard**, `UnionRule.liftOne`: the lifted rule where the target's normal form has at most
+  one union member, and a refusal elsewhere. It goes when the TypeScript printer writes the type
+  arguments of a printed call at a proper union (decisions row 292).
+* **The raw answer**, in `UnionRule.extend`: the member rule's own answer where the member rule
+  answers at the raw target, and the guarded rule elsewhere. It goes when the match of a
+  template reads a request up to its normal form (decisions row 294).
+
 **Depends on.** `Ty` alone: its normal form, its union members and its join. The module holds no
 `match` on a type.
 
@@ -44,7 +56,11 @@ them:
   `lift_all`). The soundness of the two record rules against `Fits` and against `Val.hasTy` is
   an instance;
 * for a rule that reads one constructor, the lifted rule is the constructor's lower adjoint
-  (`Eliminator`).
+  (`Eliminator`);
+* the guarded rule answers exactly where the lifted rule answers at a target with at most one
+  union member (`liftOne_eq_some_iff`);
+* the extended rule agrees with its member rule (`extend_agrees`), and the contract of a
+  converted eliminator (`Eliminator.extend_laws`).
 
 An instance is one line here, and the facts of its member rule there.
 -/
@@ -86,5 +102,42 @@ the join of the answers. One refusal refuses the target. At `never` it answers t
 answer. -/
 def lift (rule : Ty → Option α) (target : Ty) : Option α :=
   (target.normalize.members.mapM rule).map joinAll
+
+/-- **The guarded rule**: the lifted rule where the target's normal form has at most one union
+member, and a refusal elsewhere. At `never` and at one union member it is the lifted rule. At a
+proper union, a normal form with two union members or more, it refuses.
+
+**Why it exists** (decisions row 292, point 1). The lifted rule of a by-shape function answers
+at a proper union. The TypeScript printer writes no type argument at the printed call there,
+and the owner ruled that the checker keeps today's refusal until it does
+(`docs/research/2026-10-06-uniform-eliminators-landing-probe.md`, finding 3 and proposal 4).
+
+**What removes it.** The printer writes the type arguments of the call at the join, which are
+the lifted rule's own answer. A rule that says `liftOne` then says `lift`, in one line, and each
+proof that used `liftOne_some` (`src/Effect4/Laws/Program/UnionRule.lean`) still has its
+premise. Until then a guarded rule is not monotone in the order at a proper union. -/
+def liftOne (rule : Ty → Option α) (target : Ty) : Option α :=
+  if target.normalize.members.length ≤ 1 then lift rule target else none
+
+/-- **The extended rule**: the member rule's own answer where the member rule answers at the raw
+target, and the guarded rule elsewhere. It extends the member rule: it answers wherever the
+member rule answers, with the same answer (`extend_agrees`,
+`src/Effect4/Laws/Program/UnionRule.lean`). So the conversion of a by-shape function to
+`extend` of that function refuses no program that the function admitted, and it changes no
+type of such a program. It answers more: `never`, and each raw union whose normal form is one
+union member, such as a union with `never`.
+
+It has two interim parts.
+
+* **The guard** (`liftOne`). It goes when the TypeScript printer writes the type arguments of a
+  printed call at a proper union (decisions row 292).
+* **The raw answer** (the first alternative). It goes when the match of a template reads a
+  request up to its normal form (decisions row 294). The guarded rule answers a normal form.
+  Today an atom's scheme infers on the raw type of its argument, so it can refuse the normal
+  form of a type that it admits raw (`Test/Program/Eliminators.lean`).
+
+With both parts gone a converted rule is `lift` of its member rule. -/
+def extend (rule : Ty → Option α) (target : Ty) : Option α :=
+  (rule target).orElse fun _ => liftOne rule target
 
 end Effect4.Program.UnionRule
