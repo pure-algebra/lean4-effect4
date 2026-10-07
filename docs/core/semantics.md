@@ -889,6 +889,19 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   Its lifted rule answers exactly below the constructor's image, in `Ty.subN`
   (`Eliminator.adjoint`).
   At types, a map with the four properties of the lifted rule is the lifted rule (`lift_unique`).
+  The same holds at a pair of types (`lift_unique_pair`).
+  The join law is an equation at a type and at a pair of types, since each join is a normal type
+  (`lift_union_eq`, `lift_union_eq_pair`).
+  It is an equation at every carrier whose order is antisymmetric (`lift_union_eq_of_antisymm`).
+  The checker's order on raw types is not antisymmetric, so the two first forms are no case of the
+  third (`Test/Program/Order.lean`).
+  The order is read in Lean core's classes.
+  A carrier with those classes, a least answer and `join = max` is a carrier of answers
+  (`AnswerOrder.ofCore`).
+  On raw types the checker's order is the order of canonical types, by definition (`subN_iff_le`),
+  and an eliminator's adjoint form is stated in `≤` there (`Eliminator.adjoint_le`).
+  A join in those classes has its laws once (`src/Effect4/Laws/Program/Order.lean`): the equations
+  of `CTy` and of `ErrTy` are one application each.
   The two record rules are its instances, and each equals its earlier definition by `rfl`
   (`Test/Program/UnionRule.lean`).
   It establishes no conversion of an eliminator, no `checker-monotone` and nothing at an

@@ -1,5 +1,6 @@
 import Effect4.Program.Typed
 import Effect4.Laws.Program.Admits
+import Effect4.Laws.Program.Order
 
 namespace Effect4.Program.Ty
 
@@ -551,12 +552,6 @@ end Effect4.Program.Ty
 
 namespace Effect4.Program.CTy
 
-@[simp] theorem join_self (t : CTy) : join t t = t := by
-  apply Subtype.ext
-  change Ty.join t.val t.val = t.val
-  rw [Ty.join_self]
-  exact t.property
-
 @[simp] theorem join_never (t : CTy) : join never t = t := by
   apply Subtype.ext
   change Ty.join .never t.val = t.val
@@ -568,14 +563,6 @@ namespace Effect4.Program.CTy
   change Ty.join t.val .never = t.val
   rw [Ty.join_never_right]
   exact t.property
-
-theorem join_comm (a b : CTy) : join a b = join b a := by
-  apply Subtype.ext
-  exact Ty.join_comm a.val b.val
-
-theorem join_assoc (a b c : CTy) : join (join a b) c = join a (join b c) := by
-  apply Subtype.ext
-  exact Ty.join_assoc a.val b.val c.val
 
 end Effect4.Program.CTy
 
@@ -1615,6 +1602,16 @@ instance instLawfulOrderLT : Std.LawfulOrderLT CTy where
 instance instLawfulOrderSup : Std.LawfulOrderSup CTy where
   max_le_iff := Ty.OrderProof.sub_join_iff Ty.sub_trans
 
+/-- The join of canonical types is commutative: `Order.max_comm` at their partial order. -/
+theorem join_comm (a b : CTy) : join a b = join b a := Order.max_comm a b
+
+/-- The join of canonical types is associative: `Order.max_assoc` at their partial order. -/
+theorem join_assoc (a b c : CTy) : join (join a b) c = join a (join b c) :=
+  Order.max_assoc a b c
+
+/-- The join of canonical types is idempotent: `Order.max_idem` at their partial order. -/
+@[simp] theorem join_self (t : CTy) : join t t = t := Order.max_idem t
+
 /-- The empty canonical union is below every canonical type. -/
 theorem never_le (t : CTy) : never ≤ t := Ty.OrderProof.sub_never t.toRaw
 
@@ -1648,17 +1645,12 @@ theorem le_join_right (a b : ErrTy) : b ≤ join a b := Ty.sub_join_right a.toCT
 theorem join_least (a b c : ErrTy) (ha : a ≤ c) (hb : b ≤ c) : join a b ≤ c :=
   Ty.join_least a.toCTy b.toCTy c.toCTy ha hb
 
-theorem join_comm (a b : ErrTy) : join a b = join b a := by
-  apply Subtype.ext
-  exact CTy.join_comm a.toCTy b.toCTy
+theorem join_comm (a b : ErrTy) : join a b = join b a := Order.max_comm a b
 
-theorem join_assoc (a b c : ErrTy) : join (join a b) c = join a (join b c) := by
-  apply Subtype.ext
-  exact CTy.join_assoc a.toCTy b.toCTy c.toCTy
+theorem join_assoc (a b c : ErrTy) : join (join a b) c = join a (join b c) :=
+  Order.max_assoc a b c
 
-theorem join_self (t : ErrTy) : join t t = t := by
-  apply Subtype.ext
-  exact CTy.join_self t.toCTy
+theorem join_self (t : ErrTy) : join t t = t := Order.max_idem t
 
 theorem join_never (t : ErrTy) : join never t = t := by
   apply Subtype.ext

@@ -461,6 +461,18 @@ In work since the suspension of the handover:
   beside it. The other conversions follow, and then the guards go. The plan checks the
   second model's report against the pinned sources, and it holds two compiled probes. It
   rules nothing.
+- **Slice ORDER is landed: one order vocabulary, in Lean core's classes**
+  ([the receipt](research/2026-10-06-seat-ORDER-receipt.md), with
+  [the coordinator's review](research/2026-10-06-slice-ORDER-review.md); rows 293 and 300).
+  It is the first slice that the second model implemented. A join in core's classes has its
+  laws once (`src/Effect4/Laws/Program/Order.lean`), and the join equations of `CTy` and
+  `ErrTy` are one application each. A carrier in those classes is a carrier of answers
+  (`AnswerOrder.ofCore`). On raw types the checker's order is the order of canonical types
+  by definition (`subN_iff_le`). The join law is an equation at a type, at a pair of types
+  and at a carrier whose order is antisymmetric, through one lemma. The landing changed
+  seven things of the slice, and one was a claim: its pair equation had no instance at raw
+  types. The battery holds readers and controls only, which is the rule for a battery from
+  now on. The second model works in the main checkout, by the owner's word.
 - **Seat PILOT is merged: the fiber rule is converted**
   ([the landing note](research/2026-10-06-seat-PILOT-receipt.md); rows 285, 292, 293, 296
   and 298). `fiberTy` is `UnionRule.extend Member.fiber`, in one line: the member rule's own

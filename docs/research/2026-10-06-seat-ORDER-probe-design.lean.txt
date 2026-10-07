@@ -1,0 +1,301 @@
+import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Slice.Lattice
+
+/-!
+# 2026-10-06 seat ORDER design probe
+
+Each statement of seat ORDER's brief (`docs/research/2026-10-05-claude-lead/briefs/seat-order-brief.md`),
+compiled against main at 594d3bdb.
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Laws.Program.Order
+
+universe u
+
+/-! ## 1. Generic order theory for join in core's classes -/
+
+section Preorder
+
+variable {α : Type u} [LE α] [Max α] [Std.IsPreorder α] [Std.LawfulOrderSup α]
+
+theorem le_max_left (a b : α) : a ≤ max a b :=
+  Std.left_le_max
+
+theorem le_max_right (a b : α) : b ≤ max a b :=
+  Std.right_le_max
+
+omit [Std.IsPreorder α] in
+theorem max_le {a b c : α} (h1 : a ≤ c) (h2 : b ≤ c) : max a b ≤ c :=
+  Std.max_le_iff.mpr ⟨h1, h2⟩
+
+theorem max_mono_left {a b : α} (c : α) (h : a ≤ b) : max a c ≤ max b c :=
+  max_le (Std.IsPreorder.le_trans a b _ h Std.left_le_max) Std.right_le_max
+
+theorem max_mono_right {a b : α} (c : α) (h : a ≤ b) : max c a ≤ max c b :=
+  max_le Std.left_le_max (Std.IsPreorder.le_trans a b _ h Std.right_le_max)
+
+theorem max_mono {a b c d : α} (hac : a ≤ c) (hbd : b ≤ d) : max a b ≤ max c d :=
+  max_le (Std.IsPreorder.le_trans a c _ hac Std.left_le_max)
+         (Std.IsPreorder.le_trans b d _ hbd Std.right_le_max)
+
+end Preorder
+
+section PartialOrder
+
+variable {α : Type u} [LE α] [Max α] [Std.IsPartialOrder α] [Std.LawfulOrderSup α]
+
+theorem max_comm (a b : α) : max a b = max b a :=
+  Std.IsPartialOrder.le_antisymm _ _
+    (max_le Std.right_le_max Std.left_le_max)
+    (max_le Std.right_le_max Std.left_le_max)
+
+theorem max_idem (a : α) : max a a = a :=
+  Std.IsPartialOrder.le_antisymm _ _
+    (max_le (Std.IsPreorder.le_refl a) (Std.IsPreorder.le_refl a))
+    Std.left_le_max
+
+theorem max_assoc (a b c : α) : max (max a b) c = max a (max b c) :=
+  Std.IsPartialOrder.le_antisymm _ _
+    (max_le
+      (max_le Std.left_le_max
+        (Std.IsPreorder.le_trans _ _ _ Std.left_le_max Std.right_le_max))
+      (Std.IsPreorder.le_trans _ _ _ Std.right_le_max Std.right_le_max))
+    (max_le
+      (Std.IsPreorder.le_trans _ _ _ Std.left_le_max Std.left_le_max)
+      (max_le
+        (Std.IsPreorder.le_trans _ _ _ Std.right_le_max Std.left_le_max)
+        Std.right_le_max))
+
+instance instCommutativeMax : Std.Commutative (max : α → α → α) where
+  comm := max_comm
+
+instance instAssociativeMax : Std.Associative (max : α → α → α) where
+  assoc := max_assoc
+
+instance instIdempotentOpMax : Std.IdempotentOp (max : α → α → α) where
+  idempotent := max_idem
+
+end PartialOrder
+
+end Effect4.Laws.Program.Order
+
+namespace SeatOrderProbe
+
+open Effect4 Effect4.Program Effect4.Laws.Program.Order
+open Effect4.Program.UnionRule
+
+/-! ## 2. Equations of CTy and ErrTy from generic theorems -/
+
+example (a b : CTy) : max a b = max b a := max_comm a b
+example (a b c : CTy) : max (max a b) c = max a (max b c) := max_assoc a b c
+example (a : CTy) : max a a = a := max_idem a
+
+example (a b : ErrTy) : max a b = max b a := max_comm a b
+example (a b c : ErrTy) : max (max a b) c = max a (max b c) := max_assoc a b c
+example (a : ErrTy) : max a a = a := max_idem a
+
+/-! ## 3. AnswerOrder derivable from core's classes -/
+
+@[instance_reducible] def answerOrderOfCore {β : Type} [Answer β] [LE β] [Max β]
+    [Std.IsPreorder β] [Std.LawfulOrderSup β]
+    (join_eq : ∀ a b : β, Answer.join a b = max a b)
+    (bot_le : ∀ a : β, Answer.bot ≤ a) : AnswerOrder β where
+  le a b := a ≤ b
+  refl := Std.IsPreorder.le_refl
+  trans := fun {a b c} hab hbc => Std.IsPreorder.le_trans a b c hab hbc
+  bot_le := bot_le
+  le_join_left a b := by rw [join_eq]; exact le_max_left a b
+  le_join_right a b := by rw [join_eq]; exact le_max_right a b
+  join_le := fun {a b c} hac hbc => by rw [join_eq]; exact max_le hac hbc
+
+-- Instance on CTy directly via core classes:
+instance instAnswerCTy : Answer CTy where
+  bot := CTy.never
+  join := max
+
+instance instAnswerOrderCTy : AnswerOrder CTy :=
+  answerOrderOfCore (fun _ _ => rfl) CTy.never_le
+
+-- Bridge at raw types:
+theorem subN_iff_le (a b : Ty) : (Ty.subN a b = true) ↔ (CTy.ofRaw a ≤ CTy.ofRaw b) :=
+  Iff.rfl
+
+/-! ## 4. The join law as an equation in an antisymmetric carrier -/
+
+theorem lift_union_eq_of_antisymm {α : Type} [Answer α] [AnswerOrder α]
+    (antisymm : ∀ a b : α, AnswerOrder.le a b → AnswerOrder.le b a → a = b)
+    {rule : Ty → Option α} (mono : Below rule rule) (s t : Ty) :
+    lift rule (.union s t) = (lift rule s).bind fun a => (lift rule t).map (Answer.join a) := by
+  obtain ⟨some_some, inverse⟩ := lift_union mono s t
+  cases hs : lift rule s with
+  | none =>
+    cases hu : lift rule (.union s t) with
+    | none => rfl
+    | some c =>
+      obtain ⟨a, b, ha, -⟩ := inverse hu
+      rw [hs] at ha
+      exact nomatch ha
+  | some a =>
+    cases ht : lift rule t with
+    | none =>
+      cases hu : lift rule (.union s t) with
+      | none => rfl
+      | some c =>
+        obtain ⟨a', b, -, hb⟩ := inverse hu
+        rw [ht] at hb
+        exact nomatch hb
+    | some b =>
+      obtain ⟨c, hc, hle, hge⟩ := some_some hs ht
+      rw [hc]
+      dsimp [Option.bind, Option.map]
+      have eq : c = Answer.join a b := antisymm c (Answer.join a b) hle hge
+      rw [eq]
+
+-- Instance at CTy:
+example {rule : Ty → Option CTy} (mono : Below rule rule) (s t : Ty) :
+    lift rule (.union s t) = (lift rule s).bind fun a => (lift rule t).map (Answer.join a) :=
+  lift_union_eq_of_antisymm (fun _ _ h1 h2 => Std.IsPartialOrder.le_antisymm _ _ h1 h2) mono s t
+
+-- Instance at a pair of CTy:
+example {rule : Ty → Option (CTy × CTy)} (mono : Below rule rule) (s t : Ty) :
+    lift rule (.union s t) = (lift rule s).bind fun a => (lift rule t).map (Answer.join a) :=
+  lift_union_eq_of_antisymm (fun _ _ (h1 : _ ∧ _) (h2 : _ ∧ _) =>
+    Prod.ext (Std.IsPartialOrder.le_antisymm _ _ h1.1 h2.1)
+             (Std.IsPartialOrder.le_antisymm _ _ h1.2 h2.2)) mono s t
+
+/-! ## 5. The adjoint form in ≤ -/
+
+theorem Eliminator.adjoint_le {rule : Ty → Option Ty} {C : Ty → Ty}
+    (e : Eliminator rule C) (t : Ty) :
+    ((lift rule t).isSome = true ↔ ∃ b, CTy.ofRaw t ≤ CTy.ofRaw (C b)) ∧
+    ∀ {a : Ty}, lift rule t = some a →
+      ∀ b : Ty, CTy.ofRaw a ≤ CTy.ofRaw b ↔ CTy.ofRaw t ≤ CTy.ofRaw (C b) := by
+  obtain ⟨is_some, adj⟩ := e.adjoint t
+  exact ⟨is_some, fun typed b => adj typed b⟩
+
+/-! ## 6. Monotone premise of slice view -/
+
+-- Eliminator.monotone provides `Below rule rule`.
+-- `lift_mono` provides monotonicity on Ty.subN.
+-- Read on CTy via `subN_iff_le`, this gives monotonicity under ≤ for slice views.
+example {rule : Ty → Option Ty} {C : Ty → Ty} (e : Eliminator rule C)
+    {s t : Ty} (smaller : CTy.ofRaw s ≤ CTy.ofRaw t) {b : Ty}
+    (typed : lift rule t = some b) :
+    ∃ a, lift rule s = some a ∧ CTy.ofRaw a ≤ CTy.ofRaw b :=
+  lift_mono e.monotone smaller typed
+
+theorem foldl_join_pair (types : List (Ty × Ty)) (acc : Ty × Ty) :
+    types.foldl Answer.join acc =
+      ((types.map Prod.fst).foldl Ty.join acc.1, (types.map Prod.snd).foldl Ty.join acc.2) := by
+  induction types generalizing acc with
+  | nil => rfl
+  | cons y rest ih =>
+    dsimp [Answer.join]
+    exact ih (Ty.join acc.1 y.1, Ty.join acc.2 y.2)
+
+theorem foldl_join_pair_start (types : List (Ty × Ty)) (acc : Ty × Ty)
+    (hacc1 : acc.1.normalize = acc.1) (hacc2 : acc.2.normalize = acc.2) :
+    types.foldl Answer.join acc = Answer.join acc (types.foldl Answer.join Answer.bot) := by
+  apply Prod.ext
+  · rw [foldl_join_pair, foldl_join_pair]
+    dsimp [Answer.join, Answer.bot]
+    exact foldl_join_start (types.map Prod.fst) acc.1 hacc1
+  · rw [foldl_join_pair, foldl_join_pair]
+    dsimp [Answer.join, Answer.bot]
+    exact foldl_join_start (types.map Prod.snd) acc.2 hacc2
+
+theorem lift_unique_pair {rule f : Ty → Option (Ty × Ty)}
+    (normal : ∀ t, f t = f t.normalize)
+    (never : f .never = some Answer.bot)
+    (member : ∀ {m : Ty}, Ty.Normal m → m.isMember = true →
+      f m = (rule m).map fun p => (p.1.normalize, p.2.normalize))
+    (union : ∀ {m r : Ty}, Ty.Normal m → m.isMember = true → Ty.Normal r →
+      Ty.Normal (.union m r) → f (.union m r) = (f m).bind fun a => (f r).map (Answer.join a))
+    (t : Ty) : f t = lift rule t := by
+  have row : ∀ (ms : List Ty), (∀ m ∈ ms, Ty.Normal m) → (∀ m ∈ ms, m.isMember = true) →
+      Effect4.Ascending ms →
+      (∀ x ∈ ms, ∀ y ∈ ms, Ty.sub x y = true → Ty.sub y x = true) →
+      f (Ty.ofMembers ms) = (ms.mapM rule).map joinAll := by
+    intro ms
+    induction ms with
+    | nil => intro _ _ _ _; exact never
+    | cons m rest ih =>
+      intro hn ha hs hm
+      have hnm := hn m List.mem_cons_self
+      have ham := ha m List.mem_cons_self
+      cases rest with
+      | nil =>
+        show f m = Option.map joinAll (rule m >>= fun a => List.mapM.loop rule [] [a])
+        rw [member hnm ham]
+        cases rule m with
+        | none => rfl
+        | some x =>
+          show some (x.1.normalize, x.2.normalize) = some (Answer.join Answer.bot x)
+          dsimp [Answer.join, Answer.bot]
+          rw [Ty.join_never, Ty.join_never]
+      | cons m' rest' =>
+        have hnTail := fun x hx => hn x (List.mem_cons_of_mem m hx)
+        have haTail := fun x hx => ha x (List.mem_cons_of_mem m hx)
+        have hmTail := fun x hx y hy =>
+          hm x (List.mem_cons_of_mem m hx) y (List.mem_cons_of_mem m hy)
+        have tail := ih hnTail haTail (List.Pairwise.tail hs) hmTail
+        show f (.union m (Ty.ofMembers (m' :: rest'))) = _
+        rw [union hnm ham (normal_ofMembers hnTail haTail (List.Pairwise.tail hs) hmTail)
+          (normal_ofMembers hn ha hs hm), member hnm ham, tail]
+        cases hrule : rule m with
+        | none =>
+          have refused : (m :: m' :: rest').mapM rule = none := by
+            cases hall : (m :: m' :: rest').mapM rule with
+            | none => rfl
+            | some ys =>
+              obtain ⟨y, _, hy, -, -⟩ := mapM_cons_eq_some.mp hall
+              rw [hrule] at hy
+              exact nomatch hy
+          rw [refused]
+          rfl
+        | some x =>
+          cases hrest : (m' :: rest').mapM rule with
+          | none =>
+            have refused : (m :: m' :: rest').mapM rule = none := by
+              cases hall : (m :: m' :: rest').mapM rule with
+              | none => rfl
+              | some ys =>
+                obtain ⟨_, zs, -, hzs, -⟩ := mapM_cons_eq_some.mp hall
+                rw [hrest] at hzs
+                exact nomatch hzs
+            rw [refused]
+            rfl
+          | some xs =>
+            rw [mapM_cons_eq_some.mpr ⟨x, xs, hrule, hrest, rfl⟩]
+            show some (Answer.join (x.1.normalize, x.2.normalize) (xs.foldl Answer.join Answer.bot)) =
+              some (xs.foldl Answer.join (Answer.join Answer.bot x))
+            rw [foldl_join_pair_start xs (Answer.join Answer.bot x)]
+            · dsimp [Answer.join, Answer.bot]
+              rw [Ty.join_never, Ty.join_never]
+            · dsimp [Answer.join, Answer.bot]
+              rw [Ty.join_never]
+              exact (Ty.normal_normalize x.1).fixed
+            · dsimp [Answer.join, Answer.bot]
+              rw [Ty.join_never]
+              exact (Ty.normal_normalize x.2).fixed
+  have hN := Ty.normal_normalize t
+  rw [normal t, lift_congr rule (Ty.normalize_idem t).symm]
+  have hrow := row t.normalize.members (fun m hm => hN.members hm)
+    (fun m hm => Ty.members_isMember hm) hN.members_ascending hN.members_maximal
+  rw [hN.ofMembers_members] at hrow
+  rw [hrow]
+  unfold lift
+  rw [Ty.normalize_idem]
+
+#print axioms Effect4.Laws.Program.Order.max_comm
+#print axioms Effect4.Laws.Program.Order.max_assoc
+#print axioms Effect4.Laws.Program.Order.max_idem
+#print axioms Effect4.Laws.Program.Order.max_mono
+#print axioms lift_union_eq_of_antisymm
+#print axioms Eliminator.adjoint_le
+#print axioms lift_unique_pair
+
+end SeatOrderProbe

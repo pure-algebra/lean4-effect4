@@ -5,6 +5,9 @@ the owner's request, for the second reader's review before a slice starts. **Rev
 2026-10-06, after the two last seats landed**: seat PILOT (decisions row 298) and seat BOUNDS
 (row 299). The owner then ratified the probe's recommendations (row 299, point 10), so slice
 MATCH waits for no decision. No seat runs. Base: main at the commit that enters row 299.
+**Slice ORDER landed the same day** (row 300). Section 5.1 says what it left. The coordinator's
+review gives the rules that the next slices follow
+(`docs/research/2026-10-06-slice-ORDER-review.md`).
 
 ## 1. Question
 
@@ -156,12 +159,16 @@ Two paths end at UNGUARD: TABLE, then PRINT; and MATCH, then CONVERT. MATCH come
 CONVERT because it repairs a disagreement with tsgo, and a conversion repairs none. At most
 two code seats build at one time (the machine has two Lean slots).
 
-### 5.1 ORDER: the order of a lifted rule in Lean core's classes
+### 5.1 ORDER: the order of a lifted rule in Lean core's classes (landed, row 300)
 
-The brief is written: `docs/research/2026-10-05-claude-lead/briefs/seat-order-brief.md`, with
-its compiled probe. The review changed nothing in it. Seat PILOT is merged, so it can start:
-both edit `src/Effect4/Laws/Program/UnionRule.lean`, which now holds the guard's laws and the
-extended rule's.
+The slice is landed. What it left for a later slice:
+
+- **A carrier of answers states its order in core's classes** and takes `AnswerOrder.ofCore`.
+  No slice writes the seven fields by hand again.
+- **A join equation at a new carrier** is one application of `lift_union_eq_of`.
+- **`lift_unique` and `lift_unique_pair` share their proof's shape**, 86 lines each. One lemma
+  over the carrier is a candidate, when a third carrier comes.
+- **A battery holds readers and controls only** (the review's rule).
 
 ### 5.2 TABLE: the address table and the list of refusals
 
@@ -365,8 +372,8 @@ evidence folder beside it.
   and `make check-target`. The citation query reads the prelude's declarations, and the probe
   emulated it: it did not run `check-target`.
 - **A first commit that stands alone**: the declaration of `cons`. In the probe's model the
-  cross form and the whole form each remove the disagreement of section 4.3, with today's
-  match too (row 299, point 7). So the prelude can move before the match does.
+  cross form and the whole form each remove the disagreement of section 4.3. Today's match
+  need not change for that (row 299, point 7). So the prelude can move before the match does.
 - **It carries** the repair of the population filter (row 293, point 9), since both rebuild
   the tree.
 - **Do not touch**: `Ty.join`, `Ty.normalize`, `Ty.sub`; the rules of `HasTy`.
