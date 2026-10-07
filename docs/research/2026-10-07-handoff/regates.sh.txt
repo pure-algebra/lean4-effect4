@@ -1,0 +1,14 @@
+#!/bin/bash
+cd /Users/pooks/Dev/lean4-effect4 || exit 1
+SP="$1"; BASE="$2"
+M="make -o ts/eff/node_modules -o harness/truth/node_modules"
+run() { name="$1"; shift; "$@" > "$SP/$name.log" 2>&1; echo "== $name: exit $?" >> "$SP/regates.summary"; }
+: > "$SP/regates.summary"
+run gen-tsdiag $M gen-tsdiag
+run check-tsdiag $M check-tsdiag
+run conservativity2 $M check-conservativity BASE="$BASE"
+run check-docs2 $M check-docs
+run check-language2 $M check-language
+run check-semantics2 $M check-semantics
+git status --short > "$SP/status-after-regates.txt" 2>&1
+echo "done" >> "$SP/regates.summary"

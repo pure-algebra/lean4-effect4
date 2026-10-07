@@ -1,0 +1,26 @@
+✔ Built Effect4.Laws.Program.Simulation.Actions (2.7s)
+✖ Building Effect4.Laws.Program.Simulation.Pending (4.2s)
+error: src/Effect4/Laws/Program/Simulation/Pending.lean:262:6: Type mismatch
+error: src/Effect4/Laws/Program/Simulation/Pending.lean:264:4: Type mismatch
+✖ Building Effect4.Laws.Program.Simulation.Evaluate (4.7s)
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:102:2: Tactic `split` failed: Could not split an `if` or `match` expression in the goal
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:402:15: Tactic `rfl` failed: The left-hand side
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:407:5: Tactic `aesop` failed, made no progress
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:540:20: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:545:23: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:551:32: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:557:36: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:569:24: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:575:37: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:582:29: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:589:49: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:600:57: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:611:49: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:622:51: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:633:47: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:644:59: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:655:64: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:782:28: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:792:33: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:843:23: unsolved goals
+error: src/Effect4/Laws/Program/Simulation/Evaluate.lean:1009:26: Application type mismatch: The argument

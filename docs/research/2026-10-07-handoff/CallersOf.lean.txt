@@ -1,0 +1,39 @@
+import Effect4.Laws
+import Test.All
+open Lean Meta
+
+/-- The declaration that a person wrote and that owns a constant: its longest prefix with a
+declaration range. -/
+partial def ownerOf (env : Environment) (ranges : NameSet) (n : Name) : Name :=
+  if ranges.contains n then n
+  else match n with
+    | .str p _ => if p.isAnonymous then n else ownerOf env ranges p
+    | .num p _ => if p.isAnonymous then n else ownerOf env ranges p
+    | .anonymous => n
+
+#eval show MetaM Unit from do
+  let env ← getEnv
+  let targets : List Name := [`Effect4.Laws.Program.Template, `Effect4.Data.Constructive]
+  let modOf (n : Name) : Option Name := (env.getModuleIdxFor? n).map fun i => env.header.moduleNames[i.toNat]!
+  -- the declarations that a person wrote
+  let mut ranges : NameSet := {}
+  for (n, _) in env.constants.toList do
+    if (← findDeclarationRanges? n).isSome then ranges := ranges.insert n
+  -- callers by owner
+  let mut callers : Std.HashMap Name NameSet := {}
+  for (n, ci) in env.constants.toList do
+    let o := ownerOf env ranges n
+    let used := ci.getUsedConstantsAsSet
+    for u in used.toList do
+      let ou := ownerOf env ranges u
+      if ou != o then
+        callers := callers.insert ou ((callers.getD ou {}).insert o)
+  let names : List Name := [`Effect4.Constructive.List.flatMap_congr, `Effect4.Constructive.List.mem_zip_map_self,
+    `Effect4.Constructive.List.mem_zip_middle, `Effect4.Constructive.List.eq_of_mem_zip_map,
+    `Effect4.Constructive.List.lookup_of_mem_nodup, `Effect4.Program.Ty.args_zip_of_map,
+    `Effect4.Program.Ty.canon_map_payload, `Effect4.Program.Ty.normal_union_inv,
+    `Effect4.Program.Ty.sub_of_mem_factors, `Effect4.Program.Ty.args_co_or_inv,
+    `Effect4.Program.Ty.anchoredFrom, `Effect4.Program.Ty.paramOccurrences, `Effect4.Program.Ty.instance_members,
+    `Effect4.Program.Ty.paramOccurrences_record, `Effect4.Program.Ty.paramOccurrences_firsts]
+  for n in names do
+    IO.println s!"{n}\t{env.contains n}\tcallers:{((callers.getD n {}).toList.map toString)}"

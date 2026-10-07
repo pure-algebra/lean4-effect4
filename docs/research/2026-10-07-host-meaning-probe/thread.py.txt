@@ -1,0 +1,29 @@
+import pathlib, re, sys
+# Thread the row table through a law file. Each interpretation named at a program gains `table`
+# in a statement or a proof. The body of an inductive relation keeps the default table: the
+# fields that a relation reads do not depend on the table. The file gains the implicit variable.
+TOP = re.compile(r"^(theorem|private theorem|protected theorem|def|private def|abbrev|/--|/-!|@\[|end |namespace |section|variable|instance|structure|open |#|mutual|set_option|attribute|macro|syntax|elab|local |noncomputable)")
+P1 = re.compile(r"\b(interpOf|interpR|evaluatorFor|termEvaluatorFor) (root|e|program|p)\b(?! table)")
+P2 = re.compile(r"\b(interpAt|interpRAt) (root|e|program|p) ([A-Za-z_][\w₁₂'.]*|\([^()\n]*\))(?! table)")
+for f in sys.argv[1:]:
+    p = pathlib.Path(f); lines = p.read_text().split("\n")
+    out = []; inside = False; n = 0; kept = 0
+    for line in lines:
+        if line.startswith("inductive "): inside = True
+        elif inside and TOP.match(line): inside = False
+        if inside:
+            kept += len(P1.findall(line)) + len(P2.findall(line))
+            out.append(line); continue
+        line, a = P1.subn(r"\1 \2 table", line); line, b = P2.subn(r"\1 \2 \3 table", line)
+        n += a + b; out.append(line)
+    s = "\n".join(out)
+    if "variable {table : RowTable}" not in s:
+        lines = s.split("\n"); i = 0
+        while i < len(lines) and not lines[i].startswith("namespace "): i += 1
+        j = i + 1
+        while j < len(lines) and (lines[j].strip() == "" or lines[j].startswith("open ") or lines[j].startswith("  ")): j += 1
+        while lines[j-1].strip() == "": j -= 1
+        lines[j:j] = ["", "variable {table : RowTable}"]
+        s = "\n".join(lines)
+    p.write_text(s)
+    print(f.split("/")[-1], "threaded", n, "kept in relations", kept)

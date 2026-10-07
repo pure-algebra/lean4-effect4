@@ -1,0 +1,9 @@
+#!/bin/bash
+# one round of the rehearsal: build the cone, print which modules built and the first errors
+cd /Users/pooks/Dev/lean4-effect4-t3b || exit 1
+SP="$1"; N="$2"
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.RuntimeR > "$SP/round$N.log" 2>&1
+echo "exit $?"
+grep -E '^(✖|✔)' "$SP/round$N.log" | sed -E 's/\[[0-9]+\/[0-9]+\] //' | grep -E 'Simulation|RuntimeR|Means' | cut -c1-80
+echo "errors: $(grep -c -E '^error: src' "$SP/round$N.log")"
+grep -E '^error: src' "$SP/round$N.log" | cut -c1-230 | head -12

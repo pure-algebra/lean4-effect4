@@ -1,0 +1,685 @@
+import Effect4.Laws.Program.Denote
+import Effect4.Laws.Program.Folds.Denote
+import Effect4.Laws.Run.Tape
+import Effects.Family
+import Effects.Algebra.Sum
+import Test.Dogfood.Scenario.Todo
+import Test.Dogfood.Scenario.Routing
+
+/-! Battery B4, assembled by `assemble.py`: the drafts P10 and P15, then the draft of
+`Test/Api/SessionMeaning.lean`. Scratch; no tracked file. -/
+
+set_option maxRecDepth 8192
+
+-- ==== from W10_DenoteRows.lean ====
+
+/-!
+# Program.DenoteRows — the call tree of a program over the stores and its host rows (DI-69)
+
+Scratch draft of `src/Effect4/Laws/Program/DenoteRows.lean`, slice H1 of
+`docs/research/2026-10-07-packet-host-meaning.md`. No tracked file.
+
+The row table means the algebra package's `Family` through `Alphabet.toFamily`, and its
+signature through `toSignature` (`Test/contracts/foundation-wave2.contract.md`, "Row table
+meaning"). `denoteRows` extends `denote` (`Laws/Program/Denote.lean`) from `Straight` to
+straight-line programs with host rows on one fiber. A host is a handler of the row signature,
+and a reply tape is one host.
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Program.Denote
+
+open Effect4 Effect4.Machine Effect4.Program
+
+/-! ## The row table as an alphabet, a family and a signature -/
+
+/-- The two column sorts of a host row, as codes: what a call sends and what a reply holds. -/
+inductive Column
+  /-- The request column, with its type. -/
+  | request (ty : Ty)
+  /-- The reply columns: the answer type and the error type. -/
+  | reply (answer error : Ty)
+deriving DecidableEq
+
+/-- The carrier of a column code. A request is a value. A reply is an exit: a success at the
+answer column, or a failure whose typed reasons are at the error column. The carrier forgets
+the types: membership is a protocol's (`Laws/Effects/Protocol.lean`), not the carrier's. -/
+abbrev Column.carrier : Column → Type
+  | .request _ => Val
+  | .reply _ _ => ExitV
+
+/-- The row table as a first-order alphabet: a name is a position of the table, and its two
+codes are the linked row's columns (`Row.normalizeTypes`). -/
+def Alphabet.ofTable (table : RowTable) : Effects.Alphabet Column where
+  Op := Fin table.length
+  requestTy i := .request (table[i]).normalizeTypes.request
+  answerTy i := .reply (table[i]).normalizeTypes.answer (table[i]).normalizeTypes.error
+
+/-- **The meaning of a row table** (DI-69): the algebra package's family of its alphabet. -/
+abbrev RowFamily (table : RowTable) : Effects.Family.{0, 0, 0} :=
+  (Alphabet.ofTable table).toFamily Column.carrier
+
+/-- The signature of a row table: an operation is a row's position applied to a request. -/
+abbrev RowSig (table : RowTable) : Effects.Signature.{0, 0} := (RowFamily table).toSignature
+
+/-- The signature of a program over the stores and its host rows: the coproduct. -/
+abbrev RowsSig (table : RowTable) : Effects.Signature.{0, 0} :=
+  Effects.Signature.sum StoreSig (RowSig table)
+
+example (table : RowTable) : (RowSig table).Op = ((_ : Fin table.length) × Val) := rfl
+example (table : RowTable) (op : (RowSig table).Op) : (RowSig table).Answer op = ExitV := rfl
+example (table : RowTable) (op : (RowSig table).Op) :
+    (RowsSig table).Answer (.inr op) = ExitV := rfl
+example (table : RowTable) (o : SyncOp) : (RowsSig table).Answer (.inl o) = Val := rfl
+
+/-! ## The fragment -/
+
+/-- A host row that this fragment calls: the position names a row that the runner registers
+(`externalRow`), and its answer column is no handle type, so a reply allocates nothing
+(`externalValue`, `Program/Compile.lean`). -/
+def dataRow (table : RowTable) (i : Nat) : Bool :=
+  match externalRow table i with
+  | some row => match row.answer with
+    | .handle _ => false
+    | _ => true
+  | none => false
+
+/-- **Straight-line plus host rows on one fiber** (DI-69): `Straight`, with one more admitted
+leaf, a `perform` of a host row of the table. Every constructor is named (decisions row 35). -/
+def StraightRows (table : RowTable) : NativeEff → Bool
+  | .succeed _ => true
+  | .fail _ => true
+  | .failCause _ => true
+  | .sync _ => true
+  | .suspend b => StraightRows table b
+  | .perform op _ =>
+    match op with
+    | .external i => dataRow table i
+    | _ => match op.kind with
+      | .sync => true
+      | _ => false
+  | .bind a b => StraightRows table a && StraightRows table b
+  | .select _ _ a b => StraightRows table a && StraightRows table b
+  | .exit b => StraightRows table b
+  | .catchCause b h => StraightRows table b && StraightRows table h
+  | .catchIf _ b h => StraightRows table b && StraightRows table h
+  | .matchCause b v c => StraightRows table b && StraightRows table v && StraightRows table c
+  | .onExit b f => StraightRows table b && StraightRows table f
+  | .gen _ => false
+  | .uninterruptible _ => false
+  | .interruptible _ => false
+  | .yieldNow _ => false
+  | .awaitFiber _ _ => false
+  | .withFiber _ => false
+  | .scoped _ => false
+  | .acquireRelease _ _ => false
+  | .provideLayer _ _ _ => false
+  | .service _ => false
+  | .provideService _ _ _ => false
+  | .iterate _ _ _ _ _ _ => false
+  | .restore _ _ => false
+
+/-! ## The denotation -/
+
+/-- Short-circuit on failure, at any signature (`seqExit` is the store signature's). -/
+def seqRows {S : Effects.Signature.{0, 0}} (k : Val → Effects.Program S ExitV) :
+    ExitV → Effects.Program S ExitV
+  | Exit.success v => k v
+  | Exit.failure c => pure (Exit.failure c)
+
+/-- One host call as a node of the tree: the row's position and the evaluated request. The
+answer is the exit that the call's reply gives the continuation. -/
+def rowCall (table : RowTable) (i : Fin table.length) (request : Val) :
+    Effects.Program (RowsSig table) ExitV :=
+  Effects.Program.vis (.inr ⟨i, request⟩) Effects.Program.pure
+
+/-- **The call tree of a program over the stores and its host rows.** Each arm is `denote`'s
+arm. The one new arm of the fragment is the `perform` of a host row. It mirrors `asyncRoute`'s
+external case (`Program/Compile.lean`): the request is evaluated first, and the call is one
+node. A position outside the table has no operation: `outsideExit`, never reached under
+`StraightRows`. `catchIf` has its arm (`contEOf`'s `caughtError`), outside the fragment. -/
+def denoteRows (table : RowTable) : NativeEff → List Val → Effects.Program (RowsSig table) ExitV
+  | .succeed v, env =>
+    pure (match evalTerm env v with | some x => Exit.success x | none => badShapeExit)
+  | .fail e, env =>
+    pure (match evalTerm env e with
+      | some x => Exit.failure (Cause.fail (errOf x)) | none => badShapeExit)
+  | .failCause c, env =>
+    pure (match causeOf env c with | some cause => Exit.failure cause | none => badShapeExit)
+  | .sync t, env => pure (Exit.success ((evalTerm env t).getD Val.unit))
+  | .suspend b, env => denoteRows table b env
+  | .perform op r, env =>
+    match op with
+    | .external i =>
+      match evalTerm env r with
+      | some v => if h : i < table.length then rowCall table ⟨i, h⟩ v else pure outsideExit
+      | none => pure badShapeExit
+    | _ =>
+      match (NativeOp.row op).kind with
+      | .sync =>
+        match (evalTerm env r).bind (NativeOp.syncOpOf op env) with
+        | some o => Effects.Program.vis (.inl o) fun v => pure (Exit.success v)
+        | none => pure badShapeExit
+      | _ => pure outsideExit
+  | .bind a b, env =>
+    Effects.Program.bind (denoteRows table a env) (seqRows fun v => denoteRows table b (env ++ [v]))
+  | .select t d a b, env =>
+    match (evalTerm env t).bind d.decide with
+    | some (true, bound) => denoteRows table a (env ++ bound.toList)
+    | some (false, bound) => denoteRows table b (env ++ bound.toList)
+    | none => pure badShapeExit
+  | .exit b, env =>
+    Effects.Program.bind (denoteRows table b env) fun ex => pure (Exit.success (reifyExitVal ex))
+  | .catchCause b h, env => Effects.Program.bind (denoteRows table b env) fun
+    | Exit.success v => pure (Exit.success v)
+    | Exit.failure c => denoteRows table h (env ++ [Val.exitErr c])
+  | .catchIf test b h, env => Effects.Program.bind (denoteRows table b env) fun
+    | Exit.success v => pure (Exit.success v)
+    | Exit.failure cause =>
+      match caughtErrorValue? env test cause with
+      | some value => denoteRows table h (env ++ [value])
+      | none => pure (Exit.failure cause)
+  | .matchCause b v c, env => Effects.Program.bind (denoteRows table b env) fun
+    | Exit.success x => denoteRows table v (env ++ [x])
+    | Exit.failure cause => denoteRows table c (env ++ [Val.exitErr cause])
+  | .onExit b f, env => Effects.Program.bind (denoteRows table b env) fun ex =>
+    Effects.Program.bind (denoteRows table f (env ++ [reifyExitVal ex])) fun fex =>
+      pure (Exit.restoreAfterFinalizer ex (finVoid fex))
+  | _, _ => pure outsideExit
+
+/-! ## A host as a handler, a reply tape as one host, and the meaning under a host -/
+
+/-- The store handler in a monad that holds the stores and a host's state. -/
+def storeLift {σ : Type} : Effects.Handler StoreSig (StateT Stores (StateT σ Option)) where
+  handle o := fun s => pure (storeHandler.handle o s)
+
+/-- The stores and a host answer the coproduct: the store handler on the left, the host on the
+right. A host is a partial handler of the row signature over its own state. Its `none` is the
+frontier: the call waits on the host. -/
+def rowsHandler {σ : Type} {table : RowTable}
+    (host : Effects.Handler (RowSig table) (StateT σ Option)) :
+    Effects.Handler (RowsSig table) (StateT Stores (StateT σ Option)) :=
+  Effects.Handler.sum storeLift ⟨fun op => StateT.lift (host.handle op)⟩
+
+/-- **The meaning of a program under a host**: the exit, the stores that it leaves and the
+host's state. `none`: a call got no answer, the frontier. -/
+def meaningUnder {σ : Type} {table : RowTable}
+    (host : Effects.Handler (RowSig table) (StateT σ Option)) (e : NativeEff) (env : List Val)
+    (s : Stores) (state : σ) : Option ((ExitV × Stores) × σ) :=
+  ((Effects.interpret (rowsHandler host) (denoteRows table e env)).run s).run state
+
+/-- **A reply tape**: the exits that the applied replies of a one-fiber run give its calls, in
+call order. It is what a call reads of the run's decision tape on this fragment
+(`Run.appliedExits`, `Laws/Api/SessionMeaning.lean`). -/
+abbrev ReplyTape := List ExitV
+
+/-- **A reply tape as a partial handler of the row signature** (DI-69). Each call takes the next
+exit of the reply tape. `none` is the frontier: the call waits on the host. -/
+def tapeHandler (table : RowTable) : Effects.Handler (RowSig table) (StateT ReplyTape Option) where
+  handle _ := fun tape =>
+    match tape with
+    | [] => none
+    | ex :: rest => some (ex, rest)
+
+/-- **The meaning of a program under a reply tape**: the exit, the stores that it leaves and
+the unread reply tape. `none`: a call found the reply tape empty. -/
+def meaningRows (table : RowTable) (e : NativeEff) (env : List Val) (s : Stores)
+    (tape : ReplyTape) : Option ((ExitV × Stores) × ReplyTape) :=
+  meaningUnder (tapeHandler table) e env s tape
+
+/-! ## The laws of the first slice -/
+
+/-- The fragment extends `Straight`: a straight-line program calls no host row. A step of
+`denoteRows_straight`'s use: a consumer that holds `Straight` gets `StraightRows`. -/
+theorem straightRows_of_straight (table : RowTable) :
+    ∀ (e : NativeEff), Straight e = true → StraightRows table e = true
+  | .succeed _, _ => rfl
+  | .fail _, _ => rfl
+  | .failCause _, _ => rfl
+  | .sync _, _ => rfl
+  | .suspend b, h => straightRows_of_straight table b h
+  | .perform op _, h => by
+    cases op with
+    | external _ => cases h
+    | _ => exact h
+  | .bind a b, h => by
+    have hab := Straight.bind h
+    simp only [StraightRows, straightRows_of_straight table a hab.1,
+      straightRows_of_straight table b hab.2, Bool.and_self]
+  | .select _ _ a b, h => by
+    have hab := Straight.select h
+    simp only [StraightRows, straightRows_of_straight table a hab.1,
+      straightRows_of_straight table b hab.2, Bool.and_self]
+  | .exit b, h => straightRows_of_straight table b h
+  | .catchCause b hd, h => by
+    have hab := Straight.catchCause h
+    simp only [StraightRows, straightRows_of_straight table b hab.1,
+      straightRows_of_straight table hd hab.2, Bool.and_self]
+  | .matchCause b v c, h => by
+    have hab := Straight.matchCause h
+    simp only [StraightRows, straightRows_of_straight table b hab.1,
+      straightRows_of_straight table v hab.2.1, straightRows_of_straight table c hab.2.2,
+      Bool.and_self]
+  | .onExit b f, h => by
+    have hab := Straight.onExit h
+    simp only [StraightRows, straightRows_of_straight table b hab.1,
+      straightRows_of_straight table f hab.2, Bool.and_self]
+  | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h
+  | .awaitFiber _ _, h | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h
+  | .provideLayer _ _ _, h | .service _, h | .provideService _ _ _, h | .catchIf _ _ _, h
+  | .iterate _ _ _ _ _ _, h | .restore _ _, h => by cases h
+
+/-- A host row called inside the fragment is a position of the table. A step of
+`denoteR_straightRows` and of `denoteRows_append`. -/
+theorem lt_of_dataRow {table : RowTable} {i : Nat} (h : dataRow table i = true) :
+    i < table.length := by
+  rcases Nat.lt_or_ge i table.length with hlt | hge
+  · exact hlt
+  · have hnone : externalRow table i = none := by
+      simp only [externalRow, List.getElem?_eq_none hge, Option.bind_eq_bind, Option.bind_none]
+    simp only [dataRow, hnone] at h
+    cases h
+
+/-- A `perform` of the fragment that is no host call is a `sync` row, as in `Straight`. A step
+of `denoteR_straightRows` and of `denoteRows_append`. -/
+theorem StraightRows.perform_sync {table : RowTable} {op : NativeOp} {r : Term}
+    (h : StraightRows table (.perform op r) = true) (hop : ∀ i, op ≠ .external i) :
+    (NativeOp.row op).kind = .sync := by
+  rw [NativeOp.row_kind]
+  cases op with
+  | external i => exact absurd rfl (hop i)
+  | sleep => contradiction
+  | deferredAwait => contradiction
+  | scopeMake strategy => cases strategy <;> rfl
+  | _ => rfl
+
+/-- A `sync` row keeps `denote`'s arm under the external-first routing (DI-61). A step of
+`denoteRows_straight`. -/
+theorem denoteRows_perform_sync (table : RowTable) (op : NativeOp) (r : Term) (env : List Val)
+    (hk : (NativeOp.row op).kind = .sync) :
+    denoteRows table (.perform op r) env =
+      (match (evalTerm env r).bind (NativeOp.syncOpOf op env) with
+       | some o => Effects.Program.vis (.inl o) fun v => pure (Exit.success v)
+       | none => pure badShapeExit) := by
+  cases op with
+  | external _ => cases hk
+  | _ => simp only [denoteRows, hk]
+
+/-- `seqExit` under the left injection is `seqRows`. A step of `denoteRows_straight`. -/
+theorem inl_seqExit (table : RowTable) (k : Val → Effects.Program StoreSig ExitV) (ex : ExitV) :
+    Effects.Program.inl (T := RowSig table) (seqExit k ex) =
+      seqRows (fun v => Effects.Program.inl (T := RowSig table) (k v)) ex := by
+  cases ex <;> rfl
+
+/-- **On `Straight` the tree is `denote`'s tree, injected on the left.** The connector of the
+two denotations: `denote` is `denoteRows` at no host call. -/
+theorem denoteRows_straight (table : RowTable) : ∀ (e : NativeEff) (env : List Val),
+    Straight e = true →
+    denoteRows table e env = Effects.Program.inl (T := RowSig table) (denote e env)
+  | .succeed _, _, _ => by rw [denoteRows, denote]; rfl
+  | .fail _, _, _ => by rw [denoteRows, denote]; rfl
+  | .failCause _, _, _ => by rw [denoteRows, denote]; rfl
+  | .sync _, _, _ => by rw [denoteRows, denote]; rfl
+  | .suspend b, env, hs => by
+    rw [denoteRows, denote]
+    exact denoteRows_straight table b env hs
+  | .perform op r, env, hs => by
+    have hk := Straight.perform_sync hs
+    rw [denoteRows_perform_sync table op r env hk]
+    simp only [denote, hk]
+    cases (evalTerm env r).bind (NativeOp.syncOpOf op env) <;> rfl
+  | .bind a b, env, hs => by
+    have hab := Straight.bind hs
+    rw [denoteRows, denote, Effects.Program.inl_bind, denoteRows_straight table a env hab.1]
+    congr 1
+    funext ex
+    rw [inl_seqExit]
+    cases ex with
+    | success v => exact denoteRows_straight table b (env ++ [v]) hab.2
+    | failure c => rfl
+  | .select t d a b, env, hs => by
+    have hab := Straight.select hs
+    rw [denoteRows, denote]
+    rcases hd : (evalTerm env t).bind d.decide with _ | ⟨first, bound⟩
+    · rfl
+    · cases first with
+      | true => exact denoteRows_straight table a _ hab.1
+      | false => exact denoteRows_straight table b _ hab.2
+  | .exit b, env, hs => by
+    rw [denoteRows, denote, Effects.Program.inl_bind, denoteRows_straight table b env hs]
+    rfl
+  | .catchCause b h, env, hs => by
+    have hab := Straight.catchCause hs
+    rw [denoteRows, denote, Effects.Program.inl_bind, denoteRows_straight table b env hab.1]
+    congr 1
+    funext ex
+    cases ex with
+    | success v => rfl
+    | failure c => exact denoteRows_straight table h _ hab.2
+  | .matchCause b v c, env, hs => by
+    have hab := Straight.matchCause hs
+    rw [denoteRows, denote, Effects.Program.inl_bind, denoteRows_straight table b env hab.1]
+    congr 1
+    funext ex
+    cases ex with
+    | success x => exact denoteRows_straight table v _ hab.2.1
+    | failure cause => exact denoteRows_straight table c _ hab.2.2
+  | .onExit b f, env, hs => by
+    have hab := Straight.onExit hs
+    rw [denoteRows, denote, Effects.Program.inl_bind, denoteRows_straight table b env hab.1]
+    congr 1
+    funext ex
+    rw [Effects.Program.inl_bind, denoteRows_straight table f _ hab.2]
+    rfl
+  | .gen _, _, hs | .uninterruptible _, _, hs | .interruptible _, _, hs | .yieldNow _, _, hs
+  | .awaitFiber _ _, _, hs | .withFiber _, _, hs | .scoped _, _, hs | .acquireRelease _ _, _, hs
+  | .provideLayer _ _ _, _, hs | .service _, _, hs | .provideService _ _ _, _, hs
+  | .catchIf _ _ _, _, hs | .iterate _ _ _ _ _ _, _, hs | .restore _ _, _, hs => by cases hs
+
+/-- The lifted store handler runs as the store handler and keeps the host's state. A step of
+`meaningUnder_straight`. -/
+theorem interpret_storeLift {σ A : Type} (p : Effects.Program StoreSig A) (s : Stores)
+    (state : σ) :
+    ((Effects.interpret (storeLift (σ := σ)) p).run s).run state =
+      some ((Effects.interpret storeHandler p).run s, state) := by
+  induction p generalizing s with
+  | pure a => rfl
+  | vis o k ih => exact ih _ _
+
+/-- **On `Straight` the meaning under any host is `meaning`, and the host is not asked.** -/
+theorem meaningUnder_straight {σ : Type} {table : RowTable}
+    (host : Effects.Handler (RowSig table) (StateT σ Option)) (e : NativeEff) (env : List Val)
+    (s : Stores) (state : σ) (hs : Straight e = true) :
+    meaningUnder host e env s state = some (meaning e env s, state) := by
+  unfold meaningUnder rowsHandler
+  rw [denoteRows_straight table e env hs, Effects.interpret_inl]
+  exact interpret_storeLift (denote e env) s state
+
+/-- A host call asks the host once, and leaves the stores as they were. -/
+theorem meaningUnder_call {σ : Type} {table : RowTable}
+    (host : Effects.Handler (RowSig table) (StateT σ Option)) (i : Nat) (r : Term)
+    (env : List Val) (s : Stores) (state : σ) {v : Val} (hv : evalTerm env r = some v)
+    (hi : i < table.length) :
+    meaningUnder host (.perform (.external i) r) env s state =
+      ((host.handle ⟨⟨i, hi⟩, v⟩).run state).map fun answer => ((answer.1, s), answer.2) := by
+  unfold meaningUnder
+  simp only [denoteRows, hv, hi, dite_true]
+  show ((StateT.lift (host.handle ⟨⟨i, hi⟩, v⟩) >>= fun answer =>
+    (pure answer : StateT Stores (StateT σ Option) ExitV)).run s).run state = _
+  simp only [StateT.run_bind, StateT.run_lift, bind_assoc, pure_bind]
+  show (host.handle ⟨⟨i, hi⟩, v⟩).run state >>= _ = _
+  cases (host.handle ⟨⟨i, hi⟩, v⟩).run state <;> rfl
+
+end Effect4.Program.Denote
+
+
+
+-- ==== from P15_session.part ====
+
+/-! ## The session's side, and the drafted statement (draft of `Laws/Api/SessionMeaning.lean`) -/
+
+namespace Effect4.Run
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
+
+/-- A decision that a host hands a one-fiber run: the root's evaluation, a flush, or an answer
+that holds an exit. An interruption, a clock step and a delayed cell read are not. -/
+def hostDecision : Api.Decision → Bool
+  | .answerAsync _ _ (.ofExit _) => true
+  | decision => decision == Api.evaluate || decision == Api.flush
+
+/-- The reply tape of a decision tape: the exits of its answer decisions, in order. -/
+def exitsOf (tape : List Api.Decision) : ReplyTape :=
+  tape.filterMap fun
+    | .answerAsync _ _ (.ofExit ex) => some ex
+    | _ => none
+
+/-- The reply tape of a run: the exits of the replies that the session applied, in order. -/
+def appliedExits (s : Run) : ReplyTape := exitsOf (tapeOf s)
+
+/-- A run that a host drives: each decision of its tape is a host's (`hostDecision`). The
+premise reads the tape, as both sides of the statement do: a row that the session refuses, and
+a reply that it never applies, hand the machine nothing. -/
+def hostDriven (s : Run) : Bool := (tapeOf s).all hostDecision
+
+/-- The proposition of `denoteRows_eq_session`, on the fragment `frag`. -/
+def DenoteRowsEqSession (frag : RowTable → NativeEff → Bool) : Prop :=
+  ∀ (s : Run), Run.Reached s → funded s = true → atRest s = true → hostDriven s = true →
+    frag s.built.table s.built.program = true →
+    meaningRows s.built.table s.built.program [] Stores.empty (appliedExits s) =
+      s.exit.map fun ex => ((ex, s.machine.state), [])
+
+end Effect4.Run
+
+-- ==== from W_B4_tests.part ====
+
+/-!
+# The meaning under a run's tape: the battery of slice H7
+
+Draft of `Test/Api/SessionMeaning.lean`. At the landing its imports are
+`Effect4.Laws.Api.SessionMeaning`, `Test.Dogfood.Scenario.Todo` and
+`Test.Dogfood.Scenario.Routing`. Each line is a finite evaluation of an open statement, or a
+control. `denoteRows_eq_session` is a planned goal: these lines are its finite evidence, and
+they shrink in the slice that proves it.
+-/
+
+namespace Test.Api.SessionMeaning
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring Effect4.Program.Denote
+open Effect4.Run (appliedExits hostDriven funded atRest)
+open Test.Dogfood.Scenario
+open Test.Dogfood.P2HandlerLayers (built?)
+
+/-- One run: the fragment, the three premises of `denoteRows_eq_session` on the run, and whether
+its two sides are equal. -/
+def sides (s : Run) : Bool × Bool × Bool × Bool × Bool :=
+  (StraightRows s.built.table s.built.program, funded s, atRest s, hostDriven s,
+    decide (meaningRows s.built.table s.built.program [] Stores.empty (appliedExits s) =
+      s.exit.map fun ex => ((ex, s.machine.state), [])))
+
+/-- Every premise holds, and the two sides are equal. -/
+def green : Bool × Bool × Bool × Bool × Bool := (true, true, true, true, true)
+
+/-! ## Real programs -/
+
+section todo
+open Test.Dogfood.Scenario.Todo
+
+def onTodo (main : Src NativeOp) (moves : List Move) : Option (Bool × Bool × Bool × Bool × Bool) :=
+  (built? (request main)).map fun b => sides (play (Run.open b "todo") moves)
+
+-- finite evaluation: the four to-do programs. The last three runs end at the frontier: no
+-- reply, a reply that is not applied, and a reply outside the answer column, which the session
+-- refuses
+#guard [ onTodo (add (str "milk"))
+           (script [[.start], answer (.row "TodoRepo.insert") (ok (todo 1 "milk" false))])
+       , onTodo (add (str ""))
+           (script [[.start], answer (.row "TodoRepo.insert") (ok (todo 1 "" false))])
+       , onTodo (complete (nat 1))
+           (script [[.start], answer (.row "TodoRepo.setDone") (ok (.some (todo 1 "milk" true)))])
+       , onTodo (complete (nat 1))
+           (script [[.start], answer (.row "TodoRepo.setDone") (failed "SqlError" "locked")])
+       , onTodo (complete (nat 7)) (script [[.start], answer (.row "TodoRepo.setDone") (ok .none)])
+       , onTodo (remove (nat 7)) (script [[.start], answer (.row "TodoRepo.delete") (ok (.bool false))])
+       , onTodo list
+           (script [[.start], answer (.row "TodoRepo.all") (ok (.list [todo 1 "milk" true, todo 2 "tea" false]))])
+       , onTodo list [.start]
+       , onTodo list [.start, .receive (.row "TodoRepo.all") (ok (.list []))]
+       , onTodo list (script [[.start], answer (.row "TodoRepo.all") (ok (.nat 3))]) ].all
+  (· = some green)
+
+end todo
+
+-- finite evaluation, for the owner's question on `catchIf`: the routing program is outside the
+-- ruled fragment, and the two sides are equal on each of its eleven named runs
+#guard Routing.runsAndControls.1.length = 11
+#guard Routing.runsAndControls.1.all fun run => sides run.played = green
+
+/-! ## Raw programs: each constructor of the fragment with a call inside -/
+
+/-- One host row: a number in, a number out, a tagged failure. -/
+def wait : Row := (Row.host "H.wait" .nat .nat (.prod .string .string) "battery").row
+/-- One host row that answers an external handle. -/
+def kvMake : Row := (Row.host "K.make" .unit NativeOp.kvTy (.prod .string .string) "battery").row
+
+def call (n : Term) : NativeEff := .perform (.external 0) n
+def num (n : Nat) : Term := .lit (.nat n)
+def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
+def reply (v : Nat) : List Move := answer (.row "H.wait") (ok (.nat v))
+def refuse : List Move := answer (.row "H.wait") (failed "E" "m")
+def failing (cause : CauseV) : List Move := answer (.row "H.wait") (.ofExit (.failure cause))
+
+def raw (program : NativeEff) (table : RowTable) (moves : List Move)
+    (budget : Effect4.Api.Budget := {}) : Option (Bool × Bool × Bool × Bool × Bool) :=
+  ((Effect4.Api.Author.Internal.finishBuild program table []).toOption).map fun b =>
+    sides (play (Run.open b "raw" budget) moves)
+
+/-- Three calls in sequence: each request is the reply before it. -/
+def chain : NativeEff := .bind (call (num 1)) (.bind (call (.var 0)) (call (.var 1)))
+def fin : NativeEff := .onExit (call (num 1)) (call (num 2))
+def caught : NativeEff := .catchCause (call (num 1)) (call (num 2))
+def matched : NativeEff := .matchCause (call (num 1)) (call (.var 0)) (call (num 9))
+def exited : NativeEff := .exit (call (num 1))
+def suspended : NativeEff := .suspend (.bind (call (num 1)) (.sync (.var 0)))
+/-- A cell made, a call, the reply written to the cell, the cell read. -/
+def celled : NativeEff :=
+  .bind (.perform .refMake (num 0))
+    (.bind (call (num 1))
+      (.bind (.perform .refSet (pairT (.var 0) (.var 1))) (.perform .refGet (.var 0))))
+/-- A call, then a clock read. -/
+def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit))
+
+-- finite evaluation: a success and a typed failure through each constructor, and a frontier
+#guard [ raw chain [wait] (script [[.start], reply 5, reply 6, reply 7])
+       , raw chain [wait] (script [[.start], reply 5, refuse, reply 7])
+       , raw chain [wait] (script [[.start], reply 5, reply 6])
+       , raw fin [wait] (script [[.start], reply 5, refuse])
+       , raw fin [wait] (script [[.start], refuse, reply 6])
+       , raw caught [wait] (script [[.start], refuse, reply 6])
+       , raw matched [wait] (script [[.start], refuse, reply 6])
+       , raw exited [wait] (script [[.start], refuse])
+       , raw suspended [wait] (script [[.start], reply 5])
+       , raw celled [wait] (script [[.start], reply 5])
+       , raw clocked [wait] (script [[.start], reply 5]) ].all (· = some green)
+-- finite evaluation: a reply that fails with no typed error: a defect, an interruption, an
+-- empty cause and a mixed cause, through each constructor that reads a failure
+#guard [ Cause.die (Defect.user 3), Cause.interrupt none, Cause.empty,
+         Cause.combine (Cause.fail (.tagged "E" "m")) (Cause.interrupt (some ⟨0⟩)) ].all fun cause =>
+  [ raw chain [wait] (script [[.start], reply 5, failing cause, reply 7])
+  , raw fin [wait] (script [[.start], failing cause, reply 6])
+  , raw fin [wait] (script [[.start], reply 5, failing cause])
+  , raw caught [wait] (script [[.start], failing cause, reply 6])
+  , raw matched [wait] (script [[.start], failing cause, reply 6])
+  , raw exited [wait] (script [[.start], failing cause]) ].all (· = some green)
+
+/-! ## Controls: for each premise, a run where it fails and the two sides differ -/
+
+-- control (`hostDriven`): an interruption of the root while it waits
+#guard raw chain [wait] (script [[.start], [.cancel ⟨0⟩], [.flush]]) =
+  some (true, true, true, false, false)
+-- control (`hostDriven`): a clock step before a clock read
+#guard raw clocked [wait] (script [[.start], [.tick 5], reply 5]) =
+  some (true, true, true, false, false)
+-- control (`hostDriven`): a delayed cell read as the reply
+#guard raw (.bind (.perform .refMake (num 7)) (call (num 1))) [wait]
+    (script [[.start], answer (.row "H.wait") (.ofRefGet ⟨0⟩)]) =
+  some (true, true, true, false, false)
+-- control (`funded`): a command budget of 5 cuts the last step of three calls. The run is at
+-- rest and no row is refused. 6 is the least command budget at which the run is funded
+#guard raw chain [wait] (script [[.start], reply 5, reply 6, reply 7]) { fuel := 5, compileFuel := 1000 } =
+  some (true, false, true, true, false)
+#guard ((List.range 41).find? fun fuel =>
+    raw chain [wait] (script [[.start], reply 5, reply 6, reply 7]) { fuel := fuel, compileFuel := 1000 }
+      = some green) = some 6
+-- control (`atRest`): a run that has not started, on a program with no call
+#guard raw (.succeed (num 1)) [wait] [] = some (true, true, false, true, false)
+-- control (`dataRow`): a row that answers a handle. The reply allocates, and the tree does not
+#guard raw (.bind (.perform (.external 0) (.lit .unit)) (.succeed (num 1))) [kvMake]
+    (script [[.start], answer (.row "K.make") (ok (.nat 0))]) =
+  some (false, true, true, true, false)
+
+-- finite evaluation (the premise reads the tape): a delayed cell read that the session receives
+-- and never applies hands the machine nothing. The run is host-driven, and both sides wait
+#guard raw (.bind (.perform .refMake (num 7)) (call (num 1))) [wait]
+    [.start, .receive (.row "H.wait") (.ofRefGet ⟨0⟩)] = some green
+
+/-! ## A host as a handler: an in-memory repository -/
+
+section repository
+open Test.Dogfood.Scenario.Todo
+
+/-- A host function as a handler of the row signature, with the session's reply check on its
+answer: an answer outside the row's columns is no answer. -/
+def reactorHandler {σ : Type} (table : RowTable) (r : Run.Reactor σ) :
+    Effects.Handler (RowSig table) (StateT σ Option) where
+  handle op := fun state =>
+    match externalRow table op.1.val with
+    | none => none
+    | some row =>
+      match r row op.2 state with
+      | some (.ofExit ex, next) =>
+        if externalAdmits table op.1.val (.ofExit ex) [] then some (ex, next) else none
+      | _ => none
+
+/-- The repository's state: the next id and the to-dos. -/
+abbrev Repo := Nat × List (Nat × String × Bool)
+
+def todoOf (entry : Nat × String × Bool) : Val := todo entry.1 entry.2.1 entry.2.2
+
+/-- An in-memory repository as a host function, row by row. -/
+def repository : Run.Reactor Repo := fun row sent state =>
+  if row.spelling == "TodoRepo.insert" then
+    match sent with
+    | .str title =>
+      some (ok (todo state.1 title false), (state.1 + 1, state.2 ++ [(state.1, title, false)]))
+    | _ => none
+  else if row.spelling == "TodoRepo.all" then
+    some (ok (.list (state.2.map todoOf)), state)
+  else if row.spelling == "TodoRepo.setDone" then
+    match sent with
+    | .list [.nat id, .bool done] =>
+      match state.2.find? (·.1 == id) with
+      | some entry =>
+        some (ok (.some (todo id entry.2.1 done)),
+          (state.1, state.2.map fun e => if e.1 == id then (e.1, e.2.1, done) else e))
+      | none => some (ok .none, state)
+    | _ => none
+  else if row.spelling == "TodoRepo.delete" then
+    match sent with
+    | .nat id => some (ok (.bool (state.2.any (·.1 == id))), (state.1, state.2.filter (·.1 != id)))
+    | _ => none
+  else none
+
+/-- Whether two results are one: the exit, the stores and the repository's state. The
+comparison is by component: instance search does not reach the whole type at default limits. -/
+def same (a b : Option ((ExitV × Stores) × Repo)) : Bool :=
+  match a, b with
+  | none, none => true
+  | some x, some y => decide (x.1.1 = y.1.1) && decide (x.1.2 = y.1.2) && decide (x.2 = y.2)
+  | _, _ => false
+
+/-- The drive of a to-do program under the repository, against its meaning under the repository
+as a handler: whether they are one, the exit, and the repository's state. -/
+def driven (main : Src NativeOp) (state : Repo) : Option (Bool × Option ExitV × Repo) :=
+  (built? (request main)).map fun b =>
+    let run : Run × Repo := Run.runWith b repository state "todo"
+    (same (meaningUnder (reactorHandler b.table repository) b.program [] Stores.empty state)
+        (run.1.exit.map fun ex => ((ex, run.1.machine.state), run.2)),
+      run.1.exit, run.2)
+
+-- finite evaluation: the drive and the meaning are one on each program, from two states
+#guard [driven (add (str "milk")) (1, []), driven (add (str "")) (1, []), driven list (1, []),
+    driven list (3, [(1, "milk", false), (2, "tea", true)]),
+    driven (complete (nat 1)) (3, [(1, "milk", false), (2, "tea", true)]),
+    driven (complete (nat 7)) (3, [(1, "milk", false)]),
+    driven (remove (nat 2)) (3, [(1, "milk", false), (2, "tea", true)]),
+    driven (remove (nat 7)) (3, [(1, "milk", false)])].all fun r => (r.map (·.1)) = some true
+-- finite evaluation of a fact under a host: after `add`, `list` answers the new to-do
+#guard ((driven (add (str "milk")) (1, [])).bind fun added =>
+    (driven list added.2.2).map fun listed => listed.2.1) =
+  some (some (.success (.list [todo 1 "milk" false])))
+
+end repository
+
+end Test.Api.SessionMeaning
