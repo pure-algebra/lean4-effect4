@@ -143,6 +143,10 @@ private def negativeCases : Array ReportCase := #[
     registry := { base with requirements := [{ id := "R0", title := "A", top := [], openParts := ["x"] },
                                              { id := "R0", title := "B", top := [], openParts := ["y"] }] }
     expected := #[#["requirement R0", "duplicate"]] },
+  { label := "open part that waits on nothing"
+    registry := { base with requirements :=
+      [{ id := "R0", title := "A", top := [], openParts := [.ruling "" "x"] }] }
+    expected := #[#["requirement R0", "an open part waits on nothing"]] },
   { label := "plain definition is not a witness", registry := withPointer (.witness (fixtureName `semantics))
     expected := #[#["fixture-claim", "semantics", "not a theorem"]] },
   { label := "plain witness outside axiom ceiling", registry := withPointer (.witness `Classical.em)

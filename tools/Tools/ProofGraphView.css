@@ -101,7 +101,21 @@
 .pg-matrix .rt { font-weight: 400; color: var(--ink-2); margin-top: 2px; line-height: 1.35; }
 .pg-matrix td { max-width: 92px; line-height: 0; }
 .pg-matrix td.ops, .pg-matrix th.ops { line-height: 1.4; text-align: center; color: var(--ink-3); }
-.pg-matrix td.ops a { color: var(--st-goal); font-weight: 600; text-decoration: none; cursor: pointer; }
+.pg-matrix td.ops { text-align: left; min-width: 96px; }
+/* An open part: an outlined mark, with no hue. Its state is its shape. A filled corner is how far
+   the part is: nothing for a part that is not triaged, a dashed outline while it waits, a solid
+   outline when its statement is worded. */
+.part { display: inline-block; width: 11px; height: 11px; margin: 1.5px; box-sizing: border-box; vertical-align: middle;
+  border: 1.5px dotted var(--ink-3); border-radius: 50%; background: none; cursor: pointer; }
+.part.ruling { border-style: dashed; border-color: var(--ink-2); border-radius: 0; transform: rotate(45deg) scale(0.82); }
+.part.definition { border-style: dashed; border-color: var(--ink-2); border-radius: 0; }
+.part.work { border-style: solid; border-color: var(--ink-2); border-radius: 0; }
+.part.proposed { border-style: solid; border-color: var(--ink-2); border-radius: 0; background: linear-gradient(135deg, var(--ink-2) 50%, transparent 50%); }
+.pg-matrix p.hint .part, ul.parts .part { cursor: default; }
+ul.parts { list-style: none; padding-left: 0; }
+ul.parts li { margin: 0 0 8px; }
+ul.parts .on { color: var(--ink-3); }
+ul.parts div { color: var(--ink-2, inherit); }
 .pg-matrix .dot { display: inline-block; width: 10px; height: 10px; margin: 0 3px 3px 0; border-radius: 3px; cursor: pointer;
   border: 1.5px solid var(--c); background: color-mix(in srgb, var(--c) 30%, transparent); }
 .pg-matrix .dot.proved { --c: var(--st-proved); }

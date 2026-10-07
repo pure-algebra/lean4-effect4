@@ -482,6 +482,18 @@ In work since the suspension of the handover:
   - **Open after it**: the helpers that served the retired claim keep its name in their
     docstrings (`src/Effect4/Laws/Program/Template.lean`,
     `src/Effect4/Data/Constructive.lean`). Each is placed again or cut in the next chunk.
+- **The plan's open parts carry a state, and the to-do application has its first slice**
+  (rows 307 and 308).
+  - **Each open part of a requirement has one state**: not triaged, worded, waits on a ruling,
+    needs a definition, or after other work (`tools/Tools/SemanticsRegistry.lean`). The report
+    counts them, and the proof graph view draws one mark for each
+    ([the pass](research/2026-10-07-open-parts-pass.md)).
+  - **The to-do application is the centre of the dogfooding** (the owner, row 307). Its first
+    slice holds four host rows and four programs that build, run and print
+    (`Test/Dogfood/Scenario/Todo.lean`). It holds no claim yet.
+  - **The theorems of a program** are examined in
+    [a note](research/2026-10-07-theorems-of-a-program.md). The owner agrees the form of a
+    program's claims before one is added.
 - **Chunk 2 is landed: the query function, the match by bounds and four converted rules**
   (rows 303 to 305). [The coordinator's review](research/2026-10-07-chunk-2-landing-review.md)
   says what the landing changed. Two reviews were written in flight:
