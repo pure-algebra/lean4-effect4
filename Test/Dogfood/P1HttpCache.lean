@@ -36,8 +36,8 @@ This battery ports the model probe's program 1 and its form laws
   `new HttpError({ … })`, and the module reads back (section 7). The program still fails with
   the pair, which prints.
 
-**What the language refuses** (section 6): `status: number` (row 121: admission refuses a signed
-field by its path); a `Quote` record in the cache; the forms `retry` and `catchTag` (DI-89, DI-39) and
+**What the language refuses** (section 6): a `Quote` record in the cache (a signed `status` builds
+since decisions row 317); the forms `retry` and `catchTag` (DI-89, DI-39) and
 `timeout`. The
 retry test compares the status text with `"503"`, where rc.112 reads `status >= 500`. When the
 timeout gives up on attempt 1, the session retires the call and records it
@@ -46,7 +46,7 @@ no retirement edge (R6, parked). The retry loop states its cursor's type (DI-91)
 reads it by the checked type reader since the state plan's T5, part B, so the program reads back.
 
 **Waits on:** R10 with DI-89, DI-39 and DI-91 (the forms, with a readable expansion); R3 with
-row 121 (`status: number`); R7 and row 82 (`Cache` keeps code); R6, parked (the retirement
+row 121 (the profile's bound of an integer, the integers packet's slices 6 and 7); R7 and row 82 (`Cache` keeps code); R6, parked (the retirement
 notice). The slices of row 204 that move it: error payloads (row 120), and the derived forms
 beside them.
 -/

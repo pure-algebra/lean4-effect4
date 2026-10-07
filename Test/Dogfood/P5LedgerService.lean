@@ -33,16 +33,15 @@ new balance, builds and runs over the `Account` record; its term captures the am
 binder (section 1). The term is no name's image, so the printer refused the row by name until the
 state plan's T5, part A. Since then it prints as a function of the account and reads back.
 
-**What the language refuses** (section 2): `needed` and `available` as rc.112 types them, signed
-numbers (admission refuses `int` by the field's path; row 121); a
-signed number (table admission refuses an `int` column as uninhabited,
-and `sub` truncates, so `10 - 25` answers `0` where rc.112 answers `-15`). A listener is code,
+**What the language refuses** (section 2): nothing of the numbers since decisions rows 317 and
+319: `needed` and `available` build as signed fields, a row answers a signed number, and
+`minus` answers `10 - 25` as rc.112's `-15`. A listener is code,
 which no value holds; so are `Ref.modify`'s effect-valued answer and `Effect.callback`'s cancel
 effect, and removal by identity needs equality on code (R7, row 82).
 
 **Waits on:** R4, the faces' part (the state plan's T5: a binder term prints as a function since
 part A, and `Ref.make<A>` is part B); R3 with
-row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect); R10 with
+row 121 (the profile's bound of an integer, the integers packet's slices 6 and 7); R7 with row 82 (listeners, the effect-valued answer, the cancel effect); R10 with
 DI-89 (`forEach`) and DI-39 (`catchTag`); R6, parked, or the logical clock (`settle`). The slices
 of row 204 that move it: state at any type, and error payloads.
 -/
@@ -168,13 +167,15 @@ def insufficientIntModule : Module NativeOp :=
     ("needed", false, .int)])
 
 /-- `e.available - e.needed` with the recorded run's numbers. -/
-def balanceAfter : Module NativeOp := program (succeed (app "sub" [nat 10, nat 25]))
+def balanceAfter : Module NativeOp := program (succeed (app "minus" [nat 10, nat 25]))
 
--- The `sub` atom truncates at zero (`natSub`, `src/Effect4/Machine/Term.lean`): the program answers
--- `0` where rc.112 answers `-15`. This runs the Lean machine only; the other faces are not run here.
-#guard (Effect4.Api.Author.build balanceAfter).toOption.map (·.runSync) = some (.success (.nat 0))
+-- Since decisions row 319 `minus` is exact (`intSub_spec`, `src/Effect4/Laws/Machine/Integers.lean`):
+-- the program answers rc.112's `-15`, the image `negInt 14`. This runs the Lean machine only; the
+-- other faces are not run here.
+#guard (Effect4.Api.Author.build balanceAfter).toOption.map (·.runSync) =
+  some (.success (.negInt 14))
 -- Green control: the same atom where the answer is a natural number.
-#guard (Effect4.Api.Author.build (program (succeed (app "sub" [nat 25, nat 10])))).toOption.map
+#guard (Effect4.Api.Author.build (program (succeed (app "minus" [nat 25, nat 10])))).toOption.map
   (·.runSync) = some (.success (.nat 15))
 
 /-- A host row answering a signed number. -/
