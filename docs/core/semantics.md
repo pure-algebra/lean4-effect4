@@ -815,11 +815,22 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 (`src/Effect4/Laws/Program/TypeAlgebra.lean:1067`). Canonical types `CTy` form a bounded join-semilattice.
 
 #### 4. Required Properties and Obligations
-- **Raw formation (`raw-formation`)**: The raw check agrees with distinct record names, the admitted map-key predicate
-  and a deferred's admitted error column.
+- **Raw formation (`raw-formation`)**: The raw check agrees with distinct record names, the admitted map-key predicate,
+  a deferred's admitted error column and the variable rule.
   Rows 192 and 193 require this check before normalization at each checked public boundary.
   Open map keys and open error columns are deferred only in row templates.
+  A type variable is formed in a template only (row 288, point 6 a).
+  A row's column is a template site, and a program's annotation is not.
+  A declared service carrier is a strict formation site, and no template (row 297).
   Formation establishes no inhabitance, codec admission or execution property.
+- **Closed types of the checker (`checked-types-closed`)**: A formed program that the checker admits has closed
+  types (`check_closed`, `src/Effect4/Laws/Program/Typing/Closed.lean`; seat FORM).
+  The statement fixes a closed environment and a typing signature with closed atoms and closed service carriers.
+  It asks nothing of a row: the row rule checks strict formation of each instantiated column.
+  The whole-program checker has the same property with no premise on a layer reference (`typeOfProgram_closed`).
+  An admitted program has closed types with no premise (`AdmittedProgram.closed`).
+  The checker alone does not have it: it types a stated cursor at a type that is not closed.
+  It establishes no closed type of a sketch with a gap, and nothing of a run.
 - **Reflexivity (`subn-refl`)**: Normalized subtyping is reflexive.
   (`subN_refl` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Transitivity (`subn-trans`)**: Normalized subtyping is transitive.

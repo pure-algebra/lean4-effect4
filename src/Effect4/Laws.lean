@@ -61,6 +61,7 @@ import Effect4.Laws.Api.Guard
 import Effect4.Laws.Api.Supervision
 import Effect4.Laws.Api.Codegen
 import Effect4.Laws.Api.Formation
+import Effect4.Laws.Program.Typing.Closed
 import Effect4.Laws.Run
 import Effect4.Laws.Run.Rows
 import Effect4.Laws.Run.Tape

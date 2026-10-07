@@ -1,4 +1,5 @@
 import Effect4.Program.Refs
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Laws/Program/PathFold — the path fold visits every addressed node
@@ -15,10 +16,18 @@ A census over the program by the path fold is an instance: the layer reference s
 formation rule (`Eff.layerRefsWF`) at a reference site (`layerRefsWF_mem`) and at a reference
 reached by its address (`layerRefsWF_at`).
 
+The last section relates a path fold to the fold with no path (`foldMap_eff` and its siblings).
+Through a homomorphism that reads no path, a path fold is the fold with no path. The law is
+`foldMapAt_eff_fuse` with its six siblings, and `foldMapAt_term_fuse` for a term. It holds at
+every operation, not at the list monoid alone. So a census that a path fold collects is a
+conjunction over the program's shape, once its paths are forgotten.
+
 Placement (AGENTS.md, Trust): concept initial-algebras-folds (`docs/core/semantics.md` §2.7).
 The consumers are the layer family's reference hop (`Typed/LayerArm.lean`, decisions row 170's
 premise read at an address) and the reference expansion (`Laws/Program/ReferenceExpansion.lean`,
-`target_refs_prior`, a step of `expanded_refs_nil_of_wf`).
+`target_refs_prior`, a step of `expanded_refs_nil_of_wf`). The consumer of the last section is
+the fold form of a program's annotations (`Formation.programAnnotations_all`,
+`Laws/Program/Typing/Closed.lean`), a step of `check_closed` (requirement R14).
 -/
 
 set_option autoImplicit false
@@ -172,5 +181,176 @@ theorem layerRefsWF_at {Op : Type} {root : Eff Op} {path target : List Nat}
     (hwf : root.layerRefsWF = true) (h : Node.at_ (.eff root) path = some (.layer (.ref target))) :
     ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' :=
   (layerRefsWF_mem hwf (mem_refSites_of_at h)).2.2
+
+/-! ## A path fold and the fold with no path
+
+The generated module has two folds into a carrier with an operation: the path fold
+(`foldMapAt_*`), whose node function reads the node's path, and the fold with no path
+(`foldMap_*`). A homomorphism `φ` carries the first to the second when the image of each node's
+value does not depend on the path. Each statement is one line for its sort: the sort's case
+list, and the law at each recursive argument. -/
+
+section Fuse
+
+universe u v
+
+variable {Op : Type} {M : Type u} {N : Type v}
+
+mutual
+
+/-- **A path fold, through a homomorphism that reads no path, is the fold with no path**, at a
+term. `φ` carries the fold's operation to `op'`, and the image of each node's value does not
+depend on the node's path. With `φ` the identity it says that a path fold whose node function
+reads no path is the fold with no path. It is a law of the generated folds
+(`Program/Fold.lean`). A term has two sorts, and each has its own hypothesis. Its consumer is
+`Formation.termAnnotations_all` (`Laws/Program/Typing/Closed.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_term_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f_term : Term → List Nat → M} {f_terms : Terms → List Nat → M}
+    {g_term : Term → N} {g_terms : Terms → N}
+    (hterm : ∀ n q, φ (f_term n q) = g_term n) (hterms : ∀ n q, φ (f_terms n q) = g_terms n)
+    (t : Term) (p : List Nat) :
+    φ (foldMapAt_term unit op p t f_term f_terms) = foldMap_term unit' op' t g_term g_terms := by
+  cases t <;>
+    simp only [foldMapAt_term, foldMap_term, hop, hterm,
+      foldMapAt_term_fuse φ (unit' := unit') hop hterm hterms,
+      foldMapAt_terms_fuse φ (unit' := unit') hop hterm hterms]
+
+/-- `foldMapAt_term_fuse` at an argument list. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_terms_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f_term : Term → List Nat → M} {f_terms : Terms → List Nat → M}
+    {g_term : Term → N} {g_terms : Terms → N}
+    (hterm : ∀ n q, φ (f_term n q) = g_term n) (hterms : ∀ n q, φ (f_terms n q) = g_terms n)
+    (ts : Terms) (p : List Nat) :
+    φ (foldMapAt_terms unit op p ts f_term f_terms) =
+      foldMap_terms unit' op' ts g_term g_terms := by
+  cases ts <;>
+    simp only [foldMapAt_terms, foldMap_terms, hop, hterms,
+      foldMapAt_term_fuse φ (unit' := unit') hop hterm hterms,
+      foldMapAt_terms_fuse φ (unit' := unit') hop hterm hterms]
+
+end
+
+mutual
+
+/-- **A path fold, through a homomorphism that reads no path, is the fold with no path**, at a
+program. It is `foldMapAt_term_fuse` for the program's family: one statement for each sort, each
+proved by the sort's own case list. The node functions of the seven sorts are one function of
+the family (`EffSelfCarrier`), so the statement has one hypothesis on them. Its consumer is
+`Formation.programAnnotations_all` (`Laws/Program/Typing/Closed.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_eff_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : Eff Op) (p : List Nat) :
+    φ (foldMapAt_eff unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_eff unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_eff, foldMap_eff, hop, h,
+      foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_stmts_fuse φ (unit' := unit') hop h,
+      foldMapAt_action_fuse φ (unit' := unit') hop h,
+      foldMapAt_layer_fuse φ (unit' := unit') hop h]
+
+/-- `foldMapAt_eff_fuse` at a statement. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_stmt_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : Stmt Op) (p : List Nat) :
+    φ (foldMapAt_stmt unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_stmt unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_stmt, foldMap_stmt, hop, h,
+      foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_stmts_fuse φ (unit' := unit') hop h]
+
+/-- `foldMapAt_eff_fuse` at a statement list. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_stmts_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : Stmts Op) (p : List Nat) :
+    φ (foldMapAt_stmts unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_stmts unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_stmts, foldMap_stmts, hop, h,
+      foldMapAt_stmt_fuse φ (unit' := unit') hop h, foldMapAt_stmts_fuse φ (unit' := unit') hop h]
+
+/-- `foldMapAt_eff_fuse` at a race's entrants. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_effs_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : Effs Op) (p : List Nat) :
+    φ (foldMapAt_effs unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_effs unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_effs, foldMap_effs, hop, h,
+      foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_effs_fuse φ (unit' := unit') hop h]
+
+/-- `foldMapAt_eff_fuse` at a fiber action. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_action_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : ActionTerm Op) (p : List Nat) :
+    φ (foldMapAt_action unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_action unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_action, foldMap_action, hop, h,
+      foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_effs_fuse φ (unit' := unit') hop h]
+
+/-- `foldMapAt_eff_fuse` at a layer. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_layer_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : LayerTerm Op) (p : List Nat) :
+    φ (foldMapAt_layer unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_layer unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_layer, foldMap_layer, hop, h,
+      foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_layer_fuse φ (unit' := unit') hop h,
+      foldMapAt_layers_fuse φ (unit' := unit') hop h]
+
+/-- `foldMapAt_eff_fuse` at a layer list. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldMapAt_layers_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
+    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
+    {f : (fam : EffFam) → EffSelfCarrier Op fam → List Nat → M}
+    {g : (fam : EffFam) → EffSelfCarrier Op fam → N}
+    (h : ∀ fam n q, φ (f fam n q) = g fam n) (e : LayerTerms Op) (p : List Nat) :
+    φ (foldMapAt_layers unit op p e (f .eff) (f .stmt) (f .stmts) (f .effs) (f .action) (f .layer)
+        (f .layers)) =
+      foldMap_layers unit' op' e (g .eff) (g .stmt) (g .stmts) (g .effs) (g .action) (g .layer)
+        (g .layers) := by
+  cases e <;>
+    simp only [foldMapAt_layers, foldMap_layers, hop, h,
+      foldMapAt_layer_fuse φ (unit' := unit') hop h,
+      foldMapAt_layers_fuse φ (unit' := unit') hop h]
+
+end
+
+end Fuse
 
 end Effect4.Program

@@ -19,8 +19,9 @@ the signature's admission is part of program admission) when:
    key a row requires has a carrier. Refused as `signature why`, with the signature's own located
    refusal.
 3. The program tree mentions no reserved integer type (`findIntInProgram`, DI-92).
-4. Every raw type of the program and the table is formed: distinct record names, valid map keys
-   (rows 192 and 193).
+4. Every raw type of the program, the table and the declared service carriers is formed:
+   distinct record names, valid map keys (rows 192 and 193), and no type variable outside a
+   row's template (row 288, point 6 a).
 5. The program is well-typed at the signature (`typeOfProgram app.signature program = some ty`).
 6. The inferred answer and error mention no reserved integer type, and each is inhabited or
    `never` (`admitColumn`, rows 127 and 149; refused as `uninhabited at` and `emptyColumn at`).
@@ -116,7 +117,7 @@ structure AdmittedProgram (program : NativeEff) (app : SigApp)
     extends TypedProgram app.signature program where
   intFreeTable : findIntInTable app.rows = none
   signature : admitSig app = .ok ()
-  formed : Formation.InputFormed program app.rows
+  formed : Formation.InputFormed program app.rows app.services
   intFreeProgram : findIntInProgram program = none
   intFreeType : findIntInEffTy ty = none
   columnsType : findEmptyColumnInEffTy ty = none
@@ -137,7 +138,7 @@ def admitProgram (program : NativeEff) (app : SigApp := {}) :
     match hprogram : findIntInProgram program with
     | some pos => .error (.uninhabited pos)
     | none =>
-    match hformed : Formation.checkInput program app.rows with
+    match hformed : Formation.checkInput program app.rows app.services with
     | some why => .error (.formation why)
     | none =>
     match checkTypedProgram app.signature program with
@@ -149,8 +150,8 @@ def admitProgram (program : NativeEff) (app : SigApp := {}) :
         match hcolType : findEmptyColumnInEffTy typing.ty with
         | some pos => .error (.emptyColumn pos)
         | none => .ok ⟨typing, htable, hsig,
-            (Formation.checkInput_eq_none_iff program app.rows).mp hformed, hprogram, htype,
-            hcolType⟩
+            (Formation.checkInput_eq_none_iff program app.rows app.services).mp hformed,
+            hprogram, htype, hcolType⟩
 
 /-- Failure of ordinary admission, or a program outside the proved straight fragment.
 Outside-fragment refusal does not mean that the program is ill-typed. -/
@@ -261,7 +262,7 @@ and formation succeed. -/
 theorem admitProgram_type_int (program : NativeEff) (app : SigApp) (ty : EffTy) (pos : Path)
     (hTable : findIntInTable app.rows = none) (hSig : admitSig app = .ok ())
     (hProgram : findIntInProgram program = none)
-    (hFormed : Formation.checkInput program app.rows = none)
+    (hFormed : Formation.checkInput program app.rows app.services = none)
     (hTy : typeOfProgram app.signature program = some ty)
     (hInt : findIntInEffTy ty = some pos) :
     admitProgram program app = .error (.uninhabited pos) := by

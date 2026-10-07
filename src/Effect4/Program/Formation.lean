@@ -10,7 +10,10 @@ normalizer can discard syntax. A deferred's error column is an error type the er
 alphabet admits (`admittedErrTy`), since a deferred fails only with a value `errOf`
 carries (decisions rows 42 and 120, the state plan's T3a). Row templates may defer an
 open map key or an open error column until instantiation. Program annotations cannot
-defer either. The generated folds collect raw occurrences; this module supplies their
+defer either. A type variable is formed in a template only (decisions row 288, point 6 a):
+a row's column may hold a parameter, and a program's annotation may not. A declared service
+carrier is no template either: `Effect.service(key)` answers it as it is declared
+(`serviceSites`). The generated folds collect raw occurrences; this module supplies their
 local judgment and located check.
 
 The coordinator places `raw-formation` under decidability of the type algebra.
@@ -28,6 +31,11 @@ inductive FormationReason where
   /-- A deferred's error column that the error alphabet does not admit (`admittedErrTy`):
   `Deferred.fail` would fail it with a value `errOf` cannot carry (decisions rows 42, 120). -/
   | deferredError
+  /-- A type variable outside a template (decisions row 288, point 6 a). A row's column may hold
+  a parameter, which the checker instantiates at each use. A program's annotation states a
+  program's type, which holds none: the checker would give the program a type that is not
+  closed, or close the variable to `never` without a word. The refusal keeps the variable. -/
+  | typeVariable
   deriving DecidableEq, Repr
 
 /-- A refusal retains the raw type; its path ends in a preorder occurrence index. -/
@@ -39,11 +47,14 @@ structure FormationRefusal where
 
 namespace Formation
 
-/-- The local formation judgment at one raw type occurrence. -/
+/-- The local formation judgment at one raw type occurrence. A type variable is formed in a
+template only, so a type whose every occurrence is formed outside a template is closed
+(`Formation.closed_of_formed`, `Laws/Program/Typing/Closed.lean`). -/
 def HeadFormed (template : Bool) : Ty → Prop
   | .record fields => (fields.map Prod.fst).Nodup
   | .map key _ => key.normalize = .string ∨ (template = true ∧ key.closed = false)
   | .deferredOf _ error => admittedErrTy error = true ∨ (template = true ∧ error.closed = false)
+  | .var _ => template = true
   | _ => True
 
 instance (template : Bool) (ty : Ty) : Decidable (HeadFormed template ty) := by
@@ -64,6 +75,7 @@ def reason (ty : Ty) : Reason :=
   match ty with
   | .record fields => .repeatedField ((Field.firstRepeated fields).getD "")
   | .deferredOf _ _ => .deferredError
+  | .var _ => .typeVariable
   | _ => .mapKey
 
 /-- Raw occurrences, including the root, collected without normalization. -/
@@ -107,6 +119,15 @@ def instantiatedSites (row : Row) (bindings : Ty.Subst) : List Site :=
   sites false ["row", "request"] (row.request.instantiate bindings) ++
   sites false ["row", "answer"] (row.answer.instantiate bindings) ++
   sites false ["row", "error"] (row.error.instantiate bindings)
+
+/-- The declared carrier of every service declaration, checked strictly. A carrier is no
+template: no use instantiates it, and `Effect.service(key)` answers it as it is declared. So a
+type variable in a carrier is refused, and a repeated field name, a map key and a deferred's
+error column inside it are checked as an annotation's are (decisions row 288, point 6 a, at a
+site that is no template). -/
+def serviceSites (services : List (ServiceKey × Ty)) : List Site :=
+  services.zipIdx.flatMap fun (entry, i) =>
+    sites false ["service", toString i, "carrier"] entry.2
 
 /-- Raw declarations in a term, collected by the generated term fold: a record's fields, and
 the accumulator type a list fold states (decisions row 228), as a loop's cursor annotation is a
@@ -164,23 +185,29 @@ def programAnnotations {Op : Type} [ScopedOp Op] (program : Eff Op) : List (List
 def programSites {Op : Type} [ScopedOp Op] (program : Eff Op) : List Site :=
   (programAnnotations program).flatMap fun (path, ty) => sites false path ty
 
-/-- The shared raw input of every checked public boundary. -/
-def input {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) : List Site :=
-  tableSites table ++ programSites program
+/-- The shared raw input of every checked public boundary: the supplied rows' columns, the
+declared service carriers, and the program's annotations, in that order. A boundary at a row
+table alone declares no carrier: its signature is the native one, whose carriers are built in. -/
+def input {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row)
+    (services : List (ServiceKey × Ty) := []) : List Site :=
+  tableSites table ++ (serviceSites services ++ programSites program)
 
-/-- Raw formation of the exact program and table, before typing or printing. -/
-def InputFormed {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) : Prop :=
-  Formed (input program table)
+/-- Raw formation of the exact program, table and declared carriers, before typing or
+printing. -/
+def InputFormed {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row)
+    (services : List (ServiceKey × Ty) := []) : Prop :=
+  Formed (input program table services)
 
 /-- The shared checked boundary; no consumer owns a separate type traversal. -/
-def checkInput {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) :
-    Option Refusal :=
-  check (input program table)
+def checkInput {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row)
+    (services : List (ServiceKey × Ty) := []) : Option Refusal :=
+  check (input program table services)
 
 /-- The `raw-formation` claim, used by every checked boundary's certificate. -/
-theorem checkInput_eq_none_iff {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) :
-    checkInput program table = none ↔ InputFormed program table :=
-  check_eq_none_iff (input program table)
+theorem checkInput_eq_none_iff {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row)
+    (services : List (ServiceKey × Ty) := []) :
+    checkInput program table services = none ↔ InputFormed program table services :=
+  check_eq_none_iff (input program table services)
 
 end Formation
 end Effect4.Program

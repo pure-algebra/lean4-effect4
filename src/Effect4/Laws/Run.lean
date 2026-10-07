@@ -219,7 +219,7 @@ field of the certificate, so none of them can fail. This is the fact `HostSessio
 needs and the tree did not have. -/
 theorem admitProgram_certificate (program : Api.Program) (app : SigApp)
     (c : AdmittedProgram program app) : admitProgram program app = .ok c := by
-  have hformed := (Formation.checkInput_eq_none_iff program app.rows).mpr c.formed
+  have hformed := (Formation.checkInput_eq_none_iff program app.rows app.services).mpr c.formed
   aesop (add norm unfold [admitProgram, checkTypedProgram])
     (add norm simp [c.intFreeTable, c.signature, c.intFreeProgram, c.typed, c.intFreeType,
       hformed, c.columnsType]) (add safe apply admitted_unique)

@@ -176,15 +176,21 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
   | _ => false
 #guard (checkRow (NativeOp.row (.deferredMakeOf .unit .never)).normalizeTypes .unit).toOption =
   some (EffTy.pure (.deferredOf .unit .never))
--- A parameter inside the operation's own type arguments is accepted and types at `never` (the
--- T3a design's D5 (a)): the request binds nothing. Since the state plan's T5, part B, an
--- operation's types are program annotations (`Formation.programAnnotations` reads them through
--- `ScopedOp.typeArgs`; decisions row 212). Raw formation has no rule against a bare parameter,
--- so the program is still admitted and still types at `never`. The faces refuse it by name: a
--- parameter has no printed form (`Test/Codegen/TermRows.lean`, section 6).
+-- A parameter inside the operation's own type arguments is refused at formation (decisions
+-- rows 212 and 288, point 6 a). Since the state plan's T5, part B, an operation's types are
+-- program annotations (`Formation.programAnnotations` reads them through `ScopedOp.typeArgs`),
+-- and a type variable is formed in a template only (`Formation.HeadFormed`). The checker alone
+-- still types the node at `never`: the request binds nothing, and the row's instance closes the
+-- parameter (the T3a design's D5 (a)). Admission runs formation first and refuses the program
+-- with the located variable. Until the clause the program was admitted, and the faces refused
+-- it by name. The other annotation sites are `Test/Program/FormationClosed.lean`'s.
 #guard (Effect4.Api.typeOf (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit))).map (·.answer) =
   some (.deferredOf .never .nat)
-#guard (admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩).isOk
+#guard match admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩ with
+  | .error (.formation why) =>
+    why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
+      why.ty == .var 0 && why.reason == .typeVariable
+  | _ => false
 #guard (Formation.programAnnotations
     (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit) : NativeEff)).map (·.2) =
   [.var 0, .nat]

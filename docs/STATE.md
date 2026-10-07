@@ -347,7 +347,7 @@ place, and the whole keeps its type. The true gap is the second step: the type o
 whose type is not stated. It costs one appended leaf of `Ty`, with one name per hole, and it
 pays where a value reaches a cell. The study's plan has nine stages and seven slices. Three
 need no ruling and no append: the hole table (SKETCH), the replacement law (REPLACE) and
-formation at a type variable (FORM). The first of them has landed (row 291): a sketch is a
+formation at a type variable (FORM). All three have landed. The first (row 291): a sketch is a
 program with its hole table (`src/Effect4/Program/Sketch.lean`), and its language is a
 conservative extension of the program's (`src/Effect4/Laws/Program/Sketch.lean`). The
 replacement law has landed too (row 294): a program of the focus's type stands in the
@@ -414,11 +414,17 @@ In work since the suspension of the handover:
   The checker does not change, and nothing is stored. The dictionary's trace stays the
   machine's, so this is no trace. Its first consumer is the TypeScript printer: the receipt
   says what the printer reads at an eliminator, and three open items are the printer's.
-- **Seat FORM has formation at a type variable** (branch `seat/form`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-form-brief.md); row 288, point
-  6 a). A type variable is formed in a template only, and a formed program that the checker
-  admits has closed types. It narrows the admitted programs by those that hold a variable
-  in an annotation.
+- **Seat FORM is merged** ([its receipt](research/2026-10-06-seat-FORM-receipt.md); rows
+  288 and 297). A type variable is formed in a template only (`Formation.HeadFormed`, the
+  reason `FormationReason.typeVariable`). A formed program that the checker admits has
+  closed types (`check_closed`, the registry claim `checked-types-closed`), and an admitted
+  program has them with no premise (`AdmittedProgram.closed`). Two things narrow what is
+  admitted. A program that holds a type variable in an annotation is refused at formation:
+  the pin of row 212 moved. A declared service carrier is a strict formation site now, so
+  program admission refuses a carrier with a type variable, a repeated field name, a map key
+  that is no string, or a deferred's error column outside the error alphabet. No typing
+  signature of the tree declares such a carrier, and none of 560 stored programs moves. The
+  owner heard of the carrier step with the merge.
 - **Seat LATTICE's renaming is merged**
   ([its receipt](research/2026-10-06-seat-LATTICE-words-receipt.md); row 286, point 5). The
   slice module says "omitted" where it said "folded", and the dictionary has eight entries
