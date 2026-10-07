@@ -27,10 +27,6 @@ import Effect4.Laws.Auto.Semantics
 * **In reach** (`TemplateOK`, `templateOKb`, `templateOK_of`). A template in the reach of the
   laws is its own normal form, is admissible, and holds no nominal reference.
   `Test/Program/BoundsControls.lean` decides it for every template of the tree.
-* **Conservative** (`matchB_conservative`, `matchArgsB_conservative`). Where the match by first
-  occurrence answered, the match by bounds answers, and each parameter instantiates to the same
-  type. These two laws name the old match (`Ty.matchTemplate`, `Ty.matchTemplateArgs`), which the
-  checker no longer calls. They go with it (decisions row 303, the open stage).
 * **The binder term** (`matchB_cell_fixed`, `termGuard_modify_use`, `matchTerm_modify_use`). The
   guard's one general law is `Bounds.matchB_of_matchTerm`
   (`src/Effect4/Laws/Program/Template.lean`).
@@ -48,8 +44,7 @@ are `NativeAtom.sound_of_poly` (`src/Effect4/Laws/Program/Typed.lean`), the row 
 - That the checker is complete against `HasTy`.
 - Anything of tsgo's inference. The interim guard and the prelude's declarations answer to
   that, and the truth lane tests them on finite programs.
-- The conservative laws hold within their premises. At an argument list the premise is that the
-  old match's final bindings admit every argument. At a binder term's raw type no law is stated.
+- At a binder term's raw type no law is stated.
 -/
 
 open Effect4 Effect4.Program
@@ -195,8 +190,7 @@ theorem matchB_sound {seed σ : Subst} {t r : Ty} (h : matchB seed t r = some σ
   · exact nomatch h
 
 /-- **The match of an argument list is sound at one instance**: every argument is below its
-parameter's instance at the same, final bindings. `Ty.matchTemplateArgs` checks each argument at
-the bindings of its own step. -/
+parameter's instance at the same, final bindings. -/
 @[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_sound {ps rs : List Ty} {σ : Subst} (h : matchArgsB ps rs = some σ) :
     ps.length = rs.length ∧ Admits σ ps rs := by
@@ -1188,213 +1182,6 @@ theorem matchArgsN_least {ps rs : List Ty} {σ : Subst} (h : matchArgsN ps rs = 
       exact normal_normalize x)
     (admits_normalize hτ)
 
-/-! ## Conservative: where the present match succeeds -/
-
-/-- **Each binding that `Ty.infer` makes is one of the request's candidates**, whichever rule
-`join` picks: a parameter binds at an occurrence, to the request's type there. The second half of
-the list motive serves a nominal reference, whose arguments `cands` reads at their declared
-variances. -/
-theorem infer_cands (join : Bool) (σ : Subst) (t r : Ty) :
-    ∀ (v : Variance) (j : Nat) (u : Ty), (infer σ t r join).lookup j = some u →
-      σ.lookup j = some u ∨ ∃ w, (j, w, u) ∈ cands v t r := by
-  induction σ, t, r using infer.induct_unfolding join
-      (motive_2 := fun σ ts rs result => ∀ (v : Variance) (j : Nat) (u : Ty),
-        result.lookup j = some u → σ.lookup j = some u ∨
-          ((∃ w, (j, w, u) ∈ candsItems v ts rs) ∧
-            ∀ (n : String) (k : Nat), ∃ w, (j, w, u) ∈ candsArgs v n k ts rs))
-      (motive_3 := fun σ fs gs result => ∀ (v : Variance) (j : Nat) (u : Ty),
-        result.lookup j = some u → σ.lookup j = some u ∨ ∃ w, (j, w, u) ∈ candsFields v fs gs)
-  case case1 σ i r hnone =>
-    intro v j u hj
-    rw [List.lookup_append] at hj
-    cases hσj : σ.lookup j with
-    | some w =>
-      rw [hσj, Option.some_or] at hj
-      exact Or.inl hj
-    | none =>
-      rw [hσj, Option.none_or, List.lookup_cons] at hj
-      cases hji : j == i with
-      | true =>
-        rw [hji] at hj
-        cases hj
-        rw [beq_iff_eq.mp hji, cands_var]
-        exact Or.inr ⟨v, List.mem_singleton_self _⟩
-      | false =>
-        rw [hji, List.lookup_nil] at hj
-        cases hj
-  case case2 σ i r bound hbound hjoin =>
-    intro v j u hj
-    rw [List.lookup_cons] at hj
-    cases hji : j == i with
-    | true =>
-      rw [hji] at hj
-      cases hj
-      rw [beq_iff_eq.mp hji, cands_var]
-      exact Or.inr ⟨v, List.mem_singleton_self _⟩
-    | false =>
-      rw [hji] at hj
-      exact Or.inl hj
-  case case3 => exact fun _ _ _ h => Or.inl h
-  case case4 ih | case5 ih | case6 ih =>
-    intro v j u hj
-    exact ih v j u hj
-  case case7 ih =>
-    intro v j u hj
-    exact ih (comp v .inv) j u hj
-  case case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂ | case11 ih₁ ih₂ | case13 ih₁ ih₂ =>
-    intro v j u hj
-    rcases ih₂ v j u hj with h | ⟨w, h⟩
-    · rcases ih₁ v j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case12 ih₁ ih₂ =>
-    intro v j u hj
-    rcases ih₂ (comp v .inv) j u hj with h | ⟨w, h⟩
-    · rcases ih₁ (comp v .inv) j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case14 ih₁ ih₂ =>
-    intro v j u hj
-    rcases ih₂ v j u hj with h | ⟨w, h⟩
-    · rcases ih₁ (comp v .inv) j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case15 ih => exact ih
-  case case16 ih =>
-    intro v j u hj
-    rcases ih v j u hj with h | ⟨h, -⟩
-    · exact Or.inl h
-    · exact Or.inr h
-  case case17 ih =>
-    intro v j u hj
-    rcases ih v j u hj with h | ⟨-, h⟩
-    · exact Or.inl h
-    · obtain ⟨w, hw⟩ := h _ 0
-      refine Or.inr ⟨w, ?_⟩
-      rw [cands, if_pos rfl]
-      exact hw
-  case case18 => exact fun _ _ _ h => Or.inl h
-  case case19 σ t c d hv hu ih₁ ih₂ =>
-    intro v j u hj
-    rw [cands_union_right v (fun i h => hv i h) (fun a b h => hu a b h)]
-    rcases ih₂ v j u hj with h | ⟨w, h⟩
-    · rcases ih₁ v j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case20 => exact fun _ _ _ h => Or.inl h
-  case case21 => exact Or.inl (by assumption)
-  case case22 hl ih v j u hj =>
-    rcases ih v j u hj with h | ⟨w, h⟩
-    · exact Or.inl h
-    · refine Or.inr ⟨w, ?_⟩
-      rw [candsFields, hl]
-      exact h
-  case case23 hl ihT ihR v j u hj =>
-    rw [candsFields, hl]
-    rcases ihR v j u hj with h | ⟨w, h⟩
-    · rcases ihT v j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case24 σ ty rest request remaining ihT ihR v j u hj =>
-    by_cases h0 : σ.lookup j = some u
-    · exact Or.inl h0
-    · rcases ihR v j u hj with h | ⟨⟨w, hw⟩, hargs⟩
-      · refine Or.inr ⟨?_, fun n k => ?_⟩
-        · obtain ⟨w, hw⟩ := (ihT v j u h).resolve_left h0
-          exact ⟨w, by rw [candsItems]; exact List.mem_append_left _ hw⟩
-        · obtain ⟨w, hw⟩ := (ihT (comp v (argVariance n k)) j u h).resolve_left h0
-          exact ⟨w, by rw [candsArgs]; exact List.mem_append_left _ hw⟩
-      · refine Or.inr ⟨⟨w, by rw [candsItems]; exact List.mem_append_right _ hw⟩, fun n k => ?_⟩
-        obtain ⟨w', hw'⟩ := hargs n (k + 1)
-        exact ⟨w', by rw [candsArgs]; exact List.mem_append_right _ hw'⟩
-  case case25 => exact Or.inl (by assumption)
-
-/-- Each candidate of a normal list of lower bounds being normal, their join is normal. -/
-theorem joinCands_normal : ∀ (l : List Ty), (∀ c ∈ l, Normal c) → Normal (joinCands l)
-  | [], _ => .never
-  | [x], h => h x List.mem_cons_self
-  | _ :: _ :: _, _ => normal_normalize _
-
-/-- **The match by bounds is conservative at one template**: where the present match
-(`Ty.matchTemplate`, the checker's rule with no `join`) answers bindings for a normal request,
-the match by bounds answers bindings too, and each parameter instantiates to the SAME type, not
-only to one of the same normal form. So a row's answer, its error and its formation sites are
-the same types. -/
-@[semantics "subtyping-algebra" (requirement := R4)]
-theorem matchB_conservative {seed σo : Subst} {t r : Ty} (ht : TemplateOK t) (hr : Normal r)
-    (h : matchTemplate seed t r = some σo) :
-    ∃ σ, matchB seed t r = some σ ∧ ∀ i, instantiate σ (.var i) = instantiate σo (.var i) := by
-  have hsound := matchTemplate_sound seed t r σo h
-  rw [hr.fixed] at hsound
-  have hkeep := matchTemplate_keeps h
-  have hseed : ∀ j u, seed.lookup j = some u →
-      (instantiate σo (.var j)).normalize = u.normalize := by
-    intro j u hj
-    rw [instantiate, hkeep j u hj]
-    rfl
-  have hcb := cands_below σo (sizeOf r + 1) r t .co (Nat.lt_succ_self _) (fun h => nomatch h)
-    ht hr hsound
-  have hb := solve_between seed (cands .co t r) σo hseed hcb
-  have hσo : σo = infer seed t r := by
-    dsimp only [matchTemplate] at h
-    split at h
-    · cases h
-      rfl
-    · exact nomatch h
-  obtain ⟨σ, hσ⟩ := matchB_complete seed ht hr hseed hsound
-  have hσeq : σ = solve seed (cands .co t r) := by
-    have hσ' := hσ
-    unfold matchB at hσ'
-    dsimp only at hσ'
-    split at hσ'
-    · cases hσ'
-      rfl
-    · exact nomatch hσ'
-  refine ⟨σ, hσ, fun i => ?_⟩
-  rw [hσeq]
-  cases hs : seed.lookup i with
-  | some u =>
-    rw [instantiate, instantiate, lookup_solve_seed seed _ hs, hkeep i u hs]
-  | none =>
-    rw [instantiate_solve seed _ i hs]
-    have hJn : Normal (joinCands (lowers (cands .co t r) i)) :=
-      joinCands_normal _ fun c hc => by
-        obtain ⟨c', hc', -, -, rfl⟩ := mem_lowers.mp hc
-        exact (hcb c' hc').2.1
-    have hle : sub (joinCands (lowers (cands .co t r) i)).normalize
-        (instantiate σo (.var i)).normalize = true := by
-      have := hb.1 i
-      rw [instantiate_solve seed _ i hs] at this
-      exact this
-    cases hl : σo.lookup i with
-    | none =>
-      have e : instantiate σo (.var i) = .never := by
-        rw [instantiate, hl]
-        rfl
-      rw [e] at hle ⊢
-      rw [hJn.fixed] at hle
-      exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn .never hle (OrderProof.sub_never _)
-    | some u =>
-      have e : instantiate σo (.var i) = u := by
-        rw [instantiate, hl]
-        rfl
-      rw [e] at hle ⊢
-      have hl' := hl
-      rw [hσo] at hl'
-      rcases infer_cands false seed t r .co i u hl' with hsd | ⟨w, hw⟩
-      · rw [hs] at hsd
-        exact nomatch hsd
-      · have hc := hcb (i, w, u) hw
-        have hge := hb.2 (i, w, u) hw
-        rw [instantiate_solve seed _ i hs, hJn.fixed] at hge
-        rw [hJn.fixed, hc.2.1.fixed] at hle
-        exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn hc.2.1 hle hge
-
 /-- Equal instances of every parameter give equal instances of every template. -/
 theorem instantiate_congr {σ σ' : Subst}
     (h : ∀ i, instantiate σ (.var i) = instantiate σ' (.var i)) (t : Ty) :
@@ -1420,90 +1207,6 @@ theorem candsList_cons (p : Ty) (ps : List Ty) (r : Ty) (rs : List Ty) :
     candsList (p :: ps) (r :: rs) = cands .co p r ++ candsList ps rs := by
   unfold candsList
   rw [List.zip_cons_cons, List.flatMap_cons]
-
-/-- Each binding of the present match of an argument list is a candidate of the list, whichever
-rule `join` picks. -/
-theorem matchArgs_cands (join : Bool) : ∀ (ps rs : List Ty) (σ σo : Subst),
-    matchTemplateArgs σ ps rs join = some σo → ∀ j u, σo.lookup j = some u →
-      σ.lookup j = some u ∨ ∃ w, (j, w, u) ∈ candsList ps rs
-  | [], [], σ, σo, h, j, u, hj => by
-    simp only [matchTemplateArgs, Option.some.injEq] at h
-    rw [← h] at hj
-    exact Or.inl hj
-  | [], _ :: _, _, _, h, _, _, _ => nomatch h
-  | _ :: _, [], _, _, h, _, _, _ => nomatch h
-  | p :: ps, r :: rs, σ, σo, h, j, u, hj => by
-    simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
-    obtain ⟨σ₁, h₁, hrest⟩ := h
-    have hσ₁ : σ₁ = infer σ p r join := by
-      dsimp only [matchTemplate] at h₁
-      split at h₁
-      · cases h₁
-        rfl
-      · exact nomatch h₁
-    rw [candsList_cons]
-    rcases matchArgs_cands join ps rs σ₁ σo hrest j u hj with h | ⟨w, h⟩
-    · rw [hσ₁] at h
-      rcases infer_cands join σ p r .co j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-
-/-- **The match by bounds is conservative at an argument list**, under one premise: the present
-match's final bindings admit every argument in the checker's order (`Admits`). Then each
-parameter instantiates to the same type. The premise is needed: `Ty.matchTemplateArgs` checks
-each argument at the bindings of its own step, and with `join` a later argument can move a
-parameter that an earlier argument holds at an invariant position (the finite model's family S2:
-58 applications that the present match admits at no instance). -/
-@[semantics "subtyping-algebra" (requirement := R4)]
-theorem matchArgsB_conservative {ps rs : List Ty} {σo : Subst} {join : Bool}
-    (hps : ∀ p ∈ ps, TemplateOK p) (hrs : ∀ r ∈ rs, Normal r)
-    (h : matchTemplateArgs [] ps rs join = some σo) (hadm : Admits σo ps rs) :
-    ∃ σ, matchArgsB ps rs = some σ ∧ ∀ i, instantiate σ (.var i) = instantiate σo (.var i) := by
-  have hlen : ps.length = rs.length := (matchTemplateArgs_length h).symm
-  have hcb := candsList_below σo hps hrs hadm
-  have hb := solve_between [] (candsList ps rs) σo (fun _ _ hj => nomatch hj) hcb
-  obtain ⟨σ, hσ⟩ := matchArgsB_complete hlen hps hrs hadm
-  have hσeq : σ = solve [] (candsList ps rs) := by
-    have hσ' := hσ
-    unfold matchArgsB at hσ'
-    rw [if_pos hlen] at hσ'
-    dsimp only at hσ'
-    split at hσ'
-    · cases hσ'
-      rfl
-    · exact nomatch hσ'
-  refine ⟨σ, hσ, fun i => ?_⟩
-  rw [hσeq, instantiate_solve [] _ i rfl]
-  have hJn : Normal (joinCands (lowers (candsList ps rs) i)) :=
-    joinCands_normal _ fun c hc => by
-      obtain ⟨c', hc', -, -, rfl⟩ := mem_lowers.mp hc
-      exact (hcb c' hc').2.1
-  have hle : sub (joinCands (lowers (candsList ps rs) i)).normalize
-      (instantiate σo (.var i)).normalize = true := by
-    have := hb.1 i
-    rw [instantiate_solve [] _ i rfl] at this
-    exact this
-  cases hl : σo.lookup i with
-  | none =>
-    have e : instantiate σo (.var i) = .never := by
-      rw [instantiate, hl]
-      rfl
-    rw [e] at hle ⊢
-    rw [hJn.fixed] at hle
-    exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn .never hle (OrderProof.sub_never _)
-  | some u =>
-    have e : instantiate σo (.var i) = u := by
-      rw [instantiate, hl]
-      rfl
-    rw [e] at hle ⊢
-    rcases matchArgs_cands join ps rs [] σo h i u hl with hsd | ⟨w, hw⟩
-    · exact nomatch hsd
-    · have hc := hcb (i, w, u) hw
-      have hge := hb.2 (i, w, u) hw
-      rw [instantiate_solve [] _ i rfl, hJn.fixed] at hge
-      rw [hJn.fixed, hc.2.1.fixed] at hle
-      exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn hc.2.1 hle hge
 
 /-! ## The rule's first case is a consequence, not a case of the function
 

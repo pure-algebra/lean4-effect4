@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Residual
+import Effect4.Laws.Program.Bounds
 
 /-! DI-53: deep canonicalization, exact membership and deliberate admission deltas.
 These finite controls supplement the universal laws; they do not prove host conformance. -/
@@ -188,10 +189,9 @@ top would be caught here and not only in a proof. -/
 /-! ### `E4-CHECK-CE-018`: a request union against a product template (the state plan's T3a)
 
 `Ref.set(cell, x)` with `x : "a" | "b"` has a normal request that is a union of two products. The
-match infers a request union member by member (`Ty.infer`), so it finds the substitution the
-instance needs; before the repair it bound nothing there and refused. A member whose anchor holds
-`never` binds the parameter at a covariant occurrence first: that boundary is the premise of the
-theorem `Ty.matchTemplate_complete_anchored` (`Ty.bottomFree`; seat T4). -/
+match collects bounds across request union members, finding the substitution the instance needs.
+Matching under `Bounds.matchB` succeeds when an anchor holds `never` and when a parameter first occurs
+covariantly. -/
 
 /-- `Ref.set`'s template, `[Ref<A>, A]`. -/
 def setT : Ty := .prod (.refOf (.var 0)) (.var 0)
@@ -200,25 +200,25 @@ def setR : Ty := .prod (.refOf .string) (.union (.lit "a") (.lit "b"))
 
 #guard setR.normalize ==
   .union (.prod (.refOf .string) (.lit "a")) (.prod (.refOf .string) (.lit "b"))
-#guard Ty.matchTemplate [] setT setR.normalize = some [(0, .string)]
+#guard Bounds.matchB [] setT setR.normalize =
+  some [(0, .string), (0, .string), (0, .string), (0, .string)]
 -- `Deferred.fail` with a union-typed error
-#guard Ty.matchTemplate [] (.prod (.deferredOf (.var 0) (.var 1)) (.var 1))
+#guard Bounds.matchB [] (.prod (.deferredOf (.var 0) (.var 1)) (.var 1))
     (Ty.prod (.deferredOf .nat .string) (.union (.lit "x") (.lit "y"))).normalize =
-  some [(0, .nat), (1, .string)]
+  some [(0, .nat), (1, .string), (1, .string), (0, .nat), (1, .string), (1, .string)]
 -- the checker: `Ref.set` with a union-typed value answers the cell at its declared type
 #guard (effTy nativeSignature [.refOf .string, .union (.lit "a") (.lit "b")]
     (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))).map (·.answer) =
   some (.refOf .string)
 -- red: an invariant handle with no witness stays refused
-#guard Ty.matchTemplate [] (.refOf (.var 0)) (Ty.union (.refOf .nat) (.refOf .string)).normalize = none
--- the boundary: `never` at the first member's anchor; a substitution exists, the match refuses,
--- and the goal's premise excludes the request
+#guard Bounds.matchB [] (.refOf (.var 0)) (Ty.union (.refOf .nat) (.refOf .string)).normalize = none
+-- Bounds matching succeeds when an anchor holds never.
 def neverR : Ty := .union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b"))
 #guard Ty.sub neverR.normalize (setT.instantiate [(0, .string)]).normalize
-#guard Ty.matchTemplate [] setT neverR.normalize = none
+#guard Bounds.matchB [] setT neverR.normalize =
+  some [(0, .string), (0, .string), (0, .string)]
 #guard !Ty.bottomFree neverR
--- the other premise: a template whose parameter first occurs covariantly is not anchored, and the
--- match refuses a request a substitution places under its instance (seat T4's control)
+-- Bounds matching succeeds when a parameter first occurs covariantly.
 /-- `[A, Ref<A>]`: the parameter is first met outside an invariant handle. -/
 def covT : Ty := .prod (.var 0) (.refOf (.var 0))
 /-- `[number, Ref<number | string>]`. -/
@@ -226,7 +226,8 @@ def covR : Ty := .prod .nat (.refOf (Ty.union .nat .string).normalize)
 #guard covT.normalize == covT && covT.templateAdmissible && !covT.anchored
 #guard covR.normalize == covR && covR.bottomFree
 #guard Ty.sub covR.normalize (covT.instantiate [(0, (Ty.union .nat .string).normalize)]).normalize
-#guard Ty.matchTemplate [] covT covR = none
+#guard Bounds.matchB [] covT covR =
+  some [(0, (Ty.union .nat .string).normalize), (0, (Ty.union .nat .string).normalize)]
 
 end Test.Program.TypeAlgebraContract
 

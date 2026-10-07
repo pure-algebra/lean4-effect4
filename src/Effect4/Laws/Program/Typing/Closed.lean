@@ -434,76 +434,6 @@ bindings. -/
 
 namespace Ty
 
-/-- **Inference reads closed bindings from a closed request**: a parameter binds to a part of
-the request, and a part of a closed type is closed. A step of `closedSubst_matchTemplateArgs`. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem closedSubst_infer {join : Bool} (σ : Subst) (t r : Ty) :
-    ClosedSubst σ → r.closed = true → ClosedSubst (infer σ t r join) := by
-  induction σ, t, r using infer.induct_unfolding join
-      (motive_2 := fun σ _ rs result =>
-        ClosedSubst σ → closedItems rs = true → ClosedSubst result)
-      (motive_3 := fun σ _ gs result =>
-        ClosedSubst σ → closedFields gs = true → ClosedSubst result)
-  case case1 =>
-    exact fun hσ hr b hb => (List.mem_append.mp hb).elim (hσ b) fun h => by
-      rw [List.mem_singleton.mp h]
-      exact hr
-  case case2 =>
-    exact fun hσ hr b hb => (List.mem_cons.mp hb).elim (fun h => by rw [h]; exact hr) (hσ b)
-  case case3 => exact fun hσ _ => hσ
-  case case4 ih | case5 ih | case6 ih | case7 ih => exact ih
-  case case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂ | case11 ih₁ ih₂
-  | case12 ih₁ ih₂ | case13 ih₁ ih₂ | case14 ih₁ ih₂ =>
-    exact fun hσ hr =>
-      ih₂ (ih₁ hσ (Bool.and_eq_true_iff.mp hr).1) (Bool.and_eq_true_iff.mp hr).2
-  case case15 ih | case16 ih | case17 ih => exact ih
-  case case18 => exact fun hσ _ => hσ
-  case case19 ih₁ ih₂ =>
-    exact fun hσ hr =>
-      ih₂ (ih₁ hσ (Bool.and_eq_true_iff.mp hr).1) (Bool.and_eq_true_iff.mp hr).2
-  case case20 => exact fun hσ _ => hσ
-  -- the list motives: the two premises are the case's last two names
-  case case21 hσ _ => exact hσ
-  case case22 ih hσ hr => exact ih hσ (Bool.and_eq_true_iff.mp hr).2
-  case case23 ih₁ ih₂ hσ hr =>
-    exact ih₂ (ih₁ hσ (Bool.and_eq_true_iff.mp hr).1) (Bool.and_eq_true_iff.mp hr).2
-  case case24 ih₁ ih₂ hσ hr =>
-    exact ih₂ (ih₁ hσ (Bool.and_eq_true_iff.mp hr).1) (Bool.and_eq_true_iff.mp hr).2
-  case case25 hσ _ => exact hσ
-
-/-- A match reads closed bindings from a closed request. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem closedSubst_matchTemplate {join : Bool} {σ σ' : Subst} {t r : Ty}
-    (h : matchTemplate σ t r join = some σ') (hσ : ClosedSubst σ) (hr : r.closed = true) :
-    ClosedSubst σ' := by
-  dsimp only [matchTemplate] at h
-  split at h
-  · cases h
-    exact closedSubst_infer σ t r hσ hr
-  · exact nomatch h
-
-/-- A list match reads closed bindings from closed arguments. A step of
-`NativeAtom.Scheme.closed_apply`. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem closedSubst_matchTemplateArgs {join : Bool} {σ σ' : Subst} {ps rs : List Ty}
-    (h : matchTemplateArgs σ ps rs join = some σ') (hσ : ClosedSubst σ)
-    (hrs : ∀ r ∈ rs, r.closed = true) : ClosedSubst σ' := by
-  induction ps generalizing rs σ with
-  | nil =>
-    cases rs with
-    | nil =>
-      cases h
-      exact hσ
-    | cons _ _ => exact nomatch h
-  | cons p ps ih =>
-    cases rs with
-    | nil => exact nomatch h
-    | cons r rs =>
-      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
-      obtain ⟨σ₁, h₁, hrest⟩ := h
-      exact ih hrest (closedSubst_matchTemplate h₁ hσ (hrs r List.mem_cons_self))
-        (fun u hu => hrs u (List.mem_cons_of_mem _ hu))
-
 /-- **Each candidate's type is closed where the request is.** The walk of the match by bounds
 gives a candidate the request's type at an occurrence, and that type is a part of the request.
 The case list is the function's. A step of `closedSubst_matchArgsB`, its consumer, and so of the
@@ -582,7 +512,7 @@ theorem closed_joinCands : ∀ (l : List Ty), (∀ c ∈ l, c.closed = true) →
 /-- **A list match by bounds reads closed bindings from closed arguments.** Each binding is the
 join of candidates (`closed_joinCands`), and each candidate is a part of an argument
 (`closed_cands`). A step of `NativeAtom.Scheme.closed_apply`, its consumer, and so of the claim
-`checked-types-closed`. It replaces `closedSubst_matchTemplateArgs` there. -/
+`checked-types-closed`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closedSubst_matchArgsB {σ : Subst} {ps rs : List Ty}
     (h : Bounds.matchArgsB ps rs = some σ)
