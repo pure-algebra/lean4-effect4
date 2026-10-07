@@ -1,0 +1,130 @@
+atom getOrElse	admission by order: (option<never>, bool) bounds {'0 := bool}
+atom getOrElse	present depends on the order: (option<never>, bool)
+atom getOrElse	admission by order: (option<never>, "a") bounds {'0 := "a"}
+atom getOrElse	present depends on the order: (option<never>, "a")
+atom getOrElse	admission by argument: (option<bool>, "a") bounds {'0 := (bool | "a")}
+atom getOrElse	admission by argument: (option<bool>, string) bounds {'0 := (string | bool)}
+atom getOrElse	admission by member: ((option<bool> | option<"a">), never) bounds {'0 := (bool | "a")}
+atom getOrElse	admission by member: ((option<bool> | option<"a">), bool) bounds {'0 := (bool | "a")}
+atom ite	admission by argument: (bool, bool, "a") bounds {'0 := (bool | "a")}
+atom ite	admission by argument: (bool, bool, string) bounds {'0 := (string | bool)}
+atom cons	admission by member: (never, (list<bool> | list<"a">)) bounds {'0 := (bool | "a")}
+atom cons	admission by member: (never, (list<string> | list<bool>)) bounds {'0 := (string | bool)}
+atom cons	admission by argument: (bool, list<"a">) bounds {'0 := (bool | "a")}
+atom cons	admission by argument: (bool, list<string>) bounds {'0 := (string | bool)}
+atom cons	the guard of a split parameter refuses what the present match admits: ((bool | "a"), (list<bool> | list<"a">))
+atom cons	present depends on the order: ((bool | "a"), (list<bool> | list<"a">))
+atom cons	the guard of a split parameter refuses what the present match admits: ((string | bool), (list<bool> | list<"a">))
+atom cons	present depends on the order: ((string | bool), (list<bool> | list<"a">))
+atom get	admission by member: ((list<bool> | list<"a">), nat) bounds {'0 := (bool | "a")}
+atom get	admission by member: ((list<bool> | list<"a">), never) bounds {'0 := (bool | "a")}
+atom append	admission by member: (list<never>, (list<bool> | list<"a">)) bounds {'0 := (bool | "a")}
+atom append	admission by member: (list<never>, (list<string> | list<bool>)) bounds {'0 := (string | bool)}
+atom append	admission by argument: (list<bool>, list<"a">) bounds {'0 := (bool | "a")}
+atom append	admission by argument: (list<bool>, list<string>) bounds {'0 := (string | bool)}
+atom append	the guard of a split parameter refuses what the present match admits: (list<(bool | "a")>, (list<bool> | list<"a">))
+atom append	present depends on the order: (list<(bool | "a")>, (list<bool> | list<"a">))
+atom append	the guard of a split parameter refuses what the present match admits: (list<(string | bool)>, (list<bool> | list<"a">))
+atom append	present depends on the order: (list<(string | bool)>, (list<bool> | list<"a">))
+atom mapGet	admission by member: ((map<string, bool> | map<string, "a">), string) bounds {'0 := (bool | "a")}
+atom mapGet	admission by member: ((map<string, bool> | map<string, "a">), never) bounds {'0 := (bool | "a")}
+atom mapKeys	admission by member: ((map<string, bool> | map<string, "a">)) bounds {'0 := (bool | "a")}
+atom mapKeys	admission by member: ((map<string, string> | map<string, bool>)) bounds {'0 := (string | bool)}
+atom mapEntries	admission by member: ((map<string, bool> | map<string, "a">)) bounds {'0 := (bool | "a")}
+atom mapEntries	admission by member: ((map<string, string> | map<string, bool>)) bounds {'0 := (string | bool)}
+atom mapFromEntries	admission by member: (list<([string, bool] | [string, "a"])>) bounds {'0 := (bool | "a")}
+atom mapFromEntries	admission by member: (list<([string, string] | [string, bool])>) bounds {'0 := (string | bool)}
+atom take	admission by member: ((list<bool> | list<"a">), nat) bounds {'0 := (bool | "a")}
+atom take	admission by member: ((list<bool> | list<"a">), never) bounds {'0 := (bool | "a")}
+atom drop	admission by member: ((list<bool> | list<"a">), nat) bounds {'0 := (bool | "a")}
+atom drop	admission by member: ((list<bool> | list<"a">), never) bounds {'0 := (bool | "a")}
+row refSet	admission by member: (([never, bool] | [never, "a"])) bounds {'0 := (bool | "a")}
+row refSet	admission by member: (([never, string] | [never, bool])) bounds {'0 := (string | bool)}
+row refSet	admission by order: (([never, bool] | [ref<(bool | "a")>, never])) bounds {'0 := (bool | "a")}
+row refSet	admission by order: (([never, "a"] | [ref<(bool | "a")>, never])) bounds {'0 := (bool | "a")}
+row refGetAndSet	admission by member: (([never, bool] | [never, "a"])) bounds {'0 := (bool | "a")}
+row refGetAndSet	admission by member: (([never, string] | [never, bool])) bounds {'0 := (string | bool)}
+row refGetAndSet	admission by order: (([never, bool] | [ref<(bool | "a")>, never])) bounds {'0 := (bool | "a")}
+row refGetAndSet	admission by order: (([never, "a"] | [ref<(bool | "a")>, never])) bounds {'0 := (bool | "a")}
+row refSetAndGet	admission by member: (([never, bool] | [never, "a"])) bounds {'0 := (bool | "a")}
+row refSetAndGet	admission by member: (([never, string] | [never, bool])) bounds {'0 := (string | bool)}
+row refSetAndGet	admission by order: (([never, bool] | [ref<(bool | "a")>, never])) bounds {'0 := (bool | "a")}
+row refSetAndGet	admission by order: (([never, "a"] | [ref<(bool | "a")>, never])) bounds {'0 := (bool | "a")}
+row deferredSucceed	admission by member: (([never, nat] | [never, string])) bounds {'0 := (nat | string)}
+row deferredSucceed	admission by order: (([never, "a"] | [deferred<string, never>, never])) bounds {'0 := string, '1 := never}
+row deferredSucceed	admission by order: (([never, "a"] | [deferred<string, nat>, never])) bounds {'0 := string, '1 := nat}
+row deferredSucceed	admission by member: (([never, nat] | ([never, string] | [deferred<(nat | string), never>, never]))) bounds {'0 := (nat | string), '1 := never}
+row deferredFail	admission by member: (([never, nat] | [never, string])) bounds {'1 := (nat | string)}
+row deferredFail	admission by order: (([never, "a"] | [deferred<never, string>, never])) bounds {'1 := string, '0 := never}
+row deferredFail	admission by order: (([never, nat] | [deferred<never, (nat | string)>, never])) bounds {'1 := (nat | string), '0 := never}
+row deferredFail	admission by member: (([never, nat] | ([never, string] | [deferred<never, (nat | string)>, never]))) bounds {'1 := (nat | string), '0 := never}
+binder term modify	admission by member: (([bool, never] | ["a", never])) bounds {'0 := nat, '1 := (bool | "a")}
+binder term modify	admission by member: (([bool, nat] | ["a", nat])) bounds {'0 := nat, '1 := (bool | "a")}
+binder term modify	admission by order: (([never, nat] | [bool, never])) bounds {'0 := nat, '1 := bool}
+binder term modify	admission by order: (([never, nat] | ["a", never])) bounds {'0 := nat, '1 := "a"}
+binder term modify	admission by member: (([bool, never] | ["a", never])) bounds {'0 := string, '1 := (bool | "a")}
+binder term modify	admission by member: (([bool, "a"] | ["a", "a"])) bounds {'0 := string, '1 := (bool | "a")}
+binder term modify	admission by order: (([never, "a"] | [bool, never])) bounds {'0 := string, '1 := bool}
+binder term modify	admission by order: (([never, "a"] | ["a", never])) bounds {'0 := string, '1 := "a"}
+binder term modify	admission by member: (([bool, never] | ["a", never])) bounds {'0 := (nat | string), '1 := (bool | "a")}
+binder term modify	admission by member: (([bool, "a"] | ["a", "a"])) bounds {'0 := (nat | string), '1 := (bool | "a")}
+binder term modify	admission by order: (([never, "a"] | [bool, never])) bounds {'0 := (nat | string), '1 := bool}
+binder term modify	admission by order: (([never, "a"] | ["a", never])) bounds {'0 := (nat | string), '1 := "a"}
+binder term modifySome	admission by member: (([bool, option<never>] | ["a", option<never>])) bounds {'0 := nat, '1 := (bool | "a")}
+binder term modifySome	admission by member: (([bool, option<nat>] | ["a", option<nat>])) bounds {'0 := nat, '1 := (bool | "a")}
+binder term modifySome	admission by order: (([never, option<never>] | [bool, never])) bounds {'0 := nat, '1 := bool}
+binder term modifySome	admission by order: (([never, option<never>] | ["a", never])) bounds {'0 := nat, '1 := "a"}
+binder term modifySome	admission by member: (([bool, option<never>] | ["a", option<never>])) bounds {'0 := string, '1 := (bool | "a")}
+binder term modifySome	admission by member: (([bool, option<"a">] | ["a", option<"a">])) bounds {'0 := string, '1 := (bool | "a")}
+binder term modifySome	admission by order: (([never, option<never>] | [bool, never])) bounds {'0 := string, '1 := bool}
+binder term modifySome	admission by order: (([never, option<never>] | ["a", never])) bounds {'0 := string, '1 := "a"}
+binder term modifySome	admission by member: (([bool, option<never>] | ["a", option<never>])) bounds {'0 := (nat | string), '1 := (bool | "a")}
+binder term modifySome	admission by member: (([bool, option<"a">] | ["a", option<"a">])) bounds {'0 := (nat | string), '1 := (bool | "a")}
+binder term modifySome	admission by order: (([never, option<never>] | [bool, never])) bounds {'0 := (nat | string), '1 := bool}
+binder term modifySome	admission by order: (([never, option<never>] | ["a", never])) bounds {'0 := (nat | string), '1 := "a"}
+S1 a product under a cell	admission by member: (ref<([never, nat] | [never, string])>) bounds {'0 := never, '1 := (nat | string)}
+S1 a product under a cell	F refuses: (ref<([never, nat] | [never, string])>) J {'0 := never, '1 := (nat | string)}
+S1 a product under a cell	admission by member: (ref<([nat, nat] | [nat, string])>) bounds {'0 := nat, '1 := (nat | string)}
+S1 a product under a cell	F refuses: (ref<([nat, nat] | [nat, string])>) J {'0 := nat, '1 := (nat | string)}
+S2 a cell beside its content, two arguments, join	the guard of one parameter refuses what the present match admits: (ref<never>, bool)
+S2 a cell beside its content, two arguments, join	the guard of a split parameter refuses what the present match admits: (ref<never>, bool)
+S2 a cell beside its content, two arguments, join	the guard with cross terms refuses what the present match admits: (ref<never>, bool)
+S2 a cell beside its content, two arguments, join	regression: (ref<never>, bool) present {'0 := bool}
+S2 a cell beside its content, two arguments, join	present not sound in the order: (ref<never>, bool) present {'0 := bool}
+S2 a cell beside its content, two arguments, join	present depends on the order: (ref<never>, bool)
+S2 a cell beside its content, two arguments, join	the guard of one parameter refuses what the present match admits: (ref<never>, "a")
+S2 a cell beside its content, two arguments, join	the guard of a split parameter refuses what the present match admits: (ref<never>, "a")
+S2 a cell beside its content, two arguments, join	the guard with cross terms refuses what the present match admits: (ref<never>, "a")
+S2 a cell beside its content, two arguments, join	regression: (ref<never>, "a") present {'0 := "a"}
+S2 a cell beside its content, two arguments, join	present not sound in the order: (ref<never>, "a") present {'0 := "a"}
+S2 a cell beside its content, two arguments, join	present depends on the order: (ref<never>, "a")
+S3 a cell beside its content, two arguments	present depends on the order: (ref<bool>, never)
+S3 a cell beside its content, two arguments	present depends on the order: (ref<"a">, never)
+S4 the content before its cell	admission by order: ([never, ref<bool>]) bounds {'0 := bool}
+S4 the content before its cell	admission by order: ([never, ref<"a">]) bounds {'0 := "a"}
+S4 the content before its cell	admission by member: (([bool, ref<(bool | "a")>] | ["a", ref<(bool | "a")>])) bounds {'0 := (bool | "a")}
+S4 the content before its cell	admission by member: (([bool, ref<(string | bool)>] | ["a", ref<(string | bool)>])) bounds {'0 := (string | bool)}
+S5 a list of lists	admission by member: ((list<list<bool>> | list<list<"a">>)) bounds {'0 := (bool | "a")}
+S5 a list of lists	admission by member: ((list<list<string>> | list<list<bool>>)) bounds {'0 := (string | bool)}
+S6 one parameter twice in a pair	admission by order: ([never, bool]) bounds {'0 := bool}
+S6 one parameter twice in a pair	admission by order: ([never, "a"]) bounds {'0 := "a"}
+S6 one parameter twice in a pair	admission by member: (([never, bool] | [never, "a"])) bounds {'0 := (bool | "a")}
+S6 one parameter twice in a pair	admission by member: (([never, string] | [never, bool])) bounds {'0 := (string | bool)}
+S8 a contravariant argument beside a covariant one	different: (Context.Context<bool>, never) present {'0 := bool} bounds {'0 := never}
+S8 a contravariant argument beside a covariant one	different: (Context.Context<"a">, never) present {'0 := "a"} bounds {'0 := never}
+S8 a contravariant argument beside a covariant one	admission by order: ((Context.Context<bool> | Context.Context<"a">), never) bounds {'0 := never}
+S8 a contravariant argument beside a covariant one	present depends on the order: ((Context.Context<bool> | Context.Context<"a">), never)
+S8 a contravariant argument beside a covariant one	admission by order: ((Context.Context<string> | Context.Context<bool>), never) bounds {'0 := never}
+S8 a contravariant argument beside a covariant one	present depends on the order: ((Context.Context<string> | Context.Context<bool>), never)
+S9 two contravariant arguments	admission by order: (Queue.Enqueue<nat, never>) bounds {}
+S9 two contravariant arguments	different: (Queue.Enqueue<nat, nat>) present {'0 := nat} bounds {}
+S9 two contravariant arguments	admission by order: (Queue.Enqueue<nat, string>) bounds {}
+S9 two contravariant arguments	different: (Queue.Enqueue<nat, (nat | string)>) present {'0 := nat} bounds {}
+S10 a tuple of three	admission by order: (tuple[never, nat, never]) bounds {'0 := nat, '1 := never}
+S10 a tuple of three	admission by order: (tuple[never, nat, nat]) bounds {'0 := nat, '1 := nat}
+S10 a tuple of three	admission by member: (tuple[nat, string, never]) bounds {'0 := (nat | string), '1 := never}
+S10 a tuple of three	admission by member: (tuple[nat, string, nat]) bounds {'0 := (nat | string), '1 := nat}
+S11 a record of two fields	admission by order: ({a: never, b?: nat}) bounds {'0 := nat}
+S11 a record of two fields	admission by order: ({a: never, b?: string}) bounds {'0 := string}
+S11 a record of two fields	admission by member: ({a: nat, b?: string}) bounds {'0 := (nat | string)}
+S11 a record of two fields	admission by member: ({a: nat, b?: "a"}) bounds {'0 := (nat | "a")}

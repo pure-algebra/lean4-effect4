@@ -1,0 +1,15 @@
+== run rec: 727 static types, 2929 gap types (at most 2 constructor members)
+gap types by where the gap stands: {'static': 421, 'whole': 3, 'under a union': 2505}
+control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M: True | by T: False
+static actual type, expected gap type `static`: pairs 306067; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+static actual type, expected gap type `whole`: pairs 2181; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+static actual type, expected gap type `under a union`: pairs 1821135; T differs from the definition 1096488 (accepts beyond 0, refuses within 1096488); M differs 0; B differs 0
+     num  ≲  nat | □: T False, the definition True
+     str  ≲  nat | □: T False, the definition True
+     {a: never}  ≲  nat | □: T False, the definition True
+the walk extended to an expected union (remainder at a bare gap, one member per head), expected gap type `under a union`: pairs 1821135; differs from the definition 9936 (accepts beyond 0, refuses within 9936); member pairs met as a choice 61776
+     {a: num}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+     {a: nat | str}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+     {a: num | str}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+     {a: unknown}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+gap types with a gap, as the ACTUAL type: 2508 of 2929; T reads no parameter there (pairs not compared: 7345932)

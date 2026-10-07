@@ -1,0 +1,176 @@
+program	admitted	path	kind	place	name	template	inputs	present	bounds	verdict	verdictF	boundsAtNormal	maxLowers	unordered	candidates	presentAtNormal	rawNotNormal
+g0	false	.	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g5	false	.	atom	term	pair	true	(unit, nat)	[unit, nat]	[unit, nat]	same	same	same	1	false	'0:co unit; '1:co nat	same	false
+g8	false	0.0.0.0.0.0.0	atom	term	snd	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g10	false	0.0	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g13	false	0.0.0	atom	term	snd	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g14	false	0.0.0.1.0	atom	term	eq	false	(unit, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g17	false	0.0.0.0.0.0.0	atom	term	add	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g19	false	0.0.0	atom	term	pred	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g19	false	0.0.0	row	node	refGet	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g24	false	0.0	atom	term	eq	false	(string, string)	bool	bool	same	same	same	0	false		same	false
+g25	false	0.0.0.2	row	node	deferredFail	true	bool	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g26	false	0.0.0	row	node	deferredAwait	true	string	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g27	false	.	row	node	deferredFail	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g31	false	.	row	node	deferredPoll	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g32	false	.	atom	term	fst	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g34	false	1.0.0.0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g35	false	0.0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g35	false	0.0	atom	term	pred	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g35	false	1	atom	term	eq	false	(bool, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g36	false	0.0.0.0.0.0.0	atom	term	eq	false	(an argument has no type)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false	-	bothRefuse	false
+g36	false	0.0.0.0.0.0.0	atom	term	snd	false	(string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g39	false	0.0.0	atom	term	snd	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g42	false	.	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g47	false	0.0	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g48	false	0.0.0.0	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g53	true	0.0.0.1.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g61	false	0.0.0.0.0.1.1.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g61	false	0.0.0.0.0.1.1.0	row	node	refModifyWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g62	false	0.0.1.1	atom	term	eq	false	(string, string)	bool	bool	same	same	same	0	false		same	false
+g64	false	1.0	atom	term	pair	true	(nat, "hi")	[nat, "hi"]	[nat, "hi"]	same	same	same	1	false	'0:co nat; '1:co "hi"	same	false
+g69	false	0.0.0.0	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g69	false	0.0.0.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g69	false	0.0.1.0.1	atom	term	not	false	(bool)	bool	bool	same	same	same	0	false		same	false
+g70	false	.	row	node	refGetAndSet	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g76	false	0.0.0.0.0.0	atom	term	not	false	(bool)	bool	bool	same	same	same	0	false		same	false
+g76	false	0.0.0.0.0.0	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g79	false	0.0.0.0.0.0	atom	term	not	false	(bool)	bool	bool	same	same	same	0	false		same	false
+g86	false	0.0.0	atom	term	eq	false	(string, string)	bool	bool	same	same	same	0	false		same	false
+g86	false	0.0.0.0.0.0.0	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g87	false	0.0.1	atom	term	pair	true	(fiber<never, string>, "hi")	[fiber<never, string>, "hi"]	[fiber<never, string>, "hi"]	same	same	same	1	false	'0:co fiber<never, string>; '1:co "hi"	same	false
+g88	false	0.0.0.0	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g91	false	0.0.0.0.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g92	false	0.0.0.0	row	node	deferredIsDone	true	string	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g94	false	.	row	node	refUpdateWith	true	bool with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g97	false	0.0	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g103	false	0.0	atom	term	not	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g108	false	0.0.0.0.0	atom	term	isZero	false	(string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g112	false	0	atom	term	succ	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g112	false	0	atom	term	lt	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g114	false	0.0	atom	term	pred	false	(string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g116	false	0.0.0	atom	term	add	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g119	false	0.0.1.0	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g124	false	0.0	row	node	refUpdateSomeAndGetWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g125	false	0	atom	term	pred	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g126	false	0	atom	term	isZero	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g127	false	0.1.0.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g127	false	0.1.0.0	row	node	refUpdateWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g128	false	0.0.0.0	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g131	false	0	atom	term	snd	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g133	false	.	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g138	false	.	atom	term	isZero	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g139	false	.	atom	term	lt	false	(nat, bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g140	false	0.0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g147	false	0.0.0.0.1	row	node	refGetAndUpdateWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g151	false	0.0.0.0	atom	term	lt	false	(bool, bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g151	false	0.0.0.0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g152	false	.	atom	term	pair	true	(nat, nat)	[nat, nat]	[nat, nat]	same	same	same	1	false	'0:co nat; '1:co nat	same	false
+g152	false	0	atom	term	pred	false	(string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g153	false	1	atom	term	add	false	(string, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g154	false	0.0.0.0.1	row	node	refGetAndUpdateWith	true	bool with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g155	false	0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g158	true	0.0.0	row	node	refMake	true	string	<ref<string> ; never>	<ref<string> ; never>	same	same	same	1	false	'0:co string	same	false
+g164	false	0.0	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g166	false	0.0	atom	term	eq	false	(string, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g167	false	0	atom	term	pair	true	(nat, nat)	[nat, nat]	[nat, nat]	same	same	same	1	false	'0:co nat; '1:co nat	same	false
+g168	false	0.0.0.0	atom	term	pred	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g171	false	0.0.0.0.1	atom	term	not	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g177	false	.	atom	term	lt	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g178	false	.	atom	term	snd	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g186	false	0.0.0	atom	term	not	false	(bool)	bool	bool	same	same	same	0	false		same	false
+g187	false	.	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g192	false	0.0.0	atom	term	lt	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g192	false	0.0.1.0.1.0.0	atom	term	snd	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g195	false	0.0	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g196	false	.	row	node	refGetAndSet	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g199	true	0.0.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g200	false	.	row	node	refGet	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g201	false	.	atom	term	eq	false	(bool, bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g202	false	.	atom	term	isZero	false	(an argument has no type)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false	-	bothRefuse	false
+g202	false	.	atom	term	add	false	(string, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g203	false	0.0.0.0.0	atom	term	pair	true	(nat, nat)	[nat, nat]	[nat, nat]	same	same	same	1	false	'0:co nat; '1:co nat	same	false
+g204	false	0.1.0.1	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g205	false	0.0.0.0	atom	term	pred	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g207	false	0.0	row	node	deferredFail	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g208	false	1.0.0.0.0.0	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g210	false	0.0.0.0.0.1.0	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g215	false	0.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g216	false	.	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g221	false	0.0.0	atom	term	isZero	false	(an argument has no type)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false	-	bothRefuse	false
+g221	false	0.0.0	atom	term	snd	false	(string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g227	false	0.0.0.0.0	atom	term	add	false	(string, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g228	false	.	atom	term	not	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g230	false	0.0.0.1.1.0.1.0.0	atom	term	pair	true	(an argument has no type)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false	-	bothRefuse	false
+g230	false	0.0.0.1.1.0.1.0.0	atom	term	eq	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g231	false	1.0.0.0.0.0.1.0	row	node	refModifyWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g232	false	0	atom	term	snd	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g233	false	1	atom	term	add	false	(string, bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g239	false	.	row	node	refGetAndUpdateSomeWith	true	unit with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g240	false	.	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g240	false	0.1.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g240	false	0.1.0.0	atom	term	add	false	(string, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g241	false	.	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g258	false	0	atom	term	snd	false	(an argument has no type)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false	-	bothRefuse	false
+g258	false	0	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g259	false	0	atom	term	succ	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g261	false	0.0	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g266	false	0.0.0.0.0	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g270	false	0.0	atom	term	lt	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g270	false	1.0.0	atom	term	pair	true	(unit, nat)	[unit, nat]	[unit, nat]	same	same	same	1	false	'0:co unit; '1:co nat	same	false
+g271	false	0.0.1	atom	term	add	false	(nat, string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g272	false	0.0.0	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g273	false	0.0.0.0	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g277	false	0.0.1.0.0.0.0	row	node	refMake	true	exit<never, nat>	<ref<exit<never, nat>> ; never>	<ref<exit<never, nat>> ; never>	same	same	same	1	false	'0:co exit<never, nat>	same	false
+g277	false	0	atom	term	lt	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g279	false	.	atom	term	pred	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g280	false	.	atom	term	pair	true	(unit, nat)	[unit, nat]	[unit, nat]	same	same	same	1	false	'0:co unit; '1:co nat	same	false
+g281	false	0	atom	term	isZero	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g294	false	0.0.0.0	row	node	refUpdateSomeAndGetWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g296	false	0.0	row	node	refGetAndSet	true	unit	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g298	false	0	atom	term	lt	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g298	false	0	row	node	refModifyWith	true	bool with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g299	false	0.0.0.0	atom	term	snd	false	(unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g302	false	.	row	node	scopeMake	false	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g303	false	.	atom	term	add	false	(nat, bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g304	false	.	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g309	true	0.0.0.0.1	row	node	deferredAwait	true	never	<never ; never>	<never ; never>	same	same	same	0	false		same	false
+g315	false	0.0.0.0.0	row	node	deferredIsDone	true	unit	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g319	false	.	atom	term	pair	true	(nat, nat)	[nat, nat]	[nat, nat]	same	same	same	1	false	'0:co nat; '1:co nat	same	false
+g321	false	.	atom	term	eq	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g323	false	0.0.0.0.0	atom	term	pair	true	("hi", unit)	["hi", unit]	["hi", unit]	same	same	same	1	false	'0:co "hi"; '1:co unit	same	false
+g323	false	0.0.0.0.0	row	node	deferredAwait	true	["hi", unit]	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g324	false	0.1.0	atom	term	pred	false	(string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g326	false	0.0.0.0	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g326	false	0.0.0.0.0.0.1.0.0	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g328	false	0.0.0	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g333	false	0.0	atom	term	pred	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g336	false	0.0.0.0	atom	term	lt	false	(nat, unit)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g339	false	1.0.0.2	row	node	deferredMakeOf	false	unit	<deferred<nat, nat> ; never>	<deferred<nat, nat> ; never>	same	same	same	0	false		same	false
+g340	false	0.0.0.1.0	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g341	false	.	row	node	scopeMake	false	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g342	false	.	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g343	false	.	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g345	false	.	row	node	refUpdateWith	true	nat with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g348	false	0.0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g349	false	1	row	node	deferredAwait	true	unit	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g351	false	0	atom	term	not	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g353	true	0.0	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g354	false	0.0.0.0	row	node	refGetAndSet	true	string	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g355	false	0	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g356	false	.	row	node	deferredAwait	true	nat	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g357	false	0.0	atom	term	eq	false	(string, nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g360	false	0.0	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g361	false	1	row	node	deferredAwait	true	bool	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g362	false	0.0.0.0	atom	term	eq	false	(nat, nat)	bool	bool	same	same	same	0	false		same	false
+g364	false	.	atom	term	isZero	false	(nat)	bool	bool	same	same	same	0	false		same	false
+g364	false	0.0	atom	term	snd	false	(bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g366	true	0.0	atom	term	succ	false	(nat)	nat	nat	same	same	same	0	false		same	false
+g376	false	2.0.0.0.0.0.0	atom	term	eq	false	(string, string)	bool	bool	same	same	same	0	false		same	false
+g377	false	0.0	atom	term	eq	false	(nat, bool)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g379	false	0.0.0.0.0.0.0	row	node	refGetAndUpdateWith	true	unit with a binder term	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g381	false	.	atom	term	snd	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g382	true	.	atom	term	add	false	(nat, nat)	nat	nat	same	same	same	0	false		same	false
+g385	false	.	atom	term	fst	false	(nat)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g395	false	.	row	node	deferredAwait	true	bool	refused: requestNotSubtype	refused: requestNotSubtype	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false
+g399	false	0.0.0.0.0	atom	term	lt	false	(nat, string)	refused	refused	bothRefuse	bothRefuse	bothRefuse	0	false		bothRefuse	false

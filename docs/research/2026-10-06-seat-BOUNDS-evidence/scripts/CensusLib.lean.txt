@@ -1,0 +1,843 @@
+/-
+Seat CENSUS, 2026-10-06: the shared text of the type slicing probes (scratch, not a module of
+the tree). Each probe file is this text followed by its own tail (`run.sh`). It imports the
+tree's checker and changes nothing: every type below comes from `Checker.check`,
+`Checker.checkStmt` or `Checker.term?` of `src/Effect4/Program/Checker.lean`.
+-/
+
+open Effect4 Effect4.Program Effect4.Api
+open Effect4.Machine.Env (Requirement)
+
+set_option autoImplicit false
+set_option maxRecDepth 100000
+
+namespace Census
+
+abbrev Sig := Signature NativeOp
+abbrev P := Eff NativeOp
+
+/-! ## A faithful printer of `Ty` (`Ty.renderRaw` prints `nat`, `int` and `number` alike) -/
+
+mutual
+def showTy : Ty → String
+  | .never => "never"
+  | .unknown => "unknown"
+  | .unit => "unit"
+  | .nat => "nat"
+  | .int => "int"
+  | .number => "number"
+  | .string => "string"
+  | .bool => "bool"
+  | .handle target => "handle(" ++ target ++ ")"
+  | .option inner => "option<" ++ showTy inner ++ ">"
+  | .list inner => "list<" ++ showTy inner ++ ">"
+  | .prod left right => "[" ++ showTy left ++ ", " ++ showTy right ++ "]"
+  | .except error value => "except<" ++ showTy error ++ ", " ++ showTy value ++ ">"
+  | .exitOf value error => "exit<" ++ showTy value ++ ", " ++ showTy error ++ ">"
+  | .causeOf error => "cause<" ++ showTy error ++ ">"
+  | .fiberOf value error => "fiber<" ++ showTy value ++ ", " ++ showTy error ++ ">"
+  | .union left right => "(" ++ showTy left ++ " | " ++ showTy right ++ ")"
+  | .lit value => "\"" ++ value ++ "\""
+  | .refOf value => "ref<" ++ showTy value ++ ">"
+  | .deferredOf value error => "deferred<" ++ showTy value ++ ", " ++ showTy error ++ ">"
+  | .var index => "'" ++ toString index
+  | .record fields => "{" ++ ", ".intercalate (showFields fields) ++ "}"
+  | .map key value => "map<" ++ showTy key ++ ", " ++ showTy value ++ ">"
+  | .tuple items => "tuple[" ++ ", ".intercalate (showItems items) ++ "]"
+  | .app name args => name ++ "<" ++ ", ".intercalate (showItems args) ++ ">"
+  | .null => "null"
+  | .undefined => "undefined"
+  | .bytes => "bytes"
+def showItems : List Ty → List String
+  | [] => []
+  | t :: rest => showTy t :: showItems rest
+def showFields : List (String × Bool × Ty) → List String
+  | [] => []
+  | (n, o, t) :: rest => (n ++ (if o then "?: " else ": ") ++ showTy t) :: showFields rest
+end
+
+def showEnv (env : TyEnv) : String := "[" ++ ", ".intercalate (env.map showTy) ++ "]"
+
+def showKey (k : ServiceKey) : String := s!"k{k.name.value}_{k.service.value}"
+
+def showReq (r : Requirement) : String := "{" ++ ", ".intercalate (r.elems.map showKey) ++ "}"
+
+def showEffTy (t : EffTy) : String :=
+  "<" ++ showTy t.answer ++ " ; " ++ showTy t.error ++ " ; " ++ showReq t.requires ++ ">"
+
+def showPath (p : List Nat) : String :=
+  if p.isEmpty then "." else ".".intercalate (p.map toString)
+
+/-! ## A compact printer of terms and programs, with a marker at folded addresses -/
+
+def showLit : Lit → String
+  | .unit => "()"
+  | .nat n => toString n
+  | .bool b => toString b
+  | .str s => "\"" ++ s ++ "\""
+
+mutual
+def showTerm : Term → String
+  | .var index => "a" ++ toString index
+  | .lit value => showLit value
+  | .app atom args => atom ++ "(" ++ ", ".intercalate (showTerms args) ++ ")"
+  | .record fields names values =>
+    "record{" ++ ", ".intercalate (showFields fields) ++ "}[" ++ ", ".intercalate names ++ "](" ++
+      ", ".intercalate (showTerms values) ++ ")"
+  | .field mode target name =>
+    showTerm target ++ (match mode with | .required => "." | .optional => "?.") ++ name
+  | .recordSet target name value => showTerm target ++ " with " ++ name ++ " := " ++ showTerm value
+  | .tupleAt target index => showTerm target ++ "#" ++ toString index
+  | .fold accTy list init body =>
+    "fold" ++ (match accTy with | some t => "<" ++ showTy t ++ ">" | none => "") ++ "(" ++
+      showTerm list ++ ", " ++ showTerm init ++ ", " ++ showTerm body ++ ")"
+def showTerms : Terms → List String
+  | .nil => []
+  | .cons head tail => showTerm head :: showTerms tail
+end
+
+def showCause : CauseTerm → String
+  | .fail error => "Fail(" ++ showTerm error ++ ")"
+  | .die defect => "Die(" ++ showTerm defect ++ ")"
+  | .interrupt none => "Interrupt"
+  | .interrupt (some who) => "Interrupt(" ++ showTerm who ++ ")"
+  | .both left right => "Both(" ++ showCause left ++ ", " ++ showCause right ++ ")"
+
+def showDecision : Program.Decision → String
+  | .bool => "bool"
+  | .option => "option"
+  | .tag t => "tag " ++ t
+  | .recordTag t => "recordTag " ++ t
+
+def showOp : NativeOp → String
+  | .external i => s!"external{i}"
+  | .deferredMakeOf v e => "deferredMake<" ++ showTy v ++ ", " ++ showTy e ++ ">"
+  | .refUpdateWith f => "refUpdate{" ++ showTerm f ++ "}"
+  | .refGetAndUpdateWith f => "refGetAndUpdate{" ++ showTerm f ++ "}"
+  | .refUpdateAndGetWith f => "refUpdateAndGet{" ++ showTerm f ++ "}"
+  | .refUpdateSomeWith f => "refUpdateSome{" ++ showTerm f ++ "}"
+  | .refGetAndUpdateSomeWith f => "refGetAndUpdateSome{" ++ showTerm f ++ "}"
+  | .refUpdateSomeAndGetWith f => "refUpdateSomeAndGet{" ++ showTerm f ++ "}"
+  | .refModifyWith f => "refModify{" ++ showTerm f ++ "}"
+  | .refModifySomeWith f => "refModifySome{" ++ showTerm f ++ "}"
+  | op => (NativeOp.row op).name
+
+/-- What stands at a folded address in a printed program: the marker and what it stands for. -/
+abbrev Marks := List (List Nat × String)
+
+def markAt (marks : Marks) (p : List Nat) : Option String := (marks.find? (·.1 == p)).map (·.2)
+
+mutual
+def showEff (marks : Marks) (p : List Nat) : P → String
+  | .succeed v => (markAt marks p).getD ("succeed(" ++ showTerm v ++ ")")
+  | .fail v => (markAt marks p).getD ("fail(" ++ showTerm v ++ ")")
+  | .failCause c => (markAt marks p).getD ("failCause(" ++ showCause c ++ ")")
+  | .sync v => (markAt marks p).getD ("sync(" ++ showTerm v ++ ")")
+  | .suspend b => (markAt marks p).getD ("suspend(" ++ showEff marks (p ++ [0]) b ++ ")")
+  | .perform op r => (markAt marks p).getD (showOp op ++ "(" ++ showTerm r ++ ")")
+  | .bind f r =>
+    (markAt marks p).getD ("bind(" ++ showEff marks (p ++ [0]) f ++ ", " ++ showEff marks (p ++ [1]) r ++ ")")
+  | .gen b => (markAt marks p).getD ("gen{" ++ showStmts marks (p ++ [0]) b ++ "}")
+  | .catchCause b h =>
+    (markAt marks p).getD ("catchCause(" ++ showEff marks (p ++ [0]) b ++ ", " ++ showEff marks (p ++ [1]) h ++ ")")
+  | .matchCause b v c =>
+    (markAt marks p).getD ("matchCause(" ++ showEff marks (p ++ [0]) b ++ ", " ++ showEff marks (p ++ [1]) v ++ ", " ++
+      showEff marks (p ++ [2]) c ++ ")")
+  | .onExit b f =>
+    (markAt marks p).getD ("onExit(" ++ showEff marks (p ++ [0]) b ++ ", " ++ showEff marks (p ++ [1]) f ++ ")")
+  | .exit b => (markAt marks p).getD ("exit(" ++ showEff marks (p ++ [0]) b ++ ")")
+  | .uninterruptible b => (markAt marks p).getD ("uninterruptible(" ++ showEff marks (p ++ [0]) b ++ ")")
+  | .interruptible b => (markAt marks p).getD ("interruptible(" ++ showEff marks (p ++ [0]) b ++ ")")
+  | .yieldNow n => (markAt marks p).getD ("yieldNow(" ++ toString n ++ ")")
+  | .awaitFiber f mode =>
+    (markAt marks p).getD ((match mode with | .joinEffect => "join(" | .awaitValue => "await(") ++ showTerm f ++ ")")
+  | .withFiber a => (markAt marks p).getD (showAction marks (p ++ [0]) a)
+  | .scoped b => (markAt marks p).getD ("scoped(" ++ showEff marks (p ++ [0]) b ++ ")")
+  | .acquireRelease a r =>
+    (markAt marks p).getD ("acquireRelease(" ++ showEff marks (p ++ [0]) a ++ ", " ++ showEff marks (p ++ [1]) r ++ ")")
+  | .provideLayer l _ b =>
+    (markAt marks p).getD ("provide(" ++ showLayer marks (p ++ [0]) l ++ ", " ++ showEff marks (p ++ [1]) b ++ ")")
+  | .service k => (markAt marks p).getD ("service(" ++ showKey k ++ ")")
+  | .provideService k v b =>
+    (markAt marks p).getD ("provideService(" ++ showKey k ++ ", " ++ showTerm v ++ ", " ++ showEff marks (p ++ [0]) b ++ ")")
+  | .catchIf t b h =>
+    (markAt marks p).getD ("catchIf(" ++ showTerm t ++ ", " ++ showEff marks (p ++ [0]) b ++ ", " ++
+      showEff marks (p ++ [1]) h ++ ")")
+  | .select s d a0 a1 =>
+    (markAt marks p).getD ("select[" ++ showDecision d ++ "](" ++ showTerm s ++ ", " ++ showEff marks (p ++ [0]) a0 ++ ", " ++
+      showEff marks (p ++ [1]) a1 ++ ")")
+  | .iterate cursorTy initial test step result body =>
+    (markAt marks p).getD ("iterate" ++ (match cursorTy with | some t => "<" ++ showTy t ++ ">" | none => "") ++ "(" ++
+      showTerm initial ++ "; " ++ showTerm test ++ "; " ++ showTerm step ++ "; " ++ showTerm result ++ "; " ++
+      showEff marks (p ++ [0]) body ++ ")")
+  | .restore s b => (markAt marks p).getD ("restore(" ++ showTerm s ++ ", " ++ showEff marks (p ++ [0]) b ++ ")")
+def showStmt (marks : Marks) (p : List Nat) : Stmt NativeOp → String
+  | .bindYield e => "let _ <- " ++ showEff marks (p ++ [0]) e
+  | .yieldDiscard e => "do " ++ showEff marks (p ++ [0]) e
+  | .ret v => "return " ++ showTerm v
+  | .ifElse t a b =>
+    "if " ++ showTerm t ++ " {" ++ showStmts marks (p ++ [0]) a ++ "} else {" ++ showStmts marks (p ++ [1]) b ++ "}"
+  | .whileTrue b => "while {" ++ showStmts marks (p ++ [0]) b ++ "}"
+  | .breakLoop => "break"
+def showStmts (marks : Marks) (p : List Nat) : Stmts NativeOp → String
+  | .nil => ""
+  | .cons head tail => showStmt marks (p ++ [0]) head ++ "; " ++ showStmts marks (p ++ [1]) tail
+def showEffs (marks : Marks) (p : List Nat) : Effs NativeOp → String
+  | .nil => ""
+  | .cons head tail => showEff marks (p ++ [0]) head ++ " || " ++ showEffs marks (p ++ [1]) tail
+def showAction (marks : Marks) (p : List Nat) : ActionTerm NativeOp → String
+  | .fork e _ => "fork(" ++ showEff marks (p ++ [0]) e ++ ")"
+  | .forkIn e _ s => "forkIn(" ++ showEff marks (p ++ [0]) e ++ ", " ++ showTerm s ++ ")"
+  | .forkScoped e _ => "forkScoped(" ++ showEff marks (p ++ [0]) e ++ ")"
+  | .runIn t s => "runIn(" ++ showTerm t ++ ", " ++ showTerm s ++ ")"
+  | .interrupt t => "interrupt(" ++ showTerm t ++ ")"
+  | .interruptScoped t => "interruptScoped(" ++ showTerm t ++ ")"
+  | .interruptAll t none => "interruptAll(" ++ showTerm t ++ ")"
+  | .interruptAll t (some w) => "interruptAll(" ++ showTerm t ++ ", " ++ showTerm w ++ ")"
+  | .awaitAll t => "awaitAll(" ++ showTerm t ++ ")"
+  | .awaitAllFailFast t => "awaitAllFailFast(" ++ showTerm t ++ ")"
+  | .snapshotChildren => "snapshotChildren"
+  | .awaitNewChildren t => "awaitNewChildren(" ++ showTerm t ++ ")"
+  | .raceAll es => "raceAll(" ++ showEffs marks (p ++ [0]) es ++ ")"
+  | .setContext t => "setContext(" ++ showTerm t ++ ")"
+  | .getContext => "getContext"
+  | .getId => "getId"
+  | .closeScope s e => "closeScope(" ++ showTerm s ++ ", " ++ showTerm e ++ ")"
+  | .getInterruptible => "getInterruptible"
+def showLayer (marks : Marks) (p : List Nat) : LayerTerm NativeOp → String
+  | .succeed k v => "Layer.succeed(" ++ showKey k ++ ", " ++ showLit v ++ ")"
+  | .effect k b => "Layer.effect(" ++ showKey k ++ ", " ++ showEff marks (p ++ [0]) b ++ ")"
+  | .effectDiscard b => "Layer.effectDiscard(" ++ showEff marks (p ++ [0]) b ++ ")"
+  | .provide a b => "Layer.provide(" ++ showLayer marks (p ++ [0]) a ++ ", " ++ showLayer marks (p ++ [1]) b ++ ")"
+  | .provideMerge a b =>
+    "Layer.provideMerge(" ++ showLayer marks (p ++ [0]) a ++ ", " ++ showLayer marks (p ++ [1]) b ++ ")"
+  | .merge a b => "Layer.merge(" ++ showLayer marks (p ++ [0]) a ++ ", " ++ showLayer marks (p ++ [1]) b ++ ")"
+  | .fresh a => "Layer.fresh(" ++ showLayer marks (p ++ [0]) a ++ ")"
+  | .orDie a => "Layer.orDie(" ++ showLayer marks (p ++ [0]) a ++ ")"
+  | .ref t => "Layer.ref(" ++ showPath t ++ ")"
+  | .mergeAll ls => "Layer.mergeAll(" ++ showLayers marks (p ++ [0]) ls ++ ")"
+def showLayers (marks : Marks) (p : List Nat) : LayerTerms NativeOp → String
+  | .nil => ""
+  | .cons head tail => showLayer marks (p ++ [0]) head ++ ", " ++ showLayers marks (p ++ [1]) tail
+end
+
+def showProgram (e : P) (marks : Marks := []) : String := showEff marks [] e
+
+/-! ## The effect addresses of a program, each with the environment the checker gives it
+
+A site is an effect node at its path (`Node.child` indices, the checker's own paths). Its
+environment is built on the way down from the checker's own results for the siblings: the same
+calls, in the same order, as the arm of `Checker.check` for the parent. `route` is the list of
+edges from the root, each `Family.constructor.index`; its last element is the site's rule. -/
+
+structure Site where
+  path : List Nat
+  node : P
+  env : TyEnv
+  route : List String
+  /-- A sibling's check failed on the way down: never, in an admitted program. -/
+  anomaly : Bool := false
+
+def Site.rule (s : Site) : String := s.route.getLast?.getD "root"
+
+/-- The edges at which the child's error column flows into a value type: a caught body, an
+`exit`, an `onExit` body (the finalizer's exit) and a fork. An address under none of them is in
+candidate A's domain (the plan's section 4.3). -/
+def closedEdges : List String :=
+  ["Eff.catchCause.0", "Eff.catchIf.0", "Eff.matchCause.0", "Eff.onExit.0", "Eff.exit.0",
+   "ActionTerm.fork.0", "ActionTerm.forkIn.0", "ActionTerm.forkScoped.0"]
+
+/-- The edges into a layer's body, which the checker types at the empty environment. -/
+def layerEdges : List String := ["LayerTerm.effect.0", "LayerTerm.effectDiscard.0"]
+
+def Site.columnOpen (s : Site) : Bool := s.route.all fun e => !closedEdges.contains e
+def Site.inLayer (s : Site) : Bool := s.route.any fun e => layerEdges.contains e
+def Site.firstClosed (s : Site) : String := (s.route.find? fun e => closedEdges.contains e).getD "-"
+
+def anomalyAt (p : List Nat) (route : List String) : List Site :=
+  [⟨p, .yieldNow 0, [], route ++ ["ANOMALY"], true⟩]
+
+def decisionName : Program.Decision → String
+  | .bool => "bool"
+  | .option => "option"
+  | .tag _ => "tag"
+  | .recordTag _ => "recordTag"
+
+mutual
+def sitesEff (sig : Sig) (env : TyEnv) (p : List Nat) (route : List String) : P → List Site
+  | .succeed v => [⟨p, .succeed v, env, route, false⟩]
+  | .fail v => [⟨p, .fail v, env, route, false⟩]
+  | .failCause c => [⟨p, .failCause c, env, route, false⟩]
+  | .sync v => [⟨p, .sync v, env, route, false⟩]
+  | .perform op r => [⟨p, .perform op r, env, route, false⟩]
+  | .yieldNow n => [⟨p, .yieldNow n, env, route, false⟩]
+  | .awaitFiber f m => [⟨p, .awaitFiber f m, env, route, false⟩]
+  | .service k => [⟨p, .service k, env, route, false⟩]
+  | .suspend body =>
+    ⟨p, .suspend body, env, route, false⟩ :: sitesEff sig env (p ++ [0]) (route ++ ["Eff.suspend.0"]) body
+  | .bind first rest =>
+    ⟨p, .bind first rest, env, route, false⟩ ::
+      (sitesEff sig env (p ++ [0]) (route ++ ["Eff.bind.0"]) first ++
+        match Checker.check sig env (p ++ [0]) first with
+        | .ok f => sitesEff sig (env ++ [f.answer]) (p ++ [1]) (route ++ ["Eff.bind.1"]) rest
+        | .error _ => anomalyAt (p ++ [1]) route)
+  | .gen body =>
+    ⟨p, .gen body, env, route, false⟩ :: sitesStmts sig env false (p ++ [0]) (route ++ ["Eff.gen.0"]) body
+  | .catchCause body handler =>
+    ⟨p, .catchCause body handler, env, route, false⟩ ::
+      (sitesEff sig env (p ++ [0]) (route ++ ["Eff.catchCause.0"]) body ++
+        match Checker.check sig env (p ++ [0]) body with
+        | .ok b => sitesEff sig (env ++ [.causeOf b.error]) (p ++ [1]) (route ++ ["Eff.catchCause.1"]) handler
+        | .error _ => anomalyAt (p ++ [1]) route)
+  | .catchIf test body handler =>
+    ⟨p, .catchIf test body handler, env, route, false⟩ ::
+      (sitesEff sig env (p ++ [0]) (route ++ ["Eff.catchIf.0"]) body ++
+        match Checker.check sig env (p ++ [0]) body with
+        | .ok b => sitesEff sig (env ++ [b.error]) (p ++ [1]) (route ++ ["Eff.catchIf.1"]) handler
+        | .error _ => anomalyAt (p ++ [1]) route)
+  | .select s d a0 a1 =>
+    ⟨p, .select s d a0 a1, env, route, false⟩ ::
+      (match (Checker.term? sig env p s).toOption.bind d.arms with
+        | some arms =>
+          sitesEff sig (env ++ arms.1) (p ++ [0]) (route ++ ["Eff.select." ++ decisionName d ++ ".0"]) a0 ++
+            sitesEff sig (env ++ arms.2) (p ++ [1]) (route ++ ["Eff.select." ++ decisionName d ++ ".1"]) a1
+        | none => anomalyAt (p ++ [0]) route)
+  | .matchCause body onValue onCause =>
+    ⟨p, .matchCause body onValue onCause, env, route, false⟩ ::
+      (sitesEff sig env (p ++ [0]) (route ++ ["Eff.matchCause.0"]) body ++
+        match Checker.check sig env (p ++ [0]) body with
+        | .ok b =>
+          sitesEff sig (env ++ [b.answer]) (p ++ [1]) (route ++ ["Eff.matchCause.1"]) onValue ++
+            sitesEff sig (env ++ [.causeOf b.error]) (p ++ [2]) (route ++ ["Eff.matchCause.2"]) onCause
+        | .error _ => anomalyAt (p ++ [1]) route)
+  | .onExit body finalizer =>
+    ⟨p, .onExit body finalizer, env, route, false⟩ ::
+      (sitesEff sig env (p ++ [0]) (route ++ ["Eff.onExit.0"]) body ++
+        match Checker.check sig env (p ++ [0]) body with
+        | .ok b =>
+          sitesEff sig (env ++ [.exitOf b.answer b.error]) (p ++ [1]) (route ++ ["Eff.onExit.1"]) finalizer
+        | .error _ => anomalyAt (p ++ [1]) route)
+  | .exit body =>
+    ⟨p, .exit body, env, route, false⟩ :: sitesEff sig env (p ++ [0]) (route ++ ["Eff.exit.0"]) body
+  | .uninterruptible body =>
+    ⟨p, .uninterruptible body, env, route, false⟩ ::
+      sitesEff sig env (p ++ [0]) (route ++ ["Eff.uninterruptible.0"]) body
+  | .interruptible body =>
+    ⟨p, .interruptible body, env, route, false⟩ ::
+      sitesEff sig env (p ++ [0]) (route ++ ["Eff.interruptible.0"]) body
+  | .iterate cursorTy initial test step result body =>
+    ⟨p, .iterate cursorTy initial test step result body, env, route, false⟩ ::
+      (match Checker.term? sig env p initial with
+        | .ok c0 => sitesEff sig (env ++ [cursorTy.getD c0]) (p ++ [0]) (route ++ ["Eff.iterate.0"]) body
+        | .error _ => anomalyAt (p ++ [0]) route)
+  | .withFiber action =>
+    ⟨p, .withFiber action, env, route, false⟩ :: sitesAction sig env (p ++ [0]) (route ++ ["Eff.withFiber.0"]) action
+  | .scoped body =>
+    ⟨p, .scoped body, env, route, false⟩ :: sitesEff sig env (p ++ [0]) (route ++ ["Eff.scoped.0"]) body
+  | .acquireRelease acquire release =>
+    ⟨p, .acquireRelease acquire release, env, route, false⟩ ::
+      (sitesEff sig env (p ++ [0]) (route ++ ["Eff.acquireRelease.0"]) acquire ++
+        match Checker.check sig env (p ++ [0]) acquire with
+        | .ok a =>
+          sitesEff sig (env ++ [a.answer, .exitOf .unknown .unknown]) (p ++ [1])
+            (route ++ ["Eff.acquireRelease.1"]) release
+        | .error _ => anomalyAt (p ++ [1]) route)
+  | .provideLayer layer isLocal body =>
+    ⟨p, .provideLayer layer isLocal body, env, route, false⟩ ::
+      (sitesLayer sig (p ++ [0]) (route ++ ["Eff.provideLayer.0"]) layer ++
+        sitesEff sig env (p ++ [1]) (route ++ ["Eff.provideLayer.1"]) body)
+  | .provideService key value body =>
+    ⟨p, .provideService key value body, env, route, false⟩ ::
+      sitesEff sig env (p ++ [0]) (route ++ ["Eff.provideService.0"]) body
+  | .restore saved body =>
+    ⟨p, .restore saved body, env, route, false⟩ :: sitesEff sig env (p ++ [0]) (route ++ ["Eff.restore.0"]) body
+def sitesStmt (sig : Sig) (env : TyEnv) (inLoop : Bool) (p : List Nat) (route : List String) :
+    Stmt NativeOp → List Site
+  | .bindYield e => sitesEff sig env (p ++ [0]) (route ++ ["Stmt.bindYield.0"]) e
+  | .yieldDiscard e => sitesEff sig env (p ++ [0]) (route ++ ["Stmt.yieldDiscard.0"]) e
+  | .ret _ => []
+  | .ifElse _ a b =>
+    sitesStmts sig env inLoop (p ++ [0]) (route ++ ["Stmt.ifElse.0"]) a ++
+      sitesStmts sig env inLoop (p ++ [1]) (route ++ ["Stmt.ifElse.1"]) b
+  | .whileTrue b => sitesStmts sig env true (p ++ [0]) (route ++ ["Stmt.whileTrue.0"]) b
+  | .breakLoop => []
+def sitesStmts (sig : Sig) (env : TyEnv) (inLoop : Bool) (p : List Nat) (route : List String) :
+    Stmts NativeOp → List Site
+  | .nil => []
+  | .cons head rest =>
+    sitesStmt sig env inLoop (p ++ [0]) (route ++ ["Stmts.cons.0"]) head ++
+      match Checker.checkStmt sig env inLoop (p ++ [0]) head with
+      | .ok (.step _ binds) => sitesStmts sig (env ++ binds) inLoop (p ++ [1]) (route ++ ["Stmts.cons.1"]) rest
+      | .ok (.ret _) => sitesStmts sig env inLoop (p ++ [1]) (route ++ ["Stmts.cons.1"]) rest
+      | .ok .pass => sitesStmts sig env inLoop (p ++ [1]) (route ++ ["Stmts.cons.1"]) rest
+      | .error _ => anomalyAt (p ++ [1]) route
+def sitesEffs (sig : Sig) (env : TyEnv) (p : List Nat) (route : List String) : Effs NativeOp → List Site
+  | .nil => []
+  | .cons head tail =>
+    sitesEff sig env (p ++ [0]) (route ++ ["Effs.cons.0"]) head ++
+      sitesEffs sig env (p ++ [1]) (route ++ ["Effs.cons.1"]) tail
+def sitesAction (sig : Sig) (env : TyEnv) (p : List Nat) (route : List String) :
+    ActionTerm NativeOp → List Site
+  | .fork e _ => sitesEff sig env (p ++ [0]) (route ++ ["ActionTerm.fork.0"]) e
+  | .forkIn e _ _ => sitesEff sig env (p ++ [0]) (route ++ ["ActionTerm.forkIn.0"]) e
+  | .forkScoped e _ => sitesEff sig env (p ++ [0]) (route ++ ["ActionTerm.forkScoped.0"]) e
+  | .raceAll es => sitesEffs sig env (p ++ [0]) (route ++ ["ActionTerm.raceAll.0"]) es
+  | .runIn _ _ | .interrupt _ | .interruptScoped _ | .interruptAll _ _ | .awaitAll _
+  | .awaitAllFailFast _ | .snapshotChildren | .awaitNewChildren _ | .setContext _ | .getContext
+  | .getId | .closeScope _ _ | .getInterruptible => []
+def sitesLayer (sig : Sig) (p : List Nat) (route : List String) : LayerTerm NativeOp → List Site
+  | .effect _ body => sitesEff sig [] (p ++ [0]) (route ++ ["LayerTerm.effect.0"]) body
+  | .effectDiscard body => sitesEff sig [] (p ++ [0]) (route ++ ["LayerTerm.effectDiscard.0"]) body
+  | .provide a b =>
+    sitesLayer sig (p ++ [0]) (route ++ ["LayerTerm.provide.0"]) a ++
+      sitesLayer sig (p ++ [1]) (route ++ ["LayerTerm.provide.1"]) b
+  | .provideMerge a b =>
+    sitesLayer sig (p ++ [0]) (route ++ ["LayerTerm.provideMerge.0"]) a ++
+      sitesLayer sig (p ++ [1]) (route ++ ["LayerTerm.provideMerge.1"]) b
+  | .merge a b =>
+    sitesLayer sig (p ++ [0]) (route ++ ["LayerTerm.merge.0"]) a ++
+      sitesLayer sig (p ++ [1]) (route ++ ["LayerTerm.merge.1"]) b
+  | .fresh a => sitesLayer sig (p ++ [0]) (route ++ ["LayerTerm.fresh.0"]) a
+  | .orDie a => sitesLayer sig (p ++ [0]) (route ++ ["LayerTerm.orDie.0"]) a
+  | .mergeAll ls => sitesLayers sig (p ++ [0]) (route ++ ["LayerTerm.mergeAll.0"]) ls
+  | .succeed _ _ | .ref _ => []
+def sitesLayers (sig : Sig) (p : List Nat) (route : List String) : LayerTerms NativeOp → List Site
+  | .nil => []
+  | .cons head tail =>
+    sitesLayer sig (p ++ [0]) (route ++ ["LayerTerms.cons.0"]) head ++
+      sitesLayers sig (p ++ [1]) (route ++ ["LayerTerms.cons.1"]) tail
+end
+
+/-- Every effect address of a program checked at `env`, in program order (a node before its
+children). -/
+def sites (sig : Sig) (env : TyEnv) (e : P) : List Site := sitesEff sig env [] [] e
+
+/-- The addresses of the effect nodes by the tree's own path fold (`foldMapAt_eff`): the
+independent count that `sites` is compared with. -/
+def effectPaths (e : P) : List (List Nat) :=
+  foldMapAt_eff [] (· ++ ·) [] e (f_eff := fun _ q => [q])
+
+/-- The number of nodes of every sort (the sizes of the report). -/
+def nodeCount (e : P) : Nat :=
+  foldMapAt_eff 0 (· + ·) [] e (f_eff := fun _ _ => 1) (f_stmt := fun _ _ => 1)
+    (f_stmts := fun _ _ => 1) (f_effs := fun _ _ => 1) (f_action := fun _ _ => 1)
+    (f_layer := fun _ _ => 1) (f_layers := fun _ _ => 1)
+
+/-- The node's own type at its site, by the checker. -/
+def Site.type (sig : Sig) (s : Site) : Except TypeRefusal EffTy := Checker.check sig s.env s.path s.node
+
+/-! ## Replacing the node at an address (`Node.replaceAt`, `src/Effect4/Program/Refs.lean`) -/
+
+def replaceEff (e : P) (path : List Nat) (replacement : P) : Option P :=
+  ((Node.eff e).replaceAt path (.eff replacement)).bind Node.eff?
+
+/-! ## The two folds
+
+Fold N puts a program of type `never` in all three columns at the address:
+`failCause (interrupt none)`, a closed program of the existing syntax.
+
+Fold A puts a program with the node's own answer type, the error `never` and no requirement.
+It has two forms, and both use the existing syntax and the existing checker.
+
+* The **variable form**: the root environment gains one variable of the node's answer type at
+  position 0, every other variable moves up by one (`Eff.weaken 0`), and the node becomes
+  `succeed (var 0)`. A layer's body is checked at the empty environment, so this form does
+  not reach an address under a layer.
+* The **row form**: the row table gains one row `unit → A` with the error `never` and no
+  requirement, and the node becomes `perform` of that row at the unit request. It reaches
+  every address. The row check normalizes the row's answer and checks its formation, so the
+  node's type is `⟨A.normalize, never, ∅⟩` where the row is formed. -/
+
+def neverProgram : P := .failCause (.interrupt none)
+
+def foldN (sig : Sig) (rootEnv : TyEnv) (e : P) (path : List Nat) : Option (Except TypeRefusal EffTy) :=
+  (replaceEff e path neverProgram).map fun e' => Checker.check sig rootEnv [] e'
+
+/-- Fold A, the variable form, at one address. `rootEnv` is the environment of the full
+program (empty for a whole program). -/
+def foldAVar (sig : Sig) (rootEnv : TyEnv) (e : P) (path : List Nat) (answer : Ty) :
+    Option (Except TypeRefusal EffTy) :=
+  (replaceEff (Eff.weaken 0 e) path (.succeed (.var 0))).map fun e' =>
+    Checker.check sig (answer :: rootEnv) [] e'
+
+/-- The assumed row of fold A's row form. -/
+def assumeRow (answer : Ty) : Row :=
+  { name := "assume", spelling := "Assume.at", kind := .async, registration := .external,
+    request := .unit, answer := answer, error := .never, cite := "seat CENSUS: fold A, the row form" }
+
+/-- Fold A, the row form, at one address, over the row table `table`. -/
+def foldARow (table : RowTable) (rootEnv : TyEnv) (e : P) (path : List Nat) (answer : Ty) :
+    Option (Except TypeRefusal EffTy) :=
+  (replaceEff e path (.perform (.external table.length) (.lit .unit))).map fun e' =>
+    Checker.check (nativeSignature (table ++ [assumeRow answer])) rootEnv [] e'
+
+/-! ## Comparing a column of the folded program with the full program's -/
+
+inductive Rel
+  | same       -- the two raw types are equal
+  | sameNormal -- the raw types differ and their normal forms are equal
+  | smaller    -- below, and not above, by `Ty.sub` on normal forms
+  | larger     -- above, and not below
+  | bothWays   -- below and above, and the normal forms differ
+  | unrelated
+deriving DecidableEq, Repr
+
+def Rel.name : Rel → String
+  | .same => "same"
+  | .sameNormal => "sameNormal"
+  | .smaller => "smaller"
+  | .larger => "larger"
+  | .bothWays => "bothWays"
+  | .unrelated => "unrelated"
+
+/-- The folded column `a` against the full column `b`. -/
+def relTy (a b : Ty) : Rel :=
+  if a = b then .same
+  else
+    let a' := a.normalize
+    let b' := b.normalize
+    if a' = b' then .sameNormal
+    else match Ty.sub a' b', Ty.sub b' a' with
+      | true, false => .smaller
+      | false, true => .larger
+      | true, true => .bothWays
+      | false, false => .unrelated
+
+/-- The folded requirement `a` against the full requirement `b`, by inclusion. -/
+def relReq (a b : Requirement) : Rel :=
+  if a = b then .same
+  else match a.elems.all (b.elems.contains ·), b.elems.all (a.elems.contains ·) with
+    | true, false => .smaller
+    | false, true => .larger
+    | true, true => .bothWays
+    | false, false => .unrelated
+
+/-- Graduality holds for a column outcome when the folded column is no larger. -/
+def Rel.gradual : Rel → Bool
+  | .same | .sameNormal | .smaller => true
+  | .larger | .bothWays | .unrelated => false
+
+/-! ## Reading a refusal -/
+
+def reasonDetail : TypeReason → String
+  | .term t => "term " ++ showTerm t
+  | .cause c => "cause " ++ showCause c
+  | .errorNotAdmitted e => "errorNotAdmitted " ++ showTy e
+  | .outsideDomain r => "outsideDomain " ++ r
+  | .requestNotSubtype r request expected =>
+    "requestNotSubtype " ++ r ++ " request=" ++ showTy request ++ " expected=" ++ showTy expected
+  | .predicateNotBool t => "predicateNotBool " ++ showTy t
+  | .notSelectable d t => "notSelectable " ++ showDecision d ++ " " ++ showTy t
+  | .stepNotCursor step cursor => "stepNotCursor step=" ++ showTy step ++ " cursor=" ++ showTy cursor
+  | .initialNotCursor initial cursor =>
+    "initialNotCursor initial=" ++ showTy initial ++ " cursor=" ++ showTy cursor
+  | .releaseFails e => "releaseFails " ++ showTy e
+  | .notFiber t => "notFiber " ++ showTy t
+  | .scopeExpected t => "scopeExpected " ++ showTy t
+  | .natExpected t => "natExpected " ++ showTy t
+  | .listOfFibersExpected t => "listOfFibersExpected " ++ showTy t
+  | .contextExpected t => "contextExpected " ++ showTy t
+  | .snapshotExpected t => "snapshotExpected " ++ showTy t
+  | .exitExpected t => "exitExpected " ++ showTy t
+  | .serviceUnknown k => "serviceUnknown " ++ showKey k
+  | .valueNotSubtype k v c => "valueNotSubtype " ++ showKey k ++ " value=" ++ showTy v ++ " carrier=" ++ showTy c
+  | .layerReference t => "layerReference " ++ showPath t
+  | .referencesIllFormed => "referencesIllFormed"
+  | .mergeAllEmpty => "mergeAllEmpty"
+  | .returnNotLast => "returnNotLast"
+  | .breakOutsideLoop => "breakOutsideLoop"
+  | .literalOutsideAlphabet v => "literalOutsideAlphabet " ++ showLit v
+  | .instantiatedFormation r _ => "instantiatedFormation " ++ r
+  | .recordTerm why => "recordTerm at " ++ showPath why.path
+  | .recordCause why => "recordCause at " ++ showPath why.causePath
+  | .tupleTerm why => "tupleTerm at " ++ showPath why.path ++ " index " ++ toString why.index
+  | .tupleCause why => "tupleCause at " ++ showPath why.causePath
+  | .errorPayloadField e _ f => "errorPayloadField " ++ showTy e ++ " field " ++ showTy f
+  | .errorSpelling e s => "errorSpelling " ++ showTy e ++ " as " ++ showTy s
+  | .binderTerm r param => "binderTerm " ++ r ++ " param=" ++ showTy param
+  | .resultNotSubtype r result expected =>
+    "resultNotSubtype " ++ r ++ " result=" ++ showTy result ++ " expected=" ++ showTy expected
+  | .foldTerm why => "foldTerm at " ++ showPath why.path
+  | .foldCause why => "foldCause at " ++ showPath why.causePath
+  | .maskRestoreExpected t => "maskRestoreExpected " ++ showTy t
+
+/-- The constructor of the node at a path, as `Family.constructor`. -/
+def ctorName : Node NativeOp → String
+  | .eff e =>
+    "Eff." ++ match e with
+      | .succeed _ => "succeed" | .fail _ => "fail" | .failCause _ => "failCause" | .sync _ => "sync"
+      | .suspend _ => "suspend" | .perform op _ => "perform(" ++ (NativeOp.row op).name ++ ")"
+      | .bind _ _ => "bind" | .gen _ => "gen"
+      | .catchCause _ _ => "catchCause" | .matchCause _ _ _ => "matchCause" | .onExit _ _ => "onExit"
+      | .exit _ => "exit" | .uninterruptible _ => "uninterruptible" | .interruptible _ => "interruptible"
+      | .yieldNow _ => "yieldNow" | .awaitFiber _ _ => "awaitFiber" | .withFiber _ => "withFiber"
+      | .scoped _ => "scoped" | .acquireRelease _ _ => "acquireRelease" | .provideLayer _ _ _ => "provideLayer"
+      | .service _ => "service" | .provideService _ _ _ => "provideService" | .catchIf _ _ _ => "catchIf"
+      | .select _ d _ _ => "select." ++ decisionName d | .iterate _ _ _ _ _ _ => "iterate"
+      | .restore _ _ => "restore"
+  | .stmt s =>
+    "Stmt." ++ match s with
+      | .bindYield _ => "bindYield" | .yieldDiscard _ => "yieldDiscard" | .ret _ => "ret"
+      | .ifElse _ _ _ => "ifElse" | .whileTrue _ => "whileTrue" | .breakLoop => "breakLoop"
+  | .stmts s => "Stmts." ++ match s with | .nil => "nil" | .cons _ _ => "cons"
+  | .effs s => "Effs." ++ match s with | .nil => "nil" | .cons _ _ => "cons"
+  | .action a =>
+    "ActionTerm." ++ match a with
+      | .fork _ _ => "fork" | .forkIn _ _ _ => "forkIn" | .forkScoped _ _ => "forkScoped"
+      | .runIn _ _ => "runIn" | .interrupt _ => "interrupt" | .interruptScoped _ => "interruptScoped"
+      | .interruptAll _ _ => "interruptAll" | .awaitAll _ => "awaitAll"
+      | .awaitAllFailFast _ => "awaitAllFailFast" | .snapshotChildren => "snapshotChildren"
+      | .awaitNewChildren _ => "awaitNewChildren" | .raceAll _ => "raceAll" | .setContext _ => "setContext"
+      | .getContext => "getContext" | .getId => "getId" | .closeScope _ _ => "closeScope"
+      | .getInterruptible => "getInterruptible"
+  | .layer l =>
+    "LayerTerm." ++ match l with
+      | .succeed _ _ => "succeed" | .effect _ _ => "effect" | .effectDiscard _ => "effectDiscard"
+      | .provide _ _ => "provide" | .provideMerge _ _ => "provideMerge" | .merge _ _ => "merge"
+      | .fresh _ => "fresh" | .orDie _ => "orDie" | .ref _ => "ref" | .mergeAll _ => "mergeAll"
+  | .layers l => "LayerTerms." ++ match l with | .nil => "nil" | .cons _ _ => "cons"
+
+def ctorAt (e : P) (path : List Nat) : String :=
+  match (Node.eff e).at_ path with
+  | some n => ctorName n
+  | none => "?"
+
+/-- Where a refusal stands against the folded address: at an ancestor of it (the fold's own
+column reached a rule above), or elsewhere (the folded node's answer reached a rule through a
+binder). The folded node itself is never refused: both folds put an admitted leaf there. -/
+def refusalPlace (folded refused : List Nat) : String :=
+  if refused = folded then "at-fold"
+  else if refused.isPrefixOf folded then "ancestor"
+  else if folded.isPrefixOf refused then "below-fold"
+  else "sibling"
+
+end Census
+
+namespace Census
+
+/-! ## The checker's own account of a site, read from its refusals
+
+The environment of a site is built by this file's walk. These three probes confirm it against
+the checker: each replaces the node at the address by a node that the checker refuses with a
+payload, and reads the payload.
+
+* **Level**: `succeed (var L)` is refused at the address as a term with no type, and
+  `succeed (var (L - 1))` is not refused there. So the checker's environment there has
+  exactly `L` entries.
+* **Entry `i`**: `withFiber (setContext (var i))` is refused one step below the address with
+  `contextExpected t`, and `t` is the checker's own type of the variable. A variable of the
+  type `Ty.context` is admitted there, and `restore (var i) …` reads it instead.
+* **Answer**: `bind node (withFiber (setContext (var L)))` is refused with `contextExpected A`,
+  and `A` is the checker's own answer type of the node. -/
+
+def probeAt (sig : Sig) (rootEnv : TyEnv) (e : P) (path : List Nat) (probe : P) : Option TypeRefusal :=
+  (replaceEff e path probe).bind fun e' => Checker.refusal (Checker.check sig rootEnv [] e')
+
+def levelOk (sig : Sig) (rootEnv : TyEnv) (e : P) (s : Site) : Bool :=
+  let L := s.env.length
+  probeAt sig rootEnv e s.path (.succeed (.var L)) == some ⟨s.path, .term (.var L)⟩ &&
+    (L == 0 ||
+      match probeAt sig rootEnv e s.path (.succeed (.var (L - 1))) with
+      | some r => r.path != s.path
+      | none => true)
+
+def entryOk (sig : Sig) (rootEnv : TyEnv) (e : P) (s : Site) (i : Nat) : Bool :=
+  match s.env[i]? with
+  | none => false
+  | some t =>
+    if t = Ty.context then
+      probeAt sig rootEnv e s.path (.restore (.var i) (.succeed (.lit .unit))) ==
+        some ⟨s.path, .maskRestoreExpected t⟩
+    else
+      probeAt sig rootEnv e s.path (.withFiber (.setContext (.var i))) ==
+        some ⟨s.path ++ [0], .contextExpected t⟩
+
+def entriesOk (sig : Sig) (rootEnv : TyEnv) (e : P) (s : Site) (from_ : Nat := 0) : Bool :=
+  (List.range s.env.length).all fun i => i < from_ || entryOk sig rootEnv e s i
+
+def answerOk (sig : Sig) (rootEnv : TyEnv) (e : P) (s : Site) (answer : Ty) : Bool :=
+  let L := s.env.length
+  if answer = Ty.context then
+    probeAt sig rootEnv e s.path (.bind s.node (.restore (.var L) (.succeed (.lit .unit)))) ==
+      some ⟨s.path ++ [1], .maskRestoreExpected answer⟩
+  else
+    probeAt sig rootEnv e s.path (.bind s.node (.withFiber (.setContext (.var L)))) ==
+      some ⟨s.path ++ [1, 0], .contextExpected answer⟩
+
+/-- The upper half of the level check alone: `succeed (var L)` is unbound at the address, so the
+checker's environment there has at most `L` entries. The answer probe gives the lower half: it
+reads the variable `L` one binder deeper, which is unbound when the environment is shorter. -/
+def levelUpperOk (sig : Sig) (rootEnv : TyEnv) (e : P) (s : Site) : Bool :=
+  let L := s.env.length
+  probeAt sig rootEnv e s.path (.succeed (.var L)) == some ⟨s.path, .term (.var L)⟩
+
+end Census
+
+/-
+Seat CENSUS: the term addresses. A term is no node of the path language (`Node.replaceAt`:
+"Terms are not nodes in this path language"), so a term address is an effect address, a slot of
+that node, and a path inside the slot's term (the child convention of `TermRefusal`: an
+argument's index; a target at 0 and a replacement at 1; a fold's list at 0, its initial value at
+1 and its body at 2).
+
+No closed term of the existing atom table has the type `never` (the receipt's finding, with
+its enumeration in `Probe1Term.tail.lean`). So fold N at a term address assumes one: the
+signature gains a nullary atom of type `never`, and the sub-term becomes its application. It
+is the term-level form of fold A's row form.
+-/
+namespace Census
+
+/-- A part of a term: its path, the role of its position (who consumes it), the sub-term, and
+the term with that part replaced. -/
+structure TermPart where
+  path : List Nat
+  role : String
+  part : Term
+  rebuild : Term → Term
+
+mutual
+def termParts (role : String) : Term → List TermPart
+  | .var index => [⟨[], role, .var index, id⟩]
+  | .lit value => [⟨[], role, .lit value, id⟩]
+  | .app atom args =>
+    ⟨[], role, .app atom args, id⟩ ::
+      (termsParts atom 0 args).map fun (p : List Nat × String × Term × (Term → Terms)) =>
+        ⟨p.1, p.2.1, p.2.2.1, fun x => .app atom (p.2.2.2 x)⟩
+  | .record fields names values =>
+    ⟨[], role, .record fields names values, id⟩ ::
+      (termsParts "record" 0 values).map fun (p : List Nat × String × Term × (Term → Terms)) =>
+        ⟨p.1, p.2.1, p.2.2.1, fun x => .record fields names (p.2.2.2 x)⟩
+  | .field mode target name =>
+    ⟨[], role, .field mode target name, id⟩ ::
+      (termParts "field.target" target).map fun q =>
+        ⟨0 :: q.path, q.role, q.part, fun x => .field mode (q.rebuild x) name⟩
+  | .recordSet target name value =>
+    ⟨[], role, .recordSet target name value, id⟩ ::
+      ((termParts "recordSet.target" target).map fun q =>
+          ⟨0 :: q.path, q.role, q.part, fun x => .recordSet (q.rebuild x) name value⟩) ++
+        ((termParts "recordSet.value" value).map fun q =>
+          ⟨1 :: q.path, q.role, q.part, fun x => .recordSet target name (q.rebuild x)⟩)
+  | .tupleAt target index =>
+    ⟨[], role, .tupleAt target index, id⟩ ::
+      (termParts "tupleAt.target" target).map fun q =>
+        ⟨0 :: q.path, q.role, q.part, fun x => .tupleAt (q.rebuild x) index⟩
+  | .fold accTy list init body =>
+    ⟨[], role, .fold accTy list init body, id⟩ ::
+      ((termParts "fold.list" list).map fun q =>
+          ⟨0 :: q.path, q.role, q.part, fun x => .fold accTy (q.rebuild x) init body⟩) ++
+        ((termParts "fold.init" init).map fun q =>
+          ⟨1 :: q.path, q.role, q.part, fun x => .fold accTy list (q.rebuild x) body⟩) ++
+        ((termParts "fold.body" body).map fun q =>
+          ⟨2 :: q.path, q.role, q.part, fun x => .fold accTy list init (q.rebuild x)⟩)
+def termsParts (head : String) (k : Nat) : Terms → List (List Nat × String × Term × (Term → Terms))
+  | .nil => []
+  | .cons first rest =>
+    ((termParts (head ++ "." ++ toString k) first).map fun q =>
+        (k :: q.path, q.role, q.part, fun x => Terms.cons (q.rebuild x) rest)) ++
+      ((termsParts head (k + 1) rest).map fun (p : List Nat × String × Term × (Term → Terms)) =>
+        (p.1, p.2.1, p.2.2.1, fun x => Terms.cons first (p.2.2.2 x)))
+end
+
+/-- A term slot of an effect node: its name, its term, and the node with that term replaced. -/
+structure Slot where
+  name : String
+  term : Term
+  rebuild : Term → P
+
+def causeSlots : CauseTerm → List (String × Term × (Term → CauseTerm))
+  | .fail error => [("failCause.fail", error, fun x => .fail x)]
+  | .die defect => [("failCause.die", defect, fun x => .die x)]
+  | .interrupt none => []
+  | .interrupt (some who) => [("failCause.interruptor", who, fun x => .interrupt (some x))]
+  | .both left right =>
+    ((causeSlots left).map fun (s : String × Term × (Term → CauseTerm)) => (s.1, s.2.1, fun x => CauseTerm.both (s.2.2 x) right)) ++
+      ((causeSlots right).map fun (s : String × Term × (Term → CauseTerm)) => (s.1, s.2.1, fun x => CauseTerm.both left (s.2.2 x)))
+
+mutual
+/-- The terms of a statement and of the statements of its blocks: a nested program is another
+effect address and holds its own. -/
+def stmtSlots : Stmt NativeOp → List (String × Term × (Term → Stmt NativeOp))
+  | .ret value => [("gen.return", value, fun x => .ret x)]
+  | .ifElse test a b =>
+    ("gen.if.test", test, fun x => Stmt.ifElse x a b) ::
+      (((stmtsSlots a).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmt.ifElse test (s.2.2 x) b)) ++
+        ((stmtsSlots b).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmt.ifElse test a (s.2.2 x))))
+  | .whileTrue body =>
+    (stmtsSlots body).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmt.whileTrue (s.2.2 x))
+  | .bindYield _ | .yieldDiscard _ | .breakLoop => []
+def stmtsSlots : Stmts NativeOp → List (String × Term × (Term → Stmts NativeOp))
+  | .nil => []
+  | .cons head tail =>
+    ((stmtSlots head).map fun (s : String × Term × (Term → Stmt NativeOp)) => (s.1, s.2.1, fun x => Stmts.cons (s.2.2 x) tail)) ++
+      ((stmtsSlots tail).map fun (s : String × Term × (Term → Stmts NativeOp)) => (s.1, s.2.1, fun x => Stmts.cons head (s.2.2 x)))
+end
+
+def actionSlots : ActionTerm NativeOp → List (String × Term × (Term → ActionTerm NativeOp))
+  | .forkIn e o scope => [("forkIn.scope", scope, fun x => .forkIn e o x)]
+  | .runIn target scope =>
+    [("runIn.target", target, fun x => .runIn x scope), ("runIn.scope", scope, fun x => .runIn target x)]
+  | .interrupt target => [("interrupt.target", target, fun x => .interrupt x)]
+  | .interruptScoped target => [("interruptScoped.target", target, fun x => .interruptScoped x)]
+  | .interruptAll targets none => [("interruptAll.targets", targets, fun x => .interruptAll x none)]
+  | .interruptAll targets (some who) =>
+    [("interruptAll.targets", targets, fun x => .interruptAll x (some who)),
+     ("interruptAll.interruptor", who, fun x => .interruptAll targets (some x))]
+  | .awaitAll targets => [("awaitAll.targets", targets, fun x => .awaitAll x)]
+  | .awaitAllFailFast targets => [("awaitAllFailFast.targets", targets, fun x => .awaitAllFailFast x)]
+  | .awaitNewChildren snapshot => [("awaitNewChildren.snapshot", snapshot, fun x => .awaitNewChildren x)]
+  | .setContext context => [("setContext.context", context, fun x => .setContext x)]
+  | .closeScope scope exit =>
+    [("closeScope.scope", scope, fun x => .closeScope x exit), ("closeScope.exit", exit, fun x => .closeScope scope x)]
+  | .fork _ _ | .forkScoped _ _ | .snapshotChildren | .raceAll _ | .getContext | .getId | .getInterruptible => []
+
+/-- The term slots of an effect node itself: its own terms, its operation's binder term, its
+cause's leaves, and the terms of its statements or of its fiber action. -/
+def termSlots : P → List Slot
+  | .succeed v => [⟨"succeed.value", v, fun x => .succeed x⟩]
+  | .fail v => [⟨"fail.error", v, fun x => .fail x⟩]
+  | .failCause c => (causeSlots c).map fun (s : String × Term × (Term → CauseTerm)) => ⟨s.1, s.2.1, fun x => .failCause (s.2.2 x)⟩
+  | .sync v => [⟨"sync.thunk", v, fun x => .sync x⟩]
+  | .perform op r =>
+    ⟨"perform(" ++ (NativeOp.row op).name ++ ").request", r, fun x => .perform op x⟩ ::
+      match op.binder? with
+      | some (_, t) => [⟨"perform(" ++ (NativeOp.row op).name ++ ").binder", t, fun x => .perform (op.withTerm x) r⟩]
+      | none => []
+  | .catchIf t b h => [⟨"catchIf.test", t, fun x => .catchIf x b h⟩]
+  | .select s d a0 a1 => [⟨"select." ++ decisionName d ++ ".scrutinee", s, fun x => .select x d a0 a1⟩]
+  | .iterate c i t s r b =>
+    [⟨"iterate.initial", i, fun x => .iterate c x t s r b⟩, ⟨"iterate.test", t, fun x => .iterate c i x s r b⟩,
+     ⟨"iterate.step", s, fun x => .iterate c i t x r b⟩, ⟨"iterate.result", r, fun x => .iterate c i t s x b⟩]
+  | .awaitFiber f m => [⟨"awaitFiber.fiber", f, fun x => .awaitFiber x m⟩]
+  | .provideService k v b => [⟨"provideService.value", v, fun x => .provideService k x b⟩]
+  | .restore s b => [⟨"restore.saved", s, fun x => .restore x b⟩]
+  | .gen body => (stmtsSlots body).map fun (s : String × Term × (Term → Stmts NativeOp)) => ⟨s.1, s.2.1, fun x => .gen (s.2.2 x)⟩
+  | .withFiber action =>
+    (actionSlots action).map fun (s : String × Term × (Term → ActionTerm NativeOp)) => ⟨s.1, s.2.1, fun x => .withFiber (s.2.2 x)⟩
+  | .suspend _ | .bind _ _ | .catchCause _ _ | .matchCause _ _ _ | .onExit _ _ | .exit _
+  | .uninterruptible _ | .interruptible _ | .yieldNow _ | .scoped _ | .acquireRelease _ _
+  | .provideLayer _ _ _ | .service _ => []
+
+/-- The assumed atom of fold N at a term address. -/
+def neverAtom : String := "census.never"
+def neverTerm : Term := .app neverAtom .nil
+
+/-- The native signature with one more atom: `census.never`, nullary, of type `never`. -/
+def sigWithNever (table : RowTable) : Sig :=
+  let sig := nativeSignature table
+  { sig with atomOf := fun name tys => if name == neverAtom && tys.isEmpty then some .never else sig.atomOf name tys }
+
+def termHead : Term → String
+  | .var _ => "var"
+  | .lit (.unit) => "lit.unit"
+  | .lit (.nat _) => "lit.nat"
+  | .lit (.bool _) => "lit.bool"
+  | .lit (.str _) => "lit.str"
+  | .app atom _ => "app:" ++ atom
+  | .record _ _ _ => "record"
+  | .field _ _ _ => "field"
+  | .recordSet _ _ _ => "recordSet"
+  | .tupleAt _ _ => "tupleAt"
+  | .fold _ _ _ _ => "fold"
+
+
+end Census

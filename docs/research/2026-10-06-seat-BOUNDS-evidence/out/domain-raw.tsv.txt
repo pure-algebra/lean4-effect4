@@ -1,0 +1,38 @@
+family	tree	parameters	raw applications	with an argument that is not normal	present: raw only	present: normal form only	present: both, other bindings	bounds: raw only	bounds: normal form only	bounds: both, other bindings	present on raw against bounds on the normal form: not conservative	present admits raw, the guard with cross terms refuses the normal form	present admits raw, the guard with cross terms refuses the raw type
+atom pair	true	('0, '1)	36	0	0	0	0	0	0	0	0	0	0
+atom getOrElse	true	(option<'0>, '0)	182	0	0	0	0	0	0	0	0	0	0
+atom ite	true	(bool, '0, '0) join	338	0	0	0	0	0	0	0	0	0	0
+atom some	true	('0)	13	0	0	0	0	0	0	0	0	0	0
+atom cons	true	('0, list<'0>) join	182	0	0	0	0	0	0	0	0	0	0
+atom get	true	(list<'0>, nat)	28	0	0	0	0	0	0	0	0	0	0
+atom append	true	(list<'0>, list<'0>) join	196	0	0	0	0	0	0	0	0	0	0
+atom mapGet	true	(map<string, '0>, string)	28	0	0	0	0	0	0	0	0	0	0
+atom mapSet	true	(map<string, '0>, string, '1)	84	0	0	0	0	0	0	0	0	0	0
+atom mapKeys	true	(map<string, '0>)	14	0	0	0	0	0	0	0	0	0	0
+atom mapEntries	true	(map<string, '0>)	14	0	0	0	0	0	0	0	0	0	0
+atom mapFromEntries	true	(list<[string, '0]>)	28	14	14	0	0	0	0	0	0	14	0
+atom take	true	(list<'0>, nat)	28	0	0	0	0	0	0	0	0	0	0
+atom drop	true	(list<'0>, nat)	28	0	0	0	0	0	0	0	0	0	0
+binder term update	true	('0) from {'0 := nat}	13	0	0	0	0	0	0	0	0	0	0
+binder term update	true	('0) from {'0 := string}	13	0	0	0	0	0	0	0	0	0	0
+binder term update	true	('0) from {'0 := (nat | string)}	13	0	0	0	0	0	0	0	0	0	0
+binder term updateSome	true	(option<'0>) from {'0 := nat}	14	0	0	0	0	0	0	0	0	0	0
+binder term updateSome	true	(option<'0>) from {'0 := string}	14	0	0	0	0	0	0	0	0	0	0
+binder term updateSome	true	(option<'0>) from {'0 := (nat | string)}	14	0	0	0	0	0	0	0	0	0	0
+binder term modify	true	(['1, '0]) from {'0 := nat}	170	133	14	0	0	0	0	0	0	14	0
+binder term modify	true	(['1, '0]) from {'0 := string}	170	133	21	0	0	0	0	0	0	21	0
+binder term modify	true	(['1, '0]) from {'0 := (nat | string)}	170	133	42	0	0	0	0	0	0	42	0
+binder term modifySome	true	(['1, option<'0>]) from {'0 := nat}	183	98	21	0	0	0	0	0	0	21	0
+binder term modifySome	true	(['1, option<'0>]) from {'0 := string}	183	98	28	0	0	0	0	0	0	28	0
+binder term modifySome	true	(['1, option<'0>]) from {'0 := (nat | string)}	183	98	49	0	0	0	0	0	0	49	0
+S1 a product under a cell	false	(ref<['0, '1]>)	38	11	11	0	0	0	0	0	0	11	0
+S2 a cell beside its content, two arguments, join	false	(ref<'0>, '0) join	182	0	0	0	0	0	0	0	54	54	54
+S3 a cell beside its content, two arguments	false	(ref<'0>, '0)	182	0	0	0	0	0	0	0	0	0	0
+S4 the content before its cell	false	(['0, ref<'0>])	183	98	14	0	0	0	0	0	0	7	0
+S5 a list of lists	false	(list<list<'0>>)	15	0	0	0	0	0	0	0	0	0	0
+S6 one parameter twice in a pair	false	(['0, '0])	170	133	44	0	0	0	0	0	0	44	0
+S7 one parameter at two cells	false	(deferred<'0, '0>)	170	0	0	0	0	0	0	0	0	0	0
+S8 a contravariant argument beside a covariant one	false	(Context.Context<'0>, '0)	182	0	0	0	0	0	0	0	54	0	0
+S9 two contravariant arguments	false	(Queue.Enqueue<'0, '0>)	37	0	0	0	0	0	0	0	13	0	0
+S10 a tuple of three	false	(tuple['0, '0, '1])	217	0	0	0	0	0	0	0	0	0	0
+S11 a record of two fields	false	({a: '0, b?: '0})	37	0	0	0	0	0	0	0	0	0	0

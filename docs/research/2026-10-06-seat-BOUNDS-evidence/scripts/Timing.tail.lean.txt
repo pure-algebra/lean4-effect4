@@ -1,0 +1,29 @@
+/- Seat BOUNDS: the cost of the match by bounds on the truth lane's corpus: the traced copy of the
+checker under the present match and under the match by bounds (normal-form reading), each program
+checked ten times. Wall times of the interpreter (`lake env lean`), one run. -/
+namespace Bounds
+
+def timeRule (rule : Rule) (sigOf : RowTable → Sig) (progs : List (String × RowTable × P)) : IO (Nat × Nat) := do
+  let t0 ← IO.monoMsNow
+  let mut admitted := 0
+  for _ in List.range 10 do
+    for (_, table, p) in progs do
+      let r := (runT rule (sigOf table) p.expandRefs).1
+      if r.toOption.isSome then admitted := admitted + 1
+  let t1 ← IO.monoMsNow
+  return (t1 - t0, admitted)
+
+def sigBNormal (table : RowTable) : Sig :=
+  { nativeSignature table with atomOf := fun name tys => atomTyB name (tys.map Ty.normalize) }
+
+def runTiming : IO Unit := do
+  let progs := OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+  let (a, na) ← timeRule presentRule (fun table => nativeSignature table) progs
+  let (b, nb) ← timeRule (boundsRule true) sigBNormal progs
+  let (a2, _) ← timeRule presentRule (fun table => nativeSignature table) progs
+  let (b2, _) ← timeRule (boundsRule true) sigBNormal progs
+  IO.println s!"ten checks of each of {progs.length} programs: present {a} ms and {a2} ms (admitted {na}); by bounds {b} ms and {b2} ms (admitted {nb})"
+
+#eval runTiming
+
+end Bounds

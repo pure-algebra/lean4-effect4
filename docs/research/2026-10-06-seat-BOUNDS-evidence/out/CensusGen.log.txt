@@ -1,0 +1,2 @@
+gen: programs 400; the present checker admits 128; the checker by bounds admits 128; programs where the traced copy differs from Checker.check: 0; applications met by the present checker: 175; wall time 100 ms
+wall=3s exit=0

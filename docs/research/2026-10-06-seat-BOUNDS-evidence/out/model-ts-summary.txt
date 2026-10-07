@@ -1,0 +1,159 @@
+- prelude present: 7777 error lines; outside the applications: 0; calls refused: 5290 of 6295
+- prelude split: 6510 error lines; outside the applications: 0; calls refused: 4924 of 6295
+- prelude cross: 5770 error lines; outside the applications: 0; calls refused: 4184 of 6295
+- prelude whole: 2617 error lines; outside the applications: 0; calls refused: 2617 of 6295
+
+Applications: 6295; at a normal request: 6281; at a raw request that is not normal: 14
+- Lean, present: admits 869
+- Lean, bounds: admits 3582
+- Lean, bounds + guard of one parameter: admits 1059
+- Lean, bounds + guard of a split parameter: admits 1323
+- Lean, bounds + guard with cross terms: admits 1587
+- tsgo, prelude present: accepts 1005
+- tsgo, prelude split: accepts 1371
+- tsgo, prelude cross: accepts 2111
+- tsgo, prelude whole: accepts 3678
+
+Each reading of the checker against each prelude (all six atoms):
+
+| Lean | prelude | both admit | Lean admits, tsgo refuses | tsgo accepts, Lean refuses | both refuse |
+| --- | --- | --- | --- | --- | --- |
+| present | present | 803 | 66 | 202 | 5224 |
+| present | split | 737 | 132 | 634 | 4792 |
+| present | cross | 869 | 0 | 1242 | 4184 |
+| present | whole | 869 | 0 | 2809 | 2617 |
+| bounds | present | 961 | 2621 | 44 | 2669 |
+| bounds | split | 1323 | 2259 | 48 | 2665 |
+| bounds | cross | 2051 | 1531 | 60 | 2653 |
+| bounds | whole | 3582 | 0 | 96 | 2617 |
+| bounds + guard of one parameter | present | 869 | 190 | 136 | 5100 |
+| bounds + guard of one parameter | split | 795 | 264 | 576 | 4660 |
+| bounds + guard of one parameter | cross | 1059 | 0 | 1052 | 4184 |
+| bounds + guard of one parameter | whole | 1059 | 0 | 2619 | 2617 |
+| bounds + guard of a split parameter | present | 829 | 494 | 176 | 4796 |
+| bounds + guard of a split parameter | split | 1323 | 0 | 48 | 4924 |
+| bounds + guard of a split parameter | cross | 1323 | 0 | 788 | 4184 |
+| bounds + guard of a split parameter | whole | 1323 | 0 | 2355 | 2617 |
+| bounds + guard with cross terms | present | 961 | 626 | 44 | 4664 |
+| bounds + guard with cross terms | split | 1323 | 264 | 48 | 4660 |
+| bounds + guard with cross terms | cross | 1587 | 0 | 524 | 4184 |
+| bounds + guard with cross terms | whole | 1587 | 0 | 2091 | 2617 |
+
+The pairs of a reading and its prelude, by atom:
+
+| Lean | prelude | atom | request | applications | both admit | Lean admits, tsgo refuses | tsgo accepts, Lean refuses |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| present | present | getOrElse | normal | 748 | 88 | 0 | 0 |
+| present | present | ite | normal | 2312 | 282 | 0 | 0 |
+| present | present | cons | normal | 748 | 146 | 66 | 109 |
+| present | present | append | normal | 1936 | 214 | 0 | 91 |
+| present | present | get | normal | 352 | 28 | 0 | 2 |
+| present | present | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| present | present | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds + guard of one parameter | present | getOrElse | normal | 748 | 88 | 124 | 0 |
+| bounds + guard of one parameter | present | ite | normal | 2312 | 282 | 0 | 0 |
+| bounds + guard of one parameter | present | cons | normal | 748 | 146 | 66 | 109 |
+| bounds + guard of one parameter | present | append | normal | 1936 | 280 | 0 | 25 |
+| bounds + guard of one parameter | present | get | normal | 352 | 28 | 0 | 2 |
+| bounds + guard of one parameter | present | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| bounds + guard of one parameter | present | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds + guard of a split parameter | split | getOrElse | normal | 748 | 238 | 0 | 0 |
+| bounds + guard of a split parameter | split | ite | normal | 2312 | 578 | 0 | 0 |
+| bounds + guard of a split parameter | split | cons | normal | 748 | 238 | 0 | 17 |
+| bounds + guard of a split parameter | split | append | normal | 1936 | 196 | 0 | 29 |
+| bounds + guard of a split parameter | split | get | normal | 352 | 28 | 0 | 2 |
+| bounds + guard of a split parameter | split | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| bounds + guard of a split parameter | split | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds + guard with cross terms | cross | getOrElse | normal | 748 | 304 | 0 | 87 |
+| bounds + guard with cross terms | cross | ite | normal | 2312 | 578 | 0 | 0 |
+| bounds + guard with cross terms | cross | cons | normal | 748 | 304 | 0 | 104 |
+| bounds + guard with cross terms | cross | append | normal | 1936 | 328 | 0 | 331 |
+| bounds + guard with cross terms | cross | get | normal | 352 | 28 | 0 | 2 |
+| bounds + guard with cross terms | cross | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| bounds + guard with cross terms | cross | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds | whole | getOrElse | normal | 748 | 646 | 0 | 0 |
+| bounds | whole | ite | normal | 2312 | 578 | 0 | 0 |
+| bounds | whole | cons | normal | 748 | 646 | 0 | 17 |
+| bounds | whole | append | normal | 1936 | 1444 | 0 | 77 |
+| bounds | whole | get | normal | 352 | 76 | 0 | 2 |
+| bounds | whole | mapFromEntries | normal | 185 | 178 | 0 | 0 |
+| bounds | whole | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+
+The call's type, where the match by bounds and tsgo both admit:
+
+| prelude | applications | tsgo's type is not assignable to Lean's answer | Lean's answer is not assignable to tsgo's type |
+| --- | --- | --- | --- |
+| present | 961 | 19 | 0 |
+| split | 1323 | 31 | 0 |
+| cross | 2051 | 55 | 0 |
+| whole | 3582 | 0 | 0 |
+
+Examples (at most 6 of each kind):
+
+- present against prelude present: Lean admits, tsgo refuses: 66
+    - a3206: cons((bool | "a"), (list<bool> | list<"a">)) [normal]; lower bounds: member
+    - a3294: cons((string | bool), (list<bool> | list<"a">)) [normal]; lower bounds: member
+
+- present against prelude present: tsgo accepts, Lean refuses: 202
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3106: cons(bool, list<"a">) [normal]; lower bounds: argument
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4291: append(list<"a">, [nat, string]) [normal]; lower bounds: -
+
+- bounds + guard of one parameter against prelude present: Lean admits, tsgo refuses: 190
+    - a1: getOrElse(option<never>, bool) [normal]; lower bounds: order
+    - a2: getOrElse(option<never>, "a") [normal]; lower bounds: order
+    - a3206: cons((bool | "a"), (list<bool> | list<"a">)) [normal]; lower bounds: member
+    - a3294: cons((string | bool), (list<bool> | list<"a">)) [normal]; lower bounds: member
+
+- bounds + guard of one parameter against prelude present: tsgo accepts, Lean refuses: 136
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3106: cons(bool, list<"a">) [normal]; lower bounds: argument
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4291: append(list<"a">, [nat, string]) [normal]; lower bounds: -
+
+- bounds + guard of a split parameter against prelude split: tsgo accepts, Lean refuses: 48
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3147: cons(bool, [nat, string]) [normal]; lower bounds: -
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4247: append(list<bool>, [nat, string]) [normal]; lower bounds: -
+
+- bounds + guard with cross terms against prelude cross: tsgo accepts, Lean refuses: 524
+    - a239: getOrElse((option<bool> | option<"a">), bool) [normal]; lower bounds: member
+    - a245: getOrElse((option<bool> | option<"a">), (nat | bool)) [normal]; lower bounds: member
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3118: cons(bool, (list<bool> | list<"a">)) [normal]; lower bounds: member
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+
+- bounds against prelude whole: tsgo accepts, Lean refuses: 96
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3147: cons(bool, [nat, string]) [normal]; lower bounds: -
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4247: append(list<bool>, [nat, string]) [normal]; lower bounds: -
+
+- prelude present, tsgo below Lean fails: 19
+    - a221: getOrElse(never, never) [normal]; Lean answers never
+    - a222: getOrElse(never, bool) [normal]; Lean answers boolean
+    - a223: getOrElse(never, "a") [normal]; Lean answers "a"
+    - a224: getOrElse(never, (bool | "a")) [normal]; Lean answers boolean | "a"
+
+- prelude split, tsgo below Lean fails: 31
+    - a221: getOrElse(never, never) [normal]; Lean answers never
+    - a222: getOrElse(never, bool) [normal]; Lean answers boolean
+    - a223: getOrElse(never, "a") [normal]; Lean answers "a"
+    - a224: getOrElse(never, (bool | "a")) [normal]; Lean answers boolean | "a"
+
+- prelude cross, tsgo below Lean fails: 55
+    - a221: getOrElse(never, never) [normal]; Lean answers never
+    - a222: getOrElse(never, bool) [normal]; Lean answers boolean
+    - a223: getOrElse(never, "a") [normal]; Lean answers "a"
+    - a224: getOrElse(never, (bool | "a")) [normal]; Lean answers boolean | "a"

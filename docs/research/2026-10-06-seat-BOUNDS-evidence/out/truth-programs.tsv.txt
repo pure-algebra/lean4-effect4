@@ -1,0 +1,74 @@
+program	present	bounds	verdict	boundsNormalBinder	verdictNormalBinder	tracedAgrees	applicationsPresent	applicationsBounds	presentType	boundsType
+p42	true	true	same	true	same	true	0	0	<nat ; never ; {}>	<nat ; never ; {}>
+pBind	true	true	same	true	same	true	1	1	<nat ; never ; {}>	<nat ; never ; {}>
+pFork	true	true	same	true	same	true	0	0	<exit<nat, never> ; never ; {}>	<exit<nat, never> ; never ; {}>
+pAwait	true	true	same	true	same	true	2	2	<nat ; nat ; {}>	<nat ; nat ; {}>
+pGen	true	true	same	true	same	true	1	1	<bool ; never ; {}>	<bool ; never ; {}>
+pLoop	true	true	same	true	same	true	6	6	<unit ; never ; {}>	<unit ; never ; {}>
+pCatch	true	true	same	true	same	true	0	0	<unit ; never ; {}>	<unit ; never ; {}>
+pScope	true	true	same	true	same	true	1	1	<unit ; never ; {}>	<unit ; never ; {}>
+pTwo	true	true	same	true	same	true	0	0	<exit<nat, never> ; never ; {}>	<exit<nat, never> ; never ; {}>
+pAcquire	true	true	same	true	same	true	4	4	<nat ; never ; {}>	<nat ; never ; {}>
+pAcquireClosed	true	true	same	true	same	true	4	4	<nat ; never ; {}>	<nat ; never ; {}>
+pProvide	true	true	same	true	same	true	0	0	<nat ; never ; {}>	<nat ; never ; {}>
+pProvideMerge	true	true	same	true	same	true	8	8	<nat ; never ; {}>	<nat ; never ; {}>
+pProvideTwice	true	true	same	true	same	true	8	8	<nat ; never ; {}>	<nat ; never ; {}>
+pDiamond	true	true	same	true	same	true	11	11	<nat ; never ; {}>	<nat ; never ; {}>
+pMergeAll	true	true	same	true	same	true	11	11	<nat ; never ; {}>	<nat ; never ; {}>
+pAcquireHandle	true	true	same	true	same	true	4	4	<[handle(Host.Resource), nat] ; never ; {}>	<[handle(Host.Resource), nat] ; never ; {}>
+pFailTagged	true	true	same	true	same	true	1	1	<never ; ["SqlError", "boom"] ; {}>	<never ; ["SqlError", "boom"] ; {}>
+pSqlite	true	true	same	true	same	true	14	14	<list<list<[string, string]>> ; [string, string] ; {}>	<list<list<[string, string]>> ; [string, string] ; {}>
+pKv	true	true	same	true	same	true	11	11	<[option<string>, bool] ; [string, string] ; {}>	<[option<string>, bool] ; [string, string] ; {}>
+pSqlFail	true	true	same	true	same	true	6	6	<list<list<[string, string]>> ; [string, string] ; {}>	<list<list<[string, string]>> ; [string, string] ; {}>
+pSqlCatch	true	true	same	true	same	true	6	6	<string ; never ; {}>	<string ; never ; {}>
+pSqlExit	true	true	same	true	same	true	6	6	<exit<list<list<[string, string]>>, [string, string]> ; never ; {}>	<exit<list<list<[string, string]>>, [string, string]> ; never ; {}>
+pSqlOrDie	true	true	same	true	same	true	6	6	<nat ; never ; {}>	<nat ; never ; {}>
+pFailText	true	true	same	true	same	true	0	0	<never ; string ; {}>	<never ; string ; {}>
+pFailBoomText	true	true	same	true	same	true	0	0	<never ; string ; {}>	<never ; string ; {}>
+pTextOrDie	true	true	same	true	same	true	0	0	<nat ; never ; {}>	<nat ; never ; {}>
+pCatchError	true	true	same	true	same	true	0	0	<nat ; never ; {}>	<nat ; never ; {}>
+pCatchIfHit	true	true	same	true	same	true	1	1	<nat ; nat ; {}>	<nat ; nat ; {}>
+pCatchIfMiss	true	true	same	true	same	true	1	1	<nat ; nat ; {}>	<nat ; nat ; {}>
+pCatchIfRetained	true	true	same	true	same	true	5	5	<nat ; never ; {}>	<nat ; never ; {}>
+pTagHit	true	true	same	true	same	true	2	2	<nat ; (string | ["A", "m"]) ; {}>	<nat ; (string | ["A", "m"]) ; {}>
+pTagMiss	true	true	same	true	same	true	2	2	<nat ; (string | ["A", "m"]) ; {}>	<nat ; (string | ["A", "m"]) ; {}>
+pTagTwoFail	true	true	same	true	same	true	3	3	<nat ; (["A", "m"] | ["B", "x"]) ; {}>	<nat ; (["A", "m"] | ["B", "x"]) ; {}>
+pOptionSome	true	true	same	true	same	true	4	4	<[bool, nat] ; never ; {}>	<[bool, nat] ; never ; {}>
+pOptionNone	true	true	same	true	same	true	4	4	<[bool, nat] ; never ; {}>	<[bool, nat] ; never ; {}>
+pFailPayload	true	true	same	true	same	true	0	0	<never ; {_tag: "NotFound", id: nat} ; {}>	<never ; {_tag: "NotFound", id: nat} ; {}>
+pTagPayload	true	true	same	true	same	true	1	1	<nat ; {_tag: "NotFound", id: nat} ; {}>	<nat ; {_tag: "NotFound", id: nat} ; {}>
+pInterruptEscape	true	true	same	true	same	true	2	2	<nat ; never ; {}>	<nat ; never ; {}>
+pFold	true	true	same	true	same	true	7	7	<nat ; never ; {}>	<nat ; never ; {}>
+pModifyFold	true	true	same	true	same	true	14	14	<[nat, nat] ; never ; {}>	<[nat, nat] ; never ; {}>
+pQueueOffer	true	true	same	true	same	true	53	53	<tuple[bool, nat, nat] ; never ; {}>	<tuple[bool, nat, nat] ; never ; {}>
+pRateRequest	true	true	same	true	same	true	39	39	<tuple[bool, bool, nat, nat, nat] ; never ; {}>	<tuple[bool, bool, nat, nat, nat] ; never ; {}>
+pDeferredGate	true	true	same	true	same	true	8	8	<tuple[bool, bool, bool, nat] ; never ; {}>	<tuple[bool, bool, bool, nat] ; never ; {}>
+pInterruptedWait	true	true	same	true	same	true	12	12	<[bool, nat] ; never ; {}>	<[bool, nat] ; never ; {}>
+pMaskWait	true	true	same	true	same	true	12	12	<[bool, nat] ; never ; {}>	<[bool, nat] ; never ; {}>
+pMaskedRestore	true	true	same	true	same	true	16	16	<tuple[nat, bool, nat] ; never ; {}>	<tuple[nat, bool, nat] ; never ; {}>
+pLateSeen	true	true	same	true	same	true	3	3	<[exit<unit, never>, fiber<nat, never>] ; never ; {}>	<[exit<unit, never>, fiber<nat, never>] ; never ; {}>
+pQueueWake	true	true	same	true	same	true	239	239	<nat ; never ; {}>	<nat ; never ; {}>
+pQueueFull	true	true	same	true	same	true	475	475	<tuple[bool, nat, bool, nat] ; never ; {}>	<tuple[bool, nat, bool, nat] ; never ; {}>
+pQueueInterrupted	true	true	same	true	same	true	402	402	<[nat, nat] ; never ; {}>	<[nat, nat] ; never ; {}>
+pQueueMasked	true	true	same	true	same	true	251	251	<tuple[nat, nat, bool, nat, nat] ; never ; {}>	<tuple[nat, nat, bool, nat, nat] ; never ; {}>
+pQueueOrder	true	true	same	true	same	true	494	494	<list<nat> ; never ; {}>	<list<nat> ; never ; {}>
+pSemaphoreProtectedJoined	true	true	same	true	same	true	262	262	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pSemaphoreScan	true	true	same	true	same	true	303	303	<tuple[tuple[nat, nat, list<nat>, list<nat>], nat, tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], nat, tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pSemaphoreOvertake	true	true	same	true	same	true	308	308	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pSemaphoreBodiesJoined	true	true	same	true	same	true	428	428	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pSemaphoreInterrupted	true	true	same	true	same	true	371	371	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], nat, tuple[nat, nat, list<nat>, list<nat>]] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], nat, tuple[nat, nat, list<nat>, list<nat>]] ; never ; {}>
+pSemaphoreIfAvailable	true	true	same	true	same	true	294	294	<tuple[option<nat>, tuple[nat, nat, list<nat>, list<nat>], option<nat>, bool, bool, tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[option<nat>, tuple[nat, nat, list<nat>, list<nat>], option<nat>, bool, bool, tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pSemaphoreMasked	true	true	same	true	same	true	288	288	<tuple[tuple[nat, nat, list<nat>, list<nat>], nat, bool, tuple[nat, nat, list<nat>, list<nat>]] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], nat, bool, tuple[nat, nat, list<nat>, list<nat>]] ; never ; {}>
+pSemaphoreHandoff	true	true	same	true	same	true	251	251	<[nat, nat] ; never ; {}>	<[nat, nat] ; never ; {}>
+pSemaphoreProtected	true	true	same	true	same	true	264	264	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pSemaphoreBodies	true	true	same	true	same	true	430	430	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>	<tuple[tuple[nat, nat, list<nat>, list<nat>], tuple[nat, nat, list<nat>, list<nat>], list<nat>] ; never ; {}>
+pPoolReuse	true	true	same	true	same	true	382	382	<[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>	<[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>
+pPoolOrder	true	true	same	true	same	true	713	713	<[[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>	<[[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>
+pPoolWaiters	true	true	same	true	same	true	588	588	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>
+pPoolLateWake	true	true	same	true	same	true	582	582	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>
+pPoolWake	true	true	same	true	same	true	427	427	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>
+pPoolMakeFails	true	true	same	true	same	true	237	237	<tuple[bool, option<nat>, list<list<nat>>] ; never ; {}>	<tuple[bool, option<nat>, list<list<nat>>] ; never ; {}>
+pPoolCloseWaits	true	true	same	true	same	true	413	413	<tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], bool, bool, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>	<tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], bool, bool, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>
+pPoolWithdrawn	true	true	same	true	same	true	582	582	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>	<[tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat]], list<list<nat>>] ; never ; {}>
+pPoolClosed	true	true	same	true	same	true	244	244	<tuple[exit<unit, never>, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>	<tuple[exit<unit, never>, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>
+pPoolClosing	true	true	same	true	same	true	581	581	<tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], exit<unit, never>, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], bool, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>	<tuple[tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], exit<unit, never>, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], bool, tuple[list<nat>, list<nat>, list<nat>, nat, bool, nat], list<list<nat>>] ; never ; {}>

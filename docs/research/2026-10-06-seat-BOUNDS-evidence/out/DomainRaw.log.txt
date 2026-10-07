@@ -1,0 +1,4 @@
+mapFromEntries at the raw type: present map<string, (nat | string)>; bounds map<string, (nat | string)>
+mapFromEntries at the normal form list<([string, nat] | [string, string])>: present refused; bounds map<string, (nat | string)>
+raw families 37; raw applications 3752
+wall=5s exit=0

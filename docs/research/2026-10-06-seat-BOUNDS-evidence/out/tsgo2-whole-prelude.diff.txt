@@ -1,0 +1,28 @@
+148,149c148,149
+< export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>
+<   Option.getOrElse(value, () => fallback)
+---
+> export const getOrElse = <O extends Option.Option<unknown>, B = (O extends Option.Option<infer A> ? A : never)>(value: O, fallback: B): (O extends Option.Option<infer A> ? A : never) | B =>
+>   (Option.isSome(value) ? value.value : fallback) as (O extends Option.Option<infer A> ? A : never) | B
+155c155
+< export const ite = <A>(c: boolean, t: A, f: A): A => (c ? t : f)
+---
+> export const ite = <A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)
+188c188
+< export const cons = <A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]
+---
+> export const cons = <A, Y extends ReadonlyArray<unknown> = ReadonlyArray<A>>(x: A, xs: Y): ReadonlyArray<A | Y[number]> => [x, ...xs]
+194,195c194,195
+< export const get = <A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>
+<   (i < xs.length ? Option.some(xs[i] as A) : Option.none())
+---
+> export const get = <X extends ReadonlyArray<unknown>>(xs: X, i: number): Option.Option<X[number]> =>
+>   (i < xs.length ? Option.some(xs[i] as X[number]) : Option.none())
+205c205
+< export const append = <A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>
+---
+> export const append = <X extends ReadonlyArray<unknown>, Y extends ReadonlyArray<unknown> = X>(xs: X, ys: Y): ReadonlyArray<X[number] | Y[number]> =>
+256c256
+< export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)
+---
+> export const mapFromEntries = <E extends ReadonlyArray<readonly [string, unknown]> = ReadonlyArray<readonly [string, never]>>(entries: E): Readonly<Record<string, E[number][1]>> => Object.fromEntries(entries) as Readonly<Record<string, E[number][1]>>

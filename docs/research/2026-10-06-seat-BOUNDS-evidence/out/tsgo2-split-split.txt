@@ -1,0 +1,64 @@
+split.ts(34,39): error TS2379: Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'None<number>' is not assignable to type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'None<number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'number' is not assignable to type 'string'.
+split.ts(35,41): error TS2379: Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'None<number>' is not assignable to type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'None<number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'number' is not assignable to type 'string'.
+split.ts(36,47): error TS2379: Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'None<number>' is not assignable to type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'None<number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'number' is not assignable to type 'string'.
+split.ts(43,37): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(44,39): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(45,45): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(52,41): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(53,36): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(54,42): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(55,38): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(56,48): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(57,44): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(58,37): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(64,37): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(66,47): error TS2345: Argument of type 'readonly (readonly [string, string] | readonly [string, number])[]' is not assignable to parameter of type 'readonly (readonly [string, string])[]'.
+  Type 'readonly [string, string] | readonly [string, number]' is not assignable to type 'readonly [string, string]'.
+    Type 'readonly [string, number]' is not assignable to type 'readonly [string, string]'.
+      Type at position 1 in source is not compatible with type at position 1 in target.
+        Type 'number' is not assignable to type 'string'.
+split.ts(75,41): error TS2345: Argument of type 'Ref<number>' is not assignable to parameter of type 'Ref<string | number>'.
+  The types of '[TypeId]._A' are incompatible between these types.
+    Type 'Invariant<number>' is not assignable to type 'Invariant<string | number>'.
+      Types of parameters '_' and '_' are incompatible.
+        Type 'string | number' is not assignable to type 'number'.
+          Type 'string' is not assignable to type 'number'.
+split.ts(83,57): error TS2322: Type 'readonly [string, number] | readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+  Type 'readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'number' is not assignable to type 'string'.
+split.ts(90,59): error TS2322: Type 'readonly [number, string]' is not assignable to type 'readonly [unknown, number]'.
+  Type at position 1 in source is not compatible with type at position 1 in target.
+    Type 'string' is not assignable to type 'number'.
+exit=1

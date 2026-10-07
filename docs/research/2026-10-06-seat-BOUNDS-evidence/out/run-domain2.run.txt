@@ -1,0 +1,7 @@
+Domain: wall 285 s, exit 0
+DomainRaw: wall 5 s, exit 0
+ModelTs: wall 5 s, exit 0
+Domain: wall 249 s, exit 143
+DomainRaw: wall 8 s, exit 0
+ModelTs: wall 8 s, exit 0
+domain2-done

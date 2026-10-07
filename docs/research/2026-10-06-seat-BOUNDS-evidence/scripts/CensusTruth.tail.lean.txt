@@ -1,0 +1,10 @@
+/- Seat BOUNDS: the differential census on the truth lane's corpus (`harness/truth/Truth.lean`),
+each program at its own row table (`hostInputs`). -/
+namespace Bounds
+
+def truthProgs : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+
+#eval runCorpus "truth" truthProgs
+
+end Bounds

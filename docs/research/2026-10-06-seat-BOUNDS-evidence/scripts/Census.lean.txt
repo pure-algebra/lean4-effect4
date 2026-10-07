@@ -1,0 +1,364 @@
+/-
+Seat BOUNDS, assignment 2: the differential census. It runs the present match and the match by
+bounds on every template application that the checker meets in a corpus: each application of an
+atom with a template scheme, each row use, and each binder term of a row use.
+
+The applications come from the traced copy of the checker (`Trace.lean`). A term's atom
+applications are read from the term with the tree's own `argsTy`, at the environment that the
+checker typed the term at.
+-/
+namespace Bounds
+
+open Effect4.Machine.Env (Requirement)
+
+abbrev Sig := Signature NativeOp
+abbrev P := Eff NativeOp
+
+def presentRule : Rule := ⟨fun row request use => checkRow row request use⟩
+def boundsRule (normal : Bool) : Rule := ⟨fun row request use => checkRowB normal row request use⟩
+
+/-- The native signature with every template scheme applied by bounds. -/
+def sigB (table : RowTable) : Sig := { nativeSignature table with atomOf := atomTyB }
+
+/-- One run of the traced copy at the empty environment: its answer and its log. -/
+def runT (rule : Rule) (sig : Sig) (e : P) : Except TypeRefusal EffTy × Array Event :=
+  ((tcheck rule sig [] [] e).run.run #[])
+
+/-! ## The atom applications of a term -/
+
+structure AtomApp where
+  atom : String
+  args : Option (List Ty)
+
+mutual
+/-- Each application inside a term, outermost first, with its argument types by `argsTy` at the
+term's environment. A list fold's body is read at the environment that `argTy` gives it. -/
+def appsOf (sig : Sig) (env : TyEnv) : Term → List AtomApp
+  | .var _ => []
+  | .lit _ => []
+  | .app atom args => ⟨atom, argsTy sig env (sig.constAtom atom) args⟩ :: appsOfTerms sig env args
+  | .record _ _ values => appsOfTerms sig env values
+  | .field _ target _ => appsOf sig env target
+  | .recordSet target _ value => appsOf sig env target ++ appsOf sig env value
+  | .tupleAt target _ => appsOf sig env target
+  | .fold accTy list init body =>
+    appsOf sig env list ++ appsOf sig env init ++
+      match argTy sig env false list, argTy sig env false init with
+      | some listType, some initType =>
+        match Checker.listOf? listType with
+        | some item => appsOf sig (env ++ [accTy.getD initType, item]) body
+        | none => []
+      | _, _ => []
+def appsOfTerms (sig : Sig) (env : TyEnv) : Terms → List AtomApp
+  | .nil => []
+  | .cons head tail => appsOf sig env head ++ appsOfTerms sig env tail
+end
+
+def causeLeaves : CauseTerm → List Term
+  | .fail error => [error]
+  | .die defect => [defect]
+  | .interrupt none => []
+  | .interrupt (some who) => [who]
+  | .both left right => causeLeaves left ++ causeLeaves right
+
+/-! ## One application under both matches -/
+
+inductive Verdict
+  | same          -- both admit, with equal raw types
+  | sameNormal    -- both admit; the raw types differ and their normal forms are equal
+  | different     -- both admit, and the normal forms differ: a finding
+  | regression    -- the present match admits and the match by bounds refuses: a finding
+  | admission     -- the match by bounds admits and the present match refuses
+  | bothRefuse
+deriving DecidableEq
+
+def Verdict.name : Verdict → String
+  | .same => "same"
+  | .sameNormal => "sameNormal"
+  | .different => "different"
+  | .regression => "regression"
+  | .admission => "admission"
+  | .bothRefuse => "bothRefuse"
+
+def verdictTy (present bounds : Option Ty) : Verdict :=
+  match present, bounds with
+  | some a, some b => if a = b then .same else if a.normalize = b.normalize then .sameNormal else .different
+  | some _, none => .regression
+  | none, some _ => .admission
+  | none, none => .bothRefuse
+
+def verdictEff (present bounds : Option EffTy) : Verdict :=
+  match present, bounds with
+  | some a, some b =>
+    if a = b then .same
+    else if a.answer.normalize = b.answer.normalize ∧ a.error.normalize = b.error.normalize
+        ∧ a.requires = b.requires then .sameNormal
+    else .different
+  | some _, none => .regression
+  | none, some _ => .admission
+  | none, none => .bothRefuse
+
+/-- The scheme of an atom by name, when it is a template. -/
+def polyOf (name : String) : Option (List Ty × Ty × Bool) :=
+  (NativeAtom.ofName? name).bind fun atom =>
+    match (NativeAtom.spec atom).scheme with
+    | .poly params answer join => some (params, answer, join)
+    | _ => none
+
+/-- The note's rule (variant F) at an atom. -/
+def atomTyF (name : String) (types : List Ty) : Option Ty :=
+  match polyOf name with
+  | some (params, answer, _) => (matchArgsF params types).map fun σ => Ty.instantiate σ answer
+  | none => nativeAtomTy name types
+
+/-- The largest number of lower bounds of one parameter, and whether some parameter has two
+lower bounds with no order between them (`Ty.sub` on normal forms). -/
+def spread (cs : List Cand) : Nat × Bool :=
+  let ps := (cs.map (·.1)).eraseDups
+  let ls := ps.map fun i => (lowers cs i).map Ty.normalize
+  (ls.foldl (fun m l => max m l.length) 0,
+    ls.any fun l => l.any fun a => l.any fun b => !Ty.sub a b && !Ty.sub b a)
+
+def showCands (cs : List Cand) : String :=
+  "; ".intercalate (cs.map fun c => "'" ++ toString c.1 ++ ":" ++ showVar c.2.1 ++ " " ++ showTy c.2.2)
+
+def showRowRefusal : RowTypingRefusal → String
+  | .requestNotSubtype => "requestNotSubtype"
+  | .formation _ => "formation"
+  | .term param => "binderTerm at " ++ showTy param
+  | .resultNotSubtype result expected => "resultNotSubtype " ++ showTy result ++ " expected " ++ showTy expected
+
+def showEffTy (t : EffTy) : String :=
+  "<" ++ showTy t.answer ++ " ; " ++ showTy t.error ++ ">"
+
+def showRowResult : Except RowTypingRefusal EffTy → String
+  | .ok t => showEffTy t
+  | .error why => "refused: " ++ showRowRefusal why
+
+def showPath (p : List Nat) : String :=
+  if p.isEmpty then "." else ".".intercalate (p.map toString)
+
+/-- One row of the applications file. `kind` is `atom`, `row` or `binder`; `place` says whether
+the application stands in a node's own term or in a row's binder term. -/
+structure AppRow where
+  kind : String
+  place : String
+  name : String
+  inputs : String
+  present : String
+  bounds : String
+  verdict : Verdict
+  verdictF : Verdict
+  /-- The match by bounds at the normal form of each argument, against the present match. -/
+  verdictN : Verdict
+  /-- The present match at the normal form of each argument, against the present match at the
+  raw types. `regression` here is seat SKETCH's control: admitted raw, refused at the normal form. -/
+  verdictPN : Verdict
+  /-- Some argument's raw type is not its normal form. -/
+  nonNormal : Bool
+  template : Bool
+  maxLowers : Nat
+  unordered : Bool
+  cands : String
+
+def atomRow (place : String) (app : AtomApp) : AppRow :=
+  match app.args with
+  | none =>
+    ⟨"atom", place, app.atom, "(an argument has no type)", "refused", "refused", .bothRefuse, .bothRefuse,
+      .bothRefuse, .bothRefuse, false, (polyOf app.atom).isSome, 0, false, "-"⟩
+  | some tys =>
+    let tysN := tys.map Ty.normalize
+    let present := nativeAtomTy app.atom tys
+    let bounds := atomTyB app.atom tys
+    let cs := match polyOf app.atom with
+      | some (params, _, _) => candsList params tys
+      | none => []
+    let sp := spread cs
+    ⟨"atom", place, app.atom, showTys tys, showOptTy present, showOptTy bounds, verdictTy present bounds,
+      verdictTy present (atomTyF app.atom tys), verdictTy present (atomTyB app.atom tysN),
+      verdictTy present (nativeAtomTy app.atom tysN), tys != tysN, (polyOf app.atom).isSome, sp.1, sp.2,
+      showCands cs⟩
+
+/-- `bindTerm` and `checkRow` (`src/Effect4/Program/Typing/Rules.lean`) with one change: the
+present match reads the normal form of the binder term's type. It is the control of what the
+present match does when a term's type reaches it in normal form. -/
+def checkRowPN (row : Row) (request : Ty) (use : Option TermUse) : Except RowTypingRefusal EffTy :=
+  match Ty.matchTemplate [] row.request.normalize request.normalize with
+  | none => .error .requestNotSubtype
+  | some σ =>
+    let bound : Except RowTypingRefusal Subst := match use with
+      | none => .ok σ
+      | some u =>
+        let param := (u.param.normalize.instantiate σ).normalize
+        match u.typeAt param with
+        | none => .error (.term param)
+        | some r =>
+          match Ty.matchTemplate σ u.result.normalize r.normalize with
+          | some σ' => .ok σ'
+          | none => .error (.resultNotSubtype r (u.result.normalize.instantiate σ).normalize)
+    match bound with
+    | .error why => .error why
+    | .ok bindings =>
+      match Formation.check (Formation.instantiatedSites row bindings) with
+      | some why => .error (.formation why)
+      | none => .ok ⟨(row.answer.instantiate bindings).normalize,
+          (row.error.instantiate bindings).normalize, Requirement.ofList row.requires⟩
+
+/-- A row use under the present match and under the match by bounds. The third verdict reads
+the binder term's type in normal form (`checkRowB true`). -/
+def rowRow (sig : Sig) (env : TyEnv) (op : NativeOp) (row : Row) (request : Ty) : AppRow :=
+  let use := sig.termUse env op
+  let present := checkRow row request use
+  let bounds := checkRowB false row request use
+  let boundsN := checkRowB true row request use
+  let boundsF : Except RowTypingRefusal EffTy :=
+    match matchF [] row.request.normalize request.normalize with
+    | none => .error .requestNotSubtype
+    | some σ =>
+      match use with
+      | none => .ok ⟨(row.answer.instantiate σ).normalize, (row.error.instantiate σ).normalize,
+          Requirement.ofList row.requires⟩
+      | some u =>
+        let param := (u.param.normalize.instantiate σ).normalize
+        match u.typeAt param with
+        | none => .error (.term param)
+        | some r =>
+          match matchF σ u.result.normalize r with
+          | some σ' => .ok ⟨(row.answer.instantiate σ').normalize, (row.error.instantiate σ').normalize,
+              Requirement.ofList row.requires⟩
+          | none => .error (.resultNotSubtype r (u.result.normalize.instantiate σ).normalize)
+  let cs := cands .co row.request.normalize request.normalize
+  let sp := spread cs
+  ⟨"row", "node", row.name, showTy request ++ (if use.isSome then " with a binder term" else ""),
+    showRowResult present, showRowResult bounds,
+    verdictEff present.toOption bounds.toOption, verdictEff present.toOption boundsF.toOption,
+    verdictEff present.toOption boundsN.toOption,
+    verdictEff present.toOption (checkRowPN row request use).toOption, request != request.normalize,
+    !row.request.closed, sp.1, sp.2, showCands cs⟩
+
+/-- The binder term of a row use, as a template application of its own: the term's type against
+the result template, from the request's bindings. `none` when the row carries no term, or the
+request has no match. -/
+def binderRow (sig : Sig) (env : TyEnv) (op : NativeOp) (row : Row) (request : Ty) : Option AppRow :=
+  match sig.termUse env op, Ty.matchTemplate [] row.request.normalize request.normalize with
+  | some use, some σ =>
+    let param := (use.param.normalize.instantiate σ).normalize
+    match use.typeAt param with
+    | none => none
+    | some r =>
+      let result := use.result.normalize
+      let present := Ty.matchTemplate σ result r
+      let bounds := matchB σ result r
+      let boundsN := matchB σ result r.normalize
+      let boundsF := matchF σ result r
+      let inst (m : Option Subst) : Option Ty := m.map fun σ' => (Ty.instantiate σ' result).normalize
+      let cs := cands .co result r
+      let csN := cands .co result r.normalize
+      let sp := spread csN
+      some ⟨"binder", "node", row.name,
+        showTy r ++ " against " ++ showTy result ++ " from " ++ showSubst σ ++
+          (if r = r.normalize then "" else "; normal form " ++ showTy r.normalize),
+        (match present with | some σ' => showSubst σ' | none => "refused"),
+        (match bounds with | some σ' => showSubst σ' | none => "refused"),
+        verdictTy (inst present) (inst bounds), verdictTy (inst present) (inst boundsF),
+        verdictTy (inst present) (inst boundsN),
+        verdictTy (inst present) (inst (Ty.matchTemplate σ result r.normalize)), r != r.normalize,
+        true, sp.1, sp.2,
+        showCands cs ++ (if r = r.normalize then "" else " | normal: " ++ showCands csN)⟩
+  | _, _ => none
+
+/-- The applications of one event: a term's atoms, a cause's leaves' atoms, and a row use with
+its binder term and that term's atoms. -/
+def eventRows (sig : Sig) : Event → List (List Nat × AppRow)
+  | .term p env t => (appsOf sig env t).map fun a => (p, atomRow "term" a)
+  | .cause p env c => (causeLeaves c).flatMap fun t => (appsOf sig env t).map fun a => (p, atomRow "term" a)
+  | .row p env op row request =>
+    [(p, rowRow sig env op row request)] ++
+      (match binderRow sig env op row request with | some b => [(p, b)] | none => []) ++
+      (match sig.termOf op, Ty.matchTemplate [] row.request.normalize request.normalize with
+        | some b, some σ =>
+          let param := (b.param.normalize.instantiate σ).normalize
+          (appsOf sig (env ++ [param]) b.term).map fun a => (p, atomRow "binder term" a)
+        | _, _ => [])
+
+def appHeader : String :=
+  tsv ["program", "admitted", "path", "kind", "place", "name", "template", "inputs", "present", "bounds",
+    "verdict", "verdictF", "boundsAtNormal", "maxLowers", "unordered", "candidates", "presentAtNormal",
+    "rawNotNormal"]
+
+def appLine (program : String) (admitted : Bool) (p : List Nat) (r : AppRow) : String :=
+  tsv [program, toString admitted, showPath p, r.kind, r.place, r.name, toString r.template, r.inputs, r.present,
+    r.bounds, r.verdict.name, r.verdictF.name, r.verdictN.name, toString r.maxLowers, toString r.unordered, r.cands,
+    r.verdictPN.name, toString r.nonNormal]
+
+/-! ## One program under both checkers -/
+
+def sameResult : Except TypeRefusal EffTy → Except TypeRefusal EffTy → Bool
+  | .ok a, .ok b => decide (a = b)
+  | .error a, .error b => decide (a = b)
+  | _, _ => false
+
+def showResult : Except TypeRefusal EffTy → String
+  | .ok t => "<" ++ showTy t.answer ++ " ; " ++ showTy t.error ++ " ; " ++
+      "{" ++ ", ".intercalate (t.requires.elems.map fun k => s!"k{k.name.value}_{k.service.value}") ++ "}>"
+  | .error r => "refused at " ++ showPath r.path
+
+def programHeader : String :=
+  tsv ["program", "present", "bounds", "verdict", "boundsNormalBinder", "verdictNormalBinder", "tracedAgrees",
+    "applicationsPresent", "applicationsBounds", "presentType", "boundsType"]
+
+def appendLines (path : String) (lines : List String) : IO Unit := do
+  let h ← IO.FS.Handle.mk path .append
+  for l in lines do h.putStrLn l
+  h.flush
+
+def outDir : String :=
+  "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/seat-bounds/out/"
+
+structure Tally where
+  programs : Nat := 0
+  presentAdmits : Nat := 0
+  boundsAdmits : Nat := 0
+  tracedDisagrees : Nat := 0
+  apps : Nat := 0
+
+/-- The census of a corpus. A program is checked as `Api.wellTyped` checks it: its references
+well formed, then its expansion at the table's signature. Three files of rows:
+`<label>-programs.tsv`, `<label>-apps.tsv` (the applications that the present checker meets) and
+`<label>-apps-bounds.tsv` (those that the checker by bounds meets). -/
+def runCorpus (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  IO.FS.writeFile (outDir ++ label ++ "-programs.tsv") (programHeader ++ "\n")
+  IO.FS.writeFile (outDir ++ label ++ "-apps.tsv") (appHeader ++ "\n")
+  IO.FS.writeFile (outDir ++ label ++ "-apps-bounds.tsv") (appHeader ++ "\n")
+  let mut tally : Tally := {}
+  let t0 ← IO.monoMsNow
+  for (name, table, p) in progs do
+    let sig := nativeSignature table
+    let e := p.expandRefs
+    let wf := p.layerRefsWF
+    let reference := Checker.check sig [] [] e
+    let (present, log) := runT presentRule sig e
+    let (bounds, logB) := runT (boundsRule false) (sigB table) e
+    let (boundsN, _) := runT (boundsRule true) (sigB table) e
+    let agrees : Bool := sameResult present reference && ((Api.wellTyped p table) == (wf && present.toOption.isSome))
+    let rows := log.toList.flatMap (eventRows sig)
+    let rowsB := logB.toList.flatMap (eventRows (sigB table))
+    let v := verdictEff present.toOption bounds.toOption
+    let vN := verdictEff present.toOption boundsN.toOption
+    appendLines (outDir ++ label ++ "-programs.tsv")
+      [tsv [name, toString present.toOption.isSome, toString bounds.toOption.isSome, v.name,
+        toString boundsN.toOption.isSome, vN.name, toString agrees, toString rows.length, toString rowsB.length,
+        showResult present, showResult bounds]]
+    appendLines (outDir ++ label ++ "-apps.tsv")
+      (rows.map fun (path, r) => appLine name present.toOption.isSome path r)
+    appendLines (outDir ++ label ++ "-apps-bounds.tsv")
+      (rowsB.map fun (path, r) => appLine name bounds.toOption.isSome path r)
+    tally := { programs := tally.programs + 1,
+               presentAdmits := tally.presentAdmits + (if present.toOption.isSome then 1 else 0),
+               boundsAdmits := tally.boundsAdmits + (if bounds.toOption.isSome then 1 else 0),
+               tracedDisagrees := tally.tracedDisagrees + (if agrees then 0 else 1),
+               apps := tally.apps + rows.length }
+  let t1 ← IO.monoMsNow
+  IO.println s!"{label}: programs {tally.programs}; the present checker admits {tally.presentAdmits}; the checker by bounds admits {tally.boundsAdmits}; programs where the traced copy differs from Checker.check: {tally.tracedDisagrees}; applications met by the present checker: {tally.apps}; wall time {t1 - t0} ms"
+
+end Bounds

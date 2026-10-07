@@ -1,0 +1,182 @@
+option	0	co	co
+list	0	co	co
+prod	0	co	co
+prod	1	co	co
+except	0	co	co
+except	1	co	co
+exitOf	0	co	co
+exitOf	1	co	co
+causeOf	0	co	co
+fiberOf	0	co	co
+fiberOf	1	co	co
+union	0	co	co
+union	1	co	co
+refOf	0	inv	inv
+deferredOf	0	inv	inv
+deferredOf	1	inv	inv
+map	0	inv	inv
+map	1	co	co
+record{a, b?}	0	co	co
+record{a, b?}	1	co	co
+tuple/3	0	co	co
+tuple/3	1	co	co
+tuple/3	2	co	co
+app Ref.Ref	0	inv	inv
+app Deferred.Deferred	0	inv	inv
+app Deferred.Deferred	1	inv	inv
+app Fiber.Fiber	0	co	co
+app Fiber.Fiber	1	co	co
+app Cause.Cause	0	co	co
+app Cause.Reason	0	co	co
+app Cause.Fail	0	co	co
+app Cause.Done	0	inv	inv
+app Exit.Exit	0	co	co
+app Exit.Exit	1	co	co
+app Exit.Success	0	co	co
+app Exit.Success	1	co	co
+app Exit.Failure	0	co	co
+app Exit.Failure	1	co	co
+app Effect.Effect	0	co	co
+app Effect.Effect	1	co	co
+app Effect.Effect	2	co	co
+app Effect.EffectUnify	0	inv	inv
+app Effect.Variance	0	inv	inv
+app Effect.Variance	1	inv	inv
+app Effect.Variance	2	inv	inv
+app Effect.Success	0	inv	inv
+app Effect.Error	0	inv	inv
+app Effect.Services	0	inv	inv
+app Effect.EffectIterator	0	inv	inv
+app Effect.TagsWithReason	0	inv	inv
+app Context.Key	0	co	co
+app Context.Key	1	co	co
+app Context.Service	0	inv	inv
+app Context.Service	1	inv	inv
+app Context.ServiceClass	0	inv	inv
+app Context.ServiceClass	1	inv	inv
+app Context.ServiceClass	2	inv	inv
+app Context.Reference	0	inv	inv
+app Context.Context	0	contra	contra
+app Layer.Layer	0	contra	contra
+app Layer.Layer	1	co	co
+app Layer.Layer	2	co	co
+app Layer.LayerUnify	0	inv	inv
+app Layer.Variance	0	contra	contra
+app Layer.Variance	1	co	co
+app Layer.Variance	2	co	co
+app Layer.Services	0	inv	inv
+app Layer.Error	0	inv	inv
+app Layer.Success	0	inv	inv
+app Layer.PartialEffectful	0	inv	inv
+app Queue.Enqueue	0	contra	contra
+app Queue.Enqueue	1	contra	contra
+app Queue.Dequeue	0	co	co
+app Queue.Dequeue	1	co	co
+app Queue.Queue	0	inv	inv
+app Queue.Queue	1	inv	inv
+app PubSub.PubSub	0	inv	inv
+app PubSub.Subscription	0	co	co
+app Option.Option	0	co	co
+app Option.None	0	co	co
+app Option.OptionIterator	0	inv	inv
+app Option.Some	0	co	co
+app Option.OptionUnify	0	inv	inv
+app Undeclared.Name	0	inv	inv
+positions: 84; co 45; inv 34; contra 5; both 0
+contravariant positions: app Context.Context[0], app Layer.Layer[0], app Layer.Variance[0], app Queue.Enqueue[0], app Queue.Enqueue[1]
+atom pair	parameter 0	'0	'0:co
+atom pair	parameter 1	'1	'1:co
+atom pair	answer	['0, '1]	'0:co, '1:co
+atom getOrElse	parameter 0	option<'0>	'0:co
+atom getOrElse	parameter 1	'0	'0:co
+atom getOrElse	answer	'0	'0:co
+atom ite	parameter 1	'0	'0:co
+atom ite	parameter 2	'0	'0:co
+atom ite	answer	'0	'0:co
+atom some	parameter 0	'0	'0:co
+atom some	answer	option<'0>	'0:co
+atom cons	parameter 0	'0	'0:co
+atom cons	parameter 1	list<'0>	'0:co
+atom cons	answer	list<'0>	'0:co
+atom get	parameter 0	list<'0>	'0:co
+atom get	answer	option<'0>	'0:co
+atom append	parameter 0	list<'0>	'0:co
+atom append	parameter 1	list<'0>	'0:co
+atom append	answer	list<'0>	'0:co
+atom mapGet	parameter 0	map<string, '0>	'0:co
+atom mapGet	answer	option<'0>	'0:co
+atom mapSet	parameter 0	map<string, '0>	'0:co
+atom mapSet	parameter 2	'1	'1:co
+atom mapSet	answer	map<string, ('0 | '1)>	'0:co, '1:co
+atom mapKeys	parameter 0	map<string, '0>	'0:co
+atom mapEntries	parameter 0	map<string, '0>	'0:co
+atom mapEntries	answer	list<[string, '0]>	'0:co
+atom mapFromEntries	parameter 0	list<[string, '0]>	'0:co
+atom mapFromEntries	answer	map<string, '0>	'0:co
+atom take	parameter 0	list<'0>	'0:co
+atom take	answer	list<'0>	'0:co
+atom drop	parameter 0	list<'0>	'0:co
+atom drop	answer	list<'0>	'0:co
+row refMake	request	'0	'0:co
+row refMake	answer	ref<'0>	'0:inv
+row refGet	request	ref<'0>	'0:inv
+row refGet	answer	'0	'0:co
+row refSet	request	[ref<'0>, '0]	'0:inv, '0:co
+row refSet	answer	ref<'0>	'0:inv
+row refGetAndSet	request	[ref<'0>, '0]	'0:inv, '0:co
+row refGetAndSet	answer	'0	'0:co
+row refSetAndGet	request	[ref<'0>, '0]	'0:inv, '0:co
+row refSetAndGet	answer	'0	'0:co
+row refUpdateWith	request	ref<'0>	'0:inv
+row refGetAndUpdateWith	request	ref<'0>	'0:inv
+row refGetAndUpdateWith	answer	'0	'0:co
+row refUpdateAndGetWith	request	ref<'0>	'0:inv
+row refUpdateAndGetWith	answer	'0	'0:co
+row refUpdateSomeWith	request	ref<'0>	'0:inv
+row refGetAndUpdateSomeWith	request	ref<'0>	'0:inv
+row refGetAndUpdateSomeWith	answer	'0	'0:co
+row refUpdateSomeAndGetWith	request	ref<'0>	'0:inv
+row refUpdateSomeAndGetWith	answer	'0	'0:co
+row refModifyWith	request	ref<'0>	'0:inv
+row refModifyWith	answer	'1	'1:co
+row refModifySomeWith	request	ref<'0>	'0:inv
+row refModifySomeWith	answer	'1	'1:co
+row deferredIsDone	request	deferred<'0, '1>	'0:inv, '1:inv
+row deferredPoll	request	deferred<'0, '1>	'0:inv, '1:inv
+row deferredSucceed	request	[deferred<'0, '1>, '0]	'0:inv, '1:inv, '0:co
+row deferredFail	request	[deferred<'0, '1>, '1]	'0:inv, '1:inv, '1:co
+row deferredAwait	request	deferred<'0, '1>	'0:inv, '1:inv
+row deferredAwait	answer	'0	'0:co
+row deferredAwait	error	'1	'1:co
+binder term update	handed	'0	'0:co
+binder term update	result	'0	'0:co
+binder term updateSome	handed	'0	'0:co
+binder term updateSome	result	option<'0>	'0:co
+binder term modify	handed	'0	'0:co
+binder term modify	result	['1, '0]	'1:co, '0:co
+binder term modifySome	handed	'0	'0:co
+binder term modifySome	result	['1, option<'0>]	'1:co, '0:co
+templates: 141; with a parameter: 72; atoms with a template scheme: 14 of 43; native rows: 23; host rows: 8
+occurrences in matched columns (an atom's parameters, a row's request, a binder term's result): co 32; inv 22; contra 0
+occurrences in the other columns (answers, errors, a binder term's parameter): co 30; inv 2; contra 0
+templates with a nominal reference: 0
+atom getOrElse	'0 at co, co
+atom ite	'0 at co, co
+atom cons	'0 at co, co
+atom append	'0 at co, co
+row refSet	'0 at inv, co
+row refGetAndSet	'0 at inv, co
+row refSetAndGet	'0 at inv, co
+row deferredSucceed	'0 at inv, co
+row deferredFail	'1 at inv, co
+getOrElse(option<nat>, string)	refused	(nat | string)
+getOrElse(option<string>, "d")	string	string
+getOrElse(option<"d">, string)	refused	string
+ite(bool, nat, string)	refused	(nat | string)
+ite(bool, string, nat)	refused	(nat | string)
+append(list<nat>, list<string>)	refused	list<(nat | string)>
+cons(string, list<nat>)	refused	list<(nat | string)>
+get(list<nat> | list<string>, nat)	refused	option<(nat | string)>
+neverR by bounds: {'0 := string}
+neverR, the note's rule (F): {'0 := string}
+wall=772s exit=0

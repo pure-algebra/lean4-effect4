@@ -1,0 +1,113 @@
+# Seat BOUNDS: four declarations of a repeated covariant parameter (run-ts2.sh)
+
+tsgo: Version 7.0.0-dev.20260629.1
+effect: 4.0.0-rc.112
+node: v22.23.2
+
+## Errors of each run (`error TS` lines; tsgo's exit code)
+
+| run | present | split | cross | whole |
+| --- | --- | --- | --- | --- |
+| lane | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| generated | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| inferred | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| probe | 20 (exit 1) | 17 (exit 1) | 17 (exit 1) | 16 (exit 1) |
+| forms | 6 (exit 1) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| cite | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| spell | 4 (exit 1) | 4 (exit 1) | 4 (exit 1) | 2 (exit 1) |
+| split | 25 (exit 1) | 18 (exit 1) | 10 (exit 1) | 3 (exit 1) |
+| model | 7777 (exit 1) | 6510 (exit 1) | 5770 (exit 1) | 2617 (exit 1) |
+
+split: inferred declarations of main that differ from present: 0 of 73
+cross: inferred declarations of main that differ from present: 0 of 73
+whole: inferred declarations of main that differ from present: 0 of 73
+- present: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+- split: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+- cross: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+- whole: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+
+## The forms of `split.ts`: verdict and emitted type, by prelude
+
+| form | call | present | split | cross | whole |
+| --- | --- | --- | --- | --- | --- |
+| `I_same` | `ite(c, n, n)` | `number` | `number` | `number` | `number` |
+| `I_wide_first` | `ite(c, v, n)` | `string \| number` | `string \| number` | `string \| number` | `string \| number` |
+| `I_wide_second` | `ite(c, n, v)` | `string \| number` | `string \| number` | `string \| number` | `string \| number` |
+| `I_two` | `ite(c, n, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `I_two_shapes` | `ite(c, n, nil())` | TS2345 | `number \| readonly never[]` | `number \| readonly never[]` | `number \| readonly never[]` |
+| `O_same` | `getOrElse(o1, n)` | `number` | `number` | `number` | `number` |
+| `O_wide_option` | `getOrElse(o12, n)` | `string \| number` | `string \| number` | `string \| number` | `string \| number` |
+| `O_wide_fallback` | `getOrElse(o1, v)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `O_two` | `getOrElse(o1, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `O_union_wide` | `getOrElse(ou, v)` | TS2379 | TS2379 | `string \| number` | `string \| number` |
+| `O_union_member` | `getOrElse(ou, n)` | TS2379 | TS2379 | `string \| number` | `string \| number` |
+| `O_union_member_other` | `getOrElse(ou, s)` | TS2379 | TS2379 | TS2379 | `string \| number` |
+| `O_none` | `getOrElse(none(), n)` | TS2345 | `number` | `number` | `number` |
+| `C_same` | `cons(n, l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `C_wide_element` | `cons(v, l1)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_wide_list` | `cons(n, l12)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_two` | `cons(s, l1)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_wide_union` | `cons(v, lu)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_member_union` | `cons(n, lu)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_member_union_other` | `cons(s, lu)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `C_nil` | `cons(n, nil())` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `A_same` | `append(l1, l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `A_wide_first` | `append(l12, l1)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_wide_second` | `append(l1, l12)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_two` | `append(l1, l2)` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_wide_union` | `append(l12, lu)` | `readonly (string \| number)[]` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_union_wide` | `append(lu, l12)` | `readonly (string \| number)[]` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_member_union` | `append(l1, lu)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_union_member` | `append(lu, l1)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_member_union_other` | `append(l2, lu)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `A_union_member_other` | `append(lu, l2)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `A_union_union` | `append(lu, lu)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `A_nil_first` | `append(nil(), l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `A_nil_second` | `append(l1, nil())` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `G_list` | `get(l1, 0)` | `Option.Option<number>` | `Option.Option<number>` | `Option.Option<number>` | `Option.Option<number>` |
+| `G_list_of_union` | `get(l12, 0)` | `Option.Option<string \| number>` | `Option.Option<string \| number>` | `Option.Option<string \| number>` | `Option.Option<string \| number>` |
+| `G_union_of_lists` | `get(lu, 0)` | TS2345 | TS2345 | TS2345 | `Option.Option<string \| number>` |
+| `M_tupleOfUnion` | `mapFromEntries(tupleOfUnion)` | `Readonly<Record<string, string \| number>>` | `Readonly<Record<string, string \| number>>` | `Readonly<Record<string, string \| number>>` | `Readonly<Record<string, string \| number>>` |
+| `M_unionOfTuples` | `mapFromEntries(unionOfTuples)` | TS2345 | TS2345 | TS2345 | `Readonly<Record<string, string \| number>>` |
+| `M_empty` | `mapFromEntries(nil())` | `Readonly<Record<string, never>>` | `Readonly<Record<string, never>>` | `Readonly<Record<string, never>>` | `Readonly<Record<string, never>>` |
+| `R_set_same` | `Ref.set(r1, n)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_set_wide_cell` | `Ref.set(r12, n)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_set_wide_cell_union` | `Ref.set(r12, v)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_set_wide_value` | `Ref.set(r1, v)` | TS2345 | TS2345 | TS2345 | TS2345 |
+| `R_make_two` | `Ref.make(ite(c, n, s))` | TS2345 | `Effect.Effect<Ref.Ref<string \| number>, never, never>` | `Effect.Effect<Ref.Ref<string \| number>, never, never>` | `Effect.Effect<Ref.Ref<string \| number>, never, never>` |
+| `R_succeed_wide_cell` | `Deferred.succeed(d12, n)` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` |
+| `R_set_never_cell` | `Ref.set(nv, v)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_succeed_never_cell` | `Deferred.succeed(nv, v)` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` |
+| `B_modify_one_pair` | `Ref.modify(r1, (a) => pair(v, a))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `B_modify_two_ordered` | `Ref.modify(r1, (a) => ite(c, pair(v, a), pair(n, a)))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `B_modify_two_pairs` | `Ref.modify(r1, (a) => ite(c, pair(n, a), pair(s, a)))` | TS2345 | TS2322 | TS2322 | TS2322 |
+| `B_modify_two_ordered_reverse` | `Ref.modify(r1, (a) => ite(c, pair(n, a), pair(v, a)))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `B_modify_two_pairs_explicit` | `Ref.modify<number, number \| string>(r1, (a) => ite(c, pair(n, a), pair(s, a)))` | TS2345 | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `W_modify_one_pair` | `modifyWhole(r1, (a) => pair(v, a))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `W_modify_two_pairs` | `modifyWhole(r1, (a) => ite(c, pair(n, a), pair(s, a)))` | TS2345 | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `W_modify_wrong_cell` | `modifyWhole(r1, (a) => pair(n, s))` | TS2322 | TS2322 | TS2322 | TS2322 |
+
+Accepted, of 56 forms: present 31; split 38; cross 46; whole 53
+
+## The forms of `forms.ts`: verdict and emitted type, by prelude
+
+| form | call | present | split | cross | whole |
+| --- | --- | --- | --- | --- | --- |
+| `O6_getOrElse_two` | `getOrElse(o1, "d")` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `T1_ite_two` | `ite(c, 1, "a")` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `L7_append_two` | `append(l1, l2)` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `O6v` | `getOrElse(o1, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `T1v` | `ite(c, n, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `P1_getOrElse_same` | `getOrElse(o1, 9)` | `number` | `number` | `number` | `number` |
+| `P2_ite_same` | `ite(c, 1, 2)` | `number` | `number` | `number` | `number` |
+| `P3_ite_options` | `ite(c, some(1), none())` | `Option.Option<number>` | `Option.Option<number> \| Option.Option<never>` | `Option.None<number> \| Option.None<never> \| Option.Some<number> \| Option.Some<never>` | `Option.Option<number> \| Option.Option<never>` |
+| `P4_append_same` | `append(l1, cons(1, nil()))` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `P5_append_nil` | `append(nil(), l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `P6_getOrElse_none` | `getOrElse(none(), 9)` | TS2345 | `9` | `9` | `9` |
+| `C1_ref_ite` | `Ref.make(ite(c, 1, 2))` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` |
+| `C2_ref_getOrElse` | `Ref.make(getOrElse(o1, 9))` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` |
+| `C3_ref_ite_annotated` | `Ref.make(ite(c, 1, 2))` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` |
+| `C4_ref_getOrElse_annotated` | `Ref.make(getOrElse(o1, 9))` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` |
+| `C5_pair_ite` | `pair(ite(c, 1, 2), getOrElse(o1, 9))` | `readonly [number, number]` | `readonly [number, number]` | `readonly [number, number]` | `readonly [number, number]` |
+
+Accepted, of 16 forms: present 10; split 16; cross 16; whole 16

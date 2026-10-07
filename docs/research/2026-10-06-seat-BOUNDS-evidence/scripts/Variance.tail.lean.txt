@@ -1,0 +1,235 @@
+/-
+Seat BOUNDS, assignment 1: the variance of each position of `Ty`, measured from `Ty.sub` itself,
+and compared with the generated view `Ty.args` (`src/Effect4/Laws/Program/TyView.lean`). Then
+the polarity of each occurrence of a parameter in each template of the tree.
+-/
+namespace Bounds
+
+/-- A head with children: its name, its arity, and the type at given children. -/
+structure Head where
+  name : String
+  arity : Nat
+  build : List Ty → Ty
+
+def child (ts : List Ty) (k : Nat) : Ty := ts[k]?.getD .never
+
+/-- Every name of `Ty.declaredVariance` (`src/Effect4/Program/TyVariance.lean`), taken from the
+file by `grep`, and one name that it does not declare. -/
+def declaredNames : List String :=
+  ["Ref.Ref","Deferred.Deferred","Fiber.Fiber","Cause.Cause","Cause.Reason","Cause.Fail","Cause.Done",
+   "Exit.Exit","Exit.Success","Exit.Failure","Effect.Effect","Effect.EffectUnify","Effect.Variance",
+   "Effect.Success","Effect.Error","Effect.Services","Effect.EffectIterator","Effect.TagsWithReason",
+   "Context.Key","Context.Service","Context.ServiceClass","Context.Reference","Context.Context",
+   "Layer.Layer","Layer.LayerUnify","Layer.Variance","Layer.Services","Layer.Error","Layer.Success",
+   "Layer.PartialEffectful","Queue.Enqueue","Queue.Dequeue","Queue.Queue","PubSub.PubSub",
+   "PubSub.Subscription","Option.Option","Option.None","Option.OptionIterator","Option.Some",
+   "Option.OptionUnify"]
+
+/-- Every constructor of `Ty` that holds a `Ty` child (`src/Effect4/Program/TyCore.lean`): twelve
+structural heads, a record of two fields, a tuple of three items, and a nominal reference at
+each declared name and at one undeclared name of one argument. -/
+def heads : List Head :=
+  [ ⟨"option", 1, fun ts => .option (child ts 0)⟩,
+    ⟨"list", 1, fun ts => .list (child ts 0)⟩,
+    ⟨"prod", 2, fun ts => .prod (child ts 0) (child ts 1)⟩,
+    ⟨"except", 2, fun ts => .except (child ts 0) (child ts 1)⟩,
+    ⟨"exitOf", 2, fun ts => .exitOf (child ts 0) (child ts 1)⟩,
+    ⟨"causeOf", 1, fun ts => .causeOf (child ts 0)⟩,
+    ⟨"fiberOf", 2, fun ts => .fiberOf (child ts 0) (child ts 1)⟩,
+    ⟨"union", 2, fun ts => .union (child ts 0) (child ts 1)⟩,
+    ⟨"refOf", 1, fun ts => .refOf (child ts 0)⟩,
+    ⟨"deferredOf", 2, fun ts => .deferredOf (child ts 0) (child ts 1)⟩,
+    ⟨"map", 2, fun ts => .map (child ts 0) (child ts 1)⟩,
+    ⟨"record{a, b?}", 2, fun ts => .record [("a", false, child ts 0), ("b", true, child ts 1)]⟩,
+    ⟨"tuple/3", 3, fun ts => .tuple ts⟩ ] ++
+  (declaredNames.map fun n => ⟨"app " ++ n, (Ty.declaredVariance n).length, fun ts => .app n ts⟩) ++
+  [⟨"app Undeclared.Name", 1, fun ts => .app "Undeclared.Name" ts⟩]
+
+/-- The children of a probe: `.bool` everywhere, and `x` at position `k`. -/
+def probeAt (h : Head) (k : Nat) (x : Ty) : Ty :=
+  h.build ((List.range h.arity).map fun j => if j = k then x else .bool)
+
+/-- The variance of a position, measured: `lit "a"` is strictly below `string`, so a covariant
+position admits the probe upward and not downward, a contravariant one the reverse, and an
+invariant one neither. -/
+def measured (h : Head) (k : Nat) : String :=
+  let lo := probeAt h k (.lit "a")
+  let hi := probeAt h k .string
+  match Ty.sub lo hi, Ty.sub hi lo with
+  | true, false => "co"
+  | false, true => "contra"
+  | false, false => "inv"
+  | true, true => "both"
+
+/-- The variance that the generated view gives the position. A union is no head of the view's
+`sameHead`, and its `args` are covariant. -/
+def viewed (h : Head) (k : Nat) : String :=
+  match (probeAt h k .string).args[k]? with
+  | some (v, _) => showVar v
+  | none => "?"
+
+def positionRows : List (String × Nat × String × String) :=
+  heads.flatMap fun h => (List.range h.arity).map fun k => (h.name, k, measured h k, viewed h k)
+
+#eval IO.println ("\n".intercalate (positionRows.map fun (n, k, m, v) => tsv [n, toString k, m, v]))
+
+-- the measured variance is the view's at every position
+#guard positionRows.all fun (_, _, m, v) => m == v
+-- red control: a position that the view would give another variance fails the comparison
+#guard !(("co" : String) == measured ⟨"refOf", 1, fun ts => .refOf (child ts 0)⟩ 0)
+
+def countWhere (p : String → Bool) : Nat := (positionRows.filter fun (_, _, m, _) => p m).length
+
+#eval IO.println s!"positions: {positionRows.length}; co {countWhere (· == "co")}; inv {countWhere (· == "inv")}; contra {countWhere (· == "contra")}; both {countWhere (· == "both")}"
+#eval IO.println ("contravariant positions: " ++ ", ".intercalate
+  ((positionRows.filter fun (_, _, m, _) => m == "contra").map fun (n, k, _, _) => s!"{n}[{k}]"))
+-- of the structural heads none is contravariant; five positions of four declared names are
+#guard (positionRows.filter fun (n, _, m, _) => m == "contra" && !n.startsWith "app ").isEmpty
+#guard countWhere (· == "contra") == 5
+#guard countWhere (· == "both") == 0
+
+/-! ## The occurrences of a parameter in each template of the tree -/
+
+/-- The occurrences of a template's parameters, each with its polarity: the template's
+candidates against itself. -/
+def occurrences (t : Ty) : List (Nat × Variance) := (cands .co t t).map fun c => (c.1, c.2.1)
+
+-- the walk finds every occurrence that `Ty.varsOf` names, in its order, where no parameter is
+-- under a union head (red control below)
+#guard (occurrences (.prod (.refOf (.var 0)) (.var 0))).map (·.1) == Ty.varsOf (.prod (.refOf (.var 0)) (.var 0))
+#guard occurrences (.prod (.refOf (.var 0)) (.var 0)) == [(0, .inv), (0, .co)]
+#guard occurrences (.app "Layer.Layer" [.var 0, .var 1, .refOf (.var 2)]) == [(0, .contra), (1, .co), (2, .inv)]
+#guard occurrences (.app "Queue.Enqueue" [.app "Context.Context" [.var 0], .var 1]) == [(0, .co), (1, .contra)]
+
+structure Template where
+  owner : String
+  column : String
+  ty : Ty
+
+def atomTemplates : List Template :=
+  NativeAtom.all.flatMap fun atom =>
+    match (NativeAtom.spec atom).scheme with
+    | .poly params answer _ =>
+      (params.zipIdx.map fun (p, k) => ⟨"atom " ++ atom.name, s!"parameter {k}", p⟩) ++
+        [⟨"atom " ++ atom.name, "answer", answer⟩]
+    | _ => []
+
+def shapeName : FnShape → String
+  | .update => "update"
+  | .updateSome => "updateSome"
+  | .modify => "modify"
+  | .modifySome => "modifySome"
+
+def rowTemplates : List Template :=
+  (NativeOp.spelled.flatMap fun op =>
+    let row := (NativeOp.row op).normalizeTypes
+    [⟨"row " ++ row.name, "request", row.request⟩, ⟨"row " ++ row.name, "answer", row.answer⟩,
+     ⟨"row " ++ row.name, "error", row.error⟩]) ++
+  ([FnShape.update, .updateSome, .modify, .modifySome].flatMap fun s =>
+    -- the parameter column is handed to the term: the row instantiates it, and no request is
+    -- matched against it
+    [⟨"binder term " ++ shapeName s, "handed", s.param.normalize⟩,
+     ⟨"binder term " ++ shapeName s, "result", s.result.normalize⟩])
+
+def hostTemplates : List Template :=
+  ([("sqliteBun", Packages.sqliteBun), ("keyValueStoreMemory", Packages.keyValueStoreMemory)].flatMap
+    fun (pkg, table) => table.flatMap fun row =>
+      let row := row.normalizeTypes
+      [⟨"host row " ++ pkg ++ "." ++ row.name, "request", row.request⟩,
+       ⟨"host row " ++ pkg ++ "." ++ row.name, "answer", row.answer⟩,
+       ⟨"host row " ++ pkg ++ "." ++ row.name, "error", row.error⟩])
+
+def allTemplates : List Template := atomTemplates ++ rowTemplates ++ hostTemplates
+
+mutual
+/-- No nominal reference anywhere in the type (the text of `noApp`, `Laws.tail.lean`). -/
+def noAppT : Ty → Bool
+  | .app _ _ => false
+  | .option t | .list t | .causeOf t | .refOf t => noAppT t
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
+  | .map a b => noAppT a && noAppT b
+  | .record fs => noAppTFields fs
+  | .tuple ts => noAppTItems ts
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
+  | .null | .undefined | .number | .bytes => true
+def noAppTFields : List (String × Bool × Ty) → Bool
+  | [] => true
+  | (_, _, t) :: rest => noAppT t && noAppTFields rest
+def noAppTItems : List Ty → Bool
+  | [] => true
+  | t :: rest => noAppT t && noAppTItems rest
+end
+
+def showOccs (os : List (Nat × Variance)) : String :=
+  if os.isEmpty then "-" else ", ".intercalate (os.map fun (i, v) => "'" ++ toString i ++ ":" ++ showVar v)
+
+#eval IO.println ("\n".intercalate ((allTemplates.filter fun t => !t.ty.closed).map fun t =>
+  tsv [t.owner, t.column, showTy t.ty, showOccs (occurrences t.ty)]))
+
+def occCount (ts : List Template) (v : Variance) : Nat :=
+  ((ts.flatMap fun t => occurrences t.ty).filter fun o => o.2 == v).length
+
+/-- A column that a request is matched against: an atom's parameter, a row's request, a binder
+term's result. -/
+def matched (t : Template) : Bool := t.column != "answer" && t.column != "error" && t.column != "handed"
+
+#eval IO.println s!"templates: {allTemplates.length}; with a parameter: {(allTemplates.filter fun t => !t.ty.closed).length}; atoms with a template scheme: {(NativeAtom.all.filter fun a => match (NativeAtom.spec a).scheme with | .poly .. => true | _ => false).length} of {NativeAtom.all.length}; native rows: {NativeOp.spelled.length}; host rows: {Packages.sqliteBun.length + Packages.keyValueStoreMemory.length}"
+#eval IO.println s!"occurrences in matched columns (an atom's parameters, a row's request, a binder term's result): co {occCount (allTemplates.filter matched) .co}; inv {occCount (allTemplates.filter matched) .inv}; contra {occCount (allTemplates.filter matched) .contra}"
+#eval IO.println s!"occurrences in the other columns (answers, errors, a binder term's parameter): co {occCount (allTemplates.filter fun t => !matched t) .co}; inv {occCount (allTemplates.filter fun t => !matched t) .inv}; contra {occCount (allTemplates.filter fun t => !matched t) .contra}"
+#eval IO.println s!"templates with a nominal reference: {(allTemplates.filter fun t => !noAppT t.ty).length}"
+-- no template of the tree holds a parameter at a contravariant position, and none holds a nominal
+-- reference
+#guard occCount allTemplates .contra == 0
+#guard allTemplates.all fun t => noAppT t.ty
+#guard !noAppT (.prod (.app "Context.Context" [.var 0]) .nat)
+-- every host row of the two packages is closed
+#guard hostTemplates.all fun t => t.ty.closed
+
+/-- The parameters that a scheme or a row uses at two or more request occurrences. -/
+def repeated (ts : List Template) : List (Nat × List Variance) :=
+  let os := ts.flatMap fun t => occurrences t.ty
+  ((os.map (·.1)).eraseDups.map fun i => (i, (os.filter fun o => o.1 == i).map (·.2))).filter fun p => p.2.length ≥ 2
+
+#eval IO.println ("\n".intercalate (
+  ((allTemplates.map (·.owner)).eraseDups.filterMap fun owner =>
+    let req := allTemplates.filter fun t => t.owner == owner && matched t
+    match repeated req with
+    | [] => none
+    | rs => some (tsv [owner, "; ".intercalate (rs.map fun (i, vs) => "'" ++ toString i ++ " at " ++ ", ".intercalate (vs.map showVar))]))))
+
+/-! ## The three forms that the present match refuses, and the counterexample of the anchored theorem -/
+
+def tyOf (name : String) (tys : List Ty) : String := showOptTy (nativeAtomTy name tys)
+def tyOfB (name : String) (tys : List Ty) : String := showOptTy (atomTyB name tys)
+
+#eval IO.println (tsv ["getOrElse(option<nat>, string)", tyOf "getOrElse" [.option .nat, .string], tyOfB "getOrElse" [.option .nat, .string]])
+#eval IO.println (tsv ["getOrElse(option<string>, \"d\")", tyOf "getOrElse" [.option .string, .lit "d"], tyOfB "getOrElse" [.option .string, .lit "d"]])
+#eval IO.println (tsv ["getOrElse(option<\"d\">, string)", tyOf "getOrElse" [.option (.lit "d"), .string], tyOfB "getOrElse" [.option (.lit "d"), .string]])
+#eval IO.println (tsv ["ite(bool, nat, string)", tyOf "ite" [.bool, .nat, .string], tyOfB "ite" [.bool, .nat, .string]])
+#eval IO.println (tsv ["ite(bool, string, nat)", tyOf "ite" [.bool, .string, .nat], tyOfB "ite" [.bool, .string, .nat]])
+#eval IO.println (tsv ["append(list<nat>, list<string>)", tyOf "append" [.list .nat, .list .string], tyOfB "append" [.list .nat, .list .string]])
+#eval IO.println (tsv ["cons(string, list<nat>)", tyOf "cons" [.string, .list .nat], tyOfB "cons" [.string, .list .nat]])
+#eval IO.println (tsv ["get(list<nat> | list<string>, nat)", tyOf "get" [.union (.list .nat) (.list .string), .nat], tyOfB "get" [.union (.list .nat) (.list .string), .nat]])
+
+-- the order of the arguments: the present match depends on it, the match by bounds does not
+#guard nativeAtomTy "getOrElse" [.option .string, .lit "d"] == some .string
+#guard nativeAtomTy "getOrElse" [.option (.lit "d"), .string] == none
+#guard (atomTyB "getOrElse" [.option .string, .lit "d"]).map Ty.normalize == some .string
+#guard (atomTyB "getOrElse" [.option (.lit "d"), .string]).map Ty.normalize == some .string
+#guard nativeAtomTy "ite" [.bool, .nat, .string] == none
+#guard (atomTyB "ite" [.bool, .nat, .string]) == some (Ty.join .nat .string)
+#guard (atomTyB "ite" [.bool, .string, .nat]) == some (Ty.join .string .nat)
+#guard Ty.join .nat .string == Ty.join .string .nat
+
+-- `neverR`, the counterexample that bounds `template-match-anchored`
+-- (`Test/Program/TypeAlgebraContract.lean`): the present match refuses it, the match by bounds
+-- finds the instance
+def setT : Ty := .prod (.refOf (.var 0)) (.var 0)
+def neverR : Ty := .union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b"))
+#guard Ty.sub neverR.normalize (setT.instantiate [(0, .string)]).normalize
+#guard Ty.matchTemplate [] setT neverR.normalize == none
+#guard (matchB [] setT neverR.normalize).map (fun σ => (Ty.instantiate σ (.var 0)).normalize) == some .string
+#eval IO.println ("neverR by bounds: " ++ match matchB [] setT neverR.normalize with | some σ => showSubst σ | none => "refused")
+#eval IO.println ("neverR, the note's rule (F): " ++ match matchF [] setT neverR.normalize with | some σ => showSubst σ | none => "refused")
+
+end Bounds

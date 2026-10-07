@@ -1,0 +1,2 @@
+truth: programs 73; the present checker admits 73; the checker by bounds admits 73; programs where the traced copy differs from Checker.check: 0; applications met by the present checker: 10109; wall time 31331 ms
+wall=35s exit=0

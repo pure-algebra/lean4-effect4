@@ -1,0 +1,129 @@
+/-
+Seat BOUNDS: the omissions of `Folds.tail.lean` once more, under the two interim packages of the
+receipt's proposal. A package keeps the checker inside what tsgo infers with no type argument
+written (`model_ts.py`, `split.ts`).
+
+  whole  the prelude declares an atom's parameter as the argument's whole type, so tsgo reads a
+         union member by member at an atom, and no guard stands there.
+  cross  the prelude splits a repeated parameter and lets each occurrence hold the other's. At
+         an atom the guard with cross terms stands (`guardCross`, `DomainLib.lean`).
+
+Under both, a binder term keeps today's reading and gets one guard. Its declaration is Effect's
+own, and tsgo infers its type arguments by candidates. So the term's type is read raw, as
+`bindTerm` reads it, and it must offer each parameter that the cell does not fix a greatest lower
+bound. A row's request is matched with no guard under both: where the match answers at a cell,
+the cell's content is the greatest lower bound.
+-/
+namespace Bounds
+
+def famOf (seed : Subst) (params : List Ty) : Family := { name := "", params := params, seed := seed }
+
+/-- A scheme applied by bounds under the guard with cross terms. -/
+def applyX : NativeAtom.Scheme → List Ty → Option Ty
+  | .poly params answer _, tys =>
+    if guardCross (famOf [] params) tys then (matchArgsB params tys).map fun σ => Ty.instantiate σ answer
+    else none
+  | s, tys => s.apply tys
+
+def atomTyX (name : String) (types : List Ty) : Option Ty :=
+  (NativeAtom.ofName? name).bind fun atom => applyX (NativeAtom.spec atom).scheme types
+
+/-- The signature by bounds under the guard with cross terms, with CENSUS's assumed atom. -/
+def sigXN (table : RowTable) : Sig :=
+  { nativeSignature table with
+    atomOf := fun name tys =>
+      if name == Census.neverAtom && tys.isEmpty then some .never
+      else atomTyX name (tys.map Ty.normalize) }
+
+/-- `bindTermB` at the raw type, under the guard at a binder term. -/
+def bindTermG (σ : Subst) : Option TermUse → Except RowTypingRefusal Subst
+  | none => .ok σ
+  | some use =>
+    let param := (use.param.normalize.instantiate σ).normalize
+    match use.typeAt param with
+    | none => .error (.term param)
+    | some r =>
+      let t := use.result.normalize
+      if guardSplit (famOf σ [t]) [r] then
+        match matchB σ t r with
+        | some σ' => .ok σ'
+        | none => .error (.resultNotSubtype r (t.instantiate σ).normalize)
+      else .error (.resultNotSubtype r (t.instantiate σ).normalize)
+
+/-- `checkRowB`, with the binder term at its raw type and under the guard. -/
+def checkRowG (row : Row) (request : Ty) (use : Option TermUse := none) :
+    Except RowTypingRefusal EffTy :=
+  match matchB [] row.request.normalize request.normalize with
+  | none => .error .requestNotSubtype
+  | some σ =>
+    match bindTermG σ use with
+    | .error why => .error why
+    | .ok bindings =>
+      match Formation.check (Formation.instantiatedSites row bindings) with
+      | some why => .error (.formation why)
+      | none => .ok ⟨(row.answer.instantiate bindings).normalize,
+          (row.error.instantiate bindings).normalize,
+          Effect4.Machine.Env.Requirement.ofList row.requires⟩
+
+def guardRule : Rule := ⟨fun row request use => checkRowG row request use⟩
+
+-- the guard with cross terms at an atom: two arguments with no order pass; a join inside one
+-- argument does not, unless another argument covers it
+#guard atomTyX "ite" [.bool, .nat, .string] == atomTyB "ite" [.bool, .nat, .string]
+#guard (atomTyX "ite" [.bool, .nat, .string]).isSome
+#guard (atomTyB "get" [.union (.list .nat) (.list .string), .nat]).isSome
+#guard atomTyX "get" [.union (.list .nat) (.list .string), .nat] == none
+#guard (atomTyX "cons" [.union .nat .string, .union (.list .nat) (.list .string)]).isSome
+#guard (atomTyB "append" [.union (.list .nat) (.list .string), .list .nat]).isSome
+#guard atomTyX "append" [.union (.list .nat) (.list .string), .list .nat] == none
+-- the guard at a binder term (`Ref.modify`'s result `['1, '0]`, the cell at `nat`): a pair whose
+-- first part is a union passes; two pairs whose first parts have no order do not; two pairs
+-- whose first parts have an order pass; with no guard the match by bounds answers all three
+def useModify (r : Ty) : Option TermUse := some ⟨.var 0, .prod (.var 1) (.var 0), fun _ => some r⟩
+#guard (bindTermG [(0, .nat)] (useModify (.prod (.union .nat .string) .nat))).toOption.isSome
+#guard (bindTermG [(0, .nat)] (useModify (.union (.prod .nat .nat) (.prod .string .nat)))).toOption.isNone
+#guard (bindTermB true [(0, .nat)] (useModify (.union (.prod .nat .nat) (.prod .string .nat)))).toOption.isSome
+#guard (bindTermG [(0, .nat)] (useModify (.union (.prod (.lit "a") .nat) (.prod .string .nat)))).toOption.isSome
+-- the guard does not read the cell's parameter: two pairs that differ in the second part only pass
+#guard (bindTermG [(0, .union .nat .string)] (useModify (.union (.prod .bool .nat) (.prod .bool .string)))).toOption.isSome
+-- the raw reading: a pair of a union passes, and its normal form, two pairs, does not
+#guard (Ty.prod (.union .nat .string) .nat).normalize != Ty.prod (.union .nat .string) .nat
+#guard (bindTermG [(0, .nat)] (useModify (Ty.prod (.union .nat .string) .nat).normalize)).toOption.isNone
+
+def guardLine (program kind address detail : String) (table : RowTable) (e' : P) : String :=
+  let whole := (runT guardRule (sigBN table) e').1
+  let cross := (runT guardRule (sigXN table) e').1
+  tsv [program, kind, address, detail, toString whole.toOption.isSome, toString cross.toOption.isSome,
+    refusalHead whole, refusalHead cross]
+
+def guardHeader : String :=
+  tsv ["program", "kind", "address", "detail", "whole", "cross", "wholeRefusal", "crossRefusal"]
+
+/-- The omissions of `runFolds`, in its order, each checked under the two guards. -/
+def runFoldsGuard (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let file := outDir ++ label ++ "-folds-guard.tsv"
+  IO.FS.writeFile file (guardHeader ++ "\n")
+  let mut n := 0
+  let t0 ← IO.monoMsNow
+  for (name, table, p) in progs do
+    if Api.wellTyped p table then
+      let e := p.expandRefs
+      match Checker.check (nativeSignature table) [] [] e with
+      | .error _ => pure ()
+      | .ok _ =>
+        let ss := Census.sites (nativeSignature table) [] e
+        let effectLines := ss.filterMap fun s =>
+          (Census.replaceEff e s.path Census.neverProgram).map fun e' =>
+            guardLine name "effect" (showPath s.path) (Census.ctorName (.eff s.node)) table e'
+        let termLines := ss.flatMap fun s =>
+          (Census.termSlots s.node).flatMap fun slot =>
+            (Census.termParts slot.name slot.term).filterMap fun part =>
+              (Census.replaceEff e s.path (slot.rebuild (part.rebuild Census.neverTerm))).map fun e' =>
+                guardLine name "term" (showPath s.path)
+                  (slot.name ++ " " ++ showPath part.path ++ " " ++ part.role) table e'
+        appendLines file (effectLines ++ termLines)
+        n := n + effectLines.length + termLines.length
+  let t1 ← IO.monoMsNow
+  IO.println s!"{label}: folds under the guards {n}; wall time {t1 - t0} ms"
+
+end Bounds

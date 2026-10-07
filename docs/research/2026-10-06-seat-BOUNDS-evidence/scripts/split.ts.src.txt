@@ -1,0 +1,90 @@
+// Seat BOUNDS, assignment 6: one parameter at two covariant places, at each class of request.
+// Each form is one line, so an error names it. The file runs against four preludes:
+//   present  the lane's prelude as it is
+//   split    `<A, B = A>`: one parameter for each occurrence, the second defaulted
+//   cross    the same, and each occurrence may also hold the other's parameter (`NoInfer`)
+//   whole    a parameter is an argument's whole type, and the answer is read from it by index
+import { Deferred, Effect, Option, Ref } from "effect"
+import { getOrElse, ite, cons, append, get, mapFromEntries, nil, none, pair } from "./prelude.ts"
+declare const c: boolean
+declare const n: number
+declare const s: string
+declare const v: number | string
+declare const l1: ReadonlyArray<number>
+declare const l2: ReadonlyArray<string>
+declare const l12: ReadonlyArray<number | string>
+declare const lu: ReadonlyArray<number> | ReadonlyArray<string>
+declare const o1: Option.Option<number>
+declare const o2: Option.Option<string>
+declare const o12: Option.Option<number | string>
+declare const ou: Option.Option<number> | Option.Option<string>
+declare const tupleOfUnion: ReadonlyArray<readonly [string, number | string]>
+declare const unionOfTuples: ReadonlyArray<readonly [string, number] | readonly [string, string]>
+// ---- ite: each argument is a whole candidate
+export const I_same = ite(c, n, n)
+export const I_wide_first = ite(c, v, n)
+export const I_wide_second = ite(c, n, v)
+export const I_two = ite(c, n, s)
+export const I_two_shapes = ite(c, n, nil())
+// ---- getOrElse
+export const O_same = getOrElse(o1, n)
+export const O_wide_option = getOrElse(o12, n)
+export const O_wide_fallback = getOrElse(o1, v)
+export const O_two = getOrElse(o1, s)
+export const O_union_wide = getOrElse(ou, v)
+export const O_union_member = getOrElse(ou, n)
+export const O_union_member_other = getOrElse(ou, s)
+export const O_none = getOrElse(none(), n)
+// ---- cons
+export const C_same = cons(n, l1)
+export const C_wide_element = cons(v, l1)
+export const C_wide_list = cons(n, l12)
+export const C_two = cons(s, l1)
+export const C_wide_union = cons(v, lu)
+export const C_member_union = cons(n, lu)
+export const C_member_union_other = cons(s, lu)
+export const C_nil = cons(n, nil())
+// ---- append
+export const A_same = append(l1, l1)
+export const A_wide_first = append(l12, l1)
+export const A_wide_second = append(l1, l12)
+export const A_two = append(l1, l2)
+export const A_wide_union = append(l12, lu)
+export const A_union_wide = append(lu, l12)
+export const A_member_union = append(l1, lu)
+export const A_union_member = append(lu, l1)
+export const A_member_union_other = append(l2, lu)
+export const A_union_member_other = append(lu, l2)
+export const A_union_union = append(lu, lu)
+export const A_nil_first = append(nil(), l1)
+export const A_nil_second = append(l1, nil())
+// ---- one occurrence under a constructor: a join inside one argument
+export const G_list = get(l1, 0)
+export const G_list_of_union = get(l12, 0)
+export const G_union_of_lists = get(lu, 0)
+export const M_tupleOfUnion = mapFromEntries(tupleOfUnion)
+export const M_unionOfTuples = mapFromEntries(unionOfTuples)
+export const M_empty = mapFromEntries(nil())
+// ---- a row use and a binder term: the declarations are Effect's own, and tsgo infers by candidates
+declare const r1: Ref.Ref<number>
+declare const r12: Ref.Ref<number | string>
+declare const d12: Deferred.Deferred<number | string, never>
+export const R_set_same = Ref.set(r1, n)
+export const R_set_wide_cell = Ref.set(r12, n)
+export const R_set_wide_cell_union = Ref.set(r12, v)
+export const R_set_wide_value = Ref.set(r1, v)
+export const R_make_two = Ref.make(ite(c, n, s))
+export const R_succeed_wide_cell = Deferred.succeed(d12, n)
+declare const nv: never
+export const R_set_never_cell = Ref.set(nv, v)
+export const R_succeed_never_cell = Deferred.succeed(nv, v)
+export const B_modify_one_pair = Ref.modify(r1, (a) => pair(v, a))
+export const B_modify_two_ordered = Ref.modify(r1, (a) => ite(c, pair(v, a), pair(n, a)))
+export const B_modify_two_pairs = Ref.modify(r1, (a) => ite(c, pair(n, a), pair(s, a)))
+export const B_modify_two_ordered_reverse = Ref.modify(r1, (a) => ite(c, pair(n, a), pair(v, a)))
+export const B_modify_two_pairs_explicit = Ref.modify<number, number | string>(r1, (a) => ite(c, pair(n, a), pair(s, a)))
+// ---- a row called through a declaration in the whole form: the term's whole type is the parameter
+declare const modifyWhole: <A, P extends readonly [unknown, A]>(self: Ref.Ref<A>, f: (a: A) => P) => Effect.Effect<P[0]>
+export const W_modify_one_pair = modifyWhole(r1, (a) => pair(v, a))
+export const W_modify_two_pairs = modifyWhole(r1, (a) => ite(c, pair(n, a), pair(s, a)))
+export const W_modify_wrong_cell = modifyWhole(r1, (a) => pair(n, s))

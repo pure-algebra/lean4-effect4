@@ -1,0 +1,57 @@
+/-
+Seat BOUNDS: a traced copy of the checker (`src/Effect4/Program/Checker.lean`), written by
+`mktrace.sh` from the tree's own text. It answers what `Checker.check` answers, and it records
+each term that the checker types, with its environment, and each row use, with its request's
+type. The row check is a parameter, so the same copy runs the match by bounds.
+-/
+namespace Bounds
+
+open Effect4.Machine.Env (Requirement)
+open Effect4.Program.Checker (expect exitOf? listOf?)
+
+/-- What the checker reads at a node: a term at an environment, a cause's leaves at an
+environment, or a row use at its request's type. -/
+inductive Event
+  | term (path : List Nat) (env : TyEnv) (t : Term)
+  | cause (path : List Nat) (env : TyEnv) (c : CauseTerm)
+  | row (path : List Nat) (env : TyEnv) (op : NativeOp) (row : Row) (request : Ty)
+
+/-- The row check of a run: `checkRow`, or the match by bounds. -/
+structure Rule where
+  rowCheck : Row → Ty → Option TermUse → Except RowTypingRefusal EffTy
+
+/-- The checker's refusals over a log of events. The log is kept when a check refuses. -/
+abbrev M := ExceptT TypeRefusal (StateM (Array Event))
+
+instance : MonadLift (Except TypeRefusal) M where
+  monadLift x := match x with
+    | .ok a => pure a
+    | .error e => throw e
+
+def record (e : Event) : M Unit := modify fun log => log.push e
+
+def termT (sig : Signature NativeOp) (env : TyEnv) (p : List Nat) (t : Term) : M Ty := do
+  record (.term p env t)
+  liftM (Checker.term? sig env p t)
+
+/-- A `return`'s term: the checker stores its result and reads it later. -/
+def termE (sig : Signature NativeOp) (env : TyEnv) (p : List Nat) (t : Term) :
+    M (Except TypeRefusal Ty) := do
+  record (.term p env t)
+  pure (Checker.term? sig env p t)
+
+def causeT (sig : Signature NativeOp) (env : TyEnv) (p : List Nat) (c : CauseTerm) : M Ty := do
+  record (.cause p env c)
+  liftM (Checker.cause? sig env p c)
+
+/-- `Checker.rowCheck`, with the rule's row check in the place of `checkRow`. -/
+def rowT (rule : Rule) (sig : Signature NativeOp) (env : TyEnv) (op : NativeOp) (row : Row)
+    (r : Ty) (p : List Nat) : M EffTy := do
+  record (.row p env op row r)
+  match rule.rowCheck row r (sig.termUse env op) with
+  | .ok t => pure t
+  | .error .requestNotSubtype => throw ⟨p, .requestNotSubtype row.name r row.request⟩
+  | .error (.formation why) => throw ⟨p, .instantiatedFormation row.name why⟩
+  | .error (.term param) => throw ⟨p, .binderTerm row.name param⟩
+  | .error (.resultNotSubtype result expected) => throw ⟨p, .resultNotSubtype row.name result expected⟩
+

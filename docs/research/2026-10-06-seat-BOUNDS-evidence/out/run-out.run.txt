@@ -1,0 +1,13 @@
+Variance: wall 772 s, exit 0
+Laws: wall 6 s, exit 0
+SelfTest: wall 4 s, exit 0
+CensusGen: wall 3 s, exit 0
+CensusTruth: wall 35 s, exit 0
+Domain: wall 268 s, exit 0
+DomainRaw: wall 4 s, exit 0
+FoldsGenAll: wall 4 s, exit 0
+Timing: wall 40 s, exit 0
+done: out
+Variance: wall 6 s, exit 0
+Timing: wall 41 s, exit 0
+all-done

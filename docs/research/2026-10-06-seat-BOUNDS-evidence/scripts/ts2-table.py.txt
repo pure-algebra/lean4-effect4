@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Seat BOUNDS: the tables of run-ts2.sh, from its outputs.
+
+    python3 ts2-table.py <scratch-folder> <out-folder>
+
+One table of error counts (probe by prelude), and one of the forms of split.ts and forms.ts: for
+each form and each prelude, tsgo's verdict and the declared type that tsgo emits.
+"""
+import os
+import re
+import sys
+
+S, OUT = sys.argv[1], sys.argv[2]
+VARIANTS = ["present", "split", "cross", "whole"]
+PROBES = ["lane", "generated", "inferred", "probe", "forms", "cite", "spell", "split", "model"]
+
+
+def read(name):
+    path = os.path.join(OUT, name)
+    return open(path).read() if os.path.exists(path) else None
+
+
+print("# Seat BOUNDS: four declarations of a repeated covariant parameter (run-ts2.sh)\n")
+print((read("tsgo2-versions.txt") or "").strip())
+print("\n## Errors of each run (`error TS` lines; tsgo's exit code)\n")
+print("| run | " + " | ".join(VARIANTS) + " |")
+print("| --- | " + " | ".join("---" for _ in VARIANTS) + " |")
+for probe in PROBES:
+    cells = []
+    for v in VARIANTS:
+        text = read(f"tsgo2-{v}-{probe}.txt")
+        if text is None:
+            cells.append("not run")
+            continue
+        exits = re.findall(r"^exit=(\d+)", text, flags=re.M)
+        cells.append(f"{len(re.findall(r'error TS', text))} (exit {exits[-1] if exits else '?'})")
+    print(f"| {probe} | " + " | ".join(cells) + " |")
+print()
+print((read("tsgo2-inferred-declarations.summary.txt") or "").strip())
+for v in VARIANTS:
+    sha = (read(f"tsgo2-{v}-inferred-declarations.sha256") or "").strip()
+    print(f"- {v}: SHA-256 of the 73 inferred declarations of `main`: {sha}")
+
+for probe in ["split", "forms"]:
+    src = open(os.path.join(S, f"{probe}.ts.src")).read().split("\n")
+    forms = [(i, m.group(1), m.group(2)) for i, line in enumerate(src, 1)
+             for m in [re.match(r"export const (\w+)(?:: [^=]+)? = (.*)", line)] if m]
+    print(f"\n## The forms of `{probe}.ts`: verdict and emitted type, by prelude\n")
+    print("| form | call | " + " | ".join(VARIANTS) + " |")
+    print("| --- | --- | " + " | ".join("---" for _ in VARIANTS) + " |")
+    verdicts = {}
+    for v in VARIANTS:
+        text = read(f"tsgo2-{v}-{probe}.txt") or ""
+        bad = {}
+        for m in re.finditer(rf"{probe}\.ts\((\d+),\d+\): error (TS\d+)", text):
+            bad.setdefault(int(m.group(1)), m.group(2))
+        decl = {m.group(1): (m.group(2) or m.group(3))
+                for m in re.finditer(r"export declare const (\w+)(?:: (.*)| = (.*));", read(f"tsgo2-{v}-{probe}-declarations.txt") or "")}
+        verdicts[v] = (bad, decl)
+    counts = {v: 0 for v in VARIANTS}
+    for line, name, call in forms:
+        cells = []
+        for v in VARIANTS:
+            bad, decl = verdicts[v]
+            if line in bad:
+                cells.append(bad[line])
+            else:
+                counts[v] += 1
+                cells.append("`" + decl.get(name, "?").replace("|", "\\|") + "`")
+        print(f"| `{name}` | `{call.replace('|', chr(92) + '|')}` | " + " | ".join(cells) + " |")
+    print(f"\nAccepted, of {len(forms)} forms: " + "; ".join(f"{v} {counts[v]}" for v in VARIANTS))

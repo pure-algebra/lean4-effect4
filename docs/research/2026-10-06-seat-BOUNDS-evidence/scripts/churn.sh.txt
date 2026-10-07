@@ -1,0 +1,34 @@
+#!/bin/bash
+# Seat BOUNDS: the churn of a replacement, counted. For each file that names the present match
+# or one of its laws: the number of such lines (grep -c), from the worktree's root.
+#   churn.sh
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-mask
+cd "$W"
+PAT='matchTemplate\|Ty\.infer\|[^a-zA-Z_.]infer [σ(\[]\|infer_closed\|infer_widens\|infer_keeps\|infer_of_bound\|infer_bound_mono\|infer_union_right\|infer_args\|infer_anchor\|infer_recovers\|infer_var_\|inferItems\|inferFields\|Widens\|bindTerm\|Ty\.anchored\|[^a-zA-Z_]anchored \|bottomFree\|paramOccurrences\|UnderInstance\|Scheme\.poly\|\.poly \['
+echo "| File | Lines that name the present match or a law of it |"
+echo "| --- | --- |"
+grep -rl "$PAT" src/Effect4 Test tools --include='*.lean' | sort | while read -r f; do
+  echo "| \`$f\` | $(grep -c "$PAT" "$f") |"
+done
+echo
+echo "declarations of src/Effect4/Laws/Program/Template.lean: $(grep -c '^theorem\|^def\|^abbrev' src/Effect4/Laws/Program/Template.lean)"
+a=$(grep -n '^/-! ## The match.s completeness on anchored templates' src/Effect4/Laws/Program/Template.lean | cut -d: -f1)
+b=$(awk -v a="$a" 'NR > a && /^end Ty$/ { print NR; exit }' src/Effect4/Laws/Program/Template.lean)
+echo "of them in its section on anchored templates: $(sed -n "${a},${b}p" src/Effect4/Laws/Program/Template.lean | grep -c '^theorem\|^def\|^abbrev')"
+echo "uses of the three atoms in the generated modules: getOrElse $(cat harness/truth/generated/*.ts | grep -o '\bgetOrElse(' | wc -l | tr -d ' '), ite $(cat harness/truth/generated/*.ts | grep -o '\bite(' | wc -l | tr -d ' '), append $(cat harness/truth/generated/*.ts | grep -o '\bappend(' | wc -l | tr -d ' '), cons $(cat harness/truth/generated/*.ts | grep -o '\bcons(' | wc -l | tr -d ' ')"
+echo
+echo "declarations of Template.lean that the scratch laws use (by name, outside comments):"
+python3 - "$W/src/Effect4/Laws/Program/Template.lean" "$S/Laws.tail.lean" <<'PY'
+import re, sys
+template = open(sys.argv[1]).read()
+names = set(re.findall(r"^(?:theorem|def|abbrev)\s+([A-Za-z_.0-9?!']+)", template, flags=re.M))
+laws = open(sys.argv[2]).read()
+laws = re.sub(r"/-.*?-/", "", laws, flags=re.S)
+laws = re.sub(r"--.*", "", laws)
+used = sorted(n for n in names
+              if re.search(r"(?<![A-Za-z_.0-9])" + re.escape(n.split(".")[-1]) + r"(?![A-Za-z_0-9'])", laws))
+print(len(used), ", ".join(used))
+PY
+echo "theorems of the scratch laws: $(grep -c '^theorem ' "$S/Laws.tail.lean"); lines: $(grep -c '' "$S/Laws.tail.lean"); lines of Bounds.lean: $(grep -c '' "$S/Bounds.lean")"

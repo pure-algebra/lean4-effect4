@@ -1,0 +1,48 @@
+#!/bin/bash
+# Seat BOUNDS: build one probe file from its imports, the shared text and its tail.
+#   build.sh <Name> <laws|gen|truth> [lib ...]
+# `laws`  imports the law graph of the template calculus (for the variance view and the proofs).
+# `gen`   adds the generated corpus (Test/Program/Gen.lean).
+# `truth` adds the truth lane's corpus, taken as text from harness/truth/Truth.lean (lines 97 to
+#         883, from `namespace OCaml5.Truth` to the end of `corpus`), as seat CENSUS took it.
+# Each named lib is a file `<lib>.lean` of this folder, appended after `Bounds.lean`.
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-mask
+name="$1"; head="$2"; shift 2
+out="$S/$name.lean"
+case "$head" in
+  laws)
+    printf 'import Std.Data.HashSet\nimport Effect4.Laws.Program.Template\nimport Effect4.Api\n\n' > "$out" ;;
+  gen)
+    printf 'import Std.Data.HashSet\nimport Effect4.Laws.Program.Template\nimport Effect4.Api\nimport Test.Program.Gen\n\n' > "$out" ;;
+  truth)
+    want=1e890a73c7b66fdcae662c510e9003988170716709b363ed4c994794ccc8a28a
+    have=$(shasum -a 256 "$W/harness/truth/Truth.lean" | cut -d' ' -f1)
+    [ "$want" = "$have" ] || { echo "Truth.lean moved: $have" >&2; exit 1; }
+    { cat <<'HEAD'
+import Std.Data.HashSet
+import Test.Counterexamples.Machine.Semantics.InterruptEscape
+import Test.Codegen.TermRows
+import Test.Program.MaskContract
+import Test.Program.QueueMask
+import Test.Program.SemaphoreScenarios
+import Test.Program.PoolPublic
+import Effect4.Laws.Program.Template
+import Effect4.Api
+import Test.Program.Gen
+import TypeScript.Render
+
+HEAD
+      sed -n '97,883p' "$W/harness/truth/Truth.lean"; printf '\nend OCaml5.Truth\n\n'; } > "$out" ;;
+  *) echo "unknown head $head" >&2; exit 1 ;;
+esac
+for lib in "$@"; do case "$lib" in @*) cat "$S/${lib#@}.lean" >> "$out"; printf '\n' >> "$out" ;; esac; done
+cat "$S/Bounds.lean" >> "$out"
+for lib in "$@"; do case "$lib" in @*) ;; *) printf '\n' >> "$out"; cat "$S/$lib.lean" >> "$out" ;; esac; done
+printf '\n' >> "$out"
+cat "$S/$name.tail.lean" >> "$out"
+# the folder that a probe writes its rows to: `out`, or the folder named by BOUNDS_OUT
+if [ -n "${BOUNDS_OUT:-}" ] && [ "$BOUNDS_OUT" != out ]; then
+  sed -i '' "s#seat-bounds/out/#seat-bounds/$BOUNDS_OUT/#g" "$out"
+fi

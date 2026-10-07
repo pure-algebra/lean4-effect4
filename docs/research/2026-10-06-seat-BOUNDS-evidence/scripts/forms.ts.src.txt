@@ -1,0 +1,31 @@
+// Seat BOUNDS, assignment 6: the three forms that tsgo refuses at the prelude's one parameter, and
+// what each parameter split by polarity infers. The declarations are those of
+// docs/research/2026-10-06-uniform-eliminators-tsgo-probe.ts.txt.
+import { Effect, Option, Ref } from "effect"
+import { getOrElse, ite, append, cons, nil, some, none, pair } from "./prelude.ts"
+declare const c: boolean
+declare const o1: Option.Option<number>
+declare const l1: ReadonlyArray<number>
+declare const l2: ReadonlyArray<string>
+declare const s: string
+declare const n: number
+// ---- the three forms
+export const O6_getOrElse_two = getOrElse(o1, "d")
+export const T1_ite_two = ite(c, 1, "a")
+export const L7_append_two = append(l1, l2)
+// ---- the same three at variables, where no literal is inferred
+export const O6v = getOrElse(o1, s)
+export const T1v = ite(c, n, s)
+// ---- the forms that the one parameter admits today: what each infers
+export const P1_getOrElse_same = getOrElse(o1, 9)
+export const P2_ite_same = ite(c, 1, 2)
+export const P3_ite_options = ite(c, some(1), none())
+export const P4_append_same = append(l1, cons(1, nil()))
+export const P5_append_nil = append(nil(), l1)
+export const P6_getOrElse_none = getOrElse(none(), 9)
+// ---- at an invariant place: a cell made from each
+export const C1_ref_ite = Ref.make(ite(c, 1, 2))
+export const C2_ref_getOrElse = Ref.make(getOrElse(o1, 9))
+export const C3_ref_ite_annotated: Effect.Effect<Ref.Ref<number>> = Ref.make(ite(c, 1, 2))
+export const C4_ref_getOrElse_annotated: Effect.Effect<Ref.Ref<number>> = Ref.make(getOrElse(o1, 9))
+export const C5_pair_ite = pair(ite(c, 1, 2), getOrElse(o1, 9))

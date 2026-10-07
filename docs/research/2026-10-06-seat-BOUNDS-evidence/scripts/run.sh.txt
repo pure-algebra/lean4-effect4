@@ -1,0 +1,40 @@
+#!/bin/bash
+# Seat BOUNDS, 2026-10-06: every command of the probes, in the order of the receipt.
+#   run.sh [out-folder] [skip-truth-folds]
+# Run from anywhere; each Lean command runs from the worktree's root through the shared slot
+# script (run1.sh). The base build comes first, once:
+#   lean-slot.sh lake build Effect4.Laws.Program.Template Effect4.Api Test.Program.Gen \
+#     Test.Counterexamples.Machine.Semantics.InterruptEscape Test.Codegen.TermRows \
+#     Test.Program.MaskContract Test.Program.QueueMask Test.Program.SemaphoreScenarios \
+#     Test.Program.PoolPublic TypeScript.Render
+# The rows go to <out-folder> (default `out`). With a second argument the omissions of the truth
+# lane's programs are not run: that probe takes most of an hour.
+set -uo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+export BOUNDS_OUT="${1:-out}"
+mkdir -p "$S/$BOUNDS_OUT"
+"$S/mktrace.sh" > /dev/null
+cat "$S/Folds.tail.lean" "$S/FoldsGen.tail.lean" > "$S/FoldsGenAll.tail.lean"
+cat "$S/Folds.tail.lean" "$S/FoldsTruth.tail.lean" > "$S/FoldsTruthAll.tail.lean"
+"$S/run1.sh" Variance laws Show
+"$S/run1.sh" Laws laws
+"$S/run1.sh" SelfTest gen Show Trace Census
+"$S/run1.sh" CensusGen gen Show Trace Census
+"$S/run1.sh" CensusTruth truth Show Trace Census
+"$S/run1.sh" Domain laws Show DomainLib
+"$S/run1.sh" DomainRaw laws Show DomainLib
+"$S/run1.sh" FoldsGenAll gen @CensusLib Show Trace Census
+if [ -z "${2:-}" ]; then "$S/run1.sh" FoldsTruthAll truth @CensusLib Show Trace Census; fi
+"$S/run1.sh" Timing truth Show Trace Census
+for k in ref list rec; do
+  ( cd "$S/gap" && python3 gap_compare.py $k 2 ) > "$S/$BOUNDS_OUT/gap-compare-$k.txt" 2>&1
+done
+"$S/run-ts.sh" "ts-$BOUNDS_OUT" "$BOUNDS_OUT"
+# the finite model against tsgo, at four preludes
+"$S/run1.sh" ModelTs laws Show DomainLib
+python3 "$S/model_ts.py" gen "$S/$BOUNDS_OUT" > "$S/$BOUNDS_OUT/model-ts-gen.txt" 2>&1
+"$S/run-ts2.sh" "ts2-$BOUNDS_OUT" "$BOUNDS_OUT" "$S/$BOUNDS_OUT/model.ts"
+python3 "$S/model_ts.py" join "$S/$BOUNDS_OUT" > "$S/$BOUNDS_OUT/model-ts-summary.txt" 2>&1
+"$S/churn.sh" > "$S/$BOUNDS_OUT/churn.txt" 2>&1
+python3 "$S/agg.py" "$S/$BOUNDS_OUT" > "$S/$BOUNDS_OUT/summary.txt" 2>&1
+echo "done: $BOUNDS_OUT"

@@ -1,0 +1,18 @@
+#!/bin/bash
+# Seat BOUNDS: build one probe file and run it through the shared slot, from the worktree's root.
+#   run1.sh <Name> <laws|gen|truth> [lib ...]
+# The log is out/<Name>.log; its last line holds the wall time and Lean's exit code.
+set -uo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-mask
+SLOT=/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh
+name="$1"
+"$S/build.sh" "$@" || exit 1
+O="${BOUNDS_OUT:-out}"
+mkdir -p "$S/$O"
+cd "$W"
+code=0; t0=$(date +%s)
+"$SLOT" lake env lean -M6144 -DmaxErrors=200 "$S/$name.lean" > "$S/$O/$name.log" 2>&1 || code=$?
+t1=$(date +%s)
+echo "wall=$((t1 - t0))s exit=$code" >> "$S/$O/$name.log"
+echo "$name: wall $((t1 - t0)) s, exit $code"

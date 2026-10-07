@@ -1,0 +1,845 @@
+# Seat BOUNDS: the counts, from `/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/seat-bounds/out`
+
+## The probes: the last line of each log (wall time and Lean's exit code)
+- Variance: wall=772s exit=0; error lines 0; guards in its tail 24
+- Laws: wall=6s exit=0; error lines 0; guards in its tail 6
+- SelfTest: wall=4s exit=0; error lines 0; guards in its tail 33
+- CensusGen: wall=3s exit=0; error lines 0; guards in its tail 0
+- CensusTruth: wall=35s exit=0; error lines 0; guards in its tail 0
+- Domain: wall=285s exit=0; error lines 0; guards in its tail 1
+- DomainRaw: wall=5s exit=0; error lines 0; guards in its tail 9
+- FoldsGenAll: wall=4s exit=0; error lines 0; guards in its tail 0
+- FoldsTruthAll: truth: folds 29846; wall time 2179493 ms; error lines 0; guards in its tail 0
+- Timing: wall=40s exit=0; error lines 0; guards in its tail 0
+- ModelTs: wall=5s exit=0; error lines 0; guards in its tail 8
+
+## Assignment 1: the positions of `Ty` (the Variance log)
+- positions: 84; co 45; inv 34; contra 5; both 0
+- contravariant positions: app Context.Context[0], app Layer.Layer[0], app Layer.Variance[0], app Queue.Enqueue[0], app Queue.Enqueue[1]
+- templates: 141; with a parameter: 72; atoms with a template scheme: 14 of 43; native rows: 23; host rows: 8
+- occurrences in matched columns (an atom's parameters, a row's request, a binder term's result): co 32; inv 22; contra 0
+- occurrences in the other columns (answers, errors, a binder term's parameter): co 30; inv 2; contra 0
+
+## Assignment 2: the census of the truth lane's programs
+- programs: 73; admitted by the present checker: 73; admitted by the checker by bounds: 73; by bounds with the binder term at its normal form: 73
+- programs where the traced copy differs from `Checker.check`: 0
+
+Programs by verdict (present against bounds):
+| verdict | count |
+| --- | --- |
+| same | 73 |
+
+- applications met by the present checker: 10109; met by the checker by bounds: 10109
+
+Applications by kind:
+| kind | scheme or request | count |
+| --- | --- | --- |
+| atom | template | 4477 |
+| atom | no template | 4290 |
+| row | template | 759 |
+| binder | template | 377 |
+| row | no template | 206 |
+
+Applications by verdict of the match by bounds on the same inputs, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | same | 8767 |
+| row | same | 965 |
+| binder | same | 377 |
+
+Applications by verdict of the note's rule, word for word, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | same | 8767 |
+| row | same | 965 |
+| binder | same | 377 |
+
+Applications by verdict of the match by bounds at the normal form of each input, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | same | 8767 |
+| row | same | 965 |
+| binder | same | 377 |
+
+Applications by verdict of the present match at the normal form of each input, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | same | 8767 |
+| row | same | 965 |
+| binder | same | 377 |
+- different instances: 0 among the applications of the present run; 0 among those of the run by bounds
+- regressions: 0 among the applications of the present run; 0 among those of the run by bounds
+- new admissions: 0 among the applications of the present run; 0 among those of the run by bounds
+- applications with an input whose raw type is not its normal form: 0
+- applications where some parameter has two lower bounds or more: 2737; with two lower bounds that have no order: 0
+
+Template applications by name:
+| kind | name | verdict | count |
+| --- | --- | --- | --- |
+| atom | cons | same | 1034 |
+| atom | append | same | 845 |
+| atom | take | same | 805 |
+| atom | ite | same | 684 |
+| atom | pair | same | 584 |
+| binder | refModifyWith | same | 279 |
+| row | refModifyWith | same | 279 |
+| atom | get | same | 190 |
+| atom | drop | same | 164 |
+| atom | some | same | 115 |
+| row | deferredSucceed | same | 112 |
+| row | deferredAwait | same | 103 |
+| binder | refUpdateWith | same | 98 |
+| row | refUpdateWith | same | 98 |
+| row | refGet | same | 91 |
+| row | refMake | same | 69 |
+| atom | getOrElse | same | 56 |
+| row | refSet | same | 6 |
+| row | deferredIsDone | same | 1 |
+
+## Assignment 2: the census of the generated corpus
+- programs: 400; admitted by the present checker: 128; admitted by the checker by bounds: 128; by bounds with the binder term at its normal form: 128
+- programs where the traced copy differs from `Checker.check`: 0
+
+Programs by verdict (present against bounds):
+| verdict | count |
+| --- | --- |
+| bothRefuse | 272 |
+| same | 128 |
+
+- applications met by the present checker: 175; met by the checker by bounds: 175
+
+Applications by kind:
+| kind | scheme or request | count |
+| --- | --- | --- |
+| atom | no template | 121 |
+| row | template | 40 |
+| atom | template | 11 |
+| row | no template | 3 |
+
+Applications by verdict of the match by bounds on the same inputs, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | bothRefuse | 70 |
+| atom | same | 62 |
+| row | bothRefuse | 39 |
+| row | same | 4 |
+
+Applications by verdict of the note's rule, word for word, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | bothRefuse | 70 |
+| atom | same | 62 |
+| row | bothRefuse | 39 |
+| row | same | 4 |
+
+Applications by verdict of the match by bounds at the normal form of each input, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | bothRefuse | 70 |
+| atom | same | 62 |
+| row | bothRefuse | 39 |
+| row | same | 4 |
+
+Applications by verdict of the present match at the normal form of each input, against the present match:
+| kind | verdict | count |
+| --- | --- | --- |
+| atom | bothRefuse | 70 |
+| atom | same | 62 |
+| row | bothRefuse | 39 |
+| row | same | 4 |
+- different instances: 0 among the applications of the present run; 0 among those of the run by bounds
+- regressions: 0 among the applications of the present run; 0 among those of the run by bounds
+- new admissions: 0 among the applications of the present run; 0 among those of the run by bounds
+- applications with an input whose raw type is not its normal form: 0
+- applications where some parameter has two lower bounds or more: 0; with two lower bounds that have no order: 0
+
+Template applications by name:
+| kind | name | verdict | count |
+| --- | --- | --- | --- |
+| row | deferredAwait | bothRefuse | 13 |
+| atom | pair | same | 10 |
+| row | refGetAndSet | bothRefuse | 4 |
+| row | deferredFail | bothRefuse | 3 |
+| row | refGetAndUpdateWith | bothRefuse | 3 |
+| row | refModifyWith | bothRefuse | 3 |
+| row | refUpdateWith | bothRefuse | 3 |
+| row | deferredIsDone | bothRefuse | 2 |
+| row | refGet | bothRefuse | 2 |
+| row | refMake | same | 2 |
+| row | refUpdateSomeAndGetWith | bothRefuse | 2 |
+| atom | pair | bothRefuse | 1 |
+| row | deferredAwait | same | 1 |
+| row | deferredPoll | bothRefuse | 1 |
+| row | refGetAndUpdateSomeWith | bothRefuse | 1 |
+
+## Assignments 2 and 3: the exhaustive finite model (`domain.tsv`)
+
+- the families of the tree: 44 families
+    - applications: 137651
+    - admissible: 9124
+    - present admits: 2481
+    - bounds admits: 9124
+    - regressions: 0
+    - different: 0
+    - raw different: 0
+    - admitted: order: 530
+    - admitted: argument: 528
+    - admitted: member: 5585
+    - not complete: 0
+    - not least: 0
+    - present incomplete: 6643
+    - present not sound in the order: 0
+    - F differs: 0
+    - present depends on order: 380
+    - bounds depends on order: 0
+    - guard of one parameter: bounds admits: 4087
+    - guard of one parameter: present admits and it refuses: 0
+    - guard of a split parameter: bounds admits: 4351
+    - guard of a split parameter: present admits and it refuses: 132
+    - guard with cross terms: bounds admits: 4615
+    - guard with cross terms: present admits and it refuses: 0
+
+- the families that the tree does not hold: 11 families
+    - applications: 38467
+    - admissible: 5776
+    - present admits: 774
+    - bounds admits: 5776
+    - regressions: 58
+    - different: 89
+    - raw different: 0
+    - admitted: order: 576
+    - admitted: argument: 0
+    - admitted: member: 4484
+    - not complete: 0
+    - not least: 0
+    - present incomplete: 5060
+    - present not sound in the order: 58
+    - F differs: 11
+    - present depends on order: 158
+    - bounds depends on order: 0
+    - guard of one parameter: bounds admits: 2610
+    - guard of one parameter: present admits and it refuses: 58
+    - guard of a split parameter: bounds admits: 2610
+    - guard of a split parameter: present admits and it refuses: 58
+    - guard with cross terms: bounds admits: 2610
+    - guard with cross terms: present admits and it refuses: 58
+
+| family | parameters | applications | admissible | present admits | bounds admits | regressions | different | admitted: order | admitted: argument | admitted: member | not complete | not least | present not sound in the order | F differs | present depends on order | bounds depends on order |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| atom pair | ('0, '1) | 144 | 144 | 144 | 144 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom getOrElse | (option<'0>, '0) | 748 | 646 | 88 | 646 | 0 | 0 | 58 | 92 | 408 | 0 | 0 | 0 | 0 | 182 | 0 |
+| atom ite | (bool, '0, '0) join | 2312 | 578 | 282 | 578 | 0 | 0 | 0 | 296 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom some | ('0) | 17 | 17 | 17 | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom cons | ('0, list<'0>) join | 748 | 646 | 212 | 646 | 0 | 0 | 0 | 92 | 342 | 0 | 0 | 0 | 0 | 66 | 0 |
+| atom get | (list<'0>, nat) | 352 | 76 | 28 | 76 | 0 | 0 | 0 | 0 | 48 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom append | (list<'0>, list<'0>) join | 1936 | 1444 | 214 | 1444 | 0 | 0 | 0 | 48 | 1182 | 0 | 0 | 0 | 0 | 132 | 0 |
+| atom mapGet | (map<string, '0>, string) | 405 | 76 | 28 | 76 | 0 | 0 | 0 | 0 | 48 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom mapSet | (map<string, '0>, string, '1) | 1386 | 154 | 154 | 154 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom mapKeys | (map<string, '0>) | 45 | 38 | 14 | 38 | 0 | 0 | 0 | 0 | 24 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom mapEntries | (map<string, '0>) | 45 | 38 | 14 | 38 | 0 | 0 | 0 | 0 | 24 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom mapFromEntries | (list<[string, '0]>) | 185 | 178 | 31 | 178 | 0 | 0 | 0 | 0 | 147 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom take | (list<'0>, nat) | 352 | 76 | 28 | 76 | 0 | 0 | 0 | 0 | 48 | 0 | 0 | 0 | 0 | 0 | 0 |
+| atom drop | (list<'0>, nat) | 352 | 76 | 28 | 76 | 0 | 0 | 0 | 0 | 48 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refMake | ('0) | 17 | 17 | 17 | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refGet | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refSet | ([ref<'0>, '0]) | 14074 | 241 | 91 | 241 | 0 | 0 | 28 | 0 | 122 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refGetAndSet | ([ref<'0>, '0]) | 14074 | 241 | 91 | 241 | 0 | 0 | 28 | 0 | 122 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refSetAndGet | ([ref<'0>, '0]) | 14074 | 241 | 91 | 241 | 0 | 0 | 28 | 0 | 122 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refUpdateWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refGetAndUpdateWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refUpdateAndGetWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refUpdateSomeWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refGetAndUpdateSomeWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refUpdateSomeAndGetWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refModifyWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row refModifySomeWith | (ref<'0>) | 98 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row deferredIsDone | (deferred<'0, '1>) | 674 | 37 | 37 | 37 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row deferredPoll | (deferred<'0, '1>) | 674 | 37 | 37 | 37 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row deferredSucceed | ([deferred<'0, '1>, '0]) | 23487 | 314 | 186 | 314 | 0 | 0 | 54 | 0 | 74 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row deferredFail | ([deferred<'0, '1>, '1]) | 23487 | 314 | 186 | 314 | 0 | 0 | 54 | 0 | 74 | 0 | 0 | 0 | 0 | 0 | 0 |
+| row deferredAwait | (deferred<'0, '1>) | 674 | 37 | 37 | 37 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term update | ('0) from {'0 := nat} | 17 | 2 | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term update | ('0) from {'0 := string} | 17 | 3 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term update | ('0) from {'0 := (nat | string)} | 17 | 6 | 6 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term updateSome | (option<'0>) from {'0 := nat} | 44 | 3 | 3 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term updateSome | (option<'0>) from {'0 := string} | 44 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term updateSome | (option<'0>) from {'0 := (nat | string)} | 44 | 10 | 10 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term modify | (['1, '0]) from {'0 := nat} | 4244 | 81 | 15 | 81 | 0 | 0 | 8 | 0 | 58 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term modify | (['1, '0]) from {'0 := string} | 4244 | 202 | 25 | 202 | 0 | 0 | 24 | 0 | 153 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term modify | (['1, '0]) from {'0 := (nat | string)} | 4244 | 871 | 61 | 871 | 0 | 0 | 32 | 0 | 778 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := nat} | 7864 | 202 | 25 | 202 | 0 | 0 | 24 | 0 | 153 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := string} | 7864 | 377 | 37 | 377 | 0 | 0 | 48 | 0 | 292 | 0 | 0 | 0 | 0 | 0 | 0 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := (nat | string)} | 7864 | 1571 | 109 | 1571 | 0 | 0 | 144 | 0 | 1318 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S1 a product under a cell | (ref<['0, '1]>) | 711 | 37 | 26 | 37 | 0 | 0 | 0 | 0 | 11 | 0 | 0 | 0 | 11 | 0 | 0 |
+| S2 a cell beside its content, two arguments, join | (ref<'0>, '0) join | 1666 | 88 | 146 | 88 | 58 | 0 | 0 | 0 | 0 | 0 | 0 | 58 | 0 | 58 | 0 |
+| S3 a cell beside its content, two arguments | (ref<'0>, '0) | 1666 | 88 | 88 | 88 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 58 | 0 |
+| S4 the content before its cell | (['0, ref<'0>]) | 14074 | 241 | 15 | 241 | 0 | 0 | 72 | 0 | 154 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S5 a list of lists | (list<list<'0>>) | 46 | 39 | 15 | 39 | 0 | 0 | 0 | 0 | 24 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S6 one parameter twice in a pair | (['0, '0]) | 4244 | 4238 | 81 | 4238 | 0 | 0 | 53 | 0 | 4104 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S7 one parameter at two cells | (deferred<'0, '0>) | 14373 | 14 | 14 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S8 a contravariant argument beside a covariant one | (Context.Context<'0>, '0) | 765 | 130 | 88 | 130 | 0 | 58 | 42 | 0 | 0 | 0 | 0 | 0 | 0 | 42 | 0 |
+| S9 two contravariant arguments | (Queue.Enqueue<'0, '0>) | 349 | 342 | 125 | 342 | 0 | 31 | 217 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S10 a tuple of three | (tuple['0, '0, '1]) | 224 | 217 | 115 | 217 | 0 | 0 | 78 | 0 | 24 | 0 | 0 | 0 | 0 | 0 | 0 |
+| S11 a record of two fields | ({a: '0, b?: '0}) | 349 | 342 | 61 | 342 | 0 | 0 | 114 | 0 | 167 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+The three guards, by kind of site (the tree's families):
+| kind | families | applications | present admits | bounds admits | guard of one parameter: bounds admits | guard of one parameter: present admits and it refuses | guard of a split parameter: bounds admits | guard of a split parameter: present admits and it refuses | guard with cross terms: bounds admits | guard with cross terms: present admits and it refuses |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| atoms | 14 | 9027 | 1282 | 4187 | 1472 | 0 | 1736 | 132 | 2000 | 0 |
+| rows | 18 | 92117 | 899 | 1605 | 1580 | 0 | 1580 | 0 | 1580 | 0 |
+| binder terms | 12 | 36507 | 300 | 3332 | 1035 | 0 | 1035 | 0 | 1035 | 0 |
+
+The three guards, by family (the tree's families where a guard refuses an answer of the match by bounds):
+| family | parameters | present admits | bounds admits | guard of one parameter: bounds admits | guard of one parameter: present admits and it refuses | guard of a split parameter: bounds admits | guard of a split parameter: present admits and it refuses | guard with cross terms: bounds admits | guard with cross terms: present admits and it refuses |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| atom getOrElse | (option<'0>, '0) | 88 | 646 | 212 | 0 | 238 | 0 | 304 | 0 |
+| atom ite | (bool, '0, '0) join | 282 | 578 | 282 | 0 | 578 | 0 | 578 | 0 |
+| atom cons | ('0, list<'0>) join | 212 | 646 | 212 | 0 | 238 | 66 | 304 | 0 |
+| atom get | (list<'0>, nat) | 28 | 76 | 28 | 0 | 28 | 0 | 28 | 0 |
+| atom append | (list<'0>, list<'0>) join | 214 | 1444 | 280 | 0 | 196 | 66 | 328 | 0 |
+| atom mapGet | (map<string, '0>, string) | 28 | 76 | 28 | 0 | 28 | 0 | 28 | 0 |
+| atom mapKeys | (map<string, '0>) | 14 | 38 | 14 | 0 | 14 | 0 | 14 | 0 |
+| atom mapEntries | (map<string, '0>) | 14 | 38 | 14 | 0 | 14 | 0 | 14 | 0 |
+| atom mapFromEntries | (list<[string, '0]>) | 31 | 178 | 31 | 0 | 31 | 0 | 31 | 0 |
+| atom take | (list<'0>, nat) | 28 | 76 | 28 | 0 | 28 | 0 | 28 | 0 |
+| atom drop | (list<'0>, nat) | 28 | 76 | 28 | 0 | 28 | 0 | 28 | 0 |
+| row refSet | ([ref<'0>, '0]) | 91 | 241 | 234 | 0 | 234 | 0 | 234 | 0 |
+| row refGetAndSet | ([ref<'0>, '0]) | 91 | 241 | 234 | 0 | 234 | 0 | 234 | 0 |
+| row refSetAndGet | ([ref<'0>, '0]) | 91 | 241 | 234 | 0 | 234 | 0 | 234 | 0 |
+| row deferredSucceed | ([deferred<'0, '1>, '0]) | 186 | 314 | 312 | 0 | 312 | 0 | 312 | 0 |
+| row deferredFail | ([deferred<'0, '1>, '1]) | 186 | 314 | 312 | 0 | 312 | 0 | 312 | 0 |
+| binder term modify | (['1, '0]) from {'0 := nat} | 15 | 81 | 30 | 0 | 30 | 0 | 30 | 0 |
+| binder term modify | (['1, '0]) from {'0 := string} | 25 | 202 | 70 | 0 | 70 | 0 | 70 | 0 |
+| binder term modify | (['1, '0]) from {'0 := (nat | string)} | 61 | 871 | 241 | 0 | 241 | 0 | 241 | 0 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := nat} | 25 | 202 | 70 | 0 | 70 | 0 | 70 | 0 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := string} | 37 | 377 | 127 | 0 | 127 | 0 | 127 | 0 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := (nat | string)} | 109 | 1571 | 469 | 0 | 469 | 0 | 469 | 0 |
+
+New admissions of the model by operation (the tree's families; a binder term's three seeds summed):
+| operation | applications | present admits | new: the order only | new: two arguments | new: one argument's members |
+| --- | --- | --- | --- | --- | --- |
+| atom pair | 144 | 144 | 0 | 0 | 0 |
+| atom getOrElse | 748 | 88 | 58 | 92 | 408 |
+| atom ite | 2312 | 282 | 0 | 296 | 0 |
+| atom some | 17 | 17 | 0 | 0 | 0 |
+| atom cons | 748 | 212 | 0 | 92 | 342 |
+| atom get | 352 | 28 | 0 | 0 | 48 |
+| atom append | 1936 | 214 | 0 | 48 | 1182 |
+| atom mapGet | 405 | 28 | 0 | 0 | 48 |
+| atom mapSet | 1386 | 154 | 0 | 0 | 0 |
+| atom mapKeys | 45 | 14 | 0 | 0 | 24 |
+| atom mapEntries | 45 | 14 | 0 | 0 | 24 |
+| atom mapFromEntries | 185 | 31 | 0 | 0 | 147 |
+| atom take | 352 | 28 | 0 | 0 | 48 |
+| atom drop | 352 | 28 | 0 | 0 | 48 |
+| row refMake | 17 | 17 | 0 | 0 | 0 |
+| row refGet | 98 | 14 | 0 | 0 | 0 |
+| row refSet | 14074 | 91 | 28 | 0 | 122 |
+| row refGetAndSet | 14074 | 91 | 28 | 0 | 122 |
+| row refSetAndGet | 14074 | 91 | 28 | 0 | 122 |
+| row refUpdateWith | 98 | 14 | 0 | 0 | 0 |
+| row refGetAndUpdateWith | 98 | 14 | 0 | 0 | 0 |
+| row refUpdateAndGetWith | 98 | 14 | 0 | 0 | 0 |
+| row refUpdateSomeWith | 98 | 14 | 0 | 0 | 0 |
+| row refGetAndUpdateSomeWith | 98 | 14 | 0 | 0 | 0 |
+| row refUpdateSomeAndGetWith | 98 | 14 | 0 | 0 | 0 |
+| row refModifyWith | 98 | 14 | 0 | 0 | 0 |
+| row refModifySomeWith | 98 | 14 | 0 | 0 | 0 |
+| row deferredIsDone | 674 | 37 | 0 | 0 | 0 |
+| row deferredPoll | 674 | 37 | 0 | 0 | 0 |
+| row deferredSucceed | 23487 | 186 | 54 | 0 | 74 |
+| row deferredFail | 23487 | 186 | 54 | 0 | 74 |
+| row deferredAwait | 674 | 37 | 0 | 0 | 0 |
+| binder term update | 51 | 11 | 0 | 0 | 0 |
+| binder term updateSome | 132 | 17 | 0 | 0 | 0 |
+| binder term modify | 12732 | 101 | 64 | 0 | 989 |
+| binder term modifySome | 23592 | 171 | 216 | 0 | 1763 |
+
+## The match reads a request up to the normal form (`domain-raw.tsv`)
+
+- the families of the tree: 26 families
+    - raw applications: 2339
+    - with an argument that is not normal: 707
+    - present: raw only: 189
+    - present: normal form only: 0
+    - present: both, other bindings: 0
+    - bounds: raw only: 0
+    - bounds: normal form only: 0
+    - bounds: both, other bindings: 0
+    - present on raw against bounds on the normal form: not conservative: 0
+    - present admits raw, the guard with cross terms refuses the normal form: 189
+    - present admits raw, the guard with cross terms refuses the raw type: 0
+
+- the families that the tree does not hold: 11 families
+    - raw applications: 1413
+    - with an argument that is not normal: 242
+    - present: raw only: 69
+    - present: normal form only: 0
+    - present: both, other bindings: 0
+    - bounds: raw only: 0
+    - bounds: normal form only: 0
+    - bounds: both, other bindings: 0
+    - present on raw against bounds on the normal form: not conservative: 121
+    - present admits raw, the guard with cross terms refuses the normal form: 116
+    - present admits raw, the guard with cross terms refuses the raw type: 54
+
+Families where the present match admits a raw type and refuses its normal form:
+| family | parameters | raw applications | not normal | present: raw only |
+| --- | --- | --- | --- | --- |
+| atom mapFromEntries | (list<[string, '0]>) | 28 | 14 | 14 |
+| binder term modify | (['1, '0]) from {'0 := nat} | 170 | 133 | 14 |
+| binder term modify | (['1, '0]) from {'0 := string} | 170 | 133 | 21 |
+| binder term modify | (['1, '0]) from {'0 := (nat | string)} | 170 | 133 | 42 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := nat} | 183 | 98 | 21 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := string} | 183 | 98 | 28 |
+| binder term modifySome | (['1, option<'0>]) from {'0 := (nat | string)} | 183 | 98 | 49 |
+| S1 a product under a cell | (ref<['0, '1]>) | 38 | 11 | 11 |
+| S4 the content before its cell | (['0, ref<'0>]) | 183 | 98 | 14 |
+| S6 one parameter twice in a pair | (['0, '0]) | 170 | 133 | 44 |
+
+## Assignment 2, third domain: an omission to `never` at each address of the truth lane's programs
+- omissions: 29846; at an effect address: 4644; at a term address: 25202
+
+Omissions by verdict:
+| address | present admits | bounds admits | verdict | count |
+| --- | --- | --- | --- | --- |
+| term | true | true | same | 19715 |
+| term | false | false | bothRefuse | 5353 |
+| effect | true | true | same | 4000 |
+| effect | false | false | bothRefuse | 640 |
+| term | false | true | admission | 134 |
+| effect | false | true | admission | 4 |
+
+- refused by the present checker: 6131; of them admitted by bounds: 138; refused by both at the same refusal: 5975; refused by both at another refusal: 18
+- admitted by the present checker and refused by bounds: 0; admitted by both at other types: 0; at types with one normal form and other raw forms: 0
+
+New admissions by the application that only the match by bounds admits:
+| applications | count |
+| --- | --- |
+| atom ite | 132 |
+| atom getOrElse | 6 |
+
+New admissions by the present checker's refusal:
+| refusal | count |
+| --- | --- |
+| binderTerm | 132 |
+| term | 6 |
+
+New admissions: the type by bounds against the full program's type:
+| columns | count |
+| --- | --- |
+| gradual | 138 |
+
+Refused by both at another refusal: the present refusal, then the refusal by bounds:
+| present | bounds | count |
+| --- | --- | --- |
+| binderTerm | stepNotCursor | 18 |
+
+Programs with a new admission:
+| program | count |
+| --- | --- |
+| pQueueFull | 34 |
+| pQueueOrder | 34 |
+| pQueueInterrupted | 30 |
+| pQueueMasked | 17 |
+| pQueueWake | 17 |
+| pOptionNone | 3 |
+| pOptionSome | 3 |
+
+## Assignment 2, third domain: an omission to `never` at each address of the generated corpus
+- omissions: 336; at an effect address: 238; at a term address: 98
+
+Omissions by verdict:
+| address | present admits | bounds admits | verdict | count |
+| --- | --- | --- | --- | --- |
+| effect | true | true | same | 238 |
+| term | true | true | same | 96 |
+| term | false | false | bothRefuse | 2 |
+
+- refused by the present checker: 2; of them admitted by bounds: 0; refused by both at the same refusal: 2; refused by both at another refusal: 0
+- admitted by the present checker and refused by bounds: 0; admitted by both at other types: 0; at types with one normal form and other raw forms: 0
+
+New admissions by the application that only the match by bounds admits:
+| applications | count |
+| --- | --- |
+
+New admissions by the present checker's refusal:
+| refusal | count |
+| --- | --- |
+
+New admissions: the type by bounds against the full program's type:
+| columns | count |
+| --- | --- |
+
+Refused by both at another refusal: the present refusal, then the refusal by bounds:
+| present | bounds | count |
+| --- | --- | --- |
+
+Programs with a new admission:
+| program | count |
+| --- | --- |
+
+## Assignment 6: tsgo
+- tsgo-bounds-cite.txt: errors 0; exit 0
+- tsgo-bounds-forms-declarations.txt: errors 0; exit ?
+- tsgo-bounds-forms-dts.txt: errors 0; exit 0
+- tsgo-bounds-forms.txt: errors 0; exit 0
+- tsgo-bounds-generated.txt: errors 0; exit 0
+- tsgo-bounds-inferred-count.txt: errors 0; exit ?
+- tsgo-bounds-inferred-dts.txt: errors 0; exit 0
+- tsgo-bounds-inferred.txt: errors 0; exit 0
+- tsgo-bounds-lane-generated-files.txt: errors 0; exit ?
+- tsgo-bounds-lane.txt: errors 0; exit 0
+- tsgo-bounds-nodefault-cite.txt: errors 6; exit 1
+- tsgo-bounds-nodefault-forms.txt: errors 0; exit 0
+- tsgo-bounds-nodefault-generated.txt: errors 0; exit 0
+- tsgo-bounds-probe.txt: errors 17; exit 1
+- tsgo-bounds-spell.txt: errors 4; exit 1
+- tsgo-inferred-declarations.summary.txt: errors 0; exit ?
+- tsgo-present-cite.txt: errors 0; exit 0
+- tsgo-present-forms-declarations.txt: errors 0; exit ?
+- tsgo-present-forms-dts.txt: errors 6; exit 2
+- tsgo-present-forms.txt: errors 6; exit 1
+- tsgo-present-generated.txt: errors 0; exit 0
+- tsgo-present-inferred-count.txt: errors 0; exit ?
+- tsgo-present-inferred-dts.txt: errors 0; exit 0
+- tsgo-present-inferred.txt: errors 0; exit 0
+- tsgo-present-lane-generated-files.txt: errors 0; exit ?
+- tsgo-present-lane.txt: errors 0; exit 0
+- tsgo-present-probe.txt: errors 20; exit 1
+- tsgo-present-spell.txt: errors 4; exit 1
+- tsgo-split-declarations.txt: errors 0; exit ?
+- tsgo-split.txt: errors 9; exit 1
+- tsgo-summary.txt: errors 0; exit ?
+- tsgo-versions.txt: errors 0; exit ?
+
+## Assignment 6, second part: tsgo2-summary.txt
+
+# Seat BOUNDS: four declarations of a repeated covariant parameter (run-ts2.sh)
+
+tsgo: Version 7.0.0-dev.20260629.1
+effect: 4.0.0-rc.112
+node: v22.23.2
+
+## Errors of each run (`error TS` lines; tsgo's exit code)
+
+| run | present | split | cross | whole |
+| --- | --- | --- | --- | --- |
+| lane | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| generated | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| inferred | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| probe | 20 (exit 1) | 17 (exit 1) | 17 (exit 1) | 16 (exit 1) |
+| forms | 6 (exit 1) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| cite | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) | 0 (exit 0) |
+| spell | 4 (exit 1) | 4 (exit 1) | 4 (exit 1) | 2 (exit 1) |
+| split | 25 (exit 1) | 18 (exit 1) | 10 (exit 1) | 3 (exit 1) |
+| model | 7777 (exit 1) | 6510 (exit 1) | 5770 (exit 1) | 2617 (exit 1) |
+
+split: inferred declarations of main that differ from present: 0 of 73
+cross: inferred declarations of main that differ from present: 0 of 73
+whole: inferred declarations of main that differ from present: 0 of 73
+- present: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+- split: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+- cross: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+- whole: SHA-256 of the 73 inferred declarations of `main`: 28df1c8546a9d63e37dd41b252db5daa2588a18a56b84ea5700c631b103e8d9c
+
+## The forms of `split.ts`: verdict and emitted type, by prelude
+
+| form | call | present | split | cross | whole |
+| --- | --- | --- | --- | --- | --- |
+| `I_same` | `ite(c, n, n)` | `number` | `number` | `number` | `number` |
+| `I_wide_first` | `ite(c, v, n)` | `string \| number` | `string \| number` | `string \| number` | `string \| number` |
+| `I_wide_second` | `ite(c, n, v)` | `string \| number` | `string \| number` | `string \| number` | `string \| number` |
+| `I_two` | `ite(c, n, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `I_two_shapes` | `ite(c, n, nil())` | TS2345 | `number \| readonly never[]` | `number \| readonly never[]` | `number \| readonly never[]` |
+| `O_same` | `getOrElse(o1, n)` | `number` | `number` | `number` | `number` |
+| `O_wide_option` | `getOrElse(o12, n)` | `string \| number` | `string \| number` | `string \| number` | `string \| number` |
+| `O_wide_fallback` | `getOrElse(o1, v)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `O_two` | `getOrElse(o1, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `O_union_wide` | `getOrElse(ou, v)` | TS2379 | TS2379 | `string \| number` | `string \| number` |
+| `O_union_member` | `getOrElse(ou, n)` | TS2379 | TS2379 | `string \| number` | `string \| number` |
+| `O_union_member_other` | `getOrElse(ou, s)` | TS2379 | TS2379 | TS2379 | `string \| number` |
+| `O_none` | `getOrElse(none(), n)` | TS2345 | `number` | `number` | `number` |
+| `C_same` | `cons(n, l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `C_wide_element` | `cons(v, l1)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_wide_list` | `cons(n, l12)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_two` | `cons(s, l1)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_wide_union` | `cons(v, lu)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_member_union` | `cons(n, lu)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `C_member_union_other` | `cons(s, lu)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `C_nil` | `cons(n, nil())` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `A_same` | `append(l1, l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `A_wide_first` | `append(l12, l1)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_wide_second` | `append(l1, l12)` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_two` | `append(l1, l2)` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_wide_union` | `append(l12, lu)` | `readonly (string \| number)[]` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_union_wide` | `append(lu, l12)` | `readonly (string \| number)[]` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_member_union` | `append(l1, lu)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_union_member` | `append(lu, l1)` | TS2345 | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `A_member_union_other` | `append(l2, lu)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `A_union_member_other` | `append(lu, l2)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `A_union_union` | `append(lu, lu)` | TS2345 | TS2345 | TS2345 | `readonly (string \| number)[]` |
+| `A_nil_first` | `append(nil(), l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `A_nil_second` | `append(l1, nil())` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `G_list` | `get(l1, 0)` | `Option.Option<number>` | `Option.Option<number>` | `Option.Option<number>` | `Option.Option<number>` |
+| `G_list_of_union` | `get(l12, 0)` | `Option.Option<string \| number>` | `Option.Option<string \| number>` | `Option.Option<string \| number>` | `Option.Option<string \| number>` |
+| `G_union_of_lists` | `get(lu, 0)` | TS2345 | TS2345 | TS2345 | `Option.Option<string \| number>` |
+| `M_tupleOfUnion` | `mapFromEntries(tupleOfUnion)` | `Readonly<Record<string, string \| number>>` | `Readonly<Record<string, string \| number>>` | `Readonly<Record<string, string \| number>>` | `Readonly<Record<string, string \| number>>` |
+| `M_unionOfTuples` | `mapFromEntries(unionOfTuples)` | TS2345 | TS2345 | TS2345 | `Readonly<Record<string, string \| number>>` |
+| `M_empty` | `mapFromEntries(nil())` | `Readonly<Record<string, never>>` | `Readonly<Record<string, never>>` | `Readonly<Record<string, never>>` | `Readonly<Record<string, never>>` |
+| `R_set_same` | `Ref.set(r1, n)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_set_wide_cell` | `Ref.set(r12, n)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_set_wide_cell_union` | `Ref.set(r12, v)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_set_wide_value` | `Ref.set(r1, v)` | TS2345 | TS2345 | TS2345 | TS2345 |
+| `R_make_two` | `Ref.make(ite(c, n, s))` | TS2345 | `Effect.Effect<Ref.Ref<string \| number>, never, never>` | `Effect.Effect<Ref.Ref<string \| number>, never, never>` | `Effect.Effect<Ref.Ref<string \| number>, never, never>` |
+| `R_succeed_wide_cell` | `Deferred.succeed(d12, n)` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` |
+| `R_set_never_cell` | `Ref.set(nv, v)` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` | `Effect.Effect<void, never, never>` |
+| `R_succeed_never_cell` | `Deferred.succeed(nv, v)` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` | `Effect.Effect<boolean, never, never>` |
+| `B_modify_one_pair` | `Ref.modify(r1, (a) => pair(v, a))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `B_modify_two_ordered` | `Ref.modify(r1, (a) => ite(c, pair(v, a), pair(n, a)))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `B_modify_two_pairs` | `Ref.modify(r1, (a) => ite(c, pair(n, a), pair(s, a)))` | TS2345 | TS2322 | TS2322 | TS2322 |
+| `B_modify_two_ordered_reverse` | `Ref.modify(r1, (a) => ite(c, pair(n, a), pair(v, a)))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `B_modify_two_pairs_explicit` | `Ref.modify<number, number \| string>(r1, (a) => ite(c, pair(n, a), pair(s, a)))` | TS2345 | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `W_modify_one_pair` | `modifyWhole(r1, (a) => pair(v, a))` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `W_modify_two_pairs` | `modifyWhole(r1, (a) => ite(c, pair(n, a), pair(s, a)))` | TS2345 | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` | `Effect.Effect<string \| number, never, never>` |
+| `W_modify_wrong_cell` | `modifyWhole(r1, (a) => pair(n, s))` | TS2322 | TS2322 | TS2322 | TS2322 |
+
+Accepted, of 56 forms: present 31; split 38; cross 46; whole 53
+
+## The forms of `forms.ts`: verdict and emitted type, by prelude
+
+| form | call | present | split | cross | whole |
+| --- | --- | --- | --- | --- | --- |
+| `O6_getOrElse_two` | `getOrElse(o1, "d")` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `T1_ite_two` | `ite(c, 1, "a")` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `L7_append_two` | `append(l1, l2)` | TS2345 | `readonly (string \| number)[]` | `readonly (string \| number)[]` | `readonly (string \| number)[]` |
+| `O6v` | `getOrElse(o1, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `T1v` | `ite(c, n, s)` | TS2345 | `string \| number` | `string \| number` | `string \| number` |
+| `P1_getOrElse_same` | `getOrElse(o1, 9)` | `number` | `number` | `number` | `number` |
+| `P2_ite_same` | `ite(c, 1, 2)` | `number` | `number` | `number` | `number` |
+| `P3_ite_options` | `ite(c, some(1), none())` | `Option.Option<number>` | `Option.Option<number> \| Option.Option<never>` | `Option.None<number> \| Option.None<never> \| Option.Some<number> \| Option.Some<never>` | `Option.Option<number> \| Option.Option<never>` |
+| `P4_append_same` | `append(l1, cons(1, nil()))` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `P5_append_nil` | `append(nil(), l1)` | `readonly number[]` | `readonly number[]` | `readonly number[]` | `readonly number[]` |
+| `P6_getOrElse_none` | `getOrElse(none(), 9)` | TS2345 | `9` | `9` | `9` |
+| `C1_ref_ite` | `Ref.make(ite(c, 1, 2))` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` |
+| `C2_ref_getOrElse` | `Ref.make(getOrElse(o1, 9))` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` | `Effect.Effect<Ref.Ref<number>, never, never>` |
+| `C3_ref_ite_annotated` | `Ref.make(ite(c, 1, 2))` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` |
+| `C4_ref_getOrElse_annotated` | `Ref.make(getOrElse(o1, 9))` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` | `Effect.Effect<Ref.Ref<number>>` |
+| `C5_pair_ite` | `pair(ite(c, 1, 2), getOrElse(o1, 9))` | `readonly [number, number]` | `readonly [number, number]` | `readonly [number, number]` | `readonly [number, number]` |
+
+Accepted, of 16 forms: present 10; split 16; cross 16; whole 16
+
+## Assignment 6, second part: model-ts-summary.txt
+
+- prelude present: 7777 error lines; outside the applications: 0; calls refused: 5290 of 6295
+- prelude split: 6510 error lines; outside the applications: 0; calls refused: 4924 of 6295
+- prelude cross: 5770 error lines; outside the applications: 0; calls refused: 4184 of 6295
+- prelude whole: 2617 error lines; outside the applications: 0; calls refused: 2617 of 6295
+
+Applications: 6295; at a normal request: 6281; at a raw request that is not normal: 14
+- Lean, present: admits 869
+- Lean, bounds: admits 3582
+- Lean, bounds + guard of one parameter: admits 1059
+- Lean, bounds + guard of a split parameter: admits 1323
+- Lean, bounds + guard with cross terms: admits 1587
+- tsgo, prelude present: accepts 1005
+- tsgo, prelude split: accepts 1371
+- tsgo, prelude cross: accepts 2111
+- tsgo, prelude whole: accepts 3678
+
+Each reading of the checker against each prelude (all six atoms):
+
+| Lean | prelude | both admit | Lean admits, tsgo refuses | tsgo accepts, Lean refuses | both refuse |
+| --- | --- | --- | --- | --- | --- |
+| present | present | 803 | 66 | 202 | 5224 |
+| present | split | 737 | 132 | 634 | 4792 |
+| present | cross | 869 | 0 | 1242 | 4184 |
+| present | whole | 869 | 0 | 2809 | 2617 |
+| bounds | present | 961 | 2621 | 44 | 2669 |
+| bounds | split | 1323 | 2259 | 48 | 2665 |
+| bounds | cross | 2051 | 1531 | 60 | 2653 |
+| bounds | whole | 3582 | 0 | 96 | 2617 |
+| bounds + guard of one parameter | present | 869 | 190 | 136 | 5100 |
+| bounds + guard of one parameter | split | 795 | 264 | 576 | 4660 |
+| bounds + guard of one parameter | cross | 1059 | 0 | 1052 | 4184 |
+| bounds + guard of one parameter | whole | 1059 | 0 | 2619 | 2617 |
+| bounds + guard of a split parameter | present | 829 | 494 | 176 | 4796 |
+| bounds + guard of a split parameter | split | 1323 | 0 | 48 | 4924 |
+| bounds + guard of a split parameter | cross | 1323 | 0 | 788 | 4184 |
+| bounds + guard of a split parameter | whole | 1323 | 0 | 2355 | 2617 |
+| bounds + guard with cross terms | present | 961 | 626 | 44 | 4664 |
+| bounds + guard with cross terms | split | 1323 | 264 | 48 | 4660 |
+| bounds + guard with cross terms | cross | 1587 | 0 | 524 | 4184 |
+| bounds + guard with cross terms | whole | 1587 | 0 | 2091 | 2617 |
+
+The pairs of a reading and its prelude, by atom:
+
+| Lean | prelude | atom | request | applications | both admit | Lean admits, tsgo refuses | tsgo accepts, Lean refuses |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| present | present | getOrElse | normal | 748 | 88 | 0 | 0 |
+| present | present | ite | normal | 2312 | 282 | 0 | 0 |
+| present | present | cons | normal | 748 | 146 | 66 | 109 |
+| present | present | append | normal | 1936 | 214 | 0 | 91 |
+| present | present | get | normal | 352 | 28 | 0 | 2 |
+| present | present | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| present | present | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds + guard of one parameter | present | getOrElse | normal | 748 | 88 | 124 | 0 |
+| bounds + guard of one parameter | present | ite | normal | 2312 | 282 | 0 | 0 |
+| bounds + guard of one parameter | present | cons | normal | 748 | 146 | 66 | 109 |
+| bounds + guard of one parameter | present | append | normal | 1936 | 280 | 0 | 25 |
+| bounds + guard of one parameter | present | get | normal | 352 | 28 | 0 | 2 |
+| bounds + guard of one parameter | present | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| bounds + guard of one parameter | present | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds + guard of a split parameter | split | getOrElse | normal | 748 | 238 | 0 | 0 |
+| bounds + guard of a split parameter | split | ite | normal | 2312 | 578 | 0 | 0 |
+| bounds + guard of a split parameter | split | cons | normal | 748 | 238 | 0 | 17 |
+| bounds + guard of a split parameter | split | append | normal | 1936 | 196 | 0 | 29 |
+| bounds + guard of a split parameter | split | get | normal | 352 | 28 | 0 | 2 |
+| bounds + guard of a split parameter | split | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| bounds + guard of a split parameter | split | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds + guard with cross terms | cross | getOrElse | normal | 748 | 304 | 0 | 87 |
+| bounds + guard with cross terms | cross | ite | normal | 2312 | 578 | 0 | 0 |
+| bounds + guard with cross terms | cross | cons | normal | 748 | 304 | 0 | 104 |
+| bounds + guard with cross terms | cross | append | normal | 1936 | 328 | 0 | 331 |
+| bounds + guard with cross terms | cross | get | normal | 352 | 28 | 0 | 2 |
+| bounds + guard with cross terms | cross | mapFromEntries | normal | 185 | 31 | 0 | 0 |
+| bounds + guard with cross terms | cross | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+| bounds | whole | getOrElse | normal | 748 | 646 | 0 | 0 |
+| bounds | whole | ite | normal | 2312 | 578 | 0 | 0 |
+| bounds | whole | cons | normal | 748 | 646 | 0 | 17 |
+| bounds | whole | append | normal | 1936 | 1444 | 0 | 77 |
+| bounds | whole | get | normal | 352 | 76 | 0 | 2 |
+| bounds | whole | mapFromEntries | normal | 185 | 178 | 0 | 0 |
+| bounds | whole | mapFromEntries | raw | 14 | 14 | 0 | 0 |
+
+The call's type, where the match by bounds and tsgo both admit:
+
+| prelude | applications | tsgo's type is not assignable to Lean's answer | Lean's answer is not assignable to tsgo's type |
+| --- | --- | --- | --- |
+| present | 961 | 19 | 0 |
+| split | 1323 | 31 | 0 |
+| cross | 2051 | 55 | 0 |
+| whole | 3582 | 0 | 0 |
+
+Examples (at most 6 of each kind):
+
+- present against prelude present: Lean admits, tsgo refuses: 66
+    - a3206: cons((bool | "a"), (list<bool> | list<"a">)) [normal]; lower bounds: member
+    - a3294: cons((string | bool), (list<bool> | list<"a">)) [normal]; lower bounds: member
+
+- present against prelude present: tsgo accepts, Lean refuses: 202
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3106: cons(bool, list<"a">) [normal]; lower bounds: argument
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4291: append(list<"a">, [nat, string]) [normal]; lower bounds: -
+
+- bounds + guard of one parameter against prelude present: Lean admits, tsgo refuses: 190
+    - a1: getOrElse(option<never>, bool) [normal]; lower bounds: order
+    - a2: getOrElse(option<never>, "a") [normal]; lower bounds: order
+    - a3206: cons((bool | "a"), (list<bool> | list<"a">)) [normal]; lower bounds: member
+    - a3294: cons((string | bool), (list<bool> | list<"a">)) [normal]; lower bounds: member
+
+- bounds + guard of one parameter against prelude present: tsgo accepts, Lean refuses: 136
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3106: cons(bool, list<"a">) [normal]; lower bounds: argument
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4291: append(list<"a">, [nat, string]) [normal]; lower bounds: -
+
+- bounds + guard of a split parameter against prelude split: tsgo accepts, Lean refuses: 48
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3147: cons(bool, [nat, string]) [normal]; lower bounds: -
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4247: append(list<bool>, [nat, string]) [normal]; lower bounds: -
+
+- bounds + guard with cross terms against prelude cross: tsgo accepts, Lean refuses: 524
+    - a239: getOrElse((option<bool> | option<"a">), bool) [normal]; lower bounds: member
+    - a245: getOrElse((option<bool> | option<"a">), (nat | bool)) [normal]; lower bounds: member
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3118: cons(bool, (list<bool> | list<"a">)) [normal]; lower bounds: member
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+
+- bounds against prelude whole: tsgo accepts, Lean refuses: 96
+    - a3103: cons(never, [nat, string]) [normal]; lower bounds: -
+    - a3147: cons(bool, [nat, string]) [normal]; lower bounds: -
+    - a4152: get([nat, string], nat) [normal]; lower bounds: -
+    - a4153: get([nat, string], never) [normal]; lower bounds: -
+    - a4203: append(list<never>, [nat, string]) [normal]; lower bounds: -
+    - a4247: append(list<bool>, [nat, string]) [normal]; lower bounds: -
+
+- prelude present, tsgo below Lean fails: 19
+    - a221: getOrElse(never, never) [normal]; Lean answers never
+    - a222: getOrElse(never, bool) [normal]; Lean answers boolean
+    - a223: getOrElse(never, "a") [normal]; Lean answers "a"
+    - a224: getOrElse(never, (bool | "a")) [normal]; Lean answers boolean | "a"
+
+- prelude split, tsgo below Lean fails: 31
+    - a221: getOrElse(never, never) [normal]; Lean answers never
+    - a222: getOrElse(never, bool) [normal]; Lean answers boolean
+    - a223: getOrElse(never, "a") [normal]; Lean answers "a"
+    - a224: getOrElse(never, (bool | "a")) [normal]; Lean answers boolean | "a"
+
+- prelude cross, tsgo below Lean fails: 55
+    - a221: getOrElse(never, never) [normal]; Lean answers never
+    - a222: getOrElse(never, bool) [normal]; Lean answers boolean
+    - a223: getOrElse(never, "a") [normal]; Lean answers "a"
+    - a224: getOrElse(never, (bool | "a")) [normal]; Lean answers boolean | "a"
+
+## Assignment 5: gap-compare-list.txt
+    == run list: 67 static types, 457 gap types (at most 2 constructor members)
+    gap types by where the gap stands: {'static': 67, 'whole': 2, 'under a union': 388}
+    control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M: True | by T: False
+    static actual type, expected gap type `static`: pairs 4489; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+    static actual type, expected gap type `whole`: pairs 134; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+    static actual type, expected gap type `under a union`: pairs 25996; T differs from the definition 13221 (accepts beyond 0, refuses within 13221); M differs 0; B differs 0
+         num  ≲  nat | □: T False, the definition True
+         str  ≲  nat | □: T False, the definition True
+         list(never)  ≲  nat | □: T False, the definition True
+    the walk extended to an expected union (remainder at a bare gap, one member per head), expected gap type `under a union`: pairs 25996; differs from the definition 648 (accepts beyond 0, refuses within 648); member pairs met as a choice 2808
+         list(num)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+         list(nat | str)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+         list(num | str)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+         list(unknown)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+    gap types with a gap, as the ACTUAL type: 390 of 457; T reads no parameter there (pairs not compared: 178230)
+
+## Assignment 5: gap-compare-rec.txt
+    == run rec: 727 static types, 2929 gap types (at most 2 constructor members)
+    gap types by where the gap stands: {'static': 421, 'whole': 3, 'under a union': 2505}
+    control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M: True | by T: False
+    static actual type, expected gap type `static`: pairs 306067; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+    static actual type, expected gap type `whole`: pairs 2181; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+    static actual type, expected gap type `under a union`: pairs 1821135; T differs from the definition 1096488 (accepts beyond 0, refuses within 1096488); M differs 0; B differs 0
+         num  ≲  nat | □: T False, the definition True
+         str  ≲  nat | □: T False, the definition True
+         {a: never}  ≲  nat | □: T False, the definition True
+    the walk extended to an expected union (remainder at a bare gap, one member per head), expected gap type `under a union`: pairs 1821135; differs from the definition 9936 (accepts beyond 0, refuses within 9936); member pairs met as a choice 61776
+         {a: num}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+         {a: nat | str}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+         {a: num | str}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+         {a: unknown}  ≲  {a: nat | □} | {a: str | □}: extended walk False, the definition True
+    gap types with a gap, as the ACTUAL type: 2508 of 2929; T reads no parameter there (pairs not compared: 7345932)
+
+## Assignment 5: gap-compare-ref.txt
+    == run ref: 769 static types, 1105 gap types (at most 2 constructor members)
+    gap types by where the gap stands: {'static': 175, 'whole': 2, 'under a union': 928}
+    control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M: True | by T: False
+    static actual type, expected gap type `static`: pairs 134575; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+    static actual type, expected gap type `whole`: pairs 1538; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 120; B differs 0
+    static actual type, expected gap type `under a union`: pairs 713632; T differs from the definition 425352 (accepts beyond 0, refuses within 425352); M differs 36132; B differs 0
+         num  ≲  nat | □: T False, the definition True
+         str  ≲  nat | □: T False, the definition True
+         ref(never)  ≲  nat | □: T False, the definition True
+    the walk extended to an expected union (remainder at a bare gap, one member per head), expected gap type `under a union`: pairs 713632; differs from the definition 276984 (accepts beyond 0, refuses within 276984); member pairs met as a choice 483840
+         ref(never) | ref(nat)  ≲  ref(□) | □: extended walk False, the definition True
+         ref(never) | ref(num)  ≲  ref(□) | □: extended walk False, the definition True
+         ref(never) | ref(str)  ≲  ref(□) | □: extended walk False, the definition True
+         ref(never) | ref(nat | str)  ≲  ref(□) | □: extended walk False, the definition True
+    at the cell ref(□), over 769 static actual types: the definition admits 8; T admits 8; B admits 8; M admits 128
+         T = the definition: True | B = the definition: True | M = the definition: False
+    gap types with a gap, as the ACTUAL type: 930 of 1105; T reads no parameter there (pairs not compared: 1027650)

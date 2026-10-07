@@ -1,0 +1,16 @@
+148c148
+< export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>
+---
+> export const getOrElse = <A, B = A>(value: Option.Option<A | NoInfer<B>>, fallback: B | NoInfer<A>): A | B =>
+155c155
+< export const ite = <A>(c: boolean, t: A, f: A): A => (c ? t : f)
+---
+> export const ite = <A, B = A>(c: boolean, t: A | NoInfer<B>, f: B | NoInfer<A>): A | B => (c ? t : f)
+188c188
+< export const cons = <A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]
+---
+> export const cons = <A, B = A>(x: A | NoInfer<B>, xs: ReadonlyArray<B | NoInfer<A>>): ReadonlyArray<A | B> => [x, ...xs]
+205c205
+< export const append = <A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>
+---
+> export const append = <A, B = A>(xs: ReadonlyArray<A | NoInfer<B>>, ys: ReadonlyArray<B | NoInfer<A>>): ReadonlyArray<A | B> =>

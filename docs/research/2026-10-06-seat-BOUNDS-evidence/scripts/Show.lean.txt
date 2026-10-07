@@ -1,0 +1,65 @@
+/-
+Seat BOUNDS: a faithful printer of `Ty` (`Ty.renderRaw` prints `nat`, `int` and `number` alike).
+The text of `showTy` is seat CENSUS's (`docs/research/2026-10-06-seat-CENSUS-evidence/scripts/Lib.lean.txt`).
+-/
+namespace Bounds
+
+mutual
+def showTy : Ty → String
+  | .never => "never"
+  | .unknown => "unknown"
+  | .unit => "unit"
+  | .nat => "nat"
+  | .int => "int"
+  | .number => "number"
+  | .string => "string"
+  | .bool => "bool"
+  | .handle target => "handle(" ++ target ++ ")"
+  | .option inner => "option<" ++ showTy inner ++ ">"
+  | .list inner => "list<" ++ showTy inner ++ ">"
+  | .prod left right => "[" ++ showTy left ++ ", " ++ showTy right ++ "]"
+  | .except error value => "except<" ++ showTy error ++ ", " ++ showTy value ++ ">"
+  | .exitOf value error => "exit<" ++ showTy value ++ ", " ++ showTy error ++ ">"
+  | .causeOf error => "cause<" ++ showTy error ++ ">"
+  | .fiberOf value error => "fiber<" ++ showTy value ++ ", " ++ showTy error ++ ">"
+  | .union left right => "(" ++ showTy left ++ " | " ++ showTy right ++ ")"
+  | .lit value => "\"" ++ value ++ "\""
+  | .refOf value => "ref<" ++ showTy value ++ ">"
+  | .deferredOf value error => "deferred<" ++ showTy value ++ ", " ++ showTy error ++ ">"
+  | .var index => "'" ++ toString index
+  | .record fields => "{" ++ ", ".intercalate (showFields fields) ++ "}"
+  | .map key value => "map<" ++ showTy key ++ ", " ++ showTy value ++ ">"
+  | .tuple items => "tuple[" ++ ", ".intercalate (showItems items) ++ "]"
+  | .app name args => name ++ "<" ++ ", ".intercalate (showItems args) ++ ">"
+  | .null => "null"
+  | .undefined => "undefined"
+  | .bytes => "bytes"
+def showItems : List Ty → List String
+  | [] => []
+  | t :: rest => showTy t :: showItems rest
+def showFields : List (String × Bool × Ty) → List String
+  | [] => []
+  | (n, o, t) :: rest => (n ++ (if o then "?: " else ": ") ++ showTy t) :: showFields rest
+end
+
+def showVar : Variance → String
+  | .co => "co"
+  | .contra => "contra"
+  | .inv => "inv"
+
+def showTys (ts : List Ty) : String := "(" ++ ", ".intercalate (ts.map showTy) ++ ")"
+
+/-- Bindings with one entry for each parameter: the entry that `lookup` reads. -/
+def dedup (σ : Subst) : Subst :=
+  σ.foldl (fun acc b => if (acc.lookup b.1).isSome then acc else acc ++ [(b.1, (σ.lookup b.1).getD b.2)]) []
+
+def showSubst (σ : Subst) : String :=
+  "{" ++ ", ".intercalate ((dedup σ).map fun b => "'" ++ toString b.1 ++ " := " ++ showTy b.2) ++ "}"
+
+def showOptTy : Option Ty → String
+  | some t => showTy t
+  | none => "refused"
+
+def tsv (cells : List String) : String := "\t".intercalate cells
+
+end Bounds
