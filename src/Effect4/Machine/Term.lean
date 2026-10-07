@@ -280,7 +280,7 @@ deriving DecidableEq, Repr
 nowhere else; `name`, `arity` and `constGeneric` are projections of it. -/
 def row : NativeAtom → AtomRow
   | .succ => { name := "succ", arity := some 1, constGeneric := false,
-               prelude := "(n: number): number => n + 1" }
+               prelude := "(n: number): number => inProfile(n + 1)" }
   | .pred => { name := "pred", arity := some 1, constGeneric := false,
                prelude := "(n: number): number => (n === 0 ? 0 : n - 1)" }
   | .isZero => { name := "isZero", arity := some 1, constGeneric := false,
@@ -288,7 +288,7 @@ def row : NativeAtom → AtomRow
   | .boolNot => { name := "not", arity := some 1, constGeneric := false,
                   prelude := "(b: boolean): boolean => !b" }
   | .add => { name := "add", arity := some 2, constGeneric := false,
-              prelude := "(a: number, b: number): number => a + b" }
+              prelude := "(a: number, b: number): number => inProfile(a + b)" }
   | .lt => { name := "lt", arity := some 2, constGeneric := false,
              prelude := "(a: number, b: number): boolean => a < b" }
   | .eq => { name := "eq", arity := some 2, constGeneric := false,
@@ -410,11 +410,12 @@ def row : NativeAtom → AtomRow
                     <A, B>(a: Ref.Ref<A>, b: Ref.Ref<B>): boolean\n  \
                     <A, E, B, F>(a: Deferred.Deferred<A, E>, b: Deferred.Deferred<B, F>): \
                     boolean\n}" }
-  -- exact integer arithmetic (decisions row 309); the profile's bound is slice 6's
+  -- exact integer arithmetic (decisions row 309); the target refuses past the profile's bound
+  -- through the prelude's `inProfile` (decisions row 322)
   | .intAdd => { name := "plus", arity := some 2, constGeneric := false,
-                 prelude := "(a: number, b: number): number => a + b" }
+                 prelude := "(a: number, b: number): number => inProfile(a + b)" }
   | .intSub => { name := "minus", arity := some 2, constGeneric := false,
-                 prelude := "(a: number, b: number): number => a - b" }
+                 prelude := "(a: number, b: number): number => inProfile(a - b)" }
 
 def name (atom : NativeAtom) : String := (row atom).name
 

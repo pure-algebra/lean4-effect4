@@ -62,6 +62,31 @@ def wide : List String :=
   , ""
   ]
 
+/-- **The profile's bound on the target** (DI-56; decisions rows 108, 321 and 322). The four rows
+that grow (`succ`, `add`, `plus`, `minus`) grow through `Profile.grow` in the reference
+(`src/Effect4/Machine/Integers.lean`), and their bodies call this helper. A double holds the exact
+sum of two safe integers up to 2^53, and rounding is monotone, so the test after the sum is
+exact. Past the bound it throws `ProfileRefusal`: a refusal of the target profile, never a
+rounded value. The OCaml engine refuses at the same bound (`E4_clock.to_profile_nat`). -/
+def profile : List String :=
+  [ "/** The profile's bound on the target (DI-56; decisions rows 108, 321 and 322). The four rows"
+  , " * that grow call it after the sum: a double holds the exact sum of two safe integers up to"
+  , " * 2^53, and rounding is monotone, so the test is exact. Past the bound it throws"
+  , " * `ProfileRefusal`, a refusal of the profile, never a rounded value. */"
+  , "export class ProfileRefusal extends Error {"
+  , "  readonly value: number"
+  , "  constructor(value: number) {"
+  , "    super(`outside the integer profile: ${value}`)"
+  , "    this.value = value"
+  , "  }"
+  , "}"
+  , "const inProfile = (n: number): number => {"
+  , "  if (!Number.isSafeInteger(n)) throw new ProfileRefusal(n)"
+  , "  return n"
+  , "}"
+  , ""
+  ]
+
 /-- The whole file: the imports the bodies need, the one shared reader the cause atoms call,
 the one shared type of the literal rule (`wide`), and the atoms in the inventory's order.
 `queryCause` is the host image of `Effect4.Program.queryReasons?`; it is not an atom, so it is
@@ -84,7 +109,7 @@ def render (head : String) : List String :=
   , "const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<E> =>"
   , "  Exit.isExit(input) ? Exit.isFailure(input) ? input.cause : Cause.empty : input"
   , ""
-  ] ++ wide ++ NativeAtom.all.flatMap entry
+  ] ++ wide ++ profile ++ NativeAtom.all.flatMap entry
 
 structure Args where
   group : String := "PreludeAtoms"

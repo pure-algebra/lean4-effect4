@@ -25,10 +25,26 @@ const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<
  * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */
 type Wide<T> = T extends number ? number : T extends boolean ? boolean : T
 
+/** The profile's bound on the target (DI-56; decisions rows 108, 321 and 322). The four rows
+ * that grow call it after the sum: a double holds the exact sum of two safe integers up to
+ * 2^53, and rounding is monotone, so the test is exact. Past the bound it throws
+ * `ProfileRefusal`, a refusal of the profile, never a rounded value. */
+export class ProfileRefusal extends Error {
+  readonly value: number
+  constructor(value: number) {
+    super(`outside the integer profile: ${value}`)
+    this.value = value
+  }
+}
+const inProfile = (n: number): number => {
+  if (!Number.isSafeInteger(n)) throw new ProfileRefusal(n)
+  return n
+}
+
 /**
  * `"succ", [nat n] => nat (n + 1)`
  */
-export const succ = (n: number): number => n + 1
+export const succ = (n: number): number => inProfile(n + 1)
 
 /**
  * `"pred", [nat n] => nat (n - 1)` — Lean `Nat` subtraction truncates at zero.
@@ -48,7 +64,7 @@ export const not = (b: boolean): boolean => !b
 /**
  * `"add", [nat a, nat b] => nat (a + b)`
  */
-export const add = (a: number, b: number): number => a + b
+export const add = (a: number, b: number): number => inProfile(a + b)
 
 /**
  * `"lt", [x, y] => bool (x < y)` on two integers (decisions row 121).
@@ -288,10 +304,10 @@ export const sameHandle = ((a: unknown, b: unknown): boolean => a === b) as {
  * `"plus", [x, y] => x + y` on two integers, exact (decisions rows 108 and 121).
  * The reference adds without a bound. A target refuses a result outside ±(2^53 - 1) (DI-56).
  */
-export const plus = (a: number, b: number): number => a + b
+export const plus = (a: number, b: number): number => inProfile(a + b)
 
 /**
  * `"minus", [x, y] => x - y` on two integers, exact: `sub` stops at zero.
  * A target refuses a result outside ±(2^53 - 1) (DI-56).
  */
-export const minus = (a: number, b: number): number => a - b
+export const minus = (a: number, b: number): number => inProfile(a - b)

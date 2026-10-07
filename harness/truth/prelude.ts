@@ -109,6 +109,11 @@ export const caseTag = <T, K extends string, A0, E0, R0, A1, E1, R1>(
  * fold's head, that the case exercises: `run-truth.ts` checks the atom names against the profile's own
  * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
  * Lean cannot stay untested here. `strings` was untested until that check existed. */
+/** Whether a call refuses at the profile's bound: the prelude throws `ProfileRefusal`. */
+const refusedAt = (call: () => unknown): string => {
+  try { call(); return "answered" } catch (e) { return e instanceof Atoms.ProfileRefusal ? "refused" : "threw" }
+}
+
 export const selfTestCases: ReadonlyArray<{
   readonly atom: string; readonly name: string; readonly apply: () => unknown; readonly expected: unknown
 }> = [
@@ -167,6 +172,15 @@ export const selfTestCases: ReadonlyArray<{
   { atom: "minus", name: "minus 0 404", apply: () => Atoms.minus(0, 404), expected: -404 },
   { atom: "lt", name: "lt -2 1", apply: () => Atoms.lt(-2, 1), expected: true },
   { atom: "eq", name: "eq -1 -1", apply: () => Atoms.eq(-1, -1), expected: true },
+  // the profile's bound (decisions row 322): inside it the sum is exact, past it the row refuses
+  { atom: "plus", name: "plus at the bound", apply: () => Atoms.plus(Number.MAX_SAFE_INTEGER - 1, 1),
+    expected: Number.MAX_SAFE_INTEGER },
+  { atom: "plus", name: "plus past the bound refuses", apply: () => refusedAt(() => Atoms.plus(Number.MAX_SAFE_INTEGER, 1)),
+    expected: "refused" },
+  { atom: "add", name: "add past the bound refuses", apply: () => refusedAt(() => Atoms.add(Number.MAX_SAFE_INTEGER, 1)),
+    expected: "refused" },
+  { atom: "minus", name: "minus past the bound refuses", apply: () => refusedAt(() => Atoms.minus(-Number.MAX_SAFE_INTEGER, 1)),
+    expected: "refused" },
   { atom: "div", name: "div 10 3", apply: () => Atoms.div(10, 3), expected: 3 },
   { atom: "div", name: "div 10 0 is zero", apply: () => Atoms.div(10, 0), expected: 0 },
   { atom: "mod", name: "mod 10 3", apply: () => Atoms.mod(10, 3), expected: 1 },

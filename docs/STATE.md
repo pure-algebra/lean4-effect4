@@ -481,7 +481,8 @@ In work since the suspension of the handover:
   integer scan is gone), `int` and `number` have exact JSON wires, and the atoms `plus` and
   `minus` compute exactly, with `lt` and `eq` at `int`. The profile's bound is written once,
   at `Profile.grow`: the OCaml engine refuses past it, and its judgment is a theorem (row 321).
-  p5's balance answers `-15` (row 320). Open: the TypeScript half of the bound
+  p5's balance answers `-15` (row 320). The TypeScript prelude refuses at the same bound
+  (row 322). Open: the truth runner's record of a refusal and its comparator class
   ([the packet](research/2026-10-07-packet-integers.md), section 3.5). The term guard stands
   at a host row's request (row 315). [The map of H8](research/2026-10-07-h8-map.md) decomposes
   the proof of `denoteRows_eq_session` into three steps, one of them new.
