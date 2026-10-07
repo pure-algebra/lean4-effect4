@@ -1,0 +1,34 @@
+import Drivers.ForeignCorpus
+import Effect4.Api
+import TypeScript.Render
+
+open Effect4 Effect4.Program Effect4.Api
+
+def renderExpr (p : Eff NativeOp) : String :=
+  match Api.print p with
+  | .ok e => TypeScript.Render.expr TypeScript.house0 0 e
+  | .error _ => "PRINT REFUSED"
+
+-- (i) the three probes: typing, the round trip, the printed text
+#eval do
+  for (name, p) in Tools.ForeignCorpus.maskProbes do
+    let same := match Api.roundTrip p with | .ok kept => decide (kept = p) | .error _ => false
+    IO.println s!"{name}: wellTyped {Api.wellTyped p} readable {Api.readable p} roundTrip-same {same}"
+    IO.println ("  " ++ renderExpr p)
+
+-- (ii) a layer declared under a restore site: Lean prints the module and reads it back
+def k44 : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+def layerUnderRestore : Eff NativeOp :=
+  .bind (.withFiber .getInterruptible) (.uninterruptible (.restore (.var 0)
+    (.bind (.provideLayer (.succeed k44 (.nat 7)) false (.succeed (.lit (.nat 1))))
+      (.provideLayer (.ref [1, 0, 0, 0, 0]) false (.succeed (.lit (.nat 2)))))))
+
+#eval do
+  IO.println s!"layerUnderRestore: wellTyped {Api.wellTyped layerUnderRestore}"
+  match Api.printModule "main" layerUnderRestore with
+  | none => IO.println "  printModule: none"
+  | some m =>
+    IO.println (TypeScript.Render.module TypeScript.house0 m)
+    match Program.readModule (nativeSignature []) (nativeSpell []) m.decls with
+    | .ok back => IO.println s!"  readModule gives the program back: {decide (back = layerUnderRestore)}"
+    | .error _ => IO.println "  readModule: REFUSED"

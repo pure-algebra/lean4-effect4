@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# One hold of the Lean slot: the modules that harness/truth/Truth.lean imports (a narrow build),
+# then the truth lane through make, with its flags written out.
+set -uo pipefail
+cd <worktree>
+echo "== lake build of the imports of harness/truth/Truth.lean"
+lake build Test.Counterexamples.Machine.Semantics.InterruptEscape Test.Codegen.TermRows Test.Program.MaskContract Test.Program.QueueMask Test.Program.SemaphoreScenarios Test.Program.PoolPublic Tools.GeneratedStamp Tools.ProfileJson Effect4.Api Effect4.Laws.Api.Frontier Effect4.Laws.Program.Denote Test.Program.Gen; echo "imports-exit=$?"
+echo "== make check-truth"
+make -o build -o ts/eff/node_modules -o harness/truth/node_modules check-truth; echo "check-truth-exit=$?"
+echo "-- git status:"; git status --short; echo "-- end"

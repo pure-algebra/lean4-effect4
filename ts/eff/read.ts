@@ -2123,10 +2123,21 @@ const atLayer = (v: LayerTerm, back: (v: LayerTerm) => IrNode): Child =>
 const atLayers = (v: ReadonlyArray<LayerTerm>, back: (v: ReadonlyArray<LayerTerm>) => IrNode): Child =>
   [kLayers(v), (c) => (c.sort === "layers" ? back(c.layers) : undefined)]
 
+/** The default of each switch of `childrenOf`. Its argument has no value when every constructor
+ * of the sort has a case, so a constructor with no case is refused where this file is
+ * type-checked (`bun run typecheck`). The constructor lists are the generated types'
+ * (`eff.gen.ts`); `test/red/walkers.red.ts` is the red twin. */
+const noChildCase = (node: never): never => { throw new Error(`childrenOf has no case for ${JSON.stringify(node)}`) }
+
 /**
  * A node's children, in the order the path scheme numbers them — a node's children are these
  * and nothing else (`Node.child`). A spine is a cons cell: its head is child 0 and its tail
  * child 1, so element `i` of the spine at child `c` of `p` is at `p ++ [c] ++ [1]*i ++ [0]`.
+ *
+ * A hand copy of `Node.child`, which Lean generates (`src/Effect4/Program/NodeLenses.lean`).
+ * Every constructor has a case, a leaf too. Until 2026-10-06 a constructor with no case was a
+ * leaf without a word, and a `restore` had no child: a layer declared under a restore site
+ * went back to no path, and the module was refused.
  */
 export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
   switch (n.sort) {
@@ -2157,7 +2168,10 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "provideLayer":
           return [atLayer(e.layer, (layer) => kEff({ ...e, layer })), atEff(e.body, (body) => kEff({ ...e, body }))]
         case "provideService": return [atEff(e.body, (body) => kEff({ ...e, body }))]
-        default: return []
+        case "restore": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": case "service":
+          return []
+        default: return noChildCase(e)
       }
     }
     case "layer": {
@@ -2174,7 +2188,8 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "fresh": return [atLayer(l.inner, (inner) => kLayer({ ...l, inner }))]
         case "orDie": return [atLayer(l.inner, (inner) => kLayer({ ...l, inner }))]
         case "mergeAll": return [atLayers(l.layers, (layers) => kLayer({ ...l, layers }))]
-        default: return []
+        case "succeed": case "ref": return []
+        default: return noChildCase(l)
       }
     }
     case "stmt": {
@@ -2185,7 +2200,8 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "ifElse":
           return [atStmts(s.thenB, (thenB) => kStmt({ ...s, thenB })), atStmts(s.elseB, (elseB) => kStmt({ ...s, elseB }))]
         case "whileTrue": return [atStmts(s.body, (body) => kStmt({ ...s, body }))]
-        default: return []
+        case "ret": case "breakLoop": return []
+        default: return noChildCase(s)
       }
     }
     case "action": {
@@ -2195,7 +2211,11 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "forkIn": return [atEff(a.program, (program) => kAction({ ...a, program }))]
         case "forkScoped": return [atEff(a.program, (program) => kAction({ ...a, program }))]
         case "raceAll": return [atEffs(a.entrants, (entrants) => kAction({ ...a, entrants }))]
-        default: return []
+        case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
+        case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
+        case "getInterruptible":
+          return []
+        default: return noChildCase(a)
       }
     }
     case "stmts": {

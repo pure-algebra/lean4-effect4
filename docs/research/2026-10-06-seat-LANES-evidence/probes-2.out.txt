@@ -1,0 +1,126 @@
+== mask-extra, on the seat's head
+agree    Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(pipe(Effect.suc
+     ck  lifted ["bind",["withFiber",["getInterruptible"]],["restore",["var",0],["restore",["var",0],["succeed",["lit",["nat",
+agree    Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(Effect.succeed(
+     ck  lifted ["bind",["withFiber",["getInterruptible"]],["restore",["var",0],["succeed",["lit",["nat",1]]]]]
+agree    Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe((Effect.succeed
+     ck  lifted ["bind",["withFiber",["getInterruptible"]],["restore",["var",0],["succeed",["lit",["nat",1]]]]]
+agree    Effect.uninterruptibleMask(((r) => Effect.succeed(r)))
+     ck  lifted ["withFiber",["getInterruptible"]]
+agree    Effect.uninterruptibleMask((r) => (Effect.succeed(r)))
+     ck  lifted ["withFiber",["getInterruptible"]]
+agree    Effect.uninterruptibleMask((r) => Effect.succeed((r)))
+     ck  lifted ["withFiber",["getInterruptible"]]
+agree    Effect.uninterruptibleMask<number, never, never>((r) => Effect.succeed(r))
+     ck  lifted ["withFiber",["getInterruptible"]]
+agree    Effect.uninterruptibleMask((r: unknown) => Effect.succeed(r))
+     ck  lifted ["withFiber",["getInterruptible"]]
+DISAGREE Effect.uninterruptibleMask((r) => Effect.succeed(r))()
+     ck  E-NODE: fragment node: arity
+     oxc E-BIND-SHAPE: binding shape: arity
+agree    Effect.uninterruptibleMask((r) => Effect?.succeed(r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask((r) => Effect.succeed?.(r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask((r) => Effect['succeed'](r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask(...[(r) => Effect.succeed(r)])
+     ck  E-SPINE-ESCAPE: spine escape: spread
+agree    Effect.uninterruptibleMask((...r) => Effect.succeed(r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask(({ r }) => Effect.succeed(r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask((r) => Effect.fail(r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask((r) => succ(r))
+     ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(Effect.succeed(
+     ck  E-BIND-SHAPE: binding shape: unary reference
+     oxc E-OP-RECEIVER: unresolved receiver: undefined
+agree    Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(r, r))
+     ck  E-NODE: fragment node: shape
+agree    Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(Effect.succeed(
+     ck  lifted ["bind",["withFiber",["getInterruptible"]],["succeed",["lit",["nat",1]]]]
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe())
+     ck  E-NODE: fragment node: argument
+     oxc E-BIND-SHAPE: binding shape: arity
+agree    Effect.gen(function* () { const r = yield* Effect.uninterruptibleMask((r) => Effect.succeed(r));
+     ck  lifted ["gen",["cons",["bindYield",["withFiber",["getInterruptible"]]],["cons",["bindYield",["restore",["var",0],["su
+agree    Effect.gen(function* () { const r = yield* Effect.uninterruptibleMask((r) => Effect.succeed(r));
+     ck  lifted ["gen",["cons",["bindYield",["withFiber",["getInterruptible"]]],["cons",["ifElse",["lit",["bool",true]],["cons
+== mask-extra, on the base 6d10fcc0
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(pipe(Effect.suc
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(Effect.succeed(
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe((Effect.succeed
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask(((r) => Effect.succeed(r)))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => (Effect.succeed(r)))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => Effect.succeed((r)))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask<number, never, never>((r) => Effect.succeed(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r: unknown) => Effect.succeed(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => Effect.succeed(r))()
+     ck  E-NODE: fragment node: arity
+     oxc E-BIND-SHAPE: binding shape: arity
+DISAGREE Effect.uninterruptibleMask((r) => Effect?.succeed(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => Effect.succeed?.(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => Effect['succeed'](r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+agree    Effect.uninterruptibleMask(...[(r) => Effect.succeed(r)])
+     ck  E-SPINE-ESCAPE: spine escape: spread
+DISAGREE Effect.uninterruptibleMask((...r) => Effect.succeed(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask(({ r }) => Effect.succeed(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => Effect.fail(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.uninterruptibleMask((r) => succ(r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(Effect.succeed(
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(r, r))
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe(Effect.succeed(
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => pipe())
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.gen(function* () { const r = yield* Effect.uninterruptibleMask((r) => Effect.succeed(r));
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Effect.gen(function* () { const r = yield* Effect.uninterruptibleMask((r) => Effect.succeed(r));
+     ck  E-ARG-DYNAMIC: dynamic argument: term
+     oxc E-NODE: fragment node: Effect.uninterruptibleMask
+== mask-forms, on the seat's head
+agree | as expected | a restore site in the second argument of andThen, its saved state bound outside 
+    ["bind",["withFiber",["getInterruptible"]],["bind",["succeed",["lit",["nat",1]]],["restore",["var",0],["succeed",["lit",["nat",2]]]]]]
+agree | as expected | a whole mask in the second argument of andThen 
+    ["bind",["succeed",["lit",["nat",1]]],["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",1],["succeed",["lit",["nat",2]]]]]]]
+agree | as expected | a mask as the first argument of tap, with a continuation 
+    ["bind",["withFiber",["getInterruptible"]],["bind",["restore",["var",0],["succeed",["lit",["nat",2]]]],["succeed",["var",0]]]]

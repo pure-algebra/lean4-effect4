@@ -1,0 +1,8 @@
+tsdiag: 408 programs, one native run in 0.24s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed
+tsgo command line: exit 1
+pairs from the command line: 671; pairs from the lane: 671
+the two multisets are equal
+command-line diagnostics outside programs/: 0
+by code, from the lane:
+ 493 2345;  61 2322;  32 2769;  30 2872;  20 2375;  12 1107;   7 7005;   4 7034;   4 2873;   4 2379;   2 2739;   1 2740;   1 1345;

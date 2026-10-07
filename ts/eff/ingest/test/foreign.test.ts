@@ -3,7 +3,7 @@ import { recognizeSource as ck } from "../ck.ts"
 import { recognizeSource as oxc } from "../oxc.ts"
 import { compareVerdicts } from "../gate.ts"
 import { canonJson, sourceEditKey } from "../contract.ts"
-import type { Eff, Term } from "../../eff.gen.ts"
+import type { Eff, LayerTerm, Term } from "../../eff.gen.ts"
 
 for (const recognizeSource of [ck, oxc]) {
 
@@ -387,4 +387,141 @@ test("both engines refuse a bare value or an atom application in program positio
   }
   // `Effect.fail(e)` is the failure's spelling, and lifts in both.
   expect(ck(header + "const p = Effect.fail(7)", "fail.ts").map(v => v.kind)).toEqual(["lifted"])
+})
+
+// Seat LANES (decisions rows 244 to 246 and 289): the mask that restores, in foreign source. The
+// foreign contract reads the mask's two printed rows and nothing else of it: the getter as
+// `Effect.uninterruptibleMask((r) => Effect.succeed(r))`, and a restore site as
+// `pipe(body, saved)` whose one segment is a binder. The native callback spelling has no reading
+// (decisions row 215).
+const maskHeader = 'import { Effect, pipe } from "effect"\n'
+const maskGetter = (r: string) => `Effect.uninterruptibleMask((${r}) => Effect.succeed(${r}))`
+const one: Eff = { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 1 } } }
+const getInterruptible: Eff = { _tag: "withFiber", action: { _tag: "getInterruptible" } }
+const restoreAt = (index: number, body: Eff): Eff => ({ _tag: "restore", saved: { _tag: "var", index }, body })
+const lifts = (source: string): readonly Eff[] => {
+  const left = ck(source, "mask.ts"), right = oxc(source, "mask.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  return [left, right].map(result => {
+    const v = result[0]
+    if (result.length !== 1 || v?.kind !== "lifted") throw new Error("expected one lift: " + JSON.stringify(result))
+    return v.eff
+  })
+}
+const refusals = (source: string): readonly string[] => {
+  const left = ck(source, "mask.ts"), right = oxc(source, "mask.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  return left.map(v => v.kind === "refusal" ? `${v.code} ${v.detail}` : v.kind)
+}
+
+test("both engines lift the mask's printed rows under every spelling of the call around them", () => {
+  const masked: Eff = { _tag: "bind", first: getInterruptible, rest: { _tag: "uninterruptible", body: restoreAt(0, one) } }
+  const rest = (r: string) => `(${r}) => Effect.uninterruptible(pipe(Effect.succeed(1), ${r}))`
+  for (const source of [
+    // the printed image, and the same under names of the source's own
+    maskHeader + `export const program = Effect.flatMap(${maskGetter("a0")}, ${rest("a0")})`,
+    maskHeader + `export const program = Effect.flatMap(${maskGetter("restore")}, ${rest("saved")})`,
+    // the four pipe spellings of the dual call around the two rows (`Styles.applyHead`)
+    maskHeader + `export const program = (${maskGetter("r")}).pipe(Effect.flatMap(${rest("r")}))`,
+    maskHeader + `export const program = pipe(${maskGetter("r")}, Effect.flatMap(${rest("r")}))`,
+    maskHeader + `export const program = Effect.flatMap(${rest("r")})(${maskGetter("r")})`,
+    maskHeader + `export const program = (${maskGetter("r")}).pipe((_self) => Effect.flatMap(_self, ${rest("r")}))`,
+    // the heads through a namespace import, and `pipe` through its own module
+    'import { pipe } from "effect"\nimport * as E from "effect/Effect"\n' +
+      "export const program = E.flatMap(E.uninterruptibleMask((r) => E.succeed(r)), (r) => E.uninterruptible(pipe(E.succeed(1), r)))",
+    'import { Effect } from "effect"\nimport { pipe } from "effect/Function"\n' +
+      `export const program = Effect.flatMap(${maskGetter("r")}, ${rest("r")})`,
+  ]) for (const eff of lifts(source)) expect(eff).toEqual(masked)
+})
+
+test("a restore site names the binder of its own mask among two, and a binder that a generator declares", () => {
+  const nested = maskHeader + `export const program = Effect.flatMap(${maskGetter("a")}, (outer) => Effect.uninterruptible(` +
+    `Effect.flatMap(${maskGetter("b")}, (inner) => Effect.uninterruptible(` +
+    "Effect.flatMap(pipe(Effect.succeed(1), inner), (x) => pipe(Effect.succeed(x), outer))))))"
+  const mask = (body: Eff): Eff => ({ _tag: "bind", first: getInterruptible, rest: { _tag: "uninterruptible", body } })
+  for (const eff of lifts(nested)) expect(eff).toEqual(mask(mask({ _tag: "bind", first: restoreAt(1, one),
+    rest: restoreAt(0, { _tag: "succeed", value: { _tag: "var", index: 2 } }) })))
+  const generator = maskHeader + `export const program = Effect.gen(function* () { const saved = yield* ${maskGetter("r")}; ` +
+    "yield* Effect.uninterruptible(pipe(Effect.succeed(1), saved)); return undefined })"
+  for (const eff of lifts(generator)) expect(eff).toEqual({ _tag: "gen", body: [
+    { _tag: "bindYield", effect: getInterruptible },
+    { _tag: "yieldDiscard", effect: { _tag: "uninterruptible", body: restoreAt(0, one) } },
+    { _tag: "ret", value: { _tag: "lit", value: { _tag: "unit" } } },
+  ] })
+})
+
+test("any other use of the mask is one refusal in both engines, the native callback spelling among them", () => {
+  for (const argument of [
+    "(restore) => restore(Effect.succeed(1))",       // the native callback spelling
+    "(r) => Effect.succeed(1)",                      // the body does not answer the parameter
+    "(r) => Effect.succeed(r, r)",
+    "(Effect) => Effect.succeed(Effect)",            // the body's head starts at the parameter
+    "(r, s) => Effect.succeed(r)",
+    "(r = 1) => Effect.succeed(r)",
+    "async (r) => Effect.succeed(r)",
+    "(r) => { return Effect.succeed(r) }",
+    "function (r) { return Effect.succeed(r) }",
+    "",                                              // no argument
+    "(r) => Effect.succeed(r), 1",
+  ]) expect(refusals(maskHeader + `export const program = Effect.uninterruptibleMask(${argument})`))
+    .toEqual(["E-ARG-CLOSURE unknown closure: Effect.uninterruptibleMask"])
+})
+
+test("a restore site has one spelling: every other place of a saved state is refused alike", () => {
+  const under = (site: string) => maskHeader + `export const program = Effect.flatMap(${maskGetter("r")}, (r) => ${site})`
+  for (const site of [
+    "Effect.succeed(1).pipe(r)",     // a method pipe
+    "r(Effect.succeed(1))",          // the native application
+    "pipe(Effect.succeed(1), r, r)", // two segments
+  ]) expect(refusals(under(site))).toEqual(["E-OP-RECEIVER unresolved receiver: r"])
+  // a name that no binder holds is no saved state
+  expect(refusals(maskHeader + "export const program = pipe(Effect.succeed(1), nowhere)"))
+    .toEqual(["E-OP-RECEIVER unresolved receiver: nowhere"])
+  // `pipe` with a segment of the pinned `effect` is piping, as before
+  for (const eff of lifts(under("pipe(Effect.succeed(1), Effect.flatMap((x) => Effect.succeed(x)))")))
+    expect(eff).toEqual({ _tag: "bind", first: getInterruptible, rest: { _tag: "bind", first: one,
+      rest: { _tag: "succeed", value: { _tag: "var", index: 1 } } } })
+})
+
+// A derived form that inserts a binder re-reads its argument one level up (`effectSlot`,
+// `ingest/forms.ts`; Lean `Forms.insert`). A saved state bound outside keeps its level, and a mask
+// inside the argument binds its saved state above the inserted binder.
+test("the mask's rows keep their binders under a form that inserts one", () => {
+  const two: Eff = { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 2 } } }
+  const cases: ReadonlyArray<readonly [string, Eff]> = [
+    [`Effect.flatMap(${maskGetter("r")}, (r) => Effect.andThen(Effect.succeed(1), pipe(Effect.succeed(2), r)))`,
+      { _tag: "bind", first: getInterruptible, rest: { _tag: "bind", first: one, rest: restoreAt(0, two) } }],
+    [`Effect.andThen(Effect.succeed(1), Effect.flatMap(${maskGetter("r")}, (s) => Effect.uninterruptible(pipe(Effect.succeed(2), s))))`,
+      { _tag: "bind", first: one, rest: { _tag: "bind", first: getInterruptible, rest: { _tag: "uninterruptible", body: restoreAt(1, two) } } }],
+    [`Effect.tap(${maskGetter("r")}, (s) => pipe(Effect.succeed(2), s))`,
+      { _tag: "bind", first: getInterruptible, rest: { _tag: "bind", first: restoreAt(0, two), rest: { _tag: "succeed", value: { _tag: "var", index: 0 } } } }],
+  ]
+  for (const [body, expected] of cases) for (const eff of lifts(maskHeader + "export const program = " + body)) expect(eff).toEqual(expected)
+})
+
+// A layer constant used under a restore site. Both engines walk into the site's body: the ck
+// engine by `walkProgram`, the oxc engine by `childrenOf` of `read.ts`. Until 2026-10-06 neither
+// walker had the case, and the oxc engine left the definition's index where the layer's path
+// belongs.
+test("a layer definition under a restore site resolves to its path in both engines", () => {
+  const source = 'import { Effect, Layer, Context, pipe } from "effect"\n' +
+    'const Live = Layer.succeed(Context.Service<number>("K"), 7)\n' +
+    `export const program = Effect.flatMap(${maskGetter("r")}, (r) => Effect.uninterruptible(pipe(` +
+    "Effect.flatMap(Effect.provide(Effect.succeed(1), Live), (x) => Effect.provide(Effect.succeed(2), Live)), r)))\n"
+  const left = ck(source, "mask-layer.ts"), right = oxc(source, "mask-layer.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  const k44 = { name: { value: 4 }, service: { value: 4 } }
+  const provide = (layer: LayerTerm, n: number): Eff =>
+    ({ _tag: "provideLayer", layer, isLocal: false, body: { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: n } } } })
+  for (const result of [left, right]) {
+    const v = result.find(v => v.unit.name === "program")
+    if (v?.kind !== "lifted") throw new Error("expected a lift: " + JSON.stringify(v))
+    expect(v.eff).toEqual({ _tag: "bind", first: getInterruptible, rest: { _tag: "uninterruptible", body: restoreAt(0, {
+      _tag: "bind",
+      first: provide({ _tag: "succeed", key: k44, value: { _tag: "nat", value: 7 } }, 1),
+      rest: provide({ _tag: "ref", target: [1, 0, 0, 0, 0] }, 2),
+    }) } })
+    expect(v.layers).toEqual([{ sourceName: "Live", target: [1, 0, 0, 0, 0] }])
+    expect(v.keys).toEqual([{ ordinal: 4, service: 4, sourceId: "K" }])
+  }
 })

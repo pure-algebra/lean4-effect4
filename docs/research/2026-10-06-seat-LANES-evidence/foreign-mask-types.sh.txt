@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# An extra probe, outside every lane: the foreign corpus's mask sources under tsgo's type check,
+# with the corpus's compiler options. No lane types the foreign corpus (check-styles.ts reads
+# syntax alone). Usage: bash foreign-mask-types.sh <worktree> <scratch>
+set -uo pipefail
+W="$1"; S="$2"; T="$S/foreign-mask-types"
+rm -rf "$T" && mkdir -p "$T/src" && cp "$S"/foreign/*-mask-*.ts "$T/src/" && ln -s "$W/ts/eff/node_modules" "$T/node_modules"
+python3 - "$W/.lake/corpus/tsconfig.json" "$T/tsconfig.json" <<'PY'
+import json, sys
+config = json.load(open(sys.argv[1])); config['include'] = ['src']
+json.dump(config, open(sys.argv[2], 'w'), indent=2)
+PY
+echo "sources: $(ls "$T/src" | wc -l | tr -d ' ')"
+(cd "$T" && node "$W/ts/eff/node_modules/@typescript/native-preview/bin/tsgo" --pretty false --noEmit -p tsconfig.json) > "$S/foreign-mask-types.txt" 2>&1
+echo "tsgo exit: $?"
+cut -c1-230 "$S/foreign-mask-types.txt"
+echo "sources with a diagnostic: $(grep -oE '^src/[^(]+' "$S/foreign-mask-types.txt" | sort -u | wc -l | tr -d ' ')"

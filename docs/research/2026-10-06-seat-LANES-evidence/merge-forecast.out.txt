@@ -1,0 +1,46 @@
+== the coordinator's branch, and the seat's
+9dd89864 Merge slice REPLACE (15531103): the replacement law, and the two edits of a sketch
+commits past the base 6d10fcc0: 32
+39a044c0 Seat LANES: the receipt states the one fetch, and voids four runs of a probe
+== files changed since the base: the seat's 50, that branch's 75
+== files changed on both sides
+(end of that list)
+== that branch's changes outside docs, vendor and AGENTS.md, by status
+M	Test/All.lean
+A	Test/Program/ReplaceControls.lean
+A	Test/Program/SketchControls.lean
+M	Test/Program/SliceLattice.lean
+A	Test/Program/UnionRule.lean
+M	generated/semantics.md
+M	src/Effect4.lean
+M	src/Effect4/Laws.lean
+M	src/Effect4/Laws/Modules/Queue/Typing.lean
+A	src/Effect4/Laws/Program/Sketch.lean
+M	src/Effect4/Laws/Program/Typed.lean
+M	src/Effect4/Laws/Program/Typed/RecordOperations.lean
+A	src/Effect4/Laws/Program/Typing/Replace.lean
+M	src/Effect4/Laws/Program/Typing/TermIntro.lean
+A	src/Effect4/Laws/Program/UnionRule.lean
+M	src/Effect4/Laws/Slice/Lattice.lean
+M	src/Effect4/Program/Record.lean
+A	src/Effect4/Program/Sketch.lean
+A	src/Effect4/Program/UnionRule.lean
+M	tools/Tools/SemanticsRegistry.lean
+== the definitions that it changes in src/Effect4/Program/Record.lean
+-def joinResults (types : List Ty) : Ty := types.foldl Ty.join .never
++def joinResults (types : List Ty) : Ty := UnionRule.joinAll types
+-  ((Ty.members target.normalize).mapM (fieldOf optional name)).map joinResults
++  UnionRule.lift (fieldOf optional name) target
+-  ((Ty.members target.normalize).mapM (setOf name valueType)).map joinResults
++  UnionRule.lift (setOf name valueType) target
+== the lifted rule and its join on that branch
+def joinAll (answers : List α) : α :=
+  answers.foldl Answer.join Answer.bot
+--
+def lift (rule : Ty → Option α) (target : Ty) : Option α :=
+  (target.normalize.members.mapM rule).map joinAll
+== the corpus index: that branch against the base, and the two working files
+that branch moves neither generated/corpus-index.tsv nor generated/tsdiag-agreement.tsv
+the coordinator's working index has the worktree's bytes
+== the forecast's time
+2026-10-06 18:49:23

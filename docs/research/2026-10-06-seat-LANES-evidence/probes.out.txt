@@ -1,0 +1,144 @@
+== children-probe, on the seat's head
+effect that the reader loads: 4.0.0-rc.112 at <coordinator>/ts/eff/node_modules/effect ; bun 1.4.2
+layer under a restore site: read ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"
+control: the same layer under interruptible: read ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["interruptible",["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"valu
+childrenOf(restore).length = 1 ; childrenOf(interruptible).length = 1
+== children-probe, on the base 6d10fcc0
+effect that the reader loads: 4.0.0-rc.112 at <coordinator>/ts/eff/node_modules/effect ; bun 1.4.2
+layer under a restore site: REFUSED shape module
+control: the same layer under interruptible: read ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["interruptible",["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"valu
+childrenOf(restore).length = 0 ; childrenOf(interruptible).length = 1
+== mask-layer, on the seat's head
+agreement: agree
+ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"value":4}},["nat",7]],false,["succeed",["lit",["nat",1]]]],["provideLayer",["ref",[1,0,0,0,0]],false,["succeed",["lit",["nat",2]]]]]]]] layers [{"sourceName":"Live","target":[1,0,0,0,0]}] keys [{"ordinal":4,"service":4,"sourceId":"K"}]
+oxc ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["bind",["provideLayer",["succeed",{"name":{"value":4},"service":{"value":4}},["nat",7]],false,["succeed",["lit",["nat",1]]]],["provideLayer",["ref",[1,0,0,0,0]],false,["succeed",["lit",["nat",2]]]]]]]] layers [{"sourceName":"Live","target":[1,0,0,0,0]}] keys [{"ordinal":4,"service":4,"sourceId":"K"}]
+== mask-layer, on the base 6d10fcc0
+agreement: disagree
+ck  E-ARG-DYNAMIC: dynamic argument: term
+oxc E-NODE: fragment node: Effect.uninterruptibleMask
+== mask-engines, on the seat's head
+agree    printed
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    foreign names
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    method pipe
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    function pipe
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    curried
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    eta
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    namespace
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    Function.pipe
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]]
+agree    generator
+    ck  ["gen",["cons",["bindYield",["withFiber",["getInterruptible"]]],["cons",["yieldDiscard",["uninterruptible",["restore",["var",0],["succeed",["lit",["nat",1]]]]]],["cons",["ret",["lit",["unit"]]],["nil"]]]]]
+agree    nested
+    ck  ["bind",["withFiber",["getInterruptible"]],["uninterruptible",["bind",["withFiber",["getInterruptible"]],["uninterruptible",["bind",["restore",["var",1],["succeed",["lit",["nat",1]]]],["restore",["var",0],["succeed",["var",2]]]]]]]]
+agree    REFUSE native callback
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE body answers a literal
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE head starts at the parameter
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE two parameters
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE no argument
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE async
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE block body
+    ck  E-ARG-CLOSURE: unknown closure: Effect.uninterruptibleMask
+agree    REFUSE body.pipe(saved)
+    ck  E-OP-RECEIVER: unresolved receiver: r
+agree    REFUSE saved(body)
+    ck  E-OP-RECEIVER: unresolved receiver: r
+agree    REFUSE three arguments
+    ck  E-OP-RECEIVER: unresolved receiver: r
+agree    REFUSE unbound saved
+    ck  E-OP-RECEIVER: unresolved receiver: nowhere
+agree    REFUSE mask as a segment
+    ck  E-BIND-SHAPE: binding shape: unary reference
+agree    a binder that is no saved state
+    ck  ["bind",["succeed",["lit",["nat",1]]],["restore",["var",0],["succeed",["lit",["nat",2]]]]]
+== mask-engines, on the base 6d10fcc0
+DISAGREE printed
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE foreign names
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE method pipe
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE function pipe
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE curried
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE eta
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE namespace
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE Function.pipe
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE generator
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE nested
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE native callback
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE body answers a literal
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE head starts at the parameter
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE two parameters
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE no argument
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE async
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE block body
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE body.pipe(saved)
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE saved(body)
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+DISAGREE REFUSE three arguments
+    ck  E-ARG-DYNAMIC: dynamic argument: term
+    oxc E-NODE: fragment node: Effect.uninterruptibleMask
+agree    REFUSE unbound saved
+    ck  E-OP-RECEIVER: unresolved receiver: nowhere
+agree    REFUSE mask as a segment
+    ck  E-BIND-SHAPE: binding shape: unary reference
+agree    a binder that is no saved state
+    ck  E-OP-RECEIVER: unresolved receiver: a
+== residual, on the seat's head
+disagree a known head that is no segment, as a method segment | ck: E-BIND-SHAPE: binding shape: pipe segment | oxc: E-NODE: fragment node: Effect.succeed
+disagree the mask as a call segment | ck: E-BIND-SHAPE: binding shape: pipe segment | oxc: E-NODE: fragment node: Effect.uninterruptibleMask
+disagree a literal as a function-pipe segment | ck: E-SPINE-ESCAPE: spine escape: member | oxc: E-SPINE-ESCAPE: spine escape: Literal
+disagree a literal as a method segment | ck: E-SPINE-ESCAPE: spine escape: member | oxc: E-SPINE-ESCAPE: spine escape: Literal
+disagree wrong arity of a direct head | ck: E-NODE: fragment node: arity | oxc: E-BIND-SHAPE: binding shape: arity
+== residual, on the base 6d10fcc0
+disagree a known head that is no segment, as a method segment | ck: E-BIND-SHAPE: binding shape: pipe segment | oxc: E-NODE: fragment node: Effect.succeed
+disagree the mask as a call segment | ck: E-BIND-SHAPE: binding shape: pipe segment | oxc: E-NODE: fragment node: Effect.uninterruptibleMask
+disagree a literal as a function-pipe segment | ck: E-SPINE-ESCAPE: spine escape: member | oxc: E-SPINE-ESCAPE: spine escape: Literal
+disagree a literal as a method segment | ck: E-SPINE-ESCAPE: spine escape: member | oxc: E-SPINE-ESCAPE: spine escape: Literal
+disagree wrong arity of a direct head | ck: E-NODE: fragment node: arity | oxc: E-BIND-SHAPE: binding shape: arity

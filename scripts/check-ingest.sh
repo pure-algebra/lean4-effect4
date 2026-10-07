@@ -17,7 +17,9 @@ command -v bun >/dev/null
 command -v node >/dev/null
 command -v opam >/dev/null
 before_lock="$(sha256 ts/eff/bun.lock)"
-(cd ts/eff && bun install --frozen-lockfile)
+# No install here (decisions rows 289 and 295): the Makefile's rule `ts/eff/node_modules` is the
+# one place that installs. This step reads the installed versions against the lock and stops.
+python3 scripts/check-lock-install.py "$repo_root" || { echo 'FAIL ingest: ts/eff/node_modules differs from ts/eff/bun.lock; the rule ts/eff/node_modules of the Makefile installs' >&2; exit 1; }
 [[ "$(sha256 ts/eff/bun.lock)" = "$before_lock" ]] || { echo 'FAIL ingest: lockfile drift' >&2; exit 1; }
 bun ts/eff/ingest/cli.ts --help >/dev/null
 lean_run tools/Drivers/Corpus.lean --foreign "$work/foreign" 400 4

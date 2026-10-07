@@ -1,0 +1,16 @@
+// Probe: refusals on which the two engines differ, near the mask's heads. Read-only.
+import { recognizeSource as ck } from "<worktree>/ts/eff/ingest/ck.ts"
+import { recognizeSource as oxc } from "<worktree>/ts/eff/ingest/oxc.ts"
+import { compareVerdicts } from "<worktree>/ts/eff/ingest/gate.ts"
+const h = 'import { Effect, pipe } from "effect"\n'
+for (const [name, body] of [
+  ["a known head that is no segment, as a method segment", "Effect.succeed(1).pipe(Effect.succeed(2))"],
+  ["the mask as a call segment", "Effect.succeed(1).pipe(Effect.uninterruptibleMask((r) => Effect.succeed(r)))"],
+  ["a literal as a function-pipe segment", "pipe(Effect.succeed(1), true)"],
+  ["a literal as a method segment", "Effect.succeed(1).pipe(1)"],
+  ["wrong arity of a direct head", "Effect.succeed(1, 2)"],
+] as const) {
+  const l = ck(h + "export const program = " + body, "x.ts"), r = oxc(h + "export const program = " + body, "x.ts")
+  const show = (vs: typeof l) => vs.map(v => v.kind === "lifted" ? "lifted" : v.code + ": " + v.detail).join(" ; ")
+  console.log(compareVerdicts(l, r).status.padEnd(8), name, "| ck:", show(l), "| oxc:", show(r))
+}

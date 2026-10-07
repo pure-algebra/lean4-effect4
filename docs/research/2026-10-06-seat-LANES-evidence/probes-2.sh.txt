@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# The two later engine probes, on the seat's head and on the base's three files. bun only.
+# Every run is `bun --no-install`: no probe may make bun resolve a package outside node_modules.
+# Usage: bash probes-2.sh <worktree> <scratch>   (run probes.sh first: it builds <scratch>/base-tree)
+set -uo pipefail
+W="$1"; S="$2"; B="$S/base-tree"
+echo "== mask-extra, on the seat's head"
+bun --no-install "$S/probe/mask-extra.ts" 2>&1 | cut -c1-300
+echo "== mask-extra, on the base 6d10fcc0"
+sed "s|$W|$B|g" "$S/probe/mask-extra.ts" > "$S/probe/mask-extra-base.ts"
+bun --no-install "$S/probe/mask-extra-base.ts" 2>&1 | cut -c1-300
+echo "== mask-forms, on the seat's head"
+bun --no-install "$S/probe/mask-forms.ts" 2>&1 | cut -c1-300

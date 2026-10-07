@@ -119,6 +119,34 @@ def nativeProbes : List (String × Eff NativeOp) :=
       | _ => p
     ("native-" ++ toString index ++ "-" ++ row.name ++ "-" ++ "-".intercalate row.trailing, p)
 
+/-- The mask that restores (decisions rows 244 to 246), where the form is well formed: a restore
+site under the mask that saves its interruptibility. The mask is the derived form
+`bind (withFiber getInterruptible) (uninterruptible body)`, and a restore site names the getter's
+answer (`Eff.restore`, `src/Effect4/Program/Eff.lean`). The seeded generator draws neither
+constructor (`Test.Program.Gen.pendingEffs` and `pendingActions`), so these probes hold the
+corpus's only `restore` and `getInterruptible`. Four shapes:
+
+* one restore site;
+* two masks, with a restore site of each saved state inside the inner one, so a reader must
+  tell the two binders apart;
+* a generator that binds the saved state with `const`;
+* a layer and a reference to it under a restore site. The layer's path goes through the site
+  (`Node.child`: a restore site's body is its child 0), so a reader that resolves the reference
+  must walk into the site's body. -/
+def maskProbes : List (String × Eff NativeOp) :=
+  let mask (body : Eff NativeOp) : Eff NativeOp :=
+    .bind (.withFiber .getInterruptible) (.uninterruptible body)
+  let one : Eff NativeOp := .succeed (.lit (.nat 1))
+  [ ("mask-restore", mask (.restore (.var 0) one))
+  , ("mask-nested", mask (mask (.bind (.restore (.var 1) one)
+      (.restore (.var 0) (.succeed (.var 2))))))
+  , ("mask-gen", .gen (.cons (.bindYield (.withFiber .getInterruptible))
+      (.cons (.yieldDiscard (.uninterruptible (.restore (.var 0) one)))
+      (.cons (.ret (.lit .unit)) .nil))))
+  , ("mask-layer", mask (.restore (.var 0)
+      (.bind (.provideLayer (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 7)) false one)
+        (.provideLayer (.ref [1, 0, 0, 0, 0]) false (.succeed (.lit (.nat 2))))))) ]
+
 def corpus (dir : System.FilePath) (skeletons : List (String × Eff NativeOp)) : IO Unit := do
   IO.FS.createDirAll dir
   let mut index := "name\tstyle\tbytes\n"
@@ -126,7 +154,7 @@ def corpus (dir : System.FilePath) (skeletons : List (String × Eff NativeOp)) :
   let mut total := 0
   for c in Tools.Styles.isolated do
     let mut count := 0
-    for (name, skeleton) in skeletons ++ Tools.Styles.probes ++ nativeProbes do
+    for (name, skeleton) in skeletons ++ Tools.Styles.probes ++ nativeProbes ++ maskProbes do
       let .ok kept := roundTrip nativeSignature nativeSpell 0 skeleton | throw (IO.userError s!"skeleton refused {name}")
       let (p, keys) := (program kept).run []
       -- The style renderer uses only names and values, never the main declaration's

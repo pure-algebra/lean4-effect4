@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# The lane's reading against the tsgo command line over the same work project: the pairs of
+# program and code must be the same multiset, and no diagnostic may stand outside programs/.
+# Usage: bash tsdiag-cli-crosscheck.sh <worktree> <scratch>
+set -uo pipefail
+W="$1"; S="$2"; work="$S/tsdiag-crosscheck"
+(cd "$W" && node harness/tsdiag/run-tsdiag.mjs "$W/.lake/corpus" "$work") | tail -2
+(cd "$work" && node "$W/ts/eff/node_modules/@typescript/native-preview/bin/tsgo" --pretty false --noEmit -p tsconfig.json) > "$S/tsdiag-cli.txt" 2>&1
+echo "tsgo command line: exit $?"
+grep -E '^[^ ].*\): error TS' "$S/tsdiag-cli.txt" | sed -E 's|^programs/([A-Za-z0-9]+)\.ts\([0-9]+,[0-9]+\): error TS([0-9]+):.*|\1 \2|' | sort > "$S/cli-pairs.txt"
+awk -F'\t' '!/^#/ && NF {print $1, $4}' "$work/diagnostics.tsv" | sort > "$S/api-pairs.txt"
+echo "pairs from the command line: $(wc -l < "$S/cli-pairs.txt" | tr -d ' '); pairs from the lane: $(wc -l < "$S/api-pairs.txt" | tr -d ' ')"
+if diff -q "$S/cli-pairs.txt" "$S/api-pairs.txt" > /dev/null; then echo "the two multisets are equal"; else echo "THE TWO MULTISETS DIFFER"; fi
+echo "command-line diagnostics outside programs/: $(grep -E '^[^ ].*\): error TS' "$S/tsdiag-cli.txt" | grep -vc '^programs/')"
+echo "by code, from the lane:"; awk '{print $2}' "$S/api-pairs.txt" | sort | uniq -c | sort -rn | tr '\n' ';'; echo

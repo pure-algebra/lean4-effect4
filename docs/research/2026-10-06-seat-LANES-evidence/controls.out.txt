@@ -1,0 +1,26 @@
+the corpus's mask files: 84 sources
+== A0 the head
+   exit=0
+== A1 ts/eff/read.ts as at the base 6d10fcc0
+error: baseline-mask-layer: Error: engine disagreement: {"left":[{"kind":"lifted","unit":{"file":"baseline-mask-layer.ts","name":"program","span":{"start":200,"end":442}},"keys":[{"ordinal":4,"service":4,"sourceId":"k4_4"}]}],"right":[{"kind":"lifted","unit":{"file":"baseline-mask-layer.ts","name":"program","span":{"start":200,"
+   exit=1
+== A2 walkProgram takes a restore site as a leaf
+error: baseline-mask-layer: Error: engine disagreement: {"left":[{"kind":"lifted","unit":{"file":"baseline-mask-layer.ts","name":"program","span":{"start":200,"end":442}},"keys":[]}],"right":[{"kind":"lifted","unit":{"file":"baseline-mask-layer.ts","name":"program","span":{"start":200,"end":442}},"keys":[{"ordinal":4,"service":4
+   exit=1
+== A3 the two engines as at the base 6d10fcc0
+error: baseline-mask-gen: Error: engine disagreement: {"left":[{"kind":"refusal","unit":{"file":"baseline-mask-gen.ts","name":"program","span":{"start":121,"end":311}},"code":"E-ARG-DYNAMIC","detail":"dynamic argument: term"}],"right":[{"kind":"refusal","unit":{"file":"baseline-mask-gen.ts","name":"program","span":{"start":121,"
+   exit=1
+== B0 the head type-checks
+   exit=0
+== B1 walkProgram without its restore case
+ingest/ck.ts(184,30): error TS2345: Argument of type '{ readonly _tag: "restore"; readonly saved: Term; readonly body: Eff; }' is not assignable to parameter of type 'never'.
+   exit=1
+== B2 the coverage walker without its restore case
+ingest/check-coverage.ts(52,28): error TS2345: Argument of type '"restore"' is not assignable to parameter of type 'never'.
+   exit=1
+== B3 the coverage walker without the action getInterruptible
+ingest/check-coverage.ts(74,28): error TS2345: Argument of type '"getInterruptible"' is not assignable to parameter of type 'never'.
+   exit=1
+== B4 childrenOf without its restore case
+read.ts(2173,37): error TS2345: Argument of type '{ readonly _tag: "restore"; readonly saved: Term; readonly body: Eff; }' is not assignable to parameter of type 'never'.
+   exit=1

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Read-only: what bun's home holds from the seat's session (it began 2026-10-06 17:19).
+# It runs no bun, and it writes nothing under ~/.bun.
+# Usage: bash incident-measure.sh <worktree> <scratch>
+set -uo pipefail
+cache="$HOME/.bun/install/cache"
+since="2026-10-06 17:19:00"
+echo "== every path under ~/.bun, at any depth, that changed after the session began"
+find "$HOME/.bun" -newermt "$since" | sed "s|$HOME|~|"
+echo "== every path under ~/.bun, at any depth, that was created after the session began"
+find "$HOME/.bun" -newerBt "$since" | sed "s|$HOME|~|"
+echo "== the manifest cache of effect"
+stat -f '%N  %z bytes  modified %Sm  created %SB' -t '%Y-%m-%d %H:%M:%S' "$cache/b7c5cc8194df205f.npm" | sed "s|$HOME|~|"
+strings "$cache/b7c5cc8194df205f.npm" | sed -n '2,3p'
+echo "== the probe that asked: the file's creation (its first run is the same command)"
+stat -f '%N  created %SB' -t '%Y-%m-%d %H:%M:%S' "$2/probe/children-probe.ts"
+echo "== the version folders of effect in the cache, newest first (none is from the session)"
+ls -lT "$cache/effect" | awk 'NR>1 {print $6, $7, $8, $9, $10}' | sort -k4,4 -k1,1M -k2,2n -k3,3 | tail -3
+echo "== node_modules above the worktree's root and above the scratch folder"
+for d in "$1/node_modules" "$(dirname "$1")/node_modules" "$HOME/node_modules" "$2/node_modules" "$(dirname "$2")/node_modules"; do
+  if [ -e "$d" ]; then echo "present: $d"; else echo "absent"; fi
+done
+echo "== the measure's time"
+date '+%Y-%m-%d %H:%M:%S'

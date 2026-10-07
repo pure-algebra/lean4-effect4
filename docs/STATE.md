@@ -302,10 +302,10 @@ the state at the handover point and the integration procedure as practiced.
 
 The set is landed, and the sweep ran on `ea0f584a` (row 289). `make check` and
 `make check-slow` pass, and the release ledger matches. Three targets of `make check-full`
-are red. `check-ingest` is red since seat MASK's merge: the constructed foreign corpus builds
-no `restore` form. `check-tsdiag` is red because its harness drifted, and it measures nothing
-today. `check-schema-ts` asks for an input that is not set. The first two are repairs with no
-seat yet. The law of a whole run for a module's operation is not in the set. It is the
+were red. Two are repaired (seat LANES, row 295). `check-ingest` was red since seat MASK's
+merge: the constructed foreign corpus built no `restore` form. `check-tsdiag` was red because
+its harness had drifted, and it measured nothing. `check-schema-ts` still asks for an input
+that is not set. The law of a whole run for a module's operation is not in the set. It is the
 main open theory, and it starts with a design question. The owner asked for a discussion of
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
@@ -381,6 +381,18 @@ In work since the suspension of the handover:
   `hole-rule`. `Sketch.check` is the checker's answer: it admits no sketch to a later stage.
   A stored sketch is pinned to the row count of its application, and its renumbering is an
   open part of R14.
+- **Seat LANES is merged** ([its receipt](research/2026-10-06-seat-LANES-receipt.md); rows
+  289 and 295). The diagnostics lane measures again. One file holds a printed module's
+  imports (`harness/truth/module-imports.ts`), and the truth lane and the diagnostics lane
+  both read it. The lane copies the prelude's files as the compiler names them, it refuses
+  to write a table when its own project has a defect, and it runs eleven controls on every
+  run. The promoted table has 408 programs and no program that the checker types and tsgo 7
+  refuses. The ingest's census holds the `restore` form: the foreign corpus builds four mask
+  programs, both foreign engines read the mask's two printed rows, and three hand walkers
+  have a case for every constructor, held by the type check. The ingest's script installs
+  nothing now: it compares the installed versions with the lock
+  (`scripts/check-lock-install.py`). One probe of the seat made bun fetch a package manifest
+  from the registry, against the owner's rule. The owner heard of it the same day.
 - **Slice REPLACE is merged** ([its receipt](research/2026-10-06-seat-REPLACE-receipt.md);
   rows 288 and 294). The replacement law is one statement over a judgment of nodes
   (`NodeHasTy.replace`, the registry claim `typed-replacement`), with one step for each arm
@@ -1169,8 +1181,8 @@ Open at this landing:
   - the owner's guidance came with all three. Automate the repeated checks. Keep a question
     for the owner to a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:
-  - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
-    typed program reports a module error (seat T3b's reading);
+  - `check-tsdiag`: its harness copied the prelude without `prelude-atoms.gen.ts`, so every
+    typed program reported a module error (seat T3b's reading). It is repaired (row 295);
   - `check-schema-ts`: its host packages are not installed.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)

@@ -1,0 +1,57 @@
++ set -euo pipefail
+++ pwd -P
++ repo_root=<worktree>
++ cd <worktree>
++ printed=<worktree>/.lake/corpus
++ . scripts/lib/portable.sh
+++ mktemp -d <scratch>/tmp/effect4-ingest.XXXXXX
++ work=<scratch>/tmp/effect4-ingest.BjFzUw
++ trap 'rm -rf -- "$work"' EXIT
++ command -v bun
++ command -v node
++ command -v opam
+++ sha256 ts/eff/bun.lock
+++ local digest
+++ command -v sha256sum
++++ sha256sum ts/eff/bun.lock
+++ digest='55adfdf439e37323db32a4c7ffca43c9224119dfe3c0beb0f322da7c39b65145  ts/eff/bun.lock'
+++ printf '%s\n' 55adfdf439e37323db32a4c7ffca43c9224119dfe3c0beb0f322da7c39b65145
++ before_lock=55adfdf439e37323db32a4c7ffca43c9224119dfe3c0beb0f322da7c39b65145
+++ sha256 ts/eff/bun.lock
+++ local digest
+++ command -v sha256sum
++++ sha256sum ts/eff/bun.lock
+++ digest='55adfdf439e37323db32a4c7ffca43c9224119dfe3c0beb0f322da7c39b65145  ts/eff/bun.lock'
+++ printf '%s\n' 55adfdf439e37323db32a4c7ffca43c9224119dfe3c0beb0f322da7c39b65145
++ [[ 55adfdf439e37323db32a4c7ffca43c9224119dfe3c0beb0f322da7c39b65145 = \5\5\a\d\f\d\f\4\3\9\e\3\7\3\2\3\d\b\3\2\a\4\c\7\f\f\c\a\4\3\c\9\2\2\4\1\1\9\d\f\e\3\c\0\b\e\b\0\f\3\2\2\d\a\7\c\3\9\b\6\5\1\4\5 ]]
++ bun ts/eff/ingest/cli.ts --help
++ lean_run tools/Drivers/Corpus.lean --foreign <scratch>/tmp/effect4-ingest.BjFzUw/foreign 400 4
++ local lean_file=tools/Drivers/Corpus.lean
++ shift
++ local out err status
+++ mktemp <scratch>/tmp/effect4-lean-out.XXXXXX
++ out=<scratch>/tmp/effect4-lean-out.wi2HDW
+++ mktemp <scratch>/tmp/effect4-lean-err.XXXXXX
++ err=<scratch>/tmp/effect4-lean-err.W0qnJF
++ lake env lean -M4096 --run tools/Drivers/Corpus.lean --foreign <scratch>/tmp/effect4-ingest.BjFzUw/foreign 400 4
++ status=0
++ '[' 0 -ne 0 ']'
++ grep -v '^warning: manifest out of date' <scratch>/tmp/effect4-lean-out.wi2HDW
+foreign 22314; isolated 21; products 11520; forms 19 at four depths; construction JSON/wire/keys before readers
++ status=0
++ rm -f <scratch>/tmp/effect4-lean-out.wi2HDW <scratch>/tmp/effect4-lean-err.W0qnJF
++ return 0
++ bun ts/eff/ingest/check-coverage.ts <scratch>/tmp/effect4-ingest.BjFzUw/foreign
+59 | }
+60 | // The key must keep the profile's rows apart, or a missing name would hide behind another.
+61 | if (new Set(expected.row).size !== rows.length) throw new Error("the row coverage key collapses two profile rows")
+62 | for (const family of ["eff", "stmt", "action", "layer", "row"] as const) {
+63 |   const missing = expected[family].filter(n => !seen[family].has(n))
+64 |   if (missing.length) throw new Error(`missing ${family} coverage: ${missing.join(", ")}`)
+                                     ^
+error: missing eff coverage: restore
+      at <worktree>/ts/eff/ingest/check-coverage.ts:64:33
+
+Bun v1.4.2 (macOS arm64)
++ rm -rf -- <scratch>/tmp/effect4-ingest.BjFzUw
+exit=1

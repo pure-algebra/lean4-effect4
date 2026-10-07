@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Red controls of part 2, on a copy of ts/eff under the scratch folder. bun and tsgo only.
+# The copy's node_modules is a link to the worktree's, and every bun run is `bun --no-install`.
+# tsgo runs by its path under node_modules/.bin.
+#   A. the corpus's mask files (84 files, 4 probes under 21 styles) through `check-corpus.ts
+#      foreign-batch`: green on the head; red with the base's childrenOf, with a walkProgram
+#      that takes a restore site as a leaf, and with the base's two engines.
+#   B. the package's type check with one case removed from a walker: tsgo must refuse.
+# Usage: bash controls.sh <worktree> <scratch>   (<scratch>/foreign holds the foreign corpus)
+set -uo pipefail
+W="$1"; S="$2"; R="$S/ts-eff-red"; M="$S/foreign-mask"
+rm -rf "$M" && mkdir -p "$M" && cp "$S"/foreign/*-mask-* "$M/"
+echo "the corpus's mask files: $(ls "$M" | grep -c '\.ts$') sources"
+fresh() { rm -rf "$R" && mkdir -p "$R" && (cd "$W/ts/eff" && tar cf - --exclude node_modules .) | (cd "$R" && tar xf -) && ln -s "$W/ts/eff/node_modules" "$R/node_modules"; }
+batch() { (cd "$R" && bun --no-install ingest/check-corpus.ts foreign-batch "$M" 0 500 2>&1 | grep -E "^error:" | head -1 | cut -c1-330; echo "   exit=${PIPESTATUS[0]}"); }
+tsgo() { (cd "$R" && node_modules/.bin/tsgo --noEmit --pretty false -p tsconfig.json 2>&1 | cut -c1-260; echo "   exit=${PIPESTATUS[0]}"); }
+edit() { python3 - "$R/$1" "$2" "$3" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); t = p.read_text()
+assert t.count(sys.argv[2]) == 1, t.count(sys.argv[2])
+p.write_text(t.replace(sys.argv[2], sys.argv[3]))
+PY
+}
+echo "== A0 the head"; fresh; batch
+echo "== A1 ts/eff/read.ts as at the base 6d10fcc0"; fresh; (cd "$W" && git show 6d10fcc0:ts/eff/read.ts) > "$R/read.ts"; batch
+echo "== A2 walkProgram takes a restore site as a leaf"; fresh
+edit ingest/ck.ts 'case "iterate": case "scoped": case "restore":' 'case "iterate": case "scoped":'
+edit ingest/ck.ts 'case "yieldNow": case "awaitFiber": return e' 'case "yieldNow": case "awaitFiber": case "restore": return e'
+batch
+echo "== A3 the two engines as at the base 6d10fcc0"; fresh; (cd "$W" && git show 6d10fcc0:ts/eff/ingest/ck.ts) > "$R/ingest/ck.ts"; (cd "$W" && git show 6d10fcc0:ts/eff/ingest/oxc.ts) > "$R/ingest/oxc.ts"; batch
+echo "== B0 the head type-checks"; fresh; tsgo
+echo "== B1 walkProgram without its restore case"; fresh; edit ingest/ck.ts 'case "iterate": case "scoped": case "restore":' 'case "iterate": case "scoped":'; tsgo
+echo "== B2 the coverage walker without its restore case"; fresh; edit ingest/check-coverage.ts '    case "restore": eff(a[2]); return
+' ''; tsgo
+echo "== B3 the coverage walker without the action getInterruptible"; fresh; edit ingest/check-coverage.ts '    case "getInterruptible": return' '    return'; tsgo
+echo "== B4 childrenOf without its restore case"; fresh; edit read.ts '        case "restore": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+' ''; tsgo

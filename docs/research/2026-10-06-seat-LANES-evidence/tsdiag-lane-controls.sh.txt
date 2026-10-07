@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Lane-level controls of harness/tsdiag/run-tsdiag.mjs, run in a skeleton tree under the scratch
+# folder. The skeleton holds only what the lane reads, and it has no harness/truth/node_modules.
+# Usage: bash tsdiag-lane-controls.sh <worktree> <scratch>
+set -uo pipefail
+W="$1"; S="$2"; K="$S/skeleton"; C="$W/.lake/corpus"
+build() {
+  rm -rf "$K"
+  mkdir -p "$K/harness/truth/session" "$K/harness/tsdiag" "$K/ts/eff" "$K/generated"
+  cp "$W"/harness/truth/*.ts "$K/harness/truth/"
+  cp "$W"/harness/truth/session/*.ts "$K/harness/truth/session/"
+  cp "$W/harness/tsdiag/run-tsdiag.mjs" "$K/harness/tsdiag/"
+  cp "$W/ts/eff/profile.gen.ts" "$W/ts/eff/eff.gen.ts" "$K/ts/eff/"
+  ln -s "$W/ts/eff/node_modules" "$K/ts/eff/node_modules"
+  cp "$W/generated/tsdiag-agreement.tsv" "$K/generated/"
+}
+run() {
+  local label="$1"; shift
+  echo "== $label"
+  (cd "$K" && node harness/tsdiag/run-tsdiag.mjs "$C" "$S/skeleton-work" "$@" 2>&1) | sed "s|$S|<scratch>|g" | grep -v '^    at \|^$\|^Node.js\|^ *\^' | cut -c1-330 | head -7
+  echo "   exit=${PIPESTATUS[0]}"
+  if cmp -s "$K/generated/tsdiag-agreement.tsv" "$W/generated/tsdiag-agreement.tsv"; then echo "   the skeleton's table is the committed table"; else echo "   THE SKELETON'S TABLE CHANGED"; fi
+}
+build; test ! -e "$K/harness/truth/node_modules" && echo "the skeleton has no harness/truth/node_modules"
+run "K0 the skeleton as it is (expect PASS, exit 0)"
+build; printf '\nexport const broken: number = "text"\n' >> "$K/harness/truth/prelude.ts"
+run "K1 a prelude that does not check, with --promote (expect the lane's-own-files refusal, exit 1, table kept)" --promote
+build; printf 'export const laterName = (n: number): number => n + 1\n' > "$K/harness/truth/later-sibling.ts"; printf '\nexport * from "./later-sibling.ts"\n' >> "$K/harness/truth/prelude.ts"
+run "K2 a later sibling that the prelude re-exports (expect PASS, exit 0, 9 files)"
+build; sed -i.bak 's|\[\.\.\.atomNames, \.\.\.preludeHelpers|[...[...atomNames].filter(n => n !== "some"), ...preludeHelpers|' "$K/harness/truth/module-imports.ts"; grep -c 'filter(n => n !== "some")' "$K/harness/truth/module-imports.ts"
+run "K3 the one list without the atom some (expect a table that differs, exit 1)"
+build; printf '\nimport "../../ts/eff/profile.gen.ts"\n' >> "$K/harness/truth/prelude.ts"
+run "K4 the prelude reaches a file outside harness/truth (expect the refusal, exit 1)"
+build; sed -i.bak 's|"optionCase", "caseTag", "caseTagR",|"optionCase", "caseTag", "caseTagR", "notExportedByThePrelude",|' "$K/harness/truth/module-imports.ts"; grep -c 'notExportedByThePrelude' "$K/harness/truth/module-imports.ts"
+run "K6 the one list names what the prelude does not export, with --promote (expect the header refusal, exit 1, table kept)" --promote
+build; rm "$K/harness/truth/tuples.ts"
+run "K7 the tree's prelude lacks a file that it imports (expect prelude.ts: TS2307, exit 1)"
+build
+run "K8 the skeleton again, as it is (expect PASS, exit 0)"

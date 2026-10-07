@@ -4,6 +4,8 @@
 // reading.
 
 import { describe, expect, test } from "bun:test"
+import { spawnSync } from "node:child_process"
+import { resolve } from "node:path"
 import { Result } from "effect"
 import { isEff, type Eff, type LayerTerm, type Row, type Term, type Ty } from "../eff.gen.ts"
 import { toJson } from "../json.gen.ts"
@@ -477,6 +479,51 @@ describe("layer references", () => {
     const read = JSON.parse(json(source))
     expect(read[1]).toEqual(["merge", ["succeed", k44, ["nat", 7]], ["ref", [0, 0]]])
     expect(read[3][1]).toEqual(["ref", [0]])
+  })
+  // A restore site's body is its child 0 (`Node.child`, `src/Effect4/Program/NodeLenses.lean`).
+  // The first provision's layer is at [1, 0, 0, 0, 0]: root bind → child 1 uninterruptible →
+  // child 0 restore → child 0 bind → child 0 provideLayer → child 0. Until 2026-10-06
+  // `childrenOf` gave a restore no child, and this module was refused (`shape "module"`).
+  test("a target under a restore site is put back at its path", () => {
+    const source = [
+      `export const L_1_0_0_0_0 = Layer.succeed(${key}, 7)`,
+      `export const main = Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => ` +
+        `Effect.uninterruptible(pipe(Effect.flatMap(Effect.provide(Effect.succeed(1), L_1_0_0_0_0), ` +
+        `(a1) => Effect.provide(Effect.succeed(2), L_1_0_0_0_0)), a0)))`,
+    ].join("\n")
+    expect(JSON.parse(json(source))).toEqual([
+      "bind",
+      ["withFiber", ["getInterruptible"]],
+      ["uninterruptible", ["restore", ["var", 0], [
+        "bind",
+        ["provideLayer", ["succeed", k44, ["nat", 7]], false, ["succeed", ["lit", ["nat", 1]]]],
+        ["provideLayer", ["ref", [1, 0, 0, 0, 0]], false, ["succeed", ["lit", ["nat", 2]]]],
+      ]]],
+    ])
+  })
+})
+
+// The walkers' red twin. `childrenOf` (`read.ts`) ends every switch in a default that takes
+// `never`, as each hand walker over the program's sorts must. So the package's own type check
+// refuses a constructor of a sort that has no case there. tsgo 7, the one compiler, run on
+// `test/red/tsconfig.json`, must refuse each line of `test/red/walkers.red.ts`, a walker with a
+// case for every constructor of a sort but one, and it must name that constructor. Finite
+// compiler evidence against the generated types of `eff.gen.ts`.
+describe("a walker that lacks a constructor's case", () => {
+  test("the red twin fails at each default, with the constructor that has no case", () => {
+    const root = resolve(import.meta.dir, "..")
+    const tsgo = resolve(root, "node_modules/@typescript/native-preview/bin/tsgo")
+    const run = spawnSync("node", [tsgo, "--noEmit", "--pretty", "false", "-p", resolve(root, "test/red/tsconfig.json")],
+      { cwd: root, encoding: "utf8" })
+    expect(run.status).toBe(1)
+    const errors = [...run.stdout.matchAll(/^test\/red\/walkers\.red\.ts\((\d+),\d+\): error (TS\d+): Argument of type '\{ readonly _tag: "(\w+)";.*' is not assignable to parameter of type 'never'\.$/gm)]
+      .map((match) => `${match[1]} ${match[2]} ${match[3]}`)
+    expect(errors).toEqual([
+      "12 TS2345 restore",          // Eff
+      "13 TS2345 ret",              // Stmt
+      "14 TS2345 getInterruptible", // ActionTerm
+      "15 TS2345 ref",              // LayerTerm
+    ])
   })
 })
 

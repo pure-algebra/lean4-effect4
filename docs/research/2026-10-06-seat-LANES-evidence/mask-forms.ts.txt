@@ -1,0 +1,22 @@
+// Probe: the mask's two rows under a derived form that inserts a binder (Forms.insert).
+import { recognizeSource as ck } from "<worktree>/ts/eff/ingest/ck.ts"
+import { recognizeSource as oxc } from "<worktree>/ts/eff/ingest/oxc.ts"
+import { compareVerdicts } from "<worktree>/ts/eff/ingest/gate.ts"
+import { effJson } from "<worktree>/ts/eff/json.gen.ts"
+const h = 'import { Effect, pipe } from "effect"\n'
+const getter = (r: string) => `Effect.uninterruptibleMask((${r}) => Effect.succeed(${r}))`
+for (const [name, body, expected] of [
+  ["a restore site in the second argument of andThen, its saved state bound outside",
+    `Effect.flatMap(${getter("r")}, (r) => Effect.andThen(Effect.succeed(1), pipe(Effect.succeed(2), r)))`,
+    '["bind",["withFiber",["getInterruptible"]],["bind",["succeed",["lit",["nat",1]]],["restore",["var",0],["succeed",["lit",["nat",2]]]]]]'],
+  ["a whole mask in the second argument of andThen",
+    `Effect.andThen(Effect.succeed(1), Effect.flatMap(${getter("r")}, (s) => Effect.uninterruptible(pipe(Effect.succeed(2), s))))`,
+    '["bind",["succeed",["lit",["nat",1]]],["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",1],["succeed",["lit",["nat",2]]]]]]]'],
+  ["a mask as the first argument of tap, with a continuation",
+    `Effect.tap(${getter("r")}, (s) => pipe(Effect.succeed(2), s))`,
+    '["bind",["withFiber",["getInterruptible"]],["bind",["restore",["var",0],["succeed",["lit",["nat",2]]]],["succeed",["var",0]]]]'],
+] as const) {
+  const l = ck(h + "export const program = " + body, "x.ts"), r = oxc(h + "export const program = " + body, "x.ts")
+  const show = (vs: typeof l) => vs.map(v => v.kind === "lifted" ? JSON.stringify(effJson(v.eff)) : v.code + ": " + v.detail).join(" ; ")
+  console.log(compareVerdicts(l, r).status, "|", show(l) === expected ? "as expected" : "NOT AS EXPECTED", "|", name, "\n   ", show(l))
+}

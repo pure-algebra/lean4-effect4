@@ -50,7 +50,11 @@ CORE := .lake/build/lib/lean/Effect4.trace
 LAWS := .lake/build/lib/lean/Effect4/Laws.trace
 TRACE := .lake/build/lib/lean/Effect4
 LEAN_SOURCES := $(shell find src Test -name '*.lean')
-TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts) ts/eff/package.json ts/eff/bun.lock ts/eff/tsconfig.json ts/eff/test/type-projection.gen.json
+# Every folder that a lane of `ts/eff` reads (seat LANES, decisions row 295): the ingest's fidelity,
+# census and fixture folders and the red twins of the tests stood outside this list.
+TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/test/red/* ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts \
+  ts/eff/ingest/fidelity/*.ts ts/eff/ingest/census/* ts/eff/ingest/fixtures/* ts/eff/ingest/fixtures/*/* ts/eff/ingest/fixtures/*/*/*) \
+  ts/eff/package.json ts/eff/bun.lock ts/eff/tsconfig.json ts/eff/test/type-projection.gen.json
 VENDOR_SOURCES := $(wildcard vendor/effect-4.0.0-rc.112/src/*.ts vendor/effect-4.0.0-rc.112/src/internal/*.ts)
 
 # ---------------------------------------------------------------------------- build
@@ -179,7 +183,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
 # runtime prints the modules, re-records the tapes and writes the result. Both are
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
-TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean harness/truth/records.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
+TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
 $(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
@@ -629,7 +633,7 @@ $(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) $(GEN)/fixtures
 # located refusal (Api.explain) and TypeScript's diagnostics, one row per program in
 # generated/tsdiag-agreement.tsv (committed; `make gen-tsdiag` promotes a fresh run). The lane
 # fails on a program this checker types that TypeScript refuses, and on drift of the table.
-$(CHK)/tsdiag: $(CORPUS)/index.tsv harness/tsdiag/run-tsdiag.mjs harness/truth/prelude.ts $(wildcard harness/truth/session/*.ts) generated/tsdiag-agreement.tsv | ts/eff/node_modules
+$(CHK)/tsdiag: $(CORPUS)/index.tsv harness/tsdiag/run-tsdiag.mjs $(wildcard harness/truth/*.ts harness/truth/session/*.ts) ts/eff/profile.gen.ts ts/eff/eff.gen.ts generated/tsdiag-agreement.tsv | ts/eff/node_modules
 	$(NODE) harness/tsdiag/run-tsdiag.mjs $(abspath $(CORPUS)) $(abspath .lake/tsdiag)
 	@mkdir -p $(CHK) && touch $@
 
@@ -646,7 +650,7 @@ $(CHK)/ingest-smoke: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES)
 
 # The fidelity step observes modules through harness/truth/run-truth.ts, which resolves `effect`
 # through the truth link; a fresh worktree has none (order-only, like every other consumer).
-$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh | harness/truth/node_modules
+$(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/Drivers/ForeignCorpus.lean tools/Drivers/Styles.lean $(OCAML_SOURCES) scripts/check-ingest.sh scripts/check-lock-install.py | harness/truth/node_modules
 	bash scripts/check-ingest.sh
 	@mkdir -p $(CHK) && touch $@
 

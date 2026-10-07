@@ -1,0 +1,37 @@
+// Probe: more spellings near the mask's two rows; do the two engines agree?
+import { recognizeSource as ck } from "<worktree>/ts/eff/ingest/ck.ts"
+import { recognizeSource as oxc } from "<worktree>/ts/eff/ingest/oxc.ts"
+import { compareVerdicts } from "<worktree>/ts/eff/ingest/gate.ts"
+import { effJson } from "<worktree>/ts/eff/json.gen.ts"
+const h = 'import { Effect, pipe } from "effect"\n'
+const g = "Effect.uninterruptibleMask((r) => Effect.succeed(r))"
+for (const body of [
+  `Effect.flatMap(${g}, (r) => pipe(pipe(Effect.succeed(1), r), r))`,
+  `Effect.flatMap(${g}, (r) => pipe(Effect.succeed(1), (r)))`,
+  `Effect.flatMap(${g}, (r) => pipe((Effect.succeed(1)), r))`,
+  "Effect.uninterruptibleMask(((r) => Effect.succeed(r)))",
+  "Effect.uninterruptibleMask((r) => (Effect.succeed(r)))",
+  "Effect.uninterruptibleMask((r) => Effect.succeed((r)))",
+  "Effect.uninterruptibleMask<number, never, never>((r) => Effect.succeed(r))",
+  "Effect.uninterruptibleMask((r: unknown) => Effect.succeed(r))",
+  "Effect.uninterruptibleMask((r) => Effect.succeed(r))()",
+  "Effect.uninterruptibleMask((r) => Effect?.succeed(r))",
+  "Effect.uninterruptibleMask((r) => Effect.succeed?.(r))",
+  "Effect.uninterruptibleMask((r) => Effect['succeed'](r))",
+  "Effect.uninterruptibleMask(...[(r) => Effect.succeed(r)])",
+  "Effect.uninterruptibleMask((...r) => Effect.succeed(r))",
+  "Effect.uninterruptibleMask(({ r }) => Effect.succeed(r))",
+  "Effect.uninterruptibleMask((r) => Effect.fail(r))",
+  "Effect.uninterruptibleMask((r) => succ(r))",
+  `Effect.flatMap(${g}, (r) => pipe(Effect.succeed(1), undefined))`,
+  `Effect.flatMap(${g}, (r) => pipe(r, r))`,
+  `Effect.flatMap(${g}, (r) => pipe(Effect.succeed(1)))`,
+  `Effect.flatMap(${g}, (r) => pipe())`,
+  `Effect.gen(function* () { const r = yield* ${g}; const x = yield* pipe(Effect.succeed(1), r); return x })`,
+  `Effect.gen(function* () { const r = yield* ${g}; if (true) { yield* pipe(Effect.succeed(1), r) } else { yield* Effect.succeed(2) } return undefined })`,
+]) {
+  const l = ck(h + "export const program = " + body, "x.ts"), r = oxc(h + "export const program = " + body, "x.ts")
+  const show = (vs: typeof l) => vs.map(v => v.kind === "lifted" ? "lifted " + JSON.stringify(effJson(v.eff)).slice(0, 110) : v.code + ": " + v.detail).join(" ; ")
+  const agree = compareVerdicts(l, r).status === "agree"
+  console.log((agree ? "agree    " : "DISAGREE ") + body.slice(0, 96) + "\n     ck  " + show(l) + (agree ? "" : "\n     oxc " + show(r)))
+}

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# One hold of the Lean slot: the lanes of the files this seat changed, then the brief's two
+# acceptance targets. Each make call writes its flags out.
+set -uo pipefail
+cd <worktree>
+for target in check-ts-reader check-ingest-smoke check-tsdiag gen-fixtures check-docs; do
+  echo "== make $target"
+  make -o build -o ts/eff/node_modules -o harness/truth/node_modules $target; echo "$target-exit=$?"
+  echo "-- git status after $target:"; git status --short; echo "-- end"
+done

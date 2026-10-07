@@ -803,6 +803,28 @@ class Normalize {
     }
     return binder(this.term(body, [...env, name]), env.length)
   }
+  /** The getter's image (decisions row 245; `Codegen/Templates.lean`, the row of
+   * `getInterruptible`): the one argument of `Effect.uninterruptibleMask` is
+   * `(r) => Effect.succeed(r)`, an arrow of one plain parameter whose body answers that
+   * parameter. The parameter's name, or `undefined` for any other argument list. The head of the
+   * body must not start at the parameter. The native callback spelling, whose body uses the
+   * function, has no reading (decisions row 215). Written apart from the other engine's: the two
+   * engines stay two walks. */
+  maskParameter(a: readonly Node[]): string | undefined {
+    const f = a.length === 1 ? unwrap(a[0]!) : undefined
+    if (f?.type !== "ArrowFunctionExpression" || f.async === true || isNode(f.typeParameters)) return undefined
+    const ps = list(f, "params"), body = unwrap(node(f, "body"))
+    if (ps.length !== 1 || ps[0]!.type !== "Identifier" || body.type !== "CallExpression" || body.optional === true) return undefined
+    const parameter = str(ps[0]!, "name"), args = list(body, "arguments")
+    const answer = args.length === 1 ? unwrap(args[0]!) : undefined
+    if (answer?.type !== "Identifier" || answer.name !== parameter) return undefined
+    let root = unwrap(node(body, "callee"))
+    while (root.type === "MemberExpression") root = unwrap(node(root, "object"))
+    if (root.type !== "Identifier" || root.name === parameter) return undefined
+    let head: string
+    try { head = this.head(node(body, "callee")) } catch (error) { if (error instanceof Refuse) return undefined; throw error }
+    return head === "Effect.succeed" ? parameter : undefined
+  }
   program(n: Node, env: readonly string[]): Expr {
     n = unwrap(n)
     if (n.type === "ArrowFunctionExpression" || n.type === "FunctionExpression") return reject(n.typeParameters ? "E-TYPE-PARAM" : "E-PARAM-SHAPE", n.typeParameters ? "generic unit" : "function")
@@ -870,10 +892,27 @@ class Normalize {
     if (h === "Effect.fn" || h === "Effect.fnUntraced") return reject("E-PARAM-SHAPE", "function")
     if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return reject("E-HANDLER", h)
     if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return reject("E-ARG-CLOSURE", h)
+    // The mask's getter (decisions row 245), in its printed spelling alone: the mask on
+    // `(r) => Effect.succeed(r)`, as the printed fragment at this level. Any other argument list
+    // is a closure with no reading here, the native callback spelling among them (decisions row
+    // 215).
+    if (h === "Effect.uninterruptibleMask") {
+      if (this.maskParameter(a) === undefined) return reject("E-ARG-CLOSURE", h)
+      return call(h, [binder(call("Effect.succeed", [id(`a${env.length}`)]), env.length)])
+    }
     if (h === "Effect.whileLoop") return reject("E-LOOP", "whileLoop")
     if (h.startsWith("Cause.") || h.startsWith("Layer.")) return reject("E-NODE", "program fragment")
     if (h === "pipe" || h === "Function.pipe") {
       if (!a[0]) return reject("E-BIND-SHAPE", "arity")
+      // A restore site (decisions row 245), in its printed spelling alone: `pipe(body, saved)`
+      // whose one segment is a binder, as the printed fragment. A segment is a function, and the
+      // one function that a binder holds is a mask's saved state. Every other call of `pipe` is
+      // piping, as before: there a binder among the segments is refused, and so are
+      // `body.pipe(saved)` and `saved(body)`.
+      if (a.length === 2) {
+        const saved = unwrap(a[1]!)
+        if (saved.type === "Identifier" && env.lastIndexOf(str(saved, "name")) >= 0) return call("pipe", [this.program(a[0], env), this.term(saved, env)])
+      }
       let value = this.program(a[0], env)
       for (const segment of a.slice(1)) value = this.segment(segment, value, env)
       return value
