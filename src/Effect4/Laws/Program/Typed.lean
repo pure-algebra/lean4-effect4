@@ -31,9 +31,13 @@ which is at the ceiling (`src/Effect4/Program/Config.lean` header records the sa
 
 Refusals of the value typing, each a `false` of `Val.hasTy` and not a silent one:
 
-* `TYPED-FB-INT` — `.int` has no inhabitant: `Val.nat` is a `.nat`. `Ty.render` sends both to
-  `number`; the printer's identification is not the typing's (`E4-TYPED-CE-002`).
 * `.except`, `.never` and an unknown handle target have no inhabitant in this cut.
+
+The former refusal `TYPED-FB-INT` is retired, the ID kept: `.int` is inhabited by the two
+integer frames, `Val.nat` and `Store.Val.negInt` (`intImage`), admission carries it since
+decisions row 317, and the rows `plus`, `minus`, `lt` and `eq` compute on it since row 319.
+`Ty.render` still sends `nat`, `int` and `number` to `number`; the printer's identification is
+not the typing's (`E4-TYPED-CE-002`).
 
 Since the host rows slice (2026-09-08, DB-15) `.string` is inhabited by the carrier's `str`
 frame and `.option t` by `none` and a `some` of a `t`: strings are machine values on the
