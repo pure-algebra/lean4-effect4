@@ -299,15 +299,15 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
         cases hs
         exact .eff (.provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub hx)⟩
   -- eff (.catchIf _ a1 _), 0
-  · cases hn with | eff hp => cases hp with | catchIf hb ht hh hj =>
+  · cases hn with | eff hp => cases hp with | catchIf hb ht hsub hh hj =>
     exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
-        cases hs; exact .eff (.catchIf hx ((h.termTy _ _).trans ht) (hasTy_ext h hh) hj)⟩
+        cases hs; exact .eff (.catchIf hx ((h.termTy _ _).trans ht) hsub (hasTy_ext h hh) hj)⟩
   -- eff (.catchIf _ _ a2), 1
-  · cases hn with | eff hp => cases hp with | catchIf hb ht hh hj =>
+  · cases hn with | eff hp => cases hp with | catchIf hb ht hsub hh hj =>
     exact ⟨_, .eff hh, effTy_map_of_hasTy hb _, fun h hc' hs => by
       cases hc' with | eff hx =>
-        cases hs; exact .eff (.catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) hx hj)⟩
+        cases hs; exact .eff (.catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) hsub hx hj)⟩
   -- eff (.select _ _ a2 _), 0
   · cases hn with | eff hp => cases hp with | select ht hd h0 h1 hj =>
     exact ⟨_, .eff h0,
@@ -323,25 +323,25 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
       cases hc' with | eff hx =>
         cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd (hasTy_ext h h0) hx hj)⟩
   -- eff (.iterate _ _ _ _ _ a5), 0
-  · cases hn with | eff hp => cases hp with | iterate hi ht hb hst hr hs0 hs1 =>
+  · cases hn with | eff hp => cases hp with | iterate hi ht hsub hb hst hr hs0 hs1 =>
     exact ⟨_, .eff hb, Option.map_eq_some_iff.mpr ⟨_, hi, rfl⟩, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs
-        exact .eff (.iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) hx
+        exact .eff (.iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) hsub hx
           ((h.termTy _ _).trans hst) ((h.termTy _ _).trans hr) hs0 hs1)⟩
   -- eff (.restore _ a1), 0
-  · cases hn with | eff hp => cases hp with | restore hsv hb =>
+  · cases hn with | eff hp => cases hp with | restore hsv hsub hb =>
     exact ⟨_, .eff hb, rfl, fun h hc' hs => by
-      cases hc' with | eff hx => cases hs; exact .eff (.restore ((h.termTy _ _).trans hsv) hx)⟩
+      cases hc' with | eff hx => cases hs; exact .eff (.restore ((h.termTy _ _).trans hsv) hsub hx)⟩
   -- action (.fork a0 _), 0
   · cases hn with | action ha => cases ha with | fork options hp =>
     exact ⟨_, .eff hp, rfl, fun _ hc' hs => by
       cases hc' with | eff hx => cases hs; exact .action (.fork _ hx)⟩
   -- action (.forkIn a0 _ _), 0
-  · cases hn with | action ha => cases ha with | forkIn options hp hsc =>
+  · cases hn with | action ha => cases ha with | forkIn options hp hsc hsub =>
     exact ⟨_, .eff hp, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
-        cases hs; exact .action (.forkIn _ hx ((h.termTy _ _).trans hsc))⟩
+        cases hs; exact .action (.forkIn _ hx ((h.termTy _ _).trans hsc) hsub)⟩
   -- action (.forkScoped a0 _), 0
   · cases hn with | action ha => cases ha with | forkScoped options hp =>
     exact ⟨_, .eff hp, rfl, fun h hc' hs => by
@@ -415,11 +415,11 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
     | ret ht =>
       obtain ⟨rest, q, hat⟩ := hlead
       exact absurd hat (Node.at_stmts_nil rest q)
-    | ifElse ht ha hb hr hab hg =>
+    | ifElse ht hsub ha hb hr hab hg =>
       exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
         cases hc' with | stmts hx =>
           cases hs
-          exact .stmts (.ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha)
+          exact .stmts (.ifElse ((h.termTy _ _).trans ht) hsub (stmtsHasTy_ext h ha)
             (stmtsHasTy_ext h hb) hx hab hg)⟩
     | whileTrue hb hr hg =>
       exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
@@ -437,18 +437,18 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
     exact ⟨_, .eff he, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .stmt (.yieldDiscard hx (stmtsHasTy_ext h hr))⟩
   -- stmt (.ifElse _ a1 _), 0
-  · cases hn with | stmt hb => cases hb with | ifElse ht ha hb hr hab hg =>
+  · cases hn with | stmt hb => cases hb with | ifElse ht hsub ha hb hr hab hg =>
     exact ⟨_, .stmts ha, rfl, fun h hc' hs => by
       cases hc' with | stmts hx =>
         cases hs
-        exact .stmt (.ifElse ((h.termTy _ _).trans ht) hx (stmtsHasTy_ext h hb)
+        exact .stmt (.ifElse ((h.termTy _ _).trans ht) hsub hx (stmtsHasTy_ext h hb)
           (stmtsHasTy_ext h hr) hab hg)⟩
   -- stmt (.ifElse _ _ a2), 1
-  · cases hn with | stmt hb => cases hb with | ifElse ht ha hb hr hab hg =>
+  · cases hn with | stmt hb => cases hb with | ifElse ht hsub ha hb hr hab hg =>
     exact ⟨_, .stmts hb, rfl, fun h hc' hs => by
       cases hc' with | stmts hx =>
         cases hs
-        exact .stmt (.ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha) hx
+        exact .stmt (.ifElse ((h.termTy _ _).trans ht) hsub (stmtsHasTy_ext h ha) hx
           (stmtsHasTy_ext h hr) hab hg)⟩
   -- stmt (.whileTrue a0), 0
   · cases hn with | stmt hb => cases hb with | whileTrue hb hr hg =>

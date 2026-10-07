@@ -1,0 +1,15 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// tsgo exit code: 0
+// tsgo output:
+//   (clean, 0 errors)
+
+import { Cause, Context, Deferred, Effect, Exit, Fiber, Option, Ref, Scope, pipe } from "effect"
+import { type MaskRestore } from "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"
+
+declare const fiber: Fiber.Fiber<number, never>
+declare const scope: Scope.Scope
+declare const ctx: Context.Context<any>
+declare const exitVal: Exit.Exit<void, never>
+
+declare const s_union: Scope.Scope | never
+export const green_union = Scope.close(s_union, exitVal)

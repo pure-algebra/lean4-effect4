@@ -349,7 +349,7 @@ src/Effect4/Laws/Program/Admit.lean	admitAnswer_minted	simp-without-only	5
 src/Effect4/Laws/Program/Admit.lean	admitted_row	try	5
 src/Effect4/Laws/Program/Admit.lean	causeOf_admits	simp-without-only	5
 src/Effect4/Laws/Program/Admit.lean	causeOf_die_typed	simp-without-only	2
-src/Effect4/Laws/Program/Admit.lean	causeOf_isSome_of_causeTy	simp-without-only	5
+src/Effect4/Laws/Program/Admit.lean	causeOf_isSome_of_causeTy	simp-without-only	4
 src/Effect4/Laws/Program/Admit.lean	externalAdmits_failure_reservedFree	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	external_answer_typed	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	external_oracle_error_typed	simp-without-only	1

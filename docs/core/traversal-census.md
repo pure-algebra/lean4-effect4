@@ -32,7 +32,7 @@ they were written with — classified by what its *own code* does with the value
 A definition's own code is its value and the helpers the compiler made for it, followed
 transitively: the matcher, the sparse `casesOn` a `match` with a catch-all compiles through
 (shared across definitions and named after whichever needed it first:
-`Ty.isFactor.match_1` uses `Ty.infer._sparseCasesOn_13`), the `_unary`/`_mutual` helper of a
+`Ty.isFactor.match_1` uses `Ty.isFactor._sparseCasesOn_1`), the `_unary`/`_mutual` helper of a
 well-founded definition of two or more arguments, the `_f` functional of a structural one. Never
 a definition a person wrote (handing a value to one is `delegates`), never the family's own
 recursors, never a derived `sizeOf`. The recursion may be on the family value, on another
@@ -349,7 +349,8 @@ proofs that unfold `f` rewrite by `f.eq_cata`, and `f` is deleted. That is where
 Row 40 closed this list as tracked debt — nothing is converted for uniformity's sake, a hand
 definition that is not a fold is not thereby wrong — so naming each row with its shape is the
 whole obligation. The exemptions named on 2026-10-01 (row 143) are `Ty.closed`,
-`Ty.instantiate`, `Ty.infer`, `Ty.varsOf`, `Ty.templateAdmissible`, `Ty.sub` and the three
+`Ty.instantiate`, `Ty.infer` (removed on 2026-10-07, decisions row 306), `Ty.varsOf`,
+`Ty.templateAdmissible`, `Ty.sub` and the three
 private traversals `Codegen.Types.ofNormalized`, `Representation.beq` and `Check.beq`. With the
 thirteen of row 40 as they classify now and the statement walks the repaired instrument shows,
 the 24 hand traversals without a fold beside them are:
@@ -361,7 +362,6 @@ the 24 hand traversals without a fold beside them are:
 | `runStmts`, `runStmts.yieldOf`, `Sched.walkR`, `Sched.walkR.yieldOf` | `Program/Compile.lean`, `Laws/Program/InterpR.lean` | `wf` on fuel: the statement walk looks up the node at a program counter and destructs it, one level per step | the recursion is on fuel and the node is looked up, not a child: no fold applies. Printed `opaque` until 2026-10-01 (the fixpoint sits in a `_mutual` helper) |
 | `loopExit` | `Program/Compile.lean` | structural on a depth: walks up the enclosing blocks by path | as the statement walk. Printed `opaque` until 2026-10-01 |
 | `Ty.closed`, `Ty.instantiate`, `Ty.varsOf`, `Ty.templateAdmissible` | `Program/Ty.lean` | structural and pure (`instantiate` with its substitution fixed): §4's shape 1 | the row-template calculus (rows 42–43, written the evening of 2026-09-18, after the converter's run); never put through `fold_of` |
-| `Ty.infer` | `Program/Ty.lean` | structural on the template, the request read in step, the substitution threaded | two values walked together; §7.1's accumulator shape with the request among the varying binders, not tried |
 | `Bounds.cands`, with `candsFields`, `candsItems` and `candsArgs` | `Program/Bounds.lean` | structural on the request, the template read in step; it answers a list of candidates and threads nothing | two values walked together, as `Ty.infer`. It is the walk of the match by bounds (decisions row 303, 2026-10-07). The checker calls it where it called `Ty.infer`, and `Ty.infer` goes at the open stage of slice MATCH |
 | `Ty.sub` | `Program/Ty.lean` | `wf` on `sizeOf a + sizeOf b`, two values walked together | not a fold of one value. Printed `opaque` until 2026-10-01 (the fixpoint sits in `Ty.sub._unary` over `WellFounded.Nat.fix`) |
 | `Codegen.Types.ofNormalized` [private] | `Codegen/Types.lean` | structural and pure, every constructor named: shape 1 | private, so no census row until 2026-10-01; never put through `fold_of` |

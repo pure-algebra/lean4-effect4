@@ -13,13 +13,14 @@
  * (`Test/Program/FoldContract.lean`), and two steps of the Queue's probe, which that battery pins
  * in full.
  */
-import { type Deferred, Effect, type Option, Ref } from "effect"
+import { Cause, type Deferred, Effect, Exit, Fiber, type Option, pipe, Ref, Scope } from "effect"
 import {
   add, append, cons, fold, get, getOrElse, isZero, ite, length, lt, mul, nil, none, not, pair, recordRequired, recordSet,
   sameHandle, some, succ, take, tuple, tupleAt, and, isSome, or, sub, drop, eq, recordValue
 } from "./prelude.ts"
 
 declare const a0: Ref.Ref<number>
+declare const fiber0: Fiber.Fiber<number, never>
 
 // ---- the eight rows: the parameter is the cell's element type, and the answer follows ----
 
@@ -198,6 +199,67 @@ Ref.modify(a0, (a1) => twoPairs)
 // The one pair of the union offers one candidate. The compiler and the guard accept it.
 declare const onePair: readonly [number | string, number]
 const modifyJoined: Effect.Effect<number | string> = Ref.modify(a0, (a1) => onePair)
+
+// ---- the eleven tests at a fixed type: each printed form with `never` at the tested position ----
+// (`Test/Program/TypingCheckContract.lean` holds the checker's side of each line)
+
+declare const neverTest: (error: unknown) => never
+declare const neverWhile: () => never
+
+// 1. catchIf (predicate returns boolean)
+const catchIfGreen: Effect.Effect<number> = Effect.catchIf(Effect.succeed(1), neverTest, () => Effect.succeed(2))
+// @ts-expect-error predicate must return boolean
+Effect.catchIf(Effect.succeed(1), (_: unknown): number => 123, () => Effect.succeed(2))
+
+// 2. iterate (while condition returns boolean)
+const iterateGreen: Effect.Effect<void> = Effect.whileLoop({ while: neverWhile, body: () => Effect.void, step: () => {} })
+// @ts-expect-error while condition must return boolean
+Effect.whileLoop({ while: (): string => "no", body: () => Effect.void, step: () => {} })
+
+// 3. ifElse (statement branch condition is boolean)
+const ifElseGreen: number | string = ite(true as boolean | never, 1, "two")
+// @ts-expect-error condition must be boolean
+ite(123, 1, "two")
+
+// 4. Decision.arms .bool (scrutinee is boolean)
+const decisionBoolGreen: boolean = not(true as boolean | never)
+// @ts-expect-error argument must be boolean
+not(123)
+
+// 5. restore (saved term must be MaskRestore)
+const restoreGreen: Effect.Effect<number> = pipe(Effect.succeed(1), (undefined as never))
+// @ts-expect-error saved state must be MaskRestore
+pipe(Effect.succeed(1), 123)
+
+// 6. forkIn (target scope must be Scope)
+const forkInGreen: Effect.Effect<Fiber.Fiber<number, never>> = Effect.forkIn(Effect.succeed(1), (undefined as never))
+// @ts-expect-error target scope must be Scope
+Effect.forkIn(Effect.succeed(1), 123)
+
+// 7. runIn (target scope must be Scope)
+const runInGreen: Fiber.Fiber<number, never> = Fiber.runIn(fiber0, (undefined as never))
+// @ts-expect-error target scope must be Scope
+Fiber.runIn(fiber0, 123)
+
+// 8. closeScope (scope must be Scope)
+const closeScopeGreen: Effect.Effect<void> = Scope.close((undefined as never), Exit.void)
+// @ts-expect-error scope must be Scope
+Scope.close(123, Exit.void)
+
+// 9. setContext (context must be Context)
+const setContextGreen: Effect.Effect<number> = Effect.provide(Effect.succeed(1), (undefined as never))
+// @ts-expect-error context must be Context
+Effect.provide(Effect.succeed(1), 123)
+
+// 10. interruptAll (fiber id must be number)
+const interruptAllGreen: Effect.Effect<void> = Fiber.interruptAllAs([fiber0], (undefined as never))
+// @ts-expect-error fiber id cannot be boolean
+Fiber.interruptAllAs([fiber0], true)
+
+// 11. causeTy .interrupt (some who) (fiber id must be number)
+const causeInterruptGreen: Cause.Cause<never> = Cause.interrupt((undefined as never))
+// @ts-expect-error fiber id cannot be boolean
+Cause.interrupt(true)
 
 void [
   update, getAndUpdate, updateAndGet, updateSome, getAndUpdateSome, updateSomeAndGet, modify, modifySome,

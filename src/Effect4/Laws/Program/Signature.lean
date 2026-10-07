@@ -153,8 +153,8 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .bind hf hr => .bind (hasTy_ext h hf) (hasTy_ext h hr)
   | _, _, _, .gen hb => .gen (stmtsHasTy_ext h hb)
   | _, _, _, .catchCause hb hh hj => .catchCause (hasTy_ext h hb) (hasTy_ext h hh) hj
-  | _, _, _, .catchIf hb ht hh hj =>
-    .catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) (hasTy_ext h hh) hj
+  | _, _, _, .catchIf hb ht hsub hh hj =>
+    .catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) hsub (hasTy_ext h hh) hj
   | _, _, _, .select ht hd h0 h1 hj =>
     .select ((h.termTy _ _).trans ht) hd (hasTy_ext h h0) (hasTy_ext h h1) hj
   | _, _, _, .matchCause hb hv hc hj =>
@@ -163,8 +163,8 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .exit hb => .exit (hasTy_ext h hb)
   | _, _, _, .uninterruptible hb => .uninterruptible (hasTy_ext h hb)
   | _, _, _, .interruptible hb => .interruptible (hasTy_ext h hb)
-  | _, _, _, .iterate hi ht hb hs hr hs0 hs1 =>
-    .iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) (hasTy_ext h hb)
+  | _, _, _, .iterate hi ht hsub hb hs hr hs0 hs1 =>
+    .iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) hsub (hasTy_ext h hb)
       ((h.termTy _ _).trans hs) ((h.termTy _ _).trans hr) hs0 hs1
   | _, _, _, .yieldNow priority => .yieldNow priority
   | _, _, _, .awaitFiber_join ht hf => .awaitFiber_join ((h.termTy _ _).trans ht) hf
@@ -181,7 +181,7 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .service hk => .service (h.service _ _ hk)
   | _, _, _, .provideService hk hv hsub hb =>
     .provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub (hasTy_ext h hb)
-  | _, _, _, .restore hs hb => .restore ((h.termTy _ _).trans hs) (hasTy_ext h hb)
+  | _, _, _, .restore hs hsub hb => .restore ((h.termTy _ _).trans hs) hsub (hasTy_ext h hb)
 
 theorem stmtsHasTy_ext (h : SigExtends s s') :
     ∀ {env : TyEnv} {inLoop : Bool} {b : Stmts Op} {g : GenTy},
@@ -190,8 +190,8 @@ theorem stmtsHasTy_ext (h : SigExtends s s') :
   | _, _, _, _, .bindYield he hr => .bindYield (hasTy_ext h he) (stmtsHasTy_ext h hr)
   | _, _, _, _, .yieldDiscard he hr => .yieldDiscard (hasTy_ext h he) (stmtsHasTy_ext h hr)
   | _, _, _, _, .ret ht => .ret ((h.termTy _ _).trans ht)
-  | _, _, _, _, .ifElse ht ha hb hr hab hg =>
-    .ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha) (stmtsHasTy_ext h hb)
+  | _, _, _, _, .ifElse ht hsub ha hb hr hab hg =>
+    .ifElse ((h.termTy _ _).trans ht) hsub (stmtsHasTy_ext h ha) (stmtsHasTy_ext h hb)
       (stmtsHasTy_ext h hr) hab hg
   | _, _, _, _, .whileTrue hb hr hg => .whileTrue (stmtsHasTy_ext h hb) (stmtsHasTy_ext h hr) hg
   | _, _, _, _, .breakLoop hr => .breakLoop (stmtsHasTy_ext h hr)
@@ -204,25 +204,25 @@ theorem effsHasTy_ext (h : SigExtends s s') :
 theorem actionHasTy_ext (h : SigExtends s s') :
     ∀ {env : TyEnv} {a : ActionTerm Op} {t : EffTy}, ActionHasTy s env a t → ActionHasTy s' env a t
   | _, _, _, .fork options hp => .fork options (hasTy_ext h hp)
-  | _, _, _, .forkIn options hp hsc => .forkIn options (hasTy_ext h hp) ((h.termTy _ _).trans hsc)
+  | _, _, _, .forkIn options hp hsc hsub => .forkIn options (hasTy_ext h hp) ((h.termTy _ _).trans hsc) hsub
   | _, _, _, .forkScoped options hp => by
     rw [← h.scopeKey]
     exact .forkScoped options (hasTy_ext h hp)
-  | _, _, _, .runIn ht hf hsc => .runIn ((h.termTy _ _).trans ht) hf ((h.termTy _ _).trans hsc)
+  | _, _, _, .runIn ht hf hsc hsub => .runIn ((h.termTy _ _).trans ht) hf ((h.termTy _ _).trans hsc) hsub
   | _, _, _, .interrupt ht hf => .interrupt ((h.termTy _ _).trans ht) hf
   | _, _, _, .interruptScoped ht hf => .interruptScoped ((h.termTy _ _).trans ht) hf
   | _, _, _, .interruptAll_self ht hl hf => .interruptAll_self ((h.termTy _ _).trans ht) hl hf
-  | _, _, _, .interruptAll_by ht hl hf hw =>
-    .interruptAll_by ((h.termTy _ _).trans ht) hl hf ((h.termTy _ _).trans hw)
+  | _, _, _, .interruptAll_by ht hl hf hw hsub =>
+    .interruptAll_by ((h.termTy _ _).trans ht) hl hf ((h.termTy _ _).trans hw) hsub
   | _, _, _, .awaitAll ht hl hf => .awaitAll ((h.termTy _ _).trans ht) hl hf
   | _, _, _, .awaitAllFailFast ht hl hf => .awaitAllFailFast ((h.termTy _ _).trans ht) hl hf
   | _, _, _, .snapshotChildren => .snapshotChildren
   | _, _, _, .awaitNewChildren ht hsub => .awaitNewChildren ((h.termTy _ _).trans ht) hsub
   | _, _, _, .raceAll he => .raceAll (effsHasTy_ext h he)
-  | _, _, _, .setContext ht => .setContext ((h.termTy _ _).trans ht)
+  | _, _, _, .setContext ht hsub => .setContext ((h.termTy _ _).trans ht) hsub
   | _, _, _, .getContext => .getContext
   | _, _, _, .getId => .getId
-  | _, _, _, .closeScope hs he hx => .closeScope ((h.termTy _ _).trans hs) ((h.termTy _ _).trans he) hx
+  | _, _, _, .closeScope hs hsub he hx => .closeScope ((h.termTy _ _).trans hs) hsub ((h.termTy _ _).trans he) hx
   | _, _, _, .getInterruptible => .getInterruptible
 
 theorem layerHasTy_ext (h : SigExtends s s') :

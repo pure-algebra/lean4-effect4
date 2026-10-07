@@ -1354,7 +1354,6 @@ Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
 | subn-equiv-iff | decidability | proved | Effect4.Program.Ty.subN_equiv_iff | yes |  |
 | normalize-idem | compatibility | proved | Effect4.Program.Ty.normalize_idem | yes |  |
 | sub-antisymm-canonical | antisymmetry | proved | Effect4.Program.Ty.sub_antisymm_canonical | yes |  |
-| template-match-anchored | decidability | proved | Effect4.Program.Ty.matchTemplate_complete_anchored | yes |  |
 | template-match-complete | decidability | proved | Effect4.Program.Bounds.matchB_complete | yes |  |
 | slice-lattice-minimal | monotonicity | proved | Effect4.SliceView.lattice_minimal | yes |  |
 | union-rule-lift | compatibility | proved | Effect4.Program.UnionRule.lift_laws | yes |  |
@@ -1413,19 +1412,6 @@ Literature: TAPL, §16.3, p. 218 — adaptedResult
 ```
 
 Literature: Castagna2024, audit P6 — adaptedResult
-
-**template-match-anchored**
-
-```lean
-∀ {t r : Effect4.Program.Ty} {τ : Effect4.Program.Ty.Subst},
-  t.Normal →
-    Eq t.templateAdmissible Bool.true →
-      Eq t.anchored Bool.true →
-        r.Normal →
-          Eq r.bottomFree Bool.true →
-            Eq (r.normalize.sub (Effect4.Program.Ty.instantiate τ t).normalize) Bool.true →
-              Exists fun σ => Eq (Effect4.Program.Ty.matchTemplate List.nil t r) (Option.some σ)
-```
 
 **template-match-complete**
 
@@ -2354,7 +2340,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 275; inherited (provisional): 2296; unplaced: 0.
+Tagged: 275; inherited (provisional): 2291; unplaced: 0.
 
 ## Plan
 
@@ -2367,7 +2353,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `closeStep_types` (proved), `drainStep_types` (proved), `initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `matchArgsB_complete` (proved), `matchArgsB_conservative` (proved), `matchArgsB_least` (proved), `matchArgsB_sound` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_conservative` (proved), `matchB_least` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `templateOK_of` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `closeStep_types` (proved), `drainStep_types` (proved), `initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lookup_solve_seed` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `matchTerm_modify_use` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `termGuard_modify_use` (proved), `perform_scoped_iff` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `applied_selects` (proved), `control_retires` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
@@ -2377,7 +2363,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
-| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `matchArgsB_monotone` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `at_layers_nil` (proved), `at_stmts_nil` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `mem_foldList_iff` (proved), `replaceAt_eff` (proved), `sizeOf_child_lt` (proved), `child_step` (proved), `replace` (proved), `replace_envAt` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_filled` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `fillAt_of_replaceAt` (proved), `hole_hasTy` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_infer` (proved), `closedSubst_matchArgsB` (proved), `closedSubst_matchTemplate` (proved), `closedSubst_matchTemplateArgs` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `focusAt_nil` (proved), `focusAt_typed` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `refusals_head` (proved), `refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `termTy_closed` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
+| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `matchArgsB_monotone` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `at_layers_nil` (proved), `at_stmts_nil` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `mem_foldList_iff` (proved), `replaceAt_eff` (proved), `sizeOf_child_lt` (proved), `child_step` (proved), `replace` (proved), `replace_envAt` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_filled` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `fillAt_of_replaceAt` (proved), `hole_hasTy` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `focusAt_nil` (proved), `focusAt_typed` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `refusals_head` (proved), `refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `termTy_closed` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
 
 **Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -2440,50 +2426,51 @@ flowchart LR
   n47["handles_of_payloadFieldTy<br/>proved"]
   n48["decision_preserves<br/>proved"]
   n49["load_typed<br/>proved"]
-  n50["subN_list_iff<br/>proved"]
-  n51["extend_adjoint<br/>proved"]
-  n52["joinAll_keeps<br/>proved"]
-  n53["mapM_answer<br/>proved"]
-  n54["subN_exitOf_iff<br/>proved"]
-  n55["subN_causeOf_iff<br/>proved"]
-  n56["le_joinAll<br/>proved"]
-  n57["liftOne_eq_some_iff<br/>proved"]
-  n58["subN_option_iff<br/>proved"]
-  n59["configTyped_frame<br/>proved"]
-  n60["wake_preserves<br/>proved"]
-  n61["mono<br/>proved"]
-  n62["close_typed<br/>proved"]
-  n63["registrationDone_preserves<br/>proved"]
-  n64["launch_preserves<br/>proved"]
-  n65["guardBind_typed<br/>proved"]
-  n66["deliver_preserves<br/>proved"]
-  n67["loop_preserves<br/>proved"]
-  n68["driveState_lift<br/>proved"]
-  n69["denotesTyped<br/>proved"]
-  n70["adjoint<br/>proved"]
-  n71["foldl_keeps<br/>proved"]
-  n72["mapM_cons_eq_some<br/>proved"]
-  n73["completionStrong_await<br/>proved"]
-  n74["catchGuard_typed<br/>proved"]
-  n75["closeOrder_eq<br/>proved"]
-  n76["fits_scope_inv<br/>proved"]
-  n77["seq_typed<br/>proved"]
-  n78["memoBuild_extension<br/>proved"]
-  n79["fiberTy_upper<br/>proved"]
-  n80["allGuard_typed<br/>proved"]
-  n81["provideLayerArm<br/>proved"]
-  n82["onExit_typed<br/>proved"]
-  n83["exitOf_upper<br/>proved"]
-  n84["Eliminator.lift_least<br/>proved"]
-  n85["mapM_total<br/>proved"]
-  n86["fiber_eliminator<br/>proved"]
-  n87["exit_eliminator<br/>proved"]
-  n88["UnionRule.lift_least<br/>proved"]
-  n89["subN_fiberOf_iff<br/>proved"]
-  n90["mapM_source<br/>proved"]
-  n91["joinAll_le<br/>proved"]
-  n92["joinAll_all<br/>proved"]
-  n93["foldl_all<br/>proved"]
+  n50["lookup_solve_seed<br/>proved"]
+  n51["subN_list_iff<br/>proved"]
+  n52["extend_adjoint<br/>proved"]
+  n53["joinAll_keeps<br/>proved"]
+  n54["mapM_answer<br/>proved"]
+  n55["subN_exitOf_iff<br/>proved"]
+  n56["subN_causeOf_iff<br/>proved"]
+  n57["le_joinAll<br/>proved"]
+  n58["liftOne_eq_some_iff<br/>proved"]
+  n59["subN_option_iff<br/>proved"]
+  n60["configTyped_frame<br/>proved"]
+  n61["wake_preserves<br/>proved"]
+  n62["mono<br/>proved"]
+  n63["close_typed<br/>proved"]
+  n64["registrationDone_preserves<br/>proved"]
+  n65["launch_preserves<br/>proved"]
+  n66["guardBind_typed<br/>proved"]
+  n67["deliver_preserves<br/>proved"]
+  n68["loop_preserves<br/>proved"]
+  n69["driveState_lift<br/>proved"]
+  n70["denotesTyped<br/>proved"]
+  n71["adjoint<br/>proved"]
+  n72["foldl_keeps<br/>proved"]
+  n73["mapM_cons_eq_some<br/>proved"]
+  n74["completionStrong_await<br/>proved"]
+  n75["catchGuard_typed<br/>proved"]
+  n76["closeOrder_eq<br/>proved"]
+  n77["fits_scope_inv<br/>proved"]
+  n78["seq_typed<br/>proved"]
+  n79["memoBuild_extension<br/>proved"]
+  n80["fiberTy_upper<br/>proved"]
+  n81["allGuard_typed<br/>proved"]
+  n82["provideLayerArm<br/>proved"]
+  n83["onExit_typed<br/>proved"]
+  n84["exitOf_upper<br/>proved"]
+  n85["Eliminator.lift_least<br/>proved"]
+  n86["mapM_total<br/>proved"]
+  n87["fiber_eliminator<br/>proved"]
+  n88["exit_eliminator<br/>proved"]
+  n89["UnionRule.lift_least<br/>proved"]
+  n90["subN_fiberOf_iff<br/>proved"]
+  n91["mapM_source<br/>proved"]
+  n92["joinAll_le<br/>proved"]
+  n93["joinAll_all<br/>proved"]
+  n94["foldl_all<br/>proved"]
   n3 --> n7
   n3 --> n8
   n4 --> n7
@@ -2587,27 +2574,28 @@ flowchart LR
   n33 --> n23
   n33 --> n12
   n33 --> n11
-  n35 --> n50
+  n34 --> n50
+  n35 --> n51
   n35 --> n19
   n35 --> n21
   n35 --> n24
-  n36 --> n51
-  n37 --> n52
+  n36 --> n52
   n37 --> n53
+  n37 --> n54
   n38 --> n41
   n38 --> n42
-  n39 --> n54
+  n39 --> n55
   n39 --> n41
   n39 --> n21
-  n39 --> n55
-  n40 --> n56
+  n39 --> n56
+  n40 --> n57
   n40 --> n21
-  n40 --> n53
+  n40 --> n54
   n42 --> n21
   n42 --> n24
-  n42 --> n54
-  n44 --> n57
-  n45 --> n58
+  n42 --> n55
+  n44 --> n58
+  n45 --> n59
   n45 --> n19
   n45 --> n21
   n45 --> n24
@@ -2616,12 +2604,11 @@ flowchart LR
   n48 --> n17
   n48 --> n10
   n48 --> n21
-  n48 --> n59
+  n48 --> n60
   n48 --> n11
   n48 --> n12
-  n48 --> n60
-  n48 --> n28
   n48 --> n61
+  n48 --> n28
   n48 --> n62
   n48 --> n63
   n48 --> n64
@@ -2629,90 +2616,55 @@ flowchart LR
   n48 --> n66
   n48 --> n67
   n48 --> n68
-  n49 --> n69
+  n48 --> n69
+  n49 --> n70
   n49 --> n0
   n49 --> n1
-  n51 --> n44
-  n51 --> n70
-  n51 --> n43
+  n52 --> n44
   n52 --> n71
+  n52 --> n43
   n53 --> n72
-  n56 --> n52
-  n59 --> n11
-  n59 --> n28
-  n59 --> n61
-  n59 --> n12
-  n60 --> n10
-  n60 --> n59
+  n54 --> n73
+  n57 --> n53
   n60 --> n11
-  n60 --> n73
+  n60 --> n28
+  n60 --> n62
   n60 --> n12
-  n61 --> n28
-  n63 --> n11
-  n63 --> n62
-  n63 --> n17
-  n63 --> n10
-  n64 --> n24
-  n64 --> n17
+  n61 --> n10
+  n61 --> n60
+  n61 --> n11
+  n61 --> n74
+  n61 --> n12
+  n62 --> n28
   n64 --> n11
-  n64 --> n28
-  n64 --> n61
+  n64 --> n63
+  n64 --> n17
   n64 --> n10
+  n65 --> n24
+  n65 --> n17
+  n65 --> n11
+  n65 --> n28
   n65 --> n62
-  n66 --> n10
-  n66 --> n17
-  n66 --> n11
-  n66 --> n74
-  n66 --> n24
-  n66 --> n65
-  n66 --> n75
-  n66 --> n76
-  n66 --> n28
-  n66 --> n77
-  n66 --> n61
-  n66 --> n59
-  n66 --> n12
-  n66 --> n73
-  n66 --> n78
-  n66 --> n13
-  n66 --> n14
-  n66 --> n69
-  n66 --> n16
-  n66 --> n18
-  n66 --> n19
-  n66 --> n20
-  n66 --> n21
-  n66 --> n22
-  n66 --> n23
-  n66 --> n79
-  n66 --> n34
-  n66 --> n15
-  n66 --> n26
-  n66 --> n27
-  n66 --> n80
-  n66 --> n62
-  n66 --> n81
-  n66 --> n25
-  n66 --> n82
-  n66 --> n83
+  n65 --> n10
+  n66 --> n63
   n67 --> n10
   n67 --> n17
   n67 --> n11
-  n67 --> n74
-  n67 --> n24
-  n67 --> n65
   n67 --> n75
+  n67 --> n24
+  n67 --> n66
   n67 --> n76
-  n67 --> n28
   n67 --> n77
-  n67 --> n61
-  n67 --> n59
-  n67 --> n12
-  n67 --> n73
+  n67 --> n28
   n67 --> n78
+  n67 --> n62
+  n67 --> n60
+  n67 --> n12
+  n67 --> n74
+  n67 --> n79
   n67 --> n13
   n67 --> n14
-  n67 --> n69
+  n67 --> n70
   n67 --> n16
   n67 --> n18
   n67 --> n19
@@ -2720,113 +2672,149 @@ flowchart LR
   n67 --> n21
   n67 --> n22
   n67 --> n23
-  n67 --> n79
+  n67 --> n80
   n67 --> n34
   n67 --> n15
   n67 --> n26
   n67 --> n27
-  n67 --> n80
-  n67 --> n62
   n67 --> n81
-  n67 --> n25
+  n67 --> n63
   n67 --> n82
+  n67 --> n25
   n67 --> n83
-  n69 --> n81
-  n69 --> n16
-  n69 --> n17
-  n69 --> n18
-  n69 --> n19
-  n69 --> n20
-  n69 --> n21
-  n69 --> n22
-  n69 --> n23
-  n69 --> n12
-  n69 --> n11
-  n69 --> n25
-  n69 --> n28
-  n69 --> n24
-  n69 --> n74
-  n69 --> n82
-  n69 --> n65
-  n69 --> n83
-  n69 --> n76
-  n69 --> n79
-  n69 --> n34
-  n69 --> n15
-  n69 --> n26
-  n69 --> n27
-  n69 --> n80
-  n70 --> n84
+  n67 --> n84
+  n68 --> n10
+  n68 --> n17
+  n68 --> n11
+  n68 --> n75
+  n68 --> n24
+  n68 --> n66
+  n68 --> n76
+  n68 --> n77
+  n68 --> n28
+  n68 --> n78
+  n68 --> n62
+  n68 --> n60
+  n68 --> n12
+  n68 --> n74
+  n68 --> n79
+  n68 --> n13
+  n68 --> n14
+  n68 --> n70
+  n68 --> n16
+  n68 --> n18
+  n68 --> n19
+  n68 --> n20
+  n68 --> n21
+  n68 --> n22
+  n68 --> n23
+  n68 --> n80
+  n68 --> n34
+  n68 --> n15
+  n68 --> n26
+  n68 --> n27
+  n68 --> n81
+  n68 --> n63
+  n68 --> n82
+  n68 --> n25
+  n68 --> n83
+  n68 --> n84
+  n70 --> n82
+  n70 --> n17
+  n70 --> n16
+  n70 --> n18
+  n70 --> n19
+  n70 --> n20
   n70 --> n21
-  n70 --> n85
-  n70 --> n46
-  n73 --> n21
-  n74 --> n17
-  n74 --> n65
-  n77 --> n24
-  n77 --> n17
-  n77 --> n65
-  n79 --> n86
-  n79 --> n19
-  n79 --> n21
-  n79 --> n24
-  n79 --> n36
-  n80 --> n65
-  n81 --> n17
-  n81 --> n10
-  n81 --> n79
-  n81 --> n12
-  n81 --> n21
-  n81 --> n18
-  n81 --> n34
-  n81 --> n15
-  n81 --> n16
-  n81 --> n19
-  n81 --> n20
-  n81 --> n22
-  n81 --> n23
-  n81 --> n26
-  n81 --> n27
-  n81 --> n28
-  n81 --> n24
-  n81 --> n82
-  n81 --> n65
-  n81 --> n11
-  n81 --> n76
-  n81 --> n77
-  n81 --> n74
+  n70 --> n22
+  n70 --> n23
+  n70 --> n12
+  n70 --> n11
+  n70 --> n25
+  n70 --> n28
+  n70 --> n24
+  n70 --> n75
+  n70 --> n83
+  n70 --> n66
+  n70 --> n84
+  n70 --> n77
+  n70 --> n80
+  n70 --> n34
+  n70 --> n15
+  n70 --> n26
+  n70 --> n27
+  n70 --> n81
+  n71 --> n85
+  n71 --> n21
+  n71 --> n86
+  n71 --> n46
+  n74 --> n21
+  n75 --> n17
+  n75 --> n66
+  n78 --> n24
+  n78 --> n17
+  n78 --> n66
+  n80 --> n87
+  n80 --> n19
+  n80 --> n21
+  n80 --> n24
+  n80 --> n36
+  n81 --> n66
   n82 --> n17
-  n82 --> n11
-  n82 --> n74
-  n82 --> n24
-  n82 --> n65
+  n82 --> n10
   n82 --> n80
-  n83 --> n87
-  n83 --> n19
-  n83 --> n21
+  n82 --> n12
+  n82 --> n21
+  n82 --> n18
+  n82 --> n34
+  n82 --> n15
+  n82 --> n16
+  n82 --> n19
+  n82 --> n20
+  n82 --> n22
+  n82 --> n23
+  n82 --> n26
+  n82 --> n27
+  n82 --> n28
+  n82 --> n24
+  n82 --> n83
+  n82 --> n66
+  n82 --> n11
+  n82 --> n77
+  n82 --> n78
+  n82 --> n75
+  n83 --> n17
+  n83 --> n11
+  n83 --> n75
   n83 --> n24
-  n83 --> n36
+  n83 --> n66
+  n83 --> n81
   n84 --> n88
-  n85 --> n72
-  n86 --> n89
-  n86 --> n19
-  n86 --> n21
-  n86 --> n24
-  n87 --> n54
+  n84 --> n19
+  n84 --> n21
+  n84 --> n24
+  n84 --> n36
+  n85 --> n89
+  n86 --> n73
+  n87 --> n90
   n87 --> n19
   n87 --> n21
   n87 --> n24
+  n88 --> n55
+  n88 --> n19
   n88 --> n21
-  n88 --> n90
-  n88 --> n91
-  n90 --> n72
-  n91 --> n92
+  n88 --> n24
+  n89 --> n21
+  n89 --> n91
+  n89 --> n92
+  n91 --> n73
   n92 --> n93
+  n93 --> n94
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `check_sound` | proved | — | — | 136 | 263 |
+| `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `admitSig_ok_iff` | proved | — | — | 44 | 147 |
 | `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 77 | 385 |
@@ -2841,7 +2829,7 @@ flowchart LR
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `deferredMake_extension` | proved | — | — | 112 | 340 |
 | `refMake_extension` | proved | — | — | 113 | 340 |
-| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 394 | 713 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 393 | 713 |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 122 | 65 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 225 |
@@ -2860,7 +2848,7 @@ flowchart LR
 | `cata_eff_congr_on` | proved | — | — | 65 | 73 |
 | `hom_eq_cata_eff` | proved | — | — | 65 | 79 |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` | 451 | 434 |
-| `matchB_sound` | proved | — | — | 39 | 58 |
+| `matchB_sound` | proved | — | `lookup_solve_seed` | 38 | 58 |
 | `list_eliminator` | proved | — | `subN_list_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 139 | 65 |
 | `extend_upper` | proved | — | `extend_adjoint` | 38 | 52 |
 | `lift_transfer` | proved | — | `joinAll_keeps`, `mapM_answer` | 62 | 55 |
@@ -2876,6 +2864,7 @@ flowchart LR
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 135 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1055 | 1562 |
 | `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 108 | 1195 |
+| `lookup_solve_seed` | proved | — | — | 38 | 54 |
 | `subN_list_iff` | proved | — | — | 43 | 48 |
 | `extend_adjoint` | proved | — | `liftOne_some`, `adjoint`, `extend_eq_some_iff` | 39 | 52 |
 | `joinAll_keeps` | proved | — | `foldl_keeps` | 0 | 2 |
@@ -2892,10 +2881,10 @@ flowchart LR
 | `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 329 | 1353 |
 | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 364 | 1372 |
 | `guardBind_typed` | proved | — | `close_typed` | 54 | 256 |
-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1987 | 1608 |
-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1994 | 1608 |
+| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1986 | 1607 |
+| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1993 | 1607 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 780 | 902 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 779 | 902 |
 | `adjoint` | proved | — | `Eliminator.lift_least`, `subN_trans`, `mapM_total`, `Eliminator.lift_upper` | 84 | 57 |
 | `foldl_keeps` | proved | — | — | 0 | 1 |
 | `mapM_cons_eq_some` | proved | — | — | 0 | 0 |
@@ -2907,7 +2896,7 @@ flowchart LR
 | `memoBuild_extension` | proved | — | — | 111 | 340 |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 128 | 68 |
 | `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 246 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 814 | 944 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 813 | 943 |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 90 | 680 |
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 128 | 68 |
 | `Eliminator.lift_least` | proved | — | `UnionRule.lift_least` | 39 | 51 |
@@ -2949,7 +2938,7 @@ flowchart LR
 | `check_ext` | proved | — | `check_sound`, `check_complete` | 68 | 256 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 73 | 330 |
 | `lawful_append` | proved | — | — | 40 | 142 |
-| `check_sound` | proved | — | — | 136 | 263 |
+| `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `cata_eff_congr_on` | proved | — | — | 65 | 73 |
 | `hom_eq_cata_eff` | proved | — | — | 65 | 79 |
@@ -3054,535 +3043,791 @@ flowchart LR
   n23["Pool.make_types<br/>proved"]
   n24["use_types<br/>proved"]
   n25["ascribe_scoped<br/>proved"]
-  n26["matchArgsB_complete<br/>proved"]
-  n27["matchArgsB_conservative<br/>proved"]
-  n28["matchArgsB_least<br/>proved"]
-  n29["matchArgsB_sound<br/>proved"]
-  n30["matchArgsN_complete<br/>proved"]
-  n31["matchArgsN_least<br/>proved"]
-  n32["matchB_cell_fixed<br/>proved"]
-  n33["matchB_complete<br/>proved"]
-  n34["matchB_conservative<br/>proved"]
-  n35["matchB_least<br/>proved"]
-  n36["matchB_sound<br/>proved"]
-  n37["matchN_congr<br/>proved"]
-  n38["templateOK_of<br/>proved"]
-  n39["perform_scoped_iff<br/>proved"]
-  n40["matchTemplate_complete_anchored<br/>proved"]
-  n41["mono<br/>proved"]
-  n42["syncRow_typed<br/>proved"]
-  n43["termMaps_of_typed<br/>proved"]
-  n44["empty_typed<br/>proved"]
-  n45["offerStep_typed<br/>proved"]
-  n46["offerStep_types<br/>proved"]
-  n47["pollStep_typed<br/>proved"]
-  n48["pollStep_types<br/>proved"]
-  n49["sizeStep_typed<br/>proved"]
-  n50["takeStep_typed<br/>proved"]
-  n51["Queue.Model.takeStep_types<br/>proved"]
-  n52["withdrawOffer_typed<br/>proved"]
-  n53["withdrawOffer_types<br/>proved"]
-  n54["withdrawTake_typed<br/>proved"]
-  n55["withdrawTake_types<br/>proved"]
-  n56["bounded_types<br/>proved"]
-  n57["offer_types<br/>proved"]
-  n58["poll_types<br/>proved"]
-  n59["size_types<br/>proved"]
-  n60["Queue.take_types<br/>proved"]
-  n61["empty_types<br/>proved"]
-  n62["Semaphore.Model.profile_closed<br/>proved"]
-  n63["releaseStep_types<br/>proved"]
-  n64["takeIfAvailableStep_types<br/>proved"]
-  n65["Semaphore.Model.takeStep_types<br/>proved"]
-  n66["visitStep_types<br/>proved"]
-  n67["Semaphore.Model.withdrawStep_types<br/>proved"]
-  n68["Semaphore.make_types<br/>proved"]
-  n69["release_types<br/>proved"]
-  n70["takeIfAvailable_types<br/>proved"]
-  n71["Semaphore.take_types<br/>proved"]
-  n72["withPermitsIfAvailable_types<br/>proved"]
-  n73["withPermits_types<br/>proved"]
-  n74["atomic<br/>modulo"]
-  n75["bounded<br/>goal"]
-  n76["committed<br/>goal"]
-  n77["counted<br/>goal"]
-  n78["readTerm_printTerm<br/>proved"]
-  n79["listOf_upper<br/>proved"]
-  n80["fits_subN<br/>proved"]
-  n81["fits_normalize<br/>proved"]
-  n82["normalize_idem<br/>proved"]
-  n83["lift_sound<br/>proved"]
-  n84["subN_trans<br/>proved"]
-  n85["causeInputError_upper<br/>proved"]
-  n86["hom_eq_cata_ty<br/>proved"]
-  n87["fits_mono<br/>proved"]
-  n88["denotesTyped<br/>proved"]
-  n89["lift_member<br/>proved"]
-  n90["subN_refl<br/>proved"]
-  n91["check_complete<br/>proved"]
-  n92["check_sound<br/>proved"]
-  n93["waitRetryAt_answers<br/>proved"]
-  n94["mask_printed_form_profile<br/>proved"]
-  n95["optionTy_option<br/>proved"]
-  n96["protectedBy_has<br/>proved"]
-  n97["errOf_payload<br/>proved"]
-  n98["isPayload_of_hasTy_record<br/>proved"]
-  n99["rowTy_instantiated_formed<br/>proved"]
-  n100["sub_antisymm_canonical<br/>proved"]
-  n101["unsuspended_runs<br/>proved"]
-  n102["cleans_once<br/>goal"]
-  n103["checkInput_eq_none_iff<br/>proved"]
-  n104["list_eliminator<br/>proved"]
-  n105["extend_upper<br/>proved"]
-  n106["lift_transfer<br/>proved"]
-  n107["cause_upper<br/>proved"]
-  n108["cause_mono<br/>proved"]
-  n109["UnionRule.lift_upper<br/>proved"]
-  n110["subN_causeOf_causeUpper<br/>proved"]
-  n111["subN_exitOf_causeUpper<br/>proved"]
-  n112["extend_eq_some_iff<br/>proved"]
-  n113["provideLayerArm<br/>proved"]
-  n114["optionTy_upper<br/>proved"]
-  n115["catchGuard_typed<br/>proved"]
-  n116["onExit_typed<br/>proved"]
-  n117["guardBind_typed<br/>proved"]
-  n118["exitOf_upper<br/>proved"]
-  n119["fits_scope_inv<br/>proved"]
-  n120["fiberTy_upper<br/>proved"]
-  n121["allGuard_typed<br/>proved"]
-  n122["saved_mask_restoration<br/>proved"]
-  n123["read_print<br/>proved"]
-  n124["liftOne_member<br/>proved"]
-  n125["handles_of_payloadFieldTy<br/>proved"]
-  n126["run_agrees<br/>proved"]
-  n127["subN_list_iff<br/>proved"]
-  n128["extend_adjoint<br/>proved"]
-  n129["joinAll_keeps<br/>proved"]
-  n130["mapM_answer<br/>proved"]
-  n131["subN_exitOf_iff<br/>proved"]
-  n132["subN_causeOf_iff<br/>proved"]
-  n133["le_joinAll<br/>proved"]
-  n134["seq_typed<br/>proved"]
-  n135["liftOne_some<br/>proved"]
-  n136["option_eliminator<br/>proved"]
-  n137["Eliminator.lift_upper<br/>proved"]
-  n138["close_typed<br/>proved"]
-  n139["exit_eliminator<br/>proved"]
-  n140["fiber_eliminator<br/>proved"]
-  n141["liftOne_eq<br/>proved"]
-  n142["run_eq_meaning<br/>proved"]
-  n143["adjoint<br/>proved"]
-  n144["foldl_keeps<br/>proved"]
-  n145["mapM_cons_eq_some<br/>proved"]
-  n146["liftOne_eq_some_iff<br/>proved"]
-  n147["subN_option_iff<br/>proved"]
-  n148["subN_fiberOf_iff<br/>proved"]
-  n149["Eliminator.lift_least<br/>proved"]
-  n150["mapM_total<br/>proved"]
-  n151["UnionRule.lift_least<br/>proved"]
-  n152["mapM_source<br/>proved"]
-  n153["joinAll_le<br/>proved"]
-  n154["joinAll_all<br/>proved"]
-  n155["foldl_all<br/>proved"]
-  n5 --> n78
+  n26["args<br/>proved"]
+  n27["head<br/>proved"]
+  n28["above_args<br/>proved"]
+  n29["above_prod<br/>proved"]
+  n30["admits_normalize<br/>proved"]
+  n31["below_args<br/>proved"]
+  n32["candsFields_eq<br/>proved"]
+  n33["candsItems_eq<br/>proved"]
+  n34["candsList_below<br/>proved"]
+  n35["candsList_cons<br/>proved"]
+  n36["candsList_nil<br/>proved"]
+  n37["cands_args<br/>proved"]
+  n38["cands_below<br/>proved"]
+  n39["cands_mem_members<br/>proved"]
+  n40["cands_union_right<br/>proved"]
+  n41["cands_var<br/>proved"]
+  n42["comp_co<br/>proved"]
+  n43["comp_inv<br/>proved"]
+  n44["comp_ne_contra<br/>proved"]
+  n45["covers<br/>proved"]
+  n46["instance_shape<br/>proved"]
+  n47["instantiate_solve<br/>proved"]
+  n48["joinCands_least<br/>proved"]
+  n49["joinCands_upper<br/>proved"]
+  n50["join_eq_left_of_subN<br/>proved"]
+  n51["join_eq_right_of_subN<br/>proved"]
+  n52["lookup_added<br/>proved"]
+  n53["lookup_solve_seed<br/>proved"]
+  n54["lowers_cons<br/>proved"]
+  n55["matchArgsB_append<br/>proved"]
+  n56["matchArgsB_complete<br/>proved"]
+  n57["matchArgsB_cons_nil<br/>proved"]
+  n58["matchArgsB_ite<br/>proved"]
+  n59["matchArgsB_least<br/>proved"]
+  n60["matchArgsB_list_var_nat<br/>proved"]
+  n61["matchArgsB_one_var<br/>proved"]
+  n62["matchArgsB_sound<br/>proved"]
+  n63["matchArgsB_two_vars<br/>proved"]
+  n64["matchArgsN_complete<br/>proved"]
+  n65["matchArgsN_least<br/>proved"]
+  n66["matchB_cell_fixed<br/>proved"]
+  n67["matchB_complete<br/>proved"]
+  n68["matchB_least<br/>proved"]
+  n69["matchB_modify_use<br/>proved"]
+  n70["matchB_one_var<br/>proved"]
+  n71["matchB_refOf_var<br/>proved"]
+  n72["matchB_sound<br/>proved"]
+  n73["matchN_congr<br/>proved"]
+  n74["matchTerm_modify_use<br/>proved"]
+  n75["mem_lowers<br/>proved"]
+  n76["mem_varsOf_args<br/>proved"]
+  n77["mem_zip_map_right<br/>proved"]
+  n78["mem_zip_self_map<br/>proved"]
+  n79["noAppFields_eq_all<br/>proved"]
+  n80["noAppItems_eq_all<br/>proved"]
+  n81["noApp_args<br/>proved"]
+  n82["prod_left_cands<br/>proved"]
+  n83["prod_member_left<br/>proved"]
+  n84["prod_member_right<br/>proved"]
+  n85["prod_or_not<br/>proved"]
+  n86["prod_right_cands<br/>proved"]
+  n87["recovers<br/>proved"]
+  n88["solve_between<br/>proved"]
+  n89["subN_join_least<br/>proved"]
+  n90["subN_never<br/>proved"]
+  n91["templateOK_of<br/>proved"]
+  n92["termGuard_modify_use<br/>proved"]
+  n93["perform_scoped_iff<br/>proved"]
+  n94["mono<br/>proved"]
+  n95["syncRow_typed<br/>proved"]
+  n96["termMaps_of_typed<br/>proved"]
+  n97["empty_typed<br/>proved"]
+  n98["offerStep_typed<br/>proved"]
+  n99["offerStep_types<br/>proved"]
+  n100["pollStep_typed<br/>proved"]
+  n101["pollStep_types<br/>proved"]
+  n102["sizeStep_typed<br/>proved"]
+  n103["takeStep_typed<br/>proved"]
+  n104["Queue.Model.takeStep_types<br/>proved"]
+  n105["withdrawOffer_typed<br/>proved"]
+  n106["withdrawOffer_types<br/>proved"]
+  n107["withdrawTake_typed<br/>proved"]
+  n108["withdrawTake_types<br/>proved"]
+  n109["bounded_types<br/>proved"]
+  n110["offer_types<br/>proved"]
+  n111["poll_types<br/>proved"]
+  n112["size_types<br/>proved"]
+  n113["Queue.take_types<br/>proved"]
+  n114["empty_types<br/>proved"]
+  n115["Semaphore.Model.profile_closed<br/>proved"]
+  n116["releaseStep_types<br/>proved"]
+  n117["takeIfAvailableStep_types<br/>proved"]
+  n118["Semaphore.Model.takeStep_types<br/>proved"]
+  n119["visitStep_types<br/>proved"]
+  n120["Semaphore.Model.withdrawStep_types<br/>proved"]
+  n121["Semaphore.make_types<br/>proved"]
+  n122["release_types<br/>proved"]
+  n123["takeIfAvailable_types<br/>proved"]
+  n124["Semaphore.take_types<br/>proved"]
+  n125["withPermitsIfAvailable_types<br/>proved"]
+  n126["withPermits_types<br/>proved"]
+  n127["atomic<br/>modulo"]
+  n128["bounded<br/>goal"]
+  n129["committed<br/>goal"]
+  n130["counted<br/>goal"]
+  n131["readTerm_printTerm<br/>proved"]
+  n132["listOf_upper<br/>proved"]
+  n133["fits_subN<br/>proved"]
+  n134["fits_normalize<br/>proved"]
+  n135["normalize_idem<br/>proved"]
+  n136["lift_sound<br/>proved"]
+  n137["subN_trans<br/>proved"]
+  n138["causeInputError_upper<br/>proved"]
+  n139["hom_eq_cata_ty<br/>proved"]
+  n140["fits_mono<br/>proved"]
+  n141["denotesTyped<br/>proved"]
+  n142["lift_member<br/>proved"]
+  n143["subN_refl<br/>proved"]
+  n144["check_complete<br/>proved"]
+  n145["check_sound<br/>proved"]
+  n146["waitRetryAt_answers<br/>proved"]
+  n147["mask_printed_form_profile<br/>proved"]
+  n148["optionTy_option<br/>proved"]
+  n149["protectedBy_has<br/>proved"]
+  n150["errOf_payload<br/>proved"]
+  n151["isPayload_of_hasTy_record<br/>proved"]
+  n152["rowTy_instantiated_formed<br/>proved"]
+  n153["sub_antisymm_canonical<br/>proved"]
+  n154["unsuspended_runs<br/>proved"]
+  n155["cleans_once<br/>goal"]
+  n156["checkInput_eq_none_iff<br/>proved"]
+  n157["list_eliminator<br/>proved"]
+  n158["extend_upper<br/>proved"]
+  n159["lift_transfer<br/>proved"]
+  n160["cause_upper<br/>proved"]
+  n161["cause_mono<br/>proved"]
+  n162["UnionRule.lift_upper<br/>proved"]
+  n163["subN_causeOf_causeUpper<br/>proved"]
+  n164["subN_exitOf_causeUpper<br/>proved"]
+  n165["extend_eq_some_iff<br/>proved"]
+  n166["provideLayerArm<br/>proved"]
+  n167["optionTy_upper<br/>proved"]
+  n168["catchGuard_typed<br/>proved"]
+  n169["onExit_typed<br/>proved"]
+  n170["guardBind_typed<br/>proved"]
+  n171["exitOf_upper<br/>proved"]
+  n172["fits_scope_inv<br/>proved"]
+  n173["fiberTy_upper<br/>proved"]
+  n174["allGuard_typed<br/>proved"]
+  n175["saved_mask_restoration<br/>proved"]
+  n176["read_print<br/>proved"]
+  n177["liftOne_member<br/>proved"]
+  n178["handles_of_payloadFieldTy<br/>proved"]
+  n179["run_agrees<br/>proved"]
+  n180["subN_list_iff<br/>proved"]
+  n181["extend_adjoint<br/>proved"]
+  n182["joinAll_keeps<br/>proved"]
+  n183["mapM_answer<br/>proved"]
+  n184["subN_exitOf_iff<br/>proved"]
+  n185["subN_causeOf_iff<br/>proved"]
+  n186["le_joinAll<br/>proved"]
+  n187["seq_typed<br/>proved"]
+  n188["liftOne_some<br/>proved"]
+  n189["option_eliminator<br/>proved"]
+  n190["Eliminator.lift_upper<br/>proved"]
+  n191["close_typed<br/>proved"]
+  n192["exit_eliminator<br/>proved"]
+  n193["fiber_eliminator<br/>proved"]
+  n194["liftOne_eq<br/>proved"]
+  n195["run_eq_meaning<br/>proved"]
+  n196["adjoint<br/>proved"]
+  n197["foldl_keeps<br/>proved"]
+  n198["mapM_cons_eq_some<br/>proved"]
+  n199["liftOne_eq_some_iff<br/>proved"]
+  n200["subN_option_iff<br/>proved"]
+  n201["subN_fiberOf_iff<br/>proved"]
+  n202["Eliminator.lift_least<br/>proved"]
+  n203["mapM_total<br/>proved"]
+  n204["UnionRule.lift_least<br/>proved"]
+  n205["mapM_source<br/>proved"]
+  n206["joinAll_le<br/>proved"]
+  n207["joinAll_all<br/>proved"]
+  n208["foldl_all<br/>proved"]
+  n5 --> n131
   n5 --> n0
-  n5 --> n43
-  n5 --> n79
-  n5 --> n80
-  n5 --> n81
-  n5 --> n82
-  n5 --> n83
-  n5 --> n84
-  n5 --> n85
-  n5 --> n29
-  n5 --> n86
-  n6 --> n87
-  n8 --> n88
-  n8 --> n79
-  n8 --> n80
-  n8 --> n81
-  n8 --> n82
-  n8 --> n83
-  n8 --> n84
-  n8 --> n85
-  n8 --> n29
-  n8 --> n86
+  n5 --> n96
+  n5 --> n132
+  n5 --> n133
+  n5 --> n134
+  n5 --> n135
+  n5 --> n136
+  n5 --> n137
+  n5 --> n138
+  n5 --> n62
+  n5 --> n139
+  n6 --> n140
+  n8 --> n141
+  n8 --> n133
+  n8 --> n132
+  n8 --> n134
+  n8 --> n135
+  n8 --> n136
+  n8 --> n137
+  n8 --> n138
+  n8 --> n62
+  n8 --> n139
   n11 --> n5
-  n12 --> n89
-  n12 --> n82
-  n13 --> n82
-  n13 --> n89
-  n14 --> n90
-  n14 --> n89
-  n14 --> n82
-  n16 --> n89
-  n16 --> n82
-  n16 --> n90
-  n19 --> n90
-  n19 --> n89
-  n19 --> n82
-  n20 --> n82
-  n20 --> n89
-  n21 --> n89
-  n21 --> n82
-  n21 --> n90
+  n12 --> n142
+  n12 --> n135
+  n13 --> n135
+  n13 --> n142
+  n13 --> n63
+  n14 --> n143
+  n14 --> n142
+  n14 --> n135
+  n14 --> n51
+  n14 --> n58
+  n14 --> n57
+  n14 --> n55
+  n14 --> n60
+  n14 --> n63
+  n15 --> n57
+  n15 --> n55
+  n16 --> n142
+  n16 --> n135
+  n16 --> n51
+  n16 --> n58
+  n16 --> n60
+  n16 --> n143
+  n16 --> n57
+  n16 --> n55
+  n16 --> n63
+  n19 --> n143
+  n19 --> n142
+  n19 --> n135
+  n19 --> n51
+  n19 --> n58
+  n19 --> n57
+  n19 --> n55
+  n19 --> n60
+  n19 --> n63
+  n20 --> n60
+  n20 --> n135
+  n20 --> n142
+  n20 --> n63
+  n21 --> n142
+  n21 --> n135
+  n21 --> n143
+  n21 --> n57
+  n21 --> n55
+  n21 --> n51
+  n21 --> n58
+  n21 --> n60
+  n21 --> n63
   n22 --> n21
-  n22 --> n91
-  n22 --> n92
+  n22 --> n144
+  n22 --> n145
   n22 --> n14
-  n22 --> n93
-  n22 --> n94
-  n22 --> n90
-  n22 --> n89
-  n22 --> n82
-  n22 --> n95
+  n22 --> n74
+  n22 --> n71
+  n22 --> n146
+  n22 --> n147
+  n22 --> n143
+  n22 --> n142
+  n22 --> n135
+  n22 --> n63
+  n22 --> n60
+  n22 --> n148
   n22 --> n20
   n22 --> n13
-  n23 --> n82
-  n23 --> n91
-  n23 --> n92
+  n23 --> n135
+  n23 --> n144
+  n23 --> n145
   n23 --> n22
   n23 --> n15
-  n24 --> n91
-  n24 --> n92
-  n24 --> n90
-  n24 --> n89
-  n24 --> n82
-  n24 --> n95
+  n23 --> n70
+  n24 --> n144
+  n24 --> n145
+  n24 --> n143
+  n24 --> n142
+  n24 --> n135
+  n24 --> n63
+  n24 --> n60
+  n24 --> n148
   n24 --> n20
+  n24 --> n74
+  n24 --> n71
   n24 --> n19
   n24 --> n21
   n24 --> n16
-  n24 --> n93
-  n24 --> n96
-  n26 --> n82
-  n26 --> n84
-  n26 --> n90
-  n27 --> n26
-  n27 --> n82
-  n27 --> n84
-  n27 --> n90
-  n28 --> n82
-  n28 --> n84
-  n28 --> n90
-  n30 --> n82
-  n30 --> n26
-  n31 --> n82
-  n31 --> n28
-  n32 --> n36
-  n33 --> n82
-  n33 --> n84
-  n33 --> n90
-  n34 --> n33
-  n34 --> n82
-  n34 --> n84
-  n34 --> n90
-  n35 --> n82
-  n35 --> n84
-  n35 --> n90
-  n40 --> n82
-  n41 --> n1
-  n42 --> n81
-  n42 --> n84
-  n42 --> n80
-  n42 --> n43
-  n42 --> n36
-  n42 --> n86
-  n42 --> n97
-  n42 --> n98
-  n42 --> n82
-  n42 --> n90
-  n43 --> n79
-  n43 --> n80
-  n43 --> n81
-  n43 --> n82
-  n43 --> n83
-  n43 --> n84
-  n43 --> n85
-  n43 --> n29
-  n43 --> n86
-  n43 --> n87
-  n45 --> n46
-  n46 --> n82
-  n46 --> n90
-  n46 --> n89
-  n47 --> n48
-  n48 --> n82
-  n48 --> n90
+  n24 --> n146
+  n24 --> n149
+  n26 --> n81
+  n28 --> n77
+  n28 --> n46
+  n30 --> n135
+  n34 --> n38
+  n37 --> n33
+  n37 --> n32
+  n37 --> n43
+  n37 --> n42
+  n38 --> n26
+  n38 --> n44
+  n38 --> n37
+  n38 --> n31
+  n38 --> n40
+  n38 --> n39
+  n38 --> n27
+  n38 --> n41
+  n39 --> n40
+  n44 --> n43
+  n44 --> n42
+  n45 --> n28
+  n45 --> n29
+  n45 --> n85
+  n45 --> n87
+  n45 --> n37
+  n45 --> n26
+  n45 --> n31
+  n45 --> n40
+  n45 --> n27
+  n45 --> n41
+  n47 --> n52
   n48 --> n89
-  n49 --> n89
-  n49 --> n82
+  n48 --> n90
+  n49 --> n135
+  n49 --> n137
+  n49 --> n143
   n50 --> n51
-  n51 --> n82
-  n51 --> n90
+  n51 --> n135
+  n51 --> n143
   n51 --> n89
-  n52 --> n53
-  n53 --> n82
-  n53 --> n89
-  n53 --> n90
-  n54 --> n55
-  n55 --> n82
-  n55 --> n89
-  n55 --> n90
-  n56 --> n44
-  n56 --> n91
-  n56 --> n92
-  n57 --> n53
-  n57 --> n91
-  n57 --> n92
-  n57 --> n95
-  n57 --> n89
-  n57 --> n82
-  n57 --> n90
-  n57 --> n46
-  n57 --> n99
-  n57 --> n94
-  n58 --> n91
-  n58 --> n92
-  n58 --> n89
-  n58 --> n82
-  n58 --> n90
-  n58 --> n95
-  n58 --> n48
-  n59 --> n89
-  n59 --> n82
-  n59 --> n91
-  n59 --> n92
-  n60 --> n55
-  n60 --> n91
-  n60 --> n92
-  n60 --> n95
-  n60 --> n89
-  n60 --> n82
-  n60 --> n90
-  n60 --> n51
-  n60 --> n93
-  n60 --> n94
-  n63 --> n82
-  n63 --> n89
-  n64 --> n89
-  n64 --> n82
-  n64 --> n90
-  n65 --> n89
-  n65 --> n82
-  n65 --> n90
-  n66 --> n90
-  n66 --> n89
-  n66 --> n82
-  n67 --> n89
-  n67 --> n82
-  n67 --> n90
-  n68 --> n61
-  n68 --> n91
-  n68 --> n92
-  n69 --> n91
-  n69 --> n92
-  n69 --> n82
-  n69 --> n90
-  n69 --> n89
-  n69 --> n95
-  n69 --> n66
-  n69 --> n63
-  n70 --> n64
-  n70 --> n91
-  n70 --> n92
-  n71 --> n67
-  n71 --> n91
-  n71 --> n92
-  n71 --> n65
-  n71 --> n93
-  n71 --> n94
-  n72 --> n69
-  n72 --> n92
-  n72 --> n91
-  n72 --> n82
-  n72 --> n70
-  n72 --> n96
-  n72 --> n100
-  n73 --> n69
-  n73 --> n67
-  n73 --> n91
-  n73 --> n92
-  n73 --> n65
-  n73 --> n93
-  n73 --> n96
-  n74 --> n101
-  n74 --> n102
-  n74 --> n76
-  n74 --> n77
-  n74 --> n75
-  n74 --> n103
-  n75 --> n103
-  n76 --> n103
-  n77 --> n103
-  n79 --> n104
-  n79 --> n82
-  n79 --> n84
-  n79 --> n90
-  n79 --> n105
-  n80 --> n84
-  n80 --> n81
-  n81 --> n84
-  n81 --> n82
-  n83 --> n106
-  n85 --> n107
-  n85 --> n108
-  n85 --> n82
-  n85 --> n84
-  n85 --> n90
-  n85 --> n109
-  n85 --> n110
-  n85 --> n111
-  n85 --> n112
-  n88 --> n113
-  n88 --> n79
-  n88 --> n80
-  n88 --> n81
-  n88 --> n82
-  n88 --> n83
-  n88 --> n84
-  n88 --> n85
-  n88 --> n29
-  n88 --> n86
-  n88 --> n87
-  n88 --> n114
-  n88 --> n1
-  n88 --> n90
-  n88 --> n115
-  n88 --> n116
-  n88 --> n117
-  n88 --> n118
-  n88 --> n119
-  n88 --> n120
-  n88 --> n36
-  n88 --> n42
-  n88 --> n97
-  n88 --> n98
-  n88 --> n121
-  n93 --> n91
-  n93 --> n92
-  n93 --> n95
-  n93 --> n82
-  n94 --> n122
-  n94 --> n123
-  n94 --> n92
-  n94 --> n91
-  n95 --> n124
-  n96 --> n82
-  n96 --> n92
-  n96 --> n91
-  n96 --> n94
-  n98 --> n125
-  n101 --> n126
-  n102 --> n103
-  n104 --> n127
-  n104 --> n82
-  n104 --> n84
-  n104 --> n90
-  n105 --> n128
-  n106 --> n129
-  n106 --> n130
-  n107 --> n110
-  n107 --> n111
-  n108 --> n131
-  n108 --> n110
-  n108 --> n84
-  n108 --> n132
-  n109 --> n133
-  n109 --> n84
-  n109 --> n130
-  n111 --> n84
-  n111 --> n90
-  n111 --> n131
-  n113 --> n80
-  n113 --> n0
-  n113 --> n120
-  n113 --> n86
-  n113 --> n84
-  n113 --> n81
-  n113 --> n36
-  n113 --> n42
-  n113 --> n79
-  n113 --> n82
-  n113 --> n83
-  n113 --> n85
-  n113 --> n29
-  n113 --> n97
-  n113 --> n98
-  n113 --> n1
-  n113 --> n90
-  n113 --> n116
-  n113 --> n117
-  n113 --> n87
-  n113 --> n119
-  n113 --> n134
-  n113 --> n115
-  n114 --> n135
-  n114 --> n136
-  n114 --> n82
-  n114 --> n84
-  n114 --> n90
-  n114 --> n137
-  n115 --> n80
-  n115 --> n117
-  n116 --> n80
-  n116 --> n87
-  n116 --> n115
-  n116 --> n90
-  n116 --> n117
-  n116 --> n121
-  n117 --> n138
-  n118 --> n139
-  n118 --> n82
-  n118 --> n84
-  n118 --> n90
-  n118 --> n105
-  n120 --> n140
-  n120 --> n82
-  n120 --> n84
-  n120 --> n90
-  n120 --> n105
-  n121 --> n117
-  n123 --> n78
-  n124 --> n89
-  n124 --> n141
-  n126 --> n142
-  n128 --> n135
-  n128 --> n143
-  n128 --> n112
-  n129 --> n144
-  n130 --> n145
-  n133 --> n129
-  n134 --> n90
-  n134 --> n80
-  n134 --> n117
-  n135 --> n146
-  n136 --> n147
-  n136 --> n82
-  n136 --> n84
-  n136 --> n90
-  n137 --> n90
-  n137 --> n109
-  n139 --> n131
-  n139 --> n82
-  n139 --> n84
-  n139 --> n90
-  n140 --> n148
-  n140 --> n82
-  n140 --> n84
-  n140 --> n90
-  n143 --> n149
-  n143 --> n84
-  n143 --> n150
-  n143 --> n137
-  n149 --> n151
-  n150 --> n145
-  n151 --> n84
-  n151 --> n152
-  n151 --> n153
-  n152 --> n145
-  n153 --> n154
-  n154 --> n155
+  n52 --> n54
+  n55 --> n36
+  n55 --> n41
+  n55 --> n35
+  n56 --> n45
+  n56 --> n34
+  n56 --> n88
+  n57 --> n36
+  n57 --> n41
+  n57 --> n35
+  n58 --> n135
+  n58 --> n36
+  n58 --> n41
+  n58 --> n35
+  n59 --> n34
+  n59 --> n88
+  n60 --> n36
+  n60 --> n41
+  n60 --> n35
+  n61 --> n41
+  n61 --> n36
+  n61 --> n35
+  n63 --> n36
+  n63 --> n41
+  n63 --> n35
+  n64 --> n30
+  n64 --> n56
+  n65 --> n30
+  n65 --> n59
+  n66 --> n72
+  n67 --> n45
+  n67 --> n38
+  n67 --> n88
+  n68 --> n38
+  n68 --> n88
+  n69 --> n41
+  n70 --> n41
+  n71 --> n41
+  n71 --> n43
+  n72 --> n53
+  n74 --> n69
+  n74 --> n92
+  n81 --> n80
+  n81 --> n79
+  n82 --> n27
+  n82 --> n26
+  n82 --> n41
+  n82 --> n39
+  n82 --> n83
+  n86 --> n27
+  n86 --> n26
+  n86 --> n41
+  n86 --> n39
+  n86 --> n84
+  n87 --> n78
+  n87 --> n37
+  n87 --> n46
+  n87 --> n76
+  n87 --> n86
+  n87 --> n82
+  n87 --> n26
+  n87 --> n85
+  n87 --> n27
+  n87 --> n41
+  n88 --> n49
+  n88 --> n53
+  n88 --> n75
+  n88 --> n48
+  n88 --> n47
+  n89 --> n135
+  n92 --> n41
+  n94 --> n1
+  n95 --> n134
+  n95 --> n137
+  n95 --> n133
+  n95 --> n96
+  n95 --> n72
+  n95 --> n139
+  n95 --> n150
+  n95 --> n151
+  n95 --> n135
+  n95 --> n143
+  n96 --> n132
+  n96 --> n133
+  n96 --> n134
+  n96 --> n135
+  n96 --> n136
+  n96 --> n137
+  n96 --> n138
+  n96 --> n62
+  n96 --> n139
+  n96 --> n140
+  n98 --> n99
+  n99 --> n51
+  n99 --> n58
+  n99 --> n50
+  n99 --> n60
+  n99 --> n61
+  n99 --> n63
+  n99 --> n135
+  n99 --> n142
+  n99 --> n57
+  n99 --> n55
+  n100 --> n101
+  n101 --> n50
+  n101 --> n58
+  n101 --> n60
+  n101 --> n63
+  n101 --> n135
+  n101 --> n142
+  n101 --> n51
+  n101 --> n143
+  n101 --> n55
+  n102 --> n142
+  n102 --> n135
+  n103 --> n104
+  n104 --> n50
+  n104 --> n58
+  n104 --> n60
+  n104 --> n51
+  n104 --> n57
+  n104 --> n55
+  n104 --> n143
+  n104 --> n142
+  n104 --> n135
+  n104 --> n63
+  n105 --> n106
+  n106 --> n63
+  n106 --> n135
+  n106 --> n142
+  n106 --> n60
+  n106 --> n51
+  n106 --> n58
+  n106 --> n143
+  n106 --> n57
+  n106 --> n55
+  n107 --> n108
+  n108 --> n63
+  n108 --> n135
+  n108 --> n142
+  n108 --> n60
+  n108 --> n51
+  n108 --> n58
+  n108 --> n143
+  n108 --> n57
+  n108 --> n55
+  n109 --> n97
+  n109 --> n70
+  n109 --> n144
+  n109 --> n145
+  n110 --> n106
+  n110 --> n144
+  n110 --> n145
+  n110 --> n148
+  n110 --> n142
+  n110 --> n135
+  n110 --> n143
+  n110 --> n63
+  n110 --> n60
+  n110 --> n99
+  n110 --> n74
+  n110 --> n71
+  n110 --> n152
+  n110 --> n147
+  n111 --> n144
+  n111 --> n145
+  n111 --> n142
+  n111 --> n135
+  n111 --> n143
+  n111 --> n63
+  n111 --> n60
+  n111 --> n148
+  n111 --> n101
+  n111 --> n74
+  n111 --> n71
+  n112 --> n142
+  n112 --> n135
+  n112 --> n144
+  n112 --> n145
+  n112 --> n71
+  n113 --> n108
+  n113 --> n144
+  n113 --> n145
+  n113 --> n148
+  n113 --> n142
+  n113 --> n135
+  n113 --> n143
+  n113 --> n63
+  n113 --> n60
+  n113 --> n104
+  n113 --> n74
+  n113 --> n71
+  n113 --> n146
+  n113 --> n147
+  n116 --> n135
+  n116 --> n142
+  n116 --> n63
+  n117 --> n142
+  n117 --> n135
+  n117 --> n63
+  n117 --> n51
+  n117 --> n58
+  n118 --> n142
+  n118 --> n135
+  n118 --> n51
+  n118 --> n58
+  n118 --> n57
+  n118 --> n55
+  n118 --> n63
+  n118 --> n143
+  n118 --> n60
+  n119 --> n143
+  n119 --> n57
+  n119 --> n55
+  n119 --> n142
+  n119 --> n135
+  n119 --> n51
+  n119 --> n58
+  n119 --> n60
+  n119 --> n63
+  n120 --> n142
+  n120 --> n135
+  n120 --> n143
+  n120 --> n57
+  n120 --> n55
+  n120 --> n51
+  n120 --> n58
+  n120 --> n60
+  n120 --> n63
+  n121 --> n114
+  n121 --> n70
+  n121 --> n144
+  n121 --> n145
+  n122 --> n144
+  n122 --> n145
+  n122 --> n135
+  n122 --> n143
+  n122 --> n142
+  n122 --> n63
+  n122 --> n148
+  n122 --> n119
+  n122 --> n74
+  n122 --> n71
+  n122 --> n61
+  n122 --> n116
+  n123 --> n117
+  n123 --> n144
+  n123 --> n145
+  n123 --> n74
+  n123 --> n71
+  n124 --> n120
+  n124 --> n144
+  n124 --> n145
+  n124 --> n118
+  n124 --> n74
+  n124 --> n71
+  n124 --> n146
+  n124 --> n147
+  n125 --> n122
+  n125 --> n145
+  n125 --> n144
+  n125 --> n135
+  n125 --> n61
+  n125 --> n123
+  n125 --> n149
+  n125 --> n153
+  n126 --> n122
+  n126 --> n120
+  n126 --> n144
+  n126 --> n145
+  n126 --> n118
+  n126 --> n74
+  n126 --> n71
+  n126 --> n146
+  n126 --> n149
+  n127 --> n154
+  n127 --> n155
+  n127 --> n129
+  n127 --> n130
+  n127 --> n128
+  n127 --> n156
+  n128 --> n156
+  n129 --> n156
+  n130 --> n156
+  n132 --> n157
+  n132 --> n135
+  n132 --> n137
+  n132 --> n143
+  n132 --> n158
+  n133 --> n137
+  n133 --> n134
+  n134 --> n137
+  n134 --> n135
+  n136 --> n159
+  n138 --> n160
+  n138 --> n161
+  n138 --> n135
+  n138 --> n137
+  n138 --> n143
+  n138 --> n162
+  n138 --> n163
+  n138 --> n164
+  n138 --> n165
+  n141 --> n166
+  n141 --> n133
+  n141 --> n132
+  n141 --> n134
+  n141 --> n135
+  n141 --> n136
+  n141 --> n137
+  n141 --> n138
+  n141 --> n62
+  n141 --> n139
+  n141 --> n140
+  n141 --> n167
+  n141 --> n1
+  n141 --> n143
+  n141 --> n168
+  n141 --> n169
+  n141 --> n170
+  n141 --> n171
+  n141 --> n172
+  n141 --> n173
+  n141 --> n72
+  n141 --> n95
+  n141 --> n150
+  n141 --> n151
+  n141 --> n174
+  n146 --> n144
+  n146 --> n145
+  n146 --> n148
+  n146 --> n135
+  n146 --> n61
+  n147 --> n175
+  n147 --> n176
+  n147 --> n145
+  n147 --> n144
+  n148 --> n177
+  n149 --> n135
+  n149 --> n145
+  n149 --> n144
+  n149 --> n147
+  n151 --> n178
+  n154 --> n179
+  n155 --> n156
+  n157 --> n180
+  n157 --> n135
+  n157 --> n137
+  n157 --> n143
+  n158 --> n181
+  n159 --> n182
+  n159 --> n183
+  n160 --> n163
+  n160 --> n164
+  n161 --> n184
+  n161 --> n163
+  n161 --> n137
+  n161 --> n185
+  n162 --> n186
+  n162 --> n137
+  n162 --> n183
+  n164 --> n137
+  n164 --> n143
+  n164 --> n184
+  n166 --> n133
+  n166 --> n0
+  n166 --> n173
+  n166 --> n139
+  n166 --> n137
+  n166 --> n134
+  n166 --> n72
+  n166 --> n95
+  n166 --> n132
+  n166 --> n135
+  n166 --> n136
+  n166 --> n138
+  n166 --> n62
+  n166 --> n150
+  n166 --> n151
+  n166 --> n1
+  n166 --> n143
+  n166 --> n169
+  n166 --> n170
+  n166 --> n140
+  n166 --> n172
+  n166 --> n187
+  n166 --> n168
+  n167 --> n188
+  n167 --> n189
+  n167 --> n135
+  n167 --> n137
+  n167 --> n143
+  n167 --> n190
+  n168 --> n133
+  n168 --> n170
+  n169 --> n133
+  n169 --> n140
+  n169 --> n168
+  n169 --> n143
+  n169 --> n170
+  n169 --> n174
+  n170 --> n191
+  n171 --> n192
+  n171 --> n135
+  n171 --> n137
+  n171 --> n143
+  n171 --> n158
+  n173 --> n193
+  n173 --> n135
+  n173 --> n137
+  n173 --> n143
+  n173 --> n158
+  n174 --> n170
+  n176 --> n131
+  n177 --> n142
+  n177 --> n194
+  n179 --> n195
+  n181 --> n188
+  n181 --> n196
+  n181 --> n165
+  n182 --> n197
+  n183 --> n198
+  n186 --> n182
+  n187 --> n143
+  n187 --> n133
+  n187 --> n170
+  n188 --> n199
+  n189 --> n200
+  n189 --> n135
+  n189 --> n137
+  n189 --> n143
+  n190 --> n143
+  n190 --> n162
+  n192 --> n184
+  n192 --> n135
+  n192 --> n137
+  n192 --> n143
+  n193 --> n201
+  n193 --> n135
+  n193 --> n137
+  n193 --> n143
+  n196 --> n202
+  n196 --> n137
+  n196 --> n203
+  n196 --> n190
+  n202 --> n204
+  n203 --> n198
+  n204 --> n137
+  n204 --> n205
+  n204 --> n206
+  n205 --> n198
+  n206 --> n207
+  n207 --> n208
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3595,72 +3840,125 @@ flowchart LR
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` | 550 | 668 |
 | `handle_identity_laws` | proved | — | `fits_mono` | 176 | 372 |
 | `saved_mask_image_membership` | proved | — | — | 75 | 256 |
-| `scoped_body_substitution_boundary` | proved | — | `denotesTyped`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` | 754 | 1122 |
+| `scoped_body_substitution_boundary` | proved | — | `denotesTyped`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` | 755 | 1122 |
 | `image_agrees` | proved | — | — | 11 | 110 |
 | `ascribe_untyped` | proved | — | — | 44 | 105 |
 | `step_keeps_cell` | proved | — | `fold_typed_atomic_update` | 57 | 402 |
 | `types_ascribe` | proved | — | `lift_member`, `normalize_idem` | 93 | 112 |
-| `closeStep_types` | proved | — | `normalize_idem`, `lift_member` | 156 | 157 |
-| `drainStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem` | 302 | 188 |
-| `initial_types` | proved | — | — | 133 | 162 |
-| `leaseStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 341 | 195 |
+| `closeStep_types` | proved | — | `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 152 | 154 |
+| `drainStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 275 | 183 |
+| `initial_types` | proved | — | `matchArgsB_cons_nil`, `matchArgsB_append` | 128 | 159 |
+| `leaseStep_types` | proved | — | `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_two_vars` | 314 | 190 |
 | `lease_enrols_iff` | proved | — | — | 5 | 14 |
 | `Pool.Model.profile_closed` | proved | — | — | 25 | 22 |
-| `returnStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem` | 313 | 192 |
-| `selectStep_types` | proved | — | `normalize_idem`, `lift_member` | 126 | 151 |
-| `Pool.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 284 | 183 |
-| `close_answers` | proved | — | `Pool.Model.withdrawStep_types`, `check_complete`, `check_sound`, `drainStep_types`, `waitRetryAt_answers`, `mask_printed_form_profile`, `subN_refl`, `lift_member`, `normalize_idem`, `optionTy_option`, `selectStep_types`, `closeStep_types` | 259 | 444 |
-| `Pool.make_types` | proved | — | `normalize_idem`, `check_complete`, `check_sound`, `close_answers`, `initial_types` | 243 | 452 |
-| `use_types` | proved | — | `check_complete`, `check_sound`, `subN_refl`, `lift_member`, `normalize_idem`, `optionTy_option`, `selectStep_types`, `returnStep_types`, `Pool.Model.withdrawStep_types`, `leaseStep_types`, `waitRetryAt_answers`, `protectedBy_has` | 282 | 454 |
+| `returnStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 286 | 187 |
+| `selectStep_types` | proved | — | `matchArgsB_list_var_nat`, `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 118 | 146 |
+| `Pool.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 250 | 178 |
+| `close_answers` | proved | — | `Pool.Model.withdrawStep_types`, `check_complete`, `check_sound`, `drainStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `mask_printed_form_profile`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `selectStep_types`, `closeStep_types` | 249 | 439 |
+| `Pool.make_types` | proved | — | `normalize_idem`, `check_complete`, `check_sound`, `close_answers`, `initial_types`, `matchB_one_var` | 241 | 449 |
+| `use_types` | proved | — | `check_complete`, `check_sound`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `selectStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `returnStep_types`, `Pool.Model.withdrawStep_types`, `leaseStep_types`, `waitRetryAt_answers`, `protectedBy_has` | 272 | 449 |
 | `ascribe_scoped` | proved | — | — | 7 | 10 |
-| `matchArgsB_complete` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 267 | 132 |
-| `matchArgsB_conservative` | proved | — | `matchArgsB_complete`, `normalize_idem`, `subN_trans`, `subN_refl` | 233 | 94 |
-| `matchArgsB_least` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 228 | 89 |
+| `args` | proved | — | `noApp_args` | 25 | 38 |
+| `head` | proved | — | — | 5 | 13 |
+| `above_args` | proved | — | `mem_zip_map_right`, `instance_shape` | 71 | 53 |
+| `above_prod` | proved | — | — | 153 | 61 |
+| `admits_normalize` | proved | — | `normalize_idem` | 37 | 48 |
+| `below_args` | proved | — | — | 168 | 65 |
+| `candsFields_eq` | proved | — | — | 0 | 7 |
+| `candsItems_eq` | proved | — | — | 0 | 7 |
+| `candsList_below` | proved | — | `cands_below` | 62 | 59 |
+| `candsList_cons` | proved | — | — | 0 | 7 |
+| `candsList_nil` | proved | — | — | 0 | 7 |
+| `cands_args` | proved | — | `candsItems_eq`, `candsFields_eq`, `comp_inv`, `comp_co` | 21 | 24 |
+| `cands_below` | proved | — | `args`, `comp_ne_contra`, `cands_args`, `below_args`, `cands_union_right`, `cands_mem_members`, `head`, `cands_var` | 114 | 67 |
+| `cands_mem_members` | proved | — | `cands_union_right` | 1 | 7 |
+| `cands_union_right` | proved | — | — | 0 | 10 |
+| `cands_var` | proved | — | — | 0 | 10 |
+| `comp_co` | proved | — | — | 0 | 2 |
+| `comp_inv` | proved | — | — | 0 | 2 |
+| `comp_ne_contra` | proved | — | `comp_inv`, `comp_co` | 0 | 2 |
+| `covers` | proved | — | `above_args`, `above_prod`, `prod_or_not`, `recovers`, `cands_args`, `args`, `below_args`, `cands_union_right`, `head`, `cands_var` | 155 | 73 |
+| `instance_shape` | proved | — | — | 53 | 57 |
+| `instantiate_solve` | proved | — | `lookup_added` | 38 | 55 |
+| `joinCands_least` | proved | — | `subN_join_least`, `subN_never` | 37 | 47 |
+| `joinCands_upper` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 121 | 56 |
+| `join_eq_left_of_subN` | proved | — | `join_eq_right_of_subN` | 49 | 46 |
+| `join_eq_right_of_subN` | proved | — | `normalize_idem`, `subN_refl`, `subN_join_least` | 161 | 60 |
+| `lookup_added` | proved | — | `lowers_cons` | 1 | 7 |
+| `lookup_solve_seed` | proved | — | — | 38 | 54 |
+| `lowers_cons` | proved | — | — | 1 | 5 |
+| `matchArgsB_append` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 72 | 66 |
+| `matchArgsB_complete` | proved | — | `covers`, `candsList_below`, `solve_between` | 63 | 66 |
+| `matchArgsB_cons_nil` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 81 | 69 |
+| `matchArgsB_ite` | proved | — | `normalize_idem`, `candsList_nil`, `cands_var`, `candsList_cons` | 124 | 75 |
+| `matchArgsB_least` | proved | — | `candsList_below`, `solve_between` | 38 | 61 |
+| `matchArgsB_list_var_nat` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 41 | 65 |
+| `matchArgsB_one_var` | proved | — | `cands_var`, `candsList_nil`, `candsList_cons` | 39 | 59 |
 | `matchArgsB_sound` | proved | — | — | 38 | 60 |
-| `matchArgsN_complete` | proved | — | `normalize_idem`, `matchArgsB_complete` | 63 | 55 |
-| `matchArgsN_least` | proved | — | `normalize_idem`, `matchArgsB_least` | 64 | 68 |
+| `matchArgsB_two_vars` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 39 | 59 |
+| `matchArgsN_complete` | proved | — | `admits_normalize`, `matchArgsB_complete` | 62 | 55 |
+| `matchArgsN_least` | proved | — | `admits_normalize`, `matchArgsB_least` | 63 | 68 |
 | `matchB_cell_fixed` | proved | — | `matchB_sound` | 144 | 72 |
-| `matchB_complete` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 266 | 130 |
-| `matchB_conservative` | proved | — | `matchB_complete`, `normalize_idem`, `subN_trans`, `subN_refl` | 232 | 91 |
-| `matchB_least` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 227 | 87 |
-| `matchB_sound` | proved | — | — | 39 | 58 |
+| `matchB_complete` | proved | — | `covers`, `cands_below`, `solve_between` | 63 | 64 |
+| `matchB_least` | proved | — | `cands_below`, `solve_between` | 38 | 59 |
+| `matchB_modify_use` | proved | — | `cands_var` | 39 | 58 |
+| `matchB_one_var` | proved | — | `cands_var` | 39 | 58 |
+| `matchB_refOf_var` | proved | — | `cands_var`, `comp_inv` | 39 | 58 |
+| `matchB_sound` | proved | — | `lookup_solve_seed` | 38 | 58 |
 | `matchN_congr` | proved | — | — | 38 | 59 |
+| `matchTerm_modify_use` | proved | — | `matchB_modify_use`, `termGuard_modify_use` | 38 | 62 |
+| `mem_lowers` | proved | — | — | 1 | 5 |
+| `mem_varsOf_args` | proved | — | — | 43 | 75 |
+| `mem_zip_map_right` | proved | — | — | 0 | 0 |
+| `mem_zip_self_map` | proved | — | — | 0 | 0 |
+| `noAppFields_eq_all` | proved | — | — | 0 | 2 |
+| `noAppItems_eq_all` | proved | — | — | 0 | 2 |
+| `noApp_args` | proved | — | `noAppItems_eq_all`, `noAppFields_eq_all` | 4 | 11 |
+| `prod_left_cands` | proved | — | `head`, `args`, `cands_var`, `cands_mem_members`, `prod_member_left` | 104 | 65 |
+| `prod_member_left` | proved | — | — | 153 | 58 |
+| `prod_member_right` | proved | — | — | 153 | 58 |
+| `prod_or_not` | proved | — | — | 0 | 0 |
+| `prod_right_cands` | proved | — | `head`, `args`, `cands_var`, `cands_mem_members`, `prod_member_right` | 104 | 65 |
+| `recovers` | proved | — | `mem_zip_self_map`, `cands_args`, `instance_shape`, `mem_varsOf_args`, `prod_right_cands`, `prod_left_cands`, `args`, `prod_or_not`, `head`, `cands_var` | 77 | 67 |
+| `solve_between` | proved | — | `joinCands_upper`, `lookup_solve_seed`, `mem_lowers`, `joinCands_least`, `instantiate_solve` | 64 | 62 |
+| `subN_join_least` | proved | — | `normalize_idem` | 114 | 55 |
+| `subN_never` | proved | — | — | 38 | 44 |
 | `templateOK_of` | proved | — | — | 62 | 56 |
+| `termGuard_modify_use` | proved | — | `cands_var` | 38 | 56 |
 | `perform_scoped_iff` | proved | — | — | 0 | 73 |
-| `matchTemplate_complete_anchored` | proved | — | `normalize_idem` | 233 | 124 |
 | `mono` | proved | — | `order_trans` | 57 | 271 |
-| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 394 | 713 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 393 | 713 |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` | 451 | 434 |
 | `empty_typed` | proved | — | — | 56 | 149 |
 | `offerStep_typed` | proved | — | `offerStep_types` | 43 | 166 |
-| `offerStep_types` | proved | — | `normalize_idem`, `subN_refl`, `lift_member` | 309 | 177 |
+| `offerStep_types` | proved | — | `join_eq_right_of_subN`, `matchArgsB_ite`, `join_eq_left_of_subN`, `matchArgsB_list_var_nat`, `matchArgsB_one_var`, `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_cons_nil`, `matchArgsB_append` | 280 | 171 |
 | `pollStep_typed` | proved | — | `pollStep_types` | 43 | 172 |
-| `pollStep_types` | proved | — | `normalize_idem`, `subN_refl`, `lift_member` | 317 | 190 |
+| `pollStep_types` | proved | — | `join_eq_left_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `join_eq_right_of_subN`, `subN_refl`, `matchArgsB_append` | 288 | 185 |
 | `sizeStep_typed` | proved | — | `lift_member`, `normalize_idem` | 93 | 157 |
 | `takeStep_typed` | proved | — | `Queue.Model.takeStep_types` | 50 | 186 |
-| `Queue.Model.takeStep_types` | proved | — | `normalize_idem`, `subN_refl`, `lift_member` | 352 | 204 |
+| `Queue.Model.takeStep_types` | proved | — | `join_eq_left_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_cons_nil`, `matchArgsB_append`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars` | 324 | 199 |
 | `withdrawOffer_typed` | proved | — | `withdrawOffer_types` | 50 | 169 |
-| `withdrawOffer_types` | proved | — | `normalize_idem`, `lift_member`, `subN_refl` | 295 | 187 |
+| `withdrawOffer_types` | proved | — | `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_ite`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append` | 261 | 182 |
 | `withdrawTake_typed` | proved | — | `withdrawTake_types` | 50 | 169 |
-| `withdrawTake_types` | proved | — | `normalize_idem`, `lift_member`, `subN_refl` | 293 | 187 |
-| `bounded_types` | proved | — | `empty_typed`, `check_complete`, `check_sound` | 86 | 336 |
-| `offer_types` | proved | — | `withdrawOffer_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `offerStep_types`, `rowTy_instantiated_formed`, `mask_printed_form_profile` | 260 | 434 |
-| `poll_types` | proved | — | `check_complete`, `check_sound`, `lift_member`, `normalize_idem`, `subN_refl`, `optionTy_option`, `pollStep_types` | 253 | 411 |
-| `size_types` | proved | — | `lift_member`, `normalize_idem`, `check_complete`, `check_sound` | 180 | 363 |
-| `Queue.take_types` | proved | — | `withdrawTake_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `Queue.Model.takeStep_types`, `waitRetryAt_answers`, `mask_printed_form_profile` | 254 | 449 |
+| `withdrawTake_types` | proved | — | `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_ite`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append` | 259 | 182 |
+| `bounded_types` | proved | — | `empty_typed`, `matchB_one_var`, `check_complete`, `check_sound` | 83 | 333 |
+| `offer_types` | proved | — | `withdrawOffer_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `offerStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `rowTy_instantiated_formed`, `mask_printed_form_profile` | 250 | 429 |
+| `poll_types` | proved | — | `check_complete`, `check_sound`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `pollStep_types`, `matchTerm_modify_use`, `matchB_refOf_var` | 241 | 406 |
+| `size_types` | proved | — | `lift_member`, `normalize_idem`, `check_complete`, `check_sound`, `matchB_refOf_var` | 177 | 360 |
+| `Queue.take_types` | proved | — | `withdrawTake_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `Queue.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `mask_printed_form_profile` | 242 | 444 |
 | `empty_types` | proved | — | — | 65 | 143 |
 | `Semaphore.Model.profile_closed` | proved | — | — | 13 | 18 |
-| `releaseStep_types` | proved | — | `normalize_idem`, `lift_member` | 158 | 155 |
-| `takeIfAvailableStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 257 | 164 |
-| `Semaphore.Model.takeStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 314 | 188 |
-| `visitStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem` | 310 | 188 |
-| `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 282 | 182 |
-| `Semaphore.make_types` | proved | — | `empty_types`, `check_complete`, `check_sound` | 74 | 326 |
-| `release_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `lift_member`, `optionTy_option`, `visitStep_types`, `releaseStep_types` | 292 | 420 |
-| `takeIfAvailable_types` | proved | — | `takeIfAvailableStep_types`, `check_complete`, `check_sound` | 96 | 349 |
-| `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `waitRetryAt_answers`, `mask_printed_form_profile` | 144 | 414 |
-| `withPermitsIfAvailable_types` | proved | — | `release_types`, `check_sound`, `check_complete`, `normalize_idem`, `takeIfAvailable_types`, `protectedBy_has`, `sub_antisymm_canonical` | 233 | 422 |
-| `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `waitRetryAt_answers`, `protectedBy_has` | 138 | 425 |
+| `releaseStep_types` | proved | — | `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 154 | 152 |
+| `takeIfAvailableStep_types` | proved | — | `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `join_eq_right_of_subN`, `matchArgsB_ite` | 233 | 158 |
+| `Semaphore.Model.takeStep_types` | proved | — | `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_two_vars`, `subN_refl`, `matchArgsB_list_var_nat` | 287 | 183 |
+| `visitStep_types` | proved | — | `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 283 | 183 |
+| `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 248 | 177 |
+| `Semaphore.make_types` | proved | — | `empty_types`, `matchB_one_var`, `check_complete`, `check_sound` | 71 | 323 |
+| `release_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `lift_member`, `matchArgsB_two_vars`, `optionTy_option`, `visitStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `matchArgsB_one_var`, `releaseStep_types` | 284 | 417 |
+| `takeIfAvailable_types` | proved | — | `takeIfAvailableStep_types`, `check_complete`, `check_sound`, `matchTerm_modify_use`, `matchB_refOf_var` | 89 | 346 |
+| `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `mask_printed_form_profile` | 140 | 411 |
+| `withPermitsIfAvailable_types` | proved | — | `release_types`, `check_sound`, `check_complete`, `normalize_idem`, `matchArgsB_one_var`, `takeIfAvailable_types`, `protectedBy_has`, `sub_antisymm_canonical` | 231 | 419 |
+| `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `protectedBy_has` | 134 | 422 |
 | `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 86 | 1515 |
 | `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 86 | 1477 |
 | `committed` | goal | `committed` | `checkInput_eq_none_iff` | 86 | 1483 |
@@ -3675,15 +3973,15 @@ flowchart LR
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extend_eq_some_iff` | 122 | 67 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `fits_mono` | proved | — | — | 80 | 235 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 780 | 902 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 779 | 902 |
 | `lift_member` | proved | — | — | 62 | 54 |
 | `subN_refl` | proved | — | — | 38 | 44 |
 | `check_complete` | proved | — | — | 69 | 266 |
-| `check_sound` | proved | — | — | 136 | 263 |
-| `waitRetryAt_answers` | proved | — | `check_complete`, `check_sound`, `optionTy_option`, `normalize_idem` | 252 | 396 |
-| `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` | 217 | 888 |
+| `check_sound` | proved | — | — | 136 | 262 |
+| `waitRetryAt_answers` | proved | — | `check_complete`, `check_sound`, `optionTy_option`, `normalize_idem`, `matchArgsB_one_var` | 250 | 393 |
+| `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` | 218 | 888 |
 | `optionTy_option` | proved | — | `liftOne_member` | 69 | 60 |
-| `protectedBy_has` | proved | — | `normalize_idem`, `check_sound`, `check_complete`, `mask_printed_form_profile` | 139 | 350 |
+| `protectedBy_has` | proved | — | `normalize_idem`, `check_sound`, `check_complete`, `mask_printed_form_profile` | 140 | 350 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
 | `rowTy_instantiated_formed` | proved | — | — | 55 | 116 |
@@ -3700,7 +3998,7 @@ flowchart LR
 | `subN_causeOf_causeUpper` | proved | — | — | 117 | 54 |
 | `subN_exitOf_causeUpper` | proved | — | `subN_trans`, `subN_refl`, `subN_exitOf_iff` | 117 | 56 |
 | `extend_eq_some_iff` | proved | — | — | 37 | 50 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 814 | 944 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 813 | 943 |
 | `optionTy_upper` | proved | — | `liftOne_some`, `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` | 122 | 64 |
 | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` | 56 | 246 |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 90 | 680 |
@@ -3768,7 +4066,7 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `build_total` | proved | — | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 173 | 288 |
+| `build_total` | proved | — | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 173 | 287 |
 | `expanded_refs_nil_of_wf` | proved | — | — | 19 | 106 |
 | `typeOfProgram_expandRefs` | proved | — | `expanded_refs_nil_of_wf` | 58 | 348 |
 | `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1453 |
@@ -3859,31 +4157,32 @@ flowchart LR
   n67["subN_exitOf_causeUpper<br/>proved"]
   n68["extend_eq_some_iff<br/>proved"]
   n69["fiber_eliminator<br/>proved"]
-  n70["termMaps_of_typed<br/>proved"]
-  n71["liftOne_some<br/>proved"]
-  n72["option_eliminator<br/>proved"]
-  n73["Eliminator.lift_upper<br/>proved"]
-  n74["exit_eliminator<br/>proved"]
-  n75["subN_list_iff<br/>proved"]
-  n76["extend_adjoint<br/>proved"]
-  n77["joinAll_keeps<br/>proved"]
-  n78["mapM_answer<br/>proved"]
-  n79["subN_exitOf_iff<br/>proved"]
-  n80["subN_causeOf_iff<br/>proved"]
-  n81["le_joinAll<br/>proved"]
-  n82["subN_fiberOf_iff<br/>proved"]
-  n83["liftOne_eq_some_iff<br/>proved"]
-  n84["subN_option_iff<br/>proved"]
-  n85["adjoint<br/>proved"]
-  n86["foldl_keeps<br/>proved"]
-  n87["mapM_cons_eq_some<br/>proved"]
-  n88["Eliminator.lift_least<br/>proved"]
-  n89["mapM_total<br/>proved"]
-  n90["UnionRule.lift_least<br/>proved"]
-  n91["mapM_source<br/>proved"]
-  n92["joinAll_le<br/>proved"]
-  n93["joinAll_all<br/>proved"]
-  n94["foldl_all<br/>proved"]
+  n70["lookup_solve_seed<br/>proved"]
+  n71["termMaps_of_typed<br/>proved"]
+  n72["liftOne_some<br/>proved"]
+  n73["option_eliminator<br/>proved"]
+  n74["Eliminator.lift_upper<br/>proved"]
+  n75["exit_eliminator<br/>proved"]
+  n76["subN_list_iff<br/>proved"]
+  n77["extend_adjoint<br/>proved"]
+  n78["joinAll_keeps<br/>proved"]
+  n79["mapM_answer<br/>proved"]
+  n80["subN_exitOf_iff<br/>proved"]
+  n81["subN_causeOf_iff<br/>proved"]
+  n82["le_joinAll<br/>proved"]
+  n83["subN_fiberOf_iff<br/>proved"]
+  n84["liftOne_eq_some_iff<br/>proved"]
+  n85["subN_option_iff<br/>proved"]
+  n86["adjoint<br/>proved"]
+  n87["foldl_keeps<br/>proved"]
+  n88["mapM_cons_eq_some<br/>proved"]
+  n89["Eliminator.lift_least<br/>proved"]
+  n90["mapM_total<br/>proved"]
+  n91["UnionRule.lift_least<br/>proved"]
+  n92["mapM_source<br/>proved"]
+  n93["joinAll_le<br/>proved"]
+  n94["joinAll_all<br/>proved"]
+  n95["foldl_all<br/>proved"]
   n0 --> n10
   n0 --> n11
   n0 --> n12
@@ -4016,8 +4315,8 @@ flowchart LR
   n30 --> n58
   n30 --> n59
   n32 --> n56
-  n32 --> n45
   n32 --> n18
+  n32 --> n45
   n32 --> n35
   n32 --> n46
   n32 --> n47
@@ -4068,10 +4367,11 @@ flowchart LR
   n50 --> n19
   n50 --> n37
   n50 --> n61
+  n51 --> n70
   n52 --> n35
   n52 --> n19
   n52 --> n18
-  n52 --> n70
+  n52 --> n71
   n52 --> n51
   n52 --> n22
   n52 --> n53
@@ -4103,85 +4403,85 @@ flowchart LR
   n56 --> n40
   n56 --> n41
   n56 --> n38
-  n57 --> n71
   n57 --> n72
+  n57 --> n73
   n57 --> n46
   n57 --> n19
   n57 --> n37
-  n57 --> n73
+  n57 --> n74
   n58 --> n18
   n58 --> n21
   n58 --> n38
   n58 --> n37
   n58 --> n28
   n58 --> n55
-  n59 --> n74
+  n59 --> n75
   n59 --> n46
   n59 --> n19
   n59 --> n37
   n59 --> n61
-  n60 --> n75
+  n60 --> n76
   n60 --> n46
   n60 --> n19
   n60 --> n37
-  n61 --> n76
-  n62 --> n77
+  n61 --> n77
   n62 --> n78
+  n62 --> n79
   n63 --> n66
   n63 --> n67
-  n64 --> n79
+  n64 --> n80
   n64 --> n66
   n64 --> n19
-  n64 --> n80
-  n65 --> n81
+  n64 --> n81
+  n65 --> n82
   n65 --> n19
-  n65 --> n78
+  n65 --> n79
   n67 --> n19
   n67 --> n37
-  n67 --> n79
-  n69 --> n82
+  n67 --> n80
+  n69 --> n83
   n69 --> n46
   n69 --> n19
   n69 --> n37
-  n70 --> n45
-  n70 --> n18
-  n70 --> n35
-  n70 --> n46
-  n70 --> n47
-  n70 --> n19
-  n70 --> n48
-  n70 --> n49
-  n70 --> n22
-  n70 --> n21
-  n71 --> n83
+  n71 --> n45
+  n71 --> n18
+  n71 --> n35
+  n71 --> n46
+  n71 --> n47
+  n71 --> n19
+  n71 --> n48
+  n71 --> n49
+  n71 --> n22
+  n71 --> n21
   n72 --> n84
-  n72 --> n46
-  n72 --> n19
-  n72 --> n37
+  n73 --> n85
+  n73 --> n46
+  n73 --> n19
   n73 --> n37
-  n73 --> n65
-  n74 --> n79
-  n74 --> n46
-  n74 --> n19
   n74 --> n37
-  n76 --> n71
-  n76 --> n85
-  n76 --> n68
+  n74 --> n65
+  n75 --> n80
+  n75 --> n46
+  n75 --> n19
+  n75 --> n37
+  n77 --> n72
   n77 --> n86
+  n77 --> n68
   n78 --> n87
-  n81 --> n77
-  n85 --> n88
-  n85 --> n19
-  n85 --> n89
-  n85 --> n73
-  n88 --> n90
-  n89 --> n87
-  n90 --> n19
-  n90 --> n91
-  n90 --> n92
-  n91 --> n87
-  n92 --> n93
+  n79 --> n88
+  n82 --> n78
+  n86 --> n89
+  n86 --> n19
+  n86 --> n90
+  n86 --> n74
+  n89 --> n91
+  n90 --> n88
+  n91 --> n19
+  n91 --> n92
+  n91 --> n93
+  n92 --> n88
   n93 --> n94
+  n94 --> n95
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4215,11 +4515,11 @@ flowchart LR
 | `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 329 | 1353 |
 | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 364 | 1372 |
 | `guardBind_typed` | proved | — | `close_typed` | 54 | 256 |
-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1987 | 1608 |
-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1994 | 1608 |
+| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1986 | 1607 |
+| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1993 | 1607 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 780 | 902 |
-| `check_sound` | proved | — | — | 136 | 263 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 779 | 902 |
+| `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 225 |
 | `completionStrong_await` | proved | — | `subN_trans` | 250 | 238 |
@@ -4237,12 +4537,12 @@ flowchart LR
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extend_eq_some_iff` | 122 | 67 |
 | `matchArgsB_sound` | proved | — | — | 38 | 60 |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 128 | 68 |
-| `matchB_sound` | proved | — | — | 39 | 58 |
-| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 394 | 713 |
+| `matchB_sound` | proved | — | `lookup_solve_seed` | 38 | 58 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 393 | 713 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
 | `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 246 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 814 | 944 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 813 | 943 |
 | `optionTy_upper` | proved | — | `liftOne_some`, `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` | 122 | 64 |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 90 | 680 |
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 128 | 68 |
@@ -4256,6 +4556,7 @@ flowchart LR
 | `subN_exitOf_causeUpper` | proved | — | `subN_trans`, `subN_refl`, `subN_exitOf_iff` | 117 | 56 |
 | `extend_eq_some_iff` | proved | — | — | 37 | 50 |
 | `fiber_eliminator` | proved | — | `subN_fiberOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 145 | 67 |
+| `lookup_solve_seed` | proved | — | — | 38 | 54 |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` | 451 | 434 |
 | `liftOne_some` | proved | — | `liftOne_eq_some_iff` | 37 | 49 |
 | `option_eliminator` | proved | — | `subN_option_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 139 | 65 |
@@ -4416,32 +4717,33 @@ flowchart LR
   n58["subN_exitOf_causeUpper<br/>proved"]
   n59["extend_eq_some_iff<br/>proved"]
   n60["fiber_eliminator<br/>proved"]
-  n61["termMaps_of_typed<br/>proved"]
-  n62["handles_of_payloadFieldTy<br/>proved"]
-  n63["liftOne_some<br/>proved"]
-  n64["option_eliminator<br/>proved"]
-  n65["Eliminator.lift_upper<br/>proved"]
-  n66["exit_eliminator<br/>proved"]
-  n67["subN_list_iff<br/>proved"]
-  n68["extend_adjoint<br/>proved"]
-  n69["joinAll_keeps<br/>proved"]
-  n70["mapM_answer<br/>proved"]
-  n71["subN_exitOf_iff<br/>proved"]
-  n72["subN_causeOf_iff<br/>proved"]
-  n73["le_joinAll<br/>proved"]
-  n74["subN_fiberOf_iff<br/>proved"]
-  n75["liftOne_eq_some_iff<br/>proved"]
-  n76["subN_option_iff<br/>proved"]
-  n77["adjoint<br/>proved"]
-  n78["foldl_keeps<br/>proved"]
-  n79["mapM_cons_eq_some<br/>proved"]
-  n80["Eliminator.lift_least<br/>proved"]
-  n81["mapM_total<br/>proved"]
-  n82["UnionRule.lift_least<br/>proved"]
-  n83["mapM_source<br/>proved"]
-  n84["joinAll_le<br/>proved"]
-  n85["joinAll_all<br/>proved"]
-  n86["foldl_all<br/>proved"]
+  n61["lookup_solve_seed<br/>proved"]
+  n62["termMaps_of_typed<br/>proved"]
+  n63["handles_of_payloadFieldTy<br/>proved"]
+  n64["liftOne_some<br/>proved"]
+  n65["option_eliminator<br/>proved"]
+  n66["Eliminator.lift_upper<br/>proved"]
+  n67["exit_eliminator<br/>proved"]
+  n68["subN_list_iff<br/>proved"]
+  n69["extend_adjoint<br/>proved"]
+  n70["joinAll_keeps<br/>proved"]
+  n71["mapM_answer<br/>proved"]
+  n72["subN_exitOf_iff<br/>proved"]
+  n73["subN_causeOf_iff<br/>proved"]
+  n74["le_joinAll<br/>proved"]
+  n75["subN_fiberOf_iff<br/>proved"]
+  n76["liftOne_eq_some_iff<br/>proved"]
+  n77["subN_option_iff<br/>proved"]
+  n78["adjoint<br/>proved"]
+  n79["foldl_keeps<br/>proved"]
+  n80["mapM_cons_eq_some<br/>proved"]
+  n81["Eliminator.lift_least<br/>proved"]
+  n82["mapM_total<br/>proved"]
+  n83["UnionRule.lift_least<br/>proved"]
+  n84["mapM_source<br/>proved"]
+  n85["joinAll_le<br/>proved"]
+  n86["joinAll_all<br/>proved"]
+  n87["foldl_all<br/>proved"]
   n0 --> n2
   n0 --> n3
   n0 --> n4
@@ -4565,8 +4867,8 @@ flowchart LR
   n20 --> n49
   n20 --> n50
   n22 --> n47
-  n22 --> n36
   n22 --> n6
+  n22 --> n36
   n22 --> n26
   n22 --> n37
   n22 --> n38
@@ -4617,17 +4919,18 @@ flowchart LR
   n41 --> n8
   n41 --> n28
   n41 --> n52
+  n42 --> n61
   n43 --> n26
   n43 --> n8
   n43 --> n6
-  n43 --> n61
+  n43 --> n62
   n43 --> n42
   n43 --> n11
   n43 --> n44
   n43 --> n45
   n43 --> n37
   n43 --> n28
-  n45 --> n62
+  n45 --> n63
   n46 --> n18
   n47 --> n6
   n47 --> n7
@@ -4652,85 +4955,85 @@ flowchart LR
   n47 --> n31
   n47 --> n32
   n47 --> n29
-  n48 --> n63
   n48 --> n64
+  n48 --> n65
   n48 --> n37
   n48 --> n8
   n48 --> n28
-  n48 --> n65
+  n48 --> n66
   n49 --> n6
   n49 --> n10
   n49 --> n29
   n49 --> n28
   n49 --> n18
   n49 --> n46
-  n50 --> n66
+  n50 --> n67
   n50 --> n37
   n50 --> n8
   n50 --> n28
   n50 --> n52
-  n51 --> n67
+  n51 --> n68
   n51 --> n37
   n51 --> n8
   n51 --> n28
-  n52 --> n68
-  n53 --> n69
+  n52 --> n69
   n53 --> n70
+  n53 --> n71
   n54 --> n57
   n54 --> n58
-  n55 --> n71
+  n55 --> n72
   n55 --> n57
   n55 --> n8
-  n55 --> n72
-  n56 --> n73
+  n55 --> n73
+  n56 --> n74
   n56 --> n8
-  n56 --> n70
+  n56 --> n71
   n58 --> n8
   n58 --> n28
-  n58 --> n71
-  n60 --> n74
+  n58 --> n72
+  n60 --> n75
   n60 --> n37
   n60 --> n8
   n60 --> n28
-  n61 --> n36
-  n61 --> n6
-  n61 --> n26
-  n61 --> n37
-  n61 --> n38
-  n61 --> n8
-  n61 --> n39
-  n61 --> n40
-  n61 --> n11
-  n61 --> n10
-  n63 --> n75
+  n62 --> n36
+  n62 --> n6
+  n62 --> n26
+  n62 --> n37
+  n62 --> n38
+  n62 --> n8
+  n62 --> n39
+  n62 --> n40
+  n62 --> n11
+  n62 --> n10
   n64 --> n76
-  n64 --> n37
-  n64 --> n8
-  n64 --> n28
+  n65 --> n77
+  n65 --> n37
+  n65 --> n8
   n65 --> n28
-  n65 --> n56
-  n66 --> n71
-  n66 --> n37
-  n66 --> n8
   n66 --> n28
-  n68 --> n63
-  n68 --> n77
-  n68 --> n59
+  n66 --> n56
+  n67 --> n72
+  n67 --> n37
+  n67 --> n8
+  n67 --> n28
+  n69 --> n64
   n69 --> n78
+  n69 --> n59
   n70 --> n79
-  n73 --> n69
-  n77 --> n80
-  n77 --> n8
-  n77 --> n81
-  n77 --> n65
-  n80 --> n82
-  n81 --> n79
-  n82 --> n8
-  n82 --> n83
-  n82 --> n84
-  n83 --> n79
-  n84 --> n85
+  n71 --> n80
+  n74 --> n70
+  n78 --> n81
+  n78 --> n8
+  n78 --> n82
+  n78 --> n66
+  n81 --> n83
+  n82 --> n80
+  n83 --> n8
+  n83 --> n84
+  n83 --> n85
+  n84 --> n80
   n85 --> n86
+  n86 --> n87
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4754,11 +5057,11 @@ flowchart LR
 | `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 329 | 1353 |
 | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 364 | 1372 |
 | `guardBind_typed` | proved | — | `close_typed` | 54 | 256 |
-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1987 | 1608 |
-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1994 | 1608 |
+| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1986 | 1607 |
+| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper` | 1993 | 1607 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 780 | 902 |
-| `check_sound` | proved | — | — | 136 | 263 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 779 | 902 |
+| `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `admitSig_ok_iff` | proved | — | — | 44 | 147 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 225 |
@@ -4777,12 +5080,12 @@ flowchart LR
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extend_eq_some_iff` | 122 | 67 |
 | `matchArgsB_sound` | proved | — | — | 38 | 60 |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 128 | 68 |
-| `matchB_sound` | proved | — | — | 39 | 58 |
-| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 394 | 713 |
+| `matchB_sound` | proved | — | `lookup_solve_seed` | 38 | 58 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 393 | 713 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
 | `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 246 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 814 | 944 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 813 | 943 |
 | `optionTy_upper` | proved | — | `liftOne_some`, `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` | 122 | 64 |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 90 | 680 |
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 128 | 68 |
@@ -4796,6 +5099,7 @@ flowchart LR
 | `subN_exitOf_causeUpper` | proved | — | `subN_trans`, `subN_refl`, `subN_exitOf_iff` | 117 | 56 |
 | `extend_eq_some_iff` | proved | — | — | 37 | 50 |
 | `fiber_eliminator` | proved | — | `subN_fiberOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 145 | 67 |
+| `lookup_solve_seed` | proved | — | — | 38 | 54 |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` | 451 | 434 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 135 |
 | `liftOne_some` | proved | — | `liftOne_eq_some_iff` | 37 | 49 |
@@ -4958,47 +5262,59 @@ flowchart LR
   n114["unauthorized_calls_nothing<br/>goal"]
   n115["readTerm_printTerm<br/>proved"]
   n116["fold_typed_atomic_update<br/>proved"]
-  n117["subN_refl<br/>proved"]
-  n118["order_refl<br/>proved"]
-  n119["termMaps_of_typed<br/>proved"]
-  n120["listOf_upper<br/>proved"]
-  n121["fits_subN<br/>proved"]
-  n122["fits_normalize<br/>proved"]
-  n123["lift_sound<br/>proved"]
-  n124["subN_trans<br/>proved"]
-  n125["causeInputError_upper<br/>proved"]
-  n126["matchArgsB_sound<br/>proved"]
-  n127["hom_eq_cata_ty<br/>proved"]
-  n128["fits_mono<br/>proved"]
-  n129["list_eliminator<br/>proved"]
-  n130["extend_upper<br/>proved"]
-  n131["lift_transfer<br/>proved"]
-  n132["cause_upper<br/>proved"]
-  n133["cause_mono<br/>proved"]
-  n134["UnionRule.lift_upper<br/>proved"]
-  n135["subN_causeOf_causeUpper<br/>proved"]
-  n136["subN_exitOf_causeUpper<br/>proved"]
-  n137["extend_eq_some_iff<br/>proved"]
-  n138["subN_list_iff<br/>proved"]
-  n139["extend_adjoint<br/>proved"]
-  n140["joinAll_keeps<br/>proved"]
-  n141["mapM_answer<br/>proved"]
-  n142["subN_exitOf_iff<br/>proved"]
-  n143["subN_causeOf_iff<br/>proved"]
-  n144["le_joinAll<br/>proved"]
-  n145["liftOne_some<br/>proved"]
-  n146["adjoint<br/>proved"]
-  n147["foldl_keeps<br/>proved"]
-  n148["mapM_cons_eq_some<br/>proved"]
-  n149["liftOne_eq_some_iff<br/>proved"]
-  n150["Eliminator.lift_least<br/>proved"]
-  n151["mapM_total<br/>proved"]
-  n152["Eliminator.lift_upper<br/>proved"]
-  n153["UnionRule.lift_least<br/>proved"]
-  n154["mapM_source<br/>proved"]
-  n155["joinAll_le<br/>proved"]
-  n156["joinAll_all<br/>proved"]
-  n157["foldl_all<br/>proved"]
+  n117["matchArgsB_two_vars<br/>proved"]
+  n118["subN_refl<br/>proved"]
+  n119["join_eq_right_of_subN<br/>proved"]
+  n120["matchArgsB_ite<br/>proved"]
+  n121["matchArgsB_cons_nil<br/>proved"]
+  n122["matchArgsB_append<br/>proved"]
+  n123["matchArgsB_list_var_nat<br/>proved"]
+  n124["join_eq_left_of_subN<br/>proved"]
+  n125["matchArgsB_one_var<br/>proved"]
+  n126["order_refl<br/>proved"]
+  n127["termMaps_of_typed<br/>proved"]
+  n128["listOf_upper<br/>proved"]
+  n129["fits_subN<br/>proved"]
+  n130["fits_normalize<br/>proved"]
+  n131["lift_sound<br/>proved"]
+  n132["subN_trans<br/>proved"]
+  n133["causeInputError_upper<br/>proved"]
+  n134["matchArgsB_sound<br/>proved"]
+  n135["hom_eq_cata_ty<br/>proved"]
+  n136["candsList_nil<br/>proved"]
+  n137["cands_var<br/>proved"]
+  n138["candsList_cons<br/>proved"]
+  n139["subN_join_least<br/>proved"]
+  n140["fits_mono<br/>proved"]
+  n141["list_eliminator<br/>proved"]
+  n142["extend_upper<br/>proved"]
+  n143["lift_transfer<br/>proved"]
+  n144["cause_upper<br/>proved"]
+  n145["cause_mono<br/>proved"]
+  n146["UnionRule.lift_upper<br/>proved"]
+  n147["subN_causeOf_causeUpper<br/>proved"]
+  n148["subN_exitOf_causeUpper<br/>proved"]
+  n149["extend_eq_some_iff<br/>proved"]
+  n150["subN_list_iff<br/>proved"]
+  n151["extend_adjoint<br/>proved"]
+  n152["joinAll_keeps<br/>proved"]
+  n153["mapM_answer<br/>proved"]
+  n154["subN_exitOf_iff<br/>proved"]
+  n155["subN_causeOf_iff<br/>proved"]
+  n156["le_joinAll<br/>proved"]
+  n157["liftOne_some<br/>proved"]
+  n158["adjoint<br/>proved"]
+  n159["foldl_keeps<br/>proved"]
+  n160["mapM_cons_eq_some<br/>proved"]
+  n161["liftOne_eq_some_iff<br/>proved"]
+  n162["Eliminator.lift_least<br/>proved"]
+  n163["mapM_total<br/>proved"]
+  n164["Eliminator.lift_upper<br/>proved"]
+  n165["UnionRule.lift_least<br/>proved"]
+  n166["mapM_source<br/>proved"]
+  n167["joinAll_le<br/>proved"]
+  n168["joinAll_all<br/>proved"]
+  n169["foldl_all<br/>proved"]
   n0 --> n84
   n0 --> n85
   n1 --> n84
@@ -5157,134 +5473,238 @@ flowchart LR
   n89 --> n116
   n90 --> n86
   n90 --> n94
-  n91 --> n117
+  n90 --> n117
+  n91 --> n118
   n91 --> n94
   n91 --> n86
+  n91 --> n119
+  n91 --> n120
+  n91 --> n121
+  n91 --> n122
+  n91 --> n123
+  n91 --> n117
   n92 --> n94
   n92 --> n86
+  n92 --> n119
+  n92 --> n120
+  n92 --> n123
+  n92 --> n118
+  n92 --> n121
+  n92 --> n122
   n92 --> n117
-  n93 --> n117
+  n93 --> n118
   n93 --> n94
   n93 --> n86
+  n93 --> n119
+  n93 --> n120
+  n93 --> n121
+  n93 --> n122
+  n93 --> n123
+  n93 --> n117
+  n95 --> n123
   n95 --> n86
   n95 --> n94
+  n95 --> n117
   n96 --> n94
   n96 --> n86
+  n96 --> n118
+  n96 --> n121
+  n96 --> n122
+  n96 --> n119
+  n96 --> n120
+  n96 --> n123
   n96 --> n117
-  n97 --> n86
+  n97 --> n119
+  n97 --> n120
+  n97 --> n124
+  n97 --> n123
+  n97 --> n125
   n97 --> n117
+  n97 --> n86
   n97 --> n94
+  n97 --> n121
+  n97 --> n122
+  n98 --> n117
   n98 --> n86
   n98 --> n94
-  n98 --> n117
-  n99 --> n86
+  n98 --> n123
+  n98 --> n119
+  n98 --> n120
+  n98 --> n118
+  n98 --> n121
+  n98 --> n122
+  n99 --> n124
+  n99 --> n120
+  n99 --> n123
   n99 --> n117
+  n99 --> n86
   n99 --> n94
+  n99 --> n119
+  n99 --> n118
+  n99 --> n122
+  n100 --> n124
+  n100 --> n120
+  n100 --> n123
+  n100 --> n119
+  n100 --> n121
+  n100 --> n122
+  n100 --> n118
+  n100 --> n94
   n100 --> n86
   n100 --> n117
-  n100 --> n94
+  n101 --> n117
   n101 --> n86
   n101 --> n94
-  n101 --> n117
+  n101 --> n123
+  n101 --> n119
+  n101 --> n120
+  n101 --> n118
+  n101 --> n121
+  n101 --> n122
   n102 --> n86
   n102 --> n94
+  n102 --> n117
   n103 --> n94
   n103 --> n86
   n103 --> n117
+  n103 --> n119
+  n103 --> n120
   n104 --> n94
   n104 --> n86
+  n104 --> n119
+  n104 --> n120
+  n104 --> n121
+  n104 --> n122
   n104 --> n117
+  n104 --> n118
+  n104 --> n123
   n105 --> n94
   n105 --> n86
+  n105 --> n118
+  n105 --> n121
+  n105 --> n122
+  n105 --> n119
+  n105 --> n120
+  n105 --> n123
   n105 --> n117
-  n106 --> n117
+  n106 --> n118
+  n106 --> n121
+  n106 --> n122
   n106 --> n94
   n106 --> n86
+  n106 --> n119
+  n106 --> n120
+  n106 --> n123
+  n106 --> n117
   n108 --> n107
   n109 --> n107
   n110 --> n107
   n114 --> n107
   n116 --> n115
-  n116 --> n118
-  n116 --> n119
-  n116 --> n120
-  n116 --> n121
-  n116 --> n122
-  n116 --> n86
-  n116 --> n123
-  n116 --> n124
-  n116 --> n125
   n116 --> n126
   n116 --> n127
-  n119 --> n120
-  n119 --> n121
-  n119 --> n122
+  n116 --> n128
+  n116 --> n129
+  n116 --> n130
+  n116 --> n86
+  n116 --> n131
+  n116 --> n132
+  n116 --> n133
+  n116 --> n134
+  n116 --> n135
+  n117 --> n136
+  n117 --> n137
+  n117 --> n138
   n119 --> n86
-  n119 --> n123
-  n119 --> n124
-  n119 --> n125
-  n119 --> n126
-  n119 --> n127
-  n119 --> n128
-  n120 --> n129
+  n119 --> n118
+  n119 --> n139
   n120 --> n86
-  n120 --> n124
-  n120 --> n117
-  n120 --> n130
-  n121 --> n124
-  n121 --> n122
-  n122 --> n124
-  n122 --> n86
-  n123 --> n131
-  n125 --> n132
-  n125 --> n133
-  n125 --> n86
-  n125 --> n124
-  n125 --> n117
-  n125 --> n134
-  n125 --> n135
-  n125 --> n136
+  n120 --> n136
+  n120 --> n137
+  n120 --> n138
+  n121 --> n136
+  n121 --> n137
+  n121 --> n138
+  n122 --> n136
+  n122 --> n137
+  n122 --> n138
+  n123 --> n136
+  n123 --> n137
+  n123 --> n138
+  n124 --> n119
   n125 --> n137
-  n129 --> n138
-  n129 --> n86
-  n129 --> n124
-  n129 --> n117
-  n130 --> n139
-  n131 --> n140
-  n131 --> n141
-  n132 --> n135
-  n132 --> n136
-  n133 --> n142
-  n133 --> n135
-  n133 --> n124
-  n133 --> n143
-  n134 --> n144
-  n134 --> n124
-  n134 --> n141
-  n136 --> n124
-  n136 --> n117
-  n136 --> n142
-  n139 --> n145
-  n139 --> n146
-  n139 --> n137
-  n140 --> n147
-  n141 --> n148
-  n144 --> n140
-  n145 --> n149
-  n146 --> n150
-  n146 --> n124
-  n146 --> n151
-  n146 --> n152
-  n150 --> n153
-  n151 --> n148
-  n152 --> n117
-  n152 --> n134
-  n153 --> n124
-  n153 --> n154
-  n153 --> n155
-  n154 --> n148
-  n155 --> n156
-  n156 --> n157
+  n125 --> n136
+  n125 --> n138
+  n127 --> n128
+  n127 --> n129
+  n127 --> n130
+  n127 --> n86
+  n127 --> n131
+  n127 --> n132
+  n127 --> n133
+  n127 --> n134
+  n127 --> n135
+  n127 --> n140
+  n128 --> n141
+  n128 --> n86
+  n128 --> n132
+  n128 --> n118
+  n128 --> n142
+  n129 --> n132
+  n129 --> n130
+  n130 --> n132
+  n130 --> n86
+  n131 --> n143
+  n133 --> n144
+  n133 --> n145
+  n133 --> n86
+  n133 --> n132
+  n133 --> n118
+  n133 --> n146
+  n133 --> n147
+  n133 --> n148
+  n133 --> n149
+  n139 --> n86
+  n141 --> n150
+  n141 --> n86
+  n141 --> n132
+  n141 --> n118
+  n142 --> n151
+  n143 --> n152
+  n143 --> n153
+  n144 --> n147
+  n144 --> n148
+  n145 --> n154
+  n145 --> n147
+  n145 --> n132
+  n145 --> n155
+  n146 --> n156
+  n146 --> n132
+  n146 --> n153
+  n148 --> n132
+  n148 --> n118
+  n148 --> n154
+  n151 --> n157
+  n151 --> n158
+  n151 --> n149
+  n152 --> n159
+  n153 --> n160
+  n156 --> n152
+  n157 --> n161
+  n158 --> n162
+  n158 --> n132
+  n158 --> n163
+  n158 --> n164
+  n162 --> n165
+  n163 --> n160
+  n164 --> n118
+  n164 --> n146
+  n165 --> n132
+  n165 --> n166
+  n165 --> n167
+  n166 --> n160
+  n167 --> n168
+  n168 --> n169
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -5305,10 +5725,10 @@ flowchart LR
 | `yieldNow_typed` | proved | — | `check_complete`, `check_sound` | 58 | 272 |
 | `forkChildDefault_typed` | proved | — | `check_sound`, `check_complete` | 60 | 272 |
 | `forkDetachDefault_typed` | proved | — | `check_sound`, `check_complete` | 60 | 272 |
-| `forkInDefault_typed` | proved | — | `check_sound`, `check_complete` | 60 | 272 |
+| `forkInDefault_typed` | proved | — | `check_sound`, `check_complete` | 61 | 272 |
 | `forkScopedDefault_typed` | proved | — | `check_sound`, `check_complete` | 60 | 272 |
 | `releaseOne_typed` | proved | — | `check_sound`, `check_complete` | 81 | 286 |
-| `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` | 217 | 888 |
+| `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` | 218 | 888 |
 | `cell_read` | proved | — | — | 10 | 200 |
 | `reads_ascribe` | proved | — | — | 16 | 108 |
 | `step_updates` | proved | — | — | 10 | 210 |
@@ -5373,29 +5793,29 @@ flowchart LR
 | `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 85 | 1463 |
 | `tagIs_pair` | proved | — | — | 8 | 86 |
 | `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1476 |
-| `check_sound` | proved | — | — | 136 | 263 |
+| `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
 | `saved_mask_restoration` | proved | — | — | 99 | 753 |
 | `read_print` | proved | — | `readTerm_printTerm` | 346 | 553 |
 | `step_keeps_cell` | proved | — | `fold_typed_atomic_update` | 57 | 402 |
-| `closeStep_types` | proved | — | `normalize_idem`, `lift_member` | 156 | 157 |
-| `drainStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem` | 302 | 188 |
-| `leaseStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 341 | 195 |
-| `returnStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem` | 313 | 192 |
+| `closeStep_types` | proved | — | `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 152 | 154 |
+| `drainStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 275 | 183 |
+| `leaseStep_types` | proved | — | `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_two_vars` | 314 | 190 |
+| `returnStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 286 | 187 |
 | `lift_member` | proved | — | — | 62 | 54 |
-| `selectStep_types` | proved | — | `normalize_idem`, `lift_member` | 126 | 151 |
-| `Pool.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 284 | 183 |
-| `offerStep_types` | proved | — | `normalize_idem`, `subN_refl`, `lift_member` | 309 | 177 |
-| `withdrawOffer_types` | proved | — | `normalize_idem`, `lift_member`, `subN_refl` | 295 | 187 |
-| `pollStep_types` | proved | — | `normalize_idem`, `subN_refl`, `lift_member` | 317 | 190 |
-| `Queue.Model.takeStep_types` | proved | — | `normalize_idem`, `subN_refl`, `lift_member` | 352 | 204 |
-| `withdrawTake_types` | proved | — | `normalize_idem`, `lift_member`, `subN_refl` | 293 | 187 |
-| `releaseStep_types` | proved | — | `normalize_idem`, `lift_member` | 158 | 155 |
-| `takeIfAvailableStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 257 | 164 |
-| `Semaphore.Model.takeStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 314 | 188 |
-| `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl` | 282 | 182 |
-| `visitStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem` | 310 | 188 |
+| `selectStep_types` | proved | — | `matchArgsB_list_var_nat`, `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 118 | 146 |
+| `Pool.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 250 | 178 |
+| `offerStep_types` | proved | — | `join_eq_right_of_subN`, `matchArgsB_ite`, `join_eq_left_of_subN`, `matchArgsB_list_var_nat`, `matchArgsB_one_var`, `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_cons_nil`, `matchArgsB_append` | 280 | 171 |
+| `withdrawOffer_types` | proved | — | `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_ite`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append` | 261 | 182 |
+| `pollStep_types` | proved | — | `join_eq_left_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `join_eq_right_of_subN`, `subN_refl`, `matchArgsB_append` | 288 | 185 |
+| `Queue.Model.takeStep_types` | proved | — | `join_eq_left_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_cons_nil`, `matchArgsB_append`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars` | 324 | 199 |
+| `withdrawTake_types` | proved | — | `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_ite`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append` | 259 | 182 |
+| `releaseStep_types` | proved | — | `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 154 | 152 |
+| `takeIfAvailableStep_types` | proved | — | `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `join_eq_right_of_subN`, `matchArgsB_ite` | 233 | 158 |
+| `Semaphore.Model.takeStep_types` | proved | — | `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_two_vars`, `subN_refl`, `matchArgsB_list_var_nat` | 287 | 183 |
+| `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 248 | 177 |
+| `visitStep_types` | proved | — | `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 283 | 183 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
 | `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 87 | 1606 |
 | `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1622 |
@@ -5406,7 +5826,15 @@ flowchart LR
 | `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1453 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` | 550 | 668 |
+| `matchArgsB_two_vars` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 39 | 59 |
 | `subN_refl` | proved | — | — | 38 | 44 |
+| `join_eq_right_of_subN` | proved | — | `normalize_idem`, `subN_refl`, `subN_join_least` | 161 | 60 |
+| `matchArgsB_ite` | proved | — | `normalize_idem`, `candsList_nil`, `cands_var`, `candsList_cons` | 124 | 75 |
+| `matchArgsB_cons_nil` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 81 | 69 |
+| `matchArgsB_append` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 72 | 66 |
+| `matchArgsB_list_var_nat` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 41 | 65 |
+| `join_eq_left_of_subN` | proved | — | `join_eq_right_of_subN` | 49 | 46 |
+| `matchArgsB_one_var` | proved | — | `cands_var`, `candsList_nil`, `candsList_cons` | 39 | 59 |
 | `order_refl` | proved | — | — | 57 | 205 |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` | 451 | 434 |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 122 | 65 |
@@ -5417,6 +5845,10 @@ flowchart LR
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extend_eq_some_iff` | 122 | 67 |
 | `matchArgsB_sound` | proved | — | — | 38 | 60 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
+| `candsList_nil` | proved | — | — | 0 | 7 |
+| `cands_var` | proved | — | — | 0 | 10 |
+| `candsList_cons` | proved | — | — | 0 | 7 |
+| `subN_join_least` | proved | — | `normalize_idem` | 114 | 55 |
 | `fits_mono` | proved | — | — | 80 | 235 |
 | `list_eliminator` | proved | — | `subN_list_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 139 | 65 |
 | `extend_upper` | proved | — | `extend_adjoint` | 38 | 52 |
@@ -5732,277 +6164,314 @@ flowchart LR
   n105["fillAt_of_replaceAt<br/>proved"]
   n106["closed_project<br/>proved"]
   n107["closed_typeAt<br/>proved"]
-  n108["closedSubst_infer<br/>proved"]
-  n109["closedSubst_matchArgsB<br/>proved"]
-  n110["closedSubst_matchTemplate<br/>proved"]
-  n111["closedSubst_matchTemplateArgs<br/>proved"]
-  n112["closed_cands<br/>proved"]
-  n113["closed_diffTag<br/>proved"]
-  n114["closed_instantiate<br/>proved"]
-  n115["closed_joinCands<br/>proved"]
-  n116["closed_payloadOf<br/>proved"]
-  n117["closed_payloadTy<br/>proved"]
-  n118["mem_of_lookup<br/>proved"]
-  n119["subN_causeOf_iff<br/>proved"]
-  n120["subN_exitOf_iff<br/>proved"]
-  n121["subN_fiberOf_iff<br/>proved"]
-  n122["subN_list_iff<br/>proved"]
-  n123["subN_option_iff<br/>proved"]
-  n124["adjoint<br/>proved"]
-  n125["adjoint_le<br/>proved"]
-  n126["extend_adjoint<br/>proved"]
-  n127["extend_bot<br/>proved"]
-  n128["extend_isSome_iff<br/>proved"]
-  n129["extend_laws<br/>proved"]
-  n130["extend_least<br/>proved"]
-  n131["extend_liftOne<br/>proved"]
-  n132["extend_mono<br/>proved"]
-  n133["extend_upper<br/>proved"]
-  n134["liftOne_answers<br/>proved"]
-  n135["liftOne_isSome_iff<br/>proved"]
-  n136["liftOne_mono<br/>proved"]
-  n137["Eliminator.lift_least<br/>proved"]
-  n138["Eliminator.lift_mono<br/>proved"]
-  n139["Eliminator.lift_upper<br/>proved"]
-  n140["monotone<br/>proved"]
-  n141["lift_sound<br/>proved"]
-  n142["below_of_upper<br/>proved"]
-  n143["closed_join<br/>proved"]
-  n144["extend_agrees<br/>proved"]
-  n145["extend_closed<br/>proved"]
-  n146["extend_closed_pair<br/>proved"]
-  n147["extend_eq_some_iff<br/>proved"]
-  n148["extend_never<br/>proved"]
-  n149["extend_refused<br/>proved"]
-  n150["extend_two<br/>proved"]
-  n151["foldl_all<br/>proved"]
-  n152["foldl_join_normalize<br/>proved"]
-  n153["foldl_join_pair<br/>proved"]
-  n154["foldl_join_pair_start<br/>proved"]
-  n155["foldl_join_start<br/>proved"]
-  n156["foldl_keeps<br/>proved"]
-  n157["joinAll_all<br/>proved"]
-  n158["joinAll_keeps<br/>proved"]
-  n159["joinAll_le<br/>proved"]
-  n160["joinAll_normalize<br/>proved"]
-  n161["join_normalize_right<br/>proved"]
-  n162["le_joinAll<br/>proved"]
-  n163["liftOne_congr<br/>proved"]
-  n164["liftOne_eq<br/>proved"]
-  n165["liftOne_eq_some_iff<br/>proved"]
-  n166["liftOne_member<br/>proved"]
-  n167["liftOne_never<br/>proved"]
-  n168["liftOne_some<br/>proved"]
-  n169["liftOne_two<br/>proved"]
-  n170["lift_all<br/>proved"]
-  n171["lift_closed<br/>proved"]
-  n172["lift_closed_pair<br/>proved"]
-  n173["lift_congr<br/>proved"]
-  n174["lift_laws<br/>proved"]
-  n175["UnionRule.lift_least<br/>proved"]
-  n176["lift_member<br/>proved"]
-  n177["UnionRule.lift_mono<br/>proved"]
-  n178["lift_never<br/>proved"]
-  n179["lift_transfer<br/>proved"]
-  n180["lift_union<br/>proved"]
-  n181["lift_union_eq<br/>proved"]
-  n182["lift_union_eq_of<br/>proved"]
-  n183["lift_union_eq_of_antisymm<br/>proved"]
-  n184["lift_union_eq_pair<br/>proved"]
-  n185["lift_unique<br/>proved"]
-  n186["lift_unique_pair<br/>proved"]
-  n187["UnionRule.lift_upper<br/>proved"]
-  n188["mapM_answer<br/>proved"]
-  n189["mapM_cons_eq_some<br/>proved"]
-  n190["mapM_source<br/>proved"]
-  n191["mapM_total<br/>proved"]
-  n192["members_union<br/>proved"]
-  n193["normal_ofMembers<br/>proved"]
-  n194["prod_antisymm<br/>proved"]
-  n195["subN_iff_le<br/>proved"]
-  n196["actionHasTy_closed<br/>proved"]
-  n197["actionHasTy_replace<br/>proved"]
-  n198["addresses_eff_head<br/>proved"]
-  n199["addresses_eq_foldList<br/>proved"]
-  n200["argTy_closed<br/>proved"]
-  n201["argsTy_closed<br/>proved"]
-  n202["causeInputError_causeOf<br/>proved"]
-  n203["causeInputError_exitOf<br/>proved"]
-  n204["causeInputError_upper<br/>proved"]
-  n205["causeTy_closed<br/>proved"]
-  n206["cause_mono<br/>proved"]
-  n207["Program.check_focusAt<br/>proved"]
-  n208["check_replace<br/>proved"]
-  n209["check_replace_focusAt<br/>proved"]
-  n210["closedSig_app<br/>proved"]
-  n211["closedSig_native<br/>proved"]
-  n212["closed_catchIfError<br/>proved"]
-  n213["closed_causeInputError<br/>proved"]
-  n214["closed_exitOf<br/>proved"]
-  n215["closed_fiberTy<br/>proved"]
-  n216["closed_getD<br/>proved"]
-  n217["closed_joinAnswer<br/>proved"]
-  n218["closed_listOf<br/>proved"]
-  n219["closed_litArgTy<br/>proved"]
-  n220["closed_nativeAtomTy<br/>proved"]
-  n221["closed_nativeServiceTy<br/>proved"]
-  n222["closed_optionTy<br/>proved"]
-  n223["closed_rowTy<br/>proved"]
-  n224["closed_serviceTy<br/>proved"]
-  n225["effTy_map_of_hasTy<br/>proved"]
-  n226["effsHasTy_closed<br/>proved"]
-  n227["effsHasTy_replace<br/>proved"]
-  n228["exitOf_exitOf<br/>proved"]
-  n229["exitOf_upper<br/>proved"]
-  n230["fiberTy_fiberOf<br/>proved"]
-  n231["fiberTy_upper<br/>proved"]
-  n232["focusAt_eq_some<br/>proved"]
-  n233["focusAt_nil<br/>proved"]
-  n234["focusAt_typed<br/>proved"]
-  n235["foldMapAt_action_fuse<br/>proved"]
-  n236["foldMapAt_eff_fuse<br/>proved"]
-  n237["foldMapAt_effs_fuse<br/>proved"]
-  n238["foldMapAt_layer_fuse<br/>proved"]
-  n239["foldMapAt_layers_fuse<br/>proved"]
-  n240["foldMapAt_stmt_fuse<br/>proved"]
-  n241["foldMapAt_stmts_fuse<br/>proved"]
-  n242["foldMapAt_term_fuse<br/>proved"]
-  n243["foldMapAt_terms_fuse<br/>proved"]
-  n244["hasTy_closed<br/>proved"]
-  n245["hasTy_focusAt<br/>proved"]
-  n246["hasTy_replace<br/>proved"]
-  n247["hasTy_replace_focusAt<br/>proved"]
-  n248["layerHasTy_closed<br/>proved"]
-  n249["layerHasTy_replace<br/>proved"]
-  n250["layersHasTy_closed<br/>proved"]
-  n251["layersHasTy_cons<br/>proved"]
-  n252["layersHasTy_replace<br/>proved"]
-  n253["listOf_list<br/>proved"]
-  n254["listOf_upper<br/>proved"]
-  n255["mem_addresses_iff<br/>proved"]
-  n256["optionTy_eq_normal<br/>proved"]
-  n257["optionTy_option<br/>proved"]
-  n258["optionTy_upper<br/>proved"]
-  n259["refusals_head<br/>proved"]
-  n260["refusals_of_hasTy<br/>proved"]
-  n261["sketch_more_holes<br/>proved"]
-  n262["sketch_reads_its_holes<br/>proved"]
-  n263["stmtsHasTy_closed<br/>proved"]
-  n264["stmtsHasTy_replace<br/>proved"]
-  n265["subN_causeOf_causeUpper<br/>proved"]
-  n266["subN_exitOf_causeUpper<br/>proved"]
-  n267["table_head<br/>proved"]
-  n268["table_result_refusal_none_of_hasTy<br/>proved"]
-  n269["termTy_closed<br/>proved"]
-  n270["typeOfProgram_closed<br/>proved"]
-  n271["typeOfProgram_closed_app<br/>proved"]
-  n272["yieldAt_addressYield<br/>proved"]
-  n273["drop_le<br/>proved"]
-  n274["drop_le_of_subset<br/>proved"]
-  n275["exists_mem_subslices<br/>proved"]
-  n276["failed_rest<br/>proved"]
-  n277["failed_snoc<br/>proved"]
-  n278["filter_mem_sublists<br/>proved"]
-  n279["firstDrop_append<br/>proved"]
-  n280["firstDrop_length<br/>proved"]
-  n281["instIsPreorder<br/>proved"]
-  n282["instLawfulOrderInf<br/>proved"]
-  n283["instLawfulOrderSup<br/>proved"]
-  n284["le_drop<br/>proved"]
-  n285["le_of_mem_subslices<br/>proved"]
-  n286["not_mem_drop<br/>proved"]
-  n287["omitted_anti<br/>proved"]
-  n288["omitted_full<br/>proved"]
-  n289["omitted_subset<br/>proved"]
-  n290["restart_append<br/>proved"]
-  n291["restart_eq_sweep<br/>proved"]
-  n292["restart_of_none<br/>proved"]
-  n293["restart_of_some<br/>proved"]
-  n294["sublists_subset<br/>proved"]
-  n295["sweepAsked_length<br/>proved"]
-  n296["sweepFreeAsked_sublist<br/>proved"]
-  n297["sweepFree_congr<br/>proved"]
-  n298["sweepFree_eq_sweep<br/>proved"]
-  n299["sweep_congr<br/>proved"]
-  n300["sweep_kept_needed<br/>proved"]
-  n301["sweep_sublist<br/>proved"]
-  n302["sweep_valid<br/>proved"]
-  n303["keeps_above<br/>proved"]
-  n304["needs<br/>proved"]
-  n305["of_same_sites<br/>proved"]
-  n306["contribution_le<br/>proved"]
-  n307["contribution_lub<br/>proved"]
-  n308["contribution_valid<br/>proved"]
-  n309["decide_valid_up<br/>proved"]
-  n310["descendTree_asks<br/>proved"]
-  n311["descendTree_eq_descend<br/>proved"]
-  n312["descendTree_minimal<br/>proved"]
-  n313["descend_asks<br/>proved"]
-  n314["descend_eq_restart<br/>proved"]
-  n315["descend_le<br/>proved"]
-  n316["descend_minimal<br/>proved"]
-  n317["descend_sublist<br/>proved"]
-  n318["descend_valid<br/>proved"]
-  n319["exists_minimal_below<br/>proved"]
-  n320["isMinimal_iff<br/>proved"]
-  n321["minimal_iff_drop<br/>proved"]
-  n322["minimal_refine<br/>proved"]
-  n323["minimals_complete<br/>proved"]
-  n324["minimals_sound<br/>proved"]
-  n325["ofOmitted_full<br/>proved"]
-  n326["parentOmitted_sound<br/>proved"]
-  n327["valid_max<br/>proved"]
-  n328["valid_refine<br/>proved"]
-  n329["valid_up<br/>proved"]
-  n330["check_restrict<br/>proved"]
-  n331["normalize_idem<br/>proved"]
-  n332["check_sound<br/>proved"]
-  n333["check_complete<br/>proved"]
-  n334["matchArgsB_least<br/>proved"]
-  n335["matchArgsB_complete<br/>proved"]
-  n336["matchArgsB_sound<br/>proved"]
-  n337["subN_trans<br/>proved"]
-  n338["subN_refl<br/>proved"]
-  n339["replaceAt_spec<br/>proved"]
-  n340["subN_equiv_iff<br/>proved"]
-  n341["check_ext<br/>proved"]
-  n342["cata_eff_congr_on<br/>proved"]
-  n343["hom_eq_cata_eff<br/>proved"]
+  n108["closedSubst_matchArgsB<br/>proved"]
+  n109["closed_cands<br/>proved"]
+  n110["closed_diffTag<br/>proved"]
+  n111["closed_instantiate<br/>proved"]
+  n112["closed_joinCands<br/>proved"]
+  n113["closed_payloadOf<br/>proved"]
+  n114["closed_payloadTy<br/>proved"]
+  n115["mem_of_lookup<br/>proved"]
+  n116["subN_causeOf_iff<br/>proved"]
+  n117["subN_exitOf_iff<br/>proved"]
+  n118["subN_fiberOf_iff<br/>proved"]
+  n119["subN_list_iff<br/>proved"]
+  n120["subN_option_iff<br/>proved"]
+  n121["adjoint<br/>proved"]
+  n122["adjoint_le<br/>proved"]
+  n123["extend_adjoint<br/>proved"]
+  n124["extend_bot<br/>proved"]
+  n125["extend_isSome_iff<br/>proved"]
+  n126["extend_laws<br/>proved"]
+  n127["extend_least<br/>proved"]
+  n128["extend_liftOne<br/>proved"]
+  n129["extend_mono<br/>proved"]
+  n130["extend_upper<br/>proved"]
+  n131["liftOne_answers<br/>proved"]
+  n132["liftOne_isSome_iff<br/>proved"]
+  n133["liftOne_mono<br/>proved"]
+  n134["Eliminator.lift_least<br/>proved"]
+  n135["Eliminator.lift_mono<br/>proved"]
+  n136["Eliminator.lift_upper<br/>proved"]
+  n137["monotone<br/>proved"]
+  n138["lift_sound<br/>proved"]
+  n139["below_of_upper<br/>proved"]
+  n140["closed_join<br/>proved"]
+  n141["extend_agrees<br/>proved"]
+  n142["extend_closed<br/>proved"]
+  n143["extend_closed_pair<br/>proved"]
+  n144["extend_eq_some_iff<br/>proved"]
+  n145["extend_never<br/>proved"]
+  n146["extend_refused<br/>proved"]
+  n147["extend_two<br/>proved"]
+  n148["foldl_all<br/>proved"]
+  n149["foldl_join_normalize<br/>proved"]
+  n150["foldl_join_pair<br/>proved"]
+  n151["foldl_join_pair_start<br/>proved"]
+  n152["foldl_join_start<br/>proved"]
+  n153["foldl_keeps<br/>proved"]
+  n154["joinAll_all<br/>proved"]
+  n155["joinAll_keeps<br/>proved"]
+  n156["joinAll_le<br/>proved"]
+  n157["joinAll_normalize<br/>proved"]
+  n158["join_normalize_right<br/>proved"]
+  n159["le_joinAll<br/>proved"]
+  n160["liftOne_congr<br/>proved"]
+  n161["liftOne_eq<br/>proved"]
+  n162["liftOne_eq_some_iff<br/>proved"]
+  n163["liftOne_member<br/>proved"]
+  n164["liftOne_never<br/>proved"]
+  n165["liftOne_some<br/>proved"]
+  n166["liftOne_two<br/>proved"]
+  n167["lift_all<br/>proved"]
+  n168["lift_closed<br/>proved"]
+  n169["lift_closed_pair<br/>proved"]
+  n170["lift_congr<br/>proved"]
+  n171["lift_laws<br/>proved"]
+  n172["UnionRule.lift_least<br/>proved"]
+  n173["lift_member<br/>proved"]
+  n174["UnionRule.lift_mono<br/>proved"]
+  n175["lift_never<br/>proved"]
+  n176["lift_transfer<br/>proved"]
+  n177["lift_union<br/>proved"]
+  n178["lift_union_eq<br/>proved"]
+  n179["lift_union_eq_of<br/>proved"]
+  n180["lift_union_eq_of_antisymm<br/>proved"]
+  n181["lift_union_eq_pair<br/>proved"]
+  n182["lift_unique<br/>proved"]
+  n183["lift_unique_pair<br/>proved"]
+  n184["UnionRule.lift_upper<br/>proved"]
+  n185["mapM_answer<br/>proved"]
+  n186["mapM_cons_eq_some<br/>proved"]
+  n187["mapM_source<br/>proved"]
+  n188["mapM_total<br/>proved"]
+  n189["members_union<br/>proved"]
+  n190["normal_ofMembers<br/>proved"]
+  n191["prod_antisymm<br/>proved"]
+  n192["subN_iff_le<br/>proved"]
+  n193["actionHasTy_closed<br/>proved"]
+  n194["actionHasTy_replace<br/>proved"]
+  n195["addresses_eff_head<br/>proved"]
+  n196["addresses_eq_foldList<br/>proved"]
+  n197["argTy_closed<br/>proved"]
+  n198["argsTy_closed<br/>proved"]
+  n199["causeInputError_causeOf<br/>proved"]
+  n200["causeInputError_exitOf<br/>proved"]
+  n201["causeInputError_upper<br/>proved"]
+  n202["causeTy_closed<br/>proved"]
+  n203["cause_mono<br/>proved"]
+  n204["Program.check_focusAt<br/>proved"]
+  n205["check_replace<br/>proved"]
+  n206["check_replace_focusAt<br/>proved"]
+  n207["closedSig_app<br/>proved"]
+  n208["closedSig_native<br/>proved"]
+  n209["closed_catchIfError<br/>proved"]
+  n210["closed_causeInputError<br/>proved"]
+  n211["closed_exitOf<br/>proved"]
+  n212["closed_fiberTy<br/>proved"]
+  n213["closed_getD<br/>proved"]
+  n214["closed_joinAnswer<br/>proved"]
+  n215["closed_listOf<br/>proved"]
+  n216["closed_litArgTy<br/>proved"]
+  n217["closed_nativeAtomTy<br/>proved"]
+  n218["closed_nativeServiceTy<br/>proved"]
+  n219["closed_optionTy<br/>proved"]
+  n220["closed_rowTy<br/>proved"]
+  n221["closed_serviceTy<br/>proved"]
+  n222["effTy_map_of_hasTy<br/>proved"]
+  n223["effsHasTy_closed<br/>proved"]
+  n224["effsHasTy_replace<br/>proved"]
+  n225["exitOf_exitOf<br/>proved"]
+  n226["exitOf_upper<br/>proved"]
+  n227["fiberTy_fiberOf<br/>proved"]
+  n228["fiberTy_upper<br/>proved"]
+  n229["focusAt_eq_some<br/>proved"]
+  n230["focusAt_nil<br/>proved"]
+  n231["focusAt_typed<br/>proved"]
+  n232["foldMapAt_action_fuse<br/>proved"]
+  n233["foldMapAt_eff_fuse<br/>proved"]
+  n234["foldMapAt_effs_fuse<br/>proved"]
+  n235["foldMapAt_layer_fuse<br/>proved"]
+  n236["foldMapAt_layers_fuse<br/>proved"]
+  n237["foldMapAt_stmt_fuse<br/>proved"]
+  n238["foldMapAt_stmts_fuse<br/>proved"]
+  n239["foldMapAt_term_fuse<br/>proved"]
+  n240["foldMapAt_terms_fuse<br/>proved"]
+  n241["hasTy_closed<br/>proved"]
+  n242["hasTy_focusAt<br/>proved"]
+  n243["hasTy_replace<br/>proved"]
+  n244["hasTy_replace_focusAt<br/>proved"]
+  n245["layerHasTy_closed<br/>proved"]
+  n246["layerHasTy_replace<br/>proved"]
+  n247["layersHasTy_closed<br/>proved"]
+  n248["layersHasTy_cons<br/>proved"]
+  n249["layersHasTy_replace<br/>proved"]
+  n250["listOf_list<br/>proved"]
+  n251["listOf_upper<br/>proved"]
+  n252["mem_addresses_iff<br/>proved"]
+  n253["optionTy_eq_normal<br/>proved"]
+  n254["optionTy_option<br/>proved"]
+  n255["optionTy_upper<br/>proved"]
+  n256["refusals_head<br/>proved"]
+  n257["refusals_of_hasTy<br/>proved"]
+  n258["sketch_more_holes<br/>proved"]
+  n259["sketch_reads_its_holes<br/>proved"]
+  n260["stmtsHasTy_closed<br/>proved"]
+  n261["stmtsHasTy_replace<br/>proved"]
+  n262["subN_causeOf_causeUpper<br/>proved"]
+  n263["subN_exitOf_causeUpper<br/>proved"]
+  n264["table_head<br/>proved"]
+  n265["table_result_refusal_none_of_hasTy<br/>proved"]
+  n266["termTy_closed<br/>proved"]
+  n267["typeOfProgram_closed<br/>proved"]
+  n268["typeOfProgram_closed_app<br/>proved"]
+  n269["yieldAt_addressYield<br/>proved"]
+  n270["drop_le<br/>proved"]
+  n271["drop_le_of_subset<br/>proved"]
+  n272["exists_mem_subslices<br/>proved"]
+  n273["failed_rest<br/>proved"]
+  n274["failed_snoc<br/>proved"]
+  n275["filter_mem_sublists<br/>proved"]
+  n276["firstDrop_append<br/>proved"]
+  n277["firstDrop_length<br/>proved"]
+  n278["instIsPreorder<br/>proved"]
+  n279["instLawfulOrderInf<br/>proved"]
+  n280["instLawfulOrderSup<br/>proved"]
+  n281["le_drop<br/>proved"]
+  n282["le_of_mem_subslices<br/>proved"]
+  n283["not_mem_drop<br/>proved"]
+  n284["omitted_anti<br/>proved"]
+  n285["omitted_full<br/>proved"]
+  n286["omitted_subset<br/>proved"]
+  n287["restart_append<br/>proved"]
+  n288["restart_eq_sweep<br/>proved"]
+  n289["restart_of_none<br/>proved"]
+  n290["restart_of_some<br/>proved"]
+  n291["sublists_subset<br/>proved"]
+  n292["sweepAsked_length<br/>proved"]
+  n293["sweepFreeAsked_sublist<br/>proved"]
+  n294["sweepFree_congr<br/>proved"]
+  n295["sweepFree_eq_sweep<br/>proved"]
+  n296["sweep_congr<br/>proved"]
+  n297["sweep_kept_needed<br/>proved"]
+  n298["sweep_sublist<br/>proved"]
+  n299["sweep_valid<br/>proved"]
+  n300["keeps_above<br/>proved"]
+  n301["needs<br/>proved"]
+  n302["of_same_sites<br/>proved"]
+  n303["contribution_le<br/>proved"]
+  n304["contribution_lub<br/>proved"]
+  n305["contribution_valid<br/>proved"]
+  n306["decide_valid_up<br/>proved"]
+  n307["descendTree_asks<br/>proved"]
+  n308["descendTree_eq_descend<br/>proved"]
+  n309["descendTree_minimal<br/>proved"]
+  n310["descend_asks<br/>proved"]
+  n311["descend_eq_restart<br/>proved"]
+  n312["descend_le<br/>proved"]
+  n313["descend_minimal<br/>proved"]
+  n314["descend_sublist<br/>proved"]
+  n315["descend_valid<br/>proved"]
+  n316["exists_minimal_below<br/>proved"]
+  n317["isMinimal_iff<br/>proved"]
+  n318["minimal_iff_drop<br/>proved"]
+  n319["minimal_refine<br/>proved"]
+  n320["minimals_complete<br/>proved"]
+  n321["minimals_sound<br/>proved"]
+  n322["ofOmitted_full<br/>proved"]
+  n323["parentOmitted_sound<br/>proved"]
+  n324["valid_max<br/>proved"]
+  n325["valid_refine<br/>proved"]
+  n326["valid_up<br/>proved"]
+  n327["check_restrict<br/>proved"]
+  n328["normalize_idem<br/>proved"]
+  n329["check_sound<br/>proved"]
+  n330["check_complete<br/>proved"]
+  n331["matchArgsB_least<br/>proved"]
+  n332["matchArgsB_complete<br/>proved"]
+  n333["matchArgsB_sound<br/>proved"]
+  n334["subN_trans<br/>proved"]
+  n335["subN_refl<br/>proved"]
+  n336["replaceAt_spec<br/>proved"]
+  n337["subN_equiv_iff<br/>proved"]
+  n338["check_ext<br/>proved"]
+  n339["cata_eff_congr_on<br/>proved"]
+  n340["hom_eq_cata_eff<br/>proved"]
+  n341["candsList_below<br/>proved"]
+  n342["solve_between<br/>proved"]
+  n343["covers<br/>proved"]
   n344["sub_antisymm_canonical<br/>proved"]
-  n0 --> n327
-  n0 --> n322
-  n0 --> n316
-  n0 --> n315
+  n345["cands_below<br/>proved"]
+  n346["joinCands_upper<br/>proved"]
+  n347["lookup_solve_seed<br/>proved"]
+  n348["mem_lowers<br/>proved"]
+  n349["joinCands_least<br/>proved"]
+  n350["instantiate_solve<br/>proved"]
+  n351["above_args<br/>proved"]
+  n352["above_prod<br/>proved"]
+  n353["prod_or_not<br/>proved"]
+  n354["recovers<br/>proved"]
+  n355["cands_args<br/>proved"]
+  n356["args<br/>proved"]
+  n357["below_args<br/>proved"]
+  n358["cands_union_right<br/>proved"]
+  n359["head<br/>proved"]
+  n360["cands_var<br/>proved"]
+  n361["comp_ne_contra<br/>proved"]
+  n362["cands_mem_members<br/>proved"]
+  n363["subN_join_least<br/>proved"]
+  n364["subN_never<br/>proved"]
+  n365["lookup_added<br/>proved"]
+  n366["mem_zip_map_right<br/>proved"]
+  n367["instance_shape<br/>proved"]
+  n368["mem_zip_self_map<br/>proved"]
+  n369["mem_varsOf_args<br/>proved"]
+  n370["prod_right_cands<br/>proved"]
+  n371["prod_left_cands<br/>proved"]
+  n372["candsItems_eq<br/>proved"]
+  n373["candsFields_eq<br/>proved"]
+  n374["comp_inv<br/>proved"]
+  n375["comp_co<br/>proved"]
+  n376["noApp_args<br/>proved"]
+  n377["lowers_cons<br/>proved"]
+  n378["prod_member_right<br/>proved"]
+  n379["prod_member_left<br/>proved"]
+  n380["noAppItems_eq_all<br/>proved"]
+  n381["noAppFields_eq_all<br/>proved"]
+  n0 --> n324
   n0 --> n319
+  n0 --> n313
+  n0 --> n312
+  n0 --> n316
   n1 --> n93
-  n1 --> n330
-  n2 --> n262
-  n2 --> n261
-  n3 --> n331
+  n1 --> n327
+  n2 --> n259
+  n2 --> n258
+  n3 --> n328
   n3 --> n95
   n4 --> n5
   n5 --> n86
   n6 --> n26
-  n6 --> n332
-  n6 --> n244
-  n7 --> n332
-  n7 --> n260
-  n7 --> n259
-  n8 --> n333
-  n8 --> n332
+  n6 --> n329
+  n6 --> n241
+  n7 --> n329
+  n7 --> n257
+  n7 --> n256
+  n8 --> n330
+  n8 --> n329
   n9 --> n12
   n10 --> n12
   n11 --> n12
   n13 --> n12
-  n14 --> n271
-  n15 --> n334
-  n15 --> n335
-  n15 --> n336
+  n14 --> n268
+  n15 --> n331
+  n15 --> n332
+  n15 --> n333
   n18 --> n16
   n19 --> n92
-  n19 --> n113
-  n19 --> n117
-  n19 --> n222
+  n19 --> n110
+  n19 --> n114
+  n19 --> n219
   n25 --> n33
   n25 --> n40
   n25 --> n47
@@ -6029,7 +6498,7 @@ flowchart LR
   n32 --> n43
   n40 --> n45
   n40 --> n21
-  n40 --> n238
+  n40 --> n235
   n45 --> n29
   n45 --> n28
   n46 --> n36
@@ -6038,542 +6507,603 @@ flowchart LR
   n46 --> n22
   n47 --> n45
   n47 --> n21
-  n47 --> n236
+  n47 --> n233
   n48 --> n31
   n51 --> n23
   n51 --> n22
   n51 --> n21
-  n51 --> n242
-  n52 --> n143
-  n53 --> n143
-  n54 --> n143
+  n51 --> n239
+  n52 --> n140
+  n53 --> n140
+  n54 --> n140
   n54 --> n53
-  n55 --> n143
+  n55 --> n140
   n55 --> n53
   n58 --> n56
   n59 --> n60
   n59 --> n58
   n59 --> n61
-  n59 --> n331
-  n59 --> n337
-  n59 --> n338
-  n59 --> n142
+  n59 --> n328
+  n59 --> n334
+  n59 --> n335
+  n59 --> n139
   n60 --> n56
-  n61 --> n265
-  n61 --> n266
-  n63 --> n120
-  n63 --> n331
-  n63 --> n337
-  n63 --> n338
-  n66 --> n121
-  n66 --> n331
-  n66 --> n337
-  n66 --> n338
-  n69 --> n122
-  n69 --> n331
-  n69 --> n337
-  n69 --> n338
-  n72 --> n123
-  n72 --> n331
-  n72 --> n337
-  n72 --> n338
-  n73 --> n213
+  n61 --> n262
+  n61 --> n263
+  n63 --> n117
+  n63 --> n328
+  n63 --> n334
+  n63 --> n335
+  n66 --> n118
+  n66 --> n328
+  n66 --> n334
+  n66 --> n335
+  n69 --> n119
+  n69 --> n328
+  n69 --> n334
+  n69 --> n335
+  n72 --> n120
+  n72 --> n328
+  n72 --> n334
+  n72 --> n335
+  n73 --> n210
   n73 --> n76
   n74 --> n73
-  n74 --> n109
-  n74 --> n114
+  n74 --> n108
+  n74 --> n111
   n74 --> n75
-  n76 --> n143
+  n76 --> n140
   n77 --> n78
   n77 --> n74
   n81 --> n85
   n81 --> n82
   n83 --> n81
-  n84 --> n339
-  n86 --> n251
+  n84 --> n336
+  n86 --> n248
   n86 --> n79
   n86 --> n80
-  n86 --> n225
+  n86 --> n222
   n89 --> n88
-  n89 --> n171
+  n89 --> n168
   n91 --> n90
-  n91 --> n171
+  n91 --> n168
   n97 --> n105
   n97 --> n93
   n97 --> n96
-  n97 --> n208
+  n97 --> n205
   n98 --> n105
-  n98 --> n209
+  n98 --> n206
   n98 --> n93
   n98 --> n96
   n99 --> n1
-  n100 --> n207
-  n101 --> n261
-  n102 --> n333
+  n100 --> n204
+  n101 --> n258
+  n102 --> n330
   n102 --> n3
   n102 --> n97
-  n103 --> n333
+  n103 --> n330
   n103 --> n98
   n103 --> n3
   n104 --> n94
-  n106 --> n143
+  n106 --> n140
   n107 --> n106
-  n109 --> n115
-  n109 --> n112
-  n110 --> n108
-  n111 --> n110
-  n114 --> n118
-  n115 --> n143
-  n117 --> n116
-  n124 --> n137
-  n124 --> n337
-  n124 --> n191
-  n124 --> n139
-  n125 --> n124
-  n125 --> n331
-  n125 --> n337
-  n125 --> n338
-  n126 --> n168
-  n126 --> n124
+  n108 --> n112
+  n108 --> n109
+  n111 --> n115
+  n112 --> n140
+  n114 --> n113
+  n121 --> n134
+  n121 --> n334
+  n121 --> n188
+  n121 --> n136
+  n122 --> n121
+  n122 --> n328
+  n122 --> n334
+  n122 --> n335
+  n123 --> n165
+  n123 --> n121
+  n123 --> n144
+  n124 --> n141
+  n124 --> n145
+  n125 --> n146
+  n125 --> n141
+  n125 --> n144
+  n125 --> n132
   n126 --> n147
-  n127 --> n144
-  n127 --> n148
-  n128 --> n149
+  n126 --> n123
+  n126 --> n130
+  n126 --> n124
+  n126 --> n146
+  n126 --> n141
+  n127 --> n123
+  n128 --> n130
+  n128 --> n134
+  n128 --> n165
+  n128 --> n136
+  n128 --> n127
+  n128 --> n132
+  n128 --> n125
+  n128 --> n131
   n128 --> n144
-  n128 --> n147
-  n128 --> n135
-  n129 --> n150
-  n129 --> n126
-  n129 --> n133
   n129 --> n127
-  n129 --> n149
-  n129 --> n144
-  n130 --> n126
-  n131 --> n133
-  n131 --> n137
-  n131 --> n168
-  n131 --> n139
-  n131 --> n130
-  n131 --> n135
-  n131 --> n128
+  n129 --> n125
+  n129 --> n130
+  n129 --> n334
+  n130 --> n123
   n131 --> n134
-  n131 --> n147
-  n132 --> n130
-  n132 --> n128
-  n132 --> n133
-  n132 --> n337
-  n133 --> n126
-  n134 --> n137
-  n134 --> n139
-  n134 --> n338
-  n134 --> n124
-  n134 --> n165
-  n135 --> n165
-  n135 --> n124
-  n136 --> n165
-  n136 --> n168
-  n136 --> n138
-  n137 --> n175
-  n138 --> n140
-  n138 --> n177
-  n139 --> n338
-  n139 --> n187
-  n140 --> n338
-  n140 --> n142
-  n141 --> n179
-  n142 --> n337
-  n144 --> n147
-  n145 --> n168
-  n145 --> n171
-  n145 --> n147
-  n146 --> n168
-  n146 --> n172
-  n146 --> n147
-  n148 --> n167
-  n148 --> n149
-  n150 --> n169
-  n150 --> n149
-  n152 --> n331
-  n154 --> n155
-  n154 --> n153
-  n155 --> n161
-  n155 --> n331
-  n157 --> n151
-  n158 --> n156
-  n159 --> n157
-  n160 --> n152
-  n161 --> n331
-  n162 --> n158
+  n131 --> n136
+  n131 --> n335
+  n131 --> n121
+  n131 --> n162
+  n132 --> n162
+  n132 --> n121
+  n133 --> n162
+  n133 --> n165
+  n133 --> n135
+  n134 --> n172
+  n135 --> n137
+  n135 --> n174
+  n136 --> n335
+  n136 --> n184
+  n137 --> n335
+  n137 --> n139
+  n138 --> n176
+  n139 --> n334
+  n141 --> n144
+  n142 --> n165
+  n142 --> n168
+  n142 --> n144
+  n143 --> n165
+  n143 --> n169
+  n143 --> n144
+  n145 --> n164
+  n145 --> n146
+  n147 --> n166
+  n147 --> n146
+  n149 --> n328
+  n151 --> n152
+  n151 --> n150
+  n152 --> n158
+  n152 --> n328
+  n154 --> n148
+  n155 --> n153
+  n156 --> n154
+  n157 --> n149
+  n158 --> n328
+  n159 --> n155
+  n160 --> n170
   n163 --> n173
-  n166 --> n176
-  n166 --> n164
-  n168 --> n165
-  n170 --> n190
-  n170 --> n157
-  n171 --> n143
+  n163 --> n161
+  n165 --> n162
+  n167 --> n187
+  n167 --> n154
+  n168 --> n140
+  n168 --> n167
+  n169 --> n140
+  n169 --> n167
+  n171 --> n176
+  n171 --> n174
   n171 --> n170
-  n172 --> n143
-  n172 --> n170
-  n174 --> n179
-  n174 --> n177
-  n174 --> n173
-  n174 --> n176
-  n174 --> n178
-  n175 --> n337
-  n175 --> n190
-  n175 --> n159
+  n171 --> n173
+  n171 --> n175
+  n172 --> n334
+  n172 --> n187
+  n172 --> n156
+  n174 --> n156
+  n174 --> n159
+  n174 --> n185
+  n174 --> n188
+  n176 --> n155
+  n176 --> n185
+  n177 --> n187
+  n177 --> n156
   n177 --> n159
-  n177 --> n162
+  n177 --> n185
   n177 --> n188
-  n177 --> n191
-  n179 --> n158
-  n179 --> n188
-  n180 --> n190
-  n180 --> n159
-  n180 --> n162
-  n180 --> n188
-  n180 --> n191
-  n180 --> n192
-  n181 --> n160
-  n181 --> n331
-  n181 --> n340
-  n181 --> n182
+  n177 --> n189
+  n178 --> n157
+  n178 --> n328
+  n178 --> n337
+  n178 --> n179
+  n178 --> n334
+  n178 --> n335
+  n179 --> n177
+  n180 --> n179
+  n181 --> n157
+  n181 --> n328
+  n181 --> n150
   n181 --> n337
-  n181 --> n338
-  n182 --> n180
-  n183 --> n182
-  n184 --> n160
-  n184 --> n331
-  n184 --> n153
-  n184 --> n340
-  n184 --> n182
-  n184 --> n337
-  n184 --> n338
-  n185 --> n331
-  n185 --> n173
-  n185 --> n155
-  n185 --> n189
-  n185 --> n193
-  n186 --> n331
-  n186 --> n173
-  n186 --> n154
-  n186 --> n189
-  n186 --> n193
-  n187 --> n162
-  n187 --> n337
-  n187 --> n188
-  n188 --> n189
-  n190 --> n189
-  n191 --> n189
-  n196 --> n17
-  n196 --> n218
-  n196 --> n54
-  n196 --> n55
-  n196 --> n215
-  n196 --> n216
-  n196 --> n16
-  n196 --> n19
-  n196 --> n212
-  n196 --> n217
-  n196 --> n52
-  n196 --> n143
-  n196 --> n18
-  n196 --> n223
-  n196 --> n205
-  n196 --> n269
-  n197 --> n4
-  n200 --> n107
-  n200 --> n91
-  n200 --> n89
-  n200 --> n31
-  n200 --> n87
-  n200 --> n219
-  n201 --> n107
-  n201 --> n91
-  n201 --> n89
-  n201 --> n31
-  n201 --> n87
-  n201 --> n219
-  n202 --> n144
-  n203 --> n144
-  n204 --> n61
-  n204 --> n206
-  n204 --> n331
-  n204 --> n337
-  n204 --> n338
-  n204 --> n187
-  n204 --> n265
-  n204 --> n266
-  n204 --> n147
-  n205 --> n143
-  n205 --> n269
-  n206 --> n120
-  n206 --> n265
-  n206 --> n337
-  n206 --> n119
-  n207 --> n332
-  n207 --> n245
-  n208 --> n84
-  n208 --> n333
-  n208 --> n332
-  n208 --> n246
-  n209 --> n332
-  n209 --> n247
-  n209 --> n333
-  n209 --> n234
-  n209 --> n84
-  n210 --> n48
-  n210 --> n224
-  n210 --> n220
-  n211 --> n221
-  n211 --> n220
+  n181 --> n179
+  n181 --> n334
+  n181 --> n335
+  n182 --> n328
+  n182 --> n170
+  n182 --> n152
+  n182 --> n186
+  n182 --> n190
+  n183 --> n328
+  n183 --> n170
+  n183 --> n151
+  n183 --> n186
+  n183 --> n190
+  n184 --> n159
+  n184 --> n334
+  n184 --> n185
+  n185 --> n186
+  n187 --> n186
+  n188 --> n186
+  n193 --> n17
+  n193 --> n215
+  n193 --> n54
+  n193 --> n55
+  n193 --> n212
+  n193 --> n213
+  n193 --> n16
+  n193 --> n19
+  n193 --> n209
+  n193 --> n214
+  n193 --> n52
+  n193 --> n140
+  n193 --> n18
+  n193 --> n220
+  n193 --> n202
+  n193 --> n266
+  n194 --> n4
+  n197 --> n107
+  n197 --> n91
+  n197 --> n89
+  n197 --> n31
+  n197 --> n87
+  n197 --> n216
+  n198 --> n107
+  n198 --> n91
+  n198 --> n89
+  n198 --> n31
+  n198 --> n87
+  n198 --> n216
+  n199 --> n141
+  n200 --> n141
+  n201 --> n61
+  n201 --> n203
+  n201 --> n328
+  n201 --> n334
+  n201 --> n335
+  n201 --> n184
+  n201 --> n262
+  n201 --> n263
+  n201 --> n144
+  n202 --> n140
+  n202 --> n266
+  n203 --> n117
+  n203 --> n262
+  n203 --> n334
+  n203 --> n116
+  n204 --> n329
+  n204 --> n242
+  n205 --> n84
+  n205 --> n330
+  n205 --> n329
+  n205 --> n243
+  n206 --> n329
+  n206 --> n244
+  n206 --> n330
+  n206 --> n231
+  n206 --> n84
+  n207 --> n48
+  n207 --> n221
+  n207 --> n217
+  n208 --> n218
+  n208 --> n217
+  n209 --> n140
+  n210 --> n57
+  n210 --> n142
+  n211 --> n62
+  n211 --> n143
+  n212 --> n65
   n212 --> n143
-  n213 --> n57
-  n213 --> n145
-  n214 --> n62
-  n214 --> n146
-  n215 --> n65
-  n215 --> n146
-  n217 --> n143
-  n218 --> n68
-  n218 --> n145
-  n220 --> n77
-  n222 --> n168
-  n222 --> n71
-  n222 --> n171
-  n223 --> n31
-  n225 --> n333
-  n225 --> n332
-  n226 --> n17
-  n226 --> n218
-  n226 --> n54
-  n226 --> n55
-  n226 --> n215
-  n226 --> n216
-  n226 --> n16
-  n226 --> n19
-  n226 --> n212
-  n226 --> n217
-  n226 --> n52
-  n226 --> n143
-  n226 --> n18
-  n226 --> n223
-  n226 --> n205
-  n226 --> n269
-  n227 --> n4
-  n228 --> n144
-  n229 --> n63
-  n229 --> n331
-  n229 --> n337
-  n229 --> n338
-  n229 --> n133
-  n230 --> n144
-  n231 --> n66
-  n231 --> n331
-  n231 --> n337
-  n231 --> n338
-  n231 --> n133
-  n234 --> n332
-  n234 --> n232
-  n244 --> n17
-  n244 --> n218
-  n244 --> n54
-  n244 --> n55
-  n244 --> n215
-  n244 --> n216
-  n244 --> n16
-  n244 --> n19
-  n244 --> n212
-  n244 --> n217
-  n244 --> n52
-  n244 --> n143
-  n244 --> n18
-  n244 --> n223
-  n244 --> n205
-  n244 --> n269
-  n245 --> n333
-  n245 --> n332
-  n245 --> n232
-  n245 --> n5
+  n214 --> n140
+  n215 --> n68
+  n215 --> n142
+  n217 --> n77
+  n219 --> n165
+  n219 --> n71
+  n219 --> n168
+  n220 --> n31
+  n222 --> n330
+  n222 --> n329
+  n223 --> n17
+  n223 --> n215
+  n223 --> n54
+  n223 --> n55
+  n223 --> n212
+  n223 --> n213
+  n223 --> n16
+  n223 --> n19
+  n223 --> n209
+  n223 --> n214
+  n223 --> n52
+  n223 --> n140
+  n223 --> n18
+  n223 --> n220
+  n223 --> n202
+  n223 --> n266
+  n224 --> n4
+  n225 --> n141
+  n226 --> n63
+  n226 --> n328
+  n226 --> n334
+  n226 --> n335
+  n226 --> n130
+  n227 --> n141
+  n228 --> n66
+  n228 --> n328
+  n228 --> n334
+  n228 --> n335
+  n228 --> n130
+  n231 --> n329
+  n231 --> n229
+  n241 --> n17
+  n241 --> n215
+  n241 --> n54
+  n241 --> n55
+  n241 --> n212
+  n241 --> n213
+  n241 --> n16
+  n241 --> n19
+  n241 --> n209
+  n241 --> n214
+  n241 --> n52
+  n241 --> n140
+  n241 --> n18
+  n241 --> n220
+  n241 --> n202
+  n241 --> n266
+  n242 --> n330
+  n242 --> n329
+  n242 --> n229
+  n242 --> n5
+  n243 --> n4
+  n244 --> n330
+  n244 --> n329
+  n244 --> n5
+  n244 --> n229
+  n245 --> n17
+  n245 --> n215
+  n245 --> n54
+  n245 --> n55
+  n245 --> n212
+  n245 --> n213
+  n245 --> n16
+  n245 --> n19
+  n245 --> n209
+  n245 --> n214
+  n245 --> n52
+  n245 --> n140
+  n245 --> n18
+  n245 --> n220
+  n245 --> n202
+  n245 --> n266
   n246 --> n4
-  n247 --> n333
-  n247 --> n332
-  n247 --> n5
-  n247 --> n232
-  n248 --> n17
-  n248 --> n218
-  n248 --> n54
-  n248 --> n55
-  n248 --> n215
-  n248 --> n216
-  n248 --> n16
-  n248 --> n19
-  n248 --> n212
-  n248 --> n217
-  n248 --> n52
-  n248 --> n143
-  n248 --> n18
-  n248 --> n223
-  n248 --> n205
-  n248 --> n269
+  n247 --> n17
+  n247 --> n215
+  n247 --> n54
+  n247 --> n55
+  n247 --> n212
+  n247 --> n213
+  n247 --> n16
+  n247 --> n19
+  n247 --> n209
+  n247 --> n214
+  n247 --> n52
+  n247 --> n140
+  n247 --> n18
+  n247 --> n220
+  n247 --> n202
+  n247 --> n266
   n249 --> n4
-  n250 --> n17
-  n250 --> n218
-  n250 --> n54
-  n250 --> n55
-  n250 --> n215
-  n250 --> n216
-  n250 --> n16
-  n250 --> n19
-  n250 --> n212
-  n250 --> n217
-  n250 --> n52
-  n250 --> n143
-  n250 --> n18
-  n250 --> n223
-  n250 --> n205
-  n250 --> n269
-  n252 --> n4
-  n253 --> n144
-  n254 --> n69
-  n254 --> n331
-  n254 --> n337
-  n254 --> n338
-  n254 --> n133
-  n255 --> n272
-  n255 --> n83
-  n255 --> n199
-  n257 --> n166
-  n258 --> n168
-  n258 --> n72
-  n258 --> n331
-  n258 --> n337
+  n250 --> n141
+  n251 --> n69
+  n251 --> n328
+  n251 --> n334
+  n251 --> n335
+  n251 --> n130
+  n252 --> n269
+  n252 --> n83
+  n252 --> n196
+  n254 --> n163
+  n255 --> n165
+  n255 --> n72
+  n255 --> n328
+  n255 --> n334
+  n255 --> n335
+  n255 --> n136
+  n256 --> n264
+  n256 --> n329
+  n256 --> n257
+  n257 --> n265
+  n258 --> n93
   n258 --> n338
-  n258 --> n139
-  n259 --> n267
-  n259 --> n332
-  n259 --> n260
-  n260 --> n268
-  n261 --> n93
-  n261 --> n341
-  n261 --> n96
-  n262 --> n93
-  n262 --> n330
-  n262 --> n96
-  n263 --> n17
-  n263 --> n218
-  n263 --> n54
-  n263 --> n55
-  n263 --> n215
-  n263 --> n216
-  n263 --> n16
-  n263 --> n19
-  n263 --> n212
-  n263 --> n217
-  n263 --> n52
-  n263 --> n143
-  n263 --> n18
-  n263 --> n223
-  n263 --> n205
-  n263 --> n269
-  n264 --> n4
-  n266 --> n337
-  n266 --> n338
-  n266 --> n120
-  n267 --> n198
-  n268 --> n332
-  n268 --> n333
-  n268 --> n232
-  n268 --> n245
-  n269 --> n200
-  n270 --> n26
-  n270 --> n25
-  n270 --> n17
-  n270 --> n332
-  n270 --> n244
-  n271 --> n38
-  n271 --> n39
-  n271 --> n210
-  n271 --> n270
-  n275 --> n278
-  n285 --> n294
+  n258 --> n96
+  n259 --> n93
+  n259 --> n327
+  n259 --> n96
+  n260 --> n17
+  n260 --> n215
+  n260 --> n54
+  n260 --> n55
+  n260 --> n212
+  n260 --> n213
+  n260 --> n16
+  n260 --> n19
+  n260 --> n209
+  n260 --> n214
+  n260 --> n52
+  n260 --> n140
+  n260 --> n18
+  n260 --> n220
+  n260 --> n202
+  n260 --> n266
+  n261 --> n4
+  n263 --> n334
+  n263 --> n335
+  n263 --> n117
+  n264 --> n195
+  n265 --> n329
+  n265 --> n330
+  n265 --> n229
+  n265 --> n242
+  n266 --> n197
+  n267 --> n26
+  n267 --> n25
+  n267 --> n17
+  n267 --> n329
+  n267 --> n241
+  n268 --> n38
+  n268 --> n39
+  n268 --> n207
+  n268 --> n267
+  n272 --> n275
+  n282 --> n291
+  n287 --> n274
+  n287 --> n273
+  n287 --> n290
+  n287 --> n276
+  n287 --> n289
+  n287 --> n277
+  n288 --> n287
+  n289 --> n277
   n290 --> n277
-  n290 --> n276
-  n290 --> n293
-  n290 --> n279
-  n290 --> n292
-  n290 --> n280
-  n291 --> n290
-  n292 --> n280
-  n293 --> n280
-  n296 --> n274
-  n298 --> n274
+  n293 --> n271
+  n295 --> n271
+  n297 --> n298
+  n297 --> n271
   n300 --> n301
-  n300 --> n274
-  n303 --> n304
+  n301 --> n318
+  n302 --> n278
+  n302 --> n326
   n304 --> n321
-  n305 --> n281
-  n305 --> n329
-  n307 --> n324
+  n304 --> n320
+  n305 --> n313
+  n305 --> n312
+  n305 --> n278
+  n305 --> n304
+  n305 --> n315
+  n305 --> n326
+  n306 --> n326
+  n307 --> n294
   n307 --> n323
-  n308 --> n316
-  n308 --> n315
-  n308 --> n281
-  n308 --> n307
-  n308 --> n318
-  n308 --> n329
-  n309 --> n329
-  n310 --> n297
-  n310 --> n326
-  n310 --> n309
+  n307 --> n306
+  n307 --> n293
+  n308 --> n323
+  n308 --> n306
+  n308 --> n295
+  n309 --> n308
+  n309 --> n313
   n310 --> n296
-  n311 --> n326
-  n311 --> n309
-  n311 --> n298
-  n312 --> n311
-  n312 --> n316
-  n313 --> n299
-  n313 --> n295
-  n314 --> n309
-  n314 --> n291
-  n314 --> n280
-  n315 --> n317
-  n316 --> n309
-  n316 --> n300
-  n316 --> n318
-  n316 --> n321
-  n317 --> n301
-  n318 --> n302
+  n310 --> n292
+  n311 --> n306
+  n311 --> n288
+  n311 --> n277
+  n312 --> n314
+  n313 --> n306
+  n313 --> n297
+  n313 --> n315
+  n313 --> n318
+  n314 --> n298
+  n315 --> n299
+  n316 --> n313
+  n316 --> n312
+  n317 --> n318
+  n318 --> n281
+  n318 --> n326
+  n318 --> n270
+  n318 --> n283
+  n319 --> n325
   n319 --> n316
-  n319 --> n315
-  n320 --> n321
-  n321 --> n284
-  n321 --> n329
-  n321 --> n273
-  n321 --> n286
-  n322 --> n328
-  n322 --> n319
-  n323 --> n305
-  n323 --> n320
-  n323 --> n275
-  n324 --> n320
-  n324 --> n285
-  n325 --> n288
-  n327 --> n283
-  n327 --> n281
-  n327 --> n329
-  n330 --> n342
-  n330 --> n343
-  n334 --> n331
-  n334 --> n337
-  n334 --> n338
-  n335 --> n331
-  n335 --> n337
-  n335 --> n338
-  n340 --> n344
-  n340 --> n331
-  n341 --> n332
-  n341 --> n333
+  n320 --> n302
+  n320 --> n317
+  n320 --> n272
+  n321 --> n317
+  n321 --> n282
+  n322 --> n285
+  n324 --> n280
+  n324 --> n278
+  n324 --> n326
+  n327 --> n339
+  n327 --> n340
+  n331 --> n341
+  n331 --> n342
+  n332 --> n343
+  n332 --> n341
+  n332 --> n342
+  n337 --> n344
+  n337 --> n328
+  n338 --> n329
+  n338 --> n330
+  n341 --> n345
+  n342 --> n346
+  n342 --> n347
+  n342 --> n348
+  n342 --> n349
+  n342 --> n350
+  n343 --> n351
+  n343 --> n352
+  n343 --> n353
+  n343 --> n354
+  n343 --> n355
+  n343 --> n356
+  n343 --> n357
+  n343 --> n358
+  n343 --> n359
+  n343 --> n360
+  n345 --> n356
+  n345 --> n361
+  n345 --> n355
+  n345 --> n357
+  n345 --> n358
+  n345 --> n362
+  n345 --> n359
+  n345 --> n360
+  n346 --> n328
+  n346 --> n334
+  n346 --> n335
+  n349 --> n363
+  n349 --> n364
+  n350 --> n365
+  n351 --> n366
+  n351 --> n367
+  n354 --> n368
+  n354 --> n355
+  n354 --> n367
+  n354 --> n369
+  n354 --> n370
+  n354 --> n371
+  n354 --> n356
+  n354 --> n353
+  n354 --> n359
+  n354 --> n360
+  n355 --> n372
+  n355 --> n373
+  n355 --> n374
+  n355 --> n375
+  n356 --> n376
+  n361 --> n374
+  n361 --> n375
+  n362 --> n358
+  n363 --> n328
+  n365 --> n377
+  n370 --> n359
+  n370 --> n356
+  n370 --> n360
+  n370 --> n362
+  n370 --> n378
+  n371 --> n359
+  n371 --> n356
+  n371 --> n360
+  n371 --> n362
+  n371 --> n379
+  n376 --> n380
+  n376 --> n381
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -6686,10 +7216,7 @@ flowchart LR
 | `fillAt_of_replaceAt` | proved | — | — | 0 | 9 |
 | `closed_project` | proved | — | `closed_join` | 38 | 48 |
 | `closed_typeAt` | proved | — | `closed_project` | 59 | 54 |
-| `closedSubst_infer` | proved | — | — | 15 | 31 |
 | `closedSubst_matchArgsB` | proved | — | `closed_joinCands`, `closed_cands` | 38 | 61 |
-| `closedSubst_matchTemplate` | proved | — | `closedSubst_infer` | 37 | 50 |
-| `closedSubst_matchTemplateArgs` | proved | — | `closedSubst_matchTemplate` | 37 | 51 |
 | `closed_cands` | proved | — | — | 0 | 13 |
 | `closed_diffTag` | proved | — | — | 3 | 6 |
 | `closed_instantiate` | proved | — | `mem_of_lookup` | 5 | 8 |
@@ -6910,10 +7437,10 @@ flowchart LR
 | `valid_up` | proved | — | — | 1 | 4 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 73 | 330 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
-| `check_sound` | proved | — | — | 136 | 263 |
+| `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
-| `matchArgsB_least` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 228 | 89 |
-| `matchArgsB_complete` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 267 | 132 |
+| `matchArgsB_least` | proved | — | `candsList_below`, `solve_between` | 38 | 61 |
+| `matchArgsB_complete` | proved | — | `covers`, `candsList_below`, `solve_between` | 63 | 66 |
 | `matchArgsB_sound` | proved | — | — | 38 | 60 |
 | `subN_trans` | proved | — | — | 96 | 53 |
 | `subN_refl` | proved | — | — | 38 | 44 |
@@ -6922,7 +7449,47 @@ flowchart LR
 | `check_ext` | proved | — | `check_sound`, `check_complete` | 68 | 256 |
 | `cata_eff_congr_on` | proved | — | — | 65 | 73 |
 | `hom_eq_cata_eff` | proved | — | — | 65 | 79 |
+| `candsList_below` | proved | — | `cands_below` | 62 | 59 |
+| `solve_between` | proved | — | `joinCands_upper`, `lookup_solve_seed`, `mem_lowers`, `joinCands_least`, `instantiate_solve` | 64 | 62 |
+| `covers` | proved | — | `above_args`, `above_prod`, `prod_or_not`, `recovers`, `cands_args`, `args`, `below_args`, `cands_union_right`, `head`, `cands_var` | 155 | 73 |
 | `sub_antisymm_canonical` | proved | — | — | 144 | 61 |
+| `cands_below` | proved | — | `args`, `comp_ne_contra`, `cands_args`, `below_args`, `cands_union_right`, `cands_mem_members`, `head`, `cands_var` | 114 | 67 |
+| `joinCands_upper` | proved | — | `normalize_idem`, `subN_trans`, `subN_refl` | 121 | 56 |
+| `lookup_solve_seed` | proved | — | — | 38 | 54 |
+| `mem_lowers` | proved | — | — | 1 | 5 |
+| `joinCands_least` | proved | — | `subN_join_least`, `subN_never` | 37 | 47 |
+| `instantiate_solve` | proved | — | `lookup_added` | 38 | 55 |
+| `above_args` | proved | — | `mem_zip_map_right`, `instance_shape` | 71 | 53 |
+| `above_prod` | proved | — | — | 153 | 61 |
+| `prod_or_not` | proved | — | — | 0 | 0 |
+| `recovers` | proved | — | `mem_zip_self_map`, `cands_args`, `instance_shape`, `mem_varsOf_args`, `prod_right_cands`, `prod_left_cands`, `args`, `prod_or_not`, `head`, `cands_var` | 77 | 67 |
+| `cands_args` | proved | — | `candsItems_eq`, `candsFields_eq`, `comp_inv`, `comp_co` | 21 | 24 |
+| `args` | proved | — | `noApp_args` | 25 | 38 |
+| `below_args` | proved | — | — | 168 | 65 |
+| `cands_union_right` | proved | — | — | 0 | 10 |
+| `head` | proved | — | — | 5 | 13 |
+| `cands_var` | proved | — | — | 0 | 10 |
+| `comp_ne_contra` | proved | — | `comp_inv`, `comp_co` | 0 | 2 |
+| `cands_mem_members` | proved | — | `cands_union_right` | 1 | 7 |
+| `subN_join_least` | proved | — | `normalize_idem` | 114 | 55 |
+| `subN_never` | proved | — | — | 38 | 44 |
+| `lookup_added` | proved | — | `lowers_cons` | 1 | 7 |
+| `mem_zip_map_right` | proved | — | — | 0 | 0 |
+| `instance_shape` | proved | — | — | 53 | 57 |
+| `mem_zip_self_map` | proved | — | — | 0 | 0 |
+| `mem_varsOf_args` | proved | — | — | 43 | 75 |
+| `prod_right_cands` | proved | — | `head`, `args`, `cands_var`, `cands_mem_members`, `prod_member_right` | 104 | 65 |
+| `prod_left_cands` | proved | — | `head`, `args`, `cands_var`, `cands_mem_members`, `prod_member_left` | 104 | 65 |
+| `candsItems_eq` | proved | — | — | 0 | 7 |
+| `candsFields_eq` | proved | — | — | 0 | 7 |
+| `comp_inv` | proved | — | — | 0 | 2 |
+| `comp_co` | proved | — | — | 0 | 2 |
+| `noApp_args` | proved | — | `noAppItems_eq_all`, `noAppFields_eq_all` | 4 | 11 |
+| `lowers_cons` | proved | — | — | 1 | 5 |
+| `prod_member_right` | proved | — | — | 153 | 58 |
+| `prod_member_left` | proved | — | — | 153 | 58 |
+| `noAppItems_eq_all` | proved | — | — | 0 | 2 |
+| `noAppFields_eq_all` | proved | — | — | 0 | 2 |
 
 ## Acceptance programs
 

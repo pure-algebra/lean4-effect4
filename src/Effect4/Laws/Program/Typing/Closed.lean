@@ -1341,7 +1341,7 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
     have b := hasTy_closed hsig hb henv hs.2.1
     have h := hasTy_closed hsig hh (henv.push b.2) hs.2.2
     ⟨closed_joinAnswer hj b.1 h.1, h.2⟩
-  | _, _, _, .catchIf hb _ hh hj, henv, hs =>
+  | _, _, _, .catchIf hb _ _ hh hj, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2.1
     have h := hasTy_closed hsig hh (henv.push b.2) hs.2.2
     ⟨closed_joinAnswer hj b.1 h.1, closed_catchIfError _ _ b.2 h.2⟩
@@ -1363,7 +1363,7 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
     ⟨Bool.and_eq_true_iff.mpr (hasTy_closed hsig hb henv hs.2), rfl⟩
   | _, _, _, .uninterruptible hb, henv, hs => hasTy_closed hsig hb henv hs.2
   | _, _, _, .interruptible hb, henv, hs => hasTy_closed hsig hb henv hs.2
-  | _, _, _, .iterate hi _ hb _ hr _ _, henv, hs =>
+  | _, _, _, .iterate hi _ _ hb _ hr _ _, henv, hs =>
     have cursor := closed_getD hs.1.1 (termTy_closed hsig henv hs.1.2.1 hi)
     have b := hasTy_closed hsig hb (henv.push cursor) hs.2
     ⟨termTy_closed hsig (henv.push cursor) hs.1.2.2.2.2.1 hr, b.2⟩
@@ -1386,7 +1386,7 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .provideService _ _ _ hb, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2
     ⟨b.1, b.2⟩
-  | _, _, _, .restore _ hb, henv, hs => hasTy_closed hsig hb henv hs.2
+  | _, _, _, .restore _ _ hb, henv, hs => hasTy_closed hsig hb henv hs.2
 
 /-- A generator body leaves a closed state. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1405,7 +1405,7 @@ theorem stmtsHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, _, .ret ht, henv, hs =>
     ⟨fun _ ha => Option.some.inj (Option.mem_def.mp ha) ▸ termTy_closed hsig henv hs.2.1.1 ht,
       rfl⟩
-  | _, _, _, _, .ifElse _ ha hb hr hab hg, henv, hs =>
+  | _, _, _, _, .ifElse _ _ ha hb hr hab hg, henv, hs =>
     GenTy.closed_seq hg
       (GenTy.closed_merge hab (stmtsHasTy_closed hsig ha henv hs.2.1.2.1)
         (stmtsHasTy_closed hsig hb henv hs.2.1.2.2))
@@ -1435,15 +1435,15 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
       AnnotationsClosed .action a → t.Closed
   | _, _, _, .fork _ hp, henv, hs =>
     ⟨Bool.and_eq_true_iff.mpr (hasTy_closed hsig hp henv hs.2), rfl⟩
-  | _, _, _, .forkIn _ hp _, henv, hs =>
+  | _, _, _, .forkIn _ hp _ _, henv, hs =>
     ⟨Bool.and_eq_true_iff.mpr (hasTy_closed hsig hp henv hs.2), rfl⟩
   | _, _, _, .forkScoped _ hp, henv, hs =>
     ⟨Bool.and_eq_true_iff.mpr (hasTy_closed hsig hp henv hs.2), rfl⟩
-  | _, _, _, .runIn _ _ _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .runIn _ _ _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .interrupt _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .interruptScoped _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .interruptAll_self _ _ _, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .interruptAll_by _ _ _ _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .interruptAll_by _ _ _ _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .awaitAll ht hl hf, henv, hs =>
     have hts := termTy_closed hsig henv hs.1 ht
     have hinner := closed_listOf hts hl
@@ -1455,10 +1455,10 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .snapshotChildren, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .awaitNewChildren _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .raceAll he, henv, hs => effsHasTy_closed hsig he henv hs.2
-  | _, _, _, .setContext _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .setContext _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getContext, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getId, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .closeScope _ _ _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .closeScope _ _ _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getInterruptible, _, _ => ⟨rfl, rfl⟩
 
 /-- A layer's error type is closed. -/

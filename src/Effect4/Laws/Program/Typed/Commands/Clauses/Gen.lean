@@ -758,10 +758,10 @@ theorem walk_typed {root : ProgramSource} (hwf : root.program.layerRefsWF = true
           exact fits_subN w (hanswer ty rfl) val hfit
       | ifElse test a b =>
         rw [expandIn_ifElse] at hcheck
-        obtain ⟨htest, ga, gb, r, hca, hcb, hcr, rfl⟩ :=
+        obtain ⟨testTy, htest, hsub_test, ga, gb, r, hca, hcb, hcr, rfl⟩ :=
           Checker.inv_stmts_ifElse _ _ _ _ _ _ _ _ g hcheck
         obtain ⟨val, hval, hfit⟩ := evalTerm_progress_env (src := root) henv htest
-        obtain ⟨bb, rfl⟩ := fits_bool_inv hfit
+        obtain ⟨bb, rfl⟩ := fits_bool_inv (fits_subN w (b := .bool) hsub_test val hfit)
         have hans := ansBelow_join hanswer
         have hansM := ansBelow_join hans.1
         have herrs := subN_join_both herror

@@ -1,0 +1,23 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// tsgo exit code: 1
+// tsgo output:
+//   scratch/order_probe/1_catchIf_red.ts(12,3): error TS2769: No overload matches this call.
+//     The last overload gave the following error.
+//       Argument of type '(a0: number) => string' is not assignable to parameter of type 'Predicate<number>'.
+//         Type 'string' is not assignable to type 'boolean'.
+
+import { Cause, Context, Deferred, Effect, Exit, Fiber, Option, Ref, Scope, pipe } from "effect"
+import { type MaskRestore } from "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"
+
+declare const fiber: Fiber.Fiber<number, never>
+declare const scope: Scope.Scope
+declare const ctx: Context.Context<any>
+declare const exitVal: Exit.Exit<void, never>
+
+declare const p_red: (a0: number) => string
+export const red = Effect.catchIf(
+  Effect.fail(1),
+  p_red,
+  (a0: number) => Effect.succeed(a0),
+  undefined
+)

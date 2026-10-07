@@ -320,7 +320,7 @@ theorem forkInDefault_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff
         (effTy sig env) =
       some ⟨.fiberOf p.answer p.error, .never, p.requires⟩ := by
   change effTy sig env (.withFiber (.forkIn body (defaults true) scope)) = _
-  exact effTy_complete sig _ env _ (.withFiber (.forkIn _ (effTy_sound sig body env p hp) hs))
+  exact effTy_complete sig _ env _ (.withFiber (.forkIn (defaults true) (effTy_sound sig body env p hp) hs (Ty.sub_refl _)))
 
 open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
 /-- `Effect.forkScoped` with the default options requires the ambient scope. -/

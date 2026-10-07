@@ -616,9 +616,6 @@ def registry : Registry where
       literature := [
         { work := "Castagna2024", locator := "audit P6", relation := "adaptedResult" }
       ] },
-    { id := "template-match-anchored", concept := "subtyping-algebra", role := .decidability
-      title := "The match by first occurrence is complete on anchored templates: a normal request with no never outside an invariant handle's argument, below some instance, has a match (the state plan's T3a); the checker no longer calls this match, which the match by bounds replaced at each caller (template-match-complete); the function and this claim go at the open stage of slice MATCH (decisions row 303)"
-      pointer := .witness `Effect4.Program.Ty.matchTemplate_complete_anchored },
     { id := "template-match-complete", concept := "subtyping-algebra", role := .decidability
       title := "The match of a template by bounds is complete: on a template that is its own normal form, is admissible and holds no nominal reference, a normal request below some instance has a match, from any seed that the instance agrees with; no premise asks where a parameter first occurs or where never stands; the match is sound by its guard (matchB_sound), its bindings are the least (matchB_least), an argument list is checked at one final list of bindings (matchArgsB_sound), and smaller arguments have a match with smaller bindings (matchArgsB_monotone); every template of the tree is in reach, as a finite check; a binder term is matched under the term guard until the TypeScript printer writes a row's type arguments (Bounds.termGuard); it does not match under a union head or a nominal reference, and it establishes nothing of tsgo's inference (decisions rows 299, 303)"
       pointer := .witness `Effect4.Program.Bounds.matchB_complete },

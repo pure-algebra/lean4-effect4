@@ -89,16 +89,22 @@ def optionTy : Ty → Option Ty := UnionRule.liftOne Member.option
 namespace Decision
 
 /-- What child 0 and child 1 bind, from the scrutinee's type; `none` refuses the scrutinee.
-`.bool` tests the type syntactically (`t = .bool`), the rule the retired `branch` had, which
-made its retirement an equality of typing. -/
+`.bool` tests that the scrutinee's type is below `.bool` (`Ty.sub t.normalize .bool`). -/
 def arms : Decision → Ty → Option (List Ty × List Ty)
-  | .bool, t => if t = .bool then some ([], []) else none
+  | .bool, t => if Ty.sub t.normalize .bool then some ([], []) else none
   | .option, t => (optionTy t).map fun a => ([], [a])
   | .tag name, t =>
     let c := t.normalize
     if Ty.taggedColumn c then (Ty.payloadTy name c).map fun p => ([p], [Ty.diffTag name c])
     else none
   | .recordTag name, t => (Record.tagArms name t).map fun arms => ([arms.1], [arms.2])
+
+@[simp] theorem arms_bool_of_sub {t : Ty} (h : Ty.sub t.normalize .bool = true) :
+    arms .bool t = some ([], []) := by
+  simp only [arms, h, ↓reduceIte]
+
+@[simp] theorem arms_bool : arms .bool .bool = some ([], []) :=
+  arms_bool_of_sub (Ty.sub_refl _)
 
 /-- How many values each child binds, for the readers' binder depth. -/
 def binds : Decision → Nat × Nat

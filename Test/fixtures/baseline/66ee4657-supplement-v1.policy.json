@@ -90,7 +90,13 @@
     "counter stands at 8 on the fork entry where it stands at 7 on the sync entry (g81, g144, g250,",
     "g289, g313). The note of each now gives the sync entry's exit. g102 moved in its note alone: it",
     "loses the sentence on the fork entry. Each of the six was a registered difference before, on",
-    "both dimensions, and it is the same difference (DI-73)."
+    "both dimensions, and it is the same difference (DI-73).",
+    "",
+    "Chunk 3 (2026-10-07, decisions row 306): eleven tests of the checker at a fixed type read the",
+    "order, so a test at the type `never` is accepted. One row of the corpus index moved in its",
+    "address column, and no verdict column moved. g85 is refused with `predicateNotBool` as",
+    "before. Its address was the root, the test of a `catchIf` whose body cannot fail. It is now",
+    "`1.0`, the test `7` of the inner loop, which is where tsgo 7 reports its one error (TS2322)."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -228,6 +234,7 @@
   "verdict_moves": [
     "generated/corpus-index.tsv:g158",
     "generated/corpus-index.tsv:g277",
+    "generated/corpus-index.tsv:g85",
     "harness/truth/corpus-results.tsv:g158",
     "harness/truth/corpus-results.tsv:g309",
     "harness/truth/corpus-results.tsv:g5",

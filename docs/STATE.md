@@ -462,8 +462,26 @@ In work since the suspension of the handover:
   second model's report against the pinned sources, and it holds two compiled probes. It
   rules nothing. [The brief of chunk 2](research/2026-10-06-chunk-2-brief.md) mapped wave 2
   and wave 3 as one hand-over, and chunk 2 is landed (the next bullet).
-  [The brief of chunk 3](research/2026-10-07-chunk-3-brief.md) is the next hand-over: the old
-  match goes, the placements, and the tests by equality. The typed print follows it.
+  [The brief of chunk 3](research/2026-10-07-chunk-3-brief.md) mapped the next hand-over, and
+  chunk 3 is landed (the next bullet). The typed print follows it, after the coordinator's
+  design note.
+- **Chunk 3 is landed: the old match is gone, and eleven tests of the checker read the order**
+  (row 306). [The coordinator's review](research/2026-10-07-chunk-3-landing-review.md) says
+  what the landing changed.
+  - **One match of a template stands**, the match by bounds. The match by first occurrence is
+    removed with its laws, and the registry claim `template-match-anchored` is retired with it.
+  - **Every law of the match by bounds carries its placement**
+    (`src/Effect4/Laws/Program/Bounds.lean`), and no law of chunk 2 has a premise with a
+    default proof.
+  - **Eleven tests at a fixed type read the order.** Each compared a term's type with `.bool`,
+    `.nat` or a handle type by equality. Each now asks that the normal type is below it. So
+    the checker types a term at `never` there, and a term at a raw union with `never`.
+    [The probe](research/2026-10-07-tests-by-order-probe.md) ran each printed form with
+    tsgo 7. No verdict of the two corpora moved. One row of the corpus index moved in its
+    address: g85 is refused as before, now where tsgo reports its error.
+  - **Open after it**: the helpers that served the retired claim keep its name in their
+    docstrings (`src/Effect4/Laws/Program/Template.lean`,
+    `src/Effect4/Data/Constructive.lean`). Each is placed again or cut in the next chunk.
 - **Chunk 2 is landed: the query function, the match by bounds and four converted rules**
   (rows 303 to 305). [The coordinator's review](research/2026-10-07-chunk-2-landing-review.md)
   says what the landing changed. Two reviews were written in flight:
@@ -490,8 +508,8 @@ In work since the suspension of the handover:
   - **The checker types more programs.** Two candidates with no order join at a template
     atom. Each converted rule answers at `never`, and three of them at one union member under
     a raw union. No row of the two corpora moved.
-  - **Two stages are open**: the match by first occurrence stands with its laws and no caller,
-    and the tests by equality are not converted. Both are in chunk 3.
+  - **Two stages were open, and chunk 3 closed both**: the match by first occurrence, and the
+    tests by equality.
   - **The landing made the repairs of both reviews.** The slice came with no term guard and
     with eight atoms at their old declarations, and tsgo refuses the calls that the checker
     typed there. Its

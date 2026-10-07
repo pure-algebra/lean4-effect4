@@ -1070,7 +1070,7 @@ theorem causeTy_die (sig : Signature Op) (env : TyEnv) (defect : Term) :
 
 theorem causeTy_interrupt_some (sig : Signature Op) (env : TyEnv) (who : Term) :
     causeTy sig env (.interrupt (some who)) =
-      (termTy sig env who).bind fun t => if t = .nat then some .never else none := rfl
+      (termTy sig env who).bind fun t => if Ty.sub t.normalize .nat then some .never else none := rfl
 
 theorem causeTy_both (sig : Signature Op) (env : TyEnv) (left right : CauseTerm) :
     causeTy sig env (.both left right) =
@@ -1121,13 +1121,18 @@ theorem causeOf_isSome_of_causeTy (tys : TyEnv) (env : List Val) (hfit : Fits en
     | some who =>
       rw [causeTy_interrupt_some] at h
       obtain ⟨w, hw, ht⟩ := Option.bind_eq_some_iff.mp h
-      have hnat : w = .nat := by
-        by_cases hn : w = .nat
-        · exact hn
-        · simp [hn] at ht
-      subst hnat
-      obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome who env tys .nat hfit hw)
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv (evalTerm_hasTy who env tys .nat v hfit hw hv)
+      have hsub : Ty.sub w.normalize .nat = true := by
+        split at ht
+        · rename_i hsub; exact hsub
+        · contradiction
+      obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome who env tys w hfit hw)
+      have hval : Val.hasTy v w = true := evalTerm_hasTy who env tys w v hfit hw hv
+      have hnat : Val.hasTy v .nat = true := by
+        rw [← hasTy_normalize .nat v []]
+        apply hasTy_sub w.normalize Ty.nat.normalize v [] hsub
+        rw [hasTy_normalize w v []]
+        exact hval
+      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hnat
       simp [causeOf, hv]
   | both left right ihl ihr =>
     rw [causeTy_both] at h

@@ -163,15 +163,19 @@ theorem Decision.decide_typed (d : Decision) {t : Ty} {e0 e1 : List Ty} {v : Val
     simp only [Decision.arms] at harms
     split at harms
     · rename_i ht
-      subst ht
       simp only [Option.some.injEq, Prod.mk.injEq] at harms
       obtain ⟨h0, h1⟩ := harms
       subst h0; subst h1
-      simp only [Val.hasTy] at hv
-      split at hv
+      have hv' : Val.hasTy v .bool allocated = true := by
+        rw [← hasTy_normalize .bool]
+        apply hasTy_sub t.normalize Ty.bool.normalize v allocated ht
+        rw [hasTy_normalize]
+        exact hv
+      simp only [Val.hasTy] at hv'
+      split at hv'
       · rename_i b
         exact ⟨b, none, rfl, by cases b <;> trivial⟩
-      · exact nomatch hv
+      · exact nomatch hv'
     · exact nomatch harms
   | option =>
     simp only [Decision.arms] at harms

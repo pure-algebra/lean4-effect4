@@ -185,7 +185,7 @@ mutual
     | .catchIf test body handler => do
       let b ← check sig env (p ++ [0]) body
       let predicate ← term? sig (env ++ [b.error]) p test
-      if predicate = .bool then
+      if Ty.sub predicate.normalize .bool then
         let h ← check sig (env ++ [b.error]) (p ++ [1]) handler
         pure ⟨Ty.join b.answer h.answer, catchIfError test env.length b.error h.error,
           b.requires.union h.requires⟩
@@ -218,9 +218,9 @@ mutual
       let b ← check sig (env ++ [cursor]) (p ++ [0]) body
       let c1 ← term? sig (env ++ [cursor, b.answer]) p step
       let d ← term? sig (env ++ [cursor]) p result
-      if t = .bool ∧ Ty.sub c0.normalize cursor.normalize = true
+      if Ty.sub t.normalize .bool ∧ Ty.sub c0.normalize cursor.normalize = true
           ∧ Ty.sub c1.normalize cursor.normalize = true then pure ⟨d, b.error, b.requires⟩
-      else if ¬ t = .bool then throw ⟨p, .predicateNotBool t⟩
+      else if ¬ Ty.sub t.normalize .bool then throw ⟨p, .predicateNotBool t⟩
       else if Ty.sub c0.normalize cursor.normalize = true then throw ⟨p, .stepNotCursor c1 cursor⟩
       else throw ⟨p, .initialNotCursor c0 cursor⟩
     | .yieldNow _ => pure (EffTy.pure .unit)
@@ -262,7 +262,7 @@ mutual
     -- type, and the node at its body's type. No other rule names the type but the getter's
     | .restore saved body => do
       let s ← term? sig env p saved
-      if s = Ty.maskRestore then check sig env (p ++ [0]) body
+      if Ty.sub s.normalize Ty.maskRestore then check sig env (p ++ [0]) body
       else throw ⟨p, .maskRestoreExpected s⟩
 
   /-- `layerTy` and `explainLayer` as one. -/
@@ -325,7 +325,7 @@ mutual
     | .ret value => pure (.ret (term? sig env p value))
     | .ifElse test thenB elseB => do
       let t ← term? sig env p test
-      if t = .bool then
+      if Ty.sub t.normalize .bool then
         let a ← checkStmts sig env inLoop none (p ++ [0]) thenB
         let b ← checkStmts sig env inLoop none (p ++ [1]) elseB
         pure (.step (a.mergeT b) [])
@@ -374,7 +374,7 @@ mutual
     | .forkIn program _ scope => do
       let t ← check sig env (p ++ [0]) program
       let s ← term? sig env p scope
-      if s = Ty.scope then pure ⟨.fiberOf t.answer t.error, .never, t.requires⟩
+      if Ty.sub s.normalize Ty.scope then pure ⟨.fiberOf t.answer t.error, .never, t.requires⟩
       else throw ⟨p, .scopeExpected s⟩
     | .forkScoped program _ => do
       let t ← check sig env (p ++ [0]) program
@@ -384,7 +384,7 @@ mutual
       let t ← term? sig env p target
       let _ ← expect ⟨p, .notFiber t⟩ (fiberTy t)
       let s ← term? sig env p scope
-      if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
+      if Ty.sub s.normalize Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
     | .interrupt target => do
       let t ← term? sig env p target
       let _ ← expect ⟨p, .notFiber t⟩ (fiberTy t)
@@ -401,7 +401,7 @@ mutual
       | none => pure (EffTy.pure .unit)
       | some who => do
         let w ← term? sig env p who
-        if w = .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
+        if Ty.sub w.normalize .nat then pure (EffTy.pure .unit) else throw ⟨p, .natExpected w⟩
     | .awaitAll targets => do
       let ts ← term? sig env p targets
       let inner ← expect ⟨p, .listOfFibersExpected ts⟩ (listOf? ts)
@@ -421,14 +421,14 @@ mutual
     | .raceAll entrants => checkEffs sig env (p ++ [0]) entrants
     | .setContext context => do
       let c ← term? sig env p context
-      if c = Ty.context then pure (EffTy.pure .unit) else throw ⟨p, .contextExpected c⟩
+      if Ty.sub c.normalize Ty.context then pure (EffTy.pure .unit) else throw ⟨p, .contextExpected c⟩
     | .getContext => pure (EffTy.pure Ty.context)
     | .getId => pure (EffTy.pure .nat)
     | .closeScope scope exit => do
       let s ← term? sig env p scope
       let e ← term? sig env p exit
       let _ ← expect ⟨p, .exitExpected e⟩ (exitOf? e)
-      if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
+      if Ty.sub s.normalize Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
     -- the mask at a constant body (decisions row 245): it answers the saved state, with no
     -- error and no requirement
     | .getInterruptible => pure (EffTy.pure Ty.maskRestore)

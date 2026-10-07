@@ -38,7 +38,7 @@ structure LoopChecked (root : ProgramSource) (p : Point) (env : List Ty) (ct : T
     Prop where
   hnode : Node.at_ (.eff root.program) p.path =
     some (.eff (.iterate cursorTy initial test step result body))
-  htest : termTy root.signature (env ++ [ct]) test = some .bool
+  htest : ∃ testTy, termTy root.signature (env ++ [ct]) test = some testTy ∧ Ty.subN testTy .bool = true
   hbody : Checker.check root.signature (env ++ [ct]) (p.path ++ [0])
     (Eff.expandIn root.program body) = .ok tin
   hstep : ∃ c1, termTy root.signature (env ++ [ct, tin.answer]) step = some c1 ∧
@@ -94,8 +94,9 @@ theorem loopEnter_typed {w : World} {tin tout : EffTy} {name : EffName} {cursor 
       loopNextRAt root.program { p with completed := C } cursor := rfl
   rw [entered]
   have hcur : EnvTyped w (env ++ [ct]) (p.env ++ [cursor]) := envTyped_append henv hfit
-  obtain ⟨tv, htv, hfitv⟩ := evalTerm_progress_env (src := root) hcur checked.htest
-  obtain ⟨b, rfl⟩ := fits_bool_inv hfitv
+  obtain ⟨testTy, htest, hsub_bool⟩ := checked.htest
+  obtain ⟨tv, htv, hfitv⟩ := evalTerm_progress_env (src := root) hcur htest
+  obtain ⟨b, rfl⟩ := fits_bool_inv (fits_subN w (b := .bool) hsub_bool tv hfitv)
   have hloop := loopAt_of_node C checked.hnode
   cases b with
   | true =>
@@ -177,12 +178,12 @@ theorem loopFrameTyped_of_point {w : World} {p : Point} {ty : EffTy} {cursor : V
     ∃ tin, LoopFrameTyped root (w, tin, ty, .loop p, cursor) := by
   obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, _, hc0, hfit⟩ := h
   rw [Eff.expandIn_iterate] at hcheck
-  obtain ⟨c0', c1, d, b, hinit, htest, hbody, hstep, hresult, _, hsub1, rfl⟩ :=
+  obtain ⟨c0', c1, d, b, testTy, hinit, htest, hsub_bool, hbody, hstep, hresult, _, hsub1, rfl⟩ :=
     Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
   rw [hc0] at hinit
   cases hinit
   exact ⟨b, hwf, htie, p, env, _, cursorTy, initial, test, step, result, body, rfl,
-    ⟨hat, htest, hbody, ⟨c1, hstep, hsub1⟩, ⟨d, hresult, rfl⟩⟩, henv, hfit⟩
+    ⟨hat, ⟨testTy, htest, hsub_bool⟩, hbody, ⟨c1, hstep, hsub1⟩, ⟨d, hresult, rfl⟩⟩, henv, hfit⟩
 
 end Invariant
 
