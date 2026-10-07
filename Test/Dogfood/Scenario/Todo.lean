@@ -1,5 +1,8 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
+import Effect4.Program.Authoring.Declare
+import Effect4.Program.Authoring.Atoms
+import Effect4.Program.Authoring.Sugar
 
 /-!
 # The to-do application, first slice: its programs build and run under a scripted host
@@ -23,9 +26,8 @@ and how a program carries them as data, is a design of its own: the owner asked 
 care, on 2026-10-07. The scenario's record, its lowered runs and its place in
 `Test/Dogfood/Scenario/Faces.lean` come after that design.
 
-One finding stands in no guard yet. The module printer refuses an export name that begins with
-`a` (`PrintRefusal.unsafeName`), so the program `add` prints as a module under another name
-alone, and `Api.printModule` answers `none` with no reason.
+One finding stands in no guard yet. The module printer refuses `add` as an export name
+because a module imports the atom `add`.
 -/
 
 set_option autoImplicit false
@@ -34,64 +36,50 @@ set_option maxRecDepth 8192
 namespace Test.Dogfood.Scenario.Todo
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Program.Authoring.Atom (eq pair)
 open Test.Dogfood.P2HandlerLayers (recordVal built?)
 
 /-! ## 1. The data and the rows -/
 
-/-- `Todo = { id: number, title: string, done: boolean }`. -/
-def todoFields : List (String × Bool × Ty) :=
-  [("id", false, .nat), ("title", false, .string), ("done", false, .bool)]
-def todoTy : Ty := .record todoFields
+eff_record Todo where id : .nat, title : .string, done : .bool
+eff_failure NotFound where id : .nat
+eff_failure SqlError message
+eff_failure EmptyTitle message
 
-/-- `NotFound { id }`: a tagged record, one class in the TypeScript face. -/
-def notFoundFields : List (String × Bool × Ty) :=
-  [("_tag", false, .lit "NotFound"), ("id", false, .nat)]
-def notFoundTy : Ty := .record notFoundFields
-
-/-- A failure of the repository: the pair of the tag and a message. -/
-def sqlErrTy : Ty := .prod (.lit "SqlError") .string
-
-/-- An empty title: the pair of the tag and its one message. -/
+/-- The error that `add` raises, as the checker types it: the message is a literal type. -/
 def emptyTitleTy : Ty := .prod (.lit "EmptyTitle") (.lit "a title is required")
 
-/-- `INSERT … RETURNING *`: the stored to-do. -/
-def insert : RowDef := Row.host "TodoRepo.insert" .string todoTy sqlErrTy "the to-do scenario"
-/-- `SELECT *`: every to-do. -/
-def all : RowDef := Row.host "TodoRepo.all" .unit (.list todoTy) sqlErrTy "the to-do scenario"
-/-- `UPDATE … SET done … RETURNING *`: the updated to-do, or nothing. -/
-def setDone : RowDef :=
-  Row.host "TodoRepo.setDone" (.prod .nat .bool) (.option todoTy) sqlErrTy "the to-do scenario"
-/-- `DELETE`: whether a row went. -/
-def delete : RowDef := Row.host "TodoRepo.delete" .nat .bool sqlErrTy "the to-do scenario"
+eff_rows TodoRepo error SqlError.ty cite "the to-do scenario" where
+  insert(.string) : Todo.ty,
+  all(.unit) : .list Todo.ty,
+  setDone(.prod .nat .bool) : .option Todo.ty,
+  delete(.nat) : .bool
 
 /-! ## 2. The API -/
 
-/-- `new NotFound({ id })`. -/
-def notFound (id : TermSrc) : TermSrc :=
-  record notFoundFields [("_tag", str "NotFound"), ("id", id)]
-
 /-- `add(title)`: an empty title fails and asks the repository nothing. -/
-def add (title : TermSrc) : Src NativeOp :=
-  ifElse (app "eq" [title, str ""])
-    (fail (app "pair" [str "EmptyTitle", str "a title is required"]))
-    (Row.call insert title)
+def add (title : TermSrc) : Src NativeOp := eff do
+  if eq title (str "") then
+    EmptyTitle.raise (str "a title is required")
+  else
+    TodoRepo.insert title
 
 /-- `list()`: every to-do. -/
-def list : Src NativeOp := Row.call all unit
+def list : Src NativeOp := TodoRepo.all unit
 
 /-- `complete(id)`: the to-do, marked done; a missing one fails with its id. -/
-def complete (id : TermSrc) : Src NativeOp :=
-  bindName "updated" (Row.call setDone (app "pair" [id, bool true])) fun updated =>
-    selectOption "todo" updated (fail (notFound id)) (succeed (var "todo"))
+def complete (id : TermSrc) : Src NativeOp := eff do
+  let updated ← TodoRepo.setDone (pair id (bool true))
+  selectOptionWith updated (NotFound.raise id) fun todo => succeed todo
 
 /-- `remove(id)`: a missing to-do fails with its id. -/
-def remove (id : TermSrc) : Src NativeOp :=
-  bindName "removed" (Row.call delete id) fun removed =>
-    ifElse removed (succeed unit) (fail (notFound id))
+def remove (id : TermSrc) : Src NativeOp := eff do
+  let removed ← TodoRepo.delete id
+  if removed then succeed unit else NotFound.raise id
 
 /-- One request of the API as a module, over the repository's four rows. -/
 def request (main : Src NativeOp) : Module NativeOp :=
-  { rows := [insert, all, setDone, delete], main }
+  { rows := TodoRepo.rows, main }
 
 /-! ## 3. Each program builds -/
 
@@ -106,14 +94,14 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
 
 -- tested: `add` answers a to-do. Its error is the repository's or the empty title
 #guard typeOf? (add (str "milk")) =
-  some (todoTy.normalize, (Ty.union emptyTitleTy sqlErrTy).normalize)
+  some (Todo.ty.normalize, (Ty.union emptyTitleTy SqlError.ty).normalize)
 -- tested: `list` answers the to-dos, and only the repository fails
-#guard typeOf? list = some ((Ty.list todoTy).normalize, sqlErrTy)
+#guard typeOf? list = some ((Ty.list Todo.ty).normalize, SqlError.ty)
 -- tested: `complete` answers a to-do. Its error is the repository's or the missing to-do
 #guard typeOf? (complete (nat 1)) =
-  some (todoTy.normalize, (Ty.union notFoundTy sqlErrTy).normalize)
+  some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
 -- tested: `remove` answers nothing, with the same error
-#guard typeOf? (remove (nat 1)) = some (.unit, (Ty.union notFoundTy sqlErrTy).normalize)
+#guard typeOf? (remove (nat 1)) = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
 
 /-! ## 4. Finite runs under a scripted host -/
 

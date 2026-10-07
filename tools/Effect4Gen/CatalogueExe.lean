@@ -2,6 +2,7 @@ import Effect4Gen.Dispatch
 import Effect4Gen.Rows
 import Effect4Gen.Forms
 import Effect4Gen.PreludeAtoms
+import Effect4Gen.AtomLifts
 
 /-! Catalogue generators inspect compiled Effect4 values.
 Build this executable only after regenerating the files its imports consume. -/
@@ -10,7 +11,7 @@ namespace Effect4Gen.CatalogueExe
 
 def generators : Effect4Gen.Dispatch.Generators :=
   [("Rows", Effect4Gen.Rows.cli), ("Forms", Effect4Gen.Forms.cli),
-   ("PreludeAtoms", Effect4Gen.PreludeAtoms.cli)]
+   ("PreludeAtoms", Effect4Gen.PreludeAtoms.cli), ("AtomLifts", Effect4Gen.AtomLifts.cli)]
 
 end Effect4Gen.CatalogueExe
 

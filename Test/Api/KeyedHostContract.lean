@@ -72,6 +72,14 @@ def cancelled := (advance ab 1000 (.interruptFrom none .empty ⟨1⟩)).session
 #guard Stream.chunk? (.some (.list [])) = none
 #guard Stream.chunk? (.nat 0) = none
 #guard (Api.typeOf (Stream.scopedPulls 0 3) (Stream.table "Host.Stream" .nat .never)).isSome
+#guard Stream.pulled? (Stream.endVal .unit) = some (.error .unit)
+#guard Stream.pulled? (Stream.chunkVal [.nat 1]) = some (.ok [.nat 1])
+#guard Stream.pulled? (Stream.chunkVal []) = none
+#guard Val.hasTy (Stream.chunkVal [.nat 1, .nat 2]) (Stream.pulledTy .nat .unit)
+#guard Val.hasTy (Stream.endVal .unit) (Stream.pulledTy .nat .unit)
+#guard !Val.hasTy (Stream.endVal (.nat 1)) (Stream.pulledTy .nat .unit)
+#guard Stream.ofOption .none = some (Stream.endVal .unit)
+#guard Stream.ofOption (.some (.list [.nat 1])) = some (Stream.chunkVal [.nat 1])
 
 -- E4-HOST-CE-005: applying independent-key answers resumes shared effects, so AB ≠ BA.
 def pair (x y : Term) : Term := .app "pair" (.cons x (.cons y .nil))

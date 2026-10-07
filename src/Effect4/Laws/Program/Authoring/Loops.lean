@@ -35,6 +35,19 @@ theorem forRange_scoped {Op : Type} [ScopedOp Op] {lo hi : TermSrc} {body : Term
     (fun _ _ hc _ => app_scoped "succ" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil))
     (fun _ hc => hc)
 
+theorem forEachOf_scoped {items : TermSrc} {body : TermSrc → Src NativeOp} (h0 : items.Scoped)
+    (h1 : ∀ item : TermSrc, item.Scoped → (body item).Scoped) : (forEachOf items body).Scoped :=
+  iterateWith_scoped (nat_scoped 0)
+    (fun _ hi => app_scoped "lt" (TermSrc.Scoped_cons hi
+      (TermSrc.Scoped_cons (app_scoped "length" (TermSrc.Scoped_cons h0 TermSrc.Scoped_nil))
+        TermSrc.Scoped_nil)))
+    (fun _ hi => selectOptionWith_scoped
+      (app_scoped "get" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons hi TermSrc.Scoped_nil)))
+      (succeed_scoped unit_scoped)
+      fun _ hitem => andThen_scoped (h1 _ hitem) (succeed_scoped unit_scoped))
+    (fun _ _ hi _ => app_scoped "succ" (TermSrc.Scoped_cons hi TermSrc.Scoped_nil))
+    (fun _ hi => hi)
+
 theorem foldRange_scoped {Op : Type} [ScopedOp Op]
     {lo hi zero : TermSrc} {f : TermSrc → TermSrc → Src Op}
     (h0 : lo.Scoped) (h1 : hi.Scoped) (h2 : zero.Scoped)

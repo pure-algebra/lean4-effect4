@@ -460,6 +460,10 @@ refuses all three by name, before it looks at the row table. -/
   | .error (.unsafeName spelling) => spelling == "L_0"
   | _ => false
 
+#guard ["all", "answer"].all exportNameSafe
+#guard exportNameFault "a0" == some .binder && exportNameFault "a12" == some .binder
+#guard exportNameFault "add" == some .imported && exportNameFault "eq" == some .imported &&
+  exportNameFault "Effect" == some .imported
 #guard exportNameSafe "main" = true
 #guard exportNameSafe "a0" = false
 #guard exportNameSafe "Effect.succeed" = false

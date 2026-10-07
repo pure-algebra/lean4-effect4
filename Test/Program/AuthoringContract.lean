@@ -3,6 +3,8 @@ import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Codegen.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Forms
+import Effect4.Program.Authoring.Atoms
+import Effect4.Laws.Program.Authoring.Atoms
 import Test.Program.LayerSharingContract
 
 /-!
@@ -333,5 +335,28 @@ theorem rendezvous_scoped : Src.Scoped rendezvous := by
 #guard (elaborate (conditionalBranchProg false)).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborate rendezvous).toOption.map (Eff.scopedAt 0) = some true
 #guard (elaborateModule twiceByName).toOption.map (Eff.scopedAt 0) = some true
+
+/-! ## The generated atom authoring functions (slice ATOMS) -/
+
+-- Reader: a generated function elaborates to the term of `app` at the atom's name
+#guard (Atom.eq (nat 1) (nat 2)) {} [] = .ok (.app "eq" (termsOfList [.lit (.nat 1), .lit (.nat 2)]))
+
+-- Finite evaluation: the generated file declares one function for each atom of `NativeAtom.all`
+#guard_msgs in
+run_meta do
+  let env ← Lean.getEnv
+  for a in NativeAtom.all do
+    let n := `Effect4.Program.Authoring.Atom ++ Lean.Name.mkSimple (NativeAtom.row a).name
+    unless env.contains n do Lean.throwError "no generated function {n}"
+
+/-! ## Conditional in an `eff` block (slice IF) -/
+
+-- Reader: a block whose test is a term elaborates to the tree of `ifElse`
+#guard elaborate (eff do if (bool true) then succeed (nat 1) else succeed (nat 2) : Src NativeOp)
+  = elaborate (ifElse (bool true) (succeed (nat 1)) (succeed (nat 2)) : Src NativeOp)
+
+-- Control: a block whose test is a Boolean of Lean keeps its tree
+#guard elaborate (eff do if true then succeed (nat 1) else succeed (nat 2) : Src NativeOp)
+  = elaborate (succeed (nat 1) : Src NativeOp)
 
 end Test.Program.AuthoringContract

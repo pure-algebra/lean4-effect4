@@ -55,6 +55,17 @@ it. A builder that places a caller's term in the finalizer uses this form. -/
 def onExitWith {Op : Type} (body : Src Op) (finalizer : TermSrc → Src Op) : Src Op :=
   minting "exit" fun x => onExit x body (finalizer (minted x))
 
+/-- `acquireRelease` of two minted names, with the resource read by the release. -/
+def acquireWith (acquire : Src NativeOp) (release : TermSrc → Src NativeOp) : Src NativeOp :=
+  minting "resource" fun r => minting "exit" fun x =>
+    acquireRelease r x acquire (release (minted r))
+
+/-- `select` on a tag of two minted names: the hit reads the payload, the miss reads the rest. -/
+def selectTagWith (scrutinee : TermSrc) (tag : String) (hit miss : TermSrc → Src NativeOp) :
+    Src NativeOp :=
+  minting "payload" fun p => minting "rest" fun r =>
+    selectTag p r scrutinee tag (hit (minted p)) (miss (minted r))
+
 /-- `Effect.flatMap` under its Effect name. -/
 def flatMap {Op : Type} (answer : String) (first rest : Src Op) : Src Op := bind answer first rest
 
@@ -69,6 +80,22 @@ def map {Op : Type} (atom : String) (effect : Src Op) : Src Op :=
 /-- `Effect.if`: `if` is a Lean keyword. -/
 def ifElse {Op : Type} (test : TermSrc) (thenB elseB : Src Op) : Src Op :=
   selectBool test thenB elseB
+
+/-- How an `eff` block reads `if c then a else b`, by what `c` is. A term of the program is the
+program's conditional. A Boolean or a decided proposition of Lean selects one of two programs
+while the program is built. -/
+class EffIf {α : Sort _} (c : α) (Op : Type) where
+  pick : Src Op → Src Op → Src Op
+
+attribute [reducible] EffIf.pick
+
+@[reducible] instance (c : TermSrc) (Op : Type) : EffIf c Op := ⟨fun a b => ifElse c a b⟩
+@[reducible] instance (c : Bool) (Op : Type) : EffIf c Op := ⟨fun a b => if c then a else b⟩
+@[reducible] instance (c : Prop) [Decidable c] (Op : Type) : EffIf c Op := ⟨fun a b => if c then a else b⟩
+
+/-- The conditional of an `eff` block. -/
+@[reducible] def effIf {α : Sort _} (c : α) {Op : Type} [inst : EffIf c Op] (a b : Src Op) : Src Op :=
+  inst.pick a b
 
 /-! ## Ergonomic literals and coercions for source terms -/
 
@@ -137,9 +164,9 @@ def expandDoElems : List (TSyntax `doElem) → MacroM (TSyntax `term)
     | `(doElem| return $t:term) => `(succeed $t)
     | `(doElem| return) => `(succeed unit)
     | `(doElem| if $c:term then $t:doSeq else $e:doSeq) =>
-      `(if $c then eff $t else eff $e)
+      `(effIf $c (eff $t) (eff $e))
     | `(doElem| if $c:term then $t:doSeq) =>
-      `(if $c then eff $t else succeed unit)
+      `(effIf $c (eff $t) (succeed unit))
     | `(doElem| $e:term) => `($e)
     | `(doElem| let $_:term $[: $_:term]? ← $_:term) =>
       Macro.throwErrorAt elem "an eff block cannot end with a `let ←` binding"
@@ -176,9 +203,9 @@ def expandDoElems : List (TSyntax `doElem) → MacroM (TSyntax `term)
       | some t => `(let $x : $t := $v; $restTerm)
       | none   => `(let $x := $v; $restTerm)
     | `(doElem| if $c:term then $t:doSeq else $e:doSeq) =>
-      `(andThen (if $c then eff $t else eff $e) $restTerm)
+      `(andThen (effIf $c (eff $t) (eff $e)) $restTerm)
     | `(doElem| if $c:term then $t:doSeq) =>
-      `(andThen (if $c then eff $t else succeed unit) $restTerm)
+      `(andThen (effIf $c (eff $t) (succeed unit)) $restTerm)
     | `(doElem| return $t:term) =>
       `(andThen (succeed $t) $restTerm)
     | `(doElem| $e:term) =>

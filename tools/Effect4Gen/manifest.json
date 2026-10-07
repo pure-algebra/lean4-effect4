@@ -424,6 +424,27 @@
       "Guards": "",
       "Kinds": [],
       "Types": []
+    },
+    {
+      "Note": "The authoring functions for native atoms, in namespace Authoring.Atom, from NativeAtom.all and NativeAtom.row.",
+      "Name": "Atoms",
+      "Flags": ["--module"],
+      "Tool": "tools/Effect4Gen/AtomLifts.lean",
+      "Imports": "Effect4.Program.Authoring",
+      "Out": "src\\Effect4\\Program\\Authoring\\Atoms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The scope lemma of every native atom authoring function.",
+      "Name": "AtomsLaws",
+      "Tool": "tools/Effect4Gen/AtomLifts.lean",
+      "Imports": "Effect4.Laws.Program.Authoring,Effect4.Program.Authoring.Atoms",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Atoms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
     }
   ]
 }

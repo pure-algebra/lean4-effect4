@@ -52,6 +52,20 @@ theorem onExitWith_scoped {Op : Type} [ScopedOp Op] {body : Src Op} {finalizer :
     (onExitWith body finalizer).Scoped :=
   minting_scoped _ fun x => onExit_scoped x h0 (h1 _ (minted_scoped x))
 
+theorem acquireWith_scoped {acquire : Src NativeOp} {release : TermSrc → Src NativeOp}
+    (h0 : acquire.Scoped) (h1 : ∀ r : TermSrc, r.Scoped → (release r).Scoped) :
+    (acquireWith acquire release).Scoped :=
+  minting_scoped _ fun r => minting_scoped _ fun x =>
+    acquireRelease_scoped r x h0 (h1 _ (minted_scoped r))
+
+theorem selectTagWith_scoped {scrutinee : TermSrc} (tag : String)
+    {hit miss : TermSrc → Src NativeOp} (h0 : scrutinee.Scoped)
+    (h1 : ∀ p : TermSrc, p.Scoped → (hit p).Scoped)
+    (h2 : ∀ r : TermSrc, r.Scoped → (miss r).Scoped) :
+    (selectTagWith scrutinee tag hit miss).Scoped :=
+  minting_scoped _ fun p => minting_scoped _ fun r =>
+    selectTag_scoped p r tag h0 (h1 _ (minted_scoped p)) (h2 _ (minted_scoped r))
+
 theorem OfNat.ofNat_scoped {n : Nat} : (OfNat.ofNat n : TermSrc).Scoped := nat_scoped n
 
 theorem ite_scoped {Op : Type} [ScopedOp Op] (c : Prop) [Decidable c] {t e : Src Op}

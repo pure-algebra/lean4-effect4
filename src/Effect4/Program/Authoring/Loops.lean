@@ -45,6 +45,14 @@ def forRange {Op : Type} (lo hi : TermSrc) (body : TermSrc → Src Op) : Src Op 
   iterateWith lo
     { while_ := fun i => app "lt" [i, hi], body := body, step := fun i _ => app "succ" [i] }
 
+/-- `body` once for each member of a list, in order. -/
+def forEachOf (items : TermSrc) (body : TermSrc → Src NativeOp) : Src NativeOp :=
+  iterateWith (nat 0)
+    { while_ := fun i => app "lt" [i, app "length" [items]]
+      body := fun i => selectOptionWith (app "get" [items, i]) (succeed unit) fun item =>
+        andThen (body item) (succeed unit)
+      step := fun i _ => app "succ" [i] }
+
 /-- `foldRange lo hi zero f`: a fold over `lo ≤ i < hi`. The cursor is the pair of the counter
 and the accumulator, taken apart for the author; `f i acc` answers the next accumulator. Answers
 the final accumulator. -/

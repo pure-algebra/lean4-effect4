@@ -5,6 +5,8 @@ import Effect4.Codegen.Record
 import Effect4.Codegen.Classes
 import Effect4.Codegen.Tuple
 import Effect4.Codegen.ListFold
+import Effect4.Data.NatDecimal
+import Effect4.Program.AtomInventory
 import TypeScript
 
 /-!
@@ -20,6 +22,18 @@ The `Nat` every printing function carries is the environment's length (decision 
 positional environment), so the next binder minted is `Var.name n = a{n}`. Nothing else decides
 a name: the printer never reads a source identifier and never invents one twice.
 -/
+
+namespace Effect4.Codegen
+
+/-- The `effect` namespaces a printed module may import: the printer's heads and the native rows
+use these, `Exit`, `Option` and `Result` spell printed values, and `Data` holds the payload
+classes' `Data.TaggedError` (decisions row 120). The reading boundary admits them as import
+origins (`effectOrigins`, `Codegen/Admit.lean`); a payload class may not take one as its name. -/
+def effectNamespaces : List String :=
+  ["Effect", "Layer", "Ref", "Fiber", "Cause", "Deferred", "Scope", "Context",
+    "Exit", "Option", "Result", "Data"]
+
+end Effect4.Codegen
 
 namespace Effect4.Program
 
@@ -189,17 +203,53 @@ def rowNamesSafe (row : Row) : Bool :=
       !termHelperNames.contains name)) &&
     !termHelperNames.contains row.spelling
 
-/-- A legal export name for the main declaration: a legal binder that is no printed binder
-(`a…`), no reserved head, and no layer reference name (`L_…`), so a declaration block's own
-names stay distinct from everything the reader decodes by name. -/
-def exportNameSafe (name : String) : Bool :=
-  Effect4.Codegen.Names.binderName name && firstByte name != some 97 &&
-    !reserved.contains name && (LayerTerm.readRefName name).isNone &&
-    !termHelperNames.contains name
-
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
 positional, so a position is a name and the printer needs no source identifiers. -/
 def Var.name (index : Nat) : String := "a" ++ toString index
+
+open Effect4.Data.NatDecimal (decodeBytes)
+
+/-- Whether a name is a printed binder: `a`, then the decimal spelling of a position, and
+nothing else. It reads bytes, and it compares one string: no traversal of a `String`. -/
+def binderNamed (s : String) : Bool :=
+  match s.toByteArray.data.toList with
+  | 97 :: rest => decide (s = Var.name (decodeBytes rest))
+  | _ => false
+
+/-- The names that the imports of a printed module bind, whatever its program: the `effect`
+namespaces, the root export `pipe`, and each atom of the prelude. The prelude's helpers are
+`termHelperNames` and the package adapters' roots, which the test reads beside this list. -/
+def importedNames : List String :=
+  Effect4.Codegen.effectNamespaces ++ ["pipe"] ++ NativeAtom.names
+
+/-- Why a name is no export name, as a word. `none` for a name that the module may export. -/
+inductive ExportFault
+  /-- No legal binding of the target. -/
+  | notBinding
+  /-- A printed binder: the reader would read it as a variable. -/
+  | binder
+  /-- A reserved head of the printer. -/
+  | reservedHead
+  /-- The name of a hoisted layer. -/
+  | layerName
+  /-- A helper of the prelude that a printed term calls. -/
+  | helper
+  /-- A name that the module's imports bind. -/
+  | imported
+deriving DecidableEq, Repr
+
+/-- Why a name is no export name, or `none`. The checks stand in the order of the test. -/
+def exportNameFault (name : String) : Option ExportFault :=
+  if !Effect4.Codegen.Names.binderName name then some .notBinding
+  else if binderNamed name then some .binder
+  else if reserved.contains name then some .reservedHead
+  else if (LayerTerm.readRefName name).isSome then some .layerName
+  else if termHelperNames.contains name then some .helper
+  else if importedNames.contains name then some .imported
+  else none
+
+/-- A legal export name for the main declaration: a name with no fault. -/
+def exportNameSafe (name : String) : Bool := (exportNameFault name).isNone
 
 /-- A literal as target syntax: `undefined` for unit, the number, `true`/`false`, and the
 quoted string (the renderer owns the quoting and the escapes). -/

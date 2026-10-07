@@ -128,6 +128,7 @@ DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Js
   src/Effect4/Program/Fold.lean src/Effect4/Program/TyFoldExtras.lean src/Effect4/Laws/Program/TyView.lean src/Effect4/Store/Carrier/Fold.lean src/Effect4/Schema/Fold.lean src/Effect4/Program/LayerView.lean src/Effect4/Program/NodeLenses.lean src/Effect4/Program/Binders.lean src/Effect4/Program/Scoped.lean \
   src/Effect4/Program/Authoring/Lifts.lean src/Effect4/Laws/Program/Authoring/Lifts.lean \
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
+  src/Effect4/Program/Authoring/Atoms.lean src/Effect4/Laws/Program/Authoring/Atoms.lean \
   src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
   src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts
 

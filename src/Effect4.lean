@@ -100,9 +100,11 @@ import Effect4.Program.Scoped
 import Effect4.Program.Authoring
 import Effect4.Program.Authoring.Lifts
 import Effect4.Program.Authoring.Rows
+import Effect4.Program.Authoring.Atoms
 import Effect4.Codegen.Authoring.Forms
 import Effect4.Api.TestClock
 import Effect4.Program.Authoring.Sugar
+import Effect4.Program.Authoring.Declare
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Mask
 -- A term at a declared type (`ascribe`): reachable from this root, imported by no module of the API.
@@ -187,6 +189,10 @@ import Effect4.Modules.Pool.Steps
 -- Pool's first operations: `Pool.make`, `Pool.use` and the close that `make` registers
 -- (decisions rows 267 to 269, 276 and 279).
 import Effect4.Modules.Pool.Ops
+-- Stream's source, steps and operations (decisions row 309).
+import Effect4.Modules.Stream.Source
+import Effect4.Modules.Stream.Steps
+import Effect4.Modules.Stream.Ops
 
 /-!
 # Effect4

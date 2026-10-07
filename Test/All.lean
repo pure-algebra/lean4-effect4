@@ -158,6 +158,7 @@ import Test.Program.CompileContract
 import Test.Program.TypedContract
 import Test.Program.WeakenContract
 import Test.Program.AuthoringContract
+import Test.Program.AuthoringDeclare
 import Test.Program.AuthorContract
 import Test.Program.AuthoringScope
 import Test.Program.LoopSugarContract
@@ -283,6 +284,7 @@ import Test.Dogfood.Scenario.Lowered
 import Test.Dogfood.Scenario.Gate
 import Test.Dogfood.Scenario.Faces
 import Test.Dogfood.Scenario.Todo
+import Test.Dogfood.Scenario.TodoPaged
 import Test.Program.ScopedOpContract
 import Test.Program.SliceLattice
 

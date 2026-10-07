@@ -140,6 +140,7 @@ import Effect4.Laws.Program.Authoring.Folds
 import Effect4.Laws.Program.Typed.ListFold
 import Effect4.Laws.Program.Authoring.Lifts
 import Effect4.Laws.Program.Authoring.Rows
+import Effect4.Laws.Program.Authoring.Atoms
 import Effect4.Laws.Program.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Loops
@@ -227,6 +228,10 @@ import Effect4.Laws.Modules.Pool.Relation
 import Effect4.Laws.Modules.Pool.Reading
 import Effect4.Laws.Modules.Pool.Steps
 import Effect4.Laws.Modules.Pool.Ops
+import Effect4.Laws.Modules.Stream.Model
+import Effect4.Laws.Modules.Stream.Steps
+import Effect4.Laws.Modules.Stream.Typing
+import Effect4.Laws.Modules.Stream.Ops
 import Effect4.Laws.Program.Typing.TermIntro
 import Effect4.Laws.Slice.Lattice
 

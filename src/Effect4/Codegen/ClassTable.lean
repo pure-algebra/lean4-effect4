@@ -34,14 +34,6 @@ set_option autoImplicit false
 
 namespace Effect4.Codegen
 
-/-- The `effect` namespaces a printed module may import: the printer's heads and the native rows
-use these, `Exit`, `Option` and `Result` spell printed values, and `Data` holds the payload
-classes' `Data.TaggedError` (decisions row 120). The reading boundary admits them as import
-origins (`effectOrigins`, `Codegen/Admit.lean`); a payload class may not take one as its name. -/
-def effectNamespaces : List String :=
-  ["Effect", "Layer", "Ref", "Fiber", "Cause", "Deferred", "Scope", "Context",
-    "Exit", "Option", "Result", "Data"]
-
 namespace ClassTable
 
 open Effect4.Program Effect4.Codegen.Classes

@@ -153,7 +153,7 @@ def toolName (tool : String) : String :=
 
 /-- Catalogue tools inspect compiled values; early tools inspect loaded declarations. -/
 def executable (tool : String) : String :=
-  if ["Rows", "Forms", "PreludeAtoms"].contains (toolName tool)
+  if ["Rows", "Forms", "PreludeAtoms", "AtomLifts"].contains (toolName tool)
   then "effect4gen-catalogue" else "effect4gen"
 
 /-- The generator's argument list for one group: the old `Invoke-Lean`'s, in its order. -/

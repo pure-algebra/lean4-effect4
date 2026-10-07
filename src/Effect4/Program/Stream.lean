@@ -2,8 +2,9 @@ module
 
 public import Effect4.Program.Native
 
-/-! DI-11: a stream kernel uses external rows and existing Scope/Eff constructors.
+/-! DI-11, decisions row 205: a stream kernel uses external rows and existing Scope/Eff constructors.
 `pullRow` carries Option (List α); the binding additionally checks nonempty Some chunks.
+Row 205 amends the pull row: `pulledTy` is a union of two tagged pairs, beside `pullRow`.
 No stream constructor, queue store, Done error, host closure, or operator AST is introduced.
 Source: vendor/effect-4.0.0-rc.112/src/Stream.ts, toPull;
 Test/contracts/foundation-wave2.contract.md, T-09 / T-12 amendment. -/
@@ -49,6 +50,40 @@ Failure is a separate completion category. Empty host batches must be skipped be
 def chunk? : Val → Option (Option (List Val))
   | .none => some none
   | .some (.list (head :: tail)) => some (some (head :: tail))
+  | _ => none
+
+/-- **What a pull answers**: a chunk, or the end with its leftover. The end is a value of the
+answer column, so it is no failure. Two tagged pairs: `select` on the tag `End` takes them
+apart. -/
+def pulledTy (elem done : Ty) : Ty :=
+  .union (.prod (.lit "Chunk") (.list elem)) (.prod (.lit "End") done)
+
+/-- The amended pull row, beside `Stream.pullRow`. -/
+def pullEndRow (target : String) (elem done error : Ty) : Row where
+  name := "streamPull"
+  spelling := "Host.pull"
+  kind := .async
+  registration := .external
+  request := .handle target
+  answer := pulledTy elem done
+  error := error
+  cite := "vendor/effect-4.0.0-rc.112/src/Pull.ts, Pull and matchEffect; Stream.ts, toPull"
+
+/-- A chunk value and an end value, as a host answers them. -/
+def chunkVal (items : List Val) : Val := .list [.str "Chunk", .list items]
+def endVal (leftover : Val) : Val := .list [.str "End", leftover]
+
+/-- The binding's refinement of an answer: the end with its leftover, or a chunk with a member.
+The row's type admits an empty chunk, and the binding refuses it, as `Stream.chunk?` does. -/
+def pulled? : Val → Option (Except Val (List Val))
+  | .list [.str "End", leftover] => some (.error leftover)
+  | .list [.str "Chunk", .list (head :: tail)] => some (.ok (head :: tail))
+  | _ => none
+
+-- the connector to today's row: `none` is the end with no leftover, `some chunk` is the chunk
+def ofOption : Val → Option Val
+  | .none => some (endVal .unit)
+  | .some (.list items) => some (chunkVal items)
   | _ => none
 
 /-- A bounded sequence of pulls in an existing environment. Pairing the answers preserves

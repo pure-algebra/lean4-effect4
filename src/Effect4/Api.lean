@@ -202,9 +202,10 @@ def printDecl (name : String) (program : Program) (table : RowTable := []) : Opt
 
 /-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
 (the host rows slice, `Program.printModule`), then the exported main constant; `none` when it
-is ill-typed or the printer refuses it. The block is what a host must run for a program with
-a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the one
-`const` is the one object. -/
+is ill-typed or the printer refuses it. `Api.emitModule` answers the refusal's reason; an
+export name with an `exportNameFault` is one. The block is what a host must run for a program
+with a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the
+one `const` is the one object. -/
 def printModule (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.Module :=
   ((Effect4.Codegen.emitModule name program table).toOption).map (·.module)
 
