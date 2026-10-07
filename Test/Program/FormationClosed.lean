@@ -124,7 +124,7 @@ def host (request answer : Ty) : Row :=
 def templateRow : Row := host (.var 0) (.list (.var 0))
 
 -- A request whose type holds a variable binds the row's parameter to it, and the instantiated
--- column is refused. Until the clause the row check answered `ReadonlyArray<T3>`.
+-- column is refused. Until the clause, formation had no rule at a variable.
 #guard match checkRow templateRow (.var 3) with
   | .error (.formation why) =>
     why.path == ["row", "request", "type", "0"] && why.ty == .var 3 &&
@@ -321,7 +321,7 @@ def holdsVariable (e : NativeEff) : Bool :=
 #print axioms Formation.closed_of_formed
 #print axioms Formation.programAnnotations_all
 #print axioms foldMapAt_eff_fuse
-#print axioms Ty.closed_memberwise
+#print axioms Record.closed_fieldType
 #print axioms openAtoms_not_closed
 #print axioms openCarrier_not_closed
 

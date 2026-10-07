@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Laws.Program.References
+import Effect4.Laws.Program.UnionRule
 import Effect4.Program.Admission
 import Effect4.Laws.Auto.Semantics
 
@@ -18,14 +19,14 @@ The sections, in the order a proof reads them:
    type's sites is the head judgment at each raw occurrence (`Formation.formed_sites_iff`), and
    outside a template no occurrence is a variable.
 2. **Each type operation keeps closed types closed**: one lemma per operation the checker
-   applies. `Ty.closed_normalize` and its steps are `Laws/Program/Template.lean`'s. A rule that
-   reads a union member by member keeps closed types closed when its member rule does
-   (`Ty.closed_memberwise`), and the two record rules are its instances. An atom's scheme
+   applies. `Ty.closed_normalize` and its steps are `Laws/Program/Template.lean`'s. A lifted
+   rule keeps closed types closed when its member rule does (`UnionRule.lift_closed`,
+   `Laws/Program/UnionRule.lean`), and the two record rules are its instances. An atom's scheme
    answers a closed type at closed arguments (`NativeAtom.Scheme.closed_apply`).
 3. **The annotations of a program, as a fold** (`Formation.AnnotationsAll`). The collector
-   `Formation.programAnnotations` is a positional fold into lists. Through a homomorphism that
-   reads no position, a positional fold is the plain fold (`foldMapAt_eff_fuse` and its
-   siblings, one line per sort). So "every annotation's type satisfies `P`" is a conjunction
+   `Formation.programAnnotations` is a path fold into lists. Through a homomorphism that reads
+   no path, a path fold is the fold with no path (`foldMapAt_eff_fuse` and its siblings,
+   `Laws/Program/PathFold.lean`). So "every annotation's type satisfies `P`" is a conjunction
    that follows the program's shape (`Formation.programAnnotations_all`). A program's expansion
    states what the program states (`Formation.annotationsAll_expandRefs`).
 4. **Terms and causes** (`termTy_closed`, `causeTy_closed`).
@@ -36,16 +37,15 @@ The sections, in the order a proof reads them:
    (`Formation.serviceSites`), so a formed input gives closed carriers (`closedSig_app`), and
    an admitted program has closed types with no premise (`AdmittedProgram.closed`).
 
-Placement. Concept `subtyping-algebra`, requirements R1, R3 and R14; the laws of the generated
-folds are placed under `initial-algebras-folds`. Reach: a closed environment, a typing signature
-with closed atoms and closed service carriers (`ClosedSig`), and a program whose annotations are
-formed outside a template. No premise is asked of a row: the row rule checks strict formation
-of each instantiated column (`checkRow`), so its answer is closed by section 1. No premise is
-asked of a layer reference. It does not establish a closed type of a sketch with a gap, and
-nothing of a run. Its consumers are the premise of `ofSchema_schema` (`Schema/Bridge.lean`), the
-type printer `ofTy` and the codec, and stage 6 of the study of a gap with holes
-(`docs/research/2026-10-06-seat-GAP-study.md`): after it a gap is the only open leaf of a
-sketch's type.
+Placement. Concept `subtyping-algebra`, requirements R1, R3 and R14. Reach: a closed
+environment, a typing signature with closed atoms and closed service carriers (`ClosedSig`), and
+a program whose annotations are formed outside a template. No premise is asked of a row: the row
+rule checks strict formation of each instantiated column (`checkRow`), so its answer is closed
+by section 1. No premise is asked of a layer reference. It does not establish a closed type of a
+sketch with a gap, and nothing of a run. Its consumers are the premise of `ofSchema_schema`
+(`Schema/Bridge.lean`), the type printer `ofTy` and the codec, and stage 6 of the study of a gap
+with holes (`docs/research/2026-10-06-seat-GAP-study.md`): after it a gap is the only open leaf
+of a sketch's type.
 -/
 
 set_option autoImplicit false
@@ -149,12 +149,6 @@ end Formation
 
 namespace Ty
 
-/-- The join of two closed types is closed. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem closed_join {a b : Ty} (ha : a.closed = true) (hb : b.closed = true) :
-    (join a b).closed = true :=
-  closed_normalize _ (Bool.and_eq_true_iff.mpr ⟨ha, hb⟩)
-
 /-- The tag residual of a closed type is closed: it keeps members. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_diffTag (tag : String) {t : Ty} (h : t.closed = true) :
@@ -232,59 +226,6 @@ theorem closed_instantiate {σ : Subst} (hσ : ClosedSubst σ) (t : Ty) :
     exact ih v hv
   | _ => aesop (add norm simp [closed, instantiate])
 
-/-- A rule's answers are a property of the list `mapM` answers. A step of `closed_memberwise`. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem forall_of_mapM {α β : Type} {f : α → Option β} {P : β → Prop} :
-    ∀ {l : List α} {rs : List β}, (∀ a ∈ l, ∀ b, f a = some b → P b) →
-      l.mapM f = some rs → ∀ b ∈ rs, P b
-  | [], rs, _, h => by
-    cases h
-    exact fun _ hb => nomatch hb
-  | a :: l, rs, step, h => by
-    simp only [List.mapM_cons, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨b, hb, bs, hbs, rfl⟩ := h
-    intro c hc
-    rcases List.mem_cons.mp hc with rfl | hc
-    · exact step a List.mem_cons_self c hb
-    · exact forall_of_mapM (fun a ha => step a (List.mem_cons_of_mem _ ha)) hbs c hc
-
-end Ty
-
-namespace Record
-
-/-- The join of closed branch results is closed. A step of `Ty.closed_memberwise`. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem closed_joinResults {types : List Ty} (h : ∀ t ∈ types, t.closed = true) :
-    (joinResults types).closed = true := by
-  have step : ∀ (ts : List Ty) (acc : Ty), acc.closed = true →
-      (∀ t ∈ ts, t.closed = true) → (ts.foldl Ty.join acc).closed = true := by
-    intro ts
-    induction ts with
-    | nil => exact fun _ hacc _ => hacc
-    | cons t ts ih =>
-      exact fun acc hacc hts => ih (Ty.join acc t)
-        (Ty.closed_join hacc (hts t List.mem_cons_self))
-        (fun u hu => hts u (List.mem_cons_of_mem _ hu))
-  exact step types .never rfl h
-
-end Record
-
-namespace Ty
-
-/-- **A rule that reads a union member by member keeps closed types closed**, when its member
-rule does. The rule applies the member rule to each member of the target's normal form and joins
-the answers. The two record rules are its instances (`Record.closed_fieldType`,
-`Record.closed_setType`). It is stated over the rule's explicit shape, so it holds of any rule
-that is that shape by definition. -/
-@[semantics "subtyping-algebra" (requirement := R14)]
-theorem closed_memberwise {rule : Ty → Option Ty} {t ty : Ty} (ht : t.closed = true)
-    (hrule : ∀ m r, m.closed = true → rule m = some r → r.closed = true)
-    (h : ((members t.normalize).mapM rule).map Record.joinResults = some ty) :
-    ty.closed = true := by
-  obtain ⟨rs, hrs, rfl⟩ := Option.map_eq_some_iff.mp h
-  exact Record.closed_joinResults (forall_of_mapM
-    (fun m hm r hr => hrule m r (closed_members _ (closed_normalize t ht) m hm) hr) hrs)
-
 end Ty
 
 namespace Record
@@ -325,23 +266,22 @@ theorem closed_setOf {name : String} {valueType m r : Ty} (hv : valueType.closed
     · exact hm p (List.mem_filter.mp hp).1
   | _ => exact nomatch h
 
-/-- The field read keeps closed types closed: `Ty.closed_memberwise` at `fieldOf`. -/
+/-- The field read keeps closed types closed. It is a lifted rule (`UnionRule.lift`), and its
+member rule `fieldOf` keeps closed types closed (`UnionRule.lift_closed`,
+`Laws/Program/UnionRule.lean`). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_fieldType {optional : Bool} {target ty : Ty} {name : String}
     (ht : target.closed = true) (h : fieldType optional target name = some ty) :
     ty.closed = true :=
-  Ty.closed_memberwise ht (fun _ _ hm hr => closed_fieldOf hm hr)
-    (show ((Ty.members target.normalize).mapM (fieldOf optional name)).map joinResults = some ty
-      from h)
+  UnionRule.lift_closed (fun _ _ hm hr => closed_fieldOf hm hr) h ht
 
-/-- The field write keeps closed types closed: `Ty.closed_memberwise` at `setOf`. -/
+/-- The field write keeps closed types closed, at a closed replacement: `UnionRule.lift_closed`
+at the member rule `setOf`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_setType {target valueType ty : Ty} {name : String} (ht : target.closed = true)
     (hv : valueType.closed = true) (h : setType target name valueType = some ty) :
     ty.closed = true :=
-  Ty.closed_memberwise ht (fun _ _ hm hr => closed_setOf hv hm hr)
-    (show ((Ty.members target.normalize).mapM (setOf name valueType)).map joinResults = some ty
-      from h)
+  UnionRule.lift_closed (fun _ _ hm hr => closed_setOf hv hm hr) h ht
 
 /-- A record term's type is the normal form of its declaration. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -391,7 +331,7 @@ theorem Tuple.closed_project {index : Nat} {t : Ty} : ∀ {r : Ty}, t.closed = t
     have hc := Bool.and_eq_true_iff.mp ht
     simp only [Tuple.project, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨a, ha, b, hb, rfl⟩ := h
-    exact Ty.closed_join (ihl hc.1 ha) (ihr hc.2 hb)
+    exact UnionRule.closed_join (ihl hc.1 ha) (ihr hc.2 hb)
   | never =>
     intro r _ h
     cases h
@@ -460,8 +400,8 @@ theorem closed_catchIfError (test : Term) (caught : Nat) {b h : Ty} (hb : b.clos
   · split
     · split
       · exact hh
-      · exact Ty.closed_join hb hh
-    · exact Ty.closed_join hb hh
+      · exact UnionRule.closed_join hb hh
+    · exact UnionRule.closed_join hb hh
 
 /-! ### Templates and atoms
 
@@ -575,7 +515,7 @@ theorem closed_projectProduct {second : Bool} {t : Ty} : ∀ {r : Ty}, t.closed 
     have hc := Bool.and_eq_true_iff.mp ht
     simp only [projectProduct, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨l, hl, rr, hr, rfl⟩ := h
-    exact Ty.closed_join (iha hc.1 hl) (ihb hc.2 hr)
+    exact UnionRule.closed_join (iha hc.1 hl) (ihb hc.2 hr)
   | never =>
     intro r _ h
     cases h
@@ -675,310 +615,9 @@ end NativeAtom
 
 /-! ## 3. The annotations of a program, as a fold
 
-The collector is a positional fold into lists. A proof that follows a program's shape wants a
-conjunction over the node's parts. The two are one fold seen through a homomorphism. -/
-
-section Fuse
-
-universe u v
-
-variable {Op : Type} {M : Type u} {N : Type v}
-
-mutual
-
-/-- **A positional fold, through a homomorphism that reads no position, is the plain fold**, at
-a term. `φ` carries the fold's operation to `op'`, and the image of each node's value does not
-depend on the node's position. With `φ` the identity it says that a fold whose node function
-reads no position is the plain fold. It is a law of the generated folds
-(`Program/Fold.lean`). Its consumer is `Formation.termAnnotations_all`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_term_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_term : Term → List Nat → M} {f_terms : Terms → List Nat → M}
-    {g_term : Term → N} {g_terms : Terms → N}
-    (hterm : ∀ n q, φ (f_term n q) = g_term n) (hterms : ∀ n q, φ (f_terms n q) = g_terms n)
-    (t : Term) (p : List Nat) :
-    φ (foldMapAt_term unit op p t f_term f_terms) = foldMap_term unit' op' t g_term g_terms := by
-  cases t <;>
-    simp only [foldMapAt_term, foldMap_term, hop, hterm,
-      foldMapAt_term_fuse φ (unit' := unit') hop hterm hterms,
-      foldMapAt_terms_fuse φ (unit' := unit') hop hterm hterms]
-
-/-- `foldMapAt_term_fuse` at an argument list. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_terms_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_term : Term → List Nat → M} {f_terms : Terms → List Nat → M}
-    {g_term : Term → N} {g_terms : Terms → N}
-    (hterm : ∀ n q, φ (f_term n q) = g_term n) (hterms : ∀ n q, φ (f_terms n q) = g_terms n)
-    (ts : Terms) (p : List Nat) :
-    φ (foldMapAt_terms unit op p ts f_term f_terms) =
-      foldMap_terms unit' op' ts g_term g_terms := by
-  cases ts <;>
-    simp only [foldMapAt_terms, foldMap_terms, hop, hterms,
-      foldMapAt_term_fuse φ (unit' := unit') hop hterm hterms,
-      foldMapAt_terms_fuse φ (unit' := unit') hop hterm hterms]
-
-end
-
-mutual
-
-/-- **A positional fold, through a homomorphism that reads no position, is the plain fold**, at
-a program. It is `foldMapAt_term_fuse` for the program's family: one statement per sort, each
-proved by the sort's own case list. Its consumer is `Formation.programAnnotations_all`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_eff_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : Eff Op) (p : List Nat) :
-    φ (foldMapAt_eff unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_eff unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_eff, foldMap_eff, hop, h_eff,
-      foldMapAt_eff_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_stmts_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_action_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_layer_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-/-- `foldMapAt_eff_fuse` at a statement. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_stmt_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : Stmt Op) (p : List Nat) :
-    φ (foldMapAt_stmt unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_stmt unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_stmt, foldMap_stmt, hop, h_stmt,
-      foldMapAt_eff_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_stmts_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-/-- `foldMapAt_eff_fuse` at a statement list. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_stmts_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : Stmts Op) (p : List Nat) :
-    φ (foldMapAt_stmts unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_stmts unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_stmts, foldMap_stmts, hop, h_stmts,
-      foldMapAt_stmt_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_stmts_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-/-- `foldMapAt_eff_fuse` at a race's entrants. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_effs_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : Effs Op) (p : List Nat) :
-    φ (foldMapAt_effs unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_effs unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_effs, foldMap_effs, hop, h_effs,
-      foldMapAt_eff_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_effs_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-/-- `foldMapAt_eff_fuse` at a fiber action. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_action_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : ActionTerm Op) (p : List Nat) :
-    φ (foldMapAt_action unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_action unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_action, foldMap_action, hop, h_action,
-      foldMapAt_eff_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_effs_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-/-- `foldMapAt_eff_fuse` at a layer. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_layer_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : LayerTerm Op) (p : List Nat) :
-    φ (foldMapAt_layer unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_layer unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_layer, foldMap_layer, hop, h_layer,
-      foldMapAt_eff_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_layer_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_layers_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-/-- `foldMapAt_eff_fuse` at a layer list. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem foldMapAt_layers_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit' : N}
-    {op' : N → N → N} (hop : ∀ a b, φ (op a b) = op' (φ a) (φ b))
-    {f_eff : Eff Op → List Nat → M}
-    {f_stmt : Stmt Op → List Nat → M}
-    {f_stmts : Stmts Op → List Nat → M}
-    {f_effs : Effs Op → List Nat → M}
-    {f_action : ActionTerm Op → List Nat → M}
-    {f_layer : LayerTerm Op → List Nat → M}
-    {f_layers : LayerTerms Op → List Nat → M}
-    {g_eff : Eff Op → N}
-    {g_stmt : Stmt Op → N}
-    {g_stmts : Stmts Op → N}
-    {g_effs : Effs Op → N}
-    {g_action : ActionTerm Op → N}
-    {g_layer : LayerTerm Op → N}
-    {g_layers : LayerTerms Op → N}
-    (h_eff : ∀ n q, φ (f_eff n q) = g_eff n)
-    (h_stmt : ∀ n q, φ (f_stmt n q) = g_stmt n)
-    (h_stmts : ∀ n q, φ (f_stmts n q) = g_stmts n)
-    (h_effs : ∀ n q, φ (f_effs n q) = g_effs n)
-    (h_action : ∀ n q, φ (f_action n q) = g_action n)
-    (h_layer : ∀ n q, φ (f_layer n q) = g_layer n)
-    (h_layers : ∀ n q, φ (f_layers n q) = g_layers n)
-    (e : LayerTerms Op) (p : List Nat) :
-    φ (foldMapAt_layers unit op p e f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) =
-      foldMap_layers unit' op' e g_eff g_stmt g_stmts g_effs g_action g_layer g_layers := by
-  cases e <;>
-    simp only [foldMapAt_layers, foldMap_layers, hop, h_layers,
-      foldMapAt_layer_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers,
-      foldMapAt_layers_fuse φ (unit' := unit') hop
-        h_eff h_stmt h_stmts h_effs h_action h_layer h_layers]
-
-end
-
-end Fuse
+The collector is a path fold into lists. A proof that follows a program's shape wants a
+conjunction over the node's parts. The two are one fold seen through a homomorphism: the law is
+`foldMapAt_eff_fuse` (`Laws/Program/PathFold.lean`). -/
 
 namespace Formation
 
@@ -1151,37 +790,37 @@ theorem nodeAnnotations_all (P : Ty → Prop) (fam : EffFam) (node : EffSelfCarr
   argsAnnotations_all P _ (fun ⟨arg, index⟩ => argumentAnnotations_all P _ index arg)
     (view fam node).2 0
 
-/-- The plain fold of `NodeAll` at a program: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a program: `AnnotationsAll` at this sort. -/
 abbrev effAll (P : Ty → Prop) (node : Eff Op) : Prop :=
   foldMap_eff True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
 
-/-- The plain fold of `NodeAll` at a statement: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a statement: `AnnotationsAll` at this sort. -/
 abbrev stmtAll (P : Ty → Prop) (node : Stmt Op) : Prop :=
   foldMap_stmt True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
 
-/-- The plain fold of `NodeAll` at a statement list: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a statement list: `AnnotationsAll` at this sort. -/
 abbrev stmtsAll (P : Ty → Prop) (node : Stmts Op) : Prop :=
   foldMap_stmts True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
 
-/-- The plain fold of `NodeAll` at a race's entrants: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a race's entrants: `AnnotationsAll` at this sort. -/
 abbrev effsAll (P : Ty → Prop) (node : Effs Op) : Prop :=
   foldMap_effs True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
 
-/-- The plain fold of `NodeAll` at a fiber action: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a fiber action: `AnnotationsAll` at this sort. -/
 abbrev actionAll (P : Ty → Prop) (node : ActionTerm Op) : Prop :=
   foldMap_action True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
 
-/-- The plain fold of `NodeAll` at a layer: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a layer: `AnnotationsAll` at this sort. -/
 abbrev layerAll (P : Ty → Prop) (node : LayerTerm Op) : Prop :=
   foldMap_layer True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
 
-/-- The plain fold of `NodeAll` at a layer list: `AnnotationsAll` at this sort. -/
+/-- The fold of `NodeAll` with no path, at a layer list: `AnnotationsAll` at this sort. -/
 abbrev layersAll (P : Ty → Prop) (node : LayerTerms Op) : Prop :=
   foldMap_layers True And node (NodeAll P .eff) (NodeAll P .stmt) (NodeAll P .stmts)
     (NodeAll P .effs) (NodeAll P .action) (NodeAll P .layer) (NodeAll P .layers)
@@ -1205,10 +844,7 @@ does `NodeAll`: no constructor of the program's family is named. A step of `chec
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem programAnnotations_all (P : Ty → Prop) (e : Eff Op) :
     allTypes P (programAnnotations e) ↔ AnnotationsAll P .eff e :=
-  Iff.of_eq (foldMapAt_eff_fuse (allTypes P) (allTypes_append P)
-    (nodeAnnotations_all P .eff) (nodeAnnotations_all P .stmt) (nodeAnnotations_all P .stmts)
-    (nodeAnnotations_all P .effs) (nodeAnnotations_all P .action) (nodeAnnotations_all P .layer)
-    (nodeAnnotations_all P .layers) e [])
+  Iff.of_eq (foldMapAt_eff_fuse (allTypes P) (allTypes_append P) (nodeAnnotations_all P) e [])
 
 /-- Every annotation under a node has a closed type. -/
 abbrev AnnotationsClosed (fam : EffFam) (node : EffSelfCarrier Op fam) : Prop :=
@@ -1305,8 +941,8 @@ def annotationYield : PathYield Op (List String × Ty) where
   layers := nodeAnnotations .layers
 
 /-- **The layer at a path of a program states what the program states there.** The path fold
-collects every addressed node's fold (`Node.foldList_subset_of_at`), and the positional fold of
-the layer is its plain fold (`foldMapAt_layer_fuse`). A step of `annotationsAll_expandRefs`. -/
+collects every addressed node's fold (`Node.foldList_subset_of_at`), and the layer's path fold
+is its fold with no path (`foldMapAt_layer_fuse`). A step of `annotationsAll_expandRefs`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem layerAll_of_layerAt (P : Ty → Prop) {root : Eff Op} {target : List Nat}
     {layer : LayerTerm Op} (h : (Node.eff root).layerAt target = some layer)
@@ -1314,10 +950,8 @@ theorem layerAll_of_layerAt (P : Ty → Prop) {root : Eff Op} {target : List Nat
   have hat := (Node.layerAt_eq_some_iff _ _ _).mp h
   have hsub := Node.foldList_subset_of_at annotationYield target (.eff root) (.layer layer) [] hat
   rw [List.nil_append] at hsub
-  exact (foldMapAt_layer_fuse (allTypes P) (allTypes_append P) (nodeAnnotations_all P .eff)
-    (nodeAnnotations_all P .stmt) (nodeAnnotations_all P .stmts) (nodeAnnotations_all P .effs)
-    (nodeAnnotations_all P .action) (nodeAnnotations_all P .layer)
-    (nodeAnnotations_all P .layers) layer target).mp fun x hx => hroot x (hsub hx)
+  exact (foldMapAt_layer_fuse (allTypes P) (allTypes_append P) (nodeAnnotations_all P) layer
+    target).mp fun x hx => hroot x (hsub hx)
 
 /-- **A program's expansion states what the program states.** Each round replaces a reference
 by the layer at its target in the stored program, and that layer's annotations are the
@@ -1516,7 +1150,7 @@ theorem causeTy_closed (hsig : ClosedSig sig) {env : TyEnv} (henv : ClosedEnv en
     intro ty hs h
     simp only [causeTy, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
     obtain ⟨l, hl, r, hr, rfl⟩ := h
-    exact Ty.closed_join (ihl hs.1 hl) (ihr hs.2 hr)
+    exact UnionRule.closed_join (ihl hs.1 hl) (ihr hs.2 hr)
 
 end Terms
 
@@ -1558,7 +1192,7 @@ theorem closed_rowTy {row : Row} {request : Ty} {use : Option TermUse} {t : EffT
 theorem closed_joinAnswer {a b answer : Ty} (h : EffTy.joinAnswer a b = some answer)
     (ha : a.closed = true) (hb : b.closed = true) : answer.closed = true := by
   cases h
-  exact Ty.closed_join ha hb
+  exact UnionRule.closed_join ha hb
 
 namespace GenTy
 
@@ -1574,7 +1208,7 @@ theorem closed_joinAnswerT {a b : Option Ty} (ha : ∀ x ∈ a, x.closed = true)
     | some b =>
       intro x hx
       rw [← Option.some.inj (Option.mem_def.mp hx)]
-      exact Ty.closed_join (ha a rfl) (hb b rfl)
+      exact UnionRule.closed_join (ha a rfl) (hb b rfl)
 
 /-- An `if`'s merged state is closed when both branches' are. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1582,7 +1216,7 @@ theorem closed_merge {a b ab : GenTy} (h : merge a b = some ab) (ha : a.Closed) 
     ab.Closed := by
   rw [merge_eq] at h
   cases h
-  exact ⟨closed_joinAnswerT ha.1 hb.1, Ty.closed_join ha.2 hb.2⟩
+  exact ⟨closed_joinAnswerT ha.1 hb.1, UnionRule.closed_join ha.2 hb.2⟩
 
 /-- A statement's state before its tail's is closed when both are. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1590,7 +1224,7 @@ theorem closed_seq {s r g : GenTy} (h : seq s r = some g) (hs : s.Closed) (hr : 
     g.Closed := by
   rw [seq_eq] at h
   cases h
-  exact ⟨closed_joinAnswerT hs.1 hr.1, Ty.closed_join hs.2 hr.2⟩
+  exact ⟨closed_joinAnswerT hs.1 hr.1, UnionRule.closed_join hs.2 hr.2⟩
 
 /-- The answer of a generator over a closed state is closed. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1601,7 +1235,7 @@ theorem closed_genAnswer {g : GenTy} (hg : g.Closed) : g.genAnswer.closed = true
   · rename_i t hanswer
     have ht : t.closed = true := hg.1 t hanswer
     split
-    · exact Ty.closed_join ht rfl
+    · exact UnionRule.closed_join ht rfl
     · exact ht
 
 end GenTy
@@ -1632,7 +1266,7 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .bind hf hr, henv, hs =>
     have f := hasTy_closed hsig hf henv hs.2.1
     have r := hasTy_closed hsig hr (henv.push f.1) hs.2.2
-    ⟨r.1, Ty.closed_join f.2 r.2⟩
+    ⟨r.1, UnionRule.closed_join f.2 r.2⟩
   | _, _, _, .gen hb, henv, hs =>
     have g := stmtsHasTy_closed hsig hb henv hs.2
     ⟨GenTy.closed_genAnswer g, g.2⟩
@@ -1648,16 +1282,16 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
     have arms := Decision.closed_arms (termTy_closed hsig henv hs.1.1 ht) hd
     have t0 := hasTy_closed hsig h0 (henv.append arms.1) hs.2.1
     have t1 := hasTy_closed hsig h1 (henv.append arms.2) hs.2.2
-    ⟨closed_joinAnswer hj t0.1 t1.1, Ty.closed_join t0.2 t1.2⟩
+    ⟨closed_joinAnswer hj t0.1 t1.1, UnionRule.closed_join t0.2 t1.2⟩
   | _, _, _, .matchCause hb hv hc hj, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2.1
     have v := hasTy_closed hsig hv (henv.push b.1) hs.2.2.1
     have c := hasTy_closed hsig hc (henv.push b.2) hs.2.2.2
-    ⟨closed_joinAnswer hj v.1 c.1, Ty.closed_join v.2 c.2⟩
+    ⟨closed_joinAnswer hj v.1 c.1, UnionRule.closed_join v.2 c.2⟩
   | _, _, _, .onExit hb hf, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2.1
     have f := hasTy_closed hsig hf (henv.push (Bool.and_eq_true_iff.mpr b)) hs.2.2
-    ⟨b.1, Ty.closed_join b.2 f.2⟩
+    ⟨b.1, UnionRule.closed_join b.2 f.2⟩
   | _, _, _, .exit hb, henv, hs =>
     ⟨Bool.and_eq_true_iff.mpr (hasTy_closed hsig hb henv hs.2), rfl⟩
   | _, _, _, .uninterruptible hb, henv, hs => hasTy_closed hsig hb henv hs.2
@@ -1680,7 +1314,7 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
     ⟨a.1, a.2⟩
   | _, _, _, .provideLayer _ hl hb, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2.2
-    ⟨b.1, Ty.closed_join b.2 (layerHasTy_closed hsig hl hs.2.1)⟩
+    ⟨b.1, UnionRule.closed_join b.2 (layerHasTy_closed hsig hl hs.2.1)⟩
   | _, _, _, .service hk, _, _ => ⟨hsig.service _ _ hk, rfl⟩
   | _, _, _, .provideService _ _ _ hb, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2
@@ -1696,11 +1330,11 @@ theorem stmtsHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, _, .bindYield he hr, henv, hs =>
     have t := hasTy_closed hsig he henv hs.2.1.2
     have r := stmtsHasTy_closed hsig hr (henv.push t.1) hs.2.2
-    ⟨r.1, Ty.closed_join t.2 r.2⟩
+    ⟨r.1, UnionRule.closed_join t.2 r.2⟩
   | _, _, _, _, .yieldDiscard he hr, henv, hs =>
     have t := hasTy_closed hsig he henv hs.2.1.2
     have r := stmtsHasTy_closed hsig hr henv hs.2.2
-    ⟨r.1, Ty.closed_join t.2 r.2⟩
+    ⟨r.1, UnionRule.closed_join t.2 r.2⟩
   | _, _, _, _, .ret ht, henv, hs =>
     ⟨fun _ ha => Option.some.inj (Option.mem_def.mp ha) ▸ termTy_closed hsig henv hs.2.1.1 ht,
       rfl⟩
@@ -1725,7 +1359,7 @@ theorem effsHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .cons hh ht hj, henv, hs =>
     have h := hasTy_closed hsig hh henv hs.2.1
     have t := effsHasTy_closed hsig ht henv hs.2.2
-    ⟨closed_joinAnswer hj h.1 t.1, Ty.closed_join h.2 t.2⟩
+    ⟨closed_joinAnswer hj h.1 t.1, UnionRule.closed_join h.2 t.2⟩
 
 /-- A fiber action has closed types. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1769,11 +1403,11 @@ theorem layerHasTy_closed (hsig : ClosedSig sig) :
   | _, _, .effect hb _ _, hs => (hasTy_closed hsig hb ClosedEnv.nil hs.2).2
   | _, _, .effectDiscard hb, hs => (hasTy_closed hsig hb ClosedEnv.nil hs.2).2
   | _, _, .provide ha hb, hs =>
-    Ty.closed_join (layerHasTy_closed hsig ha hs.2.1) (layerHasTy_closed hsig hb hs.2.2)
+    UnionRule.closed_join (layerHasTy_closed hsig ha hs.2.1) (layerHasTy_closed hsig hb hs.2.2)
   | _, _, .provideMerge ha hb, hs =>
-    Ty.closed_join (layerHasTy_closed hsig ha hs.2.1) (layerHasTy_closed hsig hb hs.2.2)
+    UnionRule.closed_join (layerHasTy_closed hsig ha hs.2.1) (layerHasTy_closed hsig hb hs.2.2)
   | _, _, .merge ha hb, hs =>
-    Ty.closed_join (layerHasTy_closed hsig ha hs.2.1) (layerHasTy_closed hsig hb hs.2.2)
+    UnionRule.closed_join (layerHasTy_closed hsig ha hs.2.1) (layerHasTy_closed hsig hb hs.2.2)
   | _, _, .fresh hi, hs => layerHasTy_closed hsig hi hs.2
   | _, _, .orDie _, _ => rfl
   | _, _, .mergeAll hl, hs => layersHasTy_closed hsig hl hs.2
@@ -1785,7 +1419,7 @@ theorem layersHasTy_closed (hsig : ClosedSig sig) :
       AnnotationsClosed .layers ls → t.error.closed = true
   | _, _, .one hl, hs => layerHasTy_closed hsig hl hs.2.1
   | _, _, .cons hl hr, hs =>
-    Ty.closed_join (layerHasTy_closed hsig hl hs.2.1) (layersHasTy_closed hsig hr hs.2.2)
+    UnionRule.closed_join (layerHasTy_closed hsig hl hs.2.1) (layersHasTy_closed hsig hr hs.2.2)
 
 end
 
