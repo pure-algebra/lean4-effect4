@@ -1,0 +1,394 @@
+/-
+Seat BOUNDS, assignments 2 and 3: an exhaustive finite model. Every template of the tree, and
+eleven templates that the tree does not hold, against every request of a declared finite
+domain. Each application is run under the present match, the match by bounds (J) and the note's
+rule word for word (F). The laws are tested against every binding of a declared finite domain.
+
+It is a finite probe. A law that holds here is not proved.
+-/
+namespace Bounds
+
+def subsets {α : Type} : List α → List (List α)
+  | [] => [[]]
+  | x :: xs => let r := subsets xs; r ++ r.map (x :: ·)
+
+/-- A list of types with each type once (`Ty.key` is injective). -/
+def uniqTys (xs : List Ty) : List Ty :=
+  (xs.foldl (fun (acc : Std.HashSet (List Nat) × Array Ty) t =>
+    let k := t.key
+    if acc.1.contains k then acc else (acc.1.insert k, acc.2.push t)) ({}, #[])).2.toList
+
+/-- Every normal union of `nat`, `string`, `lit "a"` and `bool`, with `never`, and `unknown`.
+`lit "a"` is below `string`; `nat`, `string` and `bool` have no order. -/
+def U13 : List Ty :=
+  uniqTys ((subsets [Ty.nat, .string, .lit "a", .bool]).map fun l => (Ty.ofMembers l).normalize) ++ [.unknown]
+
+/-- A smaller base, for a template of two parameters under a handle. -/
+def U6 : List Ty := [.never, .nat, .string, .lit "a", (Ty.union .nat .string).normalize, .unknown]
+
+def assignments : List Nat → List Ty → List Subst
+  | [], _ => [[]]
+  | i :: rest, B => (assignments rest B).flatMap fun σ => B.map fun b => (i, b) :: σ
+
+/-- The requests of a template over a base: the base at a parameter, the head at its
+children's requests, and `never` at every level. A closed leaf is itself. -/
+def reqs (B : List Ty) : Ty → List Ty
+  | .var _ => B
+  | .option t => (reqs B t).map Ty.option ++ [.never]
+  | .list t => (reqs B t).map Ty.list ++ [.never]
+  | .causeOf t => (reqs B t).map Ty.causeOf ++ [.never]
+  | .refOf t => (reqs B t).map Ty.refOf ++ [.never]
+  | .prod a b => ((reqs B a).flatMap fun x => (reqs B b).map fun y => Ty.prod x y) ++ [.never]
+  | .deferredOf a b => ((reqs B a).flatMap fun x => (reqs B b).map fun y => Ty.deferredOf x y) ++ [.never]
+  | .map k v => (reqs B v).map (Ty.map k) ++ [.never]
+  | .tuple [a, b, c] =>
+    ((reqs B a).flatMap fun x => (reqs B b).flatMap fun y => (reqs B c).map fun z => Ty.tuple [x, y, z]) ++ [.never]
+  | .app n [a] => (reqs B a).map (fun x => Ty.app n [x]) ++ [.never]
+  | .app n [a, b] => ((reqs B a).flatMap fun x => (reqs B b).map fun y => Ty.app n [x, y]) ++ [.never]
+  | .record [(f, o, a), (g, q, b)] =>
+    ((reqs B a).flatMap fun x => (reqs B b).map fun y => Ty.record [(f, o, x), (g, q, y)]) ++ [.never]
+  | t => [t, .never]
+
+def noise : List Ty :=
+  [.unknown, .nat, .bool, .option .nat, .list .string, .refOf .nat, .prod .nat .string]
+
+def unions2 (xs : List Ty) : List Ty :=
+  let arr := xs.toArray
+  (List.range arr.size).flatMap fun i => (List.range arr.size).filterMap fun j =>
+    if i < j then some (Ty.union (arr[i]?.getD .never) (arr[j]?.getD .never)).normalize else none
+
+/-- The request domain of one parameter template: its requests in normal form, the unions of
+two of them when `pairs` is set, and seven types of other shapes. -/
+def requestDomain (B : List Ty) (pairs : Bool) (p : Ty) : List Ty :=
+  let base := uniqTys ((reqs B p).map Ty.normalize)
+  uniqTys (base ++ (if pairs then unions2 base else []) ++ noise)
+
+def product : List (List Ty) → List (List Ty)
+  | [] => [[]]
+  | xs :: rest => xs.flatMap fun x => (product rest).map fun tail => x :: tail
+
+/-- A family: a parameter list, with the present match's `join` flag, a seed, and its domains. -/
+structure Family where
+  name : String
+  params : List Ty
+  join : Bool := false
+  seed : Subst := []
+  base : List Ty := U13
+  pairs : List Bool := []
+  taus : List Ty := U13
+  /-- A template of the tree, or one that it does not hold. -/
+  tree : Bool := true
+
+def Family.vars (f : Family) : List Nat :=
+  ((f.params.flatMap Ty.varsOf).eraseDups).filter fun i => (f.seed.lookup i).isNone
+
+/-- The present match of an argument list from a seed: `Ty.matchTemplateArgs`. -/
+def presentArgs (f : Family) (rs : List Ty) : Option Subst := Ty.matchTemplateArgs f.seed f.params rs f.join
+
+/-- The match by bounds of an argument list from a seed. -/
+def boundsArgs (solver : Subst → List Cand → Subst) (f : Family) (rs : List Ty) : Option Subst :=
+  if f.params.length = rs.length then
+    let σ := solver f.seed (candsList f.params rs)
+    if (f.params.zip rs).all fun pr => Ty.sub pr.2.normalize (Ty.instantiate σ pr.1).normalize then some σ
+    else none
+  else none
+
+def bindingN (σ : Subst) (i : Nat) : Ty := (Ty.instantiate σ (.var i)).normalize
+
+def sameOn (vars : List Nat) (σ σ' : Subst) : Bool := vars.all fun i => bindingN σ i == bindingN σ' i
+def rawSameOn (vars : List Nat) (σ σ' : Subst) : Bool :=
+  vars.all fun i => Ty.instantiate σ (.var i) == Ty.instantiate σ' (.var i)
+
+/-- How the lower bounds of an admitted application stand: every parameter's lower bounds are a
+chain (`order`); or two of them have no order and come from two arguments (`argument`); or two of
+them have no order and come from one argument, a union read member by member (`member`). -/
+def admissionKind (f : Family) (rs : List Ty) : String :=
+  let perArg := (f.params.zip rs).map fun pr => cands .co pr.1 pr.2
+  let unorderedIn (cs : List Cand) : Bool :=
+    ((cs.map (·.1)).eraseDups).any fun i =>
+      let ls := (lowers cs i).map Ty.normalize
+      ls.any fun a => ls.any fun b => !Ty.sub a b && !Ty.sub b a
+  if perArg.any unorderedIn then "member"
+  else if unorderedIn perArg.flatten then "argument"
+  else "order"
+
+/-! ## Three guards, one for each way that the target can declare a repeated parameter
+
+tsgo infers a type argument from its candidates by choosing one of them: the candidate that every
+other candidate is below, or else the first (`getCommonSupertype`). It forms no join of two
+candidates with no order. So the match by bounds can answer a join that an inferred type argument
+does not reach. Each guard below names the applications where the join is reached, for one way of
+declaring the atom in the prelude. A parameter that the seed binds is not read: the seed fixes it,
+and the match's own guard checks its candidates. -/
+
+/-- The lower bounds that each argument offers parameter `i`, in normal form. -/
+def lowersAt (f : Family) (rs : List Ty) (i : Nat) : List (List Ty) :=
+  (f.params.zip rs).map fun pr => (lowers (cands .co pr.1 pr.2) i).map Ty.normalize
+
+/-- A candidate that every candidate of the list is below. -/
+def greatestOf (ls : List Ty) : Option Ty := ls.find? fun c => ls.all fun d => Ty.sub d c
+
+def hasGreatest (ls : List Ty) : Bool := ls.isEmpty || (greatestOf ls).isSome
+
+/-- **The guard of one parameter** (`<A>` at every occurrence): over all the arguments, a
+parameter's lower bounds have a greatest one. -/
+def guardOne (f : Family) (rs : List Ty) : Bool :=
+  f.vars.all fun i => hasGreatest (lowersAt f rs i).flatten
+
+/-- **The guard of a split parameter** (`<A, B = A>`, one parameter for each argument): the lower
+bounds that one argument offers a parameter have a greatest one. -/
+def guardSplit (f : Family) (rs : List Ty) : Bool :=
+  f.vars.all fun i => (lowersAt f rs i).all hasGreatest
+
+/-- **The guard of a split parameter with cross terms** (each argument may also hold the other
+arguments' parameters): every lower bound of a parameter is below the join of the greatest lower
+bounds of the arguments that have one. -/
+def guardCross (f : Family) (rs : List Ty) : Bool :=
+  f.vars.all fun i =>
+    let per := lowersAt f rs i
+    let top := (joinCands (per.filterMap greatestOf)).normalize
+    per.flatten.all fun c => Ty.sub c top
+
+structure Counts where
+  apps : Nat := 0
+  presentAdmits : Nat := 0
+  boundsAdmits : Nat := 0
+  regressions : Nat := 0
+  different : Nat := 0
+  rawDifferent : Nat := 0
+  admitOrder : Nat := 0
+  admitArgument : Nat := 0
+  admitMember : Nat := 0
+  admissible : Nat := 0          -- some binding of the domain admits every argument
+  completeViolations : Nat := 0  -- such a binding exists, and the match by bounds refuses
+  leastViolations : Nat := 0     -- the match by bounds answers bindings that are not below an admitting one
+  presentIncomplete : Nat := 0   -- such a binding exists, and the present match refuses
+  presentUnsound : Nat := 0      -- the present match's bindings do not admit an argument (in `Ty.sub`)
+  fDiffers : Nat := 0            -- the note's rule (F) differs from J: verdict or bindings
+  presentOrder : Nat := 0        -- the present match's verdict changes when the arguments are reversed
+  boundsOrder : Nat := 0         -- the match by bounds changes when the arguments are reversed
+  oneAdmits : Nat := 0           -- the match by bounds admits, and the guard of one parameter passes
+  oneRegressions : Nat := 0      -- the present match admits, and the match by bounds under that guard refuses
+  splitAdmits : Nat := 0         -- the same two, under the guard of a split parameter
+  splitRegressions : Nat := 0
+  crossAdmits : Nat := 0         -- the same two, under the guard of a split parameter with cross terms
+  crossRegressions : Nat := 0
+  examples : List String := []
+
+def Counts.note (c : Counts) (label : String) (text : String) : Counts :=
+  if (c.examples.filter fun e => e.startsWith label).length < 2 then { c with examples := c.examples ++ [label ++ ": " ++ text] }
+  else c
+
+def bump (b : Bool) (n : Nat) : Nat := if b then n + 1 else n
+
+/-- One family against its whole domain. -/
+def runFamily (f : Family) : Counts := Id.run do
+  let vars := f.vars
+  let doms := f.params.zipIdx.map fun (p, k) => requestDomain f.base (f.pairs[k]?.getD false) p
+  let taus := (assignments vars f.taus).map fun τ => f.seed ++ τ
+  -- each parameter's instance at each binding, in normal form, once
+  let instances := taus.map fun τ => (τ, f.params.map fun p => (Ty.instantiate τ p).normalize)
+  let reversed : Family := { f with params := f.params.reverse }
+  let mut c : Counts := {}
+  for rs in product doms do
+    let rsN := rs.map Ty.normalize
+    let present := presentArgs f rs
+    let bounds := boundsArgs solve f rs
+    let boundsF := boundsArgs solveF f rs
+    let admitting := instances.filter fun (_, insts) => (rsN.zip insts).all fun (r, inst) => Ty.sub r inst
+    let shown := showTys rs
+    let gOne := bounds.isSome && guardOne f rs
+    let gSplit := bounds.isSome && guardSplit f rs
+    let gCross := bounds.isSome && guardCross f rs
+    c := { c with apps := c.apps + 1, presentAdmits := bump present.isSome c.presentAdmits,
+                  boundsAdmits := bump bounds.isSome c.boundsAdmits,
+                  admissible := bump (!admitting.isEmpty) c.admissible,
+                  oneAdmits := bump gOne c.oneAdmits,
+                  oneRegressions := bump (present.isSome && !gOne) c.oneRegressions,
+                  splitAdmits := bump gSplit c.splitAdmits,
+                  splitRegressions := bump (present.isSome && !gSplit) c.splitRegressions,
+                  crossAdmits := bump gCross c.crossAdmits,
+                  crossRegressions := bump (present.isSome && !gCross) c.crossRegressions }
+    if present.isSome && !gOne then
+      c := c.note "the guard of one parameter refuses what the present match admits" shown
+    if present.isSome && !gSplit then
+      c := c.note "the guard of a split parameter refuses what the present match admits" shown
+    if present.isSome && !gCross then
+      c := c.note "the guard with cross terms refuses what the present match admits" shown
+    if gCross && !gOne && !gSplit then
+      c := c.note "only the guard with cross terms passes" shown
+    -- conservative: where the present match succeeds
+    match present, bounds with
+    | some σo, none =>
+      c := { c with regressions := c.regressions + 1 }
+      c := c.note "regression" (shown ++ " present " ++ showSubst σo)
+    | some σo, some σj =>
+      if !sameOn vars σo σj then
+        c := { c with different := c.different + 1 }
+        c := c.note "different" (shown ++ " present " ++ showSubst σo ++ " bounds " ++ showSubst σj)
+      else if !rawSameOn vars σo σj then
+        c := { c with rawDifferent := c.rawDifferent + 1 }
+        c := c.note "rawDifferent" (shown ++ " present " ++ showSubst σo ++ " bounds " ++ showSubst σj)
+    | none, some σj =>
+      match admissionKind f rs with
+      | "order" =>
+        c := { c with admitOrder := c.admitOrder + 1 }
+        c := c.note "admission by order" (shown ++ " bounds " ++ showSubst σj)
+      | "argument" =>
+        c := { c with admitArgument := c.admitArgument + 1 }
+        c := c.note "admission by argument" (shown ++ " bounds " ++ showSubst σj)
+      | _ =>
+        c := { c with admitMember := c.admitMember + 1 }
+        c := c.note "admission by member" (shown ++ " bounds " ++ showSubst σj)
+    | none, none => pure ()
+    -- the present match, read in the order: its bindings admit every argument
+    match present with
+    | some σo =>
+      if !((f.params.zip rsN).all fun (p, r) => Ty.sub r (Ty.instantiate σo p).normalize) then
+        c := { c with presentUnsound := c.presentUnsound + 1 }
+        c := c.note "present not sound in the order" (shown ++ " present " ++ showSubst σo)
+    | none =>
+      if !admitting.isEmpty then
+        c := { c with presentIncomplete := c.presentIncomplete + 1 }
+    -- complete and least, against every binding of the domain
+    match bounds with
+    | none =>
+      if let some (τ, _) := admitting.head? then
+        c := { c with completeViolations := c.completeViolations + 1 }
+        c := c.note "not complete" (shown ++ " admitted at " ++ showSubst τ)
+    | some σj =>
+      if let some (τ, _) := admitting.find? fun (τ, _) => !(vars.all fun i => Ty.sub (bindingN σj i) (bindingN τ i)) then
+        c := { c with leastViolations := c.leastViolations + 1 }
+        c := c.note "not least" (shown ++ " bounds " ++ showSubst σj ++ " admitted at " ++ showSubst τ)
+    -- the note's rule
+    match bounds, boundsF with
+    | some σj, some σf =>
+      if !sameOn vars σj σf then
+        c := { c with fDiffers := c.fDiffers + 1 }
+        c := c.note "F differs" (shown ++ " J " ++ showSubst σj ++ " F " ++ showSubst σf)
+    | none, none => pure ()
+    | some σj, none =>
+      c := { c with fDiffers := c.fDiffers + 1 }
+      c := c.note "F refuses" (shown ++ " J " ++ showSubst σj)
+    | none, some σf =>
+      c := { c with fDiffers := c.fDiffers + 1 }
+      c := c.note "F admits alone" (shown ++ " F " ++ showSubst σf)
+    -- the order of the arguments
+    if f.params.length > 1 then
+      let presentR := presentArgs reversed rs.reverse
+      let boundsR := boundsArgs solve reversed rs.reverse
+      if present.isSome != presentR.isSome then
+        c := { c with presentOrder := c.presentOrder + 1 }
+        c := c.note "present depends on the order" shown
+      let agree := match bounds, boundsR with
+        | some a, some b => sameOn vars a b
+        | none, none => true
+        | _, _ => false
+      if !agree then
+        c := { c with boundsOrder := c.boundsOrder + 1 }
+        c := c.note "bounds depends on the order" shown
+  return c
+
+def header : String :=
+  tsv ["family", "tree", "parameters", "applications", "admissible", "present admits", "bounds admits",
+    "regressions", "different", "raw different", "admitted: order", "admitted: argument", "admitted: member",
+    "not complete", "not least", "present incomplete", "present not sound in the order", "F differs",
+    "present depends on order", "bounds depends on order",
+    "guard of one parameter: bounds admits", "guard of one parameter: present admits and it refuses",
+    "guard of a split parameter: bounds admits", "guard of a split parameter: present admits and it refuses",
+    "guard with cross terms: bounds admits", "guard with cross terms: present admits and it refuses"]
+
+def line (f : Family) (c : Counts) : String :=
+  tsv [f.name, toString f.tree, showTys f.params ++ (if f.join then " join" else "") ++
+      (if f.seed.isEmpty then "" else " from " ++ showSubst f.seed),
+    toString c.apps, toString c.admissible, toString c.presentAdmits, toString c.boundsAdmits,
+    toString c.regressions, toString c.different, toString c.rawDifferent, toString c.admitOrder,
+    toString c.admitArgument, toString c.admitMember, toString c.completeViolations, toString c.leastViolations,
+    toString c.presentIncomplete, toString c.presentUnsound, toString c.fDiffers, toString c.presentOrder,
+    toString c.boundsOrder, toString c.oneAdmits, toString c.oneRegressions, toString c.splitAdmits,
+    toString c.splitRegressions, toString c.crossAdmits, toString c.crossRegressions]
+
+/-! ## The families -/
+
+/-- Every atom with a template scheme, at its own `join` flag. -/
+def atomFamilies : List Family :=
+  NativeAtom.all.filterMap fun atom =>
+    match (NativeAtom.spec atom).scheme with
+    | .poly params _ join =>
+      some { name := "atom " ++ atom.name, params := params, join := join,
+             pairs := params.map fun p => !p.closed && params.length ≤ 2,
+             base := if (params.flatMap Ty.varsOf).eraseDups.length > 1 then U6 else U13,
+             taus := if (params.flatMap Ty.varsOf).eraseDups.length > 1 then U6 else U13 }
+    | _ => none
+
+/-- Every native row whose request holds a parameter, the request in normal form as the row
+check reads it. -/
+def rowFamilies : List Family :=
+  NativeOp.spelled.filterMap fun op =>
+    let row := (NativeOp.row op).normalizeTypes
+    if row.request.closed then none
+    else
+      let two := row.request.varsOf.eraseDups.length > 1
+      some { name := "row " ++ row.name, params := [row.request], pairs := [true],
+             base := if two then U6 else U13, taus := if two then U6 else U13 }
+
+/-- A binder term's result template, from each seed of the cell's type. -/
+def binderFamilies : List Family :=
+  [FnShape.update, .updateSome, .modify, .modifySome].flatMap fun s =>
+    [Ty.nat, .string, (Ty.union .nat .string).normalize].map fun a =>
+      { name := "binder term " ++ shapeNameD s, params := [s.result.normalize], seed := [(0, a)], pairs := [true] }
+where shapeNameD : FnShape → String
+  | .update => "update"
+  | .updateSome => "updateSome"
+  | .modify => "modify"
+  | .modifySome => "modifySome"
+
+/-- Eleven templates that the tree does not hold. -/
+def syntheticFamilies : List Family :=
+  [ { name := "S1 a product under a cell", params := [.refOf (.prod (.var 0) (.var 1))], pairs := [true],
+      base := U6, taus := U6, tree := false },
+    { name := "S2 a cell beside its content, two arguments, join", params := [.refOf (.var 0), .var 0],
+      join := true, pairs := [true, false], tree := false },
+    { name := "S3 a cell beside its content, two arguments", params := [.refOf (.var 0), .var 0],
+      pairs := [true, false], tree := false },
+    { name := "S4 the content before its cell", params := [.prod (.var 0) (.refOf (.var 0))], pairs := [true],
+      tree := false },
+    { name := "S5 a list of lists", params := [.list (.list (.var 0))], pairs := [true], tree := false },
+    { name := "S6 one parameter twice in a pair", params := [.prod (.var 0) (.var 0)], pairs := [true],
+      tree := false },
+    { name := "S7 one parameter at two cells", params := [.deferredOf (.var 0) (.var 0)], pairs := [true],
+      tree := false },
+    { name := "S8 a contravariant argument beside a covariant one",
+      params := [.app "Context.Context" [.var 0], .var 0], pairs := [true, false], tree := false },
+    { name := "S9 two contravariant arguments", params := [.app "Queue.Enqueue" [.var 0, .var 0]],
+      pairs := [true], base := U6, taus := U6, tree := false },
+    { name := "S10 a tuple of three", params := [.tuple [.var 0, .var 0, .var 1]], pairs := [false],
+      base := U6, taus := U6, tree := false },
+    { name := "S11 a record of two fields", params := [.record [("a", false, .var 0), ("b", true, .var 0)]],
+      pairs := [true], base := U6, taus := U6, tree := false } ]
+
+def allFamilies : List Family := atomFamilies ++ rowFamilies ++ binderFamilies ++ syntheticFamilies
+
+def outDirD : String :=
+  "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/seat-bounds/out/"
+
+def runDomain : IO Unit := do
+  IO.FS.writeFile (outDirD ++ "domain.tsv") (header ++ "\n")
+  IO.FS.writeFile (outDirD ++ "domain-examples.txt") ""
+  IO.println s!"bases: U13 has {U13.length} types, U6 has {U6.length}"
+  let mut total : Nat := 0
+  for f in allFamilies do
+    let t0 ← IO.monoMsNow
+    let c := runFamily f
+    let t1 ← IO.monoMsNow
+    let h ← IO.FS.Handle.mk (outDirD ++ "domain.tsv") .append
+    h.putStrLn (line f c)
+    h.flush
+    let e ← IO.FS.Handle.mk (outDirD ++ "domain-examples.txt") .append
+    for x in c.examples do e.putStrLn (f.name ++ "\t" ++ x)
+    e.flush
+    total := total + c.apps
+    IO.println s!"{f.name}: {c.apps} applications, {t1 - t0} ms"
+  IO.println s!"families {allFamilies.length}; applications {total}"
+
+end Bounds

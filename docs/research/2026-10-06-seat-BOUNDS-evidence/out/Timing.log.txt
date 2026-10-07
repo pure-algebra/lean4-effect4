@@ -1,0 +1,2 @@
+ten checks of each of 73 programs: present 6728 ms and 7690 ms (admitted 730); by bounds 10208 ms and 11189 ms (admitted 730)
+wall=40s exit=0

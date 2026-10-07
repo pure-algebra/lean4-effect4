@@ -1,0 +1,337 @@
+program	kind	address	detail	present	bounds	verdict	presentRefusal	boundsRefusal	refusal	boundsAgainstFull	admittedAt
+g3	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g11	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g15	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g15	effect	0.0	Eff.sync	true	true	same	-	-	-	gradual	-
+g15	term	0.0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g16	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g16	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g20	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g20	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g21	effect	.	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g21	effect	0	Eff.catchCause	true	true	same	-	-	-	gradual	-
+g21	effect	0.0	Eff.service	true	true	same	-	-	-	gradual	-
+g21	effect	0.1	Eff.service	true	true	same	-	-	-	gradual	-
+g33	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g33	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g38	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g44	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g49	effect	.	Eff.bind	true	true	same	-	-	-	gradual	-
+g49	effect	0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g49	effect	1	Eff.succeed	true	true	same	-	-	-	gradual	-
+g49	term	0	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g49	term	1	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g50	effect	.	Eff.provideService	true	true	same	-	-	-	gradual	-
+g50	effect	0	Eff.service	true	true	same	-	-	-	gradual	-
+g50	term	.	provideService.value . provideService.value	true	true	same	-	-	-	gradual	-
+g53	effect	.	Eff.suspend	true	true	same	-	-	-	gradual	-
+g53	effect	0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0	Eff.bind	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0.0	Eff.matchCause	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0.0.1	Eff.fail	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0.0.2	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0.1	Eff.exit	true	true	same	-	-	-	gradual	-
+g53	effect	0.0.0.1.0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g53	term	0.0.0.0.1	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g53	term	0.0.0.1.0	failCause.die . failCause.die	true	true	same	-	-	-	gradual	-
+g53	term	0.0.0.1.0	failCause.die 0 succ.0	true	true	same	-	-	-	gradual	-
+g54	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g54	effect	0.0	Eff.sync	true	true	same	-	-	-	gradual	-
+g54	term	0.0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g55	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g55	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g57	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g57	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g59	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g59	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g66	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g68	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g68	term	.	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g72	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g72	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g73	effect	.	Eff.exit	true	true	same	-	-	-	gradual	-
+g73	effect	0	Eff.sync	true	true	same	-	-	-	gradual	-
+g73	term	0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g74	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g75	effect	.	Eff.gen	true	true	same	-	-	-	gradual	-
+g75	effect	0.0.0	Eff.gen	true	true	same	-	-	-	gradual	-
+g75	term	.	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g75	term	0.0.0	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g78	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g78	effect	0.0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g81	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g83	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g83	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g89	effect	.	Eff.provideService	true	true	same	-	-	-	gradual	-
+g89	effect	0	Eff.bind	true	true	same	-	-	-	gradual	-
+g89	effect	0.0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g89	effect	0.1	Eff.service	true	true	same	-	-	-	gradual	-
+g89	term	.	provideService.value . provideService.value	true	true	same	-	-	-	gradual	-
+g96	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g96	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g100	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g100	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g102	effect	.	Eff.provideLayer	true	true	same	-	-	-	gradual	-
+g102	effect	1	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g102	effect	1.0.0	Eff.provideService	true	true	same	-	-	-	gradual	-
+g102	effect	1.0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g102	effect	1.0.0.0.0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g102	term	1.0.0	provideService.value . provideService.value	true	true	same	-	-	-	gradual	-
+g102	term	1.0.0.0.0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g105	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g109	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g113	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g117	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g117	effect	0.0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g118	effect	.	Eff.gen	true	true	same	-	-	-	gradual	-
+g118	effect	0.0.0	Eff.bind	true	true	same	-	-	-	gradual	-
+g118	effect	0.0.0.0	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g118	effect	0.0.0.0.0	Eff.sync	true	true	same	-	-	-	gradual	-
+g118	effect	0.0.0.1	Eff.uninterruptible	true	true	same	-	-	-	gradual	-
+g118	effect	0.0.0.1.0	Eff.exit	true	true	same	-	-	-	gradual	-
+g118	effect	0.0.0.1.0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g118	term	.	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g118	term	0.0.0.0.0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g118	term	0.0.0.1.0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g120	effect	.	Eff.suspend	true	true	same	-	-	-	gradual	-
+g120	effect	0	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g120	effect	0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g120	effect	0.0.0.0	Eff.fail	true	true	same	-	-	-	gradual	-
+g120	term	0.0.0.0	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g121	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g121	effect	0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g121	term	0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g122	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g122	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g123	effect	.	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g123	effect	0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g123	effect	0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g130	effect	.	Eff.scoped	true	true	same	-	-	-	gradual	-
+g130	effect	0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g130	effect	0.0.0	Eff.suspend	true	true	same	-	-	-	gradual	-
+g130	effect	0.0.0.0	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g130	effect	0.0.0.0.0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g130	term	0.0.0.0.0	failCause.die . failCause.die	true	true	same	-	-	-	gradual	-
+g135	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g135	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g136	effect	.	Eff.exit	true	true	same	-	-	-	gradual	-
+g136	effect	0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g137	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g144	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g145	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g145	effect	0.0	Eff.scoped	true	true	same	-	-	-	gradual	-
+g145	effect	0.0.0	Eff.fail	true	true	same	-	-	-	gradual	-
+g145	term	0.0.0	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g146	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g146	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g148	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g150	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g158	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g158	effect	0.0.0	Eff.perform(refMake)	true	true	same	-	-	-	gradual	-
+g158	term	0.0.0	perform(refMake).request . perform(refMake).request	true	true	same	-	-	-	not gradual	-
+g159	effect	.	Eff.suspend	true	true	same	-	-	-	gradual	-
+g159	effect	0	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g159	effect	0.0	Eff.service	true	true	same	-	-	-	gradual	-
+g160	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g160	effect	0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g160	term	0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g161	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g161	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g163	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g163	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g172	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g174	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g174	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g175	effect	.	Eff.exit	true	true	same	-	-	-	gradual	-
+g175	effect	0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g176	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g179	effect	.	Eff.exit	true	true	same	-	-	-	gradual	-
+g179	effect	0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g179	term	0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g180	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g181	effect	.	Eff.gen	true	true	same	-	-	-	gradual	-
+g181	term	.	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g183	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g184	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g184	effect	0.0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g184	term	0.0	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g185	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g185	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g189	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g189	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g193	effect	.	Eff.scoped	true	true	same	-	-	-	gradual	-
+g193	effect	0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g193	effect	0.0.0	Eff.fail	true	true	same	-	-	-	gradual	-
+g193	term	0.0.0	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g199	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g199	effect	0.0	Eff.suspend	true	true	same	-	-	-	gradual	-
+g199	effect	0.0.0	Eff.sync	true	true	same	-	-	-	gradual	-
+g199	term	0.0.0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g199	term	0.0.0	sync.thunk 0 succ.0	true	true	same	-	-	-	gradual	-
+g211	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g213	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g213	term	.	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g217	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g218	effect	.	Eff.exit	true	true	same	-	-	-	gradual	-
+g218	effect	0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g218	term	0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g219	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g220	effect	.	Eff.gen	true	true	same	-	-	-	gradual	-
+g220	term	.	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g222	effect	.	Eff.suspend	true	true	same	-	-	-	gradual	-
+g222	effect	0	Eff.scoped	true	true	same	-	-	-	gradual	-
+g222	effect	0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g222	term	0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g223	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g223	effect	0.0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g223	term	0.0	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g224	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g224	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g235	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g236	effect	.	Eff.scoped	true	true	same	-	-	-	gradual	-
+g236	effect	0	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g236	effect	0.0	Eff.scoped	true	true	same	-	-	-	gradual	-
+g236	effect	0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g236	effect	0.0.0.0.0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g238	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g238	effect	0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g242	effect	.	Eff.exit	true	true	same	-	-	-	gradual	-
+g242	effect	0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g242	term	0	failCause.die . failCause.die	true	true	same	-	-	-	gradual	-
+g243	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g247	effect	.	Eff.provideLayer	true	true	same	-	-	-	gradual	-
+g247	effect	1	Eff.uninterruptible	true	true	same	-	-	-	gradual	-
+g247	effect	1.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g247	effect	1.0.0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g247	term	1.0.0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g250	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g252	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g252	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g256	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g260	effect	.	Eff.scoped	true	true	same	-	-	-	gradual	-
+g260	effect	0	Eff.gen	true	true	same	-	-	-	gradual	-
+g260	effect	0.0.0.0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g263	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g263	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g267	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g267	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g269	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g269	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g274	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g276	effect	.	Eff.bind	true	true	same	-	-	-	gradual	-
+g276	effect	0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g276	effect	1	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g276	term	0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g278	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g282	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g286	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g287	effect	.	Eff.gen	true	true	same	-	-	-	gradual	-
+g287	term	.	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g289	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g290	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g290	effect	0.0	Eff.provideService	true	true	same	-	-	-	gradual	-
+g290	effect	0.0.0	Eff.service	true	true	same	-	-	-	gradual	-
+g290	term	0.0	provideService.value . provideService.value	true	true	same	-	-	-	gradual	-
+g291	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g291	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g300	effect	.	Eff.bind	true	true	same	-	-	-	gradual	-
+g300	effect	0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g300	effect	1	Eff.scoped	true	true	same	-	-	-	gradual	-
+g300	effect	1.0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g300	term	0	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g300	term	0	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g305	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g305	effect	0.0	Eff.sync	true	true	same	-	-	-	gradual	-
+g305	term	0.0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g306	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g306	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g308	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g308	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g309	effect	.	Eff.onExit	true	true	same	-	-	-	gradual	-
+g309	effect	0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g309	effect	0.0.0	Eff.suspend	true	true	same	-	-	-	gradual	-
+g309	effect	0.0.0.0	Eff.matchCause	true	true	same	-	-	-	gradual	-
+g309	effect	0.0.0.0.0	Eff.fail	true	true	same	-	-	-	gradual	-
+g309	effect	0.0.0.0.1	Eff.perform(deferredAwait)	true	true	same	-	-	-	gradual	-
+g309	effect	0.0.0.0.2	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g309	effect	1	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g309	term	0.0.0.0.0	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g309	term	0.0.0.0.1	perform(deferredAwait).request . perform(deferredAwait).request	true	true	same	-	-	-	gradual	-
+g313	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g317	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g325	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g330	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g330	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g334	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g334	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g344	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g344	effect	0.0	Eff.gen	true	true	same	-	-	-	gradual	-
+g344	effect	0.0.0.0.0	Eff.select.bool	true	true	same	-	-	-	gradual	-
+g344	effect	0.0.0.0.0.0	Eff.interruptible	true	true	same	-	-	-	gradual	-
+g344	effect	0.0.0.0.0.0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g344	effect	0.0.0.0.0.1	Eff.fail	true	true	same	-	-	-	gradual	-
+g344	term	0.0	gen.return . gen.return	true	true	same	-	-	-	gradual	-
+g344	term	0.0.0.0.0	select.bool.scrutinee . select.bool.scrutinee	false	false	bothRefuse	predicateNotBool@0.0.0.0.0	predicateNotBool@0.0.0.0.0	same refusal	-	-
+g344	term	0.0.0.0.0.0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g344	term	0.0.0.0.0.1	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g347	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g347	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g352	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g353	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g353	effect	0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g353	term	0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g353	term	0.0	succeed.value 0 isZero.0	true	true	same	-	-	-	gradual	-
+g358	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g358	term	.	failCause.fail . failCause.fail	true	true	same	-	-	-	gradual	-
+g359	effect	.	Eff.uninterruptible	true	true	same	-	-	-	gradual	-
+g359	effect	0	Eff.uninterruptible	true	true	same	-	-	-	gradual	-
+g359	effect	0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g359	term	0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g363	effect	.	Eff.uninterruptible	true	true	same	-	-	-	gradual	-
+g363	effect	0	Eff.sync	true	true	same	-	-	-	gradual	-
+g363	term	0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g366	effect	.	Eff.scoped	true	true	same	-	-	-	gradual	-
+g366	effect	0	Eff.suspend	true	true	same	-	-	-	gradual	-
+g366	effect	0.0	Eff.fail	true	true	same	-	-	-	gradual	-
+g366	term	0.0	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g366	term	0.0	fail.error 0 succ.0	true	true	same	-	-	-	gradual	-
+g367	effect	.	Eff.suspend	true	true	same	-	-	-	gradual	-
+g367	effect	0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g367	effect	0.0.0	Eff.fail	true	true	same	-	-	-	gradual	-
+g367	term	0.0.0	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g368	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g368	effect	0.0	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g369	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g369	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g371	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g371	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g373	effect	.	Eff.sync	true	true	same	-	-	-	gradual	-
+g373	term	.	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g375	effect	.	Eff.succeed	true	true	same	-	-	-	gradual	-
+g375	term	.	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g380	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g382	effect	.	Eff.failCause	true	true	same	-	-	-	gradual	-
+g382	term	.	failCause.interruptor . failCause.interruptor	false	false	bothRefuse	cause@.	cause@.	same refusal	-	-
+g382	term	.	failCause.interruptor 0 add.0	true	true	same	-	-	-	gradual	-
+g382	term	.	failCause.interruptor 1 add.1	true	true	same	-	-	-	gradual	-
+g384	effect	.	Eff.yieldNow	true	true	same	-	-	-	gradual	-
+g386	effect	.	Eff.fail	true	true	same	-	-	-	gradual	-
+g386	term	.	fail.error . fail.error	true	true	same	-	-	-	gradual	-
+g388	effect	.	Eff.service	true	true	same	-	-	-	gradual	-
+g390	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g390	effect	0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g390	effect	0.0.0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g390	effect	0.0.1.0	Eff.provideService	true	true	same	-	-	-	gradual	-
+g390	effect	0.0.1.0.0	Eff.sync	true	true	same	-	-	-	gradual	-
+g390	term	0.0.1.0	provideService.value . provideService.value	true	true	same	-	-	-	gradual	-
+g390	term	0.0.1.0.0	sync.thunk . sync.thunk	true	true	same	-	-	-	gradual	-
+g392	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g392	effect	0.0	Eff.succeed	true	true	same	-	-	-	gradual	-
+g392	term	0.0	succeed.value . succeed.value	true	true	same	-	-	-	gradual	-
+g396	effect	.	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g396	effect	0.0	Eff.scoped	true	true	same	-	-	-	gradual	-
+g396	effect	0.0.0	Eff.withFiber	true	true	same	-	-	-	gradual	-
+g396	effect	0.0.0.0.0	Eff.suspend	true	true	same	-	-	-	gradual	-
+g396	effect	0.0.0.0.0.0	Eff.failCause	true	true	same	-	-	-	gradual	-
+g396	term	0.0.0.0.0.0	failCause.die . failCause.die	true	true	same	-	-	-	gradual	-

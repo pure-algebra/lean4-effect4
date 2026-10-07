@@ -1,0 +1,7 @@
+cite.ts(8,14): error TS2322: Type 'true' is not assignable to type 'false'.
+cite.ts(8,54): error TS2635: Type '<A, B>(value: Option<A>, fallback: B) => A | B' has no signatures for which the type argument list is applicable.
+cite.ts(9,14): error TS2322: Type 'true' is not assignable to type 'false'.
+cite.ts(9,42): error TS2635: Type '<A, B>(c: boolean, t: A, f: B) => A | B' has no signatures for which the type argument list is applicable.
+cite.ts(10,14): error TS2322: Type 'true' is not assignable to type 'false'.
+cite.ts(10,48): error TS2635: Type '<A, B>(xs: readonly A[], ys: readonly B[]) => readonly (A | B)[]' has no signatures for which the type argument list is applicable.
+exit=1

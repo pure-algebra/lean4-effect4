@@ -1,0 +1,17 @@
+== run ref: 769 static types, 1105 gap types (at most 2 constructor members)
+gap types by where the gap stands: {'static': 175, 'whole': 2, 'under a union': 928}
+control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M: True | by T: False
+static actual type, expected gap type `static`: pairs 134575; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+static actual type, expected gap type `whole`: pairs 1538; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 120; B differs 0
+static actual type, expected gap type `under a union`: pairs 713632; T differs from the definition 425352 (accepts beyond 0, refuses within 425352); M differs 36132; B differs 0
+     num  ≲  nat | □: T False, the definition True
+     str  ≲  nat | □: T False, the definition True
+     ref(never)  ≲  nat | □: T False, the definition True
+the walk extended to an expected union (remainder at a bare gap, one member per head), expected gap type `under a union`: pairs 713632; differs from the definition 276984 (accepts beyond 0, refuses within 276984); member pairs met as a choice 483840
+     ref(never) | ref(nat)  ≲  ref(□) | □: extended walk False, the definition True
+     ref(never) | ref(num)  ≲  ref(□) | □: extended walk False, the definition True
+     ref(never) | ref(str)  ≲  ref(□) | □: extended walk False, the definition True
+     ref(never) | ref(nat | str)  ≲  ref(□) | □: extended walk False, the definition True
+at the cell ref(□), over 769 static actual types: the definition admits 8; T admits 8; B admits 8; M admits 128
+     T = the definition: True | B = the definition: True | M = the definition: False
+gap types with a gap, as the ACTUAL type: 930 of 1105; T reads no parameter there (pairs not compared: 1027650)

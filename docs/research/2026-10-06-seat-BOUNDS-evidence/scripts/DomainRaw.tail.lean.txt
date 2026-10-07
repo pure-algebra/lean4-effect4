@@ -1,0 +1,140 @@
+/-
+Seat BOUNDS: the match reads a request up to the normal form (the coordinator's third point, after
+seat SKETCH's control). Every family against its RAW requests: the requests of `reqs`, before
+normalization. A pair that holds a union is raw there, and its normal form is a union of pairs.
+
+For each raw request list the present match and the match by bounds are run twice: on the raw
+types, as an atom's arguments and a binder term's type are read today, and on their normal forms,
+as a row's request is read today.
+-/
+namespace Bounds
+
+structure RawCounts where
+  apps : Nat := 0
+  notNormal : Nat := 0            -- some argument is not its normal form
+  presentRawOnly : Nat := 0       -- the present match admits the raw types and refuses their normal forms
+  presentNormOnly : Nat := 0      -- the present match refuses the raw types and admits their normal forms
+  presentDiffer : Nat := 0        -- it admits both, at bindings with different normal forms
+  boundsRawOnly : Nat := 0        -- the same three, for the match by bounds
+  boundsNormOnly : Nat := 0
+  boundsDiffer : Nat := 0
+  notConservative : Nat := 0      -- the present match admits the raw types; the match by bounds at the
+                                  -- normal forms refuses, or answers other bindings up to the normal form
+  guardRefuses : Nat := 0         -- the present match admits the raw types; the match by bounds under the
+                                  -- guard with cross terms refuses their normal forms
+  guardRefusesRaw : Nat := 0      -- the present match admits the raw types; the same guard refuses the raw types
+  examples : List String := []
+
+def RawCounts.note (c : RawCounts) (label : String) (text : String) : RawCounts :=
+  if (c.examples.filter fun e => e.startsWith label).length < 2 then
+    { c with examples := c.examples ++ [label ++ ": " ++ text] }
+  else c
+
+def runRawFamily (f : Family) : RawCounts := Id.run do
+  let vars := f.vars
+  let doms := f.params.map fun p => uniqTys (reqs f.base p)
+  let mut c : RawCounts := {}
+  for rs in product doms do
+    let rsN := rs.map Ty.normalize
+    let presentRaw := presentArgs f rs
+    let presentNorm := presentArgs f rsN
+    let boundsRaw := boundsArgs solve f rs
+    let boundsNorm := boundsArgs solve f rsN
+    let shown := showTys rs
+    c := { c with apps := c.apps + 1, notNormal := bump (rs != rsN) c.notNormal }
+    match presentRaw, presentNorm with
+    | some σ, none =>
+      c := { c with presentRawOnly := c.presentRawOnly + 1 }
+      c := c.note "present admits the raw type only" (shown ++ " at " ++ showSubst σ ++ "; normal form " ++ showTys rsN)
+    | none, some σ =>
+      c := { c with presentNormOnly := c.presentNormOnly + 1 }
+      c := c.note "present admits the normal form only" (shown ++ "; normal form " ++ showTys rsN ++ " at " ++ showSubst σ)
+    | some σ, some σ' =>
+      if !sameOn vars σ σ' then
+        c := { c with presentDiffer := c.presentDiffer + 1 }
+        c := c.note "present differs" (shown ++ " raw " ++ showSubst σ ++ " normal " ++ showSubst σ')
+    | none, none => pure ()
+    match boundsRaw, boundsNorm with
+    | some σ, none =>
+      c := { c with boundsRawOnly := c.boundsRawOnly + 1 }
+      c := c.note "bounds admits the raw type only" (shown ++ " at " ++ showSubst σ)
+    | none, some σ =>
+      c := { c with boundsNormOnly := c.boundsNormOnly + 1 }
+      c := c.note "bounds admits the normal form only" (shown ++ "; normal form " ++ showTys rsN ++ " at " ++ showSubst σ)
+    | some σ, some σ' =>
+      if !sameOn vars σ σ' then
+        c := { c with boundsDiffer := c.boundsDiffer + 1 }
+        c := c.note "bounds differs" (shown ++ " raw " ++ showSubst σ ++ " normal " ++ showSubst σ')
+    | none, none => pure ()
+    if presentRaw.isSome && !(boundsNorm.isSome && guardCross f rsN) then
+      c := { c with guardRefuses := c.guardRefuses + 1 }
+      c := c.note "the guard refuses the normal form" (shown ++ "; normal form " ++ showTys rsN)
+    if presentRaw.isSome && !(boundsRaw.isSome && guardCross f rs) then
+      c := { c with guardRefusesRaw := c.guardRefusesRaw + 1 }
+    match presentRaw, boundsNorm with
+    | some σo, none =>
+      c := { c with notConservative := c.notConservative + 1 }
+      c := c.note "not conservative" (shown ++ " present " ++ showSubst σo)
+    | some σo, some σj =>
+      if !sameOn vars σo σj then
+        c := { c with notConservative := c.notConservative + 1 }
+        c := c.note "not conservative" (shown ++ " present " ++ showSubst σo ++ " bounds at the normal form " ++ showSubst σj)
+    | none, _ => pure ()
+  return c
+
+def rawHeader : String :=
+  tsv ["family", "tree", "parameters", "raw applications", "with an argument that is not normal",
+    "present: raw only", "present: normal form only", "present: both, other bindings",
+    "bounds: raw only", "bounds: normal form only", "bounds: both, other bindings",
+    "present on raw against bounds on the normal form: not conservative",
+    "present admits raw, the guard with cross terms refuses the normal form",
+    "present admits raw, the guard with cross terms refuses the raw type"]
+
+def rawLine (f : Family) (c : RawCounts) : String :=
+  tsv [f.name, toString f.tree, showTys f.params ++ (if f.join then " join" else "") ++
+      (if f.seed.isEmpty then "" else " from " ++ showSubst f.seed),
+    toString c.apps, toString c.notNormal, toString c.presentRawOnly, toString c.presentNormOnly,
+    toString c.presentDiffer, toString c.boundsRawOnly, toString c.boundsNormOnly, toString c.boundsDiffer,
+    toString c.notConservative, toString c.guardRefuses, toString c.guardRefusesRaw]
+
+/-- The families whose requests are read raw today: an atom's arguments and a binder term's
+type. A row's request is read at its normal form today (`checkRow`), so no row family is here.
+The families that the tree does not hold are read as an atom's arguments. -/
+def rawFamilies : List Family :=
+  allFamilies.filter fun f => !f.name.startsWith "row "
+
+def runRaw : IO Unit := do
+  IO.FS.writeFile (outDirD ++ "domain-raw.tsv") (rawHeader ++ "\n")
+  IO.FS.writeFile (outDirD ++ "domain-raw-examples.txt") ""
+  let mut total : Nat := 0
+  for f in rawFamilies do
+    let c := runRawFamily f
+    let h ← IO.FS.Handle.mk (outDirD ++ "domain-raw.tsv") .append
+    h.putStrLn (rawLine f c)
+    h.flush
+    let e ← IO.FS.Handle.mk (outDirD ++ "domain-raw-examples.txt") .append
+    for x in c.examples do e.putStrLn (f.name ++ "\t" ++ x)
+    e.flush
+    total := total + c.apps
+  IO.println s!"raw families {rawFamilies.length}; raw applications {total}"
+
+-- seat SKETCH's control, as the coordinator states it: the atom answers at the raw type, and the
+-- present match refuses the same atom at that type's normal form; the match by bounds answers
+-- at both, with one normal form
+def sketchRaw : Ty := .list (.prod .string (.union .nat .string))
+#guard sketchRaw != sketchRaw.normalize
+#guard nativeAtomTy "mapFromEntries" [sketchRaw] == some (.map .string (.union .nat .string))
+#guard nativeAtomTy "mapFromEntries" [sketchRaw.normalize] == none
+#guard (atomTyB "mapFromEntries" [sketchRaw]).map Ty.normalize == some (Ty.map .string (.union .nat .string)).normalize
+#guard (atomTyB "mapFromEntries" [sketchRaw.normalize]).map Ty.normalize == some (Ty.map .string (.union .nat .string)).normalize
+#eval IO.println ("mapFromEntries at the raw type: present " ++ showOptTy (nativeAtomTy "mapFromEntries" [sketchRaw]) ++ "; bounds " ++ showOptTy (atomTyB "mapFromEntries" [sketchRaw]))
+#eval IO.println ("mapFromEntries at the normal form " ++ showTy sketchRaw.normalize ++ ": present " ++ showOptTy (nativeAtomTy "mapFromEntries" [sketchRaw.normalize]) ++ "; bounds " ++ showOptTy (atomTyB "mapFromEntries" [sketchRaw.normalize]))
+-- a tuple of two is a pair's raw form: the walk does not match it raw, under either match
+#guard nativeAtomTy "fst" [.tuple [.nat, .string]] == none
+#guard Ty.matchTemplate [] (.prod (.var 0) (.var 1)) (.tuple [.nat, .string]) == none
+#guard (matchB [] (.prod (.var 0) (.var 1)) (.tuple [.nat, .string])).isNone
+#guard (matchB [] (.prod (.var 0) (.var 1)) (Ty.tuple [.nat, .string]).normalize).isSome
+
+#eval runRaw
+
+end Bounds

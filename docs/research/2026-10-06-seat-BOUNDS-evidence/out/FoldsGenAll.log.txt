@@ -1,0 +1,2 @@
+gen: folds 336; wall time 41 ms
+wall=4s exit=0

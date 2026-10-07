@@ -1,0 +1,17 @@
+spell.ts(16,48): error TS2345: Argument of type 'readonly (readonly [string, string] | readonly [string, number])[]' is not assignable to parameter of type 'readonly (readonly [string, string])[]'.
+  Type 'readonly [string, string] | readonly [string, number]' is not assignable to type 'readonly [string, string]'.
+    Type 'readonly [string, number]' is not assignable to type 'readonly [string, string]'.
+      Type at position 1 in source is not compatible with type at position 1 in target.
+        Type 'number' is not assignable to type 'string'.
+spell.ts(19,73): error TS2345: Argument of type 'readonly [string, string]' is not assignable to parameter of type 'readonly [string, number]'.
+  Type at position 1 in source is not compatible with type at position 1 in target.
+    Type 'string' is not assignable to type 'number'.
+spell.ts(21,14): error TS2322: Type 'readonly [string, string | number]' is not assignable to type 'readonly [string, string] | readonly [string, number]'.
+  Type 'readonly [string, string | number]' is not assignable to type 'readonly [string, string]'.
+    Type at position 1 in source is not compatible with type at position 1 in target.
+      Type 'string | number' is not assignable to type 'string'.
+        Type 'number' is not assignable to type 'string'.
+spell.ts(27,38): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+exit=1

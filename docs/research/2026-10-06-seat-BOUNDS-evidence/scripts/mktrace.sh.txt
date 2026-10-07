@@ -1,0 +1,40 @@
+#!/bin/bash
+# Seat BOUNDS: write Trace.lean, a traced copy of the checker's mutual block.
+# The block is lines 156 to 439 of src/Effect4/Program/Checker.lean (from `mutual` to `end`), taken
+# as text at the SHA-256 below. Seven edits are made by name, and no rule is edited:
+#   1. the seven functions get the prefix `t` and a first argument `rule`;
+#   2. each result type `Except TypeRefusal X` becomes `M X`, a writer over the same refusals;
+#   3. `term?` becomes `termT`, which records the call and then calls `Checker.term?`;
+#   4. `cause?` becomes `causeT`, likewise;
+#   5. a `return`'s `term?`, which the checker stores unread, is recorded by `termE`;
+#   6. `rowCheck row r (sig.termUse env op) p` becomes `rowT rule sig env op row r p`, which
+#      records the row use and applies the rule's row check;
+#   7. `Op` is `NativeOp`.
+# `Census.tail.lean` holds the guard: with the present row check the copy answers what
+# `Checker.check` answers, on every program of both corpora.
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-mask
+F="$W/src/Effect4/Program/Checker.lean"
+want=858d1bad1e6b57536f14c45e5b9b8075305ad932996753f7d406081e5a51235a
+have=$(shasum -a 256 "$F" | cut -d' ' -f1)
+[ "$want" = "$have" ] || { echo "Checker.lean moved: $have" >&2; exit 1; }
+[ "$(sed -n '156p' "$F")" = "mutual" ] || { echo "line 156 is not mutual" >&2; exit 1; }
+[ "$(sed -n '439p' "$F")" = "end" ] || { echo "line 439 is not end" >&2; exit 1; }
+{
+cat "$S/Trace.head.lean"
+sed -n '156,439p' "$F" | perl -pe '
+  s/pure \(\.ret \(term\? sig env p value\)\)/(do let answer ← termE sig env p value; pure (.ret answer))/;
+  s/rowCheck row r \(sig\.termUse env op\) p/rowT rule sig env op row r p/;
+  s/\bcheck(Layers|Layer|Stmts|Stmt|Effs|Action)?\b(?= \(sig : Signature Op\))/t$&/;
+  s/\(sig : Signature Op\)/(rule : Rule) (sig : Signature NativeOp)/;
+  s/\bcheck(Layers|Layer|Stmts|Stmt|Effs|Action)? sig\b/"tcheck" . ($1 \/\/ "") . " rule sig"/e;
+  s/Except TypeRefusal (EffTy|LayerTy|StmtTy|GenTy)\b/M $1/;
+  s/Except TypeRefusal \(List LayerTy\)/M (List LayerTy)/;
+  s/\bterm\? sig\b/termT sig/g;
+  s/\bcause\? sig\b/causeT sig/g;
+  s/\b(Eff|LayerTerm|LayerTerms|Stmt|Stmts|Effs|ActionTerm) Op\b/$1 NativeOp/g;
+'
+printf '\nend Bounds\n'
+} > "$S/Trace.lean"
+grep -c "" "$S/Trace.lean"

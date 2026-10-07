@@ -1,0 +1,27 @@
+tsgo-bounds-cite.txt: errors 0; exit=0
+tsgo-bounds-forms-dts.txt: errors 0; exit=0
+tsgo-bounds-forms.txt: errors 0; exit=0
+tsgo-bounds-generated.txt: errors 0; exit=0
+tsgo-bounds-inferred-dts.txt: errors 0; exit=0
+tsgo-bounds-inferred.txt: errors 0; exit=0
+tsgo-bounds-lane.txt: errors 0; exit=0
+tsgo-bounds-nodefault-cite.txt: errors 6; exit=1
+tsgo-bounds-nodefault-forms.txt: errors 0; exit=0
+tsgo-bounds-nodefault-generated.txt: errors 0; exit=0
+tsgo-bounds-probe.txt: errors 17; exit=1
+tsgo-bounds-spell.txt: errors 4; exit=1
+tsgo-present-cite.txt: errors 0; exit=0
+tsgo-present-forms-dts.txt: errors 6; exit=2
+tsgo-present-forms.txt: errors 6; exit=1
+tsgo-present-generated.txt: errors 0; exit=0
+tsgo-present-inferred-dts.txt: errors 0; exit=0
+tsgo-present-inferred.txt: errors 0; exit=0
+tsgo-present-lane.txt: errors 0; exit=0
+tsgo-present-probe.txt: errors 20; exit=1
+tsgo-present-spell.txt: errors 4; exit=1
+tsgo-split.txt: errors 9; exit=1
+generated modules in the lane's program: present 73, bounds 73
+tsgo: Version 7.0.0-dev.20260629.1
+effect: 4.0.0-rc.112
+node: v22.23.2
+files that differ: 0 of 73

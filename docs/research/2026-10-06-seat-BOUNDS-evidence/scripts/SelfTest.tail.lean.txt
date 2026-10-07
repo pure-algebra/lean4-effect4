@@ -1,0 +1,88 @@
+/-
+Seat BOUNDS: the census's own test. Programs with answers known by hand, through the whole
+pipeline (the traced copy, the events, both matches), and a red control for each class of the
+report. The two corpora hold no new admission, so these programs are what shows that the census
+would see one.
+-/
+namespace Bounds
+
+open Effect4.Machine.Env (Requirement)
+
+def app (atom : String) (args : List Term) : Term := .app atom (args.foldr Terms.cons .nil)
+def natT (n : Nat) : Term := .lit (.nat n)
+def strT (s : String) : Term := .lit (.str s)
+def boolT (b : Bool) : Term := .lit (.bool b)
+
+def sig0 : Sig := nativeSignature []
+
+def classOf (e : P) : Verdict :=
+  verdictEff (runT presentRule sig0 e).1.toOption (runT (boundsRule true) (sigB []) e).1.toOption
+
+def appClasses (e : P) : List (String × String × Verdict) :=
+  ((runT presentRule sig0 e).2.toList.flatMap (eventRows sig0)).map fun (_, r) => (r.kind, r.name, r.verdict)
+
+-- 1. seat GAP's smallest program (its section 9.6 (b)): refused today, admitted by bounds
+def pGetOrElse : P := .succeed (app "getOrElse" [app "some" [natT 1], strT "d"])
+#guard (Checker.check sig0 [] [] pGetOrElse).toOption.isNone
+#guard ((runT (boundsRule true) (sigB []) pGetOrElse).1.toOption.map fun t => t.answer.normalize) == some (Ty.join .nat .string)
+#guard classOf pGetOrElse == .admission
+#guard (appClasses pGetOrElse).contains ("atom", "getOrElse", .admission)
+#guard (appClasses pGetOrElse).contains ("atom", "some", .same)
+
+-- 2. `ite` on two types with no order
+def pIte : P := .succeed (app "ite" [boolT true, natT 1, strT "a"])
+#guard classOf pIte == .admission
+#guard (appClasses pIte) == [("atom", "ite", .admission)]
+
+-- 3. the list append of two lists with no order, and `cons` of a string onto a list of numbers
+def pAppend : P :=
+  .succeed (app "append" [app "cons" [natT 1, app "nil" []], app "cons" [strT "a", app "nil" []]])
+#guard classOf pAppend == .admission
+#guard (appClasses pAppend).contains ("atom", "append", .admission)
+def pCons : P := .succeed (app "cons" [strT "a", app "cons" [natT 1, app "nil" []]])
+#guard classOf pCons == .admission
+
+-- 4. a program that both admit at one type: no class but `same`
+def pSame : P := .succeed (app "ite" [boolT true, natT 1, natT 2])
+#guard classOf pSame == .same
+#guard (appClasses pSame) == [("atom", "ite", .same)]
+
+-- 5. a program that both refuse, at the same place: a cell written at another type
+def pRefuse : P := .bind (.perform .refMake (natT 1)) (.perform .refSet (app "pair" [.var 0, strT "x"]))
+#guard classOf pRefuse == .bothRefuse
+#guard (appClasses pRefuse).contains ("row", "refSet", .bothRefuse)
+-- by bounds the cell's parameter is the join `nat | string`, and the guard refuses the cell
+#guard (matchB [] (.prod (.refOf (.var 0)) (.var 0)) (Ty.prod (.refOf .nat) .string)).isNone
+
+-- 6. `Ref.modify` with a binder term whose answer is a pair over a union: seat T3b's F6. The
+-- present match admits the raw type and refuses its normal form; the match by bounds admits both.
+def f6Result : Ty := .prod (.var 1) (.var 0)
+def f6Raw : Ty := .prod (.union (.lit "a") (.lit "b")) .nat
+#guard f6Raw != f6Raw.normalize
+#guard (Ty.matchTemplate [(0, .nat)] f6Result f6Raw).isSome
+#guard (Ty.matchTemplate [(0, .nat)] f6Result f6Raw.normalize).isNone
+#guard ((matchB [(0, .nat)] f6Result f6Raw).map fun σ => (Ty.instantiate σ (.var 1)).normalize) == some (Ty.join (.lit "a") (.lit "b"))
+#guard ((matchB [(0, .nat)] f6Result f6Raw.normalize).map fun σ => (Ty.instantiate σ (.var 1)).normalize) == some (Ty.join (.lit "a") (.lit "b"))
+-- and the seed is kept: the term's candidate for the cell's parameter is checked, not joined
+#guard (matchB [(0, .nat)] f6Result (.prod .bool .string)).isNone
+#guard ((matchB [(0, .string)] f6Result (.prod .bool (.lit "a"))).map fun σ => Ty.instantiate σ (.var 0)) == some .string
+
+-- 7. red controls of the classes: each class is reported when it is there
+#guard verdictTy (some .nat) none == .regression
+#guard verdictTy none (some .nat) == .admission
+#guard verdictTy (some .nat) (some .string) == .different
+#guard verdictTy (some (.union .nat .nat)) (some .nat) == .sameNormal
+#guard verdictTy (some .nat) (some .nat) == .same
+#guard verdictTy none none == .bothRefuse
+#guard !sameResult (.ok ⟨.nat, .never, Requirement.empty⟩) (.ok ⟨.string, .never, Requirement.empty⟩)
+-- the traced copy records a refusing run's events up to the refusal
+#guard (runT presentRule sig0 pIte).2.size == 1
+-- a present match that the order does not support is seen as a regression: a cell beside its
+-- content as two arguments, with the `join` flag (the finite model's family S2)
+#guard (Ty.matchTemplateArgs [] [.refOf (.var 0), .var 0] [.refOf (.lit "a"), .string] true).isSome
+#guard (matchArgsB [.refOf (.var 0), .var 0] [.refOf (.lit "a"), .string]).isNone
+#guard !Ty.sub (Ty.refOf (.lit "a")) (Ty.refOf .string)
+
+#eval IO.println "self test: every guard holds"
+
+end Bounds

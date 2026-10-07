@@ -853,6 +853,11 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   `Ref.modify`'s `B` is such a parameter: it first occurs in the result of the row's binder term.
   The checker binds `B` from the term's raw type (`bindTerm`, `src/Effect4/Program/Typing/Rules.lean`)
   and claims no completeness there (the state plan's T3b).
+  The match by bounds is ratified to replace this match (decisions row 299).
+  It joins each parameter's lower bounds, and it reads a request up to its normal form.
+  A probe compiled its laws in scratch files: sound against `Ty.subN`, least, and complete with
+  no anchored premise (`docs/research/2026-10-06-seat-BOUNDS-receipt.md`, sections 6.5 and 10).
+  None is a theorem of the tree, and the present match stands until that slice lands.
 - **Minimal type slices of a monotone view (`slice-lattice-minimal`)**: The statement fixes a view: a
   monotone map from the type slices of one program to a preorder of types.
   A type slice is the list of its kept sites, and a smaller type slice keeps less.

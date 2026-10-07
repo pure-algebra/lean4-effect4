@@ -1,0 +1,58 @@
+bases: U13 has 13 types, U6 has 6
+atom pair: 144 applications, 0 ms
+atom getOrElse: 748 applications, 0 ms
+atom ite: 2312 applications, 0 ms
+atom some: 17 applications, 0 ms
+atom cons: 748 applications, 0 ms
+atom get: 352 applications, 0 ms
+atom append: 1936 applications, 0 ms
+atom mapGet: 405 applications, 0 ms
+atom mapSet: 1386 applications, 0 ms
+atom mapKeys: 45 applications, 0 ms
+atom mapEntries: 45 applications, 0 ms
+atom mapFromEntries: 185 applications, 0 ms
+atom take: 352 applications, 0 ms
+atom drop: 352 applications, 0 ms
+row refMake: 17 applications, 0 ms
+row refGet: 98 applications, 0 ms
+row refSet: 14074 applications, 0 ms
+row refGetAndSet: 14074 applications, 0 ms
+row refSetAndGet: 14074 applications, 0 ms
+row refUpdateWith: 98 applications, 0 ms
+row refGetAndUpdateWith: 98 applications, 0 ms
+row refUpdateAndGetWith: 98 applications, 0 ms
+row refUpdateSomeWith: 98 applications, 0 ms
+row refGetAndUpdateSomeWith: 98 applications, 0 ms
+row refUpdateSomeAndGetWith: 98 applications, 0 ms
+row refModifyWith: 98 applications, 0 ms
+row refModifySomeWith: 98 applications, 0 ms
+row deferredIsDone: 674 applications, 0 ms
+row deferredPoll: 674 applications, 0 ms
+row deferredSucceed: 23487 applications, 0 ms
+row deferredFail: 23487 applications, 0 ms
+row deferredAwait: 674 applications, 0 ms
+binder term update: 17 applications, 0 ms
+binder term update: 17 applications, 0 ms
+binder term update: 17 applications, 0 ms
+binder term updateSome: 44 applications, 0 ms
+binder term updateSome: 44 applications, 0 ms
+binder term updateSome: 44 applications, 0 ms
+binder term modify: 4244 applications, 0 ms
+binder term modify: 4244 applications, 0 ms
+binder term modify: 4244 applications, 0 ms
+binder term modifySome: 7864 applications, 0 ms
+binder term modifySome: 7864 applications, 0 ms
+binder term modifySome: 7864 applications, 0 ms
+S1 a product under a cell: 711 applications, 0 ms
+S2 a cell beside its content, two arguments, join: 1666 applications, 0 ms
+S3 a cell beside its content, two arguments: 1666 applications, 0 ms
+S4 the content before its cell: 14074 applications, 0 ms
+S5 a list of lists: 46 applications, 0 ms
+S6 one parameter twice in a pair: 4244 applications, 0 ms
+S7 one parameter at two cells: 14373 applications, 0 ms
+S8 a contravariant argument beside a covariant one: 765 applications, 0 ms
+S9 two contravariant arguments: 349 applications, 0 ms
+S10 a tuple of three: 224 applications, 0 ms
+S11 a record of two fields: 349 applications, 0 ms
+families 55; applications 176118
+wall=285s exit=0

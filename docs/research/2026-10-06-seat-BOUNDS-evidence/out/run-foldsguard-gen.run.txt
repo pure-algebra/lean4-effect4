@@ -1,0 +1,2 @@
+./run1.sh: line 15: 12225 Terminated: 15          "$SLOT" lake env lean -M6144 -DmaxErrors=200 "$S/$name.lean" > "$S/$O/$name.log" 2>&1
+FoldsGuardGenAll: wall 332 s, exit 143

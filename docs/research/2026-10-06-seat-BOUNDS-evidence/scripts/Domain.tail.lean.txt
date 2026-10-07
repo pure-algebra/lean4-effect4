@@ -1,0 +1,8 @@
+/- Seat BOUNDS: the run of the exhaustive finite model (`DomainLib.lean`): every family against its
+whole domain of normal requests. -/
+namespace Bounds
+
+#guard U13.length == 13
+#eval runDomain
+
+end Bounds

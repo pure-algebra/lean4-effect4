@@ -67,6 +67,22 @@ The order of the arguments no longer matters. An admitted program keeps its type
 normal form: where the present rule succeeds with two candidates, one is above the other, and
 the join is that one.
 
+**Corrected since** (seat BOUNDS's receipt, sections 6.2, 6.3 and 6.8; 2026-10-06).
+
+- `Ty` has five contravariant positions, and each stands under a nominal reference:
+  `Context.Context[0]`, `Layer.Layer[0]`, `Layer.Variance[0]`, `Queue.Enqueue[0]` and
+  `Queue.Enqueue[1]`. So the reading above is false of `Ty`.
+- It is true of every template of the tree: no template holds a nominal reference (tested, a
+  guard of the probe). The slice that lands the match refuses such a template at a signature's
+  admission (decisions row 299).
+- The rule still needs no meet. A contravariant occurrence gives no candidate, and the guard
+  checks its bound.
+- The rule's first case is no case of the function. The guard of the match fixes a parameter
+  at an invariant occurrence.
+- Finding 5's last point is corrected too. One TypeScript parameter for each covariant
+  occurrence refuses two calls that today's `append` accepts. The probe's whole form keeps
+  them: a parameter is an argument's whole type.
+
 ### 5. What it would give beyond the repair (hypotheses to test)
 
 - **A completeness theorem without the anchored premise.** The claim `template-match-anchored`

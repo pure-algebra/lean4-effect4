@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+"""Seat BOUNDS: every count of the receipt, computed from the row files of one output folder.
+
+    python3 agg.py <out-folder>
+
+It reads the files that the probes wrote (`*-programs.tsv`, `*-apps.tsv`, `*-apps-bounds.tsv`,
+`domain.tsv`, `domain-raw.tsv`, `*-folds.tsv`, the logs and the tsgo outputs) and prints one
+block for each section of the receipt. A count that the receipt gives is a line of this output.
+"""
+import collections
+import csv
+import os
+import re
+import sys
+
+OUT = sys.argv[1] if len(sys.argv) > 1 else "out"
+csv.field_size_limit(10 ** 9)
+
+
+def rows(name):
+    path = os.path.join(OUT, name)
+    if not os.path.exists(path):
+        return []
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f, delimiter="\t", quoting=csv.QUOTE_NONE))
+
+
+def table(title, counter, header):
+    print(f"\n{title}")
+    print("| " + " | ".join(header) + " | count |")
+    print("| " + " | ".join("---" for _ in header) + " | --- |")
+    for key, n in sorted(counter.items(), key=lambda kv: (-kv[1], kv[0])):
+        key = key if isinstance(key, tuple) else (key,)
+        print("| " + " | ".join(str(k) for k in key) + f" | {n} |")
+
+
+def log_tail(name):
+    path = os.path.join(OUT, name)
+    if not os.path.exists(path):
+        return "(no log)"
+    lines = open(path).read().strip().split("\n")
+    return lines[-1] if lines else "(empty)"
+
+
+print(f"# Seat BOUNDS: the counts, from `{OUT}`")
+
+# ------------------------------------------------------------------ the probes' logs
+print("\n## The probes: the last line of each log (wall time and Lean's exit code)")
+for name in ["Variance", "Laws", "SelfTest", "CensusGen", "CensusTruth", "Domain", "DomainRaw",
+             "FoldsGenAll", "FoldsTruthAll", "Timing", "ModelTs"]:
+    path = os.path.join(OUT, name + ".log")
+    errors = guards = 0
+    if os.path.exists(path):
+        text = open(path).read()
+        errors = len(re.findall(r": error", text))
+    src = name + ".tail.lean"
+    if os.path.exists(src):
+        guards = len(re.findall(r"^#guard", open(src).read(), flags=re.M))
+    print(f"- {name}: {log_tail(name + '.log')}; error lines {errors}; guards in its tail {guards}")
+
+# ------------------------------------------------------------------ the variance table
+print("\n## Assignment 1: the positions of `Ty` (the Variance log)")
+path = os.path.join(OUT, "Variance.log")
+if os.path.exists(path):
+    for line in open(path):
+        if line.startswith(("positions:", "contravariant positions:", "templates:", "occurrences")):
+            print("- " + line.strip())
+
+# ------------------------------------------------------------------ the census
+for label, title in [("truth", "the truth lane's programs"), ("gen", "the generated corpus")]:
+    progs = rows(f"{label}-programs.tsv")
+    apps = rows(f"{label}-apps.tsv")
+    appsB = rows(f"{label}-apps-bounds.tsv")
+    if not progs:
+        continue
+    print(f"\n## Assignment 2: the census of {title}")
+    print(f"- programs: {len(progs)}; admitted by the present checker: "
+          f"{sum(p['present'] == 'true' for p in progs)}; admitted by the checker by bounds: "
+          f"{sum(p['bounds'] == 'true' for p in progs)}; by bounds with the binder term at its normal form: "
+          f"{sum(p['boundsNormalBinder'] == 'true' for p in progs)}")
+    print(f"- programs where the traced copy differs from `Checker.check`: "
+          f"{sum(p['tracedAgrees'] != 'true' for p in progs)}")
+    table("Programs by verdict (present against bounds):",
+          collections.Counter(p["verdict"] for p in progs), ["verdict"])
+    print(f"\n- applications met by the present checker: {len(apps)}; met by the checker by bounds: {len(appsB)}")
+    kinds = collections.Counter()
+    for a in apps:
+        kinds[(a["kind"], "template" if a["template"] == "true" else "no template")] += 1
+    table("Applications by kind:", kinds, ["kind", "scheme or request"])
+    for col, name in [("verdict", "the match by bounds on the same inputs"),
+                      ("verdictF", "the note's rule, word for word"),
+                      ("boundsAtNormal", "the match by bounds at the normal form of each input"),
+                      ("presentAtNormal", "the present match at the normal form of each input")]:
+        table(f"Applications by verdict of {name}, against the present match:",
+              collections.Counter((a["kind"], a[col]) for a in apps), ["kind", "verdict"])
+    for v, word in [("different", "different instances"), ("regression", "regressions"),
+                    ("admission", "new admissions")]:
+        n = sum(a["verdict"] == v for a in apps)
+        nb = sum(a["verdict"] == v for a in appsB)
+        print(f"- {word}: {n} among the applications of the present run; {nb} among those of the run by bounds")
+    print(f"- applications with an input whose raw type is not its normal form: "
+          f"{sum(a['rawNotNormal'] == 'true' for a in apps)}")
+    print(f"- applications where some parameter has two lower bounds or more: "
+          f"{sum(int(a['maxLowers']) >= 2 for a in apps)}; with two lower bounds that have no order: "
+          f"{sum(a['unordered'] == 'true' for a in apps)}")
+    table("Template applications by name:",
+          collections.Counter((a["kind"], a["name"], a["verdict"]) for a in apps if a["template"] == "true"),
+          ["kind", "name", "verdict"])
+
+# ------------------------------------------------------------------ the finite model
+dom = rows("domain.tsv")
+if dom:
+    print("\n## Assignments 2 and 3: the exhaustive finite model (`domain.tsv`)")
+    cols = [c for c in dom[0].keys() if c not in ("family", "tree", "parameters")]
+    for tree, title in [("true", "the families of the tree"), ("false", "the families that the tree does not hold")]:
+        fam = [d for d in dom if d["tree"] == tree]
+        print(f"\n- {title}: {len(fam)} families")
+        for c in cols:
+            print(f"    - {c}: {sum(int(d[c]) for d in fam)}")
+    print("\n| family | parameters | applications | admissible | present admits | bounds admits | "
+          "regressions | different | admitted: order | admitted: argument | admitted: member | "
+          "not complete | not least | present not sound in the order | F differs | "
+          "present depends on order | bounds depends on order |")
+    print("| " + " | ".join("---" for _ in range(17)) + " |")
+    for d in dom:
+        print("| " + " | ".join(d[c] for c in
+              ["family", "parameters", "applications", "admissible", "present admits", "bounds admits",
+               "regressions", "different", "admitted: order", "admitted: argument", "admitted: member",
+               "not complete", "not least", "present not sound in the order", "F differs",
+               "present depends on order", "bounds depends on order"]) + " |")
+    # by kind of site: the three guards
+    kinds = collections.OrderedDict()
+    for d in dom:
+        if d["tree"] != "true":
+            continue
+        kind = "atoms" if d["family"].startswith("atom ") else "rows" if d["family"].startswith("row ") else "binder terms"
+        e = kinds.setdefault(kind, collections.Counter())
+        e["families"] += 1
+        for c in cols:
+            e[c] += int(d[c])
+    guard_cols = [c for c in cols if c.startswith("guard ")]
+    if guard_cols:
+        print("\nThe three guards, by kind of site (the tree's families):")
+        head = ["kind", "families", "applications", "present admits", "bounds admits"] + guard_cols
+        print("| " + " | ".join(head) + " |")
+        print("| " + " | ".join("---" for _ in head) + " |")
+        for kind, e in kinds.items():
+            print("| " + " | ".join([kind] + [str(e[c]) for c in head[1:]]) + " |")
+        print("\nThe three guards, by family (the tree's families where a guard refuses an answer of the match by bounds):")
+        head = ["family", "parameters", "present admits", "bounds admits"] + guard_cols
+        print("| " + " | ".join(head) + " |")
+        print("| " + " | ".join("---" for _ in head) + " |")
+        for d in dom:
+            if d["tree"] == "true" and any(d[c] != d["bounds admits"] for c in guard_cols if c.endswith("bounds admits")):
+                print("| " + " | ".join(d[c] for c in head) + " |")
+    # by operation: the new admissions of the tree's atoms, rows and binder terms
+    by = collections.OrderedDict()
+    for d in dom:
+        if d["tree"] != "true":
+            continue
+        name = d["family"]
+        e = by.setdefault(name, [0, 0, 0, 0, 0])
+        e[0] += int(d["applications"])
+        e[1] += int(d["present admits"])
+        e[2] += int(d["admitted: order"])
+        e[3] += int(d["admitted: argument"])
+        e[4] += int(d["admitted: member"])
+    print("\nNew admissions of the model by operation (the tree's families; a binder term's three seeds summed):")
+    print("| operation | applications | present admits | new: the order only | new: two arguments | new: one argument's members |")
+    print("| --- | --- | --- | --- | --- | --- |")
+    for name, e in by.items():
+        print(f"| {name} | {e[0]} | {e[1]} | {e[2]} | {e[3]} | {e[4]} |")
+
+raw = rows("domain-raw.tsv")
+if raw:
+    print("\n## The match reads a request up to the normal form (`domain-raw.tsv`)")
+    cols = [c for c in raw[0].keys() if c not in ("family", "tree", "parameters")]
+    for tree, title in [("true", "the families of the tree"), ("false", "the families that the tree does not hold")]:
+        fam = [d for d in raw if d["tree"] == tree]
+        print(f"\n- {title}: {len(fam)} families")
+        for c in cols:
+            print(f"    - {c}: {sum(int(d[c]) for d in fam)}")
+    print("\nFamilies where the present match admits a raw type and refuses its normal form:")
+    print("| family | parameters | raw applications | not normal | present: raw only |")
+    print("| --- | --- | --- | --- | --- |")
+    for d in raw:
+        if int(d["present: raw only"]) > 0:
+            print(f"| {d['family']} | {d['parameters']} | {d['raw applications']} | "
+                  f"{d['with an argument that is not normal']} | {d['present: raw only']} |")
+
+# ------------------------------------------------------------------ the omissions
+for label, title in [("truth", "the truth lane's programs"), ("gen", "the generated corpus")]:
+    folds = rows(f"{label}-folds.tsv")
+    if not folds:
+        continue
+    print(f"\n## Assignment 2, third domain: an omission to `never` at each address of {title}")
+    print(f"- omissions: {len(folds)}; at an effect address: {sum(f['kind'] == 'effect' for f in folds)}; "
+          f"at a term address: {sum(f['kind'] == 'term' for f in folds)}")
+    table("Omissions by verdict:", collections.Counter((f["kind"], f["present"], f["bounds"], f["verdict"])
+                                                        for f in folds),
+          ["address", "present admits", "bounds admits", "verdict"])
+    refused = [f for f in folds if f["present"] == "false"]
+    print(f"\n- refused by the present checker: {len(refused)}; of them admitted by bounds: "
+          f"{sum(f['bounds'] == 'true' for f in refused)}; refused by both at the same refusal: "
+          f"{sum(f['refusal'] == 'same refusal' for f in refused)}; refused by both at another refusal: "
+          f"{sum(f['refusal'] == 'another refusal' for f in refused)}")
+    print(f"- admitted by the present checker and refused by bounds: "
+          f"{sum(f['verdict'] == 'regression' for f in folds)}; admitted by both at other types: "
+          f"{sum(f['verdict'] == 'different' for f in folds)}; at types with one normal form and other raw forms: "
+          f"{sum(f['verdict'] == 'sameNormal' for f in folds)}")
+    adm = [f for f in folds if f["verdict"] == "admission"]
+    table("New admissions by the application that only the match by bounds admits:",
+          collections.Counter(f["admittedAt"] for f in adm), ["applications"])
+    table("New admissions by the present checker's refusal:",
+          collections.Counter(re.sub(r"@.*", "", f["presentRefusal"]) for f in adm), ["refusal"])
+    table("New admissions: the type by bounds against the full program's type:",
+          collections.Counter(f["boundsAgainstFull"] for f in adm), ["columns"])
+    moved = [f for f in folds if f["refusal"] == "another refusal"]
+    table("Refused by both at another refusal: the present refusal, then the refusal by bounds:",
+          collections.Counter((re.sub(r"@.*", "", f["presentRefusal"]), re.sub(r"@.*", "", f["boundsRefusal"]))
+                              for f in moved), ["present", "bounds"])
+    table("Programs with a new admission:", collections.Counter(f["program"] for f in adm), ["program"])
+
+# ------------------------------------------------------------------ tsgo
+print("\n## Assignment 6: tsgo")
+for name in sorted(os.listdir(OUT)):
+    if name.startswith("tsgo-") and name.endswith(".txt"):
+        text = open(os.path.join(OUT, name)).read()
+        exits = re.findall(r"^exit=(\d+)", text, flags=re.M)
+        print(f"- {name}: errors {len(re.findall(r'error TS', text))}; exit {exits[-1] if exits else '?'}")
+for name in ["tsgo2-summary.txt", "model-ts-summary.txt"]:
+    path = os.path.join(OUT, name)
+    if os.path.exists(path):
+        print(f"\n## Assignment 6, second part: {name}\n")
+        print(open(path).read().rstrip())
+for name in sorted(os.listdir(OUT)):
+    if name.startswith("gap-compare-"):
+        print(f"\n## Assignment 5: {name}")
+        for line in open(os.path.join(OUT, name)):
+            if not line.startswith(("real", "user", "sys", "python3")) and line.strip():
+                print("    " + line.rstrip()[:400])

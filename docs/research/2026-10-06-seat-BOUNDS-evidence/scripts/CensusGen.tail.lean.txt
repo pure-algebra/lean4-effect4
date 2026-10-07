@@ -1,0 +1,10 @@
+/- Seat BOUNDS: the differential census on the generated corpus (`Test/Program/Gen.lean`): 400
+programs at depth 4, named as `tools/Drivers/Corpus.lean` names them, at the empty row table. -/
+namespace Bounds
+
+def genProgs : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", ([] : RowTable), Test.Program.Gen.program i 4)
+
+#eval runCorpus "gen" genProgs
+
+end Bounds

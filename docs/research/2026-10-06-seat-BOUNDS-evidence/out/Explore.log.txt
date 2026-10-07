@@ -1,0 +1,377 @@
+cands.induct : ∀ (motive_1 : Variance → Ty → Ty → Prop) (motive_2 : Variance → String → Nat → List Ty → List Ty → Prop)
+  (motive_3 : Variance → List Ty → List Ty → Prop)
+  (motive_4 : Variance → List (String × Bool × Ty) → List (String × Bool × Ty) → Prop),
+  (∀ (v : Variance) (i : Nat) (r : Ty), motive_1 v (var i) r) →
+    (∀ (v : Variance) (t r : Ty), motive_1 v t r → motive_1 v t.option r.option) →
+      (∀ (v : Variance) (t r : Ty), motive_1 v t r → motive_1 v t.list r.list) →
+        (∀ (v : Variance) (t r : Ty), motive_1 v t r → motive_1 v t.causeOf r.causeOf) →
+          (∀ (v : Variance) (t r : Ty), motive_1 (comp v Variance.inv) t r → motive_1 v t.refOf r.refOf) →
+            (∀ (v : Variance) (a b c d : Ty), motive_1 v a c → motive_1 v b d → motive_1 v (a.prod b) (c.prod d)) →
+              (∀ (v : Variance) (a b c d : Ty),
+                  motive_1 v a c → motive_1 v b d → motive_1 v (a.except b) (c.except d)) →
+                (∀ (v : Variance) (a b c d : Ty),
+                    motive_1 v a c → motive_1 v b d → motive_1 v (a.exitOf b) (c.exitOf d)) →
+                  (∀ (v : Variance) (a b c d : Ty),
+                      motive_1 v a c → motive_1 v b d → motive_1 v (a.fiberOf b) (c.fiberOf d)) →
+                    (∀ (v : Variance) (a b c d : Ty),
+                        motive_1 (comp v Variance.inv) a c →
+                          motive_1 (comp v Variance.inv) b d → motive_1 v (a.deferredOf b) (c.deferredOf d)) →
+                      (∀ (v : Variance) (a b c d : Ty),
+                          motive_1 v a c → motive_1 v b d → motive_1 v (a.union b) (c.union d)) →
+                        (∀ (v : Variance) (a b c d : Ty),
+                            motive_1 (comp v Variance.inv) a c → motive_1 v b d → motive_1 v (a.map b) (c.map d)) →
+                          (∀ (v : Variance) (fs gs : List (String × Bool × Ty)),
+                              motive_4 v fs gs → motive_1 v (record fs) (record gs)) →
+                            (∀ (v : Variance) (ts rs : List Ty), motive_3 v ts rs → motive_1 v (tuple ts) (tuple rs)) →
+                              (∀ (v : Variance) (ts : List Ty) (other : String) (rs : List Ty),
+                                  motive_2 v other 0 ts rs → motive_1 v (app other ts) (app other rs)) →
+                                (∀ (v : Variance) (name : String) (ts : List Ty) (other : String) (rs : List Ty),
+                                    ¬name = other → motive_1 v (app name ts) (app other rs)) →
+                                  (∀ (v : Variance) (t c d : Ty),
+                                      (∀ (i : Nat), t = var i → False) →
+                                        (∀ (a b : Ty), t = a.union b → False) →
+                                          motive_1 v t c → motive_1 v t d → motive_1 v t (c.union d)) →
+                                    (∀ (t : Ty) (v : Variance) (template : Ty),
+                                        (∀ (i : Nat), template = var i → False) →
+                                          (∀ (c d : Ty), t = c.union d → False) →
+                                            (∀ (t_1 r : Ty), template = t_1.option → t = r.option → False) →
+                                              (∀ (t_1 r : Ty), template = t_1.list → t = r.list → False) →
+                                                (∀ (t_1 r : Ty), template = t_1.causeOf → t = r.causeOf → False) →
+                                                  (∀ (t_1 r : Ty), template = t_1.refOf → t = r.refOf → False) →
+                                                    (∀ (a b c d : Ty), template = a.prod b → t = c.prod d → False) →
+                                                      (∀ (a b c d : Ty),
+                                                          template = a.except b → t = c.except d → False) →
+                                                        (∀ (a b c d : Ty),
+                                                            template = a.exitOf b → t = c.exitOf d → False) →
+                                                          (∀ (a b c d : Ty),
+                                                              template = a.fiberOf b → t = c.fiberOf d → False) →
+                                                            (∀ (a b c d : Ty),
+                                                                template = a.deferredOf b →
+                                                                  t = c.deferredOf d → False) →
+                                                              (∀ (a b c d : Ty),
+                                                                  template = a.union b → t = c.union d → False) →
+                                                                (∀ (a b c d : Ty),
+                                                                    template = a.map b → t = c.map d → False) →
+                                                                  (∀ (fs gs : List (String × Bool × Ty)),
+                                                                      template = record fs → t = record gs → False) →
+                                                                    (∀ (ts rs : List Ty),
+                                                                        template = tuple ts → t = tuple rs → False) →
+                                                                      (∀ (name : String) (ts : List Ty) (other : String)
+                                                                          (rs : List Ty),
+                                                                          template = app name ts →
+                                                                            t = app other rs → False) →
+                                                                        motive_1 v template t) →
+                                      (∀ (v : Variance) (templates : List (String × Bool × Ty)),
+                                          motive_4 v templates []) →
+                                        (∀ (v : Variance) (templates : List (String × Bool × Ty)) (name : String)
+                                            (fst : Bool) (request : Ty) (rest : List (String × Bool × Ty)),
+                                            List.lookup name templates = none →
+                                              motive_4 v templates rest →
+                                                motive_4 v templates ((name, fst, request) :: rest)) →
+                                          (∀ (v : Variance) (templates : List (String × Bool × Ty)) (name : String)
+                                              (fst : Bool) (request : Ty) (rest : List (String × Bool × Ty))
+                                              (fst_1 : Bool) (ty : Ty),
+                                              List.lookup name templates = some (fst_1, ty) →
+                                                motive_1 v ty request →
+                                                  motive_4 v templates rest →
+                                                    motive_4 v templates ((name, fst, request) :: rest)) →
+                                            (∀ (v : Variance) (name : String) (k : Nat) (ty : Ty) (rest : List Ty)
+                                                (request : Ty) (remaining : List Ty),
+                                                motive_1 (comp v (argVariance name k)) ty request →
+                                                  motive_2 v name (k + 1) rest remaining →
+                                                    motive_2 v name k (ty :: rest) (request :: remaining)) →
+                                              (∀ (t : List Ty) (v : Variance) (name : String) (k : Nat)
+                                                  (templates : List Ty),
+                                                  (∀ (ty : Ty) (rest : List Ty) (request : Ty) (remaining : List Ty),
+                                                      templates = ty :: rest → t = request :: remaining → False) →
+                                                    motive_2 v name k templates t) →
+                                                (∀ (v : Variance) (ty : Ty) (rest : List Ty) (request : Ty)
+                                                    (remaining : List Ty),
+                                                    motive_1 v ty request →
+                                                      motive_3 v rest remaining →
+                                                        motive_3 v (ty :: rest) (request :: remaining)) →
+                                                  (∀ (t : List Ty) (v : Variance) (templates : List Ty),
+                                                      (∀ (ty : Ty) (rest : List Ty) (request : Ty)
+                                                          (remaining : List Ty),
+                                                          templates = ty :: rest → t = request :: remaining → False) →
+                                                        motive_3 v templates t) →
+                                                    ∀ (v : Variance) (template request : Ty),
+                                                      motive_1 v template request
+cands.induct_unfolding : ∀ (motive_1 : Variance → Ty → Ty → List Cand → Prop)
+  (motive_2 : Variance → String → Nat → List Ty → List Ty → List Cand → Prop)
+  (motive_3 : Variance → List Ty → List Ty → List Cand → Prop)
+  (motive_4 : Variance → List (String × Bool × Ty) → List (String × Bool × Ty) → List Cand → Prop),
+  (∀ (v : Variance) (i : Nat) (r : Ty), motive_1 v (var i) r [(i, v, r)]) →
+    (∀ (v : Variance) (t r : Ty), motive_1 v t r (cands v t r) → motive_1 v t.option r.option (cands v t r)) →
+      (∀ (v : Variance) (t r : Ty), motive_1 v t r (cands v t r) → motive_1 v t.list r.list (cands v t r)) →
+        (∀ (v : Variance) (t r : Ty), motive_1 v t r (cands v t r) → motive_1 v t.causeOf r.causeOf (cands v t r)) →
+          (∀ (v : Variance) (t r : Ty),
+              motive_1 (comp v Variance.inv) t r (cands (comp v Variance.inv) t r) →
+                motive_1 v t.refOf r.refOf (cands (comp v Variance.inv) t r)) →
+            (∀ (v : Variance) (a b c d : Ty),
+                motive_1 v a c (cands v a c) →
+                  motive_1 v b d (cands v b d) → motive_1 v (a.prod b) (c.prod d) (cands v a c ++ cands v b d)) →
+              (∀ (v : Variance) (a b c d : Ty),
+                  motive_1 v a c (cands v a c) →
+                    motive_1 v b d (cands v b d) → motive_1 v (a.except b) (c.except d) (cands v a c ++ cands v b d)) →
+                (∀ (v : Variance) (a b c d : Ty),
+                    motive_1 v a c (cands v a c) →
+                      motive_1 v b d (cands v b d) →
+                        motive_1 v (a.exitOf b) (c.exitOf d) (cands v a c ++ cands v b d)) →
+                  (∀ (v : Variance) (a b c d : Ty),
+                      motive_1 v a c (cands v a c) →
+                        motive_1 v b d (cands v b d) →
+                          motive_1 v (a.fiberOf b) (c.fiberOf d) (cands v a c ++ cands v b d)) →
+                    (∀ (v : Variance) (a b c d : Ty),
+                        motive_1 (comp v Variance.inv) a c (cands (comp v Variance.inv) a c) →
+                          motive_1 (comp v Variance.inv) b d (cands (comp v Variance.inv) b d) →
+                            motive_1 v (a.deferredOf b) (c.deferredOf d)
+                              (cands (comp v Variance.inv) a c ++ cands (comp v Variance.inv) b d)) →
+                      (∀ (v : Variance) (a b c d : Ty),
+                          motive_1 v a c (cands v a c) →
+                            motive_1 v b d (cands v b d) →
+                              motive_1 v (a.union b) (c.union d) (cands v a c ++ cands v b d)) →
+                        (∀ (v : Variance) (a b c d : Ty),
+                            motive_1 (comp v Variance.inv) a c (cands (comp v Variance.inv) a c) →
+                              motive_1 v b d (cands v b d) →
+                                motive_1 v (a.map b) (c.map d) (cands (comp v Variance.inv) a c ++ cands v b d)) →
+                          (∀ (v : Variance) (fs gs : List (String × Bool × Ty)),
+                              motive_4 v fs gs (candsFields v fs gs) →
+                                motive_1 v (record fs) (record gs) (candsFields v fs gs)) →
+                            (∀ (v : Variance) (ts rs : List Ty),
+                                motive_3 v ts rs (candsItems v ts rs) →
+                                  motive_1 v (tuple ts) (tuple rs) (candsItems v ts rs)) →
+                              (∀ (v : Variance) (ts : List Ty) (other : String) (rs : List Ty),
+                                  motive_2 v other 0 ts rs (candsArgs v other 0 ts rs) →
+                                    motive_1 v (app other ts) (app other rs) (candsArgs v other 0 ts rs)) →
+                                (∀ (v : Variance) (name : String) (ts : List Ty) (other : String) (rs : List Ty),
+                                    ¬name = other → motive_1 v (app name ts) (app other rs) []) →
+                                  (∀ (v : Variance) (t c d : Ty),
+                                      (∀ (i : Nat), t = var i → False) →
+                                        (∀ (a b : Ty), t = a.union b → False) →
+                                          motive_1 v t c (cands v t c) →
+                                            motive_1 v t d (cands v t d) →
+                                              motive_1 v t (c.union d) (cands v t c ++ cands v t d)) →
+                                    (∀ (t : Ty) (v : Variance) (template : Ty),
+                                        (∀ (i : Nat), template = var i → False) →
+                                          (∀ (c d : Ty), t = c.union d → False) →
+                                            (∀ (t_1 r : Ty), template = t_1.option → t = r.option → False) →
+                                              (∀ (t_1 r : Ty), template = t_1.list → t = r.list → False) →
+                                                (∀ (t_1 r : Ty), template = t_1.causeOf → t = r.causeOf → False) →
+                                                  (∀ (t_1 r : Ty), template = t_1.refOf → t = r.refOf → False) →
+                                                    (∀ (a b c d : Ty), template = a.prod b → t = c.prod d → False) →
+                                                      (∀ (a b c d : Ty),
+                                                          template = a.except b → t = c.except d → False) →
+                                                        (∀ (a b c d : Ty),
+                                                            template = a.exitOf b → t = c.exitOf d → False) →
+                                                          (∀ (a b c d : Ty),
+                                                              template = a.fiberOf b → t = c.fiberOf d → False) →
+                                                            (∀ (a b c d : Ty),
+                                                                template = a.deferredOf b →
+                                                                  t = c.deferredOf d → False) →
+                                                              (∀ (a b c d : Ty),
+                                                                  template = a.union b → t = c.union d → False) →
+                                                                (∀ (a b c d : Ty),
+                                                                    template = a.map b → t = c.map d → False) →
+                                                                  (∀ (fs gs : List (String × Bool × Ty)),
+                                                                      template = record fs → t = record gs → False) →
+                                                                    (∀ (ts rs : List Ty),
+                                                                        template = tuple ts → t = tuple rs → False) →
+                                                                      (∀ (name : String) (ts : List Ty) (other : String)
+                                                                          (rs : List Ty),
+                                                                          template = app name ts →
+                                                                            t = app other rs → False) →
+                                                                        motive_1 v template t []) →
+                                      (∀ (v : Variance) (templates : List (String × Bool × Ty)),
+                                          motive_4 v templates [] []) →
+                                        (∀ (v : Variance) (templates : List (String × Bool × Ty)) (name : String)
+                                            (fst : Bool) (request : Ty) (rest : List (String × Bool × Ty)),
+                                            List.lookup name templates = none →
+                                              motive_4 v templates rest (candsFields v templates rest) →
+                                                motive_4 v templates ((name, fst, request) :: rest)
+                                                  (candsFields v templates rest)) →
+                                          (∀ (v : Variance) (templates : List (String × Bool × Ty)) (name : String)
+                                              (fst : Bool) (request : Ty) (rest : List (String × Bool × Ty))
+                                              (fst_1 : Bool) (ty : Ty),
+                                              List.lookup name templates = some (fst_1, ty) →
+                                                motive_1 v ty request (cands v ty request) →
+                                                  motive_4 v templates rest (candsFields v templates rest) →
+                                                    motive_4 v templates ((name, fst, request) :: rest)
+                                                      (cands v ty request ++ candsFields v templates rest)) →
+                                            (∀ (v : Variance) (name : String) (k : Nat) (ty : Ty) (rest : List Ty)
+                                                (request : Ty) (remaining : List Ty),
+                                                motive_1 (comp v (argVariance name k)) ty request
+                                                    (cands (comp v (argVariance name k)) ty request) →
+                                                  motive_2 v name (k + 1) rest remaining
+                                                      (candsArgs v name (k + 1) rest remaining) →
+                                                    motive_2 v name k (ty :: rest) (request :: remaining)
+                                                      (candsArgs v name k (ty :: rest) (request :: remaining))) →
+                                              (∀ (t : List Ty) (v : Variance) (name : String) (k : Nat)
+                                                  (templates : List Ty),
+                                                  (∀ (ty : Ty) (rest : List Ty) (request : Ty) (remaining : List Ty),
+                                                      templates = ty :: rest → t = request :: remaining → False) →
+                                                    motive_2 v name k templates t (candsArgs v name k templates t)) →
+                                                (∀ (v : Variance) (ty : Ty) (rest : List Ty) (request : Ty)
+                                                    (remaining : List Ty),
+                                                    motive_1 v ty request (cands v ty request) →
+                                                      motive_3 v rest remaining (candsItems v rest remaining) →
+                                                        motive_3 v (ty :: rest) (request :: remaining)
+                                                          (candsItems v (ty :: rest) (request :: remaining))) →
+                                                  (∀ (t : List Ty) (v : Variance) (templates : List Ty),
+                                                      (∀ (ty : Ty) (rest : List Ty) (request : Ty)
+                                                          (remaining : List Ty),
+                                                          templates = ty :: rest → t = request :: remaining → False) →
+                                                        motive_3 v templates t (candsItems v templates t)) →
+                                                    ∀ (v : Variance) (template request : Ty),
+                                                      motive_1 v template request (cands v template request)
+cands.eq_1 : ∀ (v : Variance) (request : Ty) (i : Nat), cands v (var i) request = [(i, v, request)]
+cands.eq_16 : ∀ (v : Variance) (template c d : Ty),
+  (∀ (i : Nat), template = var i → False) →
+    (∀ (a b : Ty), template = a.union b → False) →
+      cands v template (c.union d) = cands v template c ++ cands v template d
+cands.eq_17 : ∀ (v : Variance) (template request : Ty),
+  (∀ (i : Nat), template = var i → False) →
+    (∀ (c d : Ty), request = c.union d → False) →
+      (∀ (t r : Ty), template = t.option → request = r.option → False) →
+        (∀ (t r : Ty), template = t.list → request = r.list → False) →
+          (∀ (t r : Ty), template = t.causeOf → request = r.causeOf → False) →
+            (∀ (t r : Ty), template = t.refOf → request = r.refOf → False) →
+              (∀ (a b c d : Ty), template = a.prod b → request = c.prod d → False) →
+                (∀ (a b c d : Ty), template = a.except b → request = c.except d → False) →
+                  (∀ (a b c d : Ty), template = a.exitOf b → request = c.exitOf d → False) →
+                    (∀ (a b c d : Ty), template = a.fiberOf b → request = c.fiberOf d → False) →
+                      (∀ (a b c d : Ty), template = a.deferredOf b → request = c.deferredOf d → False) →
+                        (∀ (a b c d : Ty), template = a.union b → request = c.union d → False) →
+                          (∀ (a b c d : Ty), template = a.map b → request = c.map d → False) →
+                            (∀ (fs gs : List (String × Bool × Ty)),
+                                template = record fs → request = record gs → False) →
+                              (∀ (ts rs : List Ty), template = tuple ts → request = tuple rs → False) →
+                                (∀ (name : String) (ts : List Ty) (other : String) (rs : List Ty),
+                                    template = app name ts → request = app other rs → False) →
+                                  cands v template request = []
+infer.induct_unfolding : ∀ (join : Bool) (motive_1 : Ty.Subst → Ty → Ty → Ty.Subst → Prop)
+  (motive_2 : Ty.Subst → List Ty → List Ty → Ty.Subst → Prop)
+  (motive_3 : Ty.Subst → List (String × Bool × Ty) → List (String × Bool × Ty) → Ty.Subst → Prop),
+  (∀ (σ : Ty.Subst) (i : Nat) (r : Ty), List.lookup i σ = none → motive_1 σ (var i) r (σ ++ [(i, r)])) →
+    (∀ (σ : Ty.Subst) (i : Nat) (r bound : Ty),
+        List.lookup i σ = some bound → (join && bound.sub r) = true → motive_1 σ (var i) r ((i, r) :: σ)) →
+      (∀ (σ : Ty.Subst) (i : Nat) (r bound : Ty),
+          List.lookup i σ = some bound → ¬(join && bound.sub r) = true → motive_1 σ (var i) r σ) →
+        (∀ (σ : Ty.Subst) (t r : Ty),
+            motive_1 σ t r (infer σ t r join) → motive_1 σ t.option r.option (infer σ t r join)) →
+          (∀ (σ : Ty.Subst) (t r : Ty),
+              motive_1 σ t r (infer σ t r join) → motive_1 σ t.list r.list (infer σ t r join)) →
+            (∀ (σ : Ty.Subst) (t r : Ty),
+                motive_1 σ t r (infer σ t r join) → motive_1 σ t.causeOf r.causeOf (infer σ t r join)) →
+              (∀ (σ : Ty.Subst) (t r : Ty),
+                  motive_1 σ t r (infer σ t r join) → motive_1 σ t.refOf r.refOf (infer σ t r join)) →
+                (∀ (σ : Ty.Subst) (a b c d : Ty),
+                    motive_1 σ a c (infer σ a c join) →
+                      motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                        motive_1 σ (a.prod b) (c.prod d) (infer (infer σ a c join) b d join)) →
+                  (∀ (σ : Ty.Subst) (a b c d : Ty),
+                      motive_1 σ a c (infer σ a c join) →
+                        motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                          motive_1 σ (a.except b) (c.except d) (infer (infer σ a c join) b d join)) →
+                    (∀ (σ : Ty.Subst) (a b c d : Ty),
+                        motive_1 σ a c (infer σ a c join) →
+                          motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                            motive_1 σ (a.exitOf b) (c.exitOf d) (infer (infer σ a c join) b d join)) →
+                      (∀ (σ : Ty.Subst) (a b c d : Ty),
+                          motive_1 σ a c (infer σ a c join) →
+                            motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                              motive_1 σ (a.fiberOf b) (c.fiberOf d) (infer (infer σ a c join) b d join)) →
+                        (∀ (σ : Ty.Subst) (a b c d : Ty),
+                            motive_1 σ a c (infer σ a c join) →
+                              motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                                motive_1 σ (a.deferredOf b) (c.deferredOf d) (infer (infer σ a c join) b d join)) →
+                          (∀ (σ : Ty.Subst) (a b c d : Ty),
+                              motive_1 σ a c (infer σ a c join) →
+                                motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                                  motive_1 σ (a.union b) (c.union d) (infer (infer σ a c join) b d join)) →
+                            (∀ (σ : Ty.Subst) (a b c d : Ty),
+                                motive_1 σ a c (infer σ a c join) →
+                                  motive_1 (infer σ a c join) b d (infer (infer σ a c join) b d join) →
+                                    motive_1 σ (a.map b) (c.map d) (infer (infer σ a c join) b d join)) →
+                              (∀ (σ : Ty.Subst) (fs gs : List (String × Bool × Ty)),
+                                  motive_3 σ fs gs (inferFields σ fs gs join) →
+                                    motive_1 σ (record fs) (record gs) (inferFields σ fs gs join)) →
+                                (∀ (σ : Ty.Subst) (ts rs : List Ty),
+                                    motive_2 σ ts rs (inferItems σ ts rs join) →
+                                      motive_1 σ (tuple ts) (tuple rs) (inferItems σ ts rs join)) →
+                                  (∀ (σ : Ty.Subst) (ts : List Ty) (other : String) (rs : List Ty),
+                                      motive_2 σ ts rs (inferItems σ ts rs join) →
+                                        motive_1 σ (app other ts) (app other rs) (inferItems σ ts rs join)) →
+                                    (∀ (σ : Ty.Subst) (name : String) (ts : List Ty) (other : String) (rs : List Ty),
+                                        ¬name = other → motive_1 σ (app name ts) (app other rs) σ) →
+                                      (∀ (σ : Ty.Subst) (t c d : Ty),
+                                          (∀ (i : Nat), t = var i → False) →
+                                            (∀ (a b : Ty), t = a.union b → False) →
+                                              motive_1 σ t c (infer σ t c join) →
+                                                motive_1 (infer σ t c join) t d (infer (infer σ t c join) t d join) →
+                                                  motive_1 σ t (c.union d) (infer (infer σ t c join) t d join)) →
+                                        (∀ (t : Ty) (σ : Ty.Subst) (template : Ty),
+                                            (∀ (i : Nat), template = var i → False) →
+                                              (∀ (c d : Ty), t = c.union d → False) →
+                                                (∀ (t_1 r : Ty), template = t_1.option → t = r.option → False) →
+                                                  (∀ (t_1 r : Ty), template = t_1.list → t = r.list → False) →
+                                                    (∀ (t_1 r : Ty), template = t_1.causeOf → t = r.causeOf → False) →
+                                                      (∀ (t_1 r : Ty), template = t_1.refOf → t = r.refOf → False) →
+                                                        (∀ (a b c d : Ty), template = a.prod b → t = c.prod d → False) →
+                                                          (∀ (a b c d : Ty),
+                                                              template = a.except b → t = c.except d → False) →
+                                                            (∀ (a b c d : Ty),
+                                                                template = a.exitOf b → t = c.exitOf d → False) →
+                                                              (∀ (a b c d : Ty),
+                                                                  template = a.fiberOf b → t = c.fiberOf d → False) →
+                                                                (∀ (a b c d : Ty),
+                                                                    template = a.deferredOf b →
+                                                                      t = c.deferredOf d → False) →
+                                                                  (∀ (a b c d : Ty),
+                                                                      template = a.union b → t = c.union d → False) →
+                                                                    (∀ (a b c d : Ty),
+                                                                        template = a.map b → t = c.map d → False) →
+                                                                      (∀ (fs gs : List (String × Bool × Ty)),
+                                                                          template = record fs →
+                                                                            t = record gs → False) →
+                                                                        (∀ (ts rs : List Ty),
+                                                                            template = tuple ts →
+                                                                              t = tuple rs → False) →
+                                                                          (∀ (name : String) (ts : List Ty)
+                                                                              (other : String) (rs : List Ty),
+                                                                              template = app name ts →
+                                                                                t = app other rs → False) →
+                                                                            motive_1 σ template t σ) →
+                                          (∀ (σ : Ty.Subst) (templates : List (String × Bool × Ty)),
+                                              motive_3 σ templates [] σ) →
+                                            (∀ (σ : Ty.Subst) (templates : List (String × Bool × Ty)) (n : String)
+                                                (o : Bool) (t : Ty) (rest : List (String × Bool × Ty)),
+                                                List.lookup n templates = none →
+                                                  motive_3 σ templates rest (inferFields σ templates rest join) →
+                                                    motive_3 σ templates ((n, o, t) :: rest)
+                                                      (inferFields σ templates rest join)) →
+                                              (∀ (σ : Ty.Subst) (templates : List (String × Bool × Ty)) (n : String)
+                                                  (o : Bool) (t : Ty) (rest : List (String × Bool × Ty)) (fst : Bool)
+                                                  (ty : Ty),
+                                                  List.lookup n templates = some (fst, ty) →
+                                                    motive_1 σ ty t (infer σ ty t join) →
+                                                      motive_3 (infer σ ty t join) templates rest
+                                                          (inferFields (infer σ ty t join) templates rest join) →
+                                                        motive_3 σ templates ((n, o, t) :: rest)
+                                                          (inferFields (infer σ ty t join) templates rest join)) →
+                                                (∀ (σ : Ty.Subst) (ty : Ty) (rest : List Ty) (request : Ty)
+                                                    (remaining : List Ty),
+                                                    motive_1 σ ty request (infer σ ty request join) →
+                                                      motive_2 (infer σ ty request join) rest remaining
+                                                          (inferItems (infer σ ty request join) rest remaining join) →
+                                                        motive_2 σ (ty :: rest) (request :: remaining)
+                                                          (inferItems (infer σ ty request join) rest remaining join)) →
+                                                  (∀ (t : List Ty) (σ : Ty.Subst) (templates : List Ty),
+                                                      (∀ (ty : Ty) (rest : List Ty) (request : Ty)
+                                                          (remaining : List Ty),
+                                                          templates = ty :: rest → t = request :: remaining → False) →
+                                                        motive_2 σ templates t σ) →
+                                                    ∀ (σ : Ty.Subst) (template request : Ty),
+                                                      motive_1 σ template request (infer σ template request join)
+'Bounds.cands' depends on axioms: [propext]
+wall=4s exit=0

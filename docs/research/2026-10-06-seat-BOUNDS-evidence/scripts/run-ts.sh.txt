@@ -1,0 +1,111 @@
+#!/bin/bash
+# Seat BOUNDS, assignment 6: every tsgo run, from a fresh scratch copy of the truth lane.
+#   run-ts.sh <ts-folder> <out-folder>
+# It copies harness/truth (and the two files of ts/eff that the lane's recorder imports) twice,
+# `present` and `bounds`, keeping the repository's topology. Each copy's node_modules is a link
+# to the worktree's ts/eff/node_modules. In `bounds` three signatures of the prelude's atoms are
+# written by polarity. tsgo runs by its path. Nothing is installed, and no bun command runs.
+set -uo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-mask
+TSGO="$W/ts/eff/node_modules/.bin/tsgo"
+T="$S/${1:-ts}"; OUT="$S/${2:-out}"
+mkdir -p "$T" "$OUT"
+echo "tsgo: $("$TSGO" --version)" > "$OUT/tsgo-versions.txt"
+for t in present bounds; do
+  rm -rf "$T/$t"; mkdir -p "$T/$t/harness/truth" "$T/$t/ts/eff"
+  rsync -a --exclude node_modules --exclude tapes --exclude '*.lean' --exclude 'result.*' \
+    --exclude 'corpus-results.tsv' --exclude 'build-ledger.*' "$W/harness/truth/" "$T/$t/harness/truth/"
+  cp "$W/ts/eff/profile.gen.ts" "$W/ts/eff/eff.gen.ts" "$T/$t/ts/eff/"
+  ln -s "$W/ts/eff/node_modules" "$T/$t/ts/eff/node_modules"
+  ln -s ../../ts/eff/node_modules "$T/$t/harness/truth/node_modules"
+done
+echo "effect: $(node -p "require('$T/present/harness/truth/node_modules/effect/package.json').version")" >> "$OUT/tsgo-versions.txt"
+echo "node: $(node --version)" >> "$OUT/tsgo-versions.txt"
+python3 - "$T/bounds/harness/truth/prelude-atoms.gen.ts" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+edits = [
+  ("export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>",
+   "export const getOrElse = <A, B = A>(value: Option.Option<A>, fallback: B): A | B =>"),
+  ("export const ite = <A>(c: boolean, t: A, f: A): A => (c ? t : f)",
+   "export const ite = <A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)"),
+  ("export const append = <A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>",
+   "export const append = <A, B = A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<B>): ReadonlyArray<A | B> =>"),
+]
+for old, new in edits:
+    assert s.count(old) == 1, old
+    s = s.replace(old, new)
+open(p, "w").write(s)
+PY
+diff "$T/present/harness/truth/prelude-atoms.gen.ts" "$T/bounds/harness/truth/prelude-atoms.gen.ts" > "$OUT/prelude-atoms.diff"
+for t in present bounds; do
+  R="$T/$t/harness/truth"
+  sed 's#"/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"#"./prelude.ts"#' \
+    "$W/docs/research/2026-10-06-uniform-eliminators-tsgo-probe.ts.txt" > "$R/probe.ts"
+  for f in forms cite spell; do [ -f "$S/$f.ts.src" ] || { echo "missing $f.ts.src" >&2; exit 1; }; done
+  cp "$S/forms.ts.src" "$R/forms.ts"; cp "$S/cite.ts.src" "$R/cite.ts"; cp "$S/spell.ts.src" "$R/spell.ts"
+  python3 - "$R" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+d = json.load(open(f"{root}/corpus.json"))
+head = open(f"{root}/generated/p42.ts").read().split("\n")
+imports = "\n".join(l for l in head if l.startswith("import ")) + "\n"
+os.makedirs(f"{root}/inferred", exist_ok=True)
+for p in d["programs"]:
+    if p.get("declInferred"):
+        open(f"{root}/inferred/{p['name']}.ts", "w").write(imports + p["declInferred"])
+opts = dict(json.load(open(f"{root}/tsconfig.json"))["compilerOptions"])
+emit = dict(opts); emit.pop("noEmit", None); emit.update({"declaration": True, "emitDeclarationOnly": True})
+def write(name, include, options):
+    json.dump({"compilerOptions": options, "include": include}, open(f"{root}/tsconfig.{name}.json", "w"), indent=2)
+write("probe", ["prelude.ts", "probe.ts"], opts)
+write("forms", ["prelude.ts", "forms.ts"], opts)
+write("forms-dts", ["prelude.ts", "forms.ts"], dict(emit, outDir="dts-forms"))
+write("cite", ["prelude-atoms.gen.ts", "cite.ts"], opts)
+write("spell", ["prelude.ts", "spell.ts"], opts)
+write("generated", ["prelude.ts", "generated"], opts)
+write("inferred", ["prelude.ts", "inferred"], opts)
+write("inferred-dts", ["prelude.ts", "inferred"], dict(emit, outDir="dts-inferred"))
+PY
+  ( cd "$R"
+    "$TSGO" --noEmit -p tsconfig.json > "$OUT/tsgo-$t-lane.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo-$t-lane.txt"
+    "$TSGO" --noEmit -p tsconfig.json --listFiles | grep -c "/generated/p" > "$OUT/tsgo-$t-lane-generated-files.txt"
+    for c in probe forms cite spell generated inferred; do
+      "$TSGO" -p "tsconfig.$c.json" > "$OUT/tsgo-$t-$c.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo-$t-$c.txt"
+    done
+    rm -rf dts-forms dts-inferred
+    "$TSGO" -p tsconfig.forms-dts.json > "$OUT/tsgo-$t-forms-dts.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo-$t-forms-dts.txt"
+    "$TSGO" -p tsconfig.inferred-dts.json > "$OUT/tsgo-$t-inferred-dts.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo-$t-inferred-dts.txt"
+    grep "export declare" dts-forms/forms.d.ts > "$OUT/tsgo-$t-forms-declarations.txt" 2>/dev/null
+    cat dts-inferred/inferred/*.d.ts | grep "export declare" | shasum -a 256 | cut -d' ' -f1 > "$OUT/tsgo-$t-inferred-declarations.sha256"
+    ls dts-inferred/inferred | wc -l | tr -d ' ' > "$OUT/tsgo-$t-inferred-count.txt" )
+done
+diff -r "$T/present/harness/truth/dts-inferred/inferred" "$T/bounds/harness/truth/dts-inferred/inferred" > "$OUT/tsgo-inferred-declarations.diff"
+echo "files that differ: $(diff -rq "$T/present/harness/truth/dts-inferred/inferred" "$T/bounds/harness/truth/dts-inferred/inferred" | wc -l | tr -d ' ') of $(cat "$OUT/tsgo-bounds-inferred-count.txt")" > "$OUT/tsgo-inferred-declarations.summary.txt"
+# the variant with no default: what the citation query reads then
+rm -rf "$T/bounds-nodefault"; cp -R "$T/bounds" "$T/bounds-nodefault"
+python3 - "$T/bounds-nodefault/harness/truth/prelude-atoms.gen.ts" <<'PY'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+for name in ["getOrElse", "ite", "append"]:
+    old = f"export const {name} = <A, B = A>("
+    assert s.count(old) == 1, old
+    s = s.replace(old, f"export const {name} = <A, B>(")
+open(p, "w").write(s)
+PY
+( cd "$T/bounds-nodefault/harness/truth"
+  for c in cite forms generated; do
+    "$TSGO" -p "tsconfig.$c.json" > "$OUT/tsgo-bounds-nodefault-$c.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo-bounds-nodefault-$c.txt"
+  done )
+rm -f "$OUT/tsgo-summary.txt"
+for f in "$OUT"/tsgo-*.txt; do
+  if grep -q '^exit=' "$f"; then
+    echo "$(basename "$f"): errors $(grep -c 'error TS' "$f"); $(grep '^exit=' "$f" | tail -1)"
+  fi
+done > "$OUT/tsgo-summary.tmp"
+mv "$OUT/tsgo-summary.tmp" "$OUT/tsgo-summary.txt"
+echo "generated modules in the lane's program: present $(cat "$OUT/tsgo-present-lane-generated-files.txt"), bounds $(cat "$OUT/tsgo-bounds-lane-generated-files.txt")" >> "$OUT/tsgo-summary.txt"
+cat "$OUT/tsgo-versions.txt" "$OUT/tsgo-inferred-declarations.summary.txt" >> "$OUT/tsgo-summary.txt"

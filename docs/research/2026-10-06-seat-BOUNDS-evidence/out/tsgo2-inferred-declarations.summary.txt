@@ -1,0 +1,3 @@
+split: inferred declarations of main that differ from present: 0 of 73
+cross: inferred declarations of main that differ from present: 0 of 73
+whole: inferred declarations of main that differ from present: 0 of 73

@@ -1,0 +1,16 @@
+namespace Bounds
+open Effect4.Program.Ty
+#check @cands.induct
+#check @cands.induct_unfolding
+#check @cands.eq_1
+#check @cands.eq_16
+#check @cands.eq_17
+#check @Effect4.Program.Ty.infer.induct_unfolding
+#print axioms cands
+example (v : Variance) (i : Nat) (r : Ty) : cands v (.var i) r = [(i, v, r)] := by rw [cands]
+example (v : Variance) (x : Ty) : cands v (.option x) .never = [] := rfl
+example (v : Variance) (x y : Ty) : cands v (.option x) (.option y) = cands v x y := rfl
+example (v : Variance) : cands v .nat .nat = [] := rfl
+example : joinCands [.nat, .string, .bool] = Ty.join .nat (Ty.join .string .bool) := rfl
+example : Ty.normalize .never = .never := rfl
+end Bounds

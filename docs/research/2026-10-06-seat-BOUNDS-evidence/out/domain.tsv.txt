@@ -1,0 +1,56 @@
+family	tree	parameters	applications	admissible	present admits	bounds admits	regressions	different	raw different	admitted: order	admitted: argument	admitted: member	not complete	not least	present incomplete	present not sound in the order	F differs	present depends on order	bounds depends on order	guard of one parameter: bounds admits	guard of one parameter: present admits and it refuses	guard of a split parameter: bounds admits	guard of a split parameter: present admits and it refuses	guard with cross terms: bounds admits	guard with cross terms: present admits and it refuses
+atom pair	true	('0, '1)	144	144	144	144	0	0	0	0	0	0	0	0	0	0	0	0	0	144	0	144	0	144	0
+atom getOrElse	true	(option<'0>, '0)	748	646	88	646	0	0	0	58	92	408	0	0	558	0	0	182	0	212	0	238	0	304	0
+atom ite	true	(bool, '0, '0) join	2312	578	282	578	0	0	0	0	296	0	0	0	296	0	0	0	0	282	0	578	0	578	0
+atom some	true	('0)	17	17	17	17	0	0	0	0	0	0	0	0	0	0	0	0	0	17	0	17	0	17	0
+atom cons	true	('0, list<'0>) join	748	646	212	646	0	0	0	0	92	342	0	0	434	0	0	66	0	212	0	238	66	304	0
+atom get	true	(list<'0>, nat)	352	76	28	76	0	0	0	0	0	48	0	0	48	0	0	0	0	28	0	28	0	28	0
+atom append	true	(list<'0>, list<'0>) join	1936	1444	214	1444	0	0	0	0	48	1182	0	0	1230	0	0	132	0	280	0	196	66	328	0
+atom mapGet	true	(map<string, '0>, string)	405	76	28	76	0	0	0	0	0	48	0	0	48	0	0	0	0	28	0	28	0	28	0
+atom mapSet	true	(map<string, '0>, string, '1)	1386	154	154	154	0	0	0	0	0	0	0	0	0	0	0	0	0	154	0	154	0	154	0
+atom mapKeys	true	(map<string, '0>)	45	38	14	38	0	0	0	0	0	24	0	0	24	0	0	0	0	14	0	14	0	14	0
+atom mapEntries	true	(map<string, '0>)	45	38	14	38	0	0	0	0	0	24	0	0	24	0	0	0	0	14	0	14	0	14	0
+atom mapFromEntries	true	(list<[string, '0]>)	185	178	31	178	0	0	0	0	0	147	0	0	147	0	0	0	0	31	0	31	0	31	0
+atom take	true	(list<'0>, nat)	352	76	28	76	0	0	0	0	0	48	0	0	48	0	0	0	0	28	0	28	0	28	0
+atom drop	true	(list<'0>, nat)	352	76	28	76	0	0	0	0	0	48	0	0	48	0	0	0	0	28	0	28	0	28	0
+row refMake	true	('0)	17	17	17	17	0	0	0	0	0	0	0	0	0	0	0	0	0	17	0	17	0	17	0
+row refGet	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refSet	true	([ref<'0>, '0])	14074	241	91	241	0	0	0	28	0	122	0	0	150	0	0	0	0	234	0	234	0	234	0
+row refGetAndSet	true	([ref<'0>, '0])	14074	241	91	241	0	0	0	28	0	122	0	0	150	0	0	0	0	234	0	234	0	234	0
+row refSetAndGet	true	([ref<'0>, '0])	14074	241	91	241	0	0	0	28	0	122	0	0	150	0	0	0	0	234	0	234	0	234	0
+row refUpdateWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refGetAndUpdateWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refUpdateAndGetWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refUpdateSomeWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refGetAndUpdateSomeWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refUpdateSomeAndGetWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refModifyWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row refModifySomeWith	true	(ref<'0>)	98	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+row deferredIsDone	true	(deferred<'0, '1>)	674	37	37	37	0	0	0	0	0	0	0	0	0	0	0	0	0	37	0	37	0	37	0
+row deferredPoll	true	(deferred<'0, '1>)	674	37	37	37	0	0	0	0	0	0	0	0	0	0	0	0	0	37	0	37	0	37	0
+row deferredSucceed	true	([deferred<'0, '1>, '0])	23487	314	186	314	0	0	0	54	0	74	0	0	128	0	0	0	0	312	0	312	0	312	0
+row deferredFail	true	([deferred<'0, '1>, '1])	23487	314	186	314	0	0	0	54	0	74	0	0	128	0	0	0	0	312	0	312	0	312	0
+row deferredAwait	true	(deferred<'0, '1>)	674	37	37	37	0	0	0	0	0	0	0	0	0	0	0	0	0	37	0	37	0	37	0
+binder term update	true	('0) from {'0 := nat}	17	2	2	2	0	0	0	0	0	0	0	0	0	0	0	0	0	2	0	2	0	2	0
+binder term update	true	('0) from {'0 := string}	17	3	3	3	0	0	0	0	0	0	0	0	0	0	0	0	0	3	0	3	0	3	0
+binder term update	true	('0) from {'0 := (nat | string)}	17	6	6	6	0	0	0	0	0	0	0	0	0	0	0	0	0	6	0	6	0	6	0
+binder term updateSome	true	(option<'0>) from {'0 := nat}	44	3	3	3	0	0	0	0	0	0	0	0	0	0	0	0	0	3	0	3	0	3	0
+binder term updateSome	true	(option<'0>) from {'0 := string}	44	4	4	4	0	0	0	0	0	0	0	0	0	0	0	0	0	4	0	4	0	4	0
+binder term updateSome	true	(option<'0>) from {'0 := (nat | string)}	44	10	10	10	0	0	0	0	0	0	0	0	0	0	0	0	0	10	0	10	0	10	0
+binder term modify	true	(['1, '0]) from {'0 := nat}	4244	81	15	81	0	0	0	8	0	58	0	0	66	0	0	0	0	30	0	30	0	30	0
+binder term modify	true	(['1, '0]) from {'0 := string}	4244	202	25	202	0	0	0	24	0	153	0	0	177	0	0	0	0	70	0	70	0	70	0
+binder term modify	true	(['1, '0]) from {'0 := (nat | string)}	4244	871	61	871	0	0	0	32	0	778	0	0	810	0	0	0	0	241	0	241	0	241	0
+binder term modifySome	true	(['1, option<'0>]) from {'0 := nat}	7864	202	25	202	0	0	0	24	0	153	0	0	177	0	0	0	0	70	0	70	0	70	0
+binder term modifySome	true	(['1, option<'0>]) from {'0 := string}	7864	377	37	377	0	0	0	48	0	292	0	0	340	0	0	0	0	127	0	127	0	127	0
+binder term modifySome	true	(['1, option<'0>]) from {'0 := (nat | string)}	7864	1571	109	1571	0	0	0	144	0	1318	0	0	1462	0	0	0	0	469	0	469	0	469	0
+S1 a product under a cell	false	(ref<['0, '1]>)	711	37	26	37	0	0	0	0	0	11	0	0	11	0	11	0	0	26	0	26	0	26	0
+S2 a cell beside its content, two arguments, join	false	(ref<'0>, '0) join	1666	88	146	88	58	0	0	0	0	0	0	0	0	58	0	58	0	88	58	88	58	88	58
+S3 a cell beside its content, two arguments	false	(ref<'0>, '0)	1666	88	88	88	0	0	0	0	0	0	0	0	0	0	0	58	0	88	0	88	0	88	0
+S4 the content before its cell	false	(['0, ref<'0>])	14074	241	15	241	0	0	0	72	0	154	0	0	226	0	0	0	0	234	0	234	0	234	0
+S5 a list of lists	false	(list<list<'0>>)	46	39	15	39	0	0	0	0	0	24	0	0	24	0	0	0	0	15	0	15	0	15	0
+S6 one parameter twice in a pair	false	(['0, '0])	4244	4238	81	4238	0	0	0	53	0	4104	0	0	4157	0	0	0	0	1204	0	1204	0	1204	0
+S7 one parameter at two cells	false	(deferred<'0, '0>)	14373	14	14	14	0	0	0	0	0	0	0	0	0	0	0	0	0	14	0	14	0	14	0
+S8 a contravariant argument beside a covariant one	false	(Context.Context<'0>, '0)	765	130	88	130	0	58	0	42	0	0	0	0	42	0	0	42	0	130	0	130	0	130	0
+S9 two contravariant arguments	false	(Queue.Enqueue<'0, '0>)	349	342	125	342	0	31	0	217	0	0	0	0	217	0	0	0	0	342	0	342	0	342	0
+S10 a tuple of three	false	(tuple['0, '0, '1])	224	217	115	217	0	0	0	78	0	24	0	0	102	0	0	0	0	193	0	193	0	193	0
+S11 a record of two fields	false	({a: '0, b?: '0})	349	342	61	342	0	0	0	114	0	167	0	0	281	0	0	0	0	276	0	276	0	276	0

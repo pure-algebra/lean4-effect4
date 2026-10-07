@@ -1,0 +1,29 @@
+split.ts(20,35): error TS2345: Argument of type 'readonly string[]' is not assignable to parameter of type 'readonly number[]'.
+  Type 'string' is not assignable to type 'number'.
+split.ts(25,43): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(29,38): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(32,39): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(33,39): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(34,39): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(48,39): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+split.ts(55,41): error TS2379: Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'None<number>' is not assignable to type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'None<number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'number' is not assignable to type 'string'.
+split.ts(56,41): error TS2379: Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'None<number>' is not assignable to type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'None<number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'number' is not assignable to type 'string'.
+exit=1

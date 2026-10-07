@@ -1,0 +1,12 @@
+// Seat BOUNDS: the citation query at the `whole` prelude. A parameter is an argument's whole
+// type there, so the query's reading "one type argument for each Lean parameter" does not apply.
+// Read at the Lean parameter's template instead, each declaration is today's `declared` column.
+import { Option } from "effect"
+import * as Atoms from "./prelude-atoms.gen.ts"
+type Eq<X, Y> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false
+export const getOrElse_p0: Eq<typeof Atoms.getOrElse<Option.Option<"p0">>, (value: Option.Option<"p0">, fallback: "p0") => "p0"> = true
+export const ite_p0: Eq<typeof Atoms.ite<"p0">, (c: boolean, t: "p0", f: "p0") => "p0"> = true
+export const append_p0: Eq<typeof Atoms.append<ReadonlyArray<"p0">>, (xs: ReadonlyArray<"p0">, ys: ReadonlyArray<"p0">) => ReadonlyArray<"p0">> = true
+export const cons_p0: Eq<typeof Atoms.cons<"p0">, (x: "p0", xs: ReadonlyArray<"p0">) => ReadonlyArray<"p0">> = true
+export const get_p0: Eq<typeof Atoms.get<ReadonlyArray<"p0">>, (xs: ReadonlyArray<"p0">, i: number) => Option.Option<"p0">> = true
+export const mapFromEntries_p0: Eq<typeof Atoms.mapFromEntries<ReadonlyArray<readonly [string, "p0"]>>, (entries: ReadonlyArray<readonly [string, "p0"]>) => Readonly<Record<string, "p0">>> = true

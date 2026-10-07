@@ -1,0 +1,8 @@
+spell.ts(17,57): error TS2344: Type 'string | number' does not satisfy the constraint 'readonly (readonly [string, unknown])[]'.
+  Type 'string' is not assignable to type 'readonly (readonly [string, unknown])[]'.
+spell.ts(21,14): error TS2322: Type 'readonly [string, string | number]' is not assignable to type 'readonly [string, string] | readonly [string, number]'.
+  Type 'readonly [string, string | number]' is not assignable to type 'readonly [string, string]'.
+    Type at position 1 in source is not compatible with type at position 1 in target.
+      Type 'string | number' is not assignable to type 'string'.
+        Type 'number' is not assignable to type 'string'.
+exit=1

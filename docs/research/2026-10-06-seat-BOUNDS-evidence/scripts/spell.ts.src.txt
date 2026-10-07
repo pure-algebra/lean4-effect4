@@ -1,0 +1,28 @@
+// Seat BOUNDS: one Lean normal form, two TypeScript spellings. Lean's normal form distributes a
+// pair over a union, so `[string, nat | string]` and `[string, nat] | [string, string]` are one
+// type for the checker. tsgo keeps them apart. Each form is one line, so an error names it.
+import { cons, get, ite, mapFromEntries, nil, pair } from "./prelude.ts"
+declare const c: boolean
+declare const k: string
+declare const v: number | string
+declare const n: number
+declare const s: string
+declare const tupleOfUnion: ReadonlyArray<readonly [string, number | string]>
+declare const unionOfTuples: ReadonlyArray<readonly [string, number] | readonly [string, string]>
+declare const p1: readonly [string, number | string]
+declare const p2: readonly [string, number] | readonly [string, string]
+// ---- the atom of seat SKETCH's control
+export const M1_tupleOfUnion = mapFromEntries(tupleOfUnion)
+export const M2_unionOfTuples = mapFromEntries(unionOfTuples)
+export const M3_unionOfTuples_explicit = mapFromEntries<number | string>(unionOfTuples)
+export const M4_built = mapFromEntries(cons(pair(k, v), nil()))
+export const M5_built_from_two = mapFromEntries(cons(ite(c, pair(k, n), pair(k, s)), nil()))
+// ---- the two spellings against each other
+export const D1_tuple_to_union: readonly [string, number] | readonly [string, string] = p1
+export const D2_union_to_tuple: readonly [string, number | string] = p2
+// ---- a list read at a union of two list types, and at a list of a union
+declare const l1: ReadonlyArray<number>
+declare const l2: ReadonlyArray<string>
+declare const l12: ReadonlyArray<number | string>
+export const G1_union_of_lists = get(c ? l1 : l2, 0)
+export const G2_list_of_union = get(l12, 0)

@@ -1,0 +1,15 @@
+== run list: 67 static types, 457 gap types (at most 2 constructor members)
+gap types by where the gap stands: {'static': 67, 'whole': 2, 'under a union': 388}
+control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M: True | by T: False
+static actual type, expected gap type `static`: pairs 4489; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+static actual type, expected gap type `whole`: pairs 134; T differs from the definition 0 (accepts beyond 0, refuses within 0); M differs 0; B differs 0
+static actual type, expected gap type `under a union`: pairs 25996; T differs from the definition 13221 (accepts beyond 0, refuses within 13221); M differs 0; B differs 0
+     num  ≲  nat | □: T False, the definition True
+     str  ≲  nat | □: T False, the definition True
+     list(never)  ≲  nat | □: T False, the definition True
+the walk extended to an expected union (remainder at a bare gap, one member per head), expected gap type `under a union`: pairs 25996; differs from the definition 648 (accepts beyond 0, refuses within 648); member pairs met as a choice 2808
+     list(num)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+     list(nat | str)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+     list(num | str)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+     list(unknown)  ≲  list(nat | □) | list(str | □): extended walk False, the definition True
+gap types with a gap, as the ACTUAL type: 390 of 457; T reads no parameter there (pairs not compared: 178230)

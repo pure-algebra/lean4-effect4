@@ -1,0 +1,16 @@
+export declare const O6_getOrElse_two: string | number;
+export declare const T1_ite_two: string | number;
+export declare const L7_append_two: readonly (string | number)[];
+export declare const O6v: string | number;
+export declare const T1v: string | number;
+export declare const P1_getOrElse_same: number;
+export declare const P2_ite_same: number;
+export declare const P3_ite_options: Option.Option<number> | Option.Option<never>;
+export declare const P4_append_same: readonly number[];
+export declare const P5_append_nil: readonly number[];
+export declare const P6_getOrElse_none = 9;
+export declare const C1_ref_ite: Effect.Effect<Ref.Ref<number>, never, never>;
+export declare const C2_ref_getOrElse: Effect.Effect<Ref.Ref<number>, never, never>;
+export declare const C3_ref_ite_annotated: Effect.Effect<Ref.Ref<number>>;
+export declare const C4_ref_getOrElse_annotated: Effect.Effect<Ref.Ref<number>>;
+export declare const C5_pair_ite: readonly [number, number];

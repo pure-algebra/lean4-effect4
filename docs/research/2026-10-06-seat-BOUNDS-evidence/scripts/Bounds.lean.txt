@@ -1,0 +1,199 @@
+/-
+Seat BOUNDS, 2026-10-06: the match by bounds, in scratch (not a module of the tree). It reads the
+tree's own `Ty.sub`, `Ty.normalize`, `Ty.instantiate`, `Ty.join` and `Ty.argVariance`, and it
+changes nothing. Each probe file is its imports, this text, and its own tail (`build.sh`).
+
+The function has three parts.
+
+* `cands`: the candidates that a request offers a template's parameters. It is `Ty.infer`'s walk
+  (`src/Effect4/Program/Ty.lean`), arm for arm, with no bindings threaded: at a parameter it
+  answers the request's type there, with the polarity of the occurrence.
+* `solve`: a parameter that the seed binds keeps its binding. Any other parameter is the join of
+  its candidates at the covariant and the invariant occurrences. A contravariant occurrence
+  gives an upper bound and no candidate.
+* `matchB`: the solved bindings, kept exactly when the request is below the template's instance
+  at them, both sides normalized. The guard is `Ty.matchTemplate`'s own.
+-/
+
+open Effect4 Effect4.Program
+
+set_option autoImplicit false
+
+namespace Bounds
+
+abbrev Variance := Ty.Variance
+abbrev Subst := Ty.Subst
+
+/-- The variance of an occurrence under a position: the outer position's, then the inner one's. -/
+def comp : Variance → Variance → Variance
+  | .inv, _ => .inv
+  | _, .inv => .inv
+  | .co, v => v
+  | .contra, .co => .contra
+  | .contra, .contra => .co
+
+/-- A candidate: a parameter, the polarity of its occurrence, and the request's type there. -/
+abbrev Cand := Nat × Variance × Ty
+
+mutual
+/-- The candidates of a request for a template's parameters, in `Ty.infer`'s order. Each arm is
+`Ty.infer`'s arm. The polarity of a child is its parent's, composed with the variance that
+`Ty.sub` reads the child at: covariant, invariant at a cell, a deferred and a map's key, and the
+declared variance at a nominal reference (`Ty.argVariance`). -/
+def cands (v : Variance) (template request : Ty) : List Cand :=
+  match template, request with
+  | .var i, r => [(i, v, r)]
+  | .option t, .option r => cands v t r
+  | .list t, .list r => cands v t r
+  | .causeOf t, .causeOf r => cands v t r
+  | .refOf t, .refOf r => cands (comp v .inv) t r
+  | .prod a b, .prod c d => cands v a c ++ cands v b d
+  | .except a b, .except c d => cands v a c ++ cands v b d
+  | .exitOf a b, .exitOf c d => cands v a c ++ cands v b d
+  | .fiberOf a b, .fiberOf c d => cands v a c ++ cands v b d
+  | .deferredOf a b, .deferredOf c d => cands (comp v .inv) a c ++ cands (comp v .inv) b d
+  | .union a b, .union c d => cands v a c ++ cands v b d
+  | .map a b, .map c d => cands (comp v .inv) a c ++ cands v b d
+  | .record fs, .record gs => candsFields v fs gs
+  | .tuple ts, .tuple rs => candsItems v ts rs
+  | .app name ts, .app other rs => if name = other then candsArgs v name 0 ts rs else []
+  | t, .union c d => cands v t c ++ cands v t d
+  | _, _ => []
+termination_by structural request
+
+/-- A record's candidates by field name, in the request's field order (`Ty.inferFields`). -/
+def candsFields (v : Variance) (templates requests : List (String × Bool × Ty)) : List Cand :=
+  match requests with
+  | [] => []
+  | (name, _, request) :: rest =>
+    match templates.lookup name with
+    | none => candsFields v templates rest
+    | some (_, ty) => cands v ty request ++ candsFields v templates rest
+termination_by structural requests
+
+/-- A tuple's candidates by position (`Ty.inferItems`). -/
+def candsItems (v : Variance) (templates requests : List Ty) : List Cand :=
+  match templates, requests with
+  | ty :: rest, request :: remaining => cands v ty request ++ candsItems v rest remaining
+  | _, _ => []
+termination_by structural requests
+
+/-- A nominal reference's candidates by position, each argument at its declared variance. -/
+def candsArgs (v : Variance) (name : String) (k : Nat) (templates requests : List Ty) : List Cand :=
+  match templates, requests with
+  | ty :: rest, request :: remaining =>
+    cands (comp v (Ty.argVariance name k)) ty request ++ candsArgs v name (k + 1) rest remaining
+  | _, _ => []
+termination_by structural requests
+end
+
+/-- The join of a parameter's candidates. One candidate is kept as it is, so a parameter that
+occurs once binds to the request's own raw type, as `Ty.infer` binds it. -/
+def joinCands : List Ty → Ty
+  | [] => .never
+  | [c] => c
+  | c :: rest => Ty.join c (joinCands rest)
+
+/-- The lower bounds of a parameter: its candidates at the occurrences that are not
+contravariant. -/
+def lowers (cs : List Cand) (i : Nat) : List Ty :=
+  cs.filterMap fun c => if c.1 = i ∧ c.2.1 ≠ .contra then some c.2.2 else none
+
+/-- The solved bindings: the seed's, then each other parameter at the join of its lower bounds.
+A parameter is entered once for each of its candidates, with one value, so `lookup` reads the
+same binding at each. A parameter with no lower bound gets no binding, and `Ty.instantiate`
+reads it as `never`. -/
+def solve (seed : Subst) (cs : List Cand) : Subst :=
+  seed ++ cs.filterMap fun c =>
+    if c.2.1 = .contra ∨ (seed.lookup c.1).isSome then none
+    else some (c.1, joinCands (lowers cs c.1))
+
+/-- **The match by bounds** of a request against a template from a seed. The guard is
+`Ty.matchTemplate`'s. -/
+def matchB (seed : Subst) (template request : Ty) : Option Subst :=
+  let σ := solve seed (cands .co template request)
+  if Ty.sub request.normalize (Ty.instantiate σ template).normalize then some σ else none
+
+/-- The candidates of an argument list for a parameter list, argument by argument. -/
+def candsList (params requests : List Ty) : List Cand :=
+  (params.zip requests).flatMap fun pr => cands .co pr.1 pr.2
+
+/-- **The match by bounds of an argument list.** Every parameter is solved from every argument,
+and then every argument is checked against its parameter's instance at those bindings. A list
+of another length is refused. -/
+def matchArgsB (params requests : List Ty) : Option Subst :=
+  if params.length = requests.length then
+    let σ := solve [] (candsList params requests)
+    if (params.zip requests).all fun pr =>
+        Ty.sub pr.2.normalize (Ty.instantiate σ pr.1).normalize then some σ
+    else none
+  else none
+
+/-- A scheme applied by bounds: a template scheme binds by `matchArgsB`, with no `join` flag.
+Every other scheme is applied as it is. -/
+def applyB : NativeAtom.Scheme → List Ty → Option Ty
+  | .poly params answer _, tys => (matchArgsB params tys).map fun σ => Ty.instantiate σ answer
+  | s, tys => s.apply tys
+
+/-- `nativeAtomTy` (`src/Effect4/Program/Native.lean`) with the schemes applied by bounds. -/
+def atomTyB (name : String) (types : List Ty) : Option Ty :=
+  (NativeAtom.ofName? name).bind fun atom => applyB (NativeAtom.spec atom).scheme types
+
+/-- `bindTerm` (`src/Effect4/Program/Typing/Rules.lean`) by bounds. The request's bindings are
+the seed, so the term's parameter is fixed before the term is typed. With `normal`, the match
+reads the normal form of the term's type; without it, the raw type, as `bindTerm` does. -/
+def bindTermB (normal : Bool) (σ : Subst) : Option TermUse → Except RowTypingRefusal Subst
+  | none => .ok σ
+  | some use =>
+    let param := (use.param.normalize.instantiate σ).normalize
+    match use.typeAt param with
+    | none => .error (.term param)
+    | some r =>
+      match matchB σ use.result.normalize (if normal then r.normalize else r) with
+      | some σ' => .ok σ'
+      | none => .error (.resultNotSubtype r (use.result.normalize.instantiate σ).normalize)
+
+/-- `checkRow` (the same file) by bounds: the same three steps, with `matchB`. -/
+def checkRowB (normal : Bool) (row : Row) (request : Ty) (use : Option TermUse := none) :
+    Except RowTypingRefusal EffTy :=
+  match matchB [] row.request.normalize request.normalize with
+  | none => .error .requestNotSubtype
+  | some σ =>
+    match bindTermB normal σ use with
+    | .error why => .error why
+    | .ok bindings =>
+      match Formation.check (Formation.instantiatedSites row bindings) with
+      | some why => .error (.formation why)
+      | none => .ok ⟨(row.answer.instantiate bindings).normalize,
+          (row.error.instantiate bindings).normalize,
+          Effect4.Machine.Env.Requirement.ofList row.requires⟩
+
+/-! ## The note's rule, word for word (variant F)
+
+"A parameter with an invariant occurrence is fixed by it. A parameter with covariant occurrences
+only is the join of its candidates." The first invariant candidate fixes the parameter. The
+census compares it with `solve`, which joins every lower bound. -/
+
+def invariants (cs : List Cand) (i : Nat) : List Ty :=
+  cs.filterMap fun c => if c.1 = i ∧ c.2.1 = .inv then some c.2.2 else none
+
+def solveF (seed : Subst) (cs : List Cand) : Subst :=
+  seed ++ cs.filterMap fun c =>
+    if c.2.1 = .contra ∨ (seed.lookup c.1).isSome then none
+    else match invariants cs c.1 with
+      | fixed :: _ => some (c.1, fixed)
+      | [] => some (c.1, joinCands (lowers cs c.1))
+
+def matchArgsF (params requests : List Ty) : Option Subst :=
+  if params.length = requests.length then
+    let σ := solveF [] (candsList params requests)
+    if (params.zip requests).all fun pr =>
+        Ty.sub pr.2.normalize (Ty.instantiate σ pr.1).normalize then some σ
+    else none
+  else none
+
+def matchF (seed : Subst) (template request : Ty) : Option Subst :=
+  let σ := solveF seed (cands .co template request)
+  if Ty.sub request.normalize (Ty.instantiate σ template).normalize then some σ else none
+
+end Bounds

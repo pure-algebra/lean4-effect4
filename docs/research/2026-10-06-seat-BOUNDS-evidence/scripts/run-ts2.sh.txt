@@ -1,0 +1,119 @@
+#!/bin/bash
+# Seat BOUNDS, assignment 6, second part: four declarations of a repeated covariant parameter.
+#   run-ts2.sh <ts-folder> <out-folder> [model.ts]
+# It copies harness/truth four times, keeping the repository's topology, as run-ts.sh does:
+#   present  the lane's prelude as it is
+#   split    `<A, B = A>`: one parameter for each occurrence, the second defaulted
+#   cross    the same, and each occurrence may also hold the other's parameter (`NoInfer`)
+#   whole    a parameter is an argument's whole type, and the answer is read from it by index
+# Each copy's node_modules is a link to the worktree's ts/eff/node_modules. tsgo runs by its
+# path. Nothing is installed, and no bun command runs. The outputs are <out-folder>/tsgo2-*.
+set -uo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-mask
+TSGO="$W/ts/eff/node_modules/.bin/tsgo"
+T="$S/${1:-ts2}"; OUT="$S/${2:-out}"; MODEL="${3:-}"
+mkdir -p "$T" "$OUT"
+for f in forms cite spell split cite-whole; do [ -f "$S/$f.ts.src" ] || { echo "missing $f.ts.src" >&2; exit 1; }; done
+VARIANTS="present split cross whole"
+for t in $VARIANTS; do
+  rm -rf "$T/$t"; mkdir -p "$T/$t/harness/truth" "$T/$t/ts/eff"
+  rsync -a --exclude node_modules --exclude tapes --exclude '*.lean' --exclude 'result.*' \
+    --exclude 'corpus-results.tsv' --exclude 'build-ledger.*' "$W/harness/truth/" "$T/$t/harness/truth/"
+  cp "$W/ts/eff/profile.gen.ts" "$W/ts/eff/eff.gen.ts" "$T/$t/ts/eff/"
+  ln -s "$W/ts/eff/node_modules" "$T/$t/ts/eff/node_modules"
+  ln -s ../../ts/eff/node_modules "$T/$t/harness/truth/node_modules"
+  python3 - "$t" "$T/$t/harness/truth/prelude-atoms.gen.ts" <<'PY'
+import sys
+variant, p = sys.argv[1], sys.argv[2]
+s = open(p).read()
+GET_OR_ELSE = "export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>\n  Option.getOrElse(value, () => fallback)"
+ITE = "export const ite = <A>(c: boolean, t: A, f: A): A => (c ? t : f)"
+CONS = "export const cons = <A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]"
+APPEND = "export const append = <A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>\n  [...xs, ...ys]"
+GET = "export const get = <A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>\n  (i < xs.length ? Option.some(xs[i] as A) : Option.none())"
+FROM = "export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)"
+edits = {
+  "present": [],
+  "split": [
+    (GET_OR_ELSE, "export const getOrElse = <A, B = A>(value: Option.Option<A>, fallback: B): A | B =>\n  Option.getOrElse(value, () => fallback)"),
+    (ITE, "export const ite = <A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)"),
+    (APPEND, "export const append = <A, B = A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<B>): ReadonlyArray<A | B> =>\n  [...xs, ...ys]"),
+  ],
+  "cross": [
+    (GET_OR_ELSE, "export const getOrElse = <A, B = A>(value: Option.Option<A | NoInfer<B>>, fallback: B | NoInfer<A>): A | B =>\n  Option.getOrElse(value, () => fallback)"),
+    (ITE, "export const ite = <A, B = A>(c: boolean, t: A | NoInfer<B>, f: B | NoInfer<A>): A | B => (c ? t : f)"),
+    (CONS, "export const cons = <A, B = A>(x: A | NoInfer<B>, xs: ReadonlyArray<B | NoInfer<A>>): ReadonlyArray<A | B> => [x, ...xs]"),
+    (APPEND, "export const append = <A, B = A>(xs: ReadonlyArray<A | NoInfer<B>>, ys: ReadonlyArray<B | NoInfer<A>>): ReadonlyArray<A | B> =>\n  [...xs, ...ys]"),
+  ],
+  "whole": [
+    (GET_OR_ELSE, "export const getOrElse = <O extends Option.Option<unknown>, B = (O extends Option.Option<infer A> ? A : never)>(value: O, fallback: B): (O extends Option.Option<infer A> ? A : never) | B =>\n  (Option.isSome(value) ? value.value : fallback) as (O extends Option.Option<infer A> ? A : never) | B"),
+    (ITE, "export const ite = <A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)"),
+    (CONS, "export const cons = <A, Y extends ReadonlyArray<unknown> = ReadonlyArray<A>>(x: A, xs: Y): ReadonlyArray<A | Y[number]> => [x, ...xs]"),
+    (APPEND, "export const append = <X extends ReadonlyArray<unknown>, Y extends ReadonlyArray<unknown> = X>(xs: X, ys: Y): ReadonlyArray<X[number] | Y[number]> =>\n  [...xs, ...ys]"),
+    (GET, "export const get = <X extends ReadonlyArray<unknown>>(xs: X, i: number): Option.Option<X[number]> =>\n  (i < xs.length ? Option.some(xs[i] as X[number]) : Option.none())"),
+    (FROM, "export const mapFromEntries = <E extends ReadonlyArray<readonly [string, unknown]> = ReadonlyArray<readonly [string, never]>>(entries: E): Readonly<Record<string, E[number][1]>> => Object.fromEntries(entries) as Readonly<Record<string, E[number][1]>>"),
+  ],
+}[variant]
+for old, new in edits:
+    assert s.count(old) == 1, old
+    s = s.replace(old, new)
+open(p, "w").write(s)
+PY
+  [ $? -eq 0 ] || { echo "the prelude of $t was not written" >&2; exit 1; }
+  diff "$W/harness/truth/prelude-atoms.gen.ts" "$T/$t/harness/truth/prelude-atoms.gen.ts" > "$OUT/tsgo2-$t-prelude.diff"
+done
+echo "tsgo: $("$TSGO" --version)" > "$OUT/tsgo2-versions.txt"
+echo "effect: $(node -p "require('$T/present/harness/truth/node_modules/effect/package.json').version")" >> "$OUT/tsgo2-versions.txt"
+echo "node: $(node --version)" >> "$OUT/tsgo2-versions.txt"
+for t in $VARIANTS; do
+  R="$T/$t/harness/truth"
+  sed 's#"/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"#"./prelude.ts"#' \
+    "$W/docs/research/2026-10-06-uniform-eliminators-tsgo-probe.ts.txt" > "$R/probe.ts"
+  cp "$S/forms.ts.src" "$R/forms.ts"; cp "$S/spell.ts.src" "$R/spell.ts"; cp "$S/split.ts.src" "$R/split.ts"
+  if [ "$t" = whole ]; then cp "$S/cite-whole.ts.src" "$R/cite.ts"; else cp "$S/cite.ts.src" "$R/cite.ts"; fi
+  if [ -n "$MODEL" ]; then cp "$MODEL" "$R/model.ts"; fi
+  python3 - "$R" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+d = json.load(open(f"{root}/corpus.json"))
+head = open(f"{root}/generated/p42.ts").read().split("\n")
+imports = "\n".join(l for l in head if l.startswith("import ")) + "\n"
+os.makedirs(f"{root}/inferred", exist_ok=True)
+for p in d["programs"]:
+    if p.get("declInferred"):
+        open(f"{root}/inferred/{p['name']}.ts", "w").write(imports + p["declInferred"])
+opts = dict(json.load(open(f"{root}/tsconfig.json"))["compilerOptions"])
+emit = dict(opts); emit.pop("noEmit", None); emit.update({"declaration": True, "emitDeclarationOnly": True})
+def write(name, include, options):
+    json.dump({"compilerOptions": options, "include": include}, open(f"{root}/tsconfig.{name}.json", "w"), indent=2)
+for name in ["probe", "forms", "spell", "split", "model"]:
+    write(name, ["prelude.ts", f"{name}.ts"], opts)
+write("split-dts", ["prelude.ts", "split.ts"], dict(emit, outDir="dts-split"))
+write("forms-dts", ["prelude.ts", "forms.ts"], dict(emit, outDir="dts-forms"))
+write("cite", ["prelude-atoms.gen.ts", "cite.ts"], opts)
+write("generated", ["prelude.ts", "generated"], opts)
+write("inferred", ["prelude.ts", "inferred"], opts)
+write("inferred-dts", ["prelude.ts", "inferred"], dict(emit, outDir="dts-inferred"))
+PY
+  ( cd "$R"
+    "$TSGO" --noEmit -p tsconfig.json > "$OUT/tsgo2-$t-lane.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo2-$t-lane.txt"
+    probes="probe forms cite spell split generated inferred"
+    if [ -n "$MODEL" ]; then probes="$probes model"; fi
+    for c in $probes; do
+      "$TSGO" -p "tsconfig.$c.json" > "$OUT/tsgo2-$t-$c.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo2-$t-$c.txt"
+    done
+    rm -rf dts-forms dts-inferred dts-split
+    "$TSGO" -p tsconfig.forms-dts.json > /dev/null 2>&1
+    "$TSGO" -p tsconfig.split-dts.json > /dev/null 2>&1
+    "$TSGO" -p tsconfig.inferred-dts.json > "$OUT/tsgo2-$t-inferred-dts.txt" 2>&1; echo "exit=$?" >> "$OUT/tsgo2-$t-inferred-dts.txt"
+    grep "export declare" dts-forms/forms.d.ts > "$OUT/tsgo2-$t-forms-declarations.txt"
+    grep "export declare" dts-split/split.d.ts > "$OUT/tsgo2-$t-split-declarations.txt"
+    cat dts-inferred/inferred/*.d.ts | grep "export declare" | shasum -a 256 | cut -d' ' -f1 > "$OUT/tsgo2-$t-inferred-declarations.sha256"
+    ls dts-inferred/inferred | wc -l | tr -d ' ' > "$OUT/tsgo2-$t-inferred-count.txt" )
+done
+for t in split cross whole; do
+  echo "$t: inferred declarations of main that differ from present: $(diff -rq "$T/present/harness/truth/dts-inferred/inferred" "$T/$t/harness/truth/dts-inferred/inferred" | wc -l | tr -d ' ') of $(cat "$OUT/tsgo2-$t-inferred-count.txt")"
+done > "$OUT/tsgo2-inferred-declarations.summary.txt"
+python3 "$S/ts2-table.py" "$S" "$OUT" > "$OUT/tsgo2-summary.txt" 2>&1
+echo "done: tsgo2 in $OUT"

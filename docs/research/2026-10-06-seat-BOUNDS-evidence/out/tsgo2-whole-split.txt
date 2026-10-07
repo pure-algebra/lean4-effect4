@@ -1,0 +1,14 @@
+split.ts(75,41): error TS2345: Argument of type 'Ref<number>' is not assignable to parameter of type 'Ref<string | number>'.
+  The types of '[TypeId]._A' are incompatible between these types.
+    Type 'Invariant<number>' is not assignable to type 'Invariant<string | number>'.
+      Types of parameters '_' and '_' are incompatible.
+        Type 'string | number' is not assignable to type 'number'.
+          Type 'string' is not assignable to type 'number'.
+split.ts(83,57): error TS2322: Type 'readonly [string, number] | readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+  Type 'readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'number' is not assignable to type 'string'.
+split.ts(90,59): error TS2322: Type 'readonly [number, string]' is not assignable to type 'readonly [unknown, number]'.
+  Type at position 1 in source is not compatible with type at position 1 in target.
+    Type 'string' is not assignable to type 'number'.
+exit=1

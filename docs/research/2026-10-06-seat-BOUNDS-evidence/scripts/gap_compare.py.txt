@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""Seat BOUNDS, assignment 5: the gap's rule at a cell against the match by bounds.
+
+It reads seat GAP's finite model (`gap_types.py`, a copy of
+`docs/research/2026-10-06-seat-GAP-gap_types.py.txt`) and adds one candidate, T: the expected gap
+type is read as a template, each gap of it as a parameter, and the actual type as the request.
+T is the scratch function `Bounds.matchB` in the model's type syntax:
+
+  cands   the walk of `Ty.infer`: at a parameter the request's type there; a request union member
+          by member; an invariant position under `ref`; no candidate under a union head of the
+          template (the tree forbids a parameter there: `Ty.templateAdmissible`);
+  solve   each parameter is the join of its candidates;
+  guard   the request is below the template's instance (`sub`).
+
+T is compared with the definition (`Model.csub_true`: some instances are in `sub`), with
+candidate M (member by member) and with candidate B (member by member, with bounds).
+
+Run: python3 gap_compare.py list|ref|rec [width]
+"""
+import sys
+from gap_types import (GAP, NEVER, Model, members, sub, mk_union, show, has_gap,
+                       csub_mw, csub_bounds)
+
+
+def template_of(b):
+    """The gap type as a template: each gap occurrence is a parameter of its own (the model's
+    gap is anonymous, and its occurrences are chosen apart)."""
+    counter = [0]
+
+    def go(t):
+        if t == GAP:
+            k = counter[0]
+            counter[0] += 1
+            return ("var", k)
+        if t[0] == "union":
+            return ("union", tuple(go(m) for m in t[1]))
+        if t[0] in ("list", "ref"):
+            return (t[0], go(t[1]))
+        if t[0] == "rec":
+            return ("rec", t[1], go(t[2]))
+        return t
+
+    return go(b), counter[0]
+
+
+def cands(pol, t, r):
+    """`Bounds.cands` in the model's syntax."""
+    if t[0] == "var":
+        return [(t[1], pol, r)]
+    if r[0] == "union":
+        if t[0] == "union":
+            return []                   # a parameter under a union head: outside the walk
+        return [c for m in r[1] for c in cands(pol, t, m)]
+    if t[0] == "list" and r[0] == "list":
+        return cands(pol, t[1], r[1])
+    if t[0] == "ref" and r[0] == "ref":
+        return cands("inv", t[1], r[1])
+    if t[0] == "rec" and r[0] == "rec":
+        return cands(pol, t[2], r[2])
+    return []
+
+
+def instantiate(sigma, t):
+    if t[0] == "var":
+        return sigma.get(t[1], NEVER)
+    if t[0] == "union":
+        return mk_union([instantiate(sigma, m) for m in t[1]])
+    if t[0] in ("list", "ref"):
+        return (t[0], instantiate(sigma, t[1]))
+    if t[0] == "rec":
+        return ("rec", t[1], instantiate(sigma, t[2]))
+    return t
+
+
+def match_T(a, b):
+    """The match by bounds of the static request `a` against the gap type `b`."""
+    t, n = template_of(b)
+    cs = cands("co", t, a)
+    sigma = {}
+    for i in range(n):
+        lows = [c for (j, pol, c) in cs if j == i and pol != "contra"]
+        if lows:
+            sigma[i] = mk_union(lows)
+    return sub(a, instantiate(sigma, t))
+
+
+def head(t):
+    """A member's head: the constructor, and a record's flag."""
+    if t[0] == "rec":
+        return ("rec", t[1])
+    return t[0]
+
+
+def cands2(pol, t, r, stats):
+    """The walk extended to an expected union, as far as it needs no choice:
+
+    * a request union is read member by member, as before;
+    * at a union of the template, a request member that a closed member of the union admits
+      offers nothing;
+    * otherwise it goes to the one member of the union with its head, when there is one;
+    * otherwise, when the union holds a bare parameter, it is a candidate of that parameter (the
+      remainder: `□ | T` stands for the supertypes of `T`);
+    * two members of the union with the request member's head are a choice, and the walk takes
+      none (`stats["choice"]` counts them)."""
+    if t[0] == "var":
+        return [(t[1], pol, r)]
+    if r[0] == "union":
+        return [c for m in r[1] for c in cands2(pol, t, m, stats)]
+    if t[0] == "union":
+        if r == NEVER:
+            return []
+        closed = [m for m in t[1] if not has_var(m)]
+        if any(sub(r, m) for m in closed):
+            return []
+        same = [m for m in t[1] if has_var(m) and m[0] != "var" and head(m) == head(r)]
+        if len(same) == 1:
+            return cands2(pol, same[0], r, stats)
+        if len(same) > 1:
+            stats["choice"] += 1
+            return []
+        bare = [m for m in t[1] if m[0] == "var"]
+        if bare:
+            return [(bare[0][1], pol, r)]
+        return []
+    if t[0] == "list" and r[0] == "list":
+        return cands2(pol, t[1], r[1], stats)
+    if t[0] == "ref" and r[0] == "ref":
+        return cands2("inv", t[1], r[1], stats)
+    if t[0] == "rec" and r[0] == "rec":
+        return cands2(pol, t[2], r[2], stats)
+    return []
+
+
+def has_var(t):
+    if t[0] == "var":
+        return True
+    if t[0] == "union":
+        return any(has_var(m) for m in t[1])
+    if t[0] in ("list", "ref"):
+        return has_var(t[1])
+    if t[0] == "rec":
+        return has_var(t[2])
+    return False
+
+
+def match_T2(a, b, stats):
+    t, n = template_of(b)
+    cs = cands2("co", t, a, stats)
+    sigma = {}
+    for i in range(n):
+        lows = [c for (j, pol, c) in cs if j == i and pol != "contra"]
+        if lows:
+            sigma[i] = mk_union(lows)
+    return sub(a, instantiate(sigma, t))
+
+
+def gap_shape(b):
+    """Where the gaps of a gap type stand: `static` (none), `whole` (the type is the gap, or one
+    constructor whose whole content is the gap: the template is admissible), or `under a union`
+    (a gap is a member of a union, at the top or inside a constructor, or a constructor with a
+    gap is a member of a union)."""
+    if not has_gap(b):
+        return "static"
+    if b == GAP:
+        return "whole"
+    if b[0] in ("list", "ref") and b[1] == GAP:
+        return "whole"
+    if b[0] == "rec" and b[2] == GAP:
+        return "whole"
+    return "under a union"
+
+
+def run(kind, width):
+    m = Model(kind, width)
+    S, G = m.static, m.gradual
+    print(f"== run {kind}: {len(S)} static types, {len(G)} gap types (at most {width} constructor members)")
+    by_shape = {}
+    for b in G:
+        by_shape.setdefault(gap_shape(b), []).append(b)
+    print("gap types by where the gap stands:", {k: len(v) for k, v in by_shape.items()})
+    print("control (red): ref(nat) | ref(str) ≲ ref(□) by candidate M:",
+          csub_mw(mk_union([("ref", ("nat",)), ("ref", ("str",))]), ("ref", GAP)),
+          "| by T:", match_T(mk_union([("ref", ("nat",)), ("ref", ("str",))]), ("ref", GAP)))
+    for shape in ("static", "whole", "under a union"):
+        pairs = wrongT = wrongM = wrongB = accepts_beyond = refuses_within = 0
+        ex = []
+        for b in by_shape.get(shape, []):
+            for a in S:
+                truth = m.csub_true(a, b)
+                t = match_T(a, b)
+                pairs += 1
+                if t != truth:
+                    wrongT += 1
+                    if t and not truth:
+                        accepts_beyond += 1
+                    else:
+                        refuses_within += 1
+                    if len(ex) < 3:
+                        ex.append((a, b, t, truth))
+                if csub_mw(a, b) != truth:
+                    wrongM += 1
+                if csub_bounds(a, b) != truth:
+                    wrongB += 1
+        print(f"static actual type, expected gap type `{shape}`: pairs {pairs}; "
+              f"T differs from the definition {wrongT} (accepts beyond {accepts_beyond}, "
+              f"refuses within {refuses_within}); M differs {wrongM}; B differs {wrongB}")
+        for a, b, t, truth in ex:
+            print(f"     {show(a)}  ≲  {show(b)}: T {t}, the definition {truth}")
+    stats = {"choice": 0}
+    pairs = wrong = beyond = within = 0
+    ex = []
+    for b in by_shape.get("under a union", []):
+        for a in S:
+            truth = m.csub_true(a, b)
+            t2 = match_T2(a, b, stats)
+            pairs += 1
+            if t2 != truth:
+                wrong += 1
+                if t2 and not truth:
+                    beyond += 1
+                else:
+                    within += 1
+                if len(ex) < 4:
+                    ex.append((a, b, t2, truth))
+    print(f"the walk extended to an expected union (remainder at a bare gap, one member per head), "
+          f"expected gap type `under a union`: pairs {pairs}; differs from the definition {wrong} "
+          f"(accepts beyond {beyond}, refuses within {within}); member pairs met as a choice {stats['choice']}")
+    for a, b, t2, truth in ex:
+        print(f"     {show(a)}  ≲  {show(b)}: extended walk {t2}, the definition {truth}")
+    # the cell itself, when the run has one
+    if kind == "ref":
+        cell = ("ref", GAP)
+        accT = [a for a in S if match_T(a, cell)]
+        accD = [a for a in S if m.csub_true(a, cell)]
+        accM = [a for a in S if csub_mw(a, cell)]
+        accB = [a for a in S if csub_bounds(a, cell)]
+        print(f"at the cell ref(□), over {len(S)} static actual types: the definition admits {len(accD)}; "
+              f"T admits {len(accT)}; B admits {len(accB)}; M admits {len(accM)}")
+        print("     T = the definition:", accT == accD, "| B = the definition:", accB == accD,
+              "| M = the definition:", accM == accD)
+    # a gap in the actual type: the match has no parameter on that side
+    left = sum(1 for a in G if has_gap(a))
+    print(f"gap types with a gap, as the ACTUAL type: {left} of {len(G)}; T reads no parameter there "
+          f"(pairs not compared: {left * len(G)})")
+
+
+if __name__ == "__main__":
+    kind = sys.argv[1] if len(sys.argv) > 1 else "ref"
+    width = int(sys.argv[2]) if len(sys.argv) > 2 else 2
+    run(kind, width)

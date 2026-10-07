@@ -1,0 +1,2 @@
+self test: every guard holds
+wall=4s exit=0

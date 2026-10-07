@@ -1,0 +1,81 @@
+/-
+Seat BOUNDS, assignment 2 on a third domain: seat CENSUS's folded programs. Each effect address
+and each term address of each admitted program is folded to `never` (CENSUS's fold N: a node
+becomes `failCause (interrupt none)`, and a sub-term becomes the assumed atom `census.never`), and
+the folded program is checked by the present checker and by the checker by bounds. The sites, the
+term parts and the replacement are CENSUS's own text (`CensusLib.lean`, cut from
+`docs/research/2026-10-06-seat-CENSUS-evidence/scripts/Lib.lean.txt` and `LibTerm.lean.txt`).
+
+The checker by bounds reads every request at its normal form: an atom's arguments, a row's
+request and a binder term's type.
+-/
+namespace Bounds
+
+/-- The present signature with CENSUS's assumed atom of type `never`. -/
+def sigN (table : RowTable) : Sig := Census.sigWithNever table
+
+/-- The signature by bounds, at the normal form of each argument, with the same assumed atom. -/
+def sigBN (table : RowTable) : Sig :=
+  { nativeSignature table with
+    atomOf := fun name tys =>
+      if name == Census.neverAtom && tys.isEmpty then some .never
+      else atomTyB name (tys.map Ty.normalize) }
+
+def refusalHead : Except TypeRefusal EffTy → String
+  | .ok _ => "-"
+  | .error r => r.reason.head ++ "@" ++ showPath r.path
+
+/-- The applications that the present checker meets in a folded program and that only the match
+by bounds admits, by name: where a new admission comes from. -/
+def admittedAt (table : RowTable) (e : P) : List String :=
+  let (_, log) := runT presentRule (sigN table) e
+  ((log.toList.flatMap (eventRows (sigN table))).filter fun (_, r) => r.verdictN == .admission).map
+    fun (_, r) => r.kind ++ " " ++ r.name
+
+def foldLine (program kind address detail : String) (table : RowTable) (full : EffTy) (e' : P) : String :=
+  let present := Checker.check (sigN table) [] [] e'
+  let bounds := (runT (boundsRule true) (sigBN table) e').1
+  let v := verdictEff present.toOption bounds.toOption
+  let moved := match present, bounds with
+    | .error a, .error b => if decide (a = b) then "same refusal" else "another refusal"
+    | _, _ => "-"
+  let gradual := match bounds with
+    | .ok t =>
+      if Ty.sub t.answer.normalize full.answer.normalize && Ty.sub t.error.normalize full.error.normalize then "gradual"
+      else "not gradual"
+    | .error _ => "-"
+  let whereAdmitted := if v == .admission then ", ".intercalate (admittedAt table e').eraseDups else "-"
+  tsv [program, kind, address, detail, toString present.toOption.isSome, toString bounds.toOption.isSome, v.name,
+    refusalHead present, refusalHead bounds, moved, gradual, whereAdmitted]
+
+def foldHeader : String :=
+  tsv ["program", "kind", "address", "detail", "present", "bounds", "verdict", "presentRefusal", "boundsRefusal",
+    "refusal", "boundsAgainstFull", "admittedAt"]
+
+def runFolds (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let file := outDir ++ label ++ "-folds.tsv"
+  IO.FS.writeFile file (foldHeader ++ "\n")
+  let mut n := 0
+  let t0 ← IO.monoMsNow
+  for (name, table, p) in progs do
+    if Api.wellTyped p table then
+      let e := p.expandRefs
+      match Checker.check (nativeSignature table) [] [] e with
+      | .error _ => pure ()
+      | .ok full =>
+        let ss := Census.sites (nativeSignature table) [] e
+        let effectLines := ss.filterMap fun s =>
+          (Census.replaceEff e s.path Census.neverProgram).map fun e' =>
+            foldLine name "effect" (showPath s.path) (Census.ctorName (.eff s.node)) table full e'
+        let termLines := ss.flatMap fun s =>
+          (Census.termSlots s.node).flatMap fun slot =>
+            (Census.termParts slot.name slot.term).filterMap fun part =>
+              (Census.replaceEff e s.path (slot.rebuild (part.rebuild Census.neverTerm))).map fun e' =>
+                foldLine name "term" (showPath s.path)
+                  (slot.name ++ " " ++ showPath part.path ++ " " ++ part.role) table full e'
+        appendLines file (effectLines ++ termLines)
+        n := n + effectLines.length + termLines.length
+  let t1 ← IO.monoMsNow
+  IO.println s!"{label}: folds {n}; wall time {t1 - t0} ms"
+
+end Bounds

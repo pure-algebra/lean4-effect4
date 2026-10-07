@@ -1,0 +1,31 @@
+| File | Lines that name the present match or a law of it |
+| --- | --- |
+| `Test/Audit/TraversalCensus.lean` | 1 |
+| `Test/Program/AtomTable.lean` | 2 |
+| `Test/Program/FormationContract.lean` | 10 |
+| `Test/Program/TermFits.lean` | 2 |
+| `Test/Program/TypeAlgebraContract.lean` | 9 |
+| `Test/Program/TypedContract.lean` | 2 |
+| `src/Effect4/Data/Constructive.lean` | 3 |
+| `src/Effect4/Laws/Auto/Traversals.lean` | 1 |
+| `src/Effect4/Laws/Modules/Waiting.lean` | 25 |
+| `src/Effect4/Laws/Program/Template.lean` | 266 |
+| `src/Effect4/Laws/Program/TypeAlgebra.lean` | 24 |
+| `src/Effect4/Laws/Program/Typed.lean` | 6 |
+| `src/Effect4/Laws/Program/Typed/Denotation.lean` | 23 |
+| `src/Effect4/Laws/Program/Typed/Membership.lean` | 7 |
+| `src/Effect4/Laws/Program/Typing/TermIntro.lean` | 86 |
+| `src/Effect4/Program/Native.lean` | 1 |
+| `src/Effect4/Program/NativeAtom.lean` | 21 |
+| `src/Effect4/Program/Ty.lean` | 32 |
+| `src/Effect4/Program/Typing/Rules.lean` | 6 |
+| `src/Effect4/Program/Typing/TermRefusal.lean` | 1 |
+| `tools/Tools/SemanticsRegistry.lean` | 2 |
+
+declarations of src/Effect4/Laws/Program/Template.lean: 99
+of them in its section on anchored templates: 53
+uses of the three atoms in the generated modules: getOrElse 56, ite 684, append 845, cons 1034
+
+declarations of Template.lean that the scratch laws use (by name, outside comments):
+18 anchorOcc_firsts, anchorsArgs, args_co_or_inv, canon_map_payload, childOcc, closed_of_lookup, instance_members, instantiate_closed, matchTemplate_keeps, matchTemplate_sound, normal_union_inv, normalize_instantiate_congr, paramOccurrences_args, paramOccurrences_firsts, sub_of_mem_factors, templateAdmissible_args, var_or_ne, varsOf_eq_nil_of_closed
+theorems of the scratch laws: 67; lines: 1585; lines of Bounds.lean: 199

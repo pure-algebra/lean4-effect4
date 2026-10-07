@@ -1,0 +1,64 @@
+probe.ts(26,41): error TS2345: Argument of type 'Fiber<number, string> | Fiber<boolean, number>' is not assignable to parameter of type 'Fiber<number, string>'.
+  Type 'Fiber<boolean, number>' is not assignable to type 'Fiber<number, string>'.
+    Type 'boolean' is not assignable to type 'number'.
+probe.ts(28,43): error TS2345: Argument of type 'Fiber<number, string> | Fiber<boolean, number>' is not assignable to parameter of type 'Fiber<number, string>'.
+  Type 'Fiber<boolean, number>' is not assignable to type 'Fiber<number, string>'.
+    Type 'boolean' is not assignable to type 'number'.
+probe.ts(29,51): error TS2345: Argument of type 'Fiber<number, string> | Fiber<boolean, number>' is not assignable to parameter of type 'Fiber<number, string>'.
+  Type 'Fiber<boolean, number>' is not assignable to type 'Fiber<number, string>'.
+    Type 'boolean' is not assignable to type 'number'.
+probe.ts(35,47): error TS2379: Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'None<number>' is not assignable to type 'Option<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'None<number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'number' is not assignable to type 'string'.
+probe.ts(40,35): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+probe.ts(42,35): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+  Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+    Type 'number' is not assignable to type 'string'.
+probe.ts(44,42): error TS2344: Type 'string | number' does not satisfy the constraint 'readonly unknown[]'.
+  Type 'string' is not assignable to type 'readonly unknown[]'.
+probe.ts(49,47): error TS2345: Argument of type 'Exit<number, string> | Exit<boolean, number>' is not assignable to parameter of type 'Cause<string> | Exit<number, string>'.
+  Type 'Failure<boolean, number>' is not assignable to type 'Cause<string> | Exit<number, string>'.
+    Type 'Failure<boolean, number>' is not assignable to type 'Cause<string> | Failure<number, string>'.
+      Type 'Failure<boolean, number>' is not assignable to type 'Failure<number, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Type 'boolean' is not assignable to type 'number'.
+probe.ts(50,48): error TS2345: Argument of type 'Cause<string> | Cause<number>' is not assignable to parameter of type 'Cause<string> | Exit<unknown, string>'.
+  Type 'Cause<number>' is not assignable to type 'Cause<string> | Exit<unknown, string>'.
+    Type 'Cause<number>' is not assignable to type 'Cause<string>'.
+      Type 'number' is not assignable to type 'string'.
+probe.ts(51,50): error TS2345: Argument of type 'Cause<string> | Cause<number>' is not assignable to parameter of type 'Cause<string> | Exit<unknown, string>'.
+  Type 'Cause<number>' is not assignable to type 'Cause<string> | Exit<unknown, string>'.
+    Type 'Cause<number>' is not assignable to type 'Cause<string>'.
+      Type 'number' is not assignable to type 'string'.
+probe.ts(52,50): error TS2379: Argument of type 'Exit<number, string> | Exit<boolean, number>' is not assignable to parameter of type 'Exit<number, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Failure<boolean, number>' is not assignable to type 'Exit<number, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'Failure<boolean, number>' is not assignable to type 'Failure<number, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+      Type 'boolean' is not assignable to type 'number'.
+probe.ts(55,37): error TS2345: Argument of type 'Ref<string> | Ref<number>' is not assignable to parameter of type 'Ref<string>'.
+  Type 'Ref<number>' is not assignable to type 'Ref<string>'.
+    Types of property 'ref' are incompatible.
+      Type 'MutableRef<number>' is not assignable to type 'MutableRef<string>'.
+        Type 'number' is not assignable to type 'string'.
+probe.ts(56,46): error TS2379: Argument of type 'Deferred<number, string> | Deferred<boolean, number>' is not assignable to parameter of type 'Deferred<number, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Deferred<boolean, number>' is not assignable to type 'Deferred<number, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'effect' are incompatible.
+      Type 'Effect<boolean, number, never>' is not assignable to type 'Effect<number, string, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Type 'boolean' is not assignable to type 'number'.
+probe.ts(57,47): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Ref<string> | Ref<number>' is not assignable to parameter of type 'Deferred<unknown, unknown>'.
+      Property '[TypeId]' is missing in type 'Ref<string>' but required in type 'Deferred<unknown, unknown>'.
+probe.ts(58,63): error TS2345: Argument of type 'Ref<string> | Ref<number>' is not assignable to parameter of type 'Ref<string | number>'.
+  Type 'Ref<string>' is not assignable to type 'Ref<string | number>'.
+    The types of '[TypeId]._A' are incompatible between these types.
+      Type 'Invariant<string>' is not assignable to type 'Invariant<string | number>'.
+        Types of parameters '_' and '_' are incompatible.
+          Type 'string | number' is not assignable to type 'string'.
+            Type 'number' is not assignable to type 'string'.
+probe.ts(60,39): error TS2345: Argument of type 'Readonly<Record<string, number>> | Readonly<Record<string, boolean>>' is not assignable to parameter of type 'Readonly<Record<string, number>>'.
+  Type 'Readonly<Record<string, boolean>>' is not assignable to type 'Readonly<Record<string, number>>'.
+    'string' index signatures are incompatible.
+      Type 'boolean' is not assignable to type 'number'.
+exit=1

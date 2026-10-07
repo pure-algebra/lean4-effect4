@@ -1,0 +1,8 @@
+getOrElse: 748 normal applications, 0 raw applications that are not normal
+ite: 2312 normal applications, 0 raw applications that are not normal
+cons: 748 normal applications, 0 raw applications that are not normal
+get: 352 normal applications, 0 raw applications that are not normal
+append: 1936 normal applications, 0 raw applications that are not normal
+mapFromEntries: 185 normal applications, 14 raw applications that are not normal
+model against tsgo: 6295 applications
+wall=5s exit=0

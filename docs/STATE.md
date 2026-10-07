@@ -368,13 +368,19 @@ that rests on one schedule.
 
 In work since the suspension of the handover:
 
-- **Seat BOUNDS probes the match by bounds** (branch `seat/bounds`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-bounds-brief.md); row 292, point
-  4). A template binds a type parameter at its first occurrence today, so a verdict depends
-  on the order of the arguments. The probe measures the rule by polarity against it on the
-  two corpora, proves what scratch allows, and runs tsgo on the prelude's signatures. It
-  edits no tracked source.
-  [The design input](research/2026-10-06-repeated-parameter-by-polarity.md) reads the paper.
+- **Seat BOUNDS's probe is merged, and the owner ratified its recommendations**
+  ([its receipt](research/2026-10-06-seat-BOUNDS-receipt.md); rows 292 and 299). A template
+  binds a type parameter at its first occurrence today, so a verdict depends on the order of
+  the arguments. The probe's verdict: one function replaces that match, under one premise,
+  that no parameter of a template stands under a nominal reference. It joins each
+  parameter's lower bounds, and it reads a request up to its normal form. On 10284
+  applications of the two corpora it changes no verdict and no type. Its laws compile in
+  scratch, and none is a theorem of the tree. tsgo forms no join of two candidates, so a
+  prelude atom is declared in a form where it computes the join itself. One finding: the
+  checker and its prelude disagree at `cons` today, in a finite model and in no program of
+  the corpora. The owner ratified the recommendations by voice. The second model implements
+  them as slice MATCH of the plan, and the coordinator implements nothing of it.
+  [The design input](research/2026-10-06-repeated-parameter-by-polarity.md) is corrected.
 - **Seat LANES repairs the two lanes that the sweep found red** (branch `seat/lanes`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-lanes-brief.md); row 289). The
   diagnostics lane measures again on its branch: no program that the checker admits is
@@ -444,19 +450,17 @@ In work since the suspension of the handover:
   types, the lifted rule is the one map with its four properties (`lift_unique`). An
   eliminator's lifted rule answers exactly below the constructor's image
   (`Eliminator.adjoint`). The fiber rule is its first conversion (row 298).
-- **The next slices wait for the owner's word** (2026-10-06). The owner hands some of them
-  to a second model. The coordinator starts no new seat: it merges the two seats that still
-  run, seat PILOT and seat BOUNDS, and stops there. One brief is written and not dispatched:
-  [seat ORDER](research/2026-10-05-claude-lead/briefs/seat-order-brief.md), the order of a
-  lifted rule in Lean core's classes, with
-  [its compiled probe](research/2026-10-06-order-classes-probe.lean.txt). It starts after
-  seat PILOT's merge, since both edit one law file. The open slices beside it are in rows
-  293 to 297: the other conversions, the typed print, total marking with the one pass, the
-  match by bounds after its probe, and the small repairs of row 297, point 8.
-  [The refined plan](research/2026-10-06-next-slices-plan.md) orders eleven slices for the
-  second model's review, with two compiled probes. It rules nothing. It checks the second
-  model's report against the pinned sources. Its critical path is the address table of a
-  program, the typed print and the guard's removal.
+- **The next slices are the second model's** (the owner, 2026-10-06). No seat runs. The
+  coordinator keeps the plan current, merges each slice with the wide gates and writes the
+  records. [The plan](research/2026-10-06-next-slices-plan.md) orders eleven slices, each
+  with its goal, its files, its statements and its placement. It was revised after the two
+  last seats landed. Wave 1 is the order of a lifted rule in Lean core's classes
+  ([seat ORDER's brief](research/2026-10-05-claude-lead/briefs/seat-order-brief.md), with
+  [its compiled probe](research/2026-10-06-order-classes-probe.lean.txt)) and the address
+  table of a program. Wave 2 is the match by bounds, with the typed print and a query driver
+  beside it. The other conversions follow, and then the guards go. The plan checks the
+  second model's report against the pinned sources, and it holds two compiled probes. It
+  rules nothing.
 - **Seat PILOT is merged: the fiber rule is converted**
   ([the landing note](research/2026-10-06-seat-PILOT-receipt.md); rows 285, 292, 293, 296
   and 298). `fiberTy` is `UnionRule.extend Member.fiber`, in one line: the member rule's own

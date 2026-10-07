@@ -1,0 +1,80 @@
+/-
+Seat BOUNDS, assignment 6: the finite model against tsgo. Every application of six atoms of the
+model (`DomainLib.lean`), at its normal requests and at its raw requests, with the verdict of the
+present match, of the match by bounds, and of the match by bounds under each of three guards.
+Each argument's type is written as the tree's own renderer writes it (`Ty.renderRaw`), so a
+script can print the call and ask tsgo (`model_ts.py`).
+
+The six atoms are those that the `whole` prelude of `run-ts2.sh` declares anew.
+-/
+namespace Bounds
+
+def tsAtomNames : List String := ["getOrElse", "ite", "cons", "get", "append", "mapFromEntries"]
+
+/-- The six atoms as families of the model, each with its answer template. -/
+def tsAtoms : List (Family × Ty) :=
+  NativeAtom.all.filterMap fun atom =>
+    match (NativeAtom.spec atom).scheme with
+    | .poly params answer join =>
+      if tsAtomNames.contains atom.name then
+        some ({ name := atom.name, params := params, join := join,
+                pairs := params.map fun p => !p.closed && params.length ≤ 2 }, answer)
+      else none
+    | _ => none
+
+#guard tsAtoms.length == 6
+-- the six are families of the model, with the same parameters, flag and domains
+#guard tsAtoms.all fun (f, _) => atomFamilies.any fun g =>
+  g.name == "atom " ++ f.name && g.params == f.params && g.join == f.join && g.pairs == f.pairs &&
+    g.base == f.base
+-- red control: an atom outside the six is not among them
+#guard !(tsAtoms.any fun (f, _) => f.name == "take")
+
+def tsHeader : String :=
+  tsv ["atom", "reading", "arguments", "arguments as TypeScript", "present", "bounds", "bounds, guard of one parameter",
+    "bounds, guard of a split parameter", "bounds, guard with cross terms", "present answer", "bounds answer",
+    "bounds answer in normal form", "lower bounds"]
+
+def tsRow (reading : String) (f : Family) (answer : Ty) (rs : List Ty) : String :=
+  let present := presentArgs f rs
+  let bounds := boundsArgs solve f rs
+  tsv [f.name, reading, showTys rs, " ;; ".intercalate (rs.map Ty.renderRaw),
+    toString present.isSome, toString bounds.isSome,
+    toString (bounds.isSome && guardOne f rs), toString (bounds.isSome && guardSplit f rs),
+    toString (bounds.isSome && guardCross f rs),
+    (present.map fun σ => (Ty.instantiate σ answer).renderRaw).getD "-",
+    (bounds.map fun σ => (Ty.instantiate σ answer).renderRaw).getD "-",
+    (bounds.map fun σ => (Ty.instantiate σ answer).normalize.renderRaw).getD "-",
+    if bounds.isSome then admissionKind f rs else "-"]
+
+def runModelTs : IO Unit := do
+  let path := outDirD ++ "model-ts.tsv"
+  IO.FS.writeFile path (tsHeader ++ "\n")
+  let mut total : Nat := 0
+  for (f, answer) in tsAtoms do
+    let normal := product (f.params.zipIdx.map fun (p, k) => requestDomain f.base (f.pairs[k]?.getD false) p)
+    let raw := (product (f.params.map fun p => uniqTys (reqs f.base p))).filter fun rs => rs != rs.map Ty.normalize
+    let h ← IO.FS.Handle.mk path .append
+    for rs in normal do h.putStrLn (tsRow "normal" f answer rs)
+    for rs in raw do h.putStrLn (tsRow "raw" f answer rs)
+    h.flush
+    total := total + normal.length + raw.length
+    IO.println s!"{f.name}: {normal.length} normal applications, {raw.length} raw applications that are not normal"
+  IO.println s!"model against tsgo: {total} applications"
+
+-- the present checker and its prelude at `cons` (tested by tsgo in `split.ts`, form `C_wide_union`):
+-- the scheme admits a wide element with a tail whose type is a union of two list types
+#guard nativeAtomTy "cons" [.union .nat .string, .union (.list .nat) (.list .string)] ==
+  some (.list (.union .nat .string))
+#guard (Ty.union (.list .nat) (.list .string)).normalize == .union (.list .nat) (.list .string)
+-- and the same at `append`, in one order of the arguments only
+#guard nativeAtomTy "append" [.list (.union .nat .string), .union (.list .nat) (.list .string)] ==
+  some (.list (.union .nat .string))
+#guard nativeAtomTy "append" [.union (.list .nat) (.list .string), .list (.union .nat .string)] == none
+-- the match by bounds answers both orders, and the guard with cross terms passes both
+#guard (atomTyB "append" [.union (.list .nat) (.list .string), .list (.union .nat .string)]).map Ty.normalize ==
+  some (Ty.list (.union .nat .string)).normalize
+
+#eval runModelTs
+
+end Bounds
