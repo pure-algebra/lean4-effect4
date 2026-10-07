@@ -272,7 +272,7 @@ theorem nativeAtomTy_get (X : Ty) : nativeAtomTy "get" [.list X, .nat] = some (.
 
 /-- Two lists of one element type append to a list of that type. Used by `snoc` and
 `gained`. -/
-theorem nativeAtomTy_append (X : Ty) (canonical : X.normalize = X := by decide) :
+theorem nativeAtomTy_append (X : Ty) (canonical : X.normalize = X) :
     nativeAtomTy "append" [.list X, .list X] = some (.list X) := by
   change (Bounds.matchArgsB [.list (.var 0), .list (.var 0)] [.list X, .list X]).map
     (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
@@ -303,24 +303,19 @@ theorem nativeAtomTy_ite (X Y : Ty) : nativeAtomTy "ite" [.bool, X, Y] = some (T
   rfl
 
 /-- **`ite` at an arm above**: where the first arm's type is below the second's, the answer is
-the second arm's type. Used by the offer step's outer selection, and at two equal arms by
-`wake`. -/
-theorem nativeAtomTy_ite_above {X Y : Ty} (above : Ty.sub X Y = true := by decide)
-    (canonical : Y.normalize = Y := by decide) : nativeAtomTy "ite" [.bool, X, Y] = some Y := by
+the second arm's type. It is a corollary of `nativeAtomTy_ite`. Used by the offer step's outer
+selection, and at two equal arms by `wake`. -/
+theorem nativeAtomTy_ite_above {X Y : Ty} (above : Ty.sub X Y = true)
+    (canonical : Y.normalize = Y) : nativeAtomTy "ite" [.bool, X, Y] = some Y := by
   rw [nativeAtomTy_ite]
   have hNorm : Normal Y := canonical ▸ normal_normalize Y
   rw [Bounds.join_eq_right_of_subN (OrderProof.sub_normalize_of_sub sub_trans X Y above) hNorm]
 
-/-- `ite` at two arms of one type answers that type. -/
-theorem nativeAtomTy_ite_self (X : Ty) (canonical : X.normalize = X := by decide) :
-    nativeAtomTy "ite" [.bool, X, X] = some X := by
-  rw [nativeAtomTy_ite, join_self, canonical]
-
 /-- **`ite` at an arm below**: where the second arm's type is below the first's, and the first
-is its own normal form, the answer is the first arm's type. Used by the take step and the poll
-step: the arm that waits answers no message. -/
-theorem nativeAtomTy_ite_below {X Y : Ty} (hX : X.normalize = X := by decide)
-    (below : Ty.sub Y X = true := by decide) : nativeAtomTy "ite" [.bool, X, Y] = some X := by
+is its own normal form, the answer is the first arm's type. It is a corollary of `nativeAtomTy_ite`.
+Used by the take step and the poll step: the arm that waits answers no message. -/
+theorem nativeAtomTy_ite_below {X Y : Ty} (hX : X.normalize = X)
+    (below : Ty.sub Y X = true) : nativeAtomTy "ite" [.bool, X, Y] = some X := by
   rw [nativeAtomTy_ite]
   have hNorm : Normal X := hX ▸ normal_normalize X
   rw [Bounds.join_eq_left_of_subN (OrderProof.sub_normalize_of_sub sub_trans Y X below) hNorm]

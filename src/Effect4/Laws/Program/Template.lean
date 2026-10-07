@@ -232,21 +232,6 @@ theorem hasTy_instantiate_widens {σ σ' : Subst} (hw : Widens σ σ') (t : Ty)
 
 end Ty
 
-theorem lookup_append_left {α β : Type} [DecidableEq α] {l₁ l₂ : List (α × β)} {a : α} {b : β}
-    (h : l₁.lookup a = some b) : (l₁ ++ l₂).lookup a = some b := by
-  induction l₁ with
-  | nil => contradiction
-  | cons p rest ih =>
-    cases p with | mk k v =>
-    rw [List.cons_append]
-    dsimp only [List.lookup] at h ⊢
-    cases heq : a == k with
-    | true =>
-      simp only [heq] at h ⊢
-      exact h
-    | false =>
-      simp only [heq] at h ⊢
-      exact ih h
 
 /-- A closed template offers no candidate for matching by bounds. -/
 theorem Bounds.cands_closed (v : Ty.Variance) (t r : Ty) (h : t.closed = true) :
@@ -302,7 +287,7 @@ theorem Bounds.matchB_closed (seed : Ty.Subst) (t r : Ty) (h : t.closed = true) 
 theorem Bounds.solve_lookup_of_mem {seed : Ty.Subst} {cs : List Bounds.Cand} {j : Nat} {u : Ty}
     (h : seed.lookup j = some u) : (Bounds.solve seed cs).lookup j = some u := by
   dsimp only [Bounds.solve]
-  exact lookup_append_left h
+  rw [List.lookup_append, h, Option.some_or]
 
 theorem Bounds.matchB_keeps {seed σ : Ty.Subst} {template request : Ty}
     (h : Bounds.matchB seed template request = some σ) :
