@@ -963,7 +963,16 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   A filling has no further premise. An omission keeps the whole type where the focus's columns
   are closed, formed and in normal form. The focus's type is kept exactly: the law says nothing
   at a type that is equal only after normalization, and nothing of behaviour. The environment
-  and the type are existential, and no function answers them yet.
+  and the type are existential there, and the focus function answers them.
+- **The focus function (`focus-function`)**: at an address of a program in a typed node, a
+  function answers the environment of the focus, and the checker answers its type there
+  (`Node.envAt`, `focusAt` (`src/Effect4/Program/Typing/Focus.lean`)). The replacement law
+  holds at that pair with no existential (`NodeHasTy.replace_envAt`
+  (`src/Effect4/Laws/Program/Typing/Replace.lean`); `check_replace_focusAt`
+  (`src/Effect4/Laws/Program/Typing/Focus.lean`)). The step has one case for each arm of
+  `Node.child`. It answers nothing after a sibling that the checker refuses. It stores
+  nothing, and one answer costs up to one check of the program. One pass that answers every
+  address is not built.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

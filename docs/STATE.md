@@ -354,8 +354,11 @@ replacement law has landed too (row 294): a program of the focus's type stands i
 focus's place, over the six typing judgments, with no rule added
 (`src/Effect4/Laws/Program/Typing/Replace.lean`). A filling has no further premise. An
 omission with three columns keeps the type where the focus's columns are closed, formed and
-in normal form. The law's environment and type are existential, and the first half of slice
-TRACE makes them a function. Nothing else of the study is a theorem of the tree yet.
+in normal form. The focus function has landed too (row 296): `focusAt` answers the
+sub-program at an address, its typing environment and its type
+(`src/Effect4/Program/Typing/Focus.lean`), and the replacement law holds at its answer with
+no existential. One answer costs up to one check of the program. One pass that answers every
+address waits for total marking. Nothing else of the study is a theorem of the tree yet.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -401,9 +404,16 @@ In work since the suspension of the handover:
   order of work. The checker refuses the normal form of a type that it admits raw, at an
   atom whose scheme infers on the raw type (a red control on `mapFromEntries`). So the
   conversions of candidate N alone do not make the checker read a type up to its normal
-  form: the match of a template must change too, which seat BOUNDS probes. Seat SKETCH has
-  the first half of slice TRACE next, on the same branch: a function for the focus's
-  environment and type.
+  form: the match of a template must change too, which seat BOUNDS probes.
+- **The focus function is merged** ([its receipt](research/2026-10-06-seat-TRACE-receipt.md);
+  rows 292 and 296). It is the first half of the study's slice TRACE. `Node.childEnv` is the
+  step: the typing environment that a node gives its child, with one case for each arm of
+  the generated `Node.child`. `Node.envAt` folds it along a path, and `focusAt` adds the
+  checker's type (the registry claim `focus-function`, pointer `NodeHasTy.replace_envAt`).
+  The two edits of a sketch hold at the computed focus, so a tool has every premise in hand.
+  The checker does not change, and nothing is stored. The dictionary's trace stays the
+  machine's, so this is no trace. Its first consumer is the TypeScript printer: the receipt
+  says what the printer reads at an eliminator, and three open items are the printer's.
 - **Seat FORM has formation at a type variable** (branch `seat/form`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-form-brief.md); row 288, point
   6 a). A type variable is formed in a template only, and a formed program that the checker

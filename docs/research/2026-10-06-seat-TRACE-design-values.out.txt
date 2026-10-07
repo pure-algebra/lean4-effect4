@@ -1,0 +1,26 @@
+[([], "env [] : number ! never / 0 keys"), ([0], "env [] : number ! never / 0 keys"),
+  ([1], "env [number] : number ! never / 0 keys"), ([1, 0], "env [number] : Ref.Ref<number> ! never / 0 keys"),
+  ([1, 1], "env [number, Ref.Ref<number>] : number ! never / 0 keys"),
+  ([1, 1, 0], "env [number, Ref.Ref<number>] : Ref.Ref<number> ! never / 0 keys"),
+  ([1, 1, 1], "env [number, Ref.Ref<number>, Ref.Ref<number>] : number ! never / 0 keys"), ([9], "none"),
+  ([0, 0], "none")]
+"env [] : number ! never / 0 keys"
+"env [] : ReadonlyArray<number> | ReadonlyArray<string> ! never / 0 keys"
+"env [ReadonlyArray<number> | ReadonlyArray<string>] : number ! never / 0 keys"
+"env [ReadonlyArray<number> | ReadonlyArray<string>]"
+some "ReadonlyArray<number> | ReadonlyArray<string>"
+some ([1], "notFiber")
+"env [] : Fiber.Fiber<number, never> | Fiber.Fiber<string, never> ! never / 0 keys"
+"none"
+"env [Fiber.Fiber<number, never> | Fiber.Fiber<string, never>]"
+some "Fiber.Fiber<number, never> | Fiber.Fiber<string, never>"
+[([0], "body [] inLoop=false", "none"), ([0, 0], "body [] inLoop=false", "none"),
+  ([0, 0, 0], "env []", "env [] : number ! never / 0 keys"), ([0, 1], "body [number] inLoop=false", "none"),
+  ([0, 1, 0], "body [number] inLoop=false", "none"), ([0, 1, 0, 0], "body [number] inLoop=true", "none"),
+  ([0, 1, 0, 0, 0], "body [number] inLoop=true", "none"),
+  ([0, 1, 0, 0, 0, 0], "env [number]", "env [number] : number ! never / 0 keys"),
+  ([0, 1, 1], "body [number] inLoop=false", "none"), ([0, 1, 1, 0], "body [number] inLoop=false", "none")]
+"none"
+"env []"
+"none"
+exit 0
