@@ -41,7 +41,7 @@ theorem prepare_agree (root : NativeEff) (table : RowTable) (cur : Option NCode)
   unfold prepareExternalAnswer prepareAtR
   by_cases ht : table.isEmpty = true
   · rw [if_pos ht, if_pos ht]
-    exact ⟨rfl, answerCode_means root answer⟩
+    exact ⟨rfl, answerCode_means (table := table) root answer⟩
   · rw [if_neg ht, if_neg ht]
     split
     · rename_i i _ _ _ value
@@ -62,7 +62,7 @@ theorem prepare_agree (root : NativeEff) (table : RowTable) (cur : Option NCode)
         · rename_i j request withSignal cancel
           exact hnot j request withSignal cancel value rfl rfl
         · cases hidx
-      · exact ⟨rfl, answerCode_means root _⟩
+      · exact ⟨rfl, answerCode_means (table := table) root _⟩
 
 theorem frame_prepareAnswer (root : NativeEff) (table : RowTable) :
     (interpOf root table).prepareAnswer = prepareExternalAnswer table := rfl
@@ -84,7 +84,7 @@ theorem prepareAsync_agree (root : NativeEff) (table : RowTable) (a : FMachine) 
   by_cases hs : b.stuck.isSome = true
   · have hs' : a.stuck.isSome = true := by rw [h.stuck]; exact hs
     rw [if_pos hs, if_pos hs']
-    exact ⟨h.state, answerCode_means root answer⟩
+    exact ⟨h.state, answerCode_means (table := table) root answer⟩
   · have hs' : ¬ a.stuck.isSome = true := by rw [h.stuck]; exact hs
     rw [if_neg hs, if_neg hs', frame_prepareAnswer, term_prepareAnswer, h.state]
     rcases book_fiber?_cases h id with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
@@ -103,5 +103,33 @@ theorem prepareAsync_agree (root : NativeEff) (table : RowTable) (a : FMachine) 
         rw [index_agree root hcode] at this
         exact this
       · exact prepare_agree root table none answer b.state
+
+/-- **A prepared answer keeps the store invariant**, at any row table: it writes the external
+allocations alone, and at the empty row table it writes nothing. A step of the prepared-answer
+clause of `hooksAgree_of` (slice H6a). -/
+theorem prepareExternalAnswer_ok (table : RowTable) (cur : Option NCode)
+    (answer : Completion Val Err Defect FiberId Ann) {s : Stores} (hs : StoresOk table s) :
+    StoresOk table (prepareExternalAnswer table cur answer s).1 := by
+  dsimp only [prepareExternalAnswer]
+  split
+  · exact hs
+  · rename_i ht
+    have hne : table ≠ [] := fun h => ht (by rw [h]; rfl)
+    split
+    · split
+      · exact hs
+      · split
+        · exact hs
+        · exact ⟨hs.keysFresh, fun h => absurd h hne, hs.answers⟩
+    · exact hs
+
+/-- The frame's prepared answer keeps the store invariant (`prepareExternalAnswer_ok`). -/
+theorem prepareAsync_ok (root : NativeEff) (table : RowTable) (a : FMachine) (id : FiberId)
+    (token : Nat) (answer : Completion Val Err Defect FiberId Ann) (hs : StoresOk table a.state) :
+    StoresOk table (prepareAsyncAnswer (interpOf root table) a id token answer).1 := by
+  unfold prepareAsyncAnswer
+  split
+  · exact hs
+  · exact prepareExternalAnswer_ok table _ answer hs
 
 end Effect4.Program.Sched

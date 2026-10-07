@@ -6,9 +6,10 @@ import Effect4.Laws.Run.Tape
 
 Slice H5 of `docs/research/2026-10-07-packet-host-meaning.md` (decisions row 310). The session
 statement follows from the raw statement: `session_eq_ref_of_raw` proves it from any
-table-aware agreement of the frame machine with a reference, by the laws of the tape. So
-`session_eq_ref` is proved modulo the planned goal `run_eq_ref_table`. Its premise is that the
-run is recorded and `funded` (the packet, section 1).
+table-aware agreement of the frame machine with a reference, by the laws of the tape. The raw
+agreement with no preloaded answer is a theorem (`run_eq_ref_table_noPreload`, slice H6a), so
+`session_eq_ref` is a theorem. Its premise is that the run is recorded and `funded` (the packet,
+section 1).
 -/
 
 set_option autoImplicit false
@@ -134,13 +135,14 @@ of the reference machine's replay of the run's own tape, at the run's row table 
 Reach: any built program and any journal, under `funded`: no row of the journal is a stopped
 row. It does not establish that a run is funded, the session's ledger, reply admission or a
 host's conformance. A run with a stopped row is outside it: the control is three calls at a
-command budget of 5. It is proved modulo `run_eq_ref_table`, by `session_eq_ref_of_raw`. Concept
+command budget of 5. It is proved by `session_eq_ref_of_raw` from `run_eq_ref_table_noPreload`
+(slice H6a), so it rests on no planned goal. Concept
 `translation-simulation`, claim `session-eq-ref`, role simulation; requirement R6. Consumer: the
 typed session (decisions row 99), and the meaning of a run's certificate. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem session_eq_ref : SessionEqRef := fun s recorded h =>
   session_eq_ref_of_raw (fun e table fuel tape compileFuel => replayR e fuel tape compileFuel table)
-    (fun e table fuel tape compileFuel => run_eq_ref_table e table fuel tape [] compileFuel)
+    (fun e table fuel tape compileFuel => run_eq_ref_table_noPreload e table fuel tape compileFuel)
     s recorded h
 
 end Effect4.Run

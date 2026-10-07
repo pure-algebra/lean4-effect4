@@ -826,8 +826,11 @@ def registry : Registry where
     { id := "run-eq-ref-table", concept := "translation-simulation", role := .simulation
       title := "The frame machine and the reference machine agree at every row table: on every program, decision tape, list of preloaded answers and pair of budgets, the same class and the same observation obs (no premise on the tape; nothing of reply admission, reply typing, a host's conformance or the session's ledger; DI-57, decisions row 310)"
       pointer := .witness `Effect4.Program.Sched.run_eq_ref_table },
+    { id := "run-eq-ref-table-no-preload", concept := "translation-simulation", role := .simulation
+      title := "The frame machine and the reference machine agree at every row table from the loads with no preloaded answer, the form every session runs: on every program, decision tape and pair of budgets, the same class and the same observation obs (the part of run-eq-ref-table with no preloaded answer; nothing of reply admission, reply typing, a host's conformance or the session's ledger; DI-57, decisions row 314)"
+      pointer := .witness `Effect4.Program.Sched.run_eq_ref_table_noPreload },
     { id := "session-eq-ref", concept := "translation-simulation", role := .simulation
-      title := "A session's reading is the reference machine's replay of the run's own tape: for a recorded, funded run, the same class and the same observation (proved modulo run-eq-ref-table by session_eq_ref_of_raw; nothing about a run with a stopped row, the session's ledger or reply admission; DI-57, decisions row 310)"
+      title := "A session's reading is the reference machine's replay of the run's own tape: for a recorded, funded run, the same class and the same observation (proved by session_eq_ref_of_raw from run_eq_ref_table_noPreload; nothing about a run with a stopped row, the session's ledger or reply admission; DI-57, decisions rows 310 and 314)"
       pointer := .witness `Effect4.Run.session_eq_ref },
     { id := "rows-denotation-session", concept := "translation-simulation", role := .simulation
       title := "The meaning of a StraightRows program under a run's reply tape is the root's exit with the stores, or the frontier: for a recorded run that is funded, at rest and driven by a host (one fiber; nothing about an interruption, a clock step, a delayed cell read or a handle row; DI-69, decisions row 310)"

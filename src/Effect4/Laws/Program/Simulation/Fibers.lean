@@ -18,6 +18,8 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
 
+variable {table : RowTable}
+
 /-! ## The two instances -/
 
 abbrev FRun := RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx
@@ -43,8 +45,8 @@ abbrev CMeans (root : NativeEff) : FCmd → RCmd → Prop := CmdMeans (CodeMeans
 
 /-- One iteration's result on both sides: machines in the book with the invariant, fibers
 related, the latch, the outcome and the nested commands the same. -/
-structure IterRel (root : NativeEff) (it₁ : FIter) (it₂ : RIter) : Prop where
-  ok : MachineOk StoresOk it₁.machine
+structure IterRel (table : RowTable) (root : NativeEff) (it₁ : FIter) (it₂ : RIter) : Prop where
+  ok : MachineOk (StoresOk table) it₁.machine
   machine : BMeans root it₁.machine it₂.machine
   fiber : FMeans root it₁.fiber it₂.fiber
   yielding : it₁.yielding = it₂.yielding
@@ -471,29 +473,29 @@ theorem pendingOk_of_fields {f g : FRun} (hf : PendingOk f) (h : g.pending = f.p
   intro p hp; rw [h] at hp; exact hf p hp
 
 /-- The existing store/pending invariant does not inspect creation records. -/
-theorem machineOk_forks {m : FMachine} (hok : MachineOk StoresOk m) (records : List ForkRecord) :
-    MachineOk StoresOk { m with forks := records } := hok
+theorem machineOk_forks {m : FMachine} (hok : MachineOk (StoresOk table) m) (records : List ForkRecord) :
+    MachineOk (StoresOk table) { m with forks := records } := hok
 
-theorem machineOk_appendFiber {m : FMachine} (hok : MachineOk StoresOk m) {c : FRun} (hc : PendingOk c)
-    (n : Nat) : MachineOk StoresOk { m with fibers := m.fibers ++ [c], nextId := n } := by
+theorem machineOk_appendFiber {m : FMachine} (hok : MachineOk (StoresOk table) m) {c : FRun} (hc : PendingOk c)
+    (n : Nat) : MachineOk (StoresOk table) { m with fibers := m.fibers ++ [c], nextId := n } := by
   refine ⟨hok.1, fun g hg => ?_⟩
   simp only [List.mem_append, List.mem_singleton] at hg
   rcases hg with hg | rfl
   · exact hok.2 g hg
   · exact hc
 
-theorem machineOk_withNextToken {m : FMachine} (hok : MachineOk StoresOk m) (n : Nat) :
-    MachineOk StoresOk { m with nextToken := n } := by aesop
+theorem machineOk_withNextToken {m : FMachine} (hok : MachineOk (StoresOk table) m) (n : Nat) :
+    MachineOk (StoresOk table) { m with nextToken := n } := by aesop
 
-theorem machineOk_withStateToken {m : FMachine} (hok : MachineOk StoresOk m) {s : Stores}
-    (hs : StoresOk s) (n : Nat) : MachineOk StoresOk { m with state := s, nextToken := n } :=
+theorem machineOk_withStateToken {m : FMachine} (hok : MachineOk (StoresOk table) m) {s : Stores}
+    (hs : StoresOk table s) (n : Nat) : MachineOk (StoresOk table) { m with state := s, nextToken := n } :=
   ⟨hs, hok.2⟩
 
-theorem machineOk_appendRace {m : FMachine} (hok : MachineOk StoresOk m) (r : FRace) (nr nt : Nat) :
-    MachineOk StoresOk { m with nextRace := nr, nextToken := nt, races := m.races ++ [r] } := by aesop
+theorem machineOk_appendRace {m : FMachine} (hok : MachineOk (StoresOk table) m) (r : FRace) (nr nt : Nat) :
+    MachineOk (StoresOk table) { m with nextRace := nr, nextToken := nt, races := m.races ++ [r] } := by aesop
 
-theorem machineOk_mapFibers {m : FMachine} (hok : MachineOk StoresOk m) {g : FRun → FRun}
-    (hg : ∀ f, PendingOk f → PendingOk (g f)) : MachineOk StoresOk { m with fibers := m.fibers.map g } := by
+theorem machineOk_mapFibers {m : FMachine} (hok : MachineOk (StoresOk table) m) {g : FRun → FRun}
+    (hg : ∀ f, PendingOk f → PendingOk (g f)) : MachineOk (StoresOk table) { m with fibers := m.fibers.map g } := by
   refine ⟨hok.1, fun f hf => ?_⟩
   obtain ⟨f', hf', rfl⟩ := List.mem_map.mp hf
   exact hg f' (hok.2 f' hf')

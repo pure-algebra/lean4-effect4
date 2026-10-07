@@ -17,6 +17,8 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program
 
+variable {table : RowTable}
+
 theorem pendingOk_parkVoid {f : FRun} (hf : PendingOk f) (token : Nat) (waitingOn : Option FiberId)
     (remaining : List FiberId) (collected : List ExitV) (failFast : Bool) :
     PendingOk (f.park ⟨token, waitingOn, remaining, collected, Resume.void, failFast⟩) :=
@@ -234,7 +236,7 @@ theorem exitScoped_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : B
   · exact evaluatePrim_pendingOk _ m f y hf
 
 theorem evaluateNative_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : Bool)
-    (hf : PendingOk f) : PendingOk (evaluateNative root m f y).fiber := by
+    (hf : PendingOk f) : PendingOk (evaluateNative root m f y table).fiber := by
   unfold evaluateNative
   split
   · split
@@ -245,8 +247,8 @@ theorem evaluateNative_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y
   · exact evaluatePrim_pendingOk _ m f y hf
 
 theorem iteration_pendingOk (root : NativeEff) (m : FMachine) (f : FRun) (y : Bool) (hf : PendingOk f) :
-    letI := evaluatorFor root
-    PendingOk (iteration (interpOf root) m f y).fiber := by
+    letI := evaluatorFor root table
+    PendingOk (iteration (interpOf root table) m f y).fiber := by
   unfold iteration
   dsimp only
   have hf' : PendingOk (countOp (runloopTop f)) := by

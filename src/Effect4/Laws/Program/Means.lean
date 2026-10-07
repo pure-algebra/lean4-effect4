@@ -35,6 +35,8 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
+variable {table : RowTable}
+
 /-- The frame machine's fiber at the native alphabet. -/
 abbrev FFiber := FrameFiber EffName EffThunk Val Err Defect FiberId Ann
 
@@ -68,11 +70,11 @@ def _root_.Effect4.Program.EffName.refreshE (completed : List (FiberId × ExitV)
   | name => name
 
 theorem interpAt_contA (root : NativeEff) (completed : List (FiberId × ExitV)) (n : EffName) (v : Val) :
-    (interpAt root completed).contA n v = contAOf root (n.refreshA completed) v := by aesop
+    (interpAt root completed table).contA n v = contAOf root (n.refreshA completed) v := by aesop
 
 theorem interpAt_contE (root : NativeEff) (completed : List (FiberId × ExitV)) (n : EffName)
     (c : CauseV) :
-    (interpAt root completed).contE n c = contEOf root (n.refreshE completed) c := by aesop
+    (interpAt root completed table).contE n c = contEOf root (n.refreshE completed) c := by aesop
 
 /-- The frame's finalizer code for an `OnExit` frame whose finalizer is a program, at the
 refreshed interpreter (`Machine.finalizerCode` reads only the two exit names). -/

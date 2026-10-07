@@ -22,40 +22,53 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
 
+variable {table : RowTable}
+
 /-! ## The remaining store invariant: fresh scope keys, no external handle -/
 
 /-- Scope registration keys lie below the fresh-name supply at every reachable registration.
 Deferred completion shape is now guaranteed by its data type. -/
-structure StoresOk (s : Stores) : Prop where
+structure StoresOk (table : RowTable) (s : Stores) : Prop where
   keysFresh : s.ScopeKeysFresh
-  /-- No external handle is allocated. The frame instance runs at the empty row table
-  (`interpOf`'s default), where the external registration and `prepareExternalAnswer` fall back
-  without minting (`Program/Compile.lean`), and no store step writes the external store; the
-  reference never mints one either (`interpR`). The exit connector's allocation premise
-  (`exitHasTy_of_fitsExit`) reads it through `replay_externals`. -/
-  externals : s.externals.allocated = []
+  /-- At the empty row table no external handle is allocated. There the external registration
+  and `prepareExternalAnswer` fall back without minting (`Program/Compile.lean`), no store step
+  writes the external store, and the reference mints none either (`prepareAtR`). At another
+  row table a host's answer at a row that answers a handle allocates one, on both machines.
+  The exit connector's allocation premise (`exitHasTy_of_fitsExit`) reads this clause through
+  `replay_externals`. -/
+  externals : table = [] → s.externals.allocated = []
+  /-- No preloaded answer stands: a session loads none, and DI-23 deletes the list. So the
+  external registration answers nothing on both machines, at any row table
+  (`registerAsync_foreign`). Slice H6a of the host packet. -/
+  answers : s.externals.answers = []
 
-/-- info: frame rules: 7 checked theorems, 11 reused clauses, 3 explicit premises -/
+/-- info: frame rules: 7 checked theorems, 17 reused clauses, 4 explicit premises -/
 #guard_msgs in
 #frame_rules StoresOk
 
+/-- A store with the same external store keeps the two external clauses: what is left is its
+fresh scope keys. -/
+theorem StoresOk.of_externals {s s' : Stores} (hs : StoresOk table s)
+    (fresh : s'.ScopeKeysFresh) (h : s'.externals = s.externals) : StoresOk table s' :=
+  ⟨fresh, by rw [h]; exact hs.externals, by rw [h]; exact hs.answers⟩
+
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem storesOk_empty : StoresOk Stores.empty := by
+theorem storesOk_empty : StoresOk table Stores.empty := by
   aesop (add safe constructors StoresOk) (add safe apply Stores.scopeKeysFresh_empty)
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem storesOk_wakeList {s : Stores} (hs : StoresOk s) (key : WakeKey) (phase : WakePhase) :
-    StoresOk (Stores.wakeList key phase s) := by
+theorem storesOk_wakeList {s : Stores} (hs : StoresOk table s) (key : WakeKey) (phase : WakePhase) :
+    StoresOk table (Stores.wakeList key phase s) := by
   unfold Stores.wakeList
   split
-  · exact StoresOk.frame_deferreds s hs _
+  · exact StoresOk.frame_deferreds table s hs _
   · exact hs
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresOk s)
-    (h : syncOpStep o s = some (s', v)) : StoresOk s' := by
+theorem storesOk_syncOpStep {s s' : Stores} {o : SyncOp} {v : Val} (hs : StoresOk table s)
+    (h : syncOpStep o s = some (s', v)) : StoresOk table s' := by
   -- The external field is independent of the scope/name-supply invariant below.
-  refine ⟨?_, by rw [syncOpStep_externals o s s' v h]; exact hs.externals⟩
+  refine StoresOk.of_externals hs ?_ (syncOpStep_externals o s s' v h)
   cases o with
   | deferredMake =>
     have h' := Prod.mk.inj (Option.some.inj h)
@@ -179,17 +192,17 @@ theorem completion_means (root : NativeEff) (a : Completion Val Err Defect Fiber
   | ofRefGet cell => exact CodeMeans.syncStore _ _ (successV root)
 
 theorem answerCode_means (root : NativeEff) (a : Completion Val Err Defect FiberId Ann) :
-    CodeMeans root ((interpOf root).answerCode a) ((interpR root).answerCode a) :=
+    CodeMeans root ((interpOf root table).answerCode a) ((interpR root table).answerCode a) :=
   completion_means root a
 
 theorem exitValue_means (root : NativeEff) (ex : ExitV) (mode : Supervision.ObserverMode) :
-    CodeMeans root ((interpOf root).exitValue ex mode) ((interpR root).exitValue ex mode) := by
+    CodeMeans root ((interpOf root table).exitValue ex mode) ((interpR root table).exitValue ex mode) := by
   cases mode
   · exact CodeMeans.success _
   · exact codeMeans_ofExit_pure root ex
 
 theorem parkCode_means (root : NativeEff) (kind : ParkKind) :
-    CodeMeans root (Prim.suspend (EffThunk.park kind)) ((interpR root).parkCode kind) := by
+    CodeMeans root (Prim.suspend (EffThunk.park kind)) ((interpR root table).parkCode kind) := by
   cases kind with
   | join target mode =>
     cases mode
@@ -199,16 +212,16 @@ theorem parkCode_means (root : NativeEff) (kind : ParkKind) :
   | awaitAll targets => exact CodeMeans.awaitAllPark targets _ delivers_seqR_pure
 
 theorem interruptCode_means (root : NativeEff) (target : FiberId) :
-    CodeMeans root ((interpOf root).interruptCode target) ((interpR root).interruptCode target) :=
+    CodeMeans root ((interpOf root table).interruptCode target) ((interpR root table).interruptCode target) :=
   CodeMeans.actInterrupt _ _ _ rfl delivers_seqR_pure
 
 theorem interruptAsCode_means (root : NativeEff) (target who : FiberId) :
-    CodeMeans root ((interpOf root).interruptAsCode target who)
-      ((interpR root).interruptAsCode target who) :=
+    CodeMeans root ((interpOf root table).interruptAsCode target who)
+      ((interpR root table).interruptAsCode target who) :=
   CodeMeans.actInterruptAs _ _ _ _ rfl delivers_seqR_pure
 
 theorem interruptAllCode_means (root : NativeEff) (targets : List FiberId) :
-    CodeMeans root ((interpOf root).interruptAllCode targets) ((interpR root).interruptAllCode targets) :=
+    CodeMeans root ((interpOf root table).interruptAllCode targets) ((interpR root table).interruptAllCode targets) :=
   CodeMeans.actInterruptAll _ _ _ _ rfl delivers_seqR_pure
 
 /-- The restoring continuation the core composes (`onSuccess` at a `restore` name). -/
@@ -232,8 +245,8 @@ theorem yieldBefore_means (root : NativeEff) {c₁ : NCode} {c₂ : RProgram} (h
   exact hc.prepare completed
 
 theorem raceSettle_means (root : NativeEff) (race : Nat) (needed : Bool) (ex : ExitV) :
-    CodeMeans root ((interpOf root).raceSettle race needed ex)
-      ((interpR root).raceSettle race needed ex) := by
+    CodeMeans root ((interpOf root table).raceSettle race needed ex)
+      ((interpR root table).raceSettle race needed ex) := by
   cases needed
   · cases ex <;> first | exact CodeMeans.success _ | exact CodeMeans.failure _
   · show CodeMeans root (Prim.onSuccess _ _) ((guardR .onSuccess _).bind _)
@@ -268,8 +281,8 @@ theorem cancelProgramOf_means (root : NativeEff) (name : EffName) :
       case cancelRace r => exact CodeMeans.actCancelRace _ _ _ rfl delivers_seqR_pure
 
 theorem cancelThenFail_means (root : NativeEff) (name : EffName) (cause : CauseV) :
-    CodeMeans root ((interpOf root).cancelThenFail name cause)
-      ((interpR root).cancelThenFail name cause) := by
+    CodeMeans root ((interpOf root table).cancelThenFail name cause)
+      ((interpR root table).cancelThenFail name cause) := by
   show CodeMeans root (Prim.onSuccess (cancelProgramOf name) (EffName.reFail cause))
     ((guardR .onSuccess (denoteCancel name)).bind _)
   rw [guardR_bind]
@@ -327,7 +340,7 @@ theorem denoteFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
 
 /-- The term's body hook is the denotation, at every view. -/
 theorem bodyR_eq (root : NativeEff) (completed : List (FiberId × ExitV)) (b : Body) :
-    bodyR (interpRAt root completed) b = denoteBody root b :=
+    bodyR (interpRAt root completed table) b = denoteBody root b :=
   by aesop
 
 theorem body_means (root : NativeEff) (b : Body) :
@@ -355,8 +368,8 @@ theorem body_means (root : NativeEff) (b : Body) :
 /-- The finalizer programs: both instances name the same finalizers, with related programs. -/
 theorem finalizerProgram_means (root : NativeEff) (completed : List (FiberId × ExitV))
     (name : EffName) (ex : ExitV) :
-    OptRel (CodeMeans root) ((interpAt root completed).finalizerProgram name ex)
-      ((interpRAt root completed).finalizerProgram name ex) := by
+    OptRel (CodeMeans root) ((interpAt root completed table).finalizerProgram name ex)
+      ((interpRAt root completed table).finalizerProgram name ex) := by
   cases name <;> try exact True.intro
   case fin p => exact resolve_intro root _
   case scopeClose scope => exact CodeMeans.actCloseScope _ _ _ _ rfl delivers_pure
@@ -433,7 +446,7 @@ theorem voidedFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
 theorem closeScope_means (root : NativeEff) (scope : Nat) (ex : ExitV) (flag : Bool) (id : FiberId)
     (s : Stores) :
     OptRel (fun (a : Stores × NCode) (b : Stores × RProgram) => a.1 = b.1 ∧ CodeMeans root a.2 b.2)
-      ((interpOf root).closeScope scope ex flag id s) ((interpR root).closeScope scope ex flag id s) := by
+      ((interpOf root table).closeScope scope ex flag id s) ((interpR root table).closeScope scope ex flag id s) := by
   show OptRel _ ((storesCloseScope scope ex flag s).map fun r => (r.1, embed r.2))
     (closeScopeR scope ex flag s)
   unfold storesCloseScope closeScopeR
@@ -551,10 +564,10 @@ theorem runStmts_walkR (root : NativeEff) (p : Point) : ∀ (fuel : Nat) (pc : L
 /-- The iterator hook: the same folds and related steps, for every generator name. -/
 theorem iterNext_means (root : NativeEff) (completed : List (FiberId × ExitV)) (name : EffName)
     (value : Val) :
-    ((interpAt root completed).iterNext name value).1 =
-        ((interpRAt root completed).iterNext name value).1 ∧
-      StepRel root ((interpAt root completed).iterNext name value).2
-        ((interpRAt root completed).iterNext name value).2 := by
+    ((interpAt root completed table).iterNext name value).1 =
+        ((interpRAt root completed table).iterNext name value).1 ∧
+      StepRel root ((interpAt root completed table).iterNext name value).2
+        ((interpRAt root completed table).iterNext name value).2 := by
   cases name with
   | gen p pc bind => exact runStmts_walkR root { p with completed } p.fuel pc _ []
   | store n =>
@@ -661,8 +674,8 @@ resuming. -/
 theorem loopEnter_means (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (cursor : Val) :
-    LoopNextMeans root ((interpAt root completed).loopEnter (.loop p') cursor)
-      ((interpRAt root completed).loopEnter (.loop p) cursor) := by
+    LoopNextMeans root ((interpAt root completed table).loopEnter (.loop p') cursor)
+      ((interpRAt root completed table).loopEnter (.loop p) cursor) := by
   show LoopNextMeans root (loopNextAt root ({ p' with completed } : Point) cursor)
     (loopNextRAt root ({ p with completed } : Point) cursor)
   rw [point_congr hp completed]
@@ -671,8 +684,8 @@ theorem loopEnter_means (root : NativeEff) (completed : List (FiberId × ExitV))
 theorem loopResume_means (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
     (cursor answer : Val) :
-    LoopNextMeans root ((interpAt root completed).loopResume (.loop p') cursor answer)
-      ((interpRAt root completed).loopResume (.loop p) cursor answer) := by
+    LoopNextMeans root ((interpAt root completed table).loopResume (.loop p') cursor answer)
+      ((interpRAt root completed table).loopResume (.loop p) cursor answer) := by
   show LoopNextMeans root (loopResumeAt root ({ p' with completed } : Point) cursor answer)
     (loopResumeRAt root ({ p with completed } : Point) cursor answer)
   rw [point_congr hp completed]

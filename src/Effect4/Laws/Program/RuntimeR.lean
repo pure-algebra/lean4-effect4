@@ -147,9 +147,9 @@ def classify {κ φ η : Type} :
   | .frontier _ _ => .frontier
   | .stuck why _ => .stuck why
 
-/-- The loaded frame machine carries the invariant: empty stores, no park. -/
-theorem load_ok (e : NativeEff) (fuel : Nat) :
-    MachineOk StoresOk (Api.load e fuel) :=
+/-- The loaded frame machine carries the invariant at every row table: empty stores, no park. -/
+theorem load_ok {table : RowTable} (e : NativeEff) (fuel : Nat) :
+    MachineOk (StoresOk table) (Api.load e fuel) :=
   ⟨storesOk_empty, fun f hf => by
     rw [List.mem_singleton.mp hf]
     exact pendingOk_make _ _ _ _ _⟩
@@ -160,18 +160,18 @@ theorem load_rel (e : NativeEff) (fuel : Nat) :
   BMeans.mk' (ListRel.cons (fmeans_make e Api.root (compile_intro e fuel []) true _ _) ListRel.nil)
     ListRel.nil rfl rfl rfl rfl rfl rfl rfl rfl
 
-/-- Every tape replays to related results, at any compile budget and any command budget. -/
-theorem replay_rel (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision)
- :
-    letI := evaluatorFor e
-    letI := termEvaluatorFor e
+/-- Every tape replays to related results, at every row table, any compile budget and any
+command budget, from the loads with no preloaded answer. -/
+theorem replay_rel {table : RowTable} (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision) :
+    letI := evaluatorFor e table
+    letI := termEvaluatorFor e table
     ReplayRel (CodeMeans e) (Means e)
-      (replayEval (interpOf e) fuel tape (Api.load e cfuel))
-      (replayEval (interpR e) fuel tape (loadR e cfuel)) := by
-  letI := evaluatorFor e
-  letI := termEvaluatorFor e
-  exact book_replayEval (interpOf e) (interpR e) (stepAgrees e) (hooksAgree_of e) fuel tape _ _
-    (load_ok e cfuel) (load_rel e cfuel)
+      (replayEval (interpOf e table) fuel tape (Api.load e cfuel))
+      (replayEval (interpR e table) fuel tape (loadR e cfuel)) := by
+  letI := evaluatorFor e table
+  letI := termEvaluatorFor e table
+  exact book_replayEval (interpOf e table) (interpR e table) (stepAgrees e) (hooksAgree_of e)
+    fuel tape _ _ (load_ok e cfuel) (load_rel e cfuel)
 
 theorem replayRel_classify_obs {e : NativeEff} {r₁ : FReplay} {r₂ : RReplay}
     (h : ReplayRel (CodeMeans e) (Means e) r₁ r₂) :
@@ -182,17 +182,19 @@ theorem replayRel_classify_obs {e : NativeEff} {r₁ : FReplay} {r₂ : RReplay}
     | exact ⟨rfl, bookMeans_obs h.2⟩
     | exact ⟨congrArg Api.Outcome.stuck h.1, bookMeans_obs h.2⟩
 
-theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
-    (Api.replay e fuel tape).outcome =
-      classify (replayEval (evaluator := evaluatorFor e) (interpOf e) fuel tape
-        (Api.load e fuel)) := by
+theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (table : RowTable)
+    (compileFuel : Nat) :
+    (Api.replay e fuel tape [] table compileFuel).outcome =
+      classify (replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel tape
+        (Api.load e compileFuel)) := by
   unfold Api.replay
   split <;> rename_i heq <;> rw [heq] <;> rfl
 
-theorem replay_machine (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
-    (Api.replay e fuel tape).machine =
-      (replayEval (evaluator := evaluatorFor e) (interpOf e) fuel tape
-        (Api.load e fuel)).machine := by
+theorem replay_machine (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (table : RowTable)
+    (compileFuel : Nat) :
+    (Api.replay e fuel tape [] table compileFuel).machine =
+      (replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel tape
+        (Api.load e compileFuel)).machine := by
   unfold Api.replay
   split <;> rename_i heq <;> rw [heq] <;> rfl
 
@@ -204,28 +206,28 @@ Nothing is said about an external host.
 
 **At the empty table, with no oracle answers** (DI-57). `Api.replay` takes a `RowTable` and a
 list of external answers; this theorem takes neither, so both stay at their defaults — the
-empty table and the empty oracle. It is an internal agreement on that fragment and it does not
-extend to a run with external rows: the reference lacks external registration, the answer's
-conversion and allocation, the prepared answer, and a way to select its evaluator. The
-table-aware proposition is filed verbatim, with those four gaps at their `file:line`, in
-`Test/contracts/machine-scheduler-core.contract.md`, "Table-aware agreement (DI-57)"; its
-proof is a later slice. -/
+empty table and the empty oracle. The reference takes the row table too (`interpR`, `replayR`),
+and the agreement at every row table with no preloaded answer is
+`run_eq_ref_table_noPreload` (`Laws/Program/Table/Agreement.lean`, decisions row 314). The
+case of preloaded answers is the rest of the planned goal `run_eq_ref_table`, whose
+proposition is filed in `Test/contracts/machine-scheduler-core.contract.md`, "Table-aware
+agreement (DI-57)". -/
 theorem run_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
  :
     (Api.replay e fuel tape).outcome = classify (replayR e fuel tape) ∧
       obs (Api.replay e fuel tape).machine = obsR (replayR e fuel tape).machine := by
   rw [replay_outcome, replay_machine]
-  exact replayRel_classify_obs (replay_rel e fuel fuel tape)
+  exact replayRel_classify_obs (replay_rel (table := []) e fuel fuel tape)
 
 /-- The frame replay keeps the frame instance's store invariant (`StoresOk`) to the end of the
-tape, at any compile and command budget (`book_replayEval_ok`). -/
-theorem replay_ok (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision) :
-    letI := evaluatorFor e
-    MachineOk StoresOk (replayEval (interpOf e) fuel tape (Api.load e cfuel)).machine := by
-  letI := evaluatorFor e
-  letI := termEvaluatorFor e
-  exact book_replayEval_ok (interpOf e) (interpR e) (stepAgrees e) (hooksAgree_of e) fuel tape _ _
-    (load_ok e cfuel) (load_rel e cfuel)
+tape, at every row table and any compile and command budget (`book_replayEval_ok`). -/
+theorem replay_ok {table : RowTable} (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision) :
+    letI := evaluatorFor e table
+    MachineOk (StoresOk table) (replayEval (interpOf e table) fuel tape (Api.load e cfuel)).machine := by
+  letI := evaluatorFor e table
+  letI := termEvaluatorFor e table
+  exact book_replayEval_ok (interpOf e table) (interpR e table) (stepAgrees e) (hooksAgree_of e)
+    fuel tape _ _ (load_ok e cfuel) (load_rel e cfuel)
 
 /-- **No replay allocates an external handle**, on every tape, host answers included: the frame
 machine runs at the empty row table, where the external registration and the prepared answer
@@ -234,14 +236,14 @@ fall back without minting (`StoresOk.externals`). The exit connector's allocatio
 theorem replay_externals (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
     (Api.replay e fuel tape).machine.state.externals.allocated = [] := by
   rw [replay_machine]
-  exact (replay_ok e fuel fuel tape).state.externals
+  exact (replay_ok (table := []) e fuel fuel tape).state.externals rfl
 
 /-- The term reference's replay allocates none either: its store is the frame replay's
 (`replay_rel`, `BookMeans.state`). -/
 theorem replayR_externals (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
     (replayR e fuel tape).machine.state.externals.allocated = [] := by
-  have ok := (replay_ok e fuel fuel tape).state.externals
-  rw [(ReplayRel.machine (replay_rel e fuel fuel tape)).state] at ok
+  have ok := (replay_ok (table := []) e fuel fuel tape).state.externals rfl
+  rw [(ReplayRel.machine (replay_rel (table := []) e fuel fuel tape)).state] at ok
   exact ok
 
 /-- Both sufficiency receipts agree, at any compile budget and any command budget. -/
@@ -262,7 +264,7 @@ theorem beh_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
     letI := evaluatorFor e
     Beh (interpOf e) (Api.load e fuel) tape fuel h₁ =
       BehR e fuel (loadR e fuel) tape h₂ :=
-  (replayRel_classify_obs (replay_rel e fuel fuel tape)).2
+  (replayRel_classify_obs (replay_rel (table := []) e fuel fuel tape)).2
 
 /-- The root's exit read on related machines. -/
 theorem BMeans.exitOf {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h : BMeans root m₁ m₂)
@@ -280,7 +282,7 @@ theorem run_eq_ref_exit (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
       ((replayR e fuel tape).machine.fiber? Api.root).bind RunFiber.exit := by
   unfold Api.Inspection.exit
   rw [replay_machine]
-  exact BMeans.exitOf (ReplayRel.machine (replay_rel e fuel fuel tape)) Api.root
+  exact BMeans.exitOf (ReplayRel.machine (replay_rel (table := []) e fuel fuel tape)) Api.root
 
 /-! ## P4: the straight fragment on the reference, at the fixed budget
 
@@ -308,7 +310,7 @@ theorem straight_ref (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
         ⟨[(Api.root, some (meaning e [] Stores.empty).1)], (meaning e [] Stores.empty).2⟩ := by
   have hpl : Straight e = true := hs
   obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
-  have h := replayRel_classify_obs (replay_rel e fuel fuel [Api.evaluate, Api.flush])
+  have h := replayRel_classify_obs (replay_rel (table := []) e fuel fuel [Api.evaluate, Api.flush])
   rw [hrep] at h
   exact ⟨h.1.symm, h.2.symm⟩
 

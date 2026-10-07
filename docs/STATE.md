@@ -471,10 +471,12 @@ In work since the suspension of the handover:
   theorems: the tree extends `denote`, C2 for host rows, and the erasure law. The reference
   machine takes the row table. The raw statement `run_eq_ref_table` and the statement of
   DI-69 `denoteRows_eq_session` are planned goals with their finite evidence.
-  `session_eq_ref` is a theorem modulo the first goal. The call instance at an address is data
-  (`callAt`), with its law. Next: the proof of the raw goal, rehearsed on `probe/h6`
-  ([the probe note](research/2026-10-07-host-meaning-probe.md)), and the term guard at a host
-  row's request (row 312).
+  The call instance at an address is data (`callAt`), with its law.
+- **`session_eq_ref` is a theorem** (row 314, slice H6a). The frame machine and the reference
+  machine agree at every row table when no answer is preloaded, the form every session runs
+  (`run_eq_ref_table_noPreload`). The case of preloaded answers stays a planned goal, with no
+  consumer on the spine. Next: the term guard at a host row's request (row 312), and the proof
+  of `denoteRows_eq_session` (slice H8).
 - **Chunks T and S are landed** (row 311): the first profile of streams and the authoring
   sugar. The implementer does no more implementation, and the coordinator lands the work itself
   (row 312). The claims record is walked with the owner at the next check-in.

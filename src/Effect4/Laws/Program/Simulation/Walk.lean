@@ -19,6 +19,8 @@ namespace Effect4.Program.Sched
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
   Effect4.FrameFiber
 
+variable {table : RowTable}
+
 /-! ## The exit's demand, skip and arm -/
 
 /-- The frame's demand for an exit (`finalizerOr`, `exitScoped`, `step`). -/
@@ -534,14 +536,14 @@ theorem walkExit_mask_failure (cause : CauseV) (flag : Bool) (rest : List NCode)
 /-- The frame's pop and the term's walk agree: both finish with the exit, or the frame
 answers — a substituted failure, the scoped exit callback, an `OnExit` finalizer, or a plain
 arm — and the term has installed the related work. -/
-inductive WalkRel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : ExitV)
+inductive WalkRel (root : NativeEff) (table : RowTable) (completed : List (FiberId × ExitV)) (ex : ExitV)
     (cur : RProgram) : NPop → RSaved → Option ExitV → Prop
   | finished {pop : NPop} {frame' : RSaved} (ha : pop.answer = .empty) (hs : pop.fiber.stack = [])
       (hs' : frame'.stack = []) (hi : pop.fiber.interruptible = frame'.interruptible)
       (hc : pop.fiber.interruptedCause = frame'.interruptedCause)
       (hd : pop.fiber.deferredInterrupt = frame'.deferredInterrupt)
       (hcur : frame'.current = cur) :
-      WalkRel root completed ex cur pop frame' (some ex)
+      WalkRel root table completed ex cur pop frame' (some ex)
   | replaced {pop : NPop} {frame' : RSaved} (cause : CauseV)
       (ha : pop.answer = .replacement (Prim.failure cause))
       (hcur : frame'.current = .pure (.failure cause))
@@ -550,7 +552,7 @@ inductive WalkRel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex :
       (hc : pop.fiber.interruptedCause = frame'.interruptedCause)
       (hd : pop.fiber.deferredInterrupt = frame'.deferredInterrupt)
       (hm : MaskInv frame'.interruptible frame'.stack) :
-      WalkRel root completed ex cur pop frame' none
+      WalkRel root table completed ex cur pop frame' none
   | scopedExit {pop : NPop} {frame' : RSaved} (body : NCode) (previous : Ctx) (scope : Nat)
       (k : ExitV → RProgram)
       (ha : pop.answer = .frame (Prim.onExit body (.scopedExit previous scope) false))
@@ -560,38 +562,38 @@ inductive WalkRel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex :
       (hc : pop.fiber.interruptedCause = frame'.interruptedCause)
       (hd : pop.fiber.deferredInterrupt = frame'.deferredInterrupt)
       (hm : MaskInv frame'.interruptible frame'.stack) :
-      WalkRel root completed ex cur pop frame' none
+      WalkRel root table completed ex cur pop frame' none
   | finalizer {pop : NPop} {frame' : RSaved} (body : NCode) (fin : EffName)
       (ha : pop.answer = .frame (Prim.onExit body fin false))
       (hns : ∀ previous scope, fin ≠ .scopedExit previous scope)
-      (hK : ∀ program, (interpAt root completed).finalizerProgram fin ex = some program →
+      (hK : ∀ program, (interpAt root completed table).finalizerProgram fin ex = some program →
         CodeMeans root (finalizerCodeAt root completed ex program) (prepareR completed frame'.current))
-      (hsome : ((interpAt root completed).finalizerProgram fin ex).isSome = true)
+      (hsome : ((interpAt root completed table).finalizerProgram fin ex).isSome = true)
       (hst : StackMeans root pop.fiber.stack frame'.stack)
       (hi : pop.fiber.interruptible = frame'.interruptible)
       (hc : pop.fiber.interruptedCause = frame'.interruptedCause)
       (hd : pop.fiber.deferredInterrupt = frame'.deferredInterrupt)
       (hm : MaskInv frame'.interruptible frame'.stack) :
-      WalkRel root completed ex cur pop frame' none
+      WalkRel root table completed ex cur pop frame' none
   | arm {pop : NPop} {frame' : RSaved} (fr : NCode) (ha : pop.answer = .frame fr)
       (hnot : ∀ body fin flag, fr ≠ Prim.onExit body fin flag)
       (harm : ∀ next pushed,
-        armOf (interpAt root completed).toPrimInterp ex fr = some (next, pushed) →
+        armOf (interpAt root completed table).toPrimInterp ex fr = some (next, pushed) →
           CodeMeans root next (prepareR completed frame'.current) ∧
             StackMeans root (pushed ++ pop.fiber.stack) frame'.stack)
-      (hsome : (armOf (interpAt root completed).toPrimInterp ex fr).isSome = true)
+      (hsome : (armOf (interpAt root completed table).toPrimInterp ex fr).isSome = true)
       (hi : pop.fiber.interruptible = frame'.interruptible)
       (hc : pop.fiber.interruptedCause = frame'.interruptedCause)
       (hd : pop.fiber.deferredInterrupt = frame'.deferredInterrupt)
       (hm : MaskInv frame'.interruptible frame'.stack) :
-      WalkRel root completed ex cur pop frame' none
+      WalkRel root table completed ex cur pop frame' none
 
 /-- The relation reads only the pop's answer and fiber. -/
 theorem WalkRel.of_eq {root : NativeEff} {completed : List (FiberId × ExitV)} {ex : ExitV}
     {cur : RProgram} {pop pop' : NPop} {frame' : RSaved} {done : Option ExitV}
     (ha : pop'.answer = pop.answer) (hf : pop'.fiber = pop.fiber)
-    (h : WalkRel root completed ex cur pop frame' done) :
-    WalkRel root completed ex cur pop' frame' done := by
+    (h : WalkRel root table completed ex cur pop frame' done) :
+    WalkRel root table completed ex cur pop' frame' done := by
   cases h with
   | finished ha' hs hs' hi hc hd hcur =>
     exact .finished (ha.trans ha') (by rw [hf]; exact hs) hs' (by rw [hf]; exact hi)
@@ -632,18 +634,18 @@ theorem walk_mask (root : NativeEff) (completed : List (FiberId × ExitV)) (ex :
       fiber.interruptible = frame.interruptible → fiber.interruptedCause = frame.interruptedCause →
       fiber.deferredInterrupt = frame.deferredInterrupt → MaskInv frame.interruptible T' →
       frame.current = cur →
-      WalkRel root completed (walkExit ex S' fiber) cur (popFrom (demandOf ex) (skipOf ex) S' fiber)
-        (popR (interpRAt root completed) ex T' frame).1 (popR (interpRAt root completed) ex T' frame).2)
+      WalkRel root table completed (walkExit ex S' fiber) cur (popFrom (demandOf ex) (skipOf ex) S' fiber)
+        (popR (interpRAt root completed table) ex T' frame).1 (popR (interpRAt root completed table) ex T' frame).2)
     (flag : Bool) (s : ScopeFrame) (hs : s = .restoreMask flag ∨ s = .finalizerMask flag)
     (fiber : FFiber) (frame : RSaved) (hstack : fiber.stack = [])
     (_hi : fiber.interruptible = frame.interruptible)
     (hc : fiber.interruptedCause = frame.interruptedCause)
     (hd : fiber.deferredInterrupt = frame.deferredInterrupt) (hm : MaskInv flag T')
     (hcur : frame.current = cur) :
-    WalkRel root completed (walkExit ex (Prim.setInterruptible flag :: S') fiber) cur
+    WalkRel root table completed (walkExit ex (Prim.setInterruptible flag :: S') fiber) cur
       (popFrom (demandOf ex) (skipOf ex) (Prim.setInterruptible flag :: S') fiber)
-      (popR (interpRAt root completed) ex (s :: T') frame).1
-      (popR (interpRAt root completed) ex (s :: T') frame).2 := by
+      (popR (interpRAt root completed table) ex (s :: T') frame).1
+      (popR (interpRAt root completed table) ex (s :: T') frame).2 := by
   have hx : walkExit ex (Prim.setInterruptible flag :: S') fiber =
       walkExit ex S' ((Prim.setInterruptible flag : NCode).ensure fiber).fst := by
     cases ex with
@@ -721,9 +723,9 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
       fiber.interruptible = frame.interruptible → fiber.interruptedCause = frame.interruptedCause →
       fiber.deferredInterrupt = frame.deferredInterrupt → MaskInv frame.interruptible T →
       frame.current = cur →
-      WalkRel root completed (walkExit ex S fiber) cur (popFrom (demandOf ex) (skipOf ex) S fiber)
-        (popR (interpRAt root completed) ex T frame).1
-        (popR (interpRAt root completed) ex T frame).2 := by
+      WalkRel root table completed (walkExit ex S fiber) cur (popFrom (demandOf ex) (skipOf ex) S fiber)
+        (popR (interpRAt root completed table) ex T frame).1
+        (popR (interpRAt root completed table) ex T frame).2 := by
   intro S T h
   induction h generalizing ex with
   | nil =>
@@ -918,9 +920,9 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
         have hp := popFrom_plain_answer .contA false (f := Prim.iterator g cursor) (rest := S')
           rfl rfl rfl hstack
         rw [popR_iter_succ]
-        have hstep := (iterNext_means root completed g v).2
-        generalize hs₁ : ((interpAt root completed).iterNext g v).2 = s₁ at hstep
-        generalize hs₂ : ((interpRAt root completed).iterNext g v).2 = s₂ at hstep ⊢
+        have hstep := (iterNext_means (table := table) root completed g v).2
+        generalize hs₁ : ((interpAt root completed table).iterNext g v).2 = s₁ at hstep
+        generalize hs₂ : ((interpRAt root completed table).iterNext g v).2 = s₂ at hstep ⊢
         cases hstep with
         | done r =>
           refine WalkRel.arm _ hp.1 (by nofun) ?_ ?_ (by rw [hp.2]; exact hi) (by rw [hp.2]; exact hc)
@@ -964,9 +966,9 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
           (rest := S') rfl rfl rfl hstack
         rw [popR_loop_succ]
         -- the two loop decisions agree (`loopResume_means`): one case each
-        have hrel := loopResume_means root completed hp cursor v
-        generalize h₁ : (interpAt root completed).loopResume (.loop p') cursor v = n₁ at hrel
-        generalize h₂ : (interpRAt root completed).loopResume (.loop p) cursor v = n₂ at hrel ⊢
+        have hrel := loopResume_means (table := table) root completed hp cursor v
+        generalize h₁ : (interpAt root completed table).loopResume (.loop p') cursor v = n₁ at hrel
+        generalize h₂ : (interpRAt root completed table).loopResume (.loop p) cursor v = n₂ at hrel ⊢
         cases hrel with
         | «continue» stepped hbody =>
           refine WalkRel.arm _ hp0.1 (by nofun) ?_ ?_ (by rw [hp0.2]; exact hi)
@@ -1045,7 +1047,7 @@ theorem walk_rel (root : NativeEff) (completed : List (FiberId × ExitV)) (ex : 
           refine ⟨?_, ?_⟩
           · by_cases hint' : c.hasInterrupts = true
             · simp only [hint', ↓reduceIte]
-              exact (cancelThenFail_means root name c).prepare completed
+              exact (cancelThenFail_means (table := table) root name c).prepare completed
             · simp only [hint', Bool.false_eq_true, ↓reduceIte]
               exact CodeMeans.failure c
           · rw [hp.2, ← hi]
@@ -1080,10 +1082,10 @@ theorem walk_rel_carried (root : NativeEff) (completed : List (FiberId × ExitV)
     (hc : fiber.interruptedCause = frame.interruptedCause)
     (hd : fiber.deferredInterrupt = frame.deferredInterrupt) (hm : MaskInv frame.interruptible T)
     (hcur : frame.current = cur) :
-    WalkRel root completed (walkExit ex S fiber) cur
+    WalkRel root table completed (walkExit ex S fiber) cur
       (popFrom (demandOf ex) (skipOf ex) S fiber (causeOf ex))
-      (popR (interpRAt root completed) ex T frame).1
-      (popR (interpRAt root completed) ex T frame).2 := by
+      (popR (interpRAt root completed table) ex T frame).1
+      (popR (interpRAt root completed table) ex T frame).2 := by
   exact WalkRel.of_eq (popFrom_answer_cause _ _ _ _ _) (popFrom_fiber_cause _ _ _ _ _)
     (walk_rel root completed ex cur hst fiber frame hs hi hc hd hm hcur)
 

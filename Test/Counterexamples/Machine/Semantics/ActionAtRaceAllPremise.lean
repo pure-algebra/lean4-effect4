@@ -40,7 +40,7 @@ theorem programs : CodeMeans root (.success .unit) (.pure (.success .unit)) := C
 theorem answers : AnswerRel root a₁ a₂ := answerRel_core root (fun v => CodeMeans.success v)
 
 theorem fork_counterexample :
-    ¬ IterRel root
+    ¬ IterRel [] root
       (FiberAction.fork (interpAt root []) m₁ f₁ false (.success .unit) { startImmediately := true, daemon := true, maskMode := .inherit } a₁)
       (FiberAction.fork (interpRAt root []) m₂ f₂ false (.pure (.success .unit)) { startImmediately := true, daemon := true, maskMode := .inherit } a₂) := by
   intro h
@@ -49,7 +49,7 @@ theorem fork_counterexample :
   cases bad
 
 theorem forkIn_counterexample :
-    ¬ IterRel root
+    ¬ IterRel [] root
       (FiberAction.forkIn (interpAt root []) m₁ f₁ false (.success .unit) { startImmediately := true, daemon := true, maskMode := .inherit } 0 a₁)
       (FiberAction.forkIn (interpRAt root []) m₂ f₂ false (.pure (.success .unit)) { startImmediately := true, daemon := true, maskMode := .inherit } 0 a₂) := by
   intro h
@@ -58,7 +58,7 @@ theorem forkIn_counterexample :
   cases bad
 
 theorem raceAll_counterexample :
-    ¬ IterRel root
+    ¬ IterRel [] root
       (FiberAction.raceAll (interpAt root []) m₁ f₁ false [] none)
       (FiberAction.raceAll (interpRAt root []) m₂ f₂ false [] none) := by
   intro h

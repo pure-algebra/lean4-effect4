@@ -37,4 +37,25 @@ role simulation; requirement R6. Consumer: `session_eq_ref`. -/
 @[semantics "translation-simulation" (requirement := R6)]
 proof_goal run_eq_ref_table : RunEqRefTable
 
+/-- **The raw statement at every row table, with no preloaded answer** (slice H6a, DI-57). On
+every program, row table, decision tape and pair of budgets, from the loads with no preloaded
+answer, the frame machine's and the reference machine's replays end in the same class and have
+the same observation `obs`. A session loads no preloaded answer, so this is the form that
+`session_eq_ref` reads. It is `Machine.Book`'s replay theorem at the two instances at the
+table: `stepAgrees` and `hooksAgree_of` hold at every row table under the store invariant
+`StoresOk`, whose clause `answers` keeps the registration arm empty and whose clause
+`externals` holds at the empty row table alone. It does not establish the case of preloaded
+answers (the rest of `run_eq_ref_table`, slice H6b), reply admission, the typing of a reply, a
+host's conformance or the session's ledger. A step of the claim `run-eq-ref-table`; consumer:
+`session_eq_ref`. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem run_eq_ref_table_noPreload (e : NativeEff) (table : RowTable) (fuel : Nat)
+    (tape : List Api.Decision) (compileFuel : Nat) :
+    (Api.replay e fuel tape [] table compileFuel).outcome =
+        classify (replayR e fuel tape compileFuel table) ∧
+      obs (Api.replay e fuel tape [] table compileFuel).machine =
+        obsR (replayR e fuel tape compileFuel table).machine := by
+  rw [replay_outcome, replay_machine]
+  exact replayRel_classify_obs (replay_rel (table := table) e compileFuel fuel tape)
+
 end Effect4.Program.Sched

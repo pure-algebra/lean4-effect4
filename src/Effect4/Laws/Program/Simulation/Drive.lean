@@ -1,6 +1,7 @@
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Simulation.Evaluate
 import Effect4.Laws.Program.Simulation.Pending
+import Effect4.Laws.Program.Table.Hooks
 
 /-!
 # The command driver (P3, step 5)
@@ -20,15 +21,17 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program
 
+variable {table : RowTable}
+
 /-! ## Results and commands -/
 
 theorem CmdsRel.mk' {root : NativeEff} {r₁ : FMachine × List FCmd} {r₂ : RState × List RCmd}
-    (hok : MachineOk StoresOk r₁.1) (hm : BMeans root r₁.1 r₂.1)
-    (hn : ListRel (CMeans root) r₁.2 r₂.2) : CmdsRel root r₁ r₂ := ⟨hok, hm, hn⟩
+    (hok : MachineOk (StoresOk table) r₁.1) (hm : BMeans root r₁.1 r₂.1)
+    (hn : ListRel (CMeans root) r₁.2 r₂.2) : CmdsRel (table := table) root r₁ r₂ := ⟨hok, hm, hn⟩
 
 theorem CmdsRel.appendRest {root : NativeEff} {a₁ : FMachine × List FCmd} {a₂ : RState × List RCmd}
-    (h : CmdsRel root a₁ a₂) {r₁ : List FCmd} {r₂ : List RCmd} (hr : ListRel (CMeans root) r₁ r₂) :
-    CmdsRel root (a₁.1, a₁.2 ++ r₁) (a₂.1, a₂.2 ++ r₂) := ⟨h.1, h.2.1, ListRel.append h.2.2 hr⟩
+    (h : CmdsRel (table := table) root a₁ a₂) {r₁ : List FCmd} {r₂ : List RCmd} (hr : ListRel (CMeans root) r₁ r₂) :
+    CmdsRel (table := table) root (a₁.1, a₁.2 ++ r₁) (a₂.1, a₂.2 ++ r₂) := ⟨h.1, h.2.1, ListRel.append h.2.2 hr⟩
 
 theorem cmeans_evaluate (root : NativeEff) {a b : FiberId} (h : a = b) :
     CMeans root (.evaluate a) (.evaluate b) :=
@@ -114,7 +117,7 @@ theorem FMeans.publish (h : FMeans root f₁ f₂) (exit : ExitV) :
     h.yieldOverride h.observers h.children h.dispatcher (means_setDeferred h.means false)
 
 theorem FMeans.cleared (h : FMeans root f₁ f₂) :
-    FMeans root (f₁.cleared (interpOf root)) (f₂.cleared (interpR root)) := by
+    FMeans root (f₁.cleared (interpOf root table)) (f₂.cleared (interpR root table)) := by
   unfold RunFiber.cleared
   dsimp only [FiberCore.clearStack, frameCore, termCore]
   exact FMeans.mk' h.id h.parked rfl h.running h.pending h.finalizing h.exit h.opCount h.maxOps
@@ -179,46 +182,46 @@ theorem pendingOk_countdownEntry {w₁ : FRun} (hw : PendingOk w₁) {w₂ : RFi
   split <;> rfl
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (hs : StoresOk s)
-    (h : (interpOf root).dropFinalizer scope key s = some s') : StoresOk s' := by
+theorem dropFinalizer_ok (root : NativeEff) (scope key : Nat) {s s' : Stores} (hs : StoresOk table s)
+    (h : (interpOf root table).dropFinalizer scope key s = some s') : StoresOk table s' := by
   dsimp only [interpOf] at h
   split at h
   · cases h
   · rw [← Option.some.inj h]
-    exact ⟨ScopeStore.keysBelow_removeFinalizer hs.keysFresh, hs.externals⟩
+    exact StoresOk.of_externals hs (ScopeStore.keysBelow_removeFinalizer hs.keysFresh) rfl
 
 theorem dueResumes_frame (root : NativeEff) (s : Stores) :
-    (interpOf root).dueResumes s =
+    (interpOf root table).dueResumes s =
       ((s.deferreds.drainDue).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
         { s with deferreds := (s.deferreds.drainDue).2 }) :=
   by aesop
 
 theorem dueResumes_term (root : NativeEff) (s : Stores) :
-    (interpR root).dueResumes s =
+    (interpR root table).dueResumes s =
       ((s.deferreds.drainDue).1.map (Owed.mapCode denoteCompletion),
         { s with deferreds := (s.deferreds.drainDue).2 }) :=
   by aesop
 
 theorem clockStep_frame (root : NativeEff) (millis : ClockMillis) (s : Stores) :
-    (interpOf root).clockStep millis s =
+    (interpOf root table).clockStep millis s =
       ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode (fun c => embed (completionPrim c))),
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 }) :=
   by aesop
 
 theorem clockStep_term (root : NativeEff) (millis : ClockMillis) (s : Stores) :
-    (interpR root).clockStep millis s =
+    (interpR root table).clockStep millis s =
       ((s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1.map (Owed.mapCode denoteCompletion),
         { s with timers := (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).2 }) :=
   by aesop
 
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
-theorem clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (hs : StoresOk s) :
-    StoresOk ((interpOf root).clockStep millis s).2 ∧
-      ((interpOf root).clockStep millis s).2 = ((interpR root).clockStep millis s).2 ∧
-      ListRel (OwedMeans (CodeMeans root)) ((interpOf root).clockStep millis s).1.toList
-        ((interpR root).clockStep millis s).1.toList := by
+theorem clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (hs : StoresOk table s) :
+    StoresOk table ((interpOf root table).clockStep millis s).2 ∧
+      ((interpOf root table).clockStep millis s).2 = ((interpR root table).clockStep millis s).2 ∧
+      ListRel (OwedMeans (CodeMeans root)) ((interpOf root table).clockStep millis s).1.toList
+        ((interpR root table).clockStep millis s).1.toList := by
   rw [clockStep_frame, clockStep_term]
-  refine ⟨StoresOk.frame_timers s hs _, rfl, ?_⟩
+  refine ⟨StoresOk.frame_timers table s hs _, rfl, ?_⟩
   cases (s.timers.clockStep millis (Completion.ofExit (Exit.success Val.unit) : Completion Val Err Defect FiberId Ann)).1 with
   | none => exact ListRel.nil
   | some d => exact drain_rel root [d]
@@ -226,26 +229,19 @@ theorem clockStep_rel (root : NativeEff) (millis : ClockMillis) (s : Stores) (hs
 /-- The book's hook obligation, discharged at the two instances. -/
 theorem hooksAgree_of (root : NativeEff) :
     HooksAgree (η₁ := FrameEvent EffName EffThunk Val Err Defect FiberId Ann) (η₂ := Unit)
-      (interpOf root) (interpR root) StoresOk (CodeMeans root) (Means root) :=
+      (interpOf root table) (interpR root table) (StoresOk table) (CodeMeans root) (Means root) :=
   ⟨answerCode_means root, fun t₁ t₂ who extra ht =>
     interruptRecord_rel root (interpAgree_of root) who extra ht,
     (fun millis s hs => clockStep_rel root millis s hs), by
+      -- the prepared-answer clause at a row table: the hook lemmas (`Table/Hooks.lean`)
       intro a b id token answer hok h
-      have hp₁ : prepareAsyncAnswer (interpOf root) a id token answer =
-          (a.state, (interpOf root).answerCode answer) := by
-        simp only [prepareAsyncAnswer, interpOf, prepareExternalAnswer, List.isEmpty_nil, if_true]
-        split <;> rfl
-      have hp₂ : prepareAsyncAnswer (interpR root) b id token answer =
-          (b.state, (interpR root).answerCode answer) := by
-        simp only [prepareAsyncAnswer, interpR]
-        split <;> rfl
-      rw [hp₁, hp₂]
-      exact ⟨hok.1, h.state, answerCode_means root answer⟩⟩
+      obtain ⟨hstate, hcode⟩ := prepareAsync_agree root table a b h id token answer
+      exact ⟨prepareAsync_ok root table a id token answer hok.1, hstate, hcode⟩⟩
 
 theorem resumePrim_means (root : NativeEff) (resume : Resume EffName)
     (hres : ∀ name, resume ≠ Resume.continueWith name) (exits : List ExitV) :
-    CodeMeans root (countdownPark.resumePrim (interpOf root) resume exits)
-      (countdownPark.resumePrim (interpR root) resume exits) := by
+    CodeMeans root (countdownPark.resumePrim (interpOf root table) resume exits)
+      (countdownPark.resumePrim (interpR root table) resume exits) := by
   cases resume with
   | exitsValue => exact CodeMeans.success _
   | void => exact CodeMeans.success _
@@ -254,7 +250,7 @@ theorem resumePrim_means (root : NativeEff) (resume : Resume EffName)
 /-- `awaitCode` reads the same fiber on both machines. -/
 theorem awaitCode_means (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hm : BMeans root m₁ m₂)
     (kind : ParkKind) :
-    CodeMeans root (awaitCode (interpOf root) m₁ kind) (awaitCode (interpR root) m₂ kind) := by
+    CodeMeans root (awaitCode (interpOf root table) m₁ kind) (awaitCode (interpR root table) m₂ kind) := by
   cases kind with
   | join target mode =>
     have hex : (m₁.fiber? target).bind RunFiber.exit = (m₂.fiber? target).bind RunFiber.exit := by
@@ -273,15 +269,15 @@ theorem awaitCode_means (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hm
   | awaitAll targets => exact parkCode_means root (.awaitAll targets)
 
 theorem asVoidCode_means (root : NativeEff) {c₁ : NCode} {c₂ : RProgram} (hc : CodeMeans root c₁ c₂) :
-    CodeMeans root (asVoidCode (interpOf root) c₁) (asVoidCode (interpR root) c₂) :=
+    CodeMeans root (asVoidCode (interpOf root table) c₁) (asVoidCode (interpR root table) c₂) :=
   restore_means root hc (.success .unit)
 
 /-! ## Settling an iteration -/
 
-theorem settle_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterRel root it₁ it₂)
+theorem settle_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterRel table root it₁ it₂)
     (hp : PendingOk it₁.fiber) {id₁ id₂ : FiberId} (hid : id₁ = id₂) {r₁ : List FCmd}
     {r₂ : List RCmd} (hr : ListRel (CMeans root) r₁ r₂) :
-    CmdsRel root (settle id₁ r₁ it₁) (settle id₂ r₂ it₂) := by
+    CmdsRel (table := table) root (settle id₁ r₁ it₁) (settle id₂ r₂ it₂) := by
   subst hid
   obtain ⟨m₁, f₁, y₁, o₁, n₁⟩ := it₁
   obtain ⟨m₂, f₂, y₂, o₂, n₂⟩ := it₂
@@ -325,11 +321,11 @@ theorem settle_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterR
 /-! ## One iteration -/
 
 theorem iteration_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuck : m₁.stuck = none)
-    (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+    (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (y : Bool) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    IterRel root (iteration (interpOf root) m₁ f₁ y) (iteration (interpR root) m₂ f₂ y) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    IterRel table root (iteration (interpOf root table) m₁ f₁ y) (iteration (interpR root table) m₂ f₂ y) := by
   have hf₁ : FMeans root (countOp (runloopTop f₁)) (countOp (runloopTop f₂)) :=
     hf.runloopTop.counted
   have hcond : (!y && !(countOp (runloopTop f₁)).preventYield && yieldVerdict (countOp (runloopTop f₁)))
@@ -349,11 +345,11 @@ theorem iteration_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstu
 
 /-! ## Interrupts and observers -/
 
-theorem interruptEach_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi : InterpAgree i₁ i₂)
-    {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂)
+theorem interruptEach_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi : InterpAgree (table := table) i₁ i₂)
+    {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂)
     (who : FiberId) {x₁ x₂ : ReasonAnnotations Ann} (hx : x₁ = x₂) (targets : List FiberId)
     {n₁ : List FCmd} {n₂ : List RCmd} (hn : ListRel (CMeans root) n₁ n₂) :
-    CmdsRel root (interruptEach i₁ who x₁ targets (m₁, n₁)) (interruptEach i₂ who x₂ targets (m₂, n₂)) := by
+    CmdsRel (table := table) root (interruptEach i₁ who x₁ targets (m₁, n₁)) (interruptEach i₂ who x₂ targets (m₂, n₂)) := by
   subst hx
   unfold interruptEach
   refine foldl_rel (P := fun (x : FMachine × List FCmd) (y : RState × List RCmd) => CmdsRel root x y)
@@ -382,11 +378,11 @@ theorem interruptEach_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (
     · exact ListRel.nil
     · exact ListRel.cons (cmeans_evaluate root rfl) ListRel.nil
 
-theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
+theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁)
     (hm : BMeans root m₁ m₂) (id : FiberId) (exit : ExitV) {n₁ : List FCmd} {n₂ : List RCmd}
     (hn : ListRel (CMeans root) n₁ n₂) (observer : Observer) :
-    CmdsRel root (fireObserver (interpOf root) id exit (m₁, n₁) observer)
-      (fireObserver (interpR root) id exit (m₂, n₂) observer) := by
+    CmdsRel (table := table) root (fireObserver (interpOf root table) id exit (m₁, n₁) observer)
+      (fireObserver (interpR root table) id exit (m₂, n₂) observer) := by
   cases observer with
   | resumeAwait waiter token mode =>
     simp only [fireObserver]
@@ -410,12 +406,12 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
       at hok' hm' ⊢
     generalize m₂.emit [RunEvent.observerFired id (Observer.dropScopeFinalizer scope key)] = M₂
       at hm' ⊢
-    have hd : (interpR root).dropFinalizer scope key M₂.state
-        = (interpOf root).dropFinalizer scope key M₁.state := by
+    have hd : (interpR root table).dropFinalizer scope key M₂.state
+        = (interpOf root table).dropFinalizer scope key M₁.state := by
       rw [hm'.state]
       rfl
     rw [hd]
-    cases hres : (interpOf root).dropFinalizer scope key M₁.state with
+    cases hres : (interpOf root table).dropFinalizer scope key M₁.state with
     | none => exact CmdsRel.mk' (machineOk_halt hok' _) (hm'.halt _) hn
     | some state =>
       exact CmdsRel.mk' (machineOk_stateOf hok' (dropFinalizer_ok root scope key hok'.state hres))
@@ -443,11 +439,11 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
         by_cases hff : (p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess) = true
         · rw [if_pos hff, if_pos hff]
           have hie := interruptEach_rel root (interpAgree_of root) hok' hm' waiter
-            (x₁ := (interpOf root).stackAnnotations waiter) (x₂ := (interpR root).stackAnnotations waiter)
+            (x₁ := (interpOf root table).stackAnnotations waiter) (x₂ := (interpR root table).stackAnnotations waiter)
             rfl p.remaining (n₁ := []) (n₂ := []) ListRel.nil
-          generalize interruptEach (interpOf root) waiter ((interpOf root).stackAnnotations waiter)
+          generalize interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
             p.remaining (M₁, []) = ie₁ at hie ⊢
-          generalize interruptEach (interpR root) waiter ((interpR root).stackAnnotations waiter)
+          generalize interruptEach (interpR root table) waiter ((interpR root table).stackAnnotations waiter)
             p.remaining (M₂, []) = ie₂ at hie ⊢
           obtain ⟨im₁, in₁⟩ := ie₁
           obtain ⟨im₂, in₂⟩ := ie₂
@@ -548,15 +544,15 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
 /-! ## The exit path -/
 
 theorem exitInterruptChildren_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
-    (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+    (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (hp : PendingOk f₁) (exit : ExitV) :
-    CmdsRel root (exitFiber.exitInterruptChildren (interpOf root) m₁ f₁ exit)
-      (exitFiber.exitInterruptChildren (interpR root) m₂ f₂ exit) := by
+    CmdsRel (table := table) root (exitFiber.exitInterruptChildren (interpOf root table) m₁ f₁ exit)
+      (exitFiber.exitInterruptChildren (interpR root table) m₂ f₂ exit) := by
   unfold exitFiber.exitInterruptChildren
   dsimp only [FiberCore.answerWith, FiberCore.setDeferred, FiberCore.onSuccess, frameCore, termCore]
   have hcode : CodeMeans root
-      (Prim.onSuccess ((interpOf root).interruptAllCode f₁.children) ((interpOf root).restoreName exit))
-      (restoreR ((interpR root).interruptAllCode f₂.children) ((interpR root).restoreName exit)) := by
+      (Prim.onSuccess ((interpOf root table).interruptAllCode f₁.children) ((interpOf root table).restoreName exit))
+      (restoreR ((interpR root table).interruptAllCode f₂.children) ((interpR root table).restoreName exit)) := by
     rw [hf.children]
     exact restore_means root (interruptAllCode_means root f₂.children) exit
   refine CmdsRel.mk' (machineOk_emit (machineOk_update hok ?_) _)
@@ -567,10 +563,10 @@ theorem exitInterruptChildren_rel (root : NativeEff) {m₁ : FMachine} {m₂ : R
       (means_answerWith (means_setDeferred hf.means false) hcode)
 
 theorem exitStore_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
-    (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+    (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (exit : ExitV) :
-    CmdsRel root (exitFiber.exitStore (interpOf root) m₁ f₁ exit)
-      (exitFiber.exitStore (interpR root) m₂ f₂ exit) := by
+    CmdsRel (table := table) root (exitFiber.exitStore (interpOf root table) m₁ f₁ exit)
+      (exitFiber.exitStore (interpR root table) m₂ f₂ exit) := by
   unfold exitFiber.exitStore
   have hpub := hf.publish exit
   have hobs : (f₁.publish exit).observers = (f₂.publish exit).observers := hpub.observers
@@ -588,9 +584,9 @@ theorem exitStore_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
         (ListRel.cons (cmeans_exitDone root hpub.id) (ListRel.cons (cmeans_drainDue root) ListRel.nil)))
 
 theorem exitFiber_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
-    (hok : MachineOk StoresOk m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+    (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (hp : PendingOk f₁) (exit : ExitV) :
-    CmdsRel root (exitFiber (interpOf root) m₁ f₁ exit) (exitFiber (interpR root) m₂ f₂ exit) := by
+    CmdsRel (table := table) root (exitFiber (interpOf root table) m₁ f₁ exit) (exitFiber (interpR root table) m₂ f₂ exit) := by
   unfold exitFiber
   have hc : (m₁.middlewareInstalled && f₁.finalizing.isNone && !f₁.children.isEmpty)
       = (m₂.middlewareInstalled && f₂.finalizing.isNone && !f₂.children.isEmpty) := by
@@ -605,16 +601,16 @@ theorem exitFiber_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState}
 
 section Commands
 
-variable (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk StoresOk m₁)
+variable (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁)
   (hm : BMeans root m₁ m₂) {r₁ : List FCmd} {r₂ : List RCmd} (hr : ListRel (CMeans root) r₁ r₂)
 
 include hok hm hr
 
 theorem drive_evaluate (id : FiberId) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.evaluate id) r₁)
-      (driveStep (interpR root) m₂ (.evaluate id) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.evaluate id) r₁)
+      (driveStep (interpR root table) m₂ (.evaluate id) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases id with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -637,10 +633,10 @@ theorem drive_evaluate (id : FiberId) :
       exact pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl
 
 theorem drive_loop (hstuck : m₁.stuck = none) (id : FiberId) (y : Bool) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.loop id y) r₁)
-      (driveStep (interpR root) m₂ (.loop id y) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.loop id y) r₁)
+      (driveStep (interpR root table) m₂ (.loop id y) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases id with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -651,10 +647,10 @@ theorem drive_loop (hstuck : m₁.stuck = none) (id : FiberId) (y : Bool) :
       (iteration_pendingOk root m₁ f₁ y (pendingOk_of_fiber? hok h₁)) rfl hr
 
 theorem drive_deliver (hstuck : m₁.stuck = none) (id : FiberId) (y : Bool) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.deliver id y) r₁)
-      (driveStep (interpR root) m₂ (.deliver id y) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.deliver id y) r₁)
+      (driveStep (interpR root table) m₂ (.deliver id y) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases id with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -665,10 +661,10 @@ theorem drive_deliver (hstuck : m₁.stuck = none) (id : FiberId) (y : Bool) :
       (evaluateNative_pendingOk root m₁ f₁ y (pendingOk_of_fiber? hok h₁)) rfl hr
 
 theorem drive_finish (id : FiberId) (exit : ExitV) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.finish id exit) r₁)
-      (driveStep (interpR root) m₂ (.finish id exit) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.finish id exit) r₁)
+      (driveStep (interpR root table) m₂ (.finish id exit) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases id with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -681,10 +677,10 @@ theorem drive_finish (id : FiberId) (exit : ExitV) :
 
 theorem drive_resume (id : FiberId) (token : Nat) {c₁ : NCode} {c₂ : RProgram}
     (hc : CodeMeans root c₁ c₂) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.resume id token c₁) r₁)
-      (driveStep (interpR root) m₂ (.resume id token c₂) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.resume id token c₁) r₁)
+      (driveStep (interpR root table) m₂ (.resume id token c₂) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases id with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
   · rw [h₁, h₂]
@@ -708,10 +704,10 @@ theorem drive_resume (id : FiberId) (token : Nat) {c₁ : NCode} {c₂ : RProgra
         exact CmdsRel.mk' hok hm hr
 
 theorem drive_launch (raceId : Nat) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.launch raceId) r₁)
-      (driveStep (interpR root) m₂ (.launch raceId) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.launch raceId) r₁)
+      (driveStep (interpR root table) m₂ (.launch raceId) r₂) := by
   simp only [driveStep]
   rcases hm.race?_cases raceId with ⟨h₁, h₂⟩ | ⟨r₁', r₂', h₁, h₂, hrace⟩
   · rw [h₁, h₂]
@@ -735,7 +731,7 @@ theorem drive_launch (raceId : Nat) :
           exact CmdsRel.mk' hok hm hr
         · rw [hh₁, hh₂]
           unfold launchEntrant
-          have hs := spawn_rel root (i₁ := interpOf root) (i₂ := interpR root) rfl hok hm hg hpc
+          have hs := spawn_rel root (i₁ := interpOf root table) (i₂ := interpR root table) rfl hok hm hg hpc
             ⟨true, true, Supervision.MaskMode.interruptible⟩ (site := site₁.getD [])
           dsimp only [TripleRel] at hs
           obtain ⟨hsok, hsm, -, hchild⟩ := hs
@@ -747,10 +743,10 @@ theorem drive_launch (raceId : Nat) :
                 (ListRel.cons (cmeans_launch root raceId) hr)))
 
 theorem drive_enrollRace (raceId : Nat) (child : FiberId) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.enrollRace raceId child) r₁)
-      (driveStep (interpR root) m₂ (.enrollRace raceId child) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.enrollRace raceId child) r₁)
+      (driveStep (interpR root table) m₂ (.enrollRace raceId child) r₂) := by
   simp only [driveStep]
   rcases hm.race?_cases raceId with ⟨h₁, h₂⟩ | ⟨r₁', r₂', h₁, h₂, hrace⟩
   · rw [h₁, h₂]
@@ -784,10 +780,10 @@ theorem drive_enrollRace (raceId : Nat) (child : FiberId) :
           exact hg.mapObservers (fun l => l ++ [Observer.raceCallback raceId])
 
 theorem drive_registrationDone (raceId : Nat) (y : Bool) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.registrationDone raceId y) r₁)
-      (driveStep (interpR root) m₂ (.registrationDone raceId y) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.registrationDone raceId y) r₁)
+      (driveStep (interpR root table) m₂ (.registrationDone raceId y) r₂) := by
   simp only [driveStep]
   rcases hm.race?_cases raceId with ⟨h₁, h₂⟩ | ⟨r₁', r₂', h₁, h₂, hrace⟩
   · rw [h₁, h₂]
@@ -816,9 +812,9 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
           ⟨hok', hm', hf.answer (raceSettle_means root raceId _ exit), rfl, rfl, ListRel.nil⟩
           (pendingOk_of_fields (pendingOk_of_fiber? hok' hh₁) rfl) hf.id hr
       | none =>
-        have hname : (interpOf root).cancelName ((interpOf root).raceCancelName raceId) f₁.id token₁
-            = (interpR root).cancelName ((interpR root).raceCancelName raceId) f₂.id token₁ :=
-          congrArg (fun i => (interpOf root).cancelName ((interpOf root).raceCancelName raceId) i token₁)
+        have hname : (interpOf root table).cancelName ((interpOf root table).raceCancelName raceId) f₁.id token₁
+            = (interpR root table).cancelName ((interpR root table).raceCancelName raceId) f₂.id token₁ :=
+          congrArg (fun i => (interpOf root table).cancelName ((interpOf root table).raceCancelName raceId) i token₁)
             hf.id
         rw [← hname]
         exact settle_rel root
@@ -828,20 +824,20 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
           hf.id hr
 
 theorem drive_interruptTarget (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.interruptTarget target who extra) r₁)
-      (driveStep (interpR root) m₂ (.interruptTarget target who extra) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.interruptTarget target who extra) r₁)
+      (driveStep (interpR root table) m₂ (.interruptTarget target who extra) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨g₁, g₂, h₁, h₂, hg⟩
   · rw [h₁, h₂]
     exact CmdsRel.mk' hok hm hr
   · rw [h₁, h₂]
     dsimp only
-    have hrec := interruptRecord_rel root (interpAgree_of root) who extra hg
-    have hpend := interruptRecord_pendingOk (interpOf root) who extra (pendingOk_of_fiber? hok h₁)
-    generalize interruptRecord (interpOf root) who extra g₁ = s₁ at hrec hpend ⊢
-    generalize interruptRecord (interpR root) who extra g₂ = s₂ at hrec ⊢
+    have hrec := interruptRecord_rel (table := table) root (interpAgree_of root) who extra hg
+    have hpend := interruptRecord_pendingOk (interpOf root table) who extra (pendingOk_of_fiber? hok h₁)
+    generalize interruptRecord (interpOf root table) who extra g₁ = s₁ at hrec hpend ⊢
+    generalize interruptRecord (interpR root table) who extra g₂ = s₂ at hrec ⊢
     obtain ⟨g₁', a₁⟩ := s₁
     obtain ⟨g₂', a₂⟩ := s₂
     obtain ⟨hrel, ha⟩ := hrec
@@ -854,10 +850,10 @@ theorem drive_interruptTarget (target : FiberId) (who : Option FiberId) (extra :
     · exact ListRel.cons (cmeans_evaluate root rfl) ListRel.nil
 
 theorem drive_afterInterrupt (host : FiberId) (y : Bool) (kind : ParkKind) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.afterInterrupt host y kind) r₁)
-      (driveStep (interpR root) m₂ (.afterInterrupt host y kind) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.afterInterrupt host y kind) r₁)
+      (driveStep (interpR root table) m₂ (.afterInterrupt host y kind) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases host with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -869,10 +865,10 @@ theorem drive_afterInterrupt (host : FiberId) (y : Bool) (kind : ParkKind) :
       (pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl) hf.id hr
 
 theorem drive_raceCancel (raceId : Nat) (host : FiberId) (y : Bool) (remaining visited : List FiberId) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.raceCancel raceId host y remaining visited) r₁)
-      (driveStep (interpR root) m₂ (.raceCancel raceId host y remaining visited) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.raceCancel raceId host y remaining visited) r₁)
+      (driveStep (interpR root table) m₂ (.raceCancel raceId host y remaining visited) r₂) := by
   simp only [driveStep]
   cases remaining with
   | nil => exact CmdsRel.mk' hok hm (ListRel.cons (cmeans_afterInterrupt root host y _) hr)
@@ -888,16 +884,16 @@ theorem drive_raceCancel (raceId : Nat) (host : FiberId) (y : Bool) (remaining v
       · rw [if_pos hl, if_pos (Eq.mp hlive hl)]
         exact CmdsRel.mk' hok hm
           (ListRel.cons (cmeans_interruptTarget root t (some host)
-              (x₁ := (interpOf root).stackAnnotations host) (x₂ := (interpR root).stackAnnotations host) rfl)
+              (x₁ := (interpOf root table).stackAnnotations host) (x₂ := (interpR root table).stackAnnotations host) rfl)
             (ListRel.cons (cmeans_raceCancel root raceId host y more (visited ++ [t])) hr))
       · rw [if_neg hl, if_neg (fun e => hl (Eq.mpr hlive e))]
         exact CmdsRel.mk' hok hm (ListRel.cons (cmeans_raceCancel root raceId host y more visited) hr)
 
 theorem drive_trackChild (parent child : FiberId) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.trackChild parent child) r₁)
-      (driveStep (interpR root) m₂ (.trackChild parent child) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.trackChild parent child) r₁)
+      (driveStep (interpR root table) m₂ (.trackChild parent child) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases child with ⟨h₁, h₂⟩ | ⟨c₁, c₂, h₁, h₂, hc⟩
   · rw [h₁, h₂]
@@ -921,18 +917,18 @@ theorem drive_trackChild (parent child : FiberId) :
         exact hg.mapObservers (fun l => l ++ [Observer.untrackChild parent])
 
 theorem drive_observe (id : FiberId) (exit : ExitV) (observer : Observer) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.observe id exit observer) r₁)
-      (driveStep (interpR root) m₂ (.observe id exit observer) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.observe id exit observer) r₁)
+      (driveStep (interpR root table) m₂ (.observe id exit observer) r₂) := by
   simp only [driveStep]
   exact CmdsRel.appendRest (fireObserver_rel root hok hm id exit ListRel.nil observer) hr
 
 theorem drive_exitDone (id : FiberId) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.exitDone id) r₁)
-      (driveStep (interpR root) m₂ (.exitDone id) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.exitDone id) r₁)
+      (driveStep (interpR root table) m₂ (.exitDone id) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases id with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -942,10 +938,10 @@ theorem drive_exitDone (id : FiberId) :
       (hm.update hf.cleared) hr
 
 theorem drive_closeParAwait (host : FiberId) (y : Bool) (fibers : List FiberId) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.closeParAwait host y fibers) r₁)
-      (driveStep (interpR root) m₂ (.closeParAwait host y fibers) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.closeParAwait host y fibers) r₁)
+      (driveStep (interpR root table) m₂ (.closeParAwait host y fibers) r₂) := by
   simp only [driveStep]
   rcases hm.fiber?_cases host with ⟨h₁, h₂⟩ | ⟨f₁, f₂, h₁, h₂, hf⟩
   · rw [h₁, h₂]
@@ -960,44 +956,44 @@ theorem drive_closeParAwait (host : FiberId) (y : Bool) (fibers : List FiberId) 
 
 theorem drive_link (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.link mode scope target interruptor extra) r₁)
-      (driveStep (interpR root) m₂ (.link mode scope target interruptor extra) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.link mode scope target interruptor extra) r₁)
+      (driveStep (interpR root table) m₂ (.link mode scope target interruptor extra) r₂) := by
   simp only [driveStep]
   exact CmdsRel.appendRest
     (linkScope_rel root (interpAgree_of root) hok hm mode scope target interruptor extra) hr
 
 theorem drive_drainDue :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ .drainDue r₁) (driveStep (interpR root) m₂ .drainDue r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ .drainDue r₁) (driveStep (interpR root table) m₂ .drainDue r₂) := by
   simp only [driveStep]
-  have hs : StoresOk m₂.state := hm.state ▸ hok.state
+  have hs : StoresOk table m₂.state := hm.state ▸ hok.state
   rw [hm.state]
   show CmdsRel root
-    ((drainOwed { m₁ with state := ((interpOf root).dueResumes m₂.state).2 }
-        ((interpOf root).dueResumes m₂.state).1).1,
-      (drainOwed { m₁ with state := ((interpOf root).dueResumes m₂.state).2 }
-        ((interpOf root).dueResumes m₂.state).1).2 ++ r₁)
-    ((drainOwed { m₂ with state := ((interpR root).dueResumes m₂.state).2 }
-        ((interpR root).dueResumes m₂.state).1).1,
-      (drainOwed { m₂ with state := ((interpR root).dueResumes m₂.state).2 }
-        ((interpR root).dueResumes m₂.state).1).2 ++ r₂)
+    ((drainOwed { m₁ with state := ((interpOf root table).dueResumes m₂.state).2 }
+        ((interpOf root table).dueResumes m₂.state).1).1,
+      (drainOwed { m₁ with state := ((interpOf root table).dueResumes m₂.state).2 }
+        ((interpOf root table).dueResumes m₂.state).1).2 ++ r₁)
+    ((drainOwed { m₂ with state := ((interpR root table).dueResumes m₂.state).2 }
+        ((interpR root table).dueResumes m₂.state).1).1,
+      (drainOwed { m₂ with state := ((interpR root table).dueResumes m₂.state).2 }
+        ((interpR root table).dueResumes m₂.state).1).2 ++ r₂)
   rw [dueResumes_frame, dueResumes_term]
   dsimp only
   obtain ⟨hok', hm', hc⟩ := book_drainOwed
     (machineOk_stateOf (s := { m₂.state with deferreds := (m₂.state.deferreds.drainDue).2 }) hok
-      (StoresOk.frame_deferreds m₂.state hs _))
+      (StoresOk.frame_deferreds table m₂.state hs _))
     (hm.stateOf _) (drain_rel root _)
   exact CmdsRel.mk' hok' hm' (ListRel.append hc hr)
 
 /-- A batch wake: the same store hook on both sides. -/
 theorem drive_wake (list : WakeKey) (phase : WakePhase) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    CmdsRel root (driveStep (interpOf root) m₁ (.wake list phase) r₁)
-      (driveStep (interpR root) m₂ (.wake list phase) r₂) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    CmdsRel (table := table) root (driveStep (interpOf root table) m₁ (.wake list phase) r₁)
+      (driveStep (interpR root table) m₂ (.wake list phase) r₂) := by
   simp only [driveStep]
   show CmdsRel root ({ m₁ with state := Stores.wakeList list phase m₁.state }, r₁)
     ({ m₂ with state := Stores.wakeList list phase m₂.state }, r₂)
@@ -1013,9 +1009,9 @@ end Commands
 frame machine's invariant and leaves the two machines and their residual commands in the
 book. -/
 theorem stepAgrees (root : NativeEff) :
-    letI := evaluatorFor root
-    letI := termEvaluatorFor root
-    StepAgrees (interpOf root) (interpR root) StoresOk (CodeMeans root) (Means root) := by
+    letI := evaluatorFor root table
+    letI := termEvaluatorFor root table
+    StepAgrees (interpOf root table) (interpR root table) (StoresOk table) (CodeMeans root) (Means root) := by
   intro a b c₁ c₂ r₁ r₂ hstuck hok hm hc hr
   cases c₁ with
   | evaluate id =>

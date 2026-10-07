@@ -1,6 +1,4 @@
 import Effect4.Laws.Api.SessionRef
-import Test.Dogfood.Scenario.Todo
-import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.QueueWorkers
 
 set_option maxRecDepth 8192
@@ -8,16 +6,18 @@ set_option maxRecDepth 8192
 /-!
 # The reference machine at a row table: the battery of slice H5
 
-Each line is a finite evaluation of an open statement, or a
-control. `run_eq_ref_table` is a planned goal: these lines are its finite evidence, and they
-shrink in the slice that proves it.
+Each line is a control or a finite evaluation that no theorem covers (decisions row 301).
+`session_eq_ref` and the raw statement with no preloaded answer (`run_eq_ref_table_noPreload`)
+are theorems since slice H6a (decisions row 314), so the lines that evaluated them on real
+programs and on 813 tapes are cut. What stays: the controls of the premise `funded` and of the
+row table, and the finite evidence of the rest of the planned goal `run_eq_ref_table`, the
+preloaded answers.
 -/
 
 namespace Test.Program.TableReference
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring Effect4.Program.Sched
 open Test.Dogfood.Scenario
-open Test.Dogfood.P2HandlerLayers (built?)
 
 abbrev Answer := Completion Val Err Defect FiberId Ann
 
@@ -54,33 +54,10 @@ def sides (s : Run) : Bool × Bool × Bool × Bool :=
 /-- Funded, both statements hold, and the reference machine at the empty row table agrees too. -/
 def green : Bool × Bool × Bool × Bool := (true, true, true, true)
 
-/-! ## Real programs -/
+/-! ## Controls on runs -/
 
-section todo
-open Test.Dogfood.Scenario.Todo
-
-def onTodo (main : Src NativeOp) (moves : List Move) : Option (Bool × Bool × Bool × Bool) :=
-  (built? (request main)).map fun b => sides (play (Run.open b "todo") moves)
-
--- finite evaluation: the four to-do programs, answered, failed, and waiting
-#guard [ onTodo (add (str "milk"))
-           (script [[.start], answer (.row "TodoRepo.insert") (ok (todo 1 "milk" false))])
-       , onTodo (add (str ""))
-           (script [[.start], answer (.row "TodoRepo.insert") (ok (todo 1 "" false))])
-       , onTodo (complete (nat 1))
-           (script [[.start], answer (.row "TodoRepo.setDone") (failed "SqlError" "locked")])
-       , onTodo (remove (nat 7)) (script [[.start], answer (.row "TodoRepo.delete") (ok (.bool false))])
-       , onTodo list
-           (script [[.start], answer (.row "TodoRepo.all") (ok (.list [todo 1 "milk" true, todo 2 "tea" false]))])
-       , onTodo list [.start] ].all (· = some green)
-
-end todo
-
--- finite evaluation: each named run of the routing scenario
-#guard Routing.runsAndControls.1.all fun run => sides run.played = green
--- finite evaluation: programs with fibers, a queue and timers. Each run that is funded meets both
--- statements. Control (`funded`): the two runs that a budget cuts fail the session statement, and
--- the raw statement holds on them
+-- control (`funded`): of the 31 runs of a program with fibers, a queue and timers, the two that
+-- a budget cuts fail the session statement, and the raw statement holds on them
 #guard QueueWorkers.runsAndControls.1.length = 31
 #guard (QueueWorkers.runsAndControls.1.filterMap fun run =>
     if sides run.played = green then none else some (run.name, sides run.played)) =
@@ -103,27 +80,17 @@ def raw (program : NativeEff) (table : RowTable) (moves : List Move)
 
 /-- Three calls in sequence: each request is the reply before it. -/
 def chain : NativeEff := .bind (call (num 1)) (.bind (call (.var 0)) (call (.var 1)))
-/-- A call, then a clock read. -/
-def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit))
-/-- A cell, then a call. -/
-def cellThenCall : NativeEff := .bind (.perform .refMake (num 7)) (call (num 1))
 /-- Two handles acquired, then the second used. -/
 def handled2 : NativeEff :=
   .bind (.perform (.external 0) (.lit .unit))
     (.bind (.perform (.external 0) (.lit .unit)) (.perform (.external 1) (.var 1)))
 
--- finite evaluation: an interruption of the waiting root, a clock step and a delayed cell read
--- are in reach of both statements
-#guard [ raw chain [wait] (script [[.start], [.cancel ⟨0⟩], [.flush]])
-       , raw clocked [wait] (script [[.start], [.tick 5], reply 5])
-       , raw cellThenCall [wait] (script [[.start], answer (.row "H.wait") (.ofRefGet ⟨0⟩)]) ].all
-  (· = some green)
 -- control (`funded` in `session_eq_ref`): a command budget of 5 cuts the last step of three
 -- calls. No row is refused, the session statement fails, and the raw statement holds
 #guard raw chain [wait] (script [[.start], reply 5, reply 6, reply 7]) { fuel := 5, compileFuel := 1000 } =
   some (false, false, true, true)
--- finite evaluation: a handle row. Control (the row table): the reference machine at the empty
--- row table does not allocate, and it disagrees
+-- control (the row table): at a handle row the reference machine at the empty row table does not
+-- allocate, and it disagrees
 #guard raw handled2 [kvMake, kvUse]
     (script [[.start], answer (.row "K.make") (ok (.nat 0)), answer (.row "K.make") (ok (.nat 1)),
       answer (.row "K.use") (ok (.nat 9))]) = some (true, true, true, false)
@@ -156,9 +123,8 @@ def disagreements (e : NativeEff) (table : RowTable) (n : Nat) (fuel : Nat := 20
   ((all.filter fun tape => !agreeRaw e table fuel tape).length,
    (all.filter fun tape => !agreeEmpty e table fuel tape).length, all.length)
 
--- finite evaluation: 813 tapes over an alphabet of 28 decisions, on data rows and on handle rows.
--- Control (the row table): at handle rows the reference machine at the empty row table disagrees
-#guard disagreements chain [wait] 2 = (0, 0, 813)
+-- control (the row table): of 813 tapes over an alphabet of 28 decisions at handle rows, the
+-- reference machine at the empty row table disagrees on 52
 #guard disagreements handled2 [kvMake, kvUse] 2 = (0, 52, 813)
 
 /-! ## Preloaded answers -/
