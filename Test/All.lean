@@ -282,6 +282,7 @@ import Test.Dogfood.Scenario.Tape
 import Test.Dogfood.Scenario.Lowered
 import Test.Dogfood.Scenario.Gate
 import Test.Dogfood.Scenario.Faces
+import Test.Dogfood.Scenario.Todo
 import Test.Program.ScopedOpContract
 import Test.Program.SliceLattice
 
