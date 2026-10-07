@@ -76,3 +76,5 @@ Atom	tuple	custom
 Atom	take	poly		[ReadonlyArray<"p0">, number]	ReadonlyArray<"p0">		<"p0">
 Atom	drop	poly		[ReadonlyArray<"p0">, number]	ReadonlyArray<"p0">		<"p0">
 Atom	sameHandle	custom					
+Atom	plus	mono		[number, number]	number		
+Atom	minus	mono		[number, number]	number		

@@ -183,4 +183,12 @@ theorem sameHandle_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (sameHandle x0 x1).Scoped :=
   app_scoped "sameHandle" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil))
 
+theorem plus_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
+    (plus x0 x1).Scoped :=
+  app_scoped "plus" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil))
+
+theorem minus_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
+    (minus x0 x1).Scoped :=
+  app_scoped "minus" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil))
+
 end Effect4.Program.Authoring.Atom

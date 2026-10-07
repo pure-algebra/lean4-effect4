@@ -477,6 +477,12 @@ In work since the suspension of the handover:
   (`run_eq_ref_table_noPreload`). The case of preloaded answers stays a planned goal, with no
   consumer on the spine. Next: the term guard at a host row's request (row 312), and the proof
   of `denoteRows_eq_session` (slice H8).
+- **Integers carry, encode and compute** (rows 316 to 319): an `int` column is admitted (the
+  integer scan is gone), `int` and `number` have exact JSON wires, and the atoms `plus` and
+  `minus` compute exactly, with `lt` and `eq` at `int`. The bound of the target profile
+  (slices 6 and 7) and p1's and p5's next stages (slice 8) are open
+  ([the packet](research/2026-10-07-packet-integers.md)). The term guard stands at a host
+  row's request (row 315).
 - **Chunks T and S are landed** (row 311): the first profile of streams and the authoring
   sugar. The implementer does no more implementation, and the coordinator lands the work itself
   (row 312). The claims record is walked with the owner at the next check-in.

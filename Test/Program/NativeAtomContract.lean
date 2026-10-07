@@ -19,7 +19,7 @@ open Effect4.Program
    "isSome", "getOrElse", "ite", "some", "none", "mul",
    "nil", "cons", "get", "length", "append", "sub", "div", "mod", "concat",
    "mapEmpty", "mapGet", "mapSet", "mapKeys", "mapEntries", "mapFromEntries", "tuple",
-   "take", "drop", "sameHandle"]
+   "take", "drop", "sameHandle", "plus", "minus"]
 -- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
 -- values — true exactly on a pair whose first component is the tag
 #guard NativeAtom.arity .tagIs = some 2
@@ -168,6 +168,28 @@ open Effect4.Program
 #guard nativeAtom "mod" [.nat 10, .nat 3] = some (.nat 1)
 #guard nativeAtom "mod" [.nat 10, .nat 0] = some (.nat 10)
 #guard nativeAtom "concat" [.str "a", .str "b"] = some (.str "ab")
+
+/-! ## The integer rows (decisions row 319; `Machine/Integers.lean`)
+
+Readers of `intSub_spec` and `intAdd_spec` (`src/Effect4/Laws/Machine/Integers.lean`) at p5's
+and p1's numbers, the order and the test at the four sign cases, and two red controls. -/
+
+-- reader: p5's `available - needed` is rc.112's `-15`; p1's `-status` is `-404`
+#guard nativeAtom "minus" [.nat 10, .nat 25] = some (.negInt 14)
+#guard nativeAtom "minus" [.nat 0, .nat 404] = some (.negInt 403)
+#guard nativeAtom "plus" [.negInt 4, .nat 5] = some (.nat 0)
+-- red control: below zero `minus` and `sub` differ, which is why `minus` is a row of its own
+#guard nativeAtom "sub" [.nat 10, .nat 25] = some (.nat 0)
+-- finite evaluation: the order and the test at the four sign cases
+#guard [ nativeAtom "lt" [.nat 1, .nat 2], nativeAtom "lt" [.negInt 0, .nat 0],
+         nativeAtom "lt" [.nat 0, .negInt 0], nativeAtom "lt" [.negInt 1, .negInt 0] ] =
+  [some (.bool true), some (.bool true), some (.bool false), some (.bool true)]
+#guard [ nativeAtom "eq" [.nat 0, .negInt 0], nativeAtom "eq" [.negInt 3, .negInt 3] ] =
+  [some (.bool false), some (.bool true)]
+-- the typing: two integers, a natural among them, answer an integer; a string is refused
+#guard nativeAtomTy "minus" [.nat, .int] = some .int
+#guard nativeAtomTy "lt" [.int, .nat] = some .bool
+#guard nativeAtomTy "plus" [.string, .int] = none
 
 /-- Every successful native typing names an inventoried atom, for arbitrary input types. -/
 theorem typed_name_known (name : String) (args : List Ty) (answer : Ty)

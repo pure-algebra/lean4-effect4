@@ -7,6 +7,7 @@ import Effect4.Program.TyClasses
 import Effect4.Program.Bounds
 import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Program.Eliminators
+import Effect4.Laws.Machine.Integers
 
 /-!
 # Value membership in a typed world
@@ -2914,6 +2915,18 @@ theorem atomFits_of_shape {a : NativeAtom} (s : NativeAtom.Shape)
     rw [he] at hv
     cases hv
     trivial
+  | int2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨u, he, hu⟩ := hev x y hx hy
+    rw [he] at hv
+    cases hv
+    exact hu
+  | intRel =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨_, he⟩ := hev x y hx hy
+    rw [he] at hv
+    cases hv
+    trivial
 
 /-! ### The projection and cause atoms -/
 
@@ -3200,7 +3213,12 @@ theorem atomFits (a : NativeAtom) : AtomFits a := by
   | isZero => exact atomFits_of_shape .natTest rfl (fun _ => ⟨_, rfl⟩)
   | boolNot => exact atomFits_of_shape .bool1 rfl (fun _ => ⟨_, rfl⟩)
   | add => exact atomFits_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
-  | lt => exact atomFits_of_shape .natRel rfl (fun _ _ => ⟨_, rfl⟩)
+  | lt =>
+    refine atomFits_of_shape .intRel rfl fun x y hx hy => ?_
+    obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
+      obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> exact ⟨_, rfl⟩
+  | intAdd => exact atomFits_of_shape .int2 rfl (fun _ _ hx hy => intAdd_closed hx hy)
+  | intSub => exact atomFits_of_shape .int2 rfl (fun _ _ hx hy => intSub_closed hx hy)
   | boolOr => exact atomFits_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
   | boolAnd => exact atomFits_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
   | tagIs => exact atomFits_of_shape .strTest rfl (fun _ _ => ⟨_, rfl⟩)
@@ -3225,10 +3243,8 @@ theorem atomFits (a : NativeAtom) : AtomFits a := by
     simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
     obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      obtain ⟨m, rfl⟩ := fits_nat_inv hx
-      obtain ⟨n, rfl⟩ := fits_nat_inv hy
-      cases hv
-      trivial
+      obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
+        obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> cases hv <;> trivial
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
       obtain ⟨s, rfl⟩ := fits_string_inv hx
       obtain ⟨t, rfl⟩ := fits_string_inv hy

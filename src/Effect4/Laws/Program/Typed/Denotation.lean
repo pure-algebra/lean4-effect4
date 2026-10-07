@@ -366,6 +366,16 @@ private theorem progress_of_shape {a : NativeAtom} (shape : NativeAtom.Shape)
     obtain ⟨_, he⟩ := hev s t
     rw [he]
     rfl
+  | int2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨_, he, _⟩ := hev x y hx hy
+    rw [he]
+    rfl
+  | intRel =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨_, he⟩ := hev x y hx hy
+    rw [he]
+    rfl
 
 /-- A list value's elements, read back: what the list atoms evaluate on. -/
 private theorem asList_of_fits {w : World} {v : Val} {a : Ty} (h : Fits w v (.list a)) :
@@ -385,7 +395,16 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
   | isZero => exact progress_of_shape .natTest rfl (fun _ => ⟨_, rfl⟩) w tys ty vs hty hfit
   | boolNot => exact progress_of_shape .bool1 rfl (fun _ => ⟨_, rfl⟩) w tys ty vs hty hfit
   | add => exact progress_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩) w tys ty vs hty hfit
-  | lt => exact progress_of_shape .natRel rfl (fun _ _ => ⟨_, rfl⟩) w tys ty vs hty hfit
+  | lt =>
+    refine progress_of_shape .intRel rfl (fun x y hx hy => ?_) w tys ty vs hty hfit
+    obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
+      obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> exact ⟨_, rfl⟩
+  | intAdd =>
+    exact progress_of_shape (a := .intAdd) .int2 rfl (fun _ _ hx hy => intAdd_closed hx hy) w tys ty vs
+      hty hfit
+  | intSub =>
+    exact progress_of_shape (a := .intSub) .int2 rfl (fun _ _ hx hy => intSub_closed hx hy) w tys ty vs
+      hty hfit
   | boolOr => exact progress_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩) w tys ty vs hty hfit
   | boolAnd => exact progress_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩) w tys ty vs hty hfit
   | tagIs => exact progress_of_shape .strTest rfl (fun _ _ => ⟨_, rfl⟩) w tys ty vs hty hfit
@@ -418,9 +437,8 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
       simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
       obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
       · obtain ⟨x, y, rfl, hx, hy⟩ := hp.pair_inv
-        obtain ⟨m, rfl⟩ := fits_nat_inv hx
-        obtain ⟨n, rfl⟩ := fits_nat_inv hy
-        rfl
+        obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
+          obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> rfl
       · obtain ⟨x, y, rfl, hx, hy⟩ := hp.pair_inv
         obtain ⟨s, rfl⟩ := fits_string_inv hx
         obtain ⟨t, rfl⟩ := fits_string_inv hy

@@ -206,15 +206,29 @@ theorem nativeAtomTy_and : nativeAtomTy "and" [.bool, .bool] = some .bool :=
 theorem nativeAtomTy_or : nativeAtomTy "or" [.bool, .bool] = some .bool :=
   NativeAtom.monoApply_self [.bool, .bool] .bool
 
-theorem nativeAtomTy_lt : nativeAtomTy "lt" [.nat, .nat] = some .bool :=
-  NativeAtom.monoApply_self [.nat, .nat] .bool
+/-- Two naturals are two integers: the leaf rule of `Ty.sub`. A step of `nativeAtomTy_lt` and
+`nativeAtomTy_eq`, whose atoms take `int` since decisions row 319. -/
+theorem nat_sub_int : Ty.sub .nat .int = true := Ty.sub_of_leafRule (by decide)
 
-/-- `eq` on two numbers: the first of the atom's two fixed signatures, at its own parameters.
+/-- A fixed signature of two parameters at arguments below them, one by one. A step of
+`nativeAtomTy_lt` and `nativeAtomTy_eq`. -/
+theorem monoApply_pair {p q a b answer : Ty} (ha : a.sub p = true) (hb : b.sub q = true) :
+    NativeAtom.monoApply [p, q] answer [a, b] = some answer := by
+  unfold NativeAtom.monoApply
+  refine if_pos ⟨rfl, ?_⟩
+  simp only [List.zip_cons_cons, List.zip_nil_right, List.all_cons, List.all_nil, ha, hb,
+    Bool.and_self]
+
+/-- `lt` on two naturals: its signature takes two integers, and a natural is one. -/
+theorem nativeAtomTy_lt : nativeAtomTy "lt" [.nat, .nat] = some .bool :=
+  monoApply_pair nat_sub_int nat_sub_int
+
+/-- `eq` on two numbers: the first of the atom's two fixed signatures, at two naturals.
 Used by a step that compares two stamps. -/
 theorem nativeAtomTy_eq : nativeAtomTy "eq" [.nat, .nat] = some .bool := by
-  show ([([Ty.nat, Ty.nat], Ty.bool), ([Ty.string, Ty.string], Ty.bool)].findSome? fun c =>
+  show ([([Ty.int, Ty.int], Ty.bool), ([Ty.string, Ty.string], Ty.bool)].findSome? fun c =>
     NativeAtom.monoApply c.1 c.2 [.nat, .nat]) = some .bool
-  rw [List.findSome?_cons, NativeAtom.monoApply_self]
+  rw [List.findSome?_cons, monoApply_pair nat_sub_int nat_sub_int]
 
 theorem nativeAtomTy_sub : nativeAtomTy "sub" [.nat, .nat] = some .nat :=
   NativeAtom.monoApply_self [.nat, .nat] .nat

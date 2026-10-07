@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Machine.Alphabets
+public import Effect4.Machine.Integers
 public import Effect4.Machine.Record
 public import Effect4.Machine.Map
 public import Effect4.Program.TyEq
@@ -221,6 +222,10 @@ inductive NativeAtom
   handles of one kind have one key. It reads no payload and no cell, and it refuses two kinds;
   the typing admits two `Ref` handles or two `Deferred` handles and so excludes that case. -/
   | sameHandle
+  /-- Exact addition and subtraction on two integer images (decisions rows 108, 121 and 309;
+  `Machine/Integers.lean`). Atoms are spelled by name on the wire, so appending them moves no
+  ordinal and no byte. -/
+  | intAdd | intSub
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -405,6 +410,11 @@ def row : NativeAtom → AtomRow
                     <A, B>(a: Ref.Ref<A>, b: Ref.Ref<B>): boolean\n  \
                     <A, E, B, F>(a: Deferred.Deferred<A, E>, b: Deferred.Deferred<B, F>): \
                     boolean\n}" }
+  -- exact integer arithmetic (decisions row 309); the profile's bound is slice 6's
+  | .intAdd => { name := "plus", arity := some 2, constGeneric := false,
+                 prelude := "(a: number, b: number): number => a + b" }
+  | .intSub => { name := "minus", arity := some 2, constGeneric := false,
+                 prelude := "(a: number, b: number): number => a - b" }
 
 def name (atom : NativeAtom) : String := (row atom).name
 
@@ -458,6 +468,8 @@ def ofName? : String → Option NativeAtom
   | "take" => some .listTake
   | "drop" => some .listDrop
   | "sameHandle" => some .sameHandle
+  | "plus" => some .intAdd
+  | "minus" => some .intSub
   | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
@@ -539,6 +551,12 @@ def eval : NativeAtom → List Val → Option Val
   | .listDrop, [xs, Val.nat count] => (Val.asList? xs).map fun vs => Val.list (vs.drop count)
   | .sameHandle, [Store.Val.handle kind index, Store.Val.handle kind' index'] =>
     if kind = kind' then some (Val.bool (index = index')) else none
+  -- the integer rows (`Machine/Integers.lean`): the widened order and test on every other pair
+  -- of integer images, and the two new rows
+  | .lt, [x, y] => intLt x y
+  | .eq, [x, y] => intEq x y
+  | .intAdd, [x, y] => Effect4.Program.intAdd x y
+  | .intSub, [x, y] => Effect4.Program.intSub x y
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
@@ -547,7 +565,7 @@ def eval : NativeAtom → List Val → Option Val
   | .listNil, _ | .listCons, _ | .listGet, _ | .listLength, _ | .listAppend, _
   | .natSub, _ | .natDiv, _ | .natMod, _ | .strConcat, _
   | .mapEmpty, _ | .mapGet, _ | .mapSet, _ | .mapKeys, _ | .mapEntries, _ | .mapFromEntries, _
-  | .listTake, _ | .listDrop, _ | .sameHandle, _ => none
+  | .listTake, _ | .listDrop, _ | .sameHandle, _ | .intAdd, _ | .intSub, _ => none
 
 end NativeAtom
 

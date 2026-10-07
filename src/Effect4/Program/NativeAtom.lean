@@ -220,10 +220,10 @@ def spec : NativeAtom → Spec
                   cite := "`\"not\", [bool b] => bool (!b)`" }
   | .add => { scheme := .mono [.nat, .nat] .nat,
               cite := "`\"add\", [nat a, nat b] => nat (a + b)`" }
-  | .lt => { scheme := .mono [.nat, .nat] .bool,
-             cite := "`\"lt\", [nat a, nat b] => bool (a < b)`" }
-  | .eq => { scheme := .alts [([.nat, .nat], .bool), ([.string, .string], .bool)],
-             cite := "NativeAtom.eq on admitted natural or string pairs (DI-09)." }
+  | .lt => { scheme := .mono [.int, .int] .bool,
+             cite := "`\"lt\", [x, y] => bool (x < y)` on two integers (decisions row 121)." }
+  | .eq => { scheme := .alts [([.int, .int], .bool), ([.string, .string], .bool)],
+             cite := "NativeAtom.eq on two integers or two strings (DI-09, decisions row 121)." }
   | .pair =>
       { scheme := .poly [.var 0, .var 1] (.prod (.var 0) (.var 1)),
         cite := "`\"pair\", [a, b] => Val.tuple [a, b]` — a two-element tuple, the wire's JSON \
@@ -375,6 +375,15 @@ def spec : NativeAtom → Spec
                  handles, at any payload types.\nThe model compares the two keys of one kind and \
                  reads no payload; the host compares the two objects (`===`).\nThat the two \
                  agree is each target's relation, not this table's." }
+  | .intAdd =>
+      { scheme := .mono [.int, .int] .int,
+        cite := "`\"plus\", [x, y] => x + y` on two integers, exact (decisions rows 108 and \
+                 121).\nThe reference adds without a bound. A target refuses a result outside \
+                 ±(2^53 - 1) (DI-56)." }
+  | .intSub =>
+      { scheme := .mono [.int, .int] .int,
+        cite := "`\"minus\", [x, y] => x - y` on two integers, exact: `sub` stops at zero.\n\
+                 A target refuses a result outside ±(2^53 - 1) (DI-56)." }
 
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause):
 the atom's scheme, applied. -/

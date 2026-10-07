@@ -167,6 +167,15 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
     · cases h
       exact List.nil_subset _
     · cases h
+  -- the four integer rows answer a value that names no handle (decisions row 319)
+  case h_47 =>
+    exact Val.keys_subset_of_handles (by rw [intLt_handles h]; exact List.nil_subset _)
+  case h_48 =>
+    exact Val.keys_subset_of_handles (by rw [intEq_handles h]; exact List.nil_subset _)
+  case h_49 =>
+    exact Val.keys_subset_of_handles (by rw [intAdd_handles h]; exact List.nil_subset _)
+  case h_50 =>
+    exact Val.keys_subset_of_handles (by rw [intSub_handles h]; exact List.nil_subset _)
   all_goals cases h
   all_goals sub_tac norm [Val.tuple]
 

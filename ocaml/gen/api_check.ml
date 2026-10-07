@@ -40,6 +40,8 @@ let rec show_val (v : A.val_) =
     Printf.sprintf "ctor %d [%s]" i (String.concat ", " (List.map show_val args))
   | A.Val_ref (k, _) -> Printf.sprintf "ref %d" k
   | A.Val_handle (k, n) -> Printf.sprintf "handle %d/%d" k n
+  | A.Val_negInt n -> string_of_int (- (n + 1))
+  | A.Val_float b -> Printf.sprintf "float %d" b
 
 let show_reason = function
   | A.Reason_fail (A.Err_boom, _) -> "fail(boom)"

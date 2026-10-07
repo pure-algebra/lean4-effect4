@@ -143,4 +143,10 @@ def drop (x0 x1 : TermSrc) : TermSrc := app "drop" [x0, x1]
 /-- `sameHandle` (the atom `NativeAtom.sameHandle`). -/
 def sameHandle (x0 x1 : TermSrc) : TermSrc := app "sameHandle" [x0, x1]
 
+/-- `plus` (the atom `NativeAtom.intAdd`). -/
+def plus (x0 x1 : TermSrc) : TermSrc := app "plus" [x0, x1]
+
+/-- `minus` (the atom `NativeAtom.intSub`). -/
+def minus (x0 x1 : TermSrc) : TermSrc := app "minus" [x0, x1]
+
 end Effect4.Program.Authoring.Atom

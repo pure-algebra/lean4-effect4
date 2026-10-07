@@ -10,6 +10,7 @@ import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Program.UnionRule
 import Effect4.Laws.Program.Eliminators
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Machine.Integers
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -912,6 +913,8 @@ costs one line naming its kernel rather than a block re-deriving the inversion. 
 /-- The monomorphic evaluation shapes present in the alphabet. -/
 inductive Shape
   | nat1 | natTest | bool1 | nat2 | natRel | bool2 | strTest | str2
+  /-- Two integers to an integer, and two integers to a Boolean (decisions row 319). -/
+  | int2 | intRel
 deriving DecidableEq, Repr
 
 def Shape.params : Shape → TyEnv
@@ -921,11 +924,14 @@ def Shape.params : Shape → TyEnv
   | .bool2 => [.bool, .bool]
   | .strTest => [.string, .unknown]
   | .str2 => [.string, .string]
+  | .int2 | .intRel => [.int, .int]
 
 def Shape.answer : Shape → Ty
   | .nat1 | .nat2 => .nat
   | .natTest | .bool1 | .natRel | .bool2 | .strTest => .bool
   | .str2 => .string
+  | .int2 => .int
+  | .intRel => .bool
 
 /-- What an atom of this shape must do: answer in the answer's frame on the frames its
 parameters admit. This is the whole per-atom content of a monomorphic atom. -/
@@ -939,6 +945,10 @@ def Shape.holds (s : Shape) (a : NativeAtom) : Prop :=
   | .bool2 => ∀ x y : Bool, ∃ b : Bool, eval a [Val.bool x, Val.bool y] = some (Val.bool b)
   | .strTest => ∀ (t : String) (v : Val), ∃ b : Bool, eval a [Val.str t, v] = some (Val.bool b)
   | .str2 => ∀ s t : String, ∃ u : String, eval a [Val.str s, Val.str t] = some (Val.str u)
+  | .int2 => ∀ x y : Val, intImage x = true → intImage y = true →
+      ∃ v : Val, eval a [x, y] = some v ∧ intImage v = true
+  | .intRel => ∀ x y : Val, intImage x = true → intImage y = true →
+      ∃ b : Bool, eval a [x, y] = some (Val.bool b)
 
 /-- The inversion of a shape's parameter fit, once per shape. `strTest`'s second parameter is
 the top (decisions row 46), which every value inhabits, so its second argument is unconstrained
@@ -981,6 +991,13 @@ theorem sound_of_shape {a : NativeAtom} (s : Shape)
     obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hy
     obtain ⟨_, he⟩ := hev s t
     exact ⟨_, he, rfl⟩
+  | int2 =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    exact hev x y hx hy
+  | intRel =>
+    obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+    obtain ⟨_, he⟩ := hev x y hx hy
+    exact ⟨_, he, rfl⟩
 
 /-- Every atom is sound: one line where a shape carries the argument, a short block where the
 atom's evaluation reads its argument's own frame (a projection, a cause query, an option, a
@@ -992,7 +1009,12 @@ theorem sound (a : NativeAtom) : Sound a := by
   | isZero => exact sound_of_shape .natTest rfl (fun _ => ⟨_, rfl⟩)
   | boolNot => exact sound_of_shape .bool1 rfl (fun _ => ⟨_, rfl⟩)
   | add => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
-  | lt => exact sound_of_shape .natRel rfl (fun _ _ => ⟨_, rfl⟩)
+  | lt =>
+    refine sound_of_shape .intRel rfl fun x y hx hy => ?_
+    obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
+      obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> exact ⟨_, rfl⟩
+  | intAdd => exact sound_of_shape .int2 rfl (fun _ _ hx hy => intAdd_closed hx hy)
+  | intSub => exact sound_of_shape .int2 rfl (fun _ _ hx hy => intSub_closed hx hy)
   | boolOr => exact sound_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
   | boolAnd => exact sound_of_shape .bool2 rfl (fun _ _ => ⟨_, rfl⟩)
   | tagIs => exact sound_of_shape .strTest rfl (fun _ _ => ⟨_, rfl⟩)
@@ -1016,9 +1038,8 @@ theorem sound (a : NativeAtom) : Sound a := by
     simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hmem
     obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := hmem
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
-      obtain ⟨m, rfl⟩ := Val.hasTy_nat_inv hx
-      obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
-      exact ⟨_, rfl, rfl⟩
+      obtain ⟨m, rfl⟩ | ⟨m, rfl⟩ := intImage_inv hx <;>
+        obtain ⟨k, rfl⟩ | ⟨k, rfl⟩ := intImage_inv hy <;> exact ⟨_, rfl, rfl⟩
     · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
       obtain ⟨s, rfl⟩ := Val.hasTy_string_inv hx
       obtain ⟨t, rfl⟩ := Val.hasTy_string_inv hy

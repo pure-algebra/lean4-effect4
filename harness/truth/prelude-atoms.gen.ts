@@ -51,12 +51,12 @@ export const not = (b: boolean): boolean => !b
 export const add = (a: number, b: number): number => a + b
 
 /**
- * `"lt", [nat a, nat b] => bool (a < b)`
+ * `"lt", [x, y] => bool (x < y)` on two integers (decisions row 121).
  */
 export const lt = (a: number, b: number): boolean => a < b
 
 /**
- * NativeAtom.eq on admitted natural or string pairs (DI-09).
+ * NativeAtom.eq on two integers or two strings (DI-09, decisions row 121).
  */
 export const eq = (a: number | string, b: number | string): boolean => a === b
 
@@ -283,3 +283,15 @@ export const sameHandle = ((a: unknown, b: unknown): boolean => a === b) as {
   <A, B>(a: Ref.Ref<A>, b: Ref.Ref<B>): boolean
   <A, E, B, F>(a: Deferred.Deferred<A, E>, b: Deferred.Deferred<B, F>): boolean
 }
+
+/**
+ * `"plus", [x, y] => x + y` on two integers, exact (decisions rows 108 and 121).
+ * The reference adds without a bound. A target refuses a result outside ±(2^53 - 1) (DI-56).
+ */
+export const plus = (a: number, b: number): number => a + b
+
+/**
+ * `"minus", [x, y] => x - y` on two integers, exact: `sub` stops at zero.
+ * A target refuses a result outside ±(2^53 - 1) (DI-56).
+ */
+export const minus = (a: number, b: number): number => a - b
