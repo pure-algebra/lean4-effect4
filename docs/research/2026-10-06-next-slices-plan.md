@@ -364,6 +364,9 @@ evidence folder beside it.
 - **Gates at the merge**: the wide gates with `check-tsdiag`, `check-corpus`, `check-ingest`
   and `make check-target`. The citation query reads the prelude's declarations, and the probe
   emulated it: it did not run `check-target`.
+- **A first commit that stands alone**: the declaration of `cons`. In the probe's model the
+  cross form and the whole form each remove the disagreement of section 4.3, with today's
+  match too (row 299, point 7). So the prelude can move before the match does.
 - **It carries** the repair of the population filter (row 293, point 9), since both rebuild
   the tree.
 - **Do not touch**: `Ty.join`, `Ty.normalize`, `Ty.sub`; the rules of `HasTy`.
