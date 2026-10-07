@@ -1,0 +1,46 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// effect version: 4.0.0-rc.112
+// command: tsgo --target ES2022 --module ESNext --moduleResolution bundler --strict --exactOptionalPropertyTypes --noUncheckedIndexedAccess --verbatimModuleSyntax --allowImportingTsExtensions --noEmit --skipLibCheck whole_candidates.ts
+// the module folder is a link to harness/truth/node_modules; nothing was installed
+// run on 2026-10-07 against the working tree of branch chunk-2 over de7b4044
+// tsgo exit code: 0
+// tsgo output:
+//   (none)
+
+// Overwatch of chunk 2, step C: the whole forms of `ite` and `getOrElse` that seat BOUNDS's probe
+// wrote (scripts/run-ts2.sh.txt, variant "whole"), each with one leading parameter in the way the
+// working tree declares `cons`, `get` and `append`, so that `typeof atom<"p0">` still reads.
+import { Option } from "effect"
+
+type OptOf<O> = O extends Option.Option<infer X> ? X : never
+export const ite = <A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)
+export const getOrElse = <A, O extends Option.Option<unknown> = Option.Option<A>, B = OptOf<O>>(value: O, fallback: B): OptOf<O> | B =>
+  (Option.isSome(value) ? value.value : fallback) as OptOf<O> | B
+
+declare const c: boolean
+declare const n: number
+declare const s: string
+declare const optNum: Option.Option<number>
+declare const optNever: Option.Option<never>
+declare const optUnion: Option.Option<number> | Option.Option<string>
+
+// the joined calls, at the checker's answers
+export const ite1: number | string = ite(c, n, s)
+export const goe1: number | string = getOrElse(optNum, s)
+export const goe3: number = getOrElse(optNever, n)
+export const goe5: number | string | boolean = getOrElse(optUnion, c)
+// the calls that today's contract answers
+export const ite0: number = ite(c, n, n)
+export const goe0: number = getOrElse(optNum, n)
+export const goe6: string = getOrElse(Option.some(s), "fallback")
+
+// the reading at the parameter's template, as an exact type
+type Eq<X, Y> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false
+export const readsIte: Eq<typeof ite<"p0">, (c: boolean, t: "p0", f: "p0") => "p0"> = true
+export const readsGetOrElse: Eq<typeof getOrElse<"p0">, (value: Option.Option<"p0">, fallback: "p0") => "p0"> = true
+
+// red: the answer is no smaller than the join
+// @ts-expect-error a number is no string
+export const red1: string = ite(c, n, s)
+// @ts-expect-error a string is no number
+export const red2: number = getOrElse(optNum, s)

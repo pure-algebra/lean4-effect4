@@ -460,8 +460,42 @@ In work since the suspension of the handover:
   table of a program. Wave 2 is the match by bounds, with the typed print and a query driver
   beside it. The other conversions follow, and then the guards go. The plan checks the
   second model's report against the pinned sources, and it holds two compiled probes. It
-  rules nothing. [The brief of the next chunk](research/2026-10-06-chunk-2-brief.md) maps
-  wave 2 and wave 3 as one hand-over, with the order of the work inside it.
+  rules nothing. [The brief of chunk 2](research/2026-10-06-chunk-2-brief.md) mapped wave 2
+  and wave 3 as one hand-over, and chunk 2 is landed (the next bullet).
+  [The brief of chunk 3](research/2026-10-07-chunk-3-brief.md) is the next hand-over: the old
+  match goes, the placements, and the tests by equality. The typed print follows it.
+- **Chunk 2 is landed: the query function, the match by bounds and four converted rules**
+  (rows 303 to 305). [The coordinator's review](research/2026-10-07-chunk-2-landing-review.md)
+  says what the landing changed. Two reviews were written in flight:
+  [steps A and B](research/2026-10-07-chunk-2-review-A-B.md) and
+  [steps C and D](research/2026-10-07-chunk-2-review-C-D.md).
+  - **The match by bounds is the checker's match** at an atom's scheme, a row's request and a
+    binder term (`src/Effect4/Program/Bounds.lean`). Each parameter binds to the join of its
+    lower bounds. It is sound, least, complete and monotone in the order `Ty.subN`
+    (`src/Effect4/Laws/Program/Bounds.lean`, the registry claim `template-match-complete`).
+    A binder term stands under the term guard until the typed print lands.
+  - **Twelve template atoms are declared in the whole form**, so tsgo computes the join that
+    the checker answers. `pair` and `some` need none. The truth lane holds the compiler's
+    lines for each join.
+  - **Four more rules of the checker are converted.** The list rule, the exit rule and the
+    cause rule are extended rules. The option rule is the guarded rule alone
+    (`src/Effect4/Laws/Program/Eliminators.lean`, the claim `union-rule-extend`).
+  - **A query function answers on demand** (`tools/Tools/Query.lean`, with its driver
+    `tools/Drivers/Query.lean`). It answers the check, the addresses, the focus, the address
+    table, the refusals, the term slots, an omission and a filling. An answer names a law only
+    where the function decided the law's premises.
+  - **The probe of the TypeScript printer** ran 44 printed forms with tsgo 7
+    ([the note](research/2026-10-06-print-probe.md)). Six have no place for a type argument,
+    and tsgo needs none there.
+  - **The checker types more programs.** Two candidates with no order join at a template
+    atom. Each converted rule answers at `never`, and three of them at one union member under
+    a raw union. No row of the two corpora moved.
+  - **Two stages are open**: the match by first occurrence stands with its laws and no caller,
+    and the tests by equality are not converted. Both are in chunk 3.
+  - **The landing made the repairs of both reviews.** The slice came with no term guard and
+    with eight atoms at their old declarations, and tsgo refuses the calls that the checker
+    typed there. Its
+    one planned goal is a theorem now, so 28 goals are planned and 12 declarations rest on one.
 - **Slice TABLE is landed: the address table, the list of refusals and the slot table**
   ([the receipt](research/2026-10-06-seat-TABLE-receipt.md), with
   [the coordinator's review](research/2026-10-06-slice-TABLE-review.md); row 302). The table

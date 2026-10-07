@@ -853,11 +853,30 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   `Ref.modify`'s `B` is such a parameter: it first occurs in the result of the row's binder term.
   The checker binds `B` from the term's raw type (`bindTerm`, `src/Effect4/Program/Typing/Rules.lean`)
   and claims no completeness there (the state plan's T3b).
-  The match by bounds is ratified to replace this match (decisions row 299).
-  It joins each parameter's lower bounds, and it reads a request up to its normal form.
-  A probe compiled its laws in scratch files: sound against `Ty.subN`, least, and complete with
-  no anchored premise (`docs/research/2026-10-06-seat-BOUNDS-receipt.md`, sections 6.5 and 10).
-  None is a theorem of the tree, and the present match stands until that slice lands.
+  The checker no longer calls this match: the match by bounds replaced it at each caller
+  (decisions row 303, and the claim below).
+  The function and this law stand until the open stage of slice MATCH removes them.
+- **The complete match of a template by bounds (`template-match-complete`)**: The statement fixes a
+  template in the reach of the laws (`Bounds.TemplateOK`).
+  Such a template is its own normal form, is admissible, and holds no nominal reference.
+  The match by bounds joins the lower bounds that a request offers each parameter.
+  It keeps the bindings where the request is below the template's instance at them.
+  A normal request below some instance of the template then has a match, from any seed that the
+  instance agrees with.
+  No premise asks where a parameter first occurs, and none asks where `never` stands.
+  It is proved (`Bounds.matchB_complete`, `src/Effect4/Laws/Program/Bounds.lean`; slice MATCH).
+  The match is sound by its guard (`Bounds.matchB_sound`), and its bindings are the least
+  (`Bounds.matchB_least`).
+  An argument list is checked at one, final list of bindings (`Bounds.matchArgsB_sound`), and
+  smaller arguments have a match with smaller bindings (`Bounds.matchArgsB_monotone`).
+  Every template of the tree is in reach, as a finite check (`Test/Program/BoundsControls.lean`).
+  A binder term is matched under the term guard (`Bounds.termGuard`, decisions row 299, point 10).
+  Its type must offer a greatest lower bound to each parameter that the cell does not fix.
+  The guard goes when the TypeScript printer writes a row's type arguments at the join.
+  It establishes no match under a union head or a nominal reference of a template, and no
+  completeness of the checker against `HasTy`.
+  It establishes nothing of tsgo's inference: the guard and the prelude's declarations answer to
+  that, and the truth lane tests them on finite programs.
 - **Minimal type slices of a monotone view (`slice-lattice-minimal`)**: The statement fixes a view: a
   monotone map from the type slices of one program to a preorder of types.
   A type slice is the list of its kept sites, and a smaller type slice keeps less.
@@ -924,11 +943,19 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   The fiber rule is the first instance: `fiberTy` is `UnionRule.extend Member.fiber`
   (`src/Effect4/Program/Typing/Rules.lean`), with its facts in
   `src/Effect4/Laws/Program/Eliminators.lean`.
+  The list rule and the exit rule are instances too (`Checker.listOf?`, `Checker.exitOf?`;
+  decisions row 304), and `HasTy` states both through the function.
+  The cause rule reads two heads, so it is no eliminator of one constructor.
+  It is the extended rule of `Member.cause`, with four member facts of an upper type
+  (`causeInputError_upper`).
+  The option rule of `Decision.arms` read the normal form before its conversion, so it is the
+  guarded rule alone (`optionTy`, `src/Effect4/Program/Decision.lean`).
+  It is the rule that it was at every type but `never` (`optionTy_eq_normal`).
   The guard and the raw answer are interim, and each goes by one line.
   The guard goes when the TypeScript printer writes the type arguments at a proper union
   (decisions row 292).
-  The raw answer goes when the match of a template reads a request up to its normal form
-  (decisions row 296).
+  The raw answer goes when a binder term is read at its normal form, which waits for the guard
+  at a binder term (decisions rows 296 and 303).
   `Eliminator.extend_liftOne` says what that second removal changes: no verdict, and an answer
   up to the order, where the member rule answers at one union member only.
   Under the guard the monotone law holds where the smaller target has at most one union member

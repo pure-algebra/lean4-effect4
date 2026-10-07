@@ -5,7 +5,10 @@ import Effect4.Program.ErrorImage
 import Effect4.Laws.Program.ErrorQueries
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Template
+import Effect4.Program.Bounds
+import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
 import Effect4.Laws.Auto.Inversion
 
 /-!
@@ -478,6 +481,40 @@ theorem Fits.instantiate {σ₀ σ : Ty.Subst} {ps : TyEnv} {join : Bool} :
         exact .cons (Ty.hasTy_instantiate_widens (Ty.matchTemplateArgs_widens hrest) p _ []
           hinst) (ih hrest hfit')
 
+/-- A successful list match by bounds puts every argument at its parameter's instance under the
+bindings of the match: each argument is below its parameter's instance (`matchArgsB_sound`), and
+values of a subtype are values of the supertype (`hasTy_sub`). -/
+theorem Fits.instantiate_admits {σ : Ty.Subst} {ps : TyEnv} :
+    ∀ {rs : TyEnv}, ps.length = rs.length → Bounds.Admits σ ps rs →
+      ∀ {vs : List Val}, Fits vs rs → Fits vs (ps.map (Ty.instantiate σ)) := by
+  induction ps with
+  | nil =>
+    intro rs hlen hadm vs hfit
+    cases rs with
+    | nil => cases hfit; exact .nil
+    | cons _ _ => exact nomatch hlen
+  | cons p ps ih =>
+    intro rs hlen hadm vs hfit
+    cases rs with
+    | nil => exact nomatch hlen
+    | cons r rs =>
+      cases hfit with
+      | cons hv hfit' =>
+        have hsub : Ty.sub r.normalize (Ty.instantiate σ p).normalize = true :=
+          hadm (p, r) List.mem_cons_self
+        have hinst := hasTy_sub r.normalize _ _ [] hsub ((hasTy_normalize r _ []).trans hv)
+        rw [hasTy_normalize] at hinst
+        have hadm' : Bounds.Admits σ ps rs := fun pr hpr =>
+          hadm pr (List.mem_cons_of_mem _ hpr)
+        exact .cons hinst (ih (Nat.succ.inj hlen) hadm' hfit')
+
+/-- The poly scheme's premise for matchArgsB (`NativeAtom.sound_of_poly`). -/
+theorem Fits.instantiateB {σ : Ty.Subst} {ps rs : TyEnv}
+    (hmatch : Bounds.matchArgsB ps rs = some σ)
+    {vs : List Val} (hfit : Fits vs rs) : Fits vs (ps.map (Ty.instantiate σ)) := by
+  have ⟨hlen, hadm⟩ := Bounds.matchArgsB_sound hmatch
+  exact Fits.instantiate_admits hlen hadm hfit
+
 /-! ### Environments at an allocation state
 
 Row DI-17. `Fits` above fixes the allocation table at the default `[]`, so it refuses an
@@ -855,15 +892,15 @@ substitution: the step from "the arguments fit `tys`" to "they fit the parameter
 at the final bindings" is `Fits.instantiate`, once, for either rule of `join`. Quantifying
 over every σ is stronger than `Scheme.apply` needs, and every template here is parametric in
 what it binds, so nothing is lost. -/
-theorem sound_of_poly {a : NativeAtom} {params : TyEnv} {answer : Ty} {join : Bool}
-    (hs : (spec a).scheme = .poly params answer join)
+theorem sound_of_poly {a : NativeAtom} {params : TyEnv} {answer : Ty}
+    (hs : (spec a).scheme = .poly params answer)
     (hev : ∀ (σ : Ty.Subst) (vs : List Val), Fits vs (params.map (Ty.instantiate σ)) →
              ∃ v, eval a vs = some v ∧ Val.hasTy v (Ty.instantiate σ answer) = true) :
     Sound a := by
   intro tys ty vs hty hfit
   simp only [typeOf, hs, Scheme.apply] at hty
   obtain ⟨σ, hmatch, rfl⟩ := Option.map_eq_some_iff.mp hty
-  exact hev σ vs (hfit.instantiate hmatch)
+  exact hev σ vs (Fits.instantiateB hmatch hfit)
 
 /-- The alternative a `findSome?` over fixed signatures hit. -/
 theorem findSome?_monoApply {alts : List (TyEnv × Ty)} {tys : List Ty} {ty : Ty}
@@ -1631,8 +1668,9 @@ under the accumulator at the fold's level and the element one above it. Step of
 theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : Option Ty}
     {list init body : Term} {ty : Ty}
     (h : termTy sig env (.fold accTy list init body) = some ty) :
-    ∃ item initType bodyType,
-      termTy sig env list = some (.list item) ∧
+    ∃ listType item initType bodyType,
+      termTy sig env list = some listType ∧
+      Checker.listOf? listType = some item ∧
       termTy sig env init = some initType ∧
       ty = accTy.getD initType ∧
       Ty.subN initType ty = true ∧
@@ -1642,10 +1680,6 @@ theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : 
   obtain ⟨listType, hlist, h1⟩ := Option.bind_eq_some_iff.mp h
   obtain ⟨item, hitem, h2⟩ := Option.bind_eq_some_iff.mp h1
   obtain ⟨initType, hinit, h3⟩ := Option.bind_eq_some_iff.mp h2
-  -- the element type that `Checker.listOf?` reads is the argument of the list head
-  obtain rfl : listType = .list item := by
-    match listType, hitem with
-    | .list _, rfl => rfl
   dsimp only at h3
   split at h3
   · next hsubInit =>
@@ -1653,7 +1687,7 @@ theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : 
     split at h4
     · next hsubBody =>
       cases h4
-      exact ⟨item, initType, bodyType, hlist, hinit, rfl, hsubInit, hbody, hsubBody⟩
+      exact ⟨listType, item, initType, bodyType, hlist, hitem, hinit, rfl, hsubInit, hbody, hsubBody⟩
     · exact nomatch h4
   · exact nomatch h3
 
@@ -1739,14 +1773,15 @@ theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : 
   -- the accumulator keeps the fold's type: the initial value is below it, every element is of
   -- the element type, and a step answers a value of the body's type, which is below it
   | fold accTy list init body =>
-    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+    obtain ⟨listType, item, initType, bodyType, hlist, hitem, hinit, _, hsubInit, hbody, hsubBody⟩ :=
       termTy_fold_inv hty
     rw [evalTerm_fold] at hev
     obtain ⟨value, hlv, hev⟩ := Option.bind_eq_some_iff.mp hev
     obtain ⟨items, hitems, hev⟩ := Option.bind_eq_some_iff.mp hev
     obtain ⟨start, hstart, hev⟩ := Option.bind_eq_some_iff.mp hev
-    obtain ⟨items', hitems', hall⟩ :=
-      Val.hasTy_list_inv (evalTerm_hasTy list env tys (.list item) value hfit hlist hlv)
+    have hhas := Val.hasTy_subN (listOf_upper hitem)
+      (evalTerm_hasTy list env tys listType value hfit hlist hlv)
+    obtain ⟨items', hitems', hall⟩ := Val.hasTy_list_inv hhas
     rw [hitems] at hitems'
     cases hitems'
     refine foldlM_keeps (P := fun acc => Val.hasTy acc ty = true)
@@ -1861,12 +1896,13 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
   -- type; each step evaluates at a fitting environment and keeps the fold's type, so the fold
   -- answers (the empty list answers the initial value)
   | fold accTy list init body =>
-    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+    obtain ⟨listType, item, initType, bodyType, hlist, hitem, hinit, _, hsubInit, hbody, hsubBody⟩ :=
       termTy_fold_inv hty
     obtain ⟨value, hlv⟩ :=
-      Option.isSome_iff_exists.mp (evalTerm_isSome list env tys (.list item) hfit hlist)
-    obtain ⟨items, hitems, hall⟩ :=
-      Val.hasTy_list_inv (evalTerm_hasTy list env tys (.list item) value hfit hlist hlv)
+      Option.isSome_iff_exists.mp (evalTerm_isSome list env tys listType hfit hlist)
+    have hhas := Val.hasTy_subN (listOf_upper hitem)
+      (evalTerm_hasTy list env tys listType value hfit hlist hlv)
+    obtain ⟨items, hitems, hall⟩ := Val.hasTy_list_inv hhas
     obtain ⟨start, hstart⟩ :=
       Option.isSome_iff_exists.mp (evalTerm_isSome init env tys initType hfit hinit)
     have hstep : ∀ acc x, Val.hasTy acc ty = true → Val.hasTy x item = true →

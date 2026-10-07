@@ -41,17 +41,22 @@ type Assert<T extends true> = T
 export type IsSomeIsBoolean = AssertFalse<typeof isSome extends
   (value: Option.Option<unknown>) => value is Option.Some<unknown> ? true : false>
 
-// These calls are compiled but never executed. A widened fallback signature or a
-// refinement predicate makes a required negative diagnostic disappear and fails tsc.
-export function optionTypeControls(value: Option.Option<number | string>, empty: Option.Option<never>) {
+// These calls are compiled but never executed. The answer of `getOrElse` is the join of the
+// payload's type and the fallback's type (decisions row 303), and the first argument is an
+// option. A refinement predicate makes a required negative diagnostic disappear, and the type
+// check fails.
+export function optionTypeControls(value: Option.Option<number | string>, empty: Option.Option<never>,
+    count: number, text: string) {
   const result = getOrElse(value, 0)
   type SamePayload = Assert<Equal<typeof result, number | string>>
   const unit = getOrElse(Option.some(undefined), undefined)
   type Unit = Assert<Equal<typeof unit, undefined>>
-  // @ts-expect-error A fallback cannot widen the option's declared payload type.
-  getOrElse(Option.some(1), "wrong")
-  // @ts-expect-error An empty payload type has no admissible numeric fallback.
-  getOrElse(empty, 0)
+  const joined = getOrElse(Option.some(count), text)
+  type Joined = Assert<Equal<typeof joined, number | string>>
+  const fromEmpty = getOrElse(empty, count)
+  type FromEmpty = Assert<Equal<typeof fromEmpty, number>>
+  // @ts-expect-error The first argument is an option.
+  getOrElse(1, 0)
   if (isSome(value)) {
     // @ts-expect-error Presence testing is Boolean, not a payload-elimination rule.
     value.value

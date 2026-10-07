@@ -1,0 +1,182 @@
+diff --git a/src/Effect4/Laws/Program/Signature.lean b/src/Effect4/Laws/Program/Signature.lean
+index f7ec8134..58d30190 100644
+--- a/src/Effect4/Laws/Program/Signature.lean
++++ b/src/Effect4/Laws/Program/Signature.lean
+@@ -211,18 +211,18 @@ theorem actionHasTy_ext (h : SigExtends s s') :
+   | _, _, _, .runIn ht hf hsc => .runIn ((h.termTy _ _).trans ht) hf ((h.termTy _ _).trans hsc)
+   | _, _, _, .interrupt ht hf => .interrupt ((h.termTy _ _).trans ht) hf
+   | _, _, _, .interruptScoped ht hf => .interruptScoped ((h.termTy _ _).trans ht) hf
+-  | _, _, _, .interruptAll_self ht hf => .interruptAll_self ((h.termTy _ _).trans ht) hf
+-  | _, _, _, .interruptAll_by ht hf hw =>
+-    .interruptAll_by ((h.termTy _ _).trans ht) hf ((h.termTy _ _).trans hw)
+-  | _, _, _, .awaitAll ht hf => .awaitAll ((h.termTy _ _).trans ht) hf
+-  | _, _, _, .awaitAllFailFast ht hf => .awaitAllFailFast ((h.termTy _ _).trans ht) hf
++  | _, _, _, .interruptAll_self ht hl hf => .interruptAll_self ((h.termTy _ _).trans ht) hl hf
++  | _, _, _, .interruptAll_by ht hl hf hw =>
++    .interruptAll_by ((h.termTy _ _).trans ht) hl hf ((h.termTy _ _).trans hw)
++  | _, _, _, .awaitAll ht hl hf => .awaitAll ((h.termTy _ _).trans ht) hl hf
++  | _, _, _, .awaitAllFailFast ht hl hf => .awaitAllFailFast ((h.termTy _ _).trans ht) hl hf
+   | _, _, _, .snapshotChildren => .snapshotChildren
+   | _, _, _, .awaitNewChildren ht hsub => .awaitNewChildren ((h.termTy _ _).trans ht) hsub
+   | _, _, _, .raceAll he => .raceAll (effsHasTy_ext h he)
+   | _, _, _, .setContext ht => .setContext ((h.termTy _ _).trans ht)
+   | _, _, _, .getContext => .getContext
+   | _, _, _, .getId => .getId
+-  | _, _, _, .closeScope hs he => .closeScope ((h.termTy _ _).trans hs) ((h.termTy _ _).trans he)
++  | _, _, _, .closeScope hs he hx => .closeScope ((h.termTy _ _).trans hs) ((h.termTy _ _).trans he) hx
+   | _, _, _, .getInterruptible => .getInterruptible
+ 
+ theorem layerHasTy_ext (h : SigExtends s s') :
+diff --git a/src/Effect4/Laws/Program/Typing/CheckInversion.lean b/src/Effect4/Laws/Program/Typing/CheckInversion.lean
+index 90ce5b68..bdcdb609 100644
+--- a/src/Effect4/Laws/Program/Typing/CheckInversion.lean
++++ b/src/Effect4/Laws/Program/Typing/CheckInversion.lean
+@@ -373,28 +373,32 @@ theorem inv_action_interruptScoped (sig : Signature Op) (env : TyEnv) (p : List
+ theorem inv_action_interruptAll_self (sig : Signature Op) (env : TyEnv) (p : List Nat)
+     (targets : Term) :
+     ∀ t, checkAction sig env p (.interruptAll targets none) = .ok t →
+-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
++      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
++        Checker.listOf? ts = some inner ∧
+         fiberTy inner = some pair ∧ t = EffTy.pure .unit := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+ theorem inv_action_interruptAll_by (sig : Signature Op) (env : TyEnv) (p : List Nat)
+     (targets who : Term) :
+     ∀ t, checkAction sig env p (.interruptAll targets (some who)) = .ok t →
+-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
++      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
++        Checker.listOf? ts = some inner ∧
+         fiberTy inner = some pair ∧ termTy sig env who = some .nat ∧
+         t = EffTy.pure .unit := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+ theorem inv_action_awaitAll (sig : Signature Op) (env : TyEnv) (p : List Nat) (targets : Term) :
+     ∀ t, checkAction sig env p (.awaitAll targets) = .ok t →
+-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
++      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
++        Checker.listOf? ts = some inner ∧
+         fiberTy inner = some pair ∧ t = EffTy.pure (.list (.exitOf pair.1 pair.2)) := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+ theorem inv_action_awaitAllFailFast (sig : Signature Op) (env : TyEnv) (p : List Nat)
+     (targets : Term) :
+     ∀ t, checkAction sig env p (.awaitAllFailFast targets) = .ok t →
+-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
++      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
++        Checker.listOf? ts = some inner ∧
+         fiberTy inner = some pair ∧ t = EffTy.pure (.list (.exitOf pair.1 pair.2)) := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+@@ -433,8 +437,9 @@ theorem inv_action_getId (sig : Signature Op) (env : TyEnv) (p : List Nat) :
+ theorem inv_action_closeScope (sig : Signature Op) (env : TyEnv) (p : List Nat)
+     (scope exit : Term) :
+     ∀ t, checkAction sig env p (.closeScope scope exit) = .ok t →
+-      ∃ pair : Ty × Ty, termTy sig env scope = some Ty.scope ∧
+-        termTy sig env exit = some (.exitOf pair.1 pair.2) ∧ t = EffTy.pure .unit := by
++      ∃ (exitTy : Ty) (pair : Ty × Ty), termTy sig env scope = some Ty.scope ∧
++        termTy sig env exit = some exitTy ∧
++        exitOf? exitTy = some pair ∧ t = EffTy.pure .unit := by
+   aesop (rule_sets := [Effect4.Checker])
+ 
+ theorem inv_action_getInterruptible (sig : Signature Op) (env : TyEnv) (p : List Nat) :
+diff --git a/src/Effect4/Laws/Program/Typing/CheckSound.lean b/src/Effect4/Laws/Program/Typing/CheckSound.lean
+index 37a63fab..7128c8c9 100644
+--- a/src/Effect4/Laws/Program/Typing/CheckSound.lean
++++ b/src/Effect4/Laws/Program/Typing/CheckSound.lean
+@@ -244,20 +244,20 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
+     intro env p t h
+     cases who with
+     | none =>
+-      obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
+-      exact .interruptAll_self ht hf
++      obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
++      exact .interruptAll_self ht hl hf
+     | some w =>
+-      obtain ⟨inner, pair, ht, hf, hw, rfl⟩ :=
++      obtain ⟨ts, inner, pair, ht, hl, hf, hw, rfl⟩ :=
+         inv_action_interruptAll_by sig env p targets w t h
+-      exact .interruptAll_by ht hf hw
++      exact .interruptAll_by ht hl hf hw
+   | awaitAll targets =>
+     intro env p t h
+-    obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
+-    exact .awaitAll ht hf
++    obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
++    exact .awaitAll ht hl hf
+   | awaitAllFailFast targets =>
+     intro env p t h
+-    obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_awaitAllFailFast sig env p targets t h
+-    exact .awaitAllFailFast ht hf
++    obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_awaitAllFailFast sig env p targets t h
++    exact .awaitAllFailFast ht hl hf
+   | snapshotChildren =>
+     intro env p t h
+     obtain rfl := inv_action_snapshotChildren sig env p t h
+@@ -283,8 +283,8 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
+     exact .getId
+   | closeScope scope exitTerm =>
+     intro env p t h
+-    obtain ⟨pair, hs, he, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
+-    exact .closeScope hs he
++    obtain ⟨exitTy, pair, hs, he, hx, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
++    exact .closeScope hs he hx
+   | getInterruptible =>
+     intro env p t h
+     obtain rfl := inv_action_getInterruptible sig env p t h
+diff --git a/src/Effect4/Laws/Program/Typing/HasTy.lean b/src/Effect4/Laws/Program/Typing/HasTy.lean
+index 7da40ad2..4567376e 100644
+--- a/src/Effect4/Laws/Program/Typing/HasTy.lean
++++ b/src/Effect4/Laws/Program/Typing/HasTy.lean
+@@ -371,26 +371,30 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy 
+       ActionHasTy sig env (.interruptScoped target) (EffTy.pure .unit)
+   /-- `fiberInterruptAll` (`:888-915`) with no interruptor: the running fiber's own id. The
+   targets are a **list of** fiber handles. -/
+-  | interruptAll_self {env : TyEnv} {targets : Term} {inner : Ty} {value error : Ty} :
+-      termTy sig env targets = some (.list inner) →
++  | interruptAll_self {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
++      termTy sig env targets = some ts →
++      Checker.listOf? ts = some inner →
+       fiberTy inner = some (value, error) →
+       ActionHasTy sig env (.interruptAll targets none) (EffTy.pure .unit)
+   /-- `fiberInterruptAllAs` (`:888-915`): a named interruptor, whose term is a fiber id — a
+   `nat`, not a handle. -/
+-  | interruptAll_by {env : TyEnv} {targets : Term} {who : Term} {inner : Ty} {value error : Ty} :
+-      termTy sig env targets = some (.list inner) →
++  | interruptAll_by {env : TyEnv} {targets : Term} {who : Term} {ts inner : Ty} {value error : Ty} :
++      termTy sig env targets = some ts →
++      Checker.listOf? ts = some inner →
+       fiberTy inner = some (value, error) →
+       termTy sig env who = some .nat →
+       ActionHasTy sig env (.interruptAll targets (some who)) (EffTy.pure .unit)
+   /-- `fiberAwaitAll` (`:779`, `:5318-5322`): the list of the targets' exits. -/
+-  | awaitAll {env : TyEnv} {targets : Term} {inner : Ty} {value error : Ty} :
+-      termTy sig env targets = some (.list inner) →
++  | awaitAll {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
++      termTy sig env targets = some ts →
++      Checker.listOf? ts = some inner →
+       fiberTy inner = some (value, error) →
+       ActionHasTy sig env (.awaitAll targets) (EffTy.pure (.list (.exitOf value error)))
+   /-- `Effect.all`/`forEach` with concurrency (`Layer.ts:1597-1598`): the same type as
+   `awaitAll` — the fail-fast interruption is behaviour, not a column. -/
+-  | awaitAllFailFast {env : TyEnv} {targets : Term} {inner : Ty} {value error : Ty} :
+-      termTy sig env targets = some (.list inner) →
++  | awaitAllFailFast {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
++      termTy sig env targets = some ts →
++      Checker.listOf? ts = some inner →
+       fiberTy inner = some (value, error) →
+       ActionHasTy sig env (.awaitAllFailFast targets) (EffTy.pure (.list (.exitOf value error)))
+   /-- `awaitAllChildren`'s snapshot (`:5318`): a list of fiber handles whose columns this
+@@ -419,9 +423,10 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy 
+   | getId {env : TyEnv} :
+       ActionHasTy sig env .getId (EffTy.pure .nat)
+   /-- `scopeClose` from the fiber (`Scope.ts` via `:3826`): a scope handle and an `Exit`. -/
+-  | closeScope {env : TyEnv} {scope exit : Term} {value error : Ty} :
++  | closeScope {env : TyEnv} {scope exit : Term} {exitTy : Ty} {value error : Ty} :
+       termTy sig env scope = some Ty.scope →
+-      termTy sig env exit = some (.exitOf value error) →
++      termTy sig env exit = some exitTy →
++      Checker.exitOf? exitTy = some (value, error) →
+       ActionHasTy sig env (.closeScope scope exit) (EffTy.pure .unit)
+   /-- `uninterruptibleMask((restore) => succeed(restore))` (`internal/effect.ts:4340-4352`;
+   decisions row 245): the saved state of the fiber's entry flag, at its own opaque type, with

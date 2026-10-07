@@ -233,7 +233,7 @@ theorem types_fromFirst {cursor s : TermSrc} (depth : types.length = env.names.l
     TypesEach sig (Semaphore.fromFirst cursor s) env path types (.list Semaphore.waiterTy) :=
   fun _ => types_foldWith_same (types_cellWaiters hs.atScope false)
     (types_noneOf atoms (types_cellWaiters hs.atScope) false)
-    (types_ifT atoms
+    ((types_ifT atoms
       (types_orT atoms
         (types_notT atoms (types_isEmpty atoms
           (types_minted_acc depth path (.list Semaphore.waiterTy) Semaphore.waiterTy)))
@@ -244,7 +244,8 @@ theorem types_fromFirst {cursor s : TermSrc} (depth : types.length = env.names.l
       (types_snoc atoms waiterTy_normal
         (types_minted_acc depth path (.list Semaphore.waiterTy) Semaphore.waiterTy)
         (types_minted_item depth path (.list Semaphore.waiterTy) Semaphore.waiterTy))
-      (types_minted_acc depth path (.list Semaphore.waiterTy) Semaphore.waiterTy) false)
+      (types_minted_acc depth path (.list Semaphore.waiterTy) Semaphore.waiterTy)
+      (by rw [Ty.normalize, waiterTy_normal])) false)
     (Ty.subN_refl (.list Semaphore.waiterTy))
 
 /-- `visitFrom`: a visit's reply and stored value, from the waiters that start at the selected
@@ -262,7 +263,8 @@ theorem types_visitFrom {rest s : TermSrc}
         (types_append atoms
           (types_take atoms waiters
             (types_sub atoms (types_len atoms waiters) (types_len atoms hrest)))
-          (types_drop atoms hrest (types_nat 1)))))
+          (types_drop atoms hrest (types_nat 1)) waiterTy_normal)))
+    (Ty.normalize_prod_canonical (Ty.normalize_option_canonical waiterTy_normal) cellTy_normal rfl rfl)
 
 end Builders
 
@@ -302,6 +304,7 @@ theorem takeStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = na
           (types_mkWaiter typesId.atScope typesNeed typesHint (types_cellNext typesCell))))
       (types_add atoms (types_cellNext typesCell) (types_nat 1)))
   exact types_ifT atoms (types_fitsT atoms typesNeed typesCell) took enrolled
+    (Ty.normalize_prod_canonical rfl cellTy_normal rfl rfl)
 
 /-- **The take-if-available step is typed at every scope.** No fold: each argument is typed at
 the scope alone. -/
@@ -317,6 +320,7 @@ theorem takeIfAvailableStep_types {Op : Type} (sig : Signature Op)
     (types_pair atoms (types_bool true)
       (types_setTaken typesCell (types_add atoms (types_cellTaken typesCell) typesNeed)))
     (types_pair atoms (types_bool false) typesCell)
+    (Ty.normalize_prod_canonical rfl cellTy_normal rfl rfl)
 
 /-- **The release step is typed at every scope.** No fold. -/
 @[semantics "store-typing" (requirement := R4)]

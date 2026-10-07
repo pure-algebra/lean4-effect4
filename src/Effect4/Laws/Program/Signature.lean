@@ -211,18 +211,18 @@ theorem actionHasTy_ext (h : SigExtends s s') :
   | _, _, _, .runIn ht hf hsc => .runIn ((h.termTy _ _).trans ht) hf ((h.termTy _ _).trans hsc)
   | _, _, _, .interrupt ht hf => .interrupt ((h.termTy _ _).trans ht) hf
   | _, _, _, .interruptScoped ht hf => .interruptScoped ((h.termTy _ _).trans ht) hf
-  | _, _, _, .interruptAll_self ht hf => .interruptAll_self ((h.termTy _ _).trans ht) hf
-  | _, _, _, .interruptAll_by ht hf hw =>
-    .interruptAll_by ((h.termTy _ _).trans ht) hf ((h.termTy _ _).trans hw)
-  | _, _, _, .awaitAll ht hf => .awaitAll ((h.termTy _ _).trans ht) hf
-  | _, _, _, .awaitAllFailFast ht hf => .awaitAllFailFast ((h.termTy _ _).trans ht) hf
+  | _, _, _, .interruptAll_self ht hl hf => .interruptAll_self ((h.termTy _ _).trans ht) hl hf
+  | _, _, _, .interruptAll_by ht hl hf hw =>
+    .interruptAll_by ((h.termTy _ _).trans ht) hl hf ((h.termTy _ _).trans hw)
+  | _, _, _, .awaitAll ht hl hf => .awaitAll ((h.termTy _ _).trans ht) hl hf
+  | _, _, _, .awaitAllFailFast ht hl hf => .awaitAllFailFast ((h.termTy _ _).trans ht) hl hf
   | _, _, _, .snapshotChildren => .snapshotChildren
   | _, _, _, .awaitNewChildren ht hsub => .awaitNewChildren ((h.termTy _ _).trans ht) hsub
   | _, _, _, .raceAll he => .raceAll (effsHasTy_ext h he)
   | _, _, _, .setContext ht => .setContext ((h.termTy _ _).trans ht)
   | _, _, _, .getContext => .getContext
   | _, _, _, .getId => .getId
-  | _, _, _, .closeScope hs he => .closeScope ((h.termTy _ _).trans hs) ((h.termTy _ _).trans he)
+  | _, _, _, .closeScope hs he hx => .closeScope ((h.termTy _ _).trans hs) ((h.termTy _ _).trans he) hx
   | _, _, _, .getInterruptible => .getInterruptible
 
 theorem layerHasTy_ext (h : SigExtends s s') :

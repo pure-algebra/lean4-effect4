@@ -141,18 +141,20 @@ export const tagIs = (tag: string, e: unknown): boolean =>
 export const isSome = (value: Option.Option<unknown>): boolean => Option.isSome(value)
 
 /**
- * NativeAtom.getOrElse: the payload type fixes the default and result. Both call
- * arguments are evaluated eagerly; this thunk captures only the already evaluated default.
+ * NativeAtom.getOrElse: the answer is the join of the payload's type and the default's type
+ * (decisions row 303). The option is taken at its whole type, so the compiler computes that join.
+ * Both call arguments are evaluated eagerly; this thunk captures only the already evaluated default.
  * Pinned implementation: vendor/effect-4.0.0-rc.112/src/Option.ts (getOrElse).
  */
-export const getOrElse = <A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>
-  Option.getOrElse(value, () => fallback)
+export const getOrElse = <A, O extends Option.Option<unknown> = Option.Option<A>, B = (O extends Option.Option<infer X> ? X : never)>(value: O, fallback: B): (O extends Option.Option<infer X> ? X : never) | B =>
+  Option.getOrElse(value, () => fallback) as (O extends Option.Option<infer X> ? X : never) | B
 
 /**
  * `"ite", [bool c, a, b] => if c then a else b` — a selection between two evaluated
- * arguments, not a lazy conditional.
+ * arguments, not a lazy conditional. The answer is the join of the two arms' types: each arm has
+ * its own type parameter, so the compiler computes that join (decisions row 303).
  */
-export const ite = <A>(c: boolean, t: A, f: A): A => (c ? t : f)
+export const ite = <A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)
 
 /**
  * `"some", [a] => some a` — Option.some (vendor/effect-4.0.0-rc.112/src/Option.ts).
@@ -177,22 +179,20 @@ export const nil = (): ReadonlyArray<never> => []
 /**
  * `"cons", [x, list vs] => list (x :: vs)` — a fiber snapshot is the list of its handles
  * (`Val.asList?`).
- * The element and the tail's element are two type parameters (seat T5, 2026-10-05): the
- * compiler infers `A` from the element alone, so a literal element widens, and
- * `cons(1, nil())` is `ReadonlyArray<number>`, the `list nat` of `NativeAtom.typeOf .listCons`.
- * With one parameter the tail took part in the inference and the literal stayed:
- * `ReadonlyArray<1>`. The answer is the union of the two, which is their common supertype
- * wherever the scheme's join finds one; a list the join refuses is Lean's to refuse, not this
- * signature's.
+ * The element has its own type parameter (seat T5, 2026-10-05): the compiler infers `A` from the
+ * element alone, so a literal element widens, and `cons(1, nil())` is `ReadonlyArray<number>`,
+ * the `list nat` of `NativeAtom.typeOf .listCons`. The tail is taken at its whole type (decisions row
+ * 303): the compiler reads its element type by index, so the answer is the union of the two
+ * element types, the scheme's join.
  */
-export const cons = <A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]
+export const cons = <A, Y extends ReadonlyArray<unknown> = ReadonlyArray<A>>(x: A, xs: Y): ReadonlyArray<A | Y[number]> => [x, ...xs]
 
 /**
  * `"get", [list vs, nat i] => option vs[i]?` — rc.112 `Array.get` at a natural index
  * (vendor/effect-4.0.0-rc.112/src/Array.ts:1698).
  */
-export const get = <A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>
-  (i < xs.length ? Option.some(xs[i] as A) : Option.none())
+export const get = <A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, i: number): Option.Option<X[number]> =>
+  (i < xs.length ? Option.some(xs[i] as X[number]) : Option.none())
 
 /**
  * `"length", [list vs] => nat vs.length`
@@ -202,7 +202,7 @@ export const length = (xs: ReadonlyArray<unknown>): number => xs.length
 /**
  * `"append", [list xs, list ys] => list (xs ++ ys)`
  */
-export const append = <A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>
+export const append = <A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>, Y extends ReadonlyArray<unknown> = X>(xs: X, ys: Y): ReadonlyArray<X[number] | Y[number]> =>
   [...xs, ...ys]
 
 /**
@@ -233,27 +233,27 @@ export const mapEmpty = (): Readonly<Record<string, never>> => ({})
 /**
  * Decisions rows 125 and 166: own-key lookup returns an outer presence option.
  */
-export const mapGet = <A>(map: Readonly<Record<string, A>>, key: string): Option.Option<A> => Object.prototype.hasOwnProperty.call(map, key) ? Option.some(map[key] as A) : Option.none()
+export const mapGet = <A, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M, key: string): Option.Option<M[string]> => Object.prototype.hasOwnProperty.call(map, key) ? Option.some(map[key] as M[string]) : Option.none()
 
 /**
  * Decision row 197: insertion retains old and new value types as separate union members.
  */
-export const mapSet = <A, B>(map: Readonly<Record<string, A>>, key: string, value: B): Readonly<Record<string, A | B>> => ({ ...map, [key]: value })
+export const mapSet = <A, B, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M, key: string, value: B): Readonly<Record<string, M[string] | B>> => ({ ...map, [key]: value }) as Readonly<Record<string, M[string] | B>>
 
 /**
  * Decisions rows 125 and 166: string-map keys in canonical UTF-8 order.
  */
-export const mapKeys = <A>(map: Readonly<Record<string, A>>): ReadonlyArray<string> => Object.keys(map).sort((a, b) => { const encoder = new TextEncoder(); const x = encoder.encode(a), y = encoder.encode(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const delta = (x[i] as number) - (y[i] as number); if (delta !== 0) return delta; } return x.length - y.length; })
+export const mapKeys = <A, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M): ReadonlyArray<string> => Object.keys(map).sort((a, b) => { const encoder = new TextEncoder(); const x = encoder.encode(a), y = encoder.encode(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const delta = (x[i] as number) - (y[i] as number); if (delta !== 0) return delta; } return x.length - y.length; })
 
 /**
  * Decisions rows 125 and 166: ordered entries as ordinary program pairs.
  */
-export const mapEntries = <A>(map: Readonly<Record<string, A>>): ReadonlyArray<readonly [string, A]> => mapKeys(map).map(key => [key, map[key] as A] as const)
+export const mapEntries = <A, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M): ReadonlyArray<readonly [string, M[string]]> => mapKeys(map).map(key => [key, map[key] as M[string]] as const)
 
 /**
  * Decision row 197: ordinary input pairs become sorted map entries, with the last repeated key retained.
  */
-export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)
+export const mapFromEntries = <A = never, E extends ReadonlyArray<readonly [string, unknown]> = ReadonlyArray<readonly [string, A]>>(entries: E): Readonly<Record<string, E[number][1]>> => Object.fromEntries(entries) as Readonly<Record<string, E[number][1]>>
 
 /**
  * Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.
@@ -266,13 +266,13 @@ export const tuple = <const A extends readonly unknown[]>(...items: A): { readon
  * `"take", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a natural count
  * (vendor/effect-4.0.0-rc.112/src/Array.ts:2208-2211). Decisions row 228: a fold with a counter, added for a demonstrated consumer.
  */
-export const take = <A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(0, n)
+export const take = <A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, n: number): ReadonlyArray<X[number]> => xs.slice(0, n) as ReadonlyArray<X[number]>
 
 /**
  * `"drop", [list vs, nat n] => list (vs.drop n)` — rc.112 `Array.drop` at a natural count
  * (vendor/effect-4.0.0-rc.112/src/Array.ts:2798-2801). Decisions row 228: a fold with a counter, added for a demonstrated consumer.
  */
-export const drop = <A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(n)
+export const drop = <A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, n: number): ReadonlyArray<X[number]> => xs.slice(n) as ReadonlyArray<X[number]>
 
 /**
  * Decisions row 229: the identity of two `Ref` handles, or of two `Deferred` handles, at any payload types.

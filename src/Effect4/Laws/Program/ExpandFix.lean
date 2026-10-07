@@ -121,17 +121,17 @@ theorem actionHasTy_expandRound :
   | _, _, _, .runIn _ _ _ => rfl
   | _, _, _, .interrupt _ _ => rfl
   | _, _, _, .interruptScoped _ _ => rfl
-  | _, _, _, .interruptAll_self _ _ => rfl
-  | _, _, _, .interruptAll_by _ _ _ => rfl
-  | _, _, _, .awaitAll _ _ => rfl
-  | _, _, _, .awaitAllFailFast _ _ => rfl
+  | _, _, _, .interruptAll_self _ _ _ => rfl
+  | _, _, _, .interruptAll_by _ _ _ _ => rfl
+  | _, _, _, .awaitAll _ _ _ => rfl
+  | _, _, _, .awaitAllFailFast _ _ _ => rfl
   | _, _, _, .snapshotChildren => rfl
   | _, _, _, .awaitNewChildren _ _ => rfl
   | _, _, _, .raceAll he => congrArg ActionTerm.raceAll (effsHasTy_expandRound he)
   | _, _, _, .setContext _ => rfl
   | _, _, _, .getContext => rfl
   | _, _, _, .getId => rfl
-  | _, _, _, .closeScope _ _ => rfl
+  | _, _, _, .closeScope _ _ _ => rfl
   | _, _, _, .getInterruptible => rfl
 
 theorem layerHasTy_expandRound :

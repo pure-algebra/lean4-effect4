@@ -129,10 +129,6 @@ def cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause : CauseTerm)
       | some (.fold why) => .foldCause why
       | none => .cause cause⟩
 
-/-- The value and error types of an exit type. -/
-def exitOf? : Ty → Option (Ty × Ty)
-  | .exitOf v e => some (v, e)
-  | _ => none
 
 /-- The refusal of a check, when it refuses. -/
 def refusal {α : Type} : Except TypeRefusal α → Option TypeRefusal

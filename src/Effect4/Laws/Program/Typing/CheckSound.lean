@@ -244,20 +244,20 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     intro env p t h
     cases who with
     | none =>
-      obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
-      exact .interruptAll_self ht hf
+      obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
+      exact .interruptAll_self ht hl hf
     | some w =>
-      obtain ⟨inner, pair, ht, hf, hw, rfl⟩ :=
+      obtain ⟨ts, inner, pair, ht, hl, hf, hw, rfl⟩ :=
         inv_action_interruptAll_by sig env p targets w t h
-      exact .interruptAll_by ht hf hw
+      exact .interruptAll_by ht hl hf hw
   | awaitAll targets =>
     intro env p t h
-    obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
-    exact .awaitAll ht hf
+    obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
+    exact .awaitAll ht hl hf
   | awaitAllFailFast targets =>
     intro env p t h
-    obtain ⟨inner, pair, ht, hf, rfl⟩ := inv_action_awaitAllFailFast sig env p targets t h
-    exact .awaitAllFailFast ht hf
+    obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_awaitAllFailFast sig env p targets t h
+    exact .awaitAllFailFast ht hl hf
   | snapshotChildren =>
     intro env p t h
     obtain rfl := inv_action_snapshotChildren sig env p t h
@@ -283,8 +283,8 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .getId
   | closeScope scope exitTerm =>
     intro env p t h
-    obtain ⟨pair, hs, he, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
-    exact .closeScope hs he
+    obtain ⟨exitTy, pair, hs, he, hx, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
+    exact .closeScope hs he hx
   | getInterruptible =>
     intro env p t h
     obtain rfl := inv_action_getInterruptible sig env p t h

@@ -42,10 +42,6 @@ theorem cause?_eq_ok (sig : Signature Op) (env : TyEnv) (path : List Nat) (cause
   | none => simp only [cause?, result, reduceCtorEq]
   | some value => simp only [cause?, result, Except.ok.injEq, Option.some.injEq]
 
-/-- The element type of a list type, inverted. -/
-theorem listOf?_eq_some (t inner : Ty) : listOf? t = some inner ↔ t = .list inner := by
-  cases t <;> simp only [listOf?, reduceCtorEq, Option.some.injEq, Ty.list.injEq]
-
 /-- The row check of a `perform` node succeeds exactly when the row's type answers. -/
 theorem rowCheck_eq_ok (row : Row) (r : Ty) (use : Option TermUse) (p : List Nat) (t : EffTy) :
     rowCheck row r use p = .ok t ↔ rowTy row r use = some t := by
@@ -53,12 +49,7 @@ theorem rowCheck_eq_ok (row : Row) (r : Ty) (use : Option TermUse) (p : List Nat
   cases rowCheck row r use p <;> simp only [Except.toOption, reduceCtorEq, Except.ok.injEq,
     Option.some.injEq]
 
-/-- The value and error types of an exit type, inverted. -/
-theorem exitOf?_eq_some (t : Ty) (x : Ty × Ty) : exitOf? t = some x ↔ t = .exitOf x.1 x.2 := by
-  cases x
-  cases t <;> simp only [exitOf?, reduceCtorEq, Option.some.injEq, Ty.exitOf.injEq, Prod.mk.injEq]
-
-attribute [aesop norm simp (rule_sets := [Effect4.Checker])] rowTy_eq_some_iff expect_eq_ok term?_eq_ok cause?_eq_ok listOf?_eq_some exitOf?_eq_some check checkStmt
+attribute [aesop norm simp (rule_sets := [Effect4.Checker])] rowTy_eq_some_iff expect_eq_ok term?_eq_ok cause?_eq_ok check checkStmt
   rowCheck_eq_ok
   checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT GenTy.seqT
   GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq GenTy.seq_eq
@@ -373,28 +364,32 @@ theorem inv_action_interruptScoped (sig : Signature Op) (env : TyEnv) (p : List 
 theorem inv_action_interruptAll_self (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets : Term) :
     ∀ t, checkAction sig env p (.interruptAll targets none) = .ok t →
-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
+        Checker.listOf? ts = some inner ∧
         fiberTy inner = some pair ∧ t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_interruptAll_by (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets who : Term) :
     ∀ t, checkAction sig env p (.interruptAll targets (some who)) = .ok t →
-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
+        Checker.listOf? ts = some inner ∧
         fiberTy inner = some pair ∧ termTy sig env who = some .nat ∧
         t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_awaitAll (sig : Signature Op) (env : TyEnv) (p : List Nat) (targets : Term) :
     ∀ t, checkAction sig env p (.awaitAll targets) = .ok t →
-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
+        Checker.listOf? ts = some inner ∧
         fiberTy inner = some pair ∧ t = EffTy.pure (.list (.exitOf pair.1 pair.2)) := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_awaitAllFailFast (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets : Term) :
     ∀ t, checkAction sig env p (.awaitAllFailFast targets) = .ok t →
-      ∃ (inner : Ty) (pair : Ty × Ty), termTy sig env targets = some (.list inner) ∧
+      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
+        Checker.listOf? ts = some inner ∧
         fiberTy inner = some pair ∧ t = EffTy.pure (.list (.exitOf pair.1 pair.2)) := by
   aesop (rule_sets := [Effect4.Checker])
 
@@ -433,8 +428,9 @@ theorem inv_action_getId (sig : Signature Op) (env : TyEnv) (p : List Nat) :
 theorem inv_action_closeScope (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (scope exit : Term) :
     ∀ t, checkAction sig env p (.closeScope scope exit) = .ok t →
-      ∃ pair : Ty × Ty, termTy sig env scope = some Ty.scope ∧
-        termTy sig env exit = some (.exitOf pair.1 pair.2) ∧ t = EffTy.pure .unit := by
+      ∃ (exitTy : Ty) (pair : Ty × Ty), termTy sig env scope = some Ty.scope ∧
+        termTy sig env exit = some exitTy ∧
+        exitOf? exitTy = some pair ∧ t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_getInterruptible (sig : Signature Op) (env : TyEnv) (p : List Nat) :

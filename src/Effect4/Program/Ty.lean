@@ -957,16 +957,18 @@ def varsOfItems : List Ty → List Nat
 end
 
 mutual
-/-- A template is admissible when no parameter sits under a union head. Named
-fields and positional arguments are inference positions; a union has no fixed
-position correspondence. This is the profile consumed by `admitSig`. -/
+/-- A template is admissible when no parameter sits under a union head or under a nominal
+reference (`.app`). Named fields and positional arguments are inference positions; a union has no
+fixed position correspondence, and nominal references do not support parameter inference. This is
+the profile consumed by `admitSig`. -/
 def templateAdmissible : Ty → Bool
   | .union a b => a.closed && b.closed
+  | .app _ ts => closedItems ts
   | .option t | .list t | .causeOf t | .refOf t => templateAdmissible t
   | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b | .map a b =>
     templateAdmissible a && templateAdmissible b
   | .record fs => templateAdmissibleFields fs
-  | .tuple ts | .app _ ts => templateAdmissibleItems ts
+  | .tuple ts => templateAdmissibleItems ts
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
   | .var _ | .null | .undefined | .number | .bytes => true
 /-- The field companion of the template profile, retaining every raw field. -/

@@ -4,6 +4,7 @@ public import Effect4.Program.Refs
 public import Effect4.Program.Formation
 public import Effect4.Program.Record
 public import Effect4.Program.Tuple
+public import Effect4.Program.Bounds
 public import Effect4.Machine.Context
 
 /-!
@@ -134,12 +135,40 @@ def litArgTy (const : Bool) : Lit → Ty
   | .nat _ => .nat
   | .bool _ => .bool
 
-/-- The element type of a list type, by its head (moved here from the checker, which reads it
-for a list of fibers): a fold types its element binder at it (decisions row 228). A union of
-two list types has none. -/
-def Checker.listOf? : Ty → Option Ty
+namespace Member
+
+/-- The member rule of the list rule: the element type of one list type, by the head of the raw
+type. It refuses `never` and every union. It is the function that `Checker.listOf?` was before its
+conversion. -/
+def list : Ty → Option Ty
   | .list t => some t
   | _ => none
+
+end Member
+
+/-- **The list rule**: the element type of a list type. It is the extended rule of `Member.list`.
+At a raw list type it answers the element type, as the member rule does. At `never` it answers
+`never`. At a raw union whose normal form is one list type it answers that type's element type.
+It refuses every other type, and a union of two list types with no order is one. -/
+def Checker.listOf? : Ty → Option Ty := UnionRule.extend Member.list
+
+namespace Member
+
+/-- The member rule of the exit rule: the value type and the error type of one exit type, by the
+head of the raw type. It refuses `never` and every union. It is the function that `Checker.exitOf?`
+was before its conversion. -/
+def exit : Ty → Option (Ty × Ty)
+  | .exitOf value error => some (value, error)
+  | _ => none
+
+end Member
+
+/-- **The exit rule**: the value type and the error type of an exit type. It is the extended rule of `Member.exit`.
+At a raw exit type it answers the two columns, as the member rule does. At `never` it answers `never` twice.
+At a raw union whose normal form is one exit type it answers that type's columns.
+It refuses every other type. -/
+def Checker.exitOf? : Ty → Option (Ty × Ty) := UnionRule.extend Member.exit
+
 
 mutual
   /-- The type of a term in argument position, as a fold: a variable from the environment, the
@@ -204,6 +233,11 @@ structure TermUse where
   result : Ty
   typeAt : Ty → Option Ty
 
+/-- The instantiated parameter type of an operation's binder term under substitution `σ`
+(decisions row 302, point 5). -/
+def TermUse.instParam (param : Ty) (σ : Ty.Subst) : Ty :=
+  (param.normalize.instantiate σ).normalize
+
 /-- The use of an operation's binder term at a node of environment `env`: the term typed at
 `env ++ [A]`, its current value `A` at the node's level (`ScopedOp`'s convention, decisions row
 43). `none` for an operation that carries no term. -/
@@ -225,17 +259,19 @@ inductive RowTypingRefusal where
   deriving DecidableEq, Repr
 
 /-- The bindings a row use's binder term extends: the term typed at the parameter's instance,
-its type matched against the result template from the request's bindings `σ`. The match reads
-the term's raw type: its normal form distributes a product over a union, where the first member
-would bind a parameter the guard then refuses (the T3b design note, F6). -/
+its type matched against the result template from the request's bindings `σ`. The match is the
+match of a binder term (`Bounds.matchTerm`): the match by bounds under the interim guard of
+decisions row 299, point 10. It reads the term's raw type. The normal form distributes a product
+over a union, and the guard then refuses two pairs whose first parts have no order, where it
+admits the one pair of their union. -/
 def bindTerm (σ : Ty.Subst) : Option TermUse → Except RowTypingRefusal Ty.Subst
   | none => .ok σ
   | some use =>
-    let param := (use.param.normalize.instantiate σ).normalize
+    let param := TermUse.instParam use.param σ
     match use.typeAt param with
     | none => .error (.term param)
     | some r =>
-      match Ty.matchTemplate σ use.result.normalize r with
+      match Bounds.matchTerm σ use.result.normalize r with
       | some σ' => .ok σ'
       | none => .error (.resultNotSubtype r (use.result.normalize.instantiate σ).normalize)
 
@@ -244,7 +280,7 @@ instantiated columns before normalization. Request mismatch retains precedence w
 checks would fail (rows 42 and 193). The checker and `rowTy` project this one result. -/
 def checkRow (row : Row) (request : Ty) (use : Option TermUse := none) :
     Except RowTypingRefusal EffTy :=
-  match Ty.matchTemplate [] row.request.normalize request.normalize with
+  match Bounds.matchB [] row.request.normalize request.normalize with
   | none => .error .requestNotSubtype
   | some σ =>
     match bindTerm σ use with

@@ -2,6 +2,7 @@ import Effect4.Program.Native
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.TyView
 import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Bounds
 
 /-!
 # Laws.Program.Typing.TermIntro — the term checker's rules in their introduction form
@@ -14,7 +15,8 @@ types to the whole's type. Each rule is stated once, and it names no module.
 
 - **Normal forms.** The types that a rule compares after `Ty.normalize`, written as their own
   normal forms: a list, an option, a product, a tuple and a record's fields.
-- **Templates.** `Ty.matchTemplate` at a parameter's first and second occurrence.
+- **Templates.** The match by bounds at an atom's parameter list (`Bounds.matchArgsB`): the
+  symbolic matches stand in `src/Effect4/Laws/Program/Bounds.lean`.
 - **Native calls.** `nativeAtomTy` at a symbolic list, option, pair or tuple type, for the
   atoms that a step term uses. `ite` has two rules: its second arm above the first, and below
   it.
@@ -161,94 +163,17 @@ theorem sub_tuple_of_items {xs ys : List Ty} (arity : xs.length = ys.length)
 
 /-! ## Templates: a parameter's first and second occurrence -/
 
-/-- A match answers the bindings that inference reads, where the instance is the request. -/
-theorem matchTemplate_exact {σ σ' : Subst} {template request : Ty} {join : Bool}
-    (inferred : infer σ template request join = σ')
-    (same : instantiate σ' template = request) :
-    matchTemplate σ template request join = some σ' := by
-  subst inferred
-  show (if sub request.normalize
-      (instantiate (infer σ template request join) template).normalize = true
-    then some (infer σ template request join) else none) = _
-  exact if_pos (by rw [same]; exact sub_refl _)
-
-/-- A match answers the bindings that inference reads, where the request is below the instance
-in the checker's order. -/
-theorem matchTemplate_below {σ σ' : Subst} {template request : Ty} {join : Bool}
-    (inferred : infer σ template request join = σ')
-    (below : sub request.normalize (instantiate σ' template).normalize = true) :
-    matchTemplate σ template request join = some σ' := by
-  subst inferred
-  show (if sub request.normalize
-      (instantiate (infer σ template request join) template).normalize = true
-    then some (infer σ template request join) else none) = _
-  exact if_pos below
-
-/-- A parameter that no binding names binds to the request. -/
-theorem infer_var_fresh {σ : Subst} {i : Nat} (request : Ty) (join : Bool)
-    (fresh : σ.lookup i = none) : infer σ (.var i) request join = σ ++ [(i, request)] := by
-  have unfolded := infer.eq_1 σ request join i
-  rw [fresh] at unfolded
-  exact unfolded
-
-/-- A bound parameter, met again: under the join rule the binding moves to a request above
-it, and it stays otherwise. -/
-theorem infer_var_bound {σ : Subst} {i : Nat} {bound : Ty} (request : Ty) (join : Bool)
-    (held : σ.lookup i = some bound) :
-    infer σ (.var i) request join =
-      if (join && sub bound request) = true then (i, request) :: σ else σ := by
-  have unfolded := infer.eq_1 σ request join i
-  rw [held] at unfolded
-  exact unfolded
-
-/-- A bound parameter, met again under the join rule at a request above its binding: the
-binding moves up. -/
-theorem infer_var_join_above {σ : Subst} {i : Nat} {bound request : Ty}
-    (held : σ.lookup i = some bound) (above : sub bound request = true) :
-    infer σ (.var i) request true = (i, request) :: σ := by
-  have unfolded := infer_var_bound request true held
-  rw [above] at unfolded
-  exact unfolded
-
-/-- A bound parameter, met again under the join rule at a request not above its binding: the
-binding stays. -/
-theorem infer_var_join_below {σ : Subst} {i : Nat} {bound request : Ty}
-    (held : σ.lookup i = some bound) (notAbove : sub bound request = false) :
-    infer σ (.var i) request true = σ := by
-  have unfolded := infer_var_bound request true held
-  rw [notAbove] at unfolded
-  exact unfolded
-
-/-- The first occurrence of the parameter `0` binds it to the request. -/
-theorem matchTemplate_var_first (X : Ty) (join : Bool) :
-    matchTemplate [] (.var 0) X join = some [(0, X)] := by
-  refine matchTemplate_exact ?_ rfl
-  exact infer_var_fresh X join rfl
-
-/-- The first occurrence of the parameter `0` under a list head binds it to the element's
-type. -/
-theorem matchTemplate_list_first (X : Ty) (join : Bool) :
-    matchTemplate [] (.list (.var 0)) (.list X) join = some [(0, X)] := by
-  refine matchTemplate_exact ?_ rfl
-  show infer [] (.var 0) X join = [(0, X)]
-  exact infer_var_fresh X join rfl
-
-/-- A number parameter at a number binds nothing. -/
-theorem matchTemplate_nat (σ : Subst) (join : Bool) :
-    matchTemplate σ .nat .nat join = some σ :=
-  matchTemplate_exact rfl rfl
-
-/-- A Boolean parameter at a Boolean binds nothing. -/
-theorem matchTemplate_bool (σ : Subst) (join : Bool) :
-    matchTemplate σ .bool .bool join = some σ :=
-  matchTemplate_exact rfl rfl
+-- A parameter's first occurrence binds by bounds (`matchArgsB_one_var`), and two distinct
+-- parameters bind positionally (`matchArgsB_two_vars`).
 
 end Ty
+
+open Ty
 
 /-! ## Native calls at a symbolic type
 
 One rule for each atom that a step term of the Queue uses. A template atom is read through
-`Ty.matchTemplateArgs`, a fixed signature through `NativeAtom.monoApply`. -/
+`Bounds.matchArgsB`, a fixed signature through `NativeAtom.monoApply`. -/
 
 /-- A fixed signature answers at its own parameters. Used by `isZero`, `not`, `and`, `or`, `lt`
 and `sub` in every step. -/
@@ -315,61 +240,46 @@ theorem nativeAtomTy_tuple (types : List Ty) :
 
 /-- `some` wraps its argument's type. Used by the offer step's decided answer. -/
 theorem nativeAtomTy_some (X : Ty) : nativeAtomTy "some" [X] = some (.option X) := by
-  show ((Ty.matchTemplate [] (.var 0) X false).bind fun σ => some σ).map
-    (fun σ => Ty.instantiate σ (.option (.var 0))) = some (.option X)
-  rw [Ty.matchTemplate_var_first]
+  change (Bounds.matchArgsB [.var 0] [X]).map (fun σ => Ty.instantiate σ (.option (.var 0))) = some (.option X)
+  rw [Bounds.matchArgsB_one_var]
   rfl
 
 /-- A pair has the product of its two arguments' types. Used by every step of a `Ref.modify`:
 the reply and the cell's next value. -/
 theorem nativeAtomTy_pair (X Y : Ty) : nativeAtomTy "pair" [X, Y] = some (.prod X Y) := by
-  have second : Ty.matchTemplate [(0, X)] (.var 1) Y false = some [(0, X), (1, Y)] := by
-    refine Ty.matchTemplate_exact ?_ rfl
-    exact Ty.infer_var_fresh Y false rfl
-  show ((Ty.matchTemplate [] (.var 0) X false).bind fun σ =>
-    (Ty.matchTemplate σ (.var 1) Y false).bind fun σ' => some σ').map
-      (fun σ => Ty.instantiate σ (.prod (.var 0) (.var 1))) = some (.prod X Y)
-  rw [Ty.matchTemplate_var_first, Option.bind_some, second]
+  change (Bounds.matchArgsB [.var 0, .var 1] [X, Y]).map (fun σ => Ty.instantiate σ (.prod (.var 0) (.var 1))) = some (.prod X Y)
+  rw [Bounds.matchArgsB_two_vars]
   rfl
 
 /-- `take` keeps a list's type. Used by `noneOf`, `wake` and `entering`. -/
 theorem nativeAtomTy_take (X : Ty) : nativeAtomTy "take" [.list X, .nat] = some (.list X) := by
-  show ((Ty.matchTemplate [] (.list (.var 0)) (.list X) false).bind fun σ =>
-    (Ty.matchTemplate σ .nat .nat false).bind fun σ' => some σ').map
-      (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
-  rw [Ty.matchTemplate_list_first, Option.bind_some, Ty.matchTemplate_nat]
+  change (Bounds.matchArgsB [.list (.var 0), .nat] [.list X, .nat]).map (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
+  rw [Bounds.matchArgsB_list_var_nat]
   rfl
 
 /-- `drop` keeps a list's type. Used by `staying` and by the buffer after a consumed message. -/
 theorem nativeAtomTy_drop (X : Ty) : nativeAtomTy "drop" [.list X, .nat] = some (.list X) := by
-  show ((Ty.matchTemplate [] (.list (.var 0)) (.list X) false).bind fun σ =>
-    (Ty.matchTemplate σ .nat .nat false).bind fun σ' => some σ').map
-      (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
-  rw [Ty.matchTemplate_list_first, Option.bind_some, Ty.matchTemplate_nat]
+  change (Bounds.matchArgsB [.list (.var 0), .nat] [.list X, .nat]).map (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
+  rw [Bounds.matchArgsB_list_var_nat]
   rfl
 
 /-- `get` answers an option of a list's element type. Used by the take step's and the poll
 step's message. -/
 theorem nativeAtomTy_get (X : Ty) : nativeAtomTy "get" [.list X, .nat] = some (.option X) := by
-  show ((Ty.matchTemplate [] (.list (.var 0)) (.list X) false).bind fun σ =>
-    (Ty.matchTemplate σ .nat .nat false).bind fun σ' => some σ').map
-      (fun σ => Ty.instantiate σ (.option (.var 0))) = some (.option X)
-  rw [Ty.matchTemplate_list_first, Option.bind_some, Ty.matchTemplate_nat]
+  change (Bounds.matchArgsB [.list (.var 0), .nat] [.list X, .nat]).map (fun σ => Ty.instantiate σ (.option (.var 0))) = some (.option X)
+  rw [Bounds.matchArgsB_list_var_nat]
   rfl
 
 /-- Two lists of one element type append to a list of that type. Used by `snoc` and
 `gained`. -/
-theorem nativeAtomTy_append (X : Ty) :
+theorem nativeAtomTy_append (X : Ty) (canonical : X.normalize = X := by decide) :
     nativeAtomTy "append" [.list X, .list X] = some (.list X) := by
-  have second : Ty.matchTemplate [(0, X)] (.list (.var 0)) (.list X) true =
-      some [(0, X), (0, X)] := by
-    refine Ty.matchTemplate_exact ?_ rfl
-    show Ty.infer [(0, X)] (.var 0) X true = [(0, X), (0, X)]
-    exact Ty.infer_var_join_above rfl (Ty.sub_refl X)
-  show ((Ty.matchTemplate [] (.list (.var 0)) (.list X) true).bind fun σ =>
-    (Ty.matchTemplate σ (.list (.var 0)) (.list X) true).bind fun σ' => some σ').map
-      (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
-  rw [Ty.matchTemplate_list_first, Option.bind_some, second]
+  change (Bounds.matchArgsB [.list (.var 0), .list (.var 0)] [.list X, .list X]).map
+    (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
+  rw [Bounds.matchArgsB_append X canonical]
+  dsimp only [Option.map, Ty.instantiate, List.lookup, BEq.beq, Nat.beq]
+  have hj : Ty.join X X = X := by rw [Ty.join_self, canonical]
+  rw [hj]
   rfl
 
 /-- **`cons` onto the empty list** answers a list of the element's type, where that type is its
@@ -377,77 +287,43 @@ own normal form. The tail's element type is the empty union: it replaces the ele
 only where the element's type is below it, and then both are the empty union. Used by `snoc`. -/
 theorem nativeAtomTy_cons_nil {X : Ty} (canonical : X.normalize = X) :
     nativeAtomTy "cons" [X, .list .never] = some (.list X) := by
-  show ((Ty.matchTemplate [] (.var 0) X true).bind fun σ =>
-    (Ty.matchTemplate σ (.list (.var 0)) (.list .never) true).bind fun σ' => some σ').map
-      (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
-  rw [Ty.matchTemplate_var_first, Option.bind_some]
-  cases empty : Ty.sub X .never with
-  | true =>
-    have isNever : X = .never := Ty.eq_never_of_sub_never canonical empty
-    subst isNever
-    have second : Ty.matchTemplate [(0, .never)] (.list (.var 0)) (.list .never) true =
-        some [(0, .never), (0, .never)] := by
-      refine Ty.matchTemplate_exact ?_ rfl
-      show Ty.infer [(0, .never)] (.var 0) .never true = [(0, .never), (0, .never)]
-      exact Ty.infer_var_join_above rfl (Ty.sub_refl .never)
-    rw [second]
-    rfl
-  | false =>
-    have second : Ty.matchTemplate [(0, X)] (.list (.var 0)) (.list .never) true =
-        some [(0, X)] := by
-      refine Ty.matchTemplate_below ?_ ?_
-      · show Ty.infer [(0, X)] (.var 0) .never true = [(0, X)]
-        exact Ty.infer_var_join_below rfl empty
-      · show Ty.sub (.list .never) (.list X.normalize) = true
-        rw [Ty.sub_list]
-        exact Ty.OrderProof.sub_never _
-    rw [second]
-    rfl
+  change (Bounds.matchArgsB [.var 0, .list (.var 0)] [X, .list .never]).map
+    (fun σ => Ty.instantiate σ (.list (.var 0))) = some (.list X)
+  rw [Bounds.matchArgsB_cons_nil canonical]
+  dsimp only [Option.map, Ty.instantiate, List.lookup, BEq.beq, Nat.beq]
+  have hj : Ty.join X .never = X := by rw [Ty.join_never_right, canonical]
+  rw [hj]
+  rfl
+
+/-- **`ite`** types at the join of the two arm types unconditionally. -/
+theorem nativeAtomTy_ite (X Y : Ty) : nativeAtomTy "ite" [.bool, X, Y] = some (Ty.join X Y) := by
+  change (Bounds.matchArgsB [.bool, .var 0, .var 0] [.bool, X, Y]).map
+    (fun σ => Ty.instantiate σ (.var 0)) = some (Ty.join X Y)
+  rw [Bounds.matchArgsB_ite]
+  rfl
 
 /-- **`ite` at an arm above**: where the first arm's type is below the second's, the answer is
 the second arm's type. Used by the offer step's outer selection, and at two equal arms by
 `wake`. -/
-theorem nativeAtomTy_ite_above {X Y : Ty} (above : Ty.sub X Y = true) :
-    nativeAtomTy "ite" [.bool, X, Y] = some Y := by
-  have third : Ty.matchTemplate [(0, X)] (.var 0) Y true = some [(0, Y), (0, X)] := by
-    refine Ty.matchTemplate_exact ?_ rfl
-    exact Ty.infer_var_join_above rfl above
-  show ((Ty.matchTemplate [] .bool .bool true).bind fun σ =>
-    (Ty.matchTemplate σ (.var 0) X true).bind fun σ' =>
-      (Ty.matchTemplate σ' (.var 0) Y true).bind fun σ'' => some σ'').map
-        (fun σ => Ty.instantiate σ (.var 0)) = some Y
-  rw [Ty.matchTemplate_bool, Option.bind_some, Ty.matchTemplate_var_first, Option.bind_some,
-    third]
-  rfl
+theorem nativeAtomTy_ite_above {X Y : Ty} (above : Ty.sub X Y = true := by decide)
+    (canonical : Y.normalize = Y := by decide) : nativeAtomTy "ite" [.bool, X, Y] = some Y := by
+  rw [nativeAtomTy_ite]
+  have hNorm : Normal Y := canonical ▸ normal_normalize Y
+  rw [Bounds.join_eq_right_of_subN (OrderProof.sub_normalize_of_sub sub_trans X Y above) hNorm]
 
 /-- `ite` at two arms of one type answers that type. -/
-theorem nativeAtomTy_ite_self (X : Ty) : nativeAtomTy "ite" [.bool, X, X] = some X :=
-  nativeAtomTy_ite_above (Ty.sub_refl X)
+theorem nativeAtomTy_ite_self (X : Ty) (canonical : X.normalize = X := by decide) :
+    nativeAtomTy "ite" [.bool, X, X] = some X := by
+  rw [nativeAtomTy_ite, join_self, canonical]
 
-/-- **`ite` at an arm below**: where the second arm's type is below the first's, and both are
-their own normal forms, the answer is the first arm's type. Used by the take step and the poll
+/-- **`ite` at an arm below**: where the second arm's type is below the first's, and the first
+is its own normal form, the answer is the first arm's type. Used by the take step and the poll
 step: the arm that waits answers no message. -/
-theorem nativeAtomTy_ite_below {X Y : Ty} (hX : X.normalize = X) (hY : Y.normalize = Y)
-    (below : Ty.sub Y X = true) : nativeAtomTy "ite" [.bool, X, Y] = some X := by
-  cases above : Ty.sub X Y with
-  | true =>
-    have same : X = Y := Ty.eq_of_sub_of_sub hX hY above below
-    subst same
-    exact nativeAtomTy_ite_self X
-  | false =>
-    have third : Ty.matchTemplate [(0, X)] (.var 0) Y true = some [(0, X)] := by
-      refine Ty.matchTemplate_below ?_ ?_
-      · exact Ty.infer_var_join_below rfl above
-      · show Ty.sub Y.normalize X.normalize = true
-        rw [hX, hY]
-        exact below
-    show ((Ty.matchTemplate [] .bool .bool true).bind fun σ =>
-      (Ty.matchTemplate σ (.var 0) X true).bind fun σ' =>
-        (Ty.matchTemplate σ' (.var 0) Y true).bind fun σ'' => some σ'').map
-          (fun σ => Ty.instantiate σ (.var 0)) = some X
-    rw [Ty.matchTemplate_bool, Option.bind_some, Ty.matchTemplate_var_first, Option.bind_some,
-      third]
-    rfl
+theorem nativeAtomTy_ite_below {X Y : Ty} (hX : X.normalize = X := by decide)
+    (below : Ty.sub Y X = true := by decide) : nativeAtomTy "ite" [.bool, X, Y] = some X := by
+  rw [nativeAtomTy_ite]
+  have hNorm : Normal X := hX ▸ normal_normalize X
+  rw [Bounds.join_eq_left_of_subN (OrderProof.sub_normalize_of_sub sub_trans Y X below) hNorm]
 
 /-! ## The checker's nodes
 

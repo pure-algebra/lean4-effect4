@@ -2,6 +2,8 @@ module
 
 public import Effect4.Program.Ty
 public import Effect4.Program.AtomInventory
+public import Effect4.Program.Bounds
+public import Effect4.Program.UnionRule
 
 /-!
 # Native atom typing (DI-40)
@@ -17,15 +19,16 @@ inventory `all` and its projections are generated from that inductive's construc
 machine's import closure, and the LCNF cut taken from it, does not carry the checker.
 
 The scheme language is the row-template calculus of decisions row 42, not a second one:
-`Ty.var`, `Ty.instantiate`, `Ty.infer` and `Ty.matchTemplate` are the rows' (`Program/Ty.lean`),
-and `Ty.matchTemplateArgs` (`Ty.lean`, beside `matchTemplate`) is its list-level fold. One
-calculus, two consumers.
+`Ty.var` and `Ty.instantiate` are the rows' (`Program/Ty.lean`), and the match is the rows' match
+by bounds at an argument list (`Bounds.matchArgsB`, `Program/Bounds.lean`; decisions row 303).
+One calculus, two consumers.
 
 A polymorphic template does not **normalise** its instantiated answer: normalising would
 change the typing judgment, since `normalize` distributes a product over a union, and that is
-rows 42/43 calculus scheduled with L4, not a refactor of what the table says today. What it
-does choose is how a parameter repeated across the arguments binds (`Scheme.poly`'s `join`):
-the prelude's own declaration decides, `NoInfer` or not. The custom tuple rule explicitly
+rows 42/43 calculus scheduled with L4, not a refactor of what the table says today. A parameter
+that is repeated across the arguments binds to the join of its lower bounds (decisions row 303).
+The prelude declares such an atom in the whole form, so the compiler computes the same join.
+The custom tuple rule explicitly
 normalizes its exact positional answer, as decisions rows 159 and 197 require.
 
 `all_complete` forces an appended constructor into the inventory, `Scheme.apply` is total, and
@@ -38,10 +41,19 @@ namespace Effect4.Program
 
 open Effect4 Effect4.Machine
 
-/-- The two input families advertised by the cause query atoms. -/
-def causeInputError? : Ty → Option Ty
+namespace Member
+
+/-- The member rule of the cause rule: the error type of one cause or exit type, by the head of
+the raw type. It refuses `never` and every union. -/
+def cause : Ty → Option Ty
   | .causeOf error | .exitOf _ error => some error
   | _ => none
+
+end Member
+
+/-- The two input families advertised by the cause query atoms: the error type of a cause or exit
+type. It is the extended rule of `Member.cause`. -/
+def causeInputError? : Ty → Option Ty := UnionRule.extend Member.cause
 
 namespace NativeAtom
 
@@ -134,11 +146,9 @@ inductive Scheme
   | mono (params : List Ty) (answer : Ty)
   /-- Any number of arguments at one parameter type. -/
   | variadic (param answer : Ty)
-  /-- A template over `Ty.var`: the parameters bind by `Ty.matchTemplateArgs` and the answer is
-  instantiated at the bindings. `join` is the prelude's inference at a repeated parameter:
-  `true` where it declares a plain `<A>` (the candidates' common supertype, `Ty.infer`),
-  `false` where a later occurrence is `NoInfer<A>` (the first binding stays). -/
-  | poly (params : List Ty) (answer : Ty) (join : Bool := false)
+  /-- A template over `Ty.var`: the parameters bind by bounds (`Bounds.matchArgsB`) and the answer
+  is instantiated at the bindings. -/
+  | poly (params : List Ty) (answer : Ty)
   /-- Alternative fixed signatures, first hit wins. -/
   | alts (cases : List (List Ty × Ty))
   /-- A named rule. -/
@@ -149,21 +159,21 @@ deriving DecidableEq, Repr
 def Scheme.apply : Scheme → List Ty → Option Ty
   | .mono params answer, tys => monoApply params answer tys
   | .variadic param answer, tys => if tys.all (·.sub param) then some answer else none
-  | .poly params answer join, tys =>
-    (Ty.matchTemplateArgs [] params tys join).map fun σ => Ty.instantiate σ answer
+  | .poly params answer, tys =>
+    (Bounds.matchArgsB params tys).map fun σ => Ty.instantiate σ answer
   | .alts cases, tys => cases.findSome? fun c => monoApply c.1 c.2 tys
   | .custom tag, tys => tag.apply tys
 
 /-- The monomorphic signature a scheme declares, when it declares one. -/
 def Scheme.monoSig : Scheme → Option (List Ty × Ty)
   | .mono params answer => some (params, answer)
-  | .variadic _ _ | .poly .. | .alts _ | .custom _ => none
+  | .variadic _ _ | .poly _ _ | .alts _ | .custom _ => none
 
 /-- The arity the scheme declares agrees with the table's own `arity` column. -/
 def Scheme.arityAgrees (s : Scheme) (arity : Option Nat) : Bool :=
   match s with
   | .mono params _ => arity == some params.length
-  | .poly params _ .. => arity == some params.length
+  | .poly params _ => arity == some params.length
   | .variadic _ _ => arity == none
   | .alts cases => cases.all fun c => arity == some c.1.length
   | .custom tag => arity == tag.declaredArity
@@ -175,7 +185,7 @@ answered by its own laws. -/
 def Scheme.answersDeclared (s : Scheme) : Bool :=
   match s with
   | .mono params answer => s.apply params == some answer
-  | .poly params answer .. => s.apply params == some answer
+  | .poly params answer => s.apply params == some answer
   | .variadic param answer => s.apply [param, param] == some answer
   | .alts cases => cases.all fun c => s.apply c.1 == some c.2
   | .custom _ => true
@@ -193,7 +203,7 @@ deriving DecidableEq, Repr
 Each row's scheme answers exactly what the hand-written arm of `typeOf` answered, at every
 argument list. Three of them are worth a sentence. `eq` is `alts`, because its two signatures
 are tried in order and both answer `bool`. `pair` is `poly` over two distinct parameters, so
-`matchTemplateArgs` binds them positionally and no join ever fires — `typeOf .pair [a, b]` is
+the match binds them positionally and no join ever fires — `typeOf .pair [a, b]` is
 `prod a b`, which is what DI-55 and the `eq (fst (pair "A" m)) "A"` idiom stand on. `tagIs` is
 `mono` at `[.string, .unknown]` — the second parameter is the top (decisions row 46), which
 every type is below, so the arm that used to ignore its second argument is now a signature the
@@ -265,14 +275,17 @@ def spec : NativeAtom → Spec
                  Pinned implementation: vendor/effect-4.0.0-rc.112/src/Option.ts (isSome)." }
   | .getOrElse =>
       { scheme := .poly [.option (.var 0), .var 0] (.var 0),
-        cite := "NativeAtom.getOrElse: the payload type fixes the default and result. Both \
-                 call\narguments are evaluated eagerly; this thunk captures only the already \
-                 evaluated default.\nPinned implementation: \
+        cite := "NativeAtom.getOrElse: the answer is the join of the payload's type and the \
+                 default's type\n(decisions row 303). The option is taken at its whole type, so \
+                 the compiler computes that join.\nBoth call arguments are evaluated eagerly; \
+                 this thunk captures only the already evaluated default.\nPinned implementation: \
                  vendor/effect-4.0.0-rc.112/src/Option.ts (getOrElse)." }
   | .ite =>
-      { scheme := .poly [.bool, .var 0, .var 0] (.var 0) true,
+      { scheme := .poly [.bool, .var 0, .var 0] (.var 0),
         cite := "`\"ite\", [bool c, a, b] => if c then a else b` — a selection between two \
-                 evaluated\narguments, not a lazy conditional." }
+                 evaluated\narguments, not a lazy conditional. The answer is the join of the two \
+                 arms' types: each arm has\nits own type parameter, so the compiler computes \
+                 that join (decisions row 303)." }
   | .optSome =>
       { scheme := .poly [.var 0] (.option (.var 0)),
         cite := "`\"some\", [a] => some a` — Option.some (vendor/effect-4.0.0-rc.112/src/Option.ts)." }
@@ -286,16 +299,14 @@ def spec : NativeAtom → Spec
       { scheme := .mono [] (.list .never),
         cite := "`\"nil\", [] => list []`" }
   | .listCons =>
-      { scheme := .poly [.var 0, .list (.var 0)] (.list (.var 0)) true,
+      { scheme := .poly [.var 0, .list (.var 0)] (.list (.var 0)),
         cite := "`\"cons\", [x, list vs] => list (x :: vs)` — a fiber snapshot is the list of its \
-                 handles\n(`Val.asList?`).\nThe element and the tail's element are two type \
-                 parameters (seat T5, 2026-10-05): the\ncompiler infers `A` from the element \
-                 alone, so a literal element widens, and\n`cons(1, nil())` is \
-                 `ReadonlyArray<number>`, the `list nat` of `NativeAtom.typeOf .listCons`.\nWith \
-                 one parameter the tail took part in the inference and the literal stayed:\n\
-                 `ReadonlyArray<1>`. The answer is the union of the two, which is their common \
-                 supertype\nwherever the scheme's join finds one; a list the join refuses is \
-                 Lean's to refuse, not this\nsignature's." }
+                 handles\n(`Val.asList?`).\nThe element has its own type parameter (seat T5, \
+                 2026-10-05): the compiler infers `A` from the\nelement alone, so a literal \
+                 element widens, and `cons(1, nil())` is `ReadonlyArray<number>`,\nthe `list nat` \
+                 of `NativeAtom.typeOf .listCons`. The tail is taken at its whole type (decisions \
+                 row\n303): the compiler reads its element type by index, so the answer is the \
+                 union of the two\nelement types, the scheme's join." }
   | .listGet =>
       { scheme := .poly [.list (.var 0), .nat] (.option (.var 0)),
         cite := "`\"get\", [list vs, nat i] => option vs[i]?` — rc.112 `Array.get` at a natural \
@@ -304,7 +315,7 @@ def spec : NativeAtom → Spec
       { scheme := .mono [.list .unknown] .nat,
         cite := "`\"length\", [list vs] => nat vs.length`" }
   | .listAppend =>
-      { scheme := .poly [.list (.var 0), .list (.var 0)] (.list (.var 0)) true,
+      { scheme := .poly [.list (.var 0), .list (.var 0)] (.list (.var 0)),
         cite := "`\"append\", [list xs, list ys] => list (xs ++ ys)`" }
   | .natSub =>
       { scheme := .mono [.nat, .nat] .nat,

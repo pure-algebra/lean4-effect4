@@ -27,9 +27,11 @@ def isGeneratedCompanion (env : Environment) : Name → Bool
     s.startsWith "instSizeOf" ||
       match env.find? p with
       | some (.ctorInfo _) => s == "inj" || s == "injEq" || s == "sizeOf_spec"
-      | some (.inductInfo _) =>
-        s == "noConfusionType" || s == "ctorIdx" || s == "ctorElim" || s == "below" ||
-          s == "ibelow" || s == "brecOn" || s == "binductionOn"
+      | some (.inductInfo info) =>
+        s == "noConfusionType" || s == "ctorIdx" ||
+          (s == "ctorElim" && info.numCtors > 1) ||
+          ((s == "below" || s == "brecOn") && info.isRec) ||
+          s == "ibelow" || s == "binductionOn"
       | _ => false
   | _ => false
 

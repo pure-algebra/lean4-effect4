@@ -1,0 +1,47 @@
+import os, sys, subprocess, shutil
+
+REPO_ROOT = "/Users/pooks/Dev/lean4-effect4"
+TSGO = f"{REPO_ROOT}/ts/eff/node_modules/.bin/tsgo"
+EVIDENCE_DIR = f"{REPO_ROOT}/docs/research/2026-10-06-print-probe-evidence"
+os.makedirs(EVIDENCE_DIR, exist_ok=True)
+
+# Common prelude import
+PRELUDE_IMPORT = f'import {{ Cause, Deferred, Effect, Exit, Fiber, Option, Ref, Scope }} from "effect"\nimport {{ recordRequired, recordOptional, recordSet, caseTagR }} from "{REPO_ROOT}/harness/truth/records.ts"\nimport {{ tupleAt }} from "{REPO_ROOT}/harness/truth/tuples.ts"\nimport * as Prelude from "{REPO_ROOT}/harness/truth/prelude.ts"\n'
+
+def run_tsgo(src_code, name):
+    src_file = f"scratch/print_probe/{name}.ts"
+    with open(src_file, "w") as f:
+        f.write(src_code)
+    
+    cmd = [
+        TSGO,
+        "--skipLibCheck",
+        "--moduleResolution", "bundler",
+        "--target", "ES2022",
+        "--module", "ESNext",
+        "--strict",
+        "--allowImportingTsExtensions",
+        "--noEmit",
+        src_file
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    
+    # Save evidence file
+    evidence_path = f"{EVIDENCE_DIR}/{name}.ts.txt"
+    with open(evidence_path, "w") as f:
+        f.write(f"// tsgo exit code: {res.returncode}\n")
+        f.write(f"// tsgo output:\n")
+        for line in res.stdout.strip().split("\n"):
+            if line:
+                f.write(f"//   {line}\n")
+        if not res.stdout.strip():
+            f.write("//   (clean, 0 errors)\n")
+        f.write("\n")
+        f.write(src_code)
+        
+    return res.returncode, res.stdout.strip()
+
+print("tsgo path:", TSGO)
+version_res = subprocess.run([TSGO, "--version"], capture_output=True, text=True)
+print("tsgo version:", version_res.stdout.strip())
+

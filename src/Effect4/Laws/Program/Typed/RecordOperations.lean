@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.Membership
 import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
 import Effect4.Program.Record
 
 /-! Record operation membership, serving registry claim `denote-typed` through `evalTerm_progress`.
@@ -411,14 +412,15 @@ theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = native
   -- element fits the element type, and a step answers a member of the body's type, which is
   -- below it (decisions row 228)
   | fold accTy list init body =>
-    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+    obtain ⟨listType, item, initType, bodyType, hlist, hitem, hinit, _, hsubInit, hbody, hsubBody⟩ :=
       termTy_fold_inv hty
     rw [evalTerm_fold] at hev
     obtain ⟨value, hlv, hev⟩ := Option.bind_eq_some_iff.mp hev
     obtain ⟨items, hitems, hev⟩ := Option.bind_eq_some_iff.mp hev
     obtain ⟨start, hstart, hev⟩ := Option.bind_eq_some_iff.mp hev
-    obtain ⟨items', hitems', hall⟩ := (fits_list_iff w value item).mp
-      (evalTerm_fitsAll sig hatom hconst w list env tys (.list item) value hfit hlist hlv)
+    have hfitsList := fits_subN w (listOf_upper hitem) value
+      (evalTerm_fitsAll sig hatom hconst w list env tys listType value hfit hlist hlv)
+    obtain ⟨items', hitems', hall⟩ := (fits_list_iff w value item).mp hfitsList
     rw [hitems] at hitems'
     cases hitems'
     refine foldlM_keeps (P := fun acc => Fits w acc ty) (Q := fun x => Fits w x item) ?_

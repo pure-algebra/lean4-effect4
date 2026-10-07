@@ -1,0 +1,41 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// effect version: 4.0.0-rc.112
+// command: tsgo --target ES2022 --module ESNext --moduleResolution bundler --strict --exactOptionalPropertyTypes --noUncheckedIndexedAccess --verbatimModuleSyntax --allowImportingTsExtensions --noEmit --skipLibCheck atoms_joined.ts
+// the module folder is a link to harness/truth/node_modules; nothing was installed
+// run on 2026-10-07 against the working tree of branch chunk-2 over de7b4044
+// tsgo exit code: 1
+// tsgo output:
+//   atoms_joined.ts(16,54): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+//   atoms_joined.ts(17,37): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+//   atoms_joined.ts(19,62): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+//   atoms_joined.ts(20,45): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.
+//   atoms_joined.ts(22,55): error TS2345: Argument of type 'number' is not assignable to parameter of type 'never'.
+//   atoms_joined.ts(23,47): error TS2345: Argument of type 'number' is not assignable to parameter of type 'never'.
+
+// Overwatch of chunk 2, step C: the calls that the checker of the working tree now answers at a
+// join, against the prelude of the working tree (harness/truth/prelude-atoms.gen.ts).
+// The declared type of each constant is the checker's answer (Test/Program/NativeAtomContract.lean,
+// Test/Program/TypedContract.lean, as the working tree changed them).
+import * as Atoms from "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude-atoms.gen.ts"
+
+declare const c: boolean
+declare const n: number
+declare const s: string
+declare const ns: ReadonlyArray<number>
+declare const ss: ReadonlyArray<string>
+const optNum = Atoms.some(n)
+const optNever = Atoms.none()
+
+// ite [bool, nat, string] = some (union nat string)
+export const ite1: number | string = Atoms.ite(c, n, s)
+export const ite2 = Atoms.ite(c, n, s)
+// getOrElse [option nat, string] = some (union nat string)
+export const goe1: number | string = Atoms.getOrElse(optNum, s)
+export const goe2 = Atoms.getOrElse(optNum, s)
+// getOrElse [option never, nat] = some nat
+export const goe3: number = Atoms.getOrElse(optNever, n)
+export const goe4 = Atoms.getOrElse(optNever, n)
+// cons [nat, list string] = some (list (union nat string))
+export const cons1: ReadonlyArray<number | string> = Atoms.cons(n, ss)
+// append [list nat, list string] = some (list (union nat string))
+export const app1: ReadonlyArray<number | string> = Atoms.append(ns, ss)

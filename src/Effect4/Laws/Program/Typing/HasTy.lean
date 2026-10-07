@@ -371,26 +371,30 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
       ActionHasTy sig env (.interruptScoped target) (EffTy.pure .unit)
   /-- `fiberInterruptAll` (`:888-915`) with no interruptor: the running fiber's own id. The
   targets are a **list of** fiber handles. -/
-  | interruptAll_self {env : TyEnv} {targets : Term} {inner : Ty} {value error : Ty} :
-      termTy sig env targets = some (.list inner) →
+  | interruptAll_self {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
+      termTy sig env targets = some ts →
+      Checker.listOf? ts = some inner →
       fiberTy inner = some (value, error) →
       ActionHasTy sig env (.interruptAll targets none) (EffTy.pure .unit)
   /-- `fiberInterruptAllAs` (`:888-915`): a named interruptor, whose term is a fiber id — a
   `nat`, not a handle. -/
-  | interruptAll_by {env : TyEnv} {targets : Term} {who : Term} {inner : Ty} {value error : Ty} :
-      termTy sig env targets = some (.list inner) →
+  | interruptAll_by {env : TyEnv} {targets : Term} {who : Term} {ts inner : Ty} {value error : Ty} :
+      termTy sig env targets = some ts →
+      Checker.listOf? ts = some inner →
       fiberTy inner = some (value, error) →
       termTy sig env who = some .nat →
       ActionHasTy sig env (.interruptAll targets (some who)) (EffTy.pure .unit)
   /-- `fiberAwaitAll` (`:779`, `:5318-5322`): the list of the targets' exits. -/
-  | awaitAll {env : TyEnv} {targets : Term} {inner : Ty} {value error : Ty} :
-      termTy sig env targets = some (.list inner) →
+  | awaitAll {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
+      termTy sig env targets = some ts →
+      Checker.listOf? ts = some inner →
       fiberTy inner = some (value, error) →
       ActionHasTy sig env (.awaitAll targets) (EffTy.pure (.list (.exitOf value error)))
   /-- `Effect.all`/`forEach` with concurrency (`Layer.ts:1597-1598`): the same type as
   `awaitAll` — the fail-fast interruption is behaviour, not a column. -/
-  | awaitAllFailFast {env : TyEnv} {targets : Term} {inner : Ty} {value error : Ty} :
-      termTy sig env targets = some (.list inner) →
+  | awaitAllFailFast {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
+      termTy sig env targets = some ts →
+      Checker.listOf? ts = some inner →
       fiberTy inner = some (value, error) →
       ActionHasTy sig env (.awaitAllFailFast targets) (EffTy.pure (.list (.exitOf value error)))
   /-- `awaitAllChildren`'s snapshot (`:5318`): a list of fiber handles whose columns this
@@ -419,9 +423,10 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
   | getId {env : TyEnv} :
       ActionHasTy sig env .getId (EffTy.pure .nat)
   /-- `scopeClose` from the fiber (`Scope.ts` via `:3826`): a scope handle and an `Exit`. -/
-  | closeScope {env : TyEnv} {scope exit : Term} {value error : Ty} :
+  | closeScope {env : TyEnv} {scope exit : Term} {exitTy : Ty} {value error : Ty} :
       termTy sig env scope = some Ty.scope →
-      termTy sig env exit = some (.exitOf value error) →
+      termTy sig env exit = some exitTy →
+      Checker.exitOf? exitTy = some (value, error) →
       ActionHasTy sig env (.closeScope scope exit) (EffTy.pure .unit)
   /-- `uninterruptibleMask((restore) => succeed(restore))` (`internal/effect.ts:4340-4352`;
   decisions row 245): the saved state of the fiber's entry flag, at its own opaque type, with

@@ -1,0 +1,29 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// effect version: 4.0.0-rc.112
+// command: tsgo --target ES2022 --module ESNext --moduleResolution bundler --strict --exactOptionalPropertyTypes --noUncheckedIndexedAccess --verbatimModuleSyntax --allowImportingTsExtensions --noEmit --skipLibCheck binder_joined.ts
+// the module folder is a link to harness/truth/node_modules; nothing was installed
+// run on 2026-10-07 against the working tree of branch chunk-2 over de7b4044
+// tsgo exit code: 1
+// tsgo output:
+//   binder_joined.ts(12,46): error TS2322: Type 'readonly [string, number] | readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+//     Type 'readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+//       Type at position 0 in source is not compatible with type at position 0 in target.
+//         Type 'number' is not assignable to type 'string'.
+//   binder_joined.ts(13,78): error TS2322: Type 'readonly [string, number] | readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+//     Type 'readonly [number, number]' is not assignable to type 'readonly [string, number]'.
+//       Type at position 0 in source is not compatible with type at position 0 in target.
+//         Type 'number' is not assignable to type 'string'.
+
+// Overwatch of chunk 2, step C: `Ref.modify` whose term has the raw type of two pairs with no
+// order between their first parts (Test/Program/TypedContract.lean, `pairUnion`). The working
+// tree's checker answers `"a" | "b"`. The form is the truth lane's (term-rows.typecheck.ts).
+import { Effect, Ref } from "effect"
+
+declare const a0: Ref.Ref<number>
+declare const pairUnion: readonly ["a", number] | readonly ["b", number]
+declare const pairWide: readonly [number, number] | readonly [string, number]
+
+export const lit1 = Ref.modify(a0, (_a1) => pairUnion)
+export const lit2: Effect.Effect<"a" | "b"> = Ref.modify(a0, (_a1) => pairUnion)
+export const wide1 = Ref.modify(a0, (_a1) => pairWide)
+export const wide2: Effect.Effect<number | string> = Ref.modify(a0, (_a1) => pairWide)

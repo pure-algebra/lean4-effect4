@@ -177,19 +177,11 @@ theorem lift_fiber_closed {t : Ty} {a : Ty × Ty} (typed : lift Member.fiber t =
     (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true :=
   lift_closed_pair (fun _ _ closed answered => Member.fiber_closed closed answered) typed closed
 
-/-- A list type that is closed has a closed element type: the member fact of `lift_closed`. -/
-theorem listOf_closed {m a : Ty} (closed : m.closed = true)
-    (answered : Checker.listOf? m = some a) : a.closed = true := by
-  cases m with
-  | list inner =>
-    cases answered
-    exact closed
-  | _ => exact nomatch answered
-
-/-- The lifted `Checker.listOf?` answers a closed type at a closed target. -/
-theorem lift_listOf_closed {t a : Ty} (typed : lift Checker.listOf? t = some a)
+/-- The lifted `Member.list` answers a closed type at a closed target: `lift_closed` at the
+member fact `Member.list_closed`. -/
+theorem lift_listOf_closed {t a : Ty} (typed : lift Member.list t = some a)
     (closed : t.closed = true) : a.closed = true :=
-  lift_closed (fun _ _ closed answered => listOf_closed closed answered) typed closed
+  lift_closed (fun _ _ closed answered => Member.list_closed closed answered) typed closed
 
 /-- A member rule that answers an open type at a closed member. -/
 def openAnswer (member : Ty) : Option Ty := if member = .string then some (.var 0) else none
@@ -203,8 +195,7 @@ def openAnswer (member : Ty) : Option Ty := if member = .string then some (.var 
 
 `Member.fiber` is an instance of `UnionRule.Eliminator`
 (`Member.fiber_eliminator`, `src/Effect4/Laws/Program/Eliminators.lean`), and the order laws of
-its lifted rule follow by projection. `Checker.listOf?` is an instance too, from the same three
-facts. It is not converted: its instance here shows what its conversion owes. -/
+its lifted rule follow by projection. `Member.list` is an instance too (`Member.list_eliminator`). -/
 
 /-- The upper form at the lifted `Member.fiber`: a target that it answers is below the fiber
 type of the answer. -/
@@ -224,35 +215,11 @@ theorem lift_fiber_mono {s t : Ty} (smaller : Ty.subN s t = true) {b : Ty × Ty}
     ∃ a, lift Member.fiber s = some a ∧ Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true :=
   Member.fiber_eliminator.lift_mono smaller typed
 
-/-- **`Checker.listOf?` is the eliminator of the list constructor**, as a member rule. -/
-theorem listOf_eliminator : Eliminator Checker.listOf? Ty.list where
-  shape {m a} answered := by
-    cases m with
-    | list inner =>
-      cases answered
-      rfl
-    | _ => exact nomatch answered
-  embeds {a b} := by
-    show Ty.sub (.list a.normalize) (.list b.normalize) = true ↔ Ty.subN a b = true
-    rw [Ty.sub_list]
-    exact Iff.rfl
-  reads {m b} normal member below := by
-    have raw : Ty.sub m (.list b.normalize) = true := by
-      have h := below
-      unfold Ty.subN at h
-      rw [normal.fixed] at h
-      exact h
-    rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
-    cases m with
-    | list inner => exact ⟨inner, rfl⟩
-    | _ => exact nomatch raw.1
-
 -- The upper form on closed targets, as guards: a union of two list types and `never`.
-#guard lift Checker.listOf? (.union (.list .nat) (.list .string)) = some (.union .nat .string)
+#guard lift Member.list (.union (.list .nat) (.list .string)) = some (.union .nat .string)
 #guard Ty.subN (.union (.list .nat) (.list .string)) (.list (.union .nat .string))
-#guard Checker.listOf? (.union (.list .nat) (.list .string)) = none
-#guard lift Checker.listOf? .never = some .never
+#guard Member.list (.union (.list .nat) (.list .string)) = none
+#guard lift Member.list .never = some .never
 
 /-! ## Red: the cause rule reads two heads, so it is no eliminator of one constructor -/
 
@@ -291,11 +258,11 @@ theorem lift_fiber_adjoint (t : Ty) :
         Ty.subN t (.fiberOf b.1 b.2) = true :=
   Member.fiber_eliminator.adjoint t
 
-/-- The lifted `Checker.listOf?` at a union is the join of its answers at the two sides. -/
+/-- The lifted `Member.list` at a union is the join of its answers at the two sides. -/
 theorem lift_listOf_union (s t : Ty) :
-    lift Checker.listOf? (.union s t) =
-      (lift Checker.listOf? s).bind fun a => (lift Checker.listOf? t).map (Ty.join a) :=
-  lift_union_eq listOf_eliminator.monotone s t
+    lift Member.list (.union s t) =
+      (lift Member.list s).bind fun a => (lift Member.list t).map (Ty.join a) :=
+  lift_union_eq Member.list_eliminator.monotone s t
 
 -- Red: the join law fails at a member rule that is not monotone. The union's normal form drops
 -- the literal, so the lifted rule answers at the union and refuses one side.

@@ -7,8 +7,10 @@
  * `total` is `pFold`'s term, `nested` is the truth program `pFold`'s (`harness/truth/Truth.lean`),
  * and `paired` is `pFoldNested`'s, whose outer fold states its accumulator's type.
  */
-import type { Deferred, Ref } from "effect"
-import { add, append, cons, drop, fold, length, nil, sameHandle, sub, succ, take, tuple } from "./prelude.ts"
+import type { Deferred, Option, Ref } from "effect"
+import {
+  add, append, cons, drop, fold, get, length, mapEntries, mapGet, mapKeys, mapSet, nil, sameHandle, sub, succ, take, tuple
+} from "./prelude.ts"
 
 // The image without a type argument: both parameters are inferred, and a numeric literal
 // widens to `number`, as Lean's literal rule types it.
@@ -53,4 +55,46 @@ sameHandle(cellA, promiseA)
 // @ts-expect-error A number is no handle.
 sameHandle(1, 1)
 
-void [total, nested, paired, firstTwo, rest, sameCell, samePromise]
+// ---- the join of two element types (decisions row 303) ----
+
+// `cons` and `append` take a list at its whole type, so the compiler computes the join that
+// Lean's match by bounds answers: the union of the two element types.
+declare const numbers: ReadonlyArray<number>
+declare const strings: ReadonlyArray<string>
+const consJoined: ReadonlyArray<number | string> = cons(1, strings)
+const appendJoined: ReadonlyArray<number | string> = append(numbers, strings)
+// @ts-expect-error The answer of `cons` is no smaller than the join.
+const consNoSmaller: ReadonlyArray<number> = cons(1, strings)
+// @ts-expect-error The same at `append`.
+const appendNoSmaller: ReadonlyArray<string> = append(numbers, strings)
+
+// ---- an argument that is a proper union (decisions row 303) ----
+
+// Lean's match by bounds reads a union argument member by member, and it answers the join of
+// the members' element types. The compiler forms no union of two inference candidates, so each
+// atom below takes its argument at its whole type and reads the element type by index.
+declare const twoLists: ReadonlyArray<number> | ReadonlyArray<string>
+declare const twoMaps: Readonly<Record<string, number>> | Readonly<Record<string, string>>
+const takeJoined: ReadonlyArray<number | string> = take(twoLists, 1)
+const dropJoined: ReadonlyArray<number | string> = drop(twoLists, 1)
+const getJoined: Option.Option<number | string> = get(twoLists, 0)
+const mapGetJoined: Option.Option<number | string> = mapGet(twoMaps, "k")
+const mapKeysJoined: ReadonlyArray<string> = mapKeys(twoMaps)
+const mapEntriesJoined: ReadonlyArray<readonly [string, number | string]> = mapEntries(twoMaps)
+const mapSetJoined: Readonly<Record<string, number | string | boolean>> = mapSet(twoMaps, "k", true)
+// @ts-expect-error The answer of `take` is no smaller than the join.
+const takeNoSmaller: ReadonlyArray<number> = take(twoLists, 1)
+// @ts-expect-error The same at `drop`.
+const dropNoSmaller: ReadonlyArray<string> = drop(twoLists, 1)
+// @ts-expect-error The same at `mapGet`.
+const mapGetNoSmaller: Option.Option<number> = mapGet(twoMaps, "k")
+// @ts-expect-error The same at `mapEntries`.
+const mapEntriesNoSmaller: ReadonlyArray<readonly [string, number]> = mapEntries(twoMaps)
+// @ts-expect-error The same at `mapSet`.
+const mapSetNoSmaller: Readonly<Record<string, number | string>> = mapSet(twoMaps, "k", true)
+
+void [
+  total, nested, paired, firstTwo, rest, sameCell, samePromise, consJoined, appendJoined, consNoSmaller, appendNoSmaller,
+  takeJoined, dropJoined, getJoined, mapGetJoined, mapKeysJoined, mapEntriesJoined, mapSetJoined,
+  takeNoSmaller, dropNoSmaller, mapGetNoSmaller, mapEntriesNoSmaller, mapSetNoSmaller
+]

@@ -99,7 +99,7 @@ def source : TypeScript.Module :=
 #guard (.map (.var 0) (.var 1) : Ty).templateAdmissible
 #guard (.record [("a", false, .var 0)] : Ty).templateAdmissible
 #guard (.tuple [.var 0, .bool, .nat] : Ty).templateAdmissible
-#guard (.app "Box" [.var 0] : Ty).templateAdmissible
+#guard !(.app "Box" [.var 0] : Ty).templateAdmissible
 #guard !(.record [("a", false, .union .nat (.var 0))] : Ty).templateAdmissible
 
 -- Open keys are deferred at the raw table, then checked on actual substitution.

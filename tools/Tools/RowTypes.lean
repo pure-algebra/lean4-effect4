@@ -120,7 +120,7 @@ def atomSignature (s : NativeAtom.Scheme) : Option (String × String × String) 
   match s with
   | .mono params answer => some (renderArgs params, Ty.renderRaw answer, "")
   | .variadic param answer => some (Ty.renderRaw param ++ "[]", Ty.renderRaw answer, "")
-  | .poly params answer _ =>
+  | .poly params answer =>
     let σ := probes params
     let typeArgs := if σ.isEmpty then "" else
       "<" ++ String.intercalate ", " (σ.map fun b => Ty.renderRaw b.2) ++ ">"

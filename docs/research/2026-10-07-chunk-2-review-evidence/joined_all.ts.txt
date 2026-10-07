@@ -1,0 +1,46 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// effect version: 4.0.0-rc.112
+// command: tsgo --target ES2022 --module ESNext --moduleResolution bundler --strict --exactOptionalPropertyTypes --noUncheckedIndexedAccess --verbatimModuleSyntax --allowImportingTsExtensions --noEmit --skipLibCheck joined_all.ts
+// run on 2026-10-07 in a copy of harness/truth; the module folder is a link to harness/truth/node_modules; nothing was installed
+// tsgo exit code: 0
+// tsgo output:
+//   (none)
+
+import { Option } from "effect"
+import * as Atoms from "./prelude-atoms.gen.ts"
+
+declare const lists: ReadonlyArray<number> | ReadonlyArray<string>
+declare const maps: Readonly<Record<string, number>> | Readonly<Record<string, string>>
+declare const n: number
+declare const key: string
+declare const flag: boolean
+
+export const take1: ReadonlyArray<number | string> = Atoms.take(lists, n)
+export const drop1: ReadonlyArray<number | string> = Atoms.drop(lists, n)
+export const mapGet1: Option.Option<number | string> = Atoms.mapGet(maps, key)
+export const mapKeys1: ReadonlyArray<string> = Atoms.mapKeys(maps)
+export const mapEntries1: ReadonlyArray<readonly [string, number | string]> = Atoms.mapEntries(maps)
+export const mapSet1: Readonly<Record<string, number | string | boolean>> = Atoms.mapSet(maps, key, flag)
+export const get1: Option.Option<number | string> = Atoms.get(lists, n)
+export const cons1: ReadonlyArray<number | string> = Atoms.cons(n, lists)
+export const append1: ReadonlyArray<number | string> = Atoms.append(lists, lists)
+// red: no answer is smaller than the join
+// @ts-expect-error
+export const takeRed: ReadonlyArray<number> = Atoms.take(lists, n)
+// @ts-expect-error
+export const dropRed: ReadonlyArray<string> = Atoms.drop(lists, n)
+// @ts-expect-error
+export const mapGetRed: Option.Option<number> = Atoms.mapGet(maps, key)
+// @ts-expect-error
+export const mapEntriesRed: ReadonlyArray<readonly [string, number]> = Atoms.mapEntries(maps)
+// @ts-expect-error
+export const mapSetRed: Readonly<Record<string, number | string>> = Atoms.mapSet(maps, key, flag)
+
+// the readings at the parameter's template, as exact types
+type Eq<X, Y> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false
+export const rTake: Eq<typeof Atoms.take<"p0">, (xs: ReadonlyArray<"p0">, n: number) => ReadonlyArray<"p0">> = true
+export const rDrop: Eq<typeof Atoms.drop<"p0">, (xs: ReadonlyArray<"p0">, n: number) => ReadonlyArray<"p0">> = true
+export const rMapGet: Eq<typeof Atoms.mapGet<"p0">, (map: Readonly<Record<string, "p0">>, key: string) => Option.Option<"p0">> = true
+export const rMapSet: Eq<typeof Atoms.mapSet<"p0", "p1">, (map: Readonly<Record<string, "p0">>, key: string, value: "p1") => Readonly<Record<string, "p0" | "p1">>> = true
+export const rMapKeys: Eq<typeof Atoms.mapKeys<"p0">, (map: Readonly<Record<string, "p0">>) => ReadonlyArray<string>> = true
+export const rMapEntries: Eq<typeof Atoms.mapEntries<"p0">, (map: Readonly<Record<string, "p0">>) => ReadonlyArray<readonly [string, "p0"]>> = true

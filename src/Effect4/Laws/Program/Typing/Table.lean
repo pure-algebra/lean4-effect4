@@ -221,7 +221,7 @@ theorem hasTy_extSlotEnv {s : Signature Op} {env : TyEnv} {p : Eff Op} {T : EffT
     split at hrow
     · cases hrow
     · rename_i σ hσ
-      cases hty : termTy s (env ++ [(b.param.normalize.instantiate σ).normalize]) b.term with
+      cases hty : termTy s (env ++ [TermUse.instParam b.param σ]) b.term with
       | none =>
         simp only [bindTerm, hty] at hrow
         cases hrow

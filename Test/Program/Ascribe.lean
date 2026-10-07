@@ -84,8 +84,9 @@ def wrongElement : Module NativeOp :=
 
 -- Red: the bare empty list fixes the cell at `never[]`, and the append's result is refused.
 #guard typingReason? bare = some (.resultNotSubtype "refUpdateWith" (.list .string) (.list .never))
--- Red: the declared type is kept. The append's term has no type over a cell of numbers.
-#guard typingReason? wrongElement = some (.binderTerm "refUpdateWith" (.list .nat))
+-- Red: the declared type is kept. The append's term has a list of a number or a string, and
+-- the cell of numbers refuses that result.
+#guard typingReason? wrongElement = some (.resultNotSubtype "refUpdateWith" (.list (.union .nat .string)) (.list .nat))
 
 /-! ## 3. A string through a declared string field
 

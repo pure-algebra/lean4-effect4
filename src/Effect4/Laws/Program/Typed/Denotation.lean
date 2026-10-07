@@ -307,9 +307,9 @@ private theorem progress_of_mono {a : NativeAtom} {params : List Ty} {answer : T
   · next hguard => exact hev w vs (hfit.sub hguard.1 hguard.2)
   · exact nomatch hty
 
-private theorem progress_of_poly {a : NativeAtom} {params : List Ty} {answer : Ty} {join : Bool}
-    (hs : (NativeAtom.spec a).scheme = .poly params answer join)
-    (hvv : ∀ p ∈ params, Ty.valueVars p = true)
+private theorem progress_of_poly {a : NativeAtom} {params : List Ty} {answer : Ty}
+    (hs : (NativeAtom.spec a).scheme = .poly params answer)
+    (_hvv : ∀ p ∈ params, Ty.valueVars p = true)
     (hev : ∀ (w : World) (σ : Ty.Subst) (vs : List Val),
       FitsAll w vs (params.map (Ty.instantiate σ)) → (NativeAtom.eval a vs).isSome = true)
     (w : World) (tys : List Ty) (ty : Ty) (vs : List Val)
@@ -317,7 +317,7 @@ private theorem progress_of_poly {a : NativeAtom} {params : List Ty} {answer : T
     (NativeAtom.eval a vs).isSome = true := by
   simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
   obtain ⟨σ, hmatch, _⟩ := Option.map_eq_some_iff.mp hty
-  exact hev w σ vs (FitsAll.instantiate hvv hmatch hfit)
+  exact hev w σ vs (FitsAll.instantiateB hmatch hfit)
 
 private theorem progress_of_shape {a : NativeAtom} (shape : NativeAtom.Shape)
     (hs : (NativeAtom.spec a).scheme = .mono shape.params shape.answer)
@@ -659,9 +659,10 @@ theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf 
   -- below the fold's, and each step runs at the environment extended by a member of the
   -- fold's type and an element, so it answers a member of the body's type, which is below it
   | .fold accTy list init body, ty, hty => by
-    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+    obtain ⟨listType, item, initType, bodyType, hlist, hitem, hinit, _, hsubInit, hbody, hsubBody⟩ :=
       termTy_fold_inv hty
-    obtain ⟨value, hlv, hfitList⟩ := evalTerm_progress hatom hfit list (.list item) hlist
+    obtain ⟨value, hlv, hfitList⟩ := evalTerm_progress hatom hfit list listType hlist
+    replace hfitList := fits_subN w (listOf_upper hitem) value hfitList
     obtain ⟨start, hstart, hfitStart⟩ := evalTerm_progress hatom hfit init initType hinit
     refine fold_fits hlv hfitList hstart (fits_subN w hsubInit start hfitStart) ?_
     intro acc x hacc hx
@@ -1037,16 +1038,12 @@ theorem decide_fits {w : World} {d : Decision} {t : Ty} {e0 e1 : List Ty} {v : V
     · exact nomatch harms
   | option =>
     simp only [Decision.arms] at harms
-    split at harms
-    · rename_i a hnorm
-      simp only [Option.some.injEq, Prod.mk.injEq] at harms
-      obtain ⟨rfl, rfl⟩ := harms
-      have hv' := (fits_normalize w t v).mpr hv
-      rw [hnorm] at hv'
-      rcases fits_option_inv hv' with rfl | ⟨x, rfl, hx⟩
-      · exact ⟨true, none, rfl, trivial⟩
-      · exact ⟨false, some x, rfl, hx⟩
-    · exact nomatch harms
+    obtain ⟨a, hopt, heq⟩ := Option.map_eq_some_iff.mp harms
+    cases heq
+    have hv' := fits_subN w (optionTy_upper hopt) v hv
+    rcases fits_option_inv hv' with rfl | ⟨x, rfl, hx⟩
+    · exact ⟨true, none, rfl, trivial⟩
+    · exact ⟨false, some x, rfl, hx⟩
   | tag name =>
     simp only [Decision.arms] at harms
     split at harms
@@ -2045,8 +2042,9 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
   have hc := Checker.inv_withFiber _ _ _ _ _ hcheck
   cases who with
   | none =>
-    obtain ⟨inner, pair, hts, hfib, rfl⟩ := Checker.inv_action_interruptAll_self _ _ _ _ _ hc
+    obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ := Checker.inv_action_interruptAll_self _ _ _ _ _ hc
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    replace hfit := fits_subN w (listOf_upper hlist) v hfit
     replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
     obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
         some (WithFiberAction.interruptAll ids none) ∧
@@ -2072,8 +2070,9 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
       (fun _ _ _ h => nomatch h) () (fibersDeclared_of_fits hdecl)
       (fun w' _ ans post => unitAnswer_typed root post)
   | some who =>
-    obtain ⟨inner, pair, hts, hfib, hwho, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
+    obtain ⟨ts, inner, pair, hts, hlist, hfib, hwho, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    replace hfit := fits_subN w (listOf_upper hlist) v hfit
     replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
     obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv hwho
     obtain ⟨m, rfl⟩ := fits_nat_inv hnfit
@@ -2109,9 +2108,10 @@ theorem awaitAll_arm {targets : Term}
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨inner, pair, hts, hfib, rfl⟩ :=
+  obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ :=
     Checker.inv_action_awaitAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  replace hfit := fits_subN w (listOf_upper hlist) v hfit
   replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
   obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
       some (WithFiberAction.awaitAll ids) ∧
@@ -2146,9 +2146,10 @@ theorem awaitAllFailFast_arm {targets : Term}
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨inner, pair, hts, hfib, rfl⟩ :=
+  obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ :=
     Checker.inv_action_awaitAllFailFast _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  replace hfit := fits_subN w (listOf_upper hlist) v hfit
   replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
   obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
       some (WithFiberAction.awaitAllFailFast ids) ∧
@@ -2328,11 +2329,12 @@ theorem closeScope_arm {scope exit : Term}
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨pair, hs, hex, rfl⟩ :=
+  obtain ⟨exitTy, pair, hs, hex, hexit, rfl⟩ :=
     Checker.inv_action_closeScope _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hs
   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hufit
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hex
+  replace hvfit := fits_subN w (exitOf_upper hexit) v hvfit
   obtain ⟨ex, hexv⟩ := exitOfVal_of_fits hvfit
   have hact : actionAt root.program p = some (WithFiberAction.closeScope sc ex) := by
     unfold actionAt
@@ -2450,7 +2452,7 @@ theorem bindTerm_termMaps {sig : Signature NativeOp} (hatom : sig.atomOf = nativ
     TermMaps w f env ty (Ty.instantiate [(0, ty), (1, Ty.instantiate σ' (.var 1))] s.result) ∧
       ∀ w' a, Fits w' a ty → Fits w' a (Ty.instantiate σ' (.var 0)) := by
   obtain ⟨r, hr, hm⟩ := bindTerm_some_ok hbind
-  have hguard := Ty.matchTemplate_sound σ _ r σ' hm
+  have hguard := (Bounds.matchB_sound hm).1
   have hparam : (Ty.instantiate σ s.param.normalize).normalize =
       (Ty.instantiate σ (.var 0)).normalize := rfl
   have hmaps : TermMaps w f env (Ty.instantiate σ (.var 0)).normalize r :=
@@ -2515,7 +2517,7 @@ theorem bindTerm_termMaps {sig : Signature NativeOp} (hatom : sig.atomOf = nativ
 
 /-- **A checked row use places the request's values under the instance** (the inversion of the
 row rule, `checkRow`): the request's bindings `σ` put every member of the request's type under
-the row's request at them (the guard, `Ty.matchTemplate_sound`); the operation's binder term
+the row's request at them (the guard, `Bounds.matchB_sound`); the operation's binder term
 extends them to `σ'` (`bindTerm`), which only widens (`bindTerm_widens`); the node's columns are
 the instance's normal forms at `σ'`, with its formation. A step of `denote-typed` (M5); its
 consumers are `syncRow_typed`, `deferredAwait_arm`, `sleep_arm` and `inlineYield_typed`. -/
@@ -2540,9 +2542,10 @@ theorem rowTy_fits {row : Effect4.Program.Row} {reqTy : Ty} {use : Option TermUs
         cases h
         refine ⟨σ, σ', ?_, hbind, bindTerm_widens hbind, rfl,
           (Formation.check_eq_none_iff _).mp hformed⟩
-        have hsub := Ty.matchTemplate_sound [] _ _ σ hmatch
+        have hsub := (Bounds.matchB_sound hmatch).1
+        rw [(Ty.normal_normalize reqTy).fixed] at hsub
         exact (fits_normalize w _ v).mp (fits_sub w hsub v
-          ((fits_normalize w _ v).mpr ((fits_normalize w reqTy v).mpr hv)))
+          ((fits_normalize w reqTy v).mpr hv))
 
 /-- `rowTy_fits` at an operation that carries no binder term: the request's bindings stand. A
 step of `denote-typed`; its consumers are `syncRow_typed`'s rows without a term,

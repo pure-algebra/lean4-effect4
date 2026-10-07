@@ -51,6 +51,7 @@ import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Provision
 import Effect4.Laws.Program.BuildTotal
 import Effect4.Laws.Program.Template
+import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.HostBoundary

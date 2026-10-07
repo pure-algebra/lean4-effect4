@@ -1,0 +1,54 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// effect version: 4.0.0-rc.112
+// command: tsgo --target ES2022 --module ESNext --moduleResolution bundler --strict --exactOptionalPropertyTypes --noUncheckedIndexedAccess --verbatimModuleSyntax --allowImportingTsExtensions --noEmit --skipLibCheck other_atoms.ts
+// run on 2026-10-07 in a copy of harness/truth; the module folder is a link to harness/truth/node_modules; nothing was installed
+// tsgo exit code: 1
+// tsgo output:
+//   other_atoms.ts(13,33): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+//     Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+//       Type 'number' is not assignable to type 'string'.
+//   other_atoms.ts(14,33): error TS2345: Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly string[]'.
+//     Type 'readonly number[]' is not assignable to type 'readonly string[]'.
+//       Type 'number' is not assignable to type 'string'.
+//   other_atoms.ts(15,37): error TS2345: Argument of type 'Readonly<Record<string, string>> | Readonly<Record<string, number>>' is not assignable to parameter of type 'Readonly<Record<string, string>>'.
+//     Type 'Readonly<Record<string, number>>' is not assignable to type 'Readonly<Record<string, string>>'.
+//       'string' index signatures are incompatible.
+//         Type 'number' is not assignable to type 'string'.
+//   other_atoms.ts(16,39): error TS2345: Argument of type 'Readonly<Record<string, string>> | Readonly<Record<string, number>>' is not assignable to parameter of type 'Readonly<Record<string, string>>'.
+//     Type 'Readonly<Record<string, number>>' is not assignable to type 'Readonly<Record<string, string>>'.
+//       'string' index signatures are incompatible.
+//         Type 'number' is not assignable to type 'string'.
+//   other_atoms.ts(17,45): error TS2345: Argument of type 'Readonly<Record<string, string>> | Readonly<Record<string, number>>' is not assignable to parameter of type 'Readonly<Record<string, string>>'.
+//     Type 'Readonly<Record<string, number>>' is not assignable to type 'Readonly<Record<string, string>>'.
+//       'string' index signatures are incompatible.
+//         Type 'number' is not assignable to type 'string'.
+//   other_atoms.ts(18,37): error TS2345: Argument of type 'Readonly<Record<string, string>> | Readonly<Record<string, number>>' is not assignable to parameter of type 'Readonly<Record<string, string>>'.
+//     Type 'Readonly<Record<string, number>>' is not assignable to type 'Readonly<Record<string, string>>'.
+//       'string' index signatures are incompatible.
+//         Type 'number' is not assignable to type 'string'.
+
+// The landing of chunk 2: the six template atoms that the hand-back left with their parameter
+// under a list or a map, at an argument that is a proper union. The match by bounds reads the
+// union member by member and answers the join (Test/Program/BoundsControls.lean). The prelude
+// is the one of the hand-back (harness/truth/prelude-atoms.gen.ts before the landing's repair).
+import * as Atoms from "./prelude-atoms.old.ts"
+
+declare const lists: ReadonlyArray<number> | ReadonlyArray<string>
+declare const maps: Readonly<Record<string, number>> | Readonly<Record<string, string>>
+declare const n: number
+declare const key: string
+declare const flag: boolean
+
+export const take1 = Atoms.take(lists, n)
+export const drop1 = Atoms.drop(lists, n)
+export const mapGet1 = Atoms.mapGet(maps, key)
+export const mapKeys1 = Atoms.mapKeys(maps)
+export const mapEntries1 = Atoms.mapEntries(maps)
+export const mapSet1 = Atoms.mapSet(maps, key, flag)
+// the atoms that the hand-back declared in the whole form, and the two with a parameter at the
+// top of an argument: accepted
+export const get1 = Atoms.get(lists, n)
+export const cons1 = Atoms.cons(n, lists)
+export const append1 = Atoms.append(lists, lists)
+export const some1 = Atoms.some(lists)
+export const pair1 = Atoms.pair(lists, maps)

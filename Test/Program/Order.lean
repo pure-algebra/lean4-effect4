@@ -79,8 +79,8 @@ example (s t : Ty) :
 
 -- green (proved): at the list rule, the lifted answer is below `b` exactly when the target is
 -- below the list of `b`, in the order of canonical types
-example (t : Ty) {a : Ty} (typed : lift Checker.listOf? t = some a) (b : Ty) :
+example (t : Ty) {a : Ty} (typed : lift Member.list t = some a) (b : Ty) :
     CTy.ofRaw a ≤ CTy.ofRaw b ↔ CTy.ofRaw t ≤ CTy.ofRaw (.list b) :=
-  (Effect4.Test.UnionRule.listOf_eliminator.adjoint_le t).2 typed b
+  (Member.list_eliminator.adjoint_le t).2 typed b
 
 end Effect4.Test.Order

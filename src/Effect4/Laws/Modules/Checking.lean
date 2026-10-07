@@ -379,25 +379,27 @@ theorem types_orT {a b : TermSrc} (ha : TypesEach sig a env path types .bool)
 /-- A selection whose second arm's type is above the first's types at the second's. -/
 theorem types_ifT_above {c t f : TermSrc} {X Y : Ty}
     (hc : TypesEach sig c env path types .bool) (ht : TypesEach sig t env path types X)
-    (hf : TypesEach sig f env path types Y) (above : Ty.sub X Y = true) :
+    (hf : TypesEach sig f env path types Y) (above : Ty.sub X Y = true := by decide)
+    (canonical : Y.normalize = Y := by decide) :
     TypesEach sig (ifT c t f) env path types Y :=
   fun _ => types_app (.cons (hc _) (.cons (ht _) (.cons (hf _) .nil)))
-    (atomOf_native atoms (nativeAtomTy_ite_above above))
+    (atomOf_native atoms (nativeAtomTy_ite_above above canonical))
 
 /-- A selection between two arms of one type. -/
 theorem types_ifT {c t f : TermSrc} {X : Ty} (hc : TypesEach sig c env path types .bool)
-    (ht : TypesEach sig t env path types X) (hf : TypesEach sig f env path types X) :
+    (ht : TypesEach sig t env path types X) (hf : TypesEach sig f env path types X)
+    (canonical : X.normalize = X := by decide) :
     TypesEach sig (ifT c t f) env path types X :=
-  types_ifT_above atoms hc ht hf (Ty.sub_refl X)
+  types_ifT_above atoms hc ht hf (Ty.sub_refl X) canonical
 
-/-- A selection whose second arm's type is below the first's, both in normal form, types at
-the first's. -/
+/-- A selection whose second arm's type is below the first's, the first in normal form, types
+at the first's: the answer is the join of the two arms' types. -/
 theorem types_ifT_below {c t f : TermSrc} {X Y : Ty}
     (hc : TypesEach sig c env path types .bool) (ht : TypesEach sig t env path types X)
-    (hf : TypesEach sig f env path types Y) (hX : X.normalize = X) (hY : Y.normalize = Y)
+    (hf : TypesEach sig f env path types Y) (hX : X.normalize = X)
     (below : Ty.sub Y X = true) : TypesEach sig (ifT c t f) env path types X :=
   fun _ => types_app (.cons (hc _) (.cons (ht _) (.cons (hf _) .nil)))
-    (atomOf_native atoms (nativeAtomTy_ite_below hX hY below))
+    (atomOf_native atoms (nativeAtomTy_ite_below hX below))
 
 /-- The identity test on two `Deferred` handles, whatever each holds. -/
 theorem types_same {a b : TermSrc} {A E B F : Ty}
@@ -424,10 +426,11 @@ theorem types_noneOf {xs : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path ty
 
 theorem types_append {xs ys : TermSrc} {T : Ty}
     (hxs : TypesEach sig xs env path types (.list T))
-    (hys : TypesEach sig ys env path types (.list T)) :
+    (hys : TypesEach sig ys env path types (.list T))
+    (canonical : T.normalize = T := by decide) :
     TypesEach sig (app "append" [xs, ys]) env path types (.list T) :=
   fun _ => types_app (.cons (hxs _) (.cons (hys _) .nil))
-    (atomOf_native atoms (nativeAtomTy_append T))
+    (atomOf_native atoms (nativeAtomTy_append T canonical))
 
 /-- The list of one element, whose type is its own normal form. -/
 theorem types_single {x : TermSrc} {T : Ty} (canonical : T.normalize = T)
@@ -440,7 +443,7 @@ theorem types_single {x : TermSrc} {T : Ty} (canonical : T.normalize = T)
 theorem types_snoc {xs x : TermSrc} {T : Ty} (canonical : T.normalize = T)
     (hxs : TypesEach sig xs env path types (.list T)) (hx : TypesEach sig x env path types T) :
     TypesEach sig (snoc xs x) env path types (.list T) :=
-  types_append atoms hxs (types_single atoms canonical hx)
+  types_append atoms hxs (types_single atoms canonical hx) canonical
 
 theorem types_lt {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     (hb : TypesEach sig b env path types .nat) :
@@ -536,7 +539,7 @@ theorem types_removeById {entries id : TermSrc} {E a e b f : Ty}
     (types_ifT atoms (types_sameItem atoms depth idField hid)
       (types_minted_acc depth path (.list E) E)
       (types_snoc atoms canonical (types_minted_acc depth path (.list E) E)
-        (types_minted_item depth path (.list E) E)) false)
+        (types_minted_item depth path (.list E) E)) (by rw [Ty.normalize, canonical]) false)
     (Ty.subN_refl (.list E))
 
 end Builders
@@ -606,7 +609,7 @@ include atoms
 theorem types_front {x xs : TermSrc} {T : Ty} (canonical : T.normalize = T)
     (hx : TypesEach sig x env path types T) (hxs : TypesEach sig xs env path types (.list T)) :
     TypesEach sig (front x xs) env path types (.list T) :=
-  types_append atoms (types_single atoms canonical hx) hxs
+  types_append atoms (types_single atoms canonical hx) hxs canonical
 
 /-- The list of the given terms, each at one type in normal form, where at least one term is
 given. -/

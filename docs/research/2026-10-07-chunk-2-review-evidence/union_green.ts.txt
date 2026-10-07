@@ -1,0 +1,17 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// command: tsgo --skipLibCheck --moduleResolution bundler --target ES2022 --module ESNext --strict --noEmit union_green.ts
+// tsgo exit code: 0
+// tsgo output:
+//   (clean, 0 errors)
+
+declare const c: boolean
+declare const rec1: { readonly a: number }
+declare const rec2: { readonly a: string }
+declare const tup1: readonly [number, boolean]
+declare const tup2: readonly [string, boolean]
+const r = c ? rec1 : rec2
+export const fieldRead: number | string = r.a
+export const fieldIndex: number | string = r["a"]
+export const updated: { readonly a: number } = { ...r, a: 1 }
+const t = c ? tup1 : tup2
+export const element: number | string = t[0]

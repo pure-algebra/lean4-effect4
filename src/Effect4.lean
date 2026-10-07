@@ -87,6 +87,7 @@ import Effect4.Program.Fold
 import Effect4.Program.LayerView
 import Effect4.Program.TyFoldExtras
 import Effect4.Program.TyClasses
+import Effect4.Program.Bounds
 import Effect4.Schema.Template
 import Effect4.Schema.TyFaces
 import Effect4.Program.Typing

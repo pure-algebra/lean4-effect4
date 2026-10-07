@@ -1345,6 +1345,20 @@ theorem extend_closed_pair {rule : Ty → Option (Ty × Ty)}
   · exact lift_closed_pair (fun _ _ closed answered => member closed answered)
       (liftOne_some lifted) closed
 
+/-- **A converted rule keeps closed types closed.** Take a member rule that answers a type.
+At each closed type that it answers, let its answer be closed. Then the extended rule answers a
+closed type at each closed target. The member rule's own answer is closed by the premise, and the
+guarded rule's answer by `lift_closed`. A part of the claim `union-rule-extend`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extend_closed {rule : Ty → Option Ty}
+    (member : ∀ {m a : Ty}, m.closed = true → rule m = some a → a.closed = true)
+    {t a : Ty} (typed : extend rule t = some a) (closed : t.closed = true) : a.closed = true := by
+  rcases (extend_eq_some_iff rule).mp typed with answered | ⟨-, lifted⟩
+  · exact member closed answered
+  · exact lift_closed (fun _ _ closed answered => member closed answered)
+      (liftOne_some lifted) closed
+
+
 section ConvertedEliminator
 
 variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}

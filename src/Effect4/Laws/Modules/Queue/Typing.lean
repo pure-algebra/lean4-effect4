@@ -331,10 +331,11 @@ include atoms
 /-- The wake's pass: a list of the takers' type. -/
 theorem types_wake {takers msgs : TermSrc} {T M : Ty}
     (htakers : TypesEach sig takers env path types (.list T))
-    (hmsgs : TypesEach sig msgs env path types (.list M)) :
+    (hmsgs : TypesEach sig msgs env path types (.list M))
+    (canonical : T.normalize = T := by decide) :
     TypesEach sig (Queue.wake takers msgs) env path types (.list T) :=
   types_ifT atoms (types_isEmpty atoms hmsgs) (types_noneOf atoms htakers)
-    (types_take atoms htakers (types_nat 1))
+    (types_take atoms htakers (types_nat 1)) (by rw [Ty.normalize, canonical])
 
 /-- `enrolled`: whether the request waits among the takers. -/
 theorem types_enrolled {takers id : TermSrc} (depth : types.length = env.names.length)
@@ -384,7 +385,7 @@ theorem types_renewHint {takers id hint : TermSrc} (depth : types.length = env.n
       (types_ifT atoms (types_sameItem atoms depth taker_idTy hid)
         (types_mkTaker (hid.underFold (.list Queue.takerTy) Queue.takerTy)
           (hhint.underFold (.list Queue.takerTy) Queue.takerTy))
-        (types_minted_item depth path (.list Queue.takerTy) Queue.takerTy)) false)
+        (types_minted_item depth path (.list Queue.takerTy) Queue.takerTy) takerTy_normal) false)
     (Ty.subN_refl (.list Queue.takerTy))
 
 /-- `fitting`: how many pending offers enter the room. -/
@@ -416,9 +417,9 @@ theorem types_gained {A : Ty} (canonical : A.normalize = A) {room msgs offers : 
     (hoffers : TypesEach sig offers env path types (.list (Queue.offerTy A))) :
     TypesEach sig (Queue.gained room msgs offers) env path types (.list A) :=
   fun _ => types_foldWith_same (types_entering atoms hroom hoffers false) (hmsgs false)
-    (types_append atoms (types_minted_acc depth path (.list A) (Queue.offerTy A))
+    ((types_append atoms (types_minted_acc depth path (.list A) (Queue.offerTy A))
       (fun _ => types_field (types_minted_item depth path (.list A) (Queue.offerTy A) false)
-        (offer_restTy canonical)) false)
+        (offer_restTy canonical)) canonical) false)
     (Ty.subN_refl (.list A))
 
 end Passes
@@ -503,8 +504,6 @@ theorem pollStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
     (types_isEmpty atoms takers)
   exact types_ifT_below atoms test yes no
     (Ty.normalize_prod_canonical (pollReplyTy_normal canonical) cellNormal rfl rfl)
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_prod_canonical rfl offersNormal rfl rfl) cellNormal rfl rfl)
     (idlePair_sub A _ _)
 
 /-- **The offer step is typed at every scope.** No fold of the step holds a caller's term, so
@@ -549,10 +548,10 @@ theorem offerStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
   have inner := types_ifT_below atoms hasRoom room full
     (Ty.normalize_prod_canonical
       (Ty.normalize_prod_canonical rfl takersNormal rfl rfl) cellNormal rfl rfl)
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_prod_canonical rfl takersNormal rfl rfl) cellNormal rfl rfl)
     (idlePair_sub .bool _ _)
   exact types_ifT_above atoms hasPending behind inner (idlePair_sub .bool _ _)
+    (Ty.normalize_prod_canonical
+      (Ty.normalize_prod_canonical rfl takersNormal rfl rfl) cellNormal rfl rfl)
 
 /-- **The take step is typed at every scope.** The request's identity and its hint stand in a
 fold's body, so each is taken with its typed capture. The arm that consumes answers a message,
@@ -600,15 +599,13 @@ theorem takeStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
   have renewed := types_renewHint atoms depth takers typesId typesHint
   have appended := types_snoc atoms takerTy_normal takers
     (types_mkTaker typesId.atScope typesHint.atScope)
-  have waiting := types_setTakers canonical typesCell (types_ifT atoms enrolled renewed appended)
+  have waiting := types_setTakers canonical typesCell (types_ifT atoms enrolled renewed appended takersNormal)
   have no := types_pair atoms
     (types_tuple3 atoms (types_noneT atoms) (types_noneOf atoms offers)
       (types_noneOf atoms takers) rfl offersNormal takersNormal)
     waiting
   exact types_ifT_below atoms test yes no
     (Ty.normalize_prod_canonical (takeReplyTy_normal canonical) cellNormal rfl rfl)
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_triple_canonical rfl offersNormal takersNormal) cellNormal rfl rfl)
     (idleTriple_sub A _ _ _)
 
 /-! ## The statements -/

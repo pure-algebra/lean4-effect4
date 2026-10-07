@@ -65,15 +65,35 @@ def decide : Decision → Val → Option (Bool × Option Val)
     | none => some (false, some v)
   | .recordTag name, value => some (Record.tagHit name value, some value)
 
+end Decision
+
+namespace Member
+
+/-- The member rule of the option rule: the element type of one option type, by the head of the
+raw type. It refuses `never` and every union. -/
+def option : Ty → Option Ty
+  | .option a => some a
+  | _ => none
+
+end Member
+
+/-- **The option rule**: the element type of an option type, read at the type's normal form. It
+is the guarded rule of `Member.option` (`UnionRule.liftOne`), and not the extended rule: the rule
+that `Decision.arms` held before its conversion read the normal form, and never the raw head. So
+the conversion moves no type. It answers `never` at `never`, which the rule refused, and it is
+that rule at every other type (`optionTy_eq_normal`,
+`src/Effect4/Laws/Program/Eliminators.lean`). It refuses a union of two option types with no
+order, until the guard of decisions row 292 goes. -/
+def optionTy : Ty → Option Ty := UnionRule.liftOne Member.option
+
+namespace Decision
+
 /-- What child 0 and child 1 bind, from the scrutinee's type; `none` refuses the scrutinee.
 `.bool` tests the type syntactically (`t = .bool`), the rule the retired `branch` had, which
 made its retirement an equality of typing. -/
 def arms : Decision → Ty → Option (List Ty × List Ty)
   | .bool, t => if t = .bool then some ([], []) else none
-  | .option, t =>
-    match t.normalize with
-    | .option a => some ([], [a])
-    | _ => none
+  | .option, t => (optionTy t).map fun a => ([], [a])
   | .tag name, t =>
     let c := t.normalize
     if Ty.taggedColumn c then (Ty.payloadTy name c).map fun p => ([p], [Ty.diffTag name c])
@@ -96,9 +116,9 @@ theorem arms_length (d : Decision) (t : Ty) (e0 e1 : List Ty) (h : d.arms t = so
     · exact nomatch h
   | option =>
     simp only [arms, binds] at h ⊢
-    split at h
-    · cases h; rfl
-    · exact nomatch h
+    obtain ⟨a, _, heq⟩ := Option.map_eq_some_iff.mp h
+    cases heq
+    rfl
   | tag name =>
     simp only [arms, binds] at h ⊢
     split at h

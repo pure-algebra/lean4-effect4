@@ -9,9 +9,12 @@ MATCH waits for no decision. No seat runs. Base: main at the commit that enters 
 review gives the rules that the next slices follow
 (`docs/research/2026-10-06-slice-ORDER-review.md`). **Slice TABLE landed too** (row 302), with
 its review (`docs/research/2026-10-06-slice-TABLE-review.md`). Section 5.2 says what it left.
-Wave 1 is done. **The next hand-over is one chunk of four steps**, and
-`docs/research/2026-10-06-chunk-2-brief.md` is its brief: QUERY, the probe of the TypeScript
-printer, MATCH and CONVERT.
+Wave 1 is done. **Chunk 2 landed on 2026-10-07** (decisions rows 303 to 305). It holds QUERY
+and the probe of the TypeScript printer. It holds MATCH less its last stage, and CONVERT less
+the tests by equality.
+Its review is `docs/research/2026-10-07-chunk-2-landing-review.md`. **The next hand-over is
+chunk 3**, and `docs/research/2026-10-07-chunk-3-brief.md` is its brief: the old match goes,
+the placements, and the tests by equality.
 
 ## 1. Question
 
@@ -154,9 +157,10 @@ flowchart TD
 | Chunk | Slices | Why together |
 | --- | --- | --- |
 | 1, landed | ORDER, TABLE | Each adds modules and changes no statement. Their files are disjoint |
-| 2 | QUERY; step 1 of PRINT; MATCH; CONVERT | One implementer works in one checkout, in a row. QUERY and the probe read the tree and rebuild nothing, so they come first. MATCH and CONVERT each rebuild the tree, so they come last and together |
-| 3 | PRINT, steps 2 to 5; COLUMN | PRINT reads the probe's note and MATCH's guard at a binder term. COLUMN reads the table |
-| 4 | UNGUARD | It needs PRINT, CONVERT and MATCH, and the owner has heard each widening |
+| 2, landed | QUERY; step 1 of PRINT; MATCH, less its last stage; CONVERT, less the tests by equality | One implementer worked in one checkout, in a row. The landing made the repairs of two reviews (rows 303 to 305) |
+| 3 | The last stage of MATCH; placements; the tests by equality of CONVERT | It closes what chunk 2 left open. It is small by design: each stage is a commit or a hand-back |
+| 4 | PRINT, steps 2 to 5 | It reads the probe's note and the term guard. The coordinator writes its design note first |
+| 5 | UNGUARD; COLUMN | UNGUARD needs PRINT, CONVERT and MATCH, and the owner has heard each widening. COLUMN reads the table |
 | Later | PASS, CLASSES, GAPLEAF | Each has an entry condition (5.9 to 5.11) |
 
 Two paths end at UNGUARD: TABLE, then PRINT; and MATCH, then CONVERT. MATCH comes before
@@ -239,7 +243,15 @@ theorem table_replace_outside {s : Signature Op} {env0 : TyEnv} {p p' q : Eff Op
 | `refusals_head`, `refusals_nil_iff` | the same; `marking-agrees`, role compatibility; R14's open part becomes a claim | the addresses of a program | a refusal of a statement's, an action's or a layer's own rule, but through the program above it; a mark after a refused sibling that a rule reads; a repair | QUERY's refusals; the study's section 8.5 |
 | `table_replace_outside` | the same; the proposed claim `edit-frame`, role substitution; R14 | a filling of the focus's type in the focus's environment; every address outside the focus | an edit that changes the focus's type; the entries inside the focus; behaviour | a tool that answers again after an edit; PASS |
 
-### 5.3 QUERY: one driver that answers on demand
+### 5.3 QUERY: one driver that answers on demand (landed, row 305)
+
+The slice is landed. What it left for a later slice:
+
+- **A sketch has no canonical codec.** A request carries no hole table, so the program that an
+  omission answers cannot be sent back as a request.
+- **Later operations**: a type slice, a graph with its label, and the typed print.
+
+The slice as it was planned:
 
 - **Goal**: one executable reads a request and prints an answer. Each operation is one library
   function, and each answer names the law that it stands on.
@@ -308,7 +320,15 @@ theorem check_noJoin (sig : Signature Op) (env : TyEnv) (e : Eff Op) (t : EffTy)
 | --- | --- | --- | --- | --- |
 | the connector, the erasure law | `exact-codecs`; a step of the claim that `Effect4.Program.roundTrip_eq` serves | every program that the two printers print | that tsgo accepts a printed form: the lanes test that | UNGUARD; the removal of the binder term's guard |
 
-### 5.5 CONVERT: the other eliminators, in the fiber rule's form
+### 5.5 CONVERT: the other eliminators, in the fiber rule's form (landed less one stage, row 304)
+
+Four rules are converted. What the slice left for chunk 3:
+
+- **The tests by equality are not converted** (stage D6). Each waits for its own run of tsgo.
+- **The option rule is the guarded rule alone.** `Decision.arms` read the normal form before, so
+  the extended rule would have moved a type. Read which form a rule has before its conversion.
+
+The slice as it was planned:
 
 - **Goal**: each rule that reads a head is the extended rule of its member rule, as the fiber
   rule is (decisions row 298).
@@ -338,7 +358,16 @@ theorem check_noJoin (sig : Signature Op) (env : TyEnv) (e : Eff Op) (t : EffTy)
   R14. Each conversion admits more programs: at `never`, and at one union member under a raw
   union. The coordinator reports each to the owner (row 285, point 3).
 
-### 5.6 MATCH: the match of a template by bounds
+### 5.6 MATCH: the match of a template by bounds (landed less one stage, row 303)
+
+The match by bounds is the checker's match at its three sites. What the slice left for chunk 3:
+
+- **The match by first occurrence stands with its laws**, and no rule of the checker calls it
+  (stage C5). The claim `template-match-anchored` goes with it.
+- **The term guard stands in the tree** (`Bounds.termGuard`). It goes with PRINT.
+- **Six atoms have the whole form.** The eight other template atoms have no table yet.
+
+The slice as it was planned:
 
 The owner ratified the probe's recommendations (decisions row 299, point 10), and this slice
 implements them. Its sources are `docs/research/2026-10-06-seat-BOUNDS-receipt.md` and the
@@ -502,8 +531,8 @@ The coordinator merges each head with the wide gates, in this order:
 
 ## 7. What waits for the owner
 
-1. **Nothing blocks chunk 2.** The owner ratified the probe's recommendations on
-   2026-10-06 (row 299, point 10), and a conversion lands with a report (row 285, point 3).
+1. **Nothing blocks chunk 3.** Its last stage widens eight tests, and each waits for its own
+   run of tsgo (row 285, point 3). The coordinator reports each widening with the landing.
 2. **Rows 296 (point 5) and 297 (point 4)** stay open to overrule.
 3. **Each widening of the admitted programs**: MATCH's, CONVERT's and UNGUARD's, each reported
    with its merge.
@@ -511,9 +540,12 @@ The coordinator merges each head with the wide gates, in this order:
 5. **An editor view** needs a JavaScript package. The plan proposes none.
 6. **The frozen contracts' pins**: their statement pins and their bare `#check` lines
    (rows 301 and 302). The coordinator touches neither before the owner decides.
-7. **Whether the second model commits each stage on a branch of the checkout.** The brief of
-   chunk 2 asks for it, so that the coordinator reviews stage by stage. Without it the
-   receipt names the files of each stage.
+7. **Whether the second model can commit.** Chunk 2 came with no commit, though its brief
+   asked for one at each stage. The brief of chunk 3 gives the fallback: a hand-back after
+   each stage.
+8. **Two contract batteries name the old match.** Its last stage states their eleven controls
+   again at the match by bounds, and some answers turn. The owner ratified the replacement
+   (row 299, point 10). The coordinator reports each turned line with the landing.
 
 The plan assumes that the coordinator merges each slice with the wide gates and writes the
 records, as `AGENTS.md` says.

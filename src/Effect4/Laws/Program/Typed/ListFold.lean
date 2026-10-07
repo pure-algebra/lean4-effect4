@@ -177,7 +177,8 @@ structure ListFoldRules (sig : Signature NativeOp) : Prop where
   below `B`. -/
   typing : ∀ (env : TyEnv) (accTy : Option Ty) (list init body : Term) (B : Ty),
     termTy sig env (.fold accTy list init body) = some B →
-      ∃ A B0 C, termTy sig env list = some (.list A) ∧ termTy sig env init = some B0 ∧
+      ∃ listType A B0 C, termTy sig env list = some listType ∧ Checker.listOf? listType = some A ∧
+        termTy sig env init = some B0 ∧
         B = accTy.getD B0 ∧ Ty.subN B0 B = true ∧
         termTy sig (env ++ [B, A]) body = some C ∧ Ty.subN C B = true
   /-- **The semantic rule**, in a fixed world, with no rule of the checker. -/

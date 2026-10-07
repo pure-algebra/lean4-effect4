@@ -258,7 +258,16 @@ structure AtomRow where
   `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. The bodies of `pair`
   and `tuple` name `Wide`, the one shared type of that file's preamble
   (`tools/Effect4Gen/PreludeAtoms.lean`, `render`): a number or a Boolean type in an immediate
-  slot widens, and a string literal keeps its literal type (decisions row 256). -/
+  slot widens, and a string literal keeps its literal type (decisions row 256).
+
+  **The whole form** (decisions row 303). A template atom whose type parameter stands under a
+  list, an option or a map of one argument takes that argument at its whole type, and reads its
+  answer from it by index. The compiler then computes the join that the match by bounds answers
+  at a union argument, where it forms no union of two inference candidates. One leading parameter
+  keeps the declaration's reading at the parameter's template, which the citation query asks.
+  Twelve atoms have the form or need none: `getOrElse`, `ite`, `cons`, `get`, `append`, `take`,
+  `drop` and the five map atoms; `pair` and `some` take their parameter at the top of an
+  argument. -/
   prelude : String
 deriving DecidableEq, Repr
 
@@ -317,11 +326,11 @@ def row : NativeAtom → AtomRow
                  prelude := "(value: Option.Option<unknown>): boolean => Option.isSome(value)" }
   | .getOrElse =>
       { name := "getOrElse", arity := some 2, constGeneric := false,
-        prelude := "<A>(value: Option.Option<A>, fallback: NoInfer<A>): A =>\n  \
-                    Option.getOrElse(value, () => fallback)" }
+        prelude := "<A, O extends Option.Option<unknown> = Option.Option<A>, B = (O extends Option.Option<infer X> ? X : never)>(value: O, fallback: B): (O extends Option.Option<infer X> ? X : never) | B =>\n  \
+                    Option.getOrElse(value, () => fallback) as (O extends Option.Option<infer X> ? X : never) | B" }
   | .ite =>
       { name := "ite", arity := some 3, constGeneric := false,
-        prelude := "<A>(c: boolean, t: A, f: A): A => (c ? t : f)" }
+        prelude := "<A, B = A>(c: boolean, t: A, f: B): A | B => (c ? t : f)" }
   | .optSome =>
       { name := "some", arity := some 1, constGeneric := false,
         prelude := "<A>(value: A): Option.Option<A> => Option.some(value)" }
@@ -336,17 +345,17 @@ def row : NativeAtom → AtomRow
         prelude := "(): ReadonlyArray<never> => []" }
   | .listCons =>
       { name := "cons", arity := some 2, constGeneric := false,
-        prelude := "<A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]" }
+        prelude := "<A, Y extends ReadonlyArray<unknown> = ReadonlyArray<A>>(x: A, xs: Y): ReadonlyArray<A | Y[number]> => [x, ...xs]" }
   | .listGet =>
       { name := "get", arity := some 2, constGeneric := false,
-        prelude := "<A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>\n  \
-                    (i < xs.length ? Option.some(xs[i] as A) : Option.none())" }
+        prelude := "<A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, i: number): Option.Option<X[number]> =>\n  \
+                    (i < xs.length ? Option.some(xs[i] as X[number]) : Option.none())" }
   | .listLength =>
       { name := "length", arity := some 1, constGeneric := false,
         prelude := "(xs: ReadonlyArray<unknown>): number => xs.length" }
   | .listAppend =>
       { name := "append", arity := some 2, constGeneric := false,
-        prelude := "<A>(xs: ReadonlyArray<A>, ys: ReadonlyArray<A>): ReadonlyArray<A> =>\n  \
+        prelude := "<A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>, Y extends ReadonlyArray<unknown> = X>(xs: X, ys: Y): ReadonlyArray<X[number] | Y[number]> =>\n  \
                     [...xs, ...ys]" }
   | .natSub =>
       { name := "sub", arity := some 2, constGeneric := false,
@@ -366,29 +375,29 @@ def row : NativeAtom → AtomRow
         prelude := "(): Readonly<Record<string, never>> => ({})" }
   | .mapGet =>
       { name := "mapGet", arity := some 2, constGeneric := false,
-        prelude := "<A>(map: Readonly<Record<string, A>>, key: string): Option.Option<A> => Object.prototype.hasOwnProperty.call(map, key) ? Option.some(map[key] as A) : Option.none()" }
+        prelude := "<A, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M, key: string): Option.Option<M[string]> => Object.prototype.hasOwnProperty.call(map, key) ? Option.some(map[key] as M[string]) : Option.none()" }
   | .mapSet =>
       { name := "mapSet", arity := some 3, constGeneric := false,
-        prelude := "<A, B>(map: Readonly<Record<string, A>>, key: string, value: B): Readonly<Record<string, A | B>> => ({ ...map, [key]: value })" }
+        prelude := "<A, B, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M, key: string, value: B): Readonly<Record<string, M[string] | B>> => ({ ...map, [key]: value }) as Readonly<Record<string, M[string] | B>>" }
   | .mapKeys =>
       { name := "mapKeys", arity := some 1, constGeneric := false,
-        prelude := "<A>(map: Readonly<Record<string, A>>): ReadonlyArray<string> => Object.keys(map).sort((a, b) => { const encoder = new TextEncoder(); const x = encoder.encode(a), y = encoder.encode(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const delta = (x[i] as number) - (y[i] as number); if (delta !== 0) return delta; } return x.length - y.length; })" }
+        prelude := "<A, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M): ReadonlyArray<string> => Object.keys(map).sort((a, b) => { const encoder = new TextEncoder(); const x = encoder.encode(a), y = encoder.encode(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const delta = (x[i] as number) - (y[i] as number); if (delta !== 0) return delta; } return x.length - y.length; })" }
   | .mapEntries =>
       { name := "mapEntries", arity := some 1, constGeneric := false,
-        prelude := "<A>(map: Readonly<Record<string, A>>): ReadonlyArray<readonly [string, A]> => mapKeys(map).map(key => [key, map[key] as A] as const)" }
+        prelude := "<A, M extends Readonly<Record<string, unknown>> = Readonly<Record<string, A>>>(map: M): ReadonlyArray<readonly [string, M[string]]> => mapKeys(map).map(key => [key, map[key] as M[string]] as const)" }
   | .mapFromEntries =>
       { name := "mapFromEntries", arity := some 1, constGeneric := false,
-        prelude := "<A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)" }
+        prelude := "<A = never, E extends ReadonlyArray<readonly [string, unknown]> = ReadonlyArray<readonly [string, A]>>(entries: E): Readonly<Record<string, E[number][1]>> => Object.fromEntries(entries) as Readonly<Record<string, E[number][1]>>" }
 
   | .tuple =>
       { name := "tuple", arity := none, constGeneric := true,
         prelude := "<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }" }
   | .listTake =>
       { name := "take", arity := some 2, constGeneric := false,
-        prelude := "<A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(0, n)" }
+        prelude := "<A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, n: number): ReadonlyArray<X[number]> => xs.slice(0, n) as ReadonlyArray<X[number]>" }
   | .listDrop =>
       { name := "drop", arity := some 2, constGeneric := false,
-        prelude := "<A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(n)" }
+        prelude := "<A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, n: number): ReadonlyArray<X[number]> => xs.slice(n) as ReadonlyArray<X[number]>" }
   -- the host's identity test, at the two handle families the typing admits
   | .sameHandle =>
       { name := "sameHandle", arity := some 2, constGeneric := false,

@@ -170,8 +170,8 @@ def Node.extSlotEnv (s : Signature Op) (env : TyEnv) (n : Node Op) : ExtSlot →
             match termTy s env req with
             | some reqTy =>
                 let row := s.rowOf op
-                match Ty.matchTemplate [] row.request.normalize reqTy.normalize with
-                | some σ => some (env ++ [(b.param.normalize.instantiate σ).normalize])
+                match Bounds.matchB [] row.request.normalize reqTy.normalize with
+                | some σ => some (env ++ [TermUse.instParam b.param σ])
                 | none => none
             | none => none
         | none => none

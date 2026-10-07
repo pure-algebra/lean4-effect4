@@ -4,6 +4,9 @@ import Effect4.Laws.Program.Typed.MapValues
 import Effect4.Program.FoldOf
 import Effect4.Laws.Program.Signature
 import Effect4.Program.TyClasses
+import Effect4.Program.Bounds
+import Effect4.Laws.Program.Bounds
+import Effect4.Laws.Program.Eliminators
 
 /-!
 # Value membership in a typed world
@@ -2784,6 +2787,35 @@ theorem FitsAll.instantiate {w : World} {join : Bool} :
           ((fits_normalize w r _).mpr hv))))
       (FitsAll.instantiate (fun q hq => hps q (List.mem_cons_of_mem p hq)) hrest hfit)
 
+theorem FitsAll.instantiate_admits {w : World} {σ : Ty.Subst} {ps : List Ty} :
+    ∀ {rs : List Ty}, ps.length = rs.length → Bounds.Admits σ ps rs →
+      ∀ {vs : List Val}, FitsAll w vs rs → FitsAll w vs (ps.map (Ty.instantiate σ)) := by
+  induction ps with
+  | nil =>
+    intro rs hlen hadm vs hfit
+    cases rs with
+    | nil => cases hfit; exact .nil
+    | cons _ _ => exact nomatch hlen
+  | cons p ps ih =>
+    intro rs hlen hadm vs hfit
+    cases rs with
+    | nil => exact nomatch hlen
+    | cons r rs =>
+      cases hfit with
+      | cons hv hfit' =>
+        have hsub : Ty.sub r.normalize (Ty.instantiate σ p).normalize = true :=
+          hadm (p, r) List.mem_cons_self
+        have hinst := (fits_normalize w _ _).mp (fits_sub w hsub _ ((fits_normalize w r _).mpr hv))
+        have hadm' : Bounds.Admits σ ps rs := fun pr hpr =>
+          hadm pr (List.mem_cons_of_mem _ hpr)
+        exact .cons hinst (ih (Nat.succ.inj hlen) hadm' hfit')
+
+theorem FitsAll.instantiateB {w : World} {σ : Ty.Subst} {ps rs : List Ty}
+    (hmatch : Bounds.matchArgsB ps rs = some σ)
+    {vs : List Val} (hfit : FitsAll w vs rs) : FitsAll w vs (ps.map (Ty.instantiate σ)) := by
+  have ⟨hlen, hadm⟩ := Bounds.matchArgsB_sound hmatch
+  exact FitsAll.instantiate_admits hlen hadm hfit
+
 /-! ### Atom soundness, once per scheme -/
 
 /-- The per-atom obligation for membership: at any argument types the atom accepts, values
@@ -2825,16 +2857,16 @@ theorem atomFits_of_custom {a : NativeAtom} {tag : NativeAtom.CustomScheme}
   simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
   exact hev w tys ty vs v hty hfit hv
 
-theorem atomFits_of_poly {a : NativeAtom} {params : List Ty} {answer : Ty} {join : Bool}
-    (hs : (NativeAtom.spec a).scheme = .poly params answer join)
-    (hvv : ∀ p ∈ params, Ty.valueVars p = true)
+theorem atomFits_of_poly {a : NativeAtom} {params : List Ty} {answer : Ty}
+    (hs : (NativeAtom.spec a).scheme = .poly params answer)
+    (_hvv : ∀ p ∈ params, Ty.valueVars p = true)
     (hev : ∀ (w : World) (σ : Ty.Subst) (vs : List Val) (v : Val),
       FitsAll w vs (params.map (Ty.instantiate σ)) → NativeAtom.eval a vs = some v →
         Fits w v (Ty.instantiate σ answer)) : AtomFits a := by
   intro w tys ty vs v hty hfit hv
   simp only [NativeAtom.typeOf, hs, NativeAtom.Scheme.apply] at hty
   obtain ⟨σ, hmatch, rfl⟩ := Option.map_eq_some_iff.mp hty
-  exact hev w σ vs v (FitsAll.instantiate hvv hmatch hfit) hv
+  exact hev w σ vs v (FitsAll.instantiateB hmatch hfit) hv
 
 theorem atomFits_of_alts {a : NativeAtom} {alts : List (List Ty × Ty)}
     (hs : (NativeAtom.spec a).scheme = .alts alts)
@@ -3020,37 +3052,35 @@ theorem fits_queryReasons (w : World) (value : Val) (input error : Ty)
     (hinput : causeInputError? input = some error) (hfit : Fits w value input) :
     ∃ reasons, queryReasons? value = some reasons ∧
       CauseFits (fun x => Fits w x error) ⟨reasons⟩ := by
-  unfold causeInputError? at hinput
-  split at hinput
-  · cases hinput
-    change (match Val.cause? value with
+  have hsub : Ty.subN input (causeUpper error) = true := causeInputError_upper hinput
+  have hfit' : Fits w value (causeUpper error) := fits_subN w hsub value hfit
+  rcases hfit' with hcause | hexit
+  · change (match Val.cause? value with
       | some c => CauseFits (fun x => Fits w x error) c
-      | none => False) at hfit
+      | none => False) at hcause
     cases hc : Val.cause? value with
-    | none => rw [hc] at hfit; exact hfit.elim
+    | none => rw [hc] at hcause; exact hcause.elim
     | some cause =>
-      rw [hc] at hfit
+      rw [hc] at hcause
       have hv := Val.cause?_exact hc
       subst value
-      refine ⟨cause.reasons, ?_, hfit⟩
+      refine ⟨cause.reasons, ?_, hcause⟩
       change (Val.cause? (Val.exitErr cause)).map Cause.reasons = _
       rw [Val.cause?_exitErr]
       rfl
-  · cases hinput
-    simp only [Fits] at hfit
-    split at hfit
+  · simp only [Fits] at hexit
+    split at hexit
     · exact ⟨[], rfl, fun _ hr => nomatch hr⟩
     · next written =>
       cases hc : causeImage.ofVal written with
-      | none => rw [hc] at hfit; exact hfit.elim
+      | none => rw [hc] at hexit; exact hexit.elim
       | some cause =>
-        rw [hc] at hfit
-        refine ⟨cause.reasons, ?_, hfit.1⟩
+        rw [hc] at hexit
+        refine ⟨cause.reasons, ?_, hexit.1⟩
         change (causeImage.ofVal written).map Cause.reasons = _
         rw [hc]
         rfl
-    · exact hfit.elim
-  all_goals cases hinput
+    · exact hexit.elim
 
 /-- The first `Fail` payload of reasons whose failures fit the error column fits it. -/
 theorem fits_firstErrorValue {w : World} {error : Ty} {reasons : List (Reason Err Defect FiberId Ann)}

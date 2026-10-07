@@ -82,10 +82,9 @@ open Effect4.Program
 #guard nativeAtomTy "isSome" [.option .nat, .nat] = none
 #guard nativeAtomTy "getOrElse" [.option .nat, .nat] = some .nat
 #guard nativeAtomTy "getOrElse" [.option .string, .lit "fallback"] = some .string
-#guard nativeAtomTy "getOrElse" [.option (.union .nat .never), .nat] =
-  some (.union .nat .never)
-#guard nativeAtomTy "getOrElse" [.option .nat, .string] = none
-#guard nativeAtomTy "getOrElse" [.option .never, .nat] = none
+#guard nativeAtomTy "getOrElse" [.option (.union .nat .never), .nat] = some .nat
+#guard nativeAtomTy "getOrElse" [.option .nat, .string] = some (.union .nat .string)
+#guard nativeAtomTy "getOrElse" [.option .never, .nat] = some .nat
 #guard nativeAtomTy "getOrElse" [.nat, .nat] = none
 #guard nativeAtomTy "getOrElse" [.option .nat] = none
 #guard nativeAtomTy "getOrElse" [.option .nat, .nat, .nat] = none
@@ -101,16 +100,20 @@ open Effect4.Program
 #guard !NativeAtom.covers (NativeAtom.names.filter (· != "isSome"))
 #guard !NativeAtom.covers (NativeAtom.names.filter (· != "getOrElse"))
 
--- The L4-blocking atoms (DI-40, DI-78). `ite` selects between two evaluated arguments, and at
--- its repeated parameter it infers the candidates' common supertype, never a union: tsgo 7
--- refuses `ite(b, n, s)` at `n: number`, `s: string` (TS2345) and types `ite(b, nv, n)` at
--- `nv: never` as `number`. `getOrElse`'s fallback is `NoInfer`, so its first binding stays:
--- tsgo refuses `getOrElse(o, n)` at `o: Option<never>` (TS2345), and so does the guard above.
+-- The L4-blocking atoms (DI-40, DI-78). `ite` selects between two evaluated arguments. Under the
+-- match by bounds its repeated parameter binds to the join of the two arms' types (decisions row
+-- 303). The prelude gives each arm its own type parameter, so tsgo 7 computes that join: it types
+-- `ite(b, n, s)` at `number | string`. `getOrElse` joins the payload's type and the default's
+-- type, and the prelude takes the option at its whole type: tsgo types `getOrElse(o, s)` at
+-- `o: Option<number>` as `number | string`, and `getOrElse(o, n)` at `o: Option<never>` as
+-- `number`. The compiler's controls stand in `harness/truth/term-rows.typecheck.ts`, and
+-- `make check-truth` runs them. With one plain parameter tsgo refused each of these calls
+-- (TS2345): `docs/research/2026-10-07-chunk-2-review-evidence/atoms_joined.ts.txt`.
 #guard nativeAtomTy "ite" [.bool, .nat, .nat] = some .nat
 #guard nativeAtomTy "ite" [.bool, .never, .nat] = some .nat
 #guard nativeAtomTy "ite" [.bool, .nat, .never] = some .nat
 #guard nativeAtomTy "ite" [.bool, .option .never, .option .nat] = some (.option .nat)
-#guard nativeAtomTy "ite" [.bool, .nat, .string] = none
+#guard nativeAtomTy "ite" [.bool, .nat, .string] = some (.union .nat .string)
 #guard nativeAtomTy "ite" [.nat, .nat, .nat] = none
 #guard nativeAtomTy "some" [.nat] = some (.option .nat)
 #guard nativeAtomTy "none" [] = some (.option .never)
@@ -130,19 +133,20 @@ open Effect4.Program
 #guard nativeAtom "length" [Effect4.Machine.Val.fibers [⟨0⟩]] = some (.nat 1)
 
 -- The L3 atoms (plan §2.6). `length` is `mono` at `list unknown` (decisions row 69's rule: a
--- parameter no answer mentions is the top). `cons` and `append` infer the common supertype of
--- their element types as tsgo does: `cons(n, nil())` and `append(nil(), ns)` type at `number`,
--- and `cons(n, ss)` and `append(ns, ss)` are refused (TS2345). `get` answers `some unit` on a
--- list of units, which the prelude must not read as a missing element.
+-- parameter no answer mentions is the top). Under the match by bounds `cons` and `append` join
+-- their element types (decisions row 303), and the prelude takes each list at its whole type, so
+-- tsgo computes the join: `cons(n, ss)` and `append(ns, ss)` type at
+-- `ReadonlyArray<number | string>` (`harness/truth/folds.typecheck.ts`). `get` answers `some unit`
+-- on a list of units, which the prelude must not read as a missing element.
 #guard NativeAtom.mono .listLength = some ([.list .unknown], .nat)
 #guard !NativeAtom.constGeneric .listCons
 #guard nativeAtomTy "nil" [] = some (.list .never)
 #guard nativeAtomTy "cons" [.nat, .list .nat] = some (.list .nat)
 #guard nativeAtomTy "cons" [.nat, .list .never] = some (.list .nat)
 #guard nativeAtomTy "cons" [.never, .list .nat] = some (.list .nat)
-#guard nativeAtomTy "cons" [.nat, .list .string] = none
+#guard nativeAtomTy "cons" [.nat, .list .string] = some (.list (.union .nat .string))
 #guard nativeAtomTy "append" [.list .never, .list .nat] = some (.list .nat)
-#guard nativeAtomTy "append" [.list .nat, .list .string] = none
+#guard nativeAtomTy "append" [.list .nat, .list .string] = some (.list (.union .nat .string))
 #guard nativeAtomTy "get" [.list .string, .nat] = some (.option .string)
 #guard nativeAtomTy "get" [.prod .nat .nat, .nat] = none
 #guard nativeAtomTy "length" [.list .nat] = some .nat

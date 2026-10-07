@@ -1,0 +1,44 @@
+// tsgo version: Version 7.0.0-dev.20260629.1
+// tsgo exit code: 1
+// tsgo output:
+//   scratch/print_probe/atom_ite_red.ts(38,43): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'number'.
+//     Type 'string' is not assignable to type 'number'.
+
+import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref, Scope } from "effect"
+import { recordRequired, recordOptional, recordSet, caseTagR } from "/Users/pooks/Dev/lean4-effect4/harness/truth/records.ts"
+import { tupleAt } from "/Users/pooks/Dev/lean4-effect4/harness/truth/tuples.ts"
+import * as Prelude from "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"
+
+declare const c: boolean
+declare const n: never
+declare const f1: Fiber.Fiber<number, string>
+declare const f2: Fiber.Fiber<boolean, number>
+declare const o1: Option.Option<number>
+declare const o2: Option.Option<string>
+declare const l1: ReadonlyArray<number>
+declare const l2: ReadonlyArray<string>
+declare const e1: Exit.Exit<number, string>
+declare const e2: Exit.Exit<boolean, number>
+declare const k1: Cause.Cause<string>
+declare const k2: Cause.Cause<number>
+declare const r1: Ref.Ref<number>
+declare const r2: Ref.Ref<string>
+declare const r12: Ref.Ref<number | string>
+declare const m1: Readonly<Record<string, number>>
+declare const m2: Readonly<Record<string, boolean>>
+declare const p1: readonly [number, string]
+declare const p2: readonly [boolean, string]
+declare const p3: readonly [number, boolean]
+declare const pA: readonly ["A", number]
+declare const pB: readonly ["B", string]
+declare const rA: { readonly _tag: "A"; readonly val: number }
+declare const rB: { readonly _tag: "B"; readonly val: string }
+declare const rec1: { readonly a: number }
+declare const rec2: { readonly a: string }
+declare const recO1: { readonly a?: number }
+declare const recO2: { readonly a?: string }
+declare const tup1: readonly [number, boolean]
+declare const tup2: readonly [string, boolean]
+declare const scope: Scope.Scope
+
+export const res = Prelude.ite<number>(c, c ? 1 : "a", 2)

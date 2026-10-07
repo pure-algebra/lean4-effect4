@@ -7,6 +7,8 @@ import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Codegen.Mask
 import Effect4.Laws.Auto.Semantics
+import Effect4.Laws.Program.Bounds
+import Effect4.Laws.Program.Eliminators
 
 /-!
 # The laws of the shared pieces of a module that waits (decisions rows 221, 238 and 240)
@@ -896,10 +898,7 @@ theorem answers_selectOptionWith_kept {scrutinee : TermSrc} {arm0 : Src NativeOp
     rw [treeC, treeA, treeB']
     rfl
   · have arms : Decision.arms .option (.option P) = some ([], [P]) := by
-      show (match (Ty.option P).normalize with
-        | .option a => some (([] : List Ty), [a])
-        | _ => none) = _
-      rw [Ty.normalize_option_canonical canonical]
+      simp only [Decision.arms, optionTy_option canonical, Option.map_some]
     have left : HasTy sig (s.types ++ []) a (EffTy.pure X) := by
       rw [List.append_nil]
       exact effTy_sound sig a _ _ typedA
@@ -1236,7 +1235,7 @@ theorem answers_perform {op : NativeOp} {request : TermSrc} {s : TypedScope} {R 
 /-- The row check in its introduction form: the request matches the row's template, the binder
 term binds, and every instantiated column is formed. -/
 theorem rowTy_intro {row : Effect4.Program.Row} {request : Ty} {use : Option TermUse} {σ bindings : Ty.Subst}
-    (matched : Ty.matchTemplate [] row.request.normalize request.normalize = some σ)
+    (matched : Bounds.matchB [] row.request.normalize request.normalize = some σ)
     (bound : bindTerm σ use = .ok bindings)
     (formed : Formation.Formed (Formation.instantiatedSites row bindings)) :
     rowTy row request use =
@@ -1287,10 +1286,10 @@ theorem answers_refMake {value : TermSrc} {s : TypedScope} {C : Ty}
     (hvalue : ∀ path, Types (nativeSignature table) value s.env path s.types false C) :
     Answers (nativeSignature table) (Ref.make value) s (.refOf C) := by
   refine answers_perform rfl hvalue ?_
-  have matched : Ty.matchTemplate []
+  have matched : Bounds.matchB []
       ((nativeSignature table).rowOf .refMake).request.normalize C.normalize = some [(0, C)] := by
     rw [normal]
-    exact Ty.matchTemplate_var_first C false
+    exact Bounds.matchB_one_var C
   have sites : Formation.Formed
       (Formation.instantiatedSites ((nativeSignature table).rowOf .refMake) [(0, C)]) :=
     formed_append (formed_append (formed_sites formed _)
@@ -1306,13 +1305,11 @@ theorem answers_refGet {cell : TermSrc} {s : TypedScope} {C : Ty}
     (hcell : Typed (nativeSignature table) cell s (.refOf C)) :
     Answers (nativeSignature table) (Ref.get cell) s C := by
   refine answers_perform rfl (fun path => hcell path false) ?_
-  have matched : Ty.matchTemplate []
+  have matched : Bounds.matchB []
       ((nativeSignature table).rowOf .refGet).request.normalize (Ty.refOf C).normalize =
         some [(0, C)] := by
     rw [normalize_refOf_canonical normal]
-    refine Ty.matchTemplate_exact ?_ rfl
-    show Ty.infer [] (.var 0) C false = [(0, C)]
-    exact Ty.infer_var_fresh C false rfl
+    exact Bounds.matchB_refOf_var C
   have sites : Formation.Formed
       (Formation.instantiatedSites ((nativeSignature table).rowOf .refGet) [(0, C)]) :=
     formed_append (formed_append (formed_sites (nodesFormed_refOf formed) _)
@@ -1323,10 +1320,10 @@ theorem answers_refGet {cell : TermSrc} {s : TypedScope} {C : Ty}
   rfl
 
 /-- A binder term binds in its introduction form: it types at the row's parameter, and its type
-matches the row's result template. -/
+matches the row's result template under the interim guard (`Bounds.matchTerm`). -/
 theorem bindTerm_intro {σ σ' : Ty.Subst} {use : TermUse} {r : Ty}
-    (typed : use.typeAt ((use.param.normalize.instantiate σ).normalize) = some r)
-    (matched : Ty.matchTemplate σ use.result.normalize r = some σ') :
+    (typed : use.typeAt (TermUse.instParam use.param σ) = some r)
+    (matched : Bounds.matchTerm σ use.result.normalize r = some σ') :
     bindTerm σ (some use) = .ok σ' := by
   simp only [bindTerm, typed, matched]
 
@@ -1351,20 +1348,11 @@ theorem answers_refModifyWith_captured {cell : TermSrc} {f : TermSrc → TermSrc
   have treeT' : f (minted (s.env.mint "current")) (s.env.push [s.env.mint "current"]) path =
       .ok t := treeT
   have typedT' : termTy (nativeSignature table) (s.types ++ [C]) t = some (.prod B C) := typedT
-  have matched : Ty.matchTemplate []
+  have matched : Bounds.matchB []
       ((nativeSignature table).rowOf (.refModifyWith t)).request.normalize
       (Ty.refOf C).normalize = some [(0, C)] := by
     rw [normalize_refOf_canonical normalC]
-    refine Ty.matchTemplate_exact ?_ rfl
-    show Ty.infer [] (.var 0) C false = [(0, C)]
-    exact Ty.infer_var_fresh C false rfl
-  have inferred : Ty.infer [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) false =
-      [(0, C), (1, B)] := by
-    show Ty.infer (Ty.infer [(0, C)] (.var 1) B false) (.var 0) C false = _
-    rw [Ty.infer_var_fresh B false rfl]
-    show Ty.infer [(0, C), (1, B)] (.var 0) C false = _
-    rw [Ty.infer_var_bound C false (bound := C) rfl]
-    rfl
+    exact Bounds.matchB_refOf_var C
   have bound : bindTerm [(0, C)]
       ((nativeSignature table).termUse s.types (.refModifyWith t)) = .ok [(0, C), (1, B)] := by
     refine bindTerm_intro (use := ⟨.var 0, .prod (.var 1) (.var 0),
@@ -1374,9 +1362,9 @@ theorem answers_refModifyWith_captured {cell : TermSrc} {f : TermSrc → TermSrc
       exact typedT'
     · have resultNormal : (Ty.prod (.var 1) (.var 0)).normalize = .prod (.var 1) (.var 0) := by
         decide +kernel
-      show Ty.matchTemplate [(0, C)] (Ty.prod (.var 1) (.var 0)).normalize (.prod B C) = _
+      show Bounds.matchTerm [(0, C)] (Ty.prod (.var 1) (.var 0)).normalize (.prod B C) = _
       rw [resultNormal]
-      exact Ty.matchTemplate_exact inferred rfl
+      exact Bounds.matchTerm_modify_use C B
   have sites : Formation.Formed (Formation.instantiatedSites
       ((nativeSignature table).rowOf (.refModifyWith t)) [(0, C), (1, B)]) :=
     formed_append (formed_append (formed_sites (nodesFormed_refOf formedC) _)

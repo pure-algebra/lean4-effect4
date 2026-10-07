@@ -1,0 +1,78 @@
+diff --git a/src/Effect4/Laws/Program/Typing/Closed.lean b/src/Effect4/Laws/Program/Typing/Closed.lean
+index 507956a3..5e43e32b 100644
+--- a/src/Effect4/Laws/Program/Typing/Closed.lean
++++ b/src/Effect4/Laws/Program/Typing/Closed.lean
+@@ -5,6 +5,7 @@ import Effect4.Laws.Program.PathFold
+ import Effect4.Laws.Program.UnionRule
+ import Effect4.Laws.Program.Eliminators
+ import Effect4.Program.Admission
++import Effect4.Program.Bounds
+ import Effect4.Laws.Auto.Semantics
+ 
+ /-!
+@@ -483,6 +484,13 @@ theorem closedSubst_matchTemplateArgs {join : Bool} {σ σ' : Subst} {ps rs : Li
+       exact ih hrest (closedSubst_matchTemplate h₁ hσ (hrs r List.mem_cons_self))
+         (fun u hu => hrs u (List.mem_cons_of_mem _ hu))
+ 
++/-- A list match by bounds reads closed bindings from closed arguments. A step of
++`NativeAtom.Scheme.closed_apply`. -/
++@[semantics "subtyping-algebra" (requirement := R14)]
++proof_goal closedSubst_matchArgsB {σ : Subst} {ps rs : List Ty}
++    (h : Bounds.matchArgsB ps rs = some σ)
++    (hrs : ∀ r ∈ rs, r.closed = true) : ClosedSubst σ
++
+ end Ty
+ 
+ /-- The error column of a cause or of an exit is closed when the type is. -/
+@@ -593,10 +601,10 @@ theorem Scheme.closed_apply (s : Scheme) (hs : s.answersClosed = true) {tys : Li
+     · cases h
+       exact hs
+     · exact nomatch h
+-  | poly params answer join =>
++  | poly params answer =>
+     obtain ⟨σ, hσ, rfl⟩ := Option.map_eq_some_iff.mp h
+     exact Ty.closed_instantiate
+-      (Ty.closedSubst_matchTemplateArgs hσ (fun _ hb => nomatch hb) htys) answer
++      (Ty.closedSubst_matchArgsB hσ htys) answer
+   | alts cases =>
+     obtain ⟨c, hc, hmono⟩ := List.exists_of_findSome?_eq_some h
+     exact closed_monoApply (List.all_eq_true.mp hs c hc) hmono
+@@ -1377,15 +1385,21 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
+   | _, _, _, .runIn _ _ _, _, _ => ⟨rfl, rfl⟩
+   | _, _, _, .interrupt _ _, _, _ => ⟨rfl, rfl⟩
+   | _, _, _, .interruptScoped _ _, _, _ => ⟨rfl, rfl⟩
+-  | _, _, _, .interruptAll_self _ _, _, _ => ⟨rfl, rfl⟩
+-  | _, _, _, .interruptAll_by _ _ _, _, _ => ⟨rfl, rfl⟩
+-  | _, _, _, .awaitAll (inner := inner) ht hf, henv, hs =>
+-    have hlist := termTy_closed hsig henv hs.1 ht
+-    have hinner : inner.closed = true := hlist
++  | _, _, _, .interruptAll_self _ _ _, _, _ => ⟨rfl, rfl⟩
++  | _, _, _, .interruptAll_by _ _ _ _, _, _ => ⟨rfl, rfl⟩
++  | _, _, _, .awaitAll (ts := ts) (inner := inner) ht hl hf, henv, hs =>
++    have hts := termTy_closed hsig henv hs.1 ht
++    have hinner : inner.closed = true := by
++      cases ts with
++      | list t => cases hl; exact hts
++      | _ => nomatch hl
+     ⟨Bool.and_eq_true_iff.mpr (closed_fiberTy hinner hf), rfl⟩
+-  | _, _, _, .awaitAllFailFast (inner := inner) ht hf, henv, hs =>
+-    have hlist := termTy_closed hsig henv hs.1 ht
+-    have hinner : inner.closed = true := hlist
++  | _, _, _, .awaitAllFailFast (ts := ts) (inner := inner) ht hl hf, henv, hs =>
++    have hts := termTy_closed hsig henv hs.1 ht
++    have hinner : inner.closed = true := by
++      cases ts with
++      | list t => cases hl; exact hts
++      | _ => nomatch hl
+     ⟨Bool.and_eq_true_iff.mpr (closed_fiberTy hinner hf), rfl⟩
+   | _, _, _, .snapshotChildren, _, _ => ⟨rfl, rfl⟩
+   | _, _, _, .awaitNewChildren _ _, _, _ => ⟨rfl, rfl⟩
+@@ -1393,7 +1407,7 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
+   | _, _, _, .setContext _, _, _ => ⟨rfl, rfl⟩
+   | _, _, _, .getContext, _, _ => ⟨rfl, rfl⟩
+   | _, _, _, .getId, _, _ => ⟨rfl, rfl⟩
+-  | _, _, _, .closeScope _ _, _, _ => ⟨rfl, rfl⟩
++  | _, _, _, .closeScope _ _ _, _, _ => ⟨rfl, rfl⟩
+   | _, _, _, .getInterruptible, _, _ => ⟨rfl, rfl⟩
+ 
+ /-- A layer's error type is closed. -/

@@ -1,6 +1,7 @@
 import Effect4.Program.Decision
 import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.RecordTag
+import Effect4.Laws.Program.Eliminators
 
 /-!
 # Laws.Program.Decision — a typed scrutinee always decides
@@ -174,16 +175,17 @@ theorem Decision.decide_typed (d : Decision) {t : Ty} {e0 e1 : List Ty} {v : Val
     · exact nomatch harms
   | option =>
     simp only [Decision.arms] at harms
-    split at harms
-    · rename_i a hnorm
-      simp only [Option.some.injEq, Prod.mk.injEq] at harms
-      obtain ⟨h0, h1⟩ := harms
-      subst h0; subst h1
-      rw [← hasTy_normalize, hnorm] at hv
-      rcases Val.hasTy_option_inv_at hv with rfl | ⟨x, rfl, hx⟩
-      · exact ⟨true, none, rfl, trivial⟩
-      · exact ⟨false, some x, rfl, hx⟩
-    · exact nomatch harms
+    obtain ⟨a, hopt, heq⟩ := Option.map_eq_some_iff.mp harms
+    cases heq
+    have hsub : Ty.subN t (.option a) = true := optionTy_upper hopt
+    have hv' : Val.hasTy v (.option a) allocated = true := by
+      rw [← hasTy_normalize (.option a)]
+      apply hasTy_sub t.normalize (Ty.option a).normalize v allocated hsub
+      rw [hasTy_normalize]
+      exact hv
+    rcases Val.hasTy_option_inv_at hv' with rfl | ⟨x, rfl, hx⟩
+    · exact ⟨true, none, rfl, trivial⟩
+    · exact ⟨false, some x, rfl, hx⟩
   | tag name =>
     simp only [Decision.arms] at harms
     split at harms

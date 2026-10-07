@@ -15,7 +15,7 @@
  */
 import { type Deferred, Effect, type Option, Ref } from "effect"
 import {
-  add, append, cons, fold, get, isZero, ite, length, lt, mul, nil, none, not, pair, recordRequired, recordSet,
+  add, append, cons, fold, get, getOrElse, isZero, ite, length, lt, mul, nil, none, not, pair, recordRequired, recordSet,
   sameHandle, some, succ, take, tuple, tupleAt, and, isSome, or, sub, drop, eq, recordValue
 } from "./prelude.ts"
 
@@ -168,14 +168,41 @@ const literal: ReadonlyArray<1> = widened
 const texts = cons("a", nil())
 // @ts-expect-error A list of strings is no list of numbers.
 const numbers: ReadonlyArray<number> = texts
-// The target does not refuse a list of two unrelated element types: its type is the union. Lean's
-// checker refuses that list (the scheme's join finds no common supertype), so no printed module
-// holds one.
+// A list of two unrelated element types has the union as its element type, on the target and
+// in Lean's checker alike: the match by bounds joins the two (decisions row 303).
 const unrelated: ReadonlyArray<number | string> = cons(1, cons("a", nil()))
+
+// ---- the join at `ite` and `getOrElse`, and the interim guard at a binder term ----
+// (decisions rows 299 and 303)
+
+declare const joinFlag: boolean
+declare const joinText: string
+declare const maybeNumber: Option.Option<number>
+declare const nothing: Option.Option<never>
+// Each arm of `ite` has its own type parameter, and `getOrElse` takes the option at its whole
+// type. So the compiler computes the join that Lean's match by bounds answers.
+const iteJoined: number | string = ite(joinFlag, 1, joinText)
+const getOrElseJoined: number | string = getOrElse(maybeNumber, joinText)
+const getOrElseNever: number = getOrElse(nothing, 1)
+// @ts-expect-error The answer of `ite` is no smaller than the join.
+const iteNoSmaller: number = ite(joinFlag, 1, joinText)
+// @ts-expect-error The same at `getOrElse`.
+const getOrElseNoSmaller: number = getOrElse(maybeNumber, joinText)
+
+// A binder term whose type is two pairs with no order between their first parts. The compiler
+// infers `B` from one candidate and refuses the other pair. Lean's checker refuses the same term
+// by the interim guard (`Bounds.termGuard`, `src/Effect4/Program/Bounds.lean`).
+declare const twoPairs: readonly [number, number] | readonly [string, number]
+// @ts-expect-error No one candidate for `B` is above the other.
+Ref.modify(a0, (a1) => twoPairs)
+// The one pair of the union offers one candidate. The compiler and the guard accept it.
+declare const onePair: readonly [number | string, number]
+const modifyJoined: Effect.Effect<number | string> = Ref.modify(a0, (a1) => onePair)
 
 void [
   update, getAndUpdate, updateAndGet, updateSome, getAndUpdateSome, updateSomeAndGet, modify, modifySome,
   captured, folded, statedFold, offerStep, withdrawTake, request, tryTake, flagged, choice, takeStep, stuckFlag, stuckChoice,
   lists, joined, second, stored, literal, numbers, unrelated,
+  iteJoined, getOrElseJoined, getOrElseNever, iteNoSmaller, getOrElseNoSmaller, modifyJoined,
   isZero, length, recordRequired, recordSet, sameHandle, take, and, isSome
 ]

@@ -449,8 +449,9 @@ private def optionDefault : Term := .app "getOrElse" (.cons (.var 0) (.cons (.va
 #guard evalTerm [Store.Val.some (.nat 3), .nat 9] optionDefault = some (.nat 3)
 #guard termTy nativeSignature [.option .string, .lit "fallback"] optionDefault = some .string
 #guard evalTerm [Store.Val.none, .str "fallback"] optionDefault = some (.str "fallback")
-#guard termTy nativeSignature [.option .nat, .string] optionDefault = none
-#guard termTy nativeSignature [.option .never, .nat] optionDefault = none
+#guard termTy nativeSignature [.option .nat, .string] optionDefault = some (.union .nat .string)
+#guard termTy nativeSignature [.option .never, .nat] optionDefault = some .nat
+#guard termTy nativeSignature [.nat, .string] optionDefault = none
 
 -- Nested options are retained as values, including an inner None selected from Some.
 #guard termTy nativeSignature [.option (.option .nat), .option .nat] optionDefault =
@@ -634,15 +635,15 @@ def captureEnv : TyEnv := [.refOf .nat, .nat]
     (.perform (.refUpdateWith (app2 "add" (.var 2) (.var 1))) (.var 0))) =
   some ⟨[], .binderTerm "refUpdateWith" .nat⟩
 
-/-! ### `B`'s binding and its limit (decisions row 213's stated limit, in a term's form)
+/-! ### `B`'s binding and the interim guard (decisions rows 213, 299 and 303)
 
-`Ref.modify`'s `B` first occurs covariantly, in the term's result template `[B, A]`, so the
-match is not complete relative to its guard there: the limit `Ty.matchTemplate_complete_anchored`
-states (`template-match-anchored`'s property line). A term whose type is a union of products
-binds `B` at the first member, and the guard refuses the term, although `B := "a" | "b"` puts
-the term's type under the instance. The same function written as a pair has the raw product
-type and binds the union. T4's control `covT` (`Test/Program/TypeAlgebraContract.lean`) is the
-same boundary at a row's request. -/
+`Ref.modify`'s `B` occurs covariantly, in the term's result template `[B, A]`. The match by
+bounds joins the lower bounds that the term's type offers `B`. At a binder term it stands under
+the interim guard (`Bounds.matchTerm`): those lower bounds must have a greatest one. A term whose
+type is a union of two pairs offers `"a"` and `"b"`, which have no order, so the guard refuses the
+term, although `B := "a" | "b"` puts the term's type under the instance. The same function
+written as a pair has the raw product type, offers one lower bound, and binds the union. The
+guard goes when the TypeScript printer writes a row's type arguments at the join. -/
 
 /-- `["a", number] | ["b", number]`: the type of an outer value that is one of two pairs. -/
 def pairUnion : Ty := .union (.prod (.lit "a") .nat) (.prod (.lit "b") .nat)
@@ -650,13 +651,17 @@ def pairUnion : Ty := .union (.prod (.lit "a") .nat) (.prod (.lit "b") .nat)
 /-- The cell, then the outer pair; the node sits at level 2. -/
 def unionEnv : TyEnv := [.refOf .nat, pairUnion]
 
--- the term is the outer variable: `B` binds `"a"` from the first member, and the guard refuses
+-- red: the term is the outer variable. Its type offers `B` two lower bounds with no order, and
+-- the interim guard refuses
 #guard Checker.refusal (Checker.check nativeSignature unionEnv []
     (.perform (.refModifyWith (.var 1)) (.var 0))) =
   some ⟨[], .resultNotSubtype "refModifyWith" pairUnion (.prod .never .nat)⟩
--- yet the binding exists: at `B := "a" | "b"` the term's type is under the instance
+-- yet the binding exists: at `B := "a" | "b"` the term's type is under the instance, and the
+-- match by bounds alone answers it
 #guard Ty.sub pairUnion.normalize
   ((Ty.prod (.var 1) (.var 0)).instantiate [(0, .nat), (1, .union (.lit "a") (.lit "b"))]).normalize
+#guard (Bounds.matchB [(0, .nat)] (.prod (.var 1) (.var 0)) pairUnion).map
+    (fun σ => (Ty.instantiate σ (.var 1)).normalize) = some (.union (.lit "a") (.lit "b"))
 -- the same function as a pair of the two components has the raw product type and binds the union
 #guard (Checker.check nativeSignature [.refOf .nat, .union (.lit "a") (.lit "b")] []
     (.perform (.refModifyWith (app2 "pair" (.var 1) (.var 2))) (.var 0))).toOption.map (·.answer) =

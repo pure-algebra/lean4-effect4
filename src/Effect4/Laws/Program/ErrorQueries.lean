@@ -1,5 +1,7 @@
 import Effect4.Machine.Term
 import Effect4.Program.Typed
+import Effect4.Laws.Program.Eliminators
+import Effect4.Laws.Program.Admits
 
 /-!
 # Error query laws (DI-09)
@@ -60,34 +62,37 @@ theorem queryReasons?_typed (value : Val) (input error : Ty) (allocated : List S
     (hfit : Val.hasTy value input allocated = true) :
     ∃ reasons, queryReasons? value = some reasons ∧
       reasons.all (reasonAdmits (fun v _ => Val.hasTy v error allocated) error) = true := by
-  unfold causeInputError? at hinput
-  split at hinput
-  · cases hinput
-    change (match Val.cause? value with
+  have hsub : Ty.subN input (causeUpper error) = true := causeInputError_upper hinput
+  have hfit' : Val.hasTy value (causeUpper error) allocated = true := by
+    rw [← hasTy_normalize (causeUpper error)]
+    apply hasTy_sub input.normalize (causeUpper error).normalize value allocated hsub
+    rw [hasTy_normalize]
+    exact hfit
+  change (Val.hasTy value (.causeOf error) allocated || Val.hasTy value (.exitOf .unknown error) allocated) = true at hfit'
+  rcases Bool.or_eq_true_iff.mp hfit' with hcause | hexit
+  · change (match Val.cause? value with
       | some c => causeAdmits (fun v _ => Val.hasTy v error allocated) error c
-      | none => false) = true at hfit
+      | none => false) = true at hcause
     cases hc : Val.cause? value with
-    | none => simp only [hc, Bool.false_eq_true] at hfit
+    | none => simp only [hc, Bool.false_eq_true] at hcause
     | some cause =>
       have hv := Val.cause?_exact hc
       subst value
       exact ⟨cause.reasons, queryReasons?_exitErr cause,
-        by simpa only [Val.cause?_exitErr, causeAdmits] using hfit⟩
-  · cases hinput
-    unfold Val.hasTy at hfit
-    split at hfit
+        by simpa only [Val.cause?_exitErr, causeAdmits] using hcause⟩
+  · unfold Val.hasTy at hexit
+    split at hexit
     · exact ⟨[], rfl, rfl⟩
     · next written =>
       cases hc : causeImage.ofVal written with
-      | none => simp only [hc, Bool.false_eq_true] at hfit
+      | none => simp only [hc, Bool.false_eq_true] at hexit
       | some cause =>
         refine ⟨cause.reasons, ?_, ?_⟩
         · change (causeImage.ofVal written).map Cause.reasons = _
           rw [hc]
           rfl
-        · simpa only [hc, causeAdmits] using hfit
-    · cases hfit
-  all_goals cases hinput
+        · simpa only [hc, causeAdmits] using hexit
+    · cases hexit
 
 theorem queryTag_typed (tag : ReasonTag) (value : Val) (input error : Ty)
     (allocated : List String) (hinput : causeInputError? input = some error)

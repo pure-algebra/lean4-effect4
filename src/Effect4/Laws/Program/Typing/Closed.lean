@@ -5,6 +5,7 @@ import Effect4.Laws.Program.PathFold
 import Effect4.Laws.Program.UnionRule
 import Effect4.Laws.Program.Eliminators
 import Effect4.Program.Admission
+import Effect4.Program.Bounds
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -346,6 +347,15 @@ theorem Tuple.closed_typeAt {target ty : Ty} {index : Nat} (ht : target.closed =
     (h : Tuple.typeAt target index = some ty) : ty.closed = true :=
   Tuple.closed_project (Ty.closed_normalize target ht) h
 
+/-- The element type that the option rule answers is closed when the target is: the guarded rule
+answers the lifted rule's answer (`UnionRule.liftOne_some`, `UnionRule.lift_closed`). A step of
+`Decision.closed_arms`, its consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closed_optionTy {t item : Ty} (ht : t.closed = true)
+    (h : optionTy t = some item) : item.closed = true :=
+  UnionRule.lift_closed (fun _ _ closed answered => Member.option_closed closed answered)
+    (UnionRule.liftOne_some h) ht
+
 /-- What a decision's arms bind is closed, at a closed scrutinee. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem Decision.closed_arms {d : Decision} {t : Ty} {e0 e1 : List Ty} (ht : t.closed = true)
@@ -361,12 +371,10 @@ theorem Decision.closed_arms {d : Decision} {t : Ty} {e0 e1 : List Ty} (ht : t.c
     · exact nomatch h
   | option =>
     simp only [Decision.arms] at h
-    split at h
-    · rename_i a hnorm
-      cases h
-      rw [hnorm] at hn
-      exact ⟨fun _ hx => (nomatch hx), fun x hx => by rw [List.mem_singleton.mp hx]; exact hn⟩
-    · exact nomatch h
+    obtain ⟨a, hopt, heq⟩ := Option.map_eq_some_iff.mp h
+    cases heq
+    have ha := closed_optionTy ht hopt
+    exact ⟨fun _ hx => (nomatch hx), fun x hx => by rw [List.mem_singleton.mp hx]; exact ha⟩
   | tag name =>
     simp only [Decision.arms] at h
     split at h
@@ -391,6 +399,19 @@ fiber type, and `UnionRule.lift_closed_pair` covers the guarded rule's answer. -
 theorem closed_fiberTy {t value error : Ty} (ht : t.closed = true)
     (h : fiberTy t = some (value, error)) : value.closed = true ∧ error.closed = true :=
   UnionRule.extend_closed_pair Member.fiber_closed h ht
+
+/-- The element type of `Checker.listOf?` is closed when the target is. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closed_listOf {t item : Ty} (ht : t.closed = true)
+    (h : Checker.listOf? t = some item) : item.closed = true :=
+  UnionRule.extend_closed Member.list_closed h ht
+
+/-- The value and error types of `Checker.exitOf?` are closed when the target is. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closed_exitOf {t : Ty} {pair : Ty × Ty} (ht : t.closed = true)
+    (h : Checker.exitOf? t = some pair) : pair.1.closed = true ∧ pair.2.closed = true :=
+  UnionRule.extend_closed_pair Member.exit_closed h ht
+
 
 /-- The error column of `catchIf` is closed when the body's and the handler's are. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -483,20 +504,134 @@ theorem closedSubst_matchTemplateArgs {join : Bool} {σ σ' : Subst} {ps rs : Li
       exact ih hrest (closedSubst_matchTemplate h₁ hσ (hrs r List.mem_cons_self))
         (fun u hu => hrs u (List.mem_cons_of_mem _ hu))
 
+/-- **Each candidate's type is closed where the request is.** The walk of the match by bounds
+gives a candidate the request's type at an occurrence, and that type is a part of the request.
+The case list is the function's. A step of `closedSubst_matchArgsB`, its consumer, and so of the
+claim `checked-types-closed`. It says nothing of the template. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closed_cands (v : Ty.Variance) (t r : Ty) (hr : r.closed = true) :
+    ∀ c ∈ Bounds.cands v t r, c.2.2.closed = true := by
+  revert hr
+  induction v, t, r using Bounds.cands.induct_unfolding
+      (motive_2 := fun _ _ _ _ rs result =>
+        Ty.closedItems rs = true → ∀ c ∈ result, c.2.2.closed = true)
+      (motive_3 := fun _ _ rs result =>
+        Ty.closedItems rs = true → ∀ c ∈ result, c.2.2.closed = true)
+      (motive_4 := fun _ _ gs result =>
+        Ty.closedFields gs = true → ∀ c ∈ result, c.2.2.closed = true)
+  case case1 =>
+    intro h c hc
+    rw [List.mem_singleton.mp hc]
+    exact h
+  case case2 ih | case3 ih | case4 ih | case5 ih => exact ih
+  case case6 ih₁ ih₂ | case7 ih₁ ih₂ | case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂
+  | case11 ih₁ ih₂ | case12 ih₁ ih₂ =>
+    intro h c hc
+    have hp := Bool.and_eq_true_iff.mp h
+    rcases List.mem_append.mp hc with hc | hc
+    · exact ih₁ hp.1 c hc
+    · exact ih₂ hp.2 c hc
+  case case13 ih | case14 ih | case15 ih => exact ih
+  case case16 => exact fun _ _ hc => nomatch hc
+  case case17 ih₁ ih₂ =>
+    intro h c hc
+    have hp := Bool.and_eq_true_iff.mp h
+    rcases List.mem_append.mp hc with hc | hc
+    · exact ih₁ hp.1 c hc
+    · exact ih₂ hp.2 c hc
+  case case18 => exact fun _ _ hc => nomatch hc
+  case case19 _ _ hc => exact nomatch hc
+  case case20 ih h c hc => exact ih (Bool.and_eq_true_iff.mp h).2 c hc
+  case case21 ih₂ ih₁ h c hc =>
+    have hp := Bool.and_eq_true_iff.mp h
+    rcases List.mem_append.mp hc with hc | hc
+    · exact ih₂ hp.1 c hc
+    · exact ih₁ hp.2 c hc
+  case case22 ih₂ ih₁ h c hc =>
+    have hp := Bool.and_eq_true_iff.mp h
+    rw [Bounds.candsArgs] at hc
+    rcases List.mem_append.mp hc with hc | hc
+    · exact ih₂ hp.1 c hc
+    · exact ih₁ hp.2 c hc
+  case case23 other _ c hc =>
+    rw [Bounds.candsArgs] at hc
+    · exact nomatch hc
+    · exact other
+  case case24 ih₂ ih₁ h c hc =>
+    have hp := Bool.and_eq_true_iff.mp h
+    rw [Bounds.candsItems] at hc
+    rcases List.mem_append.mp hc with hc | hc
+    · exact ih₂ hp.1 c hc
+    · exact ih₁ hp.2 c hc
+  case case25 other _ c hc =>
+    rw [Bounds.candsItems] at hc
+    · exact nomatch hc
+    · exact other
+
+/-- **The join of closed candidates is closed** (`UnionRule.closed_join`). A step of
+`closedSubst_matchArgsB`, its consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closed_joinCands : ∀ (l : List Ty), (∀ c ∈ l, c.closed = true) →
+    (Bounds.joinCands l).closed = true
+  | [], _ => rfl
+  | [x], h => h x List.mem_cons_self
+  | x :: y :: rest, h =>
+    UnionRule.closed_join (h x List.mem_cons_self)
+      (closed_joinCands (y :: rest) fun c hc => h c (List.mem_cons_of_mem _ hc))
+
+/-- **A list match by bounds reads closed bindings from closed arguments.** Each binding is the
+join of candidates (`closed_joinCands`), and each candidate is a part of an argument
+(`closed_cands`). A step of `NativeAtom.Scheme.closed_apply`, its consumer, and so of the claim
+`checked-types-closed`. It replaces `closedSubst_matchTemplateArgs` there. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closedSubst_matchArgsB {σ : Subst} {ps rs : List Ty}
+    (h : Bounds.matchArgsB ps rs = some σ)
+    (hrs : ∀ r ∈ rs, r.closed = true) : ClosedSubst σ := by
+  have hcs : ∀ c ∈ Bounds.candsList ps rs, c.2.2.closed = true := by
+    intro c hc
+    obtain ⟨pr, hpr, hc⟩ := List.mem_flatMap.mp hc
+    exact closed_cands .co pr.1 pr.2 (hrs pr.2 (List.of_mem_zip hpr).2) c hc
+  unfold Bounds.matchArgsB at h
+  split at h
+  · dsimp only at h
+    split at h
+    · cases h
+      intro b hb
+      obtain ⟨c, -, hb⟩ :=
+        List.mem_filterMap.mp ((List.mem_append.mp hb).resolve_left (nomatch ·))
+      split at hb
+      · exact nomatch hb
+      · cases hb
+        refine closed_joinCands _ fun x hx => ?_
+        unfold Bounds.lowers at hx
+        obtain ⟨d, hd, hx⟩ := List.mem_filterMap.mp hx
+        split at hx
+        · cases hx
+          exact hcs d hd
+        · exact nomatch hx
+    · exact nomatch h
+  · exact nomatch h
+
 end Ty
+
+/-- A closed cause or exit type has a closed error type. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Member.cause_closed {m : Ty} {a : Ty} (closed : m.closed = true)
+    (answered : Member.cause m = some a) : a.closed = true := by
+  cases m with
+  | causeOf e =>
+    cases answered
+    exact closed
+  | exitOf v e =>
+    cases answered
+    exact (Bool.and_eq_true_iff.mp closed).2
+  | _ => exact nomatch answered
 
 /-- The error column of a cause or of an exit is closed when the type is. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_causeInputError {input error : Ty} (hi : input.closed = true)
-    (h : causeInputError? input = some error) : error.closed = true := by
-  cases input with
-  | causeOf e =>
-    cases h
-    exact hi
-  | exitOf v e =>
-    cases h
-    exact (Bool.and_eq_true_iff.mp hi).2
-  | _ => exact nomatch h
+    (h : causeInputError? input = some error) : error.closed = true :=
+  UnionRule.extend_closed Member.cause_closed h hi
 
 namespace NativeAtom
 
@@ -593,10 +728,10 @@ theorem Scheme.closed_apply (s : Scheme) (hs : s.answersClosed = true) {tys : Li
     · cases h
       exact hs
     · exact nomatch h
-  | poly params answer join =>
+  | poly params answer =>
     obtain ⟨σ, hσ, rfl⟩ := Option.map_eq_some_iff.mp h
     exact Ty.closed_instantiate
-      (Ty.closedSubst_matchTemplateArgs hσ (fun _ hb => nomatch hb) htys) answer
+      (Ty.closedSubst_matchArgsB hσ htys) answer
   | alts cases =>
     obtain ⟨c, hc, hmono⟩ := List.exists_of_findSome?_eq_some h
     exact closed_monoApply (List.all_eq_true.mp hs c hc) hmono
@@ -1377,15 +1512,15 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .runIn _ _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .interrupt _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .interruptScoped _ _, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .interruptAll_self _ _, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .interruptAll_by _ _ _, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .awaitAll (inner := inner) ht hf, henv, hs =>
-    have hlist := termTy_closed hsig henv hs.1 ht
-    have hinner : inner.closed = true := hlist
+  | _, _, _, .interruptAll_self _ _ _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .interruptAll_by _ _ _ _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .awaitAll ht hl hf, henv, hs =>
+    have hts := termTy_closed hsig henv hs.1 ht
+    have hinner := closed_listOf hts hl
     ⟨Bool.and_eq_true_iff.mpr (closed_fiberTy hinner hf), rfl⟩
-  | _, _, _, .awaitAllFailFast (inner := inner) ht hf, henv, hs =>
-    have hlist := termTy_closed hsig henv hs.1 ht
-    have hinner : inner.closed = true := hlist
+  | _, _, _, .awaitAllFailFast ht hl hf, henv, hs =>
+    have hts := termTy_closed hsig henv hs.1 ht
+    have hinner := closed_listOf hts hl
     ⟨Bool.and_eq_true_iff.mpr (closed_fiberTy hinner hf), rfl⟩
   | _, _, _, .snapshotChildren, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .awaitNewChildren _ _, _, _ => ⟨rfl, rfl⟩
@@ -1393,7 +1528,7 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .setContext _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getContext, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getId, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .closeScope _ _, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .closeScope _ _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getInterruptible, _, _ => ⟨rfl, rfl⟩
 
 /-- A layer's error type is closed. -/

@@ -385,11 +385,112 @@ theorem matchTemplate_keeps {σ σ' : Subst} {t r : Ty} (h : matchTemplate σ t 
 
 end Ty
 
+theorem lookup_append_left {α β : Type} [DecidableEq α] {l₁ l₂ : List (α × β)} {a : α} {b : β}
+    (h : l₁.lookup a = some b) : (l₁ ++ l₂).lookup a = some b := by
+  induction l₁ with
+  | nil => contradiction
+  | cons p rest ih =>
+    cases p with | mk k v =>
+    rw [List.cons_append]
+    dsimp only [List.lookup] at h ⊢
+    cases heq : a == k with
+    | true =>
+      simp only [heq] at h ⊢
+      exact h
+    | false =>
+      simp only [heq] at h ⊢
+      exact ih h
+
+/-- A closed template offers no candidate for matching by bounds. -/
+theorem Bounds.cands_closed (v : Ty.Variance) (t r : Ty) (h : t.closed = true) :
+    Bounds.cands v t r = [] := by
+  revert h
+  induction v, t, r using Bounds.cands.induct_unfolding
+      (motive_2 := fun _ _ _ ts _ result => Ty.closedItems ts = true → result = [])
+      (motive_3 := fun _ ts _ result => Ty.closedItems ts = true → result = [])
+      (motive_4 := fun _ fs _ result => Ty.closedFields fs = true → result = [])
+  case case1 => intro h; cases h
+  case case2 ih | case3 ih | case4 ih | case5 ih => exact ih
+  case case6 ih₁ ih₂ | case7 ih₁ ih₂ | case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂
+  | case11 ih₁ ih₂ | case12 ih₁ ih₂ =>
+    intro h
+    have hc := Bool.and_eq_true_iff.mp h
+    rw [ih₁ hc.1, ih₂ hc.2]
+    rfl
+  case case13 ih | case14 ih | case15 ih => exact ih
+  case case16 => intro _; rfl
+  case case17 ih₁ ih₂ =>
+    intro h
+    rw [ih₁ h, ih₂ h]
+    rfl
+  case case18 => intro _; rfl
+  case case19 => rfl
+  case case20 ih h => exact ih h
+  case case21 hl ih₁ ih₂ h =>
+    rw [ih₁ (Ty.closed_of_lookup hl h), ih₂ h]
+    rfl
+  case case22 ih₁ ih₂ h =>
+    have hc := Bool.and_eq_true_iff.mp h
+    rw [Bounds.candsArgs, ih₁ hc.1, ih₂ hc.2]
+    rfl
+  case case23 =>
+    rw [Bounds.candsArgs]
+    assumption
+  case case24 ih₁ ih₂ h =>
+    have hc := Bool.and_eq_true_iff.mp h
+    rw [Bounds.candsItems, ih₁ hc.1, ih₂ hc.2]
+    rfl
+  case case25 =>
+    rw [Bounds.candsItems]
+    assumption
+
+/-- On a closed template the match by bounds is subsumption of the normal forms, and the seed. -/
+theorem Bounds.matchB_closed (seed : Ty.Subst) (t r : Ty) (h : t.closed = true) :
+    Bounds.matchB seed t r = if Ty.sub r.normalize t.normalize then some seed else none := by
+  dsimp only [Bounds.matchB]
+  rw [Bounds.cands_closed .co t r h]
+  dsimp only [Bounds.solve, List.filterMap_nil]
+  simp only [List.append_nil, Ty.instantiate_closed seed t h]
+
+theorem Bounds.solve_lookup_of_mem {seed : Ty.Subst} {cs : List Bounds.Cand} {j : Nat} {u : Ty}
+    (h : seed.lookup j = some u) : (Bounds.solve seed cs).lookup j = some u := by
+  dsimp only [Bounds.solve]
+  exact lookup_append_left h
+
+theorem Bounds.matchB_keeps {seed σ : Ty.Subst} {template request : Ty}
+    (h : Bounds.matchB seed template request = some σ) :
+    ∀ j u, seed.lookup j = some u → σ.lookup j = some u := by
+  dsimp only [Bounds.matchB] at h
+  split at h
+  · cases h
+    intro j u hj
+    exact Bounds.solve_lookup_of_mem hj
+  · contradiction
+
+theorem Bounds.matchB_widens {seed σ : Ty.Subst} {template request : Ty}
+    (h : Bounds.matchB seed template request = some σ) :
+    Ty.Widens seed σ := by
+  apply Ty.Widens.of_lookup
+  intro j u hj
+  exact ⟨u, Bounds.matchB_keeps h j u hj, Ty.sub_refl u⟩
+
+/-- **The match of a binder term answers only where the match by bounds answers**, with the same
+bindings: the interim guard refuses, and it binds nothing. So each law of `Bounds.matchB` holds
+of a binder term's match. A step of `bindTerm_some_ok`, its consumer. It does not say where
+the guard holds: `Bounds.termGuard` decides that. -/
+theorem Bounds.matchB_of_matchTerm {seed σ : Ty.Subst} {template request : Ty}
+    (h : Bounds.matchTerm seed template request = some σ) :
+    Bounds.matchB seed template request = some σ := by
+  unfold Bounds.matchTerm at h
+  split at h
+  · exact h
+  · exact nomatch h
+
 /-- A binder term binds by its result template's match at its own type (`bindTerm`). A step of
 `bindTerm_widens` and of the row lemmas below. -/
 theorem bindTerm_some_ok {σ σ' : Ty.Subst} {u : TermUse} (h : bindTerm σ (some u) = .ok σ') :
-    ∃ r, u.typeAt (Ty.instantiate σ u.param.normalize).normalize = some r ∧
-      Ty.matchTemplate σ u.result.normalize r = some σ' := by
+    ∃ r, u.typeAt (TermUse.instParam u.param σ) = some r ∧
+      Bounds.matchB σ u.result.normalize r = some σ' := by
   simp only [bindTerm] at h
   split at h
   · exact nomatch h
@@ -397,11 +498,11 @@ theorem bindTerm_some_ok {σ σ' : Ty.Subst} {u : TermUse} (h : bindTerm σ (som
     split at h
     · rename_i σ'' hm
       cases h
-      exact ⟨r, hr, hm⟩
+      exact ⟨r, hr, Bounds.matchB_of_matchTerm hm⟩
     · exact nomatch h
 
 /-- A binder term only widens the request's bindings: its result template's match widens its
-seed (`Ty.matchTemplate_widens`), and no term binds nothing. A step of `rowTy_fits`
+seed (`Bounds.matchB_widens`), and no term binds nothing. A step of `rowTy_fits`
 (`Typed/Denotation.lean`), the inversion of the row rule at a term use. -/
 theorem bindTerm_widens {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm σ use = .ok σ') :
     Ty.Widens σ σ' := by
@@ -409,10 +510,10 @@ theorem bindTerm_widens {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm
   | none => cases h; exact Ty.Widens.refl σ
   | some u =>
     obtain ⟨_, _, hm⟩ := bindTerm_some_ok h
-    exact Ty.matchTemplate_widens hm
+    exact Bounds.matchB_widens hm
 
 /-- **A binder term keeps the request's bindings, unchanged**: its result template's match keeps
-its seed (`Ty.matchTemplate_keeps`), and no term binds nothing. So the element type `A` the
+its seed (`Bounds.matchB_keeps`), and no term binds nothing. So the element type `A` the
 request bound is the one the row's columns are instantiated at; the term adds `Ref.modify`'s `B`
 and moves nothing. A step of `syncRow_typed` (`Typed/Denotation.lean`) at the term rows. -/
 theorem bindTerm_keeps {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm σ use = .ok σ') :
@@ -421,7 +522,7 @@ theorem bindTerm_keeps {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm 
   | none => cases h; exact fun _ _ hj => hj
   | some u =>
     obtain ⟨_, _, hm⟩ := bindTerm_some_ok h
-    exact Ty.matchTemplate_keeps hm
+    exact Bounds.matchB_keeps hm
 
 /-- A binder term's refusal is its own: no term use refuses as the request. A step of
 `checkRow_request_iff`. -/
@@ -461,10 +562,10 @@ theorem rowTy_closed (row : Row) (r : Ty) (hreq : row.request.closed = true)
   have hformed := (Formation.check_eq_none_iff _).mpr formed
   cases hsub : Ty.sub r.normalize row.request.normalize with
   | false =>
-    simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+    simp only [rowTy, checkRow, Bounds.matchB_closed [] _ _ (Ty.closed_normalize _ hreq),
       Ty.normalize_idem, hsub, Bool.false_eq_true, ↓reduceIte, Except.toOption]
   | true =>
-    simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+    simp only [rowTy, checkRow, Bounds.matchB_closed [] _ _ (Ty.closed_normalize _ hreq),
       Ty.normalize_idem, hsub, ↓reduceIte, bindTerm_none, hformed, Except.toOption,
       Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr]
 
@@ -478,11 +579,11 @@ theorem rowTy_closed_some {row : Row} {r : Ty} {t : EffTy} (hreq : row.request.c
   rw [rowTy_eq_some_iff] at h
   cases hsub : Ty.sub r.normalize row.request.normalize with
   | false =>
-    simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+    simp only [checkRow, Bounds.matchB_closed [] _ _ (Ty.closed_normalize _ hreq),
       Ty.normalize_idem, hsub, Bool.false_eq_true, ↓reduceIte] at h
     cases h
   | true =>
-    simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
+    simp only [checkRow, Bounds.matchB_closed [] _ _ (Ty.closed_normalize _ hreq),
       Ty.normalize_idem, hsub, ↓reduceIte, bindTerm_none] at h
     split at h
     · cases h
@@ -496,7 +597,7 @@ Typing consumes this through `rowTy`. This is a static property; it makes no hos
 execution claim. -/
 theorem rowTy_instantiated_formed {row : Row} {request : Ty} {use : Option TermUse} {ty : EffTy}
     (accepted : rowTy row request use = some ty) :
-    ∃ σ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some σ ∧
+    ∃ σ bindings, Bounds.matchB [] row.request.normalize request.normalize = some σ ∧
       bindTerm σ use = .ok bindings ∧
       Formation.Formed (Formation.instantiatedSites row bindings) := by
   rw [rowTy_eq_some_iff] at accepted
@@ -517,7 +618,7 @@ an actual failed column check after a successful template match and term binding
 theorem checkRow_formation_iff (row : Row) (request : Ty) (use : Option TermUse)
     (why : FormationRefusal) :
     checkRow row request use = .error (.formation why) ↔
-      ∃ σ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some σ ∧
+      ∃ σ bindings, Bounds.matchB [] row.request.normalize request.normalize = some σ ∧
         bindTerm σ use = .ok bindings ∧
         Formation.check (Formation.instantiatedSites row bindings) = some why := by
   constructor
@@ -545,8 +646,8 @@ theorem checkRow_formation_iff (row : Row) (request : Ty) (use : Option TermUse)
 formation branch can be reported as a subtype mismatch by the shared row checker. -/
 theorem checkRow_request_iff (row : Row) (request : Ty) (use : Option TermUse) :
     checkRow row request use = .error .requestNotSubtype ↔
-      Ty.matchTemplate [] row.request.normalize request.normalize = none := by
-  cases matched : Ty.matchTemplate [] row.request.normalize request.normalize with
+      Bounds.matchB [] row.request.normalize request.normalize = none := by
+  cases matched : Bounds.matchB [] row.request.normalize request.normalize with
   | none => simp only [checkRow, matched]
   | some σ =>
     simp only [checkRow, matched, reduceCtorEq, iff_false]
@@ -610,9 +711,8 @@ theorem templateAdmissible_of_closed (t : Ty) (h : closed t = true) :
     simp only [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true]
     exact fun t ht => ih t ht (h t ht)
   | app name ts ih =>
-    simp only [closed, closedItems_eq_all, List.all_eq_true] at h
-    simp only [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true]
-    exact fun t ht => ih t ht (h t ht)
+    simp only [closed, templateAdmissible] at h ⊢
+    exact h
   | _ => aesop (add norm simp [closed, templateAdmissible])
 
 theorem varsOfFields_nil {fs : List (String × Bool × Ty)} (h : ∀ p ∈ fs, varsOf p.2.2 = []) :
@@ -1337,10 +1437,10 @@ theorem templateAdmissible_args {t : Ty} (h : templateAdmissible t = true) :
     obtain ⟨x, hx, rfl⟩ := hp
     exact h x hx
   case app n ts =>
-    rw [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true] at h
+    rw [templateAdmissible, closedItems_eq_all, List.all_eq_true] at h
     simp only [args, List.mem_map] at hp
     obtain ⟨q, hq, rfl⟩ := hp
-    exact h q.1 (List.fst_mem_of_mem_zipIdx hq)
+    exact templateAdmissible_of_closed _ (h q.1 (List.fst_mem_of_mem_zipIdx hq))
   all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
   all_goals aesop (add norm simp [templateAdmissible])
 
