@@ -443,6 +443,15 @@ In work since the suspension of the handover:
   types, the lifted rule is the one map with its four properties (`lift_unique`). An
   eliminator's lifted rule answers exactly below the constructor's image
   (`Eliminator.adjoint`). No eliminator is converted yet.
+- **The next slices wait for the owner's word** (2026-10-06). The owner hands some of them
+  to a second model. The coordinator starts no new seat: it merges the two seats that still
+  run, seat PILOT and seat BOUNDS, and stops there. One brief is written and not dispatched:
+  [seat ORDER](research/2026-10-05-claude-lead/briefs/seat-order-brief.md), the order of a
+  lifted rule in Lean core's classes, with
+  [its compiled probe](research/2026-10-06-order-classes-probe.lean.txt). It starts after
+  seat PILOT's merge, since both edit one law file. The open slices beside it are in rows
+  293 to 297: the other conversions, the typed print, total marking with the one pass, the
+  match by bounds after its probe, and the small repairs of row 297, point 8.
 - **Seat PILOT has the first conversion** (branch `seat/pilot`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pilot-brief.md); rows 285, 292
   and 293). `fiberTy` becomes the guarded lifted rule of its member rule. It answers at
