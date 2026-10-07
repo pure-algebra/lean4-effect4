@@ -1,0 +1,131 @@
+import Effect4.Laws.Program.PathFold
+import Test.Program.FocusControls
+
+/-!
+Scratch probe (the coordinator, 2026-10-06, on `afbfc646`; Lean 4.33.1).
+
+Question: can the table that a tool, a printer and a marking pass read be stated today, from
+landed functions only, before any one-pass algorithm exists?
+
+Result (tested on five programs; no theorem). Yes, at the addresses of a program:
+
+* `addresses` is the generated path fold at the list monoid (`Node.foldList`);
+* `table` asks `Node.envAt` and `Checker.check` at each address;
+* `refusals` is the list of the distinct refusals in the table.
+
+The table has three states at an address of a program: typed, refused, and not reached (a step
+on the way reads a sibling that the checker refuses). `explain` answers one refusal of a
+generator body with two refused programs, and the table holds both. After a filling of the
+focus's type, each row outside the focus is unchanged.
+
+It is the specification. It checks a sub-program once for each address above it, so its cost is
+not linear. A statement, a fiber action and a layer have a row with an environment and no
+result: the table holds no refusal of their own rules.
+-/
+
+set_option autoImplicit false
+
+namespace TableProbe
+open Effect4 Effect4.Program
+open Test.Program.SketchControls Test.Program.FocusControls
+
+variable {Op : Type}
+
+/-- Every address of a node, in the order of the generated path fold. -/
+def addresses (n : Node Op) : List (List Nat) :=
+  n.foldList { eff := fun _ p => [p], stmt := fun _ p => [p], stmts := fun _ p => [p],
+               effs := fun _ p => [p], action := fun _ p => [p], layer := fun _ p => [p],
+               layers := fun _ p => [p] } []
+
+/-- One row of the table. -/
+structure Entry where
+  path : List Nat
+  /-- the environment at the address; `none` where a step reads a refused sibling -/
+  env : Option NodeEnv
+  /-- at an address of a program with an environment: the checker's answer there -/
+  result : Option (Except TypeRefusal EffTy)
+
+/-- The table of a program: one row for each address. -/
+def table (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : List Entry :=
+  (addresses (.eff p)).map fun a =>
+    let env := (Node.eff p).envAt s (.env env0) a
+    ⟨a, env, match (Node.eff p).at_ a, env with
+      | some (.eff q), some (.env tys) => some (Checker.check s tys a q)
+      | _, _ => none⟩
+
+/-- The distinct refusals of the table, in its order. -/
+def refusals (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : List TypeRefusal :=
+  ((table s env0 p).filterMap fun e => e.result.bind Checker.refusal).eraseDups
+
+/-- A row, as values that `#guard` compares. -/
+def Entry.shape (e : Entry) : List Nat × Option NodeEnv × Option (Option EffTy) × Option TypeRefusal :=
+  (e.path, e.env, e.result.map Except.toOption, e.result.bind Checker.refusal)
+
+/-- The path and the reason's name of each refusal. -/
+def named (rs : List TypeRefusal) : List (List Nat × String) := rs.map fun w => (w.path, w.reason.head)
+
+/-! ## The example of the focus controls: seven addresses, each typed -/
+
+#guard addresses (.eff original) = [[], [0], [1], [1, 0], [1, 1], [1, 1, 0], [1, 1, 1]]
+-- tested: each row is the focus function's answer
+#guard (table sig [] original).all fun e =>
+  (e.env.map NodeEnv.tyEnv, e.result.bind Except.toOption) =
+    (((original : Sketch).focusAt {} e.path).map (·.env), ((original : Sketch).focusAt {} e.path).map (·.ty))
+#guard refusals sig [] original = []
+
+/-! ## Two refused programs that do not read each other: the table holds both -/
+
+/-- A read of a cell at a number: refused. -/
+def bad : NativeEff := .perform .refGet (.lit (.nat 5))
+
+/-- A generator body with two refused programs, each discarded. -/
+def twoBad : NativeEff :=
+  .gen (.cons (.yieldDiscard bad) (.cons (.yieldDiscard bad) (.cons (.ret (.lit (.nat 1))) .nil)))
+
+-- tested: the checker answers the first refusal, and the table holds the two
+#guard named (explain sig [] twoBad).toList = [([0, 0, 0], "requestNotSubtype")]
+#guard named (refusals sig [] twoBad) =
+  [([0, 0, 0], "requestNotSubtype"), ([0, 1, 0, 0], "requestNotSubtype")]
+-- tested: the first refusal of the table is the checker's
+#guard (refusals sig [] twoBad).head? = explain sig [] twoBad
+-- tested: every address is reached, since no step reads a refused sibling
+#guard (table sig [] twoBad).all fun e => e.env.isSome
+-- tested: the rows of a statement and of a statement list hold an environment and no result
+#guard ((table sig [] twoBad).filter fun e => e.result.isNone).map (·.path) =
+  [[0], [0, 0], [0, 1], [0, 1, 0], [0, 1, 1], [0, 1, 1, 0], [0, 1, 1, 1]]
+
+/-! ## A refused program that the next one reads: the rows after it are not reached -/
+
+/-- Two refused programs in a chain: the second reads the answer of the first. -/
+def chained : NativeEff := .bind bad (.bind bad (.succeed (.var 0)))
+
+#guard named (refusals sig [] chained) = [([0], "requestNotSubtype")]
+#guard ((table sig [] chained).filter fun e => e.env.isNone).map (·.path) = [[1], [1, 0], [1, 1]]
+
+/-! ## An edit at an address: which rows change -/
+
+/-- The example with another program at an address. -/
+def edited (path : List Nat) (q : NativeEff) : Option NativeEff :=
+  ((Node.eff original).replaceAt path (.eff q)).bind Node.eff?
+
+/-- The rows of a table outside an address. -/
+def outside (path : List Nat) (rows : List Entry) :=
+  (rows.filter fun e => !path.isPrefixOf e.path).map Entry.shape
+
+-- green (tested): a filling of the focus's type, with two more addresses. Each row outside the
+-- focus is unchanged
+#guard (edited [0] (.bind (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 6))))).all fun e' =>
+  outside [0] (table sig [] e') = outside [0] (table sig [] original)
+#guard (edited [0] (.bind (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 6))))).all fun e' =>
+  (addresses (.eff e')).length = 9
+-- red (tested): a filling of another type. The rows after the focus change
+#guard (edited [0] (.succeed (.lit (.str "x")))).all fun e' =>
+  outside [0] (table sig [] e') != outside [0] (table sig [] original)
+-- tested: the cell is then a cell of strings, so the write of a number is refused, and the read
+-- after the write is not reached (the study's section 8.5, on its own example)
+#guard (edited [0] (.succeed (.lit (.str "x")))).all fun e' =>
+  named (refusals sig [] e') = [([1, 1, 0], "requestNotSubtype")]
+#guard (edited [0] (.succeed (.lit (.str "x")))).all fun e' =>
+  ((table sig [] e').filter fun e => e.env.isNone).map (·.path) = [[1, 1, 1]]
+
+end TableProbe

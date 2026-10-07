@@ -452,6 +452,10 @@ In work since the suspension of the handover:
   seat PILOT's merge, since both edit one law file. The open slices beside it are in rows
   293 to 297: the other conversions, the typed print, total marking with the one pass, the
   match by bounds after its probe, and the small repairs of row 297, point 8.
+  [The refined plan](research/2026-10-06-next-slices-plan.md) orders eleven slices for the
+  second model's review, with two compiled probes. It rules nothing. It checks the second
+  model's report against the pinned sources. Its critical path is the address table of a
+  program, the typed print and the guard's removal.
 - **Seat PILOT has the first conversion** (branch `seat/pilot`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pilot-brief.md); rows 285, 292
   and 293). `fiberTy` becomes the guarded lifted rule of its member rule. It answers at

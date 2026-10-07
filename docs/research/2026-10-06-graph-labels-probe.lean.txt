@@ -1,0 +1,119 @@
+/-!
+Scratch probe (the coordinator, 2026-10-06, on `afbfc646`; Lean 4.33.1; no import of the tree).
+
+Question D5 of `docs/research/2026-10-06-probe-questions.md`: which form of the label "this
+finite relation has no cycle" does a gate read by `decide` or `rfl`? Three forms, on one
+relation of four nodes. Each line below is tested by this file's own elaboration.
+
+Result. A rank and a list in topological order are data that a `Bool` function checks: `decide`,
+`rfl` and the kernel read both. One theorem says what the check means (`ranked_acyclic`). The
+label as a `WellFounded` proposition has no `Decidable` instance. A function by well-founded
+recursion is read by the kernel (`decide +kernel`) and by `simp` with its equation, and it is
+not read by `decide` or by `rfl`.
+-/
+set_option autoImplicit false
+
+namespace Label
+
+/-- A finite relation as data: its list of edges. -/
+abbrev Edges (V : Type) := List (V × V)
+
+/-! ## Form 1: a rank. Each edge lowers a number. -/
+
+/-- The check of a rank: the certificate is the function `rank`. -/
+def ranked {V : Type} (rank : V → Nat) (edges : Edges V) : Bool :=
+  edges.all fun e => decide (rank e.2 < rank e.1)
+
+/-! ## Form 3: a list in topological order. Each edge goes forward in the list. -/
+
+/-- The check of an order: the certificate is the list `order`. -/
+def ordered {V : Type} [BEq V] (order : List V) (edges : Edges V) : Bool :=
+  edges.all fun e =>
+    match order.idxOf? e.1, order.idxOf? e.2 with
+    | some i, some j => decide (i < j)
+    | _, _ => false
+
+/-! ## What the label means: no walk returns to its start -/
+
+/-- A walk of one edge or more. -/
+inductive Walk {V : Type} (edges : Edges V) : V → V → Prop
+  | one {a b : V} : (a, b) ∈ edges → Walk edges a b
+  | cons {a b c : V} : (a, b) ∈ edges → Walk edges b c → Walk edges a c
+
+/-- Along a walk the rank falls. -/
+theorem Walk.rank_lt {V : Type} {rank : V → Nat} {edges : Edges V}
+    (h : ranked rank edges = true) {a b : V} (w : Walk edges a b) : rank b < rank a := by
+  induction w with
+  | one hab => exact of_decide_eq_true (List.all_eq_true.mp h _ hab)
+  | cons hab _ ih => exact Nat.lt_trans ih (of_decide_eq_true (List.all_eq_true.mp h _ hab))
+
+/-- **The one theorem of the label**: a relation with a checked rank has no cycle. -/
+theorem ranked_acyclic {V : Type} {rank : V → Nat} {edges : Edges V}
+    (h : ranked rank edges = true) (a : V) : ¬ Walk edges a a :=
+  fun w => Nat.lt_irrefl _ (w.rank_lt h)
+
+/-! ## The function that the label unlocks: a recursion whose fuel is the rank -/
+
+/-- The targets of the edges from a node. -/
+def succs {V : Type} [BEq V] (edges : Edges V) (a : V) : List V :=
+  (edges.filter fun e => e.1 == a).map Prod.snd
+
+/-- The length of the longest walk from a node, by structural recursion on a fuel. -/
+def heightFuel {V : Type} [BEq V] (edges : Edges V) : Nat → V → Nat
+  | 0, _ => 0
+  | fuel + 1, a => ((succs edges a).map fun b => heightFuel edges fuel b + 1).foldl max 0
+
+/-- The same, with the rank as the fuel: under a checked rank the fuel never runs out. -/
+def height {V : Type} [BEq V] (rank : V → Nat) (edges : Edges V) (a : V) : Nat :=
+  heightFuel edges (rank a) a
+
+/-! ## The example -/
+
+def diamond : Edges Nat := [(3, 2), (3, 1), (2, 0), (1, 0)]
+def loop : Edges Nat := [(1, 2), (2, 1)]
+
+-- Form 1 (tested): the check runs, and `decide`, `rfl` and the kernel read it
+#guard ranked id diamond
+#guard !ranked id loop
+example : ranked id diamond = true := by decide
+example : ranked id diamond = true := rfl
+example : ranked id diamond = true := by decide +kernel
+example (a : Nat) : ¬ Walk diamond a a := ranked_acyclic (rank := id) rfl a
+-- the unlocked function reduces the same way
+example : height id diamond 3 = 2 := by decide
+example : height id diamond 3 = 2 := rfl
+
+-- Form 3 (tested): the same three readers
+#guard ordered [3, 2, 1, 0] diamond
+#guard !ordered [1, 2] loop
+example : ordered [3, 2, 1, 0] diamond = true := by decide
+example : ordered [3, 2, 1, 0] diamond = true := rfl
+example : ordered [3, 2, 1, 0] diamond = true := by decide +kernel
+
+/-! ## Form 2: `WellFounded` -/
+
+/-- The label as a proposition over the edge relation. -/
+def wfAcyclic {V : Type} (edges : Edges V) : Prop := WellFounded fun b a => (a, b) ∈ edges
+
+-- tested: no `Decidable` instance, so `decide` reads no such label
+example : True := by
+  fail_if_success (have _h : wfAcyclic diamond := by decide)
+  trivial
+
+/-- A function by well-founded recursion on a number. -/
+def halve (n : Nat) : Nat := if n < 2 then 0 else halve (n / 2) + 1
+termination_by n
+decreasing_by omega
+
+-- tested: the compiled code runs; `decide` and `rfl` do not reduce it; the kernel does
+#guard halve 8 = 3
+example : halve 8 = 3 := by
+  fail_if_success decide
+  fail_if_success rfl
+  decide +kernel
+example : halve 8 = 3 := by simp [halve]
+
+#print axioms ranked_acyclic
+#print axioms Walk.rank_lt
+
+end Label
