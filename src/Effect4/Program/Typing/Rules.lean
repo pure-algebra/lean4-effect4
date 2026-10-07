@@ -374,7 +374,7 @@ def causeTy (sig : Signature Op) (env : TyEnv) : CauseTerm → Option Ty
   | .interrupt none => some .never
   | .interrupt (some who) => do
     let t ← termTy sig env who
-    if t = .nat then some .never else none
+    if Ty.sub t.normalize .nat then some .never else none
   | .both left right => do
     let l ← causeTy sig env left
     let r ← causeTy sig env right

@@ -111,8 +111,9 @@ theorem inv_select (sig : Signature Op) (env : TyEnv) (s : Term) (d : Decision) 
 theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursorTy : Option Ty)
     (initial test step result : Term) (body : Eff Op) :
     ∀ t, effTy sig env (.iterate cursorTy initial test step result body) = some t →
-      ∃ c0 c1 d b, termTy sig env initial = some c0 ∧
-        termTy sig (env ++ [cursorTy.getD c0]) test = some .bool ∧
+      ∃ c0 c1 d b testTy, termTy sig env initial = some c0 ∧
+        termTy sig (env ++ [cursorTy.getD c0]) test = some testTy ∧
+        Ty.sub testTy.normalize .bool = true ∧
         effTy sig (env ++ [cursorTy.getD c0]) body = some b ∧
         termTy sig (env ++ [cursorTy.getD c0, b.answer]) step = some c1 ∧
         termTy sig (env ++ [cursorTy.getD c0]) result = some d ∧
@@ -120,8 +121,8 @@ theorem inv_iterate (sig : Signature Op) (env : TyEnv) (cursorTy : Option Ty)
         Ty.sub c1.normalize (cursorTy.getD c0).normalize = true ∧
         t = ⟨d, b.error, b.requires⟩ := by
   intro t h
-  obtain ⟨c0, c1, d, b, hinit, htest, hbody, hstep, hresult, hsub0, hsub1, rfl⟩ :=
+  obtain ⟨c0, c1, d, b, testTy, hinit, htest, hsub_bool, hbody, hstep, hresult, hsub0, hsub1, rfl⟩ :=
     Checker.inv_iterate sig env [] cursorTy initial test step result body t (effTy_ok h [])
-  exact ⟨c0, c1, d, b, hinit, htest, ok_effTy hbody, hstep, hresult, hsub0, hsub1, rfl⟩
+  exact ⟨c0, c1, d, b, testTy, hinit, htest, hsub_bool, ok_effTy hbody, hstep, hresult, hsub0, hsub1, rfl⟩
 
 end Conform.Effect4.Typing

@@ -21,7 +21,7 @@ the *family* — and says how the definition reads that value:
 A definition's *own code* is its value and the helpers the compiler made for it, followed
 transitively: the matcher (`foo.match_1`), the sparse `casesOn` a `match` with a catch-all
 compiles through (shared, and named after whichever definition first needed it:
-`Ty.isFactor.match_1` uses `Ty.infer._sparseCasesOn_13`), the `_unary`/`_mutual` helper a
+`Ty.isFactor.match_1` uses `Ty.isFactor._sparseCasesOn_1`), the `_unary`/`_mutual` helper a
 well-founded definition of two or more arguments compiles to, the `_f` functional of a structural
 one. Never a definition a person wrote (handing a value to one is `delegates`), never the
 family's own recursors, never a derived `sizeOf`. A private definition is a row under the name it

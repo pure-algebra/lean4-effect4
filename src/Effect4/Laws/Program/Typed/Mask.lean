@@ -383,9 +383,9 @@ theorem restore_saved_evaluates
     ∃ flag, evalTerm p.env saved = some (Val.savedMask flag) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
-  obtain ⟨hsaved, -⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
+  obtain ⟨savedTy, hsaved, hsub_saved, -⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
-  obtain ⟨flag, rfl⟩ := fits_maskRestore_inv hvfit
+  obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
   exact ⟨flag, hv⟩
 
 /-- **The body's point is typed at the node's type**, with the node's environment and view: a
@@ -396,7 +396,7 @@ theorem restore_body_typed
     (hpt : PointTyped root w p ty) : PointTyped root w (p.child 0) ty := by
   obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
-  obtain ⟨-, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
+  obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
   exact pointTyped_child hat rfl rfl hcb henv hview
 
 end TypedRestore
@@ -415,7 +415,7 @@ structure RestoreBodyBoundary : Prop where
   the node's own environment and at the node's type. -/
   checked : ∀ (sig : Signature NativeOp) (env : TyEnv) (path : List Nat) (saved : Term)
     (body : NativeEff) (t : EffTy), Checker.check sig env path (.restore saved body) = .ok t →
-      termTy sig env saved = some Ty.maskRestore ∧
+      ∃ savedTy, termTy sig env saved = some savedTy ∧ Ty.sub savedTy.normalize .maskRestore = true ∧
         Checker.check sig env (path ++ [0]) body = .ok t
   /-- Both saved choices run the one body compiled at child 0, whose environment is the
   node's: a false bit is that code, and a true bit is `interruptible` over it. -/

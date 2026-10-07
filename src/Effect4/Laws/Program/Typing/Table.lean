@@ -203,11 +203,11 @@ theorem hasTy_extSlotEnv {s : Signature Op} {env : TyEnv} {p : Eff Op} {T : EffT
     (ht : (Node.eff p).extSlotTerm s slot = some t) :
     ∃ env' ty, (Node.eff p).extSlotEnv s env slot = some env' ∧ termTy s env' t = some ty := by
   cases hp with
-  | catchIf hb htest _ _ =>
+  | catchIf hb htest _ _ _ =>
     cases slot <;> simp only [Node.extSlotTerm, Option.some.injEq, reduceCtorEq] at ht
     subst ht
     exact ⟨_, _, by simp only [Node.extSlotEnv, effTy_complete _ _ _ _ hb, Option.map_some], htest⟩
-  | iterate h0 htest hb hstep hres _ _ =>
+  | iterate h0 htest _ hb hstep hres _ _ =>
     cases slot <;> simp only [Node.extSlotTerm, Option.some.injEq, reduceCtorEq] at ht <;>
       subst ht
     · exact ⟨_, _, by simp only [Node.extSlotEnv, h0, Option.map_some], htest⟩

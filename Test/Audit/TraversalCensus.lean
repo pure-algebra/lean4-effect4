@@ -19,8 +19,8 @@ of the planted shapes in `Test/Audit/TraversalFixture.lean`, one row per shape, 
 four definitions of the tree it used to misread — `Ty.sub` is `wf` (its fixpoint sits in a
 `_unary` helper over `WellFounded.Nat.fix`; it was printed `opaque`), `Codegen.Types.ofNormalized`
 is a `[private]` structural row (private definitions were no rows), `Ty.isFactor` is `one-level`
-(its `match` compiles through a sparse `casesOn` named after `Ty.infer`; it was printed `opaque`),
-and `Ty.closed` stays `structural`.
+(its `match` compiles through a sparse `casesOn`, `Ty.isFactor._sparseCasesOn_1`; it was printed
+`opaque`), and `Ty.closed` stays `structural`.
 
 A fold row names its algebra by the name it was written with (2026-10-01, seat G's owed item 4):
 `Codegen.Schema.representation` and `Codegen.Schema.check` fold through the private

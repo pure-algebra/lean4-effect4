@@ -112,8 +112,9 @@ theorem inv_catchCause (sig : Signature Op) (env : TyEnv) (p : List Nat) (body h
 theorem inv_catchIf (sig : Signature Op) (env : TyEnv) (p : List Nat) (test : Term)
     (body handler : Eff Op) :
     ∀ t, check sig env p (.catchIf test body handler) = .ok t →
-      ∃ b h, check sig env (p ++ [0]) body = .ok b ∧
-        termTy sig (env ++ [b.error]) test = some .bool ∧
+      ∃ b h testTy, check sig env (p ++ [0]) body = .ok b ∧
+        termTy sig (env ++ [b.error]) test = some testTy ∧
+        Ty.sub testTy.normalize .bool = true ∧
         check sig (env ++ [b.error]) (p ++ [1]) handler = .ok h ∧
         t = ⟨Ty.join b.answer h.answer, catchIfError test env.length b.error h.error,
           b.requires.union h.requires⟩ := by
@@ -165,8 +166,9 @@ theorem inv_select (sig : Signature Op) (env : TyEnv) (p : List Nat) (s : Term) 
 theorem inv_iterate (sig : Signature Op) (env : TyEnv) (p : List Nat) (cursorTy : Option Ty)
     (initial test step result : Term) (body : Eff Op) :
     ∀ t, check sig env p (.iterate cursorTy initial test step result body) = .ok t →
-      ∃ c0 c1 d b, termTy sig env initial = some c0 ∧
-        termTy sig (env ++ [cursorTy.getD c0]) test = some .bool ∧
+      ∃ c0 c1 d b testTy, termTy sig env initial = some c0 ∧
+        termTy sig (env ++ [cursorTy.getD c0]) test = some testTy ∧
+        Ty.sub testTy.normalize .bool = true ∧
         check sig (env ++ [cursorTy.getD c0]) (p ++ [0]) body = .ok b ∧
         termTy sig (env ++ [cursorTy.getD c0, b.answer]) step = some c1 ∧
         termTy sig (env ++ [cursorTy.getD c0]) result = some d ∧
@@ -239,7 +241,9 @@ and the body checks at child 0 at the node's type. -/
 theorem inv_restore (sig : Signature Op) (env : TyEnv) (p : List Nat) (saved : Term)
     (body : Eff Op) :
     ∀ t, check sig env p (.restore saved body) = .ok t →
-      termTy sig env saved = some Ty.maskRestore ∧ check sig env (p ++ [0]) body = .ok t := by
+      ∃ savedTy, termTy sig env saved = some savedTy ∧
+        Ty.sub savedTy.normalize Ty.maskRestore = true ∧
+        check sig env (p ++ [0]) body = .ok t := by
   aesop (rule_sets := [Effect4.Checker])
 
 /-! ## `checkStmts` under `afterRet := none` — eight lemmas (`ret` splits on its tail) -/
@@ -283,7 +287,8 @@ theorem inv_stmts_ret_cons (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p
 theorem inv_stmts_ifElse (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat)
     (test : Term) (thenB elseB rest : Stmts Op) :
     ∀ g, checkStmts sig env inLoop none p (.cons (.ifElse test thenB elseB) rest) = .ok g →
-      termTy sig env test = some .bool ∧ ∃ a b r,
+      ∃ testTy, termTy sig env test = some testTy ∧
+        Ty.sub testTy.normalize .bool = true ∧ ∃ a b r,
         checkStmts sig env inLoop none (p ++ [0, 0]) thenB = .ok a ∧
         checkStmts sig env inLoop none (p ++ [0, 1]) elseB = .ok b ∧
         checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧
@@ -329,7 +334,9 @@ theorem inv_action_fork (sig : Signature Op) (env : TyEnv) (p : List Nat) (progr
 theorem inv_action_forkIn (sig : Signature Op) (env : TyEnv) (p : List Nat) (program : Eff Op)
     (options : Supervision.ForkOptions) (scope : Term) :
     ∀ t, checkAction sig env p (.forkIn program options scope) = .ok t →
-      ∃ q, check sig env (p ++ [0]) program = .ok q ∧ termTy sig env scope = some Ty.scope ∧
+      ∃ q scopeTy, check sig env (p ++ [0]) program = .ok q ∧
+        termTy sig env scope = some scopeTy ∧
+        Ty.sub scopeTy.normalize Ty.scope = true ∧
         t = ⟨.fiberOf q.answer q.error, .never, q.requires⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
@@ -343,8 +350,9 @@ theorem inv_action_forkScoped (sig : Signature Op) (env : TyEnv) (p : List Nat) 
 
 theorem inv_action_runIn (sig : Signature Op) (env : TyEnv) (p : List Nat) (target scope : Term) :
     ∀ t, checkAction sig env p (.runIn target scope) = .ok t →
-      ∃ (handle : Ty) (pair : Ty × Ty), termTy sig env target = some handle ∧
-        fiberTy handle = some pair ∧ termTy sig env scope = some Ty.scope ∧
+      ∃ (handle : Ty) (pair : Ty × Ty) (scopeTy : Ty), termTy sig env target = some handle ∧
+        fiberTy handle = some pair ∧ termTy sig env scope = some scopeTy ∧
+        Ty.sub scopeTy.normalize Ty.scope = true ∧
         t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
@@ -372,9 +380,10 @@ theorem inv_action_interruptAll_self (sig : Signature Op) (env : TyEnv) (p : Lis
 theorem inv_action_interruptAll_by (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (targets who : Term) :
     ∀ t, checkAction sig env p (.interruptAll targets (some who)) = .ok t →
-      ∃ (ts inner : Ty) (pair : Ty × Ty), termTy sig env targets = some ts ∧
+      ∃ (ts inner : Ty) (pair : Ty × Ty) (whoTy : Ty), termTy sig env targets = some ts ∧
         Checker.listOf? ts = some inner ∧
-        fiberTy inner = some pair ∧ termTy sig env who = some .nat ∧
+        fiberTy inner = some pair ∧ termTy sig env who = some whoTy ∧
+        Ty.sub whoTy.normalize .nat = true ∧
         t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
@@ -413,7 +422,8 @@ theorem inv_action_raceAll (sig : Signature Op) (env : TyEnv) (p : List Nat) (en
 
 theorem inv_action_setContext (sig : Signature Op) (env : TyEnv) (p : List Nat) (context : Term) :
     ∀ t, checkAction sig env p (.setContext context) = .ok t →
-      termTy sig env context = some Ty.context ∧ t = EffTy.pure .unit := by
+      ∃ contextTy, termTy sig env context = some contextTy ∧
+        Ty.sub contextTy.normalize Ty.context = true ∧ t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_getContext (sig : Signature Op) (env : TyEnv) (p : List Nat) :
@@ -428,9 +438,10 @@ theorem inv_action_getId (sig : Signature Op) (env : TyEnv) (p : List Nat) :
 theorem inv_action_closeScope (sig : Signature Op) (env : TyEnv) (p : List Nat)
     (scope exit : Term) :
     ∀ t, checkAction sig env p (.closeScope scope exit) = .ok t →
-      ∃ (exitTy : Ty) (pair : Ty × Ty), termTy sig env scope = some Ty.scope ∧
+      ∃ (scopeTy exitTy : Ty) (pair : Ty × Ty), termTy sig env scope = some scopeTy ∧
+        Ty.sub scopeTy.normalize Ty.scope = true ∧
         termTy sig env exit = some exitTy ∧
-        exitOf? exitTy = some pair ∧ t = EffTy.pure .unit := by
+        Checker.exitOf? exitTy = some pair ∧ t = EffTy.pure .unit := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_getInterruptible (sig : Signature Op) (env : TyEnv) (p : List Nat) :

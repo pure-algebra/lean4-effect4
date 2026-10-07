@@ -792,14 +792,13 @@ theorem causeOf_progress {src : ProgramSource} {w : World} {env : List Ty} {vals
       trivial
   | .interrupt (some who), e, h => by
     have h' : ((termTy src.signature env who).bind fun t =>
-        if t = .nat then some Ty.never else none) = some e := h
+        if Ty.sub t.normalize .nat then some Ty.never else none) = some e := h
     obtain ⟨t, ht, hnat⟩ := Option.bind_eq_some_iff.mp h'
     split at hnat
     · next htn =>
       cases hnat
-      subst htn
       obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv ht
-      obtain ⟨n, rfl⟩ := fits_nat_inv hfit
+      obtain ⟨n, rfl⟩ := fits_nat_inv (fits_subN w (b := .nat) htn v hfit)
       refine ⟨Cause.interrupt (some ⟨n⟩), by simp only [causeOf, hv], ?_, ?_⟩
       · intro r hr
         simp only [Cause.interrupt, List.mem_singleton] at hr
@@ -1030,10 +1029,9 @@ theorem decide_fits {w : World} {d : Decision} {t : Ty} {e0 e1 : List Ty} {v : V
     simp only [Decision.arms] at harms
     split at harms
     · rename_i ht
-      subst ht
       simp only [Option.some.injEq, Prod.mk.injEq] at harms
       obtain ⟨rfl, rfl⟩ := harms
-      obtain ⟨b, rfl⟩ := fits_bool_inv hv
+      obtain ⟨b, rfl⟩ := fits_bool_inv (fits_subN w (b := .bool) ht v hv)
       exact ⟨b, none, rfl, by cases b <;> trivial⟩
     · exact nomatch harms
   | option =>
@@ -1335,7 +1333,7 @@ theorem iterate_arm {cursorTy : Option Ty} {initial test step result : Term} {bo
   obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
   have checked := hcheck
   rw [Eff.expandIn_iterate] at hcheck
-  obtain ⟨c0, _, _, _, hc0, _, _, _, _, hsub0, _, _⟩ := Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
+  obtain ⟨c0, _, _, _, _, hc0, _, _, _, _, _, hsub0, _, _⟩ := Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
   obtain ⟨cursor, hcursor, hfit⟩ := evalTerm_progress_env henv hc0
   have pre : LoopPointTyped root w p ty cursor := ⟨cursorTy, initial, test, step, result, body, env,
     c0, hat, checked, henv, hview, hc0, fits_subN w (a := c0) (b := cursorTy.getD c0) hsub0 cursor hfit⟩
@@ -1528,7 +1526,7 @@ theorem catchIf_arm {test : Term} {b h : NativeEff} (hfuel : p.fuel = f + 1)
     TypedProg root w ty (denoteR root.program (.catchIf test b h) p) := by
   obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
   rw [Eff.expandIn_catchIf] at hcheck
-  obtain ⟨tb, th, hcb, _, hch, rfl⟩ := Checker.inv_catchIf _ _ _ _ _ _ _ hcheck
+  obtain ⟨tb, th, testTy, hcb, _, _, hch, _, rfl⟩ := Checker.inv_catchIf _ _ _ _ _ _ _ hcheck
   rw [denoteR_catchIf _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine catchGuard_typed root (mid := tb)
     (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl
@@ -1903,10 +1901,10 @@ theorem forkIn_arm {b : NativeEff} {options : Supervision.ForkOptions} {scope : 
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
   rw [Eff.expandIn_forkIn] at hcheck
-  obtain ⟨q, hcq, hscope, rfl⟩ :=
+  obtain ⟨q, scopeTy, hcq, hscope, hsub_scope, rfl⟩ :=
     Checker.inv_action_forkIn _ _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hscope
-  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hfit
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv (fits_subN w (b := .scope) hsub_scope v hfit)
   have hact : actionAt root.program p = some (WithFiberAction.forkIn
       (resolve root.program ((p.child 0).child 0)) options sc (p.child 0).path) := by
     unfold actionAt
@@ -1956,13 +1954,13 @@ theorem runIn_arm {target scope : Term}
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨handle, pair, hty, hfib, hscope, rfl⟩ :=
+  obtain ⟨handle, pair, scopeTy, hty, hfib, hscope, hsub_scope, rfl⟩ :=
     Checker.inv_action_runIn _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
   replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hΓ, -, -⟩ := fiber_of_fits hfit
   obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hscope
-  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hufit
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv (fits_subN w (b := .scope) hsub_scope u hufit)
   have hact : actionAt root.program p = some (WithFiberAction.runIn ⟨index⟩ sc) := by
     unfold actionAt
     rw [hat]
@@ -2070,12 +2068,12 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
       (fun _ _ _ h => nomatch h) () (fibersDeclared_of_fits hdecl)
       (fun w' _ ans post => unitAnswer_typed root post)
   | some who =>
-    obtain ⟨ts, inner, pair, hts, hlist, hfib, hwho, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
+    obtain ⟨ts, inner, pair, whoTy, hts, hlist, hfib, hwho, hsub_who, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
     replace hfit := fits_subN w (listOf_upper hlist) v hfit
     replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
     obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv hwho
-    obtain ⟨m, rfl⟩ := fits_nat_inv hnfit
+    obtain ⟨m, rfl⟩ := fits_nat_inv (fits_subN w (b := .nat) hsub_who n hnfit)
     obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
         some (WithFiberAction.interruptAll ids (some ⟨m⟩)) ∧
           ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
@@ -2258,10 +2256,10 @@ theorem setContext_arm {context : Term}
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨hc, rfl⟩ :=
+  obtain ⟨contextTy, hc, hsub_ctx, rfl⟩ :=
     Checker.inv_action_setContext _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hc
-  obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hfit
+  obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv (fits_subN w (b := .context) hsub_ctx v hfit)
   have hact : actionAt root.program p = some (WithFiberAction.setContext ctx) := by
     unfold actionAt
     rw [hat]
@@ -2329,10 +2327,10 @@ theorem closeScope_arm {scope exit : Term}
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨exitTy, pair, hs, hex, hexit, rfl⟩ :=
+  obtain ⟨scopeTy, exitTy, pair, hs, hsub_scope, hex, hexit, rfl⟩ :=
     Checker.inv_action_closeScope _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hs
-  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hufit
+  obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv (fits_subN w (b := .scope) hsub_scope u hufit)
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hex
   replace hvfit := fits_subN w (exitOf_upper hexit) v hvfit
   obtain ⟨ex, hexv⟩ := exitOfVal_of_fits hvfit
@@ -3352,9 +3350,9 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
     | restore saved b =>
       obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
       rw [Eff.expandIn_restore] at hcheck
-      obtain ⟨hsaved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
+      obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
       obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
-      obtain ⟨flag, rfl⟩ := fits_maskRestore_inv hvfit
+      obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
       simp only [hv, Option.bind_some, Val.savedMask?_savedMask] at hinline
       cases flag with
       | true => exact nomatch hinline
@@ -3402,9 +3400,9 @@ theorem restore_arm {saved : Term} {b : NativeEff} (hfuel : p.fuel = f + 1)
     TypedProg root w ty (denoteR root.program (.restore saved b) p) := by
   obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
-  obtain ⟨hsaved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
+  obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
-  obtain ⟨flag, rfl⟩ := fits_maskRestore_inv hvfit
+  obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
   have hchild : PointTyped root w (p.child 0) ty := pointTyped_child hat rfl rfl hcb henv hview
   rw [denoteR_restore _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv, Option.bind_some,
     Val.savedMask?_savedMask]

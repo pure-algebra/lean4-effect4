@@ -275,20 +275,25 @@ theorem maskForm_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff Nati
 theorem restore_typed (sig : Signature NativeOp) (env : TyEnv) (saved : Term)
     (body : Eff NativeOp) (t : EffTy) (hs : termTy sig env saved = some Ty.maskRestore)
     (hb : effTy sig env body = some t) : effTy sig env (.restore saved body) = some t :=
-  effTy_complete sig _ env _ (.restore hs (effTy_sound sig body env t hb))
+  effTy_complete sig _ env _ (.restore hs (Ty.sub_refl _) (effTy_sound sig body env t hb))
 
 /-- A restore site of any other saved term has no type: the Boolean use that row 239's
 selection would admit is refused. -/
 @[semantics "translation-simulation"]
 theorem restore_untyped (sig : Signature NativeOp) (env : TyEnv) (saved : Term)
-    (body : Eff NativeOp) (s : Ty) (hs : termTy sig env saved = some s) (hne : s ≠ Ty.maskRestore) :
+    (body : Eff NativeOp) (s : Ty) (hs : termTy sig env saved = some s)
+    (hne : Ty.sub s.normalize Ty.maskRestore = false) :
     effTy sig env (.restore saved body) = none := by
   cases h : effTy sig env (.restore saved body) with
   | none => rfl
   | some t =>
     have typed := effTy_sound sig _ env t h
     cases typed with
-    | restore hsaved _ => exact absurd (Option.some.inj (hs.symm.trans hsaved)) hne
+    | restore hsaved hsub _ =>
+      have heq : s = _ := Option.some.inj (hs.symm.trans hsaved)
+      subst heq
+      rw [hsub] at hne
+      contradiction
 
 end FormTyping
 
@@ -316,7 +321,7 @@ structure MaskFormProfile : Prop where
     (t : EffTy), termTy sig env saved = some Ty.maskRestore → effTy sig env body = some t →
       effTy sig env (.restore saved body) = some t
   siteRefused : ∀ (sig : Signature NativeOp) (env : TyEnv) (saved : Term) (body : Eff NativeOp)
-    (s : Ty), termTy sig env saved = some s → s ≠ Ty.maskRestore →
+    (s : Ty), termTy sig env saved = some s → Ty.sub s.normalize Ty.maskRestore = false →
       effTy sig env (.restore saved body) = none
   /-- The form is readable exactly when its body is, one level up. So it prints row by row,
   and what it prints reads back to it. -/

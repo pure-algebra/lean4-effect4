@@ -2767,26 +2767,6 @@ theorem fits_instantiate_widens {σ σ' : Ty.Subst} (hw : Ty.WidensSub σ σ') (
         ts xs (fun t ht x hx => ih t ht (hvs t ht) x hx) h
     all_goals exact h.elim
 
-/-- A list match puts every argument at its parameter's instance under the bindings of the
-LAST step (the coarse `Fits.instantiate`'s twin): each guard holds at its own step
-(`Ty.matchTemplate_sound`), and the later steps only widen (`Ty.matchTemplateArgs_widensSub`). -/
-theorem FitsAll.instantiate {w : World} {join : Bool} :
-    ∀ {σ₀ σ : Ty.Subst} {ps : List Ty}, (∀ p ∈ ps, Ty.valueVars p = true) →
-      ∀ {vs : List Val} {tys : List Ty}, Ty.matchTemplateArgs σ₀ ps tys join = some σ →
-        FitsAll w vs tys → FitsAll w vs (ps.map (Ty.instantiate σ))
-  | _, _, [], _, _, [], _, .nil => .nil
-  | _, _, [], _, _, _ :: _, hmatch, _ => nomatch hmatch
-  | _, _, _ :: _, _, _, [], hmatch, _ => nomatch hmatch
-  | σ₀, σ, p :: ps, hps, _, r :: rs, hmatch, .cons hv hfit => by
-    simp only [Ty.matchTemplateArgs, Option.bind_eq_some_iff] at hmatch
-    obtain ⟨σ₁, h₁, hrest⟩ := hmatch
-    exact .cons
-      (fits_instantiate_widens (Ty.matchTemplateArgs_widensSub hrest) w p
-        (hps p List.mem_cons_self) _
-        ((fits_normalize w _ _).mp (fits_sub w (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) _
-          ((fits_normalize w r _).mpr hv))))
-      (FitsAll.instantiate (fun q hq => hps q (List.mem_cons_of_mem p hq)) hrest hfit)
-
 theorem FitsAll.instantiate_admits {w : World} {σ : Ty.Subst} {ps : List Ty} :
     ∀ {rs : List Ty}, ps.length = rs.length → Bounds.Admits σ ps rs →
       ∀ {vs : List Val}, FitsAll w vs rs → FitsAll w vs (ps.map (Ty.instantiate σ)) := by

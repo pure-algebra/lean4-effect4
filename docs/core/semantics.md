@@ -797,9 +797,9 @@ It establishes no execution property for generated TypeScript.
   over unions; subtyping equivalence and comparisons are defined through `subN`.
 - **Exclusion of Function Types (Row 163)**: No function arrow types exist in `Ty`; arrow subtyping is excluded.
 - **Row templates and the match (row 42; the state plan's T3a)**: A row's columns may hold parameters.
-  `Ty.matchTemplate` infers bindings from the request, reading a request union member by member.
-  It keeps them exactly when the request is below the template's instance, both sides normalized.
-  The guard is the law (`matchTemplate_sound`), so inference can lose completeness and never soundness.
+  The match by bounds (`Bounds.matchB`) binds each parameter at the join of its lower bounds.
+  It keeps the bindings exactly when the request is below the template's instance, both sides normalized.
+  The guard is the law (`Bounds.matchB_sound`), so the match is sound whatever it binds.
 - **Records, maps, tuples and applications (rows 119, 162)**: the constructors are in `Ty`. `Ty.sub` compares
   records with the same canonical names and optionality field by field, covariantly (no width rule); maps
   exactly in the key and covariantly in the value; tuples of one length pointwise; and applications of one
@@ -841,21 +841,6 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   (`normalize_idem` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Antisymmetry on canonical types (`sub-antisymm-canonical`)**: `subN` is antisymmetric on canonical representatives.
   (`sub_antisymm_canonical` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
-- **Anchored completeness of the match (`template-match-anchored`)**: The statement fixes a normal, admissible
-  template whose parameters each first occur as an invariant handle's argument (`Ty.anchored`).
-  A normal request that some substitution places under its instance then has a match.
-  The request holds no `never` outside such an argument (`Ty.bottomFree`); without that premise the
-  statement is false (`E4-CHECK-CE-018`'s boundary).
-  It is proved (`Ty.matchTemplate_complete_anchored`, `src/Effect4/Laws/Program/Template.lean`; seat
-  T4).
-  It establishes no match at a parameter first met covariantly, under a union template or under a
-  nominal reference.
-  `Ref.modify`'s `B` is such a parameter: it first occurs in the result of the row's binder term.
-  The checker binds `B` from the term's raw type (`bindTerm`, `src/Effect4/Program/Typing/Rules.lean`)
-  and claims no completeness there (the state plan's T3b).
-  The checker no longer calls this match: the match by bounds replaced it at each caller
-  (decisions row 303, and the claim below).
-  The function and this law stand until the open stage of slice MATCH removes them.
 - **The complete match of a template by bounds (`template-match-complete`)**: The statement fixes a
   template in the reach of the laws (`Bounds.TemplateOK`).
   Such a template is its own normal form, is admissible, and holds no nominal reference.

@@ -80,8 +80,8 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
       (EffTy.joinAnswer_eq _ _)
   | catchIf test body handler =>
     intro env p t h
-    obtain ⟨b, hh, hb, ht, hhh, rfl⟩ := inv_catchIf sig env p test body handler t h
-    exact .catchIf (check_sound sig body env _ b hb) ht (check_sound sig handler _ _ hh hhh)
+    obtain ⟨b, hh, testTy, hb, ht, hsub, hhh, rfl⟩ := inv_catchIf sig env p test body handler t h
+    exact .catchIf (check_sound sig body env _ b hb) ht hsub (check_sound sig handler _ _ hh hhh)
       (EffTy.joinAnswer_eq _ _)
   | matchCause body onValue onCause =>
     intro env p t h
@@ -104,9 +104,9 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     exact .interruptible (check_sound sig body env _ t (inv_interruptible sig env p body t h))
   | iterate cursor initial test step result body =>
     intro env p t h
-    obtain ⟨c0, c1, d, b, hinit, htest, hbody, hstep, hresult, hsub0, hsub1, rfl⟩ :=
+    obtain ⟨c0, c1, d, b, testTy, hinit, htest, hsub_bool, hbody, hstep, hresult, hsub0, hsub1, rfl⟩ :=
       inv_iterate sig env p cursor initial test step result body t h
-    exact .iterate hinit htest (check_sound sig body _ _ b hbody) hstep hresult hsub0 hsub1
+    exact .iterate hinit htest hsub_bool (check_sound sig body _ _ b hbody) hstep hresult hsub0 hsub1
   | yieldNow priority =>
     intro env p t h
     obtain rfl := inv_yieldNow sig env p priority t h
@@ -146,8 +146,8 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     exact .provideService hty hval heq (check_sound sig body env _ b hb)
   | restore saved body =>
     intro env p t h
-    obtain ⟨hs, hb⟩ := inv_restore sig env p saved body t h
-    exact .restore hs (check_sound sig body env _ t hb)
+    obtain ⟨savedTy, hs, hsub, hb⟩ := inv_restore sig env p saved body t h
+    exact .restore hs hsub (check_sound sig body env _ t hb)
 termination_by structural e
 
 theorem checkStmts_sound (sig : Signature Op) (body : Stmts Op) :
@@ -180,9 +180,9 @@ theorem checkStmts_sound (sig : Signature Op) (body : Stmts Op) :
         exact (inv_stmts_ret_cons sig env inLoop p value next rest g h).elim
     | ifElse test thenB elseB =>
       intro env inLoop p g h
-      obtain ⟨htest, a, b, r, ha, hb, hr, rfl⟩ :=
+      obtain ⟨testTy, htest, hsub, a, b, r, ha, hb, hr, rfl⟩ :=
         inv_stmts_ifElse sig env inLoop p test thenB elseB tail g h
-      exact .ifElse htest (checkStmts_sound sig thenB env inLoop _ a ha)
+      exact .ifElse htest hsub (checkStmts_sound sig thenB env inLoop _ a ha)
         (checkStmts_sound sig elseB env inLoop _ b hb) (checkStmts_sound sig tail env inLoop _ r hr)
         (GenTy.merge_eq _ _) (GenTy.seq_eq _ _)
     | whileTrue loopBody =>
@@ -222,16 +222,16 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .fork options (check_sound sig program env _ q hq)
   | forkIn program options scope =>
     intro env p t h
-    obtain ⟨q, hq, hs, rfl⟩ := inv_action_forkIn sig env p program options scope t h
-    exact .forkIn options (check_sound sig program env _ q hq) hs
+    obtain ⟨q, scopeTy, hq, hs, hsub, rfl⟩ := inv_action_forkIn sig env p program options scope t h
+    exact .forkIn options (check_sound sig program env _ q hq) hs hsub
   | forkScoped program options =>
     intro env p t h
     obtain ⟨q, hq, rfl⟩ := inv_action_forkScoped sig env p program options t h
     exact .forkScoped options (check_sound sig program env _ q hq)
   | runIn target scope =>
     intro env p t h
-    obtain ⟨handle, pair, ht, hf, hs, rfl⟩ := inv_action_runIn sig env p target scope t h
-    exact .runIn ht hf hs
+    obtain ⟨handle, pair, scopeTy, ht, hf, hs, hsub, rfl⟩ := inv_action_runIn sig env p target scope t h
+    exact .runIn ht hf hs hsub
   | interrupt target =>
     intro env p t h
     obtain ⟨handle, pair, ht, hf, rfl⟩ := inv_action_interrupt sig env p target t h
@@ -247,9 +247,9 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
       obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_interruptAll_self sig env p targets t h
       exact .interruptAll_self ht hl hf
     | some w =>
-      obtain ⟨ts, inner, pair, ht, hl, hf, hw, rfl⟩ :=
+      obtain ⟨ts, inner, pair, whoTy, ht, hl, hf, hw, hsub, rfl⟩ :=
         inv_action_interruptAll_by sig env p targets w t h
-      exact .interruptAll_by ht hl hf hw
+      exact .interruptAll_by ht hl hf hw hsub
   | awaitAll targets =>
     intro env p t h
     obtain ⟨ts, inner, pair, ht, hl, hf, rfl⟩ := inv_action_awaitAll sig env p targets t h
@@ -271,8 +271,8 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .raceAll (checkEffs_sound sig entrants env _ t (inv_action_raceAll sig env p entrants t h))
   | setContext context =>
     intro env p t h
-    obtain ⟨hc, rfl⟩ := inv_action_setContext sig env p context t h
-    exact .setContext hc
+    obtain ⟨contextTy, hc, hsub, rfl⟩ := inv_action_setContext sig env p context t h
+    exact .setContext hc hsub
   | getContext =>
     intro env p t h
     obtain rfl := inv_action_getContext sig env p t h
@@ -283,8 +283,8 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .getId
   | closeScope scope exitTerm =>
     intro env p t h
-    obtain ⟨exitTy, pair, hs, he, hx, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
-    exact .closeScope hs he hx
+    obtain ⟨scopeTy, exitTy, pair, hs, hsub, he, hx, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
+    exact .closeScope hs hsub he hx
   | getInterruptible =>
     intro env p t h
     obtain rfl := inv_action_getInterruptible sig env p t h

@@ -300,7 +300,7 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
     SoundB (denoteBWith bad k e env) (denoteB k e env) w t.answer t.error
   | .iterate cursorTy initial test step result body, tys, env, w, t, hl, hty, hat => by
     have hlb := Looped.iterate hl
-    obtain ⟨c0, c1, d, b, hinit, htest, hbody, hstepTy, hres, hsub0, hsub1, rfl⟩ :=
+    obtain ⟨c0, c1, d, b, testTy, hinit, htest, hsub_bool, hbody, hstepTy, hres, hsub0, hsub1, rfl⟩ :=
       inv_iterate nativeSignature tys cursorTy initial test step result body t hty
     -- the cursor's type: the annotation, or the initial value's (DI-91)
     generalize cursorTy.getD c0 = cursor at htest hbody hstepTy hres hsub0 hsub1
@@ -313,7 +313,7 @@ theorem soundB (bad : ExitV) (k : Nat) : ∀ (e : NativeEff) (tys : TyEnv) (env 
     have hat' : TypedAt (tys ++ [cursor]) (env ++ [c]) w' :=
       hat₀.push (StoreOk.refl hat₀.store) hcty
     obtain ⟨tv, htv, htvfit⟩ := hat'.eval htest
-    obtain ⟨flag, rfl⟩ := Typed.fits_bool_inv htvfit
+    obtain ⟨flag, rfl⟩ := Typed.fits_bool_inv (Typed.fits_subN w' (b := .bool) hsub_bool tv htvfit)
     unfold iterateStepWith iterateStep
     rw [htv]
     cases flag with

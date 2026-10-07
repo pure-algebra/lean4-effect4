@@ -379,8 +379,8 @@ theorem types_orT {a b : TermSrc} (ha : TypesEach sig a env path types .bool)
 /-- A selection whose second arm's type is above the first's types at the second's. -/
 theorem types_ifT_above {c t f : TermSrc} {X Y : Ty}
     (hc : TypesEach sig c env path types .bool) (ht : TypesEach sig t env path types X)
-    (hf : TypesEach sig f env path types Y) (above : Ty.sub X Y = true := by decide)
-    (canonical : Y.normalize = Y := by decide) :
+    (hf : TypesEach sig f env path types Y) (above : Ty.sub X Y = true)
+    (canonical : Y.normalize = Y) :
     TypesEach sig (ifT c t f) env path types Y :=
   fun _ => types_app (.cons (hc _) (.cons (ht _) (.cons (hf _) .nil)))
     (atomOf_native atoms (nativeAtomTy_ite_above above canonical))
@@ -388,7 +388,7 @@ theorem types_ifT_above {c t f : TermSrc} {X Y : Ty}
 /-- A selection between two arms of one type. -/
 theorem types_ifT {c t f : TermSrc} {X : Ty} (hc : TypesEach sig c env path types .bool)
     (ht : TypesEach sig t env path types X) (hf : TypesEach sig f env path types X)
-    (canonical : X.normalize = X := by decide) :
+    (canonical : X.normalize = X) :
     TypesEach sig (ifT c t f) env path types X :=
   types_ifT_above atoms hc ht hf (Ty.sub_refl X) canonical
 
@@ -427,7 +427,7 @@ theorem types_noneOf {xs : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path ty
 theorem types_append {xs ys : TermSrc} {T : Ty}
     (hxs : TypesEach sig xs env path types (.list T))
     (hys : TypesEach sig ys env path types (.list T))
-    (canonical : T.normalize = T := by decide) :
+    (canonical : T.normalize = T) :
     TypesEach sig (app "append" [xs, ys]) env path types (.list T) :=
   fun _ => types_app (.cons (hxs _) (.cons (hys _) .nil))
     (atomOf_native atoms (nativeAtomTy_append T canonical))
@@ -473,7 +473,7 @@ theorem types_isZero {n : TermSrc} (hn : TypesEach sig n env path types .nat) :
 theorem types_minT {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     (hb : TypesEach sig b env path types .nat) :
     TypesEach sig (minT a b) env path types .nat :=
-  types_ifT atoms (types_lt atoms ha hb) ha hb
+  types_ifT atoms (types_lt atoms ha hb) ha hb rfl
 
 /-- The first element of a list, as an option. -/
 theorem types_head {xs : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path types (.list T)) :

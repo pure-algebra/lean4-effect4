@@ -453,34 +453,6 @@ theorem Fits.triple_inv {vs : List Val} {a b c : Ty} (h : Fits vs [a, b, c]) :
       cases hrest' with
       | cons hz hrest'' => cases hrest''; exact ⟨_, _, _, rfl, hx, hy, hz⟩
 
-/-- A successful list match puts every argument at its parameter's instance under the bindings
-of the LAST step: each guard holds at its own step's bindings (`matchTemplate_sound`), and every
-later step only widens them (`Ty.matchTemplateArgs_widens`, `Ty.hasTy_instantiate_widens`).
-The `poly` scheme's premise (`NativeAtom.sound_of_poly`), for either rule of `join`. -/
-theorem Fits.instantiate {σ₀ σ : Ty.Subst} {ps : TyEnv} {join : Bool} :
-    ∀ {vs : List Val} {tys : TyEnv}, Ty.matchTemplateArgs σ₀ ps tys join = some σ →
-      Fits vs tys → Fits vs (ps.map (Ty.instantiate σ)) := by
-  induction ps generalizing σ₀ with
-  | nil =>
-    intro vs tys hmatch hfit
-    cases tys with
-    | nil => cases hfit; exact .nil
-    | cons _ _ => exact nomatch hmatch
-  | cons p ps ih =>
-    intro vs tys hmatch hfit
-    cases tys with
-    | nil => exact nomatch hmatch
-    | cons r rs =>
-      simp only [Ty.matchTemplateArgs, Option.bind_eq_some_iff] at hmatch
-      obtain ⟨σ₁, h₁, hrest⟩ := hmatch
-      cases hfit with
-      | cons hv hfit' =>
-        have hinst := hasTy_sub r.normalize _ _ []
-          (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) ((hasTy_normalize r _ []).trans hv)
-        rw [hasTy_normalize] at hinst
-        exact .cons (Ty.hasTy_instantiate_widens (Ty.matchTemplateArgs_widens hrest) p _ []
-          hinst) (ih hrest hfit')
-
 /-- A successful list match by bounds puts every argument at its parameter's instance under the
 bindings of the match: each argument is below its parameter's instance (`matchArgsB_sound`), and
 values of a subtype are values of the supertype (`hasTy_sub`). -/
@@ -889,9 +861,8 @@ theorem sound_of_custom {a : NativeAtom} {tag : CustomScheme}
 
 /-- A template. What is left per atom is its content at the parameters' instances, for every
 substitution: the step from "the arguments fit `tys`" to "they fit the parameters instantiated
-at the final bindings" is `Fits.instantiate`, once, for either rule of `join`. Quantifying
-over every σ is stronger than `Scheme.apply` needs, and every template here is parametric in
-what it binds, so nothing is lost. -/
+at the final bindings" is `Fits.instantiateB`. Quantifying over every σ is stronger than
+`Scheme.apply` needs, and every template here is parametric in what it binds, so nothing is lost. -/
 theorem sound_of_poly {a : NativeAtom} {params : TyEnv} {answer : Ty}
     (hs : (spec a).scheme = .poly params answer)
     (hev : ∀ (σ : Ty.Subst) (vs : List Val), Fits vs (params.map (Ty.instantiate σ)) →

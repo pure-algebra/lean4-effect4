@@ -27,10 +27,6 @@ import Effect4.Laws.Auto.Semantics
 * **In reach** (`TemplateOK`, `templateOKb`, `templateOK_of`). A template in the reach of the
   laws is its own normal form, is admissible, and holds no nominal reference.
   `Test/Program/BoundsControls.lean` decides it for every template of the tree.
-* **Conservative** (`matchB_conservative`, `matchArgsB_conservative`). Where the match by first
-  occurrence answered, the match by bounds answers, and each parameter instantiates to the same
-  type. These two laws name the old match (`Ty.matchTemplate`, `Ty.matchTemplateArgs`), which the
-  checker no longer calls. They go with it (decisions row 303, the open stage).
 * **The binder term** (`matchB_cell_fixed`, `termGuard_modify_use`, `matchTerm_modify_use`). The
   guard's one general law is `Bounds.matchB_of_matchTerm`
   (`src/Effect4/Laws/Program/Template.lean`).
@@ -48,8 +44,7 @@ are `NativeAtom.sound_of_poly` (`src/Effect4/Laws/Program/Typed.lean`), the row 
 - That the checker is complete against `HasTy`.
 - Anything of tsgo's inference. The interim guard and the prelude's declarations answer to
   that, and the truth lane tests them on finite programs.
-- The conservative laws hold within their premises. At an argument list the premise is that the
-  old match's final bindings admit every argument. At a binder term's raw type no law is stated.
+- At a binder term's raw type no law is stated.
 -/
 
 open Effect4 Effect4.Program
@@ -63,20 +58,29 @@ open Effect4.Constructive.List (flatMap_congr mem_zip_map_self mem_zip_middle eq
 
 /-! ## The variances compose -/
 
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem comp_co (v : Variance) : comp v .co = v := by cases v <;> rfl
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem comp_inv (v : Variance) : comp v .inv = .inv := by cases v <;> rfl
 
 /-! ## The join of a list of candidates is their least upper bound, in the checker's order -/
 
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem subN_never (u : Ty) : subN .never u = true := OrderProof.sub_never u.normalize
 
+/-- It is a step of `matchB_least`, and `joinCands_least` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem subN_join_least {a b c : Ty} (ha : subN a c = true) (hb : subN b c = true) :
     subN (Ty.join a b) c = true := by
   show sub (Ty.join a b).normalize c.normalize = true
   rw [normalize_join]
   exact OrderProof.sub_normalize_union_le sub_trans a b c.normalize ha hb
 
-/-- Each candidate is below the join. -/
+/-- It is a step of `matchB_sound`, and `matchB_sound_step` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem joinCands_upper : ∀ (l : List Ty) (c : Ty), c ∈ l → subN c (joinCands l) = true
   | [], _, h => absurd h List.not_mem_nil
   | [x], c, h => by
@@ -90,7 +94,8 @@ theorem joinCands_upper : ∀ (l : List Ty) (c : Ty), c ∈ l → subN c (joinCa
       exact subN_join_left _ _
     · exact subN_trans (joinCands_upper (y :: rest) c h) (subN_join_right _ _)
 
-/-- The join is below every upper bound of the candidates. -/
+/-- It is a step of `matchB_least`, and `solve_between` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem joinCands_least : ∀ (l : List Ty) (u : Ty), (∀ c ∈ l, subN c u = true) →
     subN (joinCands l) u = true
   | [], u, _ => subN_never u
@@ -101,6 +106,8 @@ theorem joinCands_least : ∀ (l : List Ty) (u : Ty), (∀ c ∈ l, subN c u = t
 
 /-! ## What `solve` binds -/
 
+/-- It is a step of `matchB_least`, and `mem_lowers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem lowers_cons (c : Cand) (ds : List Cand) (i : Nat) :
     lowers (c :: ds) i = if c.1 = i ∧ c.2.1 ≠ .contra then c.2.2 :: lowers ds i else lowers ds i := by
   unfold lowers
@@ -117,8 +124,8 @@ theorem lowers_cons (c : Cand) (ds : List Cand) (i : Nat) :
       rfl
     · exact nomatch h
 
-/-- The bindings that `solve` adds to its seed, for any choice of the value: a parameter outside
-the seed is bound exactly when it has a lower bound. -/
+/-- It is a step of `matchB_sound`, and `instantiate_solve` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem lookup_added (seed : Subst) (f : Nat → Ty) (i : Nat) (hi : seed.lookup i = none) :
     ∀ ds : List Cand,
       ((ds.filterMap fun c =>
@@ -156,7 +163,8 @@ theorem lookup_added (seed : Subst) (f : Nat → Ty) (i : Nat) (hi : seed.lookup
         rw [hne]
         exact ih
 
-/-- **A parameter outside the seed is bound to the join of its lower bounds.** -/
+/-- It is a step of `matchB_sound`, and `matchB_sound_step` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem instantiate_solve (seed : Subst) (cs : List Cand) (i : Nat) (hi : seed.lookup i = none) :
     instantiate (solve seed cs) (.var i) = joinCands (lowers cs i) := by
   rw [instantiate]
@@ -168,7 +176,8 @@ theorem instantiate_solve (seed : Subst) (cs : List Cand) (i : Nat) (hi : seed.l
   · rw [h, hl]
     rfl
 
-/-- **A parameter of the seed keeps its binding.** -/
+/-- It is a step of `matchB_sound`, and `matchB_sound_step` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem lookup_solve_seed (seed : Subst) (cs : List Cand) {i : Nat} {u : Ty}
     (hi : seed.lookup i = some u) : (solve seed cs).lookup i = some u := by
   unfold solve
@@ -195,8 +204,7 @@ theorem matchB_sound {seed σ : Subst} {t r : Ty} (h : matchB seed t r = some σ
   · exact nomatch h
 
 /-- **The match of an argument list is sound at one instance**: every argument is below its
-parameter's instance at the same, final bindings. `Ty.matchTemplateArgs` checks each argument at
-the bindings of its own step. -/
+parameter's instance at the same, final bindings. -/
 @[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_sound {ps rs : List Ty} {σ : Subst} (h : matchArgsB ps rs = some σ) :
     ps.length = rs.length ∧ Admits σ ps rs := by
@@ -232,6 +240,8 @@ def noAppItems : List Ty → Bool
   | t :: rest => noApp t && noAppItems rest
 end
 
+/-- It is a step of `matchB_complete`, and `noApp_args` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem noAppFields_eq_all (fs : List (String × Bool × Ty)) :
     noAppFields fs = fs.all fun p => noApp p.2.2 := by
   induction fs with
@@ -240,11 +250,15 @@ theorem noAppFields_eq_all (fs : List (String × Bool × Ty)) :
     obtain ⟨n, o, t⟩ := p
     simp only [noAppFields, List.all_cons, ih]
 
+/-- It is a step of `matchB_complete`, and `noApp_args` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem noAppItems_eq_all (ts : List Ty) : noAppItems ts = ts.all noApp := by
   induction ts with
   | nil => rfl
   | cons t ts ih => simp only [noAppItems, List.all_cons, ih]
 
+/-- It is a step of `matchB_complete`, and `TemplateOK.args` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem noApp_args {t : Ty} (h : noApp t = true) : ∀ p ∈ t.args, noApp p.2 = true := by
   intro p hp
   cases t
@@ -269,13 +283,15 @@ structure TemplateOK (t : Ty) : Prop where
   admissible : templateAdmissible t = true
   noApp : noApp t = true
 
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem TemplateOK.args {t : Ty} (h : TemplateOK t) (hm : isMember t = true) :
     ∀ p ∈ t.args, TemplateOK p.2 := fun p hp =>
   ⟨OrderProof.normal_args h.normal hm _ (List.mem_map_of_mem hp),
     templateAdmissible_args h.admissible p hp, noApp_args h.noApp p hp⟩
 
-/-- A template that holds a parameter and is not one is a member with children: it is no union
-(an admissible union is closed) and no nominal reference. -/
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem TemplateOK.head {t : Ty} (h : TemplateOK t) (hc : closed t = false) (hv : ∀ i, t ≠ .var i) :
     (∀ a b, t ≠ .union a b) ∧ (∀ n ts, t ≠ .app n ts) ∧ t.args ≠ [] ∧ isMember t = true := by
   have hu : ∀ a b, t ≠ .union a b := by
@@ -314,16 +330,21 @@ theorem TemplateOK.head {t : Ty} (h : TemplateOK t) (hc : closed t = false) (hv 
 
 /-! ## The candidates, head by head -/
 
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem cands_var (v : Variance) (i : Nat) (r : Ty) : cands v (.var i) r = [(i, v, r)] := by
   rw [cands]
 
-/-- A request union is read member by member at a template that is no parameter and no union. -/
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem cands_union_right (v : Variance) {t : Ty} (hv : ∀ i, t ≠ .var i)
     (hu : ∀ a b, t ≠ .union a b) (c d : Ty) :
     cands v t (.union c d) = cands v t c ++ cands v t d := by
   rw [cands]
   exacts [hv, hu]
 
+/-- It is a step of `matchB_least`, and `cands_args` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem candsItems_eq (v : Variance) : ∀ (ts rs : List Ty),
     candsItems v ts rs = (ts.zip rs).flatMap fun p => cands v p.1 p.2
   | [], [] => rfl
@@ -332,7 +353,8 @@ theorem candsItems_eq (v : Variance) : ∀ (ts rs : List Ty),
   | t :: ts, r :: rs => by
     rw [candsItems, List.zip_cons_cons, List.flatMap_cons, candsItems_eq v ts rs]
 
-/-- Field candidates over aligned field lists are the candidates of the paired types. -/
+/-- It is a step of `matchB_least`, and `cands_args` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem candsFields_eq (v : Variance) (L : List (String × Bool × Ty)) :
     ∀ (fs gs : List (String × Bool × Ty)), fs.length = gs.length →
       (∀ p ∈ fs.zip gs, L.lookup p.2.1 = some p.1.2) →
@@ -345,8 +367,8 @@ theorem candsFields_eq (v : Variance) (L : List (String × Bool × Ty)) :
     rw [candsFields, hp, List.zip_cons_cons, List.flatMap_cons,
       candsFields_eq v L fs gs (Nat.succ.inj hl) fun q hq => hk q (List.mem_cons_of_mem _ hq)]
 
-/-- **A pair of one head offers its children's candidates**, each child at the polarity that the
-head reads it at. The case list is `sameHead`'s own. -/
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem cands_args (v : Variance) {t r : Ty} (hv : ∀ i, t ≠ .var i) (happ : ∀ n ts, t ≠ .app n ts)
     (hct : headCanon t = true) (hcr : headCanon r = true) (hh : sameHead t r = true) :
     cands v t r = (t.args.zip r.args).flatMap fun p => cands (comp v p.1.1) p.1.2 p.2.2 := by
@@ -393,7 +415,8 @@ theorem cands_args (v : Variance) {t r : Ty} (hv : ∀ i, t ≠ .var i) (happ : 
     simp only [cands, args, List.zip_cons_cons, List.zip_nil_right, List.flatMap_cons,
       List.flatMap_nil, List.append_nil, comp_co, comp_inv]
 
-/-- At a template that is no parameter and no union, a request's candidates are its members'. -/
+/-- It is a step of `matchB_complete`, and `recovers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem cands_mem_members (v : Variance) {t : Ty} (hv : ∀ i, t ≠ .var i)
     (hu : ∀ a b, t ≠ .union a b) :
     ∀ (r : Ty) (c : Cand), c ∈ cands v t r ↔ ∃ x ∈ r.members, c ∈ cands v t x := by
@@ -424,9 +447,8 @@ theorem cands_mem_members (v : Variance) {t : Ty} (hv : ∀ i, t ≠ .var i)
 
 /-! ## One step of the order at a template's head -/
 
-/-- **A member below a template's instance has the template's head, and each child is below the
-child's instance.** Below an invariant position the child IS the child's instance in normal form.
-It is `underInstance_args` (`src/Effect4/Laws/Program/Template.lean`) with no premise on `never`. -/
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem below_args (τ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
     (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) (hargs : t.args ≠ [])
     (hr : Normal r) (hm : isMember r = true)
@@ -484,6 +506,8 @@ theorem below_args (τ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .v
 
 /-! ## Least: each candidate is below any bindings that admit the request -/
 
+/-- It is a step of `matchB_least`, and `cands_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem comp_ne_contra {v w : Variance} (hv : v ≠ .contra) (hw : w = .co ∨ w = .inv) :
     comp v w ≠ .contra := by
   rcases hw with rfl | rfl
@@ -492,9 +516,8 @@ theorem comp_ne_contra {v w : Variance} (hv : v ≠ .contra) (hw : w = .co ∨ w
   · rw [comp_inv]
     exact fun h => nomatch h
 
-/-- **Each candidate that a request offers is a lower bound, and it is below the binding of its
-parameter**, under any bindings that place the request below the template's instance. It is a
-step of the least instance (`matchB_least`), of the complete match and of the conservative law. -/
+/-- It is a step of `matchB_least`, and `matchB_least_step` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem cands_below (τ : Subst) (n : Nat) : ∀ (r t : Ty) (v : Variance), sizeOf r < n →
     v ≠ .contra → TemplateOK t → Normal r → sub r (instantiate τ t).normalize = true →
     ∀ c ∈ cands v t r, c.2.1 ≠ .contra ∧ Normal c.2.2 ∧
@@ -540,6 +563,8 @@ theorem cands_below (τ : Subst) (n : Nat) : ∀ (r t : Ty) (v : Variance), size
           (comp_ne_contra hvc (args_co_or_inv happ p.1 (List.of_mem_zip hp).1))
           (ht.args htm p.1 (List.of_mem_zip hp).1) hpn hpsub c hc
 
+/-- It is a step of `matchB_least`, and `solve_between` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem mem_lowers {cs : List Cand} {i : Nat} {x : Ty} :
     x ∈ lowers cs i ↔ ∃ c ∈ cs, c.1 = i ∧ c.2.1 ≠ .contra ∧ c.2.2 = x := by
   unfold lowers
@@ -554,10 +579,8 @@ theorem mem_lowers {cs : List Cand} {i : Nat} {x : Ty} :
   · rintro ⟨c, hc, hi, hv, hx⟩
     exact ⟨c, hc, by rw [if_pos ⟨hi, hv⟩, hx]⟩
 
-/-- **The solved bindings stand between the candidates and any admitting bindings.** Take
-bindings `τ` that agree with the seed and are above every candidate. The solved bindings are
-below `τ` at every parameter, and above every candidate. It is the step of the least instance and
-of the complete match that reads `solve`. -/
+/-- It is a step of `matchB_least`, and `matchB_least_step` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem solve_between (seed : Subst) (cs : List Cand) (τ : Subst)
     (hseed : ∀ j u, seed.lookup j = some u → (instantiate τ (.var j)).normalize = u.normalize)
     (hcs : ∀ c ∈ cs, c.2.1 ≠ .contra ∧ Normal c.2.2 ∧
@@ -611,8 +634,8 @@ theorem matchB_least {seed σ : Subst} {t r : Ty} (h : matchB seed t r = some σ
       (cands_below τ (sizeOf r + 1) r t .co (Nat.lt_succ_self _) (fun h => nomatch h) ht hr hτ)).1
   · exact nomatch h
 
-/-- The candidates of an argument list are lower bounds below any bindings that admit every
-argument. -/
+/-- It is a step of `matchArgsB_least`, and `matchArgsB_least` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem candsList_below (τ : Subst) {ps rs : List Ty} (hps : ∀ p ∈ ps, TemplateOK p)
     (hrs : ∀ r ∈ rs, Normal r) (hτ : Admits τ ps rs) :
     ∀ c ∈ candsList ps rs, c.2.1 ≠ .contra ∧ Normal c.2.2 ∧
@@ -640,8 +663,8 @@ theorem matchArgsB_least {ps rs : List Ty} {σ : Subst} (h : matchArgsB ps rs = 
 
 /-! ## Complete: the solved bindings admit whatever some bindings admit -/
 
-/-- **The normal form of an instance, at a head that is no pair**: it is a member with the
-template's head, and its children are the children's instances in normal form. -/
+/-- It is a step of `matchB_complete`, and `covers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem instance_shape (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
     (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) (hp : ∀ a b, t ≠ .prod a b)
     (hargs : t.args ≠ []) :
@@ -702,6 +725,8 @@ theorem instance_shape (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ 
   | refOf _ | deferredOf _ _ | map _ _ =>
     exact ⟨rfl, rfl, rfl⟩
 
+/-- It is a step of `matchB_complete`, and `covers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem mem_zip_map_right {α β γ : Type} (f : β → γ) :
     ∀ {xs : List α} {ys : List β} {a : α} {c : γ},
       (a, c) ∈ xs.zip (ys.map f) → ∃ b, (b, a) ∈ ys.zip xs ∧ c = f b
@@ -720,6 +745,8 @@ theorem mem_zip_map_right {α β γ : Type} (f : β → γ) :
     · obtain ⟨b, hb, hc⟩ := mem_zip_map_right f h
       exact ⟨b, by rw [List.zip_cons_cons]; exact List.mem_cons_of_mem _ hb, hc⟩
 
+/-- It is a step of `matchB_complete`, and `covers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem mem_zip_self_map {α β : Type} (f : α → β) :
     ∀ {l : List α} {p : α}, p ∈ l → (p, f p) ∈ l.zip (l.map f)
   | [], _, h => absurd h List.not_mem_nil
@@ -729,8 +756,8 @@ theorem mem_zip_self_map {α β : Type} (f : α → β) :
     · exact Or.inl rfl
     · exact Or.inr (mem_zip_self_map f h)
 
-/-- **A member is below an instance when its children are**, at a head that is no pair: each
-child at the variance that the head reads it at. It is the converse of `below_args`. -/
+/-- It is a step of `matchB_complete`, and `covers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem above_args (σ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
     (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) (hp : ∀ a b, t ≠ .prod a b)
     (hargs : t.args ≠ []) (hm : isMember r = true) (hh : sameHead t r = true)
@@ -762,7 +789,8 @@ theorem above_args (σ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .v
   rw [hq2, ← hvar]
   exact hk
 
-/-- A pair is below a pair's instance when its parts are below the parts' instances. -/
+/-- It is a step of `matchB_complete`, and `covers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem above_prod (σ : Subst) {a b r1 r2 : Ty} (hr : Normal (.prod r1 r2))
     (h1 : sub r1 (instantiate σ a).normalize = true)
     (h2 : sub r2 (instantiate σ b).normalize = true) :
@@ -773,7 +801,8 @@ theorem above_prod (σ : Subst) {a b r1 r2 : Ty} (hr : Normal (.prod r1 r2))
   rw [hr.fixed] at h
   exact h
 
-/-- Each member of a pair's first part stands first in a member of the pair's normal form. -/
+/-- It is a step of `matchB_complete`, and `prod_left_cands` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem prod_member_left (X Y : Ty) {x : Ty} (hx : x ∈ X.normalize.members) :
     ∃ y, Ty.prod x y ∈ (normalize (.prod X Y)).members := by
   obtain ⟨y0, hy0⟩ := OrderProof.normal_factors_nonempty _ (normal_normalize Y)
@@ -800,7 +829,8 @@ theorem prod_member_left (X Y : Ty) {x : Ty} (hx : x ∈ X.normalize.members) :
   rw [hxx']
   exact ⟨y', hz⟩
 
-/-- Each member of a pair's second part stands second in a member of the pair's normal form. -/
+/-- It is a step of `matchB_complete`, and `prod_right_cands` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem prod_member_right (X Y : Ty) {y : Ty} (hy : y ∈ Y.normalize.members) :
     ∃ x, Ty.prod x y ∈ (normalize (.prod X Y)).members := by
   obtain ⟨x0, hx0⟩ := OrderProof.normal_factors_nonempty _ (normal_normalize X)
@@ -827,7 +857,8 @@ theorem prod_member_right (X Y : Ty) {y : Ty} (hy : y ∈ Y.normalize.members) :
   rw [hyy']
   exact ⟨x', hz⟩
 
-/-- A parameter of a template that is no parameter is a parameter of one of its children. -/
+/-- It is a step of `matchB_complete`, and `recovers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem mem_varsOf_args {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
     (happ : ∀ n ts, t ≠ .app n ts) (htm : isMember t = true) {i : Nat} (hi : i ∈ varsOf t) :
     ∃ p ∈ t.args, i ∈ varsOf p.2 := by
@@ -843,8 +874,8 @@ theorem mem_varsOf_args {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
   rw [← hfirsts]
   exact List.mem_map_of_mem ho
 
-/-- The candidates that a pair's first part reads from its own instance are below bindings that
-are above the candidates that the pair reads from its instance. -/
+/-- It is a step of `matchB_complete`, and `recovers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem prod_left_cands (τ σ : Subst) (v : Variance) {a b : Ty} (ht : TemplateOK (.prod a b))
     (hc : ∀ c ∈ cands v (.prod a b) (instantiate τ (.prod a b)).normalize,
       sub c.2.2 (instantiate σ (.var c.1)).normalize = true) :
@@ -878,6 +909,8 @@ theorem prod_left_cands (τ σ : Subst) (v : Variance) {a b : Ty} (ht : Template
       obtain ⟨x, hx, hcx⟩ := (cands_mem_members v hva hua _ c).mp hcc
       exact key x hx c hcx
 
+/-- It is a step of `matchB_complete`, and `recovers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem prod_right_cands (τ σ : Subst) (v : Variance) {a b : Ty} (ht : TemplateOK (.prod a b))
     (hc : ∀ c ∈ cands v (.prod a b) (instantiate τ (.prod a b)).normalize,
       sub c.2.2 (instantiate σ (.var c.1)).normalize = true) :
@@ -912,15 +945,15 @@ theorem prod_right_cands (τ σ : Subst) (v : Variance) {a b : Ty} (ht : Templat
       obtain ⟨y, hy, hcy⟩ := (cands_mem_members v hvb hub _ c).mp hcc
       exact key y hy c hcy
 
-/-- A type is a pair or is not one. -/
+/-- It is a step of `matchB_complete`, and `recovers` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem prod_or_not (t : Ty) : (∃ a b, t = .prod a b) ∨ ∀ a b, t ≠ .prod a b := by
   cases t
   case prod a b => exact Or.inl ⟨a, b, rfl⟩
   all_goals exact Or.inr fun _ _ h => nomatch h
 
-/-- **The candidates that a template reads from its own instance give its bindings back**: any
-bindings above those candidates are above the instance's bindings, at every parameter of the
-template. It is the step of the complete match at an invariant position. -/
+/-- It is a step of `matchB_complete`, and `matchB_complete` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem recovers (τ σ : Subst) (n : Nat) : ∀ (t : Ty) (v : Variance), sizeOf t < n →
     TemplateOK t →
     (∀ c ∈ cands v t (instantiate τ t).normalize,
@@ -959,10 +992,8 @@ theorem recovers (τ σ : Subst) (n : Nat) : ∀ (t : Ty) (v : Variance), sizeOf
         exact List.mem_flatMap.mpr ⟨(p, (p.1, (instantiate τ p.2).normalize)),
           mem_zip_self_map _ hp, hcc⟩
 
-/-- **The solved bindings admit whatever some bindings admit.** Take bindings `τ` that place a
-normal request below a template's instance, and bindings `σ` below `τ` at every parameter and
-above every candidate of the request. Then the request is below the instance at `σ`. It is the
-step of the complete match that walks the request. -/
+/-- It is a step of `matchB_complete`, and `matchB_complete` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem covers (τ σ : Subst)
     (hστ : ∀ i, sub (instantiate σ (.var i)).normalize (instantiate τ (.var i)).normalize = true)
     (n : Nat) : ∀ (r t : Ty) (v : Variance), sizeOf r < n → TemplateOK t → Normal r →
@@ -1101,40 +1132,6 @@ theorem matchArgsB_monotone {ps rs rs' : List Ty} {σ : Subst} (h : matchArgsB p
   obtain ⟨σ', hm⟩ := matchArgsB_complete (hl.trans hlen.symm) hps hrs' hσ'
   exact ⟨σ', hm, matchArgsB_least hm hps hrs' hσ'⟩
 
-/-! ## The order of the candidates does not matter -/
-
-/-- Two lists with the same candidates have one join, up to the normal form. -/
-theorem joinCands_congr {l l' : List Ty} (h : ∀ x, x ∈ l ↔ x ∈ l') :
-    (joinCands l).normalize = (joinCands l').normalize :=
-  OrderProof.sub_antisymm_normal sub_trans _ _ (normal_normalize _) (normal_normalize _)
-    (joinCands_least l _ fun c hc => joinCands_upper l' c ((h c).mp hc))
-    (joinCands_least l' _ fun c hc => joinCands_upper l c ((h c).mpr hc))
-
-/-- **The solved bindings read the candidates as a set**: two candidate lists with the same
-members give the same bindings, up to the normal form. So the order of the arguments, and the
-order of the members of a request union, do not matter. -/
-theorem solve_congr {cs cs' : List Cand} (h : ∀ c, c ∈ cs ↔ c ∈ cs') (i : Nat) :
-    (instantiate (solve [] cs) (.var i)).normalize =
-      (instantiate (solve [] cs') (.var i)).normalize := by
-  rw [instantiate_solve [] cs i rfl, instantiate_solve [] cs' i rfl]
-  refine joinCands_congr fun x => ?_
-  rw [mem_lowers, mem_lowers]
-  constructor
-  · rintro ⟨c, hc, hrest⟩
-    exact ⟨c, (h c).mp hc, hrest⟩
-  · rintro ⟨c, hc, hrest⟩
-    exact ⟨c, (h c).mpr hc, hrest⟩
-
-/-- **Two arguments swapped give the same bindings**, up to the normal form: the candidates of
-`[p, q]` at `[r, s]` are those of `[q, p]` at `[s, r]`. -/
-theorem solve_swap (p q r s : Ty) (i : Nat) :
-    (instantiate (solve [] (candsList [p, q] [r, s])) (.var i)).normalize =
-      (instantiate (solve [] (candsList [q, p] [s, r])) (.var i)).normalize := by
-  refine solve_congr (fun c => ?_) i
-  show c ∈ cands .co p r ++ (cands .co q s ++ []) ↔ c ∈ cands .co q s ++ (cands .co p r ++ [])
-  rw [List.append_nil, List.append_nil, List.mem_append, List.mem_append]
-  exact Or.comm
-
 /-! ## The match reads a request up to the normal form -/
 
 /-- The match by bounds of an argument list at the arguments' normal forms. -/
@@ -1150,11 +1147,8 @@ theorem matchN_congr (seed : Subst) (t : Ty) {r r' : Ty} (h : r.normalize = r'.n
   unfold matchN
   rw [h]
 
-theorem matchArgsN_congr (ps : List Ty) {rs rs' : List Ty}
-    (h : rs.map Ty.normalize = rs'.map Ty.normalize) : matchArgsN ps rs = matchArgsN ps rs' := by
-  unfold matchArgsN
-  rw [h]
-
+/-- It is a step of `matchArgsN_complete`, and `matchArgsN_complete` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem admits_normalize {τ : Subst} {ps rs : List Ty} (h : Admits τ ps rs) :
     Admits τ ps (rs.map Ty.normalize) := by
   intro pr hpr
@@ -1188,322 +1182,12 @@ theorem matchArgsN_least {ps rs : List Ty} {σ : Subst} (h : matchArgsN ps rs = 
       exact normal_normalize x)
     (admits_normalize hτ)
 
-/-! ## Conservative: where the present match succeeds -/
-
-/-- **Each binding that `Ty.infer` makes is one of the request's candidates**, whichever rule
-`join` picks: a parameter binds at an occurrence, to the request's type there. The second half of
-the list motive serves a nominal reference, whose arguments `cands` reads at their declared
-variances. -/
-theorem infer_cands (join : Bool) (σ : Subst) (t r : Ty) :
-    ∀ (v : Variance) (j : Nat) (u : Ty), (infer σ t r join).lookup j = some u →
-      σ.lookup j = some u ∨ ∃ w, (j, w, u) ∈ cands v t r := by
-  induction σ, t, r using infer.induct_unfolding join
-      (motive_2 := fun σ ts rs result => ∀ (v : Variance) (j : Nat) (u : Ty),
-        result.lookup j = some u → σ.lookup j = some u ∨
-          ((∃ w, (j, w, u) ∈ candsItems v ts rs) ∧
-            ∀ (n : String) (k : Nat), ∃ w, (j, w, u) ∈ candsArgs v n k ts rs))
-      (motive_3 := fun σ fs gs result => ∀ (v : Variance) (j : Nat) (u : Ty),
-        result.lookup j = some u → σ.lookup j = some u ∨ ∃ w, (j, w, u) ∈ candsFields v fs gs)
-  case case1 σ i r hnone =>
-    intro v j u hj
-    rw [List.lookup_append] at hj
-    cases hσj : σ.lookup j with
-    | some w =>
-      rw [hσj, Option.some_or] at hj
-      exact Or.inl hj
-    | none =>
-      rw [hσj, Option.none_or, List.lookup_cons] at hj
-      cases hji : j == i with
-      | true =>
-        rw [hji] at hj
-        cases hj
-        rw [beq_iff_eq.mp hji, cands_var]
-        exact Or.inr ⟨v, List.mem_singleton_self _⟩
-      | false =>
-        rw [hji, List.lookup_nil] at hj
-        cases hj
-  case case2 σ i r bound hbound hjoin =>
-    intro v j u hj
-    rw [List.lookup_cons] at hj
-    cases hji : j == i with
-    | true =>
-      rw [hji] at hj
-      cases hj
-      rw [beq_iff_eq.mp hji, cands_var]
-      exact Or.inr ⟨v, List.mem_singleton_self _⟩
-    | false =>
-      rw [hji] at hj
-      exact Or.inl hj
-  case case3 => exact fun _ _ _ h => Or.inl h
-  case case4 ih | case5 ih | case6 ih =>
-    intro v j u hj
-    exact ih v j u hj
-  case case7 ih =>
-    intro v j u hj
-    exact ih (comp v .inv) j u hj
-  case case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂ | case11 ih₁ ih₂ | case13 ih₁ ih₂ =>
-    intro v j u hj
-    rcases ih₂ v j u hj with h | ⟨w, h⟩
-    · rcases ih₁ v j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case12 ih₁ ih₂ =>
-    intro v j u hj
-    rcases ih₂ (comp v .inv) j u hj with h | ⟨w, h⟩
-    · rcases ih₁ (comp v .inv) j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case14 ih₁ ih₂ =>
-    intro v j u hj
-    rcases ih₂ v j u hj with h | ⟨w, h⟩
-    · rcases ih₁ (comp v .inv) j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case15 ih => exact ih
-  case case16 ih =>
-    intro v j u hj
-    rcases ih v j u hj with h | ⟨h, -⟩
-    · exact Or.inl h
-    · exact Or.inr h
-  case case17 ih =>
-    intro v j u hj
-    rcases ih v j u hj with h | ⟨-, h⟩
-    · exact Or.inl h
-    · obtain ⟨w, hw⟩ := h _ 0
-      refine Or.inr ⟨w, ?_⟩
-      rw [cands, if_pos rfl]
-      exact hw
-  case case18 => exact fun _ _ _ h => Or.inl h
-  case case19 σ t c d hv hu ih₁ ih₂ =>
-    intro v j u hj
-    rw [cands_union_right v (fun i h => hv i h) (fun a b h => hu a b h)]
-    rcases ih₂ v j u hj with h | ⟨w, h⟩
-    · rcases ih₁ v j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case20 => exact fun _ _ _ h => Or.inl h
-  case case21 => exact Or.inl (by assumption)
-  case case22 hl ih v j u hj =>
-    rcases ih v j u hj with h | ⟨w, h⟩
-    · exact Or.inl h
-    · refine Or.inr ⟨w, ?_⟩
-      rw [candsFields, hl]
-      exact h
-  case case23 hl ihT ihR v j u hj =>
-    rw [candsFields, hl]
-    rcases ihR v j u hj with h | ⟨w, h⟩
-    · rcases ihT v j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-  case case24 σ ty rest request remaining ihT ihR v j u hj =>
-    by_cases h0 : σ.lookup j = some u
-    · exact Or.inl h0
-    · rcases ihR v j u hj with h | ⟨⟨w, hw⟩, hargs⟩
-      · refine Or.inr ⟨?_, fun n k => ?_⟩
-        · obtain ⟨w, hw⟩ := (ihT v j u h).resolve_left h0
-          exact ⟨w, by rw [candsItems]; exact List.mem_append_left _ hw⟩
-        · obtain ⟨w, hw⟩ := (ihT (comp v (argVariance n k)) j u h).resolve_left h0
-          exact ⟨w, by rw [candsArgs]; exact List.mem_append_left _ hw⟩
-      · refine Or.inr ⟨⟨w, by rw [candsItems]; exact List.mem_append_right _ hw⟩, fun n k => ?_⟩
-        obtain ⟨w', hw'⟩ := hargs n (k + 1)
-        exact ⟨w', by rw [candsArgs]; exact List.mem_append_right _ hw'⟩
-  case case25 => exact Or.inl (by assumption)
-
-/-- Each candidate of a normal list of lower bounds being normal, their join is normal. -/
-theorem joinCands_normal : ∀ (l : List Ty), (∀ c ∈ l, Normal c) → Normal (joinCands l)
-  | [], _ => .never
-  | [x], h => h x List.mem_cons_self
-  | _ :: _ :: _, _ => normal_normalize _
-
-/-- **The match by bounds is conservative at one template**: where the present match
-(`Ty.matchTemplate`, the checker's rule with no `join`) answers bindings for a normal request,
-the match by bounds answers bindings too, and each parameter instantiates to the SAME type, not
-only to one of the same normal form. So a row's answer, its error and its formation sites are
-the same types. -/
+/-- It is a step of `matchArgsB_least`, and `candsList_below` reads it. -/
 @[semantics "subtyping-algebra" (requirement := R4)]
-theorem matchB_conservative {seed σo : Subst} {t r : Ty} (ht : TemplateOK t) (hr : Normal r)
-    (h : matchTemplate seed t r = some σo) :
-    ∃ σ, matchB seed t r = some σ ∧ ∀ i, instantiate σ (.var i) = instantiate σo (.var i) := by
-  have hsound := matchTemplate_sound seed t r σo h
-  rw [hr.fixed] at hsound
-  have hkeep := matchTemplate_keeps h
-  have hseed : ∀ j u, seed.lookup j = some u →
-      (instantiate σo (.var j)).normalize = u.normalize := by
-    intro j u hj
-    rw [instantiate, hkeep j u hj]
-    rfl
-  have hcb := cands_below σo (sizeOf r + 1) r t .co (Nat.lt_succ_self _) (fun h => nomatch h)
-    ht hr hsound
-  have hb := solve_between seed (cands .co t r) σo hseed hcb
-  have hσo : σo = infer seed t r := by
-    dsimp only [matchTemplate] at h
-    split at h
-    · cases h
-      rfl
-    · exact nomatch h
-  obtain ⟨σ, hσ⟩ := matchB_complete seed ht hr hseed hsound
-  have hσeq : σ = solve seed (cands .co t r) := by
-    have hσ' := hσ
-    unfold matchB at hσ'
-    dsimp only at hσ'
-    split at hσ'
-    · cases hσ'
-      rfl
-    · exact nomatch hσ'
-  refine ⟨σ, hσ, fun i => ?_⟩
-  rw [hσeq]
-  cases hs : seed.lookup i with
-  | some u =>
-    rw [instantiate, instantiate, lookup_solve_seed seed _ hs, hkeep i u hs]
-  | none =>
-    rw [instantiate_solve seed _ i hs]
-    have hJn : Normal (joinCands (lowers (cands .co t r) i)) :=
-      joinCands_normal _ fun c hc => by
-        obtain ⟨c', hc', -, -, rfl⟩ := mem_lowers.mp hc
-        exact (hcb c' hc').2.1
-    have hle : sub (joinCands (lowers (cands .co t r) i)).normalize
-        (instantiate σo (.var i)).normalize = true := by
-      have := hb.1 i
-      rw [instantiate_solve seed _ i hs] at this
-      exact this
-    cases hl : σo.lookup i with
-    | none =>
-      have e : instantiate σo (.var i) = .never := by
-        rw [instantiate, hl]
-        rfl
-      rw [e] at hle ⊢
-      rw [hJn.fixed] at hle
-      exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn .never hle (OrderProof.sub_never _)
-    | some u =>
-      have e : instantiate σo (.var i) = u := by
-        rw [instantiate, hl]
-        rfl
-      rw [e] at hle ⊢
-      have hl' := hl
-      rw [hσo] at hl'
-      rcases infer_cands false seed t r .co i u hl' with hsd | ⟨w, hw⟩
-      · rw [hs] at hsd
-        exact nomatch hsd
-      · have hc := hcb (i, w, u) hw
-        have hge := hb.2 (i, w, u) hw
-        rw [instantiate_solve seed _ i hs, hJn.fixed] at hge
-        rw [hJn.fixed, hc.2.1.fixed] at hle
-        exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn hc.2.1 hle hge
-
-/-- Equal instances of every parameter give equal instances of every template. -/
-theorem instantiate_congr {σ σ' : Subst}
-    (h : ∀ i, instantiate σ (.var i) = instantiate σ' (.var i)) (t : Ty) :
-    instantiate σ t = instantiate σ' t := by
-  induction t with
-  | var i => exact h i
-  | option x ih | list x ih | causeOf x ih | refOf x ih => simp only [instantiate, ih]
-  | prod a b iha ihb | except a b iha ihb | exitOf a b iha ihb | fiberOf a b iha ihb
-  | union a b iha ihb | deferredOf a b iha ihb | map a b iha ihb =>
-    simp only [instantiate, iha, ihb]
-  | record fs ih =>
-    rw [instantiate, instantiate, instantiateFields_eq_map, instantiateFields_eq_map]
-    exact congrArg Ty.record (List.map_congr_left fun q hq => by rw [ih q hq])
-  | tuple ts ih =>
-    rw [instantiate, instantiate, instantiateItems_eq_map, instantiateItems_eq_map]
-    exact congrArg Ty.tuple (List.map_congr_left fun x hx => ih x hx)
-  | app n ts ih =>
-    rw [instantiate, instantiate, instantiateItems_eq_map, instantiateItems_eq_map]
-    exact congrArg (Ty.app n) (List.map_congr_left fun x hx => ih x hx)
-  | _ => rfl
-
 theorem candsList_cons (p : Ty) (ps : List Ty) (r : Ty) (rs : List Ty) :
     candsList (p :: ps) (r :: rs) = cands .co p r ++ candsList ps rs := by
   unfold candsList
   rw [List.zip_cons_cons, List.flatMap_cons]
-
-/-- Each binding of the present match of an argument list is a candidate of the list, whichever
-rule `join` picks. -/
-theorem matchArgs_cands (join : Bool) : ∀ (ps rs : List Ty) (σ σo : Subst),
-    matchTemplateArgs σ ps rs join = some σo → ∀ j u, σo.lookup j = some u →
-      σ.lookup j = some u ∨ ∃ w, (j, w, u) ∈ candsList ps rs
-  | [], [], σ, σo, h, j, u, hj => by
-    simp only [matchTemplateArgs, Option.some.injEq] at h
-    rw [← h] at hj
-    exact Or.inl hj
-  | [], _ :: _, _, _, h, _, _, _ => nomatch h
-  | _ :: _, [], _, _, h, _, _, _ => nomatch h
-  | p :: ps, r :: rs, σ, σo, h, j, u, hj => by
-    simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
-    obtain ⟨σ₁, h₁, hrest⟩ := h
-    have hσ₁ : σ₁ = infer σ p r join := by
-      dsimp only [matchTemplate] at h₁
-      split at h₁
-      · cases h₁
-        rfl
-      · exact nomatch h₁
-    rw [candsList_cons]
-    rcases matchArgs_cands join ps rs σ₁ σo hrest j u hj with h | ⟨w, h⟩
-    · rw [hσ₁] at h
-      rcases infer_cands join σ p r .co j u h with h | ⟨w, h⟩
-      · exact Or.inl h
-      · exact Or.inr ⟨w, List.mem_append_left _ h⟩
-    · exact Or.inr ⟨w, List.mem_append_right _ h⟩
-
-/-- **The match by bounds is conservative at an argument list**, under one premise: the present
-match's final bindings admit every argument in the checker's order (`Admits`). Then each
-parameter instantiates to the same type. The premise is needed: `Ty.matchTemplateArgs` checks
-each argument at the bindings of its own step, and with `join` a later argument can move a
-parameter that an earlier argument holds at an invariant position (the finite model's family S2:
-58 applications that the present match admits at no instance). -/
-@[semantics "subtyping-algebra" (requirement := R4)]
-theorem matchArgsB_conservative {ps rs : List Ty} {σo : Subst} {join : Bool}
-    (hps : ∀ p ∈ ps, TemplateOK p) (hrs : ∀ r ∈ rs, Normal r)
-    (h : matchTemplateArgs [] ps rs join = some σo) (hadm : Admits σo ps rs) :
-    ∃ σ, matchArgsB ps rs = some σ ∧ ∀ i, instantiate σ (.var i) = instantiate σo (.var i) := by
-  have hlen : ps.length = rs.length := (matchTemplateArgs_length h).symm
-  have hcb := candsList_below σo hps hrs hadm
-  have hb := solve_between [] (candsList ps rs) σo (fun _ _ hj => nomatch hj) hcb
-  obtain ⟨σ, hσ⟩ := matchArgsB_complete hlen hps hrs hadm
-  have hσeq : σ = solve [] (candsList ps rs) := by
-    have hσ' := hσ
-    unfold matchArgsB at hσ'
-    rw [if_pos hlen] at hσ'
-    dsimp only at hσ'
-    split at hσ'
-    · cases hσ'
-      rfl
-    · exact nomatch hσ'
-  refine ⟨σ, hσ, fun i => ?_⟩
-  rw [hσeq, instantiate_solve [] _ i rfl]
-  have hJn : Normal (joinCands (lowers (candsList ps rs) i)) :=
-    joinCands_normal _ fun c hc => by
-      obtain ⟨c', hc', -, -, rfl⟩ := mem_lowers.mp hc
-      exact (hcb c' hc').2.1
-  have hle : sub (joinCands (lowers (candsList ps rs) i)).normalize
-      (instantiate σo (.var i)).normalize = true := by
-    have := hb.1 i
-    rw [instantiate_solve [] _ i rfl] at this
-    exact this
-  cases hl : σo.lookup i with
-  | none =>
-    have e : instantiate σo (.var i) = .never := by
-      rw [instantiate, hl]
-      rfl
-    rw [e] at hle ⊢
-    rw [hJn.fixed] at hle
-    exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn .never hle (OrderProof.sub_never _)
-  | some u =>
-    have e : instantiate σo (.var i) = u := by
-      rw [instantiate, hl]
-      rfl
-    rw [e] at hle ⊢
-    rcases matchArgs_cands join ps rs [] σo h i u hl with hsd | ⟨w, hw⟩
-    · exact nomatch hsd
-    · have hc := hcb (i, w, u) hw
-      have hge := hb.2 (i, w, u) hw
-      rw [instantiate_solve [] _ i rfl, hJn.fixed] at hge
-      rw [hJn.fixed, hc.2.1.fixed] at hle
-      exact OrderProof.sub_antisymm_normal sub_trans _ _ hJn hc.2.1 hle hge
 
 /-! ## The rule's first case is a consequence, not a case of the function
 
@@ -1537,6 +1221,8 @@ theorem templateOK_of (t : Ty) (h : templateOKb t = true) : TemplateOK t := by
   simp only [templateOKb, Bool.and_eq_true, decide_eq_true_eq] at h
   exact ⟨h.1.1 ▸ normal_normalize t, h.1.2, h.2⟩
 
+/-- It is a step of `TermIntro`, and `nativeAtomTy_ite_above` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem join_eq_right_of_subN {a b : Ty} (ha : sub a.normalize b.normalize = true) (hb : Normal b) :
     Ty.join a b = b := by
   have hl : subN (Ty.join a b) b = true := subN_join_least ha (subN_refl b)
@@ -1545,13 +1231,19 @@ theorem join_eq_right_of_subN {a b : Ty} (ha : sub a.normalize b.normalize = tru
   exact OrderProof.sub_antisymm_normal sub_trans (Ty.join a b) b
     (normal_normalize _) hb hl hr
 
+/-- It is a step of `TermIntro`, and `nativeAtomTy_ite_below` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem join_eq_left_of_subN {a b : Ty} (hb : sub b.normalize a.normalize = true) (ha : Normal a) :
     Ty.join a b = a := by
   rw [join_comm]
   exact join_eq_right_of_subN hb ha
 
+/-- It is a step of `matchArgsB_one_var`, and `matchArgsB_one_var` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem candsList_nil : candsList [] [] = [] := rfl
 
+/-- It is a step of `TermIntro`, and `Checking` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_one_var (X : Ty) : matchArgsB [.var 0] [X] = some [(0, X)] := by
   dsimp only [matchArgsB]
   rw [candsList_cons, candsList_nil, cands_var, List.append_nil]
@@ -1569,6 +1261,8 @@ theorem matchArgsB_one_var (X : Ty) : matchArgsB [.var 0] [X] = some [(0, X)] :=
   rw [hcond]
   rfl
 
+/-- It is a step of `TermIntro`, and `Checking` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_two_vars (X Y : Ty) : matchArgsB [.var 0, .var 1] [X, Y] = some [(0, X), (1, Y)] := by
   dsimp only [matchArgsB]
   rw [candsList_cons, cands_var, candsList_cons, cands_var, candsList_nil, List.append_nil,
@@ -1590,6 +1284,8 @@ theorem matchArgsB_two_vars (X Y : Ty) : matchArgsB [.var 0, .var 1] [X, Y] = so
   rw [hcond]
   rfl
 
+/-- It is a step of `TermIntro`, and `Checking` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_list_var_nat (X : Ty) : matchArgsB [.list (.var 0), .nat] [.list X, .nat] = some [(0, X)] := by
   dsimp only [matchArgsB]
   rw [candsList_cons, cands, cands_var, candsList_cons, cands_closed .co .nat .nat rfl, candsList_nil, List.append_nil,
@@ -1611,6 +1307,8 @@ theorem matchArgsB_list_var_nat (X : Ty) : matchArgsB [.list (.var 0), .nat] [.l
   rw [hcond]
   rfl
 
+/-- It is a step of `TermIntro`, and `nativeAtomTy_append` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_append (X : Ty) (canonical : X.normalize = X) :
     matchArgsB [.list (.var 0), .list (.var 0)] [.list X, .list X] = some [(0, Ty.join X X), (0, Ty.join X X)] := by
   dsimp only [matchArgsB]
@@ -1635,6 +1333,8 @@ theorem matchArgsB_append (X : Ty) (canonical : X.normalize = X) :
   rw [hcond]
   rfl
 
+/-- It is a step of `TermIntro`, and `Checking` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_cons_nil {X : Ty} (canonical : X.normalize = X) :
     matchArgsB [.var 0, .list (.var 0)] [X, .list .never] = some [(0, Ty.join X .never), (0, Ty.join X .never)] := by
   dsimp only [matchArgsB]
@@ -1671,6 +1371,8 @@ theorem matchArgsB_cons_nil {X : Ty} (canonical : X.normalize = X) :
   rw [hcond]
   rfl
 
+/-- It is a step of `TermIntro`, and `nativeAtomTy_ite` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchArgsB_ite (X Y : Ty) :
     matchArgsB [.bool, .var 0, .var 0] [.bool, X, Y] = some [(0, Ty.join X Y), (0, Ty.join X Y)] := by
   dsimp only [matchArgsB]
@@ -1697,7 +1399,8 @@ theorem matchArgsB_ite (X Y : Ty) :
   rw [hcond]
   rfl
 
-/-- The match by bounds of a single variable template against a request. -/
+/-- It is a step of `Waiting`, and `TypedScope` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchB_one_var (X : Ty) : matchB [] (.var 0) X = some [(0, X)] := by
   dsimp only [matchB]
   rw [cands_var]
@@ -1708,7 +1411,8 @@ theorem matchB_one_var (X : Ty) : matchB [] (.var 0) X = some [(0, X)] := by
   rw [hinst, hsub]
   rfl
 
-/-- The match by bounds of `refOf` with a single variable template against `refOf X`. -/
+/-- It is a step of `Waiting`, and `TypedScope` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchB_refOf_var (X : Ty) : matchB [] (.refOf (.var 0)) (.refOf X) = some [(0, X)] := by
   dsimp only [matchB]
   rw [cands, comp_inv, cands_var]
@@ -1722,7 +1426,8 @@ theorem matchB_refOf_var (X : Ty) : matchB [] (.refOf (.var 0)) (.refOf X) = som
   rw [hinst, hsub]
   rfl
 
-/-- The match by bounds of `prod (.var 1) (.var 0)` against `prod B C` with seed `[(0, C)]`. -/
+/-- It is a step of `Waiting`, and `matchTerm_modify_use` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchB_modify_use (C B : Ty) :
     matchB [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = some [(0, C), (1, B)] := by
   dsimp only [matchB]
@@ -1739,24 +1444,21 @@ theorem matchB_modify_use (C B : Ty) :
 
 /-! ## The interim guard at a binder term, at a symbolic pair -/
 
-/-- **The guard holds at a pair of two types**, for the result template of `Ref.modify`. The
-cell's parameter is the seed's, and the pair offers the other parameter one candidate. One
-candidate is a greatest one by the shape of the list, so no fact of the order is read. A step of
-`matchTerm_modify_use`, its consumer. -/
+/-- It is a step of `Waiting`, and `matchTerm_modify_use` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem termGuard_modify_use (C B : Ty) :
     termGuard [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = true := by
   dsimp only [termGuard]
   rw [cands, cands_var, cands_var, List.cons_append, List.nil_append]
   rfl
 
-/-- **The match of a binder term at a pair of two types** is the match by bounds there: the
-guard holds (`termGuard_modify_use`). Its consumer is `answers_refModifyWith_captured`
-(`src/Effect4/Laws/Modules/Waiting.lean`), the typing law of a module's step. It says nothing
-of a term whose type is a union of pairs: the guard decides that. -/
+/-- It is a step of `Waiting`, and `TypedScope` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchTerm_modify_use (C B : Ty) :
     matchTerm [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = some [(0, C), (1, B)] := by
   unfold matchTerm
   rw [termGuard_modify_use, if_pos rfl, matchB_modify_use]
 
 end Effect4.Program.Bounds
+
 

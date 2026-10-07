@@ -385,7 +385,7 @@ g81	true	-	-	-	-	-	typed-clean
 g82	false	listOfFibersExpected	0.0.0	2345	2345	-	refused-agree
 g83	true	-	-	-	-	-	typed-clean
 g84	false	listOfFibersExpected	0.0.0.0	2345	2345	-	refused-agree
-g85	false	predicateNotBool	.	-	2322	-	refused-unmapped
+g85	false	predicateNotBool	1.0	-	2322	-	refused-unmapped
 g86	false	requestNotSubtype	0.0.0.0.0.0.0	2345|2769	2322|2345|2769	-	refused-agree
 g87	false	notFiber	0.0.1	2345	2345	-	refused-agree
 g88	false	cause	0.0.0.0	-	2345|2375|2769	-	refused-unmapped

@@ -873,7 +873,7 @@ theorem answers_ifElse {test : TermSrc} {thenB elseB : Src NativeOp} {s : TypedS
       rw [List.append_nil]
       exact effTy_sound sig b _ _ typedB
     exact (effTy_complete sig _ _ _
-      (.select (d := .bool) (e0 := []) (e1 := []) typedC rfl left right rfl)).trans
+      (.select (d := .bool) (e0 := []) (e1 := []) typedC Decision.arms_bool left right rfl)).trans
         (congrArg some (pure_columns _))
 
 /-- **`selectOptionWith`, with a kept payload.** The second arm reads the payload through a kept
@@ -957,7 +957,7 @@ theorem answers_restore {saved : TermSrc} {body : Src NativeOp} {s : TypedScope}
   obtain ⟨c, treeC, typedC⟩ := hsaved path false
   obtain ⟨a, treeA, typedA⟩ := hbody (path ++ [0])
   refine ⟨.restore c a, ?_,
-    effTy_complete sig _ _ _ (.restore typedC (effTy_sound sig a _ _ typedA))⟩
+    effTy_complete sig _ _ _ (.restore typedC (Ty.sub_refl _) (effTy_sound sig a _ _ typedA))⟩
   show (saved s.env path >>= fun x0 => body s.env (path ++ [0]) >>= fun x1 =>
     Except.ok (Eff.restore x0 x1)) = _
   rw [treeC, treeA]
@@ -1048,7 +1048,7 @@ theorem answers_iterateWith_kept {initial : TermSrc} {spec : LoopSpec NativeOp} 
       path = .ok r := treeR
   refine ⟨.iterate spec.cursorTy i t st r b, ?_,
     effTy_complete sig _ _ _
-      (.iterate typedI typedT (effTy_sound sig b _ _ typedB) typedS typedR start next)⟩
+      (.iterate typedI typedT (Ty.sub_refl _) (effTy_sound sig b _ _ typedB) typedS typedR start next)⟩
   show (initial s.env path >>= fun x1 =>
     spec.while_ (minted (s.env.mint "cursor")) (s.env.push [s.env.mint "cursor"]) path >>=
       fun x2 => spec.step (minted (s.env.mint "cursor")) (minted (s.env.mint "answer"))
@@ -1157,7 +1157,7 @@ theorem has_restore {saved : TermSrc} {body : Src NativeOp} {s : TypedScope} {t 
   obtain ⟨c, treeC, typedC⟩ := hsaved path false
   obtain ⟨a, treeA, typedA⟩ := hbody (path ++ [0])
   refine ⟨.restore c a, ?_,
-    effTy_complete sig _ _ _ (.restore typedC (effTy_sound sig a _ _ typedA))⟩
+    effTy_complete sig _ _ _ (.restore typedC (Ty.sub_refl _) (effTy_sound sig a _ _ typedA))⟩
   show (saved s.env path >>= fun x0 => body s.env (path ++ [0]) >>= fun x1 =>
     Except.ok (Eff.restore x0 x1)) = _
   rw [treeC, treeA]
@@ -1214,7 +1214,7 @@ theorem has_ifElse {test : TermSrc} {thenB elseB : Src NativeOp} {s : TypedScope
       rw [List.append_nil]
       exact effTy_sound sig b _ _ typedB
     exact effTy_complete sig _ _ _
-      (.select (d := .bool) (e0 := []) (e1 := []) typedC rfl left right rfl)
+      (.select (d := .bool) (e0 := []) (e1 := []) typedC Decision.arms_bool left right rfl)
 
 /-! ## Rows -/
 
@@ -1822,7 +1822,8 @@ theorem answers_interrupt {who : TermSrc} {s : TypedScope} (hwho : Typed sig who
   have cause : causeTy sig s.types (.interrupt (some t)) = some Ty.never := by
     unfold causeTy
     rw [show termTy sig s.types t = some Ty.nat from typed]
-    rfl
+    dsimp only [Bind.bind, Option.bind, Ty.normalize]
+    simp only [Ty.sub_refl, ↓reduceIte]
   refine ⟨.failCause (.interrupt (some t)), ?_,
     effTy_complete sig _ _ _ (.failCause (ty := .never) cause)⟩
   show (((who s.env path >>= fun x => Except.ok (some x)) >>= fun x0 =>

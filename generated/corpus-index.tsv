@@ -85,7 +85,7 @@ g81	true	true	14	-	-	-
 g82	false	true	88	listOfFibersExpected	0.0.0	2345
 g83	true	true	14	-	-	-
 g84	false	true	122	listOfFibersExpected	0.0.0.0	2345
-g85	false	true	512	predicateNotBool	.	-
+g85	false	true	512	predicateNotBool	1.0	-
 g86	false	true	912	requestNotSubtype	0.0.0.0.0.0.0	2345|2769
 g87	false	true	171	notFiber	0.0.1	2345
 g88	false	false	605	cause	0.0.0.0	-

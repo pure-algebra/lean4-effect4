@@ -50,7 +50,7 @@ theorem hasTy_expandRound :
   | _, _, _, .gen hb => congrArg Eff.gen (stmtsHasTy_expandRound hb)
   | _, _, _, .catchCause hb hh _ =>
     congrArg₂ Eff.catchCause (hasTy_expandRound hb) (hasTy_expandRound hh)
-  | _, _, _, .catchIf hb _ hh _ =>
+  | _, _, _, .catchIf hb _ _ hh _ =>
     congrArg₂ (Eff.catchIf _) (hasTy_expandRound hb) (hasTy_expandRound hh)
   | _, _, _, .select _ _ h0 h1 _ =>
     congrArg₂ (Eff.select _ _) (hasTy_expandRound h0) (hasTy_expandRound h1)
@@ -62,7 +62,7 @@ theorem hasTy_expandRound :
   | _, _, _, .exit hb => congrArg Eff.exit (hasTy_expandRound hb)
   | _, _, _, .uninterruptible hb => congrArg Eff.uninterruptible (hasTy_expandRound hb)
   | _, _, _, .interruptible hb => congrArg Eff.interruptible (hasTy_expandRound hb)
-  | _, _, _, .iterate _ _ hb _ _ _ _ =>
+  | _, _, _, .iterate _ _ _ hb _ _ _ _ =>
     congrArg (Eff.iterate _ _ _ _ _) (hasTy_expandRound hb)
   | _, _, _, .yieldNow _ => rfl
   | _, _, _, .awaitFiber_join _ _ => rfl
@@ -77,7 +77,7 @@ theorem hasTy_expandRound :
   | _, _, _, .service _ => rfl
   | _, _, _, .provideService _ _ _ hb =>
     congrArg (Eff.provideService _ _) (hasTy_expandRound hb)
-  | _, _, _, .restore _ hb => congrArg (Eff.restore _) (hasTy_expandRound hb)
+  | _, _, _, .restore _ _ hb => congrArg (Eff.restore _) (hasTy_expandRound hb)
 
 theorem stmtsHasTy_expandRound :
     ∀ {env : TyEnv} {inLoop : Bool} {ss : Stmts Op} {g : GenTy},
@@ -90,7 +90,7 @@ theorem stmtsHasTy_expandRound :
     show Stmts.cons (Stmt.yieldDiscard (Eff.expandRound orig _)) (Stmts.expandRound orig _) = _
     rw [hasTy_expandRound he, stmtsHasTy_expandRound hr]
   | _, _, _, _, .ret _ => rfl
-  | _, _, _, _, .ifElse _ ha hb hr _ _ => by
+  | _, _, _, _, .ifElse _ _ ha hb hr _ _ => by
     show Stmts.cons (Stmt.ifElse _ (Stmts.expandRound orig _) (Stmts.expandRound orig _))
       (Stmts.expandRound orig _) = _
     rw [stmtsHasTy_expandRound ha, stmtsHasTy_expandRound hb, stmtsHasTy_expandRound hr]
@@ -112,26 +112,26 @@ theorem actionHasTy_expandRound :
   | _, _, _, .fork _ hp => by
     show ActionTerm.fork (Eff.expandRound orig _) _ = _
     rw [hasTy_expandRound hp]
-  | _, _, _, .forkIn _ hp _ => by
+  | _, _, _, .forkIn _ hp _ _ => by
     show ActionTerm.forkIn (Eff.expandRound orig _) _ _ = _
     rw [hasTy_expandRound hp]
   | _, _, _, .forkScoped _ hp => by
     show ActionTerm.forkScoped (Eff.expandRound orig _) _ = _
     rw [hasTy_expandRound hp]
-  | _, _, _, .runIn _ _ _ => rfl
+  | _, _, _, .runIn _ _ _ _ => rfl
   | _, _, _, .interrupt _ _ => rfl
   | _, _, _, .interruptScoped _ _ => rfl
   | _, _, _, .interruptAll_self _ _ _ => rfl
-  | _, _, _, .interruptAll_by _ _ _ _ => rfl
+  | _, _, _, .interruptAll_by _ _ _ _ _ => rfl
   | _, _, _, .awaitAll _ _ _ => rfl
   | _, _, _, .awaitAllFailFast _ _ _ => rfl
   | _, _, _, .snapshotChildren => rfl
   | _, _, _, .awaitNewChildren _ _ => rfl
   | _, _, _, .raceAll he => congrArg ActionTerm.raceAll (effsHasTy_expandRound he)
-  | _, _, _, .setContext _ => rfl
+  | _, _, _, .setContext _ _ => rfl
   | _, _, _, .getContext => rfl
   | _, _, _, .getId => rfl
-  | _, _, _, .closeScope _ _ _ => rfl
+  | _, _, _, .closeScope _ _ _ _ => rfl
   | _, _, _, .getInterruptible => rfl
 
 theorem layerHasTy_expandRound :

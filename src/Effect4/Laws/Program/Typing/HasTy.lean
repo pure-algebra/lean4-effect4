@@ -124,9 +124,11 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   /-- DI-09's first-failure binder with DI-17's all-reason bound. `catchIfError`
   removes the body's errors only for literal true or an empty tag residual. Mixed columns
   remain joined, since a miss re-raises every reason. The answer is the joined bound. -/
-  | catchIf {env : TyEnv} {test : Term} {body handler : Eff Op} {b h : EffTy} {answer : Ty} :
+  | catchIf {env : TyEnv} {test : Term} {body handler : Eff Op} {b h : EffTy} {answer : Ty}
+      {testTy : Ty} :
       HasTy sig env body b →
-      termTy sig (env ++ [b.error]) test = some .bool →
+      termTy sig (env ++ [b.error]) test = some testTy →
+      Ty.sub testTy.normalize .bool = true →
       HasTy sig (env ++ [b.error]) handler h →
       EffTy.joinAnswer b.answer h.answer = some answer →
       HasTy sig env (.catchIf test body handler)
@@ -180,9 +182,10 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   subsumption, which is what carries the cursor's membership across rounds (`hasTy_sub`). The
   answer is the result's type. -/
   | iterate {env : TyEnv} {cursorTy : Option Ty} {initial test step result : Term}
-      {body : Eff Op} {c0 c1 d : Ty} {b : EffTy} :
+      {body : Eff Op} {c0 c1 d : Ty} {b : EffTy} {testTy : Ty} :
       termTy sig env initial = some c0 →
-      termTy sig (env ++ [cursorTy.getD c0]) test = some .bool →
+      termTy sig (env ++ [cursorTy.getD c0]) test = some testTy →
+      Ty.sub testTy.normalize .bool = true →
       HasTy sig (env ++ [cursorTy.getD c0]) body b →
       termTy sig (env ++ [cursorTy.getD c0, b.answer]) step = some c1 →
       termTy sig (env ++ [cursorTy.getD c0]) result = some d →
@@ -251,8 +254,9 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   /-- A restore site (`pipe(body, saved)`, `internal/effect.ts:4340-4352`; decisions rows 244
   and 245): the saved term has the saved state's own opaque type, and the node has its body's
   type. A mask changes no column of the type, as `interruptible` changes none. -/
-  | restore {env : TyEnv} {saved : Term} {body : Eff Op} {t : EffTy} :
-      termTy sig env saved = some Ty.maskRestore →
+  | restore {env : TyEnv} {saved : Term} {body : Eff Op} {t : EffTy} {savedTy : Ty} :
+      termTy sig env saved = some savedTy →
+      Ty.sub savedTy.normalize Ty.maskRestore = true →
       HasTy sig env body t →
       HasTy sig env (.restore saved body) t
 
@@ -291,8 +295,9 @@ inductive StmtsHasTy (sig : Signature Op) : TyEnv → Bool → Stmts Op → GenT
   states merge (`GenTy.merge`, which is where two disagreeing `return` types refuse) and the
   continuation's follows them (`GenTy.seq`: it runs when a branch completes). -/
   | ifElse {env : TyEnv} {inLoop : Bool} {test : Term} {thenB elseB rest : Stmts Op}
-      {a b r ab g : GenTy} :
-      termTy sig env test = some .bool →
+      {a b r ab g : GenTy} {testTy : Ty} :
+      termTy sig env test = some testTy →
+      Ty.sub testTy.normalize .bool = true →
       StmtsHasTy sig env inLoop thenB a →
       StmtsHasTy sig env inLoop elseB b →
       StmtsHasTy sig env inLoop rest r →
@@ -341,9 +346,10 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
         ⟨.fiberOf p.answer p.error, .never, p.requires⟩
   /-- `forkIn` (`:5364-5378`): as `fork`, with the target scope a `Scope.Scope` handle. -/
   | forkIn {env : TyEnv} {program : Eff Op} (options : Supervision.ForkOptions) {scope : Term}
-      {p : EffTy} :
+      {p : EffTy} {scopeTy : Ty} :
       HasTy sig env program p →
-      termTy sig env scope = some Ty.scope →
+      termTy sig env scope = some scopeTy →
+      Ty.sub scopeTy.normalize Ty.scope = true →
       ActionHasTy sig env (.forkIn program options scope)
         ⟨.fiberOf p.answer p.error, .never, p.requires⟩
   /-- `forkScoped` (`:5400-5406`): `forkIn` on the *ambient* scope, so the action itself
@@ -354,10 +360,11 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
         ⟨.fiberOf p.answer p.error, .never, p.requires.union (Requirement.single sig.scopeKey)⟩
   /-- `fiberRunIn` (`:5447-5461`): the target must be a fiber handle and the scope a scope
   handle; the action answers `void`. -/
-  | runIn {env : TyEnv} {target scope : Term} {handle : Ty} {value error : Ty} :
+  | runIn {env : TyEnv} {target scope : Term} {handle : Ty} {value error : Ty} {scopeTy : Ty} :
       termTy sig env target = some handle →
       fiberTy handle = some (value, error) →
-      termTy sig env scope = some Ty.scope →
+      termTy sig env scope = some scopeTy →
+      Ty.sub scopeTy.normalize Ty.scope = true →
       ActionHasTy sig env (.runIn target scope) (EffTy.pure .unit)
   /-- `fiberInterrupt` (`:857`): the target must be a fiber handle. -/
   | interrupt {env : TyEnv} {target : Term} {handle : Ty} {value error : Ty} :
@@ -378,11 +385,13 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
       ActionHasTy sig env (.interruptAll targets none) (EffTy.pure .unit)
   /-- `fiberInterruptAllAs` (`:888-915`): a named interruptor, whose term is a fiber id — a
   `nat`, not a handle. -/
-  | interruptAll_by {env : TyEnv} {targets : Term} {who : Term} {ts inner : Ty} {value error : Ty} :
+  | interruptAll_by {env : TyEnv} {targets : Term} {who : Term} {ts inner : Ty} {value error : Ty}
+      {whoTy : Ty} :
       termTy sig env targets = some ts →
       Checker.listOf? ts = some inner →
       fiberTy inner = some (value, error) →
-      termTy sig env who = some .nat →
+      termTy sig env who = some whoTy →
+      Ty.sub whoTy.normalize .nat = true →
       ActionHasTy sig env (.interruptAll targets (some who)) (EffTy.pure .unit)
   /-- `fiberAwaitAll` (`:779`, `:5318-5322`): the list of the targets' exits. -/
   | awaitAll {env : TyEnv} {targets : Term} {ts inner : Ty} {value error : Ty} :
@@ -413,8 +422,9 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
       EffsHasTy sig env entrants t →
       ActionHasTy sig env (.raceAll entrants) t
   /-- `setContext` (`:709-727`): a `Context.Context<unknown>` handle in, `void` out. -/
-  | setContext {env : TyEnv} {context : Term} :
-      termTy sig env context = some Ty.context →
+  | setContext {env : TyEnv} {context : Term} {contextTy : Ty} :
+      termTy sig env context = some contextTy →
+      Ty.sub contextTy.normalize Ty.context = true →
       ActionHasTy sig env (.setContext context) (EffTy.pure .unit)
   /-- `fiber.context` as a value (`getContext`, `:2153`). -/
   | getContext {env : TyEnv} :
@@ -423,8 +433,9 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
   | getId {env : TyEnv} :
       ActionHasTy sig env .getId (EffTy.pure .nat)
   /-- `scopeClose` from the fiber (`Scope.ts` via `:3826`): a scope handle and an `Exit`. -/
-  | closeScope {env : TyEnv} {scope exit : Term} {exitTy : Ty} {value error : Ty} :
-      termTy sig env scope = some Ty.scope →
+  | closeScope {env : TyEnv} {scope exit : Term} {exitTy : Ty} {value error : Ty} {scopeTy : Ty} :
+      termTy sig env scope = some scopeTy →
+      Ty.sub scopeTy.normalize Ty.scope = true →
       termTy sig env exit = some exitTy →
       Checker.exitOf? exitTy = some (value, error) →
       ActionHasTy sig env (.closeScope scope exit) (EffTy.pure .unit)

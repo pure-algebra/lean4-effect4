@@ -1,5 +1,6 @@
 import Effect4.Laws.Api.Formation
 import Effect4.Laws.Program.Template
+import Effect4.Laws.Program.Bounds
 import Effect4.Laws.Codegen.Checked
 import Effect4.Laws.Codegen.Admit
 
@@ -82,19 +83,20 @@ def source : TypeScript.Module :=
   | .error (.uninhabited _) => true
   | _ => false
 
--- Inference traverses names and positions, including seed widening under join. A record is
--- read in the request's field order (a normal request's is canonical, `Ty.inferFields`).
-#guard Ty.infer []
+-- Bounds matching traverses names and positions. A record is read in the request's
+-- field order. A seed conflict refuses.
+#guard Bounds.matchB []
     (.record [("a", false, .var 0), ("b", false, .var 1)])
-    (.record [("b", false, .string), ("a", false, .nat)]) = [(1, .string), (0, .nat)]
-#guard Ty.infer [] (.map (.var 0) (.var 1)) (.map .string .nat) =
-  [(0, .string), (1, .nat)]
-#guard Ty.infer [] (.tuple [.var 0, .bool, .var 1]) (.tuple [.string, .bool, .nat]) =
-  [(0, .string), (1, .nat)]
-#guard Ty.infer [] (.app "Box" [.var 0]) (.app "Box" [.nat]) = [(0, .nat)]
-#guard Ty.infer [] (.app "Box" [.var 0]) (.app "Other" [.nat]) = []
-#guard Ty.infer [(0, .nat)] (.record [("a", false, .var 0)])
-    (.record [("a", false, .unknown)]) true = [(0, .unknown), (0, .nat)]
+    (.record [("b", false, .string), ("a", false, .nat)]) =
+  some [(1, .string), (0, .nat)]
+#guard Bounds.matchB [] (.map (.var 0) (.var 1)) (.map .string .nat) =
+  some [(0, .string), (1, .nat)]
+#guard Bounds.matchB [] (.tuple [.var 0, .bool, .var 1]) (.tuple [.string, .bool, .nat]) =
+  some [(0, .string), (1, .nat)]
+#guard Bounds.matchB [] (.app "Box" [.var 0]) (.app "Box" [.nat]) = some [(0, .nat)]
+#guard Bounds.matchB [] (.app "Box" [.var 0]) (.app "Other" [.nat]) = none
+#guard Bounds.matchB [(0, .nat)] (.record [("a", false, .var 0)])
+    (.record [("a", false, .unknown)]) = none
 
 #guard (.map (.var 0) (.var 1) : Ty).templateAdmissible
 #guard (.record [("a", false, .var 0)] : Ty).templateAdmissible
