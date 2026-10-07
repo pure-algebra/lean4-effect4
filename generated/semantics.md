@@ -1953,6 +1953,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | run-eq-meaning | simulation | proved | Effect4.Program.Agreement.run_eq_meaning | yes |  |
 | loop-agreement | simulation | proved | Effect4.Program.Agreement.loopAgreement | yes |  |
 | run-eq-ref | simulation | proved | Effect4.Program.Sched.run_eq_ref | yes |  |
+| profile-plus-exact | compatibility | proved | Effect4.Program.intAddIn_eq_some_iff | yes |  |
 | rows-denotation-straight | compatibility | proved | Effect4.Program.Denote.denoteRows_straight | yes |  |
 | rows-denotation-append | compatibility | proved | Effect4.Program.Denote.meaningUnder_append | yes |  |
 | rows-denotation-reference | compatibility | proved | Effect4.Program.Sched.denoteR_straightRows | yes |  |
@@ -2019,6 +2020,17 @@ Literature: Leroy2009, audit C10 — analogy
 ```
 
 Literature: LynchVaandrager1995, audit C4 — proofTechnique
+
+**profile-plus-exact**
+
+```lean
+∀ (bound : Nat) (x y v : Effect4.Machine.Val),
+  Eq (Effect4.Program.Within bound x) Bool.true →
+    Eq (Effect4.Program.Within bound y) Bool.true →
+      Iff (Eq (Effect4.Program.intAddIn bound x y) (Option.some v))
+        (And (Eq (Effect4.Program.intAdd x y) (Option.some v))
+          (Eq (Effect4.Program.Within bound v) Bool.true))
+```
 
 **rows-denotation-straight**
 

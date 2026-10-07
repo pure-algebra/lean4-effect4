@@ -500,11 +500,11 @@ def tagHit (tag : String) : Val → Bool
   | v => Program.Record.tagHit tag v
 
 def eval : NativeAtom → List Val → Option Val
-  | .succ, [Val.nat n] => some (Val.nat (n + 1))
+  | .succ, [Val.nat n] => some (Val.nat (Profile.grow n 1))
   | .pred, [Val.nat n] => some (Val.nat (n - 1))
   | .isZero, [Val.nat n] => some (Val.bool (n = 0))
   | .boolNot, [Val.bool b] => some (Val.bool (!b))
-  | .add, [Val.nat a, Val.nat b] => some (Val.nat (a + b))
+  | .add, [Val.nat a, Val.nat b] => some (Val.nat (Profile.grow a b))
   | .lt, [Val.nat a, Val.nat b] => some (Val.bool (decide (a < b)))
   | .eq, [Val.nat a, Val.nat b] => some (Val.bool (a = b))
   | .eq, [Val.str a, Val.str b] => some (Val.bool (a == b))

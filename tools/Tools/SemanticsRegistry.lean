@@ -814,6 +814,9 @@ def registry : Registry where
       literature := [
         { work := "LynchVaandrager1995", locator := "audit C4", relation := "proofTechnique" }
       ] },
+    { id := "profile-plus-exact", concept := "translation-simulation", role := .compatibility
+      title := "The checked integer addition answers exactly when the reference addition answers inside the profile, for two arguments inside it: a face equals the reference inside its profile and refuses outside it (DI-56), for the one operation that grows; nothing about the OCaml row or the TypeScript helper, each a trusted row run by a control (decisions rows 108 and 321)"
+      pointer := .witness `Effect4.Program.intAddIn_eq_some_iff },
     { id := "rows-denotation-straight", concept := "translation-simulation", role := .compatibility
       title := "The call tree over the stores and the host rows extends denote: on Straight it is denote's tree injected on the left of the coproduct (DI-69; the fragment StraightRows admits catchIf, decisions row 310)"
       pointer := .witness `Effect4.Program.Denote.denoteRows_straight },

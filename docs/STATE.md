@@ -479,10 +479,12 @@ In work since the suspension of the handover:
   of `denoteRows_eq_session` (slice H8).
 - **Integers carry, encode and compute** (rows 316 to 319): an `int` column is admitted (the
   integer scan is gone), `int` and `number` have exact JSON wires, and the atoms `plus` and
-  `minus` compute exactly, with `lt` and `eq` at `int`. The bound of the target profile
-  (slices 6 and 7) and p1's and p5's next stages (slice 8) are open
-  ([the packet](research/2026-10-07-packet-integers.md)). The term guard stands at a host
-  row's request (row 315).
+  `minus` compute exactly, with `lt` and `eq` at `int`. The profile's bound is written once,
+  at `Profile.grow`: the OCaml engine refuses past it, and its judgment is a theorem (row 321).
+  p5's balance answers `-15` (row 320). Open: the TypeScript half of the bound
+  ([the packet](research/2026-10-07-packet-integers.md), section 3.5). The term guard stands
+  at a host row's request (row 315). [The map of H8](research/2026-10-07-h8-map.md) decomposes
+  the proof of `denoteRows_eq_session` into three steps, one of them new.
 - **Chunks T and S are landed** (row 311): the first profile of streams and the authoring
   sugar. The implementer does no more implementation, and the coordinator lands the work itself
   (row 312). The claims record is walked with the owner at the next check-in.

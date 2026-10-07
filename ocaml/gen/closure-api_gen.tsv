@@ -417,7 +417,7 @@ Effect4.Machine.Value.reason._redArg	value_reason	false	3	0	0	0	0	1	0	0	0	0	3	0	
 List.findSome?._at_.Effect4.Program.firstFailure?.spec_0	list_find_some_opt_at_program_first_failure_opt_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	1	2	0	4	0	1	0	16548508499723176854
 Effect4.Program.valOfErr	program_val_of_err	false	13	0	0	0	1	5	0	0	0	0	13	0	0	0	0	0	0	0	0	8	13	0	5	0	1	0	16115292132834522894
 Effect4.Program.NativeAtom.ofName?	program_native_atom_of_name_opt	false	181	0	0	0	45	46	0	45	0	0	136	0	0	45	0	0	0	0	0	46	135	0	90	0	1	0	18236467099286070220
-Effect4.Program.NativeAtom.eval	program_native_atom_eval	false	292	0	3	6	176	220	0	4	0	0	288	0	4	0	0	0	0	0	0	206	154	0	236	162	1	0	4207871397191398029
+Effect4.Program.NativeAtom.eval	program_native_atom_eval	false	292	0	3	6	176	220	0	4	0	0	288	0	4	0	0	0	0	0	0	206	154	0	236	162	1	0	3814109818026928720
 Effect4.Machine.Record.zipNames._redArg	record_zip_names	true	8	0	0	0	4	5	0	0	0	0	8	0	0	0	0	0	0	0	0	8	8	0	6	2	1	0	94348411954359780
 List.nodupDecidable._redArg	list_nodup_decidable	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	13288127553799946404
 Effect4.Field.bytesKey	field_bytes_key	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	2	5	0	0	0	1	0	10758909720317067492
@@ -612,7 +612,6 @@ Effect4.Machine.Map.write	map_write	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	
 List.mapTR.loop._at_.Effect4.Machine.Map.keys.spec_0	list_map_tr_loop_at_map_keys_spec_0	true	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	6	0	3	0	1	0	11926743152650363440
 List.mapTR.loop._at_.Effect4.Machine.Map.entries.spec_0	list_map_tr_loop_at_map_entries_spec_0	true	8	0	0	0	2	2	0	0	0	0	8	0	0	0	0	0	0	0	0	4	11	0	3	0	1	0	17677059304486023073
 Effect4.Machine.Map.readTuples	map_read_tuples	true	11	0	0	0	7	8	0	0	0	0	11	0	0	0	0	0	0	0	0	11	7	0	9	5	1	0	3870657044087172013
-Effect4.Program.Profile.grow	program_profile_grow	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	0	0	1	0	13373726335375542725
 Effect4.Program.intNeg	program_int_neg	false	13	0	0	0	2	4	0	3	0	0	10	0	3	0	0	0	0	0	0	4	12	0	4	1	1	0	5586976546327844590
 List.decidableBAll._redArg	list_decidable_ball	true	3	0	0	0	2	3	0	0	0	0	2	1	0	0	0	0	0	0	0	0	3	0	4	0	1	0	1711085570325243429
 Effect4.Field.insertBy._redArg	field_insert_by	true	9	0	0	0	5	4	0	0	0	0	7	2	0	0	0	0	0	0	0	3	16	0	8	0	1	0	7611739395491169827

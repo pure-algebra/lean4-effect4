@@ -3,6 +3,7 @@ import Effect4.Laws.Machine.Approximation
 import Effect4.Laws.Machine.RefKernel
 import Effect4.Laws.Machine.StoresLaws
 import Effect4.Laws.Machine.Integers
+import Effect4.Laws.Machine.IntegerProfile
 import Effect4.Laws.Machine.Clock
 import Effect4.Laws.Machine.Behaviour
 import Effect4.Laws.Machine.Book

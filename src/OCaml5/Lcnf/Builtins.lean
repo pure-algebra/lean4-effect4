@@ -570,6 +570,14 @@ def builtins : List Builtin := [
     "`E4_clock.of_nat` is `Z.of_int` on a non-negative `int`, and raises `Profile_refusal` on a negative one. A literal reaches the clock by `clockNatIngress?` as exact decimal text, and a natural that the literal rule narrowed is refused at generation. Read against `ocaml/clock/e4_clock.ml`; its own tests are `ocaml/clock/test_clock.ml`.",
   row `Effect4.ClockMillis.toNat (.library "E4_clock.to_profile_nat") .domain "millis ≤ 2^53 - 1 and the value fits `int`" []
     "`E4_clock.to_profile_nat` raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56).",
+  -- The one addition that can leave the profile (decisions row 321): `succ`, `add`, `plus` and
+  -- `minus` grow through it, and its form refuses outside the bound.
+  row `Effect4.Program.Profile.grow
+    (.inline ["a", "b"] (.call "E4_clock.to_profile_nat"
+      [.call "E4_clock.add" [.call "E4_clock.of_nat" [.var "a"], .call "E4_clock.of_nat" [.var "b"]]]))
+    .domain "a + b ≤ 2^53 - 1, and each of a and b fits `int`" []
+    "Exact addition on `E4_clock.t`, then `E4_clock.to_profile_nat`, which raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56, decisions row 108). The engine answers it as `Outside_profile` with the input machine retained (`ocaml/engine/e4_engine.mli`)."
+    "two conversions and one Zarith addition for one machine addition",
   row `Effect4.ClockMillis.add (.library "E4_clock.add") .exact "" []
     "`E4_clock.add` is `Z.add`, exact on naturals of any size; Lean's `add` is `ofNat (a.toNat + b.toNat)` (`ClockMillis.toNat_add`).",
   row `Effect4.ClockMillis.decLe (.library "E4_clock.le") .exact "" []
@@ -744,7 +752,7 @@ def problems : List String := problemsOf builtins support libraries
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(libraries.map (·.1)).contains b
 #guard maxArity == 3
-#guard builtins.length == 106
+#guard builtins.length == 107
 
 /-! ### Controls: each altered copy is refused, for its own reason -/
 

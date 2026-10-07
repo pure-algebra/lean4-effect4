@@ -3240,15 +3240,11 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
         let n_5 = max 0 (x_1 - one) in
         list_drop n_5 tail_4))
 
-  (* LCNF mono: Effect4.Program.Profile.grow (a : Nat) (b : Nat) : Nat *)
-  let program_profile_grow (a : int) (b : int) : int =
-  a + b
-
   (* LCNF mono: Effect4.Program.intAdd (x.1 : Effect4.Store.Val) (x.2 : Effect4.Store.Val) : Option Effect4.Store.Val *)
   let program_int_add (x_1 : val_) (x_2 : val_) : val_ option =
   match (x_1 : val_) with
     | Val_nat n_3 -> (match (x_2 : val_) with
-        | Val_nat n_4 -> (let _x_5 = program_profile_grow n_3 n_4 in
+        | Val_nat n_4 -> (let _x_5 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_3) (E4_clock.of_nat n_4)) in
           let _x_6 = Val_nat _x_5 in
           Some _x_6)
         | Val_negInt n_8 -> (let _x_9 = n_8 < n_3 in
@@ -3272,7 +3268,7 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
         | Val_negInt n_30 -> (let _x_31 = 1 in
           let _x_32 = n_19 + _x_31 in
           let _x_33 = n_30 + _x_31 in
-          let _x_34 = program_profile_grow _x_32 _x_33 in
+          let _x_34 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat _x_32) (E4_clock.of_nat _x_33)) in
           let _x_35 = max 0 (_x_34 - _x_31) in
           let _x_36 = Val_negInt _x_35 in
           Some _x_36)
@@ -3315,7 +3311,7 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
         | head_15 :: tail_16 -> (match (head_15 : val_) with
             | Val_nat n_17 -> (match tail_16 with
                 | [] -> (let _x_18 = 1 in
-                  let _x_19 = n_17 + _x_18 in
+                  let _x_19 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_17) (E4_clock.of_nat _x_18)) in
                   let _x_20 = Val_nat _x_19 in
                   Some _x_20)
                 | _ -> None)
@@ -3355,7 +3351,7 @@ and store_val__handles_list (x_1 : val_ list) : (int * int) list =
             | Val_nat n_55 -> (match tail_54 with
                 | head_56 :: tail_57 -> (match (head_56 : val_) with
                     | Val_nat n_58 -> (match tail_57 with
-                        | [] -> (let _x_59 = n_55 + n_58 in
+                        | [] -> (let _x_59 = E4_clock.to_profile_nat (E4_clock.add (E4_clock.of_nat n_55) (E4_clock.of_nat n_58)) in
                           let _x_60 = Val_nat _x_59 in
                           Some _x_60)
                         | _ -> None)
