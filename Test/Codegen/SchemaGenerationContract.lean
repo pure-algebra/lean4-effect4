@@ -481,7 +481,6 @@ def codecCases : List (String × Ty × Store.Val × Json) :=
   (.arr [.obj [("_tag", .str "Fail"), ("error", .str "bad")]]) = none
 
 -- Opaque runtime handles and the distinct snapshot representation stay outside JSON.
-#guard Ty.encode .int (.nat 1) = none
 #guard Ty.decode .never .null = none
 #guard Ty.encode (.fiberOf .nat .never) (Machine.Val.fiber ⟨0⟩) = none
 #guard Ty.encode (Ty.handle "Ref.Ref<unknown>") (Machine.Val.cell ⟨0⟩) = none
@@ -759,6 +758,49 @@ open Effect4.Store in
   | .ok out => out.length < (shape Document).document.references.length &&
       (out.map (·.key)).eraseDups.length == out.length
   | .error _ => false
+
+/-! ## The wires of `int` and `number` (the integers packet, slice 3)
+
+Readers of `decode_iff` at `int` and `number` (`src/Effect4/Laws/Schema/Codec.lean`, with the
+exactness laws `int?_exact` and `number?_exact`): both signs, the bound, and each refusal. -/
+
+section Integers
+open Effect4.Schema.Codec
+
+-- finite evaluation: the image reads back at both signs and at the bound
+#guard [Machine.Val.nat 0, .nat 1, .nat 404, .nat safeBound, .negInt 0, .negInt 14,
+    .negInt (safeBound - 1)].all fun v => Ty.decode .int (Ty.encode .int v |>.getD .null) == some v
+-- finite evaluation: the JSON text of an image
+#guard (Ty.encode .int (.negInt 14)).map (Effect4.Codegen.JsonText.render 0) = some "-15"
+#guard Ty.encode .int (.nat 1) = some (Arch.Json.ofNat 1)
+-- control: outside the bound both directions refuse; the natural wire still reads 2^53
+#guard Ty.encode .int (.nat (safeBound + 1)) = none
+#guard Ty.encode .int (.negInt safeBound) = none
+#guard Ty.decode .int (Arch.Json.ofNat (2 ^ 53)) = none
+#guard Ty.decode .nat (Arch.Json.ofNat (2 ^ 53)) = some (.nat (2 ^ 53))
+-- control: negative zero, a fraction, a negative fraction, an infinity, a NaN and a string are
+-- no integers
+#guard [Json.number ⟨0x8000000000000000⟩, .number ⟨0x3FE0000000000000⟩,
+    .number ⟨0xBFE0000000000000⟩, .number ⟨0x7FF0000000000000⟩, .number ⟨0x7FF8000000000000⟩,
+    .str "1"].all fun j => Ty.decode .int j == none
+-- finite evaluation: 0.5, -0.5, negative zero and integers on both sides of the safe bound read
+-- back as numbers
+#guard [Effect4.Store.Val.float 0x3FE0000000000000, .float 0xBFE0000000000000, .float 0x8000000000000000,
+    .nat 3, .negInt 2, .nat (2 ^ 60), .negInt (2 ^ 60 - 1)].all fun v =>
+  Ty.decode .number (Ty.encode .number v |>.getD .null) == some v
+#guard (Ty.encode .number (.float 0xBFE0000000000000)).map (Effect4.Codegen.JsonText.render 0) =
+  some "-0.5"
+-- control: a member of `number` with no binary64 has no image; a NaN and an infinity are
+-- refused; an integral datum is read as an integer, never as a frame
+#guard Ty.encode .number (.nat (2 ^ 53 + 1)) = none
+#guard Ty.encode .number (.float 0x7FF8000000000000) = none
+#guard Ty.decode .number (.number ⟨0x7FF0000000000000⟩) = none
+#guard Ty.decode .number (.number ⟨0x4008000000000000⟩) = some (.nat 3)
+-- tested: the JSON text loses the sign of zero, as `JSON.stringify(-0)` does
+#guard (Ty.encode .number (.float 0x8000000000000000)).map (Effect4.Codegen.JsonText.render 0) =
+  some "0"
+
+end Integers
 
 end Test.Codegen.SchemaGenerationContract
 

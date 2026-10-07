@@ -633,6 +633,16 @@ theorem named_normJ : ∀ (fields : List (String × (Json → Option Val))),
     · rw [if_neg hk]
       exact named_normJ fields (fun f hf => h f (List.mem_cons_of_mem _ hf)) key j
 
+/-- The integer wire reads a datum and its normal form alike: `normJ` keeps a number. The arm of
+`decodeRaw_normJ` at `int`. -/
+theorem int?_normJ (j : Json) : int? (normJ j) = int? j := by
+  cases j <;> rfl
+
+/-- The number wire reads a datum and its normal form alike. The arm of `decodeRaw_normJ` at
+`number`. -/
+theorem number?_normJ (j : Json) : number? (normJ j) = number? j := by
+  cases j <;> rfl
+
 /-- **The decoder reads `N_J`'s quotient** (every arm, the cause, reason, defect and error
 decoders included): a JSON and its key-sorted form decode alike. -/
 theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decodeRaw t j := by
@@ -747,6 +757,8 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
       exact ih t ht j
     | obj es => rw [normJ_obj]
     | _ => rfl
+  | int => intro j; exact int?_normJ j
+  | number => intro j; exact number?_normJ j
   | _ => intro j; rfl
 
 /-! ## Exactness: every JSON the raw decoder reads is the raw encoder's image, modulo `N_J` -/
@@ -776,6 +788,99 @@ theorem nat?_exact {j : Json} {n : Nat} (h : nat? j = some n) : j = Arch.Json.of
       · exact key _ h
   | _ => exact nomatch h
 
+
+/-! ## Exactness of the two wires of the integers packet (slice 3): `int` and `number` -/
+
+/-- A datum whose sign bit is set is at least the sign bit. A step of `negJson_of_nat?`. -/
+theorem signBit_le_of_div {b : Nat} (h : ¬ b / signBit = 0) : signBit ≤ b :=
+  Nat.le_of_not_lt fun hlt => h (Nat.div_eq_of_lt hlt)
+
+/-- The datum of a negative integer, rebuilt from the datum of its magnitude: the one fact that
+the negative halves of both exactness laws read. A step of `int?_exact` and `number?_exact`. -/
+theorem negJson_of_nat? {f : Float64} {m : Nat}
+    (hhigh : ¬ f.bits.toNat / signBit = 0)
+    (hm : nat? (.number ⟨UInt64.ofNat (f.bits.toNat - signBit)⟩) = some (m + 1)) :
+    negJson m = .number f := by
+  have hj := nat?_exact hm
+  have hj' : Json.number ⟨UInt64.ofNat (f.bits.toNat - signBit)⟩ =
+      Json.number ⟨Arch.binary64OfNat (m + 1)⟩ := hj
+  have hf : (⟨UInt64.ofNat (f.bits.toNat - signBit)⟩ : Float64) =
+      ⟨Arch.binary64OfNat (m + 1)⟩ := Json.number.inj hj'
+  have hbits : UInt64.ofNat (f.bits.toNat - signBit) = Arch.binary64OfNat (m + 1) :=
+    Float64.mk.inj hf
+  have hge : signBit ≤ f.bits.toNat := signBit_le_of_div hhigh
+  have hsmall : f.bits.toNat - signBit < UInt64.size :=
+    Nat.lt_of_le_of_lt (Nat.sub_le _ _) f.bits.toNat_lt
+  unfold negJson
+  rw [← hbits, UInt64.toNat_ofNat_of_lt' hsmall, Nat.sub_add_cancel hge, UInt64.ofNat_toNat]
+
+/-- **Exactness of the integer wire**: a datum that reads as an integer is that integer's image.
+`decodeRaw_exact` takes it at the leaf `int`, with the datum itself as the witness. -/
+theorem int?_exact {j : Json} {v : Val} (h : int? j = some v) : intJson v = some j := by
+  cases j with
+  | number f =>
+    simp only [int?] at h
+    split at h
+    · obtain ⟨m, hm, hle⟩ := Option.bind_eq_some_iff.mp h
+      split at hle
+      · next hbound =>
+        cases hle
+        have hj := nat?_exact hm
+        simp only [intJson, if_pos hbound, hj]
+      · exact nomatch hle
+    · next hhigh =>
+      obtain ⟨m, hm, hneg⟩ := Option.bind_eq_some_iff.mp h
+      split at hneg
+      · exact nomatch hneg
+      · next hok =>
+        cases hneg
+        have hpos : 0 < m := Nat.pos_of_ne_zero fun h0 => hok (.inl h0)
+        have hcancel : m - 1 + 1 = m := Nat.sub_add_cancel hpos
+        have hbound : m - 1 + 1 ≤ safeBound := by
+          rw [hcancel]
+          exact Nat.le_of_not_lt fun hlt => hok (.inr hlt)
+        have hm' : nat? (.number ⟨UInt64.ofNat (f.bits.toNat - signBit)⟩) = some (m - 1 + 1) := by
+          rw [hm, hcancel]
+        simp only [intJson, if_pos hbound, negJson_of_nat? hhigh hm']
+  | _ => exact nomatch h
+
+/-- **Exactness of the number wire**: a datum that reads as a number is that number's image.
+`decodeRaw_exact` takes it at the leaf `number`. -/
+theorem number?_exact {j : Json} {v : Val} (h : number? j = some v) : numberJson v = some j := by
+  cases j with
+  | number f =>
+    simp only [number?] at h
+    split at h
+    · exact nomatch h
+    · next hfinite =>
+      have hfin : f.isFinite = true := by
+        cases hf : f.isFinite with
+        | true => rfl
+        | false => exact absurd (by rw [hf]; rfl) hfinite
+      split at h
+      · next hframe =>
+        cases h
+        have hsame : (⟨f.bits⟩ : Float64) = f := rfl
+        simp only [numberJson, hframe, hsame, hfin, Bool.and_self, if_true]
+      · split at h
+        · obtain ⟨n, hn, rfl⟩ := Option.map_eq_some_iff.mp h
+          have hj := nat?_exact hn
+          simp only [numberJson]
+          rw [← hj, if_pos hn]
+        · next hhigh =>
+          obtain ⟨m, hm, hneg⟩ := Option.bind_eq_some_iff.mp h
+          split at hneg
+          · exact nomatch hneg
+          · next hne =>
+            cases hneg
+            have hcancel : m - 1 + 1 = m := Nat.sub_add_cancel (Nat.pos_of_ne_zero hne)
+            have hm' : nat? (.number ⟨UInt64.ofNat (f.bits.toNat - signBit)⟩) =
+                some (m - 1 + 1) := by
+              rw [hm, hcancel]
+            have hj := nat?_exact hm'
+            simp only [numberJson]
+            rw [← hj, if_pos hm', negJson_of_nat? hhigh hm']
+  | _ => exact nomatch h
 /-- `fields?` succeeds on an object of the expected length whose every name is picked. -/
 theorem fields?_some {j : Json} {names : List String} {l : List Json} (h : fields? j names = some l) :
     ∃ es, j = .obj es ∧ es.length = names.length ∧ names.mapM (pick es) = some l := by
@@ -1430,6 +1535,8 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
         rfl
       · rw [normJ_arr, normJ_arr, hn]
     | _ => exact nomatch h
+  | int => intro j v h; exact ⟨j, int?_exact h, rfl⟩
+  | number => intro j v h; exact ⟨j, number?_exact h, rfl⟩
   | _ => intro j v h; exact nomatch h
 
 end Effect4.Schema.Codec

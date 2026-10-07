@@ -4,6 +4,7 @@ import Effect4.Data.JsonNumber
 import Effect4.Machine.Map
 import Effect4.Machine.Record
 import Effect4.Store.Carrier.Digest
+import Effect4.Program.Profile
 
 /-!
 # Type-directed JSON boundary
@@ -182,6 +183,68 @@ structure Wire where
 def Wire.refused (type : Ty) (supported : Bool := false) : Wire :=
   ⟨type, type, supported, fun _ => none, fun _ => none⟩
 
+/-! ## The wires of `int` and `number` (decisions rows 121 and 309; the integers packet, slice 3) -/
+
+/-- The bound of an integer's JSON image: the profile's, rc.112's `isInt`
+(`Number.isSafeInteger`, `vendor/effect-4.0.0-rc.112/src/Schema.ts`, `isInt`). -/
+def safeBound : Nat := rc112.natBound
+
+/-- The sign bit of a binary64 datum. -/
+def signBit : Nat := 2 ^ 63
+
+/-- The binary64 datum of `-(n + 1)`: the datum of `n + 1` with the sign bit set. -/
+def negJson (n : Nat) : Json :=
+  .number ⟨UInt64.ofNat ((Arch.binary64OfNat (n + 1)).toNat + signBit)⟩
+
+/-- **An integer's JSON image**: a natural inside the bound as `Arch.Json.ofNat` writes it, a
+negative integer inside the bound with the sign bit. Outside the bound it refuses. -/
+def intJson : Val → Option Json
+  | .nat n => if n ≤ safeBound then some (Arch.Json.ofNat n) else none
+  | .negInt n => if n + 1 ≤ safeBound then some (negJson n) else none
+  | _ => none
+
+/-- **An integer from its JSON image**: an exact integral binary64 inside the bound. It refuses
+negative zero, a fraction, an infinity, a NaN and every integer outside the bound. -/
+def int? : Json → Option Val
+  | .number f =>
+    let bits := f.bits.toNat
+    if bits / signBit = 0 then
+      (nat? (.number f)).bind fun n => if n ≤ safeBound then some (Val.nat n) else none
+    else
+      (nat? (.number ⟨UInt64.ofNat (bits - signBit)⟩)).bind fun m =>
+        if m = 0 ∨ safeBound < m then none else some (Store.Val.negInt (m - 1))
+  | _ => none
+
+/-- The wire of `int`, in the form of `wireAlgebra`'s fields. -/
+def intWire : Wire := ⟨.int, .int, true, intJson, int?⟩
+
+/-- **A number's JSON image**: an integer image whose datum is exact, or the frame's own bits
+when they are finite. A NaN and the two infinities have no JSON number: refused by name in this
+cut (rc.112's `toCodecJson` writes them as strings). -/
+def numberJson : Val → Option Json
+  | .nat n => if nat? (Arch.Json.ofNat n) = some n then some (Arch.Json.ofNat n) else none
+  | .negInt n =>
+    if nat? (Arch.Json.ofNat (n + 1)) = some (n + 1) then some (negJson n) else none
+  | .float b =>
+    if Store.Val.floatFrame b && (⟨b⟩ : Float64).isFinite then some (.number ⟨b⟩) else none
+  | _ => none
+
+/-- **A number from its JSON image**: the frame for a finite datum that the frame admits, and
+the integer image for every other finite datum. One datum has one value. -/
+def number? : Json → Option Val
+  | .number f =>
+    if !f.isFinite then none
+    else if Store.Val.floatFrame f.bits then some (.float f.bits)
+    else
+      let bits := f.bits.toNat
+      if bits / signBit = 0 then (nat? (.number f)).map Val.nat
+      else (nat? (.number ⟨UInt64.ofNat (bits - signBit)⟩)).bind fun m =>
+        if m = 0 then none else some (Store.Val.negInt (m - 1))
+  | _ => none
+
+/-- The wire of `number`. -/
+def numberWire : Wire := ⟨.number, .number, true, numberJson, number?⟩
+
 /-- One wire interpretation per type constructor.
 Record fields retain their names and flags. Tuple positions retain their exact arity.
 Union selection uses the original child types, including raw, noncanonical spellings. -/
@@ -193,7 +256,7 @@ def wireAlgebra : TyAlgebra (fun _ => Wire) where
   ty_nat := ⟨.nat, .nat, true,
     (fun | .nat n => some (Arch.Json.ofNat n) | _ => none),
     fun j => (nat? j).map Val.nat⟩
-  ty_int := .refused .int
+  ty_int := intWire
   ty_string := ⟨.string, .string, true,
     (fun | .str s => some (.str s) | _ => none),
     (fun | .str s => some (.str s) | _ => none)⟩
@@ -292,7 +355,7 @@ def wireAlgebra : TyAlgebra (fun _ => Wire) where
   ty_app name items := .refused (.app name (items.map Wire.type))
   ty_null := .refused .null
   ty_undefined := .refused .undefined
-  ty_number := .refused .number
+  ty_number := numberWire
   ty_bytes := .refused .bytes
 
 /-- The type language's generated fold supplies every recursive wire interpretation. -/
