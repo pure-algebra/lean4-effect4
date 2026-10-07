@@ -353,8 +353,8 @@ def evaluateR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) : R
   evaluate := evaluateR
 
 /-- The native term evaluator shares the frame evaluator's construction view. -/
-@[reducible] def termEvaluatorFor (root : NativeEff) :
+@[reducible] def termEvaluatorFor (root : NativeEff) (table : RowTable := []) :
     FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit where
-  evaluate := fun _ m f yielding => evaluateR (interpRAt root m.completedExits) m f yielding
+  evaluate := fun _ m f yielding => evaluateR (interpRAt root m.completedExits table) m f yielding
 
 end Effect4.Program.Sched

@@ -368,7 +368,7 @@ same for the whole tree: a declaration that comes to rest on a goal moves the co
 goal's proof that frees one. The gate then refuses until the pin moves, which is a review event.
 The slow root reads more modules: it logs its count and pins none.
 -/
-private def restingPin : Nat := 12
+private def restingPin : Nat := 13
 
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do

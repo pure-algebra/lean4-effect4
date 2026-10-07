@@ -732,6 +732,9 @@ def registry : Registry where
     { id := "address-table", concept := "initial-algebras-folds", role := .compatibility
       title := "The address table of a program has one entry for each address of a node, and no other (mem_addresses_iff); an entry of a program holds the environment that the step function answers and the checker's answer there; the distinct refusals of the entries start with the located refusal of explain (refusals_head), and the list is empty exactly when the checker admits the program; an entry after a refused sibling is not reached and holds no answer; the table is a specification, and each entry costs up to one check of the program; no law orders the refusals after the head (decisions row 302)"
       pointer := .witness `Effect4.Program.refusals_nil_iff },
+    { id := "call-instance-address", concept := "initial-algebras-folds", role := .inversion
+      title := "The call instance at an address is the row check's answer: where callAt answers, the node there is a call of the instance's operation, its request has the instance's request type in the address's environment, and the row check at that type answers the instance's two columns (nothing about a run's call at that address: no registration records it; decisions row 310)"
+      pointer := .witness `Effect4.Program.callAt_rowTy },
     { id := "term-slot-environment", concept := "initial-algebras-folds", role := .inversion
       title := "On a typed node, the term in each slot whose rule extends the node's environment has a type at the environment that the slot table answers: the test of catchIf, the test, the step and the result of iterate, and an operation's own term at the instance of its parameter; the proof is the inversion of HasTy at the three constructors; it does not say that the environment is the only one, and it says nothing at a refused node (decisions row 302)"
       pointer := .witness `Effect4.Program.hasTy_extSlotEnv },
@@ -811,6 +814,24 @@ def registry : Registry where
       literature := [
         { work := "LynchVaandrager1995", locator := "audit C4", relation := "proofTechnique" }
       ] },
+    { id := "rows-denotation-straight", concept := "translation-simulation", role := .compatibility
+      title := "The call tree over the stores and the host rows extends denote: on Straight it is denote's tree injected on the left of the coproduct (DI-69; the fragment StraightRows admits catchIf, decisions row 310)"
+      pointer := .witness `Effect4.Program.Denote.denoteRows_straight },
+    { id := "rows-denotation-append", concept := "translation-simulation", role := .compatibility
+      title := "C2 of DB-01 for host rows, on StraightRows: the meaning of an old program under a host of an appended row table is its meaning under that host restricted to its own rows (nothing outside the fragment, where C2 stays operational; decisions row 310)"
+      pointer := .witness `Effect4.Program.Denote.meaningUnder_append },
+    { id := "rows-denotation-reference", concept := "translation-simulation", role := .compatibility
+      title := "The reference machine's term of a StraightRows program, its control markers erased, is the program's call tree read into the reference machine's signature, when the compile budget covers the program's depth (a step of rows-denotation-session on the reference route; decisions row 310)"
+      pointer := .witness `Effect4.Program.Sched.denoteR_straightRows },
+    { id := "run-eq-ref-table", concept := "translation-simulation", role := .simulation
+      title := "The frame machine and the reference machine agree at every row table: on every program, decision tape, list of preloaded answers and pair of budgets, the same class and the same observation obs (no premise on the tape; nothing of reply admission, reply typing, a host's conformance or the session's ledger; DI-57, decisions row 310)"
+      pointer := .witness `Effect4.Program.Sched.run_eq_ref_table },
+    { id := "session-eq-ref", concept := "translation-simulation", role := .simulation
+      title := "A session's reading is the reference machine's replay of the run's own tape: for a recorded, funded run, the same class and the same observation (proved modulo run-eq-ref-table by session_eq_ref_of_raw; nothing about a run with a stopped row, the session's ledger or reply admission; DI-57, decisions row 310)"
+      pointer := .witness `Effect4.Run.session_eq_ref },
+    { id := "rows-denotation-session", concept := "translation-simulation", role := .simulation
+      title := "The meaning of a StraightRows program under a run's reply tape is the root's exit with the stores, or the frontier: for a recorded run that is funded, at rest and driven by a host (one fiber; nothing about an interruption, a clock step, a delayed cell read or a handle row; DI-69, decisions row 310)"
+      pointer := .witness `Effect4.Run.denoteRows_eq_session },
     { id := "m7-route", concept := "translation-simulation", role := .fundamentalProperty
       title := "M7 conditional route: typed exits and stores from ledger hypotheses M5 and M6"
       pointer := .witness `Effect4.Program.Typed.m7_of_ledger

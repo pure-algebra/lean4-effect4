@@ -39,8 +39,9 @@ abbrev RReplay := ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx S
 
 /-- `Api.load` with the structural term in place of compiled frame code. -/
 def loadR (program : NativeEff) (fuel : Nat)
-    (compileFuel : Nat := fuel) : RState :=
-  { (RunMachine.empty Stores.empty : RState) with
+    (compileFuel : Nat := fuel)
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : RState :=
+  { (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers } : RState) with
     fibers := [RunFiber.make Api.root (denoteR program program (rootPoint compileFuel)) true
       (stores.budgetOf emptyCtx) emptyCtx]
     nextId := 1 }
@@ -49,9 +50,10 @@ def obsR (m : RState) : Obs := obs m
 
 /-- The same Completion data and decision alphabet as `Api.replay`. -/
 def replayR (program : NativeEff) (fuel : Nat) (tape : List Api.Decision)
- (compileFuel : Nat := fuel) : RReplay :=
-  letI := termEvaluatorFor program
-  replayEval (interpR program) fuel tape (loadR program fuel compileFuel)
+    (compileFuel : Nat := fuel) (table : RowTable := [])
+    (answers : List (Completion Val Err Defect FiberId Ann) := []) : RReplay :=
+  letI := termEvaluatorFor program table
+  replayEval (interpR program table) fuel tape (loadR program fuel compileFuel answers)
 
 /-- The loaded term stays fixed when comparing command budgets. -/
 def SufficientR (program : NativeEff) (commandFuel : Nat) (m : RState)

@@ -465,7 +465,19 @@ In work since the suspension of the handover:
   [The brief of chunk 3](research/2026-10-07-chunk-3-brief.md) mapped the next hand-over, and
   chunk 3 is landed (the next bullet). The typed print follows it, after the coordinator's
   design note.
-- **The next hand-over is two chunks** (the owner, row 309).
+- **The fast path of the host meaning is landed** (row 313, chunk H). The row table has a
+  meaning, the algebra package's family. A program of the fragment `StraightRows` has a call
+  tree over the stores and its rows, and the fragment admits `catchIf`. Three laws are
+  theorems: the tree extends `denote`, C2 for host rows, and the erasure law. The reference
+  machine takes the row table. The raw statement `run_eq_ref_table` and the statement of
+  DI-69 `denoteRows_eq_session` are planned goals with their finite evidence.
+  `session_eq_ref` is a theorem modulo the first goal. The call instance at an address is data
+  (`callAt`), with its law. Next: the proof of the raw goal, rehearsed on `probe/h6`
+  ([the probe note](research/2026-10-07-host-meaning-probe.md)), and the term guard at a host
+  row's request (row 312).
+- **Chunks T and S are landed** (row 311): the first profile of streams and the authoring
+  sugar. The implementer does no more implementation, and the coordinator lands the work itself
+  (row 312). The claims record is walked with the owner at the next check-in.
   [Chunk T](research/2026-10-07-chunk-T-brief.md) is the first profile of streams: the amended
   pull row, the module and the to-do application's paged list.
   [Chunk S](research/2026-10-07-chunk-S-brief.md) is the authoring sugar. It holds the export

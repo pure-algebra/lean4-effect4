@@ -212,6 +212,7 @@ import Test.Program.HostSpecContract
 import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
+import Test.Api.SessionMeaning
 import Test.Api.RunnerFinality
 import Test.Api.KeyedHostContract
 import Test.Run.RunContract
@@ -221,6 +222,8 @@ import Test.Program.ScopeMarkers
 import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
 import Test.Program.SimulationContract
+import Test.Program.DenoteRowsContract
+import Test.Program.TableReference
 import Test.Program.ProvisionContract
 import Test.Program.ProvideRows
 import Test.Program.ConfigContract
@@ -264,6 +267,7 @@ import Test.Program.LayerSharingContract
 import Test.Program.BlameContract
 import Test.Program.FocusControls
 import Test.Program.TableControls
+import Test.Program.CallInstance
 import Test.Program.QueryControls
 import Test.Program.BoundsControls
 import Test.Program.DecisionContract

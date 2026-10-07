@@ -295,9 +295,48 @@ def loopResumeRAt (root : NativeEff) (p : Point) (cursor answer : Val) : LoopNex
     | none => .finish (.pure badShapeExit)
   | none => .finish (.pure badShapeExit)
 
+/-- The external row the reference's current code waits on, read off the term the denotation
+leaves at an external park (`CodeMeans.asyncForeign`). DI-57; slice H4 of the host packet. -/
+def externalIndexR : Option RProgram → Option Nat
+  | some (.vis (.inr (.async (.external (.external i) _) _)) _) => some i
+  | _ => none
+
+/-- The reference's prepared answer at an external row (DI-57): the frame's
+`prepareExternalAnswer` (`Program/Compile.lean`) with the row given as an index, the same
+`externalRow` and `externalValue`, and the term's own exit code. -/
+def prepareAtR (table : RowTable) (index : Option Nat)
+    (answer : Completion Val Err Defect FiberId Ann) (state : Stores) : Stores × RProgram :=
+  let fallback := (state, denoteCompletion answer)
+  if table.isEmpty then fallback else
+  match index, answer with
+  | some i, .ofExit (.success value) =>
+    match externalRow table i with
+    | none => fallback
+    | some row =>
+      match externalValue row.answer state.externals.allocated value with
+      | none => fallback
+      | some (allocated, value) =>
+        ({ state with externals := { state.externals with allocated } }, .pure (.success value))
+  | _, _ => fallback
+
+/-- The frame's external registration (`interpOf`'s `registerAsync`), with the reference's
+prepared answer: the preloaded answers, kept until DI-23's migration deletes them. -/
+def registerExternalR (table : RowTable) (i : Nat) (state : Stores) : Stores × Option RProgram :=
+  if (externalRow table i).isNone then (state, none)
+  else match state.externals.answers with
+  | [] => (state, none)
+  | answer :: rest =>
+    if externalAdmits table i answer state.externals.allocated then
+      let (next, code) := prepareAtR table (some i) answer state
+      ({ next with externals := { next.externals with answers := rest } }, some code)
+    else
+      let rejected := state.externals.rejected.orElse
+        (fun _ => some (i, answer, state.externals.answers.length))
+      ({ state with externals := { state.externals with rejected } }, none)
+
 /-- The actual loop and generator hooks, with the same non-code fields as `interpOf`.
 Frame-only hooks have explicit refusal bodies and are not read by `evaluateR`. -/
-def interpR (root : NativeEff) : RInterp where
+def interpR (root : NativeEff) (table : RowTable := []) : RInterp where
   contA := fun _ _ => .pure outsideExit
   contE := fun _ _ => .pure outsideExit
   syncValue := (interpOf root).syncValue
@@ -347,8 +386,16 @@ def interpR (root : NativeEff) : RInterp where
       ({ state with deferreds }, immediate.map denoteCompletion)
     | .store (.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
+    -- the table is tested before the row, so at the default empty table this arm is the old
+    -- identity for every operation, whatever its constructor
+    | .external op _ =>
+      if table.isEmpty then (state, none) else
+      match op with
+      | .external i => registerExternalR table i state
+      | _ => (state, none)
     | _ => (state, none)
   answerCode := denoteCompletion
+  prepareAnswer := fun current answer state => prepareAtR table (externalIndexR current) answer state
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue
     (due.map (Owed.mapCode denoteCompletion), { state with deferreds })
@@ -396,8 +443,9 @@ def interpR (root : NativeEff) : RInterp where
 
 /-- Generator/loop callbacks see the current construction view before their
 inline-exit test. Addressed eager bodies still use their captured point. -/
-def interpRAt (root : NativeEff) (completed : List (FiberId × ExitV)) : RInterp :=
-  { interpR root with
+def interpRAt (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable := []) :
+    RInterp :=
+  { interpR root table with
     iterNext := fun name value => match name with
       | .gen p pc bind => walkR root { p with completed } p.fuel pc
           (if bind then p.env ++ [value] else p.env) []
@@ -412,6 +460,6 @@ def interpRAt (root : NativeEff) (completed : List (FiberId × ExitV)) : RInterp
       | _ => .finish (.pure (.success Val.unit))
     finalizerProgram := fun name ex => match name with
       | .fin p => some (denoteAt root ({ p with completed }.childWith 1 (reifyExitVal ex)))
-      | _ => (interpR root).finalizerProgram name ex }
+      | _ => (interpR root table).finalizerProgram name ex }
 
 end Effect4.Program.Sched

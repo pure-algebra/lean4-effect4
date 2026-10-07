@@ -159,6 +159,7 @@ import Effect4.Program.Typing.Focus
 -- The address table (decisions row 302): each address with its environment and the checker's
 -- answer, the list of refusals, and the environments of the term slots.
 import Effect4.Program.Typing.Table
+import Effect4.Program.Typing.Call
 import Effect4.Api.Author
 import Effect4.Api.Supervision
 import Effect4.Run

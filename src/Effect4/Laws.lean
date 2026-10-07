@@ -26,6 +26,9 @@ import Effect4.Laws.Program.IterLimit
 import Effect4.Laws.Program.StoreComodel
 import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.Denote
+import Effect4.Laws.Program.DenoteRows
+import Effect4.Laws.Program.Folds.DenoteRows
+import Effect4.Laws.Program.DenoteRowsAppend
 import Effect4.Laws.Machine.Folds.Val
 import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.MeaningSound
@@ -37,6 +40,7 @@ import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.MeaningEq
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR
+import Effect4.Laws.Program.DenoteRowsR
 import Effect4.Laws.Program.InterpR
 import Effect4.Laws.Program.EvaluateR
 import Effect4.Laws.Program.ScopeMarkers
@@ -81,6 +85,10 @@ import Effect4.Laws.Program.Simulation.Evaluate
 import Effect4.Laws.Program.Simulation.Pending
 import Effect4.Laws.Program.Simulation.Drive
 import Effect4.Laws.Program.RuntimeR
+import Effect4.Laws.Program.Table.Hooks
+import Effect4.Laws.Program.Table.Agreement
+import Effect4.Laws.Api.SessionRef
+import Effect4.Laws.Api.SessionMeaning
 import Effect4.Laws.Program.ReasonsR
 import Effect4.Laws.Program.Guard
 import Effect4.Laws.Program.LayerSharing
@@ -97,6 +105,7 @@ import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.Typing.Check
 import Effect4.Laws.Program.Typing.Focus
 import Effect4.Laws.Program.Typing.Table
+import Effect4.Laws.Program.Typing.Call
 import Effect4.Laws.Program.Typing.CheckInversion
 import Effect4.Laws.Program.Typing.CheckSound
 import Effect4.Laws.Codegen.Forms
