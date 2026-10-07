@@ -75,9 +75,6 @@ inductive AdmitRefusal
   decisions row 21): a row, a row key, a service declaration, a service code or a required key
   with no carrier. -/
   | signature (why : SigRefusal)
-  /-- A raw table, the program tree or the inferred program type mentions the reserved
-  integer constructor. -/
-  | uninhabited («at» : Path)
   /-- The program's answer or error column is empty and is not `never` (rows 127, 149). -/
   | emptyColumn («at» : Path)
   /-- A raw type fails the shared formation judgment (rows 192 and 193). -/

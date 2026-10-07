@@ -215,10 +215,11 @@ stays open in DI-55. Subsumption at fixed-signature atom arguments (`NativeAtom.
 `sub` guards) is part of the same rule.
 
 **Inhabitation.** Every admitted type either normalizes to `never` or has a value under some
-allocation table. Under the P2a resumption amendment, `Ty.int` keeps its ordinal and
-is refused only at program/table admission with `AdmitRefusal.uninhabited (at : Path)`.
-Keep `Ty.ofSchema` and both schema retraction theorems unchanged. A foreign integer
-schema parses, and a program using its type is refused at admission with its path.
+allocation table. Under the P2a resumption amendment, `Ty.int` keeps its ordinal.
+*Amended 2026-10-07 (decisions rows 121, 309, 317 and 318):* `int` is inhabited by the
+naturals and the negative integers, and admission no longer refuses it;
+`AdmitRefusal.uninhabited` is deleted. Keep `Ty.ofSchema` and both schema retraction theorems
+unchanged. A foreign integer schema parses, and a program using its type is admitted.
 Canonicality alone does not certify admission. The value alphabet is not extended.
 
 **One run route.** Host answers reach a program only through the keyed session. The

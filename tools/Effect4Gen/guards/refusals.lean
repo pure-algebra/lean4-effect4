@@ -26,7 +26,7 @@ def recordCauses : List RecordCauseRefusal := recordTerms.map fun why => ⟨[1, 
 /-- Every constructor of a row's reason (decisions row 21: the signature's refusal reaches an
 agent through admission's). -/
 def rowReasons : List RowReason :=
-  [.notExternal, .notAsync, .builtinCollision, .valueRowTrailing, .intType "request",
+  [.notExternal, .notAsync, .builtinCollision, .valueRowTrailing,
    .internalHandle "answer", .emptyColumn "error", .templateNotAdmissible "request",
    .notWellScoped]
 
@@ -38,8 +38,8 @@ def signatures : List SigRefusal :=
 
 def admissions : List AdmitRefusal :=
   [.illTyped] ++ signatures.map .signature ++
-    [.uninhabited ["program", "answer"], .uninhabited ["table", "0", "request", "inner"],
-     .emptyColumn ["program", "error"]] ++ formations.map .formation
+    [.emptyColumn ["program", "answer"], .emptyColumn ["program", "error"]] ++
+    formations.map .formation
 
 def scopes : List Authoring.Refusal :=
   [⟨[], .unbound "x"⟩, ⟨[0, 1], .unboundLayer "L"⟩, ⟨[2], .duplicateLayer "L"⟩,

@@ -82,8 +82,6 @@ inductive RowReason
   | builtinCollision
   /-- `Table.lawful`: a value row has trailing names. -/
   | valueRowTrailing
-  /-- DB-15: the column mentions the reserved integer type. -/
-  | intType (column : String)
   /-- Row 97: the answer or error column mentions an internal handle kind. -/
   | internalHandle (column : String)
   /-- Row 127: the column is empty and is not `never`, with every template parameter read as

@@ -236,11 +236,10 @@ def shapeDoc : ShapeDoc :=
       ("notAsync", 1, []),
       ("builtinCollision", 2, []),
       ("valueRowTrailing", 3, []),
-      ("intType", 4, [("column", (shape _root_.String).root)]),
-      ("internalHandle", 5, [("column", (shape _root_.String).root)]),
-      ("emptyColumn", 6, [("column", (shape _root_.String).root)]),
-      ("templateNotAdmissible", 7, [("column", (shape _root_.String).root)]),
-      ("notWellScoped", 8, [])],
+      ("internalHandle", 4, [("column", (shape _root_.String).root)]),
+      ("emptyColumn", 5, [("column", (shape _root_.String).root)]),
+      ("templateNotAdmissible", 6, [("column", (shape _root_.String).root)]),
+      ("notWellScoped", 7, [])],
    (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.RowReason → Val
@@ -248,22 +247,20 @@ def toVal : _root_.Effect4.Program.RowReason → Val
   | .notAsync => .ctor 1 []
   | .builtinCollision => .ctor 2 []
   | .valueRowTrailing => .ctor 3 []
-  | .intType a0 => .ctor 4 [Canonical.toVal a0]
-  | .internalHandle a0 => .ctor 5 [Canonical.toVal a0]
-  | .emptyColumn a0 => .ctor 6 [Canonical.toVal a0]
-  | .templateNotAdmissible a0 => .ctor 7 [Canonical.toVal a0]
-  | .notWellScoped => .ctor 8 []
+  | .internalHandle a0 => .ctor 4 [Canonical.toVal a0]
+  | .emptyColumn a0 => .ctor 5 [Canonical.toVal a0]
+  | .templateNotAdmissible a0 => .ctor 6 [Canonical.toVal a0]
+  | .notWellScoped => .ctor 7 []
 
 def ofVal : Val → Option (_root_.Effect4.Program.RowReason)
   | .ctor 0 [] => some .notExternal
   | .ctor 1 [] => some .notAsync
   | .ctor 2 [] => some .builtinCollision
   | .ctor 3 [] => some .valueRowTrailing
-  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .intType
-  | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .internalHandle
-  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .emptyColumn
-  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .templateNotAdmissible
-  | .ctor 8 [] => some .notWellScoped
+  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .internalHandle
+  | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .emptyColumn
+  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .templateNotAdmissible
+  | .ctor 7 [] => some .notWellScoped
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -298,20 +295,17 @@ theorem fits (a : _root_.Effect4.Program.RowReason) : shapeDoc.accepts (toVal a)
     exact accepts_sum _ _ _ 2 "builtinCollision" [] [] rfl (acceptsFields_nil _)
   | «valueRowTrailing» =>
     exact accepts_sum _ _ _ 3 "valueRowTrailing" [] [] rfl (acceptsFields_nil _)
-  | «intType» a0 =>
-    exact accepts_sum _ _ _ 4 "intType" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «internalHandle» a0 =>
-    exact accepts_sum _ _ _ 5 "internalHandle" _ _ rfl
+    exact accepts_sum _ _ _ 4 "internalHandle" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «emptyColumn» a0 =>
-    exact accepts_sum _ _ _ 6 "emptyColumn" _ _ rfl
+    exact accepts_sum _ _ _ 5 "emptyColumn" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «templateNotAdmissible» a0 =>
-    exact accepts_sum _ _ _ 7 "templateNotAdmissible" _ _ rfl
+    exact accepts_sum _ _ _ 6 "templateNotAdmissible" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «notWellScoped» =>
-    exact accepts_sum _ _ _ 8 "notWellScoped" [] [] rfl (acceptsFields_nil _)
+    exact accepts_sum _ _ _ 7 "notWellScoped" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.RowReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -509,9 +503,8 @@ def shapeDoc : ShapeDoc :=
   ⟨.sum "AdmitRefusal"
      [("illTyped", 0, []),
       ("signature", 1, [("why", (shape _root_.Effect4.Program.SigRefusal).root)]),
-      ("uninhabited", 2, [("at", (shape (@_root_.List (_root_.String))).root)]),
-      ("emptyColumn", 3, [("at", (shape (@_root_.List (_root_.String))).root)]),
-      ("formation", 4, [("why", (shape _root_.Effect4.Program.FormationRefusal).root)])],
+      ("emptyColumn", 2, [("at", (shape (@_root_.List (_root_.String))).root)]),
+      ("formation", 3, [("why", (shape _root_.Effect4.Program.FormationRefusal).root)])],
    (shape _root_.Effect4.Program.SigRefusal).defs ++
      (shape (@_root_.List (_root_.String))).defs ++
      (shape _root_.Effect4.Program.FormationRefusal).defs⟩
@@ -519,16 +512,14 @@ def shapeDoc : ShapeDoc :=
 def toVal : _root_.Effect4.Program.AdmitRefusal → Val
   | .illTyped => .ctor 0 []
   | .signature a0 => .ctor 1 [Canonical.toVal a0]
-  | .uninhabited a0 => .ctor 2 [Canonical.toVal a0]
-  | .emptyColumn a0 => .ctor 3 [Canonical.toVal a0]
-  | .formation a0 => .ctor 4 [Canonical.toVal a0]
+  | .emptyColumn a0 => .ctor 2 [Canonical.toVal a0]
+  | .formation a0 => .ctor 3 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
   | .ctor 0 [] => some .illTyped
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.SigRefusal) v0).map .signature
-  | .ctor 2 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .uninhabited
-  | .ctor 3 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .emptyColumn
-  | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FormationRefusal) v0).map .formation
+  | .ctor 2 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.String))) v0).map .emptyColumn
+  | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FormationRefusal) v0).map .formation
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -571,14 +562,11 @@ theorem fits (a : _root_.Effect4.Program.AdmitRefusal) : shapeDoc.accepts (toVal
   | «signature» a0 =>
     exact accepts_sum _ _ _ 1 "signature" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_SigRefusal a0) (acceptsFields_nil _))
-  | «uninhabited» a0 =>
-    exact accepts_sum _ _ _ 2 "uninhabited" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
   | «emptyColumn» a0 =>
-    exact accepts_sum _ _ _ 3 "emptyColumn" _ _ rfl
+    exact accepts_sum _ _ _ 2 "emptyColumn" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a0) (acceptsFields_nil _))
   | «formation» a0 =>
-    exact accepts_sum _ _ _ 4 "formation" _ _ rfl
+    exact accepts_sum _ _ _ 3 "formation" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_FormationRefusal a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.AdmitRefusal) :=
@@ -2532,7 +2520,7 @@ def recordCauses : List RecordCauseRefusal := recordTerms.map fun why => ⟨[1, 
 /-- Every constructor of a row's reason (decisions row 21: the signature's refusal reaches an
 agent through admission's). -/
 def rowReasons : List RowReason :=
-  [.notExternal, .notAsync, .builtinCollision, .valueRowTrailing, .intType "request",
+  [.notExternal, .notAsync, .builtinCollision, .valueRowTrailing,
    .internalHandle "answer", .emptyColumn "error", .templateNotAdmissible "request",
    .notWellScoped]
 
@@ -2544,8 +2532,8 @@ def signatures : List SigRefusal :=
 
 def admissions : List AdmitRefusal :=
   [.illTyped] ++ signatures.map .signature ++
-    [.uninhabited ["program", "answer"], .uninhabited ["table", "0", "request", "inner"],
-     .emptyColumn ["program", "error"]] ++ formations.map .formation
+    [.emptyColumn ["program", "answer"], .emptyColumn ["program", "error"]] ++
+    formations.map .formation
 
 def scopes : List Authoring.Refusal :=
   [⟨[], .unbound "x"⟩, ⟨[0, 1], .unboundLayer "L"⟩, ⟨[2], .duplicateLayer "L"⟩,
