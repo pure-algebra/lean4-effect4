@@ -1235,7 +1235,7 @@ theorem answers_perform {op : NativeOp} {request : TermSrc} {s : TypedScope} {R 
 /-- The row check in its introduction form: the request matches the row's template, the binder
 term binds, and every instantiated column is formed. -/
 theorem rowTy_intro {row : Effect4.Program.Row} {request : Ty} {use : Option TermUse} {σ bindings : Ty.Subst}
-    (matched : Bounds.matchB [] row.request.normalize request.normalize = some σ)
+    (matched : Bounds.matchTerm [] row.request.normalize request.normalize = some σ)
     (bound : bindTerm σ use = .ok bindings)
     (formed : Formation.Formed (Formation.instantiatedSites row bindings)) :
     rowTy row request use =
@@ -1286,10 +1286,10 @@ theorem answers_refMake {value : TermSrc} {s : TypedScope} {C : Ty}
     (hvalue : ∀ path, Types (nativeSignature table) value s.env path s.types false C) :
     Answers (nativeSignature table) (Ref.make value) s (.refOf C) := by
   refine answers_perform rfl hvalue ?_
-  have matched : Bounds.matchB []
+  have matched : Bounds.matchTerm []
       ((nativeSignature table).rowOf .refMake).request.normalize C.normalize = some [(0, C)] := by
     rw [normal]
-    exact Bounds.matchB_one_var C
+    exact Bounds.matchTerm_one_var C
   have sites : Formation.Formed
       (Formation.instantiatedSites ((nativeSignature table).rowOf .refMake) [(0, C)]) :=
     formed_append (formed_append (formed_sites formed _)
@@ -1305,11 +1305,11 @@ theorem answers_refGet {cell : TermSrc} {s : TypedScope} {C : Ty}
     (hcell : Typed (nativeSignature table) cell s (.refOf C)) :
     Answers (nativeSignature table) (Ref.get cell) s C := by
   refine answers_perform rfl (fun path => hcell path false) ?_
-  have matched : Bounds.matchB []
+  have matched : Bounds.matchTerm []
       ((nativeSignature table).rowOf .refGet).request.normalize (Ty.refOf C).normalize =
         some [(0, C)] := by
     rw [normalize_refOf_canonical normal]
-    exact Bounds.matchB_refOf_var C
+    exact Bounds.matchTerm_refOf_var C
   have sites : Formation.Formed
       (Formation.instantiatedSites ((nativeSignature table).rowOf .refGet) [(0, C)]) :=
     formed_append (formed_append (formed_sites (nodesFormed_refOf formed) _)
@@ -1348,11 +1348,11 @@ theorem answers_refModifyWith_captured {cell : TermSrc} {f : TermSrc → TermSrc
   have treeT' : f (minted (s.env.mint "current")) (s.env.push [s.env.mint "current"]) path =
       .ok t := treeT
   have typedT' : termTy (nativeSignature table) (s.types ++ [C]) t = some (.prod B C) := typedT
-  have matched : Bounds.matchB []
+  have matched : Bounds.matchTerm []
       ((nativeSignature table).rowOf (.refModifyWith t)).request.normalize
       (Ty.refOf C).normalize = some [(0, C)] := by
     rw [normalize_refOf_canonical normalC]
-    exact Bounds.matchB_refOf_var C
+    exact Bounds.matchTerm_refOf_var C
   have bound : bindTerm [(0, C)]
       ((nativeSignature table).termUse s.types (.refModifyWith t)) = .ok [(0, C), (1, B)] := by
     refine bindTerm_intro (use := ⟨.var 0, .prod (.var 1) (.var 0),

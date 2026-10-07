@@ -277,10 +277,16 @@ def bindTerm (σ : Ty.Subst) : Option TermUse → Except RowTypingRefusal Ty.Sub
 
 /-- Match the request, then bind the operation's binder term (`bindTerm`), then check all raw
 instantiated columns before normalization. Request mismatch retains precedence when several
-checks would fail (rows 42 and 193). The checker and `rowTy` project this one result. -/
+checks would fail (rows 42 and 193). The checker and `rowTy` project this one result.
+
+The request's match is the match by bounds under the interim guard (`Bounds.matchTerm`;
+decisions row 312, point 1): where the request offers a parameter two lower bounds with no
+order, the row refuses, since tsgo forms no join of two inference candidates. A native row
+fixes each parameter by a cell or by the whole request, so the guard refuses nothing there. It
+goes with the binder term's guard, when the TypeScript printer writes a row's type arguments. -/
 def checkRow (row : Row) (request : Ty) (use : Option TermUse := none) :
     Except RowTypingRefusal EffTy :=
-  match Bounds.matchB [] row.request.normalize request.normalize with
+  match Bounds.matchTerm [] row.request.normalize request.normalize with
   | none => .error .requestNotSubtype
   | some σ =>
     match bindTerm σ use with

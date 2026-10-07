@@ -146,6 +146,23 @@ def twoPairs : Ty := .union (.prod .nat .nat) (.prod .string .nat)
 #guard (Ty.prod (.union .nat .string) .nat).normalize == twoPairs.normalize
 #guard matchTerm [(0, .nat)] modifyResult (Ty.prod (.union .nat .string) .nat).normalize == none
 
+/-! ## The interim guard at a host row's request (decisions row 312, point 1)
+
+The row check matches a row's request under the same guard (`checkRow`). -/
+
+/-- A host row with a parameter under a list: `List<A>` to `Option<A>`. -/
+def firstRow : Row :=
+  { name := "first", spelling := "L.first", kind := .async, registration := .external,
+    request := .list (.var 0), answer := .option (.var 0), cite := "decisions row 312" }
+
+-- green (tested): a list of a union offers one lower bound, and the row answers at it
+#guard rowTy firstRow (.list (.union .nat .string)) =
+  some ⟨.option (.union .nat .string), .never, Effect4.Machine.Env.Requirement.empty⟩
+-- red (tested): a union of two lists offers two lower bounds with no order, and the row refuses
+#guard checkRow firstRow (.union (.list .nat) (.list .string)) = .error .requestNotSubtype
+-- tested: the match by bounds alone answers there, at the join
+#guard (matchB [] firstRow.request.normalize (Ty.union (.list .nat) (.list .string)).normalize).isSome
+
 /-! ## A signature's admission at a nominal reference -/
 
 /-- A host row whose request holds a parameter under a nominal reference. -/

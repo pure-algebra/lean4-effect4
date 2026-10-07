@@ -31,7 +31,10 @@ one line: `matchTerm` becomes `matchB`.
 
 An atom needs no guard: its prelude declaration takes an argument's whole type, and tsgo
 computes the join there (`NativeAtom.row`, `src/Effect4/Machine/Term.lean`). A row's request
-needs none: where the match answers at a cell, the cell's content is the greatest lower bound.
+takes the same guard (`checkRow`, decisions row 312, point 1): a host row of an application can
+hold a parameter under a list, an option or a map, and tsgo infers its type argument by
+candidates at the application's declaration. A native row fixes each parameter by a cell or by
+the whole request, so the guard refuses nothing there.
 
 **What it is not.**
 - It is no general constraint solver. It computes no upper bound from a contravariant

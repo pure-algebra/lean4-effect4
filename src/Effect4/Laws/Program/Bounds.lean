@@ -1426,6 +1426,33 @@ theorem matchB_refOf_var (X : Ty) : matchB [] (.refOf (.var 0)) (.refOf X) = som
   rw [hinst, hsub]
   rfl
 
+/-- The guard holds at a template of one parameter: one candidate has a greatest one. It is a
+step of `Waiting`, and `matchTerm_one_var` reads it. -/
+theorem termGuard_one_var (X : Ty) : termGuard [] (.var 0) X = true := by
+  dsimp only [termGuard]
+  rw [cands_var]
+  rfl
+
+/-- The guarded match at a template of one parameter (`Ref.make`'s request). It is a step of
+`Waiting`. -/
+theorem matchTerm_one_var (X : Ty) : matchTerm [] (.var 0) X = some [(0, X)] := by
+  unfold matchTerm
+  rw [termGuard_one_var, if_pos rfl, matchB_one_var]
+
+/-- The guard holds at a cell's template: one candidate. It is a step of `Waiting`, and
+`matchTerm_refOf_var` reads it. -/
+theorem termGuard_refOf_var (X : Ty) : termGuard [] (.refOf (.var 0)) (.refOf X) = true := by
+  dsimp only [termGuard]
+  rw [cands, comp_inv, cands_var]
+  rfl
+
+/-- The guarded match at a cell's template (the request of a cell's row). It is a step of
+`Waiting`. -/
+theorem matchTerm_refOf_var (X : Ty) :
+    matchTerm [] (.refOf (.var 0)) (.refOf X) = some [(0, X)] := by
+  unfold matchTerm
+  rw [termGuard_refOf_var, if_pos rfl, matchB_refOf_var]
+
 /-- It is a step of `Waiting`, and `matchTerm_modify_use` reads it. -/
 @[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchB_modify_use (C B : Ty) :
