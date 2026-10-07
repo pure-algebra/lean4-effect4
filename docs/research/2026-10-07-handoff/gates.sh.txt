@@ -1,0 +1,30 @@
+#!/bin/bash
+# The gates of the landing of chunk 3, in order.
+cd /Users/pooks/Dev/lean4-effect4 || exit 1
+SP="$1"; BASE="$2"
+M="make -o ts/eff/node_modules -o harness/truth/node_modules"
+run() { name="$1"; shift; "$@" > "$SP/$name.log" 2>&1; echo "== $name: exit $?" >> "$SP/gates.summary"; }
+: > "$SP/gates.summary"
+run build lake build
+run gen-derived python3 scripts/generate.py --only derived
+run gen-fixtures $M gen-fixtures
+run corpus $M corpus
+run dune-build sh -c 'cd ocaml && opam exec --switch=effect4 -- dune build'
+run dune-test sh -c 'cd ocaml && opam exec --switch=effect4 -- dune test --force engine'
+run gen-truth $M gen-truth
+git status --short > "$SP/status-after-gen-truth.txt" 2>&1
+run check-truth $M check-truth
+run check-target $M check-target
+run gen-semantics $M gen-semantics
+run check-semantics $M check-semantics
+run check-cases $M check-cases
+run check-docs $M check-docs
+run check-language $M check-language
+run gen-architecture $M gen-architecture
+run test-all lake env lean Test/All.lean
+run conservativity $M check-conservativity BASE="$BASE"
+run check-tsdiag $M check-tsdiag
+run check-corpus $M check-corpus
+run check-ingest $M check-ingest
+git status --short > "$SP/status-at-end.txt" 2>&1
+echo "done" >> "$SP/gates.summary"
