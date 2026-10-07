@@ -1,0 +1,90 @@
+import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Slice.Lattice
+
+/-! A scratch probe (the coordinator, 2026-10-06): can the order of the union combinator be stated
+through Lean core's order classes, as the canonical types and the slices already are? -/
+
+set_option autoImplicit false
+
+namespace OrderProbe
+
+universe u
+
+section Generic
+variable {α : Type u} [LE α] [Max α] [Std.IsPreorder α] [Std.LawfulOrderSup α]
+
+theorem le_max_left (a b : α) : a ≤ max a b :=
+  ((Std.LawfulOrderSup.max_le_iff a b (max a b)).mp (Std.IsPreorder.le_refl _)).1
+
+theorem le_max_right (a b : α) : b ≤ max a b :=
+  ((Std.LawfulOrderSup.max_le_iff a b (max a b)).mp (Std.IsPreorder.le_refl _)).2
+
+omit [Std.IsPreorder α] in
+theorem max_le {a b c : α} (h1 : a ≤ c) (h2 : b ≤ c) : max a b ≤ c :=
+  (Std.LawfulOrderSup.max_le_iff a b c).mpr ⟨h1, h2⟩
+end Generic
+
+section Equations
+variable {α : Type u} [LE α] [Max α] [Std.IsPartialOrder α] [Std.LawfulOrderSup α]
+
+/-- In a partial order with least upper bounds the join is commutative: one proof for every carrier. -/
+theorem max_comm (a b : α) : max a b = max b a :=
+  Std.IsPartialOrder.le_antisymm _ _
+    (max_le (le_max_right b a) (le_max_left b a))
+    (max_le (le_max_right a b) (le_max_left a b))
+
+theorem max_idem (a : α) : max a a = a :=
+  Std.IsPartialOrder.le_antisymm _ _
+    (max_le (Std.IsPreorder.le_refl a) (Std.IsPreorder.le_refl a)) (le_max_left a a)
+
+theorem max_assoc (a b c : α) : max (max a b) c = max a (max b c) :=
+  Std.IsPartialOrder.le_antisymm _ _
+    (max_le
+      (max_le (le_max_left a _)
+        (Std.IsPreorder.le_trans _ _ _ (le_max_left b c) (le_max_right a _)))
+      (Std.IsPreorder.le_trans _ _ _ (le_max_right b c) (le_max_right a _)))
+    (max_le
+      (Std.IsPreorder.le_trans _ _ _ (le_max_left a b) (le_max_left _ c))
+      (max_le
+        (Std.IsPreorder.le_trans _ _ _ (le_max_right a b) (le_max_left _ c))
+        (le_max_right _ c)))
+end Equations
+
+open Effect4 Effect4.Program
+
+-- 1. The generic equations at the two carriers of types that hold the core classes today.
+example (a b : CTy) : max a b = max b a := max_comm a b
+example (a b c : CTy) : max (max a b) c = max a (max b c) := max_assoc a b c
+example (a : CTy) : max a a = a := max_idem a
+example (a b : ErrTy) : max a b = max b a := max_comm a b
+
+-- 2. The bounds at a slice, which is a preorder only: no equation there, and none is claimed.
+example {σ : Type} (a b : Slice σ) : a ≤ max a b := le_max_left a b
+
+-- 3. The checker's order on raw types is the order of canonical types, read through `ofRaw`.
+example (a b : Ty) : (Ty.subN a b = true) ↔ (CTy.ofRaw a ≤ CTy.ofRaw b) := Iff.rfl
+
+-- 4. On raw types `≤` is the key order of sorting, and not subtyping.
+example : (Ty.nat : Ty) ≤ Ty.string ∨ (Ty.string : Ty) ≤ Ty.nat := by decide
+example : Ty.subN .nat .string = false ∧ Ty.subN .string .nat = false := by decide +kernel
+
+-- 5. The order class of the combinator, restated: its seven fields are a preorder, a least upper
+-- bound and a least element. A carrier with the core classes and a least element is an instance.
+open UnionRule in
+@[instance_reducible] def answerOrderOfCore {β : Type} [Answer β] [LE β] [Max β] [Std.IsPreorder β]
+    [Std.LawfulOrderSup β] (join_eq : ∀ a b : β, Answer.join a b = max a b)
+    (bot_le : ∀ a : β, Answer.bot ≤ a) : AnswerOrder β where
+  le a b := a ≤ b
+  refl := Std.IsPreorder.le_refl
+  trans := fun {a b c} hab hbc => Std.IsPreorder.le_trans a b c hab hbc
+  bot_le := bot_le
+  le_join_left a b := by rw [join_eq]; exact le_max_left a b
+  le_join_right a b := by rw [join_eq]; exact le_max_right a b
+  join_le := fun {a b c} hac hbc => by rw [join_eq]; exact max_le hac hbc
+
+end OrderProbe
+
+#print axioms OrderProbe.max_comm
+#print axioms OrderProbe.max_assoc
+#print axioms OrderProbe.max_idem
+#print axioms OrderProbe.answerOrderOfCore

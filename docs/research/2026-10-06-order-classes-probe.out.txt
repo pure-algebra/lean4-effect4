@@ -1,0 +1,4 @@
+'OrderProbe.max_comm' does not depend on any axioms
+'OrderProbe.max_assoc' does not depend on any axioms
+'OrderProbe.max_idem' does not depend on any axioms
+'OrderProbe.answerOrderOfCore' does not depend on any axioms
