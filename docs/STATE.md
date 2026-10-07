@@ -465,6 +465,17 @@ In work since the suspension of the handover:
   [The brief of chunk 3](research/2026-10-07-chunk-3-brief.md) mapped the next hand-over, and
   chunk 3 is landed (the next bullet). The typed print follows it, after the coordinator's
   design note.
+- **The next hand-over is two chunks** (the owner, row 309).
+  [Chunk T](research/2026-10-07-chunk-T-brief.md) is the first profile of streams: the amended
+  pull row, the module and the to-do application's paged list.
+  [Chunk S](research/2026-10-07-chunk-S-brief.md) is the authoring sugar. It holds the export
+  name's test, a function for each atom and the conditional of a block. It holds declared
+  records, failures and rows too. Four research packets hold the designs and their compiled drafts:
+  [the application and its claims](research/2026-10-07-packet-application-claims.md),
+  [the sugar](research/2026-10-07-packet-authoring-sugar.md),
+  [integers](research/2026-10-07-packet-integers.md) and
+  [streams](research/2026-10-07-packet-streams.md). The typed print waits for the coordinator's
+  design note.
 - **Chunk 3 is landed: the old match is gone, and eleven tests of the checker read the order**
   (row 306). [The coordinator's review](research/2026-10-07-chunk-3-landing-review.md) says
   what the landing changed.
@@ -482,7 +493,8 @@ In work since the suspension of the handover:
   - **The helpers of the retired claim are gone** (chunk 3b, stage F1,
     [its review](research/2026-10-07-chunk-3b-F1-review.md)). Eighteen declarations with no
     caller are cut. Each helper that stays names the claim `template-match-complete` and its
-    readers. The second stage of chunk 3b, the rule on export names, is open.
+    readers. The second stage of chunk 3b, the rule on export names, is the first stage of
+    chunk S.
 - **The plan's open parts carry a state, and the to-do application has its first slice**
   (rows 307 and 308).
   - **Each open part of a requirement has one state**: not triaged, worded, waits on a ruling,
