@@ -3,6 +3,7 @@ import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Laws.Program.References
 import Effect4.Laws.Program.PathFold
 import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
 import Effect4.Program.Admission
 import Effect4.Laws.Auto.Semantics
 
@@ -381,15 +382,15 @@ theorem Decision.closed_arms {d : Decision} {t : Ty} {e0 e1 : List Ty} (ht : t.c
     exact ⟨fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.1,
       fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.2⟩
 
-/-- A fiber handle's two columns are closed when the handle's type is. -/
+/-- A fiber handle's two columns are closed when the handle's type is. The fiber rule is the
+extended rule of its member rule (`UnionRule.extend`, `src/Effect4/Program/UnionRule.lean`), so
+the fact is `UnionRule.extend_closed_pair` at the member fact `Member.fiber_closed`
+(`src/Effect4/Laws/Program/Eliminators.lean`): the member rule's own answer is closed at a closed
+fiber type, and `UnionRule.lift_closed_pair` covers the guarded rule's answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_fiberTy {t value error : Ty} (ht : t.closed = true)
-    (h : fiberTy t = some (value, error)) : value.closed = true ∧ error.closed = true := by
-  cases t with
-  | fiberOf v e =>
-    cases h
-    exact Bool.and_eq_true_iff.mp ht
-  | _ => exact nomatch h
+    (h : fiberTy t = some (value, error)) : value.closed = true ∧ error.closed = true :=
+  UnionRule.extend_closed_pair Member.fiber_closed h ht
 
 /-- The error column of `catchIf` is closed when the body's and the handler's are. -/
 @[semantics "subtyping-algebra" (requirement := R14)]

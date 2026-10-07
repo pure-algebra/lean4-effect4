@@ -1,0 +1,29 @@
+import Effect4.Laws
+import Test.All
+import ProofGraph.Population
+
+/-! The statement comparison of seat PILOT: the signature that `#check` prints, for each
+authored theorem and each constructor whose statement names `fiberTy`. Run it at the base and at
+the head, and compare the two outputs. The names are given too, so that a theorem that leaves
+or enters the list is seen by its name. -/
+
+open Lean Meta Elab Command
+
+run_cmd liftTermElabM do
+  let env ← getEnv
+  let target : Name := ``Effect4.Program.fiberTy
+  let mut names : Array Name := #[]
+  for (n, ci) in env.constants.toList do
+    let statement? : Option Expr := match ci with
+      | .thmInfo t => some t.type
+      | .ctorInfo c => some c.type
+      | _ => none
+    if let some statement := statement? then
+      if !ProofGraph.isAuxiliary env n then
+        if statement.getUsedConstants.contains target then
+          names := names.push n
+  let sorted := names.qsort (·.toString < ·.toString)
+  IO.println s!"theorems and constructors whose statement names fiberTy: {sorted.size}"
+  for n in sorted do
+    let signature ← PrettyPrinter.ppSignature n
+    IO.println (signature.fmt.pretty 100)

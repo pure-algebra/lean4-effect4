@@ -1,0 +1,65 @@
+import Effect4.Program.Checker
+import Effect4.Program.Native
+import Effect4.Program.UnionRule
+
+/-! Seat PILOT, the closed example of the brief's step 7, compiled against the base `9d50ac20`.
+One mechanism: an atom's scheme infers on the raw type of its argument, and a converted rule
+answers a normal form. -/
+
+set_option autoImplicit false
+
+namespace Effect4.Program.PilotExample
+
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+
+/-- `c ? 1 : "s"`, as a program: its answer is `nat | string`. -/
+def numberOrText : NativeEff :=
+  .select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1))) (.succeed (.lit (.str "s")))
+
+/-- The forked body: one entry `["k", x]` in a list, with `x` at `nat | string`. -/
+def body : NativeEff :=
+  .bind numberOrText
+    (.succeed (.app "cons" (.cons
+      (.app "pair" (.cons (.lit (.str "k")) (.cons (.var 0) .nil)))
+      (.cons (.app "nil" .nil) .nil))))
+
+/-- The continuation: a map from the joined entries. The handle is variable 0 and the joined
+value is variable 1. -/
+def useEntries : NativeEff := .succeed (.app "mapFromEntries" (.cons (.var 1) .nil))
+
+/-- The closed program: fork the body, join the fiber, build a map from the joined entries. -/
+def program : NativeEff :=
+  .bind (.withFiber (.fork body ⟨true, false, .inherit⟩))
+    (.bind (.awaitFiber (.var 0) .joinEffect) useEntries)
+
+/-- The body's answer, as the checker spells it: a product over a union, not a normal form. -/
+def raw : Ty := .list (.prod (.lit "k") (.union .nat .string))
+
+/-- The same type's normal form: a union of products. -/
+def normal : Ty := .list (.union (.prod (.lit "k") .nat) (.prod (.lit "k") .string))
+
+#guard Checker.check (nativeSignature []) [] [] body = .ok ⟨raw, .never, Requirement.empty⟩
+#guard raw.normalize = normal
+#guard raw != normal
+
+-- Today the checker admits the program. The fiber rule answers the raw columns, and the atom's
+-- scheme binds its parameter at `nat | string`.
+#guard fiberTy (.fiberOf raw .never) = some (raw, .never)
+#guard Checker.check (nativeSignature []) [] [] program =
+  .ok ⟨.map .string (.union .nat .string), .never, Requirement.empty⟩
+
+-- The lifted rule answers the normal form of the value column.
+#guard UnionRule.lift fiberTy (.fiberOf raw .never) = some (normal, .never)
+
+-- The continuation at the two spellings of one type: admitted at the raw type, and refused at
+-- its normal form. The scheme binds its parameter at the first union member, `nat`, and the
+-- second union member is then outside the instance.
+#guard Checker.check (nativeSignature []) [.fiberOf raw .never, raw] [] useEntries =
+  .ok ⟨.map .string (.union .nat .string), .never, Requirement.empty⟩
+#guard (explain (nativeSignature []) [.fiberOf raw .never, normal] useEntries).map (·.reason.head) =
+  some "term"
+#guard NativeAtom.typeOf .mapFromEntries [raw] = some (.map .string (.union .nat .string))
+#guard NativeAtom.typeOf .mapFromEntries [normal] = none
+
+end Effect4.Program.PilotExample

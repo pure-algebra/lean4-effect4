@@ -337,7 +337,8 @@ requirement of their own, **R14: a partial program checks and explains its types
 view promises one minimal slice and never a minimum size. The first groundwork slice is
 landed: the generic theory of type slices (seat LATTICE, row 286). The second is landed too:
 one combinator for a rule that reads a union member by member (seat UNION, rows 285 and 293).
-Its first conversion, the fiber rule, is next (seat PILOT).
+Its first conversion has landed: the fiber rule is the extended rule of its member rule
+(seat PILOT, row 298).
 
 **What the study found (row 288).** A hole needs no new constructor and no new type. A hole
 is a host row with a declared type, in a hole table that is appended after the row table.
@@ -442,7 +443,7 @@ In work since the suspension of the handover:
   and the order laws follow (`Eliminator`). The owner's two more statements are proved. At
   types, the lifted rule is the one map with its four properties (`lift_unique`). An
   eliminator's lifted rule answers exactly below the constructor's image
-  (`Eliminator.adjoint`). No eliminator is converted yet.
+  (`Eliminator.adjoint`). The fiber rule is its first conversion (row 298).
 - **The next slices wait for the owner's word** (2026-10-06). The owner hands some of them
   to a second model. The coordinator starts no new seat: it merges the two seats that still
   run, seat PILOT and seat BOUNDS, and stops there. One brief is written and not dispatched:
@@ -456,18 +457,22 @@ In work since the suspension of the handover:
   second model's review, with two compiled probes. It rules nothing. It checks the second
   model's report against the pinned sources. Its critical path is the address table of a
   program, the typed print and the guard's removal.
-- **Seat PILOT has the first conversion** (branch `seat/pilot`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-pilot-brief.md); rows 285, 292
-  and 293). `fiberTy` becomes the guarded lifted rule of its member rule. It answers at
-  `never` and at one union member of the normal form. It keeps today's refusal at a proper
-  union, by the guard that the owner ruled (row 292): tsgo 7 refuses the printed call there
-  until the printer writes the type arguments at the join
-  ([the probe](research/2026-10-06-uniform-eliminators-landing-probe.md)). The judgment
-  states each fiber rule through the checker's own function, so the conversion changes no
-  statement of it, and one inversion lemma becomes an inequality in `Ty.subN`. The seat
-  states the contract of a guarded eliminator once, for every eliminator, and it measures
-  the churn. Under the guard a converted rule is not monotone at a proper union. The traced
-  check comes forward so that the printer can write the type arguments.
+- **Seat PILOT is merged: the fiber rule is converted**
+  ([the landing note](research/2026-10-06-seat-PILOT-receipt.md); rows 285, 292, 293, 296
+  and 298). `fiberTy` is `UnionRule.extend Member.fiber`, in one line: the member rule's own
+  answer where it answers at the raw target, and the guarded rule elsewhere. So no admitted
+  program moves at the rule: the 473 programs of the two corpora keep their verdict and their
+  type, by spelling. The checker admits more: `never` at every site that asks the fiber rule,
+  and a raw union whose normal form has one union member. It keeps today's refusal at a
+  proper union, by the guard that the owner ruled (row 292). The contract of a converted
+  eliminator is stated once, for every eliminator (`Eliminator.extend_laws`, the registry
+  claim `union-rule-extend`), and a conversion writes its member facts in
+  `src/Effect4/Laws/Program/Eliminators.lean`. The judgment names the rule as before, so no
+  statement of it changes, and each use site reads an inequality in `Ty.subN`
+  (`fiberTy_upper`). The guard and the raw answer are interim, and each goes by one line.
+  The coordinator finished the slice at the owner's word to wrap the seats up: the merge of
+  main, the repair of one closed-types lemma, the cut of five unused theorems, the pin of
+  the case policy and the records.
 - **Seat LATTICE is merged** ([its receipt](research/2026-10-06-seat-LATTICE-receipt.md);
   row 286). `src/Effect4/Laws/Slice/Lattice.lean` holds the generic theory of type slices. A
   type slice is the list of its kept sites. A view is a monotone map from the type slices of

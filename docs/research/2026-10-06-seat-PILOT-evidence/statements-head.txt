@@ -1,0 +1,206 @@
+theorems and constructors whose statement names fiberTy: 26
+Conform.Effect4.Typing.ActionHasTy.awaitAll {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {targets : Effect4.Program.Term}
+  {inner value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env targets = some inner.list →
+    Effect4.Program.fiberTy inner = some (value, error) →
+      Conform.Effect4.Typing.ActionHasTy sig env (Effect4.Program.ActionTerm.awaitAll targets)
+        (Effect4.Program.EffTy.pure (value.exitOf error).list)
+Conform.Effect4.Typing.ActionHasTy.awaitAllFailFast {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {targets : Effect4.Program.Term}
+  {inner value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env targets = some inner.list →
+    Effect4.Program.fiberTy inner = some (value, error) →
+      Conform.Effect4.Typing.ActionHasTy sig env
+        (Effect4.Program.ActionTerm.awaitAllFailFast targets)
+        (Effect4.Program.EffTy.pure (value.exitOf error).list)
+Conform.Effect4.Typing.ActionHasTy.interrupt {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {target : Effect4.Program.Term}
+  {handle value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env target = some handle →
+    Effect4.Program.fiberTy handle = some (value, error) →
+      Conform.Effect4.Typing.ActionHasTy sig env (Effect4.Program.ActionTerm.interrupt target)
+        (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+Conform.Effect4.Typing.ActionHasTy.interruptAll_by {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {targets who : Effect4.Program.Term}
+  {inner value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env targets = some inner.list →
+    Effect4.Program.fiberTy inner = some (value, error) →
+      Effect4.Program.termTy sig env who = some Effect4.Program.Ty.nat →
+        Conform.Effect4.Typing.ActionHasTy sig env
+          (Effect4.Program.ActionTerm.interruptAll targets (some who))
+          (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+Conform.Effect4.Typing.ActionHasTy.interruptAll_self {Op : Type}
+  {sig : Effect4.Program.Signature Op} {env : Effect4.Program.TyEnv}
+  {targets : Effect4.Program.Term} {inner value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env targets = some inner.list →
+    Effect4.Program.fiberTy inner = some (value, error) →
+      Conform.Effect4.Typing.ActionHasTy sig env
+        (Effect4.Program.ActionTerm.interruptAll targets none)
+        (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+Conform.Effect4.Typing.ActionHasTy.interruptScoped {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {target : Effect4.Program.Term}
+  {handle value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env target = some handle →
+    Effect4.Program.fiberTy handle = some (value, error) →
+      Conform.Effect4.Typing.ActionHasTy sig env (Effect4.Program.ActionTerm.interruptScoped target)
+        (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+Conform.Effect4.Typing.ActionHasTy.runIn {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {target scope : Effect4.Program.Term}
+  {handle value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env target = some handle →
+    Effect4.Program.fiberTy handle = some (value, error) →
+      Effect4.Program.termTy sig env scope = some Effect4.Program.Ty.scope →
+        Conform.Effect4.Typing.ActionHasTy sig env (Effect4.Program.ActionTerm.runIn target scope)
+          (Effect4.Program.EffTy.pure Effect4.Program.Ty.unit)
+Conform.Effect4.Typing.HasTy.awaitFiber_await {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {fiber : Effect4.Program.Term}
+  {handle value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env fiber = some handle →
+    Effect4.Program.fiberTy handle = some (value, error) →
+      Conform.Effect4.Typing.HasTy sig env
+        (Effect4.Program.Eff.awaitFiber fiber Effect4.Supervision.ObserverMode.awaitValue)
+        (Effect4.Program.EffTy.pure (value.exitOf error))
+Conform.Effect4.Typing.HasTy.awaitFiber_join {Op : Type} {sig : Effect4.Program.Signature Op}
+  {env : Effect4.Program.TyEnv} {fiber : Effect4.Program.Term}
+  {handle value error : Effect4.Program.Ty} :
+  Effect4.Program.termTy sig env fiber = some handle →
+    Effect4.Program.fiberTy handle = some (value, error) →
+      Conform.Effect4.Typing.HasTy sig env
+        (Effect4.Program.Eff.awaitFiber fiber Effect4.Supervision.ObserverMode.joinEffect)
+        { answer := value, error := error, requires := Effect4.Machine.Env.Requirement.empty }
+Effect4.Program.Checker.inv_action_awaitAll {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (targets : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p (Effect4.Program.ActionTerm.awaitAll targets) =
+      Except.ok t →
+    ∃ inner pair,
+      Effect4.Program.termTy sig env targets = some inner.list ∧
+        Effect4.Program.fiberTy inner = some pair ∧
+          t = Effect4.Program.EffTy.pure (pair.fst.exitOf pair.snd).list
+Effect4.Program.Checker.inv_action_awaitAllFailFast {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (targets : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p
+        (Effect4.Program.ActionTerm.awaitAllFailFast targets) =
+      Except.ok t →
+    ∃ inner pair,
+      Effect4.Program.termTy sig env targets = some inner.list ∧
+        Effect4.Program.fiberTy inner = some pair ∧
+          t = Effect4.Program.EffTy.pure (pair.fst.exitOf pair.snd).list
+Effect4.Program.Checker.inv_action_interrupt {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (target : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p (Effect4.Program.ActionTerm.interrupt target) =
+      Except.ok t →
+    ∃ handle pair,
+      Effect4.Program.termTy sig env target = some handle ∧
+        Effect4.Program.fiberTy handle = some pair ∧
+          t = Effect4.Program.EffTy.pure Effect4.Program.Ty.unit
+Effect4.Program.Checker.inv_action_interruptAll_by {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (targets who : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p
+        (Effect4.Program.ActionTerm.interruptAll targets (some who)) =
+      Except.ok t →
+    ∃ inner pair,
+      Effect4.Program.termTy sig env targets = some inner.list ∧
+        Effect4.Program.fiberTy inner = some pair ∧
+          Effect4.Program.termTy sig env who = some Effect4.Program.Ty.nat ∧
+            t = Effect4.Program.EffTy.pure Effect4.Program.Ty.unit
+Effect4.Program.Checker.inv_action_interruptAll_self {Op : Type}
+  (sig : Effect4.Program.Signature Op) (env : Effect4.Program.TyEnv) (p : List Nat)
+  (targets : Effect4.Program.Term) (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p
+        (Effect4.Program.ActionTerm.interruptAll targets none) =
+      Except.ok t →
+    ∃ inner pair,
+      Effect4.Program.termTy sig env targets = some inner.list ∧
+        Effect4.Program.fiberTy inner = some pair ∧
+          t = Effect4.Program.EffTy.pure Effect4.Program.Ty.unit
+Effect4.Program.Checker.inv_action_interruptScoped {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (target : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p
+        (Effect4.Program.ActionTerm.interruptScoped target) =
+      Except.ok t →
+    ∃ handle pair,
+      Effect4.Program.termTy sig env target = some handle ∧
+        Effect4.Program.fiberTy handle = some pair ∧
+          t = Effect4.Program.EffTy.pure Effect4.Program.Ty.unit
+Effect4.Program.Checker.inv_action_runIn {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (target scope : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.checkAction sig env p (Effect4.Program.ActionTerm.runIn target scope) =
+      Except.ok t →
+    ∃ handle pair,
+      Effect4.Program.termTy sig env target = some handle ∧
+        Effect4.Program.fiberTy handle = some pair ∧
+          Effect4.Program.termTy sig env scope = some Effect4.Program.Ty.scope ∧
+            t = Effect4.Program.EffTy.pure Effect4.Program.Ty.unit
+Effect4.Program.Checker.inv_awaitFiber_await {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (fiber : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.check sig env p
+        (Effect4.Program.Eff.awaitFiber fiber Effect4.Supervision.ObserverMode.awaitValue) =
+      Except.ok t →
+    ∃ handle pair,
+      Effect4.Program.termTy sig env fiber = some handle ∧
+        Effect4.Program.fiberTy handle = some pair ∧
+          t = Effect4.Program.EffTy.pure (pair.fst.exitOf pair.snd)
+Effect4.Program.Checker.inv_awaitFiber_join {Op : Type} (sig : Effect4.Program.Signature Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (fiber : Effect4.Program.Term)
+  (t : Effect4.Program.EffTy) :
+  Effect4.Program.Checker.check sig env p
+        (Effect4.Program.Eff.awaitFiber fiber Effect4.Supervision.ObserverMode.joinEffect) =
+      Except.ok t →
+    ∃ handle pair,
+      Effect4.Program.termTy sig env fiber = some handle ∧
+        Effect4.Program.fiberTy handle = some pair ∧
+          t =
+            { answer := pair.fst, error := pair.snd,
+              requires := Effect4.Machine.Env.Requirement.empty }
+Effect4.Program.closed_fiberTy {t value error : Effect4.Program.Ty} (ht : t.closed = true)
+  (h : Effect4.Program.fiberTy t = some (value, error)) : value.closed = true ∧ error.closed = true
+Effect4.Program.fiberTy_fiberOf (value error : Effect4.Program.Ty) :
+  Effect4.Program.fiberTy (value.fiberOf error) = some (value, error)
+Effect4.Program.fiberTy_upper {t : Effect4.Program.Ty}
+  {pair : Effect4.Program.Ty × Effect4.Program.Ty} (typed : Effect4.Program.fiberTy t = some pair) :
+  t.subN (pair.fst.fiberOf pair.snd) = true
+Effect4.Test.Eliminators.fiberTy_closed {t : Effect4.Program.Ty}
+  {a : Effect4.Program.Ty × Effect4.Program.Ty} (typed : Effect4.Program.fiberTy t = some a)
+  (closed : t.closed = true) : a.fst.closed = true ∧ a.snd.closed = true
+Effect4.Test.Eliminators.fiberTy_contract :
+  (∀ {t : Effect4.Program.Ty} {a : Effect4.Program.Ty × Effect4.Program.Ty},
+      Effect4.Program.Member.fiber t = some a → Effect4.Program.fiberTy t = some a) ∧
+    (∀ {t : Effect4.Program.Ty},
+        Effect4.Program.Member.fiber t = none →
+          Effect4.Program.fiberTy t =
+            Effect4.Program.UnionRule.liftOne Effect4.Program.Member.fiber t) ∧
+      (∃ a,
+          Effect4.Program.fiberTy Effect4.Program.Ty.never = some a ∧
+            ∀ (b : Effect4.Program.Ty × Effect4.Program.Ty),
+              a.fst.subN b.fst = true ∧ a.snd.subN b.snd = true) ∧
+        (∀ {t : Effect4.Program.Ty} {a : Effect4.Program.Ty × Effect4.Program.Ty},
+            Effect4.Program.fiberTy t = some a →
+              t.subN (a.fst.fiberOf a.snd) = true ∧
+                ∀ (b : Effect4.Program.Ty × Effect4.Program.Ty),
+                  a.fst.subN b.fst = true ∧ a.snd.subN b.snd = true ↔
+                    t.subN (b.fst.fiberOf b.snd) = true) ∧
+          ∀ {t : Effect4.Program.Ty},
+            Effect4.Program.Member.fiber t = none →
+              1 < t.normalize.members.length → Effect4.Program.fiberTy t = none
+Effect4.Test.Eliminators.fiberTy_isSome_iff (t : Effect4.Program.Ty) :
+  (Effect4.Program.fiberTy t).isSome = true ↔
+    (Effect4.Program.Member.fiber t).isSome = true ∨
+      t.normalize.members.length ≤ 1 ∧ ∃ b, t.subN (b.fst.fiberOf b.snd) = true
+Effect4.Test.Eliminators.fiberTy_liftOne {t : Effect4.Program.Ty}
+  {a : Effect4.Program.Ty × Effect4.Program.Ty} (typed : Effect4.Program.fiberTy t = some a) :
+  ∃ a',
+    Effect4.Program.UnionRule.liftOne Effect4.Program.Member.fiber t = some a' ∧
+      (a.fst.subN a'.fst = true ∧ a.snd.subN a'.snd = true) ∧
+        a'.fst.subN a.fst = true ∧ a'.snd.subN a.snd = true
+Effect4.Test.Eliminators.fiberTy_mono {s t : Effect4.Program.Ty} (smaller : s.subN t = true)
+  (one : s.normalize.members.length ≤ 1) {b : Effect4.Program.Ty × Effect4.Program.Ty}
+  (typed : Effect4.Program.fiberTy t = some b) :
+  ∃ a, Effect4.Program.fiberTy s = some a ∧ a.fst.subN b.fst = true ∧ a.snd.subN b.snd = true

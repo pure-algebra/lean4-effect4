@@ -890,6 +890,32 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   invariant position.
   The upper form is false in the raw order `Ty.sub`, and the field read has no upper form:
   the order has no width rule (decisions row 178).
+- **A converted eliminator is the extended rule of its member rule (`union-rule-extend`)**: The
+  statement fixes an eliminator: a member rule with the three facts of `Eliminator`.
+  The guarded rule is the lifted rule where the target's normal form has at most one union
+  member, and a refusal elsewhere.
+  The extended rule is the member rule's own answer where the member rule answers at the raw
+  target, and the guarded rule elsewhere.
+  It agrees with the member rule, so no target that the by-shape function answered moves.
+  It answers a least answer at `never`.
+  Its answer `a` puts the target below `C a`, in `Ty.subN`.
+  An answer `b` is above `a` exactly when the target is below `C b`.
+  It refuses a proper union that the member rule refuses.
+  It is proved (`UnionRule.Eliminator.extend_laws`, `src/Effect4/Laws/Program/UnionRule.lean`;
+  seat PILOT).
+  The fiber rule is the first instance: `fiberTy` is `UnionRule.extend Member.fiber`
+  (`src/Effect4/Program/Typing/Rules.lean`), with its facts in
+  `src/Effect4/Laws/Program/Eliminators.lean`.
+  The guard and the raw answer are interim, and each goes by one line.
+  The guard goes when the TypeScript printer writes the type arguments at a proper union
+  (decisions row 292).
+  The raw answer goes when the match of a template reads a request up to its normal form
+  (decisions row 296).
+  `Eliminator.extend_liftOne` says what that second removal changes: no verdict, and an answer
+  up to the order, where the member rule answers at one union member only.
+  Under the guard the monotone law holds where the smaller target has at most one union member
+  (`Eliminator.extend_mono`).
+  It establishes no `checker-monotone`, nothing that tsgo accepts, and nothing of another rule.
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 

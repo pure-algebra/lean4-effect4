@@ -1,0 +1,107 @@
+@liftOne : {α : Type} → [Answer α] → (Ty → Option α) → Ty → Option α
+@Effect4.Program.UnionRule.liftOne_eq_some_iff : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  (rule : Effect4.Program.Ty → Option α) {t : Effect4.Program.Ty} {a : α},
+  Effect4.Program.UnionRule.liftOne rule t = some a ↔
+    t.normalize.members.length ≤ 1 ∧ Effect4.Program.UnionRule.lift rule t = some a
+@Effect4.Program.UnionRule.liftOne_some : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  {rule : Effect4.Program.Ty → Option α} {t : Effect4.Program.Ty} {a : α},
+  Effect4.Program.UnionRule.liftOne rule t = some a → Effect4.Program.UnionRule.lift rule t = some a
+@Effect4.Program.UnionRule.liftOne_eq : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  (rule : Effect4.Program.Ty → Option α) {t : Effect4.Program.Ty},
+  t.normalize.members.length ≤ 1 → Effect4.Program.UnionRule.liftOne rule t = Effect4.Program.UnionRule.lift rule t
+@Effect4.Program.UnionRule.liftOne_two : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  (rule : Effect4.Program.Ty → Option α) {t : Effect4.Program.Ty},
+  1 < t.normalize.members.length → Effect4.Program.UnionRule.liftOne rule t = none
+@Effect4.Program.UnionRule.liftOne_congr : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  (rule : Effect4.Program.Ty → Option α) {s t : Effect4.Program.Ty},
+  s.normalize = t.normalize → Effect4.Program.UnionRule.liftOne rule s = Effect4.Program.UnionRule.liftOne rule t
+@Effect4.Program.UnionRule.liftOne_never : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  (rule : Effect4.Program.Ty → Option α),
+  Effect4.Program.UnionRule.liftOne rule Effect4.Program.Ty.never = some Effect4.Program.UnionRule.Answer.bot
+@Effect4.Program.UnionRule.liftOne_member : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  (rule : Effect4.Program.Ty → Option α) {t : Effect4.Program.Ty},
+  t.Normal →
+    t.isMember = true →
+      Effect4.Program.UnionRule.liftOne rule t =
+        Option.map (Effect4.Program.UnionRule.Answer.join Effect4.Program.UnionRule.Answer.bot) (rule t)
+@Effect4.Program.UnionRule.Eliminator.liftOne_upper : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    ∀ {t : Effect4.Program.Ty} {a : α}, Effect4.Program.UnionRule.liftOne rule t = some a → t.subN (C a) = true
+@Effect4.Program.UnionRule.Eliminator.liftOne_least : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    ∀ {t : Effect4.Program.Ty} {a b : α},
+      Effect4.Program.UnionRule.liftOne rule t = some a →
+        t.subN (C b) = true → Effect4.Program.UnionRule.AnswerOrder.le a b
+@Effect4.Program.UnionRule.Eliminator.liftOne_answers : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    ∀ {t : Effect4.Program.Ty} {a : α},
+      rule t = some a →
+        ((∃ a',
+            Effect4.Program.UnionRule.liftOne rule t = some a' ∧
+              Effect4.Program.UnionRule.AnswerOrder.le a a' ∧ Effect4.Program.UnionRule.AnswerOrder.le a' a) ↔
+          t.normalize.members.length ≤ 1)
+@Effect4.Program.UnionRule.Eliminator.liftOne_mono : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    ∀ {s t : Effect4.Program.Ty},
+      s.subN t = true →
+        s.normalize.members.length ≤ 1 →
+          ∀ {b : α},
+            Effect4.Program.UnionRule.liftOne rule t = some b →
+              ∃ a, Effect4.Program.UnionRule.liftOne rule s = some a ∧ Effect4.Program.UnionRule.AnswerOrder.le a b
+@Effect4.Program.UnionRule.Eliminator.liftOne_isSome_iff : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    ∀ (t : Effect4.Program.Ty),
+      (Effect4.Program.UnionRule.liftOne rule t).isSome = true ↔
+        t.normalize.members.length ≤ 1 ∧ ∃ b, t.subN (C b) = true
+@Effect4.Program.UnionRule.Eliminator.liftOne_laws : ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    Effect4.Program.UnionRule.liftOne rule Effect4.Program.Ty.never = some Effect4.Program.UnionRule.Answer.bot ∧
+      (∀ {t : Effect4.Program.Ty} {a : α},
+          Effect4.Program.UnionRule.liftOne rule t = some a →
+            t.subN (C a) = true ∧ ∀ (b : α), Effect4.Program.UnionRule.AnswerOrder.le a b ↔ t.subN (C b) = true) ∧
+        (∀ {t : Effect4.Program.Ty} {a : α},
+            rule t = some a →
+              t.normalize.members.length ≤ 1 →
+                ∃ a',
+                  Effect4.Program.UnionRule.liftOne rule t = some a' ∧
+                    Effect4.Program.UnionRule.AnswerOrder.le a a' ∧ Effect4.Program.UnionRule.AnswerOrder.le a' a) ∧
+          ∀ {t : Effect4.Program.Ty}, 1 < t.normalize.members.length → Effect4.Program.UnionRule.liftOne rule t = none
+Effect4.Program.Member.fiber : Effect4.Program.Ty → Option (Effect4.Program.Ty × Effect4.Program.Ty)
+Effect4.Program.fiberTyG : Effect4.Program.Ty → Option (Effect4.Program.Ty × Effect4.Program.Ty)
+Effect4.Program.subN_fiberOf_iff : ∀ (a e a' e' : Effect4.Program.Ty),
+  (a.fiberOf e).subN (a'.fiberOf e') = true ↔ a.subN a' = true ∧ e.subN e' = true
+Effect4.Program.Member.fiber_eliminator : Effect4.Program.UnionRule.Eliminator Effect4.Program.Member.fiber
+  (Function.uncurry Effect4.Program.Ty.fiberOf)
+@Effect4.Program.Member.fiber_one : ∀ {t : Effect4.Program.Ty} {a : Effect4.Program.Ty × Effect4.Program.Ty},
+  Effect4.Program.Member.fiber t = some a → t.normalize.members.length ≤ 1
+@Effect4.Program.fiberTyG_upper : ∀ {t : Effect4.Program.Ty} {pair : Effect4.Program.Ty × Effect4.Program.Ty},
+  Effect4.Program.fiberTyG t = some pair → t.subN (pair.fst.fiberOf pair.snd) = true
+Effect4.Program.fiberTyG_fiberOf : ∀ (value error : Effect4.Program.Ty),
+  Effect4.Program.fiberTyG (value.fiberOf error) = some (value.normalize, error.normalize)
+@Effect4.Program.subN_list : ∀ {a b : Effect4.Program.Ty}, a.subN b = true → a.list.subN b.list = true
+@Effect4.Program.Member.fiber_closed : ∀ {m : Effect4.Program.Ty} {a : Effect4.Program.Ty × Effect4.Program.Ty},
+  m.closed = true → Effect4.Program.Member.fiber m = some a → a.fst.closed = true ∧ a.snd.closed = true
+@Effect4.Program.fiberTyG_closed : ∀ {t : Effect4.Program.Ty} {a : Effect4.Program.Ty × Effect4.Program.Ty},
+  Effect4.Program.fiberTyG t = some a → t.closed = true → a.fst.closed = true ∧ a.snd.closed = true
+'Effect4.Program.UnionRule.Eliminator.liftOne_laws' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.UnionRule.Eliminator.liftOne_mono' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.UnionRule.Eliminator.liftOne_isSome_iff' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.UnionRule.liftOne_congr' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.UnionRule.liftOne_member' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Member.fiber_eliminator' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.fiberTyG_upper' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.fiberTyG_fiberOf' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.subN_list' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.fiberTyG_closed' depends on axioms: [propext, Quot.sound]

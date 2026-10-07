@@ -45,6 +45,7 @@ import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Provision
 import Effect4.Laws.Program.BuildTotal

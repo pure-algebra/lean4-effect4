@@ -1,0 +1,96 @@
+import Truth
+import Test.Program.Gen
+import Effect4.Api
+
+/-! Seat PILOT, the differential of the brief's step 7. One row for each program of the two
+corpora: its verdict, and its type or its refusal, each as the checker spells it and at its
+normal form. Run it at the base and at the head, and compare the two outputs.
+
+The module `Truth` is `harness/truth/Truth.lean`, compiled to an object file beside this file.
+The generated corpus is `Test.Program.Gen.program i 4` for `i` below 400, named as
+`tools/Drivers/Corpus.lean` names it. The truth lane is `OCaml5.Truth.corpus`, each program at
+the row table that `OCaml5.Truth.hostInputs` gives it.
+
+Four control programs follow the two corpora. They are the red control of this comparison: two
+of them move from refused to admitted at the conversion, so a comparison that shows no moved
+row among them does not read the checker. The other two must not move. -/
+
+open Effect4 Effect4.Program
+
+/-- A type, as its constructors: one line, the faithful spelling. -/
+def tyText (t : Ty) : String := (repr t).pretty 1000000
+
+/-- The three columns of a program's type, each through `f`. -/
+def typeColumns (f : Ty → Ty) (t : EffTy) : String :=
+  let keys := t.requires.elems.map fun key => toString key.name.value ++ "/" ++ toString key.service.value
+  s!"answer={tyText (f t.answer)} error={tyText (f t.error)} requires=[{String.intercalate "," keys}]"
+
+/-- The type that a refusal holds, where its reason holds one type. -/
+def refusedType : TypeReason → Option Ty
+  | .notFiber t | .listOfFibersExpected t | .predicateNotBool t | .scopeExpected t
+  | .natExpected t | .contextExpected t | .snapshotExpected t | .exitExpected t
+  | .errorNotAdmitted t | .releaseFails t | .maskRestoreExpected t => some t
+  | _ => none
+
+/-- One row: the name, the verdict, the refusal's reason and path, then the type or the
+refusal's type as spelled, and at its normal form. -/
+def row (name : String) (p : Api.Program) (table : RowTable) : String :=
+  match Api.typeOf p table, Api.explain p table with
+  | some t, _ => s!"{name}\tadmitted\t-\t{typeColumns id t}\t{typeColumns Ty.normalize t}"
+  | none, some r =>
+    let path := if r.path.isEmpty then "." else String.intercalate "." (r.path.map toString)
+    let spelled := (refusedType r.reason).map tyText |>.getD "-"
+    let normal := (refusedType r.reason).map (fun t => tyText t.normalize) |>.getD "-"
+    s!"{name}\trefused\t{r.reason.head}@{path}\t{spelled}\t{normal}"
+  | none, none => s!"{name}\trefused\tno-reason\t-\t-"
+
+/-! ## The control programs -/
+
+/-- `fail(1)`, then a join of its answer: a handle at `never`. The by-shape rule refuses the
+join, as no fiber. The converted rule answers `never` twice. -/
+def joinNever : Api.Program :=
+  .bind (.fail (.lit (.nat 1))) (.awaitFiber (.var 0) .joinEffect)
+
+/-- An await of every fiber of the empty list: the list's element type is `never`. -/
+def awaitNone : Api.Program := .withFiber (.awaitAll (.app "nil" .nil))
+
+/-- The closed program of the design note: fork a body whose answer is a product over a union,
+join the fiber, and build a map from the joined entries. It must keep its type, by spelling. -/
+def joinsEntries : Api.Program :=
+  .bind (.withFiber (.fork
+      (.bind (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1)))
+          (.succeed (.lit (.str "s"))))
+        (.succeed (.app "cons" (.cons
+          (.app "pair" (.cons (.lit (.str "k")) (.cons (.var 0) .nil)))
+          (.cons (.app "nil" .nil) .nil)))))
+      ⟨true, false, .inherit⟩))
+    (.bind (.awaitFiber (.var 0) .joinEffect)
+      (.succeed (.app "mapFromEntries" (.cons (.var 1) .nil))))
+
+/-- A join of one of two fibers with no order between their types: a proper union. It must stay
+refused, as no fiber (decisions row 292). -/
+def joinEither : Api.Program :=
+  .bind (.select (.lit (.bool true)) .bool
+      (.withFiber (.fork (.succeed (.lit (.nat 1))) ⟨true, false, .inherit⟩))
+      (.withFiber (.fork (.succeed (.lit (.str "s"))) ⟨true, false, .inherit⟩)))
+    (.awaitFiber (.var 0) .joinEffect)
+
+def controls : List (String × Api.Program) :=
+  [("joinNever", joinNever), ("awaitNone", awaitNone), ("joinsEntries", joinsEntries),
+    ("joinEither", joinEither)]
+
+/-- Write the rows to the file that the variable `PILOT_OUT` names. `Truth` declares `main`, so
+this file has none: the command below runs at elaboration. -/
+def writeRows : IO Unit := do
+  let some out ← IO.getEnv "PILOT_OUT" | throw (IO.userError "set PILOT_OUT")
+  let mut text := "# corpus\tname\tverdict\trefusal\tspelled\tnormal\n"
+  for (name, p) in OCaml5.Truth.corpusPrograms 400 4 do
+    text := text ++ "generated\t" ++ row name p [] ++ "\n"
+  for (name, p) in OCaml5.Truth.corpus do
+    text := text ++ "truth\t" ++ row name p (OCaml5.Truth.hostInputs name).1 ++ "\n"
+  for (name, p) in controls do
+    text := text ++ "control\t" ++ row name p [] ++ "\n"
+  IO.FS.writeFile out text
+  IO.println s!"wrote {400 + OCaml5.Truth.corpus.length + controls.length} rows to {out}"
+
+#eval writeRows

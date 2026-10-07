@@ -1,0 +1,296 @@
+import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Typing.TermIntro
+import Effect4.Laws.Program.Typed.Denotation
+import Effect4.Program.Checker
+import Effect4.Program.Native
+import Effect4.Program.Sketch
+
+/-! Seat PILOT, the design probe: each statement of the design note, compiled against the base
+`9d50ac20`. The guard `liftOne` and the member rule `Member.fiber` are declared here, because
+the base holds neither. The converted rule is `fiberTyG` here: the base's `fiberTy` is the
+by-shape rule. -/
+
+set_option autoImplicit false
+
+namespace Effect4.Program.UnionRule
+
+variable {α : Type} [Answer α]
+
+/-- The guard: the lifted rule where the target's normal form has at most one union member,
+and a refusal elsewhere. -/
+def liftOne (rule : Ty → Option α) (target : Ty) : Option α :=
+  if target.normalize.members.length ≤ 1 then lift rule target else none
+
+/-! ## The guard's own laws -/
+
+theorem liftOne_eq_some_iff (rule : Ty → Option α) {t : Ty} {a : α} :
+    liftOne rule t = some a ↔ t.normalize.members.length ≤ 1 ∧ lift rule t = some a := by
+  unfold liftOne
+  constructor
+  · intro typed
+    by_cases one : t.normalize.members.length ≤ 1
+    · rw [if_pos one] at typed
+      exact ⟨one, typed⟩
+    · rw [if_neg one] at typed
+      exact nomatch typed
+  · rintro ⟨one, typed⟩
+    rw [if_pos one]
+    exact typed
+
+theorem liftOne_some {rule : Ty → Option α} {t : Ty} {a : α} (typed : liftOne rule t = some a) :
+    lift rule t = some a :=
+  ((liftOne_eq_some_iff rule).mp typed).2
+
+theorem liftOne_eq (rule : Ty → Option α) {t : Ty} (one : t.normalize.members.length ≤ 1) :
+    liftOne rule t = lift rule t :=
+  if_pos one
+
+theorem liftOne_two (rule : Ty → Option α) {t : Ty} (two : 1 < t.normalize.members.length) :
+    liftOne rule t = none :=
+  if_neg (Nat.not_le.mpr two)
+
+theorem liftOne_congr (rule : Ty → Option α) {s t : Ty} (same : s.normalize = t.normalize) :
+    liftOne rule s = liftOne rule t := by
+  unfold liftOne
+  rw [same, lift_congr rule same]
+
+theorem liftOne_never (rule : Ty → Option α) : liftOne rule .never = some Answer.bot := rfl
+
+theorem liftOne_member (rule : Ty → Option α) {t : Ty} (normal : Ty.Normal t)
+    (member : t.isMember = true) : liftOne rule t = (rule t).map (Answer.join Answer.bot) := by
+  have one : t.normalize.members.length ≤ 1 := by
+    rw [normal.fixed, Ty.members_atom member]
+    exact Nat.le_refl 1
+  rw [liftOne_eq rule one, lift_member rule normal member]
+
+/-! ## The contract of a guarded eliminator -/
+
+open AnswerOrder (le)
+
+variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+
+theorem Eliminator.liftOne_upper (e : Eliminator rule C) {t : Ty} {a : α}
+    (typed : liftOne rule t = some a) : Ty.subN t (C a) = true :=
+  e.lift_upper (liftOne_some typed)
+
+theorem Eliminator.liftOne_least (e : Eliminator rule C) {t : Ty} {a b : α}
+    (typed : liftOne rule t = some a) (upper : Ty.subN t (C b) = true) : le a b :=
+  e.lift_least (liftOne_some typed) upper
+
+theorem Eliminator.liftOne_answers (e : Eliminator rule C) {t : Ty} {a : α}
+    (answered : rule t = some a) :
+    (∃ a', liftOne rule t = some a' ∧ le a a' ∧ le a' a) ↔ t.normalize.members.length ≤ 1 := by
+  obtain rfl := e.shape answered
+  constructor
+  · rintro ⟨a', typed, -, -⟩
+    exact ((liftOne_eq_some_iff rule).mp typed).1
+  · intro one
+    obtain ⟨a', typed⟩ := Option.isSome_iff_exists.mp
+      ((e.adjoint (C a)).1.mpr ⟨a, Ty.subN_refl _⟩)
+    exact ⟨a', (liftOne_eq_some_iff rule).mpr ⟨one, typed⟩, e.embeds.mp (e.lift_upper typed),
+      e.lift_least typed (Ty.subN_refl _)⟩
+
+/-- What the guard keeps of the monotone law: a smaller target with at most one union member. -/
+theorem Eliminator.liftOne_mono (e : Eliminator rule C) {s t : Ty}
+    (smaller : Ty.subN s t = true) (one : s.normalize.members.length ≤ 1) {b : α}
+    (typed : liftOne rule t = some b) : ∃ a, liftOne rule s = some a ∧ le a b := by
+  obtain ⟨a, lifted, below⟩ := e.lift_mono smaller (liftOne_some typed)
+  exact ⟨a, (liftOne_eq_some_iff rule).mpr ⟨one, lifted⟩, below⟩
+
+theorem Eliminator.liftOne_isSome_iff (e : Eliminator rule C) (t : Ty) :
+    (liftOne rule t).isSome = true ↔
+      t.normalize.members.length ≤ 1 ∧ ∃ b, Ty.subN t (C b) = true := by
+  rw [← (e.adjoint t).1]
+  constructor
+  · intro answered
+    obtain ⟨a, typed⟩ := Option.isSome_iff_exists.mp answered
+    obtain ⟨one, lifted⟩ := (liftOne_eq_some_iff rule).mp typed
+    exact ⟨one, Option.isSome_iff_exists.mpr ⟨a, lifted⟩⟩
+  · rintro ⟨one, answered⟩
+    obtain ⟨a, lifted⟩ := Option.isSome_iff_exists.mp answered
+    exact Option.isSome_iff_exists.mpr ⟨a, (liftOne_eq_some_iff rule).mpr ⟨one, lifted⟩⟩
+
+/-- The contract as one statement. -/
+theorem Eliminator.liftOne_laws (e : Eliminator rule C) :
+    liftOne rule .never = some Answer.bot ∧
+    (∀ {t : Ty} {a : α}, liftOne rule t = some a →
+      Ty.subN t (C a) = true ∧ ∀ b : α, le a b ↔ Ty.subN t (C b) = true) ∧
+    (∀ {t : Ty} {a : α}, rule t = some a → t.normalize.members.length ≤ 1 →
+      ∃ a', liftOne rule t = some a' ∧ le a a' ∧ le a' a) ∧
+    (∀ {t : Ty}, 1 < t.normalize.members.length → liftOne rule t = none) :=
+  ⟨liftOne_never rule,
+    fun typed => ⟨e.liftOne_upper typed, (e.adjoint _).2 (liftOne_some typed)⟩,
+    fun answered one => (e.liftOne_answers answered).mpr one,
+    fun two => liftOne_two rule two⟩
+
+end Effect4.Program.UnionRule
+
+namespace Effect4.Program
+
+open UnionRule
+
+/-- The member rule of the fiber rule: today's by-shape function. -/
+def Member.fiber : Ty → Option (Ty × Ty)
+  | .fiberOf value error => some (value, error)
+  | _ => none
+
+/-- The converted rule, under a scratch name. -/
+def fiberTyG : Ty → Option (Ty × Ty) := UnionRule.liftOne Member.fiber
+
+theorem subN_fiberOf_iff (a e a' e' : Ty) :
+    Ty.subN (.fiberOf a e) (.fiberOf a' e') = true ↔
+      Ty.subN a a' = true ∧ Ty.subN e e' = true := by
+  show Ty.sub (.fiberOf a.normalize e.normalize) (.fiberOf a'.normalize e'.normalize) = true ↔ _
+  rw [Ty.sub_args_fiberOf]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, Bool.and_eq_true, Ty.subN]
+
+theorem Member.fiber_eliminator : Eliminator Member.fiber (Function.uncurry Ty.fiberOf) where
+  shape {m a} answered := by
+    cases m with
+    | fiberOf value error =>
+      cases answered
+      rfl
+    | _ => exact nomatch answered
+  embeds := subN_fiberOf_iff _ _ _ _
+  reads {m b} normal member below := by
+    have raw : Ty.sub m (.fiberOf b.1.normalize b.2.normalize) = true := by
+      have h := below
+      unfold Ty.subN at h
+      rw [normal.fixed] at h
+      exact h
+    rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
+    cases m with
+    | fiberOf value error => exact ⟨(value, error), rfl⟩
+    | _ => exact nomatch raw.1
+
+/-- The upper form: the replacement of `fiberTy_eq_some`. -/
+theorem fiberTyG_upper {t : Ty} {pair : Ty × Ty} (typed : fiberTyG t = some pair) :
+    Ty.subN t (.fiberOf pair.1 pair.2) = true :=
+  Member.fiber_eliminator.liftOne_upper typed
+
+/-- The checker's order on list types is the order on their element types. -/
+theorem subN_list {a b : Ty} (below : Ty.subN a b = true) :
+    Ty.subN (.list a) (.list b) = true := by
+  unfold Ty.subN at below
+  show Ty.sub (.list a.normalize) (.list b.normalize) = true
+  rw [Ty.sub_args_list]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, below]
+
+/-- The rule at a raw fiber type: the normal forms of the two columns. -/
+theorem fiberTyG_fiberOf (value error : Ty) :
+    fiberTyG (.fiberOf value error) = some (value.normalize, error.normalize) := by
+  have normal : Ty.Normal (.fiberOf value.normalize error.normalize) :=
+    .fiberOf (Ty.normal_normalize value) (Ty.normal_normalize error)
+  show liftOne Member.fiber (.fiberOf value error) = _
+  rw [liftOne_congr Member.fiber (s := .fiberOf value error)
+    (t := .fiberOf value.normalize error.normalize) normal.fixed.symm,
+    liftOne_member Member.fiber normal rfl]
+  show some (Ty.join .never value.normalize, Ty.join .never error.normalize) = _
+  rw [Ty.join_never, Ty.join_never, Ty.normalize_idem, Ty.normalize_idem]
+
+/-- The member rule answers only where the normal form is one union member. -/
+theorem Member.fiber_one {t : Ty} {a : Ty × Ty} (answered : Member.fiber t = some a) :
+    t.normalize.members.length ≤ 1 := by
+  cases t with
+  | fiberOf value error => exact Nat.le_refl 1
+  | _ => exact nomatch answered
+
+/-- The contract's third part at the fiber rule: where the member rule answers, the rule
+answers, with an answer equal up to the order. -/
+example {t : Ty} {a : Ty × Ty} (answered : Member.fiber t = some a) :
+    ∃ a' : Ty × Ty, fiberTyG t = some a' ∧
+      (Ty.subN a.1 a'.1 = true ∧ Ty.subN a.2 a'.2 = true) ∧
+      (Ty.subN a'.1 a.1 = true ∧ Ty.subN a'.2 a.2 = true) :=
+  (Member.fiber_eliminator.liftOne_answers answered).mpr (Member.fiber_one answered)
+
+/-- A product is the red control of that premise: the pair rule of a product is answered at a
+raw product over a union, and the normal form there has two union members. -/
+example : (Ty.prod (.union .nat .string) .unit).normalize.members.length = 2 := by decide +kernel
+
+/-- Seat FORM's lemma, from `lift_closed_pair`. -/
+theorem Member.fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
+    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true := by
+  cases m with
+  | fiberOf value error =>
+    cases answered
+    exact Bool.and_eq_true_iff.mp closed
+  | _ => exact nomatch answered
+
+theorem fiberTyG_closed {t : Ty} {a : Ty × Ty} (typed : fiberTyG t = some a)
+    (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true :=
+  lift_closed_pair (fun _ _ closed answered => Member.fiber_closed closed answered)
+    (liftOne_some typed) closed
+
+/-! ## Controls -/
+
+#guard fiberTyG .never = some (.never, .never)
+#guard fiberTyG (.union (.fiberOf .nat .never) .never) = some (.nat, .never)
+#guard fiberTyG (.union (.fiberOf .nat .never) (.fiberOf .string .bool)) = none
+#guard lift Member.fiber (.union (.fiberOf .nat .never) (.fiberOf .string .bool)) =
+  some (.union .nat .string, .bool)
+#guard fiberTyG (.union (.fiberOf (.lit "a") .never) (.fiberOf .string .never)) =
+  some (.string, .never)
+#guard fiberTyG .nat = none
+#guard Member.fiber .never = none
+
+end Effect4.Program
+
+/-! ## The use site, at the denotation's form -/
+
+namespace Effect4.Program.Typed
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
+
+example {w : World} {v : Val} {handle : Ty} {pair : Ty × Ty}
+    (hfib : fiberTyG handle = some pair) (hfit : Fits w v handle) :
+    ∃ index, v = Value.fiber index ∧ FiberDeclared w ⟨index⟩ pair.1 pair.2 := by
+  replace hfit := fits_subN w (fiberTyG_upper hfib) v hfit
+  exact fiber_of_fits hfit
+
+example {w : World} {v : Val} {inner : Ty} {pair : Ty × Ty}
+    (hfib : fiberTyG inner = some pair) (hfit : Fits w v (.list inner)) :
+    Fits w v (.list (.fiberOf pair.1 pair.2)) :=
+  fits_subN w (subN_list (fiberTyG_upper hfib)) v hfit
+
+end Effect4.Program.Typed
+
+/-! ## The statements, as Lean elaborates them -/
+
+open Effect4.Program Effect4.Program.UnionRule in
+#check @liftOne
+#check @Effect4.Program.UnionRule.liftOne_eq_some_iff
+#check @Effect4.Program.UnionRule.liftOne_some
+#check @Effect4.Program.UnionRule.liftOne_eq
+#check @Effect4.Program.UnionRule.liftOne_two
+#check @Effect4.Program.UnionRule.liftOne_congr
+#check @Effect4.Program.UnionRule.liftOne_never
+#check @Effect4.Program.UnionRule.liftOne_member
+#check @Effect4.Program.UnionRule.Eliminator.liftOne_upper
+#check @Effect4.Program.UnionRule.Eliminator.liftOne_least
+#check @Effect4.Program.UnionRule.Eliminator.liftOne_answers
+#check @Effect4.Program.UnionRule.Eliminator.liftOne_mono
+#check @Effect4.Program.UnionRule.Eliminator.liftOne_isSome_iff
+#check @Effect4.Program.UnionRule.Eliminator.liftOne_laws
+#check @Effect4.Program.Member.fiber
+#check @Effect4.Program.fiberTyG
+#check @Effect4.Program.subN_fiberOf_iff
+#check @Effect4.Program.Member.fiber_eliminator
+#check @Effect4.Program.Member.fiber_one
+#check @Effect4.Program.fiberTyG_upper
+#check @Effect4.Program.fiberTyG_fiberOf
+#check @Effect4.Program.subN_list
+#check @Effect4.Program.Member.fiber_closed
+#check @Effect4.Program.fiberTyG_closed
+#print axioms Effect4.Program.UnionRule.Eliminator.liftOne_laws
+#print axioms Effect4.Program.UnionRule.Eliminator.liftOne_mono
+#print axioms Effect4.Program.UnionRule.Eliminator.liftOne_isSome_iff
+#print axioms Effect4.Program.UnionRule.liftOne_congr
+#print axioms Effect4.Program.UnionRule.liftOne_member
+#print axioms Effect4.Program.Member.fiber_eliminator
+#print axioms Effect4.Program.fiberTyG_upper
+#print axioms Effect4.Program.fiberTyG_fiberOf
+#print axioms Effect4.Program.subN_list
+#print axioms Effect4.Program.fiberTyG_closed

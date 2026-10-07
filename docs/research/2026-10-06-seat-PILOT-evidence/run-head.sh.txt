@@ -1,0 +1,9 @@
+#!/bin/bash
+# The differential and the statement list at the merged head (the coordinator, at the merge).
+cd /Users/pooks/Dev/lean4-effect4 || exit 1
+S=/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/seat-pilot
+mkdir -p $S/truthlane-head
+lake env lean -DwarningAsError=true -M4096 -o $S/truthlane-head/Truth.olean harness/truth/Truth.lean || exit 2
+PILOT_OUT=$S/differential-head.tsv LEAN_PATH="$(lake env printenv LEAN_PATH):$S/truthlane-head" lake env sh -c 'LEAN_PATH="$LEAN_PATH:'$S'/truthlane-head" lean -DwarningAsError=true -M4096 '$S'/differential.lean' || exit 3
+lake env lean -DwarningAsError=true $S/statements.lean > $S/statements-head.txt || exit 4
+echo done

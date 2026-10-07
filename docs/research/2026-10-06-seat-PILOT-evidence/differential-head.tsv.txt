@@ -1,0 +1,478 @@
+# corpus	name	verdict	refusal	spelled	normal
+generated	g0	refused	notFiber@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g1	refused	notFiber@1	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g2	refused	notFiber@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g3	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g4	refused	notFiber@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g5	refused	cause@.	-	-
+generated	g6	refused	errorNotAdmitted@0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g7	refused	valueNotSubtype@.	-	-
+generated	g8	refused	term@0.0.0.0.0.0.0	-	-
+generated	g9	refused	notFiber@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g10	refused	term@0.0	-	-
+generated	g11	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[4/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[4/4]
+generated	g12	refused	errorNotAdmitted@0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g13	refused	term@0.0.0	-	-
+generated	g14	refused	term@0.0.0.1.0	-	-
+generated	g15	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.bool) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.bool) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g16	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g17	refused	term@0.0.0.0.0.0.0	-	-
+generated	g18	refused	predicateNotBool@0.0.0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g19	refused	requestNotSubtype@0.0.0	-	-
+generated	g20	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g21	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[8/4,11/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[8/4,11/4]
+generated	g22	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g23	refused	predicateNotBool@0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g24	refused	notFiber@0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g25	refused	requestNotSubtype@0.0.0.2	-	-
+generated	g26	refused	requestNotSubtype@0.0.0	-	-
+generated	g27	refused	requestNotSubtype@.	-	-
+generated	g28	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g29	refused	errorNotAdmitted@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g30	refused	errorNotAdmitted@0.0.1	Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.never)	Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.never)
+generated	g31	refused	requestNotSubtype@.	-	-
+generated	g32	refused	term@.	-	-
+generated	g33	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g34	refused	errorNotAdmitted@1.0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g35	refused	term@1	-	-
+generated	g36	refused	term@0.0.0.0.0.0.0	-	-
+generated	g37	refused	listOfFibersExpected@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g38	admitted	-	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]
+generated	g39	refused	term@0.0.0	-	-
+generated	g40	refused	predicateNotBool@0.0.1	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g41	refused	notFiber@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g42	refused	requestNotSubtype@.	-	-
+generated	g43	refused	notFiber@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g44	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]
+generated	g45	refused	predicateNotBool@0.0.0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g46	refused	listOfFibersExpected@0.0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g47	refused	predicateNotBool@0.1.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g48	refused	notFiber@0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g49	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.nat requires=[]
+generated	g50	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[5/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[5/4]
+generated	g51	refused	predicateNotBool@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g52	refused	breakOutsideLoop@0.0.0.0.0	-	-
+generated	g53	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+generated	g54	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g55	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g56	refused	predicateNotBool@.	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g57	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g58	refused	notFiber@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g59	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g60	refused	notFiber@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g61	refused	requestNotSubtype@0.0.0.0.0.1.1.0	-	-
+generated	g62	refused	cause@0.0.1.1	-	-
+generated	g63	refused	notFiber@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g64	refused	predicateNotBool@1.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g65	refused	scopeExpected@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g66	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g67	refused	notFiber@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g68	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g69	refused	cause@0.0.1.0.1	-	-
+generated	g70	refused	requestNotSubtype@.	-	-
+generated	g71	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g72	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g73	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g74	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[9/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[9/4]
+generated	g75	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g76	refused	cause@0.0.0.0.0.1	-	-
+generated	g77	refused	cause@0.0.0.0.0.0	-	-
+generated	g78	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g79	refused	errorNotAdmitted@0.0.0.0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g80	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g81	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g82	refused	listOfFibersExpected@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g83	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g84	refused	listOfFibersExpected@0.0.0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g85	refused	predicateNotBool@.	Effect4.Program.Ty.never	Effect4.Program.Ty.never
+generated	g86	refused	requestNotSubtype@0.0.0.0.0.0.0	-	-
+generated	g87	refused	notFiber@0.0.1	Effect4.Program.Ty.prod (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.string)) (Effect4.Program.Ty.lit "hi")	Effect4.Program.Ty.prod (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.string)) (Effect4.Program.Ty.lit "hi")
+generated	g88	refused	cause@0.0.0.0	-	-
+generated	g89	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]
+generated	g90	refused	predicateNotBool@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g91	refused	predicateNotBool@0.0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g92	refused	requestNotSubtype@0.0.0.0	-	-
+generated	g93	refused	predicateNotBool@0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g94	refused	requestNotSubtype@.	-	-
+generated	g95	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g96	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g97	refused	requestNotSubtype@0.0	-	-
+generated	g98	refused	predicateNotBool@0.0.1.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g99	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g100	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g101	refused	cause@1.0.0.0.0	-	-
+generated	g102	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g103	refused	term@0.0	-	-
+generated	g104	refused	scopeExpected@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g105	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g106	refused	notFiber@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g107	refused	cause@.	-	-
+generated	g108	refused	term@0.0.0.0.0	-	-
+generated	g109	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g110	refused	notFiber@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g111	refused	cause@.	-	-
+generated	g112	refused	term@0	-	-
+generated	g113	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[9/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[9/4]
+generated	g114	refused	term@0.0	-	-
+generated	g115	refused	notFiber@0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g116	refused	term@0.0.0	-	-
+generated	g117	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g118	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g119	refused	requestNotSubtype@0.0.1.0	-	-
+generated	g120	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g121	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g122	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g123	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.handle "Context.Context<unknown>") (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.handle "Context.Context<unknown>") (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g124	refused	requestNotSubtype@0.0	-	-
+generated	g125	refused	predicateNotBool@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g126	refused	cause@0	-	-
+generated	g127	refused	requestNotSubtype@0.1.0.0	-	-
+generated	g128	refused	predicateNotBool@.	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g129	refused	scopeExpected@1.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g130	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g131	refused	term@0	-	-
+generated	g132	refused	notFiber@0.0.0.0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g133	refused	term@.	-	-
+generated	g134	refused	errorNotAdmitted@0.0.0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g135	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g136	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g137	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]
+generated	g138	refused	term@.	-	-
+generated	g139	refused	term@.	-	-
+generated	g140	refused	exitExpected@0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g141	refused	valueNotSubtype@0.0	-	-
+generated	g142	refused	predicateNotBool@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g143	refused	exitExpected@0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g144	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g145	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+generated	g146	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g147	refused	requestNotSubtype@0.0.0.0.1	-	-
+generated	g148	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g149	refused	notFiber@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g150	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]
+generated	g151	refused	term@0.0.0.0	-	-
+generated	g152	refused	term@0	-	-
+generated	g153	refused	term@1	-	-
+generated	g154	refused	requestNotSubtype@0.0.0.0.1	-	-
+generated	g155	refused	breakOutsideLoop@0.0.0.0	-	-
+generated	g156	refused	valueNotSubtype@0.0.0.0	-	-
+generated	g157	refused	breakOutsideLoop@0.0	-	-
+generated	g158	admitted	-	answer=Effect4.Program.Ty.refOf (Effect4.Program.Ty.string) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.refOf (Effect4.Program.Ty.string) error=Effect4.Program.Ty.never requires=[]
+generated	g159	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]
+generated	g160	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g161	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g162	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g163	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g164	refused	term@0.0	-	-
+generated	g165	refused	scopeExpected@1.1.0	Effect4.Program.Ty.causeOf (Effect4.Program.Ty.never)	Effect4.Program.Ty.causeOf (Effect4.Program.Ty.never)
+generated	g166	refused	term@0.0	-	-
+generated	g167	refused	valueNotSubtype@0	-	-
+generated	g168	refused	term@0.0.0.0	-	-
+generated	g169	refused	errorNotAdmitted@0.1.1.0	Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat)	Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat)
+generated	g170	refused	predicateNotBool@1.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g171	refused	cause@0.0.0.0.1	-	-
+generated	g172	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g173	refused	notFiber@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g174	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g175	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g176	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]
+generated	g177	refused	term@.	-	-
+generated	g178	refused	term@.	-	-
+generated	g179	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g180	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[6/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[6/4]
+generated	g181	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g182	refused	notFiber@0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g183	admitted	-	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]
+generated	g184	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+generated	g185	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g186	refused	cause@0.0.0	-	-
+generated	g187	refused	requestNotSubtype@.	-	-
+generated	g188	refused	errorNotAdmitted@0.0.0.0.0.0.0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g189	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g190	refused	predicateNotBool@0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g191	refused	predicateNotBool@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g192	refused	term@0.0.1.0.1.0.0	-	-
+generated	g193	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.string) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.string) error=Effect4.Program.Ty.never requires=[]
+generated	g194	refused	predicateNotBool@1	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g195	refused	notFiber@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g196	refused	requestNotSubtype@.	-	-
+generated	g197	refused	notFiber@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g198	refused	listOfFibersExpected@0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g199	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g200	refused	requestNotSubtype@.	-	-
+generated	g201	refused	term@.	-	-
+generated	g202	refused	term@.	-	-
+generated	g203	refused	errorNotAdmitted@0.0.0.0.0	Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat)	Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat)
+generated	g204	refused	term@0.1.0.1	-	-
+generated	g205	refused	errorNotAdmitted@0.0.0.1.1	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g206	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g207	refused	requestNotSubtype@0.0	-	-
+generated	g208	refused	term@1.0.0.0.0.0	-	-
+generated	g209	refused	breakOutsideLoop@0.0.0	-	-
+generated	g210	refused	term@0.0.0.0.0.1.0	-	-
+generated	g211	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g212	refused	notFiber@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g213	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g214	refused	cause@0.0.0	-	-
+generated	g215	refused	notFiber@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g216	refused	notFiber@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g217	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]
+generated	g218	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.bool) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.bool) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g219	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[5/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[5/4]
+generated	g220	admitted	-	answer=Effect4.Program.Ty.bool error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.bool error=Effect4.Program.Ty.never requires=[]
+generated	g221	refused	term@0.0.0	-	-
+generated	g222	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g223	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.string) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.string) error=Effect4.Program.Ty.never requires=[]
+generated	g224	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g225	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g226	refused	notFiber@0.1	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g227	refused	term@0.0.0.0.0	-	-
+generated	g228	refused	term@.	-	-
+generated	g229	refused	predicateNotBool@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g230	refused	term@0.0.0.1.1.0.1.0.0	-	-
+generated	g231	refused	requestNotSubtype@1.0.0.0.0.0.1.0	-	-
+generated	g232	refused	term@0	-	-
+generated	g233	refused	cause@1	-	-
+generated	g234	refused	notFiber@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g235	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g236	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g237	refused	listOfFibersExpected@1.0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g238	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g239	refused	requestNotSubtype@.	-	-
+generated	g240	refused	term@0.1.0.0	-	-
+generated	g241	refused	term@.	-	-
+generated	g242	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g243	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[11/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[11/4]
+generated	g244	refused	notFiber@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g245	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g246	refused	errorNotAdmitted@0.0.0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g247	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g248	refused	predicateNotBool@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g249	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g250	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g251	refused	notFiber@0.0.0.0.0.0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g252	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g253	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g254	refused	predicateNotBool@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g255	refused	predicateNotBool@0.1.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g256	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]
+generated	g257	refused	valueNotSubtype@0.0	-	-
+generated	g258	refused	term@0	-	-
+generated	g259	refused	term@0	-	-
+generated	g260	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g261	refused	requestNotSubtype@0.0	-	-
+generated	g262	refused	errorNotAdmitted@0.0.1.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g263	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g264	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g265	refused	scopeExpected@0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g266	refused	term@0.0.0.0.0	-	-
+generated	g267	admitted	-	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]
+generated	g268	refused	predicateNotBool@.	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g269	admitted	-	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]
+generated	g270	refused	valueNotSubtype@1.0	-	-
+generated	g271	refused	term@0.0.1	-	-
+generated	g272	refused	notFiber@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g273	refused	notFiber@0.0.1.0	Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unknown) (Effect4.Program.Ty.unknown)	Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unknown) (Effect4.Program.Ty.unknown)
+generated	g274	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g275	refused	listOfFibersExpected@0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g276	admitted	-	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]
+generated	g277	refused	term@0	-	-
+generated	g278	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g279	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g280	refused	errorNotAdmitted@.	Effect4.Program.Ty.prod (Effect4.Program.Ty.unit) (Effect4.Program.Ty.nat)	Effect4.Program.Ty.prod (Effect4.Program.Ty.unit) (Effect4.Program.Ty.nat)
+generated	g281	refused	cause@0	-	-
+generated	g282	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[11/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[11/4]
+generated	g283	refused	breakOutsideLoop@0.0	-	-
+generated	g284	refused	cause@0.0.0.0	-	-
+generated	g285	refused	breakOutsideLoop@0.1.0.0	-	-
+generated	g286	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[10/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[10/4]
+generated	g287	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g288	refused	exitExpected@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g289	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g290	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[10/4]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[10/4]
+generated	g291	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g292	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g293	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g294	refused	requestNotSubtype@0.0.0.0	-	-
+generated	g295	refused	errorNotAdmitted@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g296	refused	requestNotSubtype@0.0	-	-
+generated	g297	refused	valueNotSubtype@.	-	-
+generated	g298	refused	requestNotSubtype@0	-	-
+generated	g299	refused	term@0.0.0.0	-	-
+generated	g300	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.nat requires=[]
+generated	g301	refused	predicateNotBool@0.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g302	refused	requestNotSubtype@.	-	-
+generated	g303	refused	term@.	-	-
+generated	g304	refused	term@.	-	-
+generated	g305	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g306	admitted	-	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]
+generated	g307	refused	predicateNotBool@.	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g308	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g309	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.handle "Context.Context<unknown>") (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.handle "Context.Context<unknown>") (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g310	refused	scopeExpected@0.0.0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g311	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g312	refused	listOfFibersExpected@0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g313	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g314	refused	listOfFibersExpected@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g315	refused	requestNotSubtype@0.0.0.0.0	-	-
+generated	g316	refused	listOfFibersExpected@0.0.0.0.1.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g317	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g318	refused	notFiber@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g319	refused	cause@.	-	-
+generated	g320	refused	notFiber@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g321	refused	term@.	-	-
+generated	g322	refused	scopeExpected@1.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g323	refused	requestNotSubtype@0.0.0.0.0	-	-
+generated	g324	refused	term@0.1.0	-	-
+generated	g325	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[9/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[9/4]
+generated	g326	refused	cause@0.0.0.0.0.0.1.0.0	-	-
+generated	g327	refused	notFiber@0.0.0.0.0.0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g328	refused	term@0.0.0	-	-
+generated	g329	refused	valueNotSubtype@0.0	-	-
+generated	g330	admitted	-	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]
+generated	g331	refused	predicateNotBool@.	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g332	refused	predicateNotBool@.	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g333	refused	exitExpected@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g334	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g335	refused	notFiber@0.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g336	refused	cause@0.0.0.0	-	-
+generated	g337	refused	breakOutsideLoop@0.0.1.0	-	-
+generated	g338	refused	listOfFibersExpected@1.0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g339	refused	errorNotAdmitted@1.0.1	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g340	refused	requestNotSubtype@0.0.0.1.0	-	-
+generated	g341	refused	requestNotSubtype@.	-	-
+generated	g342	refused	term@.	-	-
+generated	g343	refused	errorNotAdmitted@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g344	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g345	refused	requestNotSubtype@.	-	-
+generated	g346	refused	predicateNotBool@.	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g347	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g348	refused	errorNotAdmitted@0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g349	refused	requestNotSubtype@1	-	-
+generated	g350	refused	notFiber@0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g351	refused	term@0	-	-
+generated	g352	admitted	-	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.handle "Context.Context<unknown>" error=Effect4.Program.Ty.never requires=[]
+generated	g353	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.bool) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.bool) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g354	refused	requestNotSubtype@0.0.0.0	-	-
+generated	g355	refused	term@0	-	-
+generated	g356	refused	requestNotSubtype@.	-	-
+generated	g357	refused	term@0.0	-	-
+generated	g358	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g359	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g360	refused	term@0.0	-	-
+generated	g361	refused	requestNotSubtype@1	-	-
+generated	g362	refused	scopeExpected@0.0.0.0	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g363	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g364	refused	term@0.0	-	-
+generated	g365	refused	errorNotAdmitted@0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g366	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g367	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[0/0]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[0/0]
+generated	g368	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g369	admitted	-	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]
+generated	g370	refused	predicateNotBool@.	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g371	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g372	refused	listOfFibersExpected@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g373	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g374	refused	predicateNotBool@.	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g375	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+generated	g376	refused	cause@2.0.0.0.0.0.0	-	-
+generated	g377	refused	term@0.0	-	-
+generated	g378	refused	valueNotSubtype@0.0.0	-	-
+generated	g379	refused	requestNotSubtype@0.0.0.0.0.0.0	-	-
+generated	g380	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g381	refused	term@.	-	-
+generated	g382	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.never requires=[]
+generated	g383	refused	notFiber@0.0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g384	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+generated	g385	refused	term@.	-	-
+generated	g386	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+generated	g387	refused	cause@0.0.0.1	-	-
+generated	g388	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[7/4]
+generated	g389	refused	predicateNotBool@0.0.0.0.0	Effect4.Program.Ty.string	Effect4.Program.Ty.string
+generated	g390	admitted	-	answer=Effect4.Program.Ty.union (Effect4.Program.Ty.unit) (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.handle "Context.Context<unknown>") (Effect4.Program.Ty.never)) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.union (Effect4.Program.Ty.unit) (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.handle "Context.Context<unknown>") (Effect4.Program.Ty.never)) error=Effect4.Program.Ty.never requires=[]
+generated	g391	refused	listOfFibersExpected@0.0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g392	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g393	refused	notFiber@1.0	Effect4.Program.Ty.unit	Effect4.Program.Ty.unit
+generated	g394	refused	notFiber@0	Effect4.Program.Ty.nat	Effect4.Program.Ty.nat
+generated	g395	refused	requestNotSubtype@.	-	-
+generated	g396	admitted	-	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+generated	g397	refused	errorNotAdmitted@.	Effect4.Program.Ty.bool	Effect4.Program.Ty.bool
+generated	g398	refused	cause@0.0.0	-	-
+generated	g399	refused	term@0.0.0.0.0	-	-
+truth	p42	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pBind	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pFork	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+truth	pAwait	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.nat requires=[]
+truth	pGen	admitted	-	answer=Effect4.Program.Ty.bool error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.bool error=Effect4.Program.Ty.never requires=[]
+truth	pLoop	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+truth	pCatch	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+truth	pScope	admitted	-	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.unit error=Effect4.Program.Ty.never requires=[]
+truth	pTwo	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never) error=Effect4.Program.Ty.never requires=[]
+truth	pAcquire	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pAcquireClosed	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pProvide	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pProvideMerge	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pProvideTwice	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pDiamond	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pMergeAll	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pAcquireHandle	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.handle "Host.Resource") (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.handle "Host.Resource") (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pFailTagged	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "SqlError") (Effect4.Program.Ty.lit "boom") requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "SqlError") (Effect4.Program.Ty.lit "boom") requires=[]
+truth	pSqlite	admitted	-	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string))) error=Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string) requires=[]	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string))) error=Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string) requires=[]
+truth	pKv	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.option (Effect4.Program.Ty.string)) (Effect4.Program.Ty.bool) error=Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string) requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.option (Effect4.Program.Ty.string)) (Effect4.Program.Ty.bool) error=Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string) requires=[]
+truth	pSqlFail	admitted	-	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string))) error=Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string) requires=[]	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string))) error=Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string) requires=[]
+truth	pSqlCatch	admitted	-	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.string error=Effect4.Program.Ty.never requires=[]
+truth	pSqlExit	admitted	-	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string)))) (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string)) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.exitOf (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string)))) (Effect4.Program.Ty.prod (Effect4.Program.Ty.string) (Effect4.Program.Ty.string)) error=Effect4.Program.Ty.never requires=[]
+truth	pSqlOrDie	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pFailText	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.string requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.string requires=[]
+truth	pFailBoomText	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.string requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.string requires=[]
+truth	pTextOrDie	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pCatchError	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pCatchIfHit	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.nat requires=[]
+truth	pCatchIfMiss	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.nat requires=[]
+truth	pCatchIfRetained	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pTagHit	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.union (Effect4.Program.Ty.string) (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "A") (Effect4.Program.Ty.lit "m")) requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.union (Effect4.Program.Ty.string) (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "A") (Effect4.Program.Ty.lit "m")) requires=[]
+truth	pTagMiss	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.union (Effect4.Program.Ty.string) (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "A") (Effect4.Program.Ty.lit "m")) requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.union (Effect4.Program.Ty.string) (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "A") (Effect4.Program.Ty.lit "m")) requires=[]
+truth	pTagTwoFail	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.union (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "A") (Effect4.Program.Ty.lit "m")) (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "B") (Effect4.Program.Ty.lit "x")) requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.union (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "A") (Effect4.Program.Ty.lit "m")) (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "B") (Effect4.Program.Ty.lit "x")) requires=[]
+truth	pOptionSome	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pOptionNone	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pFailPayload	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.record [("_tag", false, Effect4.Program.Ty.lit "NotFound"), ("id", false, Effect4.Program.Ty.nat)] requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.record [("_tag", false, Effect4.Program.Ty.lit "NotFound"), ("id", false, Effect4.Program.Ty.nat)] requires=[]
+truth	pTagPayload	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.record [("_tag", false, Effect4.Program.Ty.lit "NotFound"), ("id", false, Effect4.Program.Ty.nat)] requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.record [("_tag", false, Effect4.Program.Ty.lit "NotFound"), ("id", false, Effect4.Program.Ty.nat)] requires=[]
+truth	pInterruptEscape	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pFold	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pModifyFold	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pQueueOffer	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]
+truth	pRateRequest	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]
+truth	pDeferredGate	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]
+truth	pInterruptedWait	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pMaskWait	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.bool) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pMaskedRestore	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]
+truth	pLateSeen	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never)) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never)) error=Effect4.Program.Ty.never requires=[]
+truth	pQueueWake	admitted	-	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.nat error=Effect4.Program.Ty.never requires=[]
+truth	pQueueFull	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]
+truth	pQueueInterrupted	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pQueueMasked	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.nat] error=Effect4.Program.Ty.never requires=[]
+truth	pQueueOrder	admitted	-	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreProtectedJoined	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreScan	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.nat, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.nat, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreOvertake	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreBodiesJoined	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreInterrupted	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.nat, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)]] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.nat, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)]] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreIfAvailable	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.option (Effect4.Program.Ty.nat), Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.option (Effect4.Program.Ty.nat), Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.option (Effect4.Program.Ty.nat), Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.option (Effect4.Program.Ty.nat), Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreMasked	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)]] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)]] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreHandoff	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.nat) (Effect4.Program.Ty.nat) error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreProtected	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pSemaphoreBodies	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.tuple [Effect4.Program.Ty.nat, Effect4.Program.Ty.nat, Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat)], Effect4.Program.Ty.list (Effect4.Program.Ty.nat)] error=Effect4.Program.Ty.never requires=[]
+truth	pPoolReuse	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]
+truth	pPoolOrder	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]) (Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat])) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]) (Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat])) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]
+truth	pPoolWaiters	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]
+truth	pPoolLateWake	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]
+truth	pPoolWake	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]
+truth	pPoolMakeFails	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.option (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.bool, Effect4.Program.Ty.option (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]
+truth	pPoolCloseWaits	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.bool, Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]
+truth	pPoolWithdrawn	admitted	-	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.prod (Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat]]) (Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))) error=Effect4.Program.Ty.never requires=[]
+truth	pPoolClosed	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never), Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never), Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]
+truth	pPoolClosing	admitted	-	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never), Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.tuple [Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.exitOf (Effect4.Program.Ty.unit) (Effect4.Program.Ty.never), Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.bool, Effect4.Program.Ty.tuple [Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.list (Effect4.Program.Ty.nat), Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat], Effect4.Program.Ty.list (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))] error=Effect4.Program.Ty.never requires=[]
+control	joinNever	admitted	-	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]	answer=Effect4.Program.Ty.never error=Effect4.Program.Ty.nat requires=[]
+control	awaitNone	admitted	-	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never)) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.list (Effect4.Program.Ty.exitOf (Effect4.Program.Ty.never) (Effect4.Program.Ty.never)) error=Effect4.Program.Ty.never requires=[]
+control	joinsEntries	admitted	-	answer=Effect4.Program.Ty.map (Effect4.Program.Ty.string) (Effect4.Program.Ty.union (Effect4.Program.Ty.nat) (Effect4.Program.Ty.string)) error=Effect4.Program.Ty.never requires=[]	answer=Effect4.Program.Ty.map (Effect4.Program.Ty.string) (Effect4.Program.Ty.union (Effect4.Program.Ty.nat) (Effect4.Program.Ty.string)) error=Effect4.Program.Ty.never requires=[]
+control	joinEither	refused	notFiber@1	Effect4.Program.Ty.union (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.never))	Effect4.Program.Ty.union (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.nat) (Effect4.Program.Ty.never)) (Effect4.Program.Ty.fiberOf (Effect4.Program.Ty.string) (Effect4.Program.Ty.never))
