@@ -147,3 +147,90 @@ probe: a child with a region inside a region is interrupted inside the inner one
 region's exit hook logs the flag that it reads. Read the pin's `interruptible` and
 `uninterruptible` frames too (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts`).
 *Evidence:* the log on both builds, and the lines of the pin that the machine transcribes.
+
+## D. Trees and graphs: what Lean already has (the owner's probe of 2026-10-06, for Gemini)
+
+**Why.** The estate holds a few graphs with exact definitions. Each has a class, and the class
+decides what is cheap. The owner wants each graph labelled by its class in Lean, with the
+generic algorithms and their laws behind the label, so that a tool computes on demand and a
+gate reads the label. Nothing of this lands now: the probe finds what exists, so that no
+utility is written twice.
+
+**The graphs, with their anchors in the tree.**
+
+| Graph | Class (the coordinator's reading) | Anchors |
+| --- | --- | --- |
+| program syntax | an ordered tree over seven sorts, with addresses | `Eff` (`src/Effect4/Program/Eff.lean`); `Node` (`src/Effect4/Program/Node.lean`); `Node.child` (`src/Effect4/Program/NodeLenses.lean`); `at_`, `replaceAt` (`src/Effect4/Program/Refs.lean`); the generated folds (`src/Effect4/Program/Fold.lean`); `ArgF` (`src/Effect4/Program/LayerView.lean`) |
+| the checker's dependencies | acyclic: a child's environment reads its parent's and the answers of earlier siblings | `Checker.check` (`src/Effect4/Program/Checker.lean`); `HasTy` (`src/Effect4/Laws/Program/Typing/HasTy.lean`); `NodeHasTy.child_step` (`src/Effect4/Laws/Program/Typing/Replace.lean`) |
+| the type order | a preorder with joins; an eliminator is a lower adjoint | `Ty` (`src/Effect4/Program/TyCore.lean`); `UnionRule.lift` (`src/Effect4/Program/UnionRule.lean`); `Eliminator.adjoint` (`src/Effect4/Laws/Program/UnionRule.lean`); `src/Effect4/Laws/Program/TypeAlgebra.lean` |
+| type slices | subsets of sites under inclusion, with a monotone view | `Slice`, `SliceView`, `descend` (`src/Effect4/Laws/Slice/Lattice.lean`) |
+| a run under a tape | one path of commands, acting on the machine | `src/Effect4/Run/Tape.lean`; `tape_replays`, `tapeFrom_cut` (`src/Effect4/Laws/Run/Tape.lean`) |
+| the proof and import graphs | acyclic | `tools/ProofGraph/Plan.lean`; `tools/Tools/Architecture.lean`; `generated/semantics.md` |
+
+**Where to read.** The pinned sources only, and install nothing:
+
+- Lean 4.33.1: `~/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean` (`Init`, `Std`, `Lean`);
+- Batteries, aesop and the other packages of this tree: `.lake/packages/`;
+- a library that is no dependency (Mathlib, ProofWidgets, cslib, import-graph): read it on its
+  public repository, give the commit that you read, and mark it "not a dependency".
+
+The tree's trust rule bounds every candidate (`AGENTS.md`, "Trust"): no `partial`, `unsafe`,
+`extern` or `implemented_by` in the tree's own code, and every declaration within
+`[propext, Quot.sound]`. Say for each candidate which of these it would break.
+
+**D1. The inventory.** *Question:* for each graph of the table, what does each source offer:
+the data structure, its traversal functions, and its theorems? *Method:* read the sources;
+give each item by its name and its file. *Evidence:* one table per graph, with four columns
+for each item: it computes (`#eval` or compiled) or it is a `Prop` only; the axioms it
+reaches; whether it is in a dependency today; what of ours it would replace or state better.
+*Leads from the coordinator's memory, not verified, to confirm or to strike:* `Lean.SubExpr`
+and its `Pos` (an address in an expression as data); `Lean.Elab.InfoTree` with its contexts
+(the environment and the type at a source position); `Lean/Util/SCC.lean`; Lake's topological
+build with its cycle check; a red-black tree with a path type in Batteries; union-find in
+Batteries; in Mathlib, `Mathlib/Data/PFunctor` and W-types (an initial algebra with its fold),
+`GaloisConnection`, `OrderHom.lfp`, Kleene algebras, the tropical semiring, `SimpleGraph`
+with walks and the adjacency matrix, `Quiver`; in cslib, labelled transition systems.
+
+**D2. Lean's own precedent for a focus.** Lean answers "what stands at this position, in
+which context, at which type" for its own syntax. *Question:* how do `InfoTree`,
+`ContextInfo`, `SubExpr.Pos`, a goal as a typed hole, and the snapshot tree of incremental
+elaboration do it: which data they keep, which function answers one position, and what they
+reuse after an edit? *Evidence:* the declarations by name and file, and for each the nearest
+thing of ours (`Node.at_`, the replacement law, a sketch's hole, a hole table). Say which
+design choice of Lean's we should copy, and which does not fit first-order program data.
+
+**D3. One pass that answers every address.** A fold gives a value at the root. A tool wants
+the value at every node, and the environment that each node was checked in. *Question:* does
+a pinned source hold a generic form of that: a fold that returns the tree with its
+annotations, an accumulation down a path, a zipper with laws, or a cached traversal of a
+shared structure? *Evidence:* each candidate with its type, its laws, and whether its cache
+is pure or rests on `unsafe` or pointer equality. Say what `Lean.Meta.transform` and the
+caches of `Lean.Expr` traversals do, and whether a pure version exists.
+
+**D4. The algebra of the orders.** *Question:* which source states, with computable
+instances: a join-semilattice and its homomorphisms; a Galois connection; a least fixed
+point of a monotone map; a closed semiring or a Kleene algebra with its star; a matrix over a
+semiring with a theorem that relates its powers to walks; the max-plus semiring? *Evidence:*
+for each, the file, whether the instances compute, and the axioms. Then one paragraph: can
+the statement that we need be written in our tree with no new dependency, as
+`UnionRule.lift_unique` is?
+
+**D5. A label that a gate reads.** *Question:* what is the lightest Lean interface that says
+"this relation is a tree", "this relation is acyclic" or "this map is monotone", with the
+generic function that the label unlocks and its one theorem? Compare three forms on a small
+example of ours, not compiled: recursion on a rank (a `Nat` that each edge lowers), `WellFounded.fix`
+on the edge relation, and a list in topological order. Say which reduces under `decide` and
+`rfl` in the kernel, since our batteries use both. *Evidence:* the three forms side by side,
+with what each costs a proof and a run.
+
+**D6. Compute on a click.** *Question:* what does it take to show one of our graphs with an
+action that calls a Lean function only when the reader asks: in the editor (`Lean/Widget`,
+an RPC method, a widget module; ProofWidgets as an outside candidate), and outside it,
+through the JSON forms that the tree already writes (`ts/eff/json.gen.ts`,
+`ts/eff/wire.gen.ts`, the drivers under `tools/Drivers/`)? *Evidence:* the smallest working
+shape for each of the two, as a list of declarations and files, with what the tree lacks.
+State no design of a server.
+
+**The relay.** One page: the three findings that change what we build first, each with its
+evidence label; then the tables. Mark every statement as read only, and every name that you
+did not open in a source as "not found" with what you searched.
