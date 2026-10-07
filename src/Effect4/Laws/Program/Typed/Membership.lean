@@ -4416,17 +4416,4 @@ theorem fits_tagPayload {w : World} {c : Ty} {v p : Val} {tag : String} {P : Ty}
     rw [fits_normalize, fits_ofMembers]
     exact ⟨q, hmem, hq⟩
 
-/-- The checker's fiber-handle reading (`fiberTy`, `Typing/Rules.lean:184`) answers only at a
-fiber handle type: the one case analysis on `Ty` the fiber rows of M5's denotation lemma need
-(awaitFiber, runIn, the interrupts, awaitAll, awaitAllFailFast; `Typed/Denotation.lean`).
-`Typing/CheckInversion.lean:32-38` holds the same shape lemma for `listOf?` and `exitOf?`; a
-later cleanup moves the three beside each other. -/
-theorem fiberTy_eq_some {t : Ty} {pair : Ty × Ty} (h : fiberTy t = some pair) :
-    t = .fiberOf pair.1 pair.2 := by
-  cases t with
-  | fiberOf a e =>
-    cases h
-    rfl
-  | _ => nomatch h
-
 end Effect4.Program.Typed

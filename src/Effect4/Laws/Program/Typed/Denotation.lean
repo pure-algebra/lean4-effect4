@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.Seq
 import Effect4.Laws.Program.Typing.CheckInversion
+import Effect4.Laws.Program.Eliminators
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.Admit
 
@@ -1563,11 +1564,13 @@ end CatchIfArm
 `awaitFiber` and the sixteen fiber actions (`withFiber`). An action's node is resolved by
 `actionAt` (`Program/Compile.lean`), which reads the action's terms at the point; every branch it
 refuses is excluded by term progress at the checker's types, since the refusal's pre is `False`
-(`fiberPre`). A fiber handle's type is read through `fiberTy_eq_some` (`Typed/Membership.lean`,
-row 132), a value at it through `fiber_of_fits`, and a list of fibers as `actionAt` decodes one
-(`fibers_of_fits`). The rows whose entries compare in raw `Ty.sub` (`awaitAll`, `awaitAllFailFast`,
-`raceAll`; decisions row 137) are met at a raw union of the declared columns, which lies below the
-checker's columns in its order (`unionFold_subN`). -/
+(`fiberPre`). A fiber handle's type is read through the upper form of the fiber rule
+(`fiberTy_upper`, `src/Effect4/Laws/Program/Eliminators.lean`): a value at the handle's type
+moves up to the fiber type of the rule's answer (`fits_subN`). A value at a fiber type is read
+through `fiber_of_fits`, and a list of fibers as `actionAt` decodes one (`fibers_of_fits`). The
+rows whose entries compare in raw `Ty.sub` (`awaitAll`, `awaitAllFailFast`, `raceAll`; decisions
+row 137) are met at a raw union of the declared columns, which lies below the checker's columns
+in its order (`unionFold_subN`). -/
 
 /-! ### Fiber handles, views and raw unions -/
 
@@ -1624,6 +1627,18 @@ theorem subN_exitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e 
   rw [Ty.sub_args_exitOf]
   simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
     List.all_nil, Bool.and_true, ha, he]
+
+/-- The checker's order on list types is the order on their element types: the list
+constructor keeps the order. A step of the claim `denote-typed`. Its consumer is each fiber arm
+that reads a list of handles: the fiber rule's upper form is at the element type
+(`interruptAll_arm`, `awaitAll_arm`, `awaitAllFailFast_arm`). -/
+theorem subN_list {a b : Ty} (below : Ty.subN a b = true) :
+    Ty.subN (.list a) (.list b) = true := by
+  unfold Ty.subN at below
+  show Ty.sub (.list a.normalize) (.list b.normalize) = true
+  rw [Ty.sub_args_list]
+  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+    List.all_nil, Bool.and_true, below]
 
 /-- The checker's order on lists of exits is the order on the exits' columns. -/
 theorem subN_listExitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) :
@@ -1804,7 +1819,7 @@ section FiberArms
 
 variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy}
 
-/-- **`awaitFiber`**: the target is a fiber handle (`fiberTy_eq_some`, term progress); a completed
+/-- **`awaitFiber`**: the target is a fiber handle (`fiberTy_upper`, term progress); a completed
 target answers from the view, which is typed at its declared type (row 175); a running one is the
 await row, whose post answers at the declared type, below the handle's columns
 (`await_fits`; by value, `subN_exitOf`). -/
@@ -1818,8 +1833,8 @@ theorem awaitFiber_arm {t : Term} {mode : Supervision.ObserverMode} (hfuel : p.f
   cases mode with
   | joinEffect =>
     obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_join _ _ _ _ _ hcheck
-    rw [fiberTy_eq_some hfib] at hty
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+    replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
     obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
     rw [hv]
     show TypedProg root w _ (match p.awaitExit ⟨index⟩ .joinEffect with
@@ -1840,8 +1855,8 @@ theorem awaitFiber_arm {t : Term} {mode : Supervision.ObserverMode} (hfuel : p.f
         exact .pure ⟨await_fits hfit o hΓ' hex.1 _, hex.2⟩
   | awaitValue =>
     obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_await _ _ _ _ _ hcheck
-    rw [fiberTy_eq_some hfib] at hty
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+    replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
     obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
     rw [hv]
     show TypedProg root w _ (match p.awaitExit ⟨index⟩ .awaitValue with
@@ -1946,8 +1961,8 @@ theorem runIn_arm {target scope : Term}
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, hscope, rfl⟩ :=
     Checker.inv_action_runIn _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  rw [fiberTy_eq_some hfib] at hty
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hΓ, -, -⟩ := fiber_of_fits hfit
   obtain ⟨u, hu, hufit⟩ := evalTerm_progress_env henv hscope
   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hufit
@@ -1972,8 +1987,8 @@ theorem interrupt_arm {target : Term}
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
     Checker.inv_action_interrupt _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  rw [fiberTy_eq_some hfib] at hty
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hdecl, -⟩ := fiber_of_fits hfit
   have hact : actionAt root.program p = some (WithFiberAction.interrupt ⟨index⟩) := by
     unfold actionAt
@@ -1995,8 +2010,8 @@ theorem interruptScoped_arm {target : Term}
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
     Checker.inv_action_interruptScoped _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  rw [fiberTy_eq_some hfib] at hty
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+  replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
   obtain ⟨index, rfl, fty, hdecl, -⟩ := fiber_of_fits hfit
   have hact : actionAt root.program p = some (WithFiberAction.interruptScoped ⟨index⟩) := by
     unfold actionAt
@@ -2031,8 +2046,8 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
   cases who with
   | none =>
     obtain ⟨inner, pair, hts, hfib, rfl⟩ := Checker.inv_action_interruptAll_self _ _ _ _ _ hc
-    rw [fiberTy_eq_some hfib] at hts
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
     obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
         some (WithFiberAction.interruptAll ids none) ∧
           ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
@@ -2058,8 +2073,8 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
       (fun w' _ ans post => unitAnswer_typed root post)
   | some who =>
     obtain ⟨inner, pair, hts, hfib, hwho, rfl⟩ := Checker.inv_action_interruptAll_by _ _ _ _ _ _ hc
-    rw [fiberTy_eq_some hfib] at hts
     obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+    replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
     obtain ⟨n, hn, hnfit⟩ := evalTerm_progress_env henv hwho
     obtain ⟨m, rfl⟩ := fits_nat_inv hnfit
     obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
@@ -2096,8 +2111,8 @@ theorem awaitAll_arm {targets : Term}
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨inner, pair, hts, hfib, rfl⟩ :=
     Checker.inv_action_awaitAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  rw [fiberTy_eq_some hfib] at hts
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
   obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
       some (WithFiberAction.awaitAll ids) ∧
         ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
@@ -2133,8 +2148,8 @@ theorem awaitAllFailFast_arm {targets : Term}
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨inner, pair, hts, hfib, rfl⟩ :=
     Checker.inv_action_awaitAllFailFast _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
-  rw [fiberTy_eq_some hfib] at hts
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hts
+  replace hfit := fits_subN w (subN_list (fiberTy_upper hfib)) v hfit
   obtain ⟨ids, hact, hdecl⟩ : ∃ ids, actionAt root.program p =
       some (WithFiberAction.awaitAllFailFast ids) ∧
         ∀ id ∈ ids, Fits w (Val.fiber id) (.fiberOf pair.1 pair.2) := by
@@ -3293,16 +3308,16 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       cases mode with
       | joinEffect =>
         obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_join _ _ _ _ _ hcheck
-        rw [fiberTy_eq_some hfib] at hty
         obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+        replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
         obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
         simp only [hv] at hinline
         obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_join hinline
         exact view_exitOk hview hmem hid hdecl _
       | awaitValue =>
         obtain ⟨handle, pair, hty, hfib, rfl⟩ := Checker.inv_awaitFiber_await _ _ _ _ _ hcheck
-        rw [fiberTy_eq_some hfib] at hty
         obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
+        replace hfit := fits_subN w (fiberTy_upper hfib) v hfit
         obtain ⟨index, rfl, hdecl⟩ := fiber_of_fits hfit
         simp only [hv] at hinline
         obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_value hinline

@@ -400,10 +400,33 @@ def genAnswer (g : GenTy) : Ty :=
 
 end GenTy
 
-/-- The fiber handle a term must denote. -/
-def fiberTy : Ty → Option (Ty × Ty)
+/-! ## The member rules of the converted eliminators
+
+A rule of the checker that reads a type by one constructor is converted to the extended rule of
+its member rule (`UnionRule.extend`, `src/Effect4/Program/UnionRule.lean`; candidate N,
+decisions rows 285 and 292 to 294). The member rule is the by-shape function that the rule was
+before: it reads the head of the raw type, at one union member. The namespace `Member` holds
+the member rule of each converted rule, and the rule keeps its own name. The facts of a member
+rule are in `src/Effect4/Laws/Program/Eliminators.lean`, in one section for each rule. -/
+
+namespace Member
+
+/-- The member rule of the fiber rule: the value type and the error type of one fiber type, by
+the head of the raw type. It refuses `never` and every union. It is the function that `fiberTy`
+was before its conversion. -/
+def fiber : Ty → Option (Ty × Ty)
   | .fiberOf value error => some (value, error)
   | _ => none
+
+end Member
+
+/-- **The fiber rule**: the value type and the error type of the fiber handle that a term must
+denote. It is the extended rule of `Member.fiber`. At a raw fiber type it answers the two
+columns, as the member rule does. At `never` it answers `never` twice. At a raw union whose
+normal form is one fiber type it answers that type's columns: a union with `never`, or a union
+of two fiber types with one below the other. It refuses every other type, and a union of two
+fiber types with no order is one (decisions row 292). -/
+def fiberTy : Ty → Option (Ty × Ty) := UnionRule.extend Member.fiber
 
 /-! ## The tag residual of `catchIf` (DI-39, DI-17; part 4 commit 3, 2026-09-12)
 

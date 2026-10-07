@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
 import Effect4.Laws.Program.Typing.TermIntro
 import Effect4.Program.Checker
 import Effect4.Program.Native
@@ -22,21 +23,23 @@ Green controls:
 Red controls, each red for its stated reason:
 
 - a member rule that is not monotone in the order, whose lifted rule is not;
-- `fiberTy` at a union of two fiber types, and at `never`: it refuses both today, as a function
-  and in the checker. The control records the present behaviour for the conversion that changes
-  it;
+- `Member.fiber`, the member rule of the fiber rule, at a union of two fiber types and at
+  `never`: it refuses both, because it reads one union member. Its lifted rule answers both;
 - the upper form in raw `Ty.sub`, at a target that is not its own normal form;
 - the field read against a record of one field: the order has no width rule, so the field read
   has no upper form;
 - a member rule that answers an open type, whose lifted rule does not keep closed types closed;
 - the cause rule against `Eliminator`: it reads two heads (`causeInput_no_eliminator`).
 
-The last sections give `fiberTy` and `Checker.listOf?` as instances of `Eliminator`, each as a
-member rule, and a finite probe of the cause rule's upper form. Then the adjoint form at
-`fiberTy`, the join law at `Checker.listOf?` with its red control, and uniqueness at its consumer:
-`Tuple.typeAt` is the lifted projection (`typeAt_eq_lift`).
+The last sections give the order laws of the lifted `Member.fiber` by projection of its instance
+(`Member.fiber_eliminator`, `src/Effect4/Laws/Program/Eliminators.lean`), `Checker.listOf?` as
+an instance of `Eliminator`, and a finite probe of the cause rule's upper form. Then the adjoint
+form at `Member.fiber`, the join law at `Checker.listOf?` with its red control, and uniqueness at
+its consumer: `Tuple.typeAt` is the lifted projection (`typeAt_eq_lift`).
 
-The battery converts no rule of the checker.
+The battery converts no rule of the checker. The fiber rule is converted
+(`fiberTy`, `src/Effect4/Program/Typing/Rules.lean`), and its controls, with those of the guard
+and of the extended rule, are in `Test/Program/Eliminators.lean`.
 -/
 
 set_option autoImplicit false
@@ -128,27 +131,24 @@ theorem stringOnly_not_below : ¬ Below stringOnly stringOnly := by
 #guard lift stringOnly .string = some .nat
 #guard lift stringOnly (.lit "a") = none
 
-/-! ## Red: `fiberTy` refuses a union of two fiber types today -/
+/-! ## Red: a member rule refuses a union and `never`, and its lifted rule answers
+
+`Member.fiber` is the member rule of the checker's fiber rule
+(`src/Effect4/Program/Typing/Rules.lean`). It reads one fiber type, and it answers a pair. -/
 
 /-- A union of two fiber types, as a term's type. -/
 def twoFibers : Ty := .union (.fiberOf .nat .never) (.fiberOf .string .bool)
 
--- The by-shape rule, as a function: it refuses the union, its normal form and `never`.
-#guard fiberTy twoFibers = none
-#guard fiberTy twoFibers.normalize = none
-#guard fiberTy .never = none
-
--- The checker today: a join of a handle of that type is refused, as no fiber. So is `never`.
-#guard explain nativeSignature [twoFibers] (.awaitFiber (.var 0) .joinEffect) =
-  some ⟨[], .notFiber twoFibers⟩
-#guard explain nativeSignature [.never] (.awaitFiber (.var 0) .joinEffect) =
-  some ⟨[], .notFiber .never⟩
+-- The member rule, as a function: it refuses the union, its normal form and `never`.
+#guard Member.fiber twoFibers = none
+#guard Member.fiber twoFibers.normalize = none
+#guard Member.fiber .never = none
 
 -- The same member rule, lifted: the pair of the joined columns, and the least pair at `never`.
--- No rule of the checker reads it.
-#guard lift fiberTy twoFibers = some (.union .nat .string, .bool)
-#guard lift fiberTy .never = some (.never, .never)
-#guard lift fiberTy (.union (.fiberOf .nat .never) .nat) = none
+-- One member that is no fiber type refuses the target.
+#guard lift Member.fiber twoFibers = some (.union .nat .string, .bool)
+#guard lift Member.fiber .never = some (.never, .never)
+#guard lift Member.fiber (.union (.fiberOf .nat .never) .nat) = none
 
 /-! ## Red: the upper form in raw `Ty.sub`, and the field read -/
 
@@ -158,7 +158,7 @@ def rawFiber : Ty := .fiberOf (.prod (.union .nat .string) .unit) .never
 
 -- The lifted rule answers there. The target is below the answer's fiber type in the checker's
 -- order, and not in raw `Ty.sub`: raw `sub` never distributes a product over a union.
-#guard lift fiberTy rawFiber = some (.union (.prod .nat .unit) (.prod .string .unit), .never)
+#guard lift Member.fiber rawFiber = some (.union (.prod .nat .unit) (.prod .string .unit), .never)
 #guard Ty.subN rawFiber (.fiberOf (.union (.prod .nat .unit) (.prod .string .unit)) .never)
 #guard !Ty.sub rawFiber (.fiberOf (.union (.prod .nat .unit) (.prod .string .unit)) .never)
 
@@ -171,18 +171,18 @@ def rawFiber : Ty := .fiberOf (.prod (.union .nat .string) .unit) .never
 /-! ## Green and red: closed types -/
 
 /-- A fiber type that is closed has closed columns: the member fact of `lift_closed_pair`. -/
-theorem fiberTy_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
-    (answered : fiberTy m = some a) : a.1.closed = true ∧ a.2.closed = true := by
+theorem fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
+    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true := by
   cases m with
   | fiberOf value error =>
     cases answered
     exact Bool.and_eq_true_iff.mp closed
   | _ => exact nomatch answered
 
-/-- The lifted `fiberTy` answers closed columns at a closed target. -/
-theorem lift_fiberTy_closed {t : Ty} {a : Ty × Ty} (typed : lift fiberTy t = some a)
+/-- The lifted `Member.fiber` answers closed columns at a closed target. -/
+theorem lift_fiber_closed {t : Ty} {a : Ty × Ty} (typed : lift Member.fiber t = some a)
     (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true :=
-  lift_closed_pair (fun _ _ closed answered => fiberTy_closed closed answered) typed closed
+  lift_closed_pair (fun _ _ closed answered => fiber_closed closed answered) typed closed
 
 /-- A list type that is closed has a closed element type: the member fact of `lift_closed`. -/
 theorem listOf_closed {m a : Ty} (closed : m.closed = true)
@@ -206,62 +206,30 @@ def openAnswer (member : Ty) : Option Ty := if member = .string then some (.var 
 #guard lift openAnswer .string = some (.var 0)
 #guard !(Ty.var 0).closed
 
-/-! ## The eliminator of one constructor: two by-shape rules as member rules
+/-! ## The eliminator of one constructor: the order laws by projection
 
-`fiberTy` and `Checker.listOf?` are instances of `UnionRule.Eliminator`, each from three facts.
-The order laws of their lifted rules follow by projection. No rule of the checker is converted:
-the instances show what a conversion owes. -/
+`Member.fiber` is an instance of `UnionRule.Eliminator`
+(`Member.fiber_eliminator`, `src/Effect4/Laws/Program/Eliminators.lean`), and the order laws of
+its lifted rule follow by projection. `Checker.listOf?` is an instance too, from the same three
+facts. It is not converted: its instance here shows what its conversion owes. -/
 
-/-- The fiber type of a pair of columns: the constructor that `fiberTy` reads. -/
-def fiberOfPair (pair : Ty × Ty) : Ty := .fiberOf pair.1 pair.2
-
-/-- The checker's order on fiber types is the order on their columns. -/
-theorem subN_fiberOf_iff (a e a' e' : Ty) :
-    Ty.subN (.fiberOf a e) (.fiberOf a' e') = true ↔
-      Ty.subN a a' = true ∧ Ty.subN e e' = true := by
-  show Ty.sub (.fiberOf a.normalize e.normalize) (.fiberOf a'.normalize e'.normalize) = true ↔ _
-  rw [Ty.sub_args_fiberOf]
-  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
-    List.all_nil, Bool.and_true, Bool.and_eq_true, Ty.subN]
-
-/-- **`fiberTy` is the eliminator of the fiber constructor**, as a member rule. -/
-theorem fiberTy_eliminator : Eliminator fiberTy fiberOfPair where
-  shape {m a} answered := by
-    cases m with
-    | fiberOf value error =>
-      cases answered
-      rfl
-    | _ => exact nomatch answered
-  embeds := subN_fiberOf_iff _ _ _ _
-  reads {m b} normal member below := by
-    have raw : Ty.sub m (.fiberOf b.1.normalize b.2.normalize) = true := by
-      have h := below
-      unfold Ty.subN at h
-      rw [normal.fixed] at h
-      exact h
-    rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
-    cases m with
-    | fiberOf value error => exact ⟨(value, error), rfl⟩
-    | _ => exact nomatch raw.1
-
-/-- The upper form at the lifted `fiberTy`: the statement that takes the place of the equation
-`fiberTy_eq_some` (`src/Effect4/Laws/Program/Typed/Membership.lean`) at the conversion. -/
-theorem lift_fiberTy_upper {t : Ty} {pair : Ty × Ty} (typed : lift fiberTy t = some pair) :
+/-- The upper form at the lifted `Member.fiber`: a target that it answers is below the fiber
+type of the answer. -/
+theorem lift_fiber_upper {t : Ty} {pair : Ty × Ty} (typed : lift Member.fiber t = some pair) :
     Ty.subN t (.fiberOf pair.1 pair.2) = true :=
-  fiberTy_eliminator.lift_upper typed
+  Member.fiber_eliminator.lift_upper typed
 
-/-- The lifted `fiberTy` answers the least pair of columns. -/
-theorem lift_fiberTy_least {t : Ty} {pair b : Ty × Ty} (typed : lift fiberTy t = some pair)
+/-- The lifted `Member.fiber` answers the least pair of columns. -/
+theorem lift_fiber_least {t : Ty} {pair b : Ty × Ty} (typed : lift Member.fiber t = some pair)
     (upper : Ty.subN t (.fiberOf b.1 b.2) = true) :
     Ty.subN pair.1 b.1 = true ∧ Ty.subN pair.2 b.2 = true :=
-  fiberTy_eliminator.lift_least typed upper
+  Member.fiber_eliminator.lift_least typed upper
 
-/-- The lifted `fiberTy` is monotone in the checker's order. -/
-theorem lift_fiberTy_mono {s t : Ty} (smaller : Ty.subN s t = true) {b : Ty × Ty}
-    (typed : lift fiberTy t = some b) :
-    ∃ a, lift fiberTy s = some a ∧ Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true :=
-  fiberTy_eliminator.lift_mono smaller typed
+/-- The lifted `Member.fiber` is monotone in the checker's order. -/
+theorem lift_fiber_mono {s t : Ty} (smaller : Ty.subN s t = true) {b : Ty × Ty}
+    (typed : lift Member.fiber t = some b) :
+    ∃ a, lift Member.fiber s = some a ∧ Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true :=
+  Member.fiber_eliminator.lift_mono smaller typed
 
 /-- **`Checker.listOf?` is the eliminator of the list constructor**, as a member rule. -/
 theorem listOf_eliminator : Eliminator Checker.listOf? Ty.list where
@@ -320,14 +288,15 @@ def causeUpper (error : Ty) : Ty := .union (.causeOf error) (.exitOf .unknown er
 
 /-! ## The adjoint form, the join law and uniqueness -/
 
-/-- The lifted `fiberTy` answers exactly at the targets below a fiber type, and its answer is
-the least pair of columns: the adjoint form at the fiber constructor. -/
-theorem lift_fiberTy_adjoint (t : Ty) :
-    ((lift fiberTy t).isSome = true ↔ ∃ b : Ty × Ty, Ty.subN t (.fiberOf b.1 b.2) = true) ∧
-    ∀ {a : Ty × Ty}, lift fiberTy t = some a → ∀ b : Ty × Ty,
+/-- The lifted `Member.fiber` answers exactly at the targets below a fiber type, and its answer
+is the least pair of columns: the adjoint form at the fiber constructor. -/
+theorem lift_fiber_adjoint (t : Ty) :
+    ((lift Member.fiber t).isSome = true ↔
+      ∃ b : Ty × Ty, Ty.subN t (.fiberOf b.1 b.2) = true) ∧
+    ∀ {a : Ty × Ty}, lift Member.fiber t = some a → ∀ b : Ty × Ty,
       (Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true) ↔
         Ty.subN t (.fiberOf b.1 b.2) = true :=
-  fiberTy_eliminator.adjoint t
+  Member.fiber_eliminator.adjoint t
 
 /-- The lifted `Checker.listOf?` at a union is the join of its answers at the two sides. -/
 theorem lift_listOf_union (s t : Ty) :
