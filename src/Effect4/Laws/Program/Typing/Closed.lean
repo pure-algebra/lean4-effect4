@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Laws.Program.References
+import Effect4.Laws.Program.PathFold
 import Effect4.Laws.Program.UnionRule
 import Effect4.Program.Admission
 import Effect4.Laws.Auto.Semantics
