@@ -110,18 +110,3 @@ example (e : Expr) (fs : Fields) (ns : List String) (vs : List Expr)
   readRecord_exact e fs ns vs h
 
 end Effect4.Test.Record
-
-#print axioms TypeScript.TypeRef.beq
-#print axioms TypeScript.TypeRef.beq_iff
-#print axioms TypeScript.TypeRef.beq_self
-#print axioms Effect4.Codegen.Record.writeRecord
-#print axioms Effect4.Codegen.Record.readRecord
-#print axioms Effect4.Codegen.Record.readRecord_size
-#print axioms Effect4.Codegen.Record.readField_size
-#print axioms Effect4.Codegen.Record.readRecord_writeRecord
-#print axioms Effect4.Codegen.Record.readRecord_exact
-#print axioms Effect4.Codegen.Record.readField_writeField
-#print axioms Effect4.Codegen.Record.readField_exact
-#print axioms Effect4.Codegen.Record.readSet_size
-#print axioms Effect4.Codegen.Record.readSet_writeSet
-#print axioms Effect4.Codegen.Record.readSet_exact

@@ -19,8 +19,7 @@ the hint that a step sets.
 
 Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
 requirement R10, a part of the proposed claim `queue-expansion-agrees`). A state outside the
-universe, another table and another message type are not checked. The pinned axiom and plan
-outputs follow the controls.
+universe, another table and another message type are not checked.
 -/
 
 set_option autoImplicit false
@@ -237,105 +236,5 @@ example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint :
   takeStep_agrees A tb msg s id hint profile requested injective rfl
     (captured_var rfl rfl rfl) (captured_var (x := "hint") rfl rfl rfl)
     (captured_var (x := "s") rfl rfl rfl).atScope
-
-/-- info: 'Effect4.Modules.captured_var' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms captured_var
-
-/-! ## The pinned outputs
-
-Each proved statement's axioms, and its standing as the plan derives it from the proof. A step
-goal that is still planned has no pin here: the goal gate counts it. The counts are of this
-battery's tree, which holds no step of a proof: the steps are in the law graph. -/
-
-/-- info: 'Effect4.Modules.step_updates' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms step_updates
-
-/-- info: 'Effect4.Modules.step_keeps_cell' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms step_keeps_cell
-
-/-- info: 'Effect4.Modules.cell_read' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms cell_read
-
-/-- info: 'Effect4.Queue.Model.sizeStep_agrees' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms sizeStep_agrees
-
-/--
-info: Effect4.Queue.Model.sizeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status sizeStep_agrees
-
-/-- info: 'Effect4.Queue.Model.withdrawTake_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms withdrawTake_agrees
-
-/--
-info: Effect4.Queue.Model.withdrawTake_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status withdrawTake_agrees
-
-/-- info: 'Effect4.Queue.Model.withdrawOffer_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms withdrawOffer_agrees
-
-/--
-info: Effect4.Queue.Model.withdrawOffer_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status withdrawOffer_agrees
-
-/-- info: 'Effect4.Queue.Model.offerStep_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms offerStep_agrees
-
-/--
-info: Effect4.Queue.Model.offerStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status offerStep_agrees
-
-/-- info: 'Effect4.Queue.Model.pollStep_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms pollStep_agrees
-
-/--
-info: Effect4.Queue.Model.pollStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status pollStep_agrees
-
-/-- info: 'Effect4.Queue.Model.takeStep_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms takeStep_agrees
-
-/--
-info: Effect4.Queue.Model.takeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status takeStep_agrees
-
--- The six statements as one: the witness of the proposed claim `queue-steps-agree`.
-/-- info: 'Effect4.Queue.Model.queue_steps_agree' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms queue_steps_agree
-
-/--
-info: Effect4.Queue.Model.queue_steps_agree: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status queue_steps_agree
 
 end Test.Program.QueueRelation

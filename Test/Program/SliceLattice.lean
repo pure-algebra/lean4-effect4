@@ -2,10 +2,10 @@ import Effect4.Laws.Slice.Lattice
 import ProofGraph.Plan
 
 /-!
-# The generic theory of type slices: its pinned outputs, the paper's examples, the red controls
+# The generic theory of type slices: the paper's examples, the red controls
 
-The statements and their proofs are in `src/Effect4/Laws/Slice/Lattice.lean`. This battery pins
-each statement's axioms and its plan status. It then holds one instance, a toy: a term with holes
+The statements and their proofs are in `src/Effect4/Laws/Slice/Lattice.lean`. This battery
+holds one instance, a toy: a term with holes
 over types with a gap, with sliced assumptions. The toy owes one fact, its monotonicity
 (`synth_mono`). For the tree's two statements it owes a second one: a site under an omitted
 parent changes nothing (`toy_noop`). The toy renders the examples of Carroll, Madhavapeddy and Omar
@@ -37,117 +37,6 @@ statement of this battery is a law of the module.
 
 namespace Test.Program.SliceLattice
 open Effect4
-
-/-! ## The statements: their axioms and their plan status -/
-
-/-- info: 'Effect4.SliceView.valid_up' does not depend on any axioms -/
-#guard_msgs in
-#print axioms SliceView.valid_up
-
-/-- info: 'Effect4.SliceView.minimal_iff_drop' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.minimal_iff_drop
-
-/-- info: 'Effect4.SliceView.isMinimal_iff' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.isMinimal_iff
-
-/-- info: 'Effect4.SliceView.Minimal.needs' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.Minimal.needs
-
-/-- info: 'Effect4.SliceView.Minimal.keeps_above' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.Minimal.keeps_above
-
-/-- info: 'Effect4.SliceView.descend_sublist' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.descend_sublist
-
-/-- info: 'Effect4.SliceView.descend_minimal' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.descend_minimal
-
-/-- info: 'Effect4.SliceView.exists_minimal_below' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.exists_minimal_below
-
-/-- info: 'Effect4.SliceView.minimal_refine' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.minimal_refine
-
-/-- info: 'Effect4.SliceView.descend_eq_restart' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.descend_eq_restart
-
-/-- info: 'Effect4.SliceView.descend_asks' does not depend on any axioms -/
-#guard_msgs in
-#print axioms SliceView.descend_asks
-
-/-- info: 'Effect4.SliceView.valid_max' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.valid_max
-
-/-- info: 'Effect4.SliceView.contribution_lub' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.contribution_lub
-
-/-- info: 'Effect4.SliceView.contribution_valid' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.contribution_valid
-
-/-- info: 'Effect4.SliceView.ofOmitted_full' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.ofOmitted_full
-
-/-- info: 'Effect4.SliceView.descendTree_eq_descend' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.descendTree_eq_descend
-
-/-- info: 'Effect4.SliceView.descendTree_minimal' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.descendTree_minimal
-
-/-- info: 'Effect4.SliceView.descendTree_asks' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms SliceView.descendTree_asks
-
-/-- info: 'Effect4.SliceView.lattice_minimal' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms SliceView.lattice_minimal
-
--- The standing is derived from each proof. The counts are of this battery's tree, which holds no
--- step of a proof: the steps are in the law module.
-/--
-info: Effect4.SliceView.valid_up: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.minimal_iff_drop: proved; nearest [Effect4.SliceView.valid_up]; 0 lemmas, 0 definitions
-Effect4.SliceView.isMinimal_iff: proved; nearest [Effect4.SliceView.minimal_iff_drop]; 0 lemmas, 0 definitions
-Effect4.SliceView.Minimal.needs: proved; nearest [Effect4.SliceView.minimal_iff_drop]; 0 lemmas, 0 definitions
-Effect4.SliceView.Minimal.keeps_above: proved; nearest [Effect4.SliceView.Minimal.needs]; 0 lemmas, 0 definitions
-Effect4.SliceView.descend_sublist: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.descend_minimal: proved; nearest [Effect4.SliceView.minimal_iff_drop]; 0 lemmas, 0 definitions
-Effect4.SliceView.exists_minimal_below: proved; nearest [Effect4.SliceView.descend_minimal]; 0 lemmas, 0 definitions
-Effect4.SliceView.minimal_refine: proved; nearest [Effect4.SliceView.exists_minimal_below]; 0 lemmas, 0 definitions
-Effect4.SliceView.descend_eq_restart: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.descend_asks: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.valid_max: proved; nearest [Effect4.SliceView.valid_up]; 0 lemmas, 0 definitions
-Effect4.SliceView.contribution_lub: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.contribution_valid: proved; nearest [Effect4.SliceView.descend_minimal, Effect4.SliceView.contribution_lub, Effect4.SliceView.valid_up]; 0 lemmas, 0 definitions
-Effect4.SliceView.ofOmitted_full: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.descendTree_eq_descend: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.descendTree_minimal: proved; nearest [Effect4.SliceView.descendTree_eq_descend, Effect4.SliceView.descend_minimal]; 0 lemmas, 0 definitions
-Effect4.SliceView.descendTree_asks: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.SliceView.lattice_minimal: proved; nearest [Effect4.SliceView.valid_max, Effect4.SliceView.minimal_refine, Effect4.SliceView.descend_minimal, Effect4.SliceView.exists_minimal_below]; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status SliceView.valid_up SliceView.minimal_iff_drop SliceView.isMinimal_iff
-  SliceView.Minimal.needs SliceView.Minimal.keeps_above SliceView.descend_sublist
-  SliceView.descend_minimal SliceView.exists_minimal_below SliceView.minimal_refine
-  SliceView.descend_eq_restart SliceView.descend_asks SliceView.valid_max
-  SliceView.contribution_lub SliceView.contribution_valid SliceView.ofOmitted_full
-  SliceView.descendTree_eq_descend SliceView.descendTree_minimal SliceView.descendTree_asks
-  SliceView.lattice_minimal
 
 /-! ## The toy: a term with holes, over types with a gap -/
 

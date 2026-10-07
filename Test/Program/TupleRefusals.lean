@@ -56,10 +56,4 @@ example {Op : Type} (sig : Signature Op) (env : TyEnv) (path : List Nat) (cause 
     (Checker.cause? sig env path cause).toOption = causeTy sig env cause :=
   Checker.toOption_cause? sig env path cause
 
-#print axioms Checker.toOption_term?
-#print axioms Checker.toOption_cause?
-#print axioms argTy_weaken
-#print axioms tagTest?_weaken
-#print axioms TermRefusal.diagnose
-#print axioms TermRefusal.diagnoseCause
 end Effect4.Test.TupleRefusals

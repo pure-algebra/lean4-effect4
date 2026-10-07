@@ -94,12 +94,4 @@ def badMetadata : Term := .record [("x", true, .map .nat .string)] [] .nil
   (.succeed (.lit .unit)) : NativeEff) []).isSome
 #guard (Formation.checkInput (.succeed (.app "some" (.cons badMetadata .nil)) : NativeEff) []).isSome
 
-#print axioms evalTerm
-#print axioms Term.weaken_eq_lit
-#print axioms instDecidableEqTerm
-#print axioms argTy_weaken
-#print axioms argTy_cases
-#print axioms tagTest?_weaken
-#print axioms Formation.checkInput_eq_none_iff
-
 end Effect4.Test.RecordTerms

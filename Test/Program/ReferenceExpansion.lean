@@ -33,7 +33,7 @@ written as real programs.
 Placement. Each guard is a finite instance of the registry claim
 `reference-expansion-complete` (concept `initial-algebras-folds`, requirement R5). A program
 outside the ten is not checked here: the theorem is the general statement. The battery states
-nothing about a run. The pinned axiom and plan outputs follow the controls.
+nothing about a run.
 -/
 
 set_option autoImplicit false
@@ -341,56 +341,5 @@ example : ∀ (program : Api.Program) (table : RowTable),
 example : ∀ (program : Api.Program) (table : RowTable),
     Api.explain program table = none ↔ Api.wellTyped program table = true :=
   @Api.explain_none_iff
-
-/-! ## The pinned outputs
-
-Each statement's axioms, and the six statements' standing as the plan derives it from the
-proofs. The top statement was a planned goal, and it is proved in place with its statement
-unchanged. The plan reads its edges from the proof terms. The checker's equation and the facade's
-rest on no node: each is its definition's own. `typeOfProgram_expandRefs` and
-`TypedProgram.expanded_refSites` rest on the top theorem, and `checkTypedProgram_of_hasTy` rests
-on the checker's equation. Until 2026-10-06 each equation rested on the top theorem, and
-`TypedProgram.expanded_refSites` rested on no node: it read the checker's second test. The
-counts are of this battery's tree, which holds no step of a proof: the steps are in the law
-graph. -/
-
-/-- info: 'Effect4.Program.expanded_refs_nil_of_wf' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms expanded_refs_nil_of_wf
-
-/-- info: 'Effect4.Program.typeOfProgram_eq_if_refsWF' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms typeOfProgram_eq_if_refsWF
-
-/-- info: 'Effect4.Program.typeOfProgram_expandRefs' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms typeOfProgram_expandRefs
-
-/-- info: 'Effect4.Program.checkTypedProgram_of_hasTy' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms checkTypedProgram_of_hasTy
-
-/--
-info: 'Effect4.Program.TypedProgram.expanded_refSites' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms TypedProgram.expanded_refSites
-
-/-- info: 'Effect4.Api.explain_eq_if_refsWF' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms Api.explain_eq_if_refsWF
-
-/--
-info: Effect4.Program.expanded_refs_nil_of_wf: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.typeOfProgram_eq_if_refsWF: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.typeOfProgram_expandRefs: proved; nearest [Effect4.Program.typeOfProgram_eq_if_refsWF, Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
-Effect4.Program.checkTypedProgram_of_hasTy: proved; nearest [Effect4.Program.typeOfProgram_eq_if_refsWF]; 0 lemmas, 0 definitions
-Effect4.Program.TypedProgram.expanded_refSites: proved; nearest [Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
-Effect4.Api.explain_eq_if_refsWF: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status expanded_refs_nil_of_wf typeOfProgram_eq_if_refsWF typeOfProgram_expandRefs
-  checkTypedProgram_of_hasTy TypedProgram.expanded_refSites Api.explain_eq_if_refsWF
 
 end Test.Program.ReferenceExpansion

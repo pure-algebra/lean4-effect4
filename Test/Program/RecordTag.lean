@@ -87,11 +87,3 @@ def bottomSet : NativeEff := .select foundTerm (.recordTag "Absent")
 #guard Val.hasTy value column = true
 
 end Effect4.Test.RecordTag
-
-#print axioms Effect4.Program.Record.lookup_required_hasTy
-#print axioms Effect4.Program.Record.tagOf_lookup
-#print axioms Effect4.Program.Record.tagHit_eq_isTag
-#print axioms Effect4.Program.Record.tagArms_hasTy
-#print axioms Effect4.Program.Decision.decide_typed
-#print axioms Effect4.Program.Typed.decide_fits
-#print axioms Effect4.Program.Decision.decide_bound_keys

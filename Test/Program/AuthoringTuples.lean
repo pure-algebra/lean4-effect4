@@ -22,6 +22,4 @@ example : (Authoring.tuple [Authoring.var "value"]).Scoped :=
 example : (Authoring.tupleAt (Authoring.var "value") 999999999999999999999).Scoped :=
   Authoring.tupleAt_scoped (Authoring.var_scoped _) _
 
-#print axioms Authoring.tuple_scoped
-#print axioms Authoring.tupleAt_scoped
 end Effect4.Test.AuthoringTuples

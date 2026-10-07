@@ -1,6 +1,6 @@
 import Effect4.Laws.Program.Typed.Denotation
 
-/-! World-indexed tuple membership controls and trust queries.
+/-! World-indexed tuple membership controls.
 A concrete declaration table witnesses the positive handle premise. -/
 namespace Effect4.Test.TupleMembership
 open Program Machine
@@ -20,12 +20,4 @@ example (w : Typed.World) (key : RefKey) (h : ¬ Typed.RefDeclared w key .nat) :
   intro hf
   exact h hf.1
 
-#print axioms Typed.FitsAll.tuple
-#print axioms Typed.tupleItem_fits
-#print axioms Typed.tuple_project_fits
-#print axioms Typed.tuple_typeAt_fits
-#print axioms Typed.atomFits
-#print axioms Typed.atom_progress
-#print axioms Typed.evalTerm_fitsAll
-#print axioms Typed.evalTerm_progress
 end Effect4.Test.TupleMembership

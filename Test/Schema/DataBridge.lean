@@ -63,18 +63,4 @@ private def docsAnn : Annotations := some [⟨"description", .str "documentation
 #guard ofSchema (FaceRow.recordFields.apply []) = none
 #guard ofSchema (FaceRow.tupleItems.apply []) = none
 
-#print axioms Effect4.Schema.Bridge.schema
-#print axioms Effect4.Schema.Bridge.ofSchema
-#print axioms Effect4.Schema.Bridge.schema_record
-#print axioms Effect4.Schema.Bridge.schema_tuple
-#print axioms Effect4.Schema.Bridge.reservedProfile_string
-#print axioms Effect4.Schema.Bridge.reservedFree_record
-#print axioms Effect4.Schema.Bridge.reservedFree_map
-#print axioms Effect4.Schema.Bridge.reservedFree_tuple
-#print axioms Effect4.Schema.Bridge.normS_objects
-#print axioms Effect4.Schema.Bridge.normS_schema
-#print axioms Effect4.Schema.Bridge.ofSchema_schema
-#print axioms Effect4.Schema.Bridge.ofSchema_exact
-#print axioms Effect4.Program.CTy.ofSchema_schema
-
 end Test.Schema.DataBridge

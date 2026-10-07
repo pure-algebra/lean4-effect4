@@ -48,7 +48,7 @@ The statements establish no order of the wake across visits, no cancellation law
 no liveness and nothing of a wrapper. An equal value in the model says nothing of a host. The
 finite controls are `Test/Program/SemaphoreAgreement.lean` and
 `Test/Program/SemaphoreRelation.lean`: each statement's conclusion on every state of a
-universe of 225 states, and each statement's pinned axioms.
+universe of 225 states.
 -/
 
 set_option autoImplicit false

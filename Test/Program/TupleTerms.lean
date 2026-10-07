@@ -33,9 +33,4 @@ private def triple : Term := .app "tuple"
 #guard Term.weaken 0 (.tupleAt (.var 0) 999999999999999999999) =
   .tupleAt (.var 1) 999999999999999999999
 
-#print axioms evalTerm
-#print axioms Term.weaken_eq_lit
-#print axioms NativeAtom.ofName?_name
-#print axioms instDecidableEqTerm
-
 end Effect4.Test.TupleTerms

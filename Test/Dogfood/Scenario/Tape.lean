@@ -400,16 +400,6 @@ theorem shown_views_opened (l : Lowered) (b : Api.Built) (id : String) (budget :
       exact congrArg machineViewOf
         ((raw _).trans (position i _ (List.getElem?_eq_getElem _)))
 
-/-! The theorem's axioms are pinned here. Its standing is not: the gate at the foot measures
-it on the plan. It refuses a claim whose proof does not reach the clause `position`, and a claim
-that rests on a planned goal which no clause names. A pinned `#plan_status` would also count
-the driver's definitions that the proof walks through, so a new helper of the driver would
-stop this module, which the fixtures' writer imports. -/
-
-/-- info: 'Test.Dogfood.Scenario.Lowered.shown_views_opened' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms shown_views_opened
-
 /-! ### The runs and the controls
 
 Each control is a finite probe: one journal on the Lean machine. A control compares

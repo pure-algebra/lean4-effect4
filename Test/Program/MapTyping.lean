@@ -82,18 +82,4 @@ example (w : Typed.World) (key : RefKey) (h : ¬ Typed.RefDeclared w key .nat) :
   intro hf
   exact h ((hf.2 _ List.mem_cons_self).2)
 
-#print axioms Typed.MapValues.encoded_of_all
-#print axioms Typed.MapValues.sorted_pairs
-#print axioms MapChecks.get
-#print axioms MapChecks.set
-#print axioms MapChecks.fromEntries
-#print axioms NativeAtom.sound
-#print axioms Typed.MapFits.get
-#print axioms Typed.MapFits.set
-#print axioms Typed.MapFits.fromEntries
-#print axioms Typed.atomFits
-#print axioms Typed.atom_progress
-#print axioms Typed.evalTerm_progress
-#print axioms Denote.sound
-
 end Effect4.Test.MapTyping

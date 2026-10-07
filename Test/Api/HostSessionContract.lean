@@ -164,14 +164,4 @@ theorem received_prepares_nat (w : Typed.World) :
 #guard Typed.shapeDecides (.exitOf .nat .never) = false
 #guard Typed.shapeDecides .unknown = false
 
-/-- info: 'Effect4.Api.HostSession.preflight_success_prepared_fits' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms preflight_success_prepared_fits
-/-- info: 'Effect4.Api.HostSession.submit_success_prepared_fits' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms submit_success_prepared_fits
-/-- info: 'Test.Api.HostSessionContract.received_prepares_nat' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms received_prepares_nat
-
 end Test.Api.HostSessionContract

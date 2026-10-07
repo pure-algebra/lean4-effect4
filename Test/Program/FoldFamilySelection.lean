@@ -34,8 +34,4 @@ fold_of ambiguous
 
 fold_of ambiguous (family := Effect4.Program.Ty)
 
-#print axioms count.eq_cata
-#print axioms countList.eq_cata
-#print axioms ambiguous.eq_cata
-
 end Effect4.Test.FoldFamilySelection

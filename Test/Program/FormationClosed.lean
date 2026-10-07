@@ -312,17 +312,4 @@ def holdsVariable (e : NativeEff) : Bool :=
 #guard Test.Program.Gen.sample.all fun e =>
   !(refusal e).any fun why => why.2.2 == .typeVariable
 
-#print axioms check_closed
-#print axioms typeOfProgram_closed
-#print axioms AdmittedProgram.closed
-#print axioms Formation.annotationsAll_expandRefs
-#print axioms closedSig_native
-#print axioms hasTy_closed
-#print axioms Formation.closed_of_formed
-#print axioms Formation.programAnnotations_all
-#print axioms foldMapAt_eff_fuse
-#print axioms Record.closed_fieldType
-#print axioms openAtoms_not_closed
-#print axioms openCarrier_not_closed
-
 end Test.Program.FormationClosed

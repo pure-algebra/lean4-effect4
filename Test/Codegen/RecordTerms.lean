@@ -63,9 +63,3 @@ example (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x : TypeScript.Ex
     (h : readTerm classes n x = .ok term) : printTerm n term = x := readTerm_exact x h
 
 end Effect4.Test.RecordTermsCodegen
-
-#print axioms Effect4.Program.readTerm
-#print axioms Effect4.Program.readTerm_printTerm
-#print axioms Effect4.Program.readTerm_exact
-#print axioms Effect4.Program.readTerms_printTerms
-#print axioms Effect4.Program.readTerms_exact

@@ -152,20 +152,6 @@ example {fuel : Nat} {tape : List Api.Decision} {inspection : Api.Inspection}
     (accepted : Api.replayChecked pureProgram fuel tape [] validTable = .inl inspection) :
     Formation.InputFormed pureProgram validTable := Api.replayChecked_formed accepted
 
-#print axioms Api.replayChecked_formation
-#print axioms Api.replayChecked_formed
-#print axioms Formation.checkInput
-#print axioms Formation.checkInput_eq_none_iff
-#print axioms rowTy_instantiated_formed
-#print axioms rowTy_eq_some_iff
-#print axioms checkRow_formation_iff
-#print axioms checkRow_request_iff
-#print axioms Ty.infer_closed
-#print axioms Ty.infer_widensSub
-#print axioms Ty.infer_widens
-#print axioms Effect4.Codegen.ModuleEmission.recheck
-#print axioms Effect4.Codegen.ModuleReading.recheck
-
 /-! The formation rule on a deferred's error column (the state plan's T3a, its D4): a deferred
 fails only with a value the error alphabet carries, so `Deferred.make<A, boolean>()` is refused at
 its instance, at the row's answer column; `Deferred.make<void, never>()` is formed. -/

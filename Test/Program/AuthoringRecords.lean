@@ -45,9 +45,4 @@ example : (Authoring.optionalField (Authoring.var "person") "nickname").Scoped :
 example : (Authoring.recordSet (Authoring.var "person") "nickname" (Authoring.var "alias")).Scoped :=
   Authoring.recordSet_scoped (Authoring.var_scoped _) (Authoring.var_scoped _) _
 
-#print axioms Authoring.record_scoped
-#print axioms Authoring.field_scoped
-#print axioms Authoring.optionalField_scoped
-#print axioms Authoring.recordSet_scoped
-
 end Effect4.Test.AuthoringRecords

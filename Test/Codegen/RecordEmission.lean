@@ -47,8 +47,4 @@ def discarded : NativeEff := .bind (.succeed unsupported) (.succeed (.lit (.nat 
     | _ => false
   | .error _ => false
 
-#print axioms Effect4.Program.annotationRefusal
-#print axioms Effect4.Program.printEntry_checks
-#print axioms Effect4.Program.printEntry_annotations
-
 end Effect4.Test.RecordEmission

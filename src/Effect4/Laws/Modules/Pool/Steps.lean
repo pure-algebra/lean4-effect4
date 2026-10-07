@@ -50,7 +50,7 @@ The statements establish no order of the wake across helpers, no cancellation la
 fairness, no liveness, no wait of the close along a run and nothing of a wrapper. An equal value in the
 model says nothing of a host. The finite controls are `Test/Program/PoolAgreement.lean` and
 `Test/Program/PoolRelation.lean`: each statement's conclusion on every state of a finite
-universe, and each statement's pinned axioms.
+universe.
 -/
 
 set_option autoImplicit false

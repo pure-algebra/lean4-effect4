@@ -20,10 +20,8 @@ battery holds the controls of that restatement.
    eight scenarios), the printed texts of `Test/Program/QueueFaces.lean`, and the engine's
    fixture that `Test/Program/QueueEngine.lean` binds.
 3. **The red control**: a text that differs in one place is another program.
-4. **The pinned outputs**: the axioms of the new forms' laws. Two more pins hold the rule of the
-   form with no loop (`waitAnswer_answers`) and the fact of a hint's type that it reads
-   (`HintTy.canonical`). One proved control stands with that fact: a type that is not its own
-   normal form has no hint's rows.
+4. **The controls of the two forms' laws**: a type that is not its own normal form has no
+   hint's rows (`HintTy.canonical`), and two rules keep their statements.
 
 The finite controls of `protectedBy` are Semaphore's: the protected permit of
 `Test/Program/SemaphoreScenarios.lean`, and its two red controls in
@@ -85,14 +83,6 @@ def takeBefore (A : Ty) (q : TermSrc) : Src NativeOp :=
 
 /-- **`Queue.take` is the program that it was**, at every message type and every handle. -/
 theorem queue_take_unmoved (A : Ty) (q : TermSrc) : Queue.take A q = takeBefore A q := rfl
-
-/-- info: 'Test.Program.SemaphoreWrapper.waitRetry_unmoved' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms waitRetry_unmoved
-
-/-- info: 'Test.Program.SemaphoreWrapper.queue_take_unmoved' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms queue_take_unmoved
 
 /-! ## 2. The trees, at three scopes of a caller -/
 
@@ -159,73 +149,12 @@ def takePart (A : Ty) (q : TermSrc) : Waiter :=
   treeAt names (waitRetry .nat "x" (takePart .nat (var "q"))) ==
     treeAt names (waitRetryBefore .nat "x" (takePart .nat (var "q")))
 
-/-! ## 4. The pinned outputs: the laws of the two forms -/
-
-/--
-info: 'Effect4.Modules.waitRetryAt_scoped' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.waitRetryAt_scoped
-
-/--
-info: 'Effect4.Modules.protectedBy_scoped' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.protectedBy_scoped
-
-/--
-info: 'Effect4.Modules.waitRetryAt_answers' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.waitRetryAt_answers
-
-/--
-info: 'Effect4.Modules.waitRetry_answers' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.waitRetry_answers
-
--- The rule of the form with no loop, and the fact of a hint's type that it reads (seat REPAIR).
-/--
-info: 'Effect4.Modules.HintTy.canonical' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.HintTy.canonical
-
-/--
-info: 'Effect4.Modules.waitAnswer_answers' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.waitAnswer_answers
+/-! ## 4. The controls of the two forms' laws -/
 
 -- The control of `HintTy.canonical`: a type that is not its own normal form has no hint's rows,
 -- at any row table. The union of a Boolean with itself is such a type.
 example (table : RowTable) : ¬ HintTy table (.union .bool .bool) := fun hint =>
   absurd hint.canonical (by decide +kernel)
-
-/--
-info: 'Effect4.Modules.protectedBy_has' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.protectedBy_has
-
-/--
-info: 'Effect4.Modules.join_absorb' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.join_absorb
-
-/--
-info: 'Effect4.Modules.captured_cursor_in_row' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.captured_cursor_in_row
-
-/--
-info: 'Effect4.Modules.captured_current' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Modules.captured_current
 
 -- The two rules whose proofs now go through a more general form keep their statements.
 example {table : RowTable} {cell : TermSrc} {f : TermSrc → TermSrc} {s : TypedScope} {C B : Ty}

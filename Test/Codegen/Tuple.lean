@@ -64,14 +64,3 @@ example (classes : Effect4.Codegen.Classes.Classes) (n index : Nat) (target : Te
   readTerm_printTerm _ h hc hu
 
 end Effect4.Test.TupleCodegen
-
-#print axioms Effect4.Data.NatDecimal.decodeBytes_repr
-#print axioms Effect4.Data.NatDecimal.read_repr
-#print axioms Effect4.Data.NatDecimal.read_exact
-#print axioms Effect4.Codegen.Tuple.readAt_size
-#print axioms Effect4.Codegen.Tuple.readAt_writeAt
-#print axioms Effect4.Codegen.Tuple.readAt_exact
-#print axioms Effect4.Program.readTerm_printTerm
-#print axioms Effect4.Program.readTerm_exact
-#print axioms Effect4.Program.keyFromText_print
-#print axioms Effect4.Program.Var.name_inj

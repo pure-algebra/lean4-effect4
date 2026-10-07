@@ -326,51 +326,6 @@ theorem receipt_inert : ReceiptInert := by
       · rfl
       · exact receive_receiptRows s _ completion
 
-/-! ### The library's laws of the tape: their axioms and their standing
-
-The axioms of the four laws of the journal's cut and of their helper, then the standing of the
-four laws, as the plan derives it from their proofs. `tape_replays` is named last, so that the
-plan shows which laws rest on it. The laws stand in the library
-(`src/Effect4/Laws/Run/Tape.lean`), and this battery keeps their pins. The plan counts what a
-proof brings in from the tree of the module that asks, here `Test`: a law of the library brings
-in no lemma and no definition of it. -/
-
-/-- info: 'Effect4.Run.tapeFrom_append' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms tapeFrom_append
-
-/-- info: 'Effect4.Run.tapeFrom_cut' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms tapeFrom_cut
-
-/-- info: 'Effect4.Run.tapeFrom_cut_replays' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms tapeFrom_cut_replays
-
-/-- info: 'Effect4.Run.tapeFrom_position_prefix' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms tapeFrom_position_prefix
-
-/-- info: 'Effect4.Run.tapeFrom_position_replays' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms tapeFrom_position_replays
-
-/--
-info: Effect4.Run.tapeFrom_append: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Run.tapeFrom_cut: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Run.tapeFrom_cut_replays: proved; nearest [Effect4.Run.tape_replays, Effect4.Run.tapeFrom_cut]; 0 lemmas, 0 definitions
-Effect4.Run.tapeFrom_position_replays: proved; nearest [Effect4.Run.tape_replays]; 0 lemmas, 0 definitions
-Effect4.Run.tape_replays: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status tapeFrom_append tapeFrom_cut tapeFrom_cut_replays tapeFrom_position_replays
-  tape_replays
-
-/-- info: 'Effect4.Run.funded_replays' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms funded_replays
-
 /-! ## 5. A scenario's record, and the gate at the foot of a battery -/
 
 /-- One entry of a scenario's record: a clause of its claim, or a law beside it, with the

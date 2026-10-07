@@ -133,6 +133,13 @@ its arrows. Anything else is a leak.
   - a claim or a requirement's top node is proved only when it rests on no goal.
 - The axiom gate audits every declaration of every `Effect4.*` and `Test.*` module at
   `[propext, Quot.sound]`.
+- So a battery holds no `#print axioms` line, and it pins no status of a proved statement.
+  Each line of a battery is one of three things (decisions row 301):
+  - a reader: a law applied at a real carrier, or at a real rule of the checker;
+  - a control: a red case that shows why a premise stands, or where a law stops;
+  - a finite evaluation that no theorem covers.
+- A battery restates no theorem. A frozen contract may pin a statement that no registry claim
+  holds.
 - A rendering declaration that must traverse a `String` is exempted by its exact name in
   `AxiomGate.lean`, never by module.
 - A battery `def` over rendered text reaches `Classical.choice`: keep rendered bytes inside

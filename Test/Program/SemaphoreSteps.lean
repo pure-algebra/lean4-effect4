@@ -19,7 +19,6 @@ alone, and what the typing theorems do not say by themselves.
 5. Each typing theorem at a scope of names: the step's own, and one where `bindWith` minted a
    name, with no assumed capture.
 6. The connector to the store: `step_keeps_cell` on a step's typing.
-7. The pinned axioms and the pinned standing of each typing theorem.
 
 The comparison with the abstract model is `Test/Program/SemaphoreAgreement.lean`. The runs on
 the machine are `Test/Program/SemaphoreScenarios.lean`.
@@ -323,97 +322,5 @@ theorem releaseStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = 
   obtain ⟨f, tree, value⟩ := reads
   exact step_keeps_cell sig atoms typedEnv
     ((releaseStep_types sig atoms typesCount typesCell false).tree tree) held member value
-
-/--
-info: 'Test.Program.SemaphoreSteps.visitStep_keeps_cell' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms visitStep_keeps_cell
-
-/--
-info: Test.Program.SemaphoreSteps.visitStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status visitStep_keeps_cell
-
-/--
-info: 'Test.Program.SemaphoreSteps.releaseStep_keeps_cell' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms releaseStep_keeps_cell
-
-/-! ## 7. The pinned outputs
-
-Each typing theorem's axioms, and its standing as the plan derives it from its proof. The
-counts are of this battery's tree, which holds no step of a proof. -/
-
-/-- info: 'Effect4.Semaphore.Model.empty_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms empty_types
-
-/-- info: 'Effect4.Semaphore.Model.takeStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms takeStep_types
-
-/--
-info: 'Effect4.Semaphore.Model.takeIfAvailableStep_types' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms takeIfAvailableStep_types
-
-/-- info: 'Effect4.Semaphore.Model.releaseStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms releaseStep_types
-
-/-- info: 'Effect4.Semaphore.Model.visitStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms visitStep_types
-
-/-- info: 'Effect4.Semaphore.Model.withdrawStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms withdrawStep_types
-
-/--
-info: Effect4.Semaphore.Model.empty_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status empty_types
-
-/--
-info: Effect4.Semaphore.Model.takeStep_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status takeStep_types
-
-/--
-info: Effect4.Semaphore.Model.takeIfAvailableStep_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status takeIfAvailableStep_types
-
-/--
-info: Effect4.Semaphore.Model.releaseStep_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status releaseStep_types
-
-/--
-info: Effect4.Semaphore.Model.visitStep_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status visitStep_types
-
-/--
-info: Effect4.Semaphore.Model.withdrawStep_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status withdrawStep_types
 
 end Test.Program.SemaphoreSteps

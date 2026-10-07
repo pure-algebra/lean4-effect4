@@ -2,32 +2,15 @@ import Effect4.Laws.Modules.Queue.Capacity
 import ProofGraph.Plan
 
 /-!
-# The Queue's capacity statements: their pinned outputs and their finite controls
+# The Queue's capacity statements: their finite controls
 
 The statements and their proofs are in `src/Effect4/Laws/Modules/Queue/Capacity.lean`. This
-battery pins each statement's axioms and its plan status, and holds the finite controls of the
-packet `Test/contracts/queue.contract.md`, one input each.
+battery holds the finite controls of the packet `Test/contracts/queue.contract.md`, one input
+each.
 -/
 
 namespace Test.Program.QueueCapacity
 open Effect4.Queue.Model
-
-/-- info: 'Effect4.Queue.Model.acceptLoop_length_le' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms acceptLoop_length_le
-
-/-- info: 'Effect4.Queue.Model.positive_suspend_step_capacity' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms positive_suspend_step_capacity
-
--- The standing is derived from the proof. The counts are of this battery's tree, which holds
--- no step of the proof: the steps are in the law graph.
-/--
-info: Effect4.Queue.Model.positive_suspend_step_capacity: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status positive_suspend_step_capacity
 
 /-! ## Controls of the step's statement: finite checks, one input each -/
 

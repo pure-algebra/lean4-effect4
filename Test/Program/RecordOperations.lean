@@ -93,36 +93,4 @@ example (w : Typed.World) : ∃ value,
   (.record [("a", false, .unknown)] ["a"] (.cons (.var 0) .nil)) "a") =
   some (.handle 255 42)
 
-#print axioms Effect4.Program.RecordChecks.build
-#print axioms Effect4.Program.RecordChecks.fieldType
-#print axioms Effect4.Program.RecordChecks.setType
-#print axioms Effect4.Program.evalTerm_hasTy
-#print axioms Effect4.Program.evalTerm_isSome
-#print axioms evalTerm_fitsAll
-#print axioms evalTerm_progress
-#print axioms Effect4.Program.evalTerm_keys
-#print axioms Effect4.Program.RawHandles.evalTerm_handles
-#print axioms Effect4.Program.RawHandles.evalTerm_registered
-
-#print axioms ascending_names_sublist
-#print axioms namedFit_of_sublist_lookup
-#print axioms zipNames_columns
-#print axioms zipNames_fits
-#print axioms firstOf_fits
-#print axioms record_build_fits
-#print axioms record_fieldOf_fits
-#print axioms record_fieldType_fits
-#print axioms firstOf_filter_other
-#print axioms record_frame_fits
-#print axioms record_set_fits
-#print axioms record_setOf_fits
-#print axioms record_setType_fits
-#print axioms namedFit_columns
-#print axioms namedFit_names_sublist
-#print axioms namedFit_lookup
-#print axioms record_entries_of_fits
-#print axioms record_lookup_fits
-#print axioms record_lookup_required
-#print axioms record_lookup_optional
-
 end Effect4.Test.RecordOperations

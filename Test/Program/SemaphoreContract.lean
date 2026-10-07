@@ -15,7 +15,6 @@ falsifiers of the packet `Test/contracts/semaphore.contract.md`.
 - The profile: one red state for each condition, each transition on one input, and a take by a
   request whose entry is present.
 - The faults of the card's section 9 that a transition can show, each red at its own property.
-- The pinned axiom and plan outputs of the proved statements.
 
 A request is named by a number: A is 1, B is 2 and C is 3. A waiter reads
 `(identity, count, stamp)`. Every guard is a finite check of the model. None is a run of a
@@ -277,57 +276,5 @@ def overtaking : State :=
   let again := take v2.1 4 1
   (v1.2, v2.2, again.2, view again.1) =
     (some ⟨2, 1, 0⟩, some ⟨3, 1, 1⟩, false, (2, [(4, 1, 2)]))
-
-/-! ## The pinned outputs
-
-Each proved statement's axioms, and its standing as the plan derives it from the proof. The
-counts are of this battery's tree, which holds no step of a proof. -/
-
-/-- info: 'Effect4.Semaphore.Model.profile_closed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms profile_closed
-
-/--
-info: Effect4.Semaphore.Model.profile_closed: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status profile_closed
-
-/--
-info: 'Effect4.Semaphore.Model.visit_selects_earliest' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms visit_selects_earliest
-
-/--
-info: Effect4.Semaphore.Model.visit_selects_earliest: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status visit_selects_earliest
-
-/-- info: 'Effect4.Semaphore.Model.visit_stops_iff' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms visit_stops_iff
-
-/--
-info: Effect4.Semaphore.Model.visit_stops_iff: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status visit_stops_iff
-
-/-- info: 'Effect4.Semaphore.Model.visit_reserves_nothing' does not depend on any axioms -/
-#guard_msgs in
-#print axioms visit_reserves_nothing
-
-/-- info: 'Effect4.Semaphore.Model.step_permits' does not depend on any axioms -/
-#guard_msgs in
-#print axioms step_permits
-
-/-- info: 'Effect4.Semaphore.Model.initial_profile' does not depend on any axioms -/
-#guard_msgs in
-#print axioms initial_profile
 
 end Test.Program.SemaphoreContract

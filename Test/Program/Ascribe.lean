@@ -12,7 +12,7 @@ import ProofGraph.Plan
 field declared at `ty` that holds `e`, and a read of that field. Its laws are `ascribe_scoped`
 (`src/Effect4/Laws/Program/Authoring/Ascribe.lean`), and `types_ascribe`, `ascribe_untyped` and
 `reads_ascribe` (`src/Effect4/Laws/Modules/Ascribe.lean`). This battery holds their finite
-controls, their instances, and their pinned axioms.
+controls and their instances.
 
 | # | Control | What it shows |
 | --- | --- | --- |
@@ -177,36 +177,5 @@ example (vals : List Val) : Reads (ascribe .nat (nat 3)) env path vals (.nat 3) 
 example : (ascribe (.list .nat) (app "nil" [])).Scoped := by authoring_scoped
 
 end Instances
-
-/-! ## The axioms and the plan
-
-Each law is at `[propext, Quot.sound]` or below it, and each is proved: no planned goal. -/
-
-/-- info: 'Effect4.Modules.types_ascribe' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms Effect4.Modules.types_ascribe
-
-/-- info: 'Effect4.Modules.ascribe_untyped' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms Effect4.Modules.ascribe_untyped
-
-/-- info: 'Effect4.Modules.reads_ascribe' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms Effect4.Modules.reads_ascribe
-
-/-- info: 'Effect4.Program.Authoring.ascribe_scoped' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms Effect4.Program.Authoring.ascribe_scoped
-
-/--
-info: Effect4.Modules.types_ascribe: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Modules.ascribe_untyped: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Modules.reads_ascribe: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.Authoring.ascribe_scoped: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status Effect4.Modules.types_ascribe Effect4.Modules.ascribe_untyped
-  Effect4.Modules.reads_ascribe Effect4.Program.Authoring.ascribe_scoped
 
 end Test.Program.Ascribe

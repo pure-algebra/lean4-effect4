@@ -35,12 +35,4 @@ open Program Machine
 example : ∃ out, Val.tupleAt? (.list [.nat 1, .str "x", .bool true]) 1 = some out ∧
     Val.hasTy out .string = true := Tuple.typeAt_typed (input := .tuple [.nat, .string, .bool]) rfl rfl
 
-#print axioms Tuple.project.eq_cata
-#print axioms Fits.tuple
-#print axioms tupleItem_typed
-#print axioms Tuple.project_typed
-#print axioms Tuple.typeAt_typed
-#print axioms NativeAtom.sound
-#print axioms evalTerm_hasTy
-#print axioms evalTerm_isSome
 end Effect4.Test.TupleTyping

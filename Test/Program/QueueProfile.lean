@@ -2,29 +2,16 @@ import Effect4.Laws.Modules.Queue.Profile
 import ProofGraph.Plan
 
 /-!
-# The Queue's first profile: its pinned outputs and its finite controls
+# The Queue's first profile: its finite controls
 
 The predicate, its closure and the two closed forms are in
-`src/Effect4/Laws/Modules/Queue/Profile.lean`. This battery pins the closure's axioms and its
-plan status, and holds the finite controls: one red state for each condition of the predicate,
+`src/Effect4/Laws/Modules/Queue/Profile.lean`. This battery holds the finite controls:
+one red state for each condition of the predicate,
 each first operation on one input, and the red controls of the premises.
 -/
 
 namespace Test.Program.QueueProfile
 open Effect4.Queue.Model
-
-/-- info: 'Effect4.Queue.Model.first_profile_closed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms first_profile_closed
-
--- The standing is derived from the proof. The counts are of this battery's tree, which holds
--- no step of the proof: the steps are in the law graph.
-/--
-info: Effect4.Queue.Model.first_profile_closed: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status first_profile_closed
 
 /-! ## Controls: finite checks, one input each -/
 

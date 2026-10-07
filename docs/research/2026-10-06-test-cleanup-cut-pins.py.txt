@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Cut the batteries' pinned outputs: each printed or pinned axiom set, and each pinned plan
+status of statements that are all proved with no goal open.
+
+Why. The axiom gate (`Test/Audit/AxiomGate.lean`) reads every declaration of every `Effect4.*`
+and `Test.*` module at `[propext, Quot.sound]`. The plan derives a statement's status from its
+proof, and `generated/semantics.md` reports each claim's status. So a pin of one statement's
+axioms, or of "proved", measures again what a gate or a report measures.
+
+What is cut. A command is its first line and each indented line after it.
+- `#print axioms X`, bare, or under `#guard_msgs` where the expected text is an axiom line
+  within `[propext, Quot.sound]`.
+- `#plan_status X ...` under `#guard_msgs` where every status line says `proved`, and the
+  text ends with `next goals: 0`.
+Anything else is kept and listed. `Test/Audit` and `Test/Counterexamples` are not read: the
+first holds the gates' own controls, the second the registered counterexamples.
+
+Usage: cut_pins.py <repository> [--write] [--list]"""
+import pathlib, re, sys
+
+root = pathlib.Path(sys.argv[1]); write = '--write' in sys.argv
+SKIP = ('Test/Audit/', 'Test/Counterexamples/')
+ALLOWED = {'propext', 'Quot.sound'}
+count = {'prints': 0, 'axiom pins': 0, 'plan pins': 0, 'plan statements': 0, 'lines': 0}
+kept = []; touched = []
+
+def command_end(lines, i):
+    """the index after the command that starts at line `i`: its indented lines belong to it"""
+    j = i + 1
+    while j < len(lines) and lines[j].strip() != '' and lines[j][0] in ' \t':
+        j += 1
+    return j
+
+def doc_start(lines, guard):
+    """the first line of the doc comment that ends right above the `#guard_msgs` line"""
+    k = guard - 1
+    if k < 0 or '-/' not in lines[k]: return None
+    while k >= 0 and not lines[k].lstrip().startswith('/--'):
+        k -= 1
+    return k if k >= 0 else None
+
+for path in sorted((root / 'Test').rglob('*.lean')):
+    rel = str(path.relative_to(root))
+    if rel.startswith(SKIP): continue
+    lines = path.read_text().split('\n')
+    drop = set(); n_before = dict(count)
+    for i, line in enumerate(lines):
+        is_print = line.startswith('#print axioms')
+        is_plan = line.startswith('#plan_status')
+        if not (is_print or is_plan): continue
+        end = command_end(lines, i)
+        guarded = i > 0 and lines[i - 1].lstrip().startswith('#guard_msgs')
+        if not guarded:
+            if is_print:
+                drop.update(range(i, end)); count['prints'] += 1
+            else:
+                kept.append((rel, i + 1, 'a bare #plan_status'))
+            continue
+        k = doc_start(lines, i - 1)
+        if k is None:
+            kept.append((rel, i + 1, 'no doc comment above #guard_msgs')); continue
+        text = '\n'.join(lines[k:i - 1])
+        if is_print:
+            m = re.search(r"depends on axioms: \[([^\]]*)\]", text)
+            ok = ('does not depend on any axioms' in text) or (m is not None and {a.strip() for a in m.group(1).split(',')} <= ALLOWED)
+            if not ok:
+                kept.append((rel, i + 1, 'an axiom pin outside the ceiling')); continue
+            count['prints'] += 1; count['axiom pins'] += 1
+        else:
+            body = re.sub(r"^/--\s*", "", text).replace('-/', '').strip().split('\n')
+            body = [b.strip() for b in body if b.strip()]
+            if body and body[0].startswith('info: '): body[0] = body[0][len('info: '):]
+            statuses = [b for b in body if not b.startswith('next goals')]
+            ok = bool(statuses) and all(re.search(r": proved; nearest \[", s) for s in statuses) and body[-1] == 'next goals: 0'
+            if not ok:
+                kept.append((rel, i + 1, 'a plan pin with a status that is not proved, or with goals open')); continue
+            count['plan pins'] += 1; count['plan statements'] += len(statuses)
+        drop.update(range(k, end))
+    if not drop: continue
+    out = []
+    for i, l in enumerate(lines):
+        if i in drop: continue
+        if l.strip() == '' and out and out[-1].strip() == '' and (i - 1) in drop: continue
+        out.append(l)
+    count['lines'] += len(lines) - len(out)
+    touched.append((rel, len(lines) - len(out)))
+    if write: path.write_text('\n'.join(out))
+
+print(f"files {len(touched)}; " + '; '.join(f"{k} {v}" for k, v in count.items()))
+print(f"kept: {len(kept)}")
+for item in kept: print('  ', item)
+if '--list' in sys.argv:
+    for item in touched: print('  ', item)

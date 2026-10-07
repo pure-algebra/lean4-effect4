@@ -26,8 +26,6 @@ open Effect4 Effect4.Program
 theorem schema_eq_face (t : Ty) : Schema.Bridge.schema t = cata_ty (TyTable.schemaFace tyFaces) t :=
   rfl
 
-#print axioms schema_eq_face
-
 /-- error: Fields missing: `unknown` -/
 #guard_msgs (error) in
 example : TyTable ClassRow where

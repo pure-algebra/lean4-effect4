@@ -63,9 +63,4 @@ def two : Val := .list [.pair (.str "b") (.nat 2), .pair (.str "d") (.nat 4)]
 #guard NativeAtom.eval .mapKeys [.list [.pair (.nat 0) .unit]] = none
 #guard nativeAtom "mapGet" [two, .str "d"] = some (.some (.nat 4))
 
-#print axioms Machine.Map.fromEntries
-#print axioms Machine.Map.set
-#print axioms NativeAtom.eval
-#print axioms NativeAtom.ofName?_name
-
 end Test.Program.MapValues

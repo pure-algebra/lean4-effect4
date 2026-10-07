@@ -2,11 +2,11 @@ import Effect4.Laws.Modules.Queue.Invariant
 import ProofGraph.Plan
 
 /-!
-# The Queue model's run invariant: its pinned outputs and its finite controls
+# The Queue model's run invariant: its finite controls
 
 The invariant `FirstRunInv`, the step law `first_step_inv` and the run law `first_run_inv` are in
-`src/Effect4/Laws/Modules/Queue/Invariant.lean`. This battery pins each placed statement's axioms
-and its plan status, and holds the finite controls. Each red control keeps every premise but
+`src/Effect4/Laws/Modules/Queue/Invariant.lean`. This battery holds the finite
+controls. Each red control keeps every premise but
 one, and it has a positive control beside it:
 
 - one red control for each of the six parts of the invariant. Five are Codex's witnesses
@@ -24,29 +24,6 @@ for the flag `named`. The controls run no program, and they deliver no signal.
 
 namespace Test.Program.QueueInvariant
 open Effect4.Queue.Model
-
-/-- info: 'Effect4.Queue.Model.first_step_inv' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms first_step_inv
-
-/-- info: 'Effect4.Queue.Model.first_run_inv' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms first_run_inv
-
-/-- info: 'Effect4.Queue.Model.first_run_flags' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms first_run_flags
-
--- The standing is derived from the proof. The counts are of this battery's tree, which holds
--- no step of the proof: the steps are in the law graph.
-/--
-info: Effect4.Queue.Model.first_step_inv: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.first_run_inv: proved; nearest [Effect4.Queue.Model.first_step_inv]; 0 lemmas, 0 definitions
-Effect4.Queue.Model.first_run_flags: proved; nearest [Effect4.Queue.Model.first_run_inv]; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status first_step_inv first_run_inv first_run_flags
 
 /-! ## The readings of the controls -/
 

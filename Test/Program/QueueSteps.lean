@@ -312,35 +312,4 @@ example : @Effect4.Queue.enrolled ≠ @Effect4.Modules.removeById := fun same =>
       [])
     (by decide)
 
-/-! ## 6. The pinned outputs of the typing statements
-
-The seven typing statements are proved at every message type that the checker types in a cell.
-The initial value's and the size step's are pinned here. The five steps of a `Ref.modify` are
-pinned in `Test/Program/QueueTyping.lean`, and the guards of section 2 are their finite
-controls. -/
-
-open Effect4.Queue.Model (empty_typed sizeStep_typed)
-
-/-- info: 'Effect4.Queue.Model.empty_typed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms empty_typed
-
-/--
-info: Effect4.Queue.Model.empty_typed: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status empty_typed
-
-/-- info: 'Effect4.Queue.Model.sizeStep_typed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms sizeStep_typed
-
-/--
-info: Effect4.Queue.Model.sizeStep_typed: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status sizeStep_typed
-
 end Test.Program.QueueSteps

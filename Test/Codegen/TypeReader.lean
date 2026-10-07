@@ -153,11 +153,4 @@ example {tys : List Ty} {xs : List TypeRef} (hr : tys.all ReadableTy = true)
     (hp : writeTys tys = some xs) : readTysChecked xs = some tys :=
   readTysChecked_of_readable hr hp
 
-#print axioms readTyChecked_exact
-#print axioms readTyChecked_of_readable
-#print axioms ofTy_of_readable
-#print axioms readTysChecked_exact
-#print axioms readTysChecked_of_readable
-#print axioms writeTys_of_readable
-
 end Test.Codegen.TypeReader

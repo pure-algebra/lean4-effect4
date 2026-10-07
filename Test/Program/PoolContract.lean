@@ -21,7 +21,6 @@ falsifiers of the packet `Test/contracts/pool.contract.md`.
 - A stale lease's return, after the item was leased again.
 - The faults of the card's section 9 that a transition or a trace of the model can show, each
   red at its own property.
-- The pinned axiom and plan outputs of the proved statements.
 
 A request is named by a number: H is 9, A is 1, B is 2, C is 3 and D is 4. An item reads
 `⟨stamp, resource, borrowed, lease⟩`. Every guard is a finite check of the model. None is a run
@@ -373,64 +372,5 @@ def three : State := { premise with waiters := [1, 2, 3] }
   first.2 ++ second.2 = [1, 3] && !([1, 3] : List Nat).isPrefixOf three.waiters
 -- With the fixed selection B's withdrawal after the selection changes nothing: C still waits.
 #guard (withdraw (select three 2).1 2).waiters = [3]
-
-/-! ## The pinned outputs
-
-Each proved statement's axioms, and its standing as the plan derives it from the proof. The
-counts are of this battery's tree, which holds no step of a proof. -/
-
-/-- info: 'Effect4.Pool.Model.profile_closed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms profile_closed
-
-/-- info: 'Effect4.Pool.Model.lease_enrols_iff' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms lease_enrols_iff
-
-/-- info: 'Effect4.Pool.Model.select_takes_first' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms select_takes_first
-
-/-- info: 'Effect4.Pool.Model.giveBack_front' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms giveBack_front
-
-/-- info: 'Effect4.Pool.Model.giveBack_once' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms giveBack_once
-
-/-- info: 'Effect4.Pool.Model.close_refuses' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms close_refuses
-
-/-- info: 'Effect4.Pool.Model.step_closing' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms step_closing
-
-/-- info: 'Effect4.Pool.Model.step_items' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms step_items
-
-/-- info: 'Effect4.Pool.Model.initial_profile' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms initial_profile
-
-/-- info: 'Effect4.Pool.Model.drain_waits' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms drain_waits
-
-/--
-info: Effect4.Pool.Model.profile_closed: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.lease_enrols_iff: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.select_takes_first: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.giveBack_front: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.giveBack_once: proved; nearest [Effect4.Pool.Model.giveBack_front]; 0 lemmas, 0 definitions
-Effect4.Pool.Model.close_refuses: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.drain_waits: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status profile_closed lease_enrols_iff select_takes_first giveBack_front giveBack_once
-  close_refuses drain_waits
 
 end Test.Program.PoolContract

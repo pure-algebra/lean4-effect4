@@ -1189,25 +1189,4 @@ example : ∀ (op : NativeOp) (tys : List Ty) (f : Term),
 #guard nativeSignature.rowOf (.deferredMakeOf .unit .never) !=
   nativeSignature.rowOf (nativeSignature.face (.deferredMakeOf .unit .never))
 
-#print axioms Effect4.Program.read_print
-#print axioms Effect4.Program.read_exact
-#print axioms Effect4.Program.readPerform_printPerform
-#print axioms Effect4.Program.readPerform_exact
-#print axioms Effect4.Program.withFunction_of_splitFunction
-#print axioms Effect4.Program.splitFunction_withFunction
-#print axioms Effect4.Program.splitFunction_printRow
-#print axioms Effect4.Program.printPerform_ok
-#print axioms Effect4.Program.nativeLawful
-#print axioms Effect4.Program.readCall_printCall
-#print axioms Effect4.Program.readCall_exact
-#print axioms Effect4.Program.readRowCall_typeArgs_ne
-#print axioms Effect4.Program.readPerformFace_bare_error
-#print axioms Effect4.Program.splitHeadTypes_withHeadTypes
-#print axioms Effect4.Program.withHeadTypes_of_splitHeadTypes
-#print axioms Effect4.Program.printRow_congr
-#print axioms Effect4.Program.printCall_ok
-#print axioms Test.Codegen.TermRows.bothLawful
-#print axioms Effect4.Program.readLeaf_print
-#print axioms Effect4.Program.readLeaf_exact
-
 end Test.Codegen.TermRows

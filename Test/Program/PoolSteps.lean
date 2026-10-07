@@ -20,7 +20,6 @@ and what the typing theorems do not say by themselves.
 5. Each typing theorem at a scope of names: the step's own, and the scope of a row of
    `Ref.modifyWith` under three names that `bindWith` minted, with no assumed capture.
 6. The connector to the store: `step_keeps_cell` on a step's typing.
-7. The pinned axioms and the pinned standing of each typing theorem.
 
 The comparison with the abstract model is `Test/Program/PoolAgreement.lean`. The runs on the
 machine are `Test/Program/PoolScenarios.lean`.
@@ -539,99 +538,5 @@ theorem drainStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = na
   exact step_keeps_cell sig atoms typedEnv
     ((drainStep_types sig atoms canonical depth typesId typesHint typesCell false).tree tree)
     held member value
-
-/--
-info: 'Test.Program.PoolSteps.leaseStep_keeps_cell' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms leaseStep_keeps_cell
-
-/--
-info: 'Test.Program.PoolSteps.selectStep_keeps_cell' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms selectStep_keeps_cell
-
-/--
-info: 'Test.Program.PoolSteps.returnStep_keeps_cell' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms returnStep_keeps_cell
-
-/--
-info: 'Test.Program.PoolSteps.drainStep_keeps_cell' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms drainStep_keeps_cell
-
-/--
-info: Test.Program.PoolSteps.leaseStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
-Test.Program.PoolSteps.selectStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
-Test.Program.PoolSteps.returnStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
-Test.Program.PoolSteps.drainStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status leaseStep_keeps_cell selectStep_keeps_cell returnStep_keeps_cell
-  drainStep_keeps_cell
-
-/-! ## 7. The pinned outputs
-
-Each typing theorem's axioms, and its standing as the plan derives it from its proof. The
-counts are of this battery's tree, which holds no step of a proof. -/
-
-/-- info: 'Effect4.Pool.Model.initial_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms initial_types
-
-/-- info: 'Effect4.Pool.Model.leaseStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms leaseStep_types
-
-/-- info: 'Effect4.Pool.Model.returnStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms returnStep_types
-
-/-- info: 'Effect4.Pool.Model.selectStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms selectStep_types
-
-/-- info: 'Effect4.Pool.Model.withdrawStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms withdrawStep_types
-
-/-- info: 'Effect4.Pool.Model.closeStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms closeStep_types
-
-/-- info: 'Effect4.Pool.Model.drainStep_types' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms drainStep_types
-
-/-- info: 'Effect4.Program.nativeAtomTy_eq' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms nativeAtomTy_eq
-
-/-- info: 'Effect4.Modules.types_eq' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms types_eq
-
-/-- info: 'Effect4.Modules.types_listOf' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms types_listOf
-
-/--
-info: Effect4.Pool.Model.initial_types: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.leaseStep_types: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.returnStep_types: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.selectStep_types: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.withdrawStep_types: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.closeStep_types: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Pool.Model.drainStep_types: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status initial_types leaseStep_types returnStep_types selectStep_types withdrawStep_types
-  closeStep_types drainStep_types
 
 end Test.Program.PoolSteps

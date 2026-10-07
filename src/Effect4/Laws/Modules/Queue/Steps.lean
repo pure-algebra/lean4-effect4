@@ -42,7 +42,7 @@ wake.
 The statements establish no delivery, no cancellation law, no liveness and nothing of a
 wrapper. An equal value in the model says nothing of a host. The finite controls are
 `Test/Program/QueueAgreement.lean` and `Test/Program/QueueRelation.lean`: each statement's
-conclusion on every state of a universe of 200 states, and each statement's pinned axioms.
+conclusion on every state of a universe of 200 states.
 -/
 
 set_option autoImplicit false

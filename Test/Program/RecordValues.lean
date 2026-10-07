@@ -56,7 +56,4 @@ example (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val)
     (h : NamedFit ps ns xs) : ns.length = xs.length :=
   namedFit_lengths ps ns xs h
 
-#print axioms namedFit_lengths
-#print axioms namedFit_required_pair
-
 end Effect4.Test.RecordValues

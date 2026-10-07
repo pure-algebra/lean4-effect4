@@ -65,18 +65,6 @@ def objectUnion : Ty := .union (.record [("x", false, .nat)]) (.map .string .nat
 #guard Schema.Codec.decodeRaw (.union (.list .nat) (.tuple [.nat])) (.arr [Arch.Json.ofNat 7]) =
   some (.list [.nat 7])
 
-#print axioms Schema.Codec.wire
-#print axioms Schema.Codec.encodeRaw
-#print axioms Schema.Codec.decodeRaw
-
-#print axioms Schema.Codec.wire_type
-#print axioms Schema.Codec.objectRead_exact
-#print axioms Schema.Codec.decodeRaw_normJ
-#print axioms Schema.Codec.decodeRaw_exact
-#print axioms Schema.decode_of_encode
-#print axioms Schema.encode_of_decode
-#print axioms Schema.decode_iff
-
 /-! ## The error payload's JSON (decisions row 120)
 
 A promoted defect's error has no type to direct its JSON. A record payload crosses as the
@@ -108,8 +96,5 @@ def failPayload : List Err := ((Payload.image.ofVal failFrame).map Err.payload).
 -- at the record type, a cause's failure carries the record's own JSON
 #guard (Schema.encode (.causeOf (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)]))
     (Val.exitErr (Cause.fail (errOf failFrame)))).isSome
-
-#print axioms Schema.Codec.decodeErr_exact
-#print axioms Schema.Codec.payloadOfHex?_exact
 
 end Effect4.Test.DataCodec

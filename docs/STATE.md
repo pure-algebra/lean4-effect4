@@ -473,6 +473,14 @@ In work since the suspension of the handover:
   seven things of the slice, and one was a claim: its pair equation had no instance at raw
   types. The battery holds readers and controls only, which is the rule for a battery from
   now on. The second model works in the main checkout, by the owner's word.
+- **The first test cleanup is landed** ([the census](research/2026-10-06-test-cleanup-census.md);
+  row 301). The owner asked for it: drop the tests that are mechanical and that the proof
+  tooling has made unnecessary. 56 batteries lose 2304 lines: each `#print axioms` line, and
+  each pin of "proved" on a statement. The axiom gate reads every declaration, and the plan
+  derives a status from the proof, so those lines measured nothing new. `Test/Audit` keeps
+  its own controls. The rule is in `AGENTS.md`: each line of a battery is a reader, a
+  control, or a finite evaluation that no theorem covers. The census lists the next
+  candidates. One is the owner's: the statement pins of the frozen contracts.
 - **Seat PILOT is merged: the fiber rule is converted**
   ([the landing note](research/2026-10-06-seat-PILOT-receipt.md); rows 285, 292, 293, 296
   and 298). `fiberTy` is `UnionRule.extend Member.fiber`, in one line: the member rule's own

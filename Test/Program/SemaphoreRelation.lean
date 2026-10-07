@@ -20,8 +20,7 @@ minted the cursor, and joined to the store by the shared connector, `step_update
 
 Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
 requirement R10, a part of the proposed claim `semaphore-expansion-agrees`). A state outside
-the universe and another table are not checked. The pinned axiom and plan outputs follow the
-controls.
+the universe and another table are not checked.
 -/
 
 set_option autoImplicit false
@@ -222,111 +221,5 @@ example (tb : Table) (s : State) (id : Nat) (q : Val) (injective : tb.Injective)
   withdrawStep_agrees tb s id injective rfl
     (captured_answer (outer := { names := [firstName] }) stepScope_second rfl)
     (captured_var (x := "s") rfl stepScope_cell rfl).atScope
-
-/-! ## The pinned outputs
-
-Each proved statement's axioms, and its standing as the plan derives it from the proof. Each
-statement was a planned goal, and it is proved in place with its statement unchanged. The
-counts are of this battery's tree, which holds no step of a proof: the steps are in the law
-graph. -/
-
-/-- info: 'Effect4.Semaphore.Model.takeStep_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms takeStep_agrees
-
-/--
-info: Effect4.Semaphore.Model.takeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status takeStep_agrees
-
-/-- info: 'Effect4.Semaphore.Model.takeIfAvailableStep_agrees' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms takeIfAvailableStep_agrees
-
-/--
-info: Effect4.Semaphore.Model.takeIfAvailableStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status takeIfAvailableStep_agrees
-
-/-- info: 'Effect4.Semaphore.Model.releaseStep_agrees' depends on axioms: [propext] -/
-#guard_msgs in
-#print axioms releaseStep_agrees
-
-/--
-info: Effect4.Semaphore.Model.releaseStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status releaseStep_agrees
-
-/-- info: 'Effect4.Semaphore.Model.visitStep_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms visitStep_agrees
-
-/--
-info: Effect4.Semaphore.Model.visitStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status visitStep_agrees
-
-/--
-info: 'Effect4.Semaphore.Model.withdrawStep_agrees' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms withdrawStep_agrees
-
-/--
-info: Effect4.Semaphore.Model.withdrawStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status withdrawStep_agrees
-
--- The five statements as one: the witness of the proposed claim `semaphore-steps-agree`.
-/--
-info: 'Effect4.Semaphore.Model.semaphore_steps_agree' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms semaphore_steps_agree
-
-/--
-info: Effect4.Semaphore.Model.semaphore_steps_agree: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status semaphore_steps_agree
-
--- The general removal, and the three joins to the store.
-/-- info: 'Effect4.Modules.reads_removeById' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms reads_removeById
-
-/--
-info: 'Test.Program.SemaphoreRelation.release_updates' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms release_updates
-
-/--
-info: 'Test.Program.SemaphoreRelation.visit_updates' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms visit_updates
-
-/--
-info: Test.Program.SemaphoreRelation.visit_updates: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status visit_updates
-
-/-- info: 'Test.Program.SemaphoreRelation.take_updates' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms take_updates
 
 end Test.Program.SemaphoreRelation

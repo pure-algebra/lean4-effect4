@@ -26,9 +26,3 @@ def pair : NativeEff := .select (.lit (.nat 7)) (.tag "Found")
 #guard !exportNameSafe "caseTagR"
 
 end Effect4.Test.RecordTagCodegen
-
-#print axioms Effect4.Program.readLeaf_exact
-#print axioms Effect4.Program.readLeaf_print
-#print axioms Effect4.Program.read_print
-#print axioms Effect4.Program.read_exact
-#print axioms Effect4.Program.print_of_readable

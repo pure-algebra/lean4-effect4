@@ -6,12 +6,12 @@ import TypeScript.Render
 import ProofGraph.Plan
 
 /-!
-# The mask's five claims: their standing, their axioms, and the printed form
+# The mask's five claims: their statements, and the printed form
 
 The five registry claims of the mask (`tools/Tools/SemanticsRegistry.lean`) have their
 statements in `src/Effect4/Laws/Program/Typed/Mask.lean` and
-`src/Effect4/Laws/Codegen/Mask.lean`. This battery pins each top node's axioms and its plan
-status, and it holds the finite controls of the printed form: a mask around one wait prints
+`src/Effect4/Laws/Codegen/Mask.lean`. This battery reads the claims' statements, and
+it holds the finite controls of the printed form: a mask around one wait prints
 as the note's F5 shows, and it reads back.
 
 Every pin of rendered text is inside a `#guard`: a definition that folds over a rendered
@@ -115,53 +115,6 @@ def keptInCell : Src NativeOp := eff do
     .ok (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))))
 #guard Api.typeOf (.restore (.lit (.bool true)) (.succeed (.lit (.nat 1)))) [] = none
 #guard !Api.readable (.restore (.var 0) (.succeed (.lit (.nat 1))))
-
-/-! ## The five claims -/
-
-/--
-info: 'Effect4.Program.Typed.saved_mask_image_membership' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms saved_mask_image_membership
-
-/--
-info: 'Effect4.Program.Typed.scoped_body_substitution_boundary' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms scoped_body_substitution_boundary
-
-/--
-info: 'Effect4.Program.Typed.saved_mask_restoration' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms saved_mask_restoration
-
-/--
-info: 'Effect4.Program.mask_rows_table_premises' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Program.mask_rows_table_premises
-
-/--
-info: 'Effect4.Program.mask_printed_form_profile' depends on axioms: [propext, Quot.sound]
--/
-#guard_msgs in
-#print axioms Effect4.Program.mask_printed_form_profile
-
--- The standing is derived from each proof. The counts are of this battery's tree, which holds
--- no step of a proof: the steps are in the law graph. The profile's nearest node is the
--- restoration claim, whose statements its two checkpoints cite.
-/--
-info: Effect4.Program.Typed.saved_mask_image_membership: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.Typed.scoped_body_substitution_boundary: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.Typed.saved_mask_restoration: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.mask_rows_table_premises: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.mask_printed_form_profile: proved; nearest [Effect4.Program.Typed.saved_mask_restoration]; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status saved_mask_image_membership scoped_body_substitution_boundary saved_mask_restoration
-  Effect4.Program.mask_rows_table_premises Effect4.Program.mask_printed_form_profile
 
 /-! ## The claims' statements, read at one input each
 

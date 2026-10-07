@@ -57,12 +57,4 @@ open Effect4.Program Effect4.Store Effect4.Codegen.Metadata TypeScript
 example (t : Ty) : readTy (writeTy t) = some t := readTy_writeTy t
 example (e : Expr) (t : Ty) (h : readTy e = some t) : writeTy t = e := readTy_exact e t h
 
-#print axioms writeValue
-#print axioms readValue
-#print axioms readValue_writeValue
-#print axioms readValue_exact
-#print axioms readTy_writeTy
-#print axioms readTy_exact
-#print axioms type_metadata_exact
-
 end Effect4.Test.Metadata

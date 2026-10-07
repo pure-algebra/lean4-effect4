@@ -88,12 +88,4 @@ example {Op : Type} (sig : Signature Op) (env : TyEnv) (path : List Nat) (term :
     (Checker.term? sig env path term).toOption = termTy sig env term :=
   Checker.toOption_term? sig env path term
 
-#print axioms Checker.toOption_term?
-#print axioms Checker.term?_eq_ok
-#print axioms Checker.toOption_cause?
-#print axioms Checker.cause?_eq_ok
-#print axioms termRefusal_ext
-#print axioms cause?_ext
-#print axioms term?_ext
-
 end Test.Program.RecordRefusals

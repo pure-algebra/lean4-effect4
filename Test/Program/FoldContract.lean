@@ -7,7 +7,7 @@ import Effect4.Laws.Program.Typed.ListFold
 
 Finite controls. Each `#guard` checks one input, and no guard is a law. The two registry claims
 `fold-typed-atomic-update` and `handle-identity-laws` have their statements in
-`src/Effect4/Laws/Program/Typed/ListFold.lean`; this file prints their axioms at its foot.
+`src/Effect4/Laws/Program/Typed/ListFold.lean`.
 
 The six steps are the design's (`docs/research/2026-10-05-claude-lead/fold-design/`, F2), each
 one term of the tree, against the function the model checks it against. `take` and `drop` take
@@ -552,19 +552,5 @@ def authored : Authoring.Src NativeOp :=
     (Authoring.var "x") (Authoring.nat 0) (Authoring.var "total"))) with
   | .error _ => true
   | .ok _ => false
-
-/-! ## The two claims -/
-
-#print axioms Typed.fold_typed_atomic_update
-#print axioms Typed.handle_identity_laws
-#print axioms evalTerm_weaken
-#print axioms Typed.fold_fits
-#print axioms Typed.refModify_typed_step
-#print axioms Typed.evalTerm_progress
-#print axioms RawHandles.evalTerm_handles
-#print axioms NativeAtom.sound
-#print axioms readTerm_printTerm
-#print axioms readTerm_exact
-#print axioms Authoring.fold_scoped
 
 end Effect4.Test.FoldContract

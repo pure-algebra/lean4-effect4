@@ -25,8 +25,7 @@ the chain on real fibers, at the alphabets `Nat`.
 Placement. Each guard is a finite instance of the registry claim proposed as
 `saved-mask-pop-discipline` (concept `scope-lifetime-finalization`, requirement R11). A fiber
 outside the sweep is not checked here: the theorem is the general statement. The battery states
-no law of a run. The region's bracket of row 1 is four instances, and no theorem states it. The
-pinned statements, axioms and plan status follow the controls.
+no law of a run. The region's bracket of row 1 is four instances, and no theorem states it.
 -/
 
 set_option autoImplicit false
@@ -367,35 +366,5 @@ has the entry's flag. A later lift must supply the two premises on the chain. -/
 example : ((emptyAt true).uninterruptible.getCont .contA false).fiber.interruptible =
     (emptyAt true).interruptible :=
   atNat.sameFlag true _ _ (by decide) (by decide) (by decide)
-
-/-! ## The pinned outputs
-
-The axioms of the placed theorem and of the three statements of Codex's packet, and the placed
-theorem's standing as the plan derives it from its proof. It was a planned goal, and it is
-proved in place with its statement unchanged. The counts are of this battery's tree, which holds
-no step of the proof: the steps are in the law graph. -/
-
-/-- info: 'Effect4.Machine.saved_mask_pop_discipline' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms saved_mask_pop_discipline
-
-/-- info: 'Effect4.FrameFiber.popFrom_maskChain' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms popFrom_maskChain
-
-/-- info: 'Effect4.FrameFiber.getCont_maskChain' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms getCont_maskChain
-
-/-- info: 'Effect4.Machine.frameExitState_maskChain' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in
-#print axioms frameExitState_maskChain
-
-/--
-info: Effect4.Machine.saved_mask_pop_discipline: proved; nearest []; 0 lemmas, 0 definitions
-next goals: 0
--/
-#guard_msgs in
-#plan_status saved_mask_pop_discipline
 
 end Test.Machine.MaskDiscipline
