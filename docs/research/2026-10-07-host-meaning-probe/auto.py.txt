@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+# The mechanical loop of the rehearsal. Build the cone. Where the compiler cannot infer the
+# implicit table at an application with no expected type, name it: `(lemma root …)` becomes
+# `(lemma (table := table) root …)`. Repeat until no such error is left. Print what is left.
+import re, subprocess, pathlib, sys
+TREE = "/Users/pooks/Dev/lean4-effect4-t3b"; SLOT = "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh"
+ERR = re.compile(r"^error: (src/[^:]+):(\d+):(\d+): don't know how to synthesize implicit argument `table`")
+fixed_total = 0
+for rnd in range(40):
+    r = subprocess.run([SLOT, "lake", "build", "Effect4.Laws.Program.RuntimeR"], cwd=TREE, capture_output=True, text=True)
+    out = r.stdout + r.stderr
+    pathlib.Path(sys.argv[1] + "/auto-last.log").write_text(out)
+    sites = sorted({(m.group(1), int(m.group(2)), int(m.group(3))) for m in map(ERR.match, out.split("\n")) if m})
+    if not sites: break
+    did = 0
+    for f, line, col in sites:
+        p = pathlib.Path(TREE) / f; lines = p.read_text().split("\n")
+        l = lines[line - 1]
+        # the application starts at the reported column, or just after an opening parenthesis there
+        m = re.compile(r"\(?([A-Za-z_][\w.']*)").match(l, col)
+        if not m or "(table := table)" in l[m.start():m.end() + 20]: continue
+        lines[line - 1] = l[:m.end()] + " (table := table)" + l[m.end():]
+        p.write_text("\n".join(lines)); did += 1
+    fixed_total += did
+    print(f"round {rnd}: {len(sites)} sites, {did} named")
+    if did == 0: break
+built = [x.split("Built ")[1].split(" (")[0].split(".")[-1] for x in out.split("\n") if x.startswith("✔") and ("Simulation" in x or "RuntimeR" in x or "Program.Means" in x)]
+errs = [x for x in out.split("\n") if x.startswith("error: src")]
+print("named in all:", fixed_total, "| exit", r.returncode, "| built:", built)
+print("errors left:", len(errs))
+for e in errs[:14]: print(e[:230])
