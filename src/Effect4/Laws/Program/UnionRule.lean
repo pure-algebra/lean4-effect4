@@ -1122,11 +1122,15 @@ proposed claim `union-rule-extend`. Its consumer is the fiber case of the claim
 that answers one type has the same law from `lift_closed`. It is stated with its first
 consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal extend_closed_pair {rule : Ty → Option (Ty × Ty)}
+theorem extend_closed_pair {rule : Ty → Option (Ty × Ty)}
     (member : ∀ {m : Ty} {a : Ty × Ty}, m.closed = true → rule m = some a →
       a.1.closed = true ∧ a.2.closed = true)
     {t : Ty} {a : Ty × Ty} (typed : extend rule t = some a) (closed : t.closed = true) :
-    a.1.closed = true ∧ a.2.closed = true
+    a.1.closed = true ∧ a.2.closed = true := by
+  rcases (extend_eq_some_iff rule).mp typed with answered | ⟨-, lifted⟩
+  · exact member closed answered
+  · exact lift_closed_pair (fun _ _ closed answered => member closed answered)
+      (liftOne_some lifted) closed
 
 section ConvertedEliminator
 

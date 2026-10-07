@@ -170,19 +170,12 @@ def rawFiber : Ty := .fiberOf (.prod (.union .nat .string) .unit) .never
 
 /-! ## Green and red: closed types -/
 
-/-- A fiber type that is closed has closed columns: the member fact of `lift_closed_pair`. -/
-theorem fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
-    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true := by
-  cases m with
-  | fiberOf value error =>
-    cases answered
-    exact Bool.and_eq_true_iff.mp closed
-  | _ => exact nomatch answered
-
-/-- The lifted `Member.fiber` answers closed columns at a closed target. -/
+/-- The lifted `Member.fiber` answers closed columns at a closed target. The member fact is
+`Member.fiber_closed` (`src/Effect4/Laws/Program/Eliminators.lean`): a fiber type that is closed
+has closed columns. -/
 theorem lift_fiber_closed {t : Ty} {a : Ty × Ty} (typed : lift Member.fiber t = some a)
     (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true :=
-  lift_closed_pair (fun _ _ closed answered => fiber_closed closed answered) typed closed
+  lift_closed_pair (fun _ _ closed answered => Member.fiber_closed closed answered) typed closed
 
 /-- A list type that is closed has a closed element type: the member fact of `lift_closed`. -/
 theorem listOf_closed {m a : Ty} (closed : m.closed = true)

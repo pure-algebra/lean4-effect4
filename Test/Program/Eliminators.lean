@@ -331,23 +331,11 @@ def rawProduct : Ty := .prod (.union .nat .string) .unit
 
 /-! ## Closed types -/
 
-/-- A fiber type that is closed has closed columns: the member fact. -/
-theorem fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
-    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true := by
-  cases m with
-  | fiberOf value error =>
-    cases answered
-    exact Bool.and_eq_true_iff.mp closed
-  | _ => exact nomatch answered
-
-/-- **A closed handle type has a closed value type and a closed error type.** The proof reads
-the fiber rule by its two alternatives (`extend_eq_some_iff`): the member fact at the raw
-answer, and `lift_closed_pair` at the guarded rule's answer. -/
+/-- **A closed handle type has a closed value type and a closed error type.** It is
+`extend_closed_pair` at the member fact of the fiber rule: the member fact at the raw answer,
+and `lift_closed_pair` at the guarded rule's answer. -/
 theorem fiberTy_closed {t : Ty} {a : Ty × Ty} (typed : fiberTy t = some a)
-    (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true := by
-  rcases (extend_eq_some_iff Member.fiber).mp typed with answered | ⟨-, lifted⟩
-  · exact fiber_closed closed answered
-  · exact lift_closed_pair (fun _ _ closed answered => fiber_closed closed answered)
-      (liftOne_some lifted) closed
+    (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true :=
+  extend_closed_pair Member.fiber_closed typed closed
 
 end Effect4.Test.Eliminators

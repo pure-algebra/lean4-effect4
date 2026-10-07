@@ -105,8 +105,13 @@ fiber rule. Its consumer is `closed_fiberTy`
 (`src/Effect4/Laws/Program/Typing/Closed.lean`), the fiber case of the claim
 `checked-types-closed`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal Member.fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
-    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true
+theorem Member.fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
+    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true := by
+  cases m with
+  | fiberOf value error =>
+    cases answered
+    exact Bool.and_eq_true_iff.mp closed
+  | _ => exact nomatch answered
 
 /-- **The fiber rule at a raw fiber type**: the two columns as they are spelled, as before the
 conversion. It is `extend_agrees` at the fiber rule: no program that the by-shape rule admitted
