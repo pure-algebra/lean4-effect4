@@ -454,13 +454,29 @@ In work since the suspension of the handover:
   coordinator keeps the plan current, merges each slice with the wide gates and writes the
   records. [The plan](research/2026-10-06-next-slices-plan.md) orders eleven slices, each
   with its goal, its files, its statements and its placement. It was revised after the two
-  last seats landed. Wave 1 is the order of a lifted rule in Lean core's classes
+  last seats landed. Wave 1 is landed: the order of a lifted rule in Lean core's classes
   ([seat ORDER's brief](research/2026-10-05-claude-lead/briefs/seat-order-brief.md), with
   [its compiled probe](research/2026-10-06-order-classes-probe.lean.txt)) and the address
   table of a program. Wave 2 is the match by bounds, with the typed print and a query driver
   beside it. The other conversions follow, and then the guards go. The plan checks the
   second model's report against the pinned sources, and it holds two compiled probes. It
-  rules nothing.
+  rules nothing. [The brief of the next chunk](research/2026-10-06-chunk-2-brief.md) maps
+  wave 2 and wave 3 as one hand-over, with the order of the work inside it.
+- **Slice TABLE is landed: the address table, the list of refusals and the slot table**
+  ([the receipt](research/2026-10-06-seat-TABLE-receipt.md), with
+  [the coordinator's review](research/2026-10-06-slice-TABLE-review.md); row 302). The table
+  has one entry for each address of a program: its typing environment, and at a program the
+  checker's answer there (`src/Effect4/Program/Typing/Table.lean`). An entry is typed,
+  refused, or not reached. The distinct refusals start with the located refusal of
+  `explain`, and the list is empty exactly when the checker admits the program
+  (`refusals_nil_iff`, the registry claim `address-table`). The address list holds exactly
+  the addresses of a node's nodes: the slice left that as a planned goal, and the landing
+  proves it from one general law of the path fold (`Node.mem_foldList_iff`,
+  `src/Effect4/Laws/Program/PathFold.lean`). The slot table answers the typing environment
+  of the five term slots that extend their node's, and the landing adds its law: on a typed
+  node the slot's term has a type there (`hasTy_extSlotEnv`, the registry claim
+  `term-slot-environment`). The table is a specification and it is slow. No theorem states
+  the frame of an edit, and no planned goal is open for it.
 - **Slice ORDER is landed: one order vocabulary, in Lean core's classes**
   ([the receipt](research/2026-10-06-seat-ORDER-receipt.md), with
   [the coordinator's review](research/2026-10-06-slice-ORDER-review.md); rows 293 and 300).

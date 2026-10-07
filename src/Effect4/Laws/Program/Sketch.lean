@@ -44,22 +44,22 @@ focus that `Sketch.focusAt` computes (`Program/Typing/Focus.lean`,
 Concept `initial-algebras-folds`: the checker is one fold of the program, and each law reads
 that fold at two signatures. Requirement R14, under decisions rows 282 and 288.
 
-- **`sketch-conservative`** (proposed claim, role compatibility; pointer `holes_conservative`).
+- **`sketch-conservative`** (claim, role compatibility; pointer `holes_conservative`).
   Reach: every application, every hole table, every environment and path, for a program that
   performs only the application's operations and reads only service keys with a carrier
   (`SigProgram`). It does not establish anything of a program that performs a hole, any
   behaviour, or that a hole table is lawful. Consumer: a sketch whose holes are all filled is an
   ordinary program, and the checker decides it.
-- **`sketch-weakening`** (proposed claim, role weakening; pointer `sketch_weakening`, which is H2
+- **`sketch-weakening`** (claim, role weakening; pointer `sketch_weakening`, which is H2
   and H3 as one statement). Reach: the same, with H3's premise at the extended signature. It
   does not establish an omission or a filling: those are the replacement law's. Consumer:
   declaring a hole, and composing two sketches.
-- **`hole-rule`** (proposed claim, role compatibility; pointer `Sketch.hole_hasTy`). Reach: a
+- **`hole-rule`** (claim, role compatibility; pointer `Sketch.hole_hasTy`). Reach: a
   hole row with a unit request, closed columns and formed columns, at any position of any hole
   table, in every environment. It does not establish a rule for a request that reads the
   environment, or a run. Consumer: the replacement law, for an omission.
 
-- **`typed-replacement`** (proposed claim, role substitution; its pointer is
+- **`typed-replacement`** (claim, role substitution; its pointer is
   `NodeHasTy.replace`, in `Laws/Program/Typing/Replace.lean`). `Sketch.check_fill` and
   `Sketch.check_omit` are its two consumers on a sketch. Reach: a sketch that the checker admits,
   and an address of a program in it. A filling has the focus's type exactly, and it may declare
@@ -68,7 +68,7 @@ that fold at two signatures. Requirement R14, under decisions rows 282 and 288.
   establish any behaviour, or a filling or an omission at a type that is equal only after
   normalization: the checker gives a node the raw type of its term, and it reads a hole row in
   normal form. The focus's environment and type are existential in these two.
-- **`focus-function`** (proposed claim, role inversion; its pointer is
+- **`focus-function`** (claim, role inversion; its pointer is
   `NodeHasTy.replace_envAt`, in `Laws/Program/Typing/Replace.lean`). `Sketch.check_focusAt`,
   `Sketch.check_fill_focusAt` and `Sketch.check_omit_focusAt` are its consumers on a sketch.
   Reach: the same sketches and addresses, with the focus as `Sketch.focusAt` answers it. The

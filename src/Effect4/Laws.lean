@@ -95,6 +95,7 @@ import Effect4.Laws.Program.LinkedRows
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.Typing.Check
 import Effect4.Laws.Program.Typing.Focus
+import Effect4.Laws.Program.Typing.Table
 import Effect4.Laws.Program.Typing.CheckInversion
 import Effect4.Laws.Program.Typing.CheckSound
 import Effect4.Laws.Codegen.Forms

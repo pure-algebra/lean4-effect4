@@ -1,5 +1,6 @@
 import Effect4.Program.SigApp
 import Effect4.Program.Typing.Focus
+import Effect4.Program.Typing.Table
 
 /-!
 # Program.Sketch — a program with its hole table
@@ -184,6 +185,14 @@ A filling of the answered type in the answered environment keeps the sketch's ty
 row declares the answered type (`Sketch.check_omit_focusAt`). -/
 def focusAt (s : Sketch) (app : SigApp) (path : List Nat) : Option (Focus NativeOp) :=
   Effect4.Program.focusAt (app.withHoles s.holes).signature [] s.program path
+
+/-- The address table of a sketch under its hole-extended signature. -/
+def table (s : Sketch) (app : SigApp := {}) : List Table.Entry :=
+  Effect4.Program.table (app.withHoles s.holes).signature [] s.program
+
+/-- The distinct refusals of a sketch under its hole-extended signature. -/
+def refusals (s : Sketch) (app : SigApp := {}) : List TypeRefusal :=
+  Effect4.Program.refusals (app.withHoles s.holes).signature [] s.program
 
 end Sketch
 

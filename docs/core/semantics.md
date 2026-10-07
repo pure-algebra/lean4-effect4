@@ -1028,6 +1028,22 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   `Node.child`. It answers nothing after a sibling that the checker refuses. It stores
   nothing, and one answer costs up to one check of the program. One pass that answers every
   address is not built.
+- **The address table (`address-table`)**: the table has one entry for each address of a node,
+  and no other (`mem_addresses_iff` (`src/Effect4/Laws/Program/Typing/Table.lean`), from
+  `Node.mem_foldList_iff` (`src/Effect4/Laws/Program/PathFold.lean`)). An entry of a program
+  holds the typing environment that the step function answers, and the checker's answer there
+  (`table` (`src/Effect4/Program/Typing/Table.lean`)). The distinct refusals of the entries
+  start with the located refusal of `explain`, and the list is empty exactly when the checker
+  admits the program (`refusals_head`, `refusals_nil_iff`). An entry after a refused sibling is
+  not reached. The table is the specification of a pass that checks each node once, and each
+  of its entries costs up to one check of the program. No law orders the refusals after the
+  head, and no theorem states the frame of an edit.
+- **The slot table (`term-slot-environment`)**: a term has no address. Five term slots read an
+  extension of their node's typing environment, and the slot table answers it
+  (`Node.extSlotEnv` (`src/Effect4/Program/Typing/Table.lean`)). On a typed node the term in
+  each slot has a type there (`hasTy_extSlotEnv`
+  (`src/Effect4/Laws/Program/Typing/Table.lean`)). The property does not say that the
+  environment is the only one, and it says nothing at a node that the checker refuses.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

@@ -361,6 +361,15 @@ no opaque and needs no entry.
 private def admittedInitializedHandles : List Name :=
   [`Effect4.Laws.Auto.semanticsAttribute]
 
+/--
+The count of declarations that rest on a planned goal, pinned at the default audit root (decisions
+rows 301 and 302). A battery no longer pins "proved" on a statement, so this one number holds the
+same for the whole tree: a declaration that comes to rest on a goal moves the count, and so does a
+goal's proof that frees one. The gate then refuses until the pin moves, which is a review event.
+The slow root reads more modules: it logs its count and pins none.
+-/
+private def restingPin : Nat := 12
+
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
@@ -537,6 +546,8 @@ elab "#effect4_axiom_gate" : command => do
   let t6 ← liftIO IO.monoMsNow
   logInfo
     m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; phases (ms): sources and closure {t1 - t0}, library roots {t2 - t1}, declarations {t3 - t2}, resolution {t4 - t3}, axioms {t5 - t4}, exemptions {t6 - t5}; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
+  if !slowRoot && resting != restingPin then
+    throwError "Effect4 goal gate: {resting} declaration(s) rest on planned goals, and the pin is {restingPin}; a declaration came to rest on a goal, or a goal's proof freed one: read which, then move `restingPin` in Test/Audit/AxiomGate.lean"
   logInfo m!"Effect4 goal gate: {goalCount} planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; {resting} declaration(s) rest on goals; no other declaration reaches sorryAx"
 
 /-!

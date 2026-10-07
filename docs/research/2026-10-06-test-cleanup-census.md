@@ -110,3 +110,12 @@ theorem. A frozen contract may pin a statement that no registry claim holds.
 - The count of restating examples is an estimate by the form of the line.
 - The times are one build each, on one machine.
 - No theorem and no gate changed. The cut removes lines that asserted nothing new.
+
+## Corrected since (2026-10-06, decisions row 302)
+
+- **The 97 bare `#check` lines are not cut.** All of them stand in contract batteries, under the
+  heading of the laws that the contract states. Each promises that a name exists, so they wait
+  with the contracts' statement pins for the owner's decision (proposal 4). Proposal 1 is
+  withdrawn.
+- **Proposal 2 is landed.** The goal gate pins the count of declarations that rest on planned
+  goals (`restingPin`, `Test/Audit/AxiomGate.lean`): 12 at the default audit root.

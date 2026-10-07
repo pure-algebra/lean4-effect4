@@ -35,7 +35,7 @@ the constructor's image, and it keeps the refusal at a proper union.
 up: `fits_subN w (fiberTy_upper hfib) v hfit` (`src/Effect4/Laws/Program/Typed/Denotation.lean`).
 The inequality is in `Ty.subN`, and never in raw `Ty.sub`.
 
-Placement. Concept `subtyping-algebra`, requirement R14, under the proposed claim
+Placement. Concept `subtyping-algebra`, requirement R14, under the claim
 `union-rule-extend`. Reach: the fiber rule, in the order `Ty.subN`. The laws do not establish
 `checker-monotone`, and they say nothing of what tsgo accepts. The controls are in
 `Test/Program/Eliminators.lean`. The design is `docs/research/2026-10-06-seat-PILOT-design.md`.
@@ -65,7 +65,7 @@ theorem Ty.subN_fiberOf_iff (a e a' e' : Ty) :
 
 /-- **`Member.fiber` is the eliminator of the fiber constructor.** It answers only at a fiber
 type, with that type's columns. The constructor keeps and reflects the order. It reads each
-normal union member that is below a fiber type. A step of the proposed claim
+normal union member that is below a fiber type. A step of the claim
 `union-rule-extend`, at its first instance. Its consumers are `fiberTy_upper`, and the order
 laws of the fiber rule by projection (`Test/Program/Eliminators.lean`). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -115,7 +115,7 @@ theorem Member.fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
 
 /-- **The fiber rule at a raw fiber type**: the two columns as they are spelled, as before the
 conversion. It is `extend_agrees` at the fiber rule: no program that the by-shape rule admitted
-moves at this rule, and its type keeps its spelling. A step of the proposed claim
+moves at this rule, and its type keeps its spelling. A step of the claim
 `union-rule-extend`. Its consumers are the differential of the conversion, and a typing
 derivation of a join of a forked fiber. -/
 @[semantics "subtyping-algebra" (requirement := R14)]

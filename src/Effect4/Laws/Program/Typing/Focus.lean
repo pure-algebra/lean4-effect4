@@ -29,7 +29,7 @@ pair is the function's.
 ## Placement
 
 Concept `initial-algebras-folds`: the typing judgment follows the program's constructors, and
-the step function is its inversion at one child. Requirement R14, the proposed claim
+the step function is its inversion at one child. Requirement R14, the claim
 `focus-function` (role inversion; pointer `NodeHasTy.replace_envAt`), under decisions rows 288
 and 292. Consumers: `Sketch.check_fill_focusAt` and `Sketch.check_omit_focusAt`
 (`Laws/Program/Sketch.lean`), a reader of a term's type at a node, and a slice view that walks

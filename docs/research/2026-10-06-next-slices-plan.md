@@ -7,7 +7,11 @@ the owner's request, for the second reader's review before a slice starts. **Rev
 MATCH waits for no decision. No seat runs. Base: main at the commit that enters row 299.
 **Slice ORDER landed the same day** (row 300). Section 5.1 says what it left. The coordinator's
 review gives the rules that the next slices follow
-(`docs/research/2026-10-06-slice-ORDER-review.md`).
+(`docs/research/2026-10-06-slice-ORDER-review.md`). **Slice TABLE landed too** (row 302), with
+its review (`docs/research/2026-10-06-slice-TABLE-review.md`). Section 5.2 says what it left.
+Wave 1 is done. **The next hand-over is one chunk of four steps**, and
+`docs/research/2026-10-06-chunk-2-brief.md` is its brief: QUERY, the probe of the TypeScript
+printer, MATCH and CONVERT.
 
 ## 1. Question
 
@@ -147,17 +151,19 @@ flowchart TD
   QUERY --> CLASSES
 ```
 
-| Wave | Slices | Why together |
+| Chunk | Slices | Why together |
 | --- | --- | --- |
-| 1 | ORDER, TABLE | Each adds modules and changes no statement. Their files are disjoint |
-| 2 | MATCH, with PRINT and QUERY beside it | MATCH edits `src/Effect4/Program/Ty.lean`, so it rebuilds the tree. The printer's files are disjoint from its files. QUERY stands under `tools/` only |
-| 3 | CONVERT, COLUMN | CONVERT edits the files that MATCH edits, so it follows MATCH |
-| 4 | UNGUARD | It needs PRINT, CONVERT and MATCH |
+| 1, landed | ORDER, TABLE | Each adds modules and changes no statement. Their files are disjoint |
+| 2 | QUERY; step 1 of PRINT; MATCH; CONVERT | One implementer works in one checkout, in a row. QUERY and the probe read the tree and rebuild nothing, so they come first. MATCH and CONVERT each rebuild the tree, so they come last and together |
+| 3 | PRINT, steps 2 to 5; COLUMN | PRINT reads the probe's note and MATCH's guard at a binder term. COLUMN reads the table |
+| 4 | UNGUARD | It needs PRINT, CONVERT and MATCH, and the owner has heard each widening |
 | Later | PASS, CLASSES, GAPLEAF | Each has an entry condition (5.9 to 5.11) |
 
 Two paths end at UNGUARD: TABLE, then PRINT; and MATCH, then CONVERT. MATCH comes before
-CONVERT because it repairs a disagreement with tsgo, and a conversion repairs none. At most
-two code seats build at one time (the machine has two Lean slots).
+CONVERT because it repairs a disagreement with tsgo, and a conversion repairs none. The
+chunks replace the waves of the first version. The second model implements alone, so a
+chunk is a row of steps and not a set of seats. One hand-back ends a chunk
+(`docs/research/2026-10-06-chunk-2-brief.md`).
 
 ### 5.1 ORDER: the order of a lifted rule in Lean core's classes (landed, row 300)
 
@@ -170,7 +176,23 @@ The slice is landed. What it left for a later slice:
   over the carrier is a candidate, when a third carrier comes.
 - **A battery holds readers and controls only** (the review's rule).
 
-### 5.2 TABLE: the address table and the list of refusals
+### 5.2 TABLE: the address table and the list of refusals (landed, row 302)
+
+The slice is landed. What it left for a later slice:
+
+- **The table is a specification, and it is slow**: up to one check of the program for each
+  entry. PASS answers the same table in one pass, and owes the agreement.
+- **`mem_addresses_iff`, `refusals_head` and `refusals_nil_iff` are theorems.** The general
+  law is `Node.mem_foldList_iff`: the path fold collects the yields of the addressed nodes
+  and nothing else.
+- **The slot table has its law** (`hasTy_extSlotEnv`). Its case for an operation's own term
+  repeats one line of `bindTerm`, and MATCH gives both one function (row 302, point 5).
+- **`table_replace_outside` is not stated.** It is the proposed claim `edit-frame`, for PASS.
+  The battery tests it on one example with its red control.
+- **Review questions 1 and 2 are open.** No slice looked for a counterexample to the frame
+  of an edit. No law orders the refusals after the head.
+
+The slice as it was planned:
 
 - **Goal**: the address table as a library function, as the specification of every later pass.
 - **New files**: `src/Effect4/Program/Typing/Table.lean` (a core module),
@@ -480,13 +502,18 @@ The coordinator merges each head with the wide gates, in this order:
 
 ## 7. What waits for the owner
 
-1. **Nothing blocks wave 1 or MATCH.** The owner ratified the probe's recommendations on
-   2026-10-06 (row 299, point 10).
+1. **Nothing blocks chunk 2.** The owner ratified the probe's recommendations on
+   2026-10-06 (row 299, point 10), and a conversion lands with a report (row 285, point 3).
 2. **Rows 296 (point 5) and 297 (point 4)** stay open to overrule.
 3. **Each widening of the admitted programs**: MATCH's, CONVERT's and UNGUARD's, each reported
    with its merge.
 4. **The append of the gap's leaf**, before it lands.
 5. **An editor view** needs a JavaScript package. The plan proposes none.
+6. **The frozen contracts' pins**: their statement pins and their bare `#check` lines
+   (rows 301 and 302). The coordinator touches neither before the owner decides.
+7. **Whether the second model commits each stage on a branch of the checkout.** The brief of
+   chunk 2 asks for it, so that the coordinator reviews stage by stage. Without it the
+   receipt names the files of each stage.
 
 The plan assumes that the coordinator merges each slice with the wide gates and writes the
 records, as `AGENTS.md` says.

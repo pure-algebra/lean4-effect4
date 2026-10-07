@@ -58,7 +58,7 @@ Three parts carry the proofs: a list read element by element (`mapM_answer`, `ma
 `mapM_total`), the join of a list (`joinAll_keeps`, `joinAll_all`), and the order of a carrier
 (`AnswerOrder`, `le_joinAll`, `joinAll_le`).
 
-Placement. Concept `subtyping-algebra`. Requirement R14, under the proposed claim
+Placement. Concept `subtyping-algebra`. Requirement R14, under the claim
 `union-rule-lift` (decisions rows 282 and 285). Reach: every member rule into a carrier with a
 least answer and a join; the order `Ty.subN`, `Ty.normalize` and `Ty.members`; every relation
 between values and types that reads the normal form and the union members. Consumers: the two
@@ -71,7 +71,7 @@ They say nothing at an invariant position. The design is
 `docs/research/2026-10-06-seat-UNION-design.md`. The controls are in
 `Test/Program/UnionRule.lean`.
 
-The guard, the extended rule and the contract have their own question: the proposed claim
+The guard, the extended rule and the contract have their own question: the claim
 `union-rule-extend`, at the same concept and requirement (decisions rows 292, 293 and 294). Its
 pointer is `Eliminator.extend_laws`. Reach: the extended rule of a member rule with the three
 facts of `Eliminator`, in the order `Ty.subN`. Consumers: each converted rule of candidate N,
@@ -436,7 +436,7 @@ normal union member that is closed, let its answer be closed. Then the lifted ru
 closed type at each closed target. `never` is closed, the join keeps closed types closed, and a
 closed type has a closed normal form with closed union members (`Ty.closed_normalize`,
 `Ty.closed_members`). A part of the claim `union-rule-lift`, as `lift_all` at one property. Its
-consumer is the record case of the proposed claim `checked-types-closed`, and then the same case
+consumer is the record case of the claim `checked-types-closed`, and then the same case
 of each conversion. It proves the member rule's fact for no rule. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem lift_closed {rule : Ty → Option Ty}
@@ -1124,7 +1124,7 @@ that is below a target it answers. -/
 
 /-- **The guard, as one fact.** The guarded rule answers `a` at a target exactly when the
 target's normal form has at most one union member and the lifted rule answers `a` there. It is
-the whole meaning of the guard. A step of the proposed claim `union-rule-extend`. Its consumers
+the whole meaning of the guard. A step of the claim `union-rule-extend`. Its consumers
 are the laws of this section. It says nothing of a member rule. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem liftOne_eq_some_iff (rule : Ty → Option α) {t : Ty} {a : α} :
@@ -1143,7 +1143,7 @@ theorem liftOne_eq_some_iff (rule : Ty → Option α) {t : Ty} {a : α} :
 
 /-- **The guarded rule implies the lifted rule's answer.** Each law whose premise is an answer
 of the lifted rule holds of the guarded rule through it: the transfer law, the closed types, the
-upper form and its least half. A step of the proposed claim `union-rule-extend`. Its consumers
+upper form and its least half. A step of the claim `union-rule-extend`. Its consumers
 are `Eliminator.extend_adjoint`, and the closed types of a converted rule (`lift_closed_pair`).
 The converse fails at a proper union. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1151,8 +1151,8 @@ theorem liftOne_some {rule : Ty → Option α} {t : Ty} {a : α}
     (typed : liftOne rule t = some a) : lift rule t = some a :=
   ((liftOne_eq_some_iff rule).mp typed).2
 
-/-- **The guarded rule is the lifted rule at one union member or none.** A step of the proposed
-claim `union-rule-extend`. Its consumer is `liftOne_member`. It says nothing at a proper union:
+/-- **The guarded rule is the lifted rule at one union member or none.** A step of the claim
+`union-rule-extend`. Its consumer is `liftOne_member`. It says nothing at a proper union:
 `liftOne_two` does. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem liftOne_eq (rule : Ty → Option α) {t : Ty}
@@ -1160,7 +1160,7 @@ theorem liftOne_eq (rule : Ty → Option α) {t : Ty}
   if_pos one
 
 /-- **The guarded rule refuses a proper union.** A target whose normal form has two union
-members or more has no answer, whatever the member rule is. A step of the proposed claim
+members or more has no answer, whatever the member rule is. A step of the claim
 `union-rule-extend`: the refusal that decisions row 292 keeps. Its consumer is `extend_two`. It
 is the guard's own refusal: the lifted rule can answer at such a target. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1169,7 +1169,7 @@ theorem liftOne_two (rule : Ty → Option α) {t : Ty}
   if_neg (Nat.not_le.mpr two)
 
 /-- **The guarded rule reads the normal form.** Two types with one normal form have one answer.
-A step of the proposed claim `union-rule-extend`, as `lift_congr` under the guard. Its consumers
+A step of the claim `union-rule-extend`, as `lift_congr` under the guard. Its consumers
 are the control that shows what the guarded rule alone answers at a raw fiber type
 (`Test/Program/Eliminators.lean`), and a converted rule once its raw answer goes. The extended
 rule does not have this law: it keeps the raw answer of its member rule. -/
@@ -1180,12 +1180,12 @@ theorem liftOne_congr (rule : Ty → Option α) {s t : Ty} (same : s.normalize =
   rw [same, lift_congr rule same]
 
 /-- **The guarded rule is total at `never`.** It answers the least answer, whatever the member
-rule is. A step of the proposed claim `union-rule-extend`. Its consumer is `extend_never`. -/
+rule is. A step of the claim `union-rule-extend`. Its consumer is `extend_never`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem liftOne_never (rule : Ty → Option α) : liftOne rule .never = some Answer.bot := rfl
 
 /-- **The guarded rule at one normal union member is the member rule**, up to the join with the
-least answer. A step of the proposed claim `union-rule-extend`, as `lift_member` under the
+least answer. A step of the claim `union-rule-extend`, as `lift_member` under the
 guard. Its consumers are the same control as `liftOne_congr`, and a converted rule at a raw type
 of its constructor once its raw answer goes. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1205,7 +1205,7 @@ variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
 above `a` and below `a`, exactly when the type's normal form has at most one union member. That
 condition is the exact member premise: the three facts of `Eliminator` do not give it. A
 constructor whose normal form distributes over a union fails it, and a product is one
-(`Test/Program/Eliminators.lean`). A step of the proposed claim `union-rule-extend`. Its
+(`Test/Program/Eliminators.lean`). A step of the claim `union-rule-extend`. Its
 consumer is `Eliminator.extend_liftOne`. It gives no equation: the answer's spelling can
 change, which is why the extended rule keeps the raw answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1225,7 +1225,7 @@ theorem Eliminator.liftOne_answers (e : Eliminator rule C) {t : Ty} {a : α}
 /-- **Where a guarded eliminator answers.** It answers exactly at a target whose normal form has
 at most one union member and that is below some `C b`. It is the first half of
 `Eliminator.adjoint` under the guard: the guard removes the proper unions and nothing else. A
-step of the proposed claim `union-rule-extend`. Its consumers are
+step of the claim `union-rule-extend`. Its consumers are
 `Eliminator.extend_isSome_iff` and `Eliminator.extend_liftOne`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem Eliminator.liftOne_isSome_iff (e : Eliminator rule C) (t : Ty) :
@@ -1245,7 +1245,7 @@ theorem Eliminator.liftOne_isSome_iff (e : Eliminator rule C) (t : Ty) :
 checker's order, and let the normal form of `s` have at most one union member. Where the guarded
 rule answers `b` at `t`, it answers at `s`, and its answer is below `b`. Without the premise on
 `s` the law is false: a proper union below a fiber type is refused
-(`Test/Program/Eliminators.lean`). A step of the proposed claim `union-rule-extend`. Its
+(`Test/Program/Eliminators.lean`). A step of the claim `union-rule-extend`. Its
 consumer is the proposed claim `checker-monotone` at a converted rule once its raw answer goes.
 It does not establish `checker-monotone`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1273,7 +1273,7 @@ verdict, and each answer up to the order only. -/
 
 /-- **The extended rule, as one fact.** It answers `a` at a target exactly when the member rule
 answers `a` there, or the member rule refuses the target and the guarded rule answers `a`. It
-is the whole meaning of the definition. A step of the proposed claim `union-rule-extend`. Its
+is the whole meaning of the definition. A step of the claim `union-rule-extend`. Its
 consumers are the laws of this section, and each law of a converted rule that is proved by its
 two alternatives. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1289,7 +1289,7 @@ theorem extend_eq_some_iff (rule : Ty → Option α) {t : Ty} {a : α} :
 /-- **Agreement.** Where the member rule answers at a raw target, the extended rule answers
 there, with the same answer. So a conversion to the extended rule refuses no target that the
 by-shape function answered, and it changes no answer: no admitted program moves at this rule. A
-part of the proposed claim `union-rule-extend`. Its consumers are `Eliminator.extend_laws`, and
+part of the claim `union-rule-extend`. Its consumers are `Eliminator.extend_laws`, and
 each converted rule at a raw type of its constructor: `fiberTy_fiberOf`
 (`src/Effect4/Laws/Program/Eliminators.lean`). It says nothing of a rule of the checker that
 reads the same type through another function. -/
@@ -1299,7 +1299,7 @@ theorem extend_agrees {rule : Ty → Option α} {t : Ty} {a : α} (answered : ru
   (extend_eq_some_iff rule).mpr (Or.inl answered)
 
 /-- **Where the member rule refuses, the extended rule is the guarded rule.** A part of the
-proposed claim `union-rule-extend`. Its consumers are `extend_never` and `extend_two`. -/
+claim `union-rule-extend`. Its consumers are `extend_never` and `extend_two`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem extend_refused {rule : Ty → Option α} {t : Ty} (refused : rule t = none) :
     extend rule t = liftOne rule t := by
@@ -1309,7 +1309,7 @@ theorem extend_refused {rule : Ty → Option α} {t : Ty} (refused : rule t = no
 
 /-- **The extended rule at `never`.** A member rule that refuses `never` extends to a rule that
 answers the least answer there. `never` is no union member, so a by-shape function refuses it.
-A part of the proposed claim `union-rule-extend`. Its consumers are `Eliminator.extend_bot`, and
+A part of the claim `union-rule-extend`. Its consumers are `Eliminator.extend_bot`, and
 a hole that is declared at `never` under a converted rule (`Test/Program/Eliminators.lean`). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem extend_never {rule : Ty → Option α} (refused : rule .never = none) :
@@ -1318,7 +1318,7 @@ theorem extend_never {rule : Ty → Option α} (refused : rule .never = none) :
 
 /-- **The extended rule keeps the refusal at a proper union.** Where the member rule refuses a
 target whose normal form has two union members or more, the extended rule refuses it. A part of
-the proposed claim `union-rule-extend`: the refusal that decisions row 292 keeps. Its consumer
+the claim `union-rule-extend`: the refusal that decisions row 292 keeps. Its consumer
 is `Eliminator.extend_laws`. The premise on the member rule is needed: a member rule can answer
 at a raw type whose normal form is a proper union, and a product is such a type. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1330,7 +1330,7 @@ theorem extend_two {rule : Ty → Option α} {t : Ty} (refused : rule t = none)
 two types. At each closed type that it answers, let both types of its answer be closed. Then the
 extended rule answers two closed types at each closed target. The member rule's own answer is
 closed by the premise, and the guarded rule's answer by `lift_closed_pair`. A part of the
-proposed claim `union-rule-extend`. Its consumer is the fiber case of the claim
+claim `union-rule-extend`. Its consumer is the fiber case of the claim
 `checked-types-closed`: `closed_fiberTy` (`src/Effect4/Laws/Program/Typing/Closed.lean`). A rule
 that answers one type has the same law from `lift_closed`. It is stated with its first
 consumer. -/
@@ -1353,7 +1353,7 @@ variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
 an eliminator answers `a` at a target, an answer `b` is above `a` exactly when the target is
 below `C b`, in the checker's order. At the member rule's own answer the target is `C a`, and
 the constructor keeps and reflects the order. At the guarded rule's answer it is the second half
-of `Eliminator.adjoint`. A part of the proposed claim `union-rule-extend`. Its consumers are
+of `Eliminator.adjoint`. A part of the claim `union-rule-extend`. Its consumers are
 `Eliminator.extend_upper` and `Eliminator.extend_least`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem Eliminator.extend_adjoint (e : Eliminator rule C) {t : Ty} {a : α}
@@ -1365,7 +1365,7 @@ theorem Eliminator.extend_adjoint (e : Eliminator rule C) {t : Ty} {a : α}
 
 /-- **The upper form of a converted eliminator.** A target that the extended rule answers at `a`
 is below `C a`, in the checker's order. It takes the place of the equation of a by-shape rule:
-a use site moves a value of the target up by `fits_subN`. A part of the proposed claim
+a use site moves a value of the target up by `fits_subN`. A part of the claim
 `union-rule-extend`. Its consumer is the upper form at each converted rule: `fiberTy_upper`
 (`src/Effect4/Laws/Program/Eliminators.lean`). The inequality is false in raw `Ty.sub`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1374,7 +1374,7 @@ theorem Eliminator.extend_upper (e : Eliminator rule C) {t : Ty} {a : α}
   (e.extend_adjoint typed a).mp (AnswerOrder.refl a)
 
 /-- **A converted eliminator answers the least.** Each `b` with the target below `C b` is above
-the extended rule's answer. A part of the proposed claim `union-rule-extend`. Its consumers are
+the extended rule's answer. A part of the claim `union-rule-extend`. Its consumers are
 `Eliminator.extend_mono`, and a type that a printer writes at a call, which must be above the
 answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1384,7 +1384,7 @@ theorem Eliminator.extend_least (e : Eliminator rule C) {t : Ty} {a b : α}
 
 /-- **A converted eliminator answers a least answer at `never`.** Its answer there is below
 every answer. Where the member rule refuses `never`, the answer is the least answer itself
-(`extend_never`). A part of the proposed claim `union-rule-extend`. Its consumer is
+(`extend_never`). A part of the claim `union-rule-extend`. Its consumer is
 `Eliminator.extend_laws`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem Eliminator.extend_bot (e : Eliminator rule C) :
@@ -1398,7 +1398,7 @@ theorem Eliminator.extend_bot (e : Eliminator rule C) :
 
 /-- **Where a converted eliminator answers.** It answers exactly where its member rule answers,
 or where the target's normal form has at most one union member and the target is below some
-`C b`. A part of the proposed claim `union-rule-extend`. Its consumers are
+`C b`. A part of the claim `union-rule-extend`. Its consumers are
 `Eliminator.extend_mono` and `Eliminator.extend_liftOne`, and the reading of a conversion's
 differential: a refusal that stays is a proper union or a target below no `C b`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1424,7 +1424,7 @@ theorem Eliminator.extend_isSome_iff (e : Eliminator rule C) (t : Ty) :
 `t` in the checker's order, and let the normal form of `s` have at most one union member. Where
 the extended rule answers `b` at `t`, it answers at `s`, and its answer is below `b`. Without
 the premise on `s` the law is false: a proper union below a fiber type is refused
-(`Test/Program/Eliminators.lean`). A part of the proposed claim `union-rule-extend`. Its
+(`Test/Program/Eliminators.lean`). A part of the claim `union-rule-extend`. Its
 consumer is the proposed claim `checker-monotone` at a converted rule, where a smaller type is
 `never` or one union member. It does not establish `checker-monotone`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1440,8 +1440,8 @@ theorem Eliminator.extend_mono (e : Eliminator rule C) {s t : Ty}
 member.** Fix a target, and let its normal form have at most one union member wherever the
 member rule answers at it. Then the extended rule and the guarded rule answer at the target
 together, and their answers are each below the other. So the removal of the raw answer changes
-no verdict at such a rule, and it changes an answer up to the order only. A part of the proposed
-claim `union-rule-extend`. Its consumer is that removal (decisions row 294), at each converted
+no verdict at such a rule, and it changes an answer up to the order only. A part of the claim
+`union-rule-extend`. Its consumer is that removal (decisions row 294), at each converted
 rule whose member rule has the premise: `Member.fiber_one`
 (`src/Effect4/Laws/Program/Eliminators.lean`). It does not say that a later rule of the checker
 reads the two answers alike: an atom's scheme does not. -/
@@ -1468,7 +1468,7 @@ member rule answers. Where the member rule refuses, it is the guarded rule. It a
 answer at `never`. Its answer `a` puts the target below `C a`, in the checker's order, and an
 answer `b` is above `a` exactly when the target is below `C b`. Where the member rule refuses a
 target whose normal form has two union members or more, it refuses. It is the pointer of the
-proposed claim `union-rule-extend`, and it adds nothing to its parts.
+claim `union-rule-extend`, and it adds nothing to its parts.
 `Eliminator.extend_isSome_iff`, `Eliminator.extend_mono` and `Eliminator.extend_liftOne` stand
 beside it. Its consumer is each conversion of candidate N: an instance proves the three facts of
 `Eliminator` and reads its contract here. It does not establish `checker-monotone`, or anything

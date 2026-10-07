@@ -1,0 +1,267 @@
+import Effect4.Program.Typing.Focus
+import Effect4.Program.Typing.Agreement
+import Effect4.Program.Sketch
+import Effect4.Laws.Program.PathFold
+import Effect4.Laws.Program.Typing.Focus
+import Effect4.Laws.Program.References
+import Effect4.Laws.Auto.Obligations
+import Test.Program.FocusControls
+
+open Effect4 Effect4.Program
+open Test.Program.SketchControls Test.Program.FocusControls
+
+set_option autoImplicit false
+
+namespace TableProbe
+
+variable {Op : Type}
+
+/-- Every address of a node, in the order of the generated path fold. -/
+def addresses (n : Node Op) : List (List Nat) :=
+  match n with
+  | .eff e => foldMapAt_eff [] (· ++ ·) [] e
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+  | .stmt s => foldMapAt_stmt [] (· ++ ·) [] s
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+  | .stmts s => foldMapAt_stmts [] (· ++ ·) [] s
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+  | .action a => foldMapAt_action [] (· ++ ·) [] a
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+  | .effs es => foldMapAt_effs [] (· ++ ·) [] es
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+  | .layer l => foldMapAt_layer [] (· ++ ·) [] l
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+  | .layers ls => foldMapAt_layers [] (· ++ ·) [] ls
+      (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
+
+/-- One row of the table. -/
+structure Entry where
+  path : List Nat
+  /-- the environment at the address; `none` where a step reads a refused sibling -/
+  env : Option NodeEnv
+  /-- at an address of a program with an environment: the checker's answer there -/
+  result : Option (Except TypeRefusal EffTy)
+
+/-- The table of a program: one row for each address. -/
+def table (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : List Entry :=
+  (addresses (.eff p)).map fun a =>
+    let env := (Node.eff p).envAt s (.env env0) a
+    ⟨a, env, match (Node.eff p).at_ a, env with
+      | some (.eff q), some (.env tys) => some (Checker.check s tys a q)
+      | _, _ => none⟩
+
+/-- The distinct refusals of the table, in its order. -/
+def refusals (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : List TypeRefusal :=
+  ((table s env0 p).filterMap fun e => e.result.bind Checker.refusal).eraseDups
+
+/-- The table of a sketch. -/
+def Sketch.table (sk : Sketch) (app : SigApp := {}) : List Entry :=
+  TableProbe.table (app.withHoles sk.holes).signature [] sk.program
+
+/-- The refusals of a sketch. -/
+def Sketch.refusals (sk : Sketch) (app : SigApp := {}) : List TypeRefusal :=
+  TableProbe.refusals (app.withHoles sk.holes).signature [] sk.program
+
+/-- A term slot whose typing environment extends the node's environment. -/
+inductive ExtSlot where
+  | catchIfTest
+  | iterateTest
+  | iterateStep
+  | iterateResult
+  | opTerm
+  deriving DecidableEq, Repr
+
+/-- The extended typing environment for a term slot. -/
+def Node.extSlotEnv (s : Signature Op) (env : TyEnv) (n : Node Op) : ExtSlot → Option TyEnv
+  | .catchIfTest => match n with
+    | .eff (.catchIf _ body _) =>
+        (effTy s env body).map fun b => env ++ [b.error]
+    | _ => none
+  | .iterateTest => match n with
+    | .eff (.iterate cursorTy initial _ _ _ _) =>
+        (termTy s env initial).map fun c0 => env ++ [cursorTy.getD c0]
+    | _ => none
+  | .iterateResult => match n with
+    | .eff (.iterate cursorTy initial _ _ _ _) =>
+        (termTy s env initial).map fun c0 => env ++ [cursorTy.getD c0]
+    | _ => none
+  | .iterateStep => match n with
+    | .eff (.iterate cursorTy initial _ _ _ body) =>
+        match termTy s env initial with
+        | some c0 =>
+            let cursor := cursorTy.getD c0
+            (effTy s (env ++ [cursor]) body).map fun b => env ++ [cursor, b.answer]
+        | none => none
+    | _ => none
+  | .opTerm => match n with
+    | .eff (.perform op req) =>
+        match s.termOf op with
+        | some b =>
+            match termTy s env req with
+            | some reqTy =>
+                let row := s.rowOf op
+                match Ty.matchTemplate [] row.request.normalize reqTy.normalize with
+                | some σ => some (env ++ [(b.param.normalize.instantiate σ).normalize])
+                | none => none
+            | none => none
+        | none => none
+    | _ => none
+
+/-- A row, as values that `#guard` compares. -/
+def Entry.shape (e : Entry) : List Nat × Option NodeEnv × Option (Option EffTy) × Option TypeRefusal :=
+  (e.path, e.env, e.result.map Except.toOption, e.result.bind Checker.refusal)
+
+/-- The path and the reason's name of each refusal. -/
+def named (rs : List TypeRefusal) : List (List Nat × String) := rs.map fun w => (w.path, w.reason.head)
+
+/-! ## The 15 controls from address-table-probe -/
+
+#guard addresses (.eff original) = [[], [0], [1], [1, 0], [1, 1], [1, 1, 0], [1, 1, 1]]
+#guard (table sig [] original).all fun e =>
+  (e.env.map NodeEnv.tyEnv, e.result.bind Except.toOption) =
+    (((original : Sketch).focusAt {} e.path).map (·.env), ((original : Sketch).focusAt {} e.path).map (·.ty))
+#guard refusals sig [] original = []
+
+def bad : NativeEff := .perform .refGet (.lit (.nat 5))
+
+def twoBad : NativeEff :=
+  .gen (.cons (.yieldDiscard bad) (.cons (.yieldDiscard bad) (.cons (.ret (.lit (.nat 1))) .nil)))
+
+#guard named (explain sig [] twoBad).toList = [([0, 0, 0], "requestNotSubtype")]
+#guard named (refusals sig [] twoBad) =
+  [([0, 0, 0], "requestNotSubtype"), ([0, 1, 0, 0], "requestNotSubtype")]
+#guard (refusals sig [] twoBad).head? = explain sig [] twoBad
+#guard (table sig [] twoBad).all fun e => e.env.isSome
+#guard ((table sig [] twoBad).filter fun e => e.result.isNone).map (·.path) =
+  [[0], [0, 0], [0, 1], [0, 1, 0], [0, 1, 1], [0, 1, 1, 0], [0, 1, 1, 1]]
+
+def chained : NativeEff := .bind bad (.bind bad (.succeed (.var 0)))
+
+#guard named (refusals sig [] chained) = [([0], "requestNotSubtype")]
+#guard ((table sig [] chained).filter fun e => e.env.isNone).map (·.path) = [[1], [1, 0], [1, 1]]
+
+def edited (path : List Nat) (q : NativeEff) : Option NativeEff :=
+  ((Node.eff original).replaceAt path (.eff q)).bind Node.eff?
+
+def outside (path : List Nat) (rows : List Entry) :=
+  (rows.filter fun e => !path.isPrefixOf e.path).map Entry.shape
+
+#guard (edited [0] (.bind (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 6))))).all fun e' =>
+  outside [0] (table sig [] e') = outside [0] (table sig [] original)
+#guard (edited [0] (.bind (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 6))))).all fun e' =>
+  (addresses (.eff e')).length = 9
+#guard (edited [0] (.succeed (.lit (.str "x")))).all fun e' =>
+  outside [0] (table sig [] e') != outside [0] (table sig [] original)
+#guard (edited [0] (.succeed (.lit (.str "x")))).all fun e' =>
+  named (refusals sig [] e') = [([1, 1, 0], "requestNotSubtype")]
+#guard (edited [0] (.succeed (.lit (.str "x")))).all fun e' =>
+  ((table sig [] e').filter fun e => e.env.isNone).map (·.path) = [[1, 1, 1]]
+
+end TableProbe
+
+section TheoryProbe
+
+open Effect4 Effect4.Program TableProbe
+open Conform.Effect4.Typing
+
+variable {Op : Type}
+
+def addressYield : PathYield Op (List Nat) where
+  eff _ p := [p]
+  stmt _ p := [p]
+  stmts _ p := [p]
+  effs _ p := [p]
+  action _ p := [p]
+  layer _ p := [p]
+  layers _ p := [p]
+
+theorem addresses_eq_foldList (n : Node Op) : addresses n = n.foldList addressYield [] := by
+  cases n <;> rfl
+
+theorem mem_addresses_of_at {n : Node Op} {a : List Nat} (h : (n.at_ a).isSome = true) :
+    a ∈ addresses n := by
+  obtain ⟨m, hm⟩ := Option.isSome_iff_exists.mp h
+  have hsub := Node.yieldAt_subset_of_at addressYield a n m [] hm
+  rw [List.nil_append] at hsub
+  rw [addresses_eq_foldList]
+  have ha : a ∈ Node.yieldAt addressYield m a := by
+    cases m <;> simp only [Node.yieldAt, addressYield, List.mem_singleton_self]
+  exact hsub ha
+
+theorem addresses_eff_head (p : Eff Op) : ∃ rest, addresses (.eff p) = [] :: rest := by
+  cases p <;> exact ⟨_, rfl⟩
+
+
+theorem table_head (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
+    ∃ rest, table s env0 p = ⟨[], some (.env env0), some (Checker.check s env0 [] p)⟩ :: rest := by
+  obtain ⟨rest, h⟩ := addresses_eff_head p
+  unfold table
+  rw [h]
+  exact ⟨_, rfl⟩
+
+theorem table_result_refusal_none_of_hasTy {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {T : EffTy}
+    (hp : HasTy s env0 p T) {e : Entry} (he : e ∈ table s env0 p) :
+    e.result.bind Checker.refusal = none := by
+  unfold table at he
+  simp only [List.mem_map] at he
+  obtain ⟨a, -, rfl⟩ := he
+  dsimp only
+  split
+  · rename_i q tys hat henv
+    obtain ⟨env, t, hf⟩ := hasTy_focusAt hp hat
+    obtain ⟨-, henv', hty⟩ := focusAt_eq_some.mp hf
+    have hsame : env = tys := by
+      injection henv'.symm.trans henv with h1
+      injection h1
+    subst hsame
+    have hchk := check_complete s q env t (effTy_sound s q env t hty) a
+    rw [hchk]
+    rfl
+  · rfl
+
+theorem refusals_of_hasTy {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {T : EffTy}
+    (hp : HasTy s env0 p T) : refusals s env0 p = [] := by
+  unfold refusals
+  have hnil : (table s env0 p).filterMap (fun e => e.result.bind Checker.refusal) = [] := by
+    rw [List.filterMap_eq_nil_iff]
+    intro e he
+    exact table_result_refusal_none_of_hasTy hp he
+  rw [hnil]
+  rfl
+
+theorem refusals_head (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
+    (refusals s env0 p).head? = explain s env0 p := by
+  cases h : explain s env0 p with
+  | none =>
+    have hty : (effTy s env0 p).isSome = true := (explain_none_iff s env0 p).mp h
+    obtain ⟨T, hT⟩ := Option.isSome_iff_exists.mp hty
+    rw [refusals_of_hasTy (effTy_sound s p env0 T hT)]
+    rfl
+  | some ref =>
+    unfold refusals
+    obtain ⟨rest, htable⟩ := table_head s env0 p
+    rw [htable]
+    simp only [List.filterMap_cons]
+    have href : Checker.refusal (Checker.check s env0 [] p) = some ref := h
+    simp only [Option.bind_some, href]
+    rw [List.eraseDups_cons]
+    rfl
+
+theorem refusals_nil_iff (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
+    refusals s env0 p = [] ↔ (effTy s env0 p).isSome = true := by
+  constructor
+  · intro h
+    have hhead : (refusals s env0 p).head? = none := by rw [h]; rfl
+    rw [refusals_head] at hhead
+    exact (explain_none_iff s env0 p).mp hhead
+  · intro h
+    obtain ⟨T, hT⟩ := Option.isSome_iff_exists.mp h
+    exact refusals_of_hasTy (effTy_sound s p env0 T hT)
+
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal mem_addresses_iff (n : Node Op) (a : List Nat) :
+    a ∈ addresses n ↔ (n.at_ a).isSome = true
+
+end TheoryProbe
+
+

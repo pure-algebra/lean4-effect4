@@ -11,6 +11,10 @@ yields (`PathYield`): a node's own yield is in its fold (`yieldAt_subset_foldLis
 fold at `p ++ [i]` is in its parent's (`foldList_child`, the case list `Node.child`'s own), so
 every addressed node's fold, at its path, is in the root's fold (`foldList_subset_of_at`), and
 its yield with it (`yieldAt_subset_of_at`).
+The converse holds too: a member of a fold is in its node's yield or in a child's fold
+(`foldList_cases`), so the fold collects the yields of the addressed nodes and nothing else
+(`mem_foldList_iff`). Its consumer is the address list of a node (`mem_addresses_iff`,
+`Laws/Program/Typing/Table.lean`).
 A census over the program by the path fold is an instance: the layer reference sites
 (`Eff.refSites`, `mem_refSites_of_at`, `refSites_subset_of_layerAt`), the premise of the reference
 formation rule (`Eff.layerRefsWF`) at a reference site (`layerRefsWF_mem`) and at a reference
@@ -123,6 +127,73 @@ theorem foldList_subset_of_at (y : PathYield Op α) :
 theorem yieldAt_subset_of_at (y : PathYield Op α) (path : List Nat) (n m : Node Op) (p : List Nat)
     (h : Node.at_ n path = some m) : yieldAt y m (p ++ path) ⊆ foldList y p n :=
   List.Subset.trans (yieldAt_subset_foldList y (p ++ path) m) (foldList_subset_of_at y path n m p h)
+
+/-! ### The converse: the fold collects nothing else -/
+
+/-- **One step of the path fold, read back.** A member of a node's fold is in the node's own
+yield, or in the fold of a child at the child's path. It is the converse of
+`yieldAt_subset_foldList` and `foldList_child` together.
+
+The proof reads each generated arm against `Node.child` at the indices 0, 1 and 2, which
+evaluation reduces at a constructor. A constructor with a fourth node-typed argument fails the
+proof at its case, so the bound cannot go stale in silence. A step of `focus-function`. Its
+consumer is `exists_at_of_mem_foldList` below. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem foldList_cases (y : PathYield Op α) (p : List Nat) (n : Node Op) {x : α}
+    (hx : x ∈ foldList y p n) :
+    x ∈ yieldAt y n p ∨ ∃ i c, n.child i = some c ∧ x ∈ foldList y (p ++ [i]) c := by
+  suffices h : x ∈ yieldAt y n p ∨
+      ∃ i, (i = 0 ∨ i = 1 ∨ i = 2) ∧ ∃ c, n.child i = some c ∧ x ∈ foldList y (p ++ [i]) c by
+    rcases h with h | ⟨i, -, c, hc, h⟩
+    · exact .inl h
+    · exact .inr ⟨i, c, hc, h⟩
+  simp only [or_and_right, exists_or, exists_eq_left]
+  rcases n with e | e | e | e | e | e | e <;> cases e <;>
+    simp only [foldList, foldMapAt_eff, foldMapAt_stmts, foldMapAt_stmt, foldMapAt_action,
+      foldMapAt_effs, foldMapAt_layer, foldMapAt_layers, List.mem_append] at hx <;>
+    (conv in (occs := *) Node.child _ _ => all_goals whnf) <;>
+    simp only [foldList, yieldAt, Option.some.injEq, exists_eq_left', reduceCtorEq, false_and,
+      exists_false, or_false] <;>
+    exact hx
+
+/-- A child is smaller than its node: the measure of the recursion along `Node.child`. The case
+list is `Node.child`'s own. A step of `focus-function`. Its consumer is
+`exists_at_of_mem_foldList` below. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem sizeOf_child_lt : ∀ (n : Node Op) (i : Nat) (c : Node Op), n.child i = some c →
+    sizeOf c < sizeOf n := by
+  intro n i c
+  fun_cases Node.child n i
+  all_goals intro h
+  all_goals cases h
+  all_goals decreasing_tactic
+
+/-- **A member of the path fold is the yield of an addressed node, at the node's path**: the
+converse of `yieldAt_subset_of_at`. The step is `foldList_cases`, and the recursion goes down
+`Node.child`. A step of `focus-function`. Its consumer is `mem_foldList_iff` below. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem exists_at_of_mem_foldList (y : PathYield Op α) (n : Node Op) (p : List Nat) {x : α}
+    (hx : x ∈ foldList y p n) :
+    ∃ path m, Node.at_ n path = some m ∧ x ∈ yieldAt y m (p ++ path) := by
+  rcases foldList_cases y p n hx with h | ⟨i, c, hc, h⟩
+  · exact ⟨[], n, rfl, by rwa [List.append_nil]⟩
+  · have := sizeOf_child_lt n i c hc
+    obtain ⟨path, m, hat, hm⟩ := exists_at_of_mem_foldList y c (p ++ [i]) h
+    refine ⟨i :: path, m, ?_, ?_⟩
+    · simp only [Node.at_, hc, Option.bind_some]
+      exact hat
+    · rwa [List.append_assoc, List.singleton_append] at hm
+termination_by sizeOf n
+
+/-- **The path fold collects the yields of the addressed nodes, each at its path, and nothing
+else.** The two inclusions are `yieldAt_subset_of_at` and `exists_at_of_mem_foldList`. It says
+nothing of the order of the fold's list. A step of `focus-function`. Its consumer is the
+address list of a node (`mem_addresses_iff`, `Laws/Program/Typing/Table.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem mem_foldList_iff (y : PathYield Op α) (n : Node Op) (p : List Nat) (x : α) :
+    x ∈ foldList y p n ↔ ∃ path m, Node.at_ n path = some m ∧ x ∈ yieldAt y m (p ++ path) :=
+  ⟨exists_at_of_mem_foldList y n p, fun ⟨path, m, hat, hx⟩ =>
+    yieldAt_subset_of_at y path n m p hat hx⟩
 
 end Node
 
