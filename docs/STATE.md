@@ -479,9 +479,10 @@ In work since the suspension of the handover:
     [The probe](research/2026-10-07-tests-by-order-probe.md) ran each printed form with
     tsgo 7. No verdict of the two corpora moved. One row of the corpus index moved in its
     address: g85 is refused as before, now where tsgo reports its error.
-  - **Open after it**: the helpers that served the retired claim keep its name in their
-    docstrings (`src/Effect4/Laws/Program/Template.lean`,
-    `src/Effect4/Data/Constructive.lean`). Each is placed again or cut in the next chunk.
+  - **The helpers of the retired claim are gone** (chunk 3b, stage F1,
+    [its review](research/2026-10-07-chunk-3b-F1-review.md)). Eighteen declarations with no
+    caller are cut. Each helper that stays names the claim `template-match-complete` and its
+    readers. The second stage of chunk 3b, the rule on export names, is open.
 - **The plan's open parts carry a state, and the to-do application has its first slice**
   (rows 307 and 308).
   - **Each open part of a requirement has one state**: not triaged, worded, waits on a ruling,

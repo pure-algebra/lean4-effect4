@@ -216,14 +216,13 @@ def setR : Ty := .prod (.refOf .string) (.union (.lit "a") (.lit "b"))
 def neverR : Ty := .union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b"))
 #guard Ty.sub neverR.normalize (setT.instantiate [(0, .string)]).normalize
 #guard (Bounds.matchB [] setT neverR.normalize).map (·.lookup 0) = some (some .string)
-#guard !Ty.bottomFree neverR
 -- a parameter that first occurs outside a handle: it binds at the handle's argument
 /-- `[A, Ref<A>]`: the parameter is first met outside an invariant handle. -/
 def covT : Ty := .prod (.var 0) (.refOf (.var 0))
 /-- `[number, Ref<number | string>]`. -/
 def covR : Ty := .prod .nat (.refOf (Ty.union .nat .string).normalize)
-#guard covT.normalize == covT && covT.templateAdmissible && !covT.anchored
-#guard covR.normalize == covR && covR.bottomFree
+#guard covT.normalize == covT && covT.templateAdmissible
+#guard covR.normalize == covR
 #guard Ty.sub covR.normalize (covT.instantiate [(0, (Ty.union .nat .string).normalize)]).normalize
 #guard (Bounds.matchB [] covT covR).map (·.lookup 0) =
   some (some (Ty.union .nat .string).normalize)

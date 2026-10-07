@@ -506,8 +506,7 @@ its term's result template binds, `Ref.modify`'s `B`: the checker binds it from 
 `Row.wellScoped` for it. `sub_sound` and
 `sub_not_complete` are the two halves of what the guard is worth: the order NEVER admits a
 value the target would refuse, and it DOES refuse pairs whose value sets agree. A checker
-built on it can lose a program, never mistype one — L4's anchored completeness is the
-statement that says which programs it loses, and it is not this one.
+built on it can lose a program, never mistype one.
 
 The predicates are defined in the core, because the signature's admission reads them
 (`rowChecks`, `Program/SigApp.lean`): `Ty.varsOf` and `Ty.templateAdmissible` beside the template
@@ -629,10 +628,11 @@ theorem NativeOp.row_wellScoped_of_none (op : NativeOp) (h : op.typeArgsClosed =
   rw [hb] at hs
   simpa only [Row.wellScoped, Option.any_none, Bool.or_false] using hs
 
-/-! ## Anchored templates (decisions row 42)
+/-! ## The occurrences of a template's parameters (decisions row 42)
 
-A parameter whose first occurrence is an invariant handle's argument (`refOf`, `deferredOf`)
-is anchored. -/
+`paramOccurrences` lists each occurrence of a parameter in a template, in the order of the walk.
+The argument of an invariant handle (`refOf`, `deferredOf`) is flagged. The laws of the match by
+bounds read the list (`Bounds.mem_varsOf_args`). -/
 
 namespace Ty
 
@@ -683,89 +683,7 @@ def paramOccurrencesAlg : TyAlgebra (fun _ => OccCarrier) where
 argument of an invariant handle. -/
 def paramOccurrences (t : Ty) : List (Nat × Bool) := (cata_ty paramOccurrencesAlg t).2
 
-/-- Each parameter's first occurrence in the list is flagged, `seen` the parameters already met. -/
-def anchoredFrom (seen : List Nat) : List (Nat × Bool) → Bool
-  | [] => true
-  | (i, anchor) :: rest => (anchor || seen.contains i) && anchoredFrom (i :: seen) rest
-
-/-- Every parameter of the template first occurs as an invariant handle's argument. -/
-def anchored (t : Ty) : Bool := anchoredFrom [] t.paramOccurrences
-
-/-- No `never` outside an invariant handle's argument, where a member of a request union could
-stand below a handle the template walks to. -/
-def bottomFreeAlg : TyAlgebra (fun _ => Bool) where
-  ty_never := false
-  ty_unit := true
-  ty_nat := true
-  ty_int := true
-  ty_string := true
-  ty_bool := true
-  ty_handle _ := true
-  ty_option a := a
-  ty_list a := a
-  ty_prod a b := a && b
-  ty_except e a := e && a
-  ty_exitOf a e := a && e
-  ty_causeOf e := e
-  ty_fiberOf a e := a && e
-  ty_union a b := a && b
-  ty_lit _ := true
-  ty_refOf _ := true
-  ty_deferredOf _ _ := true
-  ty_var _ := true
-  ty_unknown := true
-  ty_record fs := fs.all fun p => p.2.2
-  ty_map k v := k && v
-  ty_tuple ts := ts.all id
-  ty_app _ ts := ts.all id
-  ty_null := true
-  ty_undefined := true
-  ty_number := true
-  ty_bytes := true
-
-/-- A request type with no `never` outside an invariant handle's argument. -/
-def bottomFree (t : Ty) : Bool := cata_ty bottomFreeAlg t
-
-#guard anchored (.refOf (.var 0))
-#guard anchored (.prod (.refOf (.var 0)) (.var 0))
-#guard anchored (.prod (.deferredOf (.var 0) (.var 1)) (.var 1))
--- `Ref.make`'s bare parameter is not anchored: the match binds it at its first arm
-#guard !anchored (.var 0)
-#guard !anchored (.prod (.var 0) (.refOf (.var 0)))
-#guard !bottomFree (.union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b")))
-#guard bottomFree (.prod (.deferredOf .nat .never) .nat)
-
 /-! ### The proof's pieces -/
-
-/-- `anchoredFrom` reads a concatenation's second part with the first part's parameters seen. -/
-theorem anchoredFrom_append (seen : List Nat) (xs ys : List (Nat × Bool)) :
-    anchoredFrom seen (xs ++ ys) =
-      (anchoredFrom seen xs && anchoredFrom ((xs.map Prod.fst).reverse ++ seen) ys) := by
-  induction xs generalizing seen with
-  | nil => simp only [List.nil_append, anchoredFrom, List.map_nil, List.reverse_nil, Bool.true_and]
-  | cons p xs ih =>
-    obtain ⟨i, a⟩ := p
-    simp only [List.cons_append, anchoredFrom, ih, List.map_cons, List.reverse_cons,
-      List.append_assoc, List.nil_append, Bool.and_assoc]
-
-/-- A list with every flag down is anchored only when its parameters are seen. -/
-theorem anchoredFrom_unflagged {seen : List Nat} :
-    ∀ xs : List (Nat × Bool), (∀ p ∈ xs, p.2 = false) → anchoredFrom seen xs = true →
-      ∀ p ∈ xs, p.1 ∈ seen
-  | [], _, _, _, hp => absurd hp List.not_mem_nil
-  | (i, a) :: rest, hf, hx, p, hp => by
-    simp only [anchoredFrom, Bool.and_eq_true, Bool.or_eq_true, List.contains_iff_mem] at hx
-    have ha : a = false := hf (i, a) List.mem_cons_self
-    subst ha
-    have hi : i ∈ seen := hx.1.resolve_left Bool.false_ne_true
-    rcases List.mem_cons.mp hp with rfl | hp
-    · exact hi
-    · have hrest := anchoredFrom_unflagged rest (fun q hq => hf q (List.mem_cons_of_mem _ hq))
-        hx.2 p hp
-      rcases List.mem_cons.mp hrest with he | he
-      · rw [he]
-        exact hi
-      · exact he
 
 /-! Five facts of lists that the proofs below read are in `Effect4.Constructive.List`
 (`src/Effect4/Data/Constructive.lean`): `flatMap_congr`, `mem_zip_map_self`, `mem_zip_middle`,
@@ -796,20 +714,6 @@ theorem varsOfItems_eq_flatMap (ts : List Ty) : varsOfItems ts = ts.flatMap vars
   | nil => rfl
   | cons t ts ih => rw [varsOfItems, ih, List.flatMap_cons]
 
-/-- The field a lookup finds is one of the record's, so its parameters are the record's. -/
-theorem varsOf_of_lookup {fs : List (String × Bool × Ty)} {n : String} {o : Bool} {ty : Ty}
-    (hl : fs.lookup n = some (o, ty)) : ∀ i ∈ varsOf ty, i ∈ varsOfFields fs := by
-  induction fs with
-  | nil => cases hl
-  | cons p fs ih =>
-    obtain ⟨m, o', t'⟩ := p
-    simp only [List.lookup] at hl
-    intro i hi
-    simp only [varsOfFields, List.mem_append]
-    split at hl
-    · cases hl
-      exact Or.inl hi
-    · exact Or.inr (ih hl i hi)
 
 /-- An anchor flag changes no parameter of the list. -/
 theorem anchorOcc_firsts (x : Ty) :
@@ -916,32 +820,10 @@ theorem paramOccurrences_args {t : Ty} (hv : ∀ i, t ≠ .var i) (happ : ∀ n 
     simp only [args, List.flatMap_cons, List.flatMap_nil, List.append_nil]
     rfl
 
-/-- The invariant handles read every argument invariantly. -/
-theorem anchorsArgs_inv {t : Ty} (h : anchorsArgs t = true) : ∀ p ∈ t.args, p.1 = .inv := by
-  cases t
-  case refOf x =>
-    intro p hp
-    simp only [args, List.mem_singleton] at hp
-    rw [hp]
-  case deferredOf a b =>
-    intro p hp
-    simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
-    rcases hp with rfl | rfl <;> rfl
-  all_goals exact absurd h Bool.false_ne_true
-
-/-- A child that is not a parameter brings its own occurrence list. -/
-theorem childOcc_of_ne_var (h : Bool) {x : Ty} (hx : ∀ i, x ≠ .var i) :
-    childOcc h x = paramOccurrences x := by
-  cases h
-  · rfl
-  · cases x
-    case var i => exact absurd rfl (hx i)
-    all_goals rfl
-
 /-! #### What an instance's normal form is made of -/
 
 /-- A child list read off the parent's by one map pairs each child with its image. It is a step of
-`template-match-anchored`, and `instance_members` reads it. -/
+`template-match-complete`, and `instance_members` reads it. -/
 theorem args_zip_of_map {τ : Subst} {t m : Ty}
     (h : m.args = t.args.map fun p => (p.1, (instantiate τ p.2).normalize)) :
     ∀ p ∈ t.args.zip m.args, p.1.1 = p.2.1 ∧ (p.2.2 = (instantiate τ p.1.2).normalize ∨
@@ -952,7 +834,7 @@ theorem args_zip_of_map {τ : Subst} {t m : Ty}
   exact ⟨(congrArg Prod.fst e).symm, Or.inl (congrArg Prod.snd e)⟩
 
 /-- A field map that keeps every name and flag commutes with the canonical order. It is a step of
-`template-match-anchored`, and `instance_members` reads it. -/
+`template-match-complete`, and `instance_members` and `Bounds.instance_shape` read it. -/
 theorem canon_map_payload (fs : List (String × Bool × Ty)) (f : Ty → Ty) :
     canon (fs.map fun q => (q.1, q.2.1, f q.2.2)) =
       (canon fs).map fun q => (q.1, q.2.1, f q.2.2) :=
@@ -962,8 +844,8 @@ theorem canon_map_payload (fs : List (String × Bool × Ty)) (f : Ty → Ty) :
 template that is not a parameter, a union or a nominal reference. Every member of its instance's
 normal form has the template's head. Each of the member's children is the corresponding child's
 instance in normal form, or, under a product, one of that normal form's factors. The instance has a
-member unless the template is `never`. It is a step of `subtyping-algebra`, and
-`Bounds.matchB_sound` reads it. -/
+member unless the template is `never`. It is a step of
+`template-match-complete`, and `Bounds.below_args` reads it. -/
 theorem instance_members (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
     (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) :
     (t = .never ∨ ∃ m, m ∈ (instantiate τ t).normalize.members) ∧
@@ -1051,8 +933,8 @@ theorem instance_members (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t �
     subst hm
     exact ⟨by simp only [sameHead, decide_eq_true_eq], args_zip_of_map rfl⟩
 
-/-- **An instance's normal form reads only the normal forms of the template's own bindings.** It is
-a step of `subtyping-algebra`, and `Bounds.matchB_sound` reads it. -/
+/-- **An instance's normal form reads only the normal forms of the template's own bindings.** It is a step of
+`template-match-complete`, and `Bounds.covers` reads it. -/
 theorem normalize_instantiate_congr {σ τ : Subst} (t : Ty)
     (h : ∀ i ∈ varsOf t, (instantiate σ (.var i)).normalize = (instantiate τ (.var i)).normalize) :
     (instantiate σ t).normalize = (instantiate τ t).normalize := by
@@ -1088,7 +970,7 @@ theorem normalize_instantiate_congr {σ τ : Subst} (t : Ty)
 /-! #### The request: under the instance, and its head -/
 
 /-- A normal union is a normal member beside a normal, non-empty rest. It is a step of
-`template-match-anchored`, and `underInstance_union` reads it. -/
+`template-match-complete`, and `Bounds.cands_below` and `Bounds.covers` read it. -/
 theorem normal_union_inv {c d : Ty} (h : Normal (.union c d)) :
     Normal c ∧ Normal d ∧ isMember c = true ∧ d ≠ .never := by
   generalize hu : Ty.union c d = u at h
@@ -1120,8 +1002,8 @@ theorem normal_union_inv {c d : Ty} (h : Normal (.union c d)) :
         | cons z zs => exact fun h => nomatch h
   | _ => exact nomatch hu
 
-/-- A factor is below the type it factors. It is a step of `template-match-anchored`, and
-`underInstance_args` reads it. -/
+/-- A factor is below the type it factors. It is a step of
+`template-match-complete`, and `Bounds.below_args` reads it. -/
 theorem sub_of_mem_factors {x y : Ty} (hx : x ∈ y.factors) : sub x y = true := by
   unfold factors at hx
   split at hx
@@ -1130,75 +1012,8 @@ theorem sub_of_mem_factors {x y : Ty} (hx : x ∈ y.factors) : sub x y = true :=
     exact sub_refl _
   · exact OrderProof.member_sub_self hx
 
-/-- A factor's members are the factored type's, and a factor is `never` only of `never`. It is a
-step of `template-match-anchored`, and `underInstance_args` reads it. -/
-theorem members_of_mem_factors {x y : Ty} (hx : x ∈ y.factors) :
-    (∀ m ∈ x.members, m ∈ y.members) ∧ (x = .never → y = .never) := by
-  unfold factors at hx
-  split at hx
-  · rw [List.mem_singleton] at hx
-    subst hx
-    exact ⟨fun m hm => absurd hm List.not_mem_nil, fun _ => rfl⟩
-  · have hxm := members_isMember hx
-    refine ⟨fun m hm => ?_, fun hn => ?_⟩
-    · rw [members_atom hxm, List.mem_singleton] at hm
-      rw [hm]
-      exact hx
-    · rw [hn] at hxm
-      exact Bool.noConfusion hxm
-
-/-- `bottomFree` at a record reads every field. It is a step of `template-match-anchored`, and
-`bottomFree_args` reads it. -/
-theorem bottomFree_record (fs : List (String × Bool × Ty)) :
-    bottomFree (.record fs) = fs.all fun p => bottomFree p.2.2 := by
-  rw [bottomFree, cata_ty_record]
-  show (fs.map (prodMapSnd (prodMapSnd (cata_ty bottomFreeAlg)))).all (fun p => p.2.2) = _
-  rw [List.all_map]
-  rfl
-
-/-- `bottomFree` at a tuple reads every item. It is a step of `template-match-anchored`, and
-`bottomFree_args` reads it. -/
-theorem bottomFree_tuple (ts : List Ty) : bottomFree (.tuple ts) = ts.all bottomFree := by
-  rw [bottomFree, cata_ty_tuple]
-  show (ts.map (cata_ty bottomFreeAlg)).all id = _
-  rw [List.all_map]
-  rfl
-
-/-- `bottomFree` at a nominal reference reads every argument. It is a step of
-`template-match-anchored`, and `bottomFree_args` reads it. -/
-theorem bottomFree_app (n : String) (ts : List Ty) :
-    bottomFree (.app n ts) = ts.all bottomFree := by
-  rw [bottomFree, cata_ty_app]
-  show (ts.map (cata_ty bottomFreeAlg)).all id = _
-  rw [List.all_map]
-  rfl
-
-/-- `bottomFree` reaches every child that the order reads covariantly. It is a step of
-`template-match-anchored`, and `underInstance_args` reads it. -/
-theorem bottomFree_args {r : Ty} (h : bottomFree r = true) :
-    ∀ p ∈ r.args, p.1 = .co → bottomFree p.2 = true := by
-  intro p hp hco
-  cases r
-  case record fs =>
-    rw [bottomFree_record, List.all_eq_true] at h
-    simp only [args, List.mem_map] at hp
-    obtain ⟨q, hq, rfl⟩ := hp
-    exact h q (mem_canon hq)
-  case tuple ts =>
-    rw [bottomFree_tuple, List.all_eq_true] at h
-    simp only [args, List.mem_map] at hp
-    obtain ⟨x, hx, rfl⟩ := hp
-    exact h x hx
-  case app n ts =>
-    rw [bottomFree_app, List.all_eq_true] at h
-    simp only [args, List.mem_map] at hp
-    obtain ⟨q, hq, rfl⟩ := hp
-    exact h q.1 (List.fst_mem_of_mem_zipIdx hq)
-  all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
-  all_goals aesop (add norm simp [bottomFree, bottomFreeAlg])
-
-/-- Every head but a nominal reference reads its arguments covariantly or invariantly. It is a step
-of `template-match-anchored`, and `underInstance_args` reads it. -/
+/-- Every head but a nominal reference reads its arguments covariantly or invariantly. It is a step of
+`template-match-complete`, and `Bounds.below_args`, `Bounds.cands_below` and `Bounds.covers` read it. -/
 theorem args_co_or_inv {t : Ty} (happ : ∀ n ts, t ≠ .app n ts) :
     ∀ p ∈ t.args, p.1 = .co ∨ p.1 = .inv := by
   intro p hp
@@ -1215,8 +1030,8 @@ theorem args_co_or_inv {t : Ty} (happ : ∀ n ts, t ≠ .app n ts) :
   all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
   all_goals aesop
 
-/-- Every child of an admissible template is admissible, and a union's children are closed. It is a
-step of `subtyping-algebra`, and `Bounds.TemplateOK.args` reads it. -/
+/-- Every child of an admissible template is admissible, and a union's children are closed. It is a step of
+`template-match-complete`, and `Bounds.TemplateOK.args` reads it. -/
 theorem templateAdmissible_args {t : Ty} (h : templateAdmissible t = true) :
     ∀ p ∈ t.args, templateAdmissible p.2 = true := by
   intro p hp
@@ -1244,111 +1059,6 @@ theorem templateAdmissible_args {t : Ty} (h : templateAdmissible t = true) :
     exact templateAdmissible_of_closed _ (h q.1 (List.fst_mem_of_mem_zipIdx hq))
   all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
   all_goals aesop (add norm simp [templateAdmissible])
-
-/-- **A request under a template's instance at `τ`.** The request is normal. Either it is below the
-instance's normal form, with no `never` outside an invariant handle's argument. Or its members are
-members of that normal form, and it is `never` only where the normal form is. The theorem's request
-is of the first kind. The walk meets the second kind below an invariant handle. -/
-def UnderInstance (τ : Subst) (t r : Ty) : Prop :=
-  Normal r ∧ ((bottomFree r = true ∧ sub r (instantiate τ t).normalize = true) ∨
-    ((∀ m ∈ r.members, m ∈ (instantiate τ t).normalize.members) ∧
-      (r = .never → (instantiate τ t).normalize = .never)))
-
-/-- The instance's own normal form is under it. It is a step of `subtyping-algebra`, and
-`underInstance_args` reads it. -/
-theorem underInstance_self (τ : Subst) (t : Ty) : UnderInstance τ t (instantiate τ t).normalize :=
-  ⟨normal_normalize _, Or.inr ⟨fun _ hm => hm, fun h => h⟩⟩
-
-/-- A union under an instance is under it member by member. It is a step of
-`subtyping-algebra`. -/
-theorem underInstance_union {τ : Subst} {t c d : Ty} (h : UnderInstance τ t (.union c d)) :
-    UnderInstance τ t c ∧ UnderInstance τ t d := by
-  obtain ⟨hn, hmode⟩ := h
-  obtain ⟨hc, hd, hcm, hdn⟩ := normal_union_inv hn
-  have hcn : c ≠ .never := fun he => by
-    rw [he] at hcm
-    exact Bool.noConfusion hcm
-  rcases hmode with ⟨hbot, hsub⟩ | ⟨hmem, -⟩
-  · have hb := Bool.and_eq_true_iff.mp hbot
-    have hall := (OrderProof.sub_iff_members sub_trans _ _).mp hsub
-    refine ⟨⟨hc, Or.inl ⟨hb.1, ?_⟩⟩, ⟨hd, Or.inl ⟨hb.2, ?_⟩⟩⟩
-    · exact (OrderProof.sub_iff_members sub_trans _ _).mpr fun x hx =>
-        hall x (List.mem_append_left _ hx)
-    · exact (OrderProof.sub_iff_members sub_trans _ _).mpr fun x hx =>
-        hall x (List.mem_append_right _ hx)
-  · exact ⟨⟨hc, Or.inr ⟨fun m hm => hmem m (List.mem_append_left _ hm), fun h => absurd h hcn⟩⟩,
-      ⟨hd, Or.inr ⟨fun m hm => hmem m (List.mem_append_right _ hm), fun h => absurd h hdn⟩⟩⟩
-
-/-- **A member under the instance has the template's head, and its children are under the children's
-instances.** Below an invariant position a child IS the child's instance in normal form. The two
-directions of the comparison and antisymmetry on normal forms fix it. It is a step of
-`subtyping-algebra`. -/
-theorem underInstance_args (τ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
-    (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) (hargs : t.args ≠ [])
-    (hunder : UnderInstance τ t r) (hm : isMember r = true) :
-    sameHead t r = true ∧ ∀ p ∈ t.args.zip r.args,
-      (p.1.1 = .inv → p.2.2 = (instantiate τ p.1.2).normalize) ∧ UnderInstance τ p.1.2 p.2.2 := by
-  obtain ⟨hr, hmode⟩ := hunder
-  have hinst := (instance_members τ ht hv hu happ).2
-  have hchild : ∀ p ∈ t.args.zip r.args, Normal p.2.2 := fun p hp =>
-    OrderProof.normal_args hr hm _ (List.mem_map_of_mem (List.of_mem_zip hp).2)
-  rcases hmode with ⟨hbot, hsub⟩ | ⟨hmem, -⟩
-  · obtain ⟨m, hmJ, hrm⟩ := (OrderProof.sub_member_right_iff r _ hm).mp hsub
-    obtain ⟨htm, hzip⟩ := hinst m hmJ
-    have hmm : isMember m = true := members_isMember hmJ
-    have htmLen := args_congr htm
-    have hmargs : m.args ≠ [] := by
-      intro hnil
-      rw [hnil, List.length_nil] at htmLen
-      exact hargs (List.eq_nil_of_length_eq_zero htmLen.1)
-    have hleaf : leafRule r m = false := by
-      cases hl : leafRule r m with
-      | false => rfl
-      | true => exact absurd (leafRule_args hl).2.1 hmargs
-    have htop : topRule r m = false := by
-      refine topRule_eq_false fun hmu => hmargs ?_
-      rw [hmu]
-      rfl
-    rw [sub_eq_args r m hm hmm hleaf htop, Bool.and_eq_true] at hrm
-    obtain ⟨hrmh, hbelow⟩ := hrm
-    have hrmLen := args_congr hrmh
-    refine ⟨sameHead_trans htm (sameHead_symm hrmh), fun p hp => ?_⟩
-    obtain ⟨q, hpq, hrq⟩ := mem_zip_middle htmLen.1 hrmLen.1 hp
-    obtain ⟨hvar, hq⟩ := hzip (p.1, q) hpq
-    have hvr : p.2.1 = q.1 := eq_of_mem_zip_map hrmLen.2 hrq
-    have hholds : p.2.1.holds sub p.2.2 q.2 = true :=
-      List.all_eq_true.mp hbelow (p.2, q) hrq
-    rcases args_co_or_inv happ p.1 (List.of_mem_zip hp).1 with hco | hinv
-    · rw [hvr, ← hvar, hco] at hholds
-      have hbelowJ : sub p.2.2 (instantiate τ p.1.2).normalize = true := by
-        rcases hq with he | ⟨-, hf⟩
-        · rw [← he]
-          exact hholds
-        · exact sub_trans _ _ _ hholds (sub_of_mem_factors hf)
-      refine ⟨fun h => absurd (h.symm.trans hco) (by decide), hchild p hp, Or.inl ⟨?_, hbelowJ⟩⟩
-      exact bottomFree_args hbot p.2 (List.of_mem_zip hp).2 (hvr.trans (hvar.symm.trans hco))
-    · rw [hvr, ← hvar, hinv] at hholds
-      have he : q.2 = (instantiate τ p.1.2).normalize := by
-        rcases hq with he | ⟨hco, -⟩
-        · exact he
-        · exact absurd (hinv.symm.trans hco) (by decide)
-      rw [he] at hholds
-      have hboth := Bool.and_eq_true_iff.mp hholds
-      have heq : p.2.2 = (instantiate τ p.1.2).normalize :=
-        OrderProof.sub_antisymm_normal sub_trans _ _ (hchild p hp) (normal_normalize _)
-          hboth.1 hboth.2
-      exact ⟨fun _ => heq, heq ▸ underInstance_self τ p.1.2⟩
-  · have hrJ : r ∈ (instantiate τ t).normalize.members := by
-      refine hmem r ?_
-      rw [members_atom hm]
-      exact List.mem_singleton_self r
-    obtain ⟨htr, hzip⟩ := hinst r hrJ
-    refine ⟨htr, fun p hp => ?_⟩
-    obtain ⟨-, hq⟩ := hzip p hp
-    rcases hq with he | ⟨hco, hf⟩
-    · exact ⟨fun _ => he, he ▸ underInstance_self τ p.1.2⟩
-    · exact ⟨fun h => absurd (h.symm.trans hco) (by decide), hchild p hp,
-        Or.inr (members_of_mem_factors hf)⟩
 
 end Ty
 

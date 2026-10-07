@@ -243,16 +243,17 @@ theorem lookup_mem {α : Type u} {β : Type v} [DecidableEq α]
 
 /-! ### Zips, lookups and `flatMap`
 
-Steps of `template-match-anchored` (`src/Effect4/Laws/Program/Template.lean`). -/
+Steps of the claim `template-match-complete` (`src/Effect4/Laws/Program/Template.lean`,
+`src/Effect4/Laws/Program/Bounds.lean`). -/
 
-/-- `flatMap` respects pointwise equality on the list. It is a step of `template-match-anchored`,
-and `paramOccurrences_firsts` reads it. -/
+/-- `flatMap` respects pointwise equality on the list. It is a step of
+`template-match-complete`, and `Bounds.cands_args` and `paramOccurrences_firsts` read it. -/
 theorem flatMap_congr {α β : Type} {l : List α} {f g : α → List β} (h : ∀ x ∈ l, f x = g x) :
     l.flatMap f = l.flatMap g := by
   rw [List.flatMap_def, List.flatMap_def, List.map_congr_left h]
 
 /-- A list zipped with its own image pairs each element with its image. It is a step of
-`template-match-anchored`, and `args_zip_of_map` reads it. -/
+`template-match-complete`, and `args_zip_of_map` reads it. -/
 theorem mem_zip_map_self {α β : Type} {f : α → β} :
     ∀ {l : List α} {p : α × β}, p ∈ l.zip (l.map f) → p.2 = f p.1
   | [], _, hp => absurd hp List.not_mem_nil
@@ -262,8 +263,8 @@ theorem mem_zip_map_self {α β : Type} {f : α → β} :
     · rfl
     · exact mem_zip_map_self hp
 
-/-- Of three aligned lists, a pair of the first two has a partner in the third at its position. It
-is a step of `template-match-anchored`, and `underInstance_args` reads it. -/
+/-- Of three aligned lists, a pair of the first two has a partner in the third at its position. It is a step of
+`template-match-complete`, and `Bounds.below_args` and `Bounds.matchArgsB_monotone` read it. -/
 theorem mem_zip_middle {α β γ : Type} : ∀ {xs : List α} {ys : List β} {zs : List γ},
     xs.length = zs.length → ys.length = zs.length → ∀ {a : α} {b : β}, (a, b) ∈ xs.zip ys →
       ∃ c, (a, c) ∈ xs.zip zs ∧ (b, c) ∈ ys.zip zs
@@ -280,8 +281,8 @@ theorem mem_zip_middle {α β γ : Type} : ∀ {xs : List α} {ys : List β} {zs
     · obtain ⟨c, hac, hbc⟩ := mem_zip_middle (Nat.succ.inj hx) (Nat.succ.inj hy) h
       exact ⟨c, List.mem_cons_of_mem _ hac, List.mem_cons_of_mem _ hbc⟩
 
-/-- Two lists with one image pair elements of one image. It is a step of `template-match-anchored`,
-and `underInstance_args` and `infer_args` read it. -/
+/-- Two lists with one image pair elements of one image. It is a step of
+`template-match-complete`, and `Bounds.above_args`, `Bounds.below_args` and `Bounds.cands_args` read it. -/
 theorem eq_of_mem_zip_map {α β γ : Type} {f : α → γ} {g : β → γ} :
     ∀ {xs : List α} {ys : List β}, xs.map f = ys.map g → ∀ {a : α} {b : β},
       (a, b) ∈ xs.zip ys → f a = g b
@@ -297,7 +298,7 @@ theorem eq_of_mem_zip_map {α β γ : Type} {f : α → γ} {g : β → γ} :
     · exact eq_of_mem_zip_map he.2 h
 
 /-- A lookup in a list of distinct names finds the entry of that name. It is a step of
-`template-match-anchored`, and `infer_args` reads it at a record. -/
+`template-match-complete`, and `Bounds.cands_args` reads it. -/
 theorem lookup_of_mem_nodup {β : Type} :
     ∀ {L : List (String × β)}, (L.map Prod.fst).Nodup → ∀ {p : String × β}, p ∈ L →
       L.lookup p.1 = some p.2

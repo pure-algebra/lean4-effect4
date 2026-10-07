@@ -1,0 +1,101 @@
+import Effect4.Laws.Codegen.ReadLeaf
+import Effect4.Codegen.ClassTable
+
+/-!
+# Draft (scratch): the export name's test, narrowed and widened
+
+Nothing here is landed. It is the draft of slice NAMES of the packet
+`2026-10-07-packet-authoring-sugar.md`.
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Program
+
+open Effect4.Data.NatDecimal (decodeBytes)
+
+/-- Whether a name is a printed binder: `a`, then the decimal spelling of a position, and
+nothing else. It reads bytes, and it compares one string: no traversal of a `String`. -/
+def binderNamed (s : String) : Bool :=
+  match s.toByteArray.data.toList with
+  | 97 :: rest => decide (s = Var.name (decodeBytes rest))
+  | _ => false
+
+/-- The names that the imports of a printed module bind, whatever its program: the `effect`
+namespaces, the root export `pipe`, and each atom of the prelude. The prelude's helpers are
+`termHelperNames` and the package adapters' roots, which the test reads beside this list. -/
+def importedNames : List String :=
+  Effect4.Codegen.effectNamespaces ++ ["pipe"] ++ NativeAtom.names
+
+/-- Why a name is no export name, as a word. `none` for a name that the module may export. -/
+inductive ExportFault
+  /-- No legal binding of the target. -/
+  | notBinding
+  /-- A printed binder: the reader would read it as a variable. -/
+  | binder
+  /-- A reserved head of the printer. -/
+  | reservedHead
+  /-- The name of a hoisted layer. -/
+  | layerName
+  /-- A helper of the prelude that a printed term calls. -/
+  | helper
+  /-- A name that the module's imports bind. -/
+  | imported
+deriving DecidableEq, Repr
+
+/-- **Why a name is no export name**, or `none`. The checks stand in the order of today's test. -/
+def exportNameFault (name : String) : Option ExportFault :=
+  if !Effect4.Codegen.Names.binderName name then some .notBinding
+  else if binderNamed name then some .binder
+  else if reserved.contains name then some .reservedHead
+  else if (LayerTerm.readRefName name).isSome then some .layerName
+  else if termHelperNames.contains name then some .helper
+  else if importedNames.contains name then some .imported
+  else none
+
+/-- The proposed test: a name with no fault. -/
+def exportNameSafe' (name : String) : Bool := (exportNameFault name).isNone
+
+-- green: a name that begins with `a` and is no binder
+#guard ["all", "answer", "a", "a01", "a1x", "list", "complete", "remove", "main"].all exportNameSafe'
+-- red: the printed binders, each with its reason
+#guard ["a0", "a1", "a12", "a100"].all fun name => exportNameFault name == some .binder
+-- red: a name that the module's imports bind: an atom, a namespace of `effect`, `pipe`
+#guard ["add", "eq", "get", "some", "Effect", "Data"].all fun name =>
+  exportNameFault name == some .imported
+#guard exportNameFault "pipe" == some .reservedHead
+-- the other reasons, as today
+#guard exportNameFault "Effect.succeed" == some .notBinding
+#guard exportNameFault "export" == some .notBinding
+#guard exportNameFault "L_0" == some .layerName
+#guard exportNameFault "tupleAt" == some .helper
+-- the proposed test refuses each name that today's test refuses for a reason that stands
+#guard ["a0", "Effect.succeed", "L_0", "export", "tupleAt", "caseTagR"].all fun name =>
+  !exportNameSafe name && !exportNameSafe' name
+-- measured: the names where the two tests differ, on a list of 20 names
+#eval ["main", "program", "handle", "y", "p", "id", "all", "answer", "add", "eq", "get", "some",
+    "Effect", "Data", "Host", "Sql", "Kv", "list", "complete", "remove"].filterMap fun name =>
+  if exportNameSafe name != exportNameSafe' name then
+    some (name, exportNameSafe name, exportNameSafe' name) else none
+
+/-- **The binder test is exact**: it holds of the printed binders and of no other name. -/
+theorem binderNamed_iff (s : String) : binderNamed s = true ↔ ∃ i, s = Var.name i := by
+  constructor
+  · intro h
+    unfold binderNamed at h
+    split at h
+    · exact ⟨_, of_decide_eq_true h⟩
+    · exact absurd h Bool.false_ne_true
+  · rintro ⟨i, rfl⟩
+    have bytes : (Var.name i).toByteArray.data.toList = 97 :: (Nat.repr i).toByteArray.data.toList := by
+      have ha : "a".toByteArray.data.toList = [97] := by decide
+      rw [Var.name, String.toByteArray_append, ByteArray.data_append, Array.toList_append, ha]
+      rfl
+    unfold binderNamed
+    rw [bytes]
+    simp only [decodeBytes_repr, decide_true]
+
+#print axioms binderNamed_iff
+#print axioms exportNameFault
+
+end Effect4.Program
