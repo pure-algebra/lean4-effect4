@@ -43,6 +43,10 @@ const cases = [
     const q = r.plan.requirements[0];
     q.top = [...(q.top || []), { name: 'Unknown.top', status: 'proved' }];
   }, 'Unknown.top'],
+  // An open part is its text with its state. A bare text, or a state that the view does not
+  // draw, would be drawn as no mark: the open work would be hidden.
+  ['open part as a bare text', (r) => { r.plan.requirements[0].openParts = ['a part']; }, 'open part without its text or its state'],
+  ['open part in an unknown state', (r) => { r.plan.requirements[0].openParts = [{ text: 'a part', state: 'done', on: '' }]; }, 'open part without its text or its state'],
 ];
 for (const [label, mutate, expected] of cases) {
   const broken = copy();

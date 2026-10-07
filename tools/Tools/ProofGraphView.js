@@ -100,7 +100,13 @@ function validatePlan(report) {
     knownItems(`${r.id}'s top nodes`, r.top);
     knownItems(`${r.id}'s placed nodes`, r.placed);
     known(`${r.id}'s next goals`, r.next);
-    list(`${r.id}'s open parts`, r.openParts);
+    if (list(`${r.id}'s open parts`, r.openParts)) {
+      for (const p of r.openParts) {
+        if (!p || !isStr(p.text) || !['untriaged', 'proposed', 'ruling', 'definition', 'work'].includes(p.state)) {
+          problems.push(`${r.id} has an open part without its text or its state`);
+        }
+      }
+    }
   }
   known('the next goals', plan.next);
   known('the unplaced goals', plan.unplacedGoals);
@@ -172,6 +178,12 @@ const reach = (start, next) => {
 const theorems = [...nodes.values()].filter((n) => n.kind !== 'requirement');
 const statusOf = (n) => (n.kind === 'requirement' ? (n.status === 'proved' ? 'proved' : 'req') : n.status);
 const statusWord = (s) => (s === 'goal' ? 'planned goal' : s === 'modulo' ? 'modulo its goals' : s);
+// An open part is a part of a requirement that no planned goal states yet. Its state says why,
+// as the registry records it (tools/Tools/SemanticsRegistry.lean, `PartState`). The order is the
+// order of the work: a part is triaged, then it waits, then its statement is worded.
+const partStates = ['untriaged', 'ruling', 'definition', 'work', 'proposed'];
+const partWord = { untriaged: 'not triaged', ruling: 'waits on a ruling', definition: 'needs a definition',
+  work: 'after other work', proposed: 'worded as a claim' };
 
 // pg-model:end
 
@@ -195,7 +207,8 @@ const search = bar.querySelector('input[type=search]');
 const tally = (k) => theorems.filter((n) => n.status === k).length;
 bar.querySelector('.pg-counts').innerHTML =
   `<b>${reqs.length}</b> requirements, ${plan.requirements.filter((r) => r.status !== 'proved').length} open · ` +
-  `<b>${tally('proved')}</b> proved · <b>${tally('modulo')}</b> modulo · <b>${tally('goal')}</b> planned goals`;
+  `<b>${tally('proved')}</b> proved · <b>${tally('modulo')}</b> modulo · <b>${tally('goal')}</b> planned goals · ` +
+  `<b>${plan.requirements.reduce((sum, r) => sum + (r.openParts || []).length, 0)}</b> open parts`;
 const legend = document.createElement('div');
 legend.className = 'pg-legend';
 const usedRoles = [...new Set(theorems.map((n) => n.role).filter(Boolean))];
@@ -271,9 +284,11 @@ const overview = () => {
         .sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || a.label.localeCompare(b.label));
       html += `<td>${here.map((n) => `<a class="dot ${n.status}" data-go="${esc(n.id)}" title="${esc(n.label)} · ${esc(statusWord(n.status))}" aria-label="${esc(n.label)}, ${esc(statusWord(n.status))}"></a>`).join('')}</td>`;
     }
-    html += `<td class="ops">${(r.openParts || []).length ? `<a data-go="req:${esc(r.id)}">${r.openParts.length}</a>` : '—'}</td></tr>`;
+    const parts = [...(r.openParts || [])].sort((a, b) => partStates.indexOf(a.state) - partStates.indexOf(b.state));
+    html += `<td class="ops">${parts.length ? parts.map((p) => `<a class="part ${esc(p.state)}" data-go="req:${esc(r.id)}" title="${esc(partWord[p.state])}${p.on ? ': ' + esc(p.on) : ''}" aria-label="open part, ${esc(partWord[p.state])}"></a>`).join('') : '—'}</td></tr>`;
   }
-  html += '</tbody></table><p class="hint">A dot is a theorem the requirement rests on, through its proofs, in the column of its concept. Select one to see it in the graph; select a requirement for its open parts, the parts not yet stated as goals.</p></div>';
+  html += '</tbody></table><p class="hint">A dot is a theorem the requirement rests on, through its proofs, in the column of its concept. Select one to see it in the graph. An outlined mark is an open part: a part of the requirement that no planned goal states yet. Its shape says why: ' +
+    partStates.map((k) => `<span class="part ${k}"></span> ${esc(partWord[k])}`).join(', ') + '. Select a requirement to read its open parts.</p></div>';
   canvas.innerHTML = html;
 };
 
@@ -535,7 +550,7 @@ const show = (id) => {
   if (n.kind === 'requirement') {
     panel.innerHTML = `<h4>${esc(n.label)}</h4><p class="sub">${esc(n.title)}</p>${badge(n.status, n.status === 'proved' ? 'proved' : 'open')}` +
       `<dl><dt>Top nodes</dt><dd>${list(n.out)}</dd><dt>Next goals</dt><dd>${list(n.next)}</dd>` +
-      `<dt>Open parts, not yet stated as goals (${n.openParts.length})</dt><dd>${n.openParts.length ? `<ul>${n.openParts.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : '<span class="hint">none</span>'}</dd></dl>`;
+      `<dt>Open parts, not yet stated as goals (${n.openParts.length})</dt><dd>${n.openParts.length ? `<ul class="parts">${n.openParts.map((p) => `<li><span class="part ${esc(p.state)}"></span> <b>${esc(partWord[p.state])}</b>${p.on ? ` <span class="on">${esc(p.on)}</span>` : ''}<div>${esc(p.text)}</div></li>`).join('')}</ul>` : '<span class="hint">none</span>'}</dd></dl>`;
     return;
   }
   const path = n.module ? pathOf(n.module) : '';

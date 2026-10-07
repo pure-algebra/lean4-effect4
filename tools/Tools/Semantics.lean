@@ -216,7 +216,8 @@ private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement)
   let reqs := requirements.toArray.map fun r =>
     let proved := r.openParts.isEmpty && (nodesOf r).all (word · == "proved")
     obj [("id", text r.id), ("title", text r.title), ("status", text (if proved then "proved" else "open")),
-      ("openParts", toJson r.openParts),
+      ("openParts", toJson (r.openParts.map fun part =>
+        obj [("text", text part.text), ("state", text part.state.word), ("on", text part.state.on)])),
       ("top", toJson (r.top.map status)),
       ("placed", toJson ((placedAt r).map status)),
       ("next", names (plan.next (nodesOf r).toArray).toList)]
@@ -389,6 +390,10 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     reqIds := req.id :: reqIds
     if req.top.isEmpty && req.openParts.isEmpty && !placed.any (·.2 == req.id) then
       errors := errors.push s!"requirement {req.id}: no top node, no placed node and no open part"
+    -- a part that waits names what it waits on
+    for part in req.openParts do
+      if part.state.word != "untriaged" && part.state.word != "proposed" && part.state.on.isEmpty then
+        errors := errors.push s!"requirement {req.id}: an open part waits on nothing"
   for pre in registry.planScope do
     unless env.header.moduleNames.any (pre.isPrefixOf ·) do
       errors := errors.push s!"plan scope {pre}: matches no loaded module"
@@ -573,6 +578,12 @@ private def renderPlan (plan : Json) : String := Id.run do
   let unplaced := strings (nested plan "unplacedGoals")
   let loose := displayName (next ++ unplaced)
   out := out ++ s!"\n**Next goals** ({next.length}): {ticked loose next}\n"
+  -- the open parts by state: what no planned goal states yet, and why
+  let parts := (array plan "requirements").toList.flatMap fun req => (array req "openParts").toList
+  let count (state : String) : Nat := (parts.filter fun part => field part "state" == state).length
+  out := out ++ s!"\n**Open parts, with no planned goal** ({parts.length}): not triaged {count "untriaged"}; " ++
+    s!"worded as a proposed claim {count "proposed"}; waits on a ruling {count "ruling"}; " ++
+    s!"needs a definition {count "definition"}; after other work {count "work"}\n"
   unless unplaced.isEmpty do
     out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked loose unplaced}\n"
   for req in array plan "requirements" do
@@ -581,8 +592,15 @@ private def renderPlan (plan : Json) : String := Id.run do
     out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n"
     unless pending.isEmpty do
       out := out ++ s!"- **Incomplete:** the traversal stopped with {pending.length} names not visited ({ticked shown pending}).\n"
-    for part in strings (nested req "openParts") do
-      out := out ++ s!"- Open: {part}\n"
+    for part in array req "openParts" do
+      let waits := field part "on"
+      let label := match field part "state" with
+        | "proposed" => "Open, worded as a proposed claim"
+        | "ruling" => s!"Open, waits on a ruling ({waits})"
+        | "definition" => s!"Open, needs a definition ({waits})"
+        | "work" => s!"Open, after other work ({waits})"
+        | _ => "Open, not triaged"
+      out := out ++ s!"- {label}: {field part "text"}\n"
     out := out ++ "\n```mermaid\nflowchart LR\n"
     for (n, i) in reach.zipIdx do
       out := out ++ s!"  n{i}[\"{shown n}<br/>{statusOf n}\"]\n"
