@@ -1442,30 +1442,6 @@ theorem optional {v : Val} {fields : List (String × Bool × Ty)}
   | some value => exact hresult
 
 
-/-- Joining results retains a fitting member of the accumulator or any remaining branch. -/
-theorem foldl_join {value : Val} (types : List Ty) (acc : Ty)
-    (hfit : Has value acc ∨ ∃ type ∈ types, Has value type) :
-    Has value (types.foldl Ty.join acc) := by
-  induction types generalizing acc with
-  | nil =>
-    rcases hfit with h | ⟨_, h, _⟩
-    · exact h
-    · cases h
-  | cons type types ih =>
-    apply ih (Ty.join acc type)
-    rcases hfit with h | ⟨t, ht, h⟩
-    · exact Or.inl (join_left acc type value h)
-    · rcases List.mem_cons.mp ht with rfl | ht
-      · exact Or.inl (join_right acc t value h)
-      · exact Or.inr ⟨t, ht, h⟩
-
-
-/-- A branch's fitting result fits the joined result type. -/
-theorem joinResults {value : Val} {types : List Ty} {type : Ty}
-    (ht : type ∈ types) (hfit : Has value type) : Has value (Program.Record.joinResults types) :=
-  foldl_join types .never (Or.inr ⟨type, ht, hfit⟩)
-
-
 /-- The single-record field rule returns the actual fitting read result in either mode. -/
 theorem fieldOf {value : Val} {target answer : Ty}
     {optional : Bool} {name : String}

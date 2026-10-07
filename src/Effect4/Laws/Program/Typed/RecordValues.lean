@@ -270,20 +270,6 @@ theorem namedFit_of_sublist_lookup :
         (fun q hq => hall q (List.mem_cons_of_mem _ hq))⟩
 
 
-/-- A successful branchwise check gives a result for each input branch. -/
-theorem mapM_some_mem {α β : Type} {f : α → Option β} :
-    ∀ {xs : List α} {ys : List β}, xs.mapM f = some ys →
-      ∀ x ∈ xs, ∃ y ∈ ys, f x = some y
-  | [], _, _, _, hx => absurd hx List.not_mem_nil
-  | a :: xs, _, h, x, hx => by
-    simp only [List.mapM_cons, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
-    obtain ⟨b, hb, bs, hbs, rfl⟩ := h
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact ⟨b, List.mem_cons_self, hb⟩
-    · obtain ⟨y, hy, hxy⟩ := mapM_some_mem hbs x hx
-      exact ⟨y, List.mem_cons_of_mem _ hy, hxy⟩
-
-
 /-- Removing one different name leaves a lookup unchanged. Overwrite uses this field-list law. -/
 theorem firstOf_filter_other {α : Type} (removed name : String) (hne : removed ≠ name)
     (fields : List (String × α)) :

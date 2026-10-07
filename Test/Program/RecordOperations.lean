@@ -110,9 +110,6 @@ example (w : Typed.World) : ∃ value,
 #print axioms zipNames_fits
 #print axioms firstOf_fits
 #print axioms record_build_fits
-#print axioms mapM_some_mem
-#print axioms fits_foldl_join
-#print axioms fits_joinResults
 #print axioms record_fieldOf_fits
 #print axioms record_fieldType_fits
 #print axioms firstOf_filter_other

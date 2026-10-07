@@ -180,28 +180,6 @@ theorem record_lookup_optional {w : World} {v : Val} {fields : List (String × B
   | none => trivial
   | some value => exact hresult
 
-/-- Joining results retains a fitting member of the accumulator or any remaining branch. -/
-theorem fits_foldl_join {w : World} {value : Val} (types : List Ty) (acc : Ty)
-    (hfit : Fits w value acc ∨ ∃ type ∈ types, Fits w value type) :
-    Fits w value (types.foldl Ty.join acc) := by
-  induction types generalizing acc with
-  | nil =>
-    rcases hfit with h | ⟨_, h, _⟩
-    · exact h
-    · cases h
-  | cons type types ih =>
-    apply ih (Ty.join acc type)
-    rcases hfit with h | ⟨t, ht, h⟩
-    · exact Or.inl (fits_join_left w acc type value h)
-    · rcases List.mem_cons.mp ht with rfl | ht
-      · exact Or.inl (fits_join_right w acc t value h)
-      · exact Or.inr ⟨t, ht, h⟩
-
-/-- A branch's fitting result fits the joined result type. -/
-theorem fits_joinResults {w : World} {value : Val} {types : List Ty} {type : Ty}
-    (ht : type ∈ types) (hfit : Fits w value type) : Fits w value (Program.Record.joinResults types) :=
-  fits_foldl_join types .never (Or.inr ⟨type, ht, hfit⟩)
-
 /-- Membership in a typed world reads a union: its normal form, its union members and its join
 (`UnionRule.ReadsUnion`, `src/Effect4/Laws/Program/UnionRule.lean`). A step of
 `record_fieldType_fits` and `record_setType_fits` below, for the claim `denote-typed`: each
