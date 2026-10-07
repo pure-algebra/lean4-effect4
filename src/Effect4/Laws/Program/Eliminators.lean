@@ -19,7 +19,10 @@ holds one section for each converted rule, and each later conversion adds its se
 3. **The member rule at one union member**, where it holds: the member rule answers only at a
    type whose normal form has at most one union member. A constructor whose normal form
    distributes over a union does not have it.
-4. **The rule's own facts**, each by one application of the contract: the rule at a raw type of
+4. **The member rule at a closed type**: a closed type of the constructor has closed arguments.
+   The rule's closed case is then one application
+   (`extend_closed_pair`; `closed_fiberTy`, `src/Effect4/Laws/Program/Typing/Closed.lean`).
+5. **The rule's own facts**, each by one application of the contract: the rule at a raw type of
    its constructor, and the upper form that a use site names.
 
 **What a section does not hold.** It proves nothing about unions, normal forms or the guard. The
@@ -96,6 +99,14 @@ theorem Member.fiber_one {t : Ty} {a : Ty × Ty} (answered : Member.fiber t = so
   cases t with
   | fiberOf value error => exact Nat.le_refl 1
   | _ => exact nomatch answered
+
+/-- **A closed fiber type has closed columns**: the member fact of `extend_closed_pair` at the
+fiber rule. Its consumer is `closed_fiberTy`
+(`src/Effect4/Laws/Program/Typing/Closed.lean`), the fiber case of the claim
+`checked-types-closed`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+proof_goal Member.fiber_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
+    (answered : Member.fiber m = some a) : a.1.closed = true ∧ a.2.closed = true
 
 /-- **The fiber rule at a raw fiber type**: the two columns as they are spelled, as before the
 conversion. It is `extend_agrees` at the fiber rule: no program that the by-shape rule admitted

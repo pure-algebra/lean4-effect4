@@ -1113,6 +1113,21 @@ theorem extend_two {rule : Ty → Option α} {t : Ty} (refused : rule t = none)
     (two : 1 < t.normalize.members.length) : extend rule t = none := by
   rw [extend_refused refused, liftOne_two rule two]
 
+/-- **A converted rule keeps closed types closed, at a pair.** Take a member rule that answers
+two types. At each closed type that it answers, let both types of its answer be closed. Then the
+extended rule answers two closed types at each closed target. The member rule's own answer is
+closed by the premise, and the guarded rule's answer by `lift_closed_pair`. A part of the
+proposed claim `union-rule-extend`. Its consumer is the fiber case of the claim
+`checked-types-closed`: `closed_fiberTy` (`src/Effect4/Laws/Program/Typing/Closed.lean`). A rule
+that answers one type has the same law from `lift_closed`. It is stated with its first
+consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+proof_goal extend_closed_pair {rule : Ty → Option (Ty × Ty)}
+    (member : ∀ {m : Ty} {a : Ty × Ty}, m.closed = true → rule m = some a →
+      a.1.closed = true ∧ a.2.closed = true)
+    {t : Ty} {a : Ty × Ty} (typed : extend rule t = some a) (closed : t.closed = true) :
+    a.1.closed = true ∧ a.2.closed = true
+
 section ConvertedEliminator
 
 variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
