@@ -260,7 +260,7 @@ ever reduces a matcher on a constructor, never the recursion's `brecOn`. Connect
 
 | stub file | converted in this iteration |
 | --- | --- |
-| `Laws/Program/Folds/Ty.lean` | `findInt`, `Val.hasTy`, `Codec.encodeRaw`, `Codec.decodeRaw` — **`Ty` is 16 of 17** (`instReprTy.repr` remains) |
+| `Laws/Program/Folds/Ty.lean` | `Val.hasTy`, `Codec.encodeRaw`, `Codec.decodeRaw` (`findInt` went with decisions row 317) — **`Ty` is 16 of 17** (`instReprTy.repr` remains) |
 | `Laws/Program/Folds/Provision.lean` | `Provision.build` / `buildAll` |
 | `Laws/Program/Folds/Denote.lean` | `denote`, `denoteB`, `denoteWith`, `denoteBWith` (**row 30's `denote` onto the fold**), `Agreement.depth`, `steps`, `depthB`, `boundB` |
 | `Laws/Program/Folds/Term.lean` | `printTerm`/`printTerms`, `Terms.names?`, `noRow`, `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken`, `evalTerm`/`evalTerms`, `argTy` — **`Term` is 12 of 14** |

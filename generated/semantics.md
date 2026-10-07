@@ -310,7 +310,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
     Exists fun σ =>
       Exists fun bindings =>
         And
-          (Eq (Effect4.Program.Bounds.matchB List.nil row.request.normalize request.normalize)
+          (Eq (Effect4.Program.Bounds.matchTerm List.nil row.request.normalize request.normalize)
             (Option.some σ))
           (And (Eq (Effect4.Program.bindTerm σ use) (Except.ok bindings))
             (Effect4.Program.Formation.Formed
@@ -2441,7 +2441,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 275; inherited (provisional): 2291; unplaced: 0.
+Tagged: 275; inherited (provisional): 2292; unplaced: 0.
 
 ## Plan
 
@@ -2919,13 +2919,13 @@ flowchart LR
 | --- | --- | --- | --- | --- | --- |
 | `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
-| `admitSig_ok_iff` | proved | — | — | 44 | 147 |
+| `admitSig_ok_iff` | proved | — | — | 44 | 146 |
 | `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 77 | 385 |
 | `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 105 | 1165 |
-| `meaningB_typed_app` | proved | — | `check_restrict`, `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` | 780 | 930 |
+| `meaningB_typed_app` | proved | — | `check_restrict`, `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` | 780 | 929 |
 | `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` | 81 | 1254 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 73 | 330 |
-| `meaning_typed` | proved | — | `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` | 737 | 915 |
+| `meaning_typed` | proved | — | `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` | 737 | 914 |
 | `run_eq_meaning` | proved | — | — | 310 | 906 |
 | `order_refl` | proved | — | — | 57 | 205 |
 | `fits_mono` | proved | — | — | 80 | 235 |
@@ -2947,7 +2947,7 @@ flowchart LR
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
 | `order_trans` | proved | — | — | 57 | 206 |
 | `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 87 | 1275 |
-| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 148 |
+| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 147 |
 | `cata_eff_congr_on` | proved | — | — | 65 | 73 |
 | `hom_eq_cata_eff` | proved | — | — | 65 | 79 |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` | 451 | 434 |
@@ -3040,7 +3040,7 @@ flowchart LR
 | --- | --- | --- | --- | --- | --- |
 | `check_ext` | proved | — | `check_sound`, `check_complete` | 68 | 256 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 73 | 330 |
-| `lawful_append` | proved | — | — | 40 | 142 |
+| `lawful_append` | proved | — | — | 40 | 141 |
 | `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `cata_eff_congr_on` | proved | — | — | 65 | 73 |
@@ -3051,7 +3051,7 @@ flowchart LR
 - Open, not triaged: variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130
 - Open, waits on a ruling (decisions row 124: recursive types as declarations of the application): recursive types are row 124 (open): nominal Σ_app declarations through Ty.app
 - Open, not triaged: error payloads: the carrier (decisions row 120, part E1) and the face (part E2: one Data.TaggedError class per tag, printed and read back) landed; open: catchTag's residual over records (decisions row 130), int and number fields (row 121; a number field is refused by name as unreadable), a field typed by another class (refused by name), a record update of a class instance (it answers a structural object), and a host row answering a payload (R6, parked)
-- Open, waits on a ruling (decisions row 108: the owner places the numbers slice; row 121 is ruled): int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121), not landed; the admission's int scan still refuses it
+- Open, waits on a ruling (decisions row 108: the owner places the numbers slice; row 121 is ruled): int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121); carried since decisions row 317, which removes the admission's int scan; the JSON wires since row 316; the computing rows and the bound (the integers packet, slices 5 to 7) are not landed
 - Open, not triaged: the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)
 - Open, after other work (a program that compares records (decisions row 126)): equality at records: eq stays refused at records until a program compares them (decisions row 126)
 
@@ -3095,7 +3095,7 @@ flowchart LR
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
 | `inhabited_iff_fits` | proved | — | `subN_refl` | 155 | 325 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
-| `decode_iff` | proved | — | — | 185 | 296 |
+| `decode_iff` | proved | — | — | 191 | 308 |
 | `ofSchema_exact` | proved | — | — | 41 | 144 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `type_metadata_exact` | proved | — | — | 61 | 86 |
@@ -3406,6 +3406,8 @@ flowchart LR
   n22 --> n14
   n22 --> n74
   n22 --> n71
+  n22 --> n41
+  n22 --> n43
   n22 --> n146
   n22 --> n147
   n22 --> n143
@@ -3422,6 +3424,7 @@ flowchart LR
   n23 --> n22
   n23 --> n15
   n23 --> n70
+  n23 --> n41
   n24 --> n144
   n24 --> n145
   n24 --> n143
@@ -3433,6 +3436,8 @@ flowchart LR
   n24 --> n20
   n24 --> n74
   n24 --> n71
+  n24 --> n41
+  n24 --> n43
   n24 --> n19
   n24 --> n21
   n24 --> n16
@@ -3626,6 +3631,7 @@ flowchart LR
   n108 --> n55
   n109 --> n97
   n109 --> n70
+  n109 --> n41
   n109 --> n144
   n109 --> n145
   n110 --> n106
@@ -3640,6 +3646,8 @@ flowchart LR
   n110 --> n99
   n110 --> n74
   n110 --> n71
+  n110 --> n41
+  n110 --> n43
   n110 --> n152
   n110 --> n147
   n111 --> n144
@@ -3653,11 +3661,15 @@ flowchart LR
   n111 --> n101
   n111 --> n74
   n111 --> n71
+  n111 --> n41
+  n111 --> n43
   n112 --> n142
   n112 --> n135
   n112 --> n144
   n112 --> n145
   n112 --> n71
+  n112 --> n41
+  n112 --> n43
   n113 --> n108
   n113 --> n144
   n113 --> n145
@@ -3670,6 +3682,8 @@ flowchart LR
   n113 --> n104
   n113 --> n74
   n113 --> n71
+  n113 --> n41
+  n113 --> n43
   n113 --> n146
   n113 --> n147
   n116 --> n135
@@ -3709,6 +3723,7 @@ flowchart LR
   n120 --> n63
   n121 --> n114
   n121 --> n70
+  n121 --> n41
   n121 --> n144
   n121 --> n145
   n122 --> n144
@@ -3721,6 +3736,8 @@ flowchart LR
   n122 --> n119
   n122 --> n74
   n122 --> n71
+  n122 --> n41
+  n122 --> n43
   n122 --> n61
   n122 --> n116
   n123 --> n117
@@ -3728,12 +3745,16 @@ flowchart LR
   n123 --> n145
   n123 --> n74
   n123 --> n71
+  n123 --> n41
+  n123 --> n43
   n124 --> n120
   n124 --> n144
   n124 --> n145
   n124 --> n118
   n124 --> n74
   n124 --> n71
+  n124 --> n41
+  n124 --> n43
   n124 --> n146
   n124 --> n147
   n125 --> n122
@@ -3751,6 +3772,8 @@ flowchart LR
   n126 --> n118
   n126 --> n74
   n126 --> n71
+  n126 --> n41
+  n126 --> n43
   n126 --> n146
   n126 --> n149
   n127 --> n154
@@ -3957,9 +3980,9 @@ flowchart LR
 | `returnStep_types` | proved | — | `subN_refl`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 286 | 187 |
 | `selectStep_types` | proved | — | `matchArgsB_list_var_nat`, `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 118 | 146 |
 | `Pool.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 250 | 178 |
-| `close_answers` | proved | — | `Pool.Model.withdrawStep_types`, `check_complete`, `check_sound`, `drainStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `mask_printed_form_profile`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `selectStep_types`, `closeStep_types` | 249 | 439 |
-| `Pool.make_types` | proved | — | `normalize_idem`, `check_complete`, `check_sound`, `close_answers`, `initial_types`, `matchB_one_var` | 241 | 449 |
-| `use_types` | proved | — | `check_complete`, `check_sound`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `selectStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `returnStep_types`, `Pool.Model.withdrawStep_types`, `leaseStep_types`, `waitRetryAt_answers`, `protectedBy_has` | 272 | 449 |
+| `close_answers` | proved | — | `Pool.Model.withdrawStep_types`, `check_complete`, `check_sound`, `drainStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `waitRetryAt_answers`, `mask_printed_form_profile`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `selectStep_types`, `closeStep_types` | 251 | 439 |
+| `Pool.make_types` | proved | — | `normalize_idem`, `check_complete`, `check_sound`, `close_answers`, `initial_types`, `matchB_one_var`, `cands_var` | 243 | 449 |
+| `use_types` | proved | — | `check_complete`, `check_sound`, `subN_refl`, `lift_member`, `normalize_idem`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `selectStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `returnStep_types`, `Pool.Model.withdrawStep_types`, `leaseStep_types`, `waitRetryAt_answers`, `protectedBy_has` | 274 | 449 |
 | `ascribe_scoped` | proved | — | — | 7 | 10 |
 | `args` | proved | — | `noApp_args` | 25 | 38 |
 | `head` | proved | — | — | 5 | 13 |
@@ -4044,11 +4067,11 @@ flowchart LR
 | `withdrawOffer_types` | proved | — | `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_ite`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append` | 261 | 182 |
 | `withdrawTake_typed` | proved | — | `withdrawTake_types` | 50 | 169 |
 | `withdrawTake_types` | proved | — | `matchArgsB_two_vars`, `normalize_idem`, `lift_member`, `matchArgsB_list_var_nat`, `join_eq_right_of_subN`, `matchArgsB_ite`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append` | 259 | 182 |
-| `bounded_types` | proved | — | `empty_typed`, `matchB_one_var`, `check_complete`, `check_sound` | 83 | 333 |
-| `offer_types` | proved | — | `withdrawOffer_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `offerStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `rowTy_instantiated_formed`, `mask_printed_form_profile` | 250 | 429 |
-| `poll_types` | proved | — | `check_complete`, `check_sound`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `pollStep_types`, `matchTerm_modify_use`, `matchB_refOf_var` | 241 | 406 |
-| `size_types` | proved | — | `lift_member`, `normalize_idem`, `check_complete`, `check_sound`, `matchB_refOf_var` | 177 | 360 |
-| `Queue.take_types` | proved | — | `withdrawTake_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `Queue.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `mask_printed_form_profile` | 242 | 444 |
+| `bounded_types` | proved | — | `empty_typed`, `matchB_one_var`, `cands_var`, `check_complete`, `check_sound` | 85 | 333 |
+| `offer_types` | proved | — | `withdrawOffer_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `offerStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `rowTy_instantiated_formed`, `mask_printed_form_profile` | 252 | 429 |
+| `poll_types` | proved | — | `check_complete`, `check_sound`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `optionTy_option`, `pollStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv` | 243 | 406 |
+| `size_types` | proved | — | `lift_member`, `normalize_idem`, `check_complete`, `check_sound`, `matchB_refOf_var`, `cands_var`, `comp_inv` | 179 | 360 |
+| `Queue.take_types` | proved | — | `withdrawTake_types`, `check_complete`, `check_sound`, `optionTy_option`, `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_two_vars`, `matchArgsB_list_var_nat`, `Queue.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `waitRetryAt_answers`, `mask_printed_form_profile` | 244 | 444 |
 | `empty_types` | proved | — | — | 65 | 143 |
 | `Semaphore.Model.profile_closed` | proved | — | — | 13 | 18 |
 | `releaseStep_types` | proved | — | `normalize_idem`, `lift_member`, `matchArgsB_two_vars` | 154 | 152 |
@@ -4056,16 +4079,16 @@ flowchart LR
 | `Semaphore.Model.takeStep_types` | proved | — | `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_cons_nil`, `matchArgsB_append`, `matchArgsB_two_vars`, `subN_refl`, `matchArgsB_list_var_nat` | 287 | 183 |
 | `visitStep_types` | proved | — | `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 283 | 183 |
 | `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 248 | 177 |
-| `Semaphore.make_types` | proved | — | `empty_types`, `matchB_one_var`, `check_complete`, `check_sound` | 71 | 323 |
-| `release_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `lift_member`, `matchArgsB_two_vars`, `optionTy_option`, `visitStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `matchArgsB_one_var`, `releaseStep_types` | 284 | 417 |
-| `takeIfAvailable_types` | proved | — | `takeIfAvailableStep_types`, `check_complete`, `check_sound`, `matchTerm_modify_use`, `matchB_refOf_var` | 89 | 346 |
-| `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `mask_printed_form_profile` | 140 | 411 |
+| `Semaphore.make_types` | proved | — | `empty_types`, `matchB_one_var`, `cands_var`, `check_complete`, `check_sound` | 73 | 323 |
+| `release_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `lift_member`, `matchArgsB_two_vars`, `optionTy_option`, `visitStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `matchArgsB_one_var`, `releaseStep_types` | 286 | 417 |
+| `takeIfAvailable_types` | proved | — | `takeIfAvailableStep_types`, `check_complete`, `check_sound`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv` | 91 | 346 |
+| `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `waitRetryAt_answers`, `mask_printed_form_profile` | 142 | 411 |
 | `withPermitsIfAvailable_types` | proved | — | `release_types`, `check_sound`, `check_complete`, `normalize_idem`, `matchArgsB_one_var`, `takeIfAvailable_types`, `protectedBy_has`, `sub_antisymm_canonical` | 231 | 419 |
-| `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `waitRetryAt_answers`, `protectedBy_has` | 134 | 422 |
-| `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 86 | 1515 |
-| `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 86 | 1477 |
-| `committed` | goal | `committed` | `checkInput_eq_none_iff` | 86 | 1483 |
-| `counted` | goal | `counted` | `checkInput_eq_none_iff` | 86 | 1484 |
+| `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `waitRetryAt_answers`, `protectedBy_has` | 136 | 422 |
+| `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 86 | 1510 |
+| `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 86 | 1472 |
+| `committed` | goal | `committed` | `checkInput_eq_none_iff` | 86 | 1478 |
+| `counted` | goal | `counted` | `checkInput_eq_none_iff` | 86 | 1479 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 122 | 65 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
@@ -4090,7 +4113,7 @@ flowchart LR
 | `rowTy_instantiated_formed` | proved | — | — | 55 | 116 |
 | `sub_antisymm_canonical` | proved | — | — | 144 | 61 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
-| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1476 |
+| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1471 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
 | `list_eliminator` | proved | — | `subN_list_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 139 | 65 |
 | `extend_upper` | proved | — | `extend_adjoint` | 38 | 52 |
@@ -4172,7 +4195,7 @@ flowchart LR
 | `build_total` | proved | — | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 173 | 287 |
 | `expanded_refs_nil_of_wf` | proved | — | — | 19 | 106 |
 | `typeOfProgram_expandRefs` | proved | — | `expanded_refs_nil_of_wf` | 58 | 348 |
-| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1453 |
+| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1448 |
 | `satisfies_union` | proved | — | — | 20 | 33 |
 | `satisfies_weaken` | proved | — | — | 0 | 25 |
 | `satisfies_empty` | proved | — | — | 2 | 26 |
@@ -4611,9 +4634,9 @@ flowchart LR
 | `control_retires` | proved | — | — | 69 | 858 |
 | `denoteRows_eq_session` | goal | `denoteRows_eq_session` | — | 74 | 1093 |
 | `session_eq_ref` | proved | — | `run_eq_ref_table_noPreload`, `journal_replays`, `funded_replays` | 103 | 1137 |
-| `stale_never_applies` | goal | `stale_never_applies` | `checkInput_eq_none_iff` | 85 | 1480 |
-| `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` | 85 | 1489 |
-| `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 85 | 1487 |
+| `stale_never_applies` | goal | `stale_never_applies` | `checkInput_eq_none_iff` | 85 | 1475 |
+| `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` | 85 | 1484 |
+| `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 85 | 1482 |
 | `receipt_inert` | proved | — | — | 77 | 951 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1055 | 1565 |
 | `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 108 | 1199 |
@@ -4622,9 +4645,9 @@ flowchart LR
 | `journal_replays` | proved | — | — | 77 | 938 |
 | `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 71 | 979 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
-| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1475 |
-| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1476 |
-| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 85 | 1483 |
+| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1470 |
+| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1471 |
+| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 85 | 1478 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
 | `subN_trans` | proved | — | — | 96 | 53 |
 | `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 337 | 1249 |
@@ -5165,7 +5188,7 @@ flowchart LR
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1055 | 1565 |
 | `loadsTyped` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 109 | 1201 |
 | `m7_of_ledger` | proved | — | `order_trans`, `order_refl` | 932 | 1473 |
-| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 148 |
+| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 147 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
 | `order_refl` | proved | — | — | 57 | 205 |
 | `subN_trans` | proved | — | — | 96 | 53 |
@@ -5185,7 +5208,7 @@ flowchart LR
 | `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 779 | 902 |
 | `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
-| `admitSig_ok_iff` | proved | — | — | 44 | 147 |
+| `admitSig_ok_iff` | proved | — | — | 44 | 146 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 225 |
 | `completionStrong_await` | proved | — | `subN_trans` | 250 | 238 |
 | `subN_refl` | proved | — | — | 38 | 44 |
@@ -5909,12 +5932,12 @@ flowchart LR
 | `Semaphore.take_withdrawal_minted` | proved | — | `Semaphore.take_withdrawal` | 76 | 351 |
 | `visit_attempt` | proved | — | `step_keeps_cell`, `visitStep_types`, `step_updates`, `visitStep_agrees` | 72 | 462 |
 | `visit_attempt_minted` | proved | — | `visit_attempt` | 97 | 358 |
-| `held_within_fed` | goal | `held_within_fed` | `checkInput_eq_none_iff` | 87 | 1615 |
-| `queueWorkers` | modulo | `fed_accounted`, `held_within_fed`, `queue_settled`, `releases_once` | `releases_once`, `queue_settled`, `fed_accounted`, `held_within_fed`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 87 | 1638 |
-| `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 85 | 1461 |
-| `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 85 | 1463 |
+| `held_within_fed` | goal | `held_within_fed` | `checkInput_eq_none_iff` | 87 | 1610 |
+| `queueWorkers` | modulo | `fed_accounted`, `held_within_fed`, `queue_settled`, `releases_once` | `releases_once`, `queue_settled`, `fed_accounted`, `held_within_fed`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 87 | 1633 |
+| `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 85 | 1456 |
+| `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 85 | 1458 |
 | `tagIs_pair` | proved | — | — | 8 | 86 |
-| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1476 |
+| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1471 |
 | `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
@@ -5939,13 +5962,13 @@ flowchart LR
 | `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 248 | 177 |
 | `visitStep_types` | proved | — | `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 283 | 183 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
-| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 87 | 1606 |
-| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1622 |
-| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1622 |
+| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 87 | 1601 |
+| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1617 |
+| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1617 |
 | `control_retires` | proved | — | — | 69 | 858 |
 | `applied_selects` | proved | — | — | 69 | 897 |
 | `receipt_inert` | proved | — | — | 77 | 951 |
-| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1453 |
+| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1448 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` | 550 | 668 |
 | `matchArgsB_two_vars` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 39 | 59 |
@@ -6070,10 +6093,10 @@ flowchart LR
 | `compiled_mask_chain_runs` | proved | — | `driveState_lift` | 234 | 836 |
 | `compiled_region_bracket` | proved | — | `stepped_live` | 59 | 84 |
 | `stepped_live` | proved | — | — | 66 | 573 |
-| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1476 |
-| `QueueWorkers.releases_once` | goal | `QueueWorkers.releases_once` | `checkInput_eq_none_iff` | 87 | 1606 |
-| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1475 |
-| `Workers.releases_once` | goal | `Workers.releases_once` | `checkInput_eq_none_iff` | 85 | 1483 |
+| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1471 |
+| `QueueWorkers.releases_once` | goal | `QueueWorkers.releases_once` | `checkInput_eq_none_iff` | 87 | 1601 |
+| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1470 |
+| `Workers.releases_once` | goal | `Workers.releases_once` | `checkInput_eq_none_iff` | 85 | 1478 |
 | `close_idempotent` | proved | — | — | 1 | 15 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
@@ -6125,8 +6148,8 @@ flowchart LR
 | `first_step_inv` | proved | — | `positive_suspend_step_capacity`, `first_profile_closed` | 57 | 74 |
 | `visit_selects_earliest` | proved | — | — | 5 | 11 |
 | `visit_stops_iff` | proved | — | — | 4 | 11 |
-| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1622 |
-| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1622 |
+| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1617 |
+| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1617 |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
 | `first_profile_closed` | proved | — | — | 29 | 72 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
@@ -7235,7 +7258,7 @@ flowchart LR
 | `lattice_minimal` | proved | — | `valid_max`, `minimal_refine`, `descend_minimal`, `descend_le`, `exists_minimal_below` | 0 | 9 |
 | `holes_conservative` | proved | — | `withHoles_extends`, `check_restrict` | 38 | 220 |
 | `sketch_weakening` | proved | — | `sketch_reads_its_holes`, `sketch_more_holes` | 54 | 382 |
-| `hole_hasTy` | proved | — | `normalize_idem`, `withHoles_rowOf` | 84 | 227 |
+| `hole_hasTy` | proved | — | `normalize_idem`, `withHoles_rowOf` | 85 | 227 |
 | `replace` | proved | — | `replace_envAt` | 54 | 261 |
 | `replace_envAt` | proved | — | `child_step` | 54 | 262 |
 | `check_closed` | proved | — | `annotationsClosed_of_formed`, `check_sound`, `hasTy_closed` | 54 | 271 |
@@ -7625,7 +7648,7 @@ The rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/
 | `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); a number in a template string (typing: term) | R3, R5, R7, R10, R13 |
 | `P3WorkerQueue` | yes | differs | yes | yes | the log's append at Ref<never[]> (typing: resultNotSubtype) | R3, R4, R10, R11 |
 | `P4RateLimiter` | yes | rc112 | yes | yes | — | R10 |
-| `P5LedgerService` | no | notRun | no | no | a signed number (admission) | R3, R4, R6, R7, R10 |
+| `P5LedgerService` | no | notRun | no | no | — | R3, R4, R6, R7, R10 |
 
 The programs each requirement keeps waiting:
 

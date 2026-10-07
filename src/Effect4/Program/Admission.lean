@@ -9,24 +9,22 @@ import Effect4.Program.Formation
 A program is admitted to run against an application's signature (`SigApp`, decisions row 21:
 the signature's admission is part of program admission) when:
 
-1. No raw table column mentions the reserved integer type (`findIntInTable`). DI-67 rules the
-   refusal: `uninhabited at`, with the integer's path.
-2. The signature is lawful (`admitSig app = .ok ()`, `Program/SigApp.lean`). Every row is one this
+1. The signature is lawful (`admitSig app = .ok ()`, `Program/SigApp.lean`). Every row is one this
    runner registers, collides with no built-in key, names no trailing argument as a value row,
    introduces no internal handle kind in its answer or error (row 97 interim), has no empty column
    (rows 127 and 149), has an admissible template and is well scoped (row 42). The row keys are
    distinct, every service declaration is lawful at a distinct code (rows 113 and 114), and every
    key a row requires has a carrier. Refused as `signature why`, with the signature's own located
    refusal.
-3. The program tree mentions no reserved integer type (`findIntInProgram`, DI-92).
-4. Every raw type of the program, the table and the declared service carriers is formed:
+2. Every raw type of the program, the table and the declared service carriers is formed:
    distinct record names, valid map keys (rows 192 and 193), and no type variable outside a
    row's template (row 288, point 6 a).
-5. The program is well-typed at the signature (`typeOfProgram app.signature program = some ty`).
-6. The inferred answer and error mention no reserved integer type, and each is inhabited or
-   `never` (`admitColumn`, rows 127 and 149; refused as `uninhabited at` and `emptyColumn at`).
+3. The program is well-typed at the signature (`typeOfProgram app.signature program = some ty`).
+4. The inferred answer and error are each inhabited or `never` (`admitColumn`, rows 127 and
+   149; refused as `emptyColumn at`).
 
-`admitProgram` verifies all six, in this order, producing a certified `AdmittedProgram` whose
+An integer column is admitted: the integer scan went with the integers packet's slice 1
+(decisions rows 121, 309 and 317). `admitProgram` verifies all four, in this order, producing a certified `AdmittedProgram` whose
 fields witness each check. If admission fails, an exact `AdmitRefusal` reports the failure.
 Admission depends strictly on the program plane and never imports codegen.
 
@@ -40,35 +38,12 @@ application behavior; execution and safety results remain in the Laws graph.
 
 namespace Effect4.Program
 
-/-- Scan every supplied row before normalization can discard any syntax: the table's integer
-refusal is DI-67's `uninhabited at`, at the integer's path. The signature's admission reads the
-same scan at each column's root (`rowChecks`). -/
-def findIntInTable (table : RowTable) : Option Path := go 0 table
-where
-  go (index : Nat) : RowTable → Option Path
-    | [] => none
-    | row :: rest =>
-        let pos := ["table", toString index]
-        findInt (pos ++ ["request"]) row.request <|>
-          findInt (pos ++ ["answer"]) row.answer <|>
-          findInt (pos ++ ["error"]) row.error <|> go (index + 1) rest
-
-/-- The inferred answer and error are the program's explicit type columns. -/
-def findIntInEffTy (ty : EffTy) : Option Path :=
-  findInt ["program", "answer"] ty.answer <|> findInt ["program", "error"] ty.error
-
-/-- DI-92's raw integer profile reaches every program annotation, including a
-record whose value is later discarded. The shared collector retains cursor paths. -/
-def findIntInProgram (program : NativeEff) : Option Path :=
-  (Formation.programAnnotations program).findSome? fun (path, ty) => findInt path ty
-
 /-! ## The column check, located (rows 127 and 149)
 
 `admitColumn` at every column admission reads, each refusal at its position. A supplied row's
 request, answer and error column is the signature's (`RowReason.emptyColumn`, `rowChecks`); the
 program's inferred answer and error are this module's (`findEmptyColumnInEffTy`). Its refusal is
-`emptyColumn at` (row 149); the frozen `AdmitRefusal.uninhabited at` stays the `int` scan's.
-`admitProgram` runs it last, so every earlier refusal keeps its statement. -/
+`emptyColumn at` (row 149). `admitProgram` runs it last, so every earlier refusal keeps its statement. -/
 
 /-- The column check at a position: the position when the column is refused (rows 127, 149). -/
 def emptyColumnAt (pos : Path) (t : Ty) : Option Path :=
@@ -110,48 +85,33 @@ inductive AdmitRefusal
 deriving DecidableEq, Repr
 
 /-- A program admitted to run against an application's signature: its type at
-`app.signature`, the table's integer scan, the signature's admission, raw formation and the
-program's integer and column scans. Its proof fields refer to the exact program and signature
-that index the certificate. -/
+`app.signature`, the signature's admission, raw formation and the program's column scan. Its
+proof fields refer to the exact program and signature that index the certificate. -/
 structure AdmittedProgram (program : NativeEff) (app : SigApp)
     extends TypedProgram app.signature program where
-  intFreeTable : findIntInTable app.rows = none
   signature : admitSig app = .ok ()
   formed : Formation.InputFormed program app.rows app.services
-  intFreeProgram : findIntInProgram program = none
-  intFreeType : findIntInEffTy ty = none
   columnsType : findEmptyColumnInEffTy ty = none
 
-/-- Decide admission: the raw table's integer scan (DI-67), the signature's admission
-(`admitSig`), the program tree's integer scan, raw formation, the one typing certificate
-(`checkTypedProgram`, shared with code generation) at the signature, and last the inferred
-columns' integer and column scans (rows 127, 149). Each certificate field records the exact check
+/-- Decide admission: the signature's admission (`admitSig`), raw formation, the one typing
+certificate (`checkTypedProgram`, shared with code generation) at the signature, and last the
+inferred columns' column scan (rows 127, 149). Each certificate field records the exact check
 that admitted it. -/
 def admitProgram (program : NativeEff) (app : SigApp := {}) :
     Except AdmitRefusal (AdmittedProgram program app) :=
-  match htable : findIntInTable app.rows with
-  | some pos => .error (.uninhabited pos)
-  | none =>
-    match hsig : admitSig app with
-    | .error why => .error (.signature why)
-    | .ok () =>
-    match hprogram : findIntInProgram program with
-    | some pos => .error (.uninhabited pos)
-    | none =>
+  match hsig : admitSig app with
+  | .error why => .error (.signature why)
+  | .ok () =>
     match hformed : Formation.checkInput program app.rows app.services with
     | some why => .error (.formation why)
     | none =>
-    match checkTypedProgram app.signature program with
-    | none => .error .illTyped
-    | some typing =>
-      match htype : findIntInEffTy typing.ty with
-      | some pos => .error (.uninhabited pos)
-      | none =>
+      match checkTypedProgram app.signature program with
+      | none => .error .illTyped
+      | some typing =>
         match hcolType : findEmptyColumnInEffTy typing.ty with
         | some pos => .error (.emptyColumn pos)
-        | none => .ok ⟨typing, htable, hsig,
-            (Formation.checkInput_eq_none_iff program app.rows app.services).mp hformed,
-            hprogram, htype, hcolType⟩
+        | none => .ok ⟨typing, hsig,
+            (Formation.checkInput_eq_none_iff program app.rows app.services).mp hformed, hcolType⟩
 
 /-- Failure of ordinary admission, or a program outside the proved straight fragment.
 Outside-fragment refusal does not mean that the program is ill-typed. -/
@@ -199,108 +159,18 @@ theorem admitStraightProgram_outside (program : NativeEff) (app : SigApp)
     admitStraightProgram program app = .error .outsideFragment := by
   simp only [admitStraightProgram, hAdmit, hStraight, Bool.false_eq_true, ↓reduceDIte]
 
-/-- Integer syntax in any supplied table row is refused with its exact path (DI-67), before the
-signature's admission. -/
-theorem admitProgram_table_int (program : NativeEff) (app : SigApp) (pos : Path)
-    (h : findIntInTable app.rows = some pos) :
-    admitProgram program app = .error (.uninhabited pos) := by
-  unfold admitProgram
-  split
-  · rename_i found hfound
-    have same : found = pos := Option.some.inj (hfound.symm.trans h)
-    cases same
-    rfl
-  · rename_i hnone
-    rw [h] at hnone
-    contradiction
-
-/-- An unlawful signature is refused with its own located refusal, right after the table's
-integer scan (decisions row 21). -/
+/-- An unlawful signature is refused with its own located refusal, first (decisions row 21). -/
 theorem admitProgram_signature (program : NativeEff) (app : SigApp) (why : SigRefusal)
-    (hTable : findIntInTable app.rows = none) (h : admitSig app = .error why) :
+    (h : admitSig app = .error why) :
     admitProgram program app = .error (.signature why) := by
   unfold admitProgram
   split
-  · rename_i found hfound
-    rw [hTable] at hfound
+  · rename_i refused hrefused
+    have same : refused = why := Except.error.inj (hrefused.symm.trans h)
+    cases same
+    rfl
+  · rename_i hok
+    rw [h] at hok
     contradiction
-  · split
-    · rename_i refused hrefused
-      have same : refused = why := Except.error.inj (hrefused.symm.trans h)
-      cases same
-      rfl
-    · rename_i hok
-      rw [h] at hok
-      contradiction
 
-/-- Integer syntax stated inside the program tree is refused after the table's integer scan and
-the signature's admission. -/
-theorem admitProgram_program_int (program : NativeEff) (app : SigApp) (pos : Path)
-    (hTable : findIntInTable app.rows = none) (hSig : admitSig app = .ok ())
-    (h : findIntInProgram program = some pos) :
-    admitProgram program app = .error (.uninhabited pos) := by
-  unfold admitProgram
-  split
-  · rename_i found hfound
-    rw [hTable] at hfound
-    contradiction
-  · split
-    · rename_i refused hrefused
-      rw [hSig] at hrefused
-      contradiction
-    · split
-      · rename_i found hfound
-        have same : found = pos := Option.some.inj (hfound.symm.trans h)
-        cases same
-        rfl
-      · rename_i hnone
-        rw [h] at hnone
-        contradiction
-
-/-- An inferred integer occurrence is refused after the raw scans, the signature's admission
-and formation succeed. -/
-theorem admitProgram_type_int (program : NativeEff) (app : SigApp) (ty : EffTy) (pos : Path)
-    (hTable : findIntInTable app.rows = none) (hSig : admitSig app = .ok ())
-    (hProgram : findIntInProgram program = none)
-    (hFormed : Formation.checkInput program app.rows app.services = none)
-    (hTy : typeOfProgram app.signature program = some ty)
-    (hInt : findIntInEffTy ty = some pos) :
-    admitProgram program app = .error (.uninhabited pos) := by
-  unfold admitProgram
-  split
-  · rename_i found hfound
-    rw [hTable] at hfound
-    contradiction
-  · split
-    · rename_i refused hrefused
-      rw [hSig] at hrefused
-      contradiction
-    · split
-      · rename_i found hfound
-        rw [hProgram] at hfound
-        contradiction
-      · split
-        · rename_i why refused
-          rw [hFormed] at refused
-          contradiction
-        · have hChecked : checkTypedProgram app.signature program = some ⟨ty, hTy⟩ := by
-            unfold checkTypedProgram
-            split
-            · rename_i hnone
-              rw [hTy] at hnone
-              contradiction
-            · rename_i inferred hinferred
-              have same : inferred = ty := Option.some.inj (hinferred.symm.trans hTy)
-              cases same
-              rfl
-          rw [hChecked]
-          dsimp only
-          split
-          · rename_i found hfound
-            have same : found = pos := Option.some.inj (hfound.symm.trans hInt)
-            cases same
-            rfl
-          · rename_i hnone
-            rw [hInt] at hnone
-            contradiction
 end Effect4.Program

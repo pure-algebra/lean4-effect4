@@ -419,12 +419,10 @@ def sumPricesModule : Module NativeOp :=
     | none => .success .unit)
 -- Red control: a pair with a number stays refused, since a pair's message is a string (DB-15).
 #guard verdict (program (fail (app "pair" [str "HttpError", nat 404]))) = "typing: errorNotAdmitted"
--- A signed `status` stays refused (row 121: `int` is not inhabited yet): admission refuses it
--- before typing, at the field's path.
-#guard (match Effect4.Api.Author.build httpErrorIntModule with
-  | .error (.admission r) =>
-    r == .uninhabited ["program", "argument", "0", "term", "fields", "status"]
-  | _ => false)
+-- A signed `status` builds (decisions row 317): the program's error is the record with its
+-- `int` field.
+#guard (built? httpErrorIntModule).map (·.ty.error) =
+  some (.record [("_tag", false, .lit "HttpError"), ("status", false, .int), ("url", false, .string)])
 -- The key-value store's value column is `string` (DB-15), so the cache cannot hold a `Quote`.
 #guard verdict cacheQuoteModule = "typing: requestNotSubtype"
 -- Since the data wave, a host row may answer the `Quote` record, and its prices add.

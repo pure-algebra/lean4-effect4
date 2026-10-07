@@ -847,15 +847,8 @@ module's representability check and its class table reach them at a located path
     why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
       why.reason == .repeatedField "x"
   | none => false
--- The integer scan refuses `int` there. Before part B such a program was admitted: the scan
--- read the program's own type at its root, and a `Deferred` that is made and dropped does not
--- show there.
-#guard findIntInProgram (make .int .never) =
-  some ["program", "argument", "0", "op", "typeArgs", "0"]
-#guard findIntInProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) =
-  some ["program", "0", "argument", "0", "op", "typeArgs", "0"]
-#guard (admitProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk =
-  false
+-- A type argument at `int` is admitted (decisions row 317), as at `unit`.
+#guard (admitProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
 #guard (admitProgram (.bind (make .unit .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
 -- A module declares the class that a type argument names: its text holds the declaration
 -- before the program. Without the collector's arm the module named `Short` and declared no

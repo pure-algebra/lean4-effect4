@@ -286,7 +286,8 @@ def notFoundTy : Ty := .record [("_tag", false, .lit "NotFound"), ("id", false, 
 #guard !supportedErrTy (.record [("_tag", false, .string), ("id", false, .nat)])
 #guard !supportedErrTy (.record [("_tag", true, .lit "E"), ("id", false, .nat)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
-#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("n", false, .int)])
+-- an `int` field is a payload field since decisions row 317
+#guard supportedErrTy (.record [("_tag", false, .lit "E"), ("n", false, .int)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("ref", false, .refOf .nat)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("at", false, .option (.handle "Db"))])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("message", false, .string)])

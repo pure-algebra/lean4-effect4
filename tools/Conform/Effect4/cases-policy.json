@@ -445,25 +445,11 @@
      "note":
      "Seat BOUNDS (2026-10-06): the candidate walk for template matching by bounds. Each constructor decomposes homomorphic pairs; the default arm yields no candidates for non-matching constructor pairs.",
      "name": "Effect4.Program.Bounds.cands"},
-    {"name": "Effect4.Program.findInt",
-     "mode": "default",
-     "cover":
-     ["never",
-      "unit",
-      "nat",
-      "string",
-      "bool",
-      "unknown",
-      "null",
-      "undefined",
-      "number",
-      "bytes"]},
     {"name": "Effect4.Program.Ty.factors",
      "mode": "default",
      "cover":
      ["unit",
-      "nat",
-      "int",
+      "nat", "int",
       "string",
       "bool",
       "handle",
@@ -873,7 +859,8 @@
      "name": "Effect4.Program.payloadFieldTy",
      "mode": "default",
      "cover":
-     ["unit", "nat", "string", "bool", "null", "undefined", "number", "bytes"]},
+     ["unit", "nat",
+      "int", "string", "bool", "null", "undefined", "number", "bytes"]},
     {"note":
      "Both projections delegate to this one classifier. Products, unions and never have explicit arms; every listed alternative refuses. Its value-membership theorem is NativeAtom.projectProduct_typed.",
      "name": "Effect4.Program.NativeAtom.projectProduct",

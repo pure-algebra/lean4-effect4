@@ -4,18 +4,17 @@ import Effect4.Program.Fold
 /-!
 # Program.Columns — the scans of one type column
 
-Three scans of one raw type, each run before normalization can discard syntax:
+Two scans of one raw type, each run before normalization can discard syntax:
 
-* `findInt`: the first occurrence of the reserved integer constructor (DB-15, DI-67), with its
-  path.
 * `findInternalHandle`: the first internal handle kind, with its path (decisions row 97 interim).
 * `admitColumn`: the column is the designed bottom or has a member (`inhabited`, rows 127 and
   149); `admitRowColumn` reads a row's template column with every parameter inhabited (row 155
   (a)).
 
 The signature's admission reads each of them at the root of every row column (`rowChecks`,
-`Program/SigApp.lean`). Program admission reads `findInt` and `admitColumn` at the program's own
-columns, and `findInt` at the raw table (`Program/Admission.lean`).
+`Program/SigApp.lean`). Program admission reads `admitColumn` at the program's own columns
+(`Program/Admission.lean`). An integer column is admitted: the integer scan went with the
+integers packet's slice 1 (decisions rows 121, 309 and 317).
 
 The module is not a Lean module (decisions row 200): `findInternalHandle` reads
 `internalHandleTargets`, which `Program/Typed.lean` defines beside the membership arms that read
@@ -27,33 +26,6 @@ namespace Effect4.Program
 
 /-- A boundary field path, with decimal positions for table rows. -/
 abbrev Path := List String
-
-mutual
-/-- First occurrence of the reserved integer constructor in a raw type. -/
-def findInt (pos : Path) : Ty → Option Path
-  | .int => some pos
-  | .option t | .list t => findInt (pos ++ ["inner"]) t
-  | .causeOf e => findInt (pos ++ ["error"]) e
-  | .prod a b | .union a b =>
-      findInt (pos ++ ["left"]) a <|> findInt (pos ++ ["right"]) b
-  | .except e a => findInt (pos ++ ["error"]) e <|> findInt (pos ++ ["value"]) a
-  | .exitOf a e | .fiberOf a e | .deferredOf a e =>
-      findInt (pos ++ ["value"]) a <|> findInt (pos ++ ["error"]) e
-  | .refOf a => findInt (pos ++ ["value"]) a
-  | .map k v => findInt (pos ++ ["key"]) k <|> findInt (pos ++ ["value"]) v
-  | .record fs => findIntFields pos fs
-  | .tuple ts | .app _ ts => findIntItems pos 0 ts
-  | .never | .unknown | .unit | .nat | .string | .bool | .handle _ | .lit _ | .var _
-  | .null | .undefined | .number | .bytes => none
-/-- The field-list companion of `findInt`: a field at its name. -/
-def findIntFields (pos : Path) : List (String × Bool × Ty) → Option Path
-  | [] => none
-  | (n, _, t) :: rest => findInt (pos ++ [n]) t <|> findIntFields pos rest
-/-- The item-list companion of `findInt`: an item at its decimal position. -/
-def findIntItems (pos : Path) (i : Nat) : List Ty → Option Path
-  | [] => none
-  | t :: rest => findInt (pos ++ [toString i]) t <|> findIntItems pos (i + 1) rest
-end
 
 /-- Inhabitance as a fold (decisions row 127; DI-67): `never`, a template parameter and a handle
 at a spelling no kind owns (`retiredHandleTargets`) have no member; a product needs both columns, a

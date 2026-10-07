@@ -19,10 +19,7 @@ def admitted : Api.AdmittedProgram program ⟨table, []⟩ where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  intFreeTable := by decide
   signature := by decide +kernel
-  intFreeProgram := by decide
-  intFreeType := by decide
   columnsType := by decide +kernel
 
 def initial : Session program table := { admitted, header, machine := Api.load program 100 }

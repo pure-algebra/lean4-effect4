@@ -79,9 +79,8 @@ def source : TypeScript.Module :=
 #guard match Api.replayChecked pureProgram 10 [Api.evaluate] [] validTable with
   | .inl run => run.exit = some (.success (.nat 1))
   | _ => false
-#guard match admitProgram pureProgram ⟨[row .nat .int], []⟩ with
-  | .error (.uninhabited _) => true
-  | _ => false
+-- control (decisions row 317): an integer column of the table is admitted
+#guard (admitProgram pureProgram ⟨[row .nat .int], []⟩).isOk
 
 -- Bounds matching traverses names and positions. A record is read in the request's
 -- field order. A seed conflict refuses.
@@ -229,32 +228,9 @@ def inTermArgument (r : Term) : NativeEff := .bind (.succeed r) (.succeed (.lit 
       "type", "0"] && why.reason == .repeatedField "x"
   | none => false
 #guard Effect4.Api.typeOf (inBinderTerm duplicateRecord) = none
--- The integer scan refuses an `int` field of a term argument by its path, and the same field
--- inside a binder term by its path. The term typer alone admits it: the scan is the check.
-#guard match admitProgram (inTermArgument intRecord) ⟨[], []⟩ with
-  | .error (.uninhabited path) => path == ["program", "0", "argument", "0", "term", "fields", "n"]
-  | _ => false
-#guard (Effect4.Api.typeOf (inBinderTerm intRecord)).isSome
-#guard match admitProgram (inBinderTerm intRecord) ⟨[], []⟩ with
-  | .error (.uninhabited path) =>
-    path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "1", "0", "fields", "n"]
-  | _ => false
-
-/-- `Ref.make(0)`, then `Ref.modify(cell, a => pair(r, a))`: the record is the row's answer, `B`. -/
-def asModifyAnswer (r : Term) : NativeEff :=
-  .bind (.perform .refMake (.lit (.nat 0)))
-    (.perform (.refModifyWith (.app "pair" (.cons r (.cons (.var 1) .nil)))) (.var 0))
-
--- The record is refused where it stands, in the operation's term, whether it reaches the
--- program's answer or is bound and dropped. Before the fold's slice the first was refused at the
--- root's answer column and the second was admitted.
-#guard match admitProgram (asModifyAnswer intRecord) ⟨[], []⟩ with
-  | .error (.uninhabited path) =>
-    path == ["program", "1", "argument", "0", "op", "term", "0", "0", "fields", "n"]
-  | _ => false
-#guard match admitProgram (.bind (asModifyAnswer intRecord) (.succeed (.lit (.nat 0)))) ⟨[], []⟩ with
-  | .error (.uninhabited path) =>
-    path == ["program", "0", "1", "argument", "0", "op", "term", "0", "0", "fields", "n"]
-  | _ => false
+-- control (decisions row 317): an `int` field is admitted in a term argument and inside a
+-- binder term; the integer scan that refused it went with the integers packet's slice 1
+#guard (admitProgram (inTermArgument intRecord) ⟨[], []⟩).isOk
+#guard (admitProgram (inBinderTerm intRecord) ⟨[], []⟩).isOk
 
 end Test.Program.FormationContract

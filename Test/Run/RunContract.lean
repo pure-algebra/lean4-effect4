@@ -98,10 +98,7 @@ def pairAdmitted : Api.AdmittedProgram pairProgram ⟨Test.Api.HostSessionContra
   ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  intFreeTable := by decide
   signature := by decide +kernel
-  intFreeProgram := by decide
-  intFreeType := by decide
   columnsType := by decide +kernel
 
 def pairUp : Api.Built :=
@@ -175,10 +172,7 @@ def timedAdmitted : Api.AdmittedProgram timedProgram {} where
   ty := ⟨.exitOf .nat .never, .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  intFreeTable := by decide
   signature := by decide +kernel
-  intFreeProgram := by decide
-  intFreeType := by decide
   columnsType := by decide +kernel
 
 def timed : Api.Built :=
@@ -239,10 +233,7 @@ def yieldingAdmitted : Api.AdmittedProgram yieldingProgram {} where
   ty := ⟨.nat, .never, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  intFreeTable := by decide
   signature := by decide +kernel
-  intFreeProgram := by decide
-  intFreeType := by decide
   columnsType := by decide +kernel
 
 def yielding : Api.Built :=
@@ -267,10 +258,7 @@ def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram ⟨Test.Api.HostSes
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
   formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
-  intFreeTable := by decide
   signature := by decide +kernel
-  intFreeProgram := by decide
-  intFreeType := by decide
   columnsType := by decide +kernel
 
 def mixedWorkBuilt : Api.Built :=

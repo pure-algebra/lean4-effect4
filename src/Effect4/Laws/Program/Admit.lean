@@ -272,7 +272,7 @@ theorem hasTy_payloadFieldTy_allocation :
       ∀ (v : Val) (allocated : List String), Val.hasTy v t allocated = Val.hasTy v t [] := by
   intro t
   induction t with
-  | unit | nat | string | bool | lit _ | null | undefined | number | bytes =>
+  | unit | nat | int | string | bool | lit _ | null | undefined | number | bytes =>
     intro _ v allocated
     rfl
   | option a iha =>
@@ -370,7 +370,7 @@ theorem handles_of_payloadFieldTy :
     ∀ t : Ty, payloadFieldTy t = true → ∀ v : Val, Val.hasTy v t = true → v.handles = [] := by
   intro t
   induction t with
-  | unit | nat | string | bool | lit _ | null | undefined | number | bytes =>
+  | unit | nat | int | string | bool | lit _ | null | undefined | number | bytes =>
     intro _ v hv
     cases v with
     | list xs => exact nomatch hv

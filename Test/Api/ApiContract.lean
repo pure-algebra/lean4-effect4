@@ -341,42 +341,22 @@ def refusal (p : Api.Program) (table : RowTable) : Option AdmitRefusal :=
   | .error why => some why
   | .ok _ => none
 
+-- control (decisions rows 309 and 317): an integer column is admitted. The integer scan went
+-- with the integers packet's slice 1; formation, the checker and the column check pass `int`
 #guard (typeOf program [row .int]).map (fun t => t.answer) = some .int
-#guard refusal program [row .int] = some (.uninhabited ["table", "0", "answer"])
-#guard refusal (.succeed (.lit (.nat 1))) [row .int] =
-  some (.uninhabited ["table", "0", "answer"])
-#guard refusal program [row .nat (.option (.list .int))] =
-  some (.uninhabited ["table", "0", "request", "inner", "inner"])
-#guard refusal program [row .nat .nat (.union .never .int)] =
-  some (.uninhabited ["table", "0", "error", "right"])
-#guard refusal program [row .nat] = none
+#guard refusal program [row .int] = none
+#guard refusal program [row .nat .nat (.union .never .int)] = none
 
--- DI-92: a type stated inside the tree. The cursor's type reaches neither column (the handler
--- binds `never`, and `never` is under every type), so only the walk of the tree sees it.
+-- control: a type stated inside the tree (DI-92's cursor) is admitted too
 def smuggled : Api.Program :=
   .catchIf (.lit (.bool true)) (.succeed (.lit (.nat 0)))
     (.iterate (some .int) (.var 0) (.lit (.bool false)) (.var 0) (.lit .unit) (.succeed (.lit .unit)))
-#guard (typeOf smuggled []).isSome
-#guard refusal smuggled [] = some (.uninhabited ["program", "1", "cursorTy"])
-#guard refusal (.iterate (some (.option .int)) (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.lit .unit)
-    (.succeed (.lit .unit))) [] = some (.uninhabited ["program", "cursorTy", "inner"])
+#guard refusal smuggled [] = none
 
--- The foreign Schema.Int representation still parses; its resulting program refuses.
+-- The foreign Schema.Int representation parses, and its program is admitted.
 def foreignInt : Representation := .number none [Schema.Check.int]
 #guard Ty.ofSchema foreignInt = some .int
-#guard (Ty.ofSchema foreignInt).bind (fun t => refusal program [row t]) =
-  some (.uninhabited ["table", "0", "answer"])
+#guard (Ty.ofSchema foreignInt).bind (fun t => refusal program [row t]) = none
 #guard Ty.key .int = [3]
-#guard findInt [] (.handle "int") = none
-#guard findIntInTable [row .nat, { row .int with name := "other" }] =
-  some ["table", "1", "answer"]
-#guard ([ (.option .int, ["inner"]), (.list .int, ["inner"]),
-    (.causeOf .int, ["error"]), (.prod .int .nat, ["left"]),
-    (.prod .nat .int, ["right"]), (.except .int .nat, ["error"]),
-    (.except .nat .int, ["value"]), (.exitOf .int .nat, ["value"]),
-    (.exitOf .nat .int, ["error"]), (.fiberOf .int .nat, ["value"]),
-    (.fiberOf .nat .int, ["error"]), (.union .int .nat, ["left"]),
-    (.union .nat .int, ["right"]) ] : List (Ty × Path)).all
-      (fun (t, path) => findInt [] t == some path)
 
 end Test.Api.IntegerAdmission

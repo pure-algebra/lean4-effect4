@@ -54,14 +54,15 @@ and holding no handle by its type, at every node. The payload carrier (`Payload`
 `Machine/Alphabets.lean`) holds handle-free record frames only, so a field's type admits only
 values that hold none (`Laws/Program/Admit.lean`, `handles_of_payloadFieldTy`). Excluded:
 `unknown` (ruling (a): refused by name), a handle, a nominal reference (`app`), a fiber, a cell, a
-deferred, an exit, a cause, a type variable, `int` (row 121: not inhabited yet) and `never`. -/
+deferred, an exit, a cause, a type variable and `never`. An integer holds no handle, so `int` is
+a field type (decisions rows 121 and 317). -/
 def payloadFieldTy : Ty → Bool
-  | .nat | .string | .bool | .unit | .lit _ | .null | .undefined | .number | .bytes => true
+  | .nat | .int | .string | .bool | .unit | .lit _ | .null | .undefined | .number | .bytes => true
   | .option t | .list t => payloadFieldTy t
   | .prod a b | .except a b | .map a b | .union a b => payloadFieldTy a && payloadFieldTy b
   | .tuple ts => payloadItemTys ts
   | .record fs => payloadFieldTys fs
-  | .never | .int | .handle _ | .refOf _ | .deferredOf _ _ | .fiberOf _ _ | .exitOf _ _
+  | .never | .handle _ | .refOf _ | .deferredOf _ _ | .fiberOf _ _ | .exitOf _ _
   | .causeOf _ | .app _ _ | .var _ | .unknown => false
 /-- `payloadFieldTy` at every item of a tuple. -/
 def payloadItemTys : List Ty → Bool

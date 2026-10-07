@@ -480,11 +480,12 @@ private def danglingReferenceEdit : Option (Except Api.BuildRefusal Api.Built) :
   | .error (.typing refusal) => some refusal
   | _ => none) = some (some ⟨[], .referencesIllFormed⟩)
 
--- Complete admission also retains non-typing refusals.
+-- Complete admission also retains non-typing refusals: a cursor type with a repeated field is
+-- refused by formation.
 #guard (Api.Author.build readKey).toOption.map (fun before =>
-  match before.rebuild (.iterate (some .int) (.lit (.nat 0)) (.lit (.bool false))
-      (.var 0) (.var 0) (.succeed (.lit .unit))) with
-  | .error (.admission (.uninhabited _)) => true
+  match before.rebuild (.iterate (some (.record [("x", false, .nat), ("x", false, .nat)]))
+      (.lit (.nat 0)) (.lit (.bool false)) (.var 0) (.var 0) (.succeed (.lit .unit))) with
+  | .error (.admission (.formation _)) => true
   | _ => false) = some true
 
 /-! ## Scope safety of the new surface, and the axioms every proof reaches -/

@@ -74,15 +74,10 @@ def person : Term := .record personFields ["name"] (.cons (.lit (.str "Ada")) .n
   some (.record [("name", false, .lit "Grace"), ("nickname", true, .string)])
 #guard argTy (nativeSignature []) [] true person = argTy (nativeSignature []) [] false person
 
--- Raw metadata remains visible after its value is discarded.
+-- An integer field is admitted (decisions row 317), even after its value is discarded.
 def intRecord : Term := .record [("n", false, .int)] ["n"] (.cons (.lit (.nat 1)) .nil)
 def discardInt : NativeEff := .bind (.succeed intRecord) (.succeed (.lit (.nat 0)))
-#guard (findIntInProgram discardInt).isSome
-#guard match admitProgram discardInt with
-  | .error (.uninhabited _) => true
-  | _ => false
-#guard findIntInProgram (.iterate (some .int) (.lit (.nat 0)) (.lit (.bool false))
-  (.lit (.nat 0)) (.lit (.nat 0)) (.succeed (.lit .unit))) = some ["program", "cursorTy"]
+#guard (admitProgram discardInt).isOk
 
 -- Generated program views reach terms in every type-bearing leaf position.
 def badMetadata : Term := .record [("x", true, .map .nat .string)] [] .nil

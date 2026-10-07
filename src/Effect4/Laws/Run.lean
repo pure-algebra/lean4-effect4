@@ -208,8 +208,8 @@ theorem drive_eq_play {σ : Type} (r : Reactor σ) (rounds : Nat) (s : Run) (st 
 type is a proof, and the type is the one the checker computes, so two certificates agree. -/
 theorem admitted_unique (program : Api.Program) (app : SigApp)
     (a b : AdmittedProgram program app) : a = b := by
-  obtain ⟨⟨tya, ha⟩, _, _, _, _, _, _⟩ := a
-  obtain ⟨⟨tyb, hb⟩, _, _, _, _, _, _⟩ := b
+  obtain ⟨⟨tya, ha⟩, _, _, _⟩ := a
+  obtain ⟨⟨tyb, hb⟩, _, _, _⟩ := b
   have hty : tya = tyb := Option.some.inj (ha.symm.trans hb)
   subst hty
   rfl
@@ -221,8 +221,7 @@ theorem admitProgram_certificate (program : Api.Program) (app : SigApp)
     (c : AdmittedProgram program app) : admitProgram program app = .ok c := by
   have hformed := (Formation.checkInput_eq_none_iff program app.rows app.services).mpr c.formed
   aesop (add norm unfold [admitProgram, checkTypedProgram])
-    (add norm simp [c.intFreeTable, c.signature, c.intFreeProgram, c.typed, c.intFreeType,
-      hformed, c.columnsType]) (add safe apply admitted_unique)
+    (add norm simp [c.signature, c.typed, hformed, c.columnsType]) (add safe apply admitted_unique)
 
 /-- **O-1.** Opening cannot refuse. With a `Built` in hand the checked `start` of
 `HostSession` returns exactly the session `Run.open` builds: its five identity refusals are

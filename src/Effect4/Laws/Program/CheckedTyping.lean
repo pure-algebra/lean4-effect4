@@ -119,33 +119,21 @@ theorem admitProgram_eq_ok {program : NativeEff} {app : SigApp}
     admitProgram program app = .ok admitted := by
   unfold admitProgram
   split
-  · rename_i found hfound
-    rw [admitted.intFreeTable] at hfound
+  · rename_i why hwhy
+    rw [admitted.signature] at hwhy
     contradiction
   · split
-    · rename_i why hwhy
-      rw [admitted.signature] at hwhy
-      contradiction
-    · split
-      · rename_i found hfound
-        rw [admitted.intFreeProgram] at hfound
+    · rename_i why refused
+      rw [(Formation.checkInput_eq_none_iff program app.rows app.services).mpr
+        admitted.formed] at refused
+      cases refused
+    · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
+      dsimp only
+      split
+      · rename_i pos hpos
+        rw [admitted.columnsType] at hpos
         contradiction
-      · split
-        · rename_i why refused
-          rw [(Formation.checkInput_eq_none_iff program app.rows app.services).mpr
-            admitted.formed] at refused
-          cases refused
-        · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
-          dsimp only
-          split
-          · rename_i found hfound
-            rw [admitted.intFreeType] at hfound
-            contradiction
-          · split
-            · rename_i pos hpos
-              rw [admitted.columnsType] at hpos
-              contradiction
-            · cases admitted
-              rfl
+      · cases admitted
+        rfl
 
 end Effect4.Program

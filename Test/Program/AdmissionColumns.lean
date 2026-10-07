@@ -85,10 +85,9 @@ def pNeverPair : NativeEff :=
 #guard findEmptyColumnInEffTy ⟨.prod .never .nat, .never, .empty⟩ = some ["program", "answer"]
 #guard findEmptyColumnInEffTy ⟨.never, .except .never .never, .empty⟩ = some ["program", "error"]
 #guard findEmptyColumnInEffTy ⟨.never, .never, .empty⟩ = none
--- tested: two refusals, not one (TY-13): the `int` scan refuses `list int`, which has a member,
--- and misses `prod never nat`, which has none
-#guard admitColumn (.list .int) && (findInt [] (.list .int)).isSome
-#guard !admitColumn (.prod .never .nat) && (findInt [] (.prod .never .nat)).isNone
+-- tested (TY-13): the column check admits `list int`, which has a member, and refuses
+-- `prod never nat`, which has none
+#guard admitColumn (.list .int) && !admitColumn (.prod .never .nat)
 -- tested: runner admission refuses CE-015's columns, each at its position (a host-row answer and
 -- a host-row request at the signature, a program answer after every other check has passed),
 -- and still admits the inhabited table

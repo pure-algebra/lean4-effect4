@@ -1037,7 +1037,7 @@ Landed later on 2026-10-05:
   operation: the printer prints each through the type printer, and Lean's reader,
   `ts/eff/read.ts` and both foreign readers read them back. One checked type reader serves
   them, with a named readable-type domain. An operation's types are program annotations, so
-  raw formation and the integer scan reach them. p3's gate prints as
+  raw formation reaches them. p3's gate prints as
   `Deferred.make<void, never>()` and reads back. The coordinator pinned the case policy again
   for two new matches. No stored form changed its type.
 - **A loop's stated cursor type reads back** (`98b56e62`, step b of seat T5's part B; DI-91's

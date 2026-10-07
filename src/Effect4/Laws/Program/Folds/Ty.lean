@@ -31,7 +31,6 @@ fold_of Effect4.Program.payloadFieldTy
 fold_of Effect4.Program.excludedAt
 fold_of Effect4.Program.NativeAtom.projectProduct
 fold_of Effect4.Program.Tuple.project
-fold_of Effect4.Program.findInt
 fold_of Effect4.Program.Val.hasTy
 
 end Effect4.Program

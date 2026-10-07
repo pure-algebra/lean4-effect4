@@ -161,12 +161,11 @@ def insufficientIntModule : Module NativeOp :=
     [("_tag", false, .lit "InsufficientFunds"), ("needed", false, .int), ("available", false, .int)]
     [("_tag", str "InsufficientFunds"), ("needed", nat 25), ("available", nat 10)]))
 
--- Signed fields stay refused (row 121: `int` is not inhabited yet): admission refuses the first
--- before typing, at its path.
-#guard (match Effect4.Api.Author.build insufficientIntModule with
-  | .error (.admission r) =>
-    r == .uninhabited ["program", "argument", "0", "term", "fields", "needed"]
-  | _ => false)
+-- Signed fields build (decisions row 317): the program's error is the record with its two `int`
+-- fields.
+#guard (Effect4.Api.Author.build insufficientIntModule).toOption.map (·.ty.error) =
+  some (.record [("_tag", false, .lit "InsufficientFunds"), ("available", false, .int),
+    ("needed", false, .int)])
 
 /-- `e.available - e.needed` with the recorded run's numbers. -/
 def balanceAfter : Module NativeOp := program (succeed (app "sub" [nat 10, nat 25]))
@@ -182,11 +181,8 @@ def balanceAfter : Module NativeOp := program (succeed (app "sub" [nat 10, nat 2
 def intRow : RowDef := Row.host "Ledger.balance" .unit .int
 def intModule : Module NativeOp := { rows := [intRow], main := Row.call intRow unit }
 
--- `int` has no inhabitant (row 121, ruled, not landed): table admission refuses the column.
-#guard verdict intModule = "admission"
-#guard (match Effect4.Api.Author.build intModule with
-  | .error (.admission r) => r == .uninhabited ["table", "0", "answer"]
-  | _ => false)
+-- A row that answers a signed number builds (decisions row 317).
+#guard verdict intModule = "built"
 
 /-! ## 3. The one fragment that runs: `settle` on the logical clock
 
@@ -219,17 +215,16 @@ the account cell writes the program in this battery, and measures the other four
 payload part is measured on its own (decisions row 120, part E1). -/
 
 def measured : Reach :=
-  { refused :=
-      [ ("a signed number", verdict intModule) ]
+  { refused := [("a signed number", verdict intModule)].filter (·.2 != "built")
     admitted := false, answer := .notRun, printed := false, readBack := false }
 
 /-- The stage p5 reaches today, as `Test/Dogfood/README.md` quotes it: no encoding of the program
-builds, and the language refuses its signed answer. The `Account` record in one `Ref` builds since
-the state plan's T3a, and the pure part of a deposit is one atomic `Ref.modify` over it since T3b
-(section 1). -/
+builds. Its signed answer is admitted since decisions row 317, so the language refuses no part
+of it; its subtraction still truncates at zero until the integers packet's slice 5 (`minus`).
+The `Account` record in one `Ref` builds since the state plan's T3a, and the pure part of a
+deposit is one atomic `Ref.modify` over it since T3b (section 1). -/
 def stage : Reach :=
-  { refused :=
-      [ ("a signed number", "admission") ]
+  { refused := []
     admitted := false, answer := .notRun, printed := false, readBack := false }
 
 #guard measured = stage

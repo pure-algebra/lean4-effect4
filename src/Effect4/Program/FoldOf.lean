@@ -23,7 +23,7 @@ Five shapes, chosen by reading `f`:
 - **paramorphism** — an arm uses a child's value as well; the carrier pairs the value in and
   the connector reads `g e = (cata alg e).2`;
 - **accumulator** — arguments before or after the family value that a recursive call changes
-  (`effTy sig env e`, `findInt pos t`, `hasTy v t allocated`, `build sem l ctx`); the carrier
+  (`effTy sig env e`, `findInternalHandle pos t`, `hasTy v t allocated`, `build sem l ctx`); the carrier
   is the function type over them, the arm a lambda, and the connector
   `g fixed pre e post = cata alg e pre post`. The binders every recursive call passes through
   unchanged are the fixed prefix and stay parameters of the algebra;
