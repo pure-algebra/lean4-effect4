@@ -1,6 +1,6 @@
 # 2026-10-08 seat MODULES, revision 2: the design after Codex's review
 
-Status: a revision with two new probes and a fixed runner, for the next review round. It revises
+Status: a revision with three new probes and a fixed runner, for the next review round. It revises
 `docs/research/2026-10-08-seat-MODULES-design.md` (`29f369ca`) after Codex's review
 `docs/research/2026-10-08-modules-review.md` (`37c1dea4`). Base: `7dee92b4`, the merge of
 `codex/module-authoring` (`eff_module`). This note changes no decisions row. Its new files are in
@@ -111,14 +111,19 @@ parts below.
 - a record combinator for `Image` and `ValueModel` on `Machine.Record.frame`: its encoding is
   MODS-9's `Sy.encE` record arm, and its laws are the two above.
 
-**What is missing, and stays open:**
+**What was missing, and MODS-11 now probes:**
 
-- a fold from `Ty` into Lean types, so that every `Ty` has a carrier: no `TyAlgebra` into `Type`
-  is defined;
-- a deriving handler that relates an author's Lean structure to the record carrier. Only the
-  external generator `effect4gen` exists. `Image.equiv` transports exactness along such a pair;
+- a fold from `Ty` into Lean types. No `TyAlgebra` into `Type` was defined, and `cata_ty`
+  reduces definitionally on a concrete `Ty`;
+- a deriving step that relates an author's Lean structure to the record carrier. Only the
+  external generator `effect4gen` existed. `Image.equiv` transports exactness along the pair.
+
+**What stays open:**
+
 - an encoding context for identities (handles, references, deferred results): Codex's Q3. Each
   role has its own encoding through its table, and `Table.Injective` stays a premise;
+- optional fields, and the arms for `int`, `union`, `except` and `tuple`. `Image` has their
+  combinators (`sum`, `except`);
 - a TypeScript codec with a law. The generated Effect Schema code has no decoded-value law
   (`Test/contracts/schema-typescript-generation.contract.md`), and the TypeScript execution
   boundary stays at R8 and DI-49.
@@ -141,6 +146,76 @@ encoding context. `var` and `unknown` have no carrier, and the fold refuses them
 states three things: the embedding is exact, every encoded value has the arm's type, and the arm
 is a fold step. So a cell of any supported type gets its laws by the fold, with no proof of its
 own.
+
+## 4a. The tie to Lean types: one fold and one deriving step (MODS-11)
+
+The owner's steer, refined: a fold of `Ty` into Lean types, and a deriving handler. A Lean
+structure is then the one declaration, and every other form follows from it.
+`docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean` compiles with no error and no warning.
+
+```mermaid
+flowchart TD
+  S["Lean structure: LatchCell"] -->|derive_modeled| MOD["Modeled LatchCell: a Ty and an equivalence"]
+  MOD --> TY["Ty: data, canonical field order"]
+  TY -->|"cata_ty modelAlg"| CAR["carrier and exact Image"]
+  CAR -->|"Image.equiv"| IMG["exact Image of LatchCell"]
+  TY -->|"Codegen.Types.ofTy"| TS["TypeScript type"]
+  TY -->|"Ty.schema"| ES["Effect Schema representation"]
+  TY -->|"Schema.encode and decode"| JS["JSON codec"]
+  IMG --> CELL["the cell value the machine stores"]
+```
+
+**The carrier fold.** `modelAlg : TyAlgebra (fun _ => Σ α : Type, Image α)` is an algebra of
+the generated signature. Its fold gives each supported `Ty` a Lean carrier and that carrier's
+exact embedding together. `Carrier t` and `image t` are the fold's two halves, and they reduce
+on a concrete `Ty`: a record is the product of its fields' carriers. Every arm reuses an `Image`
+combinator (`unit`, `nat`, `string`, `bool`, `option`, `list`, `tuple2`). The one new combinator is
+`Image.record`: a record's frame of columns, exact by construction, at `[propext]`.
+
+**A total fold, with refusals as a second fold.** An unsupported constructor has the carrier
+`Empty`. A second algebra, `refusalAlg`, names the first such constructor: "deferredOf: an
+identity needs its table", "optional field n", and so on.
+
+**The class.** `Modeled α` holds a `Ty` and an equivalence between `α` and that `Ty`'s carrier.
+`Modeled.image α` is the carrier's image across the equivalence (`Image.equiv`). So an instance
+owes two inverse equations and nothing else. Instances exist for `Bool`, `Nat`, `String`, and
+for `List` and `Option` of a modeled type.
+
+**The deriving step.** `derive_modeled S (field := "spelling")` reads the structure's fields and
+their types. It writes five declarations:
+
+- the `Ty`, with the fields in canonical byte order under their spellings;
+- the two maps;
+- the two inverse equations, each proved by a generated term;
+- the instance.
+
+For Latch's cell, `derive_modeled LatchCell (isOpen := "open")` gives these results:
+
+| Check | Result |
+| --- | --- |
+| the derived `Ty` | `record [("open", bool), ("waiters", list (record [("hint", nat), ("id", nat)]))]` |
+| the refusal fold | none for the cell; "deferredOf: an identity needs its table" for an identity field |
+| the encoding | the machine's record frame, the same value as MODS-2's `cellOf` form |
+| exactness | the encoding reads back to the same structure |
+| membership | `Val.hasTy` of the encoding at the derived `Ty` is true |
+| the TypeScript type | `{ readonly open: boolean; readonly waiters: ReadonlyArray<{ readonly hint: number; readonly id: number }> }` |
+| the Effect Schema representation | an `Objects` node with two property signatures, a number field with its non-negative-integer filters |
+| the JSON codec | Lean value to value tree to JSON to value tree to Lean value returns the same structure |
+| the inverse equations | each at `[propext]` |
+
+**What the probe does not yet do:**
+
+- `derive_modeled` is a command. As `deriving Modeled` it is the same body, registered by a
+  deriving handler in an imported module;
+- membership is checked on one value. The law for every value is one theorem for each arm: the
+  existing `ValueModel` laws, and `record_frame_fits` for the record arm;
+- a polymorphic structure leaves its `Ty` abstract, so its carrier does not reduce. Definitions are
+  monomorphic until goal G8 (decisions row 328), so the deriving step covers monomorphic
+  structures first.
+
+**How the step language uses it.** The step language's sorts are `Ty` values, and its field
+references point into a `Ty.record` field list. Its model fold evaluates in `Carrier`. The read
+and write laws are MODS-9's, restated over `Image.record`'s frame.
 
 ## 5. Compatibility as four rows
 
@@ -220,7 +295,8 @@ Each is a choice of meaning, domain or representation.
 
 1. **The step language over the schema plane.** The steps of a module are first-order data over
    the existing `Ty`, a new sort with its signature. Its interpretations and their laws come from
-   the schema plane (§4). Recommended: yes.
+   the schema plane (§4). A module's Lean types tie to `Ty` by the carrier fold and the deriving
+   step (§4a). Recommended: yes.
 2. **Latch's wake batch.** Effect's Latch resumes every waiter in one pending batch, and ours posts
    one helper for each waiter. Either match the batch, a coalescing component of §6, or sign the
    difference with its witness. Recommended: match the batch. MODS-10
@@ -240,7 +316,7 @@ Each is a choice of meaning, domain or representation.
 | --- | --- | --- |
 | R0 | the review's counterexamples as register lines | none |
 | R1 | the step signature over `Ty`, field identities and the interpretation context, frozen as one contract | question 1 |
-| R2 | cell deriving and typed step authoring, from the schema plane | R1 |
+| R2 | `Image.record`, the carrier fold and `deriving Modeled`, from MODS-11, in the tree; then typed step authoring | R1 |
 | R3 | the laws once: encoded agreement, the frame law and typing | R1 |
 | R4 | one Semaphore step (`takeIfAvailableStep`) migrated, with connectors to its term, model, reading and typing laws | R2, R3 |
 | R5 | protocol components and binding contracts | questions 2 and 3 |
@@ -269,6 +345,7 @@ Run from the repository root:
 ```sh
 scratch/lean-slot.sh lake env lean docs/research/2026-10-08-seat-MODULES-r2/StepData.lean
 scratch/lean-slot.sh lake env lean docs/research/2026-10-08-seat-MODULES-r2/BatchLatch.lean
+scratch/lean-slot.sh lake env lean docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean
 python3 docs/research/2026-10-08-seat-MODULES-r2/native.py
 python3 docs/research/2026-10-08-seat-MODULES-r2/native.py --self-test
 scratch/lean-slot.sh python3 docs/research/2026-10-08-modules-review/review.py
