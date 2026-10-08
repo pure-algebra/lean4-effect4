@@ -109,6 +109,7 @@ import Effect4.Program.Authoring.Declare
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Mask
 import Effect4.Program.Authoring.Defs
+import Effect4.Program.Authoring.Module
 -- A term at a declared type (`ascribe`): reachable from this root, imported by no module of the API.
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Codegen.Print
@@ -189,6 +190,7 @@ import Effect4.Modules.Semaphore.Cell
 import Effect4.Modules.Semaphore.Steps
 -- Semaphore's first operations, with the protected permit (decisions rows 259 to 261 and 276).
 import Effect4.Modules.Semaphore.Ops
+import Effect4.Modules.Semaphore.Defs
 -- Pool's cell and its six steps (decisions rows 267 to 269 and 276).
 import Effect4.Modules.Pool.Cell
 import Effect4.Modules.Pool.Steps

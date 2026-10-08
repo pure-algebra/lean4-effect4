@@ -10,7 +10,7 @@ composition) are §1.1.
 
 | module | file | what an agent calls | laws |
 | --- | --- | --- | --- |
-| `Author` | `src/Effect4/Api/Author.lean`, `Program/Authoring*.lean` | `Module` (rows, services, layers, main) → `Author.build : Except BuildRefusal Built`; `Row.host`, `Row.call` by spelling; `ServiceDef.{use,give,layer,constant}`; `Package.install`; `Layer.{value,empty,mergeAll}`, `provide`, `provideAll`, `provideFresh`; `fork`, `daemon p`, `daemon p in s`, `await`, `join`; `Node.{at_,replaceAt,replaceLayerAt}`; `Built.{rebuild,typed,ty,requires,closed,positionOf,runSync,print,bytes}` | `build_table_lawful`, `build_rows_resolve`, `Row.call_scoped`, `carrier_unique`, `var_reserved`, `rebuild_spec`, `rebuild_self` |
+| `Author` | `src/Effect4/Api/Author.lean`, `Program/Authoring*.lean` | `Module` (rows, services, layers, definitions, main) → `Author.build : Except BuildRefusal Built`; `Row.host`, `Row.call` by spelling; `ServiceDef.{use,give,layer,constant}`; `Package.install`; `Layer.{value,empty,mergeAll}`, `provide`, `provideAll`, `provideFresh`; `fork`, `daemon p`, `daemon p in s`, `await`, `join`; `Node.{at_,replaceAt,replaceLayerAt}`; `Built.{rebuild,typed,ty,requires,closed,positionOf,runSync,print,bytes}` | `build_table_lawful`, `build_rows_resolve`, `Row.call_scoped`, `carrier_unique`, `var_reserved`, `rebuild_spec`, `rebuild_self` |
 | `Run` | `src/Effect4/Run.lean` | `Run.open` (cannot refuse), `Rows.{start,flush,clock,receive,answer,control,tape}` into `List Command`, `Run.{play,step,answer,receive,control}`, `Run.observe : Observation` (first-order, with `fibers`), `Run.inspect : Inspection` (holds the machine), `Run.{work,nextControl,controlOnce}`, `Reactor σ`, `Run.drive`, `runPure`/`runClock`/`runWith` | `open_total`, `journal_replays`, `drive_eq_play`, `drive_envelope`, `runPure_eq_run`, `answer_once`, `answer_accepted`, `bindCall_at`, `nextControl_spec`, `controlOnce_journal`, `play_controls_eq_replay`, `runClock_eq_run` |
 | `Run`, the tape | `src/Effect4/Run/Tape.lean` | What a tool reads off a run. The raw replay: `machineOf`, `replayFrom`, `enoughFor`. The machine's view: `MachineView`, `machineViewOf`, `machineView`. The tape of a journal: `Position`, `replyDecision`, `decisionOf`, `receiptRow`, `openedOf`, `readsOn`, `tapeFrom`, `tapeOf`. A run's budget premise and rest: `funded`, `atRest`. Reachable from the `Effect4` root; `Effect4.Api` does not export them yet | `tape_replays`, `funded_replays`, `tapeFrom_cut_replays`, `tapeFrom_position_replays` (`src/Effect4/Laws/Run/Tape.lean`); `applied_selects`, `control_retires` (`src/Effect4/Laws/Run/Rows.lean`) |
 | `Supervision` | `src/Effect4/Api/Supervision.lean` | `supervision : Eff Op → List ForkSite`, `ForkSite.parent`, `fiberStatuses`, `daemonsQuiet`, `Supervised`, `Inspection.{fibers,forked,daemonsQuiet}` | `supervision_static`, `supervision_child_flag`, `status_persists`, `spawn_status_fresh`, `daemonsQuiet_iff` |
@@ -127,6 +127,78 @@ A successful source reading establishes no target execution claim.
 The structural reader laws live in [`Laws.Codegen.ReadLeaf`](../../src/Effect4/Laws/Codegen/ReadLeaf.lean).
 The focused boundary controls live in [`RecordEmission`](../../Test/Codegen/RecordEmission.lean).
 The source and runtime controls remain finite checks.
+
+### 1.3 Declared operation modules
+
+`eff_module` lives in [`Program.Authoring.Module`](../../src/Effect4/Program/Authoring/Module.lean).
+It generates authoring declarations from one operation list.
+Each entry gives its runtime parameters, answer, optional error, optional service requirements and body.
+Semicolons separate entries.
+Header parameters are explicit typed Lean binders, fixed when the instance is constructed.
+
+```lean
+import Effect4.Api.Author
+import Effect4.Modules.Queue.Defs
+
+open Effect4 Effect4.Program Effect4.Program.Authoring
+
+def numbers := Queue.Definitions.make "numbers" .nat
+
+def main : Src NativeOp := eff do
+  let queue ← Queue.bounded .nat 2
+  let _ ← numbers.offer queue (nat 7)
+  numbers.take queue
+
+def checked := Api.Author.build (numbers.module main)
+```
+
+`Queue.Definitions` lives in [`Modules.Queue.Defs`](../../src/Effect4/Modules/Queue/Defs.lean).
+`Semaphore.Definitions` uses the same command in [`Modules.Semaphore.Defs`](../../src/Effect4/Modules/Semaphore/Defs.lean).
+The operation bodies remain their existing library builders.
+
+```lean
+eff_module Counter using self where
+  start : .nat := self.count (nat 3);
+  count (n : .nat) : .nat :=
+    ifElse (app "eq" [n, nat 0]) (succeed n)
+      (self.count (app "sub" [n, nat 1]))
+```
+
+The optional `using self` header gives each body the group's invocations before constructing any body.
+Forward invocations and recursive invocations need no Lean recursive definition.
+Execution remains subject to the existing fuel frontier.
+
+| Generated member | Use |
+| --- | --- |
+| `Name.make instanceName parameters` | Construct one instance with its names, invocations and definitions. |
+| `instance.operation arguments` | Invoke that instance's operation. |
+| `instance.defs` | Inspect or explicitly assemble its source definitions. |
+| `instance.install module` | Prepend its definitions and retain every other module field. |
+| `instance.module main` | Construct a module with those definitions and that main program. |
+| `Name.definition.operation name parameters` | Construct one definition under an exact spelling. With `using self`, supply the generated call record last. |
+| `Name.calls instanceName` | With `using self`, construct the group's invocation record. |
+
+`Def.of` in [`Program.Authoring.Defs`](../../src/Effect4/Program/Authoring/Defs.lean) checks declared parameter count against the curried operation type.
+`Def.qualifiedName` gives each generated invocation a printable TypeScript binding name.
+ASCII letters and digits stay readable. Other UTF-8 bytes receive decimal escapes.
+The instance and operation components have a separate delimiter.
+
+Install dependencies explicitly through their instances.
+Use distinct instance names for distinct specializations.
+Repeated installation retains the existing duplicate-definition refusal.
+`Package` remains a host library's rows and services.
+
+The defaults are `error .never` and `requires []`.
+The body checker checks these columns through ordinary program admission.
+The command accepts term parameters of the program, not stored Lean functions or program bodies.
+Higher-order builders remain expanded under decisions row 328.
+
+The commands produce the existing root `Eff.defs` block through `elaborateModule`.
+They add no stored program representation or semantic theorem.
+The general inlining observation remains open under decisions row 329.
+Queue and Semaphore definition headers remain outside `DefDecl.readable` because their handle request types do not read back.
+Their programs print to TypeScript. The existing reader refuses those headers with `ReadRefusal.shape "definition"`.
+The older Queue definitions have the same refusal.
 
 ## 2. The open decisions (2026-09-17)
 
