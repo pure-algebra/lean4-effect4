@@ -1,0 +1,173 @@
+{
+  "tools": {
+    "effect": "4.0.0-rc.112",
+    "tsgo": "7.0.0-dev.20260629.1",
+    "bun": "1.4.2"
+  },
+  "inputs": {
+    "d1-lib": "2d04bb21ec37094d74f3d22812df66e1538eac2bbffb684e5b7e76d432769296",
+    "d1-pin": "d1be445831fa42122623d451a0bbb8d4dabf870c71700275aef65c0c32708ec8",
+    "d2-lib": "6f4a5d7b98cc7dce235d1f050711ff861d0cd060d86cfae722216596f8e9b827",
+    "d2-pin": "cb0f61216b194ede68fb2bdd2034a0693083c11c2d5f598319cfc0f45b923c82",
+    "d3-lib": "34f8a334ae9d133f09e9f808268b3cb2e7f4d57153fc826ca2773a3a58b20f9e",
+    "d3-pin": "5ce97a9ab52b9c54c556852532a90da486769e6ecc8a2277eff9fe623b4aed7a",
+    "batch-lib": "f1f8d1c845322b4dfc2c5c9b8992dd5bd7ec63fab662ae32c0418362cc852684",
+    "batch-pin": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257",
+    "batch-coalesced-lib": "83c1165efee39a107efc3b34e4191a3f77587865f4e3d767a6220a7a8931983d",
+    "batch-coalesced-pin": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257"
+  },
+  "clients": {
+    "d1": {
+      "runs": {
+        "lib": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              3,
+              1,
+              2
+            ]
+          },
+          "stderr": ""
+        },
+        "pin": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              3,
+              1,
+              2
+            ]
+          },
+          "stderr": ""
+        }
+      },
+      "outcome": "pass"
+    },
+    "d2": {
+      "runs": {
+        "lib": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              3,
+              1,
+              2
+            ]
+          },
+          "stderr": ""
+        },
+        "pin": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              3,
+              1,
+              2
+            ]
+          },
+          "stderr": ""
+        }
+      },
+      "outcome": "pass"
+    },
+    "d3": {
+      "runs": {
+        "lib": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              true,
+              [
+                3
+              ]
+            ]
+          },
+          "stderr": ""
+        },
+        "pin": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              true,
+              [
+                3
+              ]
+            ]
+          },
+          "stderr": ""
+        }
+      },
+      "outcome": "pass"
+    },
+    "batch": {
+      "runs": {
+        "lib": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              1,
+              9,
+              2
+            ]
+          },
+          "stderr": ""
+        },
+        "pin": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              1,
+              2,
+              9
+            ]
+          },
+          "stderr": ""
+        }
+      },
+      "difference": "latch.wake-batch",
+      "outcome": "candidate"
+    },
+    "batch-coalesced": {
+      "runs": {
+        "lib": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              1,
+              2,
+              9
+            ]
+          },
+          "stderr": ""
+        },
+        "pin": {
+          "exit": 0,
+          "result": {
+            "_tag": "Success",
+            "value": [
+              1,
+              2,
+              9
+            ]
+          },
+          "stderr": ""
+        }
+      },
+      "outcome": "pass"
+    }
+  },
+  "typecheck": {
+    "exit": 0,
+    "output": ""
+  }
+}

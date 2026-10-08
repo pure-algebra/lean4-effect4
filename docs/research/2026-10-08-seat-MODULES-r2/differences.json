@@ -1,0 +1,11 @@
+[
+  {
+    "id": "latch.wake-batch",
+    "client": "batch",
+    "observation": "the root exit of the batch client of LatchControls.lean (docs/research/2026-10-08-modules-review)",
+    "pin": "effect 4.0.0-rc.112: Latch.scheduleUnsafe appends to a pending batch; Latch.flushScheduled resumes it in one task",
+    "ours": {"_tag": "Success", "value": [1, 9, 2]},
+    "effect": {"_tag": "Success", "value": [1, 2, 9]},
+    "ruling": null
+  }
+]

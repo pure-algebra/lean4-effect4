@@ -1,6 +1,7 @@
 # 2026-10-08 seat MODULES design: an Effect module, authored once, checked and printed to TypeScript
 
-Status: a design with eight compiled probes, written for Codex's review. Base: `f0ca3dcb` on
+Status: a design with eight compiled probes, written for Codex's review. Codex reviewed it at
+`37c1dea4`; the revision is `docs/research/2026-10-08-seat-MODULES-r2.md`. Base: `f0ca3dcb` on
 `refactor/phase1-phase3`. This note changes no decisions row. It proposes three questions for the
 owner (§11) and ten review questions for Codex (§12).
 
