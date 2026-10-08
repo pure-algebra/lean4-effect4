@@ -250,6 +250,22 @@ theorem gained_value {Γ : List Ty} (tb : Table) (msg : Nat → Val)
     (List.flatMap_map (offerK tb msg) rests selected).trans List.map_flatMap.symm
   exact (congrArg (fun tails => messages.map msg ++ tails) flat).trans List.map_append.symm
 
+/-- A list of pending offer carriers has exactly the existing offer encoding. -/
+theorem offersK_image (tb : Table) (msg : Nat → Val) (offers : List Offer) :
+    (imageAt Leaves.deferredKeys (.list (offerTy P))).toVal (offers.map (offerK tb msg)) =
+      Val.list (offers.map (offerVal tb msg)) := by
+  change Val.list ((offers.map (offerK tb msg)).map ((imageAt Leaves.deferredKeys (offerTy P)).toVal)) = _
+  rw [List.map_map]
+  exact congrArg Val.list (List.map_congr_left (fun o _ => offerK_image tb msg o))
+
+/-- The optional message head retains the arbitrary message map. -/
+theorem headK_image (msg : Nat → Val) (messages : List Nat) :
+    (imageAt Leaves.deferredKeys (.option P)).toVal ((messages.map msg).head?) =
+      pollReplyVal msg messages.head? := by
+  cases messages with
+  | nil => rfl
+  | cons m ms => rfl
+
 abbrev takeInputs (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : Machine.DeferredKey) :
     Inputs Leaves.deferredKeys (Data.takeΓ P) := (tb.handle id, (hint, (cellK tb msg s, ())))
 abbrev offerInputs (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hint : Machine.DeferredKey) :
@@ -305,6 +321,35 @@ theorem withdrawOffer_value (tb : Table) (injective : tb.Injective) (msg : Nat �
     have no : (s.messages.length == 0) = false := beq_eq_false_iff_ne.mpr empty
     rw [no]
     exact congrArg (fun first => (first, cellK tb msg {s with offers := s.offers.filter (fun o => o.id != id)})) List.map_take.symm
+
+/-- Poll computes the exact pending-prefix transition at the original caller inputs. -/
+theorem poll_value (tb : Table) (msg : Nat → Val) (s : State) :
+    (Data.poll P).eval (Γ := (Data.CellInputs P).types) Leaves.deferredKeys (cellK tb msg s, ()) =
+      if (!decide (s.messages.length = 0) && decide (s.takers.length = 0)) then
+        (((s.messages.map msg).head?, (s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).map (offerK tb msg)),
+          cellK tb msg { s with messages := s.messages.drop 1 ++ (s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).flatMap (·.rest), offers := s.offers.drop (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length) })
+      else ((none, []), cellK tb msg s) := by
+  let vs : Inputs Leaves.deferredKeys (Data.CellInputs P).types := (cellK tb msg s, ())
+  let state : Step (Data.CellInputs P).types (cellTy P) := .var (Data.cell P)
+  let ms := Step.get state (Data.msgsF P)
+  let os := Step.get state (Data.offersF P)
+  let rest := Step.drop ms (.nat 1)
+  let room := Step.sub (.get state (Data.capF P)) (.len rest)
+  have hrest : rest.eval Leaves.deferredKeys vs = (s.messages.drop 1).map msg := List.map_drop.symm
+  have hr : room.eval Leaves.deferredKeys vs = s.capacity.getD 0 - (s.messages.drop 1).length := by
+    change s.capacity.getD 0 - (rest.eval Leaves.deferredKeys vs).length = _
+    rw [hrest]
+    exact congrArg (fun n => s.capacity.getD 0 - n) (List.length_map (f := msg) (as := s.messages.drop 1))
+  have hg := gained_value tb msg room rest os vs _ (s.messages.drop 1) s.offers hr hrest rfl
+  have he := entering_value tb msg room os vs _ s.offers hr rfl
+  have hs := staying_value tb msg room os vs _ s.offers hr rfl
+  change (if (!decide ((s.messages.map msg).length = 0) && decide ((s.takers.map (takerK tb)).length = 0))
+    then (((s.messages.map msg).head?, (Data.entering P room os).eval Leaves.deferredKeys vs),
+      (s.capacity.getD 0, ((Data.gained P room rest os).eval Leaves.deferredKeys vs,
+        ((Data.staying P room os).eval Leaves.deferredKeys vs, (s.takers.map (takerK tb), ())))))
+    else ((none, []), cellK tb msg s)) = _
+  rw [List.length_map, List.length_map, hg, he, hs]
+  rfl
 
 end Effect4.Queue.Model
 
@@ -483,5 +528,28 @@ theorem poll_reads (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
   exact Step.sound (Γ := (Data.CellInputs P).types) Leaves.deferredKeys (cellK tb msg s, ())
     (Input.reads_cons (readsCell.to (cellK_image tb msg s).symm) Input.reads_nil)
     (Data.poll P) (by decide) (Step.scope_of_alignment _ depth)
+
+/-- Poll reading observes the exact conditional reply, entering offers, and model cell. -/
+theorem poll_encoded (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
+    {cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.pollStep A cellSrc) env path vals
+      (if (!decide (s.messages.length = 0) && decide (s.takers.length = 0)) then
+        Val.tuple [Val.tuple [pollReplyVal msg s.messages.head?,
+          Val.list ((s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).map (offerVal tb msg))],
+          cellVal tb msg {s with messages := s.messages.drop 1 ++ (s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).flatMap (·.rest), offers := s.offers.drop (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)}]
+      else Val.tuple [Val.tuple [Store.Val.none, Val.list []], cellVal tb msg s]) := by
+  apply (poll_reads A tb msg s depth readsCell).to
+  rw [poll_value]
+  by_cases accepted : (!decide (s.messages.length = 0) && decide (s.takers.length = 0)) = true
+  · rw [if_pos accepted, if_pos accepted]
+    change Val.tuple [Val.tuple [(imageAt Leaves.deferredKeys (.option P)).toVal ((s.messages.map msg).head?),
+      (imageAt Leaves.deferredKeys (.list (offerTy P))).toVal ((s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).map (offerK tb msg))],
+      (imageAt Leaves.deferredKeys (cellTy P)).toVal (cellK tb msg {s with messages := s.messages.drop 1 ++ (s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).flatMap (·.rest), offers := s.offers.drop (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)})] = _
+    rw [headK_image, offersK_image, cellK_image]
+  · rw [if_neg accepted, if_neg accepted]
+    change Val.tuple [Val.tuple [Store.Val.none, Val.list []], (imageAt Leaves.deferredKeys (cellTy P)).toVal (cellK tb msg s)] = _
+    rw [cellK_image]
 
 end Effect4.Queue.Model

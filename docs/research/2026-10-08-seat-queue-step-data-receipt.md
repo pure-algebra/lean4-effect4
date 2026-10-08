@@ -85,3 +85,11 @@ The focused Queue Data build and both Queue finite batteries pass.
 The trust probe is /private/tmp/queue-connectors-axioms.lean.
 The coordinator owns public Steps assembly; the other module seat owns new OfferData.
 This seat retains take and poll value and encoded-observation connectors.
+Poll now has its exact conditional value and encoded-observation connector.
+Its conditional uses message length and taker length at the original model state.
+Its successful branch records the bounded pending prefix and its ordered messages.
+Its unsuccessful branch retains the exact original cell.
+The focused Queue Data build passes.
+The four supporting declarations stay within propext and Quot.sound.
+Their trust probe is /private/tmp/queue-poll-axioms.lean.
+The coordinator joins poll_encoded to the existing public notification statement.
