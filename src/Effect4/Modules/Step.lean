@@ -560,6 +560,48 @@ end Effect4.Modules
 
 namespace Effect4.Modules.Step
 open Effect4.Program Effect4.Program.Authoring
+/-- The structural premises of an interpretation, concentrated in one fold.
+A fold asks for scope alignment; deferred comparison asks for its identity capability. -/
+def requirementsAlg (scope identity : Prop) : StepAlgebra (fun _ _ => Prop) where
+  var _ := True
+  bool _ := True
+  nat _ := True
+  unit := True
+  nil := True
+  none := True
+  not a := a
+  isZero a := a
+  fst a := a
+  snd a := a
+  some a := a
+  get a _ := a
+  emptyLike a := a
+  len a := a
+  head a := a
+  and a b := a ∧ b
+  or a b := a ∧ b
+  add a b := a ∧ b
+  sub a b := a ∧ b
+  lt a b := a ∧ b
+  eq a b := a ∧ b
+  pair a b := a ∧ b
+  tuple2 a b := a ∧ b
+  set a _ b := a ∧ b
+  snoc a b := a ∧ b
+  append a b := a ∧ b
+  take a b := a ∧ b
+  drop a b := a ∧ b
+  cons a b := a ∧ b
+  ite c a b := c ∧ a ∧ b
+  tuple3 a b c := a ∧ b ∧ c
+  fold xs init body := scope ∧ xs ∧ init ∧ body
+  record {_Γ} {fs} fields := FieldResults.All (fun {_} value => value) fs fields
+  sameDeferred a b := identity ∧ a ∧ b
+
+/-- Shared interpretation premises, with the same conjunction shape as the step's children. -/
+def Requirements {Γ : List Ty} {t : Ty} (e : Step Γ t) (scope identity : Prop) : Prop :=
+  cata (requirementsAlg scope identity) e
+
 /-- Whether a step needs binder slots in its caller's scope. -/
 def featureAlg (atFold atComparison : Bool) : StepAlgebra (fun _ _ => Bool) where
   var _ := false

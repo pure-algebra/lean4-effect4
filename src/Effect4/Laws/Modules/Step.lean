@@ -6,6 +6,7 @@ import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Modules.Construction
 import Effect4.Laws.Modules.Cons
 import Effect4.Laws.Modules.Tuple3
+import Effect4.Laws.Modules.Step.Requirements
 import Effect4.Laws.Schema.Identity
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Program.Typed.ListFold
@@ -446,28 +447,6 @@ theorem fields_names : ∀ {Γ : List Ty} {fs : List (String × Bool × Ty)}
   | _, _, .nil, _ => rfl
   | _, _, .cons name _ rest, src => congrArg (name :: ·) (fields_names rest src)
 
-/-- Scope alignment passes to a child whose binder occurrence implies the parent's.
-A helper of step-language-sound and step-language-typed. -/
-theorem scope_mono {Γ Δ : List Ty} {s t : Ty} {parent : Step Γ s} {child : Step Δ t}
-    {env : Env} {length : Nat} (h : parent.ScopeFacts env length)
-    (occurs : child.binds = true → parent.binds = true) : child.ScopeFacts env length := by
-  unfold ScopeFacts at h ⊢
-  cases hb : child.binds
-  · trivial
-  · rw [occurs hb] at h
-    exact h
-
-/-- An identity requirement passes to a child that compares deferred handles.
-The comparison arm of the reading law consumes this capability. -/
-theorem identity_mono {Γ Δ : List Ty} {s t : Ty} {parent : Step Γ s} {child : Step Δ t}
-    {L : Leaves} (h : parent.IdentityFacts L)
-    (occurs : child.compares = true → parent.compares = true) : child.IdentityFacts L := by
-  unfold IdentityFacts at h ⊢
-  cases hb : child.compares
-  · trivial
-  · rw [occurs hb] at h
-    exact h
-
 /-- Alignment suffices for the per-step scope contract. A helper of both step laws. -/
 theorem scope_of_alignment {Γ : List Ty} {t : Ty} (e : Step Γ t) {env : Env} {length : Nat}
     (h : length = env.names.length) : e.ScopeFacts env length := by
@@ -579,58 +558,56 @@ has a term that reads the encoding of its value. -/
 theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
     {src : {t : Ty} → Input Γ t → TermSrc} {env : Env} {path : List Nat} {vals : List Val}
     (_hin : ∀ {t : Ty} (x : Input Γ t), Reads (src x) env path vals ((imageAt L t).toVal (x.get vs)))
-    {s : Ty} (e : Step Γ s), e.canonical = true → (scope : e.ScopeFacts env vals.length) → (identity : e.IdentityFacts L) →
+    {s : Ty} (e : Step Γ s), e.canonical = true → (requirements : e.Requirements (vals.length = env.names.length) (Nonempty (DeferredIdentity L))) →
       Reads (e.term src) env path vals ((imageAt L s).toVal (e.eval L vs))
-  | _, vs, src, env, path, vals, hin, _, .var x, _, _, _ => hin x
-  | _, _, _, env, path, vals, _, _, .bool b, _, _, _ => reads_bool b env path vals
-  | _, _, _, env, path, vals, _, _, .nat n, _, _, _ => reads_nat n env path vals
-  | _, _, _, env, path, vals, _, _, .unit, _, _, _ => reads_unit
-  | _, vs, src, env, path, vals, hin, _, .not a, h, hs, hi => reads_notT (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h)
-  | _, vs, src, env, path, vals, hin, _, .and a b, h, hs, hi => reads_andT (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .or a b, h, hs, hi => reads_orT (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .ite c a b, h, hs, hi => by
+  | _, vs, src, env, path, vals, hin, _, .var x, _, _ => hin x
+  | _, _, _, env, path, vals, _, _, .bool b, _, _ => reads_bool b env path vals
+  | _, _, _, env, path, vals, _, _, .nat n, _, _ => reads_nat n env path vals
+  | _, _, _, env, path, vals, _, _, .unit, _, _ => reads_unit
+  | _, vs, src, env, path, vals, hin, _, .not a, h, req => reads_notT (sound_core (requirements := req) hin a h)
+  | _, vs, src, env, path, vals, hin, _, .and a b, h, req => reads_andT (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .or a b, h, req => reads_orT (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .ite c a b, h, req => by
     obtain ⟨hc, hab⟩ := and_true h
-    exact (reads_ifT (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin c hc) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true hab).1)
-      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true hab).2)).to (toVal_ite _ _ _ _)
-  | _, vs, src, env, path, vals, hin, _, .add a b, h, hs, hi => reads_add (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .sub a b, h, hs, hi => reads_sub (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .lt a b, h, hs, hi => reads_lt (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .eq a b, h, hs, hi => reads_eq (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .isZero a, h, hs, hi => reads_isZero (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h)
-  | _, vs, src, env, path, vals, hin, _, .pair a b, h, hs, hi => reads_pair (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .tuple2 a b, h, hs, hi => reads_tuple2 (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .fst p, h, hs, hi => reads_app (.cons (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin p h) .nil) rfl
-  | _, vs, src, env, path, vals, hin, _, .snd p, h, hs, hi => reads_app (.cons (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin p h) .nil) rfl
-  | _, vs, src, env, path, vals, hin, _, .some a, h, hs, hi => reads_some (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h)
-  | _, vs, src, env, path, vals, hin, _, .get r f, h, hs, hi =>
-    reads_field (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin r (and_true h).2)
+    exact (reads_ifT (sound_core (requirements := req.1) hin c hc) (sound_core (requirements := req.2.1) hin a (and_true hab).1)
+      (sound_core (requirements := req.2.2) hin b (and_true hab).2)).to (toVal_ite _ _ _ _)
+  | _, vs, src, env, path, vals, hin, _, .add a b, h, req => reads_add (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .sub a b, h, req => reads_sub (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .lt a b, h, req => reads_lt (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .eq a b, h, req => reads_eq (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .isZero a, h, req => reads_isZero (sound_core (requirements := req) hin a h)
+  | _, vs, src, env, path, vals, hin, _, .pair a b, h, req => reads_pair (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .tuple2 a b, h, req => reads_tuple2 (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+  | _, vs, src, env, path, vals, hin, _, .fst p, h, req => reads_app (.cons (sound_core (requirements := req) hin p h) .nil) rfl
+  | _, vs, src, env, path, vals, hin, _, .snd p, h, req => reads_app (.cons (sound_core (requirements := req) hin p h) .nil) rfl
+  | _, vs, src, env, path, vals, hin, _, .some a, h, req => reads_some (sound_core (requirements := req) hin a h)
+  | _, vs, src, env, path, vals, hin, _, .get r f, h, req =>
+    reads_field (sound_core (requirements := req) hin r (and_true h).2)
       (FieldRef.read_law (of_decide_eq_true (and_true h).1) f (r.eval L vs))
-  | _, vs, src, env, path, vals, hin, _, .set r f v, h, hs, hi => by
+  | _, vs, src, env, path, vals, hin, _, .set r f v, h, req => by
     obtain ⟨hf, rest⟩ := and_true h
-    exact reads_recordSet (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin r (and_true rest).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin v (and_true rest).2)
+    exact reads_recordSet (sound_core (requirements := req.1) hin r (and_true rest).1) (sound_core (requirements := req.2) hin v (and_true rest).2)
       (FieldRef.write_law (of_decide_eq_true hf) f (r.eval L vs) (v.eval L vs))
-  | _, vs, src, env, path, vals, hin, _, .emptyLike xs, h, hs, hi => reads_noneOf (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h)
-  | _, vs, src, env, path, vals, hin, _, .len xs, h, hs, hi => (reads_len (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h)).to (nat_length_map _ _)
-  | _, vs, src, env, path, vals, hin, _, .snoc xs x, h, hs, hi =>
-    (reads_snoc (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x (and_true h).2)).to
+  | _, vs, src, env, path, vals, hin, _, .emptyLike xs, h, req => reads_noneOf (sound_core (requirements := req) hin xs h)
+  | _, vs, src, env, path, vals, hin, _, .len xs, h, req => (reads_len (sound_core (requirements := req) hin xs h)).to (nat_length_map _ _)
+  | _, vs, src, env, path, vals, hin, _, .snoc xs x, h, req =>
+    (reads_snoc (sound_core (requirements := req.1) hin xs (and_true h).1) (sound_core (requirements := req.2) hin x (and_true h).2)).to
       (list_snoc_map _ _ _)
-  | _, vs, src, env, path, vals, hin, _, .append xs ys, h, hs, hi =>
-    (reads_append (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin ys (and_true h).2)).to
+  | _, vs, src, env, path, vals, hin, _, .append xs ys, h, req =>
+    (reads_append (sound_core (requirements := req.1) hin xs (and_true h).1) (sound_core (requirements := req.2) hin ys (and_true h).2)).to
       (list_append_map _ _ _)
-  | _, vs, src, env, path, vals, hin, _, .take xs n, h, hs, hi =>
-    (reads_take (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin n (and_true h).2)).to
+  | _, vs, src, env, path, vals, hin, _, .take xs n, h, req =>
+    (reads_take (sound_core (requirements := req.1) hin xs (and_true h).1) (sound_core (requirements := req.2) hin n (and_true h).2)).to
       (list_take_map _ _ _)
-  | _, vs, src, env, path, vals, hin, _, .drop xs n, h, hs, hi =>
-    (reads_drop (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs (and_true h).1) (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin n (and_true h).2)).to
+  | _, vs, src, env, path, vals, hin, _, .drop xs n, h, req =>
+    (reads_drop (sound_core (requirements := req.1) hin xs (and_true h).1) (sound_core (requirements := req.2) hin n (and_true h).2)).to
       (list_drop_map _ _ _)
-  | _, vs, src, env, path, vals, hin, _, .head xs, h, hs, hi => (reads_head (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h)).to (toVal_head _ _)
+  | _, vs, src, env, path, vals, hin, _, .head xs, h, req => (reads_head (sound_core (requirements := req) hin xs h)).to (toVal_head _ _)
 
-  | Γ, vs, src, env, path, vals, hin, _, .fold (acc := acc) (item := item) xs init body, h, hs, hi => by
-    have depth : vals.length = env.names.length := hs
-    have scopeXs := scope_of_alignment xs depth
-    have scopeInit := scope_of_alignment init depth
-    have readsXs := sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) hin xs (and_true (and_true h).1).1 scopeXs
-    have readsInit := sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) hin init (and_true (and_true h).1).2 scopeInit
+  | Γ, vs, src, env, path, vals, hin, _, .fold (acc := acc) (item := item) xs init body, h, req => by
+    have depth : vals.length = env.names.length := req.1
+    have readsXs := sound_core hin xs (and_true (and_true h).1).1 req.2.1
+    have readsInit := sound_core hin init (and_true (and_true h).1).2 req.2.2.1
     have resolved : ∀ {t : Ty} (x : Input Γ t), ∃ tree, src x env path = .ok tree := by
       intro t x
       obtain ⟨tree, ht, _⟩ := hin x
@@ -656,8 +633,8 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
           (env.push [env.mint "acc", env.mint "item"]).names.length := by
         change (vals ++ [_, _]).length = (env.names ++ [_, _]).length
         simp only [List.length_append, List.length_cons, List.length_nil, depth]
-      exact (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (fold_inputs_reads depth hin a i) body (and_true h).2
-        (scope_of_alignment body extended)).eval hbt
+      exact (sound_core (fold_inputs_reads depth hin a i) body (and_true h).2
+        (requirements_mono (fun _ => extended) (fun h => h) body req.2.2.2)).eval hbt
     obtain ⟨lt, hlt, hle⟩ := readsXs
     obtain ⟨it, hit, hie⟩ := readsInit
     refine ⟨.fold Option.none lt it bt, ?_, ?_⟩
@@ -674,25 +651,25 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
       exact fold_eval_image (imageAt L item) (imageAt L acc)
         (fun a i => body.eval (Γ := acc :: item :: Γ) L ((a, (i, vs)) : Inputs L (acc :: item :: Γ))) vals bt evaluates (xs.eval L vs) (init.eval L vs)
 
-  | _, vs, src, env, path, vals, hin, _, .tuple3 x y z, h, hs, hi =>
+  | _, vs, src, env, path, vals, hin, _, .tuple3 x y z, h, req =>
     reads_tuple3_image L _ _ _ _ _ _
-      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x (and_true h).1)
-      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin y (and_true (and_true h).2).1)
-      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin z (and_true (and_true h).2).2)
-  | _, vs, src, env, path, vals, hin, _, .record (fs := fs) fields, h, hs, hi =>
+      (sound_core (requirements := req.1) hin x (and_true h).1)
+      (sound_core (requirements := req.2.1) hin y (and_true (and_true h).2).1)
+      (sound_core (requirements := req.2.2) hin z (and_true (and_true h).2).2)
+  | _, vs, src, env, path, vals, hin, _, .record (fs := fs) fields, h, req =>
     reads_record_image L fs _ (of_decide_eq_true (and_true h).1)
-      (fields_names fields src) (sound_fields hin fields (and_true (and_true h).2).2 hs hi)
-  | _, _, _, env, path, vals, _, _, .nil (t := t), _, _, _ => reads_nil_ascribe t env path vals
-  | _, _, _, env, path, vals, _, _, .none (t := t), _, _, _ => reads_none_ascribe t env path vals
-  | _, vs, src, env, path, vals, hin, _, .cons x xs, h, hs, hi =>
-    reads_app (.cons (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x (and_true h).1)
-      (.cons (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs (and_true h).2) .nil)) rfl
-  | _, vs, src, env, path, vals, hin, _, .sameDeferred a b, h, hs, hi => by
-    have capabilityExists := hi
+      (fields_names fields src) (sound_fields hin fields (and_true (and_true h).2).2 req)
+  | _, _, _, env, path, vals, _, _, .nil (t := t), _, _ => reads_nil_ascribe t env path vals
+  | _, _, _, env, path, vals, _, _, .none (t := t), _, _ => reads_none_ascribe t env path vals
+  | _, vs, src, env, path, vals, hin, _, .cons x xs, h, req =>
+    reads_app (.cons (sound_core (requirements := req.1) hin x (and_true h).1)
+      (.cons (sound_core (requirements := req.2) hin xs (and_true h).2) .nil)) rfl
+  | _, vs, src, env, path, vals, hin, _, .sameDeferred a b, h, req => by
+    have capabilityExists := req.1
     obtain ⟨capability⟩ := capabilityExists
     exact capability.reads_deferredEqual
-      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a (and_true h).1)
-      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b (and_true h).2)
+      (sound_core (requirements := req.2.1) hin a (and_true h).1)
+      (sound_core (requirements := req.2.2) hin b (and_true h).2)
 
 /-- The required fields read their encoded carrier entries, in schema order. -/
 theorem sound_fields : ∀ {Γ : List Ty} {vs : Inputs L Γ}
@@ -701,19 +678,14 @@ theorem sound_fields : ∀ {Γ : List Ty} {vs : Inputs L Γ}
     {fs : List (String × Bool × Ty)} (fields : StepFields Γ fs),
     (FieldResults.map (fun _ {_} value => value) fs
       (cataFields (checkAlg (fun fs => decide (Field.Ascending Field.bytesKey fs)) (fun _ => true)) fields)).all id = true →
-    (Step.record fields).ScopeFacts env vals.length → (Step.record fields).IdentityFacts L →
+    (Step.record fields).Requirements (vals.length = env.names.length) (Nonempty (DeferredIdentity L)) →
     ReadsAll ((FieldResults.map (fun name {_} value => (name, value src)) fs
       (cataFields termAlg fields)).map Prod.snd) env path vals
       ((entriesAt L fs (FieldResults.values L vs fs (cataFields (evalAlg L) fields))).map Prod.snd)
-  | _, _, _, _, _, _, _, _, .nil, _, _, _ => .nil
-  | _, vs, src, env, path, vals, hin, _, .cons _ value rest, h, hs, hi =>
-    .cons (sound_core
-      (identity := identity_mono hi (by intro hb; simp only [compares, cata, cataFields, featureAlg, FieldResults.map, List.any_cons] at hb ⊢; aesop))
-      (scope := scope_mono hs (by intro hb; simp only [binds, cata, cataFields, bindsAlg, featureAlg, FieldResults.map, List.any_cons] at hb ⊢; aesop))
-      hin value (and_true h).1)
-      (sound_fields hin rest (and_true h).2
-        (scope_mono hs (by intro hb; simp only [binds, cata, cataFields, bindsAlg, featureAlg, FieldResults.map, List.any_cons] at hb ⊢; aesop))
-        (identity_mono hi (by intro hb; simp only [compares, cata, cataFields, featureAlg, FieldResults.map, List.any_cons] at hb ⊢; aesop)))
+  | _, _, _, _, _, _, _, _, .nil, _, _ => .nil
+  | _, _, _, _, _, _, hin, _, .cons _ value rest, h, req =>
+    .cons (sound_core hin value (and_true h).1 req.1)
+      (sound_fields hin rest (and_true h).2 req.2)
 end
 
 /-- The reading law, with scope alignment only when a fold occurs. -/
@@ -725,7 +697,7 @@ theorem sound (vs : Inputs L Γ) {src : {t : Ty} → Input Γ t → TermSrc} {en
     (scope : e.ScopeFacts env vals.length := by trivial)
     (identity : e.IdentityFacts L := by trivial) :
     Reads (e.term src) env path vals ((imageAt L s).toVal (e.eval L vs)) :=
-  sound_core L hin e h scope identity
+  sound_core L hin e h (requirements_of_facts e scope identity)
 
 end Reading
 
@@ -825,48 +797,48 @@ that types at its type, under each literal flag. A caller proves the facts from 
 type is a parameter, or by the typing check (`typed_of_normal`). -/
 theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src : {t : Ty} → Input Γ t → TermSrc}
     {env : Env} {path : List Nat} {types : List Ty} (_hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
-    {s : Ty} (e : Step Γ s), e.Facts → (scope : e.ScopeFacts env types.length) → TypesEach sig (e.term src) env path types s
+    {s : Ty} (e : Step Γ s), e.Facts → (requirements : e.Requirements (types.length = env.names.length) True) → TypesEach sig (e.term src) env path types s
   | _, src, env, path, types, hin, _, .var x, _, _ => hin x
   | _, _, _, _, _, _, _, .bool b, _, _ => types_bool b
   | _, _, _, _, _, _, _, .nat n, _, _ => types_nat n
   | _, _, _, _, _, _, _, .unit, _, _ => types_unit
-  | _, src, env, path, types, hin, _, .not a, h, hs => types_notT atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h)
-  | _, src, env, path, types, hin, _, .and a b, h, hs => types_andT atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .or a b, h, hs => types_orT atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .ite c a b, h, hs =>
-    types_ifT atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin c h.2.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.2.2.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2.2.2) h.1
-  | _, src, env, path, types, hin, _, .add a b, h, hs => types_add atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .sub a b, h, hs => types_sub atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .lt a b, h, hs => types_lt atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .eq a b, h, hs => types_eq atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .isZero a, h, hs => types_isZero atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h)
-  | _, src, env, path, types, hin, _, .pair a b, h, hs => types_pair atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
-  | _, src, env, path, types, hin, _, .tuple2 a b, h, hs =>
-    types_tuple2 atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.2.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2.2) h.1.1 h.1.2.1 h.1.2.2.1 h.1.2.2.2
-  | _, src, env, path, types, hin, _, .fst p, h, hs => fun _ => types_app (.cons (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin p h _) .nil) (atomOf_native atoms rfl)
-  | _, src, env, path, types, hin, _, .snd p, h, hs => fun _ => types_app (.cons (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin p h _) .nil) (atomOf_native atoms rfl)
-  | _, src, env, path, types, hin, _, .some a, h, hs => types_some atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h)
-  | _, src, env, path, types, hin, _, .get r f, h, hs => fun _ => types_field (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin r h.2 false) (fieldType_ref h.1 f)
-  | _, src, env, path, types, hin, _, .set r f v, h, hs => fun _ =>
-    types_recordSet (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin r h.2.1 false) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin v h.2.2 true) (setType_ref h.1 f)
-  | _, src, env, path, types, hin, _, .emptyLike xs, h, hs => types_noneOf atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h)
-  | _, src, env, path, types, hin, _, .len xs, h, hs => types_len atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h)
-  | _, src, env, path, types, hin, _, .snoc xs x, h, hs => types_snoc atoms h.1 (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h.2.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x h.2.2)
-  | _, src, env, path, types, hin, _, .append xs ys, h, hs => types_append atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h.2.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin ys h.2.2) h.1
-  | _, src, env, path, types, hin, _, .take xs n, h, hs => types_take atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin n h.2)
-  | _, src, env, path, types, hin, _, .drop xs n, h, hs => types_drop atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin n h.2)
-  | _, src, env, path, types, hin, _, .head xs, h, hs => types_head atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h)
+  | _, src, env, path, types, hin, _, .not a, h, req => types_notT atoms (typed_core atoms (requirements := req) hin a h)
+  | _, src, env, path, types, hin, _, .and a b, h, req => types_andT atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .or a b, h, req => types_orT atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .ite c a b, h, req =>
+    types_ifT atoms (typed_core atoms (requirements := req.1) hin c h.2.1) (typed_core atoms (requirements := req.2.1) hin a h.2.2.1) (typed_core atoms (requirements := req.2.2) hin b h.2.2.2) h.1
+  | _, src, env, path, types, hin, _, .add a b, h, req => types_add atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .sub a b, h, req => types_sub atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .lt a b, h, req => types_lt atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .eq a b, h, req => types_eq atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .isZero a, h, req => types_isZero atoms (typed_core atoms (requirements := req) hin a h)
+  | _, src, env, path, types, hin, _, .pair a b, h, req => types_pair atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
+  | _, src, env, path, types, hin, _, .tuple2 a b, h, req =>
+    types_tuple2 atoms (typed_core atoms (requirements := req.1) hin a h.2.1) (typed_core atoms (requirements := req.2) hin b h.2.2) h.1.1 h.1.2.1 h.1.2.2.1 h.1.2.2.2
+  | _, src, env, path, types, hin, _, .fst p, h, req => fun _ => types_app (.cons (typed_core atoms (requirements := req) hin p h _) .nil) (atomOf_native atoms rfl)
+  | _, src, env, path, types, hin, _, .snd p, h, req => fun _ => types_app (.cons (typed_core atoms (requirements := req) hin p h _) .nil) (atomOf_native atoms rfl)
+  | _, src, env, path, types, hin, _, .some a, h, req => types_some atoms (typed_core atoms (requirements := req) hin a h)
+  | _, src, env, path, types, hin, _, .get r f, h, req => fun _ => types_field (typed_core atoms (requirements := req) hin r h.2 false) (fieldType_ref h.1 f)
+  | _, src, env, path, types, hin, _, .set r f v, h, req => fun _ =>
+    types_recordSet (typed_core atoms (requirements := req.1) hin r h.2.1 false) (typed_core atoms (requirements := req.2) hin v h.2.2 true) (setType_ref h.1 f)
+  | _, src, env, path, types, hin, _, .emptyLike xs, h, req => types_noneOf atoms (typed_core atoms (requirements := req) hin xs h)
+  | _, src, env, path, types, hin, _, .len xs, h, req => types_len atoms (typed_core atoms (requirements := req) hin xs h)
+  | _, src, env, path, types, hin, _, .snoc xs x, h, req => types_snoc atoms h.1 (typed_core atoms (requirements := req.1) hin xs h.2.1) (typed_core atoms (requirements := req.2) hin x h.2.2)
+  | _, src, env, path, types, hin, _, .append xs ys, h, req => types_append atoms (typed_core atoms (requirements := req.1) hin xs h.2.1) (typed_core atoms (requirements := req.2) hin ys h.2.2) h.1
+  | _, src, env, path, types, hin, _, .take xs n, h, req => types_take atoms (typed_core atoms (requirements := req.1) hin xs h.1) (typed_core atoms (requirements := req.2) hin n h.2)
+  | _, src, env, path, types, hin, _, .drop xs n, h, req => types_drop atoms (typed_core atoms (requirements := req.1) hin xs h.1) (typed_core atoms (requirements := req.2) hin n h.2)
+  | _, src, env, path, types, hin, _, .head xs, h, req => types_head atoms (typed_core atoms (requirements := req) hin xs h)
 
-  | Γ, src, env, path, types, hin, _, .fold (acc := acc) (item := item) xs init body, h, hs => by
-    have depth : types.length = env.names.length := hs
-    have typedXs := typed_core atoms hin xs h.1 (scope_of_alignment xs depth)
-    have typedInit := typed_core atoms hin init h.2.1 (scope_of_alignment init depth)
+  | Γ, src, env, path, types, hin, _, .fold (acc := acc) (item := item) xs init body, h, req => by
+    have depth : types.length = env.names.length := req.1
+    have typedXs := typed_core atoms hin xs h.1 req.2.1
+    have typedInit := typed_core atoms hin init h.2.1 req.2.2.1
     have extended : (types ++ [acc, item]).length =
         (env.push [env.mint "acc", env.mint "item"]).names.length := by
       change (types ++ [_, _]).length = (env.names ++ [_, _]).length
       simp only [List.length_append, List.length_cons, List.length_nil, depth]
     have typedBody := typed_core atoms (fold_inputs_types depth hin) body h.2.2
-      (scope_of_alignment body extended)
+      (requirements_mono (fun _ => extended) (fun h => h) body req.2.2.2)
     intro const
     obtain ⟨lt, hlt, hle⟩ := typedXs false
     obtain ⟨it, hit, hie⟩ := typedInit false
@@ -879,19 +851,19 @@ theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src
       rfl
     · exact argTy_fold_intro const hle hie (Ty.subN_refl acc) hbe (Ty.subN_refl acc)
 
-  | _, src, env, path, types, hin, _, .tuple3 x y z, h, hs =>
-    types_tuple3 atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x h.2.1)
-      (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin y h.2.2.1)
-      (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin z h.2.2.2) h.1.1 h.1.2.1 h.1.2.2
-  | _, src, env, path, types, hin, _, .record (fs := fs) fields, h, hs =>
+  | _, src, env, path, types, hin, _, .tuple3 x y z, h, req =>
+    types_tuple3 atoms (typed_core atoms (requirements := req.1) hin x h.2.1)
+      (typed_core atoms (requirements := req.2.1) hin y h.2.2.1)
+      (typed_core atoms (requirements := req.2.2) hin z h.2.2.2) h.1.1 h.1.2.1 h.1.2.2
+  | _, src, env, path, types, hin, _, .record (fs := fs) fields, h, req =>
     types_record_declared sig fs (ascending_of_normal h.1) h.1 h.2.1
-      (fields_names fields src) (typed_fields atoms hin fields h.2.2 hs)
+      (fields_names fields src) (typed_fields atoms hin fields h.2.2 req)
   | _, _, _, _, _, _, _, .nil (t := t), h, _ => types_nil_ascribe sig atoms t h.1 h.2.1 h.2.2
   | _, _, _, _, _, _, _, .none (t := t), h, _ => types_none_ascribe sig atoms t h.1 h.2.1 h.2.2
-  | _, src, env, path, types, hin, _, .cons x xs, h, hs =>
-    types_cons atoms h.1 (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x h.2.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin xs h.2.2)
-  | _, src, env, path, types, hin, _, .sameDeferred a b, h, hs =>
-    types_same atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin a h.1) (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin b h.2)
+  | _, src, env, path, types, hin, _, .cons x xs, h, req =>
+    types_cons atoms h.1 (typed_core atoms (requirements := req.1) hin x h.2.1) (typed_core atoms (requirements := req.2) hin xs h.2.2)
+  | _, src, env, path, types, hin, _, .sameDeferred a b, h, req =>
+    types_same atoms (typed_core atoms (requirements := req.2.1) hin a h.1) (typed_core atoms (requirements := req.2.2) hin b h.2)
 
 /-- The required fields type at the declared field types, in schema order. -/
 theorem typed_fields (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src : {t : Ty} → Input Γ t → TermSrc}
@@ -899,16 +871,13 @@ theorem typed_fields (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {s
     (_hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
     {fs : List (String × Bool × Ty)} (fields : StepFields Γ fs),
     FieldResults.All (fun {_} value => value) fs (cataFields factsAlg fields) →
-    (Step.record fields).ScopeFacts env types.length →
+    (Step.record fields).Requirements (types.length = env.names.length) True →
     TypesAll sig ((FieldResults.map (fun name {_} value => (name, value src)) fs
       (cataFields termAlg fields)).map Prod.snd) env path types true (fs.map fun f => f.2.2)
   | _, _, _, _, _, _, _, .nil, _, _ => .nil
-  | _, src, env, path, types, hin, _, .cons _ value rest, h, hs =>
-    .cons (typed_core atoms
-      (scope := scope_mono hs (by intro hb; simp only [binds, cata, cataFields, bindsAlg, featureAlg, FieldResults.map, List.any_cons] at hb ⊢; aesop))
-      hin value h.1 true)
-      (typed_fields atoms hin rest h.2
-        (scope_mono hs (by intro hb; simp only [binds, cata, cataFields, bindsAlg, featureAlg, FieldResults.map, List.any_cons] at hb ⊢; aesop)))
+  | _, _, _, _, _, hin, _, .cons _ value rest, h, req =>
+    .cons (typed_core atoms hin value h.1 req.1 true)
+      (typed_fields atoms hin rest h.2 req.2)
 end
 
 include atoms
@@ -918,7 +887,7 @@ include atoms
 theorem typed (hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
     {s : Ty} (e : Step Γ s) (facts : e.Facts)
     (scope : e.ScopeFacts env types.length := by trivial) : TypesEach sig (e.term src) env path types s :=
-  typed_core sig atoms hin e facts scope
+  typed_core sig atoms hin e facts (requirements_of_scope e scope)
 
 /-- The typing law by the typing check: it closes by `rfl` on a concrete step. -/
 theorem typed_of_normal (hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
