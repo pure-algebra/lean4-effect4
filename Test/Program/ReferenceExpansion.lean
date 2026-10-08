@@ -238,7 +238,7 @@ def chainTy : EffTy := EffTy.pure .nat
 tree and well-formed references: the caller owes no fact about the expansion's sites. -/
 example : ∃ checked, checkTypedProgram sig chain = some checked ∧ checked.ty = chainTy :=
   checkTypedProgram_of_hasTy (by decide +kernel)
-    (Conform.Effect4.Typing.effTy_sound sig chain.expandRefs [] chainTy (by decide +kernel))
+    (.plain (Conform.Effect4.Typing.effTy_sound sig chain.expandRefs [] chainTy (by decide +kernel)))
 
 /-- The certificate's fact at the chain: the expansion has no reference site. The checker does
 not test it, and the certificate takes it from `expanded_refs_nil_of_wf`. -/

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Definitions
+import Effect4.Api
 
 /-!
 # A definition block (decisions row 328): the controls of slice PROC-1
@@ -16,13 +17,19 @@ number`, and a main program that invokes it at `5`.
   one, a count of bodies unlike the count of declarations, and a block below the root.
 * **G1 at the example (proved).** A main program that invokes nothing is checked the same at the
   block's signature.
+* **Admission and the run (tested; slice PROC-2).** The program interface admits a block at its
+  main program's type, and the frame machine runs it. Finite runs: one invocation, mutual
+  recursion through two definitions, recursion without end, which reaches the budget's frontier
+  and no failure, and an invocation inside a fork. M5's invocation arm (`call_arm`,
+  `Laws/Program/Typed/Denotation.lean`) is the theorem; these are finite evaluations of the
+  machine at fixed budgets.
 -/
 
 set_option autoImplicit false
 
 namespace Test.Program.DefinitionsControls
 
-open Effect4 Effect4.Program
+open Effect4 Effect4.Program Effect4.Machine
 open Effect4.Machine.Env (Requirement)
 
 /-- `id : number → number`. -/
@@ -75,5 +82,62 @@ signature. -/
 example : Checker.check (sig.withDefs [idDecl]) [] [1] (.succeed (.lit (.nat 1))) =
     Checker.check sig [] [1] (.succeed (.lit (.nat 1))) :=
   defs_conservative sig [idDecl] (e := .succeed (.lit (.nat 1))) trivial [] [1]
+
+/-! ## Admission and the run (slice PROC-2) -/
+
+/-- A term application by name. -/
+def ap (name : String) (args : List Term) : Term :=
+  .app name (args.foldr (fun a acc => .cons a acc) .nil)
+
+/-- `twice(n) = pair(n, n)`, invoked at 21. -/
+def twiceDecl : DefDecl := { name := "twice", request := .nat, answer := .prod .nat .nat }
+def twiceProg : NativeEff :=
+  .defs [twiceDecl] (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil)
+    (.perform (.call 0) (.lit (.nat 21)))
+
+/-- `isEven` and `isOdd`, each invoking the other on the predecessor, invoked at `k`. -/
+def evenOdd (k : Nat) : NativeEff :=
+  .defs [{ name := "isEven", request := .nat, answer := .bool },
+      { name := "isOdd", request := .nat, answer := .bool }]
+    (.cons (.select (ap "isZero" [.var 0]) .bool (.succeed (.lit (.bool true)))
+        (.perform (.call 1) (ap "pred" [.var 0])))
+      (.cons (.select (ap "isZero" [.var 0]) .bool (.succeed (.lit (.bool false)))
+        (.perform (.call 0) (ap "pred" [.var 0]))) .nil))
+    (.perform (.call 0) (.lit (.nat k)))
+
+/-- A definition that invokes itself without end. -/
+def spinProg : NativeEff :=
+  .defs [{ name := "spin", request := .nat, answer := .nat }]
+    (.cons (.perform (.call 0) (.var 0)) .nil) (.perform (.call 0) (.lit (.nat 1)))
+
+/-- An invocation inside a fork, joined. -/
+def forkProg : NativeEff :=
+  .defs [twiceDecl] (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil)
+    (.bind (.withFiber (.fork (.perform (.call 0) (.lit (.nat 4))) ⟨true, false, .inherit⟩))
+      (.awaitFiber (.var 0) .joinEffect))
+
+/-- The value of a successful exit. -/
+def successVal : Option ExitV → Option Val
+  | some (.success v) => some v
+  | _ => none
+
+-- tested: the program interface admits each block at its main program's type
+#guard Api.typeOf twiceProg == some (EffTy.pure (.prod .nat .nat))
+#guard Api.typeOf (evenOdd 7) == some (EffTy.pure .bool)
+#guard Api.typeOf spinProg == some (EffTy.pure .nat)
+#guard (admitProgram twiceProg).toOption.isSome
+-- red (tested): through the interface, one declaration and no body, at the root
+#guard (Api.explain (.defs [twiceDecl] .nil (.perform (.call 0) (.lit (.nat 21))))).map
+    (fun r => (r.path, r.reason.head)) = some ([], "definitionsMismatch")
+-- tested: one invocation answers its body's value
+#guard successVal (Api.run twiceProg 200).exit == some (.list [.nat 21, .nat 21])
+-- tested: mutual recursion through two definitions
+#guard successVal (Api.run (evenOdd 7) 400).exit == some (.bool false)
+#guard successVal (Api.run (evenOdd 6) 400).exit == some (.bool true)
+-- tested: recursion without end reaches the budget's frontier, with no exit and no failure
+#guard (Api.run spinProg 60).outcome == .frontier
+#guard (Api.run spinProg 60).exit.isNone
+-- tested: an invocation inside a fork, joined
+#guard successVal (Api.run forkProg 400).exit == some (.list [.nat 4, .nat 4])
 
 end Test.Program.DefinitionsControls

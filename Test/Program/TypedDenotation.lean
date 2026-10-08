@@ -248,8 +248,9 @@ program lacks, so it says nothing here; the load's checker premise refuses the p
 (`layerRefsWF_of_typeOf`). -/
 theorem chain_denotes : DenotesTyped chainSrc := by
   intro wf
-  rw [show chainSrc.program = chainRoot from rfl, chain_not_wf] at wf
-  cases wf
+  have refs := wf.refs
+  rw [show chainSrc.program = chainRoot from rfl, chain_not_wf] at refs
+  cases refs
 
 /-! ## `E4-TYPED-CE-021`: the completed view (decisions row 175) -/
 
