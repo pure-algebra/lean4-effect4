@@ -33,6 +33,102 @@ import truth_host  # noqa: E402
 truth = root / 'harness/truth'
 
 
+def widening_controls(work, manifest, bun, host_path):
+    """One existing Node compiler client batches inferred positives and AST-located mutants."""
+    request, response = work/'widening-request.json', work/'widening-receipt.json'
+    request.write_text(json.dumps({
+        'kind': 'truth-widenings', 'repo': host_path(root), 'work': host_path(work),
+        'manifest': json.loads(manifest.read_text())
+    }, indent=2) + '\n')
+    checked = subprocess.run([
+        os.environ.get('EFFECT4_NODE', 'node'), host_path(root/'tools/target/checker.ts'),
+        host_path(request), host_path(response)
+    ], cwd=root, text=True, capture_output=True, timeout=300)
+    if checked.returncode != 0:
+        sys.exit('FAIL truth widening: batched tsgo API controls refuse:\n'
+                 f'{checked.stdout}{checked.stderr}')
+    receipt = json.loads(response.read_text())
+    if receipt.get('format') != 'effect4-truth-widenings-v1' or receipt.get('conforms') is not True:
+        sys.exit('FAIL truth widening: the structured compiler receipt does not conform')
+    # Independent intended values: both union members are real positive observations.
+    expected = {
+        'pJoinedFirstNumber': {'success': {'some': 1}},
+        'pJoinedFirstString': {'success': {'some': 'negative'}},
+        'pJoinedModifyNumber': {'success': 1},
+        'pJoinedModifyString': {'success': 'negative'},
+    }
+    rows = json.loads((work/'result.json').read_text())['rows']
+    for name, wanted in expected.items():
+        matches = [row for row in rows if row['program'] == name]
+        if len(matches) != 1 or (matches[0].get('host') or {}).get('exit') != wanted or (matches[0].get('hostSync') or {}).get('exit') != wanted:
+            sys.exit(f'FAIL truth widening: {name} must observe intended reply {wanted} on both entries')
+    corrupted = receipt.get('corruptedUpdates', [])
+    if len(corrupted) != 1 or corrupted[0].get('fixture') != 'pJoinedModifyNumber' or corrupted[0].get('mutationCount') != 2:
+        sys.exit('FAIL truth widening: exact corrupted next-state control is missing')
+    controls = work/'__widening_queries__'
+    controls.mkdir(exist_ok=True)
+    mutant = controls/'pJoinedModifyNumber.wrong-update.ts'
+    mutant.write_text(corrupted[0]['source'])
+    observation_path = controls/'wrong-update.observation.json'
+    observed = subprocess.run([
+        bun, 'run', host_path(truth/'run-truth.ts'), '--observe', host_path(mutant),
+        '--result', host_path(observation_path), '--timeout', '300'
+    ], cwd=root, text=True, capture_output=True, timeout=30)
+    if observed.returncode != 0:
+        sys.exit('FAIL truth widening: corrupted update did not run on the pinned host:\n'
+                 f'{observed.stdout}{observed.stderr}')
+    observation = json.loads(observation_path.read_text())
+    host = observation.get('observation', {})
+    sentinel = {'success': 'joinedModify: wrong cell value'}
+    if observation.get('status') != 'observed' or observation.get('effect') != '4.0.0-rc.112' or host.get('parked') is not False or host.get('exit') != sentinel:
+        sys.exit(f'FAIL truth widening: corrupted update must produce its distinct sentinel: {observation}')
+    receipt['intendedPositiveReplies'] = expected
+    receipt['corruptedUpdateObservation'] = observation
+    response.write_text(json.dumps(receipt, indent=2) + '\n')
+    print('PASS truth widening: four inferred typed fixtures; two missing-member refusals; corrupted update observed')
+
+
+def p2b_controls(work, host_path):
+    """Check actual typed syntax at source environments; this collection is type-only."""
+    manifest_path = work/'p2b-manifest.json'
+    subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/P2b.lean',
+                    str(manifest_path)], cwd=root, check=True, timeout=300)
+    manifest = json.loads(manifest_path.read_text())
+    directory = work/'__p2b__'
+    directory.mkdir()
+    # The existing import owner supplies the same header as other printed consumers.
+    header = subprocess.run([
+        os.environ.get('EFFECT4_NODE', 'node'), '--input-type=module', '-e',
+        'import { moduleImports } from "./harness/truth/module-imports.ts"; '
+        'console.log(moduleImports("../prelude.ts").join("\\n"))'
+    ], cwd=root, text=True, capture_output=True, check=True, timeout=30).stdout.rstrip('\n')
+    module = directory/'printed.ts'
+    module.write_text(header + '\n\n' + '\n\n'.join(
+        fixture['declaration'] for fixture in manifest['fixtures'] + manifest['negativeObservations']) + '\n')
+    request, response = work/'p2b-request.json', work/'p2b-receipt.json'
+    request.write_text(json.dumps({
+        'kind': 'p2b-target', 'repo': host_path(root), 'work': host_path(work),
+        'module': host_path(module), 'manifest': manifest
+    }, indent=2) + '\n')
+    checked = subprocess.run([
+        os.environ.get('EFFECT4_NODE', 'node'), host_path(root/'tools/target/checker.ts'),
+        host_path(request), host_path(response)
+    ], cwd=root, text=True, capture_output=True, timeout=300)
+    if checked.returncode != 0:
+        sys.exit('FAIL P2b: batched compiler consumer refuses:\n'
+                 f'{checked.stdout}{checked.stderr}')
+    receipt = json.loads(response.read_text())
+    if receipt.get('format') != 'effect4-p2b-target-report-v1':
+        sys.exit('FAIL P2b: wrong structured receipt format')
+    # Preserve diagnostics and exact columns even when the finite gate refuses.
+    checks = ['moduleCompiles', 'exactColumnsAgree', 'expectedNegativesConform', 'mutantsConform', 'conforms']
+    failed = [name for name in checks if receipt.get(name) is not True]
+    if failed:
+        print(json.dumps(receipt, indent=2))
+        sys.exit('FAIL P2b: ' + ', '.join(failed))
+    print('PASS P2b: exact consumer columns, retained negative comparisons, and missing-member refusals checked; type-only')
+
+
 def main():
     bun, modules, host_path = truth_host.select(root, truth)
 
@@ -102,6 +198,8 @@ def main():
         if typed.returncode != 0:
             sys.exit('FAIL truth: the regenerated modules do not type-check under '
                      f'harness/truth/tsconfig.json:\n{typed.stdout}{typed.stderr}')
+        widening_controls(Path(work), manifest, bun, host_path)
+        p2b_controls(Path(work), host_path)
         for name in ['corpus.json', 'result.json', 'result.md']:
             if (Path(work)/name).read_bytes() != (truth/name).read_bytes():
                 sys.exit(f'FAIL truth: harness/truth/{name} drifted; inspect the regenerated differential before refreshing (make gen-truth)')

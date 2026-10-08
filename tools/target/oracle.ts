@@ -34,6 +34,60 @@ export interface Query {
   inputIssues?: Issue[]
   provenance?: unknown
 }
+/** The truth lane's fixed widening fixtures; no compiler-neutral parser or type printer. */
+export interface TruthWideningEntry {
+  name: string; wellTyped: boolean; expr: string | null; decl: string | null; declInferred: string | null
+  type: { answer: string; error: string; requiresEmpty: boolean; requires: unknown[] } | null
+}
+export interface TruthWideningRequest {
+  kind: "truth-widenings"; repo: string; work: string
+  manifest: { programs: TruthWideningEntry[] }
+}
+export interface TruthWideningReport {
+  format: "effect4-truth-widenings-v1"; conforms: boolean
+  versions: { compiler: string; typescript: string; effect: string }
+  compilerOptions: unknown; sourceHashes: Record<string, string>
+  positives: Array<{ fixture: string; columns: Partial<Record<Axis, Column>> }>
+  mutants: Array<{ fixture: string; removedMember: "string"; sourceHash: string; source: string
+    changedSpan: { start: number; end: number; replacement: string }; intendedSpan: { start: number; end: number }
+    diagnostics: P2bDiagnostic[] }>
+  genericBindings: Array<{ binding: string; typeParameters: string[]; selectedCall: { file: string; start: number; end: number }; selectedDeclaration: { file: string; start: number; end: number }; declaration: { file: string; line: number; column: number }; signature: string }>
+  corruptedUpdates: Array<{ fixture: string; source: string; sourceHash: string; mutationCount: number }>
+  limitations: string[]
+}
+
+/** Actual typed printer fixtures at explicit source environments; no raw emission certificate. */
+export interface P2bFixture {
+  name: string; family: string; companion: string; joined: boolean
+  initializer: string; body: string; declaration: string
+  columns: Record<"A" | "E" | "R", string>; request: string
+}
+export interface P2bNegativeFixture extends P2bFixture { expectedDiagnostic: number; difference: string }
+export interface P2bManifest {
+  format: "effect4-p2b-target-v1"; evidence: string; fixtures: P2bFixture[]; negativeObservations: P2bNegativeFixture[]
+  refusals: Array<{ name: string; reason: string; checkerAdmits: boolean }>
+}
+export interface P2bRequest {
+  kind: "p2b-target"; repo: string; work: string; module: string; manifest: P2bManifest
+}
+export interface P2bDiagnostic extends Diagnostic { start: number; end: number; compiler: unknown }
+export interface P2bReport {
+  format: "effect4-p2b-target-report-v1"; conforms: boolean
+  moduleCompiles: boolean; exactColumnsAgree: boolean; mutantsConform: boolean; expectedNegativesConform: boolean
+  scope: { exactSuccesses: string[]; expectedNegativeComparisons: string[]; observation: string }
+  negativeColumns: Report
+  expectedNegatives: Array<{ fixture: string; difference: string; oracleStatus: Observation["status"]
+    relations: Partial<Record<Axis, { actualToExpected: boolean; expectedToActual: boolean }>>
+    intendedCode: number; intendedSpan: { start: number; end: number }; diagnostics: P2bDiagnostic[]; conforms: boolean }>
+  moduleDiagnostics: P2bDiagnostic[]; positiveDiagnostics: P2bDiagnostic[]; redDiagnostics: P2bDiagnostic[]; columns: Report
+  pairs: Array<{ joined: string; single: string; joinedStatus: Observation["status"]; singleStatus: Observation["status"] }>
+  mutants: Array<{ fixture: string; companion: string; source: string; sourceHash: string
+    changedSpan: { start: number; end: number; replacement: string }
+    intendedSpan: { start: number; end: number }; intendedCode: number
+    baselineDiagnostics: P2bDiagnostic[]; diagnostics: P2bDiagnostic[]; resolvedDeclaration: { file: string; start: number; end: number }; conforms: boolean }>
+  refusals: P2bManifest["refusals"]; sourceHashes: Record<string, string>; limitations: string[]
+}
+
 export interface Diagnostic {
   code: number; file: string; line: number; column: number; message: string
 }

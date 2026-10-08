@@ -64,6 +64,29 @@ lane lands (row 99).
   (`run_eq_ref_table_noPreload`, `src/Effect4/Laws/Program/Table/Agreement.lean`). The case
   with preloaded answers waits on their deletion (DI-23).
 
+### 2.1 TypeScript print: a host template’s type arguments
+
+At a join, `Program.printTyped` prints a host row's bindings in template-variable order, with `.var 0` first.
+The host declaration must declare its type parameters in that order.
+`Ty.Subst.ordered` supplies the order in `src/Effect4/Codegen/PrintTyped.lean`.
+A missing variable below the greatest bound variable has no ordered reading.
+
+For example, a row with request `List<var 0>` and answer `Option<var 0>` calls `first<A>(request)`.
+`Ref.modify` uses `.var 0` for the cell type and `.var 1` for the reply type.
+Its data-first call therefore prints `Ref.modify<A, B>(cell, body)`.
+An overload with another parameter order needs a separate row.
+The printer does not infer that order from the host.
+
+Operation-carried type arguments and a row's declared type arguments keep their existing meanings.
+The join erasure removes only inserted arguments before the existing reader.
+It does not remove the arguments that reconstruct operation data.
+
+`KeyedTool.bindingsType` in `harness/truth/session/Keyed.lean` currently generates declarations only for closed host columns.
+Its column printer refuses template variables, so that generator supplies no generic declaration-order guarantee.
+A host supplies a template declaration explicitly and must follow the order above.
+The UNGUARD receipt records the finite compiler checks of supplied declarations and actual printed calls.
+Those checks establish no universal host implementation theorem.
+
 ## 3. Known holes, with evidence
 
 | Hole | Evidence | Row |

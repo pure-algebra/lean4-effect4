@@ -32,7 +32,7 @@ export const effectNames: ReadonlyArray<string> = [
  * `Head.caseTag` and `Head.caseTagR`, `Codegen/PrintLeaf.lean`). A new printed head joins this
  * list. A new atom does not. */
 export const preludeHelpers: ReadonlyArray<string> = [
-  "Host", "Sql", "Kv", "recordValue", "recordRequired", "recordOptional", "recordSet", "tupleAt", "fold",
+  "Host", "L", "Sql", "Kv", "recordValue", "recordRequired", "recordOptional", "recordSet", "tupleAt", "fold",
   "optionCase", "caseTag", "caseTagR",
 ]
 

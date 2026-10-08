@@ -43,6 +43,10 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
 | pTagPayload | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
 | pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
+| pJoinedFirstNumber | success {"some":1} | success {"some":1} | yes | yes | yes | runPromiseExit | same value |
+| pJoinedFirstString | success {"some":"negative"} | success {"some":"negative"} | yes | yes | yes | runPromiseExit | same value |
+| pJoinedModifyNumber | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pJoinedModifyString | success "negative" | success "negative" | yes | yes | yes | runPromiseExit | same value |
 | pFold | success 8 | success 8 | yes | yes | yes | runPromiseExit | same value |
 | pModifyFold | success [21,7] | success [21,7] | yes | yes | yes | runPromiseExit | same value |
 | pQueueOffer | success [false,2,0] | success [false,2,0] | yes | yes | yes | runPromiseExit | same value |
@@ -78,4 +82,4 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pPoolClosed | success [{"failure":{"reasons":[{"interrupt":1}]}},[[0],[],[],0,true,0],[[9,1]]] | success [{"failure":{"reasons":[{"interrupt":1}]}},[[0],[],[],0,true,0],[[9,1]]] | yes | yes | yes | runPromiseExit | same value |
 | pPoolClosing | success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]; same value |
 
-PASS: 72 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 76 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

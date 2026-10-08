@@ -156,4 +156,117 @@ example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScri
     print nativeSignature 1 modify = .ok (eraseJoinArgs [] nativeSignature (nativeSpell []) 1 x) :=
   readTyped_exact lawful read
 
+/-! The approved typed sites use the public printer and its named reader. -/
+
+/-- A joined option input exercises the branch binder's actual checked environment. -/
+def joinedOptions : Ty := .union (.option .nat) (.option .string)
+
+def optionSite : Eff NativeOp :=
+  .select (.var 0) .option (.succeed (.lit (.nat 0))) (.succeed (.var 1))
+
+/-- The generator declares an option union before visiting its typed selection. -/
+def generatedSites : Eff NativeOp := .gen
+  (.cons (.bindYield (.select (.lit (.bool true)) .bool
+    (.succeed (.app "some" (.cons (.lit (.nat 3)) .nil)))
+    (.succeed (.app "some" (.cons (.lit (.str "three")) .nil)))))
+    (.cons (.yieldDiscard optionSite) (.cons (.ret (.lit .unit)) .nil)))
+
+/-- A closed layer below an outer binder still types and erases its body at zero. -/
+def layerSites : Eff NativeOp := .bind (.succeed (.lit .unit))
+  (.provideLayer (.effectDiscard generatedSites) false (.succeed (.lit .unit)))
+
+/-- Finite public-print reconstruction and reading; either print refusal fails this control. -/
+def typedRoundTrip (env : TyEnv) (p : Eff NativeOp) : Bool :=
+  match Effect4.Program.printTyped nativeSignature env p, print nativeSignature env.length p with
+  | .ok typed, .ok plain =>
+    plain == eraseJoinArgs [] nativeSignature (nativeSpell []) env.length typed &&
+      decide (readTyped [] nativeSignature (nativeSpell []) env.length typed = .ok p)
+  | _, _ => false
+
+#guard typedRoundTrip [joinedOptions] optionSite
+#guard typedRoundTrip [] generatedSites
+#guard typedRoundTrip [] layerSites
+#guard typedRoundTrip [.union (.fiberOf .nat .never) (.fiberOf .string .bool), .scope]
+  (.withFiber (.runIn (.var 0) (.var 1)))
+
+-- Reader: actual joined selection reads through the public typed-print theorem.
+example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScript.Expr}
+    (printed : Effect4.Program.printTyped nativeSignature [joinedOptions] optionSite = .ok x) :
+    readTyped [] nativeSignature (nativeSpell []) 1 x = .ok optionSite :=
+  readTyped_printTyped lawful (by decide) printed
+
+-- Reader: the same public theorem carries a generator declaration and its branch binder.
+example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScript.Expr}
+    (printed : Effect4.Program.printTyped nativeSignature [] generatedSites = .ok x) :
+    print nativeSignature 0 generatedSites = .ok (eraseJoinArgs [] nativeSignature (nativeSpell []) 0 x) :=
+  eraseJoinArgs_printTyped lawful (by decide) printed
+
 end Test.Codegen.PrintTyped
+
+namespace Test.Codegen.PrintTyped.P2bControls
+open TypeScript Effect4.Codegen
+open EraseTermTypes
+
+-- Finite positive: the exact approved wrapper strips only inferred inner A,E.
+#guard eraseNode 0
+  (.call (.ident "Effect.withFiber") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] [], .name ["never"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] none]) ==
+  .call (.ident "Effect.withFiber") [.arrowBlock []
+    [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
+      .ret (.ident "Effect.void")] none]
+
+-- Red controls preserve a different wrapper, generic arity, or declared callback data.
+#guard eraseNode 0
+  (.call (.ident "foreign") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] [], .name ["never"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] none]) ==
+  .call (.ident "foreign") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] [], .name ["never"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] none]
+
+#guard eraseNode 0
+  (.call (.ident "Effect.withFiber") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] none]) ==
+  .call (.ident "Effect.withFiber") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] none]
+
+#guard eraseNode 0
+  (.call (.ident "Effect.withFiber") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] [], .name ["never"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] (some (.name ["void"] []))]) ==
+  .call (.ident "Effect.withFiber") [.arrowBlock []
+    [.exprStmt (.call (.generic (.ident "Fiber.runIn") [.name ["number"] [], .name ["never"] []])
+      [.ident "a0", .ident "a1"]), .ret (.ident "Effect.void")] (some (.name ["void"] []))]
+
+end Test.Codegen.PrintTyped.P2bControls
+
+namespace Test.Codegen.PrintTyped.P2bControls
+open TypeScript Effect4.Codegen
+open EraseTermTypes
+
+-- The stored B must agree with the repeated callback type before inferred A disappears.
+#guard eraseTerm 0
+  (.call (.generic (.ident "fold") [.name ["number"] [], .name ["string"] []])
+    [.ident "xs", .ident "initial", .lambda
+      [{ name := "a0", type := some (.name ["string"] []) }, { name := "a1", type := none }]
+      (.ident "a0") none]) ==
+  .call (.generic (.ident "fold") [.name ["number"] [], .name ["string"] []])
+    [.ident "xs", .ident "initial", .lambda
+      [{ name := "a0", type := some (.name ["string"] []) }, { name := "a1", type := none }]
+      (.ident "a0") none]
+
+-- A declared result annotation is outside the canonical stored-fold encoding.
+#guard eraseTerm 0
+  (.call (.generic (.ident "fold") [.name ["number"] [], .name ["string"] []])
+    [.ident "xs", .ident "initial", .lambda
+      [{ name := "a0", type := some (.name ["number"] []) }, { name := "a1", type := none }]
+      (.ident "a0") (some (.name ["number"] []))]) ==
+  .call (.generic (.ident "fold") [.name ["number"] [], .name ["string"] []])
+    [.ident "xs", .ident "initial", .lambda
+      [{ name := "a0", type := some (.name ["number"] []) }, { name := "a1", type := none }]
+      (.ident "a0") (some (.name ["number"] []))]
+
+end Test.Codegen.PrintTyped.P2bControls

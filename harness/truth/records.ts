@@ -11,7 +11,7 @@ export const recordRequired = <K extends PropertyKey>(key: K) =>
   <R extends { readonly [P in K]: unknown }>(target: R): R[K] => target[key]
 
 type OptionalResult<R, K extends keyof R> =
-  [R] extends [never] ? never : Option.Option<Required<R>[K]>
+  R extends unknown ? Option.Option<Required<R>[K]> : never
 
 /** Own-property presence distinguishes absence from Some(undefined).
  * Required<R> removes only the optional flag under exactOptionalPropertyTypes. */
