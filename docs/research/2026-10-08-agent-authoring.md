@@ -117,6 +117,23 @@ The probe's first run also met the carrier problem of §4. A carrier-typed tuple
 tuple at the implicit transparency, so `rw` failed. The probe is a finite check of one function,
 and it proves nothing about other functions.
 
+**Evidence: probe DERIVE-1** (`docs/research/2026-10-08-agent-authoring/DeriveProbe.lean`). The
+derivation exists as a probe, against the step language of slice L3:
+
+- the bank is 28 lemmas: 26 constructs, each stated against `Modeled.toC`, and two helpers;
+- the command `derive_step f as X` walks `f`'s elaborated term, writes the step `X`, and composes
+  the bank's lemmas into `X.eval_eq`, which the kernel checks;
+- it derives three models written as ordinary Lean: Semaphore's `takeIfAvailable`, and the
+  Latch's `close` and `wake`;
+- `wake` has nested choices, a helper definition, list appends, emptied fields and record
+  updates. Slice L3 proved its value equation by hand, by cases; here it is one command;
+- each derived step passes `normal` and `canonical` by `rfl`;
+- each certificate's axioms are `[propext, Quot.sound]`;
+- a control: a list built from nothing refuses with its subterm, until Codex's `Step.nil` lands.
+
+Probe DERIVE-1 is a finite probe of three functions. It establishes nothing about other functions,
+and its fragment has no fold, no record construction from nothing, and no identity.
+
 **What this changes.** The model is then the source of the step, not a second text beside it. The
 trust rests on two things: the model agrees with Effect, which `compare` grades; and each
 derivation's certificate, which the kernel checks. The independent-model rule of the gaps plan
