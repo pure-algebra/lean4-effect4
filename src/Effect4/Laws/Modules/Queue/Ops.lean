@@ -1,3 +1,4 @@
+import Effect4.Laws.Modules.Step.Scope
 import Effect4.Modules.Queue.Ops
 import Effect4.Laws.Modules.Waiting
 import Effect4.Laws.Modules.Store
@@ -99,39 +100,31 @@ theorem mkOffer_scoped (A : Ty) {id hint batch rest : TermSrc} (hid : id.Scoped)
 /-- The take step keeps scope. -/
 theorem takeStep_scoped (A : Ty) {id hint s : TermSrc} (hid : id.Scoped) (hhint : hint.Scoped)
     (hs : s.Scoped) : (takeStep A id hint s).Scoped := by
-  unfold takeStep gained entering staying fitting wake renewHint removeTaker isHead enrolled
-    removeById minT snoc isEmpty len notT andT orT ifT same noneOf noneT nilT tuple
-  authoring_scoped
+  exact Step.«scoped» (Data.take A) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_cons hs TermSrc.Scoped_nil))))
 
 /-- The offer step keeps scope. -/
 theorem offerStep_scoped (A : Ty) {id hint message s : TermSrc} (hid : id.Scoped)
     (hhint : hint.Scoped) (hmessage : message.Scoped) (hs : s.Scoped) :
     (offerStep A id hint message s).Scoped := by
-  unfold offerStep wake snoc isEmpty len notT ifT noneOf noneT nilT tuple
-  authoring_scoped
+  exact Step.«scoped» (Data.offer A) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_cons hmessage (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))))
 
 /-- The poll step keeps scope. -/
 theorem pollStep_scoped (A : Ty) {s : TermSrc} (hs : s.Scoped) : (pollStep A s).Scoped := by
-  unfold pollStep gained entering staying fitting minT isEmpty len notT andT ifT noneOf noneT
-    tuple
-  authoring_scoped
+  exact Step.«scoped» (Data.poll A) (Input.source_scoped (TermSrc.Scoped_cons hs TermSrc.Scoped_nil))
 
 /-- The size step keeps scope. -/
 theorem sizeStep_scoped (A : Ty) {s : TermSrc} (hs : s.Scoped) : (sizeStep A s).Scoped := by
-  unfold sizeStep len
-  authoring_scoped
+  exact Step.«scoped» (Data.size A) (Input.source_scoped (TermSrc.Scoped_cons hs TermSrc.Scoped_nil))
 
 /-- The withdrawal of a take keeps scope. -/
 theorem withdrawTake_scoped (A : Ty) {id s : TermSrc} (hid : id.Scoped) (hs : s.Scoped) :
     (withdrawTake A id s).Scoped := by
-  unfold withdrawTake wake removeTaker removeById snoc isEmpty len ifT same noneOf nilT
-  authoring_scoped
+  exact Step.«scoped» (Data.withdrawTake A) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))
 
 /-- The withdrawal of an offer keeps scope. -/
 theorem withdrawOffer_scoped (A : Ty) {id s : TermSrc} (hid : id.Scoped) (hs : s.Scoped) :
     (withdrawOffer A id s).Scoped := by
-  unfold withdrawOffer wake removeOffer removeById snoc isEmpty len ifT same noneOf nilT
-  authoring_scoped
+  exact Step.«scoped» (Data.withdrawOffer A) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))
 
 /-- The initial value keeps scope: it reads no name. -/
 theorem empty_scoped (A : Ty) (capacity : Nat) : (empty A capacity).Scoped :=
@@ -651,24 +644,11 @@ section OpsTyping
 variable {table : RowTable}
 
 /-- Every node of a message type that a cell holds is formed. -/
-theorem message_nodes {A : Ty} (message : MessageTy A) : NodesFormed A := fun t member =>
-  nodesFormed_of_check message.cell t (by
-    show t ∈ [Ty.record (Queue.cellFields A)] ++ (([Ty.list A] ++ Formation.nodes A) ++ _)
-    exact List.mem_append_right _ (List.mem_append_left _ (List.mem_append_right _ member)))
+theorem message_nodes {A : Ty} (message : MessageTy A) : NodesFormed A :=
+  Model.message_nodes_for_steps message
 
-theorem offer_nodes {A : Ty} (message : MessageTy A) : NodesFormed (Queue.offerTy A) := by
-  intro t member
-  have member' : t ∈ [Queue.offerTy A] ++ (Formation.nodes .bool ++
-      (Formation.nodes Queue.answerTy ++ (Formation.nodes idTy ++
-        (Formation.nodes (.list A) ++ [])))) := member
-  simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at member'
-  rcases member' with rfl | h | h | h | h
-  · show (["batch", "hint", "id", "rest"] : List String).Nodup
-    decide
-  · exact nodesFormed_of_check (T := .bool) (by decide) t h
-  · exact nodesFormed_of_check (T := Queue.answerTy) (by decide) t h
-  · exact nodesFormed_of_check (T := idTy) (by decide) t h
-  · exact nodesFormed_list (message_nodes message) t h
+theorem offer_nodes {A : Ty} (message : MessageTy A) : NodesFormed (Queue.offerTy A) :=
+  Model.offer_nodes_for_steps message
 
 theorem cell_nodes {A : Ty} (message : MessageTy A) : NodesFormed (Queue.cellTy A) := by
   intro t member
