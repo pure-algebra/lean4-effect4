@@ -1,5 +1,6 @@
 import Effect4.Modules.Semaphore.Data
 import Effect4.Laws.Modules.Step
+import Effect4.Laws.Modules.Step.Lists
 import Effect4.Laws.Schema.Identity
 import Effect4.Laws.Modules.Semaphore.Relation
 
@@ -113,22 +114,8 @@ theorem remove_eval {Γ : List Ty} (xs : Step Γ (.list waiterTy)) (request : In
     (vs : Inputs Leaves.deferredKeys Γ) :
     (Data.remove xs request).eval Leaves.deferredKeys vs =
       (waitersValue xs vs).filter (fun w => !decide ((w.2.1 : DeferredKey) = (requestValue request vs))) := by
-  change (waitersValue xs vs).foldl
-    (fun kept w => if Effect4.Schema.Model.deferredEqual Leaves.deferredKeys w.2.1 (requestValue request vs) then kept else kept ++ [w]) [] = _
-  have comparison : Effect4.Schema.Model.deferredEqual Leaves.deferredKeys =
-      fun (a b : DeferredKey) => decide (a = b) := by
-    funext a b
-    rfl
-  rw [comparison]
-  have body : (fun (kept : List WaiterCarrier) (w : WaiterCarrier) => if decide ((w.2.1 : DeferredKey) = (requestValue request vs)) = true then kept else kept ++ [w]) =
-      (fun (kept : List WaiterCarrier) (w : WaiterCarrier) => if (w.2.1 : DeferredKey) = (requestValue request vs) then kept else kept ++ [w]) := by
-    funext kept w
-    by_cases same : (w.2.1 : DeferredKey) = (requestValue request vs)
-    · rw [decide_eq_true same, if_pos same]
-      rfl
-    · rw [decide_eq_false same, if_neg same]
-      rfl
-  rw [body, Effect4.Constructive.List.foldl_keep]
+  unfold Data.remove Data.removeWith
+  rw [Step.Lists.eval_removeBy]
   rfl
 
 /-- The carrier's removal agrees with the independent model under table injectivity. -/

@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Modules.Semaphore.Data
+meta import Effect4.Modules.Step.Elab.Inputs
 public import Effect4.Program.Authoring.Tuples
 
 /-!
@@ -101,35 +102,35 @@ The request's own entry leaves first. On every state that the wrapper reaches th
 changes nothing: a visit has already removed a resumed waiter before that waiter runs this
 step again. The removal is here so that no step carries a premise on the request. -/
 def takeStep (need id hint s : TermSrc) : TermSrc :=
-  Data.take.term (Input.source [need, id, hint, s])
+  Data.take.term (input_sources% (Data.TakeInputs) {need := need, id := id, hint := hint, cell := s})
 
 /-- **The model's `takeIfAvailable`**, as the term of a `Ref.modify`. Reply: whether the
 request took. It never enrols. -/
 def takeIfAvailableStep (need s : TermSrc) : TermSrc :=
-  Data.takeIfAvailable.term (Input.source [need, s])
+  Data.takeIfAvailable.term (input_sources% (Data.CountInputs) {count := need, cell := s})
 
 /-- **The model's `release`**, as the term of a `Ref.modify`. Reply: `[the free count, whether
 a waiter is enrolled]`. `taken` loses the count by `sub`: at most what is taken (decisions row
 261). The wrapper posts one helper where a waiter is enrolled. -/
 def releaseStep (count s : TermSrc) : TermSrc :=
-  Data.release.term (Input.source [count, s])
+  Data.release.term (input_sources% (Data.CountInputs) {count := count, cell := s})
 
 /-- **The model's `visit`: one visit of the walk**, as the term of a `Ref.modify`. Reply: the
 selected waiter's record, if any. Where no permit is free it selects nobody. Otherwise it
 selects the first waiter at or after the cursor whose count fits, and that waiter leaves the
 list. `taken` stays: a wake reserves nothing (decisions row 259). The helper resolves the
 selected waiter's hint, and it continues at that waiter's stamp plus one. -/
-def visitStep (cursor s : TermSrc) : TermSrc := Data.visit.term (Input.source [cursor, s])
+def visitStep (cursor s : TermSrc) : TermSrc := Data.visit.term (input_sources% (Data.VisitInputs) {cursor := cursor, cell := s})
 
 /-- **The model's `withdraw`**, as the term of a `Ref.modify`. Reply: nothing. The request's
 entry leaves. A waiter holds nothing, so no other field changes and nobody is woken. -/
 def withdrawStep (id s : TermSrc) : TermSrc :=
-  Data.withdraw.term (Input.source [id, s])
+  Data.withdraw.term (input_sources% (Data.WithdrawInputs) {id := id, cell := s})
 
 namespace Data
 
 theorem takeIfAvailableStep_eq (need s : TermSrc) :
-    takeIfAvailableStep need s = Data.takeIfAvailable.term (Input.source [need, s]) := rfl
+    takeIfAvailableStep need s = Data.takeIfAvailable.term (input_sources% (Data.CountInputs) {count := need, cell := s}) := rfl
 
 theorem releaseStep_eq (n s : TermSrc) :
     releaseStep n s = Data.release.term (Input.source [n, s]) := rfl

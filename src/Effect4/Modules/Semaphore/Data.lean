@@ -1,11 +1,14 @@
 module
 
 public import Effect4.Modules.Semaphore.Cell
-public import Effect4.Modules.Step
+public import Effect4.Modules.Step.Lists
+public import Effect4.Modules.Step.Inputs
+meta import Effect4.Modules.Step.Elab.Inputs
+meta import Effect4.Modules.Step.Elab
 meta import Effect4.Schema.FieldRef.Elab
 
 /-!
-# Modules.Semaphore.Data — Semaphore's fold-free steps, written as data
+# Modules.Semaphore.Data — Semaphore's pure steps, written as data
 
 All five steps are first-order data over the canonical cell schema.
 `src/Effect4/Modules/Semaphore/Steps.lean` translates them to the public terms.
@@ -26,28 +29,31 @@ def permitsF : FieldRef cellRecord .nat := field_ref% "permits"
 def takenF : FieldRef cellRecord .nat := field_ref% "taken"
 def waitersF : FieldRef cellRecord (.list waiterTy) := field_ref% "waiters"
 
-/-- A step's two inputs: the request's count, then the cell. -/
-abbrev Γ : List Ty := [.nat, .record cellRecord]
+/- A step's two inputs: the request's count, then the cell. -/
+step_context% CountInputs (count : .nat, cell : cellTy)
+step_context% VisitInputs (cursor : .nat, cell : cellTy)
+abbrev Γ : List Ty := CountInputs.types
 
-def count : Input Γ .nat := .here _ _
-def cell : Input Γ (.record cellRecord) := .there _ (.here _ _)
+abbrev count : Input Γ .nat := input_ref% (CountInputs) count
+abbrev cell : Input Γ (.record cellRecord) := input_ref% (CountInputs) cell
 
 /-- The free count: the total less what is taken. -/
-def free : Step Γ .nat := .sub (.get (.var cell) permitsF) (.get (.var cell) takenF)
+def free : Step Γ .nat := step_inputs% CountInputs =>
+  .sub (.get cell permitsF) (.get cell takenF)
 
 /-- **The model's `takeIfAvailable`.** Reply: whether the request took. -/
-def takeIfAvailable : Step Γ (.prod .bool (.record cellRecord)) :=
-  .ite (.not (.lt free (.var count)))
-    (.pair (.bool true) (.set (.var cell) takenF (.add (.get (.var cell) takenF) (.var count))))
-    (.pair (.bool false) (.var cell))
+def takeIfAvailable := step_inputs% CountInputs =>
+  .ite (.not (.lt free count))
+    (.pair (.bool true) (.set cell takenF (.add (.get cell takenF) count)))
+    (.pair (.bool false) cell)
 
 /-- What a release leaves taken: `taken` less the count, truncated. -/
-def left : Step Γ .nat := .sub (.get (.var cell) takenF) (.var count)
+def left : Step Γ .nat := step_inputs% CountInputs => .sub (.get cell takenF) count
 
 /-- **The model's `release`.** Reply: `[the free count, whether a waiter is enrolled]`. -/
-def release : Step Γ (.prod (.prod .nat .bool) (.record cellRecord)) :=
-  .pair (.tuple2 (.sub (.get (.var cell) permitsF) left) (.not (.isZero (.len (.get (.var cell) waitersF)))))
-    (.set (.var cell) takenF left)
+def release := step_inputs% CountInputs =>
+  .pair (.tuple2 (.sub (.get cell permitsF) left) (.not (.isZero (.len (.get cell waitersF)))))
+    (.set cell takenF left)
 
 /-- The cell's next enrolment stamp. -/
 def nextF : FieldRef cellRecord .nat := field_ref% "next"
@@ -55,71 +61,71 @@ def waiterIdF : FieldRef waiterRecord idTy := field_ref% "id"
 def waiterNeedF : FieldRef waiterRecord .nat := field_ref% "need"
 def waiterStampF : FieldRef waiterRecord .nat := field_ref% "stamp"
 
-/-- The free count at an input in any context. -/
-def freeAt {Γ : List Ty} (s : Input Γ cellTy) : Step Γ .nat :=
-  .sub (.get (.var s) permitsF) (.get (.var s) takenF)
+/-- The free count of a cell step in any context. -/
+def freeValue {Γ : List Ty} (s : Step Γ cellTy) : Step Γ .nat :=
+  .sub (.get s permitsF) (.get s takenF)
 
-/-- Remove a request by its deferred identity. The fold body stores positional inputs. -/
-def remove {Γ : List Ty} (xs : Step Γ (.list waiterTy)) (request : Input Γ idTy) :
+/-- The compatibility input witness for the existing value equations. -/
+abbrev freeAt {Γ : List Ty} (s : Input Γ cellTy) : Step Γ .nat := freeValue (.var s)
+
+/-- Remove a request using the shared item-only removal builder. -/
+def removeWith {Γ : List Ty} (xs : Step Γ (.list waiterTy)) (request : Step Γ idTy) :
     Step Γ (.list waiterTy) :=
-  .fold xs (.emptyLike xs)
-    (.ite (.sameDeferred
-        (.get (.var (.there _ (.here _ _))) waiterIdF)
-        (.var (.there _ (.there _ request))))
-      (.var (.here _ _))
-      (.snoc (.var (.here _ _)) (.var (.there _ (.here _ _)))))
+  Step.Lists.removeBy xs (item_step% xs with entry => .sameDeferred (.get entry waiterIdF) request)
+
+/-- The compatibility input witness for existing removal equations. -/
+def remove {Γ : List Ty} (xs : Step Γ (.list waiterTy)) (request : Input Γ idTy) :
+    Step Γ (.list waiterTy) := removeWith xs (.var request)
 
 /-- Construct a waiter in the schema's canonical order. -/
 def waiter {Γ : List Ty} (id : Step Γ idTy) (need : Step Γ .nat)
     (hint : Step Γ idTy) (stamp : Step Γ .nat) : Step Γ waiterTy :=
-  .record (.cons "hint" hint (.cons "id" id (.cons "need" need (.cons "stamp" stamp .nil))))
+  record_step% { id := id, need := need, hint := hint, stamp := stamp }
 
-abbrev TakeΓ : List Ty := [.nat, idTy, idTy, cellTy]
-def takeNeed : Input TakeΓ .nat := .here _ _
-def takeId : Input TakeΓ idTy := .there _ (.here _ _)
-def takeHint : Input TakeΓ idTy := .there _ (.there _ (.here _ _))
-def takeCell : Input TakeΓ cellTy := .there _ (.there _ (.there _ (.here _ _)))
+step_context% TakeInputs (need : .nat, id : idTy, hint : idTy, cell : cellTy)
+abbrev TakeΓ : List Ty := TakeInputs.types
+abbrev takeNeed : Input TakeΓ .nat := input_ref% (TakeInputs) need
+abbrev takeId : Input TakeΓ idTy := input_ref% (TakeInputs) id
+abbrev takeHint : Input TakeΓ idTy := input_ref% (TakeInputs) hint
+abbrev takeCell : Input TakeΓ cellTy := input_ref% (TakeInputs) cell
 
 /-- Take or enrol, after removing the request's prior entry. -/
-def take : Step TakeΓ (.prod .bool cellTy) :=
-  let rest := remove (.get (.var takeCell) waitersF) takeId
-  .ite (.not (.lt (freeAt takeCell) (.var takeNeed)))
+def take := step_inputs% TakeInputs =>
+  let rest := removeWith (.get cell waitersF) id
+  .ite (.not (.lt (freeValue cell) need))
     (.pair (.bool true)
-      (.set (.set (.var takeCell) takenF (.add (.get (.var takeCell) takenF) (.var takeNeed))) waitersF rest))
+      (.set (.set cell takenF (.add (.get cell takenF) need)) waitersF rest))
     (.pair (.bool false)
-      (.set (.set (.var takeCell) waitersF
-        (.snoc rest (waiter (.var takeId) (.var takeNeed) (.var takeHint) (.get (.var takeCell) nextF))))
-        nextF (.add (.get (.var takeCell) nextF) (.nat 1))))
+      (.set (.set cell waitersF
+        (.snoc rest (waiter id need hint (.get cell nextF))))
+        nextF (.add (.get cell nextF) (.nat 1))))
 
 /-- The suffix beginning at the first fitting waiter. -/
-def fromFirst : Step Γ (.list waiterTy) :=
-  let xs := .get (.var cell) waitersF
-  .fold xs (.emptyLike xs)
-    (.ite (.or (.not (.isZero (.len (.var (.here _ _)))))
-        (.and
-          (.not (.lt (.get (.var (.there _ (.here _ _))) waiterStampF)
-            (.var (.there _ (.there _ count)))))
-          (.not (.lt (freeAt (.there _ (.there _ cell)))
-            (.get (.var (.there _ (.here _ _))) waiterNeedF)))))
-      (.snoc (.var (.here _ _)) (.var (.there _ (.here _ _))))
-      (.var (.here _ _)))
+def fromFirst := step_inputs% VisitInputs =>
+  let xs : Step _ (.list waiterTy) := .get cell waitersF
+  let available : Step _ .nat := freeValue cell
+  fold_step% xs from suffix := .emptyLike xs with entry =>
+    .ite (.or (.not (.isZero (.len suffix)))
+        (.and (.not (.lt (.get entry waiterStampF) cursor))
+          (.not (.lt available (.get entry waiterNeedF)))))
+      (.snoc suffix entry) suffix
 
 /-- Visit reserves nothing and removes the selected waiter by position. -/
-def visit : Step Γ (.prod (.option waiterTy) cellTy) :=
-  let xs := .get (.var cell) waitersF
-  .ite (.isZero free)
-    (.pair (.head (.emptyLike xs)) (.var cell))
+def visit := step_inputs% VisitInputs =>
+  let xs : Step _ (.list waiterTy) := .get cell waitersF
+  .ite (.isZero (freeValue cell))
+    (.pair (.head (.emptyLike xs)) cell)
     (.pair (.head fromFirst)
-      (.set (.var cell) waitersF
+      (.set cell waitersF
         (.append (.take xs (.sub (.len xs) (.len fromFirst))) (.drop fromFirst (.nat 1)))))
 
-abbrev WithdrawΓ : List Ty := [idTy, cellTy]
-def withdrawId : Input WithdrawΓ idTy := .here _ _
-def withdrawCell : Input WithdrawΓ cellTy := .there _ (.here _ _)
+step_context% WithdrawInputs (id : idTy, cell : cellTy)
+abbrev WithdrawΓ : List Ty := WithdrawInputs.types
+abbrev withdrawId : Input WithdrawΓ idTy := input_ref% (WithdrawInputs) id
+abbrev withdrawCell : Input WithdrawΓ cellTy := input_ref% (WithdrawInputs) cell
 
 /-- Withdrawal removes the request and changes no other field. -/
-def withdraw : Step WithdrawΓ (.prod .unit cellTy) :=
-  .pair .unit (.set (.var withdrawCell) waitersF
-    (remove (.get (.var withdrawCell) waitersF) withdrawId))
+def withdraw := step_inputs% WithdrawInputs =>
+  .pair .unit (.set cell waitersF (removeWith (.get cell waitersF) id))
 
 end Effect4.Semaphore.Data
