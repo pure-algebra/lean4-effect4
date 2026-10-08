@@ -76,3 +76,12 @@ The focused Queue Data build passes.
 The three connector declarations use only propext and Quot.sound.
 Their trust probe is /private/tmp/queue-withdraw-axioms.lean.
 The existing public withdrawal theorem still needs its notification proof joined to this connector.
+The generic tuple checkpoint integrates before the final Queue connectors.
+Both withdrawal observations now compile against that foundation.
+Take, offer, and poll readings apply the shared Step law at the arbitrary message carrier.
+The fitting, entering, staying, and gained helpers compute the model prefix, suffix, and ordered messages.
+Their declarations use only propext; the reading and withdrawal declarations also use Quot.sound.
+The focused Queue Data build and both Queue finite batteries pass.
+The trust probe is /private/tmp/queue-connectors-axioms.lean.
+The coordinator owns public Steps assembly; the other module seat owns new OfferData.
+This seat retains take and poll value and encoded-observation connectors.

@@ -207,6 +207,49 @@ theorem renewHint_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
   funext t
   exact takerK_renewed tb injective id hint t
 
+/-- Entering offers are the model prefix bounded by available room. -/
+theorem entering_value {Γ : List Ty} (tb : Table) (msg : Nat → Val)
+    (room : Step Γ .nat) (os : Step Γ (.list (offerTy P))) (vs : Inputs Leaves.deferredKeys Γ)
+    (r : Nat) (offers : List Offer)
+    (hr : room.eval Leaves.deferredKeys vs = r)
+    (ho : os.eval Leaves.deferredKeys vs = offers.map (offerK tb msg)) :
+    (Data.entering P room os).eval Leaves.deferredKeys vs =
+      (offers.take (Nat.min r offers.length)).map (offerK tb msg) := by
+  change (os.eval Leaves.deferredKeys vs).take ((Data.fitting P room os).eval Leaves.deferredKeys vs) = _
+  rw [Data.fitting_eval, hr, ho]
+  exact (congrArg (fun n => (offers.map (offerK tb msg)).take (Nat.min r n))
+    (List.length_map (f := offerK tb msg) (as := offers))).trans List.map_take.symm
+
+/-- Staying offers are the model suffix after the entering prefix. -/
+theorem staying_value {Γ : List Ty} (tb : Table) (msg : Nat → Val)
+    (room : Step Γ .nat) (os : Step Γ (.list (offerTy P))) (vs : Inputs Leaves.deferredKeys Γ)
+    (r : Nat) (offers : List Offer)
+    (hr : room.eval Leaves.deferredKeys vs = r)
+    (ho : os.eval Leaves.deferredKeys vs = offers.map (offerK tb msg)) :
+    (Data.staying P room os).eval Leaves.deferredKeys vs =
+      (offers.drop (Nat.min r offers.length)).map (offerK tb msg) := by
+  change (os.eval Leaves.deferredKeys vs).drop ((Data.fitting P room os).eval Leaves.deferredKeys vs) = _
+  rw [Data.fitting_eval, hr, ho]
+  exact (congrArg (fun n => (offers.map (offerK tb msg)).drop (Nat.min r n))
+    (List.length_map (f := offerK tb msg) (as := offers))).trans List.map_drop.symm
+
+/-- Entering offers append their model messages in arrival order. -/
+theorem gained_value {Γ : List Ty} (tb : Table) (msg : Nat → Val)
+    (room : Step Γ .nat) (ms : Step Γ (.list P)) (os : Step Γ (.list (offerTy P)))
+    (vs : Inputs Leaves.deferredKeys Γ) (r : Nat) (messages : List Nat) (offers : List Offer)
+    (hr : room.eval Leaves.deferredKeys vs = r)
+    (hm : ms.eval Leaves.deferredKeys vs = messages.map msg)
+    (ho : os.eval Leaves.deferredKeys vs = offers.map (offerK tb msg)) :
+    (Data.gained P room ms os).eval Leaves.deferredKeys vs =
+      (messages ++ (offers.take (Nat.min r offers.length)).flatMap (·.rest)).map msg := by
+  rw [Data.gained_eval, entering_value tb msg room os vs r offers hr ho, hm]
+  let selected := offers.take (Nat.min r offers.length)
+  let rests : (Bool × (DeferredKey × (DeferredKey × (List Val × Unit)))) → List Val := fun entry => entry.2.2.2.1
+  refine (Effect4.Constructive.List.foldl_append_flatMap rests (selected.map (offerK tb msg)) (messages.map msg)).trans ?_
+  have flat : (selected.map (offerK tb msg)).flatMap rests = (selected.flatMap (·.rest)).map msg :=
+    (List.flatMap_map (offerK tb msg) rests selected).trans List.map_flatMap.symm
+  exact (congrArg (fun tails => messages.map msg ++ tails) flat).trans List.map_append.symm
+
 abbrev takeInputs (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : Machine.DeferredKey) :
     Inputs Leaves.deferredKeys (Data.takeΓ P) := (tb.handle id, (hint, (cellK tb msg s, ())))
 abbrev offerInputs (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hint : Machine.DeferredKey) :
@@ -238,6 +281,30 @@ theorem withdrawTake_value (tb : Table) (injective : tb.Injective) (msg : Nat �
     have no : (s.messages.length == 0) = false := beq_eq_false_iff_ne.mpr empty
     rw [no]
     exact congrArg (fun first => (first, cellK tb msg (removeTaker s id))) List.map_take.symm
+
+/-- Offer withdrawal computes the filtered model cell and ordered wake list. -/
+theorem withdrawOffer_value (tb : Table) (injective : tb.Injective) (msg : Nat → Val) (s : State) (id : Nat) :
+    (Data.withdrawOffer P).eval Leaves.deferredKeys (withdrawInputs tb msg s id) =
+      ((if s.messages.length = 0 then [] else s.takers.take 1).map (takerK tb),
+        cellK tb msg {s with offers := s.offers.filter (fun o => o.id != id)}) := by
+  let request : Step (Data.withdrawΓ P) idTy := .var (.here _ _)
+  let state : Step (Data.withdrawΓ P) (cellTy P) := .var (.there _ (.here _ _))
+  let removed := Data.removeOffer P (.get state (Data.offersF P)) request
+  have hr := removeOffer_value tb injective msg (.get state (Data.offersF P)) request
+    (withdrawInputs tb msg s id) s.offers id rfl rfl
+  change ((if (s.messages.map msg).length == 0 then [] else (s.takers.map (takerK tb)).take 1),
+    (s.capacity.getD 0, (s.messages.map msg,
+      (removed.eval Leaves.deferredKeys (withdrawInputs tb msg s id), (s.takers.map (takerK tb), ()))))) = _
+  rw [hr, List.length_map]
+  by_cases empty : s.messages.length = 0
+  · rw [if_pos empty]
+    have yes : (s.messages.length == 0) = true := beq_iff_eq.mpr empty
+    rw [yes]
+    rfl
+  · rw [if_neg empty]
+    have no : (s.messages.length == 0) = false := beq_eq_false_iff_ne.mpr empty
+    rw [no]
+    exact congrArg (fun first => (first, cellK tb msg {s with offers := s.offers.filter (fun o => o.id != id)})) List.map_take.symm
 
 end Effect4.Queue.Model
 
@@ -330,5 +397,91 @@ theorem withdrawTake_encoded (A : Ty) (tb : Table) (injective : tb.Injective) (m
   have encoded : w.map (fun t => (imageAt Leaves.deferredKeys takerTy).toVal (takerK tb t)) = w.map (takerVal tb) :=
     List.map_congr_left (fun t _ => takerK_image tb t)
   exact congrArg (fun values => Val.tuple [Val.list values, cellVal tb msg (removeTaker s id)]) encoded
+
+/-- Shared step reading transports to every message declaration through annotation erasure. -/
+theorem withdrawOffer_reads (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+    {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
+      ((imageAt Leaves.deferredKeys (.prod (.list takerTy) (cellTy P))).toVal
+        ((Data.withdrawOffer P).eval Leaves.deferredKeys (withdrawInputs tb msg s id))) := by
+  apply Reads.of_annotations (source := Queue.withdrawOffer P idSrc cellSrc)
+    (same := congrFun (congrFun (Data.withdrawOffer_parameter A idSrc cellSrc) env) path)
+  exact Step.sound Leaves.deferredKeys (withdrawInputs tb msg s id)
+    (Input.reads_cons readsId (Input.reads_cons (readsCell.to (cellK_image tb msg s).symm) Input.reads_nil))
+    (Data.withdrawOffer P) (by decide) (Step.scope_of_alignment _ depth)
+    (by exact ⟨DeferredIdentity.deferredKeys⟩)
+
+
+/-- The withdrawal reading observes the model cell and ordered encoded takers. -/
+theorem withdrawOffer_encoded (A : Ty) (tb : Table) (injective : tb.Injective) (msg : Nat → Val) (s : State) (id : Nat)
+    {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
+      (Val.tuple [Val.list ((if s.messages.length = 0 then [] else s.takers.take 1).map (takerVal tb)),
+        cellVal tb msg {s with offers := s.offers.filter (fun o => o.id != id)}]) := by
+  apply (withdrawOffer_reads A tb msg s id depth readsId readsCell).to
+  rw [withdrawOffer_value tb injective]
+  let w := if s.messages.length = 0 then [] else s.takers.take 1
+  change Val.tuple [Val.list ((w.map (takerK tb)).map ((imageAt Leaves.deferredKeys takerTy).toVal)),
+    (imageAt Leaves.deferredKeys (cellTy P)).toVal (cellK tb msg {s with offers := s.offers.filter (fun o => o.id != id)})] = _
+  rw [List.map_map, cellK_image]
+  have encoded : w.map (fun t => (imageAt Leaves.deferredKeys takerTy).toVal (takerK tb t)) = w.map (takerVal tb) :=
+    List.map_congr_left (fun t _ => takerK_image tb t)
+  exact congrArg (fun values => Val.tuple [Val.list values, cellVal tb msg {s with offers := s.offers.filter (fun o => o.id != id)}]) encoded
+
+
+/-- Take reading uses only the original caller scope and exact input images. -/
+theorem take_reads (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey)
+    {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsHint : Reads hintSrc env path vals (Val.promise hint))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.takeStep A idSrc hintSrc cellSrc) env path vals
+      ((imageAt Leaves.deferredKeys (.prod (.tuple [.option P, .list (offerTy P), .list takerTy]) (cellTy P))).toVal
+        ((Data.take P).eval Leaves.deferredKeys (takeInputs tb msg s id hint))) := by
+  apply Reads.of_annotations (source := Queue.takeStep P idSrc hintSrc cellSrc)
+    (same := congrFun (congrFun (Data.take_parameter A idSrc hintSrc cellSrc) env) path)
+  exact Step.sound Leaves.deferredKeys (takeInputs tb msg s id hint)
+    (Input.reads_cons readsId (Input.reads_cons readsHint
+      (Input.reads_cons (readsCell.to (cellK_image tb msg s).symm) Input.reads_nil)))
+    (Data.take P) (by decide) (Step.scope_of_alignment _ depth)
+    (by exact ⟨DeferredIdentity.deferredKeys⟩)
+
+/-- Offer reading keeps arbitrary message values at the exact variable carrier. -/
+theorem offer_reads (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hint : DeferredKey)
+    {idSrc hintSrc messageSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsHint : Reads hintSrc env path vals (Val.promise hint))
+    (readsMessage : Reads messageSrc env path vals (msg a))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.offerStep A idSrc hintSrc messageSrc cellSrc) env path vals
+      ((imageAt Leaves.deferredKeys (.prod (.prod (.option .bool) (.list takerTy)) (cellTy P))).toVal
+        ((Data.offer P).eval Leaves.deferredKeys (offerInputs tb msg s id a hint))) := by
+  apply Reads.of_annotations (source := Queue.offerStep P idSrc hintSrc messageSrc cellSrc)
+    (same := congrFun (congrFun (Data.offer_parameter A idSrc hintSrc messageSrc cellSrc) env) path)
+  exact Step.sound Leaves.deferredKeys (offerInputs tb msg s id a hint)
+    (Input.reads_cons readsId (Input.reads_cons readsHint (Input.reads_cons readsMessage
+      (Input.reads_cons (readsCell.to (cellK_image tb msg s).symm) Input.reads_nil))))
+    (Data.offer P) (by decide)
+
+/-- Poll reading freezes the cell before its ordered collection fold. -/
+theorem poll_reads (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
+    {cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.pollStep A cellSrc) env path vals
+      ((imageAt Leaves.deferredKeys (.prod (.prod (.option P) (.list (offerTy P))) (cellTy P))).toVal
+        ((Data.poll P).eval (Γ := (Data.CellInputs P).types) Leaves.deferredKeys (cellK tb msg s, ()))) := by
+  apply Reads.of_annotations (source := Queue.pollStep P cellSrc)
+    (same := congrFun (congrFun (Data.poll_parameter A cellSrc) env) path)
+  exact Step.sound (Γ := (Data.CellInputs P).types) Leaves.deferredKeys (cellK tb msg s, ())
+    (Input.reads_cons (readsCell.to (cellK_image tb msg s).symm) Input.reads_nil)
+    (Data.poll P) (by decide) (Step.scope_of_alignment _ depth)
 
 end Effect4.Queue.Model

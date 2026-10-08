@@ -96,4 +96,18 @@ theorem renewHint_eval {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id hint : 
       (id.eval Leaves.deferredKeys vs, hint.eval Leaves.deferredKeys vs) := Prod.ext hi hh
   exact congrArg (fun (pair : Effect4.Machine.DeferredKey × Effect4.Machine.DeferredKey) => if Model.deferredEqual Leaves.deferredKeys t.2.1 pair.1 then (pair.2, (pair.1, ())) else t) hp
 
+/-- The fitting count computes the minimum of room and pending length. -/
+theorem fitting_eval {Γ : List Ty} (A : Ty) (room : Step Γ .nat)
+    (os : Step Γ (.list (offerTy A))) (vs : Inputs Leaves.deferredKeys Γ) :
+    (Data.fitting A room os).eval Leaves.deferredKeys vs =
+      Nat.min (room.eval Leaves.deferredKeys vs) (os.eval Leaves.deferredKeys vs).length := by
+  let r : Nat := room.eval Leaves.deferredKeys vs
+  let n : Nat := (os.eval Leaves.deferredKeys vs).length
+  change (if decide (r < n) then r else n) = Nat.min r n
+  by_cases less : r < n
+  · rw [decide_eq_true less, if_pos rfl]
+    exact (Nat.min_eq_left (Nat.le_of_lt less)).symm
+  · rw [decide_eq_false less, if_neg (by decide)]
+    exact (Nat.min_eq_right (Nat.le_of_not_lt less)).symm
+
 end Effect4.Queue.Data
