@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Modules.Queue.Cell
+public import Effect4.Modules.Queue.Data
 public import Effect4.Program.Authoring.Tuples
 public import Effect4.Program.Authoring.Folds
 
@@ -27,12 +27,10 @@ The model is `src/Effect4/Laws/Modules/Queue/Model.lean`. The rules of a step (t
 - **A step names its notifications as the model does, and in the model's order**: the offers
   that the step accepted, then the taker to wake. They are lists of the stored request records,
   so a wrapper posts one helper for each record's hint.
-- **No fold states its accumulator's type.** The empty list at the type of `xs` is `take xs 0`
-  (`noneOf`), so every step term is inside the reader's domain (`Term.unannotated`).
+- **The six operations translate stored `Step` data** from `Queue.Data`.
+- **Captured inputs keep their original caller scope**, through the shared fold compiler.
+- **Record construction uses canonical schemas**, and empty constants carry checked ascriptions.
 - **A step frames every field that it does not change**: it writes the cell by `recordSet`.
-- **Each helper folds with `Authoring.foldWith`**, whose two names are minted. A helper places
-  its caller's term in the fold's body. With fixed names a caller's variable of the same name
-  would read the folded element (`Test/Program/FoldHygiene.lean`).
 - **The accept pass is the closed form of `acceptLoop_single`**
   (`src/Effect4/Laws/Modules/Queue/Profile.lean`): `take`, `drop` and one fold.
 
@@ -122,68 +120,37 @@ def gained (room msgs offers : TermSrc) : TermSrc :=
 cell `s`. Answer: `[message?, accepted offers, takers to wake]`, the notifications in the
 model's order. It consumes when a message is buffered and no earlier taker waits. Otherwise it
 enrols the request `id` with its hint, or renews the hint of a request that waits already. -/
-def takeStep (_A : Ty) (id hint s : TermSrc) : TermSrc :=
-  let msgs := field s "msgs"
-  let takers := field s "takers"
-  let offers := field s "offers"
-  let turn := orT (isHead takers id) (andT (notT (enrolled takers id)) (isEmpty takers))
-  let msgs1 := app "drop" [msgs, nat 1]
-  let takers1 := removeTaker takers id
-  let room := app "sub" [field s "cap", len msgs1]
-  let msgs2 := gained room msgs1 offers
-  let consumed := recordSet (recordSet (recordSet s "msgs" msgs2) "takers" takers1)
-    "offers" (staying room offers)
-  let waiting := recordSet s "takers"
-    (ifT (enrolled takers id) (renewHint takers id hint) (snoc takers (mkTaker id hint)))
-  ifT (andT (notT (isEmpty msgs)) turn)
-    (app "pair" [tuple [app "get" [msgs, nat 0], entering room offers, wake takers1 msgs2],
-      consumed])
-    (app "pair" [tuple [noneT, noneOf offers, noneOf takers], waiting])
+def takeStep (A : Ty) (id hint s : TermSrc) : TermSrc :=
+  (Data.take A).term (Input.source [id, hint, s])
 
 /-- **The model's `offer` under `suspend`**, as the term of a `Ref.modify`. Answer:
 `[decided?, takers to wake]`. Behind a pending offer it waits and notifies nobody. With room it
 is accepted. At a full buffer it waits, and the model still wakes the earliest taker. -/
 def offerStep (A : Ty) (id hint a s : TermSrc) : TermSrc :=
-  let msgs := field s "msgs"
-  let offers := field s "offers"
-  let takers := field s "takers"
-  let pending := recordSet s "offers"
-    (snoc offers (mkOffer A id hint (bool false) (app "cons" [a, nilT])))
-  let accepted := recordSet s "msgs" (snoc msgs a)
-  ifT (notT (isEmpty offers))
-    (app "pair" [tuple [noneT, noneOf takers], pending])
-    (ifT (app "lt" [len msgs, field s "cap"])
-      (app "pair" [tuple [app "some" [bool true], wake takers (snoc msgs a)], accepted])
-      (app "pair" [tuple [noneT, wake takers msgs], pending]))
+  (Data.offer A).term (Input.source [id, hint, a, s])
 
 /-- **The model's `poll`**, as the term of a `Ref.modify`. Answer: `[message?, accepted
 offers]`. It consumes when a message is buffered and no taker waits, so it wakes no taker. -/
-def pollStep (_A : Ty) (s : TermSrc) : TermSrc :=
-  let msgs := field s "msgs"
-  let offers := field s "offers"
-  let msgs1 := app "drop" [msgs, nat 1]
-  let room := app "sub" [field s "cap", len msgs1]
-  let consumed := recordSet (recordSet s "msgs" (gained room msgs1 offers)) "offers"
-    (staying room offers)
-  ifT (andT (notT (isEmpty msgs)) (isEmpty (field s "takers")))
-    (app "pair" [tuple [app "get" [msgs, nat 0], entering room offers], consumed])
-    (app "pair" [tuple [noneT, noneOf offers], s])
+def pollStep (A : Ty) (s : TermSrc) : TermSrc :=
+  (Data.poll A).term (Input.source [s])
 
 /-- **The model's `size` in an opened queue**: the buffer's length. A term over the value that a
 `Ref.get` answers. It is no term of a `Ref.modify`, and it writes nothing. -/
-def sizeStep (_A : Ty) (s : TermSrc) : TermSrc := len (field s "msgs")
+def sizeStep (A : Ty) (s : TermSrc) : TermSrc :=
+  (Data.size A).term (Input.source [s])
 
-/-- **The model's `withdrawTake`**, as the term of a `Ref.modify`. Answer: the takers to
-wake. -/
-def withdrawTake (_A : Ty) (id s : TermSrc) : TermSrc :=
-  let takers1 := removeTaker (field s "takers") id
-  app "pair" [wake takers1 (field s "msgs"), recordSet s "takers" takers1]
+/-- The withdrawal of a taker, translated from its stored step. -/
+def withdrawTake (A : Ty) (id s : TermSrc) : TermSrc :=
+  (Data.withdrawTake A).term (Input.source [id, s])
 
 /-- **The model's `withdrawOffer` in an opened queue**, as the term of a `Ref.modify`. Answer:
 the takers to wake. An offer that a step already accepted is not there, so only the wake
 remains. -/
-def withdrawOffer (_A : Ty) (id s : TermSrc) : TermSrc :=
-  app "pair" [wake (field s "takers") (field s "msgs"),
-    recordSet s "offers" (removeOffer (field s "offers") id)]
+def withdrawOffer (A : Ty) (id s : TermSrc) : TermSrc :=
+  (Data.withdrawOffer A).term (Input.source [id, s])
+
+namespace Data
+theorem sizeStep_eq (A : Ty) (s : TermSrc) : sizeStep A s = (size A).term (Input.source [s]) := rfl
+end Data
 
 end Effect4.Queue

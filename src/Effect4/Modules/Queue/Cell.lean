@@ -55,7 +55,9 @@ def answerTy : Ty := .deferredOf .bool .never
 def takerFields : List (String × Bool × Ty) := [("id", false, idTy), ("hint", false, idTy)]
 
 /-- The type of a waiting taker: `takerFields` in the canonical field order. -/
-def takerTy : Ty := .record [("hint", false, idTy), ("id", false, idTy)]
+def takerRecord : List (String × Bool × Ty) := [("hint", false, idTy), ("id", false, idTy)]
+
+def takerTy : Ty := .record takerRecord
 
 /-- A pending offer as a step writes it: its identity, its hint, the batch flag, and the
 messages not yet accepted. The flag is false in the first profile, and the list holds one
@@ -65,9 +67,11 @@ def offerFields (A : Ty) : List (String × Bool × Ty) :=
    ("rest", false, .list A)]
 
 /-- The type of a pending offer: `offerFields A` in the canonical field order. -/
-def offerTy (A : Ty) : Ty := .record
+def offerRecord (A : Ty) : List (String × Bool × Ty) :=
   [("batch", false, .bool), ("hint", false, answerTy), ("id", false, idTy),
    ("rest", false, .list A)]
+
+def offerTy (A : Ty) : Ty := .record (offerRecord A)
 
 /-- The cell as the initial value writes it: the buffer, the capacity, the waiting takers and
 the pending offers, in the order of the design's F1. -/
