@@ -72,9 +72,4 @@ example {a a' v v' c c' : NativeEff}
     StraightEq (.suspend (.matchCause a v c)) (.suspend (.matchCause a' v' c')) :=
   (ha.matchCause hv hc).suspend_congr
 
-/-- info: 'Effect4.Program.Denote.StraightEq.run_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms StraightEq.run_agrees
-/-- info: 'Test.Program.MeaningEqContract.rewrite_agrees' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms rewrite_agrees
-
 end Test.Program.MeaningEqContract

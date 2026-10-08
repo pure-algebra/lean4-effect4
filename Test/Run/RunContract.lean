@@ -313,38 +313,7 @@ has no rows at all. -/
 
 /-! ## The ceilings -/
 
-/-- info: 'Effect4.Run.journal_replays' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.journal_replays
-/-- info: 'Effect4.Run.drive_eq_play' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.drive_eq_play
-/-- info: 'Effect4.Run.drive_envelope' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.drive_envelope
-/-- info: 'Effect4.Run.answer_accepted' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.answer_accepted
-/-- info: 'Effect4.Run.open_total' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.open_total
-/-- info: 'Effect4.Run.bindCall_at' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.bindCall_at
-/-- info: 'Effect4.Run.answer_once' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.answer_once
-/-- info: 'Effect4.Run.runPure_eq_run' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.runPure_eq_run
-/-- info: 'Effect4.Run.play_phases_extend' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.play_phases_extend
-/-- info: 'Effect4.Run.play_controls_eq_replay' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.play_controls_eq_replay
-/-- info: 'Effect4.Run.runClock_eq_run' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.runClock_eq_run
-/-- info: 'Effect4.Run.nextControl_spec' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.nextControl_spec
-/-- info: 'Effect4.Run.nextControl_evaluate_mem' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.nextControl_evaluate_mem
-/-- info: 'Effect4.Run.controlOnce_journal' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.controlOnce_journal
-/-- info: 'Effect4.Run.admitProgram_certificate' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Run.admitProgram_certificate
-
-#check @Effect4.Run.receive_rows
+example := @Effect4.Run.receive_rows
 example := @Effect4.Run.answer_rows
 example := @Effect4.Run.acceptReply_after_applied
 

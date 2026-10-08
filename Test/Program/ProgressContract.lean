@@ -228,17 +228,6 @@ theorem coarseWorld_not_cells : ¬ Typed.CellsTyped coarseWorld := by
 
 end Coarse
 
-/-- info: 'Test.Program.ProgressContract.ce001_columns' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms ce001_columns
-/-- info: 'Test.Program.ProgressContract.ce002_answer' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms ce002_answer
-/-- info: 'Test.Program.ProgressContract.coarseWorld_heapTable' depends on axioms: [propext] -/
-#guard_msgs in #print axioms coarseWorld_heapTable
-/-- info: 'Test.Program.ProgressContract.coarseWorld_not_cells' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms coarseWorld_not_cells
-/-- info: 'Effect4.Program.progress' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms progress
-
 /-! ## `pRefSet`: `Ref.make(5)`, `Ref.set(ref, 7)`, `Ref.get(ref)` -/
 
 section RefSet

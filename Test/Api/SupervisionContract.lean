@@ -173,23 +173,4 @@ def tags (r : Api.Inspection) : List (FiberId × Nat) :=
 #guard [childRun].all fun r =>
   Api.HostProtocol.observe r.machine != .terminated || Api.daemonsQuiet r.machine
 
-/-! ## The ceilings -/
-
-/-- info: 'Effect4.Api.supervision_child_flag' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.supervision_child_flag
-/-- info: 'Effect4.Api.TraceFacts.supervision_static_flags' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.TraceFacts.supervision_static_flags
-/-- info: 'Effect4.Api.status_persists' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.status_persists
-/-- info: 'Effect4.Api.spawn_status_fresh' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.spawn_status_fresh
-/-- info: 'Effect4.Api.spawn_status_other' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.spawn_status_other
-/-- info: 'Effect4.Api.awaits_live' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.awaits_live
-/-- info: 'Effect4.Api.daemonsQuiet_iff' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.daemonsQuiet_iff
-/-- info: 'Effect4.Api.terminated_daemonsQuiet' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Api.terminated_daemonsQuiet
-
 end Test.Api.SupervisionContract

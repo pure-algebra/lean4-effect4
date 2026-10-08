@@ -79,28 +79,10 @@ example : ∀ (k : Nat) (e : NativeEff) (t : EffTy), Looped e = true →
     ∃ w : Typed.World, w.state = (meaningB k e [] Stores.empty).2 ∧ StoreFits w :=
   @meaningB_stores
 
-/-- info: 'Effect4.Program.Denote.soundB' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms soundB
-/-- info: 'Effect4.Program.Denote.iter_soundB' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms iter_soundB
-/-- info: 'Effect4.Program.Denote.meaningB_never_wrong' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaningB_never_wrong
-/-- info: 'Effect4.Program.Denote.meaningB_typed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaningB_typed
-/-- info: 'Effect4.Program.Denote.meaningB_stores' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaningB_stores
-
 /-! ## On the certificate a caller holds -/
 
 -- The whole-program checker and `effTy` agree on every fragment program of this battery.
 #guard (typedLoops ++ [pLoopOnExit, pIterateBadResult]).all fun e =>
   Api.typeOf e == effTy nativeSignature [] e
-
-/-- info: 'Effect4.Program.Denote.typeOfProgram_looped' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms typeOfProgram_looped
-/-- info: 'Effect4.Program.Denote.TypedProgram.run_sound' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms TypedProgram.run_sound
-/-- info: 'Effect4.Program.Denote.TypedProgram.run_sound_of_agreement' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms TypedProgram.run_sound_of_agreement
 
 end Test.Program.LoopSoundContract

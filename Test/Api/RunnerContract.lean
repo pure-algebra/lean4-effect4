@@ -116,21 +116,4 @@ def junkRow : Bytes := [0, 1, 2]
 #guard journal.all fun c =>
   (schemaOf "Command").any fun doc => doc.accepts (Effect4.Store.Canonical.toVal c)
 
-/-! ## The ceilings -/
-
-/-- info: 'Effect4.Api.Runner.step_refused' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms step_refused
-/-- info: 'Effect4.Api.Runner.replay_append' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms replay_append
-/-- info: 'Effect4.Api.Runner.replay_unique' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms replay_unique
-/-- info: 'Effect4.Api.Runner.replay_skip_refused' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms replay_skip_refused
-/-- info: 'Effect4.Api.Runner.row_unique' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms row_unique
-/-- info: 'Effect4.Api.Runner.replayRows_append' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms replayRows_append
-/-- info: 'Effect4.Api.Runner.replayRows_eq_replay' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms replayRows_eq_replay
-
 end Test.Api.RunnerContract

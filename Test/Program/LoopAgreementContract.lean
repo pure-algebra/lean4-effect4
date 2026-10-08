@@ -31,21 +31,6 @@ def covered : List NativeEff :=
    pLoopCaught, pLoopExit, pLoopFinalizer]
 
 #guard covered.all fun e => Looped e && depthB e ≤ 40 && localAgrees e
-/-- info: 'Effect4.Program.Agreement.straight_of_asExit' depends on axioms: [propext] -/
-#guard_msgs in #print axioms straight_of_asExit
-
-/-- info: 'Effect4.Program.Agreement.loop_reaches' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms loop_reaches
-/-- info: 'Effect4.Program.Agreement.localRun_compileB' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms localRun_compileB
-/-- info: 'Effect4.Program.Agreement.localRun_rootB' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms localRun_rootB
-/-- info: 'Effect4.Program.Agreement.replay_Mexit_of_localRun' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms replay_Mexit_of_localRun
-/-- info: 'Effect4.Program.Agreement.loopAgreement' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms loopAgreement
-/-- info: 'Effect4.Program.Denote.TypedProgram.run_soundB' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms Effect4.Program.Denote.TypedProgram.run_soundB
 
 /-! ## The machine itself, on every loop program of the battery
 

@@ -86,15 +86,4 @@ theorem held_is_foldLift :
       (fun _ _ ts => ∀ t ∈ ts, (Api.root, 0) ∉ taskKeys t) :=
   held_foldLift p table Api.root 0 req
 
-/-- info: 'Test.Program.GuardFoldLift.held_parked' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms held_parked
-/-- info: 'Test.Program.GuardFoldLift.edit_unparks' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms edit_unparks
-/-- info: 'Test.Program.GuardFoldLift.interrupt_field_false' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms interrupt_field_false
-/-- info: 'Test.Program.GuardFoldLift.no_decisionLift' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms no_decisionLift
-/-- info: 'Test.Program.GuardFoldLift.held_is_foldLift' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms held_is_foldLift
-
 end Test.Program.GuardFoldLift

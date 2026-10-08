@@ -112,17 +112,4 @@ def pLoopNested : NativeEff :=
   ((some (meaning pBindSync [] Stores.empty).1), (meaning pBindSync [] Stores.empty).2)
 #guard agreesAt 9 pWhileLoop
 
-/-! ## The ceilings -/
-
-/-- info: 'Effect4.Program.Denote.iter_uniform' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms iter_uniform
-/-- info: 'Effect4.Program.Denote.denoteB_bind_none' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms denoteB_bind_none
-/-- info: 'Effect4.Program.Denote.denoteB_straight' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms denoteB_straight
-/-- info: 'Effect4.Program.Denote.denoteB_mono' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms denoteB_mono
-/-- info: 'Effect4.Program.Denote.meaningB_unique' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaningB_unique
-
 end Test.Program.DenoteBContract

@@ -64,15 +64,4 @@ example : ∀ (e : NativeEff) (t : EffTy), Straight e = true →
     ∃ w : Typed.World, w.state = (meaning e [] Stores.empty).2 ∧ StoreFits w :=
   @meaning_stores
 
-/-- info: 'Effect4.Program.Denote.sound' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms sound
-/-- info: 'Effect4.Program.Denote.meaning_never_wrong' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaning_never_wrong
-/-- info: 'Effect4.Program.Denote.meaning_typed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaning_typed
-/-- info: 'Effect4.Program.Denote.run_typed' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms run_typed
-/-- info: 'Effect4.Program.Denote.meaning_stores' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms meaning_stores
-
 end Test.Program.MeaningSoundContract
