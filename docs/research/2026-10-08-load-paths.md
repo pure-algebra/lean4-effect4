@@ -1,6 +1,7 @@
 # Load paths in the proof graph: what carries the claims, and what waits for a load
 
-Status: research note (history, not authority). Base: `d327beff` (`refactor/phase1-phase3`).
+Status: research note (history, not authority). Base: `c8d7b066` (`refactor/phase1-phase3`), the
+fast-forward merge of Codex's fold slice, which every measurement below includes.
 Tool: `tools/Tools/LoadPaths.lean` (`#load_report`, `#load_map`).
 
 On 2026-10-08 the owner offered an analogy, and asked to probe and mechanize it in this session.
@@ -69,10 +70,10 @@ were found by name, in the sources.
 | Landing | Theorems | Load-bearing | Reuse ratio | Its main joints |
 | --- | --- | --- | --- | --- |
 | `Laws.Program.Typing.Parts` (row 333's repair) | 10 | 10 | 42% | `callAt_rowTy`, `checkModule_sound`, `hasTy_focusAt` |
-| `Laws.Modules.Step` (slice L3) | 97 | 55 | 71% | `ItemResults.all_cons`, `Reads.eval`, `FieldRef.read_law` |
+| `Laws.Modules.Step` (with Codex's fold slice) | 97 | 55 | 71% | `ItemResults.all_cons`, `Reads.eval`, `FieldRef.read_law` |
 | `Laws.Program.Typing.{Focus,Replace,Table}` | 32 | 20 | 45% | `effTy_sound`, `effTy_complete`, `check_sound` |
 | `Laws.Program.Sketch` | 18 | 8 | 43% | `check_restrict`, `check_ext`, `check_complete` |
-| `Laws.Modules.Queue` (slice L3, before Codex's fold slice) | 311 | 168 | 45% | `Reads.to` (20), `nodesFormed_of_check`, `normalize_list_canonical` |
+| `Laws.Modules.Queue` (with Codex's fold slice) | 311 | 168 | 45% | `Reads.to` (20), `nodesFormed_of_check`, `normalize_list_canonical` |
 
 **The unconsumed theorems, by what consumes them.**
 
@@ -103,7 +104,8 @@ by itself.
 | stale | it speaks of a representation that the tree replaced | retire with the representation |
 
 The per-field frame families look like basis. The per-operation `types_*` and `reads_*` families of
-the Queue and the Pool look like candidates for subsumption by Codex's shared step laws. Both
+the Queue and the Pool stayed unconsumed after Codex's shared step laws merged. They look like
+candidates for subsumption by those laws. Both
 readings are hypotheses, not findings.
 
 The 3,392 theorems used off the roots' paths are a placement question first: a claim that rests on
@@ -124,6 +126,5 @@ them may be missing from the registry.
   term that the search built. A battery's `simp` use of an untagged lemma is not seen.
 - Battery consumers were found by name in the sources, not from proof terms.
 - The roots are the semantics registry's. A claim that is stated but not registered counts as no load.
-- Four of the five landing rows are of the tree before Codex's fold slice merges.
 - The literature was read from abstracts and summaries. No full text is filed here.
 - Nothing was removed.
