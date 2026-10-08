@@ -398,20 +398,21 @@ theorem registerAsyncR_await (root : NativeEff) (c : List (FiberId × ExitV)) (c
 /-- **With no preloaded answer the external registration answers nothing**, at any row table
 (`StoresOk.answers`). The registration arm of `hooksAgree_of` at a row table (slice H6a). -/
 theorem registerAsync_foreign (root : NativeEff) (c : List (FiberId × ExitV))
-    (op : NativeOp) (request : Val) (fid : FiberId) (tok : Nat) (s : Stores)
+    (op : NativeOp) (request : Val) (origin : List Nat) (fid : FiberId) (tok : Nat) (s : Stores)
     (h : s.externals.answers = []) :
-    (interpAt root c table).registerAsync (.external op request) fid tok s = (s, none) := by
+    (interpAt root c table).registerAsync (.external op request origin) fid tok s = (s, none) := by
   cases op with
   | external i =>
-    show (interpOf root table).registerAsync (.external (.external i) request) fid tok s = (s, none)
+    show (interpOf root table).registerAsync (.external (.external i) request origin) fid tok s =
+      (s, none)
     simp only [interpOf, h, ite_self]
   | _ => rfl
 
 /-- The reference's registration arm, under the same premise. -/
 theorem registerAsyncR_foreign (root : NativeEff) (c : List (FiberId × ExitV))
-    (op : NativeOp) (request : Val) (fid : FiberId) (tok : Nat) (s : Stores)
+    (op : NativeOp) (request : Val) (origin : List Nat) (fid : FiberId) (tok : Nat) (s : Stores)
     (h : s.externals.answers = []) :
-    (interpRAt root c table).registerAsync (.external op request) fid tok s = (s, none) := by
+    (interpRAt root c table).registerAsync (.external op request origin) fid tok s = (s, none) := by
   cases op with
   | external i =>
     show (if table.isEmpty then (s, none) else registerExternalR table i s) = (s, none)
@@ -803,13 +804,13 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     rw [hm.nextToken, hm.state]
     exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
       BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
-  | asyncForeign op request k hk =>
+  | asyncForeign op request origin k hk =>
     have hans : m₂.state.externals.answers = [] := (hm.state ▸ hok.state).answers
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveAnswerR, pushR]
-    simp only [registerAsyncR_foreign _ _ _ _ _ _ _ hans]
+    simp only [registerAsyncR_foreign _ _ _ _ _ _ _ _ hans]
     rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁
-      (registerAsync_foreign _ _ _ _ _ _ _ hok.state.answers)]
+      (registerAsync_foreign _ _ _ _ _ _ _ _ hok.state.answers)]
     dsimp only
     simp only [Bool.false_or, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
     rw [hm.nextToken, hm.state]

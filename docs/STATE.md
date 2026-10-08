@@ -477,6 +477,14 @@ In work since the suspension of the handover:
   (`run_eq_ref_table_noPreload`). The case of preloaded answers stays a planned goal, with no
   consumer on the spine. Next: the term guard at a host row's request (row 312), and the proof
   of `denoteRows_eq_session` (slice H8).
+- **A session admits a host reply at its call's checked instance** (row 323). The owner
+  ordered the next work on 2026-10-07: the typed tree, a design note on the session API, typed
+  replies, the typed print, then H8. An external registration keeps the address of its call,
+  and the session reads the checker's instance there (`HostSession.instanceAt`). A reply that
+  the row's own columns refuse is checked again at the instance. So a row from `List<A>` to
+  `Option<A>` called at a list of numbers now takes `some 1`
+  (`Test/Api/TypedReplies.lean`). Open: no law states that a run's address names the call that
+  ran, and the checked replay and the OCaml engine still read the row's columns.
 - **Integers carry, encode and compute** (rows 316 to 319): an `int` column is admitted (the
   integer scan is gone), `int` and `number` have exact JSON wires, and the atoms `plus` and
   `minus` compute exactly, with `lt` and `eq` at `int`. The profile's bound is written once,

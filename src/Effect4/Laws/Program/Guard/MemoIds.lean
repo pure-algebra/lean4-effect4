@@ -62,7 +62,7 @@ theorem registerAsync (p : NativeEff) (table : RowTable) (name : EffName)
     ((interpOf p table).registerAsync name fiber token s).1.MemoIdsOk := by
   cases name with
   | store name => cases name <;> exact hs
-  | external op request =>
+  | external op request _ =>
     cases op with
     | external i =>
       simp only [interpOf]

@@ -193,7 +193,7 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
   | .store (.registerSleep _) => Ty.unit.sub cert.answer = true
   | .registerAwait cell | .store (.registerAwait cell) =>
     ∃ a e, w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true
-  | .external op _ =>
+  | .external op _ _ =>
     ((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
       ((nativeSignature root.table).rowOf op).error.sub cert.error = true
   | .store (.externalRegister _) => True

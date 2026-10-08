@@ -101,7 +101,9 @@ def fiberValR (op : FiberOp) (h : op.answer = Val) : RProgram :=
   .vis (.inr op) fun v => .pure (.success (h ▸ v))
 
 /-- Forget control boundaries and checkpoints for the store meaning, retaining every
-other operation. This is an erasure, not a scheduler or a handler for interruption. -/
+other operation. This is an erasure, not a scheduler or a handler for interruption. It forgets
+the address an external registration keeps too: the address names the call for its reply's
+type (decisions row 323), and the meaning does not read it. -/
 def controlErasure : Effects.Handler RSig (Effects.Program RSig) where
   handle
     | .inr .construction => .pure []
@@ -109,6 +111,8 @@ def controlErasure : Effects.Handler RSig (Effects.Program RSig) where
     | .inr (.unguard ex) | .inr (.finishFinalizer ex) => .pure ex
     | .inr (.suspend _) => .pure Val.unit
     | .inr (.sync v) => .pure v
+    | .inr (.async (.external op request _) value) =>
+      .vis (.inr (.async (.external op request []) value)) Effects.Program.pure
     | op => .vis op Effects.Program.pure
 
 def eraseControl {A : Type} (program : Effects.Program RSig A) : Effects.Program RSig A :=
@@ -234,7 +238,7 @@ def denoteAsync (request : Term) (p : Point) : RProgram :=
 def denoteForeign (op : NativeOp) (request : Term) (p : Point) : RProgram :=
   match evalTerm p.env request with
   | none => .pure badShapeExit
-  | some value => .vis (.inr (.async (.external op value) value)) Effects.Program.pure
+  | some value => .vis (.inr (.async (.external op value p.path) value)) Effects.Program.pure
 
 /-- `Effect.sleep(d)` on the term route (the timer, A4): `d = 0` is the counted yield, the rest
 the registration on the logical clock by the machine's name. -/

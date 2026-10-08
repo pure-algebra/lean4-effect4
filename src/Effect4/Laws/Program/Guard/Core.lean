@@ -119,7 +119,7 @@ theorem notKeyAnswer_answer_iff (fiber target : FiberId) (token offered : Nat)
     · exact ht (RunDecision.answerAsync.inj he).2.1
 
 def externalRequest : NCode → Option (NativeOp × Val)
-  | .async (.external op request) _ _ => some (op, request)
+  | .async (.external op request _) _ _ => some (op, request)
   | _ => none
 
 theorem requestOf_shape {m : NativeMachine} {fiber : FiberId} {token : Nat}
@@ -314,10 +314,11 @@ theorem internalKeysBelow_prepareExternalAnswer {m : NativeMachine} (h : Interna
   exact h key hk
 
 theorem registerExternal_internal_state (p : NativeEff) (table : RowTable)
-    (op : NativeOp) (request : Val) (fiber : FiberId) (token : Nat) (state : Stores) :
-    ((interpOf p table).registerAsync (.external op request) fiber token state).1.timers =
+    (op : NativeOp) (request : Val) (origin : List Nat) (fiber : FiberId) (token : Nat)
+    (state : Stores) :
+    ((interpOf p table).registerAsync (.external op request origin) fiber token state).1.timers =
         state.timers ∧
-      ((interpOf p table).registerAsync (.external op request) fiber token state).1.deferreds =
+      ((interpOf p table).registerAsync (.external op request origin) fiber token state).1.deferreds =
         state.deferreds := by
   cases op <;> simp only [interpOf]
   all_goals try trivial
@@ -559,25 +560,28 @@ theorem requestsOwned_settle_parked {m : NativeMachine} {f : NFiber}
 This checks fresh allocation; it does not assert that the other branches do. -/
 theorem requestsOwned_external_park (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (rest : List NCmd)
-    (op : NativeOp) (request : Val) (signal : Bool) (cancel : Option EffName)
+    (op : NativeOp) (request : Val) (origin : List Nat) (signal : Bool) (cancel : Option EffName)
     (hf : m.fiber? f.id = some f)
-    (hc : f.frame.current = .async (.external op request) signal cancel)
-    (hreg : ((interpOf p table).registerAsync (.external op request) f.id m.nextToken m.state).2 = none)
+    (hc : f.frame.current = .async (.external op request origin) signal cancel)
+    (hreg : ((interpOf p table).registerAsync (.external op request origin) f.id m.nextToken
+      m.state).2 = none)
     (bounds : InternalKeysBelow m) (owned : RequestsOwned m) :
     RequestsOwned (settle f.id rest (evaluateNative p m f yielding table)).1 := by
-  let state := ((interpOf p table).registerAsync (.external op request) f.id m.nextToken m.state).1
+  let state := ((interpOf p table).registerAsync (.external op request origin) f.id m.nextToken
+    m.state).1
   let before : NativeMachine :=
     ({ m with state, nextToken := m.nextToken + 1 }).emit [RunEvent.parkedOn f.id m.nextToken]
   have hkeys : internalKeys before = internalKeys m := by
     simp only [before, state, internalKeys, RunMachine.emit,
-      (registerExternal_internal_state p table op request f.id m.nextToken m.state).1,
-      (registerExternal_internal_state p table op request f.id m.nextToken m.state).2]
+      (registerExternal_internal_state p table op request origin f.id m.nextToken m.state).1,
+      (registerExternal_internal_state p table op request origin f.id m.nextToken m.state).2]
   have howned : RequestsOwned before := requestsOwned_of_same_keys_and_fibers hkeys rfl owned
   have hlookup : before.fiber? f.id = some f := hf
   have hkey : (f.id, m.nextToken) ∉ internalKeys before := by
     rw [hkeys]
     exact fresh_key_not_internal bounds f.id
-  have hpair : (interpOf p table).registerAsync (.external op request) f.id m.nextToken m.state =
+  have hpair : (interpOf p table).registerAsync (.external op request origin) f.id m.nextToken
+      m.state =
       (state, none) := Prod.ext rfl hreg
   let name := (interpOf p table).cancelName
     (cancel.getD (interpOf p table).abortName) f.id m.nextToken

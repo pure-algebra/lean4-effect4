@@ -35,7 +35,7 @@ theorem asyncPre_cases {root : ProgramSource} {w : World} {register : EffName} {
     (∃ millis, register = .store (.registerSleep millis) ∧ Ty.unit.sub cert.answer = true) ∨
     (∃ cell a e, (register = .registerAwait cell ∨ register = .store (.registerAwait cell)) ∧
       w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true) ∨
-    (∃ op request, register = .external op request) ∨
+    (∃ op request origin, register = .external op request origin) ∨
     (∃ x, register = .store (.externalRegister x)) := by
   unfold asyncPre at pre
   split at pre
@@ -44,7 +44,7 @@ theorem asyncPre_cases {root : ProgramSource} {w : World} {register : EffName} {
     exact Or.inr (Or.inl ⟨_, a, e, Or.inl rfl, hc, ha, he⟩)
   · obtain ⟨a, e, hc, ha, he⟩ := pre
     exact Or.inr (Or.inl ⟨_, a, e, Or.inr rfl, hc, ha, he⟩)
-  · exact Or.inr (Or.inr (Or.inl ⟨_, _, rfl⟩))
+  · exact Or.inr (Or.inr (Or.inl ⟨_, _, _, rfl⟩))
   · exact Or.inr (Or.inr (Or.inr ⟨_, rfl⟩))
   · exact pre.elim
 
@@ -533,7 +533,8 @@ its current code the host request, which `requestOfR` then names at the token; n
 cancel frame. `Evaluating.park_fresh` assumes no external request, so this branch has its own park
 (`Evaluating.park_fresh_request`, seat M6B's item 3); `externalAsyncParks` proves it. -/
 def ExternalAsyncParks (root : ProgramSource) (rootTy : EffTy) : Prop :=
-  ∀ (op : NativeOp) (req request : Val), FiberClauseKeeps root rootTy (.async (.external op req) request)
+  ∀ (op : NativeOp) (req request : Val) (origin : List Nat),
+    FiberClauseKeeps root rootTy (.async (.external op req origin) request)
 
 /-- **`async`** (`EvaluateR.lean`'s `async` arm), every registration `asyncPre` admits: a sleep
 and a pending Deferred register the fiber's key, declared at the certificate, on their wake list
@@ -558,7 +559,7 @@ theorem clause_async_of_external (root : ProgramSource) (rootTy : EffTy) (regist
     exact hostStack_push (answerFrame_typed (fun _ _ _ hex => hex) typedNext) stack
   have wide := ev.typed.machine.wide
   rcases asyncPre_cases pre with ⟨millis, rfl, sub⟩ | ⟨cell, a, e, hreg, hcell, ha, he⟩ |
-    ⟨op, req, rfl⟩ | ⟨x, rfl⟩
+    ⟨op, req, origin, rfl⟩ | ⟨x, rfl⟩
   · -- a sleep: the timer registration, then the park under `clearTimeout`
     have noRequest : externalRequestR f.frame.current = none := by rw [hc]; rfl
     exact ev.async_parks_store hc noRequest cert _
@@ -636,7 +637,7 @@ theorem clause_async_of_external (root : ProgramSource) (rootTy : EffTy) (regist
         simp only [evaluateFiberR, saveAnswerR, pushR, RunFiber.park, hr]
         exact ev.async_parks_store hc noRequest cert _ (fun ty' d => (cancels ty' d).2) _ edit
   · -- a host row: the open branch
-    exact external op req request w m rest f y next ev hc
+    exact external op req request origin w m rest f y next ev hc
   · -- a host slot: no store edit, no cancel frame
     have noRequest : externalRequestR f.frame.current = none := by rw [hc]; rfl
     exact ev.async_parks hc noRequest cert _ answer
@@ -986,7 +987,7 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
 /-- **A host row's `async`** (`ExternalAsyncParks`): no store edit (`interpR`'s registration of a
 host row is the identity), no cancel frame; the fiber parks with its request. -/
 theorem externalAsyncParks (root : ProgramSource) (rootTy : EffTy) : ExternalAsyncParks root rootTy := by
-  intro op req request w m rest f y next ev hc
+  intro op req request origin w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨tin, current, stack, _⟩ := ev.code (by rw [hc]; rfl) ty declared
   rw [hc] at current

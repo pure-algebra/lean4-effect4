@@ -27,19 +27,20 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Typed Effect4.Progr
 
 /-- Row 116's entry: an external registration's precondition includes its row's domain bit. -/
 def AsyncDomainBit : Prop :=
-  ∀ (root : ProgramSource) (w : Typed.World) (op : NativeOp) (req : Val) (cert : EffTy),
-    asyncPre root w (.external op req) cert → (nativeSignature root.table).dom op = true
+  ∀ (root : ProgramSource) (w : Typed.World) (op : NativeOp) (req : Val) (origin : List Nat)
+    (cert : EffTy), asyncPre root w (.external op req origin) cert →
+      (nativeSignature root.table).dom op = true
 
 /-- **Row 116 holds (proved).** The external arm is `bitEntry`, whose first clause is the bit
 (`root.signature`'s domain is `nativeSignature root.table`'s). It replaces the tripwire
 `asyncRowOnly_now`. -/
-theorem asyncDomainBit_now : AsyncDomainBit := fun _ _ _ _ _ h => h.1
+theorem asyncDomainBit_now : AsyncDomainBit := fun _ _ _ _ _ _ h => h.1
 
 /-- The entry as it read before row 116 landed: the row's columns below the certificate, and
 nothing about the domain (history). -/
 def AsyncRowOnly : Prop :=
-  ∀ (root : ProgramSource) (w : Typed.World) (op : NativeOp) (req : Val) (cert : EffTy),
-    asyncPre root w (.external op req) cert ↔
+  ∀ (root : ProgramSource) (w : Typed.World) (op : NativeOp) (req : Val) (origin : List Nat)
+    (cert : EffTy), asyncPre root w (.external op req origin) cert ↔
       (((nativeSignature root.table).rowOf op).answer.sub cert.answer = true ∧
         ((nativeSignature root.table).rowOf op).error.sub cert.error = true)
 
@@ -52,7 +53,7 @@ def rowB : Effect4.Program.Row :=
 
 /-- A reference program parked on host row 0, whose continuation hands the exit back. -/
 def hostCall : RProgram :=
-  .vis (.inr (.async (.external (.external 0) Val.unit) Val.unit)) (fun ex => .pure ex)
+  .vis (.inr (.async (.external (.external 0) Val.unit []) Val.unit)) (fun ex => .pure ex)
 
 def srcShort (p : NativeEff) : ProgramSource := { program := p, table := [] }
 
@@ -76,14 +77,14 @@ theorem typedProg_not_table_monotone_of (hold : AsyncRowOnly) :
   have hshort : TypedProg (srcShort (.succeed (.lit .unit))) w0 (EffTy.pure .nat) hostCall :=
     TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) (EffTy.pure .nat : EffTy)
-      ((hold (srcShort (.succeed (.lit .unit))) w0 (.external 0) Val.unit (EffTy.pure .nat)).mpr
+      ((hold (srcShort (.succeed (.lit .unit))) w0 (.external 0) Val.unit [] (EffTy.pure .nat)).mpr
         ⟨Ty.OrderProof.sub_never _, Ty.OrderProof.sub_never _⟩)
       (fun _ _ _ hpost => TypedProg.pure hpost)
   have hlong := hmono _ w0 _ hostCall hshort
   cases hlong with
   | fiber _ _ _ _ cert pre next =>
     have hsub : Ty.sub .string cert.answer = true :=
-      ((hold (srcLong (.succeed (.lit .unit))) w0 (.external 0) Val.unit cert).mp pre).1
+      ((hold (srcLong (.succeed (.lit .unit))) w0 (.external 0) Val.unit [] cert).mp pre).1
     have hk := next w0 (leHost_refl w0) (.success (Val.str "x"))
       ⟨fits_sub w0 hsub (Val.str "x") trivial, trivial⟩
     have hex := TypedProg.pure_inv hk
@@ -94,7 +95,7 @@ so the entry refuses it at every certificate, while the old reading admitted it 
 theorem asyncRowOnly_false : ¬ AsyncRowOnly := by
   intro hold
   have entry := (hold (srcShort (.succeed (.lit .unit))) (initialWorld (EffTy.pure .unit))
-    (.external 0) Val.unit (EffTy.pure .nat)).mpr
+    (.external 0) Val.unit [] (EffTy.pure .nat)).mpr
       ⟨Ty.OrderProof.sub_never _, Ty.OrderProof.sub_never _⟩
   have hdom : (nativeSignature []).dom (.external 0) = true := entry.1
   exact absurd hdom (by decide)
@@ -104,14 +105,14 @@ theorem asyncRowOnly_false : ¬ AsyncRowOnly := by
 error: Type mismatch
   Iff.rfl
 has type
-  ?m.6 ↔ ?m.6
+  ?m.7 ↔ ?m.7
 but is expected to have type
-  asyncPre x✝⁴ x✝³ (EffName.external x✝² x✝¹) x✝ ↔
-    ((nativeSignature x✝⁴.table).rowOf x✝²).answer.sub x✝.answer = true ∧
-      ((nativeSignature x✝⁴.table).rowOf x✝²).error.sub x✝.error = true
+  asyncPre x✝⁵ x✝⁴ (EffName.external x✝³ x✝² x✝¹) x✝ ↔
+    ((nativeSignature x✝⁵.table).rowOf x✝³).answer.sub x✝.answer = true ∧
+      ((nativeSignature x✝⁵.table).rowOf x✝³).error.sub x✝.error = true
 -/
 #guard_msgs (error) in
-example : AsyncRowOnly := fun _ _ _ _ _ => Iff.rfl
+example : AsyncRowOnly := fun _ _ _ _ _ _ => Iff.rfl
 
 /-- **The flip of the red control (proved).** With the bit, `TypedProg` is monotone from the
 short source to the long one, at every program, world and type (`typedProg_rows_append`). -/
@@ -125,11 +126,11 @@ theorem typedProg_table_monotone :
 /-- The external entry transports along an appended table. -/
 def AsyncEntryRows : Prop :=
   ∀ (src src' : ProgramSource) (t' : RowTable), src'.table = src.table ++ t' →
-    ∀ (w : Typed.World) (op : NativeOp) (req : Val) (cert : EffTy),
-      asyncPre src w (.external op req) cert → asyncPre src' w (.external op req) cert
+    ∀ (w : Typed.World) (op : NativeOp) (req : Val) (origin : List Nat) (cert : EffTy),
+      asyncPre src w (.external op req origin) cert → asyncPre src' w (.external op req origin) cert
 
 /-- **It holds (proved), from `bitEntry_rows_append`.** -/
 theorem asyncEntryRows : AsyncEntryRows :=
-  fun src src' t' htab _ op _ cert h => bitEntry_rows_append src src' t' htab op cert h
+  fun src src' t' htab _ op _ _ cert h => bitEntry_rows_append src src' t' htab op cert h
 
 end Test.Program.TypedProgRows

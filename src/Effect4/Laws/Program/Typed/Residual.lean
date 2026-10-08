@@ -207,7 +207,7 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
   | .store (.registerSleep _) => Ty.unit.sub cert.answer = true
   | .registerAwait cell | .store (.registerAwait cell) =>
     ∃ a e, w.«Π» cell = some (a, e) ∧ a.sub cert.answer = true ∧ e.sub cert.error = true
-  | .external op _ => bitEntry root op cert
+  | .external op _ _ => bitEntry root op cert
   | .store (.externalRegister _) => True
   | _ => False
 
@@ -1105,7 +1105,7 @@ omit hprog hsvc in
 theorem asyncPre_rows_append {w : World} {register : EffName} {cert : EffTy}
     (h : asyncPre src w register cert) : asyncPre src' w register cert := by
   cases register with
-  | external op req => exact bitEntry_rows_append src src' t' htab op cert h
+  | external op req _ => exact bitEntry_rows_append src src' t' htab op cert h
   | store name => cases name <;> exact h
   | _ => exact h
 

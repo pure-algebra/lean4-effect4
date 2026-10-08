@@ -213,6 +213,7 @@ import Test.Program.HostBoundaryContract
 import Test.Api.HostSessionContract
 import Test.Api.RunnerContract
 import Test.Api.SessionMeaning
+import Test.Api.TypedReplies
 import Test.Api.RunnerFinality
 import Test.Api.KeyedHostContract
 import Test.Run.RunContract

@@ -55,7 +55,7 @@ def Region.keys : Region → List Handle
 
 /-- The handles a name of the compiled alphabet carries. -/
 def EffName.keys : EffName → List Handle
-  | .external _ request => request.keys
+  | .external _ request _ => request.keys
   | .cont p => p.keys
   | .caught p | .caughtError p => p.keys
   | .onValue p => p.keys

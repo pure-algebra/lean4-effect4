@@ -824,12 +824,12 @@ theorem external_oracle_error_typed (table : RowTable) (i : Nat) (c : CauseV)
 /-- A successful oracle registration resumes with its converted value, typed against
 exactly the allocations in the store it produces. -/
 theorem external_registration_typed (program : NativeEff) (table : RowTable)
-    (i : Nat) (request : Val) (row : Row) (fiber : FiberId) (token : Nat)
+    (i : Nat) (request : Val) (origin : List Nat) (row : Row) (fiber : FiberId) (token : Nat)
     (before after : Stores) (value : Val)
     (rest : List (Completion Val Err Defect FiberId Ann)) (code : NCode)
     (hrow : externalRow table i = some row)
     (hhead : before.externals.answers = .ofExit (.success value) :: rest)
-    (hreg : (interpOf program table).registerAsync (.external (.external i) request)
+    (hreg : (interpOf program table).registerAsync (.external (.external i) request origin)
       fiber token before = (after, some code)) :
     ∃ result, code = .success result ∧ Val.hasTy result row.answer after.externals.allocated = true := by
   have hne : table.isEmpty = false := by
@@ -854,8 +854,8 @@ theorem external_registration_typed (program : NativeEff) (table : RowTable)
 /-- The request projection identifies the exact current code at the matching guard. -/
 theorem requestOf_current (m : NativeMachine) (fiber : FiberId) (token : Nat)
     (op : NativeOp) (request : Val) (h : requestOf m fiber token = some (op, request)) :
-    ∃ f controller cancel, m.fiber? fiber = some f ∧ f.parked = .withGuard token ∧
-      f.frame.current = .async (.external op request) controller cancel := by
+    ∃ f controller cancel origin, m.fiber? fiber = some f ∧ f.parked = .withGuard token ∧
+      f.frame.current = .async (.external op request origin) controller cancel := by
   cases hf : m.fiber? fiber with
   | none => simp [requestOf, hf] at h
   | some f =>
@@ -864,7 +864,7 @@ theorem requestOf_current (m : NativeMachine) (fiber : FiberId) (token : Nat)
       split at h
       · try simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨f, _, _, rfl, hp, by assumption⟩
+        exact ⟨f, _, _, _, rfl, hp, by assumption⟩
       · cases h
     · simp [requestOf, hf, hp, guard] at h
       cases h
@@ -884,7 +884,7 @@ theorem external_prepared_answer_typed (program : NativeEff) (table : RowTable)
           (.ofExit (.success value))).1.externals.allocated = true := by
   obtain ⟨i, request, row, allocated, result, hreq, hrow, hv, ht⟩ :=
     external_answer_typed table m fiber token value ha
-  obtain ⟨f, controller, cancel, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
+  obtain ⟨f, controller, cancel, origin, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
   have hne : table.isEmpty = false := by
     cases table with
     | nil => simp [externalRow] at hrow
@@ -910,7 +910,7 @@ theorem external_prepared_answer_internalFree (program : NativeEff) (table : Row
             m.state.externals.allocated ++ [target]) := by
   obtain ⟨i, request, row, allocated, result, hreq, hrow, hv, _⟩ :=
     external_answer_typed table m fiber token value ha
-  obtain ⟨f, controller, cancel, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
+  obtain ⟨f, controller, cancel, origin, hf, hp, hc⟩ := requestOf_current m fiber token _ _ hreq
   have hne : table.isEmpty = false := by
     cases table with
     | nil => simp only [externalRow, List.getElem?_nil] at hrow; cases hrow
@@ -1215,5 +1215,115 @@ theorem causeOf_die_typed (tys : TyEnv) (env : List Val) (hfit : Fits env tys)
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp (evalTerm_isSome defect env tys d hfit hd)
   refine ⟨v, hv, by simp [causeOf, hv], ?_⟩
   exact ofError_errOf_ne_badName d v hadm (evalTerm_hasTy defect env tys d v hfit hd hv)
+
+
+/-! ## Replies at the call's checked instance (decisions row 183)
+
+Concept: host-answer admission (`docs/core/semantics.md`), meeting membership. The question:
+does the session admit a host reply at the type the checker chose at its call? Consumers:
+`HostSession.preflight_success_prepared_fits` and `preflight_failure_noShapeDefect`
+(`Laws/Api/HostSession.lean`). Requirement R6. Reach: one recorded reply and the machine that
+holds its call; `instanceAt` is any lookup by address, and the session's is `callAt` at its
+admitted program. These laws do not establish that the lookup's instance is the checker's
+answer at the call that ran: that is `callAt_rowTy` with the registration's origin, and no law
+yet states that a run's origin addresses its call. -/
+
+/-- An accepted reply at its call's instance establishes the envelope there, and the decision
+is the one the record names. -/
+theorem acceptAtInstance_sound (table : RowTable)
+    (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
+    (r : RecordedReply) (d : NativeDecision) (h : acceptAtInstance table instanceAt m r = some d) :
+    InstanceEnvelope table instanceAt m r ∧ d = .answerAsync r.fiber r.token r.completion := by
+  unfold acceptAtInstance at h
+  split at h
+  · rename_i hhead
+    split at h
+    · rename_i i origin hop horigin
+      split at h
+      · rename_i row c hrow hc
+        split at h
+        · rename_i hok
+          cases h
+          exact ⟨⟨hhead.1, hhead.2, i, row, origin, c, hop, hrow, hok.1, horigin, hc, hok.2.1,
+            hok.2.2⟩, rfl⟩
+        · cases h
+      · cases h
+    · cases h
+  · cases h
+
+/-- No park, no reply at the instance either: a machine that holds no call at that token
+accepts nothing for it. -/
+theorem acceptAtInstance_none_of_unparked (table : RowTable)
+    (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
+    (r : RecordedReply) (h : requestOf m r.fiber r.token = none) :
+    acceptAtInstance table instanceAt m r = none := by
+  unfold acceptAtInstance
+  rw [h]
+  exact if_neg fun hc => absurd hc.2.symm (Option.some_ne_none _)
+
+/-- At a column that allocates nothing, `externalValue` is the membership check alone. -/
+theorem externalValue_unallocating {ty : Ty} (h : allocates ty = false) (allocated : List String)
+    (value : Val) :
+    externalValue ty allocated value =
+      if Val.hasTy value ty allocated && (Store.Val.handles value).isEmpty then
+        some (allocated, value) else none := by
+  unfold externalValue
+  split
+  · cases h
+  · rfl
+
+/-- **A success admitted at its call's instance is a member of the instance's answer column**,
+holds no handle, and reaches the program unchanged: the machine's preparation leaves the stores
+as they are and answers the value itself. -/
+theorem instance_prepared_success (program : NativeEff) (table : RowTable)
+    (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
+    (r : RecordedReply) (value : Val) (hs : m.stuck = none)
+    (success : r.completion = .ofExit (.success value))
+    (henv : InstanceEnvelope table instanceAt m r) :
+    ∃ origin c, originOf m r.fiber r.token = some origin ∧ instanceAt origin = some c ∧
+      c.op = r.op ∧ Val.hasTy value c.answer m.state.externals.allocated = true ∧
+      Store.Val.handles value = [] ∧
+      prepareAsyncAnswer (interpOf program table) m r.fiber r.token r.completion =
+        (m.state, .success value) := by
+  obtain ⟨_, hreq, i, row, origin, c, hop, hrow, halloc, horigin, hc, hcop, hadmit⟩ := henv
+  rw [success] at hadmit
+  have hmem : Val.hasTy value c.answer m.state.externals.allocated = true ∧
+      Store.Val.handles value = [] := by
+    simp only [admitInstance] at hadmit
+    split at hadmit
+    · rename_i hok
+      simp only [Bool.and_eq_true, List.isEmpty_iff] at hok
+      exact hok
+    · cases hadmit
+  refine ⟨origin, c, horigin, hc, hcop, hmem.1, hmem.2, ?_⟩
+  rw [hop] at hreq
+  obtain ⟨f, controller, cancel, origin', hf, hp, hcur⟩ := requestOf_current m _ _ _ _ hreq
+  have hne : table.isEmpty = false := by
+    cases table with
+    | nil => simp only [externalRow, List.getElem?_nil] at hrow; cases hrow
+    | cons row rest => rfl
+  rw [success]
+  simp only [prepareAsyncAnswer, hs, Option.isSome_none, Bool.false_eq_true, if_false, hf, hp,
+    if_true, interpOf, prepareExternalAnswer, hne, hcur, hrow, externalValue_unallocating halloc]
+  by_cases hv : (Val.hasTy value row.answer m.state.externals.allocated &&
+      (Store.Val.handles value).isEmpty) = true
+  · simp only [hv, if_true]
+  · simp only [hv]
+    rfl
+
+/-- A failure admitted at its call's instance holds no reserved defect (decisions row 191). -/
+theorem instance_failure_reservedFree (table : RowTable)
+    (instanceAt : List Nat → Option (CallInstance NativeOp)) (m : NativeMachine)
+    (r : RecordedReply) (c : CauseV) (failed : r.completion = .ofExit (.failure c))
+    (henv : InstanceEnvelope table instanceAt m r) :
+    c.reasons.any reservedDie = false := by
+  obtain ⟨_, _, _, _, _, ci, _, _, _, _, _, _, hadmit⟩ := henv
+  rw [failed] at hadmit
+  change (if c.reasons.any reservedDie then some (Refusal.reservedDefect r.fiber r.token)
+    else if c.reasons.all (errAdmits ci.error) then (none : Option Refusal)
+    else some (.errorType r.fiber r.token ci.error)) = none at hadmit
+  cases hany : c.reasons.any reservedDie with
+  | false => rfl
+  | true => rw [if_pos hany] at hadmit; cases hadmit
 
 end Effect4.Program

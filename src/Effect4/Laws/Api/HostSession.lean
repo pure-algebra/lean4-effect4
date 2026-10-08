@@ -12,12 +12,16 @@ set_option autoImplicit false
 namespace Effect4.Api.HostSession
 open Effect4 Effect4.Program
 
-/-- Successful preflight proves the existing envelope for the association selected by key. -/
+/-- Successful preflight proves the existing envelope for the association selected by key, or,
+where the row's own columns refuse the completion, the envelope at the call's checked instance
+(decisions row 183). -/
 theorem preflight_envelope {program : Api.Program} {table : RowTable}
     (s : Session program table) (reply : Reply) (decision : NativeDecision)
     (h : preflight s reply = .ok decision) :
     ∃ bound, s.active.find? (fun b => b.key == reply.key) = some bound ∧
-      reply.callId = bound.call.callId ∧ Envelope table s.machine (bound.record reply) ∧
+      reply.callId = bound.call.callId ∧
+      (Envelope table s.machine (bound.record reply) ∨
+        InstanceEnvelope table (instanceAt program table) s.machine (bound.record reply)) ∧
       decision = .answerAsync bound.call.fiber bound.token reply.completion := by
   unfold preflight at h
   split at h
@@ -30,15 +34,22 @@ theorem preflight_envelope {program : Api.Program} {table : RowTable}
         split at h
         · cases h
         · rename_i hid
+          have hid' : reply.callId = bound.call.callId := Decidable.of_not_not hid
           split at h
           · cases h
           · split at h
-            · cases h
             · rename_i d hd
               cases h
-              exact ⟨bound, hbound, by simpa using hid,
-                acceptReply_envelope table s.machine (bound.record reply) decision hd,
+              exact ⟨bound, hbound, hid',
+                Or.inl (acceptReply_envelope table s.machine (bound.record reply) decision hd),
                 acceptReply_decision table s.machine (bound.record reply) decision hd⟩
+            · split at h
+              · rename_i d hd
+                cases h
+                obtain ⟨henv, hdec⟩ :=
+                  acceptAtInstance_sound table _ s.machine (bound.record reply) decision hd
+                exact ⟨bound, hbound, hid', Or.inr henv, hdec⟩
+              · cases h
 
 theorem storeReply_commute (slots : List ReplySlot) (a b : Reply) (h : a.key ≠ b.key) :
     storeReply (storeReply slots a) b = storeReply (storeReply slots b) a := by
@@ -227,6 +238,15 @@ theorem applied_reply_refused {program : Api.Program} {table : RowTable}
     acceptReply table (applyReply s bound.key fuel).session.machine (bound.record reply) = none :=
   acceptReply_none_of_unparked table _ _ (applied_guard_absent s fuel bound ha h)
 
+/-- The same reply is refused at its call's instance too, once applied: the guard is gone. -/
+theorem applied_reply_refused_instance {program : Api.Program} {table : RowTable}
+    (s : Session program table) (fuel : Nat) (bound : BoundCall) (reply : Reply)
+    (ha : s.active.find? (fun b => b.key == bound.key) = some bound)
+    (h : (applyReply s bound.key fuel).phase = .applied) :
+    acceptAtInstance table (instanceAt program table) (applyReply s bound.key fuel).session.machine
+      (bound.record reply) = none :=
+  acceptAtInstance_none_of_unparked table _ _ _ (applied_guard_absent s fuel bound ha h)
+
 /-- Every accepted application is an edge of the projected protocol over the actual
 before/after machine observations. The selected decision is still justified by Envelope. -/
 theorem applyReply_conforms {program : Api.Program} {table : RowTable}
@@ -283,6 +303,10 @@ Concept 9 (host-answer admission) meeting concept 1 membership; proposed T4 cont
 and `submit_success_prepared_fits` is its session API consumer. Placement and boundaries:
 `docs/research/2026-10-03-session-work/t4-plan.md`, decisions 97–99, 117, 138–139 and 152.
 This is not `AnswerOk`, whole-session typing, or a failure/handle admission theorem.
+
+A success that the row's own columns refuse is admitted at the call's checked instance
+(decisions row 183; `InstanceSuccess`): membership there holds at every column, with no
+shape-decided premise, and the value reaches the program unchanged.
 -/
 
 /-- The selected association, parked row and actual successful preparation, with value
@@ -299,16 +323,43 @@ def PreparedSuccess {program : Api.Program} {table : RowTable}
       reply.completion).2 = .success result ∧
     ∀ w : Typed.World, Typed.shapeDecides row.answer = true → Typed.Fits w result row.answer
 
-/-- A session-accepted successful completion prepares the actual row-typed value. Membership
-requires the selected row's shape-decided answer column; failures, world-reading columns and
-token-world correlation remain outside this theorem. The session is not executed here. -/
+/-- The selected association and a success admitted at its call's checked instance: the value
+is a member of the instance's answer column, holds no handle, and is prepared unchanged. -/
+def InstanceSuccess {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (decision : NativeDecision) : Prop :=
+  ∃ bound origin c value,
+    s.active.find? (fun b => b.key == reply.key) = some bound ∧
+    reply.callId = bound.call.callId ∧
+    decision = .answerAsync bound.call.fiber bound.token reply.completion ∧
+    reply.completion = .ofExit (.success value) ∧
+    originOf s.machine bound.call.fiber bound.token = some origin ∧
+    instanceAt program table origin = some c ∧ c.op = bound.call.op ∧
+    Val.hasTy value c.answer s.machine.state.externals.allocated = true ∧
+    Store.Val.handles value = [] ∧
+    Machine.prepareAsyncAnswer (interpOf program table) s.machine bound.call.fiber bound.token
+      reply.completion = (s.machine.state, .success value)
+
+/-- A session-accepted successful completion prepares the actual row-typed value, or it is
+admitted at the call's checked instance and reaches the program unchanged. On the row's path
+membership requires the selected row's shape-decided answer column. Failures, world-reading
+columns and token-world correlation remain outside this theorem. The session is not executed
+here. -/
 theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTable}
     (s : Session program table) (reply : Reply) (decision : NativeDecision) (value : Machine.Val)
     (live : s.machine.stuck = none)
     (success : reply.completion = .ofExit (.success value))
-    (accepted : preflight s reply = .ok decision) : PreparedSuccess s reply decision := by
+    (accepted : preflight s reply = .ok decision) :
+    PreparedSuccess s reply decision ∨ InstanceSuccess s reply decision := by
   obtain ⟨bound, selected, callId, envelope, decisionEq⟩ :=
     preflight_envelope s reply decision accepted
+  rcases envelope with envelope | envelope
+  rotate_left
+  · obtain ⟨origin, c, horigin, hc, hcop, hmem, hhandles, hprep⟩ :=
+      instance_prepared_success program table (instanceAt program table) s.machine
+        (bound.record reply) value live success envelope
+    exact Or.inr ⟨bound, origin, c, value, selected, callId, decisionEq, success, horigin, hc, hcop,
+      hmem, hhandles, hprep⟩
+  left
   have admitted : admit table s.machine
       (.answerAsync bound.call.fiber bound.token (.ofExit (.success value))) = none := by
     simpa only [BoundCall.record, success] using envelope.2.2
@@ -350,6 +401,10 @@ theorem preflight_failure_noShapeDefect {program : Api.Program} {table : RowTabl
     (accepted : preflight s reply = .ok decision) (ty : EffTy) :
     Typed.NoShapeDefect ty (.failure c) := by
   obtain ⟨bound, _, _, envelope, _⟩ := preflight_envelope s reply decision accepted
+  rcases envelope with envelope | envelope
+  rotate_left
+  · exact noShapeDefect_of_reservedFree ty c
+      (instance_failure_reservedFree table _ s.machine (bound.record reply) c failed envelope)
   have admitted : admit table s.machine
       (.answerAsync bound.call.fiber bound.token (.ofExit (.failure c))) = none := by
     simpa only [BoundCall.record, failed] using envelope.2.2
@@ -363,7 +418,8 @@ theorem submit_success_prepared_fits {program : Api.Program} {table : RowTable}
     (live : s.machine.stuck = none)
     (success : reply.completion = .ofExit (.success value))
     (received : (submit s reply).phase = .preflight) :
-    ∃ decision, preflight s reply = .ok decision ∧ PreparedSuccess s reply decision := by
+    ∃ decision, preflight s reply = .ok decision ∧
+      (PreparedSuccess s reply decision ∨ InstanceSuccess s reply decision) := by
   obtain ⟨_, ⟨decision, accepted⟩, _, _⟩ := submit_conditions s reply received
   exact ⟨decision, accepted, preflight_success_prepared_fits s reply decision value
     live success accepted⟩

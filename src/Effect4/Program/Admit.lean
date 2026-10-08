@@ -1,4 +1,5 @@
 import Effect4.Program.Compile
+import Effect4.Program.Typing.Call
 
 /-! Checked decisions refine the machine's existing tape walk. The machine
 retains its raw total runner; this boundary reports the first refused answer. -/
@@ -31,7 +32,7 @@ def requestOf (m : NativeMachine) (fiber : FiberId) (token : Nat) : Option (Nati
   let f ← m.fiber? fiber
   guard (f.parked = .withGuard token)
   match f.frame.current with
-  | .async (.external op request) _ _ => some (op, request)
+  | .async (.external op request _) _ _ => some (op, request)
   | _ => none
 
 /-- One call the machine is waiting on: the parked fiber, the guard token it parked on, the row
@@ -256,6 +257,76 @@ theorem acceptReply_none_of_unparked (table : RowTable) (m : NativeMachine) (r :
     (h : requestOf m r.fiber r.token = none) : acceptReply table m r = none :=
   acceptReply_none_of_request table m r
     (by rw [h]; exact fun hc => absurd hc.symm (Option.some_ne_none _))
+
+/-! ## Replies at the call's checked instance (decisions row 183)
+
+A row with a type parameter answers at the instance that the checker chose at the call
+(`callAt`, `Program/Typing/Call.lean`). A value of the request cannot recover that choice: the
+empty list is a member of every list type. So an external registration keeps the address of
+its call (`EffName.external`'s `origin`). A reply that the row's own columns refuse is checked
+again at the call's instance.
+
+The instance check never allocates. An allocation request, a number at a handle column, stays
+the row's own (`admitAnswer`), because the machine's preparation reads the row's column
+(`prepareExternalAnswer`). So the instance path stands only at a row whose answer column is
+no handle. A delayed cell read stays the row's own too. -/
+
+/-- The address of the call that a parked external registration came from. -/
+def originOf (m : NativeMachine) (fiber : FiberId) (token : Nat) : Option (List Nat) := do
+  let f ← m.fiber? fiber
+  guard (f.parked = .withGuard token)
+  match f.frame.current with
+  | .async (.external _ _ origin) _ _ => some origin
+  | _ => none
+
+/-- Whether a column allocates an external handle at a reply: a handle type at its top. -/
+def allocates : Ty → Bool
+  | .handle _ => true
+  | _ => false
+
+/-- **The answer check at a call's checked instance.** A success is a member of the instance's
+answer column and holds no handle. A failure holds no reserved defect, and its reasons are
+members of the instance's error column. A delayed cell read is refused here. -/
+def admitInstance (c : CallInstance NativeOp) (m : NativeMachine) (fiber : FiberId) (token : Nat) :
+    Completion Val Err Defect FiberId Ann → Option Refusal
+  | .ofExit (.success v) =>
+    if Val.hasTy v c.answer m.state.externals.allocated && (Store.Val.handles v).isEmpty then none
+    else some (.answerType fiber token c.answer)
+  | .ofExit (.failure cause) =>
+    if cause.reasons.any reservedDie then some (.reservedDefect fiber token)
+    else if cause.reasons.all (errAdmits c.error) then none
+    else some (.errorType fiber token c.error)
+  | .ofRefGet _ => some (.answerType fiber token c.answer)
+
+/-- **The envelope of a recorded reply at its call's checked instance.** The reply was recorded
+against this table. The machine holds that parked call, at that token, on that external row,
+whose answer column allocates nothing. The program's instance at the call's address is an
+instance of that row, and it admits the completion. `instanceAt` is the program's lookup by
+address (`callAt`). -/
+def InstanceEnvelope (table : RowTable) (instanceAt : List Nat → Option (CallInstance NativeOp))
+    (m : NativeMachine) (r : RecordedReply) : Prop :=
+  r.table = table ∧ requestOf m r.fiber r.token = some (r.op, r.request) ∧
+    ∃ i row origin c, r.op = .external i ∧ externalRow table i = some row ∧
+      allocates row.answer = false ∧ originOf m r.fiber r.token = some origin ∧
+      instanceAt origin = some c ∧ c.op = r.op ∧
+      admitInstance c m r.fiber r.token r.completion = none
+
+/-- Turn a recorded reply into a decision at its call's checked instance, or refuse it. As
+`acceptReply`, the only decision it returns is the `answerAsync` the record names. -/
+def acceptAtInstance (table : RowTable) (instanceAt : List Nat → Option (CallInstance NativeOp))
+    (m : NativeMachine) (r : RecordedReply) : Option NativeDecision :=
+  if r.table = table ∧ requestOf m r.fiber r.token = some (r.op, r.request) then
+    match r.op, originOf m r.fiber r.token with
+    | .external i, some origin =>
+      match externalRow table i, instanceAt origin with
+      | some row, some c =>
+        if allocates row.answer = false ∧ c.op = r.op ∧
+            admitInstance c m r.fiber r.token r.completion = none then
+          some (.answerAsync r.fiber r.token r.completion)
+        else none
+      | _, _ => none
+    | _, _ => none
+  else none
 
 /-- The machine after the checked replay applies one decision: the same step
 `replayCheckedFrom` takes, named so that a law about "after the reply" can be stated without

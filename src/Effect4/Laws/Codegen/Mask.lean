@@ -80,11 +80,11 @@ and its constructor alone. -/
 @[semantics "exact-codecs"]
 theorem find?_selects_unfixed {R : EffFam → Type} (fam : EffFam) (ctor : String)
     (args : List (ArgF Op R))
-    (unfixed : table.all (fun row =>
+    (unfixed : Templates.table.all (fun row =>
       !(row.fam == fam && row.ctor == ctor) || row.fixed.isEmpty) = true) :
-    (table.find? fun row => row.selects fam ctor args) =
-      table.find? fun row => row.fam == fam && row.ctor == ctor := by
-  refine find?_agree table fun row hrow => ?_
+    (Templates.table.find? fun row => row.selects fam ctor args) =
+      Templates.table.find? fun row => row.fam == fam && row.ctor == ctor := by
+  refine find?_agree Templates.table fun row hrow => ?_
   have here := List.all_eq_true.mp unfixed row hrow
   unfold Templates.Row.selects
   cases hhead : (row.fam == fam && row.ctor == ctor) with
@@ -97,7 +97,7 @@ theorem find?_selects_unfixed {R : EffFam → Type} (fam : EffFam) (ctor : Strin
 /-- The printer's row at a restore node is the restore row. -/
 @[semantics "exact-codecs"]
 theorem find?_restoreRow {R : EffFam → Type} (args : List (ArgF Op R)) :
-    (table.find? fun row => row.selects .eff "restore" args) = some restoreRow := by
+    (Templates.table.find? fun row => row.selects .eff "restore" args) = some restoreRow := by
   rw [find?_selects_unfixed .eff "restore" args (by decide)]
   rfl
 
@@ -181,25 +181,26 @@ end Readability
 F5). -/
 structure MaskRowsPremises : Prop where
   /-- The two rows are the printer's rows at their constructors. -/
-  rows : (table.find? fun row => row.fam == EffFam.action && row.ctor == "getInterruptible") =
+  rows : (Templates.table.find? fun row =>
+      row.fam == EffFam.action && row.ctor == "getInterruptible") =
       some getterRow ∧
-    (table.find? fun row => row.fam == EffFam.eff && row.ctor == "restore") = some restoreRow
+    (Templates.table.find? fun row => row.fam == EffFam.eff && row.ctor == "restore") = some restoreRow
   /-- Both heads are reserved, so no row of a signature takes either spelling. -/
   heads : "Effect.uninterruptibleMask" ∈ reserved ∧ "pipe" ∈ reserved
   /-- The table's nine decided premises, at the extended table: the reader's four, the round
   trip's four with the separation of the rows by their heads, and the printer's one. -/
-  linear : table.all rowLinear = true
-  family : table.all rowFamily = true
-  fixedNoHole : table.all rowFixedNoHole = true
-  holesLt : table.all rowHolesLt = true
-  complete : table.all rowComplete = true
-  apart : (List.range table.length).all (fun k => (List.range k).all fun j =>
-    match table[j]?, table[k]? with
+  linear : Templates.table.all rowLinear = true
+  family : Templates.table.all rowFamily = true
+  fixedNoHole : Templates.table.all rowFixedNoHole = true
+  holesLt : Templates.table.all rowHolesLt = true
+  complete : Templates.table.all rowComplete = true
+  apart : (List.range Templates.table.length).all (fun k => (List.range k).all fun j =>
+    match Templates.table[j]?, Templates.table[k]? with
     | some rj, some rk => rj.fam != rk.fam || rowsApart rj rk
     | _, _ => true) = true
-  shape : table.all rowShape = true
-  actionHeaded : table.all actionRowHeaded = true
-  holeKinds : table.all rowHoleKinds = true
+  shape : Templates.table.all rowShape = true
+  actionHeaded : Templates.table.all actionRowHeaded = true
+  holeKinds : Templates.table.all rowHoleKinds = true
   /-- The getter is readable at every depth. A restore site is readable exactly when its saved
   term is a readable leaf and its body is readable: `Readable` is unchanged in meaning, and it
   reads no type. -/

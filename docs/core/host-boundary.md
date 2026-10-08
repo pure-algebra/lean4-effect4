@@ -36,8 +36,8 @@ lane lands (row 99).
 ## 2. How host answers flow today
 
 - **The live session is the canonical route.** `advance` refuses an answer given as a plain
-  decision (`Api/HostSession.lean:239-243`). A reply enters only by `submit` through `preflight`,
-  and `applyReply` checks it again when it applies it (`:204-215`).
+  decision (`advance`, `src/Effect4/Api/HostSession.lean`). A reply enters only by `submit`
+  through `preflight`, and `applyReply` checks it again when it applies it.
 - **The admission check** (`Program/Admit.lean`). `admit` (`:77`) requires the fiber to be parked
   at that token on an external row. `admitAnswer` then checks the answer:
   - a success value goes through `externalValue` (`src/Effect4/Program/Compile.lean`). At a
@@ -46,6 +46,12 @@ lane lands (row 99).
   - every handle must exist (`mintedIn`, `src/Effect4/Program/Admit.lean`);
   - typed failures must fit the row's error type;
   - a delayed cell read (`ofRefGet`) is checked by what the cell holds at that moment.
+- **The check at the call's instance** (decisions row 323). An external registration keeps the
+  address of its call. Where the row's own columns refuse a completion, the session checks it
+  again at the checker's instance at that address (`acceptAtInstance`,
+  `src/Effect4/Program/Admit.lean`; `HostSession.instanceAt`). A success admitted there is a
+  member of the instance's answer column with no handle, and it reaches the program unchanged
+  (`instance_prepared_success`). The checked replay does not take this path yet.
 - **Preparation.** `prepareExternalAnswer` (`src/Effect4/Program/Compile.lean`) turns an accepted reply into the
   code the fiber resumes with, allocating any new external handle.
 - **Tape replays.**
@@ -53,11 +59,10 @@ lane lands (row 99).
     budget.
   - `Api.replay`, `Typed.replay` and `replayAdmitted` do not admit decisions; by their
     documentation the caller does.
-- **The reference machine ignores the host table.** It has no external registration, no
-  conversion or allocation, no prepared answer, and no way to take a table-aware interpreter.
-  These are the four gaps filed with DI-57 (`Test/contracts/machine-scheduler-core.contract.md`,
-  "Table-aware agreement"). `run_eq_ref` therefore holds at the empty table only
-  (`src/Effect4/Laws/Program/RuntimeR.lean`).
+- **The reference machine takes the row table** (decisions rows 313 and 314). The frame
+  machine and the reference machine agree at every row table when no answer is preloaded
+  (`run_eq_ref_table_noPreload`, `src/Effect4/Laws/Program/Table/Agreement.lean`). The case
+  with preloaded answers waits on their deletion (DI-23).
 
 ## 3. Known holes, with evidence
 

@@ -314,8 +314,10 @@ inductive EffName
   /-- A layer's build was forked, the value its fiber: the next layer, or the await. -/
   | mergeAllForkNext (q : Point) (i : Nat) (memoMap : MemoMapId) (parent : Nat)
       (forked : List FiberId)
-  /-- An external row and its evaluated request, retained while parked. -/
-  | external (op : NativeOp) (request : Val)
+  /-- An external row and its evaluated request, retained while parked, with the address of
+  the call that registered it (`Point.path`): the session reads the call's checked instance
+  there (`callAt`, decisions row 183). -/
+  | external (op : NativeOp) (request : Val) (origin : List Nat)
   /-- `catchIf`'s predicate and handler are recovered from the node at this point. -/
   | caughtError (p : Point)
 deriving DecidableEq
@@ -562,7 +564,7 @@ def asyncRoute (op : NativeOp) (request : Term) (p : Point) : NCode :=
   match op with
   | .external _ =>
     match evalTerm p.env request with
-    | some v => Prim.async (EffName.external op v) false none
+    | some v => Prim.async (EffName.external op v p.path) false none
     | none => badShape
   | .sleep =>
     match (evalTerm p.env request).bind NativeOp.sleepMillisOf with
@@ -1449,7 +1451,7 @@ def prepareExternalAnswer (table : RowTable) (current : Option NCode)
   let fallback := (state, embed (completionPrim answer))
   if table.isEmpty then fallback else
   match current, answer with
-  | some (.async (.external (.external i) _) _ _), .ofExit (.success value) =>
+  | some (.async (.external (.external i) _ _) _ _), .ofExit (.success value) =>
     match externalRow table i with
     | none => fallback
     | some row =>
@@ -1548,7 +1550,7 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
       ({ state with deferreds := deferreds }, immediate.map (fun c => embed (completionPrim c)))
     | .store (Name.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
-    | .external (.external i) _ =>
+    | .external (.external i) _ _ =>
       if (externalRow table i).isNone then (state, none)
       else match state.externals.answers with
       | [] => (state, none)

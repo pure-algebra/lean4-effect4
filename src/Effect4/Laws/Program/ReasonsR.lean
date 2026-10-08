@@ -12,11 +12,11 @@ def hasRunnableR (m : RState) : Bool :=
   m.fibers.any fun f => f.exit.isNone && f.parked == .notParked
 
 def externalRequest : NCode → Option (NativeOp × Val)
-  | .async (.external op request) _ _ => some (op, request)
+  | .async (.external op request _) _ _ => some (op, request)
   | _ => none
 
 def externalRequestR : RProgram → Option (NativeOp × Val)
-  | .vis (.inr (.async (.external op request) _)) _ => some (op, request)
+  | .vis (.inr (.async (.external op request _) _)) _ => some (op, request)
   | _ => none
 
 /-- Keep the actual id lookup, including its behavior on duplicate ids. -/

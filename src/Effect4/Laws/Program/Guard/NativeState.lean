@@ -184,10 +184,11 @@ theorem storeKeys_sleep (stores : Stores) (fiber : FiberId) (token : Nat)
   · exact List.mem_append_left _ (List.mem_append_right _ hk)
 
 theorem registerExternal_storeKeys (p : NativeEff) (table : RowTable)
-    (op : NativeOp) (request : Val) (fiber : FiberId) (token : Nat) (stores : Stores) :
-    storeKeys ((interpOf p table).registerAsync (.external op request) fiber token stores).1 =
+    (op : NativeOp) (request : Val) (origin : List Nat) (fiber : FiberId) (token : Nat)
+    (stores : Stores) :
+    storeKeys ((interpOf p table).registerAsync (.external op request origin) fiber token stores).1 =
       storeKeys stores := by
-  have h := registerExternal_internal_state p table op request fiber token stores
+  have h := registerExternal_internal_state p table op request origin fiber token stores
   simp only [storeKeys, h.1, h.2]
 
 attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])]
@@ -211,8 +212,9 @@ theorem registerAsync_state (p : NativeEff) (table : RowTable) (completed)
     | registerSleep millis =>
       simpa only [interpAt, interpOf] using storeKeys_sleep stores fiber token millis
     | _ => exact base
-  | external op request =>
-    change storeKeys ((interpOf p table).registerAsync (.external op request) fiber token stores).1 ⊆ _
+  | external op request origin =>
+    change storeKeys ((interpOf p table).registerAsync (.external op request origin) fiber token
+      stores).1 ⊆ _
     rw [registerExternal_storeKeys]
     exact base
   | _ => exact base

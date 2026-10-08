@@ -261,7 +261,7 @@ theorem find_append_fresh (active : List BoundCall) (bound : BoundCall) (key : K
 theorem awaits_ne_nil (m : NativeMachine) (fiber : FiberId) (token : Nat)
     (op : NativeOp) (request : Val) (h : requestOf m fiber token = some (op, request)) :
     (awaits m).isEmpty = false := by
-  obtain ⟨f, controller, cancel, hf, hp, hc⟩ := requestOf_current m fiber token op request h
+  obtain ⟨f, controller, cancel, origin, hf, hp, hc⟩ := requestOf_current m fiber token op request h
   have hid : f.id = fiber := by
     have hfound := List.find?_some hf
     simpa using hfound

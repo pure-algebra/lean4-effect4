@@ -86,8 +86,8 @@ theorem async_external (p : NativeEff) (table : RowTable) (completed)
     ExternalParkKeys m (evaluatePrim (interpAt p completed table) m f yielding) := by
   simp only [evaluatePrim, hc]
   cases register
-  case external op request =>
-    have same := registerExternal_internal_state p table op request f.id m.nextToken m.state
+  case external op request origin =>
+    have same := registerExternal_internal_state p table op request origin f.id m.nextToken m.state
     repeat' first
       | solve
         | intro token result hp hr key hk

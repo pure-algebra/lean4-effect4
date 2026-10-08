@@ -367,7 +367,7 @@ theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
   | combineWith mode that | mergeChildren q m | mergeForkOne q i m parent forked
   | mergeForkNext q i m parent forked | mergeAllChildren q m | mergeAllForkOne q i m parent forked
   | mergeAllForkNext q i m parent forked | mergeContexts | serviceLookup key | bindService key
-  | external _ _ =>
+  | external _ _ _ =>
     simp only [Program.contEOf]; exact List.nil_subset _
 
 theorem cancelProgramOf_keys (n : EffName) : nativeKeys (cancelProgramOf n) ⊆ n.keys := by
@@ -673,7 +673,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
     | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
     | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
-    | orDie | external _ _ =>
+    | orDie | external _ _ _ =>
       simp only [interpOf, IterStep.done.injEq] at h
       subst h
       exact List.subset_append_right _ _
@@ -702,7 +702,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | combineWith mode that | mergeChildren q mm | mergeForkOne q i mm parent forked
     | mergeForkNext q i mm parent forked | mergeAllChildren q mm | mergeAllForkOne q i mm parent forked
     | mergeAllForkNext q i mm parent forked | mergeContexts | serviceLookup key | bindService key
-    | orDie | external _ _ =>
+    | orDie | external _ _ _ =>
       simp only [interpOf] at h; cases h
   loopEnter n c := by
     cases n with
@@ -822,7 +822,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
       | closeIfLast _ =>
         simp only [interpOf]
         exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
-    | external op request =>
+    | external op request origin =>
       cases op with
       | external i =>
         simp only [interpOf]
@@ -840,7 +840,8 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
                 rw [externalAdmits_keys table i answer s.externals.allocated ha]
                 exact Ok_of_subset (by sub_tac) hok
               exact prepareExternalAnswer_minted table
-                (some (.async (.external (.external i) request) false none)) answer s ids hinput
+                (some (.async (.external (.external i) request origin) false none)) answer s ids
+                hinput
             · exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
       | _ =>
         simp only [interpOf]

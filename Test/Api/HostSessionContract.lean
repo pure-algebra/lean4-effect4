@@ -134,11 +134,25 @@ theorem received_prepares_nat (w : Typed.World) :
     ∃ result,
       (prepareAsyncAnswer (interpOf program table) bound0.machine Api.root 0
         reply0.completion).2 = .success result ∧ Typed.Fits w result .nat := by
-  obtain ⟨decision, _, bound, i, request, row, result, selected, _, _, parkedAt,
-      rowAt, prepared, member⟩ :=
+  obtain ⟨decision, _, path⟩ :=
     submit_success_prepared_fits bound0 reply0 (.nat 2) (by decide) rfl (by decide)
   have selectedAt : bound0.active.find? (fun b => b.key == reply0.key) =
       some (⟨call0, 0⟩ : BoundCall) := by decide
+  rcases path with ⟨bound, i, request, row, result, selected, _, _, parkedAt,
+      rowAt, prepared, member⟩ | ⟨bound, _, _, value, selected, _, _, success, _, _, _, _, _,
+      prepared⟩
+  rotate_left
+  · -- the instance's path prepares the reply's own value
+    rw [selectedAt] at selected
+    have boundEq := Option.some.inj selected
+    subst bound
+    have sent : Completion.ofExit (Exit.success (Machine.Val.nat 2)) =
+        .ofExit (.success value) := success
+    injection sent with sent
+    injection sent with sent
+    subst value
+    exact ⟨.nat 2, congrArg Prod.snd prepared,
+      Typed.fits_of_hasTy_shapeDecides w .nat rfl (.nat 2) [] rfl⟩
   rw [selectedAt] at selected
   have boundEq := Option.some.inj selected
   subst bound

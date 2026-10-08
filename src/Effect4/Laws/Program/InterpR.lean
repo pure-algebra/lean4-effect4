@@ -298,7 +298,7 @@ def loopResumeRAt (root : NativeEff) (p : Point) (cursor answer : Val) : LoopNex
 /-- The external row the reference's current code waits on, read off the term the denotation
 leaves at an external park (`CodeMeans.asyncForeign`). DI-57; slice H4 of the host packet. -/
 def externalIndexR : Option RProgram → Option Nat
-  | some (.vis (.inr (.async (.external (.external i) _) _)) _) => some i
+  | some (.vis (.inr (.async (.external (.external i) _ _) _)) _) => some i
   | _ => none
 
 /-- The reference's prepared answer at an external row (DI-57): the frame's
@@ -388,7 +388,7 @@ def interpR (root : NativeEff) (table : RowTable := []) : RInterp where
       ({ state with timers := state.timers.sleep fiber token millis }, none)
     -- the table is tested before the row, so at the default empty table this arm is the old
     -- identity for every operation, whatever its constructor
-    | .external op _ =>
+    | .external op _ _ =>
       if table.isEmpty then (state, none) else
       match op with
       | .external i => registerExternalR table i state

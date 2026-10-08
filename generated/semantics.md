@@ -1870,6 +1870,7 @@ Host Session Protocol: Session automaton, external reply ingestion, and boundary
 | allows-answer | preservation | proved | Effect4.Run.allows_answer | yes |  |
 | reply-commute | compatibility | proved | Effect4.Api.HostSession.reply_commute | yes |  |
 | session-success-prepared-membership | preservation | proved | Effect4.Api.HostSession.preflight_success_prepared_fits | yes |  |
+| reply-at-call-instance | preservation | proved | Effect4.Program.instance_prepared_success | yes |  |
 | session-failure-shape-free | preservation | proved | Effect4.Api.HostSession.preflight_failure_noShapeDefect | yes | E4-HOST-CE-008 |
 | frontier-awaithost | inversion | proved | Effect4.Api.observe_awaitingAsync_iff | yes |  |
 | host-progress | progress | assumed | Host session progress is subject to external driver execution; outside closed runtime | — |  |
@@ -1919,7 +1920,64 @@ Literature: LynchVaandrager1995, audit C4 — analogy
       Option.none →
     Eq reply.completion (Effect4.Machine.Completion.ofExit (Effect4.Exit.success value)) →
       Eq (Effect4.Api.HostSession.preflight s reply) (Except.ok decision) →
-        Effect4.Api.HostSession.PreparedSuccess s reply decision
+        Or (Effect4.Api.HostSession.PreparedSuccess s reply decision)
+          (Effect4.Api.HostSession.InstanceSuccess s reply decision)
+```
+
+**reply-at-call-instance**
+
+```lean
+∀ (program : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+  (instanceAt : List Nat → Option (Effect4.Program.CallInstance Effect4.Program.NativeOp))
+  (m : Effect4.Program.NativeMachine) (r : Effect4.Program.RecordedReply)
+  (value : Effect4.Machine.Val),
+  Eq
+      (m.stuck
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+      Option.none →
+    Eq r.completion (Effect4.Machine.Completion.ofExit (Effect4.Exit.success value)) →
+      Effect4.Program.InstanceEnvelope table instanceAt m r →
+        Exists fun origin =>
+          Exists fun c =>
+            And (Eq (Effect4.Program.originOf m r.fiber r.token) (Option.some origin))
+              (And (Eq (instanceAt origin) (Option.some c))
+                (And (Eq c.op r.op)
+                  (And
+                    (Eq
+                      (Effect4.Program.Val.hasTy value c.answer
+                        (m.state
+                              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                                Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                Effect4.FiberId Effect4.Machine.Ann)
+                              (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk
+                                Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                Effect4.FiberId Effect4.Machine.Ann)
+                              (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk
+                                Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                Effect4.FiberId Effect4.Machine.Ann)).externals.allocated)
+                      Bool.true)
+                    (And (Eq (Effect4.Store.Val.handles value) List.nil)
+                      (Eq
+                        (Effect4.Machine.prepareAsyncAnswer (Effect4.Program.interpOf program table)
+                          m r.fiber r.token r.completion)
+                        {
+                          fst :=
+                            m.state
+                              (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                                Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                Effect4.FiberId Effect4.Machine.Ann)
+                              (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk
+                                Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                Effect4.FiberId Effect4.Machine.Ann)
+                              (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk
+                                Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                Effect4.FiberId Effect4.Machine.Ann),
+                          snd := Effect4.Prim.success value })))))
 ```
 
 **session-failure-shape-free**
@@ -2453,7 +2511,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 275; inherited (provisional): 2294; unplaced: 0.
+Tagged: 275; inherited (provisional): 2295; unplaced: 0.
 
 ## Plan
 
@@ -2468,7 +2526,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `closeStep_types` (proved), `drainStep_types` (proved), `initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lookup_solve_seed` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `matchTerm_modify_use` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `termGuard_modify_use` (proved), `perform_scoped_iff` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
-| R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `session_eq_ref` (proved) | `run_eq_ref_table` (goal), `run_eq_ref_table_noPreload` (proved), `handles_of_payloadFieldTy` (proved), `applied_selects` (proved), `control_retires` (proved), `denoteRows_eq_session` (goal), `session_eq_ref` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `run_eq_ref_table`, `denoteRows_eq_session`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
+| R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `session_eq_ref` (proved) | `run_eq_ref_table` (goal), `run_eq_ref_table_noPreload` (proved), `handles_of_payloadFieldTy` (proved), `applied_selects` (proved), `control_retires` (proved), `denoteRows_eq_session` (goal), `session_eq_ref` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `run_eq_ref_table`, `denoteRows_eq_session`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
@@ -2480,7 +2538,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 
 **Next goals** (16): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `run_eq_ref_table`, `denoteRows_eq_session`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
-**Open parts, with no planned goal** (85): not triaged 36; worded as a proposed claim 21; waits on a ruling 14; needs a definition 8; after other work 6
+**Open parts, with no planned goal** (87): not triaged 36; worded as a proposed claim 23; waits on a ruling 14; needs a definition 8; after other work 6
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -4099,10 +4157,10 @@ flowchart LR
 | `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `waitRetryAt_answers`, `mask_printed_form_profile` | 142 | 411 |
 | `withPermitsIfAvailable_types` | proved | — | `release_types`, `check_sound`, `check_complete`, `normalize_idem`, `matchArgsB_one_var`, `takeIfAvailable_types`, `protectedBy_has`, `sub_antisymm_canonical` | 231 | 419 |
 | `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `matchTerm_modify_use`, `matchB_refOf_var`, `cands_var`, `comp_inv`, `waitRetryAt_answers`, `protectedBy_has` | 136 | 422 |
-| `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 86 | 1516 |
-| `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 86 | 1478 |
-| `committed` | goal | `committed` | `checkInput_eq_none_iff` | 86 | 1484 |
-| `counted` | goal | `counted` | `checkInput_eq_none_iff` | 86 | 1485 |
+| `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 86 | 1533 |
+| `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 86 | 1495 |
+| `committed` | goal | `committed` | `checkInput_eq_none_iff` | 86 | 1501 |
+| `counted` | goal | `counted` | `checkInput_eq_none_iff` | 86 | 1502 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extend_upper` | 122 | 65 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
@@ -4127,7 +4185,7 @@ flowchart LR
 | `rowTy_instantiated_formed` | proved | — | — | 55 | 116 |
 | `sub_antisymm_canonical` | proved | — | — | 144 | 61 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 869 |
-| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1477 |
+| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1494 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
 | `list_eliminator` | proved | — | `subN_list_iff`, `normalize_idem`, `subN_trans`, `subN_refl` | 139 | 65 |
 | `extend_upper` | proved | — | `extend_adjoint` | 38 | 52 |
@@ -4209,7 +4267,7 @@ flowchart LR
 | `build_total` | proved | — | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 173 | 287 |
 | `expanded_refs_nil_of_wf` | proved | — | — | 19 | 106 |
 | `typeOfProgram_expandRefs` | proved | — | `expanded_refs_nil_of_wf` | 58 | 348 |
-| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1454 |
+| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1471 |
 | `satisfies_union` | proved | — | — | 20 | 33 |
 | `satisfies_weaken` | proved | — | — | 0 | 25 |
 | `satisfies_empty` | proved | — | — | 2 | 26 |
@@ -4223,236 +4281,203 @@ flowchart LR
 - Open, waits on a ruling (decisions rows 98 to 100: the typed replay route, when the guarantee is claimed, host resources): receipt and application on the keyed lifecycle, and their converse (host-boundary §4.5; decisions rows 98–100, parked by the owner, 2026-09-30)
 - Open, not triaged: a world extension meeting C5, a retirement edge, per-row cancellation, one root (DI-58, DI-65)
 - Open, after other work (the table-aware reference and the reply correspondence above; decisions row 99 says when it is claimed): the public typed guarantee for programs using host services (decisions row 99)
+- Open, worded as a proposed claim: origin-addresses-call (proposed claim; host-session-protocol): a run's external registration keeps the address of the call that made it, so the instance the session reads there is the checker's answer at that call (compile's Point.path against Node.at_ of the program with its layer references expanded); a finite evaluation reads it (Test/Api/TypedReplies.lean), and no law states it (decisions row 323)
+- Open, worded as a proposed claim: replay-at-call-instance (proposed claim; host-session-protocol): the checked replay of a tape (replayCheckedFrom, Api.replay) and the OCaml engine still admit a reply at the row's own columns alone, so a tape that a session recorded with an answer admitted at its call's instance is refused there (decisions row 323)
 
 ```mermaid
 flowchart LR
   n0["reachable_typed<br/>proved"]
   n1["preflight_success_prepared_fits<br/>proved"]
   n2["preflight_failure_noShapeDefect<br/>proved"]
-  n3["session_eq_ref<br/>proved"]
-  n4["run_eq_ref_table<br/>goal"]
-  n5["run_eq_ref_table_noPreload<br/>proved"]
-  n6["handles_of_payloadFieldTy<br/>proved"]
-  n7["applied_selects<br/>proved"]
-  n8["control_retires<br/>proved"]
-  n9["denoteRows_eq_session<br/>goal"]
-  n10["stale_never_applies<br/>goal"]
-  n11["timeout<br/>modulo"]
-  n12["workers<br/>modulo"]
-  n13["receipt_inert<br/>proved"]
-  n14["decision_preserves<br/>proved"]
-  n15["load_typed<br/>proved"]
-  n16["order_trans<br/>proved"]
-  n17["order_refl<br/>proved"]
-  n18["journal_replays<br/>proved"]
-  n19["funded_replays<br/>proved"]
-  n20["checkInput_eq_none_iff<br/>proved"]
-  n21["cleanup_keeps<br/>goal"]
-  n22["retries_declared<br/>goal"]
-  n23["releases_once<br/>goal"]
-  n24["fits_subN<br/>proved"]
-  n25["subN_trans<br/>proved"]
-  n26["configTyped_frame<br/>proved"]
-  n27["fits_mono<br/>proved"]
-  n28["hom_eq_cata_ty<br/>proved"]
-  n29["wake_preserves<br/>proved"]
-  n30["mono<br/>proved"]
-  n31["close_typed<br/>proved"]
-  n32["registrationDone_preserves<br/>proved"]
-  n33["launch_preserves<br/>proved"]
-  n34["guardBind_typed<br/>proved"]
-  n35["deliver_preserves<br/>proved"]
-  n36["loop_preserves<br/>proved"]
-  n37["driveState_lift<br/>proved"]
-  n38["denotesTyped<br/>proved"]
-  n39["check_sound<br/>proved"]
-  n40["check_complete<br/>proved"]
-  n41["tape_replays<br/>proved"]
-  n42["fits_normalize<br/>proved"]
-  n43["completionStrong_await<br/>proved"]
-  n44["subN_refl<br/>proved"]
-  n45["catchGuard_typed<br/>proved"]
-  n46["closeOrder_eq<br/>proved"]
-  n47["fits_scope_inv<br/>proved"]
-  n48["seq_typed<br/>proved"]
-  n49["memoBuild_extension<br/>proved"]
-  n50["deferredMake_extension<br/>proved"]
-  n51["refMake_extension<br/>proved"]
-  n52["listOf_upper<br/>proved"]
-  n53["normalize_idem<br/>proved"]
-  n54["lift_sound<br/>proved"]
-  n55["causeInputError_upper<br/>proved"]
-  n56["matchArgsB_sound<br/>proved"]
-  n57["fiberTy_upper<br/>proved"]
-  n58["matchB_sound<br/>proved"]
-  n59["syncRow_typed<br/>proved"]
-  n60["errOf_payload<br/>proved"]
-  n61["isPayload_of_hasTy_record<br/>proved"]
-  n62["allGuard_typed<br/>proved"]
-  n63["provideLayerArm<br/>proved"]
-  n64["optionTy_upper<br/>proved"]
-  n65["onExit_typed<br/>proved"]
-  n66["exitOf_upper<br/>proved"]
-  n67["list_eliminator<br/>proved"]
-  n68["extend_upper<br/>proved"]
-  n69["lift_transfer<br/>proved"]
-  n70["cause_upper<br/>proved"]
-  n71["cause_mono<br/>proved"]
-  n72["UnionRule.lift_upper<br/>proved"]
-  n73["subN_causeOf_causeUpper<br/>proved"]
-  n74["subN_exitOf_causeUpper<br/>proved"]
-  n75["extend_eq_some_iff<br/>proved"]
-  n76["fiber_eliminator<br/>proved"]
-  n77["lookup_solve_seed<br/>proved"]
-  n78["termMaps_of_typed<br/>proved"]
-  n79["liftOne_some<br/>proved"]
-  n80["option_eliminator<br/>proved"]
-  n81["Eliminator.lift_upper<br/>proved"]
-  n82["exit_eliminator<br/>proved"]
-  n83["subN_list_iff<br/>proved"]
-  n84["extend_adjoint<br/>proved"]
-  n85["joinAll_keeps<br/>proved"]
-  n86["mapM_answer<br/>proved"]
-  n87["subN_exitOf_iff<br/>proved"]
-  n88["subN_causeOf_iff<br/>proved"]
-  n89["le_joinAll<br/>proved"]
-  n90["subN_fiberOf_iff<br/>proved"]
-  n91["liftOne_eq_some_iff<br/>proved"]
-  n92["subN_option_iff<br/>proved"]
-  n93["adjoint<br/>proved"]
-  n94["foldl_keeps<br/>proved"]
-  n95["mapM_cons_eq_some<br/>proved"]
-  n96["Eliminator.lift_least<br/>proved"]
-  n97["mapM_total<br/>proved"]
-  n98["UnionRule.lift_least<br/>proved"]
-  n99["mapM_source<br/>proved"]
-  n100["joinAll_le<br/>proved"]
-  n101["joinAll_all<br/>proved"]
-  n102["foldl_all<br/>proved"]
-  n0 --> n14
+  n3["instance_prepared_success<br/>proved"]
+  n4["session_eq_ref<br/>proved"]
+  n5["run_eq_ref_table<br/>goal"]
+  n6["run_eq_ref_table_noPreload<br/>proved"]
+  n7["handles_of_payloadFieldTy<br/>proved"]
+  n8["applied_selects<br/>proved"]
+  n9["control_retires<br/>proved"]
+  n10["denoteRows_eq_session<br/>goal"]
+  n11["stale_never_applies<br/>goal"]
+  n12["timeout<br/>modulo"]
+  n13["workers<br/>modulo"]
+  n14["receipt_inert<br/>proved"]
+  n15["decision_preserves<br/>proved"]
+  n16["load_typed<br/>proved"]
+  n17["order_trans<br/>proved"]
+  n18["order_refl<br/>proved"]
+  n19["journal_replays<br/>proved"]
+  n20["funded_replays<br/>proved"]
+  n21["checkInput_eq_none_iff<br/>proved"]
+  n22["cleanup_keeps<br/>goal"]
+  n23["retries_declared<br/>goal"]
+  n24["releases_once<br/>goal"]
+  n25["fits_subN<br/>proved"]
+  n26["subN_trans<br/>proved"]
+  n27["configTyped_frame<br/>proved"]
+  n28["fits_mono<br/>proved"]
+  n29["hom_eq_cata_ty<br/>proved"]
+  n30["wake_preserves<br/>proved"]
+  n31["mono<br/>proved"]
+  n32["close_typed<br/>proved"]
+  n33["registrationDone_preserves<br/>proved"]
+  n34["launch_preserves<br/>proved"]
+  n35["guardBind_typed<br/>proved"]
+  n36["deliver_preserves<br/>proved"]
+  n37["loop_preserves<br/>proved"]
+  n38["driveState_lift<br/>proved"]
+  n39["denotesTyped<br/>proved"]
+  n40["check_sound<br/>proved"]
+  n41["check_complete<br/>proved"]
+  n42["tape_replays<br/>proved"]
+  n43["fits_normalize<br/>proved"]
+  n44["completionStrong_await<br/>proved"]
+  n45["subN_refl<br/>proved"]
+  n46["catchGuard_typed<br/>proved"]
+  n47["closeOrder_eq<br/>proved"]
+  n48["fits_scope_inv<br/>proved"]
+  n49["seq_typed<br/>proved"]
+  n50["memoBuild_extension<br/>proved"]
+  n51["deferredMake_extension<br/>proved"]
+  n52["refMake_extension<br/>proved"]
+  n53["listOf_upper<br/>proved"]
+  n54["normalize_idem<br/>proved"]
+  n55["lift_sound<br/>proved"]
+  n56["causeInputError_upper<br/>proved"]
+  n57["matchArgsB_sound<br/>proved"]
+  n58["fiberTy_upper<br/>proved"]
+  n59["matchB_sound<br/>proved"]
+  n60["syncRow_typed<br/>proved"]
+  n61["errOf_payload<br/>proved"]
+  n62["isPayload_of_hasTy_record<br/>proved"]
+  n63["allGuard_typed<br/>proved"]
+  n64["provideLayerArm<br/>proved"]
+  n65["optionTy_upper<br/>proved"]
+  n66["onExit_typed<br/>proved"]
+  n67["exitOf_upper<br/>proved"]
+  n68["list_eliminator<br/>proved"]
+  n69["extend_upper<br/>proved"]
+  n70["lift_transfer<br/>proved"]
+  n71["cause_upper<br/>proved"]
+  n72["cause_mono<br/>proved"]
+  n73["UnionRule.lift_upper<br/>proved"]
+  n74["subN_causeOf_causeUpper<br/>proved"]
+  n75["subN_exitOf_causeUpper<br/>proved"]
+  n76["extend_eq_some_iff<br/>proved"]
+  n77["fiber_eliminator<br/>proved"]
+  n78["lookup_solve_seed<br/>proved"]
+  n79["termMaps_of_typed<br/>proved"]
+  n80["liftOne_some<br/>proved"]
+  n81["option_eliminator<br/>proved"]
+  n82["Eliminator.lift_upper<br/>proved"]
+  n83["exit_eliminator<br/>proved"]
+  n84["subN_list_iff<br/>proved"]
+  n85["extend_adjoint<br/>proved"]
+  n86["joinAll_keeps<br/>proved"]
+  n87["mapM_answer<br/>proved"]
+  n88["subN_exitOf_iff<br/>proved"]
+  n89["subN_causeOf_iff<br/>proved"]
+  n90["le_joinAll<br/>proved"]
+  n91["subN_fiberOf_iff<br/>proved"]
+  n92["liftOne_eq_some_iff<br/>proved"]
+  n93["subN_option_iff<br/>proved"]
+  n94["adjoint<br/>proved"]
+  n95["foldl_keeps<br/>proved"]
+  n96["mapM_cons_eq_some<br/>proved"]
+  n97["Eliminator.lift_least<br/>proved"]
+  n98["mapM_total<br/>proved"]
+  n99["UnionRule.lift_least<br/>proved"]
+  n100["mapM_source<br/>proved"]
+  n101["joinAll_le<br/>proved"]
+  n102["joinAll_all<br/>proved"]
+  n103["foldl_all<br/>proved"]
   n0 --> n15
   n0 --> n16
   n0 --> n17
-  n3 --> n5
-  n3 --> n18
-  n3 --> n19
-  n10 --> n20
+  n0 --> n18
+  n1 --> n3
+  n4 --> n6
+  n4 --> n19
+  n4 --> n20
   n11 --> n21
-  n11 --> n10
-  n11 --> n22
-  n11 --> n20
+  n12 --> n22
+  n12 --> n11
   n12 --> n23
-  n12 --> n8
-  n12 --> n7
-  n12 --> n13
-  n12 --> n20
-  n14 --> n24
-  n14 --> n17
-  n14 --> n25
-  n14 --> n26
-  n14 --> n27
-  n14 --> n28
-  n14 --> n29
-  n14 --> n16
-  n14 --> n30
-  n14 --> n31
-  n14 --> n32
-  n14 --> n33
-  n14 --> n34
-  n14 --> n35
-  n14 --> n36
-  n14 --> n37
+  n12 --> n21
+  n13 --> n24
+  n13 --> n9
+  n13 --> n8
+  n13 --> n14
+  n13 --> n21
+  n15 --> n25
+  n15 --> n18
+  n15 --> n26
+  n15 --> n27
+  n15 --> n28
+  n15 --> n29
+  n15 --> n30
+  n15 --> n17
+  n15 --> n31
+  n15 --> n32
+  n15 --> n33
+  n15 --> n34
+  n15 --> n35
+  n15 --> n36
+  n15 --> n37
   n15 --> n38
-  n15 --> n39
-  n15 --> n40
-  n19 --> n18
-  n19 --> n41
-  n21 --> n20
-  n22 --> n20
-  n23 --> n20
-  n24 --> n25
-  n24 --> n42
-  n26 --> n27
-  n26 --> n16
-  n26 --> n30
-  n26 --> n28
-  n29 --> n17
-  n29 --> n26
-  n29 --> n27
-  n29 --> n43
-  n29 --> n28
-  n30 --> n16
-  n32 --> n27
-  n32 --> n31
-  n32 --> n24
-  n32 --> n17
-  n33 --> n44
-  n33 --> n24
-  n33 --> n27
-  n33 --> n16
-  n33 --> n30
-  n33 --> n17
+  n16 --> n39
+  n16 --> n40
+  n16 --> n41
+  n20 --> n19
+  n20 --> n42
+  n22 --> n21
+  n23 --> n21
+  n24 --> n21
+  n25 --> n26
+  n25 --> n43
+  n27 --> n28
+  n27 --> n17
+  n27 --> n31
+  n27 --> n29
+  n30 --> n18
+  n30 --> n27
+  n30 --> n28
+  n30 --> n44
+  n30 --> n29
+  n31 --> n17
+  n33 --> n28
+  n33 --> n32
+  n33 --> n25
+  n33 --> n18
+  n34 --> n45
+  n34 --> n25
+  n34 --> n28
+  n34 --> n17
   n34 --> n31
-  n35 --> n17
-  n35 --> n24
-  n35 --> n27
-  n35 --> n45
-  n35 --> n44
-  n35 --> n34
-  n35 --> n46
-  n35 --> n47
-  n35 --> n16
-  n35 --> n48
-  n35 --> n30
-  n35 --> n26
-  n35 --> n28
-  n35 --> n43
-  n35 --> n49
-  n35 --> n50
-  n35 --> n51
-  n35 --> n38
-  n35 --> n52
-  n35 --> n42
-  n35 --> n53
-  n35 --> n54
-  n35 --> n25
-  n35 --> n55
-  n35 --> n56
-  n35 --> n57
-  n35 --> n58
-  n35 --> n59
-  n35 --> n60
-  n35 --> n61
-  n35 --> n62
-  n35 --> n31
-  n35 --> n63
-  n35 --> n64
-  n35 --> n65
-  n35 --> n66
-  n36 --> n17
-  n36 --> n24
-  n36 --> n27
-  n36 --> n45
-  n36 --> n44
-  n36 --> n34
-  n36 --> n46
-  n36 --> n47
-  n36 --> n16
-  n36 --> n48
-  n36 --> n30
-  n36 --> n26
+  n34 --> n18
+  n35 --> n32
+  n36 --> n18
+  n36 --> n25
   n36 --> n28
-  n36 --> n43
+  n36 --> n46
+  n36 --> n45
+  n36 --> n35
+  n36 --> n47
+  n36 --> n48
+  n36 --> n17
   n36 --> n49
+  n36 --> n31
+  n36 --> n27
+  n36 --> n29
+  n36 --> n44
   n36 --> n50
   n36 --> n51
-  n36 --> n38
   n36 --> n52
-  n36 --> n42
+  n36 --> n39
   n36 --> n53
+  n36 --> n43
   n36 --> n54
-  n36 --> n25
   n36 --> n55
+  n36 --> n26
   n36 --> n56
   n36 --> n57
   n36 --> n58
@@ -4460,207 +4485,245 @@ flowchart LR
   n36 --> n60
   n36 --> n61
   n36 --> n62
-  n36 --> n31
   n36 --> n63
+  n36 --> n32
   n36 --> n64
   n36 --> n65
   n36 --> n66
-  n38 --> n63
-  n38 --> n24
-  n38 --> n52
-  n38 --> n42
-  n38 --> n53
-  n38 --> n54
-  n38 --> n25
-  n38 --> n55
-  n38 --> n56
-  n38 --> n28
-  n38 --> n27
-  n38 --> n64
-  n38 --> n16
-  n38 --> n44
-  n38 --> n45
-  n38 --> n65
-  n38 --> n34
-  n38 --> n66
-  n38 --> n47
-  n38 --> n57
-  n38 --> n58
-  n38 --> n59
-  n38 --> n60
-  n38 --> n61
-  n38 --> n62
-  n42 --> n25
-  n42 --> n53
-  n43 --> n25
-  n45 --> n24
-  n45 --> n34
-  n48 --> n44
-  n48 --> n24
-  n48 --> n34
-  n52 --> n67
-  n52 --> n53
-  n52 --> n25
-  n52 --> n44
-  n52 --> n68
-  n54 --> n69
+  n36 --> n67
+  n37 --> n18
+  n37 --> n25
+  n37 --> n28
+  n37 --> n46
+  n37 --> n45
+  n37 --> n35
+  n37 --> n47
+  n37 --> n48
+  n37 --> n17
+  n37 --> n49
+  n37 --> n31
+  n37 --> n27
+  n37 --> n29
+  n37 --> n44
+  n37 --> n50
+  n37 --> n51
+  n37 --> n52
+  n37 --> n39
+  n37 --> n53
+  n37 --> n43
+  n37 --> n54
+  n37 --> n55
+  n37 --> n26
+  n37 --> n56
+  n37 --> n57
+  n37 --> n58
+  n37 --> n59
+  n37 --> n60
+  n37 --> n61
+  n37 --> n62
+  n37 --> n63
+  n37 --> n32
+  n37 --> n64
+  n37 --> n65
+  n37 --> n66
+  n37 --> n67
+  n39 --> n64
+  n39 --> n25
+  n39 --> n53
+  n39 --> n43
+  n39 --> n54
+  n39 --> n55
+  n39 --> n26
+  n39 --> n56
+  n39 --> n57
+  n39 --> n29
+  n39 --> n28
+  n39 --> n65
+  n39 --> n17
+  n39 --> n45
+  n39 --> n46
+  n39 --> n66
+  n39 --> n35
+  n39 --> n67
+  n39 --> n48
+  n39 --> n58
+  n39 --> n59
+  n39 --> n60
+  n39 --> n61
+  n39 --> n62
+  n39 --> n63
+  n43 --> n26
+  n43 --> n54
+  n44 --> n26
+  n46 --> n25
+  n46 --> n35
+  n49 --> n45
+  n49 --> n25
+  n49 --> n35
+  n53 --> n68
+  n53 --> n54
+  n53 --> n26
+  n53 --> n45
+  n53 --> n69
   n55 --> n70
-  n55 --> n71
-  n55 --> n53
-  n55 --> n25
-  n55 --> n44
-  n55 --> n72
-  n55 --> n73
-  n55 --> n74
-  n55 --> n75
-  n57 --> n76
-  n57 --> n53
-  n57 --> n25
-  n57 --> n44
-  n57 --> n68
+  n56 --> n71
+  n56 --> n72
+  n56 --> n54
+  n56 --> n26
+  n56 --> n45
+  n56 --> n73
+  n56 --> n74
+  n56 --> n75
+  n56 --> n76
   n58 --> n77
-  n59 --> n42
-  n59 --> n25
-  n59 --> n24
+  n58 --> n54
+  n58 --> n26
+  n58 --> n45
+  n58 --> n69
   n59 --> n78
-  n59 --> n58
-  n59 --> n28
-  n59 --> n60
-  n59 --> n61
-  n59 --> n53
-  n59 --> n44
-  n61 --> n6
-  n62 --> n34
-  n63 --> n24
-  n63 --> n17
-  n63 --> n57
-  n63 --> n28
-  n63 --> n25
-  n63 --> n42
-  n63 --> n58
-  n63 --> n59
-  n63 --> n52
-  n63 --> n53
-  n63 --> n54
-  n63 --> n55
-  n63 --> n56
-  n63 --> n60
-  n63 --> n61
-  n63 --> n16
-  n63 --> n44
-  n63 --> n65
-  n63 --> n34
-  n63 --> n27
-  n63 --> n47
-  n63 --> n48
-  n63 --> n45
-  n64 --> n79
-  n64 --> n80
-  n64 --> n53
+  n60 --> n43
+  n60 --> n26
+  n60 --> n25
+  n60 --> n79
+  n60 --> n59
+  n60 --> n29
+  n60 --> n61
+  n60 --> n62
+  n60 --> n54
+  n60 --> n45
+  n62 --> n7
+  n63 --> n35
   n64 --> n25
-  n64 --> n44
-  n64 --> n81
-  n65 --> n24
-  n65 --> n27
+  n64 --> n18
+  n64 --> n58
+  n64 --> n29
+  n64 --> n26
+  n64 --> n43
+  n64 --> n59
+  n64 --> n60
+  n64 --> n53
+  n64 --> n54
+  n64 --> n55
+  n64 --> n56
+  n64 --> n57
+  n64 --> n61
+  n64 --> n62
+  n64 --> n17
+  n64 --> n45
+  n64 --> n66
+  n64 --> n35
+  n64 --> n28
+  n64 --> n48
+  n64 --> n49
+  n64 --> n46
+  n65 --> n80
+  n65 --> n81
+  n65 --> n54
+  n65 --> n26
   n65 --> n45
-  n65 --> n44
-  n65 --> n34
-  n65 --> n62
-  n66 --> n82
-  n66 --> n53
+  n65 --> n82
   n66 --> n25
-  n66 --> n44
-  n66 --> n68
+  n66 --> n28
+  n66 --> n46
+  n66 --> n45
+  n66 --> n35
+  n66 --> n63
   n67 --> n83
-  n67 --> n53
-  n67 --> n25
-  n67 --> n44
+  n67 --> n54
+  n67 --> n26
+  n67 --> n45
+  n67 --> n69
   n68 --> n84
+  n68 --> n54
+  n68 --> n26
+  n68 --> n45
   n69 --> n85
-  n69 --> n86
-  n70 --> n73
-  n70 --> n74
-  n71 --> n87
-  n71 --> n73
-  n71 --> n25
-  n71 --> n88
+  n70 --> n86
+  n70 --> n87
+  n71 --> n74
+  n71 --> n75
+  n72 --> n88
+  n72 --> n74
+  n72 --> n26
   n72 --> n89
-  n72 --> n25
-  n72 --> n86
-  n74 --> n25
-  n74 --> n44
-  n74 --> n87
-  n76 --> n90
-  n76 --> n53
-  n76 --> n25
-  n76 --> n44
-  n78 --> n52
-  n78 --> n24
-  n78 --> n42
-  n78 --> n53
-  n78 --> n54
-  n78 --> n25
-  n78 --> n55
-  n78 --> n56
-  n78 --> n28
-  n78 --> n27
-  n79 --> n91
+  n73 --> n90
+  n73 --> n26
+  n73 --> n87
+  n75 --> n26
+  n75 --> n45
+  n75 --> n88
+  n77 --> n91
+  n77 --> n54
+  n77 --> n26
+  n77 --> n45
+  n79 --> n53
+  n79 --> n25
+  n79 --> n43
+  n79 --> n54
+  n79 --> n55
+  n79 --> n26
+  n79 --> n56
+  n79 --> n57
+  n79 --> n29
+  n79 --> n28
   n80 --> n92
-  n80 --> n53
-  n80 --> n25
-  n80 --> n44
-  n81 --> n44
-  n81 --> n72
-  n82 --> n87
-  n82 --> n53
-  n82 --> n25
-  n82 --> n44
-  n84 --> n79
-  n84 --> n93
-  n84 --> n75
+  n81 --> n93
+  n81 --> n54
+  n81 --> n26
+  n81 --> n45
+  n82 --> n45
+  n82 --> n73
+  n83 --> n88
+  n83 --> n54
+  n83 --> n26
+  n83 --> n45
+  n85 --> n80
   n85 --> n94
+  n85 --> n76
   n86 --> n95
-  n89 --> n85
-  n93 --> n96
-  n93 --> n25
-  n93 --> n97
-  n93 --> n81
-  n96 --> n98
-  n97 --> n95
-  n98 --> n25
-  n98 --> n99
-  n98 --> n100
-  n99 --> n95
-  n100 --> n101
+  n87 --> n96
+  n90 --> n86
+  n94 --> n97
+  n94 --> n26
+  n94 --> n98
+  n94 --> n82
+  n97 --> n99
+  n98 --> n96
+  n99 --> n26
+  n99 --> n100
+  n99 --> n101
+  n100 --> n96
   n101 --> n102
+  n102 --> n103
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 87 | 1281 |
-| `preflight_success_prepared_fits` | proved | — | — | 100 | 760 |
-| `preflight_failure_noShapeDefect` | proved | — | — | 66 | 285 |
-| `session_eq_ref` | proved | — | `run_eq_ref_table_noPreload`, `journal_replays`, `funded_replays` | 103 | 1143 |
+| `preflight_success_prepared_fits` | proved | — | `instance_prepared_success` | 117 | 1079 |
+| `preflight_failure_noShapeDefect` | proved | — | — | 84 | 611 |
+| `instance_prepared_success` | proved | — | — | 66 | 598 |
+| `session_eq_ref` | proved | — | `run_eq_ref_table_noPreload`, `journal_replays`, `funded_replays` | 120 | 1459 |
 | `run_eq_ref_table` | goal | `run_eq_ref_table` | — | 65 | 990 |
 | `run_eq_ref_table_noPreload` | proved | — | — | 890 | 1071 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 135 |
-| `applied_selects` | proved | — | — | 69 | 903 |
+| `applied_selects` | proved | — | — | 85 | 1222 |
 | `control_retires` | proved | — | — | 69 | 864 |
-| `denoteRows_eq_session` | goal | `denoteRows_eq_session` | — | 74 | 1099 |
-| `stale_never_applies` | goal | `stale_never_applies` | `checkInput_eq_none_iff` | 85 | 1481 |
-| `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` | 85 | 1490 |
-| `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 85 | 1488 |
-| `receipt_inert` | proved | — | — | 77 | 957 |
+| `denoteRows_eq_session` | goal | `denoteRows_eq_session` | — | 90 | 1414 |
+| `stale_never_applies` | goal | `stale_never_applies` | `checkInput_eq_none_iff` | 85 | 1498 |
+| `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` | 85 | 1507 |
+| `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 85 | 1505 |
+| `receipt_inert` | proved | — | — | 93 | 1276 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1059 | 1571 |
 | `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 108 | 1205 |
 | `order_trans` | proved | — | — | 57 | 206 |
 | `order_refl` | proved | — | — | 57 | 205 |
-| `journal_replays` | proved | — | — | 77 | 944 |
-| `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 71 | 985 |
+| `journal_replays` | proved | — | — | 93 | 1263 |
+| `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 87 | 1303 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
-| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1476 |
-| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1477 |
-| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 85 | 1484 |
+| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1493 |
+| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1494 |
+| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 85 | 1501 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 225 |
 | `subN_trans` | proved | — | — | 96 | 53 |
 | `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 337 | 1255 |
@@ -4678,7 +4741,7 @@ flowchart LR
 | `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 788 | 910 |
 | `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
-| `tape_replays` | proved | — | — | 97 | 968 |
+| `tape_replays` | proved | — | — | 114 | 1287 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 225 |
 | `completionStrong_await` | proved | — | `subN_trans` | 250 | 238 |
 | `subN_refl` | proved | — | — | 38 | 44 |
@@ -4799,14 +4862,14 @@ flowchart LR
 | `loopAgreement` | proved | — | — | 339 | 923 |
 | `run_eq_ref` | proved | — | — | 890 | 1071 |
 | `mask_rows_table_premises` | proved | — | `read_exact`, `read_print` | 124 | 521 |
-| `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 71 | 985 |
-| `tape_replays` | proved | — | — | 97 | 968 |
+| `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 87 | 1303 |
+| `tape_replays` | proved | — | — | 114 | 1287 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 869 |
-| `shown_views_opened` | proved | — | `tapeFrom_position_replays` | 74 | 1033 |
+| `shown_views_opened` | proved | — | `tapeFrom_position_replays` | 90 | 1351 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
-| `journal_replays` | proved | — | — | 77 | 944 |
+| `journal_replays` | proved | — | — | 93 | 1263 |
 | `run_agrees` | proved | — | `run_eq_meaning` | 68 | 867 |
-| `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 967 |
+| `tapeFrom_position_replays` | proved | — | `tape_replays` | 92 | 1285 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
@@ -5945,12 +6008,12 @@ flowchart LR
 | `Semaphore.take_withdrawal_minted` | proved | — | `Semaphore.take_withdrawal` | 76 | 357 |
 | `visit_attempt` | proved | — | `step_keeps_cell`, `visitStep_types`, `step_updates`, `visitStep_agrees` | 72 | 468 |
 | `visit_attempt_minted` | proved | — | `visit_attempt` | 97 | 364 |
-| `held_within_fed` | goal | `held_within_fed` | `checkInput_eq_none_iff` | 87 | 1616 |
-| `queueWorkers` | modulo | `fed_accounted`, `held_within_fed`, `queue_settled`, `releases_once` | `releases_once`, `queue_settled`, `fed_accounted`, `held_within_fed`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 87 | 1639 |
-| `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 85 | 1462 |
-| `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 85 | 1464 |
+| `held_within_fed` | goal | `held_within_fed` | `checkInput_eq_none_iff` | 87 | 1633 |
+| `queueWorkers` | modulo | `fed_accounted`, `held_within_fed`, `queue_settled`, `releases_once` | `releases_once`, `queue_settled`, `fed_accounted`, `held_within_fed`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 87 | 1656 |
+| `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 85 | 1479 |
+| `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 85 | 1481 |
 | `tagIs_pair` | proved | — | — | 8 | 92 |
-| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1477 |
+| `retries_declared` | goal | `retries_declared` | `checkInput_eq_none_iff` | 85 | 1494 |
 | `check_sound` | proved | — | — | 136 | 262 |
 | `check_complete` | proved | — | — | 69 | 266 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
@@ -5975,13 +6038,13 @@ flowchart LR
 | `Semaphore.Model.withdrawStep_types` | proved | — | `lift_member`, `normalize_idem`, `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 248 | 177 |
 | `visitStep_types` | proved | — | `subN_refl`, `matchArgsB_cons_nil`, `matchArgsB_append`, `lift_member`, `normalize_idem`, `join_eq_right_of_subN`, `matchArgsB_ite`, `matchArgsB_list_var_nat`, `matchArgsB_two_vars` | 285 | 183 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
-| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 87 | 1607 |
-| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1623 |
-| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1623 |
+| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 87 | 1624 |
+| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1640 |
+| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1640 |
 | `control_retires` | proved | — | — | 69 | 864 |
-| `applied_selects` | proved | — | — | 69 | 903 |
-| `receipt_inert` | proved | — | — | 77 | 957 |
-| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1454 |
+| `applied_selects` | proved | — | — | 85 | 1222 |
+| `receipt_inert` | proved | — | — | 93 | 1276 |
+| `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 85 | 1471 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` | 559 | 676 |
 | `matchArgsB_two_vars` | proved | — | `candsList_nil`, `cands_var`, `candsList_cons` | 39 | 59 |
@@ -6106,10 +6169,10 @@ flowchart LR
 | `compiled_mask_chain_runs` | proved | — | `driveState_lift` | 234 | 842 |
 | `compiled_region_bracket` | proved | — | `stepped_live` | 59 | 84 |
 | `stepped_live` | proved | — | — | 66 | 579 |
-| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1477 |
-| `QueueWorkers.releases_once` | goal | `QueueWorkers.releases_once` | `checkInput_eq_none_iff` | 87 | 1607 |
-| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1476 |
-| `Workers.releases_once` | goal | `Workers.releases_once` | `checkInput_eq_none_iff` | 85 | 1484 |
+| `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 86 | 1494 |
+| `QueueWorkers.releases_once` | goal | `QueueWorkers.releases_once` | `checkInput_eq_none_iff` | 87 | 1624 |
+| `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 85 | 1493 |
+| `Workers.releases_once` | goal | `Workers.releases_once` | `checkInput_eq_none_iff` | 85 | 1501 |
 | `close_idempotent` | proved | — | — | 1 | 15 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
@@ -6161,8 +6224,8 @@ flowchart LR
 | `first_step_inv` | proved | — | `positive_suspend_step_capacity`, `first_profile_closed` | 57 | 74 |
 | `visit_selects_earliest` | proved | — | — | 5 | 11 |
 | `visit_stops_iff` | proved | — | — | 4 | 11 |
-| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1623 |
-| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1623 |
+| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 87 | 1640 |
+| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 87 | 1640 |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
 | `first_profile_closed` | proved | — | — | 29 | 72 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 100 |
@@ -6192,13 +6255,13 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `journal_replays` | proved | — | — | 77 | 944 |
-| `tapeFrom_append` | proved | — | — | 75 | 960 |
-| `tapeFrom_cut` | proved | — | — | 74 | 959 |
-| `tapeFrom_cut_replays` | proved | — | `tape_replays`, `tapeFrom_cut` | 70 | 966 |
-| `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 967 |
-| `replays` | proved | — | `journal_replays` | 82 | 971 |
-| `tape_replays` | proved | — | — | 97 | 968 |
+| `journal_replays` | proved | — | — | 93 | 1263 |
+| `tapeFrom_append` | proved | — | — | 91 | 1278 |
+| `tapeFrom_cut` | proved | — | — | 90 | 1277 |
+| `tapeFrom_cut_replays` | proved | — | `tape_replays`, `tapeFrom_cut` | 86 | 1284 |
+| `tapeFrom_position_replays` | proved | — | `tape_replays` | 92 | 1285 |
+| `replays` | proved | — | `journal_replays` | 98 | 1290 |
+| `tape_replays` | proved | — | — | 114 | 1287 |
 
 ### R14: A sketch checks and explains its types: holes and the gap, graduality, the focus, minimal type slices and total marking
 

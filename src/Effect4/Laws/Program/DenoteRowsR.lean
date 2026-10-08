@@ -21,12 +21,13 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
 /-- The tree over the stores and the rows, read as a term of the reference machine: a store
 operation is itself, and a host call is the external registration with its request
-(`denoteForeign`, `Laws/Program/DenoteR.lean`). -/
+(`denoteForeign`, `Laws/Program/DenoteR.lean`), at the empty address that the erasure leaves
+(`controlErasure`). -/
 def toRef (table : RowTable) : Effects.Handler (RowsSig table) (Effects.Program RSig) where
   handle
     | .inl o => Effects.Program.vis (.inl o) Effects.Program.pure
     | .inr op =>
-      Effects.Program.vis (.inr (.async (.external (.external op.1.val) op.2) op.2))
+      Effects.Program.vis (.inr (.async (.external (.external op.1.val) op.2 []) op.2))
         Effects.Program.pure
 
 /-- Reading as a reference term commutes with sequencing. -/

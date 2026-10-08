@@ -159,8 +159,18 @@ def bindCall {program : Api.Program} {table : RowTable} (s : Session program tab
     pending := s.pending ++ [⟨⟨call.fiber, token⟩, none⟩]
     nextCall := s.nextCall + 1 }⟩
 
-/-- Pure preflight. Success establishes exactly the existing `Envelope` and returns only
-its recorded answer decision. It neither applies a decision nor consumes a reply. -/
+/-- **The checked instance at a call's address** in the session's program (`callAt`), at the
+signature that admitted it (`⟨table, []⟩`). The checker types the program with its layer
+references expanded, and the expansion keeps every other address, so a registration's origin
+addresses its call there. `none` where no call stands at the address. -/
+def instanceAt (program : Api.Program) (table : RowTable) :
+    List Nat → Option (CallInstance NativeOp) :=
+  callAt (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+
+/-- Pure preflight. Success establishes the existing `Envelope`, or, where the row's own
+columns refuse the completion, the envelope at the call's checked instance
+(`InstanceEnvelope`, decisions row 183). It returns only the recorded answer decision. It
+neither applies a decision nor consumes a reply. -/
 def preflight {program : Api.Program} {table : RowTable} (s : Session program table)
     (reply : Reply) : Except Refusal NativeDecision :=
   if reply.version ≠ version then .error .version
@@ -171,8 +181,11 @@ def preflight {program : Api.Program} {table : RowTable} (s : Session program ta
       if reply.callId ≠ bound.call.callId then .error .callOrder
       else if requestOf s.machine bound.call.fiber bound.token = none then .error .staleCall
       else match acceptReply table s.machine (bound.record reply) with
-        | none => .error .envelope
         | some decision => .ok decision
+        | none =>
+          match acceptAtInstance table (instanceAt program table) s.machine (bound.record reply) with
+          | some decision => .ok decision
+          | none => .error .envelope
 
 /-- Pending completions in binding order; no application policy is inferred from this list. -/
 def pendingReplies {program : Api.Program} {table : RowTable} (s : Session program table) : List Reply :=

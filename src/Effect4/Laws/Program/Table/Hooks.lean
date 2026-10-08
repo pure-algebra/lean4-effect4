@@ -20,14 +20,14 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
 /-- The frame's external row, read off its current code as `prepareExternalAnswer` reads it. -/
 def frameIndex : Option NCode → Option Nat
-  | some (.async (.external (.external i) _) _ _) => some i
+  | some (.async (.external (.external i) _ _) _ _) => some i
   | _ => none
 
 /-- Related current codes wait on the same external row (`CodeMeans.asyncForeign`). -/
 theorem index_agree (root : NativeEff) {c₁ : NCode} {c₂ : RProgram} (h : CodeMeans root c₁ c₂) :
     frameIndex (some c₁) = externalIndexR (some c₂) := by
   cases h with
-  | asyncForeign op request k hk => cases op <;> rfl
+  | asyncForeign op request origin k hk => cases op <;> rfl
   | _ => rfl
 
 /-- The frame's prepared answer is `prepareAtR`'s at the frame's row, up to the code each
@@ -44,7 +44,7 @@ theorem prepare_agree (root : NativeEff) (table : RowTable) (cur : Option NCode)
     exact ⟨rfl, answerCode_means (table := table) root answer⟩
   · rw [if_neg ht, if_neg ht]
     split
-    · rename_i i _ _ _ value
+    · rename_i i _ _ _ _ value
       simp only [frameIndex]
       cases hr : externalRow table i with
       | none => dsimp only; exact ⟨rfl, CodeMeans.success value⟩
@@ -59,8 +59,8 @@ theorem prepare_agree (root : NativeEff) (table : RowTable) (cur : Option NCode)
         exfalso
         unfold frameIndex at hidx
         split at hidx
-        · rename_i j request withSignal cancel
-          exact hnot j request withSignal cancel value rfl rfl
+        · rename_i j request origin withSignal cancel
+          exact hnot j request origin withSignal cancel value rfl rfl
         · cases hidx
       · exact ⟨rfl, answerCode_means (table := table) root _⟩
 

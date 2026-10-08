@@ -21,7 +21,7 @@ theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Poin
     simp only [denoteForeign]
     cases evalTerm p.env r with
     | none => exact codeMeans_badShape root
-    | some v => exact CodeMeans.asyncForeign (.external i) v _ delivers_pure
+    | some v => exact CodeMeans.asyncForeign (.external i) v _ _ delivers_pure
   | sleep =>
     unfold denoteSleep
     cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
