@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Store.Carrier.Image
+public import Effect4.Store.Carrier.Image.Record
 
 /-! Disjoint constructor images for sums and explicit errors. These are codecs, not
 new membership rules for the program's error type. -/
@@ -78,5 +78,19 @@ def tuple2 (I : Image α) (J : Image β) : Image (α × β) where
         rw [I.ofVal_exact hx, J.ofVal_exact hy]
       · exact nomatch h
     · exact nomatch h
+
+/-- Flat tuple items reuse the exact value column, without record names.
+A helper of step-language-sound, consumed by the tuple carrier and Step.tuple3. -/
+def tupleColumns {ρ : Type} (R : Effect4.Store.Columns ρ) : Image ρ where
+  toVal x := .list (R.toVals x)
+  ofVal
+    | .list vs => R.ofVals vs
+    | _ => none
+  ofVal_toVal x := R.ofVals_toVals x
+  ofVal_exact := by
+    intro v x h
+    cases v with
+    | list vs => exact congrArg Val.list (R.ofVals_exact h)
+    | _ => nomatch h
 
 end Effect4.Store.Image

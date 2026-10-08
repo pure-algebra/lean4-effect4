@@ -18,12 +18,13 @@ inputs that answers a value (decisions row 330, slice L2). Here a step is data:
   list (`Schema.FieldRef`). The syntax holds no function.
 - **The signature**: an input, the literals `bool`, `nat` and `unit`, the Boolean words `not`,
   `and`, `or` and `ite`, the numeric words `add`, `sub`, `lt`, `eq` and `isZero`, the product
-  words `pair`, `tuple2`, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and
+  words `pair`, `tuple2`, `tuple3`, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and
   the list words `nil`, `cons`, `emptyLike`, `len`, `snoc`, `append`, `take`, `drop` and `head`.
   Records carry required `StepFields`. Typed `none` and `nil` use checked ascription.
   `sameDeferred` compares deferred keys under an interpretation capability.
   A `fold` binds the accumulator and item before the outer inputs in its body. `pair` and
   `tuple2` answer one value, and differ in their atom and in their typing rule.
+  `tuple3` answers three flat tuple items, with a required-column carrier.
 - **The algebra and its fold** (`StepAlgebra`, `Step.cata`): one field per constructor, and the
   one map out of the syntax. Every interpretation below is an algebra. The two are written by
   hand: the fold generator (`tools/Effect4Gen/Fold.lean`) writes the algebras of the free objects,
@@ -98,6 +99,7 @@ inductive Step : List Ty → Ty → Type where
   | eq {Γ : List Ty} : Step Γ .nat → Step Γ .nat → Step Γ .bool
   | isZero {Γ : List Ty} : Step Γ .nat → Step Γ .bool
   | pair {Γ : List Ty} {a b : Ty} : Step Γ a → Step Γ b → Step Γ (.prod a b)
+  | tuple3 {Γ : List Ty} {a b c : Ty} : Step Γ a → Step Γ b → Step Γ c → Step Γ (.tuple [a, b, c])
   | tuple2 {Γ : List Ty} {a b : Ty} : Step Γ a → Step Γ b → Step Γ (.prod a b)
   | fst {Γ : List Ty} {a b : Ty} : Step Γ (.prod a b) → Step Γ a
   | snd {Γ : List Ty} {a b : Ty} : Step Γ (.prod a b) → Step Γ b
@@ -176,6 +178,7 @@ structure StepAlgebra (R : List Ty → Ty → Type) where
   eq : {Γ : List Ty} → R Γ .nat → R Γ .nat → R Γ .bool
   isZero : {Γ : List Ty} → R Γ .nat → R Γ .bool
   pair : {Γ : List Ty} → {a b : Ty} → R Γ a → R Γ b → R Γ (.prod a b)
+  tuple3 : {Γ : List Ty} → {a b c : Ty} → R Γ a → R Γ b → R Γ c → R Γ (.tuple [a, b, c])
   tuple2 : {Γ : List Ty} → {a b : Ty} → R Γ a → R Γ b → R Γ (.prod a b)
   fst : {Γ : List Ty} → {a b : Ty} → R Γ (.prod a b) → R Γ a
   snd : {Γ : List Ty} → {a b : Ty} → R Γ (.prod a b) → R Γ b
@@ -222,6 +225,7 @@ def cata {R : List Ty → Ty → Type} (alg : StepAlgebra R) : {Γ : List Ty} �
   | _, _, .eq a b => alg.eq (cata alg a) (cata alg b)
   | _, _, .isZero a => alg.isZero (cata alg a)
   | _, _, .pair a b => alg.pair (cata alg a) (cata alg b)
+  | _, _, .tuple3 a b c => alg.tuple3 (cata alg a) (cata alg b) (cata alg c)
   | _, _, .tuple2 a b => alg.tuple2 (cata alg a) (cata alg b)
   | _, _, .fst p => alg.fst (cata alg p)
   | _, _, .snd p => alg.snd (cata alg p)
@@ -281,6 +285,7 @@ def termAlg : StepAlgebra (fun Γ _ => ({t : Ty} → Input Γ t → TermSrc) →
   len xs := fun src => Modules.len (xs src)
   snoc xs x := fun src => Modules.snoc (xs src) (x src)
   head xs := fun src => app "get" [xs src, Authoring.nat 0]
+  tuple3 a b c := fun src => tuple [a src, b src, c src]
   tuple2 a b := fun src => tuple [a src, b src]
   add a b := fun src => app "add" [a src, b src]
   sub a b := fun src => app "sub" [a src, b src]
@@ -330,6 +335,7 @@ def evalAlg (L : Leaves) : StepAlgebra (fun Γ t => Inputs L Γ → CarrierAt L 
   eq a b := fun vs => (fun (x y : Nat) => decide (x = y)) (a vs) (b vs)
   isZero a := fun vs => (fun (x : Nat) => decide (x = 0)) (a vs)
   pair a b := fun vs => (a vs, b vs)
+  tuple3 a b c := fun vs => (a vs, (b vs, (c vs, ())))
   tuple2 a b := fun vs => (a vs, b vs)
   fst p := fun vs => (p vs).1
   snd p := fun vs => (p vs).2
@@ -373,6 +379,7 @@ def writesAlg : StepAlgebra (fun _ _ => List String) where
   eq a b := a ++ b
   isZero a := a
   pair a b := a ++ b
+  tuple3 a b c := a ++ b ++ c
   tuple2 a b := a ++ b
   fst p := p
   snd p := p
@@ -413,6 +420,7 @@ def spineAlg : StepAlgebra (fun _ _ => Option Nat) where
   eq _ _ := Option.none
   isZero _ := Option.none
   pair _ _ := Option.none
+  tuple3 _ _ _ := Option.none
   tuple2 _ _ := Option.none
   fst _ := Option.none
   snd _ := Option.none
@@ -457,6 +465,7 @@ def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → 
   eq a b := a && b
   isZero a := a
   pair a b := a && b
+  tuple3 {_Γ} {a b c} x y z := (atType a && (atType b && atType c)) && (x && (y && z))
   tuple2 {_Γ} {a b} x y := atType (.prod a b) && (x && y)
   fst p := p
   snd p := p
@@ -511,6 +520,8 @@ def factsAlg : StepAlgebra (fun _ _ => Prop) where
   eq a b := a ∧ b
   isZero a := a
   pair a b := a ∧ b
+  tuple3 {_Γ} {a b c} x y z :=
+    (a.normalize = a ∧ b.normalize = b ∧ c.normalize = c) ∧ x ∧ y ∧ z
   tuple2 {_Γ} {a b} x y :=
     (a.normalize = a ∧ b.normalize = b ∧ a.isFactor = true ∧ b.isFactor = true) ∧ x ∧ y
   fst p := p
@@ -565,6 +576,7 @@ def featureAlg (atFold atComparison : Bool) : StepAlgebra (fun _ _ => Bool) wher
   eq a b := a || b
   isZero a := a
   pair a b := a || b
+  tuple3 x y z := x || (y || z)
   tuple2  x y := x || y
   fst p := p
   snd p := p

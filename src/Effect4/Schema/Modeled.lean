@@ -24,6 +24,7 @@ at. It refuses an identity type, since an identity needs its role's table; an op
 a record whose names are not strictly ascending by their bytes (`Field.Ascending`); and every
 constructor that has no carrier yet. On the checked domain every encoded value inhabits its type
 (`Effect4.Schema.Model.member`, `src/Effect4/Laws/Schema/Modeled.lean`).
+Tuple carriers serve stored step results. The checked domain still refuses tuple types.
 
 `Modeled α` ties a Lean type to a checked `Ty` by an equivalence with that type's carrier. An
 instance proves its type checked, and its image is the fold's, carried across the equivalence,
@@ -79,6 +80,13 @@ def columnsOf : List (String × Bool × M) → Σ ρ : Type, Columns ρ
   | (n, o, m) :: rest =>
     ⟨(fieldCarrier o m).1 × (columnsOf rest).1, Columns.cons n (fieldCarrier o m).2 (columnsOf rest).2⟩
 
+/-- Tuple items share the exact columns, with names unused by their flat image.
+A helper of step-language-sound, consumed by the tuple3 step carrier. -/
+def tupleColumnsOf : List M → Σ ρ : Type, Columns ρ
+  | [] => ⟨Unit, Columns.nil⟩
+  | m :: rest => ⟨m.1 × (tupleColumnsOf rest).1,
+      Columns.cons "" m.2 (tupleColumnsOf rest).2⟩
+
 /-- **The carrier algebra** at an identity context: each supported constructor's carrier and its
 image. -/
 def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
@@ -104,7 +112,7 @@ def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
   ty_unknown := refused
   ty_record fs := ⟨(columnsOf fs).1, Image.record (columnsOf fs).2⟩
   ty_map _ _ := refused
-  ty_tuple _ := refused
+  ty_tuple ms := ⟨(tupleColumnsOf ms).1, Image.tupleColumns (tupleColumnsOf ms).2⟩
   ty_app _ _ := refused
   ty_null := refused
   ty_undefined := refused
