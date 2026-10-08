@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Program.Fold
+public import Effect4.Program.TyNormal
 public import Effect4.Store.Carrier.Image.Containers
 public import Effect4.Store.Carrier.Image.Record
 
@@ -11,6 +12,12 @@ The schema plane's carrier fold (`Model.alg`) gives each supported `Ty` its Lean
 exact embedding into `Store.Val` together. It is a `TyAlgebra`, so it reduces on a concrete type:
 `Model.Carrier (.list .nat)` is `List Nat`. A record type's carrier is the product of its fields'
 carriers, written into the record frame (`Store.Image.record`).
+
+The fold takes an **identity context** (`Model.Leaves`): the carrier of each identity type, the
+handle, the reference, the `Deferred` and the fiber. `Model.alg` is the fold at the context that
+refuses every identity (`Leaves.refused`). The context that carries an identity as its own value
+(`Leaves.opaque`) lets a step read and write a record that holds identities, Semaphore's cell
+among them (`src/Effect4/Modules/Step.lean`).
 
 The **checked domain** is the set of types the refusal fold (`Model.refusalAlg`) answers `none`
 at. It refuses an identity type, since an identity needs its role's table; an optional field;
@@ -39,33 +46,55 @@ abbrev M := Σ α : Type, Image α
 /-- The carrier of a constructor outside the checked domain: empty. -/
 def refused : M := ⟨Empty, Image.empty⟩
 
-/-- A record's fields, one column each, in the type's order. An optional field has no carrier
-yet: its column is empty, and the refusal fold refuses it. -/
+/-- **An identity context**: the carrier of each identity type, by its role. An identity's
+carrier does not depend on what the handle holds. -/
+structure Leaves where
+  handle : String → M
+  ref : M
+  deferred : M
+  fiber : M
+
+/-- The context of the checked domain: every identity is refused, since it needs its table. -/
+def Leaves.refused : Leaves := ⟨fun _ => Model.refused, Model.refused, Model.refused, Model.refused⟩
+
+/-- The context that carries an identity as its own value, with the carrier's own image
+(`Image.ident`). A step reads and writes such a field as it is, and never inspects it. -/
+def Leaves.opaque : Leaves :=
+  ⟨fun _ => ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩⟩
+
+/-- A field's carrier: its type's, or empty for an optional field, which has no carrier yet. -/
+def fieldCarrier : Bool → M → M
+  | false, m => m
+  | true, _ => refused
+
+/-- A record's fields, one column each, in the type's order. The shape is one product per
+field, whether the field is optional or not. -/
 def columnsOf : List (String × Bool × M) → Σ ρ : Type, Columns ρ
   | [] => ⟨Unit, Columns.nil⟩
-  | (n, false, m) :: rest => ⟨m.1 × (columnsOf rest).1, Columns.cons n m.2 (columnsOf rest).2⟩
-  | (n, true, _) :: rest => ⟨Empty × (columnsOf rest).1, Columns.cons n Image.empty (columnsOf rest).2⟩
+  | (n, o, m) :: rest =>
+    ⟨(fieldCarrier o m).1 × (columnsOf rest).1, Columns.cons n (fieldCarrier o m).2 (columnsOf rest).2⟩
 
-/-- **The carrier algebra**: each supported constructor's carrier and its image. -/
-def alg : TyAlgebra (fun _ => M) where
+/-- **The carrier algebra** at an identity context: each supported constructor's carrier and its
+image. -/
+def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
   ty_never := refused
   ty_unit := ⟨Unit, Image.unit⟩
   ty_nat := ⟨Nat, Image.nat⟩
   ty_int := refused
   ty_string := ⟨String, Image.string⟩
   ty_bool := ⟨Bool, Image.bool⟩
-  ty_handle _ := refused
+  ty_handle n := L.handle n
   ty_option m := ⟨Option m.1, Image.option m.2⟩
   ty_list m := ⟨List m.1, Image.list m.2⟩
   ty_prod a b := ⟨a.1 × b.1, Image.tuple2 a.2 b.2⟩
   ty_except _ _ := refused
   ty_exitOf _ _ := refused
   ty_causeOf _ := refused
-  ty_fiberOf _ _ := refused
+  ty_fiberOf _ _ := L.fiber
   ty_union _ _ := refused
   ty_lit _ := refused
-  ty_refOf _ := refused
-  ty_deferredOf _ _ := refused
+  ty_refOf _ := L.ref
+  ty_deferredOf _ _ := L.deferred
   ty_var _ := refused
   ty_unknown := refused
   ty_record fs := ⟨(columnsOf fs).1, Image.record (columnsOf fs).2⟩
@@ -77,14 +106,20 @@ def alg : TyAlgebra (fun _ => M) where
   ty_number := refused
   ty_bytes := refused
 
+/-- The Lean carrier of a type at an identity context. -/
+def CarrierAt (L : Leaves) (t : Ty) : Type := (cata_ty (algAt L) t).1
+
+/-- The exact embedding of a type's carrier at an identity context. -/
+def imageAt (L : Leaves) (t : Ty) : Image (CarrierAt L t) := (cata_ty (algAt L) t).2
+
+/-- **The carrier algebra of the checked domain**: every identity refused. -/
+def alg : TyAlgebra (fun _ => M) := algAt Leaves.refused
+
 /-- The Lean carrier of a type. -/
 def Carrier (t : Ty) : Type := (cata_ty alg t).1
 
 /-- The exact embedding of a type's carrier. -/
 def image (t : Ty) : Image (Carrier t) := (cata_ty alg t).2
-
-instance {β : Type} (l : List (String × β)) : Decidable (Field.Ascending Field.bytesKey l) :=
-  inferInstanceAs (Decidable (l.Pairwise _))
 
 /-- A record's fields: refused at an optional field, or at a field's own refusal. -/
 def fieldsRefusal : List (String × Bool × Option String) → Option String

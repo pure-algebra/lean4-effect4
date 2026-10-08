@@ -347,6 +347,9 @@ def registry : Registry where
     { id := "modeled-membership", concept := "store-typing", role := .compatibility
       title := "On the checked domain, every carrier value's encoding inhabits its type at every allocation table: the refusal fold answers none at the type, and the carrier and its image are the carrier fold's (Model.member); an instance of Modeled inherits it across its equivalence, with no proof of its own (Modeled.member); nothing for an identity type, an optional field or a refused constructor, and no codec admission (decisions row 330, slice L1)"
       pointer := .witness `Effect4.Schema.Model.member },
+    { id := "step-language-typed", concept := "store-typing", role := .compatibility
+      title := "A step of the step language types at its type at every scope: when the caller's terms type at the inputs' types, a step that passes its typing check has a term that types at the step's type under each literal flag; the check certifies normal forms by a fold of Ty and closes by rfl on a concrete step (Step.typed); typing only: no run, nothing of a fold or an optional field (decisions row 330, slice L2)"
+      pointer := .witness `Effect4.Modules.Step.typed },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
@@ -765,6 +768,9 @@ def registry : Registry where
     { id := "modeled-codec", concept := "exact-codecs", role := .compatibility
       title := "A modeled value survives JSON and back at the normal form of its type, under codec admission at the value (Ty.isCodecValue): decoding its encoding and reading the value back answers the value; admission stays a premise, since a natural above 2^53 inhabits nat and has no exact JSON image; no TypeScript codec and no target execution (decisions row 330, slice L1)"
       pointer := .witness `Effect4.Schema.Modeled.codec_roundtrip },
+    { id := "record-field-laws", concept := "exact-codecs", role := .compatibility
+      title := "A field reference is a lens on the record frame: for a record with ascending names, at every identity context, the machine's read at the reference's name reads the field's encoding, and its overwrite at that name writes the record the reference's write gives (FieldRef.frame_laws); on carriers the reference is a lawful lens whose writes at two positions commute; nothing of an optional field (decisions row 330, slice L2)"
+      pointer := .witness `Effect4.Schema.FieldRef.frame_laws },
     { id := "annotate-table", concept := "initial-algebras-folds", role := .compatibility
       title := "The address table in one traversal: annotate, the checker's seven functions with a record at each node, answers the address table at every program, entry for entry and in its order; each node's checker arm runs once, and a child's environment comes from the answers before it; past a refused read the subtree is not reached, as in the table; no theorem counts the cost, and the left child's entries are copied at each node (decisions rows 302, 324)"
       pointer := .witness `Effect4.Program.annotate_eq_table },
@@ -937,7 +943,13 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.Denote.StraightEq.run_agrees },
     { id := "mask-printed-form-profile", concept := "translation-simulation", role := .compatibility
       title := "The mask as a derived form, the getter bound to its body under uninterruptible: the surface's builder is that expansion; it types as its body under the saved state's binder, and a restore site of any other saved term has no type; it is readable exactly when its body is, so it prints and reads back; inside the getter the fiber is masked and a pending cause fails it at the getter's restoring frame, and after that frame an interruptible caller is interruptible until the body's mask (decisions rows 245, 246; no equality with the native spelling and no agreement with a release)"
-      pointer := .witness `Effect4.Program.mask_printed_form_profile }
+      pointer := .witness `Effect4.Program.mask_printed_form_profile },
+    { id := "step-language-sound", concept := "translation-simulation", role := .simulation
+      title := "A step of the step language reads its value at every scope: when the caller's terms read the encodings of the inputs' values, at any identity context, a step that passes its reading check has a term that reads the encoding of its value (Step.sound); a module's step written as data inherits its agreement with no proof of its own; nothing of a fold, an optional field, a step's specification or a run (decisions row 330, slice L2)"
+      pointer := .witness `Effect4.Modules.Step.sound },
+    { id := "step-frame", concept := "translation-simulation", role := .preservation
+      title := "On an update spine of an input, a field that no overwrite of the step names keeps its value: on carriers with no premise on the record's names (Step.frame), and on the machine's record frame for ascending names (Step.frame_read); nothing of a step that is no spine (decisions row 330, slice L2)"
+      pointer := .witness `Effect4.Modules.Step.frame }
   ]
   cuts := [
     -- 1. store-typing

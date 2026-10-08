@@ -94,6 +94,11 @@ import Effect4.Schema.TyFaces
 import Effect4.Store.Carrier.Image.Record
 import Effect4.Schema.Modeled
 import Effect4.Schema.Modeled.Derive
+-- The step language over `Ty`: field references, the normal-form certificate and the steps
+-- (decisions row 330, slice L2).
+import Effect4.Program.TyNormal
+import Effect4.Schema.FieldRef
+import Effect4.Modules.Step
 import Effect4.Program.Typing
 import Effect4.Program.Definitions
 import Effect4.Program.Typing.Blame

@@ -147,6 +147,9 @@ import Effect4.Laws.Api.ModuleReadable
 import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Schema.Modeled
+import Effect4.Laws.Program.TyNormal
+import Effect4.Laws.Schema.FieldRef
+import Effect4.Laws.Modules.Step
 import Effect4.Laws.Program.Authoring
 import Effect4.Laws.Program.Authoring.Records
 import Effect4.Laws.Program.Authoring.Tuples

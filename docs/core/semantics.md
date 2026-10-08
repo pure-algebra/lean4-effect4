@@ -304,6 +304,15 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   So an instance inherits the law with no proof of its own (`Modeled.member`).
   It establishes nothing for an identity type, an optional field or a refused constructor, and
   no codec admission (decisions row 330).
+- **A step types at its type (`step-language-typed`)**: A step is data over typed inputs
+  (`Step`, `src/Effect4/Modules/Step.lean`), and it has a source term at every scope.
+  Let the caller's terms type at the inputs' types, and let the step pass its typing check.
+  Then its term types at the step's type, under each literal flag (`Step.typed`,
+  `src/Effect4/Laws/Modules/Step.lean`).
+  The check certifies the normal forms that the checker asks for by a fold of `Ty`
+  (`Ty.normalize_of_certNormal`, `src/Effect4/Laws/Program/TyNormal.lean`).
+  So it closes by `rfl` on a concrete step, a product included.
+  It is typing only: no run, and nothing of a fold or an optional field (decisions row 330).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 - **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
@@ -841,6 +850,15 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   Codec admission at the value (`Ty.isCodecValue`) stays a premise: a natural above 2^53
   inhabits `nat` and has no exact JSON image.
   It establishes no TypeScript codec and no target execution (decisions row 330).
+- **A field reference is a lens on the record frame (`record-field-laws`)**: A field reference
+  is a position in a record's field list (`FieldRef`, `src/Effect4/Schema/FieldRef.lean`).
+  On carriers it is a lawful lens, at every identity context, and its writes at two positions
+  commute.
+  For a record with ascending names, the machine's read at the reference's name reads the
+  field's encoding.
+  The machine's overwrite at that name writes the record that the reference's write gives
+  (`FieldRef.frame_laws`, `src/Effect4/Laws/Schema/FieldRef.lean`).
+  It establishes nothing of an optional field (decisions row 330).
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.
@@ -1301,6 +1319,20 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   A client keeps one premise: nothing is acquired or registered before the body begins.
   It establishes no equality with the native spelling and no agreement with a release.
   (`mask_printed_form_profile` (`src/Effect4/Laws/Codegen/Mask.lean`)).
+- **A step reads its value (`step-language-sound`)**: A step is data over typed inputs
+  (`src/Effect4/Modules/Step.lean`), read at any identity context.
+  Let the caller's terms read the encodings of the inputs' values, and let the step pass its
+  reading check.
+  Then its term reads the encoding of its value (`Step.sound`,
+  `src/Effect4/Laws/Modules/Step.lean`).
+  A module's step written as data inherits its agreement with no proof of its own.
+  It establishes nothing of a fold, an optional field, a step's specification or a run
+  (decisions row 330).
+- **A step keeps the fields it does not name (`step-frame`)**: Take an update spine of an
+  input. A field that no overwrite of the step names keeps its value.
+  On carriers the law has no premise on the record's names (`Step.frame`).
+  On the machine's record frame it holds for ascending names (`Step.frame_read`).
+  It says nothing of a step that is no spine (decisions row 330).
 - **A journal's position replays (`journal-position-replay`)**: The machine after a position
   of a journal's tape is the raw replay of the decisions up to that position. The replay
   starts at the machine of the run that the tape was read from. A journal splits into a
