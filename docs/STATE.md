@@ -39,7 +39,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   [receipt](research/2026-10-08-procedures-proc3-receipt.md)). An author declares a definition
   once, and `Def.of` turns a library operation into a definition and its invocation. The Queue's
   operations are definitions too (slice PROC-4, the
-  [receipt](research/2026-10-08-procedures-proc4-receipt.md)).
+  [receipt](research/2026-10-08-procedures-proc4-receipt.md)). `eff_module` now derives the
+  authoring record, invocations and installation from one declaration list. Queue and Semaphore
+  use it. The [authoring receipt](research/2026-10-08-module-authoring-receipt.md) records the checks.
 - **Code generation.** The printer and the readers are driven by one table. The typed print has
   its slices P1, P2a, P2b and P3 (rows 324 and 325, the
   [receipt](research/2026-10-08-codex-unguard-receipt.md)). A call at a join carries its type
