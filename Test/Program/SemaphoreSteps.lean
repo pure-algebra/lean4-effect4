@@ -102,12 +102,12 @@ The term language has no local binding, so a step repeats its passes. The measur
 Queue battery's two algebras of the generated term fold: nodes, then folds. -/
 
 #guard measure ["need", "id", "hint", "s"]
-  (Semaphore.takeStep (var "need") (var "id") (var "hint") (var "s")) = some (72, 2)
+  (Semaphore.takeStep (var "need") (var "id") (var "hint") (var "s")) = some (74, 2)
 #guard measure ["need", "s"] (Semaphore.takeIfAvailableStep (var "need") (var "s")) =
   some (20, 0)
 #guard measure ["count", "s"] (Semaphore.releaseStep (var "count") (var "s")) = some (20, 0)
 #guard measure ["cursor", "s"] (Semaphore.visitStep (var "cursor") (var "s")) = some (133, 3)
-#guard measure ["id", "s"] (Semaphore.withdrawStep (var "id") (var "s")) = some (22, 1)
+#guard measure ["id", "s"] (Semaphore.withdrawStep (var "id") (var "s")) = some (23, 1)
 -- The two passes that fold: one fold each.
 #guard measure ["cursor", "s"] (Semaphore.fromFirst (var "cursor") (var "s")) = some (34, 1)
 #guard measure ["ws", "id"] (Semaphore.removeWaiter (var "ws") (var "id")) = some (16, 1)

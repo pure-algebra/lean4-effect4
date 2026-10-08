@@ -189,18 +189,18 @@ def measure (names : List String) (src : TermSrc) : Option (Nat × Nat) :=
 
 -- Each step's nodes and folds. The message type does not change a measure.
 #guard measure ["id", "hint", "s"] (Queue.takeStep .nat (var "id") (var "hint") (var "s")) =
-  some (283, 9)
+  some (290, 9)
 #guard measure ["id", "hint", "a", "s"]
-  (Queue.offerStep .nat (var "id") (var "hint") (var "a") (var "s")) = some (93, 0)
-#guard measure ["s"] (Queue.pollStep .nat (var "s")) = some (118, 1)
+  (Queue.offerStep .nat (var "id") (var "hint") (var "a") (var "s")) = some (101, 0)
+#guard measure ["s"] (Queue.pollStep .nat (var "s")) = some (120, 1)
 #guard measure ["s"] (Queue.sizeStep .nat (var "s")) = some (3, 0)
-#guard measure ["id", "s"] (Queue.withdrawTake .nat (var "id") (var "s")) = some (66, 3)
-#guard measure ["id", "s"] (Queue.withdrawOffer .nat (var "id") (var "s")) = some (34, 1)
+#guard measure ["id", "s"] (Queue.withdrawTake .nat (var "id") (var "s")) = some (69, 3)
+#guard measure ["id", "s"] (Queue.withdrawOffer .nat (var "id") (var "s")) = some (35, 1)
 -- The accept pass's one fold.
 #guard measure [] (Queue.gained (nat 1) nilT nilT) = some (16, 1)
 #guard messageTypes.all fun A =>
   measure ["id", "hint", "s"] (Queue.takeStep A (var "id") (var "hint") (var "s")) ==
-    some (283, 9)
+    some (290, 9)
 
 -- No fold of a step states its accumulator's type, so each step is inside the reader's domain.
 #guard ((termAt ["id", "hint", "s"] (Queue.takeStep .nat (var "id") (var "hint") (var "s"))).map
