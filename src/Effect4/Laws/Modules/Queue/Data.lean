@@ -1,4 +1,5 @@
 import Effect4.Modules.Queue.Data
+import Effect4.Laws.Modules.Queue.Passes
 import Effect4.Laws.Modules.Step
 import Effect4.Laws.Modules.Step.ErasedCompiler
 import Effect4.Laws.Modules.Queue.Relation

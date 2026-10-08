@@ -42,3 +42,17 @@ The core retains no positional binder helper.
 The focused Queue core and data connector build passes after this change.
 Both QueueData and QueueAgreement finite batteries pass.
 The general agreement and typing proof migrations remain open.
+
+Queue pass value helpers serve the existing operation agreement claims under translation-simulation and R10.
+They connect shared list folds to ordinary list operations at deferred-key carriers.
+Their consumers are Queue Data operation values, then Queue Steps reading laws.
+The helpers assume only their named carrier and evaluated inputs.
+Identity specialization requires the existing injective table premise.
+They establish neither progress nor host delivery.
+The shared Queue pass helpers compile with Queue Data as their consumer.
+Membership, head selection, taker removal, offer removal, and hint renewal use shared list and binder laws.
+Message collection computes the ordered fold directly.
+The six helper declarations use only propext and Quot.sound; message collection uses only propext.
+The command is LEAN_NUM_THREADS=3 lake build Effect4.Laws.Modules.Queue.Data.
+The trust probe is /private/tmp/queue-passes-axioms.lean.
+Model operation branch connectors and unchanged public typing proofs remain open.
