@@ -119,6 +119,9 @@ private def auditImplementationModules : List Name :=
   -- A field reference by name (`field_ref%`): a term elaborator that reads a schema and writes the
   -- positional reference; meta code, no theorem in the module (decisions row 330).
   , `Effect4.Schema.FieldRef.Elab
+  -- Named construction and binders elaborate existing indexed step data; no semantic theorem.
+  , `Effect4.Modules.Step.Elab
+  , `Effect4.Modules.Step.Elab.Inputs
   -- The position census, its totality gate and the typed-state skeleton emitter: commands over
   -- the environment and declaration constructors; meta code, no theorem in the modules.
   , `Effect4.Laws.Auto.Positions

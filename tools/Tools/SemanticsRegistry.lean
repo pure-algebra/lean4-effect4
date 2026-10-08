@@ -348,7 +348,7 @@ def registry : Registry where
       title := "On the checked domain, every carrier value's encoding inhabits its type at every allocation table: the refusal fold answers none at the type, and the carrier and its image are the carrier fold's (Model.member); an instance of Modeled inherits it across its equivalence, with no proof of its own (Modeled.member); nothing for an identity type, an optional field or a refused constructor, and no codec admission (decisions row 330, slice L1)"
       pointer := .witness `Effect4.Schema.Model.member },
     { id := "step-language-typed", concept := "store-typing", role := .compatibility
-      title := "A step of the step language types at its type at every scope: when the caller's terms type at the inputs' types, a step whose typing facts hold has a term that types at the step's type under each literal flag (Step.typed); a caller proves the facts from premises where a type is a parameter, or by the typing check, which certifies normal forms by a fold of Ty and closes by rfl on a concrete step (Step.typed_of_normal); typing only: no run, nothing of a fold or an optional field (decisions row 330, slices L2 and L3)"
+      title := "A stored step translates to its indexed type from native atom typing, typed caller inputs and Step.Facts; records retain formation and normality, and empty-value subtyping follows from the shared construction law; a fold additionally requires the caller type list to match the source scope length; Step.normal derives Facts for a closed step; no run, optional field, allocation or host behavior follows (decisions row 330)"
       pointer := .witness `Effect4.Modules.Step.typed },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
@@ -948,14 +948,17 @@ def registry : Registry where
       title := "The mask as a derived form, the getter bound to its body under uninterruptible: the surface's builder is that expansion; it types as its body under the saved state's binder, and a restore site of any other saved term has no type; it is readable exactly when its body is, so it prints and reads back; inside the getter the fiber is masked and a pending cause fails it at the getter's restoring frame, and after that frame an interruptible caller is interruptible until the body's mask (decisions rows 245, 246; no equality with the native spelling and no agreement with a release)"
       pointer := .witness `Effect4.Program.mask_printed_form_profile },
     { id := "step-language-sound", concept := "translation-simulation", role := .simulation
-      title := "A step of the step language reads its value at every scope: when the caller's terms read the encodings of the inputs' values, at any identity context, a step that passes its reading check has a term that reads the encoding of its value (Step.sound); a module's step written as data inherits its agreement with no proof of its own; nothing of a fold, an optional field, a step's specification or a run (decisions row 330, slice L2)"
+      title := "A stored step translates to a term reading its carrier value from caller terms reading the input encodings and canonical record names; folds require aligned caller value and source scope lengths, and deferred comparisons require DeferredIdentity at the carrier interpretation; captured sources resolve at their original scope; each module separately proves its value equation against an independent model; no optional field, allocation, wrapper, run or host behavior follows (decisions row 330)"
       pointer := .witness `Effect4.Modules.Step.sound },
     { id := "step-frame", concept := "translation-simulation", role := .preservation
       title := "On an update spine of an input, a field that no overwrite of the step names keeps its value: on carriers with no premise on the record's names (Step.frame), and on the machine's record frame for ascending names (Step.frame_read); nothing of a step that is no spine (decisions row 330, slice L2)"
       pointer := .witness `Effect4.Modules.Step.frame },
     { id := "latch-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of the Latch's four steps, written natively in the step language, agrees with the model of rc.112's class Latch: isOpen, open and release with scheduleUnsafe's one flush per batch, flushScheduled and closeUnsafe; the reply and the next state through the table, the cell's value being the carrier's image; each by the step language's reading law and one equation of Lean values; nothing of await, interruption, the posted flush's fiber or liveness (decisions row 330, slice L3)"
-      pointer := .witness `Effect4.Latch.Model.latch_steps_agree }
+      pointer := .witness `Effect4.Latch.Model.latch_steps_agree },
+    { id := "latch-registration-agrees", concept := "translation-simulation", role := .simulation
+      title := "Latch initial construction, await registration and first-match withdrawal read the independent model's reply and next cell; registration uses the table's identity and hint, withdrawal assumes an injective table and aligned value and source scope lengths; cleanup searches waiters before the attached scheduled batch and keeps the scheduled flag, including duplicate registrations; no interruption delivery, posted-flush execution, liveness or host behavior follows (decisions row 330)"
+      pointer := .witness `Effect4.Latch.Model.latch_registration_agrees }
   ]
   cuts := [
     -- 1. store-typing

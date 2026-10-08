@@ -76,7 +76,10 @@ theorem removeFirst_eval {Γ : List Ty} (tb : Table) (injective : tb.Injective) 
     by_cases same : w = id
     · subst w; rfl
     · rw [decide_eq_false same, decide_eq_false (Ne.symm same)]
-  rw [predicate, ← List.contains_eq_any_beq, ← List.erase_eq_eraseP]
+  rw [predicate, ← List.contains_eq_any_beq]
+  have sameTest : (fun w : Nat => id == w) = (fun w => w == id) :=
+    funext fun _ => Bool.beq_comm
+  rw [List.erase_eq_eraseP', sameTest]
 
 /-- Registration inputs at the comparison interpretation. -/
 abbrev awaitInputs (tb : Table) (s : State) (id : Nat) :
