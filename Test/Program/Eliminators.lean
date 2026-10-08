@@ -4,47 +4,13 @@ import Effect4.Program.Native
 import Effect4.Program.Sketch
 
 /-!
-# Controls of the converted eliminators of the checker
+# Controls of the five widened classifiers
 
-A rule of the checker that reads a type by one constructor is converted to the extended rule of
-its member rule (`UnionRule.extend`, `src/Effect4/Program/UnionRule.lean`; candidate N,
-decisions rows 285 and 292 to 294). The laws are in `src/Effect4/Laws/Program/UnionRule.lean`,
-and each converted rule has a section of `src/Effect4/Laws/Program/Eliminators.lean`. The fiber
-rule, `fiberTy`, is the first. Each control below is finite: a guard on closed types, or a law
-at one instance. A guard is a finite check and no theorem.
-
-Green controls:
-
-- the guarded rule at `never`, at one union member and at a raw union with one union member in
-  its normal form;
-- the fiber rule at a raw fiber type: the columns as they are spelled, as before the
-  conversion;
-- the checker at `never`, at each of its sites that ask the fiber rule;
-- a sketch that joins a handle that its hole declares at `never`;
-- the closed program of the design note: admitted, and its last line has one type at the
-  written type of the joined value and at that type's normal form;
-- the contract at the fiber rule, by projection of `Eliminator.extend_laws`;
-- a closed handle type has closed columns, through both alternatives of the extended rule;
-- the four other converted rules (decisions row 304): each at its raw constructor, at `never` and
-  at one union member under a raw union; the option rule at the normal form of its element;
-- three readers: the option rule of `Decision.arms` is the rule it was away from `never`, and
-  the raw answer of the list rule and of the exit rule is a matter of spelling.
-
-Red controls, each red for its stated reason:
-
-- the member rule at `never` and at a raw union: it reads one union member;
-- the fiber rule at two fiber types with no order: the guard refuses, and the lifted rule
-  answers;
-- the fiber rule at a union with a member that is no fiber type: the member rule refuses the
-  member;
-- two spellings of one type at the fiber rule: the answers differ in spelling, because the
-  extended rule keeps the raw answer;
-- the monotone law at a proper union below a fiber type: the premise on the smaller target is
-  needed;
-- a member rule that reads a product: it answers where the normal form is a proper union, so
-  the guarded rule alone refuses there;
-- each of the four other converted rules at a proper union and at a type of another head;
-- the extended rule at the option rule: it answers the raw element, which moves a type.
+The raw-first classifiers use `UnionRule.extendAll`; option uses the normalized full lift.
+These controls apply laws to the real classifier rules and evaluate concrete checker programs.
+The legacy `liftOne` controls retain the boundary of that guarded helper.
+Proper homogeneous unions now answer. A retained member outside a classifier's family still refuses.
+Raw constructor answers and option normalization remain unchanged.
 -/
 
 set_option autoImplicit false
@@ -105,7 +71,7 @@ theorem liftOne_fiberOf (value error : Ty) :
 /-! ## The fiber rule: the extended rule of its member rule -/
 
 -- The fiber rule is the extended rule of `Member.fiber`, by definition.
-example : fiberTy = extend Member.fiber := rfl
+example : fiberTy = extendAll Member.fiber := rfl
 
 /-- A fiber type whose value column is not its own normal form: normalization distributes the
 product over the union. -/
@@ -132,13 +98,13 @@ example (value error : Ty) : fiberTy (.fiberOf value error) = some (value, error
 
 -- Green: `never`, one fiber type under a raw union with `never`, and two fiber types with one
 -- below the other.
-example : fiberTy .never = some (.never, .never) := extend_never rfl
+example : fiberTy .never = some (.never, .never) := extendAll_never rfl
 #guard fiberTy .never = some (.never, .never)
 #guard fiberTy fiberOrNever = some (.nat, .string)
 #guard fiberTy literalOrString = some (.string, .never)
 
--- Red: two fiber types with no order, and a type that is no fiber type.
-#guard fiberTy twoFibers = none
+-- Green: two fiber types with no order join. Other heads still refuse.
+#guard fiberTy twoFibers = some (.union .nat .string, .bool)
 #guard fiberTy .nat = none
 #guard fiberTy (.union (.fiberOf .nat .never) .nat) = none
 
@@ -174,10 +140,9 @@ def noFibers : Term := .app "nil" .nil
 #guard Checker.check nativeSignature [fiberOrNever] [] (.awaitFiber (.var 0) .joinEffect) =
   .ok ⟨.nat, .string, Requirement.empty⟩
 
--- Red: two fiber types with no order are refused, as no fiber (decisions row 292). The guard
--- refuses: the lifted rule answers at that type (above).
-#guard explain nativeSignature [twoFibers] (.awaitFiber (.var 0) .joinEffect) =
-  some ⟨[], .notFiber twoFibers⟩
+-- Green: the checker joins two fiber types with no order.
+#guard Checker.check nativeSignature [twoFibers] [] (.awaitFiber (.var 0) .joinEffect) =
+  .ok ⟨.union .nat .string, .bool, Requirement.empty⟩
 -- Red: a type that is no fiber type is refused, as before the conversion.
 #guard explain nativeSignature [.nat] (.awaitFiber (.var 0) .joinEffect) =
   some ⟨[], .notFiber .nat⟩
@@ -258,57 +223,51 @@ def normalEntries : Ty := .list (.union (.prod (.lit "k") .nat) (.prod (.lit "k"
 
 /-! ## The contract at the fiber rule, by projection -/
 
-/-- **The contract of the fiber rule**: `Eliminator.extend_laws` at `Member.fiber_eliminator`,
+/-- **The contract of the fiber rule**: `Eliminator.extendAll_laws` at `Member.fiber_eliminator`,
 with the order of a pair spelled by column. The rule agrees with its member rule. Where the
-member rule refuses, it is the guarded rule. It answers a least pair at `never`. Its answer is
-the least pair of columns with the handle type below their fiber type. It refuses a proper union
-that the member rule refuses. -/
+member rule refuses, it is the full lift. It answers a least pair at `never`. Its answer is
+the least pair of columns with the handle type below their fiber type. It admits a proper union whose retained members answer. -/
 theorem fiberTy_contract :
     (∀ {t : Ty} {a : Ty × Ty}, Member.fiber t = some a → fiberTy t = some a) ∧
-    (∀ {t : Ty}, Member.fiber t = none → fiberTy t = liftOne Member.fiber t) ∧
+    (∀ {t : Ty}, Member.fiber t = none → fiberTy t = lift Member.fiber t) ∧
     (∃ a : Ty × Ty, fiberTy .never = some a ∧
       ∀ b : Ty × Ty, Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true) ∧
     (∀ {t : Ty} {a : Ty × Ty}, fiberTy t = some a →
       Ty.subN t (.fiberOf a.1 a.2) = true ∧
       ∀ b : Ty × Ty, (Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true) ↔
         Ty.subN t (.fiberOf b.1 b.2) = true) ∧
-    (∀ {t : Ty}, Member.fiber t = none → 1 < t.normalize.members.length → fiberTy t = none) :=
-  Member.fiber_eliminator.extend_laws
+    (∀ {t : Ty} {a : Ty × Ty}, extend Member.fiber t = some a → fiberTy t = some a) :=
+  Member.fiber_eliminator.extendAll_laws
 
-/-- The fiber rule answers exactly at a raw fiber type, or at a type with at most one union
-member in its normal form that is below a fiber type. -/
+/-- The fiber rule answers exactly at a raw fiber type, or at a type that is below a fiber type. -/
 theorem fiberTy_isSome_iff (t : Ty) :
     (fiberTy t).isSome = true ↔
-      (Member.fiber t).isSome = true ∨
-        (t.normalize.members.length ≤ 1 ∧ ∃ b : Ty × Ty, Ty.subN t (.fiberOf b.1 b.2) = true) :=
-  Member.fiber_eliminator.extend_isSome_iff t
+      ∃ b : Ty × Ty, Ty.subN t (.fiberOf b.1 b.2) = true :=
+  Member.fiber_eliminator.extendAll_isSome_iff t
 
 /-- **The raw answer of the fiber rule is a matter of spelling.** Where the fiber rule answers,
-the guarded rule alone answers too, and each answer is below the other by column. So the removal
-of the raw answer changes no verdict of the fiber rule (decisions row 294). It changes what a
-later rule reads: the closed program above. -/
-theorem fiberTy_liftOne {t : Ty} {a : Ty × Ty} (typed : fiberTy t = some a) :
-    ∃ a' : Ty × Ty, liftOne Member.fiber t = some a' ∧
+the full lift answers too, and each answer is below the other by column. So the removal
+of the raw answer changes no verdict of the fiber rule (decisions row 294). It can change the spelling that a later rule reads. The raw answer remains in place. -/
+theorem fiberTy_lift {t : Ty} {a : Ty × Ty} (typed : fiberTy t = some a) :
+    ∃ a' : Ty × Ty, lift Member.fiber t = some a' ∧
       (Ty.subN a.1 a'.1 = true ∧ Ty.subN a.2 a'.2 = true) ∧
       (Ty.subN a'.1 a.1 = true ∧ Ty.subN a'.2 a.2 = true) :=
-  (Member.fiber_eliminator.extend_liftOne (fun answered => Member.fiber_one answered)).1 typed
+  Member.fiber_eliminator.extendAll_lift typed
 
-/-- What the fiber rule keeps of the monotone law: a smaller handle type with at most one union
-member in its normal form. -/
+/-- What the fiber rule keeps of the monotone law: every smaller handle type. -/
 theorem fiberTy_mono {s t : Ty} (smaller : Ty.subN s t = true)
-    (one : s.normalize.members.length ≤ 1) {b : Ty × Ty} (typed : fiberTy t = some b) :
+    {b : Ty × Ty} (typed : fiberTy t = some b) :
     ∃ a : Ty × Ty, fiberTy s = some a ∧ Ty.subN a.1 b.1 = true ∧ Ty.subN a.2 b.2 = true :=
-  Member.fiber_eliminator.extend_mono smaller one typed
+  Member.fiber_eliminator.extendAll_mono smaller typed
 
--- Red: without the premise the monotone law fails. A proper union is below a fiber type, the
--- rule answers at the fiber type, and it refuses the union.
+-- Green: monotonicity now includes a proper union below a fiber type.
 #guard Ty.subN twoFibers (.fiberOf (.union .nat .string) .bool)
 #guard fiberTy (.fiberOf (.union .nat .string) .bool) = some (.union .nat .string, .bool)
-#guard fiberTy twoFibers = none
+#guard fiberTy twoFibers = some (.union .nat .string, .bool)
 
 /-! ## The member rule at one union member: which constructors have the premise
 
-`Member.fiber_one` is the premise of `Eliminator.extend_liftOne`: the member rule answers only
+`Member.fiber_one` bounds the historical guarded connector: the member rule answers only
 where the normal form has at most one union member. The normal form of a fiber type is a fiber
 type. The constructors of the next conversions have the same form. A product does not: its
 normal form distributes over a union. -/
@@ -340,12 +299,12 @@ def rawProduct : Ty := .prod (.union .nat .string) .unit
 
 The list rule, the exit rule and the cause rule read the raw head of their target, so each is the
 extended rule of its member rule, as the fiber rule is. The option rule of `Decision.arms` read
-the normal form of its target, so it is the guarded rule, with no raw answer. -/
+the normal form of its target, so it is the normalized full lift, with no raw answer. -/
 
-example : Checker.listOf? = extend Member.list := rfl
-example : Checker.exitOf? = extend Member.exit := rfl
-example : causeInputError? = extend Member.cause := rfl
-example : optionTy = liftOne Member.option := rfl
+example : Checker.listOf? = extendAll Member.list := rfl
+example : Checker.exitOf? = extendAll Member.exit := rfl
+example : causeInputError? = extendAll Member.cause := rfl
+example : optionTy = lift Member.option := rfl
 
 -- green (tested): each rule at a raw type of its constructor answers as it did
 #guard Checker.listOf? (.list rawProduct) = some rawProduct
@@ -361,11 +320,11 @@ example : optionTy = liftOne Member.option := rfl
 #guard causeInputError? .never = some .never
 #guard causeInputError? (.union (.causeOf .string) .never) = some .string
 #guard optionTy .never = some .never
--- red (tested): each rule refuses a proper union, and a type of another head
-#guard Checker.listOf? (.union (.list .nat) (.list .string)) = none
-#guard Checker.exitOf? (.union (.exitOf .nat .never) (.exitOf .string .never)) = none
-#guard causeInputError? (.union (.causeOf .nat) (.exitOf .unit .string)) = none
-#guard optionTy (.union (.option .nat) (.option .string)) = none
+-- Green: each full fallback joins its approved input families.
+#guard Checker.listOf? (.union (.list .nat) (.list .string)) = some (.union .nat .string)
+#guard Checker.exitOf? (.union (.exitOf .nat .never) (.exitOf .string .never)) = some (.union .nat .string, .never)
+#guard causeInputError? (.union (.causeOf .nat) (.exitOf .unit .string)) = some (.union .nat .string)
+#guard optionTy (.union (.option .nat) (.option .string)) = some (.union .nat .string)
 #guard Checker.listOf? .nat = none
 #guard Checker.exitOf? .nat = none
 #guard causeInputError? .nat = none
@@ -382,45 +341,136 @@ example : optionTy = liftOne Member.option := rfl
 #guard extend Member.option (.option (.union .bool .never)) = some (.union .bool .never)
 #guard rawProduct.normalize != rawProduct
 
-/-- **`Decision.arms` at an option is the rule it was, away from `never`** (proved, by
+/-- **`Decision.arms` at an option is the former rule at one normal member** (proved, by
 `optionTy_eq_normal`): the element type at a normal form that is one option type, and a refusal
 elsewhere. -/
-theorem arms_option_eq_normal {t : Ty} (some_member : t.normalize ≠ .never) :
+theorem arms_option_eq_normal {t : Ty} (some_member : t.normalize ≠ .never)
+    (one : t.normalize.members.length ≤ 1) :
     Decision.arms .option t = (match t.normalize with
       | .option a => some ([], [a])
       | _ => none) := by
   show (optionTy t).map (fun a => (([] : List Ty), [a])) = _
-  rw [optionTy_eq_normal some_member]
+  rw [optionTy_eq_normal some_member one]
   cases t.normalize <;> rfl
 
 /-- **The raw answer of the list rule is a matter of spelling** (proved, by
-`Eliminator.extend_liftOne` at `Member.list_one`): where the list rule answers, the guarded rule
+`Eliminator.extendAll_lift` at `Member.list_eliminator`): where the list rule answers, the full lift
 alone answers, and each answer is below the other. -/
-theorem listOf_liftOne {t : Ty} {a : Ty} (typed : Checker.listOf? t = some a) :
-    ∃ a' : Ty, liftOne Member.list t = some a' ∧ Ty.subN a a' = true ∧ Ty.subN a' a = true :=
-  (Member.list_eliminator.extend_liftOne (fun answered => Member.list_one answered)).1 typed
+theorem listOf_lift {t : Ty} {a : Ty} (typed : Checker.listOf? t = some a) :
+    ∃ a' : Ty, lift Member.list t = some a' ∧ Ty.subN a a' = true ∧ Ty.subN a' a = true :=
+  Member.list_eliminator.extendAll_lift typed
 
-/-- The same at the exit rule, by column (proved, at `Member.exit_one`). -/
-theorem exitOf_liftOne {t : Ty} {a : Ty × Ty} (typed : Checker.exitOf? t = some a) :
-    ∃ a' : Ty × Ty, liftOne Member.exit t = some a' ∧
+/-- The same at the exit rule, by column (proved, at `Member.exit_eliminator`). -/
+theorem exitOf_lift {t : Ty} {a : Ty × Ty} (typed : Checker.exitOf? t = some a) :
+    ∃ a' : Ty × Ty, lift Member.exit t = some a' ∧
       (Ty.subN a.1 a'.1 = true ∧ Ty.subN a.2 a'.2 = true) ∧
       (Ty.subN a'.1 a.1 = true ∧ Ty.subN a'.2 a.2 = true) :=
-  (Member.exit_eliminator.extend_liftOne (fun answered => Member.exit_one answered)).1 typed
+  Member.exit_eliminator.extendAll_lift typed
 
-/-- **The option rule answers exactly** at a type with at most one union member in its normal
-form that is below an option type (proved, by `Eliminator.liftOne_isSome_iff`). -/
+/-- **The option rule answers exactly** at a type below an option type
+(proved, by `Eliminator.adjoint`). -/
 theorem optionTy_isSome_iff (t : Ty) :
     (optionTy t).isSome = true ↔
-      t.normalize.members.length ≤ 1 ∧ ∃ b : Ty, Ty.subN t (.option b) = true :=
-  Member.option_eliminator.liftOne_isSome_iff t
+      ∃ b : Ty, Ty.subN t (.option b) = true :=
+  (Member.option_eliminator.adjoint t).1
 
 /-! ## Closed types -/
 
 /-- **A closed handle type has a closed value type and a closed error type.** It is
-`extend_closed_pair` at the member fact of the fiber rule: the member fact at the raw answer,
-and `lift_closed_pair` at the guarded rule's answer. -/
+`extendAll_closed_pair` at the member fact of the fiber rule: the member fact at the raw answer,
+and `lift_closed_pair` at the full lift's answer. -/
 theorem fiberTy_closed {t : Ty} {a : Ty × Ty} (typed : fiberTy t = some a)
     (closed : t.closed = true) : a.1.closed = true ∧ a.2.closed = true :=
-  extend_closed_pair Member.fiber_closed typed closed
+  extendAll_closed_pair Member.fiber_closed typed closed
+
+
+/-! ## Proper unions at each production consumer -/
+
+/-- Two distinct list types. -/
+def twoLists : Ty := .union (.list .nat) (.list .string)
+
+/-- Two distinct exit types. -/
+def twoExits : Ty := .union (.exitOf .nat .never) (.exitOf .string .never)
+
+/-- The two cause-query input families with distinct error types. -/
+def twoCauses : Ty := .union (.causeOf .nat) (.exitOf .unit .string)
+
+/-- Two distinct option types. -/
+def twoOptions : Ty := .union (.option .nat) (.option .string)
+
+/-- A list union whose items are distinct fiber types. -/
+def twoFiberLists : Ty := .union (.list (.fiberOf .nat .never)) (.list (.fiberOf .string .bool))
+
+-- Each retained member must belong to the classifier's input family.
+#guard Checker.listOf? (.union twoLists .nat) = none
+#guard Checker.exitOf? (.union twoExits .nat) = none
+#guard causeInputError? (.union twoCauses .nat) = none
+#guard optionTy (.union twoOptions .nat) = none
+
+-- Both fiber result modes use the joined columns.
+#guard Checker.check nativeSignature [twoFibers] [] (.awaitFiber (.var 0) .awaitValue) =
+  .ok (EffTy.pure (.exitOf (.union .nat .string) .bool))
+#guard Checker.check nativeSignature [twoFibers, .scope] []
+    (.withFiber (.runIn (.var 0) (.var 1))) = .ok (EffTy.pure .unit)
+#guard Checker.check nativeSignature [twoFibers] [] (.withFiber (.interrupt (.var 0))) =
+  .ok (EffTy.pure .unit)
+#guard Checker.check nativeSignature [twoFibers] [] (.withFiber (.interruptScoped (.var 0))) =
+  .ok (EffTy.pure .unit)
+
+-- List actions require both list and fiber classifiers. Target profile refusals stay separate.
+#guard Checker.check nativeSignature [twoFiberLists] [] (.withFiber (.interruptAll (.var 0) none)) =
+  .ok (EffTy.pure .unit)
+#guard Checker.check nativeSignature [twoFiberLists] [] (.withFiber (.awaitAll (.var 0))) =
+  .ok (EffTy.pure (.list (.exitOf (.union .nat .string) .bool)))
+#guard Checker.check nativeSignature [twoFiberLists] [] (.withFiber (.awaitAllFailFast (.var 0))) =
+  .ok (EffTy.pure (.list (.exitOf (.union .nat .string) .bool)))
+#guard (Checker.check nativeSignature [.union twoFiberLists (.list .nat)] []
+    (.withFiber (.awaitAll (.var 0)))).toOption = none
+
+-- The scope and interruptor premises remain in force.
+#guard (Checker.check nativeSignature [twoFibers, .nat] []
+    (.withFiber (.runIn (.var 0) (.var 1)))).toOption = none
+#guard (Checker.check nativeSignature [twoFiberLists, .string] []
+    (.withFiber (.interruptAll (.var 0) (some (.var 1))))).toOption = none
+#guard Checker.check nativeSignature [.scope, twoExits] []
+    (.withFiber (.closeScope (.var 0) (.var 1))) = .ok (EffTy.pure .unit)
+#guard (Checker.check nativeSignature [.nat, twoExits] []
+    (.withFiber (.closeScope (.var 0) (.var 1)))).toOption = none
+#guard (Checker.check nativeSignature [.scope, .union twoExits .nat] []
+    (.withFiber (.closeScope (.var 0) (.var 1)))).toOption = none
+
+-- An option branch receives the joined element. The invalid-member companion refuses.
+#guard Checker.check nativeSignature [twoOptions] []
+    (.select (.var 0) .option (.succeed (.lit .unit)) (.succeed (.var 1))) =
+  .ok ⟨Ty.join .unit (.union .nat .string), .never, Requirement.empty⟩
+#guard (Checker.check nativeSignature [.union twoOptions .nat] []
+    (.select (.var 0) .option (.succeed (.lit .unit)) (.succeed (.var 1)))).toOption = none
+
+-- Fold binds its joined item after its accumulator. Both accumulator bounds remain required.
+#guard termTy nativeSignature [twoLists]
+    (.fold (some .unknown) (.var 0) (.lit (.nat 0)) (.var 2)) = some .unknown
+#guard termTy nativeSignature [twoLists]
+    (.fold (some .nat) (.var 0) (.lit (.nat 0)) (.var 2)) = none
+#guard termTy nativeSignature [twoLists]
+    (.fold (some .nat) (.var 0) (.lit (.str "bad")) (.var 1)) = none
+#guard termTy nativeSignature [.union twoLists .nat]
+    (.fold (some .unknown) (.var 0) (.lit (.nat 0)) (.var 2)) = none
+
+#guard explain nativeSignature [twoLists]
+    (.succeed (.fold (some .unknown) (.var 0) (.lit (.nat 0)) (.var 2))) = none
+#guard (explain nativeSignature [twoLists]
+    (.succeed (.fold (some .nat) (.var 0) (.lit (.nat 0)) (.var 2)))).isSome
+
+-- Every cause query uses the same joined input classifier.
+#guard NativeAtom.typeOf .causeIsFail [twoCauses] = some .bool
+#guard NativeAtom.typeOf .causeIsDie [twoCauses] = some .bool
+#guard NativeAtom.typeOf .causeIsInterrupt [twoCauses] = some .bool
+#guard NativeAtom.typeOf .causeError [twoCauses] = some (.option (.union .nat .string))
+#guard NativeAtom.typeOf .causeIsFail [.union twoCauses .nat] = none
+#guard NativeAtom.typeOf .causeIsDie [.union twoCauses .nat] = none
+#guard NativeAtom.typeOf .causeIsInterrupt [.union twoCauses .nat] = none
+#guard NativeAtom.typeOf .causeError [.union twoCauses .nat] = none
+#guard termTy nativeSignature [twoCauses] (.app "causeError" (.cons (.var 0) .nil)) =
+  some (.option (.union .nat .string))
 
 end Effect4.Test.Eliminators

@@ -348,14 +348,14 @@ theorem Tuple.closed_typeAt {target ty : Ty} {index : Nat} (ht : target.closed =
     (h : Tuple.typeAt target index = some ty) : ty.closed = true :=
   Tuple.closed_project (Ty.closed_normalize target ht) h
 
-/-- The element type that the option rule answers is closed when the target is: the guarded rule
-answers the lifted rule's answer (`UnionRule.liftOne_some`, `UnionRule.lift_closed`). A step of
+/-- The element type that the option rule answers is closed when the target is
+(`UnionRule.lift_closed`). A step of
 `Decision.closed_arms`, its consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_optionTy {t item : Ty} (ht : t.closed = true)
     (h : optionTy t = some item) : item.closed = true :=
   UnionRule.lift_closed (fun _ _ closed answered => Member.option_closed closed answered)
-    (UnionRule.liftOne_some h) ht
+    h ht
 
 /-- What a decision's arms bind is closed, at a closed scrutinee. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -392,26 +392,26 @@ theorem Decision.closed_arms {d : Decision} {t : Ty} {e0 e1 : List Ty} (ht : t.c
       fun x hx => by rw [List.mem_singleton.mp hx]; exact hc.2⟩
 
 /-- A fiber handle's two columns are closed when the handle's type is. The fiber rule is the
-extended rule of its member rule (`UnionRule.extend`, `src/Effect4/Program/UnionRule.lean`), so
-the fact is `UnionRule.extend_closed_pair` at the member fact `Member.fiber_closed`
+extended rule of its member rule (`UnionRule.extendAll`, `src/Effect4/Program/UnionRule.lean`), so
+the fact is `UnionRule.extendAll_closed_pair` at the member fact `Member.fiber_closed`
 (`src/Effect4/Laws/Program/Eliminators.lean`): the member rule's own answer is closed at a closed
-fiber type, and `UnionRule.lift_closed_pair` covers the guarded rule's answer. -/
+fiber type, and `UnionRule.lift_closed_pair` covers the full lift's answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_fiberTy {t value error : Ty} (ht : t.closed = true)
     (h : fiberTy t = some (value, error)) : value.closed = true ∧ error.closed = true :=
-  UnionRule.extend_closed_pair Member.fiber_closed h ht
+  UnionRule.extendAll_closed_pair Member.fiber_closed h ht
 
 /-- The element type of `Checker.listOf?` is closed when the target is. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_listOf {t item : Ty} (ht : t.closed = true)
     (h : Checker.listOf? t = some item) : item.closed = true :=
-  UnionRule.extend_closed Member.list_closed h ht
+  UnionRule.extendAll_closed Member.list_closed h ht
 
 /-- The value and error types of `Checker.exitOf?` are closed when the target is. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_exitOf {t : Ty} {pair : Ty × Ty} (ht : t.closed = true)
     (h : Checker.exitOf? t = some pair) : pair.1.closed = true ∧ pair.2.closed = true :=
-  UnionRule.extend_closed_pair Member.exit_closed h ht
+  UnionRule.extendAll_closed_pair Member.exit_closed h ht
 
 
 /-- The error column of `catchIf` is closed when the body's and the handler's are. -/
@@ -562,7 +562,7 @@ theorem Member.cause_closed {m : Ty} {a : Ty} (closed : m.closed = true)
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closed_causeInputError {input error : Ty} (hi : input.closed = true)
     (h : causeInputError? input = some error) : error.closed = true :=
-  UnionRule.extend_closed Member.cause_closed h hi
+  UnionRule.extendAll_closed Member.cause_closed h hi
 
 namespace NativeAtom
 

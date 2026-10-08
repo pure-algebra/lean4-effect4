@@ -150,11 +150,10 @@ def list : Ty → Option Ty
 
 end Member
 
-/-- **The list rule**: the element type of a list type. It is the extended rule of `Member.list`.
-At a raw list type it answers the element type, as the member rule does. At `never` it answers
-`never`. At a raw union whose normal form is one list type it answers that type's element type.
-It refuses every other type, and a union of two list types with no order is one. -/
-def Checker.listOf? : Ty → Option Ty := UnionRule.extend Member.list
+/-- The element type of a list input. A raw list keeps its element type.
+Otherwise every retained normal member must be a list, and their element types join.
+At `never` it answers `never`. -/
+def Checker.listOf? : Ty → Option Ty := UnionRule.extendAll Member.list
 
 namespace Member
 
@@ -167,11 +166,10 @@ def exit : Ty → Option (Ty × Ty)
 
 end Member
 
-/-- **The exit rule**: the value type and the error type of an exit type. It is the extended rule of `Member.exit`.
-At a raw exit type it answers the two columns, as the member rule does. At `never` it answers `never` twice.
-At a raw union whose normal form is one exit type it answers that type's columns.
-It refuses every other type. -/
-def Checker.exitOf? : Ty → Option (Ty × Ty) := UnionRule.extend Member.exit
+/-- The two columns of an exit input. A raw exit keeps its columns.
+Otherwise every retained normal member must be an exit, and their columns join.
+At `never` it answers `never` twice. -/
+def Checker.exitOf? : Ty → Option (Ty × Ty) := UnionRule.extendAll Member.exit
 
 
 mutual
@@ -443,7 +441,7 @@ end GenTy
 /-! ## The member rules of the converted eliminators
 
 A rule of the checker that reads a type by one constructor is converted to the extended rule of
-its member rule (`UnionRule.extend`, `src/Effect4/Program/UnionRule.lean`; candidate N,
+its member rule (`UnionRule.extendAll`, `src/Effect4/Program/UnionRule.lean`; candidate N,
 decisions rows 285 and 292 to 294). The member rule is the by-shape function that the rule was
 before: it reads the head of the raw type, at one union member. The namespace `Member` holds
 the member rule of each converted rule, and the rule keeps its own name. The facts of a member
@@ -460,13 +458,10 @@ def fiber : Ty → Option (Ty × Ty)
 
 end Member
 
-/-- **The fiber rule**: the value type and the error type of the fiber handle that a term must
-denote. It is the extended rule of `Member.fiber`. At a raw fiber type it answers the two
-columns, as the member rule does. At `never` it answers `never` twice. At a raw union whose
-normal form is one fiber type it answers that type's columns: a union with `never`, or a union
-of two fiber types with one below the other. It refuses every other type, and a union of two
-fiber types with no order is one (decisions row 292). -/
-def fiberTy : Ty → Option (Ty × Ty) := UnionRule.extend Member.fiber
+/-- The two columns of a fiber input. A raw fiber keeps its columns.
+Otherwise every retained normal member must be a fiber, and their columns join.
+At `never` it answers `never` twice. -/
+def fiberTy : Ty → Option (Ty × Ty) := UnionRule.extendAll Member.fiber
 
 /-! ## The tag residual of `catchIf` (DI-39, DI-17; part 4 commit 3, 2026-09-12)
 

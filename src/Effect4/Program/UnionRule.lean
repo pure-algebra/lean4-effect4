@@ -31,17 +31,11 @@ least answer at `never`, the member rule at one union member and the join at a u
 (`lift_unique`, at the carrier `Ty`). `UnionRule.Answer` is its algebra: a least answer and a
 join.
 
-**A converted rule of the checker.** A by-shape function of the checker reads the head of the
-raw type. Its conversion is `UnionRule.extend` of that function, as its member rule. The fiber
-rule is the first (`fiberTy`, `src/Effect4/Program/Typing/Rules.lean`). `extend` is the lifted
-rule with two interim parts, and each part goes by one line.
-
-* **The guard**, `UnionRule.liftOne`: the lifted rule where the target's normal form has at most
-  one union member, and a refusal elsewhere. It goes when the TypeScript printer writes the type
-  arguments of a printed call at a proper union (decisions row 292).
-* **The raw answer**, in `UnionRule.extend`: the member rule's own answer where the member rule
-  answers at the raw target, and the guarded rule elsewhere. It goes when the match of a
-  template reads a request up to its normal form (decisions row 294).
+**A converted rule of the checker.** The four raw-head classifiers use `extendAll`.
+It keeps a raw answer first and uses the full normalized lift elsewhere.
+The option classifier uses the full normalized lift directly.
+`extend` and `liftOne` retain the historical guarded definitions and their controls.
+Raw-first answers can retain a different spelling from their normalized lift.
 
 **Depends on.** `Ty` alone: its normal form, its union members and its join. The module holds no
 `match` on a type.
@@ -119,25 +113,17 @@ premise. Until then a guarded rule is not monotone in the order at a proper unio
 def liftOne (rule : Ty → Option α) (target : Ty) : Option α :=
   if target.normalize.members.length ≤ 1 then lift rule target else none
 
-/-- **The extended rule**: the member rule's own answer where the member rule answers at the raw
-target, and the guarded rule elsewhere. It extends the member rule: it answers wherever the
-member rule answers, with the same answer (`extend_agrees`,
-`src/Effect4/Laws/Program/UnionRule.lean`). So the conversion of a by-shape function to
-`extend` of that function refuses no program that the function admitted, and it changes no
-type of such a program. It answers more: `never`, and each raw union whose normal form is one
-union member, such as a union with `never`.
-
-It has two interim parts.
-
-* **The guard** (`liftOne`). It goes when the TypeScript printer writes the type arguments of a
-  printed call at a proper union (decisions row 292).
-* **The raw answer** (the first alternative). It goes when the match of a template reads a
-  request up to its normal form (decisions row 294). The guarded rule answers a normal form.
-  Today an atom's scheme infers on the raw type of its argument, so it can refuse the normal
-  form of a type that it admits raw (`Test/Program/Eliminators.lean`).
-
-With both parts gone a converted rule is `lift` of its member rule. -/
+/-- The legacy guarded raw-first rule. It keeps the member rule's raw answer and
+uses `liftOne` elsewhere. P2b's approved classifiers use `extendAll` instead.
+This definition retains its guarded laws and synthetic controls unchanged. -/
 def extend (rule : Ty → Option α) (target : Ty) : Option α :=
   (rule target).orElse fun _ => liftOne rule target
+
+/-- The member rule's raw answer first, and the full normalized lift elsewhere.
+It keeps every answer of `extend`, including its spelling, and admits proper unions
+whose retained normal members all answer. The four approved raw-head classifiers use it.
+The option classifier uses `lift`, preserving its normalized answers. -/
+def extendAll (rule : Ty → Option α) (target : Ty) : Option α :=
+  (rule target).orElse fun _ => lift rule target
 
 end Effect4.Program.UnionRule
