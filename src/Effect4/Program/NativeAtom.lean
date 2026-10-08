@@ -51,9 +51,10 @@ def cause : Ty → Option Ty
 
 end Member
 
-/-- The two input families advertised by the cause query atoms: the error type of a cause or exit
-type. It is the extended rule of `Member.cause`. -/
-def causeInputError? : Ty → Option Ty := UnionRule.extend Member.cause
+/-- The error type of a cause or exit input. A raw cause or exit keeps its error type.
+Otherwise every retained normal member must be a cause or exit, and their errors join.
+At `never` it answers `never`. -/
+def causeInputError? : Ty → Option Ty := UnionRule.extendAll Member.cause
 
 namespace NativeAtom
 

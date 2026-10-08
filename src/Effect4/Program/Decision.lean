@@ -77,14 +77,10 @@ def option : Ty → Option Ty
 
 end Member
 
-/-- **The option rule**: the element type of an option type, read at the type's normal form. It
-is the guarded rule of `Member.option` (`UnionRule.liftOne`), and not the extended rule: the rule
-that `Decision.arms` held before its conversion read the normal form, and never the raw head. So
-the conversion moves no type. It answers `never` at `never`, which the rule refused, and it is
-that rule at every other type (`optionTy_eq_normal`,
-`src/Effect4/Laws/Program/Eliminators.lean`). It refuses a union of two option types with no
-order, until the guard of decisions row 292 goes. -/
-def optionTy : Ty → Option Ty := UnionRule.liftOne Member.option
+/-- The element type of an option input, read at its normal form.
+Every retained normal member must be an option. Their element types join.
+At `never` it answers `never`. It keeps the existing normalized answer at a raw option type. -/
+def optionTy : Ty → Option Ty := UnionRule.lift Member.option
 
 namespace Decision
 

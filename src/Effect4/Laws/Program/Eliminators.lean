@@ -8,7 +8,7 @@ import Effect4.Laws.Program.TypeAlgebra
 # Laws.Program.Eliminators — the converted eliminators of the checker
 
 A rule of the checker that reads a type by one constructor is an eliminator. Its conversion
-makes it the extended rule of its member rule (`UnionRule.extend`,
+makes it the extended rule of its member rule (`UnionRule.extendAll`,
 `src/Effect4/Program/UnionRule.lean`; candidate N, decisions rows 285 and 292 to 294). This file
 holds one section for each converted rule, and each later conversion adds its section here.
 
@@ -24,15 +24,15 @@ holds one section for each converted rule, and each later conversion adds its se
    distributes over a union does not have it.
 4. **The member rule at a closed type**: a closed type of the constructor has closed arguments.
    The rule's closed case is then one application
-   (`extend_closed_pair`; `closed_fiberTy`, `src/Effect4/Laws/Program/Typing/Closed.lean`).
+   (`extendAll_closed_pair`; `closed_fiberTy`, `src/Effect4/Laws/Program/Typing/Closed.lean`).
 5. **The rule's own facts**, each by one application of the contract: the rule at a raw type of
    its constructor, and the upper form that a use site names.
 
 **What a section does not hold.** It proves nothing about unions, normal forms or the guard. The
 contract of a converted eliminator is proved once, for every `Eliminator`
-(`Eliminator.extend_laws`, `src/Effect4/Laws/Program/UnionRule.lean`): the rule agrees with its
+(`Eliminator.extendAll_laws`, `src/Effect4/Laws/Program/UnionRule.lean`): the rule agrees with its
 member rule, it answers a least answer at `never`, its answer is the least with the target below
-the constructor's image, and it keeps the refusal at a proper union.
+the constructor's image, and its full fallback admits every proper union whose retained members answer.
 
 **At a use site.** Where a proof rewrote by the equation of a by-shape rule, it moves the value
 up: `fits_subN w (fiberTy_upper hfib) v hfit` (`src/Effect4/Laws/Program/Typed/Denotation.lean`).
@@ -124,7 +124,7 @@ derivation of a join of a forked fiber. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem fiberTy_fiberOf (value error : Ty) :
     fiberTy (.fiberOf value error) = some (value, error) :=
-  extend_agrees rfl
+  extendAll_agrees rfl
 
 /-- **The upper form of the fiber rule.** A handle type that the fiber rule answers at a pair of
 columns is below the fiber type of that pair, in the checker's order. It takes the place of the
@@ -135,7 +135,7 @@ A step of the claim `denote-typed` (R3). Its consumer is the fiber arms of
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem fiberTy_upper {t : Ty} {pair : Ty × Ty} (typed : fiberTy t = some pair) :
     Ty.subN t (.fiberOf pair.1 pair.2) = true :=
-  Member.fiber_eliminator.extend_upper typed
+  Member.fiber_eliminator.extendAll_upper typed
 
 /-! ## The list rule
 
@@ -197,13 +197,13 @@ theorem Member.list_closed {m : Ty} {a : Ty} (closed : m.closed = true)
 /-- **The list rule at a raw list type**: today's answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem listOf_list (t : Ty) : Checker.listOf? (.list t) = some t :=
-  extend_agrees rfl
+  extendAll_agrees rfl
 
 /-- **The upper form of the list rule.** -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem listOf_upper {t : Ty} {item : Ty} (typed : Checker.listOf? t = some item) :
     Ty.subN t (.list item) = true :=
-  Member.list_eliminator.extend_upper typed
+  Member.list_eliminator.extendAll_upper typed
 
 /-! ## The exit rule
 
@@ -266,21 +266,19 @@ theorem Member.exit_closed {m : Ty} {a : Ty × Ty} (closed : m.closed = true)
 /-- **The exit rule at a raw exit type**: today's answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem exitOf_exitOf (v e : Ty) : Checker.exitOf? (.exitOf v e) = some (v, e) :=
-  extend_agrees rfl
+  extendAll_agrees rfl
 
 /-- **The upper form of the exit rule.** -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem exitOf_upper {t : Ty} {pair : Ty × Ty} (typed : Checker.exitOf? t = some pair) :
     Ty.subN t (.exitOf pair.1 pair.2) = true :=
-  Member.exit_eliminator.extend_upper typed
+  Member.exit_eliminator.extendAll_upper typed
 
 /-! ## The option rule
 
-`optionTy` is the guarded rule of `Member.option` (`UnionRule.liftOne`). Its constructor is
-`Ty.option`, and it is covariant. The rule that `Decision.arms` held before its conversion read
-the normal form of its target, and never the raw head. So its conversion is the guarded rule, and
-not the extended rule: the extended rule answers the raw element at a raw option type, which moves
-a type (`optionTy_eq_normal`; the controls are in `Test/Program/Eliminators.lean`). -/
+`optionTy` is the full normalized lift of `Member.option` (`UnionRule.lift`).
+Its constructor is `Ty.option`, and it is covariant. It preserves normalized raw-option answers.
+Proper unions of options join their elements; every other retained member refuses. -/
 
 /-- The checker's order on option types is the order on their element types: the option constructor
 keeps and reflects the order. The fact `embeds` of `Member.option_eliminator`, its consumer. -/
@@ -327,7 +325,7 @@ theorem Member.option_closed {m : Ty} {a : Ty} (closed : m.closed = true)
   | _ => exact nomatch answered
 
 /-- **The option rule at an option type whose element is its own normal form**: the element.
-The guarded rule at one normal union member is the member rule (`liftOne_member`). A step of the
+The full lift at one normal union member is the member rule (`lift_member`). A step of the
 claim `union-rule-extend`, at a rule that reads the normal form. Its consumer is
 `answers_selectOptionWith_kept` (`src/Effect4/Laws/Modules/Waiting.lean`). At an element that is
 not its own normal form the answer is the normal form, as it was before the conversion. -/
@@ -337,35 +335,33 @@ theorem optionTy_option {a : Ty} (canonical : a.normalize = a) : optionTy (.opti
     show Ty.option a.normalize = Ty.option a
     rw [canonical]
   have normal : Ty.Normal (.option a) := fixed ▸ Ty.normal_normalize (.option a)
-  show liftOne Member.option (.option a) = some a
-  rw [liftOne_member Member.option normal rfl]
+  show lift Member.option (.option a) = some a
+  rw [lift_member Member.option normal rfl]
   show some (Ty.join .never a) = some a
   rw [Ty.join_never, canonical]
 
 /-- **The upper form of the option rule.** A target that the rule answers is below the option
-type of the answer, in the checker's order: the guarded rule answers the lifted rule's answer.
+type of the answer, in the checker's order.
 Its consumers are `Decision.decide_typed` (`src/Effect4/Laws/Program/Decision.lean`) and the
 membership laws of a selection. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem optionTy_upper {t : Ty} {a : Ty} (typed : optionTy t = some a) :
     Ty.subN t (.option a) = true :=
-  Member.option_eliminator.lift_upper (liftOne_some typed)
+  Member.option_eliminator.lift_upper typed
 
-/-- **The option rule is the rule it was, away from `never`.** Before its conversion
-`Decision.arms` read the target's normal form by its head: the element type at an option type,
-and a refusal elsewhere. At every target whose normal form is not `never`, the converted rule is
-that function. So the conversion refuses no program that the rule admitted, and it moves no type.
-It is the connector of the conversion (`AGENTS.md`, Working), and a step of the claim
-`union-rule-extend`. At `never` the old rule refused, and the converted rule answers `never`
-(`UnionRule.liftOne_never`): that is the conversion's one new answer. -/
+/-- The option rule agrees with the former normalized-head rule where a normal form has one member.
+Proper option unions now answer, so the one-member premise bounds this connector.
+Consumer: the single-member `Decision.arms` reader in `Test/Program/Eliminators.lean`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem optionTy_eq_normal {t : Ty} (some_member : t.normalize ≠ .never) :
+theorem optionTy_eq_normal {t : Ty} (some_member : t.normalize ≠ .never)
+    (one : t.normalize.members.length ≤ 1) :
     optionTy t = (match t.normalize with
       | .option a => some a
       | _ => none) := by
   have normal := Ty.normal_normalize t
   have built := normal.ofMembers_members
-  show liftOne Member.option t = _
+  change lift Member.option t = _
+  rw [← liftOne_eq Member.option one]
   unfold liftOne lift
   generalize t.normalize = n at normal built some_member ⊢
   match hm : n.members with
@@ -549,7 +545,7 @@ theorem causeInputError_upper {t : Ty} {error : Ty}
     (typed : causeInputError? t = some error) :
     Ty.subN t (causeUpper error) = true := by
   unfold causeInputError? at typed
-  obtain (hraw | ⟨-, hlift⟩) := (extend_eq_some_iff Member.cause).mp typed
+  obtain (hraw | ⟨-, hlift⟩) := (extendAll_eq_some_iff Member.cause).mp typed
   · cases t with
     | causeOf e =>
       cases hraw
@@ -558,21 +554,18 @@ theorem causeInputError_upper {t : Ty} {error : Ty}
       cases hraw
       exact subN_exitOf_causeUpper v error
     | _ => exact nomatch hraw
-  · unfold liftOne at hlift
-    split at hlift
-    · exact lift_upper (fun {a b} h => cause_mono h)
-        (fun {m a} nm hm ha => Member.cause_upper nm hm ha) hlift
-    · exact nomatch hlift
+  · exact lift_upper (fun {a b} h => cause_mono h)
+      (fun {m a} nm hm ha => Member.cause_upper nm hm ha) hlift
 
 /-- **`causeInputError?` at a cause type**: today's answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem causeInputError_causeOf (e : Ty) : causeInputError? (.causeOf e) = some e :=
-  extend_agrees rfl
+  extendAll_agrees rfl
 
 /-- **`causeInputError?` at an exit type**: today's answer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem causeInputError_exitOf (a e : Ty) : causeInputError? (.exitOf a e) = some e :=
-  extend_agrees rfl
+  extendAll_agrees rfl
 
 end Effect4.Program
 
