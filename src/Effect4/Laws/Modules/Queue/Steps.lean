@@ -1,5 +1,6 @@
 import Effect4.Laws.Modules.Queue.Relation
 import Effect4.Laws.Modules.Queue.Data
+import Effect4.Laws.Modules.Queue.OfferData
 import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Program.Typed.ListFold
 import Effect4.Laws.Auto.Obligations
@@ -34,10 +35,8 @@ atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed 
 (`refStep_get`).
 
 The six statements are proved, each in place of its planned goal (decisions row 203). The
-proofs read each builder of a step through the shared reading rules
-(`src/Effect4/Laws/Modules/Reading.lean`) and each pass through
-`src/Effect4/Laws/Modules/Queue/Reading.lean`. They put the model's step in closed form on the
-profile: `acceptLoop_single` and `wake_profile` give the offers that enter and the taker to
+proofs apply the shared Step reading law through the data connectors.
+They separately put the model's step in closed form on the profile: `acceptLoop_single` and `wake_profile` give the offers that enter and the taker to
 wake.
 
 The statements establish no delivery, no cancellation law, no liveness and nothing of a
@@ -454,58 +453,25 @@ theorem takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (i
           cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1]) := by
   obtain ⟨c, capacity⟩ := profile.positive
   have foreign : ∀ o ∈ s.offers, o.id ≠ id := requested
-  -- the cell's fields
-  have msgs := reads_field readsCell (cell_msgs _ _ _ _)
-  have offers := reads_field readsCell (cell_offers _ _ _ _)
-  have takers := reads_field readsCell (cell_takers _ _ _ _)
-  have cap := reads_field readsCell (cell_cap _ _ _ _)
-  -- the test: a message is buffered, and it is the request's turn
-  have buffered : (!decide ((s.messages.map msg).length = 0)) = ready s 1 := by
-    rw [ready_profile profile, List.length_map]
+  have buffered : (!decide (s.messages.length = 0)) = ready s 1 := by
+    rw [ready_profile profile]
     cases s.messages with
     | nil => rfl
     | cons m ms => rfl
-  have someMessage := (reads_notT (reads_isEmpty msgs)).to (congrArg Val.bool buffered)
-  have head := reads_isHead tb injective s.takers id depth takers readsId
-  have enrolled := (reads_enrolled tb injective s.takers id depth takers readsId).to
-    (show Val.bool (s.takers.foldl (fun found t => found || decide (t.id = id)) false) =
-        Val.bool (s.takers.any (fun u => u.id == id)) by
-      rw [foldl_or_any, Bool.false_or]
-      rfl)
-  have noTakers := (reads_isEmpty takers).to
-    (show Val.bool (decide ((s.takers.map (takerVal tb)).length = 0)) =
-        Val.bool (decide (s.takers.length = 0)) by rw [List.length_map])
-  have turn : Reads _ env path vals (Val.bool (earlier s id).isEmpty) :=
-    (reads_orT head (reads_andT (reads_notT
-      (reads_enrolled tb injective s.takers id depth takers readsId)) noTakers)).to
-      (congrArg Val.bool (earlier_isEmpty s.takers id))
-  have test := reads_andT someMessage turn
-  -- the arm that consumes
-  have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
-      (Val.list ((s.messages.drop 1).map msg)) :=
-    (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
-  have room : Reads (app "sub" [field cellSrc "cap", len
-      (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
-      (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
-    (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
-  have removed := reads_removeTaker tb injective s.takers id depth takers readsId
-  have gained := reads_gained tb msg _ (s.messages.drop 1) s.offers depth room rest offers
-  have entering := reads_entering tb msg _ s.offers room offers
-  have staying := reads_staying tb msg _ s.offers room offers
-  have toWake' := (reads_wake removed gained).to (congrArg Val.list (wake_encoded tb msg _ _))
-  have consumed := reads_recordSet
-    (reads_recordSet (reads_recordSet readsCell gained (cell_setMsgs _ _ _ _ _)) removed
-      (cell_setTakers _ _ _ _ _))
-    staying (cell_setOffers _ _ _ _ _)
-  have yes := reads_pair (reads_tuple3 (reads_head msgs) entering toWake') consumed
-  -- the arm that waits
-  have renewed := reads_renewHint tb injective s.takers id hint depth takers readsId readsHint
-  have appended := reads_snoc takers (reads_mkTaker readsId.atScope readsHint.atScope)
-  have waiting := reads_recordSet readsCell (reads_ifT enrolled renewed appended)
-    (cell_setTakers _ _ _ _ _)
-  have no := reads_pair
-    (reads_tuple3 reads_noneT (reads_noneOf offers) (reads_noneOf takers)) waiting
-  have whole := reads_ifT test yes no
+  have head : (s.takers.take 1).foldl (fun _ t => decide (t.id = id)) false =
+      (s.takers.take 1).any (fun t => decide (t.id = id)) := by
+    cases s.takers with
+    | nil => rfl
+    | cons t ts =>
+      change decide (t.id = id) = (decide (t.id = id) || false)
+      rw [Bool.or_false]
+  have turn := earlier_isEmpty s.takers id
+  rw [head, foldl_or_any, Bool.false_or] at turn
+  change _ = (earlier s id).isEmpty at turn
+  have whole := take_encoded A tb injective msg s id hint depth
+    readsId.atScope readsHint.atScope readsCell
+  dsimp only at whole
+  rw [buffered, turn] at whole
   -- the model's three arms
   cases consumes : (ready s 1 && (earlier s id).isEmpty) with
   | true =>
@@ -517,11 +483,18 @@ theorem takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (i
       cases isReady
     | cons m ms =>
       rw [consumes, if_pos rfl, held] at whole
+      have cap : s.capacity.getD 0 = c + 1 := by rw [capacity]; rfl
+      rw [cap] at whole
       rw [take_consumes profile capacity id held isTurn]
       exact ⟨_, _, _, rfl, ⟨rfl, fun o member => List.mem_of_mem_take member,
         toWake_stored _⟩, whole⟩
   | false =>
     rw [consumes, if_neg Bool.false_ne_true] at whole
+    have enrolled : s.takers.any (fun t => decide (t.id = id)) =
+        s.takers.any (fun t => t.id == id) :=
+      congrArg (fun p : Taker → Bool => s.takers.any p)
+        (funext fun t => (Lean.Grind.beq_eq_decide_eq t.id id).symm)
+    rw [enrolled] at whole
     have waits : take s ⟨id, 1, 1⟩ =
         if s.takers.any (fun u => u.id == id) = true then (s, .wait, [])
         else ({ s with takers := s.takers ++ [⟨id, 1, 1⟩] }, .wait, []) := by
@@ -571,31 +544,12 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
           cellVal (tb.afterOffer id hint (offer s id a).2.1) msg (offer s id a).1]) := by
   obtain ⟨c, capacity⟩ := profile.positive
   have foreign : ∀ t ∈ s.takers, t.id ≠ id := requested
-  -- the parts of the term, each at the value it reads
-  have msgs := reads_field readsCell (cell_msgs _ _ _ _)
-  have offers := reads_field readsCell (cell_offers _ _ _ _)
-  have takers := reads_field readsCell (cell_takers _ _ _ _)
-  have cap := reads_field readsCell (cell_cap _ _ _ _)
-  have newOffer := reads_mkOffer A readsId readsHint (reads_bool false env path vals)
-    (reads_app (.cons readsMessage (.cons reads_nilT .nil)) (atom_cons (msg a) []))
-  have pending := (reads_recordSet readsCell (reads_snoc offers newOffer)
-    (cell_setOffers _ _ _ _ _)).to (cell_pended tb msg s id a hint foreign fresh).symm
-  have longer : Reads (snoc (field cellSrc "msgs") messageSrc) env path vals
-      (Val.list ((s.messages ++ [a]).map msg)) :=
-    (reads_snoc msgs readsMessage).to (by rw [List.map_append]; rfl)
-  have accepted := reads_recordSet readsCell longer (cell_setMsgs _ _ _ _ _)
-  have behind := reads_pair (reads_tuple2 reads_noneT (reads_noneOf takers)) pending
-  have room := reads_pair
-    (reads_tuple2 (reads_some (reads_bool true env path vals)) (reads_wake takers longer))
-    accepted
-  have full := reads_pair (reads_tuple2 reads_noneT (reads_wake takers msgs)) pending
-  have hasPending : Reads (notT (isEmpty (field cellSrc "offers"))) env path vals
-      (Val.bool (!decide (s.offers.length = 0))) :=
-    (reads_notT (reads_isEmpty offers)).to (by rw [List.length_map])
-  have hasRoom : Reads (app "lt" [len (field cellSrc "msgs"), field cellSrc "cap"]) env
-      path vals (Val.bool (decide (s.messages.length < c + 1))) :=
-    (reads_lt (reads_len msgs) cap).to (by rw [List.length_map, capacity]; rfl)
-  have whole := reads_ifT hasPending behind (reads_ifT hasRoom room full)
+  have whole := offer_encoded A tb msg s id a hint readsId readsHint readsMessage readsCell
+  dsimp only at whole
+  rw [← cell_pended tb msg s id a hint foreign fresh] at whole
+  have room_test : decide (s.messages.length < s.capacity.getD 0) =
+      decide (s.messages.length < c + 1) := by rw [capacity]; rfl
+  rw [room_test] at whole
   by_cases noPending : s.offers = []
   · have none : (!decide (s.offers.length = 0)) = false := by
       rw [noPending]
@@ -612,7 +566,12 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
         rw [wake_toWake next]
         rfl
       · rw [decide_eq_true free, if_pos rfl] at whole
-        exact whole.to (by rw [wake_encoded]; rfl)
+        exact whole.to (by
+          have nonempty : (s.messages ++ [a]).length ≠ 0 := by
+            rw [List.length_append, List.length_singleton]
+            omega
+          simp only [toWake, if_neg nonempty]
+          rfl)
     · -- full: the offer waits, and the model still names the earliest taker
       have next : FirstProfile { s with offers := s.offers ++ [⟨id, false, [a]⟩] } :=
         profile.pend id a fresh foreign
@@ -625,7 +584,7 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
         refine whole.to ?_
         show _ = Val.tuple [Val.tuple [Store.Val.none,
           Val.list ((toWake s).map (takerVal (tb.renew id hint)))], _]
-        rw [wake_encoded, takers_renew tb (toWake s) id hint
+        rw [takers_renew tb (toWake s) id hint
           fun t member => foreign t (toWake_stored s t member)]
         rfl
   · -- behind a pending offer: the offer waits, and nobody is named
@@ -651,32 +610,9 @@ theorem pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
             Val.list (entered.map (offerVal tb msg))],
           cellVal tb msg (poll s).1]) := by
   obtain ⟨c, capacity⟩ := profile.positive
-  -- the parts of the term, each at the value it reads
-  have msgs := reads_field readsCell (cell_msgs _ _ _ _)
-  have offers := reads_field readsCell (cell_offers _ _ _ _)
-  have takers := reads_field readsCell (cell_takers _ _ _ _)
-  have cap := reads_field readsCell (cell_cap _ _ _ _)
-  have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
-      (Val.list ((s.messages.drop 1).map msg)) :=
-    (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
-  have room : Reads (app "sub" [field cellSrc "cap", len
-      (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
-      (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
-    (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
-  have gained := reads_gained tb msg _ (s.messages.drop 1) s.offers depth room rest offers
-  have entering := reads_entering tb msg _ s.offers room offers
-  have staying := reads_staying tb msg _ s.offers room offers
-  have consumed := reads_recordSet
-    (reads_recordSet readsCell gained (cell_setMsgs _ _ _ _ _)) staying
-    (cell_setOffers _ _ _ _ _)
-  have yes := reads_pair (reads_tuple2 (reads_head msgs) entering) consumed
-  have no := reads_pair (reads_tuple2 reads_noneT (reads_noneOf offers)) readsCell
-  have test : Reads (andT (notT (isEmpty (field cellSrc "msgs")))
-      (isEmpty (field cellSrc "takers"))) env path vals
-      (Val.bool (!decide (s.messages.length = 0) && decide (s.takers.length = 0))) :=
-    (reads_andT (reads_notT (reads_isEmpty msgs)) (reads_isEmpty takers)).to
-      (by rw [List.length_map, List.length_map])
-  have whole := reads_ifT test yes no
+  have whole := poll_encoded A tb msg s depth readsCell
+  have cap : s.capacity.getD 0 = c + 1 := by rw [capacity]; rfl
+  rw [cap] at whole
   have idle : ∀ (quiet : s.messages = [] ∨ s.takers ≠ [])
       (refused : (!decide (s.messages.length = 0) && decide (s.takers.length = 0)) = false),
       ∃ entered,
@@ -749,11 +685,7 @@ theorem withdrawTake_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State
   · show wake (removeTaker s id) = _
     rw [wake_toWake next]
     rfl
-  · have removed := reads_removeTaker tb injective s.takers id depth
-      (reads_field readsCell (cell_takers _ _ _ _)) readsId
-    have woken := reads_wake removed (reads_field readsCell (cell_msgs _ _ _ _))
-    have stored := reads_recordSet readsCell removed (cell_setTakers _ _ _ _ _)
-    exact (reads_pair woken stored).to (by rw [wake_encoded]; rfl)
+  · exact withdrawTake_encoded A tb injective msg s id depth readsId.atScope readsCell
 
 /-- **The withdrawal of an offer agrees with the model's `withdrawOffer`.** The step accepts no
 offer, its list is the takers that the model wakes, and the stored value is the model's next
@@ -776,12 +708,7 @@ theorem withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : Stat
   · show wake { s with offers := s.offers.filter (fun o => o.id != id) } = _
     rw [wake_toWake next]
     rfl
-  · have removed := reads_removeOffer tb msg injective s.offers id depth
-      (reads_field readsCell (cell_offers _ _ _ _)) readsId
-    have woken := reads_wake (reads_field readsCell (cell_takers _ _ _ _))
-      (reads_field readsCell (cell_msgs _ _ _ _))
-    have stored := reads_recordSet readsCell removed (cell_setOffers _ _ _ _ _)
-    exact (reads_pair woken stored).to (by rw [wake_encoded]; rfl)
+  · exact withdrawOffer_encoded A tb injective msg s id depth readsId.atScope readsCell
 
 /-! ## The six statements as one
 
