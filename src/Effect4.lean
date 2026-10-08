@@ -108,6 +108,7 @@ import Effect4.Program.Authoring.Sugar
 import Effect4.Program.Authoring.Declare
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Mask
+import Effect4.Program.Authoring.Defs
 -- A term at a declared type (`ascribe`): reachable from this root, imported by no module of the API.
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Codegen.Print
@@ -182,6 +183,7 @@ import Effect4.Modules.Queue.Steps
 -- first operations over them.
 import Effect4.Modules.Waiting
 import Effect4.Modules.Queue.Ops
+import Effect4.Modules.Queue.Defs
 -- Semaphore's cell and its five steps (decisions row 265).
 import Effect4.Modules.Semaphore.Cell
 import Effect4.Modules.Semaphore.Steps

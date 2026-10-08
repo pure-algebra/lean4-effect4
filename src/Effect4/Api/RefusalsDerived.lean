@@ -658,7 +658,9 @@ def shapeDoc : ShapeDoc :=
       ("placement", 3, [("name", (shape _root_.String).root)]),
       ("unboundRow", 4, [("spelling", (shape _root_.String).root)]),
       ("reservedName", 5, [("name", (shape _root_.String).root)]),
-      ("duplicateRow", 6, [("spelling", (shape _root_.String).root)])],
+      ("duplicateRow", 6, [("spelling", (shape _root_.String).root)]),
+      ("unboundDef", 7, [("name", (shape _root_.String).root)]),
+      ("duplicateDef", 8, [("name", (shape _root_.String).root)])],
    (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.Authoring.Reason → Val
@@ -669,6 +671,8 @@ def toVal : _root_.Effect4.Program.Authoring.Reason → Val
   | .unboundRow a0 => .ctor 4 [Canonical.toVal a0]
   | .reservedName a0 => .ctor 5 [Canonical.toVal a0]
   | .duplicateRow a0 => .ctor 6 [Canonical.toVal a0]
+  | .unboundDef a0 => .ctor 7 [Canonical.toVal a0]
+  | .duplicateDef a0 => .ctor 8 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.Authoring.Reason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unbound
@@ -678,6 +682,8 @@ def ofVal : Val → Option (_root_.Effect4.Program.Authoring.Reason)
   | .ctor 4 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unboundRow
   | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .reservedName
   | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .duplicateRow
+  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unboundDef
+  | .ctor 8 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .duplicateDef
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.Authoring.Reason) : ofVal (toVal a) = some a := by
@@ -689,11 +695,21 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.Authoring.Reason) : ofVal (toVal
   | «unboundRow» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «reservedName» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «duplicateRow» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unboundDef» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «duplicateDef» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Authoring.Reason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
   · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
     subst hj
     simp only [toVal]
@@ -751,6 +767,12 @@ theorem fits (a : _root_.Effect4.Program.Authoring.Reason) : shapeDoc.accepts (t
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «duplicateRow» a0 =>
     exact accepts_sum _ _ _ 6 "duplicateRow" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «unboundDef» a0 =>
+    exact accepts_sum _ _ _ 7 "unboundDef" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «duplicateDef» a0 =>
+    exact accepts_sum _ _ _ 8 "duplicateDef" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.Authoring.Reason) :=

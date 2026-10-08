@@ -26,6 +26,10 @@
    Q4  The red controls.  The five exits are five texts, and a run's exit is not the next
        run's.  A program cut by one byte is refused, never repaired.  At a small fuel the run
        does not finish, and it has no root exit.                            tested
+   Q5  queue-defs.txt holds R1, R4, R2 and R5 again over the Queue's definitions (decisions row
+       328, slice PROC-4): each program has a definition block, and each operation is an
+       invocation.  Q1 to Q4 hold of them, and each answers the exit of the same scenario over
+       the inline operations, from another program.                     tested (four runs)
 
    What it does not establish: any schedule but the engine's own drive loop, a host run, the
    steps' agreement with the abstract model (proved in Lean, on the term's value), or
@@ -120,54 +124,76 @@ end
 module RF = Rep (E4_engine.Fast)
 module RR = Rep (E4_engine.Ref)
 
-let find_fixture () : string =
-  let candidates = [ "queue.txt"; "engine/test/queue/queue.txt"; "ocaml/engine/test/queue/queue.txt" ] in
+let find_fixture (file : string) : string =
+  let candidates = [ file; "engine/test/queue/" ^ file; "ocaml/engine/test/queue/" ^ file ] in
   match List.find_opt Sys.file_exists candidates with
   | Some path -> path
-  | None -> failwith "queue.txt not found from the cwd"
+  | None -> failwith (file ^ " not found from the cwd")
 
-let () =
-  let runs = read_fixture (find_fixture ()) in
-  check (Printf.sprintf "the fixture holds five runs (%d)" (List.length runs)) (List.length runs = 5);
-  check "the fixture's runs are r1, r4, r2, r5 and masked, in that order"
-    (List.map (fun (r : run) -> r.name) runs = [ "r1"; "r4"; "r2"; "r5"; "masked" ]);
+(* Q1 to Q4 on one fixture's runs, each labelled with the fixture's name. *)
+let check_runs (label : string) (runs : run list) =
   List.iter
     (fun (r : run) ->
-       Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
+       let name = label ^ " " ^ r.name in
+       Printf.printf "== run %s: %d bytes, fuel %d ==\n" name (String.length r.program) r.fuel;
        match (RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel) with
        | Some fast, Some slow ->
-         check (r.name ^ ": Q1 the program's bytes decode on both instances") true;
-         check (r.name ^ ": Q2 Fast finishes") (fast.outcome = "finished");
-         check (r.name ^ ": Q2 Ref finishes") (slow.outcome = "finished");
+         check (name ^ ": Q1 the program's bytes decode on both instances") true;
+         check (name ^ ": Q2 Fast finishes") (fast.outcome = "finished");
+         check (name ^ ": Q2 Ref finishes") (slow.outcome = "finished");
          Printf.printf "  Lean's exit: %s\n  Fast's exit: %s\n" r.exit_text
            (Option.value fast.root ~default:"-");
-         check (r.name ^ ": Q2 Fast's root exit is the exit Lean wrote") (fast.root = Some r.exit_text);
-         check (r.name ^ ": Q2 Ref's root exit is the exit Lean wrote") (slow.root = Some r.exit_text);
-         check (r.name ^ ": Q3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
+         check (name ^ ": Q2 Fast's root exit is the exit Lean wrote") (fast.root = Some r.exit_text);
+         check (name ^ ": Q2 Ref's root exit is the exit Lean wrote") (slow.root = Some r.exit_text);
+         check (name ^ ": Q3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
          (* Q4: a program cut by one byte is refused *)
          let cut = String.sub r.program 0 (String.length r.program - 1) in
-         check (r.name ^ ": Q4 a program cut by one byte is refused on both instances")
+         check (name ^ ": Q4 a program cut by one byte is refused on both instances")
            (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
          (* Q4: at a small fuel the run does not finish *)
          (match (RF.report r.program ~fuel:5, RR.report r.program ~fuel:5) with
           | Some f, Some s ->
-            check (r.name ^ ": Q4 at fuel 5 neither instance finishes, and none has a root exit")
+            check (name ^ ": Q4 at fuel 5 neither instance finishes, and none has a root exit")
               (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None && s.root = None)
-          | _ -> check (r.name ^ ": Q4 the program decodes at fuel 5") false)
-       | _ -> check (r.name ^ ": Q1 the program's bytes decode on both instances") false)
+          | _ -> check (name ^ ": Q4 the program decodes at fuel 5") false)
+       | _ -> check (name ^ ": Q1 the program's bytes decode on both instances") false)
     runs;
   (* Q4: the runs answer pairwise different exits, so each run's check can fail. *)
   let texts = List.sort_uniq compare (List.map (fun (r : run) -> r.exit_text) runs) in
-  check (Printf.sprintf "Q4 the runs' exits are %d texts for %d runs" (List.length texts) (List.length runs))
+  check (Printf.sprintf "%s Q4 the runs' exits are %d texts for %d runs" label (List.length texts)
+           (List.length runs))
     (List.length texts = List.length runs);
   let rec neighbours = function
     | (a : run) :: ((b : run) :: _ as rest) ->
       (match RF.report a.program ~fuel:a.fuel with
-       | Some fast -> check (a.name ^ ": Q4 its exit is not " ^ b.name ^ "'s") (fast.root <> Some b.exit_text)
-       | None -> check (a.name ^ ": Q4 the run decodes") false);
+       | Some fast ->
+         check (label ^ " " ^ a.name ^ ": Q4 its exit is not " ^ b.name ^ "'s") (fast.root <> Some b.exit_text)
+       | None -> check (label ^ " " ^ a.name ^ ": Q4 the run decodes") false);
       neighbours rest
     | _ -> ()
   in
-  neighbours runs;
+  neighbours runs
+
+let () =
+  let runs = read_fixture (find_fixture "queue.txt") in
+  check (Printf.sprintf "the fixture holds five runs (%d)" (List.length runs)) (List.length runs = 5);
+  check "the fixture's runs are r1, r4, r2, r5 and masked, in that order"
+    (List.map (fun (r : run) -> r.name) runs = [ "r1"; "r4"; "r2"; "r5"; "masked" ]);
+  check_runs "queue" runs;
+  (* The same scenarios over the Queue's definitions (decisions row 328, slice PROC-4). *)
+  let defs = read_fixture (find_fixture "queue-defs.txt") in
+  check "the definitions fixture's runs are r1, r4, r2 and r5, in that order"
+    (List.map (fun (r : run) -> r.name) defs = [ "r1"; "r4"; "r2"; "r5" ]);
+  check_runs "defs" defs;
+  (* Q5: a scenario over the definitions answers the exit of the same scenario over the inline
+     operations, from another program. *)
+  List.iter
+    (fun (d : run) ->
+       match List.find_opt (fun (r : run) -> r.name = d.name) runs with
+       | Some r ->
+         check ("defs " ^ d.name ^ ": Q5 its exit is the inline run's") (d.exit_text = r.exit_text);
+         check ("defs " ^ d.name ^ ": Q5 its program is another program") (d.program <> r.program)
+       | None -> check ("defs " ^ d.name ^ ": Q5 the inline run exists") false)
+    defs;
   Printf.printf "test_queue: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1

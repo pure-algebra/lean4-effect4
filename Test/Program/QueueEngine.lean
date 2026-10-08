@@ -1,4 +1,5 @@
 import Test.Program.QueueMask
+import Test.Program.QueueDefs
 import Effect4.Store.Domain.ProgramWire
 
 /-!
@@ -34,8 +35,9 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.QueueEngine
 
 open Effect4 Effect4.Machine Effect4.Program
-open Test.Program.QueueScenarios (r1 r2 r4 r5 mk)
+open Test.Program.QueueScenarios (r1 r2 r4 r5 r1With r2With r4With r5With mk)
 open Test.Program.QueueMask (maskedCaller)
+open Test.Program.QueueDefs (invoked mkDefs)
 
 /-- The committed fixture, read where this battery is elaborated. -/
 def committed : String := include_str "../../ocaml/engine/test/queue/queue.txt"
@@ -77,5 +79,35 @@ def runs : List (String × Authoring.Src NativeOp) :=
 #guard ((runs.mapM fun run => (build run.2).map Wire.hexOf).map fun bytes =>
   bytes.eraseDups.length) = some 5
 #guard ((committed.splitOn "\n").filter fun line => line.startsWith "program ").length = 5
+
+/-! ## The same scenarios over the Queue's definitions (decisions row 328, slice PROC-4)
+
+`queue-defs.txt` holds R1, R4, R2 and R5 again, each a module with the Queue's definitions and
+each operation an invocation (`Test/Program/QueueDefs.lean`). The engine's test runs them as it
+runs the others, and checks that each answers the exit of the same scenario over the inline
+operations (Q5 of `test_queue.ml`). -/
+
+/-- The committed fixture of the definitions' runs. -/
+def committedDefs : String := include_str "../../ocaml/engine/test/queue/queue-defs.txt"
+
+/-- The definitions fixture's runs, in its order. -/
+def defsRuns : List (String × Authoring.Src NativeOp) :=
+  [("r1", r1With invoked), ("r4", r4With invoked), ("r2", r2With invoked), ("r5", r5With invoked)]
+
+def buildDefs (src : Authoring.Src NativeOp) : Option Api.Program :=
+  (Effect4.Api.Author.build (mkDefs src)).toOption.map (·.program)
+
+#guard (committedDefs.splitOn "\n").filter (fun line => line.startsWith "run ") =
+  defsRuns.map fun run => "run " ++ run.1
+-- Each program line is the canonical bytes of the program over the definitions.
+#guard (defsRuns.mapM fun run => (buildDefs run.2).map fun p => "program " ++ Wire.hexOf p) =
+  some ((committedDefs.splitOn "\n").filter fun line => line.startsWith "program ")
+-- Each exit line is the exit of the same scenario's run in `queue.txt`.
+#guard (committedDefs.splitOn "\n").filter (fun line => line.startsWith "exit ") =
+  ["exit success list[true,true,1,2]", "exit success list[true,1,true,2]", "exit success 7",
+   "exit success list[5,0]"]
+-- Each program holds its block at its root, and reads back from its bytes.
+#guard defsRuns.all fun run => (buildDefs run.2).any fun p =>
+  !p.defsOf.isEmpty && Wire.decodeProgram (Wire.encodeProgram p) = some p
 
 end Test.Program.QueueEngine

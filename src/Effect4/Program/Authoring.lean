@@ -67,6 +67,11 @@ inductive Reason
   /-- Two row declarations under one spelling: a table key is the spelling and the trailing
   names (`Program/Table.lean` `rowKey`), so two rows cannot share one. -/
   | duplicateRow (spelling : String)
+  /-- An invocation of a definition the module does not declare, by the name it was invoked
+  under (decisions row 328). -/
+  | unboundDef (name : String)
+  /-- Two definitions under one name: an invocation names its definition by its name. -/
+  | duplicateDef (name : String)
   deriving DecidableEq, Repr
 
 structure Refusal where
@@ -103,12 +108,16 @@ abbrev LayerNames := List (String × Nat)
 /-- Declared host rows, each spelling to its position in the module's table. -/
 abbrev RowNames := List (String × Nat)
 
-/-- What a source program reads: the value names in scope, the declared layer names, and the
-declared host rows. -/
+/-- Declared definitions, each name to its index in the module's definition block. -/
+abbrev DefNames := List (String × Nat)
+
+/-- What a source program reads: the value names in scope, the declared layer names, the
+declared host rows and the declared definitions. -/
 structure Env where
   names : Names := []
   layers : LayerNames := []
   rows : RowNames := []
+  defs : DefNames := []
 
 /-- A source term. -/
 abbrev TermSrc := Env → List Nat → Except Refusal Term
@@ -128,8 +137,9 @@ abbrev LayerSrc (Op : Type) := Env → List Nat → Except Refusal (LayerTerm Op
 /-- Extend the scope by the names a child binds. -/
 def Env.push (env : Env) (xs : List String) : Env := { env with names := env.names ++ xs }
 
-/-- The empty value scope, for a layer body (`layerTy` types it in the empty environment).
-The declared layers and rows stay: a layer body calls the module's rows like any other. -/
+/-- The empty value scope, for a layer body (`layerTy` types it in the empty environment) and a
+definition's body. The declared layers, rows and definitions stay: a layer body calls the
+module's rows like any other, and a body invokes the block's definitions. -/
 def Env.closed (env : Env) : Env := { env with names := [] }
 
 /-- A binder name the surface mints for itself in this scope: the reserved prefix, the stem
@@ -345,13 +355,82 @@ def elaborate {Op : Type} (src : Src Op) : Except Refusal (Eff Op) := src {} []
 /-- A closed layer: the same, for a layer written on its own. -/
 def elaborateLayer {Op : Type} (l : LayerSrc Op) : Except Refusal (LayerTerm Op) := l {} []
 
+/-! ## Definitions by name (decisions row 328, slice PROC-4)
+
+A definition is a closed program with a declared row, kept in the program's definition block
+(`Eff.defs`, `Program/Definitions.lean`). An author declares it once, by name, with its
+parameters and its columns, and writes its body as a function of its parameters' terms. The
+parameters are one request: none is `unit`, one is its own type, and more are nested pairs
+(`requestTy`). The surface elaborates the body at the closed scope with one minted name for the
+request, and each parameter reads a part of it (`requestParts`), the convention of `bindWith`.
+`Def.invoke` resolves a name to the definition's index, as `Row.call` resolves a spelling. -/
+
+/-- The request type of a list of parameter types: `unit`, the one type, or nested pairs. -/
+def requestTy : List Ty → Ty
+  | [] => .unit
+  | [t] => t
+  | t :: rest => .prod t (requestTy rest)
+
+/-- The terms of a request's parameters, in order: the request itself for one, its first
+component and the parts of its second for more. -/
+def requestParts : Nat → TermSrc → List TermSrc
+  | 0, _ => []
+  | 1, r => [r]
+  | n + 2, r => app "fst" [r] :: requestParts (n + 1) (app "snd" [r])
+
+/-- The request of an invocation's arguments: the nested pairs that `requestTy` types. -/
+def requestOf : List TermSrc → TermSrc
+  | [] => unit
+  | [a] => a
+  | a :: rest => app "pair" [a, requestOf rest]
+
+/-- A definition an author declares once: its name, its parameters with their names and types,
+its declared columns, and its body as a function of its parameters' terms. The names document
+the parameters; the body reads each through a part of the request. -/
+structure DefSrc (Op : Type) where
+  name : String
+  params : List (String × Ty)
+  answer : Ty
+  error : Ty := .never
+  requires : List Effect4.ServiceKey := []
+  body : List TermSrc → Src Op
+
+/-- The declaration a definition stores in the block: its name, its request type and its three
+columns. -/
+def DefSrc.decl {Op : Type} (d : DefSrc Op) : DefDecl :=
+  { name := d.name, request := requestTy (d.params.map (·.2)), answer := d.answer,
+    error := d.error, requires := d.requires }
+
+/-- A definition's body, at the closed scope with one minted name for its request: each
+parameter reads a part of it. `p` is the body's path in the block. -/
+def DefSrc.elaborate {Op : Type} (d : DefSrc Op) (env : Env) (p : List Nat) :
+    Except Refusal (Eff Op) :=
+  let request := env.closed.mint "request"
+  d.body (requestParts d.params.length (minted request)) (env.closed.push [request]) p
+
+/-- The path of definition `k`'s body in a block (`Program/Definitions.lean`): the bodies are
+the block's child `0`, and in their spine the head is child `0` and the rest child `1`. -/
+def bodyPath (k : Nat) : List Nat := 0 :: (List.replicate k 1 ++ [0])
+
+/-- **An invocation of a declared definition** on its arguments: the module's block gives the
+definition its index, and an undeclared name refuses at the site, by name. The arguments are
+one request (`requestOf`). -/
+def Def.invoke (name : String) (args : List TermSrc) : Src NativeOp := fun env p =>
+  match env.defs.find? (fun entry => entry.1 == name) with
+  | some (_, k) => do
+    let x ← requestOf args env p
+    .ok (.perform (.call k) x)
+  | none => .error ⟨p, .unboundDef name⟩
+
 /-- An authored module: the host rows it declares, the services it declares, the shared
-layers declared once by name, and the main program. One value holds everything a program
-needs, so the table a program is checked against is the table it was written against. -/
+layers declared once by name, the definitions declared once by name, and the main program. One
+value holds everything a program needs, so the table a program is checked against is the table
+it was written against. -/
 structure Module (Op : Type) where
   rows : List RowDef := []
   services : List ServiceDef := []
   layers : List (String × LayerSrc Op) := []
+  defs : List (DefSrc Op) := []
   main : Src Op
 
 /-- Every row a module supplies, in table order: its own declarations, then each service's
@@ -412,6 +491,22 @@ private def pointAtPlaced {Op : Type} (placed : List (Nat × List Nat)) (tree : 
       | _ => .error ⟨site, .placement ""⟩
     | none => .error ⟨site, .placement ""⟩
 
+/-- The declared definitions as a scope, or the first name declared twice. -/
+def defNamesOf {Op : Type} (defs : List (DefSrc Op)) : Except Refusal DefNames :=
+  defs.zipIdx.foldlM (init := []) fun acc (d, k) =>
+    if acc.any (·.1 == d.name) then .error ⟨[], .duplicateDef d.name⟩ else .ok (acc ++ [(d.name, k)])
+
+/-- The module's tree before its layers are placed: the main program, or, when the module
+declares a definition, the block at the root with each body and then the main program, each
+elaborated at its path in the block. -/
+def elaborateTree {Op : Type} (m : Module Op) (env : Env) : Except Refusal (Eff Op) :=
+  match m.defs with
+  | [] => m.main env []
+  | defs => do
+    let bodies ← defs.zipIdx.mapM fun (d, k) => d.elaborate env (bodyPath k)
+    let main ← m.main env [1]
+    .ok (.defs (defs.map (·.decl)) (effsOfList bodies) main)
+
 /-- The declared rows as a scope, or the first spelling declared twice: a table key is the
 spelling and the trailing names (`rowKey`), and `Table.lawful` requires it to be unique. -/
 def rowNamesOf (rows : List RowDef) : Except Refusal RowNames :=
@@ -424,12 +519,14 @@ set_option backward.privateInPublic.warn false in
 /-- The one first-order tree of an authored module: main elaborated in the empty scope, every
 declared layer placed at its first use in program order, every later use a reference to that
 path. A declared layer nobody uses is dropped; a declared row nobody calls keeps its position,
-because the table's positions are the declaration order. -/
+because the table's positions are the declaration order. A module that declares a definition
+has its block at the root (`elaborateTree`); a declared definition nobody invokes stays in it. -/
 def elaborateModule {Op : Type} (m : Module Op) : Except Refusal (Eff Op) := do
   let names ← layerNamesOf m.layers
   let rows ← rowNamesOf m.rowDefs
-  let env : Env := { layers := names, rows := rows }
-  let main ← m.main env []
+  let defs ← defNamesOf m.defs
+  let env : Env := { layers := names, rows := rows, defs := defs }
+  let main ← elaborateTree m env
   let terms ← m.layers.zipIdx.mapM fun ((_, l), k) => l env (placeholder k)
   let (tree, placed) ← placeRounds terms names (m.layers.length + 1) main []
   pointAtPlaced placed tree

@@ -7,6 +7,7 @@ import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
 import Test.Program.PoolPublic
 import Test.Program.DefinitionsControls
+import Test.Program.QueueDefs
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -940,8 +941,8 @@ of an operation's binder term (the fold in a `Ref.modify`, and a step of the Que
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
 interrupt wakes, the two programs of the mask that restores, the five programs of the
 Queue's first operations, the ten programs of Semaphore's first operations, the ten
-programs of Pool's first operations, and four programs with a definition block. Every listed
-program contributes one manifest entry. -/
+programs of Pool's first operations, four programs with a definition block, and the Queue's
+scenario R4 over its definitions. Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 /-- Four programs with a definition block (decisions row 328, slice PROC-3): one invocation,
@@ -951,6 +952,16 @@ def pDefsTwice : Api.Program := Test.Program.DefinitionsControls.twiceProg
 def pDefsEven : Api.Program := Test.Program.DefinitionsControls.evenOdd 6
 def pDefsOdd : Api.Program := Test.Program.DefinitionsControls.evenOdd 7
 def pDefsFork : Api.Program := Test.Program.DefinitionsControls.forkProg
+
+/-- **The scenario R4 over the Queue's definitions** (decisions row 328, slice PROC-4): a second
+offer waits at capacity one, and the take that frees room accepts it. Each operation is an
+invocation of a definition of the module's block, and the printed module declares each
+definition once. Its exit is `pQueueFull`'s. -/
+def pQueueDefs : Api.Program :=
+  match Effect4.Program.Authoring.elaborateModule
+      (Test.Program.QueueDefs.mkDefs (Test.Program.QueueScenarios.r4With Test.Program.QueueDefs.invoked)) with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueDefs: the source does not elaborate"))
 
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
@@ -982,7 +993,7 @@ def corpus : List (String × Api.Program) :=
     ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
     ("pPoolClosing", pPoolClosing),
     ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
-    ("pDefsFork", pDefsFork)]
+    ("pDefsFork", pDefsFork), ("pQueueDefs", pQueueDefs)]
 
 /-! ## The value wire -/
 
@@ -1756,7 +1767,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
    "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork"]
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pQueueDefs"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩

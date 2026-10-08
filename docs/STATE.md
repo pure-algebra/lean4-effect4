@@ -36,7 +36,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   machine, the OCaml engine and M5 take a block (slices PROC-1 and PROC-2, the
   [receipt](research/2026-10-08-procedures-receipt.md)). The module printer prints a block's
   definitions as constants, and the reader reads them back (slice PROC-3, the
-  [receipt](research/2026-10-08-procedures-proc3-receipt.md)).
+  [receipt](research/2026-10-08-procedures-proc3-receipt.md)). An author declares a definition
+  once, and `Def.of` turns a library operation into a definition and its invocation. The Queue's
+  operations are definitions too (slice PROC-4, the
+  [receipt](research/2026-10-08-procedures-proc4-receipt.md)).
 - **Code generation.** The printer and the readers are driven by one table. The typed print has
   its slices P1, P2a, P2b and P3 (rows 324 and 325, the
   [receipt](research/2026-10-08-codex-unguard-receipt.md)). A call at a join carries its type
@@ -70,9 +73,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **Procedures** (row 328): slices PROC-4 and PROC-5 (the
-   [procedures note](research/2026-10-08-seat-PROC-design.md)). They are the authoring surface
-   with the first composed module, and the block's handler laws.
+1. **Procedures** (row 328): slice PROC-5, the block's handler laws (the
+   [procedures note](research/2026-10-08-seat-PROC-design.md)).
 2. **The simulation across schedules** (row 329): slices S1 to S4 (the
    [simulation note](research/2026-10-08-seat-SIM-design.md)).
 3. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the

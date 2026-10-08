@@ -180,6 +180,7 @@ import Test.Program.QueueCapacity
 import Test.Program.QueueProfile
 import Test.Program.QueueSteps
 import Test.Program.QueueScenarios
+import Test.Program.QueueDefs
 import Test.Program.QueueOps
 import Test.Program.QueueTraces
 import Test.Program.QueueInvariant

@@ -80,7 +80,8 @@
     "pDefsTwice",
     "pDefsEven",
     "pDefsOdd",
-    "pDefsFork"
+    "pDefsFork",
+    "pQueueDefs"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
