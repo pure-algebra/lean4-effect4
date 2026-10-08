@@ -723,6 +723,15 @@ def registry : Registry where
     { id := "hole-rule", concept := "initial-algebras-folds", role := .compatibility
       title := "A hole row with a unit request and closed, formed columns types its perform at those columns in normal form, in every environment, at any position of the hole table; no rule is added to HasTy"
       pointer := .witness `Effect4.Program.Sketch.hole_hasTy },
+    { id := "defs-conservative", concept := "initial-algebras-folds", role := .compatibility
+      title := "A program that invokes no definition is checked the same at any definition block's signature, refusals included, at every environment and path, with no service key assumed typed (decisions row 328, G1)"
+      pointer := .witness `Effect4.Program.defs_conservative },
+    { id := "invocation-rule", concept := "initial-algebras-folds", role := .compatibility
+      title := "At a block's signature the invocation of a definition has the type of the row it declares, in normal form, at its request's type; no rule is added to HasTy (decisions row 328, G2)"
+      pointer := .witness `Effect4.Program.invoke_hasTy },
+    { id := "module-check", concept := "initial-algebras-folds", role := .compatibility
+      title := "The whole module's check and the module judgment agree at the root: what the check accepts the judgment derives, and what the judgment derives the check accepts (decisions row 328, G2)"
+      pointer := .witness `Effect4.Program.checkModule_sound },
     { id := "typed-replacement", concept := "initial-algebras-folds", role := .substitution
       title := "A typed node splits at an address of a program into an environment and a type of the focus, and every program of that type in that environment, under every extension of the typing signature, stands in the focus's place with the node keeping its type; one statement over the six typing judgments, with no rule added; the environment and the type are existential, and the focus's type is kept exactly (decisions rows 288, 294)"
       pointer := .witness `Effect4.Program.NodeHasTy.replace },

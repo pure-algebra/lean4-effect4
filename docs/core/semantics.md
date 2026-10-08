@@ -1021,6 +1021,23 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   (`Sketch.hole_hasTy` (`src/Effect4/Laws/Program/Sketch.lean`)). The typing judgment gains no
   rule. The three properties establish no admission of a sketch to a later stage, no law of
   filling a hole and no run.
+- **A definition block is a conservative extension (`defs-conservative`)**: a program that
+  invokes no definition is checked the same at any block's signature
+  (`defs_conservative` (`src/Effect4/Laws/Program/Definitions.lean`)). Refusals are included.
+  The block's signature
+  changes an invocation's domain bit and row only, so no service key is assumed typed. It says
+  nothing of the block's own bodies, and nothing of a run.
+- **The invocation's rule (`invocation-rule`)**: at a block's signature, an invocation has the
+  type of its definition's declared row, at its request's type
+  (`invoke_hasTy` (`src/Effect4/Laws/Program/Definitions.lean`)). The row is read in normal
+  form. It is the rule of a `perform`
+  read at that signature, and the typing judgment gains no rule. The declarations are closed;
+  no generic definition is typed.
+- **The module's check (`module-check`)**: the whole module's check agrees with the module
+  judgment at the root, both ways (`checkModule_sound` and `checkModule_complete`
+  (`src/Effect4/Laws/Program/Definitions.lean`)). A block stands at the root only. The checker
+  refuses a block below the root. Neither the rule nor the check says that a declared row is
+  inhabited, or that a body terminates.
 - **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
   into an environment and a type of the focus. Every program of that type in that environment
   stands in the focus's place, under every extension of the typing signature

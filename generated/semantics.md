@@ -1553,6 +1553,9 @@ Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniquenes
 | sketch-conservative | compatibility | proved | Effect4.Program.holes_conservative | yes |  |
 | sketch-weakening | weakening | proved | Effect4.Program.sketch_weakening | yes |  |
 | hole-rule | compatibility | proved | Effect4.Program.Sketch.hole_hasTy | yes |  |
+| defs-conservative | compatibility | proved | Effect4.Program.defs_conservative | yes |  |
+| invocation-rule | compatibility | proved | Effect4.Program.invoke_hasTy | yes |  |
+| module-check | compatibility | proved | Effect4.Program.checkModule_sound | yes |  |
 | typed-replacement | substitution | proved | Effect4.Program.NodeHasTy.replace | yes |  |
 | focus-function | inversion | proved | Effect4.Program.NodeHasTy.replace_envAt | yes |  |
 | address-table | compatibility | proved | Effect4.Program.refusals_nil_iff | yes |  |
@@ -1670,6 +1673,42 @@ Literature: TAPL, §16.1, p. 210 — adaptedResult
             (Effect4.Program.Sketch.hole app k)
             { answer := answer.normalize, error := error.normalize,
               requires := Effect4.Machine.Env.Requirement.ofList requires }
+```
+
+**defs-conservative**
+
+```lean
+∀ {Op : Type} (sig : Effect4.Program.Signature Op) (decls : List Effect4.Program.DefDecl)
+  {e : Effect4.Program.Eff Op},
+  Effect4.Program.NoInvocation sig e →
+    ∀ (env : Effect4.Program.TyEnv) (p : List Nat),
+      Eq (Effect4.Program.Checker.check (sig.withDefs decls) env p e)
+        (Effect4.Program.Checker.check sig env p e)
+```
+
+**invocation-rule**
+
+```lean
+∀ {Op : Type} (sig : Effect4.Program.Signature Op) (decls : List Effect4.Program.DefDecl) {op : Op}
+  {k : Nat} {d : Effect4.Program.DefDecl},
+  Eq (sig.callOf op) (Option.some k) →
+    Eq (List.instGetElem?NatLtLength.getElem? decls k) (Option.some d) →
+      ∀ (env : Effect4.Program.TyEnv) (request : Effect4.Program.Term) (t : Effect4.Program.EffTy),
+        Iff
+          (Conform.Effect4.Typing.HasTy (sig.withDefs decls) env
+            (Effect4.Program.Eff.perform op request) t)
+          (Exists fun requestTy =>
+            And (Eq (Effect4.Program.termTy sig env request) (Option.some requestTy))
+              (Eq (Effect4.Program.rowTy d.row.normalizeTypes requestTy (sig.termUse env op))
+                (Option.some t)))
+```
+
+**module-check**
+
+```lean
+∀ {Op : Type} (sig : Effect4.Program.Signature Op) (e : Effect4.Program.Eff Op)
+  (t : Effect4.Program.EffTy),
+  Eq (Effect4.Program.Checker.checkModule sig e) (Except.ok t) → Effect4.Program.ModuleHasTy sig e t
 ```
 
 **typed-replacement**
@@ -2543,8 +2582,8 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 
 | Requirement | Status | Top nodes | Placed nodes | Next goals |
 | --- | --- | --- | --- | --- |
-| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
-| R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | — | — |
+| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | — |
+| R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved) | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `closeStep_types` (proved), `drainStep_types` (proved), `initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lookup_solve_seed` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `matchTerm_modify_use` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `termGuard_modify_use` (proved), `perform_scoped_iff` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
@@ -2578,6 +2617,9 @@ flowchart LR
   nbc478f90["run_typed_app<br/>proved"]
   n52c5717b["meaningB_typed_app<br/>proved"]
   n264c79d8["reachable_typed_admitted<br/>proved"]
+  nb45e257a["checkModule_complete<br/>proved"]
+  nf68b98e1["checkModule_sound<br/>proved"]
+  n8b7e46d5["invoke_hasTy<br/>proved"]
   n2443b382["check_restrict<br/>proved"]
   ne12bb422["meaning_typed<br/>proved"]
   ndb047873["run_eq_meaning<br/>proved"]
@@ -2602,6 +2644,7 @@ flowchart LR
   n780c81c2["order_trans<br/>proved"]
   ndb1eccf7["reachable_typed<br/>proved"]
   ne2ea226b["lawfulSig_of_admitted<br/>proved"]
+  n39739397["checkModule_eq_check<br/>proved"]
   nbe6db31e["cata_eff_congr_on<br/>proved"]
   n8ec132e6["hom_eq_cata_eff<br/>proved"]
   n47c566cf["termMaps_of_typed<br/>proved"]
@@ -2695,6 +2738,9 @@ flowchart LR
   n52c5717b --> n780c81c2
   n264c79d8 --> ndb1eccf7
   n264c79d8 --> ne2ea226b
+  nb45e257a --> n39739397
+  nb45e257a --> n5a230c5
+  nf68b98e1 --> n4c593752
   n2443b382 --> nbe6db31e
   n2443b382 --> n8ec132e6
   ne12bb422 --> nd518fc14
@@ -3016,6 +3062,9 @@ flowchart LR
 | `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` |
 | `meaningB_typed_app` | proved | — | `check_restrict`, `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` |
 | `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` |
+| `checkModule_complete` | proved | — | `checkModule_eq_check`, `check_complete` |
+| `checkModule_sound` | proved | — | `check_sound` |
+| `invoke_hasTy` | proved | — | — |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` |
 | `meaning_typed` | proved | — | `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` |
 | `run_eq_meaning` | proved | — | — |
@@ -3040,6 +3089,7 @@ flowchart LR
 | `order_trans` | proved | — | — |
 | `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` |
 | `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` |
+| `checkModule_eq_check` | proved | — | — |
 | `cata_eff_congr_on` | proved | — | — |
 | `hom_eq_cata_eff` | proved | — | — |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` |
@@ -3119,6 +3169,9 @@ flowchart LR
   n2443b382["check_restrict<br/>proved"]
   n9c0698f6["lawful_append<br/>proved"]
   na8f28a67["meaningUnder_append<br/>proved"]
+  n233e8beb["checkModule_conservative<br/>proved"]
+  n39739397["checkModule_eq_check<br/>proved"]
+  nb6f402f2["defs_conservative<br/>proved"]
   n4c593752["check_sound<br/>proved"]
   n5a230c5["check_complete<br/>proved"]
   nbe6db31e["cata_eff_congr_on<br/>proved"]
@@ -3127,6 +3180,9 @@ flowchart LR
   n8e60bcb6 --> n5a230c5
   n2443b382 --> nbe6db31e
   n2443b382 --> n8ec132e6
+  n233e8beb --> nb6f402f2
+  nb6f402f2 --> nbe6db31e
+  nb6f402f2 --> n8ec132e6
 ```
 
 | Node | Status | Rests on | Nearest nodes |
@@ -3135,6 +3191,9 @@ flowchart LR
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` |
 | `lawful_append` | proved | — | — |
 | `meaningUnder_append` | proved | — | — |
+| `checkModule_conservative` | proved | — | `defs_conservative` |
+| `checkModule_eq_check` | proved | — | — |
+| `defs_conservative` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` |
 | `check_sound` | proved | — | — |
 | `check_complete` | proved | — | — |
 | `cata_eff_congr_on` | proved | — | — |
@@ -6931,8 +6990,8 @@ flowchart LR
   na1e7532 --> nf4440bf
   na1e7532 --> nfb9f8f77
   n4ed98e90 --> ndd70b0df
-  n4ed98e90 --> ndf3201b0
   n4ed98e90 --> ncba4777
+  n4ed98e90 --> ndf3201b0
   n4ed98e90 --> ncc0c907c
   n4ed98e90 --> n97bb4d34
   n4ed98e90 --> n8bc689b1
@@ -7591,7 +7650,7 @@ flowchart LR
 | `closed_projectProduct` | proved | — | `closed_join` |
 | `closed_typeOf` | proved | — | `spec_answersClosed`, `Scheme.closed_apply` |
 | `spec_answersClosed` | proved | — | — |
-| `addresses_eq_cons` | proved | — | `foldMapAt_layers_paths_cons`, `foldMapAt_effs_paths_cons`, `foldMapAt_stmt_paths_cons`, `foldMapAt_layer_paths_cons`, `foldMapAt_action_paths_cons`, `foldMapAt_stmts_paths_cons`, `foldMapAt_eff_paths_cons` |
+| `addresses_eq_cons` | proved | — | `foldMapAt_layers_paths_cons`, `foldMapAt_stmt_paths_cons`, `foldMapAt_effs_paths_cons`, `foldMapAt_layer_paths_cons`, `foldMapAt_action_paths_cons`, `foldMapAt_stmts_paths_cons`, `foldMapAt_eff_paths_cons` |
 | `at_layers_nil` | proved | — | — |
 | `at_stmts_nil` | proved | — | — |
 | `exists_at_of_mem_foldList` | proved | — | `sizeOf_child_lt`, `foldList_cases` |
