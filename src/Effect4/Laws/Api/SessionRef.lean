@@ -145,4 +145,31 @@ theorem session_eq_ref : SessionEqRef := fun s recorded h =>
     (fun e table fuel tape compileFuel => run_eq_ref_table_noPreload e table fuel tape compileFuel)
     s recorded h
 
+
+/-- **A recorded run's parked call keeps the address of its call** (decisions row 323). For a
+recorded, funded run, where the machine holds an external call at a token, the address that
+its registration keeps holds a call of that operation in the run's program. So the instance
+that the session reads there (`HostSession.instanceAt`) is the checker's answer at that call,
+up to the expansion of the program's layer references. Concept `host-session-protocol`; a step
+of the claim `reply-at-call-instance`. It does not establish that the expansion keeps the call
+at its address: the session's lookup checks the expanded program. -/
+theorem origin_addresses_call (s : Run) (recorded : Run.Reached s) (h : funded s = true)
+    (fiber : FiberId) (token : Nat) (op : NativeOp) (request : Val) (origin : List Nat)
+    (hreq : requestOf s.machine fiber token = some (op, request))
+    (horigin : originOf s.machine fiber token = some origin) :
+    ∃ r, Node.at_ (.eff s.built.program) origin = some (.eff (.perform op r)) := by
+  obtain ⟨f, controller, cancel, o, hf, hp, hcur⟩ := requestOf_current _ _ _ _ _ hreq
+  have ho : originOf s.machine fiber token = some o := by
+    simp only [originOf, hf, hp, hcur, guard, Option.bind_eq_bind, Option.bind_some, if_true]
+    rfl
+  rw [horigin] at ho
+  cases ho
+  have hm : s.machine = (replayEval (evaluator := evaluatorFor s.built.program s.built.table)
+      (interpOf s.built.program s.built.table) s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel)).machine := by
+    rw [funded_replays s recorded h, ← Run.replay_machine, Sched.replay_machine]
+  have hmem : f ∈ s.machine.fibers := List.mem_of_find?_eq_some hf
+  rw [hm] at hmem
+  exact replay_origin s.built.program s.built.table _ _ _ f hmem hcur
+
 end Effect4.Run

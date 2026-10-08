@@ -804,7 +804,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     rw [hm.nextToken, hm.state]
     exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
       BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
-  | asyncForeign op request origin k hk =>
+  | asyncForeign op request origin hnode k hk =>
     have hans : m₂.state.externals.answers = [] := (hm.state ▸ hok.state).answers
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveAnswerR, pushR]

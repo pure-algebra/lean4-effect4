@@ -788,7 +788,7 @@ def registry : Registry where
       title := "A session-accepted successful reply prepares a member of its selected shape-decided row, or, where the row's own columns refuse it, it is admitted at its call's checked instance (InstanceSuccess; decisions row 323)"
       pointer := .witness `Effect4.Api.HostSession.preflight_success_prepared_fits },
     { id := "reply-at-call-instance", concept := "host-session-protocol", role := .preservation
-      title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads callAt there; no law yet states that a run's origin addresses the call that ran (decisions rows 183, 323)"
+      title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads callAt there; in a recorded, funded run that address holds a call of the operation in the program (origin_addresses_call); the expansion of layer references keeping it there is open (decisions rows 183, 323)"
       pointer := .witness `Effect4.Program.instance_prepared_success },
     { id := "session-failure-shape-free", concept := "host-session-protocol", role := .preservation
       title := "A session-accepted failing reply carries no reserved defect: the failure half of admit_sound (decisions row 191, E4-HOST-CE-008)"
@@ -1051,6 +1051,7 @@ def registry : Registry where
         `Effect4.Api.HostSession.preflight_success_prepared_fits,
         `Effect4.Api.HostSession.preflight_failure_noShapeDefect,
         `Effect4.Program.instance_prepared_success,
+        `Effect4.Run.origin_addresses_call,
         `Effect4.Run.session_eq_ref]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
         .ruling "DI-23: the preloaded answers are deleted" "the raw agreement with preloaded answers, the rest of the planned goal run_eq_ref_table (slice H6b): no consumer on the spine; session_eq_ref reads run_eq_ref_table_noPreload (decisions row 314)",
@@ -1058,7 +1059,7 @@ def registry : Registry where
         .ruling "decisions rows 98 to 100: the typed replay route, when the guarantee is claimed, host resources" "receipt and application on the keyed lifecycle, and their converse (host-boundary §4.5; decisions rows 98–100, parked by the owner, 2026-09-30)",
         "a world extension meeting C5, a retirement edge, per-row cancellation, one root (DI-58, DI-65)",
         .work "the table-aware reference and the reply correspondence above; decisions row 99 says when it is claimed" "the public typed guarantee for programs using host services (decisions row 99)",
-        .proposed "origin-addresses-call (proposed claim; host-session-protocol): a run's external registration keeps the address of the call that made it, so the instance the session reads there is the checker's answer at that call (compile's Point.path against Node.at_ of the program with its layer references expanded); a finite evaluation reads it (Test/Api/TypedReplies.lean), and no law states it (decisions row 323)",
+        .proposed "expansion-keeps-call (proposed claim; host-session-protocol): the expansion of a program's layer references keeps a call at its address, so the instance that the session reads on the expanded program is the checker's answer at the call that ran; origin_addresses_call proves the address on the program itself, and a finite evaluation reads the instance (Test/Api/TypedReplies.lean) (decisions row 323)",
         .proposed "replay-at-call-instance (proposed claim; host-session-protocol): the checked replay of a tape (replayCheckedFrom, Api.replay) and the OCaml engine still admit a reply at the row's own columns alone, so a tape that a session recorded with an answer admitted at its call's instance is refused there (decisions row 323)"] },
     { id := "R7", title := "Retained behaviour: a resolved code entry is typed at its reference's type"
       top := []

@@ -27,7 +27,7 @@ def frameIndex : Option NCode → Option Nat
 theorem index_agree (root : NativeEff) {c₁ : NCode} {c₂ : RProgram} (h : CodeMeans root c₁ c₂) :
     frameIndex (some c₁) = externalIndexR (some c₂) := by
   cases h with
-  | asyncForeign op request origin k hk => cases op <;> rfl
+  | asyncForeign op request origin hnode k hk => cases op <;> rfl
   | _ => rfl
 
 /-- The frame's prepared answer is `prepareAtR`'s at the frame's row, up to the code each

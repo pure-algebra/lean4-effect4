@@ -58,7 +58,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | failCause c => exact intro_failCause root c p k hf hpos
   | sync t => exact intro_sync root t p k hf hpos h
   | suspend b => exact intro_suspend root n b p k hf hpos hwc h ih
-  | perform op r => exact intro_perform root op r p k hf hpos
+  | perform op r => exact intro_perform root op r p k hf hpos h
   | bind a b => exact intro_bind root n a b p k hf hpos hw0 hwcw h ih
   | gen ss => exact intro_gen root ss p k hf hpos h
   | catchCause b hd => exact intro_catchCause root n b hd p k hf hpos hw0 hwcw h ih

@@ -13,7 +13,8 @@ namespace Effect4.Program.Sched
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
 
-theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) :
+theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Point)
+    (hnode : Node.at_ (.eff root) p.path = some (.eff (.perform op r))) :
     CodeMeans root (asyncRoute op r p) (denoteAsyncRoute op r p) := by
   unfold asyncRoute denoteAsyncRoute
   cases op with
@@ -21,7 +22,7 @@ theorem asyncRoute_means (root : NativeEff) (op : NativeOp) (r : Term) (p : Poin
     simp only [denoteForeign]
     cases evalTerm p.env r with
     | none => exact codeMeans_badShape root
-    | some v => exact CodeMeans.asyncForeign (.external i) v _ _ delivers_pure
+    | some v => exact CodeMeans.asyncForeign (.external i) v _ ⟨r, hnode⟩ _ delivers_pure
   | sleep =>
     unfold denoteSleep
     cases (evalTerm p.env r).bind NativeOp.sleepMillisOf with
@@ -78,7 +79,8 @@ theorem intro_sync (root : NativeEff) (t : Term) (p : Point) (k : Nat)
   exact CodeMeans.syncPure p _ (CodeMeans.success _)
 
 theorem intro_perform (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) (k : Nat)
-    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hnode : Node.at_ (.eff root) p.path = some (.eff (.perform op r))) :
     CodeMeans root (compileEff (.perform op r) p) (denoteR root (.perform op r) p) := by
   by_cases hk : (NativeOp.row op).kind = .sync
   · rw [compileEff_perform_sync op r hf hk, denoteR_perform_sync root op r hpos hk]
@@ -90,6 +92,6 @@ theorem intro_perform (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) 
       | some o => exact CodeMeans.syncOp o _ (successV root)
       | none => exact codeMeans_badShape root
   · rw [compileEff_perform_nonsync op r hf hk, denoteR_perform_nonsync root op r hpos hk]
-    exact asyncRoute_means root op r p
+    exact asyncRoute_means root op r p hnode
 
 end Effect4.Program.Sched

@@ -58,4 +58,41 @@ theorem run_eq_ref_table_noPreload (e : NativeEff) (table : RowTable) (fuel : Na
   rw [replay_outcome, replay_machine]
   exact replayRel_classify_obs (replay_rel (table := table) e compileFuel fuel tape)
 
+
+/-- An element of the left list of a related pair has a related partner in the right list. A
+step of `replay_origin`. -/
+theorem listRel_mem_left {α β : Type _} {R : α → β → Prop} {l₁ : List α} {l₂ : List β}
+    (h : ListRel R l₁ l₂) {a : α} (ha : a ∈ l₁) : ∃ b ∈ l₂, R a b := by
+  induction h with
+  | nil => cases ha
+  | cons hab _ ih =>
+    rcases List.mem_cons.mp ha with rfl | ha'
+    · exact ⟨_, List.mem_cons_self, hab⟩
+    · obtain ⟨b, hb, hr⟩ := ih ha'
+      exact ⟨b, List.mem_cons_of_mem _ hb, hr⟩
+
+/-- **A parked call's address names its call** (decisions row 323). In every machine that the
+frame machine replays from a program's load, at any row table and any tape, a fiber whose
+current code is an external registration keeps the address of a call of that operation in the
+program. The simulation carries it: the related reference code is `CodeMeans.asyncForeign`,
+whose address holds the call (`asyncRoute_means`). Concept `host-session-protocol`; a step of
+the claim `reply-at-call-instance`; consumer: `Run.origin_addresses_call`. It does not say that
+the expansion of the program's layer references keeps the call at that address. -/
+theorem replay_origin (e : NativeEff) (table : RowTable) (cfuel fuel : Nat)
+    (tape : List Api.Decision) (f : FRun)
+    (hf : f ∈ (replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel tape
+      (Api.load e cfuel)).machine.fibers)
+    {op : NativeOp} {request : Val} {origin : List Nat} {signal : Bool} {cancel : Option EffName}
+    (hc : f.frame.current = .async (.external op request origin) signal cancel) :
+    ∃ r, Node.at_ (.eff e) origin = some (.eff (.perform op r)) := by
+  letI := evaluatorFor e table
+  letI := termEvaluatorFor e table
+  obtain ⟨f₂, _, hfm⟩ :=
+    listRel_mem_left (replay_rel (table := table) e cfuel fuel tape).machine.1 hf
+  obtain ⟨-, -, -, -, -, -, -, -, -, -, -, -, -, -, -, hcode, -⟩ := hfm
+  rw [hc] at hcode
+  generalize f₂.frame.current = c₂ at hcode
+  cases hcode with
+  | asyncForeign _ _ _ hnode _ _ => exact hnode
+
 end Effect4.Program.Sched
