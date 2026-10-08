@@ -1095,7 +1095,6 @@ def convert (target : Name) (requested : Option Name := none) : MetaM Unit := do
           pure (← mkForallFVars (fixed ++ ys) (← mkEq lhs rhs), ← mkLambdaFVars (fixed ++ ys) proof)
         let thmName := m.fn ++ `eq_cata
         addDecl <| .thmDecl { name := thmName, levelParams := info.levelParams, type := thmTy, value := thmVal }
-        logInfo m!"fold_of: {thmName} : {← ppExpr thmTy}"
       -- `s.eq_cata` per list sibling: `s fixed pre xs post = List.foldr cons nil
       -- (cata_pos_list alg xs) pre post`, through `s.eq_foldr`, `f.eq_cata` under the map and
       -- the generated `cata_pos_list_<fam>_eq`
@@ -1146,9 +1145,6 @@ def convert (target : Name) (requested : Option Name := none) : MetaM Unit := do
           pure (← mkForallFVars (fixed ++ ys) (← mkEq lhs rhs), ← mkLambdaFVars (fixed ++ ys) proof)
         let thmName := m.fn ++ `eq_cata
         addDecl <| .thmDecl { name := thmName, levelParams := info.levelParams, type := thmTy, value := thmVal }
-        logInfo m!"fold_of: {thmName} : {← ppExpr thmTy}"
-      logInfo m!"fold_of{if para then " (paramorphism: the carrier pairs the value)" else ""}: \
-        {algName} : {← ppExpr (← mkForallFVars fixed algTy)}"
 
 syntax (name := foldOf) "fold_of " ident (" (" &"family" " := " ident ")")? : command
 

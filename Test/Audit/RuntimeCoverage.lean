@@ -1201,8 +1201,11 @@ private def checkRuntimeCoverage : CommandElabM Unit := do
   logInfo m!"partial rows: {partialIds}"
   logInfo m!"absent rows: {absentIds}"
 
+/-- The machine-readable rows that `scripts/report-effect-runtime-coverage.sh` and
+`scripts/check-effect-runtime-census.sh` read. They print only when a script asks (`E4RTCOV=1`),
+so a build prints none. -/
 private def emitRuntimeCoverage : CommandElabM Unit := do
-  checkRuntimeCoverage
+  unless (← IO.getEnv "E4RTCOV") == some "1" do return
   for row in censusRows do
     liftIO <| IO.println
       s!"E4RTCOV\trow\t{row.id}\t{row.kind}\t{row.disposition}\t{row.coverage}\t{row.witnesses.length}"
