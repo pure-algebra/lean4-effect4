@@ -99,6 +99,14 @@ test("a mask whose callback does not answer its own parameter is no printed imag
     "pipe(Effect.succeed(1))",
   ]) expect(() => readPrintedSource(source)).toThrow()
 })
+
+test("a printed getter refuses an Effect head shadowed by a callback binder", () => {
+  for (const source of [
+    'Effect.uninterruptibleMask((Effect) => Effect.succeed(Effect))',
+    'Effect.flatMap(Effect.succeed(0), (Effect) => Effect.uninterruptibleMask((r) => Effect.succeed(r)))',
+    'Effect.flatMap(Effect.succeed(0), (Effect) => Effect.flatMap(Effect.succeed(1), (a1) => Effect.uninterruptibleMask((r) => Effect.succeed(r))))',
+  ]) expect(() => readPrintedSource(source)).toThrow()
+})
 }
 
 test("the compiler reader refuses paths whose components exceed exact integers", () => {

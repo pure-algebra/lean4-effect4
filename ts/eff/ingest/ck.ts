@@ -461,10 +461,10 @@ class CompilerReader {
    * `getInterruptible`): the one argument of `Effect.uninterruptibleMask` is
    * `(r) => Effect.succeed(r)`, an arrow of one plain parameter whose body answers that
    * parameter. The parameter's name, or `undefined` for any other argument list. The head of the
-   * body must not start at the parameter: `(E) => E.succeed(E)` names no export of `effect`.
+   * body must not start at the parameter or an enclosing binder: either shadows the import.
    * The native callback spelling, whose body uses the function, has no reading (decisions row
    * 215). */
-  maskParameter(args: readonly Ex[]): string | undefined {
+  maskParameter(args: readonly Ex[], env: readonly string[]): string | undefined {
     const f = args.length === 1 ? this.unwrap(args[0]!) : undefined
     if (f?.type !== "ArrowFunctionExpression" || f.async || f.typeParameters || f.params.length !== 1 || f.body.type === "BlockStatement") return undefined
     const p = f.params[0]!
@@ -475,7 +475,7 @@ class CompilerReader {
     if (answer.type !== "Identifier" || answer.name !== p.name) return undefined
     let root = this.unwrap(body.callee)
     while (root.type === "MemberExpression") root = this.unwrap(root.object)
-    if (root.type !== "Identifier" || root.name === p.name) return undefined
+    if (root.type !== "Identifier" || root.name === p.name || env.includes(root.name)) return undefined
     let head: string
     try { head = this.name(body.callee) } catch { return undefined }
     return head === "Effect.succeed" ? p.name : undefined
@@ -553,7 +553,7 @@ class CompilerReader {
       }
       // The mask's two rows (decisions row 245): the getter prints as the mask that answers its
       // own parameter, and a restore site as `pipe(body, saved)`, with any term for `saved`.
-      case "Effect.uninterruptibleMask": return this.maskParameter(a) === undefined ? bad("mask getter") : { _tag: "withFiber", action: { _tag: "getInterruptible" } }
+      case "Effect.uninterruptibleMask": return this.maskParameter(a, env) === undefined ? bad("mask getter") : { _tag: "withFiber", action: { _tag: "getInterruptible" } }
       case "pipe": { this.arity(a, 2); const body = e(0); return { _tag: "restore", saved: t(1), body } }
       case "Effect.yieldNowWith": { this.arity(a, 1); const l = this.literal(arg(0)); return l._tag === "nat" ? { _tag: "yieldNow", priority: l.value } : bad("priority") }
       case "Effect.service": this.arity(a, 1); return { _tag: "service", key: this.key(arg(0), env) }
@@ -1400,7 +1400,7 @@ class ForeignCompilerReader extends CompilerReader {
       // `(r) => Effect.succeed(r)`. Any other argument list is a closure with no reading here,
       // the native callback spelling among them (decisions row 215).
       if (h === "Effect.uninterruptibleMask") {
-        if (this.maskParameter(x.arguments) === undefined) return refuseForeign("E-ARG-CLOSURE", h)
+        if (this.maskParameter(x.arguments, env) === undefined) return refuseForeign("E-ARG-CLOSURE", h)
         return { _tag: "withFiber", action: { _tag: "getInterruptible" } }
       }
       if (h === "Effect.whileLoop") return refuseForeign("E-LOOP", "whileLoop")

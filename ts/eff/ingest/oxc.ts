@@ -807,10 +807,10 @@ class Normalize {
    * `getInterruptible`): the one argument of `Effect.uninterruptibleMask` is
    * `(r) => Effect.succeed(r)`, an arrow of one plain parameter whose body answers that
    * parameter. The parameter's name, or `undefined` for any other argument list. The head of the
-   * body must not start at the parameter. The native callback spelling, whose body uses the
-   * function, has no reading (decisions row 215). Written apart from the other engine's: the two
+   * body must not start at the parameter or an enclosing binder. The native callback spelling,
+   * whose body uses the function, has no reading (decisions row 215). Written apart from the other engine's: the two
    * engines stay two walks. */
-  maskParameter(a: readonly Node[]): string | undefined {
+  maskParameter(a: readonly Node[], env: readonly string[]): string | undefined {
     const f = a.length === 1 ? unwrap(a[0]!) : undefined
     if (f?.type !== "ArrowFunctionExpression" || f.async === true || isNode(f.typeParameters)) return undefined
     const ps = list(f, "params"), body = unwrap(node(f, "body"))
@@ -820,7 +820,7 @@ class Normalize {
     if (answer?.type !== "Identifier" || answer.name !== parameter) return undefined
     let root = unwrap(node(body, "callee"))
     while (root.type === "MemberExpression") root = unwrap(node(root, "object"))
-    if (root.type !== "Identifier" || root.name === parameter) return undefined
+    if (root.type !== "Identifier" || root.name === parameter || env.includes(str(root, "name"))) return undefined
     let head: string
     try { head = this.head(node(body, "callee")) } catch (error) { if (error instanceof Refuse) return undefined; throw error }
     return head === "Effect.succeed" ? parameter : undefined
@@ -897,7 +897,7 @@ class Normalize {
     // is a closure with no reading here, the native callback spelling among them (decisions row
     // 215).
     if (h === "Effect.uninterruptibleMask") {
-      if (this.maskParameter(a) === undefined) return reject("E-ARG-CLOSURE", h)
+      if (this.maskParameter(a, env) === undefined) return reject("E-ARG-CLOSURE", h)
       return call(h, [binder(call("Effect.succeed", [id(`a${env.length}`)]), env.length)])
     }
     if (h === "Effect.whileLoop") return reject("E-LOOP", "whileLoop")
