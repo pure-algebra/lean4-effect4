@@ -1,5 +1,6 @@
 import Effect4.Laws.Schema.FieldRef
 import Effect4.Laws.Modules.Ascribe
+import Effect4.Laws.Program.Typing.TermIntro
 
 /-!
 # Shared construction rules for module steps
@@ -12,7 +13,7 @@ then the module step agreements and their store-attempt laws.
 The record rules supply every declared field at its declared type. The step constructor
 uses required fields only. These laws add no optional-field carrier or membership claim.
 Reading requires canonical names. Typing retains declaration formation and normality.
-The empty-value rules retain the ascription's subtype check.
+The empty-value rules derive the ascription's subtype premise once from covariance and bottom.
 Nothing here establishes a run, allocation, progress, or native compatibility.
 -/
 
@@ -86,18 +87,20 @@ theorem reads_none_ascribe (t : Ty) (env : Env) (path : List Nat) (vals : List V
 theorem types_nil_ascribe {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
     (t : Ty) (normal : (.list t : Ty).normalize = .list t)
     (formed : Formation.check (Formation.sites false [] (.record (ascribeFields (.list t)))) = none)
-    (below : Ty.subN (.list .never) (.list t) = true)
     {env : Env} {path : List Nat} {types : List Ty} :
     TypesEach sig (ascribe (.list t) nilT) env path types (.list t) :=
-  types_ascribe normal formed (types_nilT atoms true) below
+  types_ascribe normal formed (types_nilT atoms true) (by
+    change Ty.sub (.list .never) (.list t.normalize) = true
+    rw [Ty.sub_list, Ty.OrderProof.sub_never])
 
 /-- The empty option has its declared type through the existing ascription rule. -/
 theorem types_none_ascribe {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
     (t : Ty) (normal : (.option t : Ty).normalize = .option t)
     (formed : Formation.check (Formation.sites false [] (.record (ascribeFields (.option t)))) = none)
-    (below : Ty.subN (.option .never) (.option t) = true)
     {env : Env} {path : List Nat} {types : List Ty} :
     TypesEach sig (ascribe (.option t) noneT) env path types (.option t) :=
-  types_ascribe normal formed (types_noneT atoms true) below
+  types_ascribe normal formed (types_noneT atoms true) (by
+    change Ty.sub (.option .never) (.option t.normalize) = true
+    rw [Ty.sub_option, Ty.OrderProof.sub_never])
 
 end Effect4.Modules

@@ -5,6 +5,7 @@ import Effect4.Laws.Modules.Reading
 import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Modules.Construction
 import Effect4.Laws.Modules.Cons
+import Effect4.Laws.Modules.Option
 import Effect4.Laws.Modules.Tuple3
 import Effect4.Laws.Modules.Step.Requirements
 import Effect4.Laws.Schema.Identity
@@ -111,96 +112,98 @@ variable {Γ : List Ty}
 mutual
 /-- A check implies a weaker check, node by node. -/
 theorem check_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂ : Ty → Bool}
-    {f₁ f₂ : Ty → Bool} {s₁ s₂ : Ty → Ty → Bool}
+    {f₁ f₂ : Ty → Bool}
     (hf : ∀ t, f₁ t = true → f₂ t = true)
-    (hs : ∀ a b, s₁ a b = true → s₂ a b = true)
     (hr : ∀ fs, r₁ fs = true → r₂ fs = true) (ha : ∀ t, a₁ t = true → a₂ t = true) :
-    ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), cata (checkAlg r₁ a₁ f₁ s₁) e = true → cata (checkAlg r₂ a₂ f₂ s₂) e = true
+    ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), cata (checkAlg r₁ a₁ f₁) e = true → cata (checkAlg r₂ a₂ f₂) e = true
   | _, _, .var _, _ => rfl
   | _, _, .bool _, _ => rfl
   | _, _, .nat _, _ => rfl
   | _, _, .unit, _ => rfl
-  | _, _, .not a, h => check_mono hf hs hr ha a h
-  | _, _, .and a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
-  | _, _, .or a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
+  | _, _, .not a, h => check_mono hf hr ha a h
+  | _, _, .and a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
+  | _, _, .or a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
   | _, _, .ite c a b, h => by
     obtain ⟨ht, rest⟩ := and_true h
     obtain ⟨hc, hab⟩ := and_true rest
-    exact and_intro (ha _ ht) (and_intro (check_mono hf hs hr ha c hc)
-      (and_intro (check_mono hf hs hr ha a (and_true hab).1) (check_mono hf hs hr ha b (and_true hab).2)))
-  | _, _, .add a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
-  | _, _, .sub a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
-  | _, _, .lt a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
-  | _, _, .eq a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
-  | _, _, .isZero a, h => check_mono hf hs hr ha a h
-  | _, _, .pair a b, h => and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
+    exact and_intro (ha _ ht) (and_intro (check_mono hf hr ha c hc)
+      (and_intro (check_mono hf hr ha a (and_true hab).1) (check_mono hf hr ha b (and_true hab).2)))
+  | _, _, .add a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
+  | _, _, .sub a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
+  | _, _, .lt a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
+  | _, _, .eq a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
+  | _, _, .isZero a, h => check_mono hf hr ha a h
+  | _, _, .pair a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
   | _, _, .tuple2 a b, h => by
     obtain ⟨ht, rest⟩ := and_true h
     exact and_intro (ha _ ht)
-      (and_intro (check_mono hf hs hr ha a (and_true rest).1) (check_mono hf hs hr ha b (and_true rest).2))
+      (and_intro (check_mono hf hr ha a (and_true rest).1) (check_mono hf hr ha b (and_true rest).2))
   | _, _, .tuple3 x y z, h =>
     and_intro (and_intro (ha _ (and_true (and_true h).1).1)
       (and_intro (ha _ (and_true (and_true (and_true h).1).2).1)
         (ha _ (and_true (and_true (and_true h).1).2).2)))
-      (and_intro (check_mono hf hs hr ha x (and_true (and_true h).2).1)
-        (and_intro (check_mono hf hs hr ha y (and_true (and_true (and_true h).2).2).1)
-          (check_mono hf hs hr ha z (and_true (and_true (and_true h).2).2).2)))
-  | _, _, .fst p, h => check_mono hf hs hr ha p h
-  | _, _, .snd p, h => check_mono hf hs hr ha p h
-  | _, _, .some a, h => check_mono hf hs hr ha a h
-  | _, _, .get r _, h => and_intro (hr _ (and_true h).1) (check_mono hf hs hr ha r (and_true h).2)
+      (and_intro (check_mono hf hr ha x (and_true (and_true h).2).1)
+        (and_intro (check_mono hf hr ha y (and_true (and_true (and_true h).2).2).1)
+          (check_mono hf hr ha z (and_true (and_true (and_true h).2).2).2)))
+  | _, _, .fst p, h => check_mono hf hr ha p h
+  | _, _, .snd p, h => check_mono hf hr ha p h
+  | _, _, .some a, h => check_mono hf hr ha a h
+  | _, _, .get r _, h => and_intro (hr _ (and_true h).1) (check_mono hf hr ha r (and_true h).2)
   | _, _, .set r _ v, h => by
     obtain ⟨hfields, rest⟩ := and_true h
     exact and_intro (hr _ hfields)
-      (and_intro (check_mono hf hs hr ha r (and_true rest).1) (check_mono hf hs hr ha v (and_true rest).2))
-  | _, _, .emptyLike xs, h => check_mono hf hs hr ha xs h
-  | _, _, .len xs, h => check_mono hf hs hr ha xs h
+      (and_intro (check_mono hf hr ha r (and_true rest).1) (check_mono hf hr ha v (and_true rest).2))
+  | _, _, .emptyLike xs, h => check_mono hf hr ha xs h
+  | _, _, .len xs, h => check_mono hf hr ha xs h
   | _, _, .snoc xs x, h => by
     obtain ⟨ht, rest⟩ := and_true h
     exact and_intro (ha _ ht)
-      (and_intro (check_mono hf hs hr ha xs (and_true rest).1) (check_mono hf hs hr ha x (and_true rest).2))
+      (and_intro (check_mono hf hr ha xs (and_true rest).1) (check_mono hf hr ha x (and_true rest).2))
   | _, _, .append xs ys, h => by
     obtain ⟨ht, rest⟩ := and_true h
     exact and_intro (ha _ ht)
-      (and_intro (check_mono hf hs hr ha xs (and_true rest).1) (check_mono hf hs hr ha ys (and_true rest).2))
-  | _, _, .take xs n, h => and_intro (check_mono hf hs hr ha xs (and_true h).1) (check_mono hf hs hr ha n (and_true h).2)
-  | _, _, .drop xs n, h => and_intro (check_mono hf hs hr ha xs (and_true h).1) (check_mono hf hs hr ha n (and_true h).2)
-  | _, _, .head xs, h => check_mono hf hs hr ha xs h
+      (and_intro (check_mono hf hr ha xs (and_true rest).1) (check_mono hf hr ha ys (and_true rest).2))
+  | _, _, .take xs n, h => and_intro (check_mono hf hr ha xs (and_true h).1) (check_mono hf hr ha n (and_true h).2)
+  | _, _, .drop xs n, h => and_intro (check_mono hf hr ha xs (and_true h).1) (check_mono hf hr ha n (and_true h).2)
+  | _, _, .head xs, h => check_mono hf hr ha xs h
   | _, _, .fold xs init body, h =>
-    and_intro (and_intro (check_mono hf hs hr ha xs (and_true (and_true h).1).1)
-      (check_mono hf hs hr ha init (and_true (and_true h).1).2)) (check_mono hf hs hr ha body (and_true h).2)
+    and_intro (and_intro (check_mono hf hr ha xs (and_true (and_true h).1).1)
+      (check_mono hf hr ha init (and_true (and_true h).1).2)) (check_mono hf hr ha body (and_true h).2)
 
   | _, _, .record fields, h =>
     and_intro (hr _ (and_true h).1) (and_intro (hf _ (and_true (and_true h).2).1)
-      (check_fields_mono hf hs hr ha fields (and_true (and_true h).2).2))
+      (check_fields_mono hf hr ha fields (and_true (and_true h).2).2))
   | _, _, .nil, h => and_intro (ha _ (and_true h).1)
-    (and_intro (hf _ (and_true (and_true h).2).1) (hs _ _ (and_true (and_true h).2).2))
+    (hf _ (and_true h).2)
   | _, _, .none, h => and_intro (ha _ (and_true h).1)
-    (and_intro (hf _ (and_true (and_true h).2).1) (hs _ _ (and_true (and_true h).2).2))
+    (hf _ (and_true h).2)
+  | _, _, .getOrElse x xs, h => and_intro (ha _ (and_true h).1)
+    (and_intro (check_mono hf hr ha x (and_true (and_true h).2).1)
+      (check_mono hf hr ha xs (and_true (and_true h).2).2))
   | _, _, .cons x xs, h => and_intro (ha _ (and_true h).1)
-    (and_intro (check_mono hf hs hr ha x (and_true (and_true h).2).1)
-      (check_mono hf hs hr ha xs (and_true (and_true h).2).2))
+    (and_intro (check_mono hf hr ha x (and_true (and_true h).2).1)
+      (check_mono hf hr ha xs (and_true (and_true h).2).2))
   | _, _, .sameDeferred a b, h =>
-    and_intro (check_mono hf hs hr ha a (and_true h).1) (check_mono hf hs hr ha b (and_true h).2)
+    and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
 
 /-- The required-field half of check monotonicity, consumed by the record arm. -/
 theorem check_fields_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂ : Ty → Bool}
-    {f₁ f₂ : Ty → Bool} {s₁ s₂ : Ty → Ty → Bool}
-    (hf : ∀ t, f₁ t = true → f₂ t = true) (hs : ∀ a b, s₁ a b = true → s₂ a b = true)
+    {f₁ f₂ : Ty → Bool}
+    (hf : ∀ t, f₁ t = true → f₂ t = true)
     (hr : ∀ fs, r₁ fs = true → r₂ fs = true) (ha : ∀ t, a₁ t = true → a₂ t = true) :
     ∀ {Γ : List Ty} {fs : List (String × Bool × Ty)} (fields : StepFields Γ fs),
-    (FieldResults.map (fun _ {_} x => x) fs (cataFields (checkAlg r₁ a₁ f₁ s₁) fields)).all id = true →
-    (FieldResults.map (fun _ {_} x => x) fs (cataFields (checkAlg r₂ a₂ f₂ s₂) fields)).all id = true
+    (FieldResults.map (fun _ {_} x => x) fs (cataFields (checkAlg r₁ a₁ f₁) fields)).all id = true →
+    (FieldResults.map (fun _ {_} x => x) fs (cataFields (checkAlg r₂ a₂ f₂) fields)).all id = true
   | _, _, .nil, _ => rfl
   | _, _, .cons _ value rest, h =>
-    and_intro (check_mono hf hs hr ha value (and_true h).1)
-      (check_fields_mono hf hs hr ha rest (and_true h).2)
+    and_intro (check_mono hf hr ha value (and_true h).1)
+      (check_fields_mono hf hr ha rest (and_true h).2)
 end
 
 /-- **The typing check implies the reading check**: a record in normal form has ascending
 names. -/
 theorem canonical_of_normal {s : Ty} (e : Step Γ s) (h : e.normal = true) : e.canonical = true :=
-  check_mono (fun _ _ => rfl) (fun _ _ _ => rfl) (fun _ hn => decide_eq_true (ascending_of_normal (Ty.normalize_of_certNormal _ hn)))
+  check_mono (fun _ _ => rfl) (fun _ hn => decide_eq_true (ascending_of_normal (Ty.normalize_of_certNormal _ hn)))
     (fun _ _ => rfl) e h
 
 mutual
@@ -408,6 +411,13 @@ theorem tree_exists : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     rfl
   | _, _, .nil, _, _, _, _ => ⟨_, rfl⟩
   | _, _, .none, _, _, _, _ => ⟨_, rfl⟩
+  | _, _, .getOrElse x xs, src, env, path, hin => by
+    obtain ⟨tx, hx⟩ := tree_exists x hin
+    obtain ⟨txs, hxs⟩ := tree_exists xs hin
+    refine ⟨.app "getOrElse" (termsOfList [tx, txs]), ?_⟩
+    change (app "getOrElse" [x.term src, xs.term src]) env path = _
+    simp only [app, List.mapM_cons, List.mapM_nil, hx, hxs]
+    rfl
   | _, _, .cons x xs, src, env, path, hin => by
     obtain ⟨tx, hx⟩ := tree_exists x hin
     obtain ⟨txs, hxs⟩ := tree_exists xs hin
@@ -661,6 +671,9 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
       (fields_names fields src) (sound_fields hin fields (and_true (and_true h).2).2 req)
   | _, _, _, env, path, vals, _, _, .nil (t := t), _, _ => reads_nil_ascribe t env path vals
   | _, _, _, env, path, vals, _, _, .none (t := t), _, _ => reads_none_ascribe t env path vals
+  | _, vs, src, env, path, vals, hin, _, .getOrElse x fallback, h, req =>
+    reads_getOrElse L _ _ _ (sound_core hin x (and_true h).1 req.1)
+      (sound_core hin fallback (and_true h).2 req.2)
   | _, vs, src, env, path, vals, hin, _, .cons x xs, h, req =>
     reads_app (.cons (sound_core (requirements := req.1) hin x (and_true h).1)
       (.cons (sound_core (requirements := req.2) hin xs (and_true h).2) .nil)) rfl
@@ -768,9 +781,11 @@ theorem facts_of_normal : ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), e.normal 
       Option.isNone_iff_eq_none.mp (and_true (and_true h).2).1,
       field_facts_of_normal fields (and_true (and_true h).2).2⟩
   | _, _, .nil, h => ⟨Ty.normalize_of_certNormal _ (and_true h).1,
-    Option.isNone_iff_eq_none.mp (and_true (and_true h).2).1, (and_true (and_true h).2).2⟩
+    Option.isNone_iff_eq_none.mp (and_true h).2⟩
   | _, _, .none, h => ⟨Ty.normalize_of_certNormal _ (and_true h).1,
-    Option.isNone_iff_eq_none.mp (and_true (and_true h).2).1, (and_true (and_true h).2).2⟩
+    Option.isNone_iff_eq_none.mp (and_true h).2⟩
+  | _, _, .getOrElse x xs, h => ⟨Ty.normalize_of_certNormal _ (and_true h).1,
+    facts_of_normal x (and_true (and_true h).2).1, facts_of_normal xs (and_true (and_true h).2).2⟩
   | _, _, .cons x xs, h => ⟨Ty.normalize_of_certNormal _ (and_true h).1,
     facts_of_normal x (and_true (and_true h).2).1, facts_of_normal xs (and_true (and_true h).2).2⟩
   | _, _, .sameDeferred a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
@@ -779,8 +794,7 @@ theorem facts_of_normal : ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), e.normal 
 theorem field_facts_of_normal : ∀ {Γ : List Ty} {fs : List (String × Bool × Ty)} (fields : StepFields Γ fs),
     (FieldResults.map (fun _ {_} value => value) fs
       (cataFields (checkAlg (fun fs => (Ty.record fs).certNormal) (fun t => t.certNormal)
-        (fun t => (Formation.check (Formation.sites false [] t)).isNone)
-        (fun a b => Ty.sub a.normalize b.normalize)) fields)).all id = true →
+        (fun t => (Formation.check (Formation.sites false [] t)).isNone)) fields)).all id = true →
     FieldResults.All (fun {_} value => value) fs (cataFields factsAlg fields)
   | _, _, .nil, _ => trivial
   | _, _, .cons _ value rest, h =>
@@ -858,8 +872,11 @@ theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src
   | _, src, env, path, types, hin, _, .record (fs := fs) fields, h, req =>
     types_record_declared sig fs (ascending_of_normal h.1) h.1 h.2.1
       (fields_names fields src) (typed_fields atoms hin fields h.2.2 req)
-  | _, _, _, _, _, _, _, .nil (t := t), h, _ => types_nil_ascribe sig atoms t h.1 h.2.1 h.2.2
-  | _, _, _, _, _, _, _, .none (t := t), h, _ => types_none_ascribe sig atoms t h.1 h.2.1 h.2.2
+  | _, _, _, _, _, _, _, .nil (t := t), h, _ => types_nil_ascribe sig atoms t h.1 h.2
+  | _, _, _, _, _, _, _, .none (t := t), h, _ => types_none_ascribe sig atoms t h.1 h.2
+  | _, src, env, path, types, hin, _, .getOrElse x fallback, h, req =>
+    types_getOrElse atoms h.1 (typed_core atoms hin x h.2.1 req.1)
+      (typed_core atoms hin fallback h.2.2 req.2)
   | _, src, env, path, types, hin, _, .cons x xs, h, req =>
     types_cons atoms h.1 (typed_core atoms (requirements := req.1) hin x h.2.1) (typed_core atoms (requirements := req.2) hin xs h.2.2)
   | _, src, env, path, types, hin, _, .sameDeferred a b, h, req =>
@@ -944,6 +961,7 @@ theorem frame {fs : List (String × Bool × Ty)} (x : Input Γ (.record fs)) {t 
   | .snd _, hs, _ => nomatch hs
   | .fold _ _ _, hs, _ => nomatch hs
   | .record _, hs, _ => nomatch hs
+  | .getOrElse _ _, hs, _ => nomatch hs
 
 /-- **The frame law on the machine's record frame**: for a record with ascending names, the
 machine's read of a field that no overwrite names is the same before and after the step. -/

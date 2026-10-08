@@ -47,6 +47,7 @@ theorem requirements_mono {P Q R S : Prop} (scope : P → R) (identity : Q → S
   | _, _, .append a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .take a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .drop a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
+  | _, _, .getOrElse a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .cons a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .ite a b c, h => ⟨requirements_mono scope identity a h.1,
     requirements_mono scope identity b h.2.1, requirements_mono scope identity c h.2.2⟩
@@ -160,6 +161,12 @@ theorem requirements_features {P Q : Prop} : ∀ {Γ : List Ty} {t : Ty} (e : St
     simp only [Bool.or_eq_true]
     aesop
   | _, _, .drop a b => by
+    change (a.Requirements P Q ∧ b.Requirements P Q) ↔
+      (((a.binds || b.binds) = true → P) ∧ ((a.compares || b.compares) = true → Q))
+    rw [requirements_features a, requirements_features b]
+    simp only [Bool.or_eq_true]
+    aesop
+  | _, _, .getOrElse a b => by
     change (a.Requirements P Q ∧ b.Requirements P Q) ↔
       (((a.binds || b.binds) = true → P) ∧ ((a.compares || b.compares) = true → Q))
     rw [requirements_features a, requirements_features b]

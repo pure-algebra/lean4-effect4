@@ -50,6 +50,16 @@ def absent : Step [] (.option .bool) := .none
     termTy nativeSignature [] t == some (.option .bool)
   | .error _ => false
 
+def presentOr : Step [] .nat := .getOrElse (.some (.nat 7)) (.nat 9)
+def absentOr : Step [] .nat := .getOrElse .none (.nat 9)
+#guard presentOr.normal && absentOr.normal
+#guard @BEq.beq Nat inferInstance (presentOr.eval (Γ := []) Leaves.opaque ()) 7
+#guard @BEq.beq Nat inferInstance (absentOr.eval (Γ := []) Leaves.opaque ()) 9
+example : Reads (presentOr.term (Input.source [])) {} [] [] (.nat 7) :=
+  Step.sound (Γ := []) Leaves.opaque () Input.reads_nil presentOr rfl
+example : TypesEach nativeSignature (absentOr.term (Input.source [])) {} [] [] .nat :=
+  Step.typed_of_normal nativeSignature rfl Input.types_nil absentOr rfl
+
 -- A normal type variable is not a formed annotation outside a template.
 #guard !(Step.nil : Step [] (.list (.var 0))).normal
 #guard !(Step.none : Step [] (.option (.var 0))).normal

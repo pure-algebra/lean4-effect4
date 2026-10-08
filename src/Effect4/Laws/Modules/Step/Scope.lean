@@ -244,6 +244,14 @@ theorem scopedAt : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     rcases hx with rfl | rfl
     · exact scopedAt a h
     · exact scopedAt b h
+  | _, _, .getOrElse a b, src, env, path, h => by
+    change SourceScopedAt (app "getOrElse" [a.term src, b.term src]) env path
+    apply app_scopedAt
+    intro x hx
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl
+    · exact scopedAt a h
+    · exact scopedAt b h
   | _, _, .cons a b, src, env, path, h => by
     change SourceScopedAt (app "cons" [a.term src, b.term src]) env path
     apply app_scopedAt

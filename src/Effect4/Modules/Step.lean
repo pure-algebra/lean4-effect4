@@ -119,6 +119,7 @@ inductive Step : List Ty → Ty → Type where
   | record {Γ : List Ty} {fs : List (String × Bool × Ty)} : StepFields Γ fs → Step Γ (.record fs)
   | nil {Γ : List Ty} {t : Ty} : Step Γ (.list t)
   | none {Γ : List Ty} {t : Ty} : Step Γ (.option t)
+  | getOrElse {Γ : List Ty} {t : Ty} : Step Γ (.option t) → Step Γ t → Step Γ t
   | cons {Γ : List Ty} {t : Ty} : Step Γ t → Step Γ (.list t) → Step Γ (.list t)
   | sameDeferred {Γ : List Ty} {a e b f : Ty} :
       Step Γ (.deferredOf a e) → Step Γ (.deferredOf b f) → Step Γ .bool
@@ -200,6 +201,7 @@ structure StepAlgebra (R : List Ty → Ty → Type) where
     FieldResults (R Γ) fs → R Γ (.record fs)
   nil : {Γ : List Ty} → {t : Ty} → R Γ (.list t)
   none : {Γ : List Ty} → {t : Ty} → R Γ (.option t)
+  getOrElse : {Γ : List Ty} → {t : Ty} → R Γ (.option t) → R Γ t → R Γ t
   cons : {Γ : List Ty} → {t : Ty} → R Γ t → R Γ (.list t) → R Γ (.list t)
   sameDeferred : {Γ : List Ty} → {a e b f : Ty} →
     R Γ (.deferredOf a e) → R Γ (.deferredOf b f) → R Γ .bool
@@ -243,6 +245,7 @@ def cata {R : List Ty → Ty → Type} (alg : StepAlgebra R) : {Γ : List Ty} �
   | _, _, .record fields => alg.record (cataFields alg fields)
   | _, _, .nil => alg.nil
   | _, _, .none => alg.none
+  | _, _, .getOrElse x fallback => alg.getOrElse (cata alg x) (cata alg fallback)
   | _, _, .cons x xs => alg.cons (cata alg x) (cata alg xs)
   | _, _, .sameDeferred a b => alg.sameDeferred (cata alg a) (cata alg b)
 
@@ -310,6 +313,7 @@ def termAlg : StepAlgebra (fun Γ _ => ({t : Ty} → Input Γ t → TermSrc) →
     Authoring.record fs (FieldResults.map (fun name {_} value => (name, value src)) fs fields)
   nil {_Γ} {t} := fun _ => ascribe (.list t) nilT
   none {_Γ} {t} := fun _ => ascribe (.option t) noneT
+  getOrElse x fallback := fun src => app "getOrElse" [x src, fallback src]
   cons x xs := fun src => app "cons" [x src, xs src]
   sameDeferred a b := fun src => Modules.same (a src) (b src)
 
@@ -354,6 +358,7 @@ def evalAlg (L : Leaves) : StepAlgebra (fun Γ t => Inputs L Γ → CarrierAt L 
   record {_Γ} {fs} fields := fun vs => FieldResults.values L vs fs fields
   nil := fun _ => []
   none := fun _ => Option.none
+  getOrElse x fallback := fun vs => (x vs).getD (fallback vs)
   cons x xs := fun vs => x vs :: xs vs
   sameDeferred a b := fun vs => Model.deferredEqual L (a vs) (b vs)
 
@@ -398,6 +403,7 @@ def writesAlg : StepAlgebra (fun _ _ => List String) where
   record {_Γ} {fs} fields := (FieldResults.map (fun _ {_} value => value) fs fields).flatten
   nil := []
   none := []
+  getOrElse x fallback := x ++ fallback
   cons x xs := x ++ xs
   sameDeferred a b := a ++ b
 
@@ -439,6 +445,7 @@ def spineAlg : StepAlgebra (fun _ _ => Option Nat) where
   record _ := Option.none
   nil := Option.none
   none := Option.none
+  getOrElse _ _ := Option.none
   cons _ _ := Option.none
   sameDeferred _ _ := Option.none
 
@@ -449,7 +456,7 @@ def spine {t : Ty} (e : Step Γ t) : Option Nat := cata spineAlg e
 /-- A check algebra: the conjunction of the children's checks, and a node's own test at a field's
 read and overwrite. -/
 def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → Bool)
-    (atFormation : Ty → Bool := fun _ => true) (atSubtype : Ty → Ty → Bool := fun _ _ => true) :
+    (atFormation : Ty → Bool := fun _ => true) :
     StepAlgebra (fun _ _ => Bool) where
   var _ := true
   bool _ := true
@@ -483,10 +490,9 @@ def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → 
 
   record {_Γ} {fs} fields := atRecord fs && (atFormation (.record fs) &&
     (FieldResults.map (fun _ {_} value => value) fs fields).all id)
-  nil {_Γ} {t} := atType (.list t) && (atFormation (.record (ascribeFields (.list t))) &&
-    atSubtype (.list .never) (.list t))
-  none {_Γ} {t} := atType (.option t) && (atFormation (.record (ascribeFields (.option t))) &&
-    atSubtype (.option .never) (.option t))
+  nil {_Γ} {t} := atType (.list t) && atFormation (.record (ascribeFields (.list t)))
+  none {_Γ} {t} := atType (.option t) && atFormation (.record (ascribeFields (.option t)))
+  getOrElse {_Γ} {t} x fallback := atType t && (x && fallback)
   cons {_Γ} {t} x xs := atType t && (x && xs)
   sameDeferred a b := a && b
 
@@ -500,7 +506,7 @@ normal form, and so is the type of each selection and of each list it extends
 (`Ty.certNormal`, `src/Effect4/Program/TyNormal.lean`). It reduces by evaluation. -/
 def normal {t : Ty} (e : Step Γ t) : Bool :=
   cata (checkAlg (fun fs => (Ty.record fs).certNormal) (fun t => t.certNormal)
-    (fun t => (Formation.check (Formation.sites false [] t)).isNone) (fun a b => Ty.sub a.normalize b.normalize)) e
+    (fun t => (Formation.check (Formation.sites false [] t)).isNone)) e
 
 /-- The facts algebra: the normal forms that the checker's rules ask for, as propositions. A
 selection and a list it extends ask for their type's normal form, a tuple for its two items' and
@@ -542,11 +548,10 @@ def factsAlg : StepAlgebra (fun _ _ => Prop) where
     Formation.check (Formation.sites false [] (.record fs)) = Option.none ∧
     FieldResults.All (fun {_} value => value) fs fields
   nil {_Γ} {t} := Ty.normalize (.list t) = .list t ∧
-    Formation.check (Formation.sites false [] (.record (ascribeFields (.list t)))) = Option.none ∧
-    Ty.sub (Ty.normalize (.list .never)) (Ty.normalize (.list t)) = true
+    Formation.check (Formation.sites false [] (.record (ascribeFields (.list t)))) = Option.none
   none {_Γ} {t} := Ty.normalize (.option t) = .option t ∧
-    Formation.check (Formation.sites false [] (.record (ascribeFields (.option t)))) = Option.none ∧
-    Ty.sub (Ty.normalize (.option .never)) (Ty.normalize (.option t)) = true
+    Formation.check (Formation.sites false [] (.record (ascribeFields (.option t)))) = Option.none
+  getOrElse {_Γ} {t} x fallback := t.normalize = t ∧ x ∧ fallback
   cons {_Γ} {t} x xs := t.normalize = t ∧ x ∧ xs
   sameDeferred a b := a ∧ b
 
@@ -591,6 +596,7 @@ def requirementsAlg (scope identity : Prop) : StepAlgebra (fun _ _ => Prop) wher
   append a b := a ∧ b
   take a b := a ∧ b
   drop a b := a ∧ b
+  getOrElse a b := a ∧ b
   cons a b := a ∧ b
   ite c a b := c ∧ a ∧ b
   tuple3 a b c := a ∧ b ∧ c
@@ -636,6 +642,7 @@ def featureAlg (atFold atComparison : Bool) : StepAlgebra (fun _ _ => Bool) wher
   record {_Γ} {fs} fields := (FieldResults.map (fun _ {_} value => value) fs fields).any id
   nil := false
   none := false
+  getOrElse x fallback := x || fallback
   cons x xs := x || xs
   sameDeferred a b := atComparison || a || b
 
