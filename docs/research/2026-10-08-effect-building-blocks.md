@@ -92,7 +92,7 @@ flowchart BT
 module's composition follows latest's own building blocks, except where this tree's kernel
 derives a building block that latest implements natively. Each module records its building
 blocks as data, so the implementation map of row 331 can draw the graph of section 2.
-Recommendation: rule it as the owner stated it on 2026-10-08.
+Ruled on 2026-10-08: decisions row 335.
 
 ## 5. What this note does not establish
 
