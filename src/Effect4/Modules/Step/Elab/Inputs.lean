@@ -45,7 +45,7 @@ def elabStepContext : CommandElab := fun stx => do
         throwErrorAt input "step_context%: repeated name {input}"
     let pairs ← names.zip types |>.mapM fun (input, ty) => do
       `(( $(quote (input.getId.toString (escape := false))), $ty ))
-    elabCommand (← `(def $name : Effect4.Modules.InputContext := [$pairs,*]))
+    elabCommand (← `(abbrev $name : Effect4.Modules.InputContext := [$pairs,*]))
   | _ => throwUnsupportedSyntax
 
 @[command_elab paramStepContextStx]
@@ -57,7 +57,7 @@ def elabParamStepContext : CommandElab := fun stx => do
         throwErrorAt input "step_context%: repeated name {input}"
     let pairs ← names.zip types |>.mapM fun (input, ty) => do
       `(( $(quote (input.getId.toString (escape := false))), $ty ))
-    elabCommand (← `(def $name $binders* : Effect4.Modules.InputContext := [$pairs,*]))
+    elabCommand (← `(abbrev $name $binders* : Effect4.Modules.InputContext := [$pairs,*]))
   | _ => throwUnsupportedSyntax
 
 private def contextEntries (stx : Syntax) : TermElabM (Array (String × Expr)) := do

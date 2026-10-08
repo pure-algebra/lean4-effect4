@@ -18,6 +18,6 @@ namespace Effect4.Modules
 abbrev InputContext := List (String × Program.Ty)
 
 /-- The positional context computed from the one named declaration. -/
-def InputContext.types (context : InputContext) : List Program.Ty := context.map Prod.snd
+abbrev InputContext.types (context : InputContext) : List Program.Ty := context.map Prod.snd
 
 end Effect4.Modules
