@@ -26,6 +26,17 @@ namespace Effect4.Program.Authoring
 
 open Effect4.Program
 
+/-- A binding name for an operation of one module instance. ASCII letters and digits stay;
+all other UTF-8 bytes become decimal escapes. The separator never occurs inside a component. -/
+def Def.qualifiedName (instanceName operation : String) : String :=
+  let encode := fun (name : String) =>
+    name.toUTF8.data.toList.foldl (fun acc byte =>
+      let n := byte.toNat
+      acc ++ if (65 ≤ n && n ≤ 90) || (97 ≤ n && n ≤ 122) || (48 ≤ n && n ≤ 57)
+        then String.singleton (Char.ofNat n)
+        else "_" ++ toString n ++ "_") ""
+  "e4$" ++ encode instanceName ++ "$" ++ encode operation
+
 /-- **An operation's arguments as a list**: the curried function type over argument terms that
 ends in a program, read both ways. `uncurry` applies an operation to a list of terms, and
 `curry` makes an operation of that type from a function of the list. -/

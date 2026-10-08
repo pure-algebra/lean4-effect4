@@ -1,5 +1,6 @@
 import Effect4.Program.Authoring.Defs
 import Effect4.Program.Authoring.Lifts
+import Effect4.Codegen.PrintLeaf
 
 /-!
 # Authoring definitions: parameter counts
@@ -84,5 +85,31 @@ def many := Def.of "many" [("a", Ty.nat), ("b", Ty.bool), ("c", Ty.string)] .str
     (.app "pair" (.cons (.lit (.nat 11))
       (.cons (.app "pair" (.cons (.lit (.bool true))
         (.cons (.lit (.str "last")) .nil))) .nil))))
+
+/-! ## Generated binding names
+
+These finite checks exercise target identifier admission and the printer's export-name checks.
+The examples do not establish an injectivity theorem.
+-/
+
+#guard Def.qualifiedName "Numbers" "take" = "e4$Numbers$take"
+#guard Def.qualifiedName "" "" = "e4$$"
+#guard Def.qualifiedName "a.b" "take$" = "e4$a_46_b$take_36_"
+#guard Def.qualifiedName "_" "λ" = "e4$_95_$_206__187_"
+#guard Def.qualifiedName "猫" "offer" = "e4$_231__140__171_$offer"
+
+#guard (["", "Numbers", "1", "a.b", "a$b", "_", "_36_", "a b", "λ", "猫",
+    "await", "pipe", "a0", "_%request0", "x\n"] : List String).all fun instanceName =>
+  (["", "take", "1", ".", "$", "_", "_36_", "x y", "λ", "猫", "class"] : List String).all
+    fun operation =>
+      TypeScript.targetIdentifier (Def.qualifiedName instanceName operation) &&
+        (exportNameFault (Def.qualifiedName instanceName operation)).isNone
+
+-- Separators and decimal-looking author names cannot imitate encoded components.
+#guard Def.qualifiedName "a$b" "c" != Def.qualifiedName "a" "b$c"
+#guard Def.qualifiedName "$" "take" != Def.qualifiedName "_36_" "take"
+#guard Def.qualifiedName "a_" "b" != Def.qualifiedName "a" "_b"
+#guard Def.qualifiedName "" "take" != Def.qualifiedName "take" ""
+#guard Def.qualifiedName "λ" "take" != Def.qualifiedName "_206__187_" "take"
 
 end Test.Program.AuthoringDefs
