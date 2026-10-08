@@ -19,6 +19,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   table, the focus function and one annotating traversal give each address its environment and
   type (rows 296, 302 and 324). A template binds its parameters by the match by bounds (rows 303,
   306 and 315). It binds a row's request and a binder term alike: UNGUARD removed the guards.
+  The approved eliminators read every union member of their input (P2b, row 325).
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311).
@@ -35,9 +36,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   machine, the OCaml engine and M5 take a block (slices PROC-1 and PROC-2, the
   [receipt](research/2026-10-08-procedures-receipt.md)). The printer refuses a block until PROC-3.
 - **Code generation.** The printer and the readers are driven by one table. The typed print has
-  its slices P1, P2a and P3 (rows 324 and 325). A call at a join carries its type arguments. The
-  reader reconstructs the typed print after its named erasure. The
-  [typed print note](research/2026-10-07-typed-print-design.md) holds the plan.
+  its slices P1, P2a, P2b and P3 (rows 324 and 325, the
+  [receipt](research/2026-10-08-codex-unguard-receipt.md)). A call at a join carries its type
+  arguments, and so does an approved eliminator site. The reader reconstructs the typed print
+  after its named erasure. The application's print is not yet the typed print.
 - **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
   replacement law holds over the six typing judgments (row 294).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
@@ -66,21 +68,17 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The typed print**, by Codex: P2b after its hearing (row 325, point 5; the
-   [widenings note](research/2026-10-08-unguard-widenings.md)).
-2. **Procedures** (row 328): slices PROC-3 to PROC-5 (the
+1. **Procedures** (row 328): slices PROC-3 to PROC-5 (the
    [procedures note](research/2026-10-08-seat-PROC-design.md)). They are the printed block, the
    authoring surface with the first composed module, and the block's handler laws.
-3. **The simulation across schedules** (row 329), after the typed print: slices S1 to S4 (the
+2. **The simulation across schedules** (row 329): slices S1 to S4 (the
    [simulation note](research/2026-10-08-seat-SIM-design.md)).
-4. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
+3. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
    [session API note](research/2026-10-07-session-api-design.md)).
-5. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
+4. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
 
 ## What the owner must decide
 
-- **UNGUARD's widenings** (row 325, point 5): assigned to Codex on the note's four
-  recommendations; a finding that changes one comes back to the owner.
 - **The simulation's three questions** (row 329): what every schedule covers, the other side of
   a module's law, and the clients it covers.
 - **The frozen contracts' statement pins** (row 301, point 8; the

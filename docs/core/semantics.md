@@ -781,6 +781,24 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   `read_print` and `read_exact` keep their statements.
   It is a claim of program syntax: it establishes no typing and no behaviour of a target.
   (`mask_rows_table_premises` (`src/Effect4/Laws/Codegen/Mask.lean`)).
+- **The typed print erases to the print (`typed-print-erasure`)**: The typed print writes type
+  arguments at two places.
+  One is a row call whose request the row check joins, and one is an approved eliminator site.
+  The named erasure removes exactly those arguments (`eraseJoinArgs`).
+  It keeps an operation's own arguments and the stored type annotations.
+  At a readable program and a lawful spelling, a successful typed print erases to the print,
+  byte for byte (`eraseJoinArgs_printTyped`, `src/Effect4/Laws/Codegen/PrintTyped.lean`).
+  A program with no such call and no such site has the typed print that is its print
+  (`printTyped_eq_print`, the claim `typed-print-connector`).
+  It establishes nothing that tsgo accepts and nothing of a run of the printed program.
+  The tsgo checks of the printed sites are finite checks (`make check-target`).
+- **The reader reads the typed print (`typed-print-read`)**: The statement fixes a readable
+  program and a lawful spelling.
+  After the named erasure, the reader reads a successful typed print back to its program
+  (`readTyped_printTyped`, the same file).
+  It transports the existing `read_print`, and `readTyped_exact` transports `read_exact`.
+  The raw reader still refuses an inserted argument before the erasure.
+  No equality of raw foreign spellings follows.
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.
@@ -864,13 +882,14 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   An argument list is checked at one, final list of bindings (`Bounds.matchArgsB_sound`), and
   smaller arguments have a match with smaller bindings (`Bounds.matchArgsB_monotone`).
   Every template of the tree is in reach, as a finite check (`Test/Program/BoundsControls.lean`).
-  A binder term is matched under the term guard (`Bounds.termGuard`, decisions row 299, point 10).
-  Its type must offer a greatest lower bound to each parameter that the cell does not fix.
-  The guard goes when the TypeScript printer writes a row's type arguments at the join.
+  The row check and a binder term read the match by bounds with no guard (slice UNGUARD).
+  The TypeScript printer writes a row's type arguments where the row check joins the request
+  (`typed-print-connector`).
   It establishes no match under a union head or a nominal reference of a template, and no
   completeness of the checker against `HasTy`.
-  It establishes nothing of tsgo's inference: the guard and the prelude's declarations answer to
-  that, and the truth lane tests them on finite programs.
+  It establishes nothing of tsgo's inference.
+  The printed type arguments and the prelude's declarations answer to that.
+  The truth lane tests them on finite programs.
 - **Minimal type slices of a monotone view (`slice-lattice-minimal`)**: The statement fixes a view: a
   monotone map from the type slices of one program to a preorder of types.
   A type slice is the list of its kept sites, and a smaller type slice keeps less.
@@ -921,39 +940,32 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   invariant position.
   The upper form is false in the raw order `Ty.sub`, and the field read has no upper form:
   the order has no width rule (decisions row 178).
-- **A converted eliminator is the extended rule of its member rule (`union-rule-extend`)**: The
+- **A converted eliminator is the full fallback of its member rule (`union-rule-extend`)**: The
   statement fixes an eliminator: a member rule with the three facts of `Eliminator`.
-  The guarded rule is the lifted rule where the target's normal form has at most one union
-  member, and a refusal elsewhere.
-  The extended rule is the member rule's own answer where the member rule answers at the raw
-  target, and the guarded rule elsewhere.
+  The full fallback is the member rule's own answer where the member rule answers at the raw
+  target.
+  Elsewhere it is the lifted rule, which reads every union member of the normal form.
   It agrees with the member rule, so no target that the by-shape function answered moves.
+  It is the lifted rule where the member rule refuses.
+  It keeps every answer of the earlier guarded rule (`extendAll_of_extend`).
   It answers a least answer at `never`.
   Its answer `a` puts the target below `C a`, in `Ty.subN`.
   An answer `b` is above `a` exactly when the target is below `C b`.
-  It refuses a proper union that the member rule refuses.
-  It is proved (`UnionRule.Eliminator.extend_laws`, `src/Effect4/Laws/Program/UnionRule.lean`;
-  seat PILOT).
-  The fiber rule is the first instance: `fiberTy` is `UnionRule.extend Member.fiber`
-  (`src/Effect4/Program/Typing/Rules.lean`), with its facts in
-  `src/Effect4/Laws/Program/Eliminators.lean`.
-  The list rule and the exit rule are instances too (`Checker.listOf?`, `Checker.exitOf?`;
-  decisions row 304), and `HasTy` states both through the function.
+  A retained union member that the member rule refuses refuses the whole target.
+  It is proved (`UnionRule.Eliminator.extendAll_laws`, `src/Effect4/Laws/Program/UnionRule.lean`;
+  slice P2b).
+  It is monotone at every smaller type (`Eliminator.extendAll_mono`).
+  Its answer equals the lifted rule's answer up to the order (`Eliminator.extendAll_lift`).
+  The fiber, list and exit rules are instances (`fiberTy`, `src/Effect4/Program/Typing/Rules.lean`;
+  `Checker.listOf?` and `Checker.exitOf?`, the same file; decisions row 304).
   The cause rule reads two heads, so it is no eliminator of one constructor.
-  It is the extended rule of `Member.cause`, with four member facts of an upper type
+  It is the full fallback of `Member.cause`, with four member facts of an upper type
   (`causeInputError_upper`).
-  The option rule of `Decision.arms` read the normal form before its conversion, so it is the
-  guarded rule alone (`optionTy`, `src/Effect4/Program/Decision.lean`).
-  It is the rule that it was at every type but `never` (`optionTy_eq_normal`).
-  The guard and the raw answer are interim, and each goes by one line.
-  The guard goes when the TypeScript printer writes the type arguments at a proper union
-  (decisions row 292).
-  The raw answer goes when a binder term is read at its normal form, which waits for the guard
-  at a binder term (decisions rows 296 and 303).
-  `Eliminator.extend_liftOne` says what that second removal changes: no verdict, and an answer
-  up to the order, where the member rule answers at one union member only.
-  Under the guard the monotone law holds where the smaller target has at most one union member
-  (`Eliminator.extend_mono`).
+  The option rule of `Decision.arms` reads the normal form alone, so it is the lifted rule of
+  `Member.option` (`optionTy`, `src/Effect4/Program/Decision.lean`).
+  It is the earlier normalized-head rule where the normal form has one member
+  (`optionTy_eq_normal`).
+  The guarded rule's laws stay for their earlier consumers (`Eliminator.extend_laws`).
   It establishes no `checker-monotone`, nothing that tsgo accepts, and nothing of another rule.
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
