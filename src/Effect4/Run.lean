@@ -104,7 +104,8 @@ def «open» (b : Api.Built) (id : String) (budget : Api.Budget := {})
     session :=
       { admitted := b.admitted
         header := ⟨Api.HostSession.version, id, profile, b.table⟩
-        machine := Api.load b.program budget.compileFuel } }
+        machine := Api.load b.program budget.compileFuel
+        calls := Api.HostSession.callTable b.program b.table } }
 
 /-- The run as the runner that plays rows: the program, the table and the job's fuel beside
 the session they index. -/

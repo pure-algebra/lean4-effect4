@@ -788,7 +788,7 @@ def registry : Registry where
       title := "A session-accepted successful reply prepares a member of its selected shape-decided row, or, where the row's own columns refuse it, it is admitted at its call's checked instance (InstanceSuccess; decisions row 323)"
       pointer := .witness `Effect4.Api.HostSession.preflight_success_prepared_fits },
     { id := "reply-at-call-instance", concept := "host-session-protocol", role := .preservation
-      title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads callAt there; in a recorded, funded run that address holds a call of the operation in the program (origin_addresses_call); the expansion of layer references keeping it there is open (decisions rows 183, 323)"
+      title := "A reply admitted at its call's checked instance is a handle-free member of the instance's answer column, and the machine prepares it unchanged, at a row whose answer column allocates nothing; a failure admitted there holds no reserved defect; the registration keeps its call's address and the session reads callAt there, from a table made once at open (reached_callInstance); in a recorded, funded run that address holds a call of the operation in the program (origin_addresses_call); the expansion of layer references keeping it there is open (decisions rows 183, 323)"
       pointer := .witness `Effect4.Program.instance_prepared_success },
     { id := "session-failure-shape-free", concept := "host-session-protocol", role := .preservation
       title := "A session-accepted failing reply carries no reserved defect: the failure half of admit_sound (decisions row 191, E4-HOST-CE-008)"
@@ -1052,6 +1052,7 @@ def registry : Registry where
         `Effect4.Api.HostSession.preflight_failure_noShapeDefect,
         `Effect4.Program.instance_prepared_success,
         `Effect4.Run.origin_addresses_call,
+        `Effect4.Run.reached_callInstance,
         `Effect4.Run.session_eq_ref]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
         .ruling "DI-23: the preloaded answers are deleted" "the raw agreement with preloaded answers, the rest of the planned goal run_eq_ref_table (slice H6b): no consumer on the spine; session_eq_ref reads run_eq_ref_table_noPreload (decisions row 314)",

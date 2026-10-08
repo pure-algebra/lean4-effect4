@@ -91,6 +91,10 @@ structure Session (program : Api.Program) (table : RowTable) where
   pending : List ReplySlot := []
   consumed : List Nat := []
   retired : List RetiredCall := []
+  /-- The program's checked call table (`Program.calls`), made once by `start`, so that no
+  reply runs the checker (decisions row 323; the session note's slice DM5). Empty, a session
+  admits replies at the rows' own columns alone. -/
+  calls : List (List Nat × CallInstance NativeOp) := []
 
 inductive Refusal
   | version
@@ -124,6 +128,13 @@ structure Result (program : Api.Program) (table : RowTable) where
   phase : Phase
   session : Session program table
 
+/-- **The program's checked call table**, at the signature that admits it (`⟨table, []⟩`), on
+the program with its layer references expanded, as the checker types it (`Program.calls`).
+`start` and `Run.open` make it once (decisions row 323; the session note's slice DM5). -/
+def callTable (program : Api.Program) (table : RowTable) :
+    List (List Nat × CallInstance NativeOp) :=
+  Program.calls (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
 refuse. The expected profile is supplied by the binding's explicitly selected profile. The header
 carries the row table only (decisions row 21), so the program is admitted at the table's own
@@ -137,7 +148,9 @@ def start (program : Api.Program) (table : RowTable) (expectedProfile : String)
   else if header.table ≠ table then .error .table
   else match admitProgram program ⟨table, []⟩ with
     | .error why => .error (.program why)
-    | .ok admitted => .ok { admitted, header, machine := Api.load program compileFuel }
+    | .ok admitted =>
+      .ok { admitted, header, machine := Api.load program compileFuel
+            calls := callTable program table }
 
 def outstanding {program : Api.Program} {table : RowTable} (s : Session program table) :
     List Await := awaits s.machine
@@ -160,12 +173,17 @@ def bindCall {program : Api.Program} {table : RowTable} (s : Session program tab
     nextCall := s.nextCall + 1 }⟩
 
 /-- **The checked instance at a call's address** in the session's program (`callAt`), at the
-signature that admitted it (`⟨table, []⟩`). The checker types the program with its layer
-references expanded, and the expansion keeps every other address, so a registration's origin
-addresses its call there. `none` where no call stands at the address. -/
+signature that admitted it (`⟨table, []⟩`), on the program with its layer references expanded,
+as the checker types it. `none` where no call stands at the address. It is the specification of
+the session's table: a session that `start` made answers it (`start_callInstance`). -/
 def instanceAt (program : Api.Program) (table : RowTable) :
     List Nat → Option (CallInstance NativeOp) :=
   callAt (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+
+/-- The session's checked instance at an address: a lookup in the table that `start` made. -/
+def Session.callInstance {program : Api.Program} {table : RowTable} (s : Session program table)
+    (origin : List Nat) : Option (CallInstance NativeOp) :=
+  s.calls.lookup origin
 
 /-- Pure preflight. Success establishes the existing `Envelope`, or, where the row's own
 columns refuse the completion, the envelope at the call's checked instance
@@ -183,7 +201,7 @@ def preflight {program : Api.Program} {table : RowTable} (s : Session program ta
       else match acceptReply table s.machine (bound.record reply) with
         | some decision => .ok decision
         | none =>
-          match acceptAtInstance table (instanceAt program table) s.machine (bound.record reply) with
+          match acceptAtInstance table s.callInstance s.machine (bound.record reply) with
           | some decision => .ok decision
           | none => .error .envelope
 

@@ -57,6 +57,8 @@ def nothing : Reply := reply (.ofExit (.success .none))
 #guard parked.map (fun s => originOf s.machine Api.root 0) = some (some [1])
 #guard (instanceAt program table [1]).map (fun c => (c.request, c.answer)) =
   some (.list .nat, .option .nat)
+-- finite evaluation: the session reads it from the table that `start` made, with no check
+#guard initial.map (fun s => (s.callInstance [1]).map (·.answer)) = some (some (.option .nat))
 -- control: the row's own columns refuse `some 1`, the one value no `Option<A>` template admits
 #guard bound.map (fun s => (acceptReply table s.machine
   ⟨table, Api.root, 0, .external 0, .list [.nat 1], some1.completion⟩).isNone) = some true

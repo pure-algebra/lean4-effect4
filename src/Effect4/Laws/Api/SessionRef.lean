@@ -172,4 +172,25 @@ theorem origin_addresses_call (s : Run) (recorded : Run.Reached s) (h : funded s
   rw [hm] at hmem
   exact replay_origin s.built.program s.built.table _ _ _ f hmem hcur
 
+
+/-- **Every reached run's session reads the checker's instance at every address** (decisions
+row 323; the session note's slice DM5). `Run.open` makes the program's call table, and no
+transition changes it. So the instance the session admits a reply at is `instanceAt`, with no
+check at the reply. Concept `host-session-protocol`; a step of the claim
+`reply-at-call-instance`. -/
+theorem reached_callInstance (s : Run) (recorded : Run.Reached s) :
+    s.session.callInstance = Api.HostSession.instanceAt s.built.program s.built.table := by
+  apply Api.HostSession.callInstance_callTable
+  induction recorded with
+  | opened b id budget profile => rfl
+  | step s c _ ih =>
+    show (Api.Runner.result s.runner c).session.calls =
+      Api.HostSession.callTable s.built.program s.built.table
+    rw [← ih]
+    cases c with
+    | bind call token => exact Api.HostSession.bindCall_calls _ _ _
+    | submit reply => exact Api.HostSession.submit_calls _ _
+    | apply key => exact Api.HostSession.applyReply_calls _ _ _
+    | control decision => exact Api.HostSession.advance_calls _ _ _
+
 end Effect4.Run

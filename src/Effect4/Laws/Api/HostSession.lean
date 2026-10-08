@@ -4,13 +4,101 @@ import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Program.Admit
 import Effect4.Laws.Program.Typed.Membership
 import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Program.Typing.Call
+import Effect4.Laws.Program.Typing.Table
 
 /-! Checked host protocol laws. Receipt commutation is equality of sessions, including
 stored replies and the unchanged machine. Answer application is a separate ordered step.
 Authority: Test/contracts/foundation-wave2.contract.md, T-09 / T-12 amendment. -/
 set_option autoImplicit false
+
+namespace Effect4.Program
+
+/-- A lookup in a table made by `filterMap` over a list of addresses answers the function at an
+address of the list, and nothing elsewhere. A step of `lookup_calls`. -/
+theorem lookup_filterMap_pair {β : Type} (f : List Nat → Option β) (o : List Nat) :
+    ∀ l : List (List Nat),
+      (l.filterMap fun a => (f a).map fun c => (a, c)).lookup o = if o ∈ l then f o else none
+  | [] => rfl
+  | a :: l => by
+    have ih := lookup_filterMap_pair f o l
+    by_cases hoa : o = a
+    · subst hoa
+      cases hf : f o with
+      | none =>
+        rw [List.filterMap_cons, hf, Option.map_none, ih, if_pos List.mem_cons_self]
+        split
+        · exact hf
+        · rfl
+      | some c =>
+        -- `List.lookup_cons_self` reaches `Classical.choice` through its `ReflBEq` instance
+        have hself : (o == o) = true := beq_iff_eq.mpr rfl
+        rw [List.filterMap_cons, hf, Option.map_some, if_pos List.mem_cons_self]
+        simp only [List.lookup, hself]
+    · have hb : (o == a) = false := beq_eq_false_iff_ne.mpr hoa
+      have rhs : (if o ∈ a :: l then f o else none) = (if o ∈ l then f o else none) := by
+        by_cases hl : o ∈ l
+        · rw [if_pos (List.mem_cons_of_mem a hl), if_pos hl]
+        · rw [if_neg (fun h => hl ((List.mem_cons.mp h).resolve_left hoa)), if_neg hl]
+      rw [rhs, ← ih]
+      cases hf : f a with
+      | none => rw [List.filterMap_cons, hf, Option.map_none]
+      | some c =>
+        rw [List.filterMap_cons, hf, Option.map_some]
+        simp only [List.lookup, hb]
+
+/-- **The call table answers at an address exactly what `callAt` answers there**: a call's
+address is an address of the program (`mem_addresses_iff`), so the table misses none. Concept
+`initial-algebras-folds`; a step of the claim `reply-at-call-instance`; consumer:
+`HostSession.start_callInstance`. -/
+theorem lookup_calls {Op : Type} (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (o : List Nat) :
+    (calls s env0 p).lookup o = callAt s env0 p o := by
+  unfold calls
+  rw [lookup_filterMap_pair]
+  split
+  · rfl
+  · rename_i hno
+    cases hc : callAt s env0 p o with
+    | none => rfl
+    | some c =>
+      obtain ⟨request, _, _, hat, _⟩ := callAt_rowTy hc
+      exact absurd ((mem_addresses_iff (.eff p) o).mpr (by rw [hat]; rfl)) hno
+
+end Effect4.Program
+
 namespace Effect4.Api.HostSession
 open Effect4 Effect4.Program
+
+/-- **A session that `start` made reads the checker's instance at every address**: its table's
+lookup is `instanceAt` (the session note's slice DM5). -/
+theorem start_callInstance {program : Api.Program} {table : RowTable} {profile : String}
+    {header : Header} {compileFuel : Nat} {s : Session program table}
+    (h : start program table profile header compileFuel = .ok s) :
+    s.callInstance = instanceAt program table := by
+  unfold start at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · split at h
+      · cases h
+      · split at h
+        · cases h
+        · split at h
+          · cases h
+          · cases h
+            funext o
+            exact lookup_calls _ _ _ o
+
+/-- A session whose table is the program's reads the checker's instance at every address. The
+consumer is `Run.open`, which makes the table as `start` does. -/
+theorem callInstance_callTable {program : Api.Program} {table : RowTable}
+    (s : Session program table) (h : s.calls = callTable program table) :
+    s.callInstance = instanceAt program table := by
+  funext o
+  unfold Session.callInstance
+  rw [h]
+  exact lookup_calls _ _ _ o
 
 /-- Successful preflight proves the existing envelope for the association selected by key, or,
 where the row's own columns refuse the completion, the envelope at the call's checked instance
@@ -21,7 +109,7 @@ theorem preflight_envelope {program : Api.Program} {table : RowTable}
     ∃ bound, s.active.find? (fun b => b.key == reply.key) = some bound ∧
       reply.callId = bound.call.callId ∧
       (Envelope table s.machine (bound.record reply) ∨
-        InstanceEnvelope table (instanceAt program table) s.machine (bound.record reply)) ∧
+        InstanceEnvelope table s.callInstance s.machine (bound.record reply)) ∧
       decision = .answerAsync bound.call.fiber bound.token reply.completion := by
   unfold preflight at h
   split at h
@@ -243,8 +331,8 @@ theorem applied_reply_refused_instance {program : Api.Program} {table : RowTable
     (s : Session program table) (fuel : Nat) (bound : BoundCall) (reply : Reply)
     (ha : s.active.find? (fun b => b.key == bound.key) = some bound)
     (h : (applyReply s bound.key fuel).phase = .applied) :
-    acceptAtInstance table (instanceAt program table) (applyReply s bound.key fuel).session.machine
-      (bound.record reply) = none :=
+    acceptAtInstance table (applyReply s bound.key fuel).session.callInstance
+      (applyReply s bound.key fuel).session.machine (bound.record reply) = none :=
   acceptAtInstance_none_of_unparked table _ _ _ (applied_guard_absent s fuel bound ha h)
 
 /-- Every accepted application is an edge of the projected protocol over the actual
@@ -333,7 +421,7 @@ def InstanceSuccess {program : Api.Program} {table : RowTable}
     decision = .answerAsync bound.call.fiber bound.token reply.completion ∧
     reply.completion = .ofExit (.success value) ∧
     originOf s.machine bound.call.fiber bound.token = some origin ∧
-    instanceAt program table origin = some c ∧ c.op = bound.call.op ∧
+    s.callInstance origin = some c ∧ c.op = bound.call.op ∧
     Val.hasTy value c.answer s.machine.state.externals.allocated = true ∧
     Store.Val.handles value = [] ∧
     Machine.prepareAsyncAnswer (interpOf program table) s.machine bound.call.fiber bound.token
@@ -355,7 +443,7 @@ theorem preflight_success_prepared_fits {program : Api.Program} {table : RowTabl
   rcases envelope with envelope | envelope
   rotate_left
   · obtain ⟨origin, c, horigin, hc, hcop, hmem, hhandles, hprep⟩ :=
-      instance_prepared_success program table (instanceAt program table) s.machine
+      instance_prepared_success program table s.callInstance s.machine
         (bound.record reply) value live success envelope
     exact Or.inr ⟨bound, origin, c, value, selected, callId, decisionEq, success, horigin, hc, hcop,
       hmem, hhandles, hprep⟩
@@ -423,5 +511,38 @@ theorem submit_success_prepared_fits {program : Api.Program} {table : RowTable}
   obtain ⟨_, ⟨decision, accepted⟩, _, _⟩ := submit_conditions s reply received
   exact ⟨decision, accepted, preflight_success_prepared_fits s reply decision value
     live success accepted⟩
+
+
+/-! ## The call table stays through every transition (the session note's slice DM5) -/
+
+theorem retire_calls {program : Api.Program} {table : RowTable} (s : Session program table) :
+    (retire s).calls = s.calls := rfl
+
+theorem bindCall_calls {program : Api.Program} {table : RowTable} (s : Session program table)
+    (call : Call) (token : Nat) : (bindCall s call token).session.calls = s.calls := by
+  unfold bindCall
+  repeat' split
+  all_goals rfl
+
+theorem submit_calls {program : Api.Program} {table : RowTable} (s : Session program table)
+    (reply : Reply) : (submit s reply).session.calls = s.calls := by
+  unfold submit
+  repeat' split
+  all_goals rfl
+
+theorem applyReply_calls {program : Api.Program} {table : RowTable} (s : Session program table)
+    (key : Key) (fuel : Nat) : (applyReply s key fuel).session.calls = s.calls := by
+  unfold applyReply
+  repeat' split
+  all_goals dsimp only
+  repeat' split
+  all_goals rfl
+
+theorem advance_calls {program : Api.Program} {table : RowTable} (s : Session program table)
+    (fuel : Nat) (decision : NativeDecision) :
+    (advance s fuel decision).session.calls = s.calls := by
+  unfold advance
+  repeat' split
+  all_goals rfl
 
 end Effect4.Api.HostSession
