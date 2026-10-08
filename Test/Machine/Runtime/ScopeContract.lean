@@ -32,8 +32,8 @@ The strategy is a passive label. rc.112 does not attach a scheduler policy to
 it: "parallel" is immediate daemon forks that inherit the closing fiber's mask.
 This packet models no fiber, so it states only the alphabet. -/
 
-#synth DecidableEq Effect4.FinalizerStrategy
-#synth Repr Effect4.FinalizerStrategy
+example : DecidableEq Effect4.FinalizerStrategy := inferInstance
+example : Repr Effect4.FinalizerStrategy := inferInstance
 
 end StrategySurface
 

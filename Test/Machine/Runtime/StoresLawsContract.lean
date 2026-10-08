@@ -458,7 +458,7 @@ def shapeCode : Val → Nat
    0x02, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
 #guard (Env.serviceKeyImage.encode ⟨⟨1⟩, ⟨2⟩⟩).length = 74
 
-#check @Effect4.Machine.Env.Val.ofSpine_entries
+example := @Effect4.Machine.Env.Val.ofSpine_entries
 
 end Foundation
 

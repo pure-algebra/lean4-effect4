@@ -49,10 +49,10 @@ open Effect4.Store
 #guard Kind.ofByte? 16 = none
 #guard Kind.ofName? "enum" = none
 
-#check @Effect4.Store.Kind.ofByte?_byte
-#check @Effect4.Store.Kind.byte_ofByte?
-#check @Effect4.Store.Kind.byte_injective
-#check @Effect4.Store.Kind.name_injective
+example := @Effect4.Store.Kind.ofByte?_byte
+example := @Effect4.Store.Kind.byte_ofByte?
+example := @Effect4.Store.Kind.byte_injective
+example := @Effect4.Store.Kind.name_injective
 
 /-! ## The census entry as content -/
 
@@ -166,13 +166,13 @@ def entryTyped : Ref Effect4.Store.Templates.Entry := ⟨entryAddress⟩
 
 /-! ## The address lattice, stated -/
 
-#check @Effect4.Store.address_congr
-#check @Effect4.Store.address_eq_or_collision
-#check @Effect4.Store.address_inj
-#check @Effect4.Store.Node.decode_encode
-#check @Effect4.Store.Node.decode_exact
-#check @Effect4.Store.Node.encode_injective
-#check @Effect4.Store.metaSchema_accepts
-#check @Effect4.Store.specOf_document
+example := @Effect4.Store.address_congr
+example := @Effect4.Store.address_eq_or_collision
+example := @Effect4.Store.address_inj
+example := @Effect4.Store.Node.decode_encode
+example := @Effect4.Store.Node.decode_exact
+example := @Effect4.Store.Node.encode_injective
+example := @Effect4.Store.metaSchema_accepts
+example := @Effect4.Store.specOf_document
 
 end Test.Store.NodeContract

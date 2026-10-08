@@ -111,8 +111,8 @@ open Effect4.Program Effect4.Schema.Bridge
 #guard Ty.ofSchema (Ty.schema (.handle "Scope.Scope")) = some (.handle "Scope.Scope")
 #guard Ty.ofSchema (Ty.schema (.union .string .nat)) = some (.union .nat .string)
 
-#check ofSchema_schema
-#check ofSchema_schema_cty
+example := @ofSchema_schema
+example := @ofSchema_schema_cty
 
 -- Row 6: what `schema` never writes, `ofSchema` refuses — a check `Ty` cannot carry, a declaration
 -- payload that is not `null`, a defect slot that is not the `Json` declaration, an optional
@@ -387,8 +387,8 @@ def rcNatDocument : Representation := .number none [rcIsIntFilter, rcNonNegative
 #guard ofSchema (.arrays none [] [Schema.element Schema.string
   (annotations := some [⟨"parseOptions", .obj []⟩]), Schema.element Schema.boolean] []) = none
 
-#check @ofSchema_exact
-#check @ofSchema_schema
+example := @ofSchema_exact
+example := @ofSchema_schema
 
 /-! ## Multi-Tier Cascading CAS -/
 
@@ -504,10 +504,10 @@ example (v : Store.Val) (hv : Program.Val.hasTy v (.lit "User") = true) :
   Schema.encode_sub (s := CTy.ofRaw (.lit "User")) (t := CTy.ofRaw .string)
     (Ty.sub_lit_string "User") hv rfl
 
-#check Schema.encode_of_hasTy
-#check Schema.decode_encode
-#check Schema.hasTy_decode
-#check Schema.encode_sub
+example := @Schema.encode_of_hasTy
+example := @Schema.decode_encode
+example := @Schema.hasTy_decode
+example := @Schema.encode_sub
 
 /-! ### Row 128: the JSON pair is exact modulo `N_J` (`Schema.decode_iff`)
 
@@ -597,9 +597,9 @@ did not evaluate to `true`
 #guard Ty.decode (.union .int (.except .nat .nat)) jResultFailure = some (.ctor 0 [.nat 1])
 #guard Ty.encode (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some jResultFailure
 
-#check @Schema.decode_iff
-#check @Schema.encode_of_decode
-#check @Schema.decode_of_encode
+example := @Schema.decode_iff
+example := @Schema.encode_of_decode
+example := @Schema.decode_of_encode
 
 /-! ## Stability of Core Language Constructs & Effect Reification -/
 

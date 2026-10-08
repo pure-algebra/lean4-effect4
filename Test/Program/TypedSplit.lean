@@ -13,22 +13,22 @@ axiom list; no claim is made here.
 
 open Effect4.Program.Typed
 
-#print MachineTyped
-#print TypedState
-#print LiveCode
-#print MachineLive
-#print ConfigTyped
-#print ReadCode
-#print ReadsCode
-#print QueueOk
-#print StepPreserves
-#print preds
-#print ScopeStateOk
-#print SnapshotTyped
-#print DecisionEdits
-#print DenotesTyped
-#print TermFits
-#print Reestablishes
+example := @MachineTyped
+example := @TypedState
+example := @LiveCode
+example := @MachineLive
+example := @ConfigTyped
+example := @ReadCode
+example := @ReadsCode
+example := @QueueOk
+example := @StepPreserves
+example := @preds
+example := @ScopeStateOk
+example := @SnapshotTyped
+example := @DecisionEdits
+example := @DenotesTyped
+example := @TermFits
+example := @Reestablishes
 
 /-! ## M5's reduction and the program as loaded
 

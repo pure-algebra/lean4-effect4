@@ -345,7 +345,7 @@ has no rows at all. -/
 #guard_msgs in #print axioms Effect4.Run.admitProgram_certificate
 
 #check @Effect4.Run.receive_rows
-#check @Effect4.Run.answer_rows
-#check @Effect4.Run.acceptReply_after_applied
+example := @Effect4.Run.answer_rows
+example := @Effect4.Run.acceptReply_after_applied
 
 end Test.Run.RunContract

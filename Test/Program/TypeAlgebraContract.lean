@@ -154,26 +154,26 @@ private def hiddenPair : Ty := .prod (.union .string .never) .string
 #guard (effTy nativeSignature [hiddenPair] (.failCause (.fail (.var 0)))).isSome
 #guard (effTy nativeSignature [.prod (.union .string .bool) .string] (.fail (.var 0))).isNone
 
-#check Ty.normalize_idem
-#check hasTy_normalize
-#check hasTy_fibers
-#check hasTy_fibers_nil
-#check Ty.join_self
-#check Ty.join_never
-#check Ty.join_comm
-#check Ty.join_assoc
-#check CTy.join_self
-#check CTy.join_never
+example := @Ty.normalize_idem
+example := @hasTy_normalize
+example := @hasTy_fibers
+example := @hasTy_fibers_nil
+example := @Ty.join_self
+example := @Ty.join_never
+example := @Ty.join_comm
+example := @Ty.join_assoc
+example := @CTy.join_self
+example := @CTy.join_never
 
 /-! The top (tooling plan 0.6, decisions row 46). `never` is the empty union and absorbs on
 the left of `join`; `unknown` is the other end and absorbs on both sides. The universal laws
 are `Ty.join_unknown` and `CTy.le_unknown`; these finite controls pin them at a scalar, at a
 union, at a handle and at the top itself, so a `sub` arm that stopped answering `true` at the
 top would be caught here and not only in a proof. -/
-#check Ty.join_unknown
-#check Ty.join_unknown_left
-#check CTy.le_unknown
-#check CTy.join_unknown
+example := @Ty.join_unknown
+example := @Ty.join_unknown_left
+example := @CTy.le_unknown
+example := @CTy.join_unknown
 #guard Ty.join .nat .unknown = .unknown
 #guard Ty.join .unknown .nat = .unknown
 #guard Ty.join raw .unknown = .unknown

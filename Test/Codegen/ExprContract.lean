@@ -12,7 +12,7 @@ open TypeScript
 
 namespace Test.Codegen.ExprContract
 
-#synth Inhabited Expr
+example : Inhabited Expr := inferInstance
 
 #guard Render.quoted house0 "quote\" slash\\ line\nreturn\rtab\t café" =
   "\"quote\\\" slash\\\\ line\\nreturn\\rtab\\t café\""

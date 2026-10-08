@@ -17,9 +17,9 @@ section SurfaceSnapshot
 
 /-! D0: the tag alphabet. Twenty-two nominal constructors, exact names. -/
 
-#synth DecidableEq RepresentationTag
-#synth Repr RepresentationTag
-#synth Inhabited RepresentationTag
+example : DecidableEq RepresentationTag := inferInstance
+example : Repr RepresentationTag := inferInstance
+example : Inhabited RepresentationTag := inferInstance
 
 /-!
 The dependent recursor freezes constructor order as part of the native public

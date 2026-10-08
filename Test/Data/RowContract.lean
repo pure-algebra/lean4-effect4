@@ -149,11 +149,11 @@ end RawCounterexamples
 
 section GroundReductions
 
-#synth LE Nat
-#synth LT Nat
-#synth DecidableLT Nat
-#synth Std.IsLinearOrder Nat
-#synth Std.LawfulOrderLT Nat
+example : LE Nat := inferInstance
+example : LT Nat := inferInstance
+example : DecidableLT Nat := inferInstance
+example : Std.IsLinearOrder Nat := inferInstance
+example : Std.LawfulOrderLT Nat := inferInstance
 
 example :
     (Effect4.Row.insert (2 : Nat)

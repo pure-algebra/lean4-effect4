@@ -51,7 +51,7 @@ end RowDiff
 
 section Algebra
 
-#synth DecidableEq LayerTy
+example : DecidableEq LayerTy := inferInstance
 
 end Algebra
 
@@ -65,7 +65,7 @@ end Adjunction
 
 section Term
 
-#synth DecidableEq (LayerTerm DocsOp)
+example : DecidableEq (LayerTerm DocsOp) := inferInstance
 
 end Term
 

@@ -15,25 +15,25 @@ universe u
 
 section SurfaceSnapshot
 
-#synth DecidableEq UnionMode
-#synth Repr UnionMode
-#synth Inhabited UnionMode
+example : DecidableEq UnionMode := inferInstance
+example : Repr UnionMode := inferInstance
+example : Inhabited UnionMode := inferInstance
 
-#synth DecidableEq CheckTag
-#synth Repr CheckTag
-#synth Inhabited CheckTag
+example : DecidableEq CheckTag := inferInstance
+example : Repr CheckTag := inferInstance
+example : Inhabited CheckTag := inferInstance
 
-#synth DecidableEq LiteralKind
-#synth Repr LiteralKind
-#synth Inhabited LiteralKind
+example : DecidableEq LiteralKind := inferInstance
+example : Repr LiteralKind := inferInstance
+example : Inhabited LiteralKind := inferInstance
 
-#synth DecidableEq EnumValueKind
-#synth Repr EnumValueKind
-#synth Inhabited EnumValueKind
+example : DecidableEq EnumValueKind := inferInstance
+example : Repr EnumValueKind := inferInstance
+example : Inhabited EnumValueKind := inferInstance
 
-#synth DecidableEq PropertyKeyKind
-#synth Repr PropertyKeyKind
-#synth Inhabited PropertyKeyKind
+example : DecidableEq PropertyKeyKind := inferInstance
+example : Repr PropertyKeyKind := inferInstance
+example : Inhabited PropertyKeyKind := inferInstance
 
 end SurfaceSnapshot
 

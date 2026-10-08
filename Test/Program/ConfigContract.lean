@@ -351,7 +351,7 @@ private def entriesOf (env : List (String × String)) : List (Path String × Str
 #guard outcomeEq (eval stdScalars demoTerm (fromEnvRecord demoTwo) [])
   (.ok (.resolved (.pair (.pair (.str "localhost") (.nat 5432)) (.str "effect4")) true))
 
-#check @Effect4.Program.Config.residual_empty_of_subset
+example := @Effect4.Program.Config.residual_empty_of_subset
 
 end Residual
 

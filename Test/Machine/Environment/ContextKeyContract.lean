@@ -42,9 +42,9 @@ one derives, and are not separately frozen.
 
 section NominalIdentities
 
-#synth DecidableEq Effect4.ServiceName
+example : DecidableEq Effect4.ServiceName := inferInstance
 
-#synth DecidableEq Effect4.ServiceTypeCode
+example : DecidableEq Effect4.ServiceTypeCode := inferInstance
 
 end NominalIdentities
 
@@ -65,8 +65,8 @@ because either implies the other.
 
 section KeyCarrier
 
-#synth DecidableEq Effect4.ServiceKey
-#synth Repr Effect4.ServiceKey
+example : DecidableEq Effect4.ServiceKey := inferInstance
+example : Repr Effect4.ServiceKey := inferInstance
 
 end KeyCarrier
 
@@ -88,7 +88,7 @@ order it is false.
 
 section Order
 
-#synth LT Effect4.ServiceKey
+example : LT Effect4.ServiceKey := inferInstance
 
 example (a b : Effect4.ServiceKey) : Decidable (a < b) := inferInstance
 

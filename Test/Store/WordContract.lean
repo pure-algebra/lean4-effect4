@@ -184,22 +184,22 @@ open Effect4.Store
 
 /-! ## The laws, stated -/
 
-#check @Effect4.Store.get_put
-#check @Effect4.Store.put_duplicate
-#check @Effect4.Store.put_conflict
-#check @Effect4.Store.put_preserves
-#check @Effect4.Store.putNode_closed
-#check @Effect4.Store.putRoot_root?
-#check @Effect4.Store.empty_closed
-#check @Effect4.Store.wf_closed
-#check @Effect4.Store.apply_idempotent
-#check @Effect4.Store.closure_wf
-#check @Effect4.Store.closure_closed
-#check @Effect4.Store.layered_get
-#check @Effect4.Store.outbox_wf
-#check @Effect4.Store.sync_sub
-#check @Effect4.Store.sync_idempotent
-#check @Effect4.Store.verify_sound
-#check @Effect4.Store.verify_roots
+example := @Effect4.Store.get_put
+example := @Effect4.Store.put_duplicate
+example := @Effect4.Store.put_conflict
+example := @Effect4.Store.put_preserves
+example := @Effect4.Store.putNode_closed
+example := @Effect4.Store.putRoot_root?
+example := @Effect4.Store.empty_closed
+example := @Effect4.Store.wf_closed
+example := @Effect4.Store.apply_idempotent
+example := @Effect4.Store.closure_wf
+example := @Effect4.Store.closure_closed
+example := @Effect4.Store.layered_get
+example := @Effect4.Store.outbox_wf
+example := @Effect4.Store.sync_sub
+example := @Effect4.Store.sync_idempotent
+example := @Effect4.Store.verify_sound
+example := @Effect4.Store.verify_roots
 
 end Test.Store.WordContract

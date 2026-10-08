@@ -41,8 +41,8 @@ section ReasonSurface
 
 /-! A2: the closed three-value reason alphabet (census: exit.reason-alphabet). -/
 
-#synth DecidableEq ReasonTag
-#synth Repr ReasonTag
+example : DecidableEq ReasonTag := inferInstance
+example : Repr ReasonTag := inferInstance
 
 /-! A3: reasons carry payload and annotations, and nothing else. -/
 

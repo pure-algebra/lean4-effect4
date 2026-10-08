@@ -90,19 +90,19 @@ compares position 0 with position 0. -/
 
 /-! ## The law, and the vocabulary it gives the proofs -/
 
-#check @Ty.sub_eq_args
-#check @Ty.sub_eq_argsBelow_of_sameHead
-#check @Ty.sub_eq_false_of_not_sameHead
-#check @Ty.sameHead_refl
-#check @Ty.sameHead_symm
-#check @Ty.sameHead_trans
-#check @Ty.args_congr
-#check @Ty.sizeOf_args
-#check @Ty.eq_of_sameHead
-#check @Ty.argsBelow_refl
-#check @Ty.Variance.holds_trans
-#check @Ty.Variance.holds_antisymm
-#check @AdmitsSub
+example := @Ty.sub_eq_args
+example := @Ty.sub_eq_argsBelow_of_sameHead
+example := @Ty.sub_eq_false_of_not_sameHead
+example := @Ty.sameHead_refl
+example := @Ty.sameHead_symm
+example := @Ty.sameHead_trans
+example := @Ty.args_congr
+example := @Ty.sizeOf_args
+example := @Ty.eq_of_sameHead
+example := @Ty.argsBelow_refl
+example := @Ty.Variance.holds_trans
+example := @Ty.Variance.holds_antisymm
+example := @AdmitsSub
 
 /-- The law as a proof obligation, so this module fails if its statement moves. -/
 example (a b : Ty) (ha : Ty.isMember a = true) (hb : Ty.isMember b = true)

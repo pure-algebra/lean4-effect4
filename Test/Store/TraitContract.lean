@@ -101,11 +101,11 @@ open Effect4.Store
 
 /-! ## The laws, stated -/
 
-#check @Effect4.Store.nodeBytes_trait_free
-#check @Effect4.Store.trait_put_preserves
-#check @Effect4.Store.trait_get_preserves
-#check @Effect4.Store.effective_deterministic
-#check @Effect4.Store.traitsOf_perm
-#check @Effect4.Store.headsUnder_perm
+example := @Effect4.Store.nodeBytes_trait_free
+example := @Effect4.Store.trait_put_preserves
+example := @Effect4.Store.trait_get_preserves
+example := @Effect4.Store.effective_deterministic
+example := @Effect4.Store.traitsOf_perm
+example := @Effect4.Store.headsUnder_perm
 
 end Test.Store.TraitContract
