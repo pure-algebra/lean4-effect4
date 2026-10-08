@@ -49,6 +49,9 @@ The laws, in order:
 - **The contract of a converted eliminator** (`Eliminator.extend_laws`): what the extended rule
   of an eliminator gives, stated once for every `Eliminator`. A converted rule of the checker
   proves none of it again (`src/Effect4/Laws/Program/Eliminators.lean`).
+- **The full fallback** (`extendAll`): the approved classifiers keep each successful raw answer
+  and use the full normalized lift elsewhere. `extendAll_of_extend` retains every old answer.
+  `Eliminator.extendAll_laws` gives their contract; `Eliminator.extendAll_mono` gives its order law.
 
 `UnionRule.lift` is the fold of a union: the unique map that answers the least answer at
 `never`, the member rule at one union member and the join at a union (`lift_unique`, at the
@@ -71,12 +74,13 @@ They say nothing at an invariant position. The design is
 `docs/research/2026-10-06-seat-UNION-design.md`. The controls are in
 `Test/Program/UnionRule.lean`.
 
-The guard, the extended rule and the contract have their own question: the claim
+The historical guard, extended rule and contract have their own question: the claim
 `union-rule-extend`, at the same concept and requirement (decisions rows 292, 293 and 294). Its
 pointer is `Eliminator.extend_laws`. Reach: the extended rule of a member rule with the three
 facts of `Eliminator`, in the order `Ty.subN`. Consumers: each converted rule of candidate N,
-`fiberTy` first, and a hole that is declared at `never` under an eliminator. They do not
-establish `checker-monotone`: a converted rule is not monotone in the order at a proper union.
+`fiberTy` first, and a hole that is declared at `never` under an eliminator. These historical
+guarded laws do not establish monotonicity at a proper union. The full fallback removes that
+classifier restriction, but does not establish `checker-monotone` for every rule of the checker.
 They do not say that a type and its normal form have one answer: the extended rule keeps the
 raw answer of its member rule. They say nothing of what tsgo accepts. The design is
 `docs/research/2026-10-06-seat-PILOT-design.md`.
@@ -1501,5 +1505,159 @@ theorem Eliminator.extend_laws (e : Eliminator rule C) :
     fun refused two => extend_two refused two⟩
 
 end ConvertedEliminator
+
+
+/-! ## The full fallback with a raw answer
+
+Placement: `subtyping-algebra`, R14, the existing claim `union-rule-extend`.
+`extendAll` removes only the proper-union guard from the approved classifiers.
+The raw branch keeps its exact answer. The old guarded definitions and laws remain unchanged.
+The closed laws serve `checked-types-closed`; the eliminator laws serve the classifier upper
+forms and their concrete readers in `Test/Program/Eliminators.lean`.
+These laws establish no target compiler or execution claim.
+-/
+
+/-- The two alternatives of the full fallback. Consumer: the upper and closed laws below. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_eq_some_iff (rule : Ty → Option α) {t : Ty} {a : α} :
+    extendAll rule t = some a ↔ rule t = some a ∨ (rule t = none ∧ lift rule t = some a) := by
+  unfold extendAll
+  cases rule t with
+  | none =>
+    exact ⟨fun typed => Or.inr ⟨rfl, typed⟩, fun h => h.elim (fun h => nomatch h) (·.2)⟩
+  | some answer =>
+    exact ⟨fun typed => Or.inl typed, fun h => h.elim id (fun h => nomatch h.1)⟩
+
+/-- The full fallback keeps each raw answer. Consumer: each classifier's raw constructor law. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_agrees {rule : Ty → Option α} {t : Ty} {a : α}
+    (answered : rule t = some a) : extendAll rule t = some a :=
+  (extendAll_eq_some_iff rule).mpr (Or.inl answered)
+
+/-- The full fallback is the lift where the raw rule refuses. Consumer: its bottom law. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_refused {rule : Ty → Option α} {t : Ty} (refused : rule t = none) :
+    extendAll rule t = lift rule t := by
+  unfold extendAll
+  rw [refused]
+  rfl
+
+/-- The full fallback answers bottom where the raw rule refuses bottom. Consumer: its contract. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_never {rule : Ty → Option α} (refused : rule .never = none) :
+    extendAll rule .never = some Answer.bot := by
+  rw [extendAll_refused refused, lift_never]
+
+/-- Every guarded answer survives with its exact spelling. Consumer: `Eliminator.extendAll_laws` and the classifier widening receipt. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_of_extend {rule : Ty → Option α} {t : Ty} {a : α}
+    (typed : extend rule t = some a) : extendAll rule t = some a := by
+  rcases (extend_eq_some_iff rule).mp typed with raw | ⟨refused, lifted⟩
+  · exact extendAll_agrees raw
+  · exact (extendAll_eq_some_iff rule).mpr (Or.inr ⟨refused, liftOne_some lifted⟩)
+
+/-- Closed columns survive the full fallback. Consumer: the fiber and exit closed-type laws. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_closed_pair {rule : Ty → Option (Ty × Ty)}
+    (member : ∀ {m : Ty} {a : Ty × Ty}, m.closed = true → rule m = some a →
+      a.1.closed = true ∧ a.2.closed = true)
+    {t : Ty} {a : Ty × Ty} (typed : extendAll rule t = some a) (closed : t.closed = true) :
+    a.1.closed = true ∧ a.2.closed = true := by
+  rcases (extendAll_eq_some_iff rule).mp typed with answered | ⟨-, lifted⟩
+  · exact member closed answered
+  · exact lift_closed_pair (fun _ _ closed answered => member closed answered) lifted closed
+
+/-- Closed types survive the full fallback. Consumer: the list and cause closed-type laws. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem extendAll_closed {rule : Ty → Option Ty}
+    (member : ∀ {m a : Ty}, m.closed = true → rule m = some a → a.closed = true)
+    {t a : Ty} (typed : extendAll rule t = some a) (closed : t.closed = true) : a.closed = true := by
+  rcases (extendAll_eq_some_iff rule).mp typed with answered | ⟨-, lifted⟩
+  · exact member closed answered
+  · exact lift_closed (fun _ _ closed answered => member closed answered) lifted closed
+
+section FullFallbackEliminator
+
+variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+
+/-- Each full-fallback answer is least below its upper form. Consumer: the classifier upper laws. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_adjoint (e : Eliminator rule C) {t : Ty} {a : α}
+    (typed : extendAll rule t = some a) (b : α) : le a b ↔ Ty.subN t (C b) = true := by
+  rcases (extendAll_eq_some_iff rule).mp typed with answered | ⟨-, lifted⟩
+  · obtain rfl := e.shape answered
+    exact e.embeds.symm
+  · exact (e.adjoint t).2 lifted b
+
+/-- Each full-fallback input is below its answer's constructor. Consumer: the three classifier upper laws. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_upper (e : Eliminator rule C) {t : Ty} {a : α}
+    (typed : extendAll rule t = some a) : Ty.subN t (C a) = true :=
+  (e.extendAll_adjoint typed a).mp (AnswerOrder.refl a)
+
+/-- The full fallback answers the least upper arguments. Consumer: its monotone law. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_least (e : Eliminator rule C) {t : Ty} {a b : α}
+    (typed : extendAll rule t = some a) (upper : Ty.subN t (C b) = true) : le a b :=
+  (e.extendAll_adjoint typed b).mpr upper
+
+/-- The full fallback answers a least answer at bottom. Consumer: its contract. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_bot (e : Eliminator rule C) :
+    ∃ a, extendAll rule .never = some a ∧ ∀ b, le a b := by
+  cases refused : rule .never with
+  | none => exact ⟨Answer.bot, extendAll_never refused, AnswerOrder.bot_le⟩
+  | some a =>
+    refine ⟨a, extendAll_agrees refused, fun b => e.embeds.mp ?_⟩
+    rw [← e.shape refused]
+    exact Ty.OrderProof.sub_never _
+
+/-- The full fallback answers exactly below a constructor image. Consumer: its monotone and agreement laws. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_isSome_iff (e : Eliminator rule C) (t : Ty) :
+    (extendAll rule t).isSome = true ↔ ∃ b, Ty.subN t (C b) = true := by
+  constructor
+  · intro answered
+    obtain ⟨a, typed⟩ := Option.isSome_iff_exists.mp answered
+    exact ⟨a, e.extendAll_upper typed⟩
+  · intro upper
+    obtain ⟨a, lifted⟩ := Option.isSome_iff_exists.mp ((e.adjoint t).1.mpr upper)
+    cases refused : rule t with
+    | none =>
+      exact Option.isSome_iff_exists.mpr ⟨a, (extendAll_eq_some_iff rule).mpr (Or.inr ⟨refused, lifted⟩)⟩
+    | some x => exact Option.isSome_iff_exists.mpr ⟨x, extendAll_agrees refused⟩
+
+/-- The full fallback is monotone at every smaller type. Consumer: the fiber rule's concrete reader. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_mono (e : Eliminator rule C) {s t : Ty}
+    (smaller : Ty.subN s t = true) {b : α} (typed : extendAll rule t = some b) :
+    ∃ a, extendAll rule s = some a ∧ le a b := by
+  have upper : Ty.subN s (C b) = true := Ty.subN_trans smaller (e.extendAll_upper typed)
+  obtain ⟨a, answered⟩ := Option.isSome_iff_exists.mp ((e.extendAll_isSome_iff s).mpr ⟨b, upper⟩)
+  exact ⟨a, answered, e.extendAll_least answered upper⟩
+
+/-- Raw-first and normalized answers agree in order. Consumer: the fiber, list, and exit readers. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_lift (e : Eliminator rule C) {t : Ty} {a : α}
+    (typed : extendAll rule t = some a) : ∃ a', lift rule t = some a' ∧ le a a' ∧ le a' a := by
+  obtain ⟨a', lifted⟩ := Option.isSome_iff_exists.mp
+    ((e.adjoint t).1.mpr ⟨a, e.extendAll_upper typed⟩)
+  exact ⟨a', lifted, e.extendAll_least typed (e.lift_upper lifted),
+    e.lift_least lifted (e.extendAll_upper typed)⟩
+
+/-- The full-fallback contract, without a proper-union refusal. Consumer: the fiber classifier reader. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.extendAll_laws (e : Eliminator rule C) :
+    (∀ {t : Ty} {a : α}, rule t = some a → extendAll rule t = some a) ∧
+    (∀ {t : Ty}, rule t = none → extendAll rule t = lift rule t) ∧
+    (∃ a, extendAll rule .never = some a ∧ ∀ b, le a b) ∧
+    (∀ {t : Ty} {a : α}, extendAll rule t = some a →
+      Ty.subN t (C a) = true ∧ ∀ b : α, le a b ↔ Ty.subN t (C b) = true) ∧
+    (∀ {t : Ty} {a : α}, extend rule t = some a → extendAll rule t = some a) :=
+  ⟨fun answered => extendAll_agrees answered, fun refused => extendAll_refused refused,
+    e.extendAll_bot, fun typed => ⟨e.extendAll_upper typed, e.extendAll_adjoint typed⟩,
+    fun typed => extendAll_of_extend typed⟩
+
+end FullFallbackEliminator
 
 end Effect4.Program.UnionRule
