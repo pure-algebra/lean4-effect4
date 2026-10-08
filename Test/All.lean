@@ -260,6 +260,7 @@ import Test.Audit.TypedStateDecl
 import Test.Audit.FrameRules
 import Test.Audit.ProofGraph
 import Test.Audit.ProofGraphPlan
+import Test.Audit.Explain
 import Test.Audit.ProofStyle
 import Test.Machine.StoreKernelBank
 import Test.Machine.MaskDiscipline
