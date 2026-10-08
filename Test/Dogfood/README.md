@@ -161,6 +161,9 @@ environment and runs the controls once. It refuses:
 - a control that reads a run which the record does not list;
 - a control that fails.
 
+`#scenario_reach` runs the first five checks and plays no run. A red control of the dependency
+check uses it on a record whose runs a green `#scenario_gate` has already judged.
+
 A battery's declaration carries its own placement at a requirement. Any other declaration carries
 `@[semantics]`, or the semantics registry places it: as a requirement's top node, as a claim's
 pointer, or by its module.

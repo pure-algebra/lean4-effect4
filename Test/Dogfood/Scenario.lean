@@ -503,9 +503,16 @@ environment, and no reader of the environment stays under the axiom ceiling
 (`Test/Audit/AxiomGate.lean`). -/
 syntax (name := scenarioGate) "#scenario_gate " ident+ : command
 
+/-- `#scenario_reach S₁ … Sₙ` runs the checks of `#scenario_gate` on the declarations, the
+placements and the dependencies, and not the checks of each record as data
+(`Scenario.problems`): it plays no run. A red control of the dependency check reads a record
+whose runs and controls a green `#scenario_gate` has already judged. -/
+syntax (name := scenarioReach) "#scenario_reach " ident+ : command
+
 open Lean in
-@[macro scenarioGate] def expandScenarioGate : Macro := fun stx => do
-  let scenarios : Array (TSyntax `term) := stx[1].getArgs.map (⟨·⟩)
+/-- The expansion of both commands: `records` adds the checks of each record as data. -/
+def scenarioGateExpansion (scenarios : Array (TSyntax `term)) (records : Bool) :
+    MacroM (TSyntax `command) :=
   `(run_cmd Lean.Elab.Command.liftTermElabM do
       let env ← Lean.getEnv
       let scenarios : List Test.Dogfood.Scenario.Scenario := [$scenarios,*]
@@ -549,9 +556,17 @@ open Lean in
             unless scenario.clauses.any (·.claim == goal) do
               findings := findings.push
                 s!"{scenario.name}: the claim {scenario.claim} rests on the planned goal {goal}, which no clause names"
-        findings := findings ++ scenario.problems.toArray
+        if $(quote records) then findings := findings ++ scenario.problems.toArray
       unless findings.isEmpty do
         throwError (String.intercalate "\n" findings.toList))
+
+open Lean in
+@[macro scenarioGate] def expandScenarioGate : Macro := fun stx =>
+  scenarioGateExpansion (stx[1].getArgs.map (⟨·⟩)) true
+
+open Lean in
+@[macro scenarioReach] def expandScenarioReach : Macro := fun stx =>
+  scenarioGateExpansion (stx[1].getArgs.map (⟨·⟩)) false
 
 /-! ## 6. A log's note
 

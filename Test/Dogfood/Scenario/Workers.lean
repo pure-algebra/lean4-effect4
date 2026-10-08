@@ -448,18 +448,21 @@ def scenario : Scenario :=
 
 /-- Red control of the gate's dependency check (decisions rows 203 and 254): the workers record
 under a claim that assembles none of its other clauses. Each placement and each control of the
-record still passes. -/
+record still passes, so the gate reads it with the dependency check alone (`#scenario_reach`). -/
 def wrongTop : Scenario :=
   { scenario with name := "workers under receipt_inert", claim := ``receipt_inert }
 
--- One run of the gate over both records. The green control is that no finding names `workers`.
--- The red control names each clause that the wrong claim's proof does not reach.
+-- The green control: the gate passes the record. The red control reads the record under the
+-- wrong claim, with the dependency check only (its runs are judged above), and names each clause
+-- that the wrong claim's proof does not reach.
+#scenario_gate scenario
+
 /--
 error: workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Effect4.Run.applied_selects)
 workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Effect4.Run.control_retires)
 workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "cleanup" (Test.Dogfood.Scenario.Workers.releases_once)
 -/
 #guard_msgs (error) in
-#scenario_gate scenario wrongTop
+#scenario_reach wrongTop
 
 end Test.Dogfood.Scenario.Workers

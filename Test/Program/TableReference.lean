@@ -1,5 +1,5 @@
 import Effect4.Laws.Api.SessionRef
-import Test.Dogfood.Scenario.QueueWorkers
+import Test.Dogfood.Scenario
 
 set_option maxRecDepth 8192
 
@@ -8,10 +8,11 @@ set_option maxRecDepth 8192
 
 Each line is a control or a finite evaluation that no theorem covers (decisions row 301).
 `session_eq_ref` and the raw statement with no preloaded answer (`run_eq_ref_table_noPreload`)
-are theorems since slice H6a (decisions row 314), so the lines that evaluated them on real
-programs and on 813 tapes are cut. What stays: the controls of the premise `funded` and of the
-row table, and the finite evidence of the rest of the planned goal `run_eq_ref_table`, the
-preloaded answers.
+are theorems since slice H6a (decisions row 314), so no line evaluates them. What stays: one red
+control of the premise `funded` and one of the row table, and the finite evidence of the rest of
+the planned goal `run_eq_ref_table`, the preloaded answers. The replay of the 31 runs of
+`QueueWorkers` and the sweep of 813 tapes are cut: each repeated one of these controls, or
+evaluated the theorems.
 -/
 
 namespace Test.Program.TableReference
@@ -51,18 +52,6 @@ def sides (s : Run) : Bool × Bool × Bool × Bool :=
     agreeRaw s.built.program s.built.table s.budget.fuel (Run.tapeOf s) [] s.budget.compileFuel,
     agreeEmpty s.built.program s.built.table s.budget.fuel (Run.tapeOf s) s.budget.compileFuel)
 
-/-- Funded, both statements hold, and the reference machine at the empty row table agrees too. -/
-def green : Bool × Bool × Bool × Bool := (true, true, true, true)
-
-/-! ## Controls on runs -/
-
--- control (`funded`): of the 31 runs of a program with fibers, a queue and timers, the two that
--- a budget cuts fail the session statement, and the raw statement holds on them
-#guard QueueWorkers.runsAndControls.1.length = 31
-#guard (QueueWorkers.runsAndControls.1.filterMap fun run =>
-    if sides run.played = green then none else some (run.name, sides run.played)) =
-  [("starved", (false, false, true, true)), ("dropped", (false, false, true, true))]
-
 /-! ## Raw programs -/
 
 def wait : Row := (Row.host "H.wait" .nat .nat (.prod .string .string) "battery").row
@@ -94,38 +83,6 @@ def handled2 : NativeEff :=
 #guard raw handled2 [kvMake, kvUse]
     (script [[.start], answer (.row "K.make") (ok (.nat 0)), answer (.row "K.make") (ok (.nat 1)),
       answer (.row "K.use") (ok (.nat 9))]) = some (true, true, true, false)
-
-/-! ## Raw decision tapes: answers that no session admits -/
-
-/-- Eight answers: three values, three failures, two delayed cell reads. -/
-def answersPool : List Answer :=
-  [ .ofExit (.success (.nat 5)), .ofExit (.success (.str "x")), .ofExit (.success (.nat 0)),
-    .ofExit (.failure (Cause.fail (.tagged "E" "m"))), .ofExit (.failure (Cause.die (Defect.user 3))),
-    .ofExit (.failure (Cause.interrupt none)), .ofRefGet ⟨0⟩, .ofRefGet ⟨9⟩ ]
-
-/-- A decision alphabet: flush, evaluate, a clock step, an interruption, and each answer of the
-pool at two tokens and two fibers. -/
-def decisions : List Api.Decision :=
-  [Api.flush, Api.evaluate, .advance (ClockMillis.ofNat 5), .interruptFrom none .empty Api.root] ++
-    (answersPool.flatMap fun a =>
-      [RunDecision.answerAsync Api.root 0 a, .answerAsync Api.root 1 a, .answerAsync ⟨1⟩ 0 a])
-
-/-- Every tape of at most `n` decisions. -/
-def tapes : Nat → List (List Api.Decision)
-  | 0 => [[]]
-  | n + 1 => [] :: (decisions.flatMap fun d => (tapes n).map fun rest => d :: rest)
-
-/-- After the root's evaluation, for every tape of at most `n` decisions: the count where the
-frame machine and the reference machine disagree, the same count with the reference machine at
-the empty row table, and the count of tapes. -/
-def disagreements (e : NativeEff) (table : RowTable) (n : Nat) (fuel : Nat := 200) : Nat × Nat × Nat :=
-  let all := (tapes n).map fun tape => Api.evaluate :: tape
-  ((all.filter fun tape => !agreeRaw e table fuel tape).length,
-   (all.filter fun tape => !agreeEmpty e table fuel tape).length, all.length)
-
--- control (the row table): of 813 tapes over an alphabet of 28 decisions at handle rows, the
--- reference machine at the empty row table disagrees on 52
-#guard disagreements handled2 [kvMake, kvUse] 2 = (0, 52, 813)
 
 /-! ## Preloaded answers -/
 
