@@ -102,3 +102,40 @@ flowchart LR
 - That the 38 forms take their type arguments from the annotation with no second spelling. The
   probe wrote them by hand.
 - Anything about the six forms with no place: they need none, by the probe.
+
+## Addendum, 2026-10-07 late: P1 landed, and P2 cut by site
+
+**P1 landed differently from section 4** (decisions row 324). The traversal is `annotate`
+(`src/Effect4/Program/Typing/Annotate.lean`), and its law is `annotate_eq_table`. It is a
+mutual induction against the table, not an agreement of folds, since the table is not a fold.
+It answers flat entries, an environment and the checker's answer at each address. The call
+instance keeps the row's bindings (`CallInstance.bindings`, `rowBindings`).
+
+**P2 is cut into two slices by site.** The two guards of section 2 stand at row calls only. So
+the row calls can print their joins, and lose their guard, before any eliminator does.
+
+| Slice | Sites | Type arguments from | Unlocks |
+| --- | --- | --- | --- |
+| P2a | a host row with a template; the eight `Ref` rows with a binder term | the call instance's bindings, in the order of the row's parameters | UNGUARD at `checkRow` and at `bindTerm` |
+| P2b | `optionCase`, `caseTag`, `caseTagR`; the fiber and scope rows; `fold` and the record terms | the node's answer and its children's answers; a term's type at its slot | UNGUARD at the converted eliminators |
+
+**P2a's design.**
+
+1. **The carrier keeps the address.** The typed print is the same table-driven fold with one
+   more input: the address of the node, `List Nat`. A child's address is the parent's address
+   and the child's index among the node arguments (`Node.child`). Every other row prints as in
+   `printAlg`.
+2. **The row call reads the instance.** At a `perform` the print looks up the call instance at
+   its address. Where a binding is a join, the call carries every binding as a type argument
+   (`withHeadTypes`). Elsewhere it prints the call that `printPerform` prints.
+3. **A join, defined.** A binding is a join where the parameter's lower bounds have no greatest
+   member: the case that `Bounds.termGuard` refuses. `NoJoin` says no call of the program has
+   one.
+4. **The connector.** Under `NoJoin` the typed print is `print`, byte for byte. Every admitted
+   program has `NoJoin` while the guards stand, so no golden file moves.
+5. **The order of a row's type arguments.** It is the order of the row's template variables,
+   `.var 0` first. The prelude declares each `Ref` row and each host template in that order.
+   Check it per row against `harness/truth/prelude.ts` before the connector is stated.
+
+**What P2a does not establish.** That tsgo accepts the printed call at a join; the lanes test
+that after UNGUARD. Anything at an eliminator, which is P2b.
