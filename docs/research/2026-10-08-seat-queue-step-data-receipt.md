@@ -1,0 +1,24 @@
+# Queue stored step migration
+
+The generic reading law needs an annotation connector before Queue agreement consumes it.
+
+Placement: concept `translation-simulation`, requirement R10.
+The helper serves `step-language-sound` and the existing Queue operation agreement claims.
+`Term.eraseAnnotations` uses the existing Term fold.
+It removes record declarations and optional fold type payloads.
+It retains record names, value children, atoms, indices, and field modes.
+`evalTerm_eraseAnnotations` states equal `evalTerm` observations at every value environment.
+The terms need no typing, formation, membership, or canonicality premise.
+The helper establishes no typing statement, admission, allocation, or host behavior.
+Queue agreement keeps its arbitrary message map and existing theorem statements.
+
+The tuple checkpoint is `b1e49ad4`.
+The focused core and tuple helper build passes.
+The finite tuple controls pass at `/private/tmp/queue-tuple3-check.lean`.
+The four tuple helper declarations use only `propext`.
+
+The Queue core build passes for `Effect4.Modules.Queue.Data` and `Effect4.Modules.Queue.Steps`.
+`Test/Program/QueueAgreement.lean` passes against the migrated public operations.
+Its finite universe contains 200 states and 2400 transitions.
+The control covers only that finite universe and its named adversarial cases.
+The public agreement and typing proofs remain open during migration.
