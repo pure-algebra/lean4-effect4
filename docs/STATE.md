@@ -39,7 +39,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
-  build prints only findings: reports print when a script asks for them.
+  build prints only findings and the axiom gate's summary: reports print when a script asks for
+  them. A battery restates no theorem (row 301); the cleanup pause of 2026-10-07 is closed, with
+  Codex's review repairs merged (`docs/research/2026-10-08-codex-review-repairs-receipt.md`).
 
 ## The documents (read these; the rest is history)
 
@@ -60,14 +62,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The cleanup pause** (the owner, 2026-10-07). The generated codec proofs become exact. The
-   batteries that replay a run twice stop doing so. Codex's review repairs follow when the owner
-   relays them.
-2. **The typed print.** UNGUARD at the row calls, then P2b (the eliminators) and P3 (row 325,
+1. **The typed print.** UNGUARD at the row calls, then P2b (the eliminators) and P3 (row 325,
    point 5).
-3. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
+2. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
    [session API note](research/2026-10-07-session-api-design.md)).
-4. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
+3. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
 
 ## What the owner must decide
 
