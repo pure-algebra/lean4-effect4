@@ -242,7 +242,7 @@ variable {classes : Classes}
 def sortKind : ArgSort → Option HoleKind
   | .child .effs | .child .layers => some .exprs
   | .child .stmts => some .stmts
-  | .child .stmt | .mode | .bool | .op => none
+  | .child .stmt | .mode | .bool | .op | .decls => none
   | .child _ | .term | .optTerm | .cause | .lit | .key | .forkOptions | .path => some .expr
   | .decision => some .str
   | .nat => some .int
@@ -257,13 +257,13 @@ def argKind {R : EffFam → Type} (v : ArgF Op R) : Option HoleKind :=
 /-- Whether an argument prints to a capture: by its sort, and for the three sorts whose
 value decides it, by the value. -/
 def argPrints {R : EffFam → Type} : ArgF Op R → Bool
-  | .child .stmt _ | .mode _ | .bool _ | .op _ => false
+  | .child .stmt _ | .mode _ | .bool _ | .op _ | .decls _ => false
   | .optTerm none | .decision .bool | .decision .option | .optTy none => false
   | _ => true
 
 /-- A sort every value of which prints. -/
 def sortPrints : ArgSort → Bool
-  | .child .stmt | .mode | .bool | .op | .optTerm | .decision | .optTy => false
+  | .child .stmt | .mode | .bool | .op | .optTerm | .decision | .optTy | .decls => false
   | _ => true
 
 theorem argPrints_of_sortPrints {R : EffFam → Type} (v : ArgF Op R)

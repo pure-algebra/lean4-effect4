@@ -54,5 +54,7 @@ def Straight : NativeEff → Bool
   | .iterate _ _ _ _ _ _ => false
   -- a restore site sets the fiber's mask when its saved bit is true: outside, as the two masks
   | .restore _ _ => false
+  -- a definition block's invocations run a body on the invoking fiber (decisions row 328)
+  | .defs _ _ _ => false
 
 end Effect4.Program.Denote

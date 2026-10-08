@@ -50,6 +50,7 @@ function eff(v: unknown): void {
     case "withFiber": action(a[1]); return
     case "provideLayer": layer(a[1]); eff(a[3]); return
     case "provideService": eff(a[3]); return
+    case "defs": chain(a[2], eff); eff(a[3]); return
     default: return noCase(tag, "Eff")
   }
 }

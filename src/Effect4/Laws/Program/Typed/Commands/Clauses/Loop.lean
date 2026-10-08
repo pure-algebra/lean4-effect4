@@ -52,7 +52,7 @@ declarations (what M5's `denoteAt_typed` reads); the hook name is a loop point w
 checked (`LoopChecked`) under an environment its values fit; the cursor fits the cursor type. -/
 def LoopFrameTyped (root : ProgramSource) : LoopState → Prop
   | (w, tin, tout, name, cursor) =>
-    root.program.layerRefsWF = true ∧ w.serviceTy = root.sig.serviceTy ∧
+    SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧
     ∃ (p : Point) (env : List Ty) (ct : Ty) (cursorTy : Option Ty) (initial test step result : Term)
       (body : NativeEff),
       name = .loop p ∧ LoopChecked root p env ct tin tout cursorTy initial test step result body ∧
@@ -173,7 +173,7 @@ theorem loopProtocol_of_frameTyped {w : World} {tin tout : EffTy} {name : EffNam
 rule read at the point (`Checker.inv_iterate`), the cursor type the initial term's
 (`cursorTy.getD c0`). -/
 theorem loopFrameTyped_of_point {w : World} {p : Point} {ty : EffTy} {cursor : Val}
-    (hwf : root.program.layerRefsWF = true) (htie : w.serviceTy = root.sig.serviceTy)
+    (hwf : SourceWF root) (htie : w.serviceTy = root.sig.serviceTy)
     (h : LoopPointTyped root w p ty cursor) :
     ∃ tin, LoopFrameTyped root (w, tin, ty, .loop p, cursor) := by
   obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, _, hc0, hfit⟩ := h

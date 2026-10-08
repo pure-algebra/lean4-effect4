@@ -148,6 +148,13 @@ def causeAnnotations (path : List String) (cause : CauseTerm) : List (List Strin
     cause_both := fun left right pos => left (pos ++ ["left"]) ++ right (pos ++ ["right"])
   } cause path
 
+/-- A definition block's declarations (decisions row 328): each declared column is a type the
+program states, at its declaration's position. -/
+def declAnnotations (path : List String) (decls : List DefDecl) : List (List String × Ty) :=
+  decls.zipIdx.flatMap fun x =>
+    [(path ++ [toString x.2, "request"], x.1.request), (path ++ [toString x.2, "answer"], x.1.answer),
+      (path ++ [toString x.2, "error"], x.1.error)]
+
 /-- Read type-bearing leaves from a generated program-family view. An operation argument is
 read through the alphabet's own views, at the path segment `op`. Its binder term
 (`ScopedOp.term?`) is program syntax that a read-modify-write row runs, so a declaration or a
@@ -160,6 +167,7 @@ def argumentAnnotations {Op : Type} [ScopedOp Op] (path : List String) (index : 
   | .cause cause => causeAnnotations (path ++ ["argument", toString index]) cause
   | .optTerm term => term.toList.flatMap (termAnnotations (path ++ ["argument", toString index]))
   | .optTy ty => ty.toList.map fun t => (path ++ ["cursorTy"], t)
+  | .decls decls => declAnnotations (path ++ ["argument", toString index]) decls
   | .op op => (ScopedOp.term? op).toList.flatMap
       (termAnnotations (path ++ ["argument", toString index, "op"])) ++
     (ScopedOp.typeArgs op).zipIdx.map fun (ty, position) =>

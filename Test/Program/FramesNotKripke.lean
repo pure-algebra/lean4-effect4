@@ -655,7 +655,7 @@ theorem good_queue : QueueOk (refProg : ProgramSource) world good [command] :=
 root's code, which the queued `loop` reads, is typed with its stack (`ReadCode`). Before the
 split this was the code clause of `TypedState … [command]`. -/
 theorem good_config : ConfigTyped (refProg : ProgramSource) unitTy world good [command] := by
-  refine ⟨⟨good_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, rfl⟩, ?_, good_queue⟩
+  refine ⟨⟨good_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, ⟨rfl, .of_nil rfl⟩⟩, ?_, good_queue⟩
   · intro f hf _ idle
     change f ∈ [rootFiber [.answer goodNext] true] at hf
     rw [List.mem_singleton] at hf
@@ -940,7 +940,7 @@ theorem afterGood_queueOk :
 `deliver` reads, is typed with its stack at the world that declares cell 0. -/
 theorem afterGood_config :
     ConfigTyped (refProg : ProgramSource) unitTy w1g afterGood.1 afterGood.2 := by
-  refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, rfl⟩, ?_,
+  refine ⟨⟨afterGood_typed, rfl, ?_, machineLive_of_quiet _ rfl rfl, ⟨rfl, .of_nil rfl⟩⟩, ?_,
     afterGood_queueOk⟩
   · intro f hf _ _ _ _ ty declared
     have saved := afterGood_saved f hf

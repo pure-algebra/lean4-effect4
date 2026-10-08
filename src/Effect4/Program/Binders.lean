@@ -22,6 +22,7 @@ variable {Op : Type}
 (`tools/Effect4Gen/binders.json`), which `effTy` follows with the types. -/
 def binders : Node Op → Nat → Nat
   | .eff (.bind _ _), 1 => 1
+  | .eff (.defs _ _ _), 0 => 1
   | .eff (.catchCause _ _), 1 => 1
   | .eff (.catchIf _ _ _), 1 => 1
   | .eff (.select _ (.option) _ _), 1 => 1
@@ -55,7 +56,7 @@ end Node
 def readerOnlyHeads : List String := ["gen"]
 
 /-- The fiber actions the printer refuses as internal. -/
-def machineOnlyHeads : List String := ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
+def machineOnlyHeads : List String := ["defs", "interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
 
 end Effect4.Program
 
@@ -93,6 +94,6 @@ private def e0 : Eff Unit := .succeed (.lit .unit)
 #guard Node.childLevel 3 (.eff (.suspend e0)) 0 = 3
 -- `gen` alone since `yieldError` retired into `fail`
 #guard readerOnlyHeads.length = 1
-#guard machineOnlyHeads.length = 5
+#guard machineOnlyHeads.length = 6
 
 end Effect4.Program.BindersGuards

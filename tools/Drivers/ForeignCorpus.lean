@@ -58,6 +58,7 @@ mutual
       let b ← program b
       let k ← key k
       return .provideService k (.lit (provision k)) b
+    | .defs decls bodies main => return .defs decls (← programs bodies) (← program main)
   def statement : Stmt NativeOp → Build (Stmt NativeOp)
     | .bindYield e => return .bindYield (← program e)
     | .yieldDiscard e => return .yieldDiscard (← program e)

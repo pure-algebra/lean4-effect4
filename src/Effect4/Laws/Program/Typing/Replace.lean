@@ -333,6 +333,9 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
   · cases hn with | eff hp => cases hp with | restore hsv hsub hb =>
     exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.restore ((h.termTy _ _).trans hsv) hsub hx)⟩
+  -- eff (.defs _ a1 _), 0 and eff (.defs _ _ a2), 1: no rule types a block below the root
+  · cases hn with | eff hp => cases hp
+  · cases hn with | eff hp => cases hp
   -- action (.fork a0 _), 0
   · cases hn with | action ha => cases ha with | fork options hp =>
     exact ⟨_, .eff hp, rfl, fun _ hc' hs => by

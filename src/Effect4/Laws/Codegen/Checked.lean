@@ -155,10 +155,10 @@ theorem emitModule_illTyped_iff (formed : Formation.InputFormed program table) :
       · split <;> simp only [typing.typed, Except.error.injEq, reduceCtorEq]
 
 /-- The same core typing judgment belongs to the emitted program's certificate.
-This is the declarative program judgment, not a TypeScript judgment. -/
+This is the declarative module judgment (`ModuleHasTy`, decisions row 328), not a TypeScript
+judgment; for a program with no definition block it is the program judgment `HasTy`. -/
 theorem ModuleEmission.hasTy (emission : ModuleEmission program table name) :
-    Conform.Effect4.Typing.HasTy (nativeSignature table) [] program.expandRefs
-      emission.typing.ty :=
+    ModuleHasTy (nativeSignature table) program.expandRefs emission.typing.ty :=
   emission.typing.hasTy
 
 end Effect4.Codegen

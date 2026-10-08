@@ -193,7 +193,7 @@ premise-free form (`load_typed`) and M6 (`decision_preserves`) through `admitted
 (`typed-state-reachable`); it reduces the host lane's typing half (T4) to executable admission
 (`admit_sound`, decisions rows 97–99). -/
 theorem reachable_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
     (tape : List Api.Decision) (admitted : AdmittedTape root rootTy fuel tape) :
     ∃ w, MachineTyped root rootTy w (replayR root.program fuel tape).machine :=
   admitted_typed root rootTy fuel (load_typed root rootTy fuel fuel checked)
@@ -204,7 +204,7 @@ halted: `reachable_typed` across `run_eq_ref`'s relation (`obsTyped_admitted`). 
 fragment's lawful, closed-row and answer-free premises; the frame machine at its empty row table
 only. -/
 theorem obs_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
     (admitted : AdmittedTape root rootTy fuel tape) :
     ∃ w, MachineTyped root rootTy w (replayR root.program fuel tape).machine ∧
       ExitsFit rootTy w (obs (Api.replay root.program fuel tape).machine) ∧

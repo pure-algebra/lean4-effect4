@@ -325,7 +325,7 @@ theorem foldMapAt_eff_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit'
   cases e <;>
     simp only [foldMapAt_eff, foldMap_eff, hop, h,
       foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_stmts_fuse φ (unit' := unit') hop h,
-      foldMapAt_action_fuse φ (unit' := unit') hop h,
+      foldMapAt_effs_fuse φ (unit' := unit') hop h, foldMapAt_action_fuse φ (unit' := unit') hop h,
       foldMapAt_layer_fuse φ (unit' := unit') hop h]
 
 /-- `foldMapAt_eff_fuse` at a statement. -/

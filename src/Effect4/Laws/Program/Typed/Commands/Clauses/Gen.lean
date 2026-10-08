@@ -590,7 +590,7 @@ def WalkOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
           PosOk root P0 w' T E ctx k (if bind then q.env ++ [v] else q.env)
 
 /-- **One walk from a typed position is typed** (`walkR`, by induction on its fuel). -/
-theorem walk_typed {root : ProgramSource} (hwf : root.program.layerRefsWF = true) {w : World}
+theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
     (htie : w.serviceTy = root.sig.serviceTy) {P0 : List Nat} {T E : Ty} {p : Point}
     (hpath : p.path = P0) (view : ViewTyped w p.completed) :
     ∀ (fuel : Nat) (ctx : GenCtx) (k : Nat) (env folded : List Val),
@@ -861,7 +861,7 @@ frame's output type; the input's error is the output's. The source's layer refer
 formed and the world carries the source's service declarations (what M5 reads at a yield). -/
 def GenSt (root : ProgramSource) : IterState → Prop
   | (w, tin, tout, name) =>
-    root.program.layerRefsWF = true ∧ w.serviceTy = root.sig.serviceTy ∧ tin.error = tout.error ∧
+    SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧ tin.error = tout.error ∧
       (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
       ∃ (q : Point) (pc : List Nat) (bind : Bool), name = .gen q pc bind ∧
         ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →

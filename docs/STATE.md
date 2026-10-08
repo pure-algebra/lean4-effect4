@@ -13,12 +13,12 @@ natively, compiled through LCNF. TypeScript joins the Effect ecosystem through t
 the readers. Programs are data: a canonical `Eff` tree with a digest and a typing certificate.
 A program has folds, a journaled run with replay, and a printed image that reads back.
 
-## Where the tree stands (2026-10-07, branch `refactor/phase1-phase3`)
+## Where the tree stands (2026-10-08, branch `refactor/phase1-phase3`)
 
 - **Programs and their types.** The checker types a program with located refusal. The address
   table, the focus function and one annotating traversal give each address its environment and
-  type (rows 296, 302 and 324). A template binds its parameters by the match by bounds, with an
-  interim guard at a row's request (rows 303, 306 and 315).
+  type (rows 296, 302 and 324). A template binds its parameters by the match by bounds (rows 303,
+  306 and 315). It binds a row's request and a binder term alike: UNGUARD removed the guards.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311).
@@ -30,10 +30,14 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `src/Effect4/Modules/`, and their laws in `src/Effect4/Laws/Modules/`. Cache's profile is ruled
   (rows 270 to 272) and not built. The procedure is the
   [module factory plan](research/2026-10-05-claude-lead/module-factory-plan.md).
+- **Procedures** (row 328). A program may hold a definition block at its root, and an operation
+  call invokes a definition by its declared row. The checker, program admission, the frame
+  machine, the OCaml engine and M5 take a block (slices PROC-1 and PROC-2, the
+  [receipt](research/2026-10-08-procedures-receipt.md)). The printer refuses a block until PROC-3.
 - **Code generation.** The printer and the readers are driven by one table. The typed print has
-  its slices P1 and P2a (rows 324 and 325). Once the guards lift, a call at a join carries its
-  type arguments. The [typed print note](research/2026-10-07-typed-print-design.md) holds the
-  plan.
+  its slices P1, P2a and P3 (rows 324 and 325). A call at a join carries its type arguments. The
+  reader reconstructs the typed print after its named erasure. The
+  [typed print note](research/2026-10-07-typed-print-design.md) holds the plan.
 - **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
   replacement law holds over the six typing judgments (row 294).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
@@ -62,10 +66,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The typed print**, by Codex: P3 and UNGUARD in one landing, then P2b after its hearing
-   (row 325, point 5; the [widenings note](research/2026-10-08-unguard-widenings.md)).
-2. **Procedures** (row 328): slices PROC-1 and PROC-2 after UNGUARD (the
-   [procedures note](research/2026-10-08-seat-PROC-design.md)).
+1. **The typed print**, by Codex: P2b after its hearing (row 325, point 5; the
+   [widenings note](research/2026-10-08-unguard-widenings.md)).
+2. **Procedures** (row 328): slices PROC-3 to PROC-5 (the
+   [procedures note](research/2026-10-08-seat-PROC-design.md)). They are the printed block, the
+   authoring surface with the first composed module, and the block's handler laws.
 3. **The simulation across schedules** (row 329), after the typed print: slices S1 to S4 (the
    [simulation note](research/2026-10-08-seat-SIM-design.md)).
 4. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the

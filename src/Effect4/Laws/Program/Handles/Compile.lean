@@ -106,6 +106,8 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     · rw [compileEff_perform op r hf]
       split
       · exact asyncRoute_keys _ r p
+      -- an invocation's suspension names its point
+      · exact List.Subset.refl _
       · split
         · split
           · next val hval =>
@@ -235,6 +237,12 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
       · exact List.Subset.refl _
       · exact compileEff_keys b (p.child 0)
       · exact List.nil_subset _
+  -- a definition block: its main program at child 1 (decisions row 328)
+  | .defs _ _ main, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_defs _ _ main hf]
+      exact compileEff_keys main (p.child 1)
 
 theorem resolve_keys (root : NativeEff) (p : Point) : nativeKeys (resolve root p) ⊆ p.keys := by
   unfold resolve

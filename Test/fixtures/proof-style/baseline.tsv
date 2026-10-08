@@ -391,7 +391,6 @@ src/Effect4/Laws/Program/Agreement.lean	resolveLayer_of_at	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	resolve_of_at	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	serviceLookupK_found	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	serviceLookupK_missing	simp-without-only	1
-src/Effect4/Laws/Program/Agreement.lean	suspendBodyAt_of_at	first	1
 src/Effect4/Laws/Program/Agreement.lean	suspendBodyAt_of_at	simp-without-only	2
 src/Effect4/Laws/Program/Agreement.lean	suspendBodyAt_select_bad	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	suspendBodyAt_select_of_decide	simp-without-only	1
@@ -539,6 +538,7 @@ src/Effect4/Laws/Program/DenoteR.lean	denoteR_awaitFiber	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_bind	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_catchCause	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_catchIf	unread	1
+src/Effect4/Laws/Program/DenoteR.lean	denoteR_defs	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_exit	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_fail	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_failCause	unread	1

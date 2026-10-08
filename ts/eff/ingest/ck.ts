@@ -180,6 +180,8 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
         const body = eff(e.body, child(0))
         return { ...e, body, key: onKey(e.key) }
       }
+      // a definition block (decisions row 328): its bodies' spine is child 0, its main program child 1
+      case "defs": return { ...e, bodies: spine(e.bodies, child(0), eff), main: eff(e.main, child(1)) }
       case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": return e
       default: return noCase(e)
     }

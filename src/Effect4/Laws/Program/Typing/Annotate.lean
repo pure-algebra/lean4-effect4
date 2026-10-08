@@ -71,7 +71,7 @@ theorem foldMapAt_eff_paths_shift (e : Eff Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
   cases e <;> simp only [foldMapAt_eff, List.map_append, List.map_cons, List.map_nil,
     List.append_assoc, foldMapAt_eff_paths_shift, foldMapAt_stmts_paths_shift,
-    foldMapAt_action_paths_shift, foldMapAt_layer_paths_shift]
+    foldMapAt_effs_paths_shift, foldMapAt_action_paths_shift, foldMapAt_layer_paths_shift]
 
 /-- `foldMapAt_eff_paths_shift` at a statement. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -404,6 +404,13 @@ theorem Annotate.check_eq (s : Signature Op) (e : Eff Op) (env : TyEnv) (p : Lis
     simp only [Annotate.check, Annotate.checkAction_eq s action, nodeAnswer, childTableAt]
     conv in (occs := *) Node.child _ _ => all_goals whnf
     simp only [Option.bind_some, Node.childEnv, NodeEnv.tyEnv, List.append_nil]
+    rfl
+  -- a definition block: the checker refuses at the node, and no child is reached
+  | .defs decls bodies main => by
+    rw [tableAt_eq_cons]
+    simp only [Annotate.check, nodeAnswer, childTableAt]
+    conv in (occs := *) Node.child _ _ => all_goals whnf
+    simp only [Option.bind_some, Node.childEnv, tableAt_none, List.append_nil]
     rfl
   | .provideLayer layer _ body => by
     rw [tableAt_eq_cons]

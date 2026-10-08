@@ -77,3 +77,7 @@ pMaskNested	well-typed
 pMaskEscape	well-typed
 pIllRestoreBool	ill-typed
 pIllMaskAsBool	ill-typed
+pDefs	well-typed
+pDefsRec	well-typed
+pIllDefsBody	ill-typed
+pIllCallOutside	ill-typed

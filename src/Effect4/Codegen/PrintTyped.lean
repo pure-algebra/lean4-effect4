@@ -56,6 +56,7 @@ def atAddress (path : List Nat) : List (ArgF Op TCarrier) → Nat → List (ArgF
   | .optTerm v :: as, j => .optTerm v :: atAddress path as j
   | .lit v :: as, j => .lit v :: atAddress path as j
   | .path v :: as, j => .path v :: atAddress path as j
+  | .decls v :: as, j => .decls v :: atAddress path as j
 
 /-- **The row call with type arguments on its head**: the call that `printPerform` prints, with
 the given types on the call's head, each as the type printer prints it. With no type argument

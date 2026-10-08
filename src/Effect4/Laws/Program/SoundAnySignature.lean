@@ -34,11 +34,13 @@ namespace Effect4.Program.Denote
 open Effect4 Effect4.Machine Effect4.Program
 
 /-- A synchronous operation is in the built-in signature's domain at every table: only a host
-row (`external`) is bounded by the table, and its kind is `.program`. -/
+row (`external`) is bounded by the table, an invocation by a block (decisions row 328), and the
+kind of both is `.program`. -/
 theorem nativeSignature_dom_sync (t : RowTable) (op : NativeOp) (h : op.kind = .sync) :
     (nativeSignature t).dom op = true := by
   cases op with
   | external i => cases h
+  | call k => cases h
   | _ => rfl
 
 /-- **A looped program is a program of the built-in signature**: every operation it performs

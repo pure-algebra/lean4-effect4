@@ -528,6 +528,7 @@ def inlineYield : NativeEff → Point → Option ExitV
       | some true => none
       | some false => inlineYield body (p.child 0)
       | none => some badShapeExit
+    | .defs _ _ main => inlineYield main (p.child 1)
     | _ => none
 
 /-- `Effect.provide`'s protocol after the counted step, at the point that carries the view
@@ -601,6 +602,16 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   | .perform op request, p =>
     match op with
     | .external _ => denoteAsyncRoute op request p
+    -- an invocation (decisions row 328), `Prim.suspend (body p)` decided by `suspendBodyAt`: the
+    -- counted step, then the definition's body at its point of the root, the request its one
+    -- variable
+    | .call k => suspendR p (constructR fun completed =>
+        match evalTerm p.env request, defBodyPath root k with
+        | some v, some path =>
+          match Node.at_ (Node.eff root) path with
+          | some (Node.eff body) => rec body { p.redirect path with completed, env := [v] }
+          | _ => .pure badShapeExit
+        | _, _ => .pure badShapeExit)
     | _ => match (NativeOp.row op).kind with
       | .sync =>
         match (evalTerm p.env request).bind (NativeOp.syncOpOf op p.env) with
@@ -695,6 +706,8 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     | some true => denoteAction root p
     | some false => rec body (p.child 0)
     | none => .pure badShapeExit
+  -- a definition block (decisions row 328): no step of its own; the main program at child 1
+  | .defs _ _ main, p => rec main (p.child 1)
 
 /-- `self.build(memoMap, scope)` at the term (`compileLayer`, `innerLayerAt`, `constructionAt`),
 the arms at a positive budget, every child at the predecessor budget through `recL`, a leaf's
@@ -942,6 +955,13 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
     denoteR root (.perform op r) p =
       (match op with
        | .external _ => denoteAsyncRoute op r p
+       | .call k => suspendR p (constructR fun completed =>
+           match evalTerm p.env r, defBodyPath root k with
+           | some v, some path =>
+             match Node.at_ (Node.eff root) path with
+             | some (Node.eff body) => denoteR root body { p.redirect path with completed, env := [v] }
+             | _ => .pure badShapeExit
+           | _, _ => .pure badShapeExit)
        | _ => match (NativeOp.row op).kind with
          | .sync =>
            match (evalTerm p.env r).bind (NativeOp.syncOpOf op p.env) with
@@ -964,7 +984,17 @@ theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
   cases op with
   | scopeMake strategy => cases strategy <;> rfl
   | external _ => cases hk
+  | call _ => cases hk
   | _ => simp_all [NativeOp.row]
+
+/-- A definition block has no step of its own: its main program at child 1 (decisions row
+328), as `compileEff_defs`. -/
+theorem denoteR_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
+    (h : p.fuel ≠ 0) :
+    denoteR root (.defs decls bodies main) p = denoteR root main (p.child 1) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf
 
 theorem denoteR_catchCause (b hd : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.catchCause b hd) p =
@@ -1306,11 +1336,15 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       rw [inlineYield_eq_headExit b (p.child 0), headExit_eq_asExit? (compileEff b (p.child 0))]
       cases hx : (compileEff b (p.child 0)).asExit? <;> rfl
+    | defs _ _ main =>
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      exact inlineYield_eq_headExit main (p.child 1)
     | perform op request =>
       cases op
       all_goals unfold compileEff; rw [hf]
       all_goals simp only [inlineYield, hf, Nat.succ_ne_zero, ↓reduceIte]
       case external i => exact inlineAsyncYield_eq_headExit (.external i) request p
+      case call k => rfl
       case sleep => exact inlineAsyncYield_eq_headExit .sleep request p
       case deferredAwait => exact inlineAsyncYield_eq_headExit .deferredAwait request p
       all_goals first

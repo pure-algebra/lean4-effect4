@@ -147,7 +147,8 @@ theorem denoteBWith_badShape (k : Nat) : ∀ (e : NativeEff) (env : List Val),
   | .perform _ _, env | .gen _, env | .uninterruptible _, env | .interruptible _, env
   | .yieldNow _, env | .awaitFiber _ _, env
   | .withFiber _, env | .scoped _, env | .acquireRelease _ _, env | .provideLayer _ _ _, env
-  | .service _, env | .provideService _ _ _, env | .catchIf _ _ _, env | .restore _ _, env => by
+  | .service _, env | .provideService _ _ _, env | .catchIf _ _ _, env | .restore _ _, env
+  | .defs _ _ _, env => by
     rw [denoteBWith_leaf badShapeExit k _ env rfl, denoteB_leaf k _ env rfl, leafB,
       denoteWith_badShape]
 

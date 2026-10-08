@@ -3,6 +3,7 @@ import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Program.CheckedTyping
+import Effect4.Laws.Program.Definitions
 
 /-!
 # Soundness, read off the typing certificate
@@ -78,7 +79,8 @@ theorem typeOfProgram_looped (sig : Signature NativeOp) (e : NativeEff) (hl : Lo
     typeOfProgram sig e = effTy sig [] e := by
   have hrefs := Looped.refSites_nil e [] hl
   rw [typeOfProgram_eq_if_refsWF, if_pos (layerRefsWF_of_refSites_nil e hrefs),
-    expandRefs_eq_self_of_refSites_nil e hrefs]
+    expandRefs_eq_self_of_refSites_nil e hrefs,
+    Effect4.Program.checkModule_eq_check sig (fun _ _ _ heq => by subst heq; cases hl)]
   rfl
 
 /-- **A certified straight program runs to an exit of its type.** -/

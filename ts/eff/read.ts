@@ -1734,6 +1734,7 @@ const withTerm = (op: NativeOp, f: Term): NativeOp | undefined => {
     case "clockNow":
     case "external":
     case "deferredMakeOf":
+    case "call":
       return undefined
     default: {
       const unclassified: never = op
@@ -1774,6 +1775,7 @@ export const typeArgsOf = (op: NativeOp): ReadonlyArray<Ty> => {
     case "sleep":
     case "clockNow":
     case "external":
+    case "call":
       return []
     default: {
       const unclassified: never = op
@@ -2169,6 +2171,9 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
           return [atLayer(e.layer, (layer) => kEff({ ...e, layer })), atEff(e.body, (body) => kEff({ ...e, body }))]
         case "provideService": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "restore": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        // a definition block (decisions row 328): its bodies' spine is child 0, its main program child 1
+        case "defs":
+          return [atEffs(e.bodies, (bodies) => kEff({ ...e, bodies })), atEff(e.main, (main) => kEff({ ...e, main }))]
         case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": case "service":
           return []
         default: return noChildCase(e)

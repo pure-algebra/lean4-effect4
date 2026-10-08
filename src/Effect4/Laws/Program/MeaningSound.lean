@@ -141,7 +141,8 @@ theorem denoteWith_badShape : ∀ (e : NativeEff) (env : List Val),
   | .gen _, _ | .uninterruptible _, _ | .interruptible _, _
   | .iterate _ _ _ _ _ _, _ | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
-  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _ => by
+  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _
+  | .defs _ _ _, _ => by
     rw [denoteWith, denote]
     all_goals (intros; rename_i heq; cases heq)
 
@@ -352,7 +353,7 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
     obtain ⟨ty, hc, rfl⟩ := inv_failCause nativeSignature tys c t hty
     obtain ⟨cause, hcause, hfits, hshape⟩ :=
       Typed.causeOf_progress (src := ({ program := .failCause c } : Typed.ProgramSource)) hat.fits
-        c ty hc
+        c ty (by rw [Typed.ProgramSource.signature_of_defsOf_nil rfl]; exact hc)
     show SoundP _ _ w _ _
     rw [denoteWith, denote, hcause]
     exact SoundP.pure hat.store _ ⟨(Typed.fitsExit_failure_iff w _ _).mpr ⟨hfits, hshape⟩, hshape⟩

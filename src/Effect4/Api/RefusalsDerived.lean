@@ -1760,7 +1760,13 @@ def shapeDoc : ShapeDoc :=
         ("expected", (shape _root_.Effect4.Program.Ty).root)]),
       ("foldTerm", 34, [("why", (shape _root_.Effect4.Program.FoldTermRefusal).root)]),
       ("foldCause", 35, [("why", (shape _root_.Effect4.Program.FoldCauseRefusal).root)]),
-      ("maskRestoreExpected", 36, [("t", (shape _root_.Effect4.Program.Ty).root)])],
+      ("maskRestoreExpected", 36, [("t", (shape _root_.Effect4.Program.Ty).root)]),
+      ("definitionBlock", 37, []),
+      ("definitionsMismatch", 38, [("decls", (shape _root_.Nat).root),
+        ("bodies", (shape _root_.Nat).root)]),
+      ("definitionColumns", 39, [("name", (shape _root_.String).root)]),
+      ("bodyNotDeclared", 40, [("name", (shape _root_.String).root),
+        ("body", (shape _root_.Effect4.Program.EffTy).root)])],
    (shape _root_.Effect4.Program.Term).defs ++ (shape _root_.Effect4.Program.CauseTerm).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.String).defs ++
      (shape _root_.Effect4.Program.Decision).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
@@ -1772,7 +1778,8 @@ def shapeDoc : ShapeDoc :=
      (shape _root_.Effect4.Program.TupleCauseRefusal).defs ++
      (shape (@_root_.List (_root_.String))).defs ++
      (shape _root_.Effect4.Program.FoldTermRefusal).defs ++
-     (shape _root_.Effect4.Program.FoldCauseRefusal).defs⟩
+     (shape _root_.Effect4.Program.FoldCauseRefusal).defs ++ (shape _root_.Nat).defs ++
+     (shape _root_.Effect4.Program.EffTy).defs⟩
 
 def toVal : _root_.Effect4.Program.TypeReason → Val
   | .term a0 => .ctor 0 [Canonical.toVal a0]
@@ -1816,6 +1823,10 @@ def toVal : _root_.Effect4.Program.TypeReason → Val
   | .foldTerm a0 => .ctor 34 [Canonical.toVal a0]
   | .foldCause a0 => .ctor 35 [Canonical.toVal a0]
   | .maskRestoreExpected a0 => .ctor 36 [Canonical.toVal a0]
+  | .definitionBlock => .ctor 37 []
+  | .definitionsMismatch a0 a1 => .ctor 38 [Canonical.toVal a0, Canonical.toVal a1]
+  | .definitionColumns a0 => .ctor 39 [Canonical.toVal a0]
+  | .bodyNotDeclared a0 a1 => .ctor 40 [Canonical.toVal a0, Canonical.toVal a1]
 
 def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .term
@@ -1899,6 +1910,17 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 34 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldTermRefusal) v0).map .foldTerm
   | .ctor 35 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldCauseRefusal) v0).map .foldCause
   | .ctor 36 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0).map .maskRestoreExpected
+  | .ctor 37 [] => some .definitionBlock
+  | .ctor 38 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Nat) v0, Canonical.ofVal (α := _root_.Nat) v1 with
+    | some a0, some a1 => some (.definitionsMismatch a0 a1)
+    | _, _ => none
+  | .ctor 39 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .definitionColumns
+  | .ctor 40 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.String) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v1 with
+    | some a0, some a1 => some (.bodyNotDeclared a0 a1)
+    | _, _ => none
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.TypeReason) : ofVal (toVal a) = some a := by
@@ -1940,6 +1962,10 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.TypeReason) : ofVal (toVal a) = 
   | «foldTerm» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «foldCause» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «maskRestoreExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «definitionBlock» => simp only [toVal, ofVal]
+  | «definitionsMismatch» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «definitionColumns» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «bodyNotDeclared» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal v = some a) :
     v = toVal a := by
@@ -2119,79 +2145,109 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal
     subst hj
     simp only [toVal]
     rw [Canonical.ofVal_exact hx]
+  · injection h with h
+    subst h
+    rfl
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
   all_goals exact nomatch h
 
 theorem lift_Term (x : _root_.Effect4.Program.Term) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Term).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_CauseTerm (x : _root_.Effect4.Program.CauseTerm) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.CauseTerm).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Decision (x : _root_.Effect4.Program.Decision) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Decision).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ListNat (x : (@_root_.List (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Lit (x : _root_.Effect4.Program.Lit) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Lit).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_FormationRefusal (x : _root_.Effect4.Program.FormationRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FormationRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
     _ _ (Canonical.fits x)
 theorem lift_RecordTermRefusal (x : _root_.Effect4.Program.RecordTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordTermRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
     _ _ (Canonical.fits x)
 theorem lift_RecordCauseRefusal (x : _root_.Effect4.Program.RecordCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordCauseRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
     _ _ (Canonical.fits x)
 theorem lift_TupleTermRefusal (x : _root_.Effect4.Program.TupleTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TupleTermRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_TupleCauseRefusal (x : _root_.Effect4.Program.TupleCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TupleCauseRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_ListString (x : (@_root_.List (_root_.String))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.String))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_FoldTermRefusal (x : _root_.Effect4.Program.FoldTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldTermRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_FoldCauseRefusal (x : _root_.Effect4.Program.FoldCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldCauseRefusal).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_EffTy (x : _root_.Effect4.Program.EffTy) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.EffTy).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
@@ -2319,6 +2375,19 @@ theorem fits (a : _root_.Effect4.Program.TypeReason) : shapeDoc.accepts (toVal a
   | «maskRestoreExpected» a0 =>
     exact accepts_sum _ _ _ 36 "maskRestoreExpected" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0) (acceptsFields_nil _))
+  | «definitionBlock» =>
+    exact accepts_sum _ _ _ 37 "definitionBlock" [] [] rfl (acceptsFields_nil _)
+  | «definitionsMismatch» a0 a1 =>
+    exact accepts_sum _ _ _ 38 "definitionsMismatch" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1) (acceptsFields_nil _)))
+  | «definitionColumns» a0 =>
+    exact accepts_sum _ _ _ 39 "definitionColumns" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «bodyNotDeclared» a0 a1 =>
+    exact accepts_sum _ _ _ 40 "bodyNotDeclared" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_EffTy a1) (acceptsFields_nil _)))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.TypeReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -3007,7 +3076,8 @@ def reasons : List TypeReason :=
    .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never),
    .foldTerm ⟨[0], .notList .nat⟩,
    .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩,
-   .maskRestoreExpected .bool]
+   .maskRestoreExpected .bool, .definitionBlock, .definitionsMismatch 1 0,
+   .definitionColumns "count", .bodyNotDeclared "count" (EffTy.pure .string)]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

@@ -266,7 +266,8 @@ theorem depthB_straight : ∀ (e : NativeEff), Straight e = true → depthB e = 
   | .perform _ _, _ | .gen _, _ | .uninterruptible _, _ | .interruptible _, _
   | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
-  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _ => rfl
+  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _
+  | .defs _ _ _, _ => rfl
 
 /-- A bound on the local steps a program of the fragment takes at the budget `k`: `steps` with
 the loop's arm. A loop runs at most `k` rounds, so its bound is `k` bodies and their frame
@@ -317,7 +318,8 @@ theorem steps_le_boundB (k : Nat) : ∀ (e : NativeEff), Straight e = true → s
   | .perform _ _, _ | .gen _, _ | .uninterruptible _, _ | .interruptible _, _
   | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
-  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _ => Nat.le_refl _
+  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _
+  | .defs _ _ _, _ => Nat.le_refl _
 
 theorem fuel_succB {e : NativeEff} {p : Point} (hd : depthB e ≤ p.fuel) :
     p.fuel = (p.fuel - 1) + 1 := by
@@ -385,7 +387,8 @@ theorem straight_of_asExit : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .awaitFiber _ _, _, _, hl, _ | .withFiber _, _, _, hl, _ | .scoped _, _, _, hl, _
   | .acquireRelease _ _, _, _, hl, _ | .provideLayer _ _ _, _, _, hl, _
   | .service _, _, _, hl, _ | .provideService _ _ _, _, _, hl, _
-  | .catchIf _ _ _, _, _, hl, _ | .restore _ _, _, _, hl, _ => hl
+  | .catchIf _ _ _, _, _, hl, _ | .restore _ _, _, _, hl, _
+  | .defs _ _ _, _, _, hl, _ => hl
 
 /-- **The local run agrees with the budgeted meaning.** A program of `Looped` compiled at an
 address of the root, run by the local machine from any outer stack, reaches the fiber holding
@@ -808,7 +811,8 @@ theorem localRun_compileB (k : Nat) :
   | .service _, p, K, i, s, ex, s', hl, h, hd, hm
   | .provideService _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
   | .catchIf _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .restore _ _, p, K, i, s, ex, s', hl, h, hd, hm =>
+  | .restore _ _, p, K, i, s, ex, s', hl, h, hd, hm
+  | .defs _ _ _, p, K, i, s, ex, s', hl, h, hd, hm =>
     localRun_compileB_straight root k _ p K i s ex s' hl h hd hm
 
 /-- **At the root.** When the budgeted meaning of a `Looped` program finishes at the budget

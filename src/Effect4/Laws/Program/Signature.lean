@@ -101,19 +101,23 @@ structure SigExtends {Op : Type} (s s' : Signature Op) : Prop where
   /-- The same binder terms (the state plan's T3b): an operation's term is its own data, which
   no table or declaration changes. -/
   termOf : s'.termOf = s.termOf
+  /-- The same invocations (decisions row 328): which operation invokes which definition is the
+  operation's own data, so a block extends both signatures alike (`SigExtends.withDefs`). -/
+  callOf : s'.callOf = s.callOf
 
 namespace SigExtends
 
 variable {Op : Type} {s s' s'' : Signature Op}
 
 theorem refl (s : Signature Op) : SigExtends s s :=
-  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl⟩
 
 theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s s'' :=
   ⟨h₂.atomOf.trans h₁.atomOf, h₂.constAtom.trans h₁.constAtom, h₂.scopeKey.trans h₁.scopeKey,
     fun op hd =>
       ⟨(h₂.row op (h₁.row op hd).1).1, (h₂.row op (h₁.row op hd).1).2.trans (h₁.row op hd).2⟩,
-    fun key ty hk => h₂.service key ty (h₁.service key ty hk), h₂.termOf.trans h₁.termOf⟩
+    fun key ty hk => h₂.service key ty (h₁.service key ty hk), h₂.termOf.trans h₁.termOf,
+    h₂.callOf.trans h₁.callOf⟩
 
 theorem termTy (h : SigExtends s s') (env : TyEnv) (t : Term) :
     Effect4.Program.termTy s' env t = Effect4.Program.termTy s env t :=
@@ -257,14 +261,6 @@ theorem effTy_ext (h : SigExtends s s') {env : TyEnv} {e : Eff Op} {t : EffTy}
     (he : effTy s env e = some t) : effTy s' env e = some t :=
   effTy_complete s' e env t (hasTy_ext h (effTy_sound s e env t he))
 
-theorem typeOfProgram_ext (h : SigExtends s s') {e : Eff Op} {t : EffTy}
-    (he : typeOfProgram s e = some t) : typeOfProgram s' e = some t := by
-  unfold typeOfProgram at he ⊢
-  split at he
-  · rw [if_pos ‹_›]
-    exact effTy_ext h he
-  · cases he
-
 theorem checkLayer_ext (h : SigExtends s s') {p : List Nat} {l : LayerTerm Op} {t : LayerTy}
     (hc : Checker.checkLayer s p l = .ok t) : Checker.checkLayer s' p l = .ok t :=
   checkLayer_complete s' l t (layerHasTy_ext h (checkLayer_sound s l p t hc)) p
@@ -275,15 +271,18 @@ end Extend
 admitted by the longer one at the same row. -/
 theorem rows_append (t t' : RowTable) :
     SigExtends (nativeSignature t) (nativeSignature (t ++ t')) := by
-  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl⟩
+  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl⟩
   intro op hd
   cases op with
   | external i =>
     have hi : i < t.length := of_decide_eq_true hd
-    refine ⟨decide_eq_true (Nat.lt_of_lt_of_le hi (by simp only [List.length_append]; omega)), ?_⟩
+    refine ⟨show decide (i < (t ++ t').length) = true from
+      decide_eq_true (Nat.lt_of_lt_of_le hi (by simp only [List.length_append]; omega)), ?_⟩
     show ((nativeRowOf (t ++ t') (.external i)).normalizeTypes) =
       (nativeRowOf t (.external i)).normalizeTypes
     simp only [nativeRowOf, List.getElem?_append_left hi]
+  -- an invocation is in no native signature's domain
+  | call k => cases hd
   | _ => exact ⟨rfl, rfl⟩
 
 /-! ## Σ_app (`SigApp`, `Program/SigApp.lean`) -/
@@ -312,7 +311,7 @@ theorem serviceTy_code (app : SigApp) {key key' : ServiceKey} (hcode : key.servi
 theorem rows_append (app : SigApp) (t' : RowTable) :
     SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services).signature := by
   have h := Effect4.Program.rows_append app.rows t'
-  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl⟩
+  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl⟩
 
 /-- A declaration appended at a code that neither the application nor the built-in table
 types. -/
@@ -324,7 +323,7 @@ types keeps its carrier. -/
 theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     (fresh : ∀ entry ∈ s', FreshCode app entry) :
     SigExtends app.signature (SigApp.mk app.rows (app.services ++ s')).signature := by
-  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl⟩
+  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl⟩
   intro key ty hk
   change app.serviceTy key = some ty at hk
   change SigApp.serviceTy ⟨app.rows, app.services ++ s'⟩ key = some ty
@@ -403,6 +402,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   eff_select : alg₁.eff_select = alg₂.eff_select
   eff_iterate : alg₁.eff_iterate = alg₂.eff_iterate
   eff_restore : alg₁.eff_restore = alg₂.eff_restore
+  eff_defs : alg₁.eff_defs = alg₂.eff_defs
   stmt_bindYield : alg₁.stmt_bindYield = alg₂.stmt_bindYield
   stmt_yieldDiscard : alg₁.stmt_yieldDiscard = alg₂.stmt_yieldDiscard
   stmt_ret : alg₁.stmt_ret = alg₂.stmt_ret
@@ -473,6 +473,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
   eff_select _ _ r2 r3 := r2 ∧ r3
   eff_iterate _ _ _ _ _ r5 := r5
   eff_restore _ r1 := r1
+  eff_defs _ r1 r2 := r1 ∧ r2
   stmt_bindYield r0 := r0
   stmt_yieldDiscard r0 := r0
   stmt_ret _ := True
@@ -610,6 +611,10 @@ theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Eff Op)
   | restore a0 a1 =>
     show alg₁.eff_restore a0 (cata_eff alg₁ a1) = alg₂.eff_restore a0 (cata_eff alg₂ a1)
     rw [h.eff_restore, cata_eff_congr_on h a1 hr]
+  | defs a0 a1 a2 =>
+    show alg₁.eff_defs a0 (cata_effs alg₁ a1) (cata_eff alg₁ a2) =
+      alg₂.eff_defs a0 (cata_effs alg₂ a1) (cata_eff alg₂ a2)
+    rw [h.eff_defs, cata_effs_congr_on h a1 hr.1, cata_eff_congr_on h a2 hr.2]
 termination_by structural e
 
 /-- Fold congruence at `Stmt`. -/
@@ -864,6 +869,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     eff_select := by simp only [Checker.check.alg, hterm]
     eff_iterate := by simp only [Checker.check.alg, hterm]
     eff_restore := by simp only [Checker.check.alg, hterm]
+    eff_defs := rfl
     stmt_bindYield := rfl
     stmt_yieldDiscard := rfl
     stmt_ret := by simp only [Checker.check.alg, hterm]

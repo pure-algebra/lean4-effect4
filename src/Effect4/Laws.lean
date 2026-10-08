@@ -194,6 +194,7 @@ import Effect4.Laws.Program.Typed.HostWalk
 import Effect4.Laws.Program.Typed.LayerArm
 import Effect4.Laws.Program.Typed.Body
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.Definitions
 import Effect4.Laws.Program.Sketch
 import Effect4.Laws.Program.Typing.Replace
 import Effect4.Laws.Program.SoundAnySignature

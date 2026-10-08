@@ -101,6 +101,17 @@ inductive TypeReason
   /-- A restore site whose saved term is not at `Ty.maskRestore` (decisions row 244): a Boolean,
   for one, is no saved state. `t` is the term's type. -/
   | maskRestoreExpected (t : Ty)
+  /-- A definition block below the root (decisions row 328). A block is typed by the whole
+  program at its root (`Checker.checkModule`, `Program/Definitions.lean`), never structurally. -/
+  | definitionBlock
+  /-- A block whose declarations and bodies differ in number. -/
+  | definitionsMismatch (decls bodies : Nat)
+  /-- A definition whose declared columns hold a type variable, or whose error column the error
+  alphabet does not admit: the first stage's definitions are monomorphic (decisions row 328). -/
+  | definitionColumns (name : String)
+  /-- A definition's body whose type is not below its declaration: an answer or an error outside
+  the declared one, or a service outside the declared requirement row. -/
+  | bodyNotDeclared (name : String) (body : EffTy)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -142,6 +153,10 @@ def TypeReason.head : TypeReason → String
   | .foldTerm _ => "foldTerm"
   | .foldCause _ => "foldCause"
   | .maskRestoreExpected _ => "maskRestoreExpected"
+  | .definitionBlock => "definitionBlock"
+  | .definitionsMismatch _ _ => "definitionsMismatch"
+  | .definitionColumns _ => "definitionColumns"
+  | .bodyNotDeclared _ _ => "bodyNotDeclared"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

@@ -3,6 +3,7 @@ module
 public import Effect4.Program.Typing.Rules
 public import Effect4.Program.Checker
 public import Effect4.Program.ScopedOp
+public import Effect4.Program.Definitions
 
 /-!
 # Program.Typing — the checker's answers, as projections of the one check
@@ -62,12 +63,14 @@ def typeOf (sig : Signature Op) (program : Eff Op) : Option EffTy := effTy sig [
 /-- The type of a whole program, its layer references resolved (the host rows slice). The
 checker tests one thing: the references are well formed (`Eff.layerRefsWF`, `Program/Refs.lean`:
 every target a non-reference layer that precedes its reference). Then it expands the program
-(`Eff.expandRefs`) and types the expansion structurally. It answers `none` when the references
+(`Eff.expandRefs`) and checks the expansion as a whole module (`Checker.checkModule`,
+`Program/Definitions.lean`): a definition block at its root is checked with its bodies, and the
+main program at the block's signature (decisions row 328). It answers `none` when the references
 are not well formed. The expansion has no reference site (`expanded_refs_nil_of_wf`,
 `Laws/Program/ReferenceExpansion.lean`), so the checker does not test for one (decisions row
-273). A program with no references is `typeOf` itself. -/
+273). A program with no references and no block is `typeOf` itself. -/
 def typeOfProgram (sig : Signature Op) (program : Eff Op) : Option EffTy :=
-  if program.layerRefsWF then typeOf sig program.expandRefs else none
+  if program.layerRefsWF then (Checker.checkModule sig program.expandRefs).toOption else none
 
 /-- A layer is well-typed when `layerTy` answers. -/
 def WellTypedLayer (sig : Signature Op) (l : LayerTerm Op) : Prop :=
@@ -142,7 +145,7 @@ mutual
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .yieldNow _
     | .withFiber _ | .scoped _ | .acquireRelease _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _
-    | .iterate _ _ _ _ _ _ | .restore _ _ => by
+    | .iterate _ _ _ _ _ _ | .restore _ _ | .defs _ _ _ => by
       simp only [Eff.weaken, check, toOption_bind, toOption_pure, toOption_throw, toOption_expect,
         toOption_term?, toOption_cause?, apply_ite Except.toOption, termTy_weaken, causeTy_weaken,
         catchIfError_weaken, List.append_assoc, List.cons_append, check_weaken sig hw,

@@ -80,7 +80,8 @@ theorem intro_sync (root : NativeEff) (t : Term) (p : Point) (k : Nat)
 
 theorem intro_perform (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
-    (hnode : Node.at_ (.eff root) p.path = some (.eff (.perform op r))) :
+    (hnode : Node.at_ (.eff root) p.path = some (.eff (.perform op r)))
+    (hcall : ∀ i, op ≠ .call i) :
     CodeMeans root (compileEff (.perform op r) p) (denoteR root (.perform op r) p) := by
   by_cases hk : (NativeOp.row op).kind = .sync
   · rw [compileEff_perform_sync op r hf hk, denoteR_perform_sync root op r hpos hk]
@@ -91,7 +92,7 @@ theorem intro_perform (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) 
       cases NativeOp.syncOpOf op p.env v with
       | some o => exact CodeMeans.syncOp o _ (successV root)
       | none => exact codeMeans_badShape root
-  · rw [compileEff_perform_nonsync op r hf hk, denoteR_perform_nonsync root op r hpos hk]
+  · rw [compileEff_perform_nonsync op r hf hk hcall, denoteR_perform_nonsync root op r hpos hk hcall]
     exact asyncRoute_means root op r p hnode
 
 end Effect4.Program.Sched

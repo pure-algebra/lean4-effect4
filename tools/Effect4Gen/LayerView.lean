@@ -53,6 +53,7 @@ def leafSort : String → Option String
   | "Bool" => some "bool"
   | "Nat" => some "nat"
   | "List Nat" => some "path"
+  | "List Effect4.Program.DefDecl" => some "decls"
   | "Op" => some "op"
   | _ => none
 

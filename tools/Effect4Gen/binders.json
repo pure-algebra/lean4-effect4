@@ -21,6 +21,7 @@
   ],
   "rows": [
     { "ctor": "Effect4.Program.Eff.bind", "slots": ["answer"], "args": [[], [0]] },
+    { "ctor": "Effect4.Program.Eff.defs", "slots": ["request"], "args": [[], [0], []] },
     { "ctor": "Effect4.Program.Eff.catchCause", "slots": ["cause"], "args": [[], [0]] },
     { "ctor": "Effect4.Program.Eff.catchIf", "slots": ["error"], "args": [[0], [], [0]] },
     { "ctor": "Effect4.Program.Eff.select", "whenArg": 1, "whenHead": "Effect4.Program.Decision.bool", "lift": "selectBool", "slots": [], "args": [[], [], [], []] },
@@ -44,6 +45,7 @@
       "Effect4.Program.Eff.gen"
     ],
     "machineOnly": [
+      "Effect4.Program.Eff.defs",
       "Effect4.Program.ActionTerm.interruptScoped", "Effect4.Program.ActionTerm.awaitAllFailFast",
       "Effect4.Program.ActionTerm.snapshotChildren", "Effect4.Program.ActionTerm.awaitNewChildren",
       "Effect4.Program.ActionTerm.setContext"

@@ -46,6 +46,10 @@ theorem compileEff_perform_eq_asyncRoute (op : NativeOp) (r : Term) (p : Point) 
   | sleep => rfl
   | deferredAwait => rfl
   | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at h
+  | call k =>
+    rcases h with ⟨_, hi⟩ | hk
+    · cases hi
+    · cases hk
   | _ => simp [NativeOp.row] at h
 
 /-! ## The table check and the registration lookup -/

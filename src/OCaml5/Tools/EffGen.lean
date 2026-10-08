@@ -2,6 +2,7 @@ import Tools.GeneratedStamp
 import OCaml5.Eff.Emit
 import OCaml5.Eff.Goldens
 import OCaml5.Eff.Metadata
+import Effect4.Program.Definitions
 
 /-!
 # EffGen — write the `eff/` library and its goldens
@@ -168,7 +169,8 @@ def main (args : List String) : IO Unit := do
   for (nm, p, t) in trees do
     IO.FS.writeBinFile (out / "goldens" / (nm ++ ".bin")) (ByteArray.mk (t.bytes lookup).toArray)
     IO.FS.writeFile (out / "goldens" / (nm ++ ".json")) (t.json ++ "\n")
-    let typed := Effect4.Program.typeOf nativeSignature p
+    -- the whole module's check: a program with no block is checked as the checker checks it
+    let typed := (Effect4.Program.Checker.checkModule nativeSignature p).toOption
     let ty := match typed with
       | some t => (effTyV { t with answer := t.answer.normalize, error := t.error.normalize }).json
       | none => "ill-typed"

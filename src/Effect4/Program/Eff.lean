@@ -327,6 +327,27 @@ def CauseTerm.scoped (n : Nat) : CauseTerm → Bool
   | .interrupt (some who) => who.scoped n
   | .both left right => left.scoped n && right.scoped n
 
+/-! ## Definitions (decisions row 328) -/
+
+/-- **The declaration of a definition**: its name, and the columns of its row. A definition is
+a closed program with a declared row, kept in the definition block at the root of a program
+(`Eff.defs`). Its body reads one variable, the request. The row is computed from these columns
+(`DefDecl.row`), so no field without meaning is stored. Several parameters are one request of a
+tuple type. -/
+structure DefDecl where
+  name : String
+  request : Ty
+  answer : Ty
+  error : Ty := .never
+  requires : List ServiceKey := []
+deriving DecidableEq, Repr
+
+/-- The row a definition declares: a program row, answered by the definition's body on the
+invoking fiber, never by the host. -/
+def DefDecl.row (d : DefDecl) : Row :=
+  { name := d.name, spelling := d.name, kind := .program, request := d.request,
+    answer := d.answer, error := d.error, requires := d.requires, cite := "" }
+
 /-! ## Programs -/
 
 mutual
@@ -412,6 +433,13 @@ mutual
     runs the node: it does not mask that fiber. Printed as `pipe(body, saved)`. Appended, so no
     stored program's bytes move (`Wire.lean`). -/
     | restore (saved : Term) (body : Eff Op)
+    /-- **A definition block** (decisions row 328): the program's definitions, then its main
+    program. Definition `k` declares `decls[k]`, and its body is the `k`-th program of `bodies`.
+    It answers the operation `call k` of the alphabet (`NativeOp.call`). A body reads one
+    variable, the request, and no other: it is closed. The block stands at the root of a
+    program only (formation), so a program with no definition has no block and keeps its bytes.
+    Appended, so no stored program's bytes move (`Wire.lean`). -/
+    | defs (decls : List DefDecl) (bodies : Effs Op) (main : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/

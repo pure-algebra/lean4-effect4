@@ -148,7 +148,7 @@ theorem typedState : TypedState (rootProgram : ProgramSource) natTy world machin
 
 /-- The complete machine premise consumed by the absent-old configuration control. -/
 theorem machine_typed : MachineTyped (rootProgram : ProgramSource) natTy world machine := by
-  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩, rfl⟩
+  refine ⟨typedState, rfl, ?_, ⟨rfl, fun o ho => nomatch ho⟩, ⟨rfl, .of_nil rfl⟩⟩
   intro f hf _ idle
   rw [Test.Program.RegistrationColumn.member hf] at idle
   cases idle

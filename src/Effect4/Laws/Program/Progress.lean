@@ -151,7 +151,7 @@ theorem progress (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : 
     rw [← NativeOp.row_kind]
     exact hkind
   let root : Typed.ProgramSource := { program := .perform op r }
-  have hsig : root.signature = nativeSignature := rfl
+  have hsig : root.signature = nativeSignature := Typed.ProgramSource.signature_of_defsOf_nil rfl
   rw [← hsig] at hrow
   obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk henv
     hrow x hxfit

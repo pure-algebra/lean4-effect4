@@ -126,7 +126,7 @@ def topLevels (e : Eff NativeOp) : List (Option Nat) :=
       | .term v => .term v | .cause v => .cause v | .op v => .op v | .nat v => .nat v
       | .mode v => .mode v | .bool v => .bool v | .key v => .key v | .decision v => .decision v
       | .optTy v => .optTy v | .forkOptions v => .forkOptions v | .optTerm v => .optTerm v
-      | .lit v => .lit v | .path v => .path v)) e)
+      | .lit v => .lit v | .path v => .path v | .decls v => .decls v)) e)
 
 def agreesWithBinders (e : Eff NativeOp) : Bool :=
   (topLevels e).zipIdx.all fun (level, j) => match level with

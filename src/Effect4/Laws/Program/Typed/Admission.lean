@@ -3,6 +3,8 @@ import Effect4.Program.Checker
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.ReferenceTyping
+import Effect4.Program.Definitions
+import Effect4.Laws.Program.Definitions
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
@@ -113,9 +115,23 @@ instance : Coe NativeEff ProgramSource := ⟨fun program => { program }⟩
 /-- The source's part of the signature. -/
 def ProgramSource.sig (src : ProgramSource) : SigApp := ⟨src.table, src.services⟩
 
-/-- The checker's signature over the source's tables; with no service declarations it is
-`nativeSignature src.table` (`SigApp.signature_nil`). -/
-def ProgramSource.signature (src : ProgramSource) : Signature NativeOp := src.sig.signature
+/-- The checker's signature for the source's program: the signature over its tables
+(`SigApp.signature`), extended by the program's own definition block (`Signature.withDefs`,
+decisions row 328), so an invocation reads its definition's declared row. Every other field is
+the tables' signature's, by definition; for a program with no block and no service declarations
+it types every operation as `nativeSignature src.table` does. Admission certifies the program at
+the tables' signature (`typeOfProgram src.sig.signature`), whose module check extends it by the
+same block. -/
+def ProgramSource.signature (src : ProgramSource) : Signature NativeOp :=
+  src.sig.signature.withDefs src.program.defsOf
+
+/-- The source's signature of a program with no definition block is its tables' signature
+(`Signature.withDefs_nil`): an application's signature keeps every invocation outside its domain. -/
+theorem ProgramSource.signature_of_defsOf_nil {src : ProgramSource} (h : src.program.defsOf = []) :
+    src.signature = src.sig.signature := by
+  show src.sig.signature.withDefs src.program.defsOf = _
+  rw [h]
+  exact Signature.withDefs_nil _ (SigApp.signature_callsOutside _)
 
 /-- D13 source admission at an addressed program node, under the source's signature: its row
 table (`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row) and its service
@@ -139,6 +155,37 @@ def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : 
     Checker.check src.signature env point.path (Eff.expandIn src.program e) = .ok ty ∧
     EnvTyped w env point.env ∧
     ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
+
+/-- **The block's bodies are typed** (decisions row 328): each declaration of the program's block
+names a body at its path (`defBodyPath`), which the checker types at the source's signature, in
+the environment of the declared request, at a type the declaration admits; and the declaration is
+formed. A program with no block has no declaration, so it holds outright. The load discharges it
+from the checker's verdict (`bodiesTyped_of_typeOf`, `Typed/Denotation.lean`), as it discharges
+the references' formation: it is a premise of M5, never a field of `ProgramSource`. The
+invocation's arm reads it (`call_arm`). -/
+def BodiesTyped (src : ProgramSource) : Prop :=
+  ∀ (k : Nat) (d : DefDecl), src.program.defsOf[k]? = some d →
+    ∃ (path : List Nat) (body : NativeEff) (tb : EffTy),
+      defBodyPath src.program k = some path ∧
+      Node.at_ (.eff src.program) path = some (.eff body) ∧
+      Checker.check src.signature [d.request.normalize] path (Eff.expandIn src.program body) =
+        .ok tb ∧
+      d.formed = true ∧ d.admits tb = true
+
+/-- **The source's formation, for M5** (decisions rows 170 and 328): its layer references are well
+formed, and its definition block's bodies are typed. Both are constant facts of the source,
+which the load discharges from the checker's verdict and every step keeps (`MachineTyped.sourceWF`).
+M5's fundamental property reads them (`DenotesTyped`): the first at a reference's target, the second
+at an invocation. Neither is a field of `ProgramSource`. -/
+structure SourceWF (src : ProgramSource) : Prop where
+  refs : src.program.layerRefsWF = true
+  bodies : BodiesTyped src
+
+/-- A program with no definition block has its bodies typed: it declares none. -/
+theorem BodiesTyped.of_nil {src : ProgramSource} (h : src.program.defsOf = []) : BodiesTyped src := by
+  intro k d hd
+  rw [h, List.getElem?_nil] at hd
+  cases hd
 
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
 under an environment its values fit, extended by the acquired value, and its context's

@@ -51,8 +51,8 @@ private theorem onRef_eq_self_eff {Op : Type} (f : List Nat → LayerTerm Op) (q
   cases node <;> simp +contextual only [foldMapAt_eff, cata_eff, EffAlgebra.id, List.nil_append,
     List.append_eq_nil_iff, implies_true, onRef_eq_self_eff f (q ++ [0]),
     onRef_eq_self_eff f (q ++ [1]), onRef_eq_self_eff f (q ++ [2]),
-    onRef_eq_self_stmts f (q ++ [0]), onRef_eq_self_action f (q ++ [0]),
-    onRef_eq_self_layer f (q ++ [0])]
+    onRef_eq_self_stmts f (q ++ [0]), onRef_eq_self_effs f (q ++ [0]),
+    onRef_eq_self_action f (q ++ [0]), onRef_eq_self_layer f (q ++ [0])]
 
 /-- A substitution fixes a `Stmt` with no reference site. -/
 private theorem onRef_eq_self_stmt {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
@@ -160,7 +160,8 @@ theorem layerRefsWF_of_refSites_nil {Op : Type} (p : Eff Op)
 
 /-- **The checker's equation.** The whole-program checker tests one thing before it types the
 expansion (`typeOfProgram`, `Program/Typing.lean`): the references are well formed. So it
-answers the structural type of the expansion exactly when the references are well formed. The
+answers the expansion's type as a whole module (`Checker.checkModule`, decisions row 328) exactly
+when the references are well formed. The
 equation is the checker's definition, so its proof is `rfl`. Until 2026-10-06 the checker also
 tested that the expansion has no reference site. That test followed from the first
 (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`), and it is gone (decisions
@@ -168,7 +169,8 @@ row 273). The equation does not say that the answer is a type. Its consumers are
 `typeOfProgram_expandRefs` below, `TypedProgram.hasTy` and `checkTypedProgram_of_hasTy`
 (`Laws/Program/CheckedTyping.lean`), and `typeOfProgram_looped` (`Laws/Program/TypedRun.lean`). -/
 theorem typeOfProgram_eq_if_refsWF {Op : Type} (sig : Signature Op) (p : Eff Op) :
-    typeOfProgram sig p = if p.layerRefsWF then typeOf sig p.expandRefs else none := rfl
+    typeOfProgram sig p =
+      if p.layerRefsWF then (Checker.checkModule sig p.expandRefs).toOption else none := rfl
 
 /-- C4 typing equation with its one premise, well-formed original layer references: the
 checker's answer on the expanded program is its answer on the program. The expansion has no

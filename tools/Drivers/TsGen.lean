@@ -442,7 +442,8 @@ run_cmd do
          ``Effect4.Program.NativeOp.refUpdateAndGetWith, ``Effect4.Program.NativeOp.refUpdateSomeWith,
          ``Effect4.Program.NativeOp.refGetAndUpdateSomeWith,
          ``Effect4.Program.NativeOp.refUpdateSomeAndGetWith,
-         ``Effect4.Program.NativeOp.refModifyWith, ``Effect4.Program.NativeOp.refModifySomeWith])
+         ``Effect4.Program.NativeOp.refModifyWith, ``Effect4.Program.NativeOp.refModifySomeWith,
+         ``Effect4.Program.NativeOp.call])
     , (``Effect4.Codegen.Forms.LambdaShape,
         [``Effect4.Codegen.Forms.LambdaShape.addOne, ``Effect4.Codegen.Forms.LambdaShape.multiplyTwo,
          ``Effect4.Codegen.Forms.LambdaShape.optionNone,
@@ -661,6 +662,8 @@ def opJs : Effect4.Program.NativeOp → String
   | .clockNow => tagged "clockNow" []
   | .scopeMake s => tagged "scopeMake" [("strategy", strategyJs s)]
   | .external i => tagged "external" [("index", toString i)]
+  -- an invocation of a definition of the program's block (decisions row 328)
+  | .call k => tagged "call" [("index", toString k)]
 
 /-- The target metadata writers share one JSON view with the truth manifest. -/
 def tyJs (ty : Effect4.Program.Ty) : String := (Tools.ProfileJson.tyJson ty).compress
@@ -1059,7 +1062,7 @@ def argSortJs : Effect4.Program.ArgSort → String
   | .term => lit "term" | .cause => lit "cause" | .op => lit "op" | .nat => lit "nat"
   | .mode => lit "mode" | .bool => lit "bool" | .key => lit "key" | .decision => lit "decision"
   | .optTy => lit "optTy" | .forkOptions => lit "forkOptions" | .optTerm => lit "optTerm"
-  | .lit => lit "lit" | .path => lit "path"
+  | .lit => lit "lit" | .path => lit "path" | .decls => lit "decls"
 
 def rowJs' (row : Effect4.Codegen.Templates.Row) : Except String String := do
   let fixed ← row.fixed.mapM fun (i, p) => do

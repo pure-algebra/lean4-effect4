@@ -248,12 +248,22 @@ module Make (A : PROGRAM_TYPES) = struct
       A.NativeOp_refUpdateSomeAndGetWith (of_term f)
     | Eff_types.Native_op_refModifyWith f -> A.NativeOp_refModifyWith (of_term f)
     | Eff_types.Native_op_refModifySomeWith f -> A.NativeOp_refModifySomeWith (of_term f)
+    (* An invocation of definition [k] of the program's block (decisions row 328). *)
+    | Eff_types.Native_op_call k -> A.NativeOp_call k
 
   let of_decision : Eff_types.decision -> A.decision = function
     | Eff_types.Decision_bool -> A.Decision_bool
     | Eff_types.Decision_option -> A.Decision_option
     | Eff_types.Decision_tag t -> A.Decision_tag t
     | Eff_types.Decision_recordTag t -> A.Decision_recordTag t
+
+  (* A definition's declaration (decisions row 328): its name and its row's columns. *)
+  let of_def_decl (d : Eff_types.def_decl) : A.def_decl =
+    { A.name = d.Eff_types.def_decl_name;
+      request = of_ty d.Eff_types.def_decl_request;
+      answer = of_ty d.Eff_types.def_decl_answer;
+      error = of_ty d.Eff_types.def_decl_error;
+      requires = List.map of_service_key d.Eff_types.def_decl_requires }
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
@@ -288,6 +298,9 @@ module Make (A : PROGRAM_TYPES) = struct
       A.Eff_provideService (of_service_key k, of_term t, of_eff e)
     (* A restore site of a mask (decisions row 245): the saved term, then the body. *)
     | Eff_types.Eff_restore (t, e) -> A.Eff_restore (of_term t, of_eff e)
+    (* A definition block at the root (decisions row 328): the declarations, the bodies, the main
+       program. *)
+    | Eff_types.Eff_defs (ds, bs, m) -> A.Eff_defs (List.map of_def_decl ds, of_effs bs, of_eff m)
 
   and of_layer_term : Eff_types.layer_term -> A.native_op A.layer_term = function
     | Eff_types.Layer_term_succeed (k, l) ->
@@ -407,6 +420,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.NativeOp_refUpdateSomeAndGetWith _ -> 20
     | A.NativeOp_refModifyWith _ -> 21
     | A.NativeOp_refModifySomeWith _ -> 22
+    | A.NativeOp_call _ -> 23
 
   let ctor_index_decision : A.decision -> int = function
     | A.Decision_bool -> 0 | A.Decision_option -> 1 | A.Decision_tag _ -> 2
@@ -439,6 +453,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_select _ -> 23
     | A.Eff_iterate _ -> 24
     | A.Eff_restore _ -> 25
+    | A.Eff_defs _ -> 26
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

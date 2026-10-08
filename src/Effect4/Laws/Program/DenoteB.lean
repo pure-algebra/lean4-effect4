@@ -152,6 +152,8 @@ def Looped : NativeEff → Bool
   | .provideService _ _ _ => false
   | .catchIf _ _ _ => false
   | .restore _ _ => false
+  -- a definition block's invocations hop into a body (decisions row 328)
+  | .defs _ _ _ => false
 
 /-! ## The fragment's subprograms -/
 
@@ -191,7 +193,12 @@ theorem Looped.suspendDecided_iff {e : NativeEff} (hl : Looped e = true) :
     e.suspendDecided = true ↔
       (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) ∨
         (∃ c i t st r b, e = .iterate c i t st r b) := by
-  cases e <;> simp [Eff.suspendDecided, Looped] at hl ⊢
+  cases e with
+  -- an invocation is a decided head and outside the fragment
+  | perform op r =>
+    cases op <;> simp only [Looped, NativeOp.kind, Eff.suspendDecided, Bool.false_eq_true,
+      reduceCtorEq, exists_false, or_self] at hl ⊢
+  | _ => simp [Eff.suspendDecided, Looped] at hl ⊢
 
 /-- The forms the budgeted meaning descends into. Every other form is a leaf. -/
 def composite : NativeEff → Bool
@@ -480,7 +487,8 @@ theorem denoteB_mono :
   | .scoped _, k, env, s, x, s', h | .acquireRelease _ _, k, env, s, x, s', h
   | .provideLayer _ _ _, k, env, s, x, s', h | .service _, k, env, s, x, s', h
   | .provideService _ _ _, k, env, s, x, s', h
-  | .catchIf _ _ _, k, env, s, x, s', h | .restore _ _, k, env, s, x, s', h => by
+  | .catchIf _ _ _, k, env, s, x, s', h | .restore _ _, k, env, s, x, s', h
+  | .defs _ _ _, k, env, s, x, s', h => by
     unfold meaningB at h ⊢
     rw [denoteB_leaf k _ env rfl] at h
     rw [denoteB_leaf (k + 1) _ env rfl]

@@ -375,8 +375,17 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   (`load-typed`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
   the load connector whose race-marker premise the root code's typing discharges
   (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
-  The displayed implication abbreviates the premises of `DenotesTyped`. They are well-formed layer
-  references, a world whose service table equals the source's, and an admitted source point whose path selects an effect node.
+  The displayed implication abbreviates the premises of `DenotesTyped`. The first is the source's
+  formation (`SourceWF`): well-formed layer references, and a definition block's bodies typed. The
+  others are a world whose service table equals the source's, and an admitted source point whose
+  path selects an effect node. The load discharges the formation from the checker's verdict
+  (`sourceWF_of_typeOf`, `src/Effect4/Laws/Program/Typed/Assembly.lean`).
+- **The invocation's arm (`invocation-arm`)**: an invocation of a checked block denotes a
+  `TypedProg` at the declared row (`call_arm` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)).
+  The request's value fits the declared request. The body is typed at its point, one unit of fuel
+  lighter, and its type widens to the declared columns. A block has no step of its own: the load
+  types its main program's point (`rootCode_typed`, `src/Effect4/Laws/Program/Typed/Assembly.lean`).
+  It does not establish progress, liveness or the termination of a recursive definition.
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
   `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`).
 - **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm
@@ -1021,6 +1030,23 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   (`Sketch.hole_hasTy` (`src/Effect4/Laws/Program/Sketch.lean`)). The typing judgment gains no
   rule. The three properties establish no admission of a sketch to a later stage, no law of
   filling a hole and no run.
+- **A definition block is a conservative extension (`defs-conservative`)**: a program that
+  invokes no definition is checked the same at any block's signature
+  (`defs_conservative` (`src/Effect4/Laws/Program/Definitions.lean`)). Refusals are included.
+  The block's signature
+  changes an invocation's domain bit and row only, so no service key is assumed typed. It says
+  nothing of the block's own bodies, and nothing of a run.
+- **The invocation's rule (`invocation-rule`)**: at a block's signature, an invocation has the
+  type of its definition's declared row, at its request's type
+  (`invoke_hasTy` (`src/Effect4/Laws/Program/Definitions.lean`)). The row is read in normal
+  form. It is the rule of a `perform`
+  read at that signature, and the typing judgment gains no rule. The declarations are closed;
+  no generic definition is typed.
+- **The module's check (`module-check`)**: the whole module's check agrees with the module
+  judgment at the root, both ways (`checkModule_sound` and `checkModule_complete`
+  (`src/Effect4/Laws/Program/Definitions.lean`)). A block stands at the root only. The checker
+  refuses a block below the root. Neither the rule nor the check says that a declared row is
+  inhabited, or that a body terminates.
 - **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
   into an environment and a type of the focus. Every program of that type in that environment
   stands in the focus's place, under every extension of the typing signature

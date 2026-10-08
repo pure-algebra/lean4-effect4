@@ -36,7 +36,7 @@ namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 
 /-- **A checked point's code is typed**: M5 at the point, through the interpreter's body hook. -/
-theorem denoteAt_typed (root : ProgramSource) {w : World} (hwf : root.program.layerRefsWF = true)
+theorem denoteAt_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (htie : w.serviceTy = root.sig.serviceTy) {p : Point} {ty : EffTy}
     (h : PointTyped root w p ty) : TypedProg root w ty (denoteAt root.program p) := by
   obtain ⟨e, env, hat, hcheck, henv, hview⟩ := h
@@ -50,7 +50,7 @@ at the point's child 0 (the node's own answer and error columns, `Checker.inv_ac
 the release's registration as a capture the registration pre admits (`CaptureTyped`: the node,
 the checker's verdicts, the environment extended by the acquired value, the context's services),
 and the acquired value as the answer, after the release when the scope was already closed. -/
-theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : root.program.layerRefsWF = true)
+theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (htie : w.serviceTy = root.sig.serviceTy) {p : Point} {ctx : Ctx} {ty : EffTy}
     (h : PointTyped root w p ty) {acquire release : NativeEff}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.acquireRelease acquire release)))
@@ -112,7 +112,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : root.program.l
 
 /-- **A capture's release body is typed** at its point's type: the release under the finalizer
 that restores the previous context, whose services fit. -/
-theorem release_typed (root : ProgramSource) {w : World} (hwf : root.program.layerRefsWF = true)
+theorem release_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (htie : w.serviceTy = root.sig.serviceTy) {q : Point} {prev : Ctx} {ty : EffTy}
     (h : PointTyped root w q ty) (hsvc : ServicesFit w prev.services) :
     TypedProg root w ty
@@ -123,7 +123,7 @@ theorem release_typed (root : ProgramSource) {w : World} (hwf : root.program.lay
 
 /-- **A layer's build body is typed** at the build's types, into a present scope through a present
 memo map. -/
-theorem layerBuildR_typed (root : ProgramSource) {w : World} (hwf : root.program.layerRefsWF = true)
+theorem layerBuildR_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (htie : w.serviceTy = root.sig.serviceTy) {q : Point} {lt : LayerTy} (m : MemoMapId)
     {scope : Nat} (h : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
     TypedProg root w (buildTy lt) (layerBuildR root.program q m scope) := by
@@ -131,12 +131,13 @@ theorem layerBuildR_typed (root : ProgramSource) {w : World} (hwf : root.program
   have unfolded : layerBuildR root.program q m scope = denoteLayer root.program l q m scope := by
     simp only [layerBuildR, hat]
   rw [unfolded]
-  exact layerBuild_typed hwf q.fuel (childDenotes_upto root (provideLayerArm root) hwf q.fuel) l q w
+  exact layerBuild_typed hwf.refs q.fuel
+    (childDenotes_upto root (provideLayerArm root) hwf.refs hwf.bodies q.fuel) l q w
     lt m scope (Nat.le_refl _) htie hat ⟨l, hat, hcheck, henv, hview⟩ hlive hmemo
 
 /-- **The body bridge**: an admitted body's program, at any completed view, is typed at the
 admitted type. -/
-theorem bodyTyped_typed (root : ProgramSource) {w : World} (hwf : root.program.layerRefsWF = true)
+theorem bodyTyped_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (htie : w.serviceTy = root.sig.serviceTy) (completed : List (FiberId × ExitV)) {b : Body}
     {ty : EffTy} (h : BodyTyped root w b ty) :
     TypedProg root w ty (bodyR (interpRAt root.program completed) b) := by

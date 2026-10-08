@@ -206,11 +206,18 @@ def opV : NativeOp → V
   | .sleep => .ctor ``NativeOp.sleep []
   | .clockNow => .ctor ``NativeOp.clockNow []
   | .external i => .ctor ``NativeOp.external [.nat i]
+  | .call k => .ctor ``NativeOp.call [.nat k]
 
 def keyV (k : ServiceKey) : V :=
   .struct ``Effect4.ServiceKey
     [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
     , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
+
+/-- A definition's declaration (decisions row 328): its name and its row's columns. -/
+def defDeclV (d : DefDecl) : V :=
+  .struct ``DefDecl
+    [ ("name", .str d.name), ("request", tyV d.request), ("answer", tyV d.answer)
+    , ("error", tyV d.error), ("requires", .list (d.requires.map keyV)) ]
 
 def decisionV : Decision → V
   | .bool => .ctor ``Decision.bool []
@@ -249,6 +256,7 @@ partial def effV : Eff NativeOp → V
   | .service k => .ctor ``Eff.service [keyV k]
   | .provideService k v b => .ctor ``Eff.provideService [keyV k, termV v, effV b]
   | .restore s b => .ctor ``Eff.restore [termV s, effV b]
+  | .defs decls bodies main => .ctor ``Eff.defs [.list (decls.map defDeclV), effsV bodies, effV main]
 partial def layerV : LayerTerm NativeOp → V
   | .succeed k v => .ctor ``LayerTerm.succeed [keyV k, litV v]
   | .effect k b => .ctor ``LayerTerm.effect [keyV k, effV b]
@@ -590,6 +598,22 @@ def pIllRestoreBool : P := .restore (.lit (.bool true)) (.succeed (n 1))
 def pIllMaskAsBool : P :=
   .bind (.withFiber .getInterruptible) (.select (v 0) .bool (.succeed (n 1)) (.succeed (n 2)))
 
+/-! A definition block (decisions row 328): one definition at the root, invoked through its row.
+The verdict is the whole module's check (`Checker.checkModule`). -/
+
+/-- `id : number → number`. -/
+def idDecl : DefDecl := { name := "id", request := .nat, answer := .nat }
+/-- The block and an invocation of its definition at `5`. -/
+def pDefs : P := .defs [idDecl] (.cons (.succeed (v 0)) .nil) (.perform (.call 0) (n 5))
+/-- A definition that invokes itself: typed by its declaration, never by its body. -/
+def pDefsRec : P :=
+  .defs [{ idDecl with name := "spin" }] (.cons (.perform (.call 0) (v 0)) .nil)
+    (.perform (.call 0) (n 1))
+
+-- ill-typed: a body above its declaration, and an invocation outside any block
+def pIllDefsBody : P := .defs [idDecl] (.cons (.succeed (.lit (.str "a"))) .nil) (.perform (.call 0) (n 5))
+def pIllCallOutside : P := .perform (.call 0) (n 5)
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -618,7 +642,9 @@ def corpus : List (String × P) :=
   , ("pIllFoldNotList", pIllFoldNotList), ("pIllFoldBody", pIllFoldBody)
   , ("pIllSameHandle", pIllSameHandle)
   , ("pMask", pMask), ("pMaskNested", pMaskNested), ("pMaskEscape", pMaskEscape)
-  , ("pIllRestoreBool", pIllRestoreBool), ("pIllMaskAsBool", pIllMaskAsBool) ]
+  , ("pIllRestoreBool", pIllRestoreBool), ("pIllMaskAsBool", pIllMaskAsBool)
+  , ("pDefs", pDefs), ("pDefsRec", pDefsRec), ("pIllDefsBody", pIllDefsBody)
+  , ("pIllCallOutside", pIllCallOutside) ]
 
 end Corpus
 
