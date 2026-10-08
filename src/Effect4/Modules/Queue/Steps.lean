@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Modules.Queue.Data
+meta import Effect4.Modules.Step.Elab.Inputs
 public import Effect4.Program.Authoring.Tuples
 public import Effect4.Program.Authoring.Folds
 
@@ -121,33 +122,33 @@ cell `s`. Answer: `[message?, accepted offers, takers to wake]`, the notificatio
 model's order. It consumes when a message is buffered and no earlier taker waits. Otherwise it
 enrols the request `id` with its hint, or renews the hint of a request that waits already. -/
 def takeStep (A : Ty) (id hint s : TermSrc) : TermSrc :=
-  (Data.take A).term (Input.source [id, hint, s])
+  (Data.take A).term (input_sources% (Data.TakeInputs A) {state := s, hint := hint, id := id})
 
 /-- **The model's `offer` under `suspend`**, as the term of a `Ref.modify`. Answer:
 `[decided?, takers to wake]`. Behind a pending offer it waits and notifies nobody. With room it
 is accepted. At a full buffer it waits, and the model still wakes the earliest taker. -/
 def offerStep (A : Ty) (id hint a s : TermSrc) : TermSrc :=
-  (Data.offer A).term (Input.source [id, hint, a, s])
+  (Data.offer A).term (input_sources% (Data.OfferInputs A) {state := s, message := a, hint := hint, id := id})
 
 /-- **The model's `poll`**, as the term of a `Ref.modify`. Answer: `[message?, accepted
 offers]`. It consumes when a message is buffered and no taker waits, so it wakes no taker. -/
 def pollStep (A : Ty) (s : TermSrc) : TermSrc :=
-  (Data.poll A).term (Input.source [s])
+  (Data.poll A).term (input_sources% (Data.CellInputs A) {state := s})
 
 /-- **The model's `size` in an opened queue**: the buffer's length. A term over the value that a
 `Ref.get` answers. It is no term of a `Ref.modify`, and it writes nothing. -/
 def sizeStep (A : Ty) (s : TermSrc) : TermSrc :=
-  (Data.size A).term (Input.source [s])
+  (Data.size A).term (input_sources% (Data.CellInputs A) {state := s})
 
 /-- The withdrawal of a taker, translated from its stored step. -/
 def withdrawTake (A : Ty) (id s : TermSrc) : TermSrc :=
-  (Data.withdrawTake A).term (Input.source [id, s])
+  (Data.withdrawTake A).term (input_sources% (Data.WithdrawInputs A) {state := s, id := id})
 
 /-- **The model's `withdrawOffer` in an opened queue**, as the term of a `Ref.modify`. Answer:
 the takers to wake. An offer that a step already accepted is not there, so only the wake
 remains. -/
 def withdrawOffer (A : Ty) (id s : TermSrc) : TermSrc :=
-  (Data.withdrawOffer A).term (Input.source [id, s])
+  (Data.withdrawOffer A).term (input_sources% (Data.WithdrawInputs A) {state := s, id := id})
 
 namespace Data
 theorem sizeStep_eq (A : Ty) (s : TermSrc) : sizeStep A s = (size A).term (Input.source [s]) := rfl

@@ -1,7 +1,9 @@
 module
 
 public import Effect4.Modules.Queue.Cell
-public import Effect4.Modules.Step
+public import Effect4.Modules.Step.Lists
+public import Effect4.Modules.Step.Inputs
+meta import Effect4.Modules.Step.Elab.Inputs
 public meta import Effect4.Modules.Step.Elab
 
 /-! Queue pure operations as typed first-order steps. Canonical schemas live in Cell.
@@ -23,31 +25,24 @@ def takerHintF : FieldRef takerRecord idTy := field_ref% "hint"
 def offerIdF (A : Ty) : FieldRef (offerRecord A) idTy := field_ref% "id"
 def offerRestF (A : Ty) : FieldRef (offerRecord A) (.list A) := field_ref% "rest"
 
-def lift2 {Γ : List Ty} {a b t : Ty} (x : Input Γ t) : Input (a :: b :: Γ) t :=
-  .there _ (.there _ x)
-def acc {Γ : List Ty} {a b : Ty} : Input (a :: b :: Γ) a := .here _ _
-def item {Γ : List Ty} {a b : Ty} : Input (a :: b :: Γ) b := .there _ (.here _ _)
-
 def mkTaker {Γ : List Ty} (id hint : Step Γ idTy) : Step Γ takerTy :=
   record_step% { id := id, hint := hint }
 def mkOffer {Γ : List Ty} (A : Ty) (id : Step Γ idTy) (hint : Step Γ answerTy)
     (batch : Step Γ .bool) (rest : Step Γ (.list A)) : Step Γ (offerTy A) :=
   record_step% { id := id, hint := hint, batch := batch, rest := rest }
 
-def enrolled {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id : Input Γ idTy) : Step Γ .bool :=
-  .fold ts (.bool false) (.or (.var acc) (.sameDeferred (.get (.var item) takerIdF) (.var (lift2 id))))
-def isHead {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id : Input Γ idTy) : Step Γ .bool :=
-  .fold (.take ts (.nat 1)) (.bool false) (.sameDeferred (.get (.var item) takerIdF) (.var (lift2 id)))
-def removeTaker {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id : Input Γ idTy) : Step Γ (.list takerTy) :=
-  .fold ts (.emptyLike ts) (.ite (.sameDeferred (.get (.var item) takerIdF) (.var (lift2 id)))
-    (.var acc) (.snoc (.var acc) (.var item)))
-def renewHint {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id hint : Input Γ idTy) : Step Γ (.list takerTy) :=
-  .fold ts (.emptyLike ts) (.snoc (.var acc)
-    (.ite (.sameDeferred (.get (.var item) takerIdF) (.var (lift2 id)))
-      (mkTaker (.var (lift2 id)) (.var (lift2 hint))) (.var item)))
-def removeOffer {Γ : List Ty} (A : Ty) (os : Step Γ (.list (offerTy A))) (id : Input Γ idTy) : Step Γ (.list (offerTy A)) :=
-  .fold os (.emptyLike os) (.ite (.sameDeferred (.get (.var item) (offerIdF A)) (.var (lift2 id)))
-    (.var acc) (.snoc (.var acc) (.var item)))
+def enrolled {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id : Step Γ idTy) : Step Γ .bool :=
+  Step.Lists.any ts (item_step% ts with entry => .sameDeferred (.get entry takerIdF) id)
+def isHead {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id : Step Γ idTy) : Step Γ .bool :=
+  Step.Lists.any (.take ts (.nat 1))
+    (item_step% ts with entry => .sameDeferred (.get entry takerIdF) id)
+def removeTaker {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id : Step Γ idTy) : Step Γ (.list takerTy) :=
+  Step.Lists.removeBy ts (item_step% ts with entry => .sameDeferred (.get entry takerIdF) id)
+def renewHint {Γ : List Ty} (ts : Step Γ (.list takerTy)) (id hint : Step Γ idTy) : Step Γ (.list takerTy) :=
+  Step.Lists.map ts (item_step% ts with entry =>
+    .ite (.sameDeferred (.get entry takerIdF) id) (mkTaker id hint) entry)
+def removeOffer {Γ : List Ty} (A : Ty) (os : Step Γ (.list (offerTy A))) (id : Step Γ idTy) : Step Γ (.list (offerTy A)) :=
+  Step.Lists.removeBy os (item_step% os with entry => .sameDeferred (.get entry (offerIdF A)) id)
 def wake {Γ : List Ty} (A : Ty) (ts : Step Γ (.list takerTy)) (ms : Step Γ (.list A)) : Step Γ (.list takerTy) :=
   .ite (.isZero (.len ms)) (.emptyLike ts) (.take ts (.nat 1))
 def fitting {Γ : List Ty} (A : Ty) (room : Step Γ .nat) (os : Step Γ (.list (offerTy A))) : Step Γ .nat :=
@@ -57,34 +52,38 @@ def entering {Γ : List Ty} (A : Ty) (room : Step Γ .nat) (os : Step Γ (.list 
 def staying {Γ : List Ty} (A : Ty) (room : Step Γ .nat) (os : Step Γ (.list (offerTy A))) : Step Γ (.list (offerTy A)) :=
   .drop os (fitting A room os)
 def gained {Γ : List Ty} (A : Ty) (room : Step Γ .nat) (ms : Step Γ (.list A)) (os : Step Γ (.list (offerTy A))) : Step Γ (.list A) :=
-  .fold (entering A room os) ms (.append (.var acc) (.get (.var item) (offerRestF A)))
+  fold_step% (entering A room os) from buffer := ms with entry =>
+    .append buffer (.get entry (offerRestF A))
 
-def cell (A : Ty) : Input [cellTy A] (cellTy A) := .here _ _
-def size (A : Ty) : Step [cellTy A] .nat := .len (.get (.var (cell A)) (msgsF A))
-def takeΓ (A : Ty) : List Ty := [idTy, idTy, cellTy A]
-def offerΓ (A : Ty) : List Ty := [idTy, answerTy, A, cellTy A]
-def withdrawΓ (A : Ty) : List Ty := [idTy, cellTy A]
+step_context% CellInputs (A : Ty) where (state : cellTy A)
+step_context% TakeInputs (A : Ty) where (id : idTy, hint : idTy, state : cellTy A)
+step_context% OfferInputs (A : Ty) where (id : idTy, hint : answerTy, message : A, state : cellTy A)
+step_context% WithdrawInputs (A : Ty) where (id : idTy, state : cellTy A)
+
+def cell (A : Ty) : Input (CellInputs A).types (cellTy A) := input_ref% (CellInputs A) state
+def size (A : Ty) : Step (CellInputs A).types .nat :=
+  step_inputs% (CellInputs A) => .len (.get state (msgsF A))
+def takeΓ (A : Ty) : List Ty := (TakeInputs A).types
+def offerΓ (A : Ty) : List Ty := (OfferInputs A).types
+def withdrawΓ (A : Ty) : List Ty := (WithdrawInputs A).types
 
 def take (A : Ty) : Step (takeΓ A) (.prod (.tuple [.option A, .list (offerTy A), .list takerTy]) (cellTy A)) :=
-  let id : Input (takeΓ A) idTy := .here _ _
-  let hint : Input (takeΓ A) idTy := .there _ (.here _ _)
-  let s : Step (takeΓ A) (cellTy A) := .var (.there _ (.there _ (.here _ _)))
+  step_inputs% (TakeInputs A) =>
+  let s := state
   let ms := .get s (msgsF A); let ts := .get s (takersF A); let os := .get s (offersF A)
   let turn := .or (isHead ts id) (.and (.not (enrolled ts id)) (.isZero (.len ts)))
   let ms1 := .drop ms (.nat 1); let ts1 := removeTaker ts id
   let room := .sub (.get s (capF A)) (.len ms1)
   let ms2 := gained A room ms1 os
   let consumed := .set (.set (.set s (msgsF A) ms2) (takersF A) ts1) (offersF A) (staying A room os)
-  let waiting := .set s (takersF A) (.ite (enrolled ts id) (renewHint ts id hint) (.snoc ts (mkTaker (.var id) (.var hint))))
+  let waiting := .set s (takersF A) (.ite (enrolled ts id) (renewHint ts id hint) (.snoc ts (mkTaker id hint)))
   .ite (.and (.not (.isZero (.len ms))) turn)
     (.pair (.tuple3 (.head ms) (entering A room os) (wake A ts1 ms2)) consumed)
     (.pair (.tuple3 .none (.emptyLike os) (.emptyLike ts)) waiting)
 
 def offer (A : Ty) : Step (offerΓ A) (.prod (.prod (.option .bool) (.list takerTy)) (cellTy A)) :=
-  let id : Step (offerΓ A) idTy := .var (.here _ _)
-  let hint : Step (offerΓ A) answerTy := .var (.there _ (.here _ _))
-  let a : Step (offerΓ A) A := .var (.there _ (.there _ (.here _ _)))
-  let s : Step (offerΓ A) (cellTy A) := .var (.there _ (.there _ (.there _ (.here _ _))))
+  step_inputs% (OfferInputs A) =>
+  let a := message; let s := state
   let ms := .get s (msgsF A); let os := .get s (offersF A); let ts := .get s (takersF A)
   let pending := .set s (offersF A) (.snoc os (mkOffer A id hint (.bool false) (.cons a .nil)))
   let accepted := .set s (msgsF A) (.snoc ms a)
@@ -94,7 +93,8 @@ def offer (A : Ty) : Step (offerΓ A) (.prod (.prod (.option .bool) (.list taker
       (.pair (.tuple2 .none (wake A ts ms)) pending))
 
 def poll (A : Ty) : Step [cellTy A] (.prod (.prod (.option A) (.list (offerTy A))) (cellTy A)) :=
-  let s := Step.var (cell A)
+  step_inputs% (CellInputs A) =>
+  let s := state
   let ms := .get s (msgsF A); let os := .get s (offersF A)
   let ms1 := .drop ms (.nat 1); let room := .sub (.get s (capF A)) (.len ms1)
   let consumed := .set (.set s (msgsF A) (gained A room ms1 os)) (offersF A) (staying A room os)
@@ -103,13 +103,13 @@ def poll (A : Ty) : Step [cellTy A] (.prod (.prod (.option A) (.list (offerTy A)
     (.pair (.tuple2 .none (.emptyLike os)) s)
 
 def withdrawTake (A : Ty) : Step (withdrawΓ A) (.prod (.list takerTy) (cellTy A)) :=
-  let id : Input (withdrawΓ A) idTy := .here _ _
-  let s : Step (withdrawΓ A) (cellTy A) := .var (.there _ (.here _ _))
+  step_inputs% (WithdrawInputs A) =>
+  let s := state
   let ts1 := removeTaker (.get s (takersF A)) id
   .pair (wake A ts1 (.get s (msgsF A))) (.set s (takersF A) ts1)
 def withdrawOffer (A : Ty) : Step (withdrawΓ A) (.prod (.list takerTy) (cellTy A)) :=
-  let id : Input (withdrawΓ A) idTy := .here _ _
-  let s : Step (withdrawΓ A) (cellTy A) := .var (.there _ (.here _ _))
+  step_inputs% (WithdrawInputs A) =>
+  let s := state
   .pair (wake A (.get s (takersF A)) (.get s (msgsF A)))
     (.set s (offersF A) (removeOffer A (.get s (offersF A)) id))
 end Effect4.Queue.Data

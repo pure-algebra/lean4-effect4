@@ -33,3 +33,12 @@ The focused `Effect4.Laws.Modules.Step.ErasedCompiler` build passes.
 The finite `Test/Program/QueueData.lean` reader and controls pass.
 A standalone check derives arbitrary A/P take and offer source equalities by computation after the shared law.
 The connector adds no message membership or typing premise.
+
+Queue input declarations now name each input once.
+The same declarations order public caller sources and generate typed operands.
+Shared list builders consume named item bodies.
+The remaining fold uses the shared named accumulator and item reader.
+The core retains no positional binder helper.
+The focused Queue core and data connector build passes after this change.
+Both QueueData and QueueAgreement finite batteries pass.
+The general agreement and typing proof migrations remain open.
