@@ -1,4 +1,5 @@
 import Effect4.Program.Typing.Table
+import Effect4.Program.Typing.Annotate
 import Effect4.Program.Sketch
 import Effect4.Laws.Program.Typing.Table
 import Effect4.Laws.Program.Typing.Sound
@@ -116,6 +117,20 @@ def outside (path : List Nat) (rows : List Table.Entry) :=
 #guard (original : Sketch).table == table sig [] original
 #guard (original : Sketch).refusals == []
 #guard (twoBad : Sketch).refusals == refusals sig [] twoBad
+
+/-! ## The annotation pass on a statement list
+
+This finite evaluation reads the entries of a statement list. It does not prove the traversal's
+cost. The guard reads the annotation pass alone: the specification table repeats checker calls.
+-/
+
+/-- A statement list with `count` discarded answers and a final return. -/
+def discardedAnswers : Nat → Stmts NativeOp
+  | 0 => .cons (.ret (.lit .unit)) .nil
+  | count + 1 => .cons (.yieldDiscard (.succeed (.lit .unit))) (discardedAnswers count)
+
+-- tested: 18 successful steps give three entries per step and four final entries
+#guard (annotate sig [] (.gen (discardedAnswers 18))).length = 58
 
 /-! ## The slot table -/
 

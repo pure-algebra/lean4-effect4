@@ -350,10 +350,13 @@ mutual
       -- head's environment
       let r : Out GenTy :=
         match h.2 with
-        | .ok st => st.fold
-            (fun _ binds => checkStmts s (env ++ binds) inLoop none (p ++ [1]) rest)
-            (fun _ => checkStmts s env inLoop (some (p ++ [0])) (p ++ [1]) rest)
-            (checkStmts s env inLoop none (p ++ [1]) rest)
+        | .ok st =>
+          -- Select a thunk before visiting the rest: the pass argument of `StmtTy.fold`
+          -- is a value, so visiting it here would also run it before a step or return.
+          (st.fold
+            (fun _ binds _ => checkStmts s (env ++ binds) inLoop none (p ++ [1]) rest)
+            (fun _ _ => checkStmts s env inLoop (some (p ++ [0])) (p ++ [1]) rest)
+            (fun _ => checkStmts s env inLoop none (p ++ [1]) rest)) ()
         | .error e =>
           match head with
           | .bindYield _ => (unreached (p ++ [1]) (.stmts rest), .error e)
