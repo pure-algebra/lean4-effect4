@@ -132,6 +132,7 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
   | Native_op_refUpdateSomeAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeAndGetWith"; json_term a0]
   | Native_op_refModifyWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifyWith"; json_term a0]
   | Native_op_refModifySomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifySomeWith"; json_term a0]
+  | Native_op_call a0 -> Eff_json_text.Array [Eff_json_text.String "call"; Eff_json_text.Int a0]
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 
@@ -158,6 +159,11 @@ let rec json_decision (v : decision) : Eff_json_text.t =
   | Decision_recordTag a0 -> Eff_json_text.Array [Eff_json_text.String "recordTag"; Eff_json_text.String a0]
 
 let print_decision (v : decision) : string = Eff_json_text.render (json_decision v)
+
+let rec json_def_decl (r : def_decl) : Eff_json_text.t =
+  Eff_json_text.Object [("name", Eff_json_text.String r.def_decl_name); ("request", json_ty r.def_decl_request); ("answer", json_ty r.def_decl_answer); ("error", json_ty r.def_decl_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.def_decl_requires))]
+
+let print_def_decl (v : def_decl) : string = Eff_json_text.render (json_def_decl v)
 
 let rec json_eff (v : eff) : Eff_json_text.t =
   match v with
@@ -187,6 +193,7 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_select (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "select"; json_term a0; json_decision a1; json_eff a2; json_eff a3]
   | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_json_text.Array [Eff_json_text.String "iterate"; (match a0 with None -> Eff_json_text.Null | Some y -> json_ty y); json_term a1; json_term a2; json_term a3; json_term a4; json_eff a5]
   | Eff_restore (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "restore"; json_term a0; json_eff a1]
+  | Eff_defs (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "defs"; Eff_json_text.Array (List.map (fun y -> json_def_decl y) a0); json_effs a1; json_eff a2]
 and json_stmt (v : stmt) : Eff_json_text.t =
   match v with
   | Stmt_bindYield a0 -> Eff_json_text.Array [Eff_json_text.String "bindYield"; json_eff a0]

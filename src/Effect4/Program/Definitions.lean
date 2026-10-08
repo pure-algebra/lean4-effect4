@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Program.Typing
+public import Effect4.Program.Checker
 
 /-!
 # Program.Definitions — the definition block of a program, checked at its root
@@ -32,9 +32,10 @@ The paths follow the node's children (`Node.child`): the bodies are child `0` an
 program child `1`, and in the bodies' spine the head is child `0` and the rest child `1`. So
 the body of definition `k` stands at `0 :: List.replicate k 1 ++ [0]`.
 
-`typeOfModule` is the success projection after the layer references, as `typeOfProgram` is for
-a program with no block, and `explainModule` its located refusal. On a program with no block
-the two answer what `typeOfProgram` and `Api.explain` answer.
+The whole program's typing is this check after the layer references (`typeOfProgram`,
+`Program/Typing.lean`), and the program interface's located refusal is its refusal
+(`Api.explain`). On a program with no block the check is the checker's own
+(`checkModule_eq_check`, `Laws/Program/Definitions.lean`).
 
 ## What this module does not establish
 
@@ -112,15 +113,11 @@ def checkModule (sig : Signature Op) : Eff Op → Except TypeRefusal EffTy
 
 end Checker
 
-/-- The type of a whole module: its layer references resolved, as `typeOfProgram` resolves
-them, then its root checked by `Checker.checkModule`. -/
-def typeOfModule (sig : Signature Op) (program : Eff Op) : Option EffTy :=
-  if program.layerRefsWF then (Checker.checkModule sig program.expandRefs).toOption else none
-
-/-- The located refusal of a whole module: at the root when its references are ill formed, else
-the refusal of `Checker.checkModule`. -/
-def explainModule (sig : Signature Op) (program : Eff Op) : Option TypeRefusal :=
-  if program.layerRefsWF then Checker.refusal (Checker.checkModule sig program.expandRefs)
-  else some ⟨[], .referencesIllFormed⟩
+/-- The declarations of a program's definition block: the block's own at its root, none for a
+program with no block. A block's program is checked at its signature extended by them
+(`Signature.withDefs`). -/
+def Eff.defsOf : Eff Op → List DefDecl
+  | .defs decls _ _ => decls
+  | _ => []
 
 end Effect4.Program

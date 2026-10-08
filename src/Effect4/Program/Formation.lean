@@ -160,6 +160,11 @@ def argumentAnnotations {Op : Type} [ScopedOp Op] (path : List String) (index : 
   | .cause cause => causeAnnotations (path ++ ["argument", toString index]) cause
   | .optTerm term => term.toList.flatMap (termAnnotations (path ++ ["argument", toString index]))
   | .optTy ty => ty.toList.map fun t => (path ++ ["cursorTy"], t)
+  -- a definition block's declarations (decisions row 328): each declared column is a type the
+  -- program states, at the declaration's position
+  | .decls decls => decls.zipIdx.flatMap fun (d, k) =>
+    let base := path ++ ["argument", toString index, toString k]
+    [(base ++ ["request"], d.request), (base ++ ["answer"], d.answer), (base ++ ["error"], d.error)]
   | .op op => (ScopedOp.term? op).toList.flatMap
       (termAnnotations (path ++ ["argument", toString index, "op"])) ++
     (ScopedOp.typeArgs op).zipIdx.map fun (ty, position) =>

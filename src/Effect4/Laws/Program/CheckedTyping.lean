@@ -2,6 +2,7 @@ import Effect4.Program.CheckedTyping
 import Effect4.Program.Admission
 import Effect4.Laws.Program.Typing.Sound
 import Effect4.Laws.Program.ReferenceTyping
+import Effect4.Laws.Program.Definitions
 
 /-!
 # Whole-program typing certificates retain exactly the existing checker
@@ -13,8 +14,8 @@ formed (`TypedProgram.layerRefsWF`). The expansion then has no reference site by
 not by a test (`TypedProgram.expanded_refSites`, from `expanded_refs_nil_of_wf`).
 `HasTy` applies to `expandRefs`, not to a claim about executing expanded programs.
 
-Proof graph: the computed match gives erasure, acceptance and refusal; the existing
-`effTy_sound`/`effTy_complete` connect that equation to the declarative judgment.
+Proof graph: the computed match gives erasure, acceptance and refusal; the module check's
+`checkModule_sound`/`checkModule_complete` connect that equation to the declarative judgment.
 The final admission equation checks an existing runner certificate without changing
 the order or meaning of any runner refusal.
 -/
@@ -90,14 +91,15 @@ theorem TypedProgram.expanded_refSites (checked : TypedProgram sig program) :
     program.expandRefs.refSites [] = [] :=
   expanded_refs_nil_of_wf program checked.layerRefsWF
 
-/-- The certificate's type derives from the existing whole-language typing rules on
-the reference-expanded tree. This theorem makes no execution-expansion claim. -/
+/-- The certificate's type derives from the whole-language typing rules on the
+reference-expanded tree: the module judgment (`ModuleHasTy`, decisions row 328), which is the
+program judgment `HasTy` for a program with no block. This theorem makes no
+execution-expansion claim. -/
 theorem TypedProgram.hasTy (checked : TypedProgram sig program) :
-    Conform.Effect4.Typing.HasTy sig [] program.expandRefs checked.ty := by
-  apply Conform.Effect4.Typing.effTy_sound
+    ModuleHasTy sig program.expandRefs checked.ty := by
   have typed := checked.typed
   rw [typeOfProgram_eq_if_refsWF, if_pos checked.layerRefsWF] at typed
-  exact typed
+  exact checkModule_sound sig _ _ (Effect4.Laws.Auto.toOption_eq_some.mp typed)
 
 /-- Conversely, well-formed references and the existing declarative judgment on the expanded
 tree produce a certificate; no codegen or execution restriction is needed. The caller owes no
@@ -106,11 +108,11 @@ fact about the expansion's reference sites: the checker tests the references' fo
 about executing the expanded tree. -/
 theorem checkTypedProgram_of_hasTy {ty : EffTy}
     (references : program.layerRefsWF = true)
-    (typed : Conform.Effect4.Typing.HasTy sig [] program.expandRefs ty) :
+    (typed : ModuleHasTy sig program.expandRefs ty) :
     ∃ checked, checkTypedProgram sig program = some checked ∧ checked.ty = ty := by
   apply checkTypedProgram_complete
-  rw [typeOfProgram_eq_if_refsWF, references]
-  exact Conform.Effect4.Typing.effTy_complete sig program.expandRefs [] ty typed
+  rw [typeOfProgram_eq_if_refsWF, if_pos references, checkModule_complete sig _ ty typed]
+  rfl
 
 /-- A completed runner certificate passes every retained admission check.
 Its typing component is the same shared certificate used by other boundaries. -/

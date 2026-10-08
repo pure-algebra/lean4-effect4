@@ -45,7 +45,7 @@ decisions row 328.
 - **`module-check`** (claim, role compatibility; pointers `checkModule_sound` and
   `checkModule_complete`). Reach: every signature and every program at its root. It does not
   establish a block below the root, which the checker refuses (`TypeReason.definitionBlock`).
-  Consumer: the admission of a module (`typeOfModule`) and G3.
+  Consumer: the whole program's typing (`typeOfProgram`), and with it admission, and G3.
 
 No statement here names a run. The host boundary stays where `docs/core/host-boundary.md` puts
 it.
@@ -93,11 +93,11 @@ signature extend it, so the reads that do not touch a row agree. A step of `defs
 def Signature.emptyDom (sig : Signature Op) : Signature Op := { sig with dom := fun _ => false }
 
 theorem Signature.emptyDom_extends (sig : Signature Op) : SigExtends sig.emptyDom sig :=
-  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl⟩
 
 theorem Signature.emptyDom_extends_withDefs (sig : Signature Op) (decls : List DefDecl) :
     SigExtends sig.emptyDom (sig.withDefs decls) :=
-  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl⟩
 
 /-! ## G1: conservative -/
 
@@ -349,5 +349,69 @@ theorem checkModule_complete (sig : Signature Op) (e : Eff Op) (t : EffTy)
   | plain hd =>
     rw [checkModule_eq_check sig (fun _ _ _ heq => by subst heq; cases hd)]
     exact check_complete sig _ _ _ hd []
+
+/-! ## The whole program's typing
+
+`typeOfProgram` (`Program/Typing.lean`) is the module check after the layer references. So the
+laws of the whole program's typing are the module's: its judgment (`ModuleHasTy`), its
+monotonicity along an extension, and, on a program with no block, the checker's own answer. -/
+
+/-- **A block extends both signatures alike**: an extension keeps which operations are
+invocations (`SigExtends.callOf`), so it extends the block's signature too. A step of
+`moduleHasTy_ext`. -/
+theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls : List DefDecl) :
+    SigExtends (s.withDefs decls) (s'.withDefs decls) := by
+  refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf⟩
+  cases hc : s.callOf op with
+  | none =>
+    have hc' : s'.callOf op = none := by rw [h.callOf]; exact hc
+    rw [s.withDefs_dom_of_none decls hc] at hd
+    rw [s'.withDefs_dom_of_none decls hc', s'.withDefs_rowOf_of_none decls hc',
+      s.withDefs_rowOf_of_none decls hc]
+    exact h.row op hd
+  | some k =>
+    have hc' : s'.callOf op = some k := by rw [h.callOf]; exact hc
+    rw [s.withDefs_dom_call decls hc] at hd
+    refine ⟨by rw [s'.withDefs_dom_call decls hc']; exact hd, ?_⟩
+    obtain ⟨d, hdk⟩ := Option.isSome_iff_exists.mp
+      (List.isSome_getElem?.mpr (of_decide_eq_true hd))
+    rw [s'.withDefs_rowOf_call decls hc' hdk, s.withDefs_rowOf_call decls hc hdk]
+
+/-- The bodies' judgment along an extension. A step of `moduleHasTy_ext`. -/
+theorem bodiesHasTy_ext {s s' : Signature Op} (h : SigExtends s s') :
+    ∀ {decls : List DefDecl} {bodies : Effs Op}, BodiesHasTy s decls bodies →
+      BodiesHasTy s' decls bodies
+  | _, _, .nil => .nil
+  | _, _, .cons hf hb ht hrest => .cons hf (hasTy_ext h hb) ht (bodiesHasTy_ext h hrest)
+
+/-- **The module judgment along an extension** (C3's monotone half for a module): a module the
+judgment types under `s` it types under every extension `s'`, at the same type. -/
+@[semantics "initial-algebras-folds" (requirement := R2)]
+theorem moduleHasTy_ext {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op} {t : EffTy}
+    (he : ModuleHasTy s e t) : ModuleHasTy s' e t := by
+  cases he with
+  | defs hb hm => exact .defs (bodiesHasTy_ext (h.withDefs _) hb) (hasTy_ext (h.withDefs _) hm)
+  | plain hd => exact .plain (hasTy_ext h hd)
+
+/-- **The whole program's typing along an extension**: a program `typeOfProgram` admits under
+`s` it admits under every extension `s'`, at the same type. -/
+@[semantics "initial-algebras-folds" (requirement := R2)]
+theorem typeOfProgram_ext {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op} {t : EffTy}
+    (he : typeOfProgram s e = some t) : typeOfProgram s' e = some t := by
+  unfold typeOfProgram at he ⊢
+  split at he
+  · rw [if_pos ‹_›]
+    exact toOption_eq_some.mpr (checkModule_complete s' _ t
+      (moduleHasTy_ext h (checkModule_sound s _ t (toOption_eq_some.mp he))))
+  · cases he
+
+/-- **On a program whose expansion has no block, the whole program's typing is the checker's
+answer** at the empty environment. -/
+theorem typeOfProgram_eq_typeOf (sig : Signature Op) {e : Eff Op}
+    (h : ∀ decls bodies main, e.expandRefs ≠ .defs decls bodies main) :
+    typeOfProgram sig e = if e.layerRefsWF then typeOf sig e.expandRefs else none := by
+  unfold typeOfProgram
+  rw [checkModule_eq_check sig h]
+  rfl
 
 end Effect4.Program
