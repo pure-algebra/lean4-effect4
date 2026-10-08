@@ -1,5 +1,7 @@
 import Conform.Layout.Types
 import Init.Data.Function
+import Lean.Meta.Basic
+import Lean.Util.CollectAxioms
 
 /-!
 # Conform.Layout.Laws — one theorem per admissibility condition
@@ -19,7 +21,7 @@ where the proof is.
   `none` and `some a` are one target value — *proved*.
 * `frame_injective`, `object_injective`, `tagged_injective`, `seq_injective`,
   `literal_injective`, `wrappingNat_collides`, `boundedNat_injective` — the conditions of the
-  other rules — *proved*, axioms printed at the foot of the file.
+  other rules — *proved*, under the axiom ceiling checked at the foot of the file.
 -/
 
 namespace Conform.Layout.Laws
@@ -244,25 +246,19 @@ theorem wrappingNat_collides (bits : Nat) :
     have : 0 < 2 ^ bits := Nat.two_pow_pos bits
     omega
 
-/-! ## Receipts -/
+/-! ## The axiom ceiling
 
-#print axioms frame_inj
-#print axioms frame_ne_of_name_ne
-#print axioms nullable_injective
-#print axioms nullable_collides
-#print axioms nullable_nested_collides
-#print axioms nativeOption_injective
-#print axioms nativeOption_nested_distinct
-#print axioms literal_inj
-#print axioms zip_right_inj
-#print axioms object_injective
-#print axioms tagged_inj
-#print axioms tagged_ne_of_tag_ne
-#print axioms tagged_injective
-#print axioms map_injective
-#print axioms seq_injective
-#print axioms tuple_inj
-#print axioms boundedNat_injective
-#print axioms wrappingNat_collides
+`Conform` stands outside the axiom gate's audit (`Test/Audit/AxiomGate.lean`), so its laws hold
+their own ceiling here: the build fails if one reaches an axiom beyond `[propext, Quot.sound]`. -/
+
+run_meta do
+  for law in [``frame_inj, ``frame_ne_of_name_ne, ``nullable_injective, ``nullable_collides,
+      ``nullable_nested_collides, ``nativeOption_injective, ``nativeOption_nested_distinct,
+      ``literal_inj, ``zip_right_inj, ``object_injective, ``tagged_inj, ``tagged_ne_of_tag_ne,
+      ``tagged_injective, ``map_injective, ``seq_injective, ``tuple_inj, ``boundedNat_injective,
+      ``wrappingNat_collides] do
+    for ax in ← Lean.collectAxioms law do
+      unless ax == ``propext || ax == ``Quot.sound do
+        throwError "{law} reaches the axiom {ax}, beyond [propext, Quot.sound]"
 
 end Conform.Layout.Laws
