@@ -185,7 +185,7 @@ roots = ["Test"]
 globs = ["Test"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
-# The five independently green area batteries; a narrow sweep is
+# The six independently green area batteries; a narrow sweep is
 # `lake build TestSchema` rather than a whole-tree build. The globs are `.+`,
 # submodules only: `.*` would also select the directory's own module, which
 # does not exist.
@@ -195,8 +195,22 @@ name = "TestSchema"
 globs = ["Test.Schema.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
+# The batteries evaluate the machine while they elaborate (`#guard`, `#scenario_gate`), and the
+# interpreter was most of their time: 504 s of `Test.Dogfood.Scenario.QueueWorkers`' 506 s
+# (profiled 2026-10-07, decisions row 327). So `TestProgram` and `TestDogfood` load the native
+# library of the core and those of the packages it calls (`dynlibs`, in load order), and the
+# elaborator calls native code: that module took 42 s, and the two libraries' modules went from
+# 2231 s to 544 s and from 802 s to 98 s, summed. `needs` builds the libraries once, before any
+# module: `dynlibs` alone fetches them from each module's setup, and a stale core module was built
+# five times at once. `needs` also puts the core library's trace into each module of the two
+# libraries, so a core edit rebuilds both. The other batteries gained nothing and paid about 0.4 s
+# a module to load, so they stay interpreted. `precompileModules` on the core was measured too, and
+# refused: every module downstream of the core then loads its 191 libraries, and the root module
+# went from 1.3 s to 21 s.
 [[lean_lib]]
 name = "TestProgram"
+needs = ["@typescript/TypeScript:shared", "@hash/Hash:shared", "Effect4:shared"]
+dynlibs = ["@typescript/TypeScript:shared", "@hash/Hash:shared", "Effect4:shared"]
 globs = ["Test.Program.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
@@ -213,6 +227,15 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 [[lean_lib]]
 name = "TestStore"
 globs = ["Test.Store.+"]
+moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
+
+# The dogfood scenarios, split from `Test`, whose root also claims them: Lake gives a module to the
+# last library that claims it. They and `TestProgram` load the native core (see above).
+[[lean_lib]]
+name = "TestDogfood"
+needs = ["@typescript/TypeScript:shared", "@hash/Hash:shared", "Effect4:shared"]
+dynlibs = ["@typescript/TypeScript:shared", "@hash/Hash:shared", "Effect4:shared"]
+globs = ["Test.Dogfood.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The generic effect algebra, morphisms, transport, families, and the shared trace

@@ -262,8 +262,9 @@ exceptions, and every battery file must be reachable from `Test/All.lean`.
 Every library file must be reachable from one of the two roots, and `Effect4` must
 never reach `Effect4.Laws`. Config, ConfigValue and Provision remain functional
 utilities in `Effect4`.
-The five area targets are `TestSchema`, `TestMachine`, `TestStore`,
-`TestProgram`, and `TestCodegen`. A single battery builds by its module name,
+The six area targets are `TestSchema`, `TestMachine`, `TestStore`,
+`TestProgram`, `TestCodegen` and `TestDogfood`. The last two load the core as native code, so
+their scenarios run compiled (decisions row 327). A single battery builds by its module name,
 for example `lake build Test.Api.ApiContract`. Run one `lake` at a time. `lake build OCaml5`
 builds the Lean half of the OCaml estate; the OCaml half is `dune build` in
 `ocaml/` under the `effect4` opam switch (`ocaml/README.md`). `lake build Tools`
