@@ -857,16 +857,19 @@ theorem requestOf_current (m : NativeMachine) (fiber : FiberId) (token : Nat)
     ∃ f controller cancel origin, m.fiber? fiber = some f ∧ f.parked = .withGuard token ∧
       f.frame.current = .async (.external op request origin) controller cancel := by
   cases hf : m.fiber? fiber with
-  | none => simp [requestOf, hf] at h
+  | none =>
+    simp only [requestOf, hf, Option.bind_eq_bind, Option.bind_none, reduceCtorEq] at h
   | some f =>
     by_cases hp : f.parked = .withGuard token
-    · simp [requestOf, hf, hp, guard] at h
+    · simp only [requestOf, hf, guard, Option.pure_def, Option.bind_eq_bind,
+        Option.bind_some, hp, ↓reduceIte] at h
       split at h
-      · try simp only [Option.some.injEq, Prod.mk.injEq] at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         exact ⟨f, _, _, _, rfl, hp, by assumption⟩
       · cases h
-    · simp [requestOf, hf, hp, guard] at h
+    · simp only [requestOf, hf, guard, Option.pure_def, Option.bind_eq_bind,
+        Option.bind_some, hp, ↓reduceIte] at h
       cases h
 
 /-- An admitted delayed success on a live machine prepares the actual typed resume
