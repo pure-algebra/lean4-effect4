@@ -163,6 +163,9 @@ theorem Step.term_erase : {Γ : List Ty} → {t : Ty} → (e : Step Γ t) →
   | _, _, .snoc a b, src => by
     change eraseSource (Modules.snoc (a.term src) (b.term src)) = Modules.snoc (Step.cata Step.erasedTermAlg a src) (Step.cata Step.erasedTermAlg b src)
     simp only [Modules.snoc, eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src, Step.term_erase b src, nilT]
+  | _, _, .getOrElse a b, src => by
+    change eraseSource (app "getOrElse" [a.term src, b.term src]) = app "getOrElse" [Step.cata Step.erasedTermAlg a src, Step.cata Step.erasedTermAlg b src]
+    simp only [eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src, Step.term_erase b src]
   | _, _, .append a b, src => by
     change eraseSource (app "append" [a.term src, b.term src]) = app "append" [Step.cata Step.erasedTermAlg a src, Step.cata Step.erasedTermAlg b src]
     simp only [eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src, Step.term_erase b src]
