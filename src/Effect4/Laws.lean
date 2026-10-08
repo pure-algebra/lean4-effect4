@@ -150,6 +150,11 @@ import Effect4.Laws.Schema.Modeled
 import Effect4.Laws.Program.TyNormal
 import Effect4.Laws.Schema.FieldRef
 import Effect4.Laws.Modules.Step
+import Effect4.Laws.Modules.Semaphore.Data
+import Effect4.Laws.Modules.Pool.Data
+import Effect4.Laws.Modules.Queue.Data
+import Effect4.Laws.Modules.Latch.Model
+import Effect4.Laws.Modules.Latch.Steps
 import Effect4.Laws.Program.Authoring
 import Effect4.Laws.Program.Authoring.Records
 import Effect4.Laws.Program.Authoring.Tuples

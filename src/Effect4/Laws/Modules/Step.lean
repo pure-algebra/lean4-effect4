@@ -123,6 +123,10 @@ theorem check_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂
   | _, .eq a b, h => and_intro (check_mono hr ha a (and_true h).1) (check_mono hr ha b (and_true h).2)
   | _, .isZero a, h => check_mono hr ha a h
   | _, .pair a b, h => and_intro (check_mono hr ha a (and_true h).1) (check_mono hr ha b (and_true h).2)
+  | _, .tuple2 a b, h => by
+    obtain ⟨ht, rest⟩ := and_true h
+    exact and_intro (ha _ ht)
+      (and_intro (check_mono hr ha a (and_true rest).1) (check_mono hr ha b (and_true rest).2))
   | _, .fst p, h => check_mono hr ha p h
   | _, .snd p, h => check_mono hr ha p h
   | _, .some a, h => check_mono hr ha a h
@@ -183,6 +187,7 @@ theorem sound
   | _, .eq a b, h => reads_eq (sound hin a (and_true h).1) (sound hin b (and_true h).2)
   | _, .isZero a, h => reads_isZero (sound hin a h)
   | _, .pair a b, h => reads_pair (sound hin a (and_true h).1) (sound hin b (and_true h).2)
+  | _, .tuple2 a b, h => reads_tuple2 (sound hin a (and_true h).1) (sound hin b (and_true h).2)
   | _, .fst p, h => reads_app (.cons (sound hin p h) .nil) rfl
   | _, .snd p, h => reads_app (.cons (sound hin p h) .nil) rfl
   | _, .some a, h => reads_some (sound hin a h)
@@ -215,57 +220,99 @@ end Reading
 
 section Typing
 
+/-- **The typing check gives the typing facts**: each certified type is its own normal form
+(`Ty.normalize_of_certNormal`), and a certified product's items are normal factors. -/
+theorem facts_of_normal : ∀ {s : Ty} (e : Step Γ s), e.normal = true → e.Facts
+  | _, .var _, _ => trivial
+  | _, .bool _, _ => trivial
+  | _, .nat _, _ => trivial
+  | _, .unit, _ => trivial
+  | _, .not a, h => facts_of_normal a h
+  | _, .and a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .or a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .ite c a b, h => by
+    obtain ⟨ht, rest⟩ := and_true h
+    obtain ⟨hc, hab⟩ := and_true rest
+    exact ⟨Ty.normalize_of_certNormal _ ht, facts_of_normal c hc,
+      facts_of_normal a (and_true hab).1, facts_of_normal b (and_true hab).2⟩
+  | _, .add a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .sub a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .lt a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .eq a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .isZero a, h => facts_of_normal a h
+  | _, .pair a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
+  | _, .tuple2 a b, h => by
+    obtain ⟨ht, rest⟩ := and_true h
+    exact ⟨certNormal_prod_facts ht, facts_of_normal a (and_true rest).1,
+      facts_of_normal b (and_true rest).2⟩
+  | _, .fst p, h => facts_of_normal p h
+  | _, .snd p, h => facts_of_normal p h
+  | _, .some a, h => facts_of_normal a h
+  | _, .get r _, h => ⟨Ty.normalize_of_certNormal _ (and_true h).1, facts_of_normal r (and_true h).2⟩
+  | _, .set r _ v, h => by
+    obtain ⟨hf, rest⟩ := and_true h
+    exact ⟨Ty.normalize_of_certNormal _ hf, facts_of_normal r (and_true rest).1,
+      facts_of_normal v (and_true rest).2⟩
+  | _, .emptyLike xs, h => facts_of_normal xs h
+  | _, .len xs, h => facts_of_normal xs h
+  | _, .snoc xs x, h => by
+    obtain ⟨ht, rest⟩ := and_true h
+    exact ⟨Ty.normalize_of_certNormal _ ht, facts_of_normal xs (and_true rest).1,
+      facts_of_normal x (and_true rest).2⟩
+  | _, .append xs ys, h => by
+    obtain ⟨ht, rest⟩ := and_true h
+    exact ⟨Ty.normalize_of_certNormal _ ht, facts_of_normal xs (and_true rest).1,
+      facts_of_normal ys (and_true rest).2⟩
+  | _, .take xs n, h => ⟨facts_of_normal xs (and_true h).1, facts_of_normal n (and_true h).2⟩
+  | _, .drop xs n, h => ⟨facts_of_normal xs (and_true h).1, facts_of_normal n (and_true h).2⟩
+  | _, .head xs, h => facts_of_normal xs h
+
 variable {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
   {src : {t : Ty} → Input Γ t → TermSrc} {env : Env} {path : List Nat} {types : List Ty}
 include atoms
 
 /-- **A step's term types at the step's type** (claim `step-language-typed`): at every scope,
-when the caller's terms type at the inputs' types, a step that passes the typing check has a
-term that types at its type, under each literal flag. -/
+when the caller's terms type at the inputs' types, a step whose typing facts hold has a term
+that types at its type, under each literal flag. A caller proves the facts from premises where a
+type is a parameter, or by the typing check (`typed_of_normal`). -/
 @[semantics "store-typing" (requirement := R4)]
 theorem typed (hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t) :
-    ∀ {s : Ty} (e : Step Γ s), e.normal = true → TypesEach sig (e.term src) env path types s
+    ∀ {s : Ty} (e : Step Γ s), e.Facts → TypesEach sig (e.term src) env path types s
   | _, .var x, _ => hin x
   | _, .bool b, _ => types_bool b
   | _, .nat n, _ => types_nat n
   | _, .unit, _ => types_unit
   | _, .not a, h => types_notT atoms (typed hin a h)
-  | _, .and a b, h => types_andT atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
-  | _, .or a b, h => types_orT atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
-  | _, .ite c a b, h => by
-    obtain ⟨ht, rest⟩ := and_true h
-    obtain ⟨hc, hab⟩ := and_true rest
-    exact types_ifT atoms (typed hin c hc) (typed hin a (and_true hab).1)
-      (typed hin b (and_true hab).2) (Ty.normalize_of_certNormal _ ht)
-  | _, .add a b, h => types_add atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
-  | _, .sub a b, h => types_sub atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
-  | _, .lt a b, h => types_lt atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
-  | _, .eq a b, h => types_eq atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
+  | _, .and a b, h => types_andT atoms (typed hin a h.1) (typed hin b h.2)
+  | _, .or a b, h => types_orT atoms (typed hin a h.1) (typed hin b h.2)
+  | _, .ite c a b, h =>
+    types_ifT atoms (typed hin c h.2.1) (typed hin a h.2.2.1) (typed hin b h.2.2.2) h.1
+  | _, .add a b, h => types_add atoms (typed hin a h.1) (typed hin b h.2)
+  | _, .sub a b, h => types_sub atoms (typed hin a h.1) (typed hin b h.2)
+  | _, .lt a b, h => types_lt atoms (typed hin a h.1) (typed hin b h.2)
+  | _, .eq a b, h => types_eq atoms (typed hin a h.1) (typed hin b h.2)
   | _, .isZero a, h => types_isZero atoms (typed hin a h)
-  | _, .pair a b, h => types_pair atoms (typed hin a (and_true h).1) (typed hin b (and_true h).2)
+  | _, .pair a b, h => types_pair atoms (typed hin a h.1) (typed hin b h.2)
+  | _, .tuple2 a b, h =>
+    types_tuple2 atoms (typed hin a h.2.1) (typed hin b h.2.2) h.1.1 h.1.2.1 h.1.2.2.1 h.1.2.2.2
   | _, .fst p, h => fun _ => types_app (.cons (typed hin p h _) .nil) (atomOf_native atoms rfl)
   | _, .snd p, h => fun _ => types_app (.cons (typed hin p h _) .nil) (atomOf_native atoms rfl)
   | _, .some a, h => types_some atoms (typed hin a h)
-  | _, .get r f, h => fun _ =>
-    types_field (typed hin r (and_true h).2 false)
-      (fieldType_ref (Ty.normalize_of_certNormal _ (and_true h).1) f)
-  | _, .set r f v, h => by
-    obtain ⟨hf, rest⟩ := and_true h
-    exact fun _ => types_recordSet (typed hin r (and_true rest).1 false)
-      (typed hin v (and_true rest).2 true) (setType_ref (Ty.normalize_of_certNormal _ hf) f)
+  | _, .get r f, h => fun _ => types_field (typed hin r h.2 false) (fieldType_ref h.1 f)
+  | _, .set r f v, h => fun _ =>
+    types_recordSet (typed hin r h.2.1 false) (typed hin v h.2.2 true) (setType_ref h.1 f)
   | _, .emptyLike xs, h => types_noneOf atoms (typed hin xs h)
   | _, .len xs, h => types_len atoms (typed hin xs h)
-  | _, .snoc xs x, h => by
-    obtain ⟨ht, rest⟩ := and_true h
-    exact types_snoc atoms (Ty.normalize_of_certNormal _ ht) (typed hin xs (and_true rest).1)
-      (typed hin x (and_true rest).2)
-  | _, .append xs ys, h => by
-    obtain ⟨ht, rest⟩ := and_true h
-    exact types_append atoms (typed hin xs (and_true rest).1) (typed hin ys (and_true rest).2)
-      (Ty.normalize_of_certNormal _ ht)
-  | _, .take xs n, h => types_take atoms (typed hin xs (and_true h).1) (typed hin n (and_true h).2)
-  | _, .drop xs n, h => types_drop atoms (typed hin xs (and_true h).1) (typed hin n (and_true h).2)
+  | _, .snoc xs x, h => types_snoc atoms h.1 (typed hin xs h.2.1) (typed hin x h.2.2)
+  | _, .append xs ys, h => types_append atoms (typed hin xs h.2.1) (typed hin ys h.2.2) h.1
+  | _, .take xs n, h => types_take atoms (typed hin xs h.1) (typed hin n h.2)
+  | _, .drop xs n, h => types_drop atoms (typed hin xs h.1) (typed hin n h.2)
   | _, .head xs, h => types_head atoms (typed hin xs h)
+
+/-- The typing law by the typing check: it closes by `rfl` on a concrete step. -/
+theorem typed_of_normal (hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
+    {s : Ty} (e : Step Γ s) (h : e.normal = true) : TypesEach sig (e.term src) env path types s :=
+  typed sig atoms hin e (facts_of_normal e h)
 
 end Typing
 
@@ -325,6 +372,58 @@ theorem frame_read {fs : List (String × Bool × Ty)} (h : Field.Ascending Field
   rw [FieldRef.read_law h g, FieldRef.read_law h g, frame L vs x g e hs hw]
 
 end Frame
+
+/-! ## Evaluating a selection -/
+
+/-- A selection's value is the chosen branch's, by the test's value. -/
+theorem eval_ite (L : Leaves) (vs : Inputs L Γ) {t : Ty} (c : Step Γ .bool) (a b : Step Γ t) :
+    (Step.ite c a b).eval L vs = cond (c.eval L vs) (a.eval L vs) (b.eval L vs) := by
+  have chosen : ∀ test : Bool,
+      (evalAlg L vs).ite test (a.eval L vs) (b.eval L vs) = cond test (a.eval L vs) (b.eval L vs) := by
+    intro test
+    cases test <;> rfl
+  exact chosen (c.eval L vs)
+
+/-! ## A caller's terms, input by input -/
+
+section Inputs
+
+variable {L : Leaves} {env : Env} {path : List Nat} {vals : List Val}
+
+/-- No input: nothing to read. -/
+theorem _root_.Effect4.Modules.Input.reads_nil :
+    ∀ {t : Ty} (x : Input [] t),
+      Reads (Input.source [] x) env path vals ((imageAt L t).toVal (x.get (L := L) ())) :=
+  fun x => nomatch x
+
+/-- The inputs' reading, one input more: the first term reads the first value. -/
+theorem _root_.Effect4.Modules.Input.reads_cons {u : Ty} {Γ : List Ty} {src0 : TermSrc}
+    {srcs : List TermSrc} {v0 : CarrierAt L u} {vs : Inputs L Γ}
+    (h0 : Reads src0 env path vals ((imageAt L u).toVal v0))
+    (hrest : ∀ {t : Ty} (x : Input Γ t),
+      Reads (Input.source srcs x) env path vals ((imageAt L t).toVal (x.get vs))) :
+    ∀ {t : Ty} (x : Input (u :: Γ) t),
+      Reads (Input.source (src0 :: srcs) x) env path vals
+        ((imageAt L t).toVal (x.get (L := L) ((v0, vs) : Inputs L (u :: Γ))))
+  | _, .here _ _ => h0
+  | _, .there _ x => hrest x
+
+variable {Op : Type} {sig : Signature Op} {types : List Ty}
+
+/-- No input: nothing to type. -/
+theorem _root_.Effect4.Modules.Input.types_nil :
+    ∀ {t : Ty} (x : Input [] t), TypesEach sig (Input.source [] x) env path types t :=
+  fun x => nomatch x
+
+/-- The inputs' typing, one input more. -/
+theorem _root_.Effect4.Modules.Input.types_cons {u : Ty} {Γ : List Ty} {src0 : TermSrc}
+    {srcs : List TermSrc} (h0 : TypesEach sig src0 env path types u)
+    (hrest : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (Input.source srcs x) env path types t) :
+    ∀ {t : Ty} (x : Input (u :: Γ) t), TypesEach sig (Input.source (src0 :: srcs) x) env path types t
+  | _, .here _ _ => h0
+  | _, .there _ x => hrest x
+
+end Inputs
 
 end Step
 end Effect4.Modules

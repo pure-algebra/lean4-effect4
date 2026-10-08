@@ -348,7 +348,7 @@ def registry : Registry where
       title := "On the checked domain, every carrier value's encoding inhabits its type at every allocation table: the refusal fold answers none at the type, and the carrier and its image are the carrier fold's (Model.member); an instance of Modeled inherits it across its equivalence, with no proof of its own (Modeled.member); nothing for an identity type, an optional field or a refused constructor, and no codec admission (decisions row 330, slice L1)"
       pointer := .witness `Effect4.Schema.Model.member },
     { id := "step-language-typed", concept := "store-typing", role := .compatibility
-      title := "A step of the step language types at its type at every scope: when the caller's terms type at the inputs' types, a step that passes its typing check has a term that types at the step's type under each literal flag; the check certifies normal forms by a fold of Ty and closes by rfl on a concrete step (Step.typed); typing only: no run, nothing of a fold or an optional field (decisions row 330, slice L2)"
+      title := "A step of the step language types at its type at every scope: when the caller's terms type at the inputs' types, a step whose typing facts hold has a term that types at the step's type under each literal flag (Step.typed); a caller proves the facts from premises where a type is a parameter, or by the typing check, which certifies normal forms by a fold of Ty and closes by rfl on a concrete step (Step.typed_of_normal); typing only: no run, nothing of a fold or an optional field (decisions row 330, slices L2 and L3)"
       pointer := .witness `Effect4.Modules.Step.typed },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
@@ -949,7 +949,10 @@ def registry : Registry where
       pointer := .witness `Effect4.Modules.Step.sound },
     { id := "step-frame", concept := "translation-simulation", role := .preservation
       title := "On an update spine of an input, a field that no overwrite of the step names keeps its value: on carriers with no premise on the record's names (Step.frame), and on the machine's record frame for ascending names (Step.frame_read); nothing of a step that is no spine (decisions row 330, slice L2)"
-      pointer := .witness `Effect4.Modules.Step.frame }
+      pointer := .witness `Effect4.Modules.Step.frame },
+    { id := "latch-steps-agree", concept := "translation-simulation", role := .simulation
+      title := "Each of the Latch's four steps, written natively in the step language, agrees with the model of rc.112's class Latch: isOpen, open and release with scheduleUnsafe's one flush per batch, flushScheduled and closeUnsafe; the reply and the next state through the table, the cell's value being the carrier's image; each by the step language's reading law and one equation of Lean values; nothing of await, interruption, the posted flush's fiber or liveness (decisions row 330, slice L3)"
+      pointer := .witness `Effect4.Latch.Model.latch_steps_agree }
   ]
   cuts := [
     -- 1. store-typing

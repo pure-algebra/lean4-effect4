@@ -1,4 +1,5 @@
 import Effect4.Laws.Modules.Pool.Reading
+import Effect4.Laws.Modules.Pool.Data
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -104,12 +105,16 @@ theorem selectStep_agrees (tb : Table) (res : Nat → Val) (s : State) (count : 
     (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
     Reads (Pool.selectStep countSrc cellSrc) env path vals
       (Val.tuple [selectReplyVal tb (select s count).2, cellVal tb res (select s count).1]) := by
-  have waiters := reads_field readsCell (cell_waiters _ _ _ _ _)
-  refine (reads_pair (reads_take waiters readsCount)
-    (reads_recordSet readsCell (reads_drop waiters readsCount)
-      (cell_setWaiters _ _ _ _ _ _))).to ?_
-  rw [← List.map_take, ← List.map_drop]
-  rfl
+  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (selectInputs tb res s count)
+    (Input.reads_cons readsCount (Input.reads_cons (readsCell.to (cellVal_image tb res s).symm)
+      Input.reads_nil)) (Data.select P) rfl
+  rw [select_eval] at reads
+  exact reads.to (by
+    show Val.list [(Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.opaque
+        (.list waiterTy)).toVal ((select s count).2.map (waiterC tb)),
+      (Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.opaque
+        (.record (Pool.cellRecord P))).toVal (cellC tb res (select s count).1)] = _
+    rw [selectReply_image, cellVal_image])
 
 /-- **The close's first step agrees with the model's `close`.** The reply is whether the step
 began the close, and the count of the waiters. The stored value is the model's next state. The
@@ -120,12 +125,11 @@ theorem closeStep_agrees (tb : Table) (res : Nat → Val) (s : State)
     (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
     Reads (Pool.closeStep cellSrc) env path vals
       (Val.tuple [closeReplyVal (close s).2, cellVal tb res (close s).1]) := by
-  have reply := reads_tuple2 (reads_notT (reads_field readsCell (cell_closing _ _ _ _ _)))
-    (reads_len (reads_field readsCell (cell_waiters _ _ _ _ _)))
-  refine (reads_pair reply
-    (reads_recordSet readsCell (reads_bool true env path vals) (cell_setClosing _ _ _ _ _ _))).to ?_
-  rw [List.length_map]
-  rfl
+  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (cellInputs tb res s)
+    (Input.reads_cons (readsCell.to (cellVal_image tb res s).symm) Input.reads_nil)
+    (Data.close P) rfl
+  rw [close_eval] at reads
+  exact reads.to (by rw [← cellVal_image]; rfl)
 
 /-- **The withdrawal agrees with the model's `withdraw`.** The reply is nothing, and the stored
 value is the model's next state. The table does not change. -/

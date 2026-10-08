@@ -1,5 +1,7 @@
 import Effect4.Modules.Semaphore.Steps
 import Effect4.Laws.Modules.Checking
+import Effect4.Laws.Modules.Step
+import Effect4.Modules.Semaphore.Data
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -316,11 +318,9 @@ theorem takeIfAvailableStep_types {Op : Type} (sig : Signature Op)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.takeIfAvailableStep needSrc cellSrc) env path types
       (.prod .bool Semaphore.cellTy) :=
-  types_ifT atoms (types_fitsT atoms typesNeed typesCell)
-    (types_pair atoms (types_bool true)
-      (types_setTaken typesCell (types_add atoms (types_cellTaken typesCell) typesNeed)))
-    (types_pair atoms (types_bool false) typesCell)
-    (Ty.normalize_prod_canonical rfl cellTy_normal rfl rfl)
+  Step.typed_of_normal sig atoms
+    (Input.types_cons typesNeed (Input.types_cons typesCell Input.types_nil))
+    Data.takeIfAvailable rfl
 
 /-- **The release step is typed at every scope.** No fold. -/
 @[semantics "store-typing" (requirement := R4)]
@@ -329,11 +329,9 @@ theorem releaseStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf =
     (typesCount : TypesEach sig countSrc env path types .nat)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.releaseStep countSrc cellSrc) env path types
-      (.prod releaseReplyTy Semaphore.cellTy) := by
-  have left := types_sub atoms (types_cellTaken typesCell) typesCount
-  have reply := types_tuple2 atoms (types_sub atoms (types_cellPermits typesCell) left)
-    (types_notT atoms (types_isEmpty atoms (types_cellWaiters typesCell))) rfl rfl rfl rfl
-  exact types_pair atoms reply (types_setTaken typesCell left)
+      (.prod releaseReplyTy Semaphore.cellTy) :=
+  Step.typed_of_normal sig atoms
+    (Input.types_cons typesCount (Input.types_cons typesCell Input.types_nil)) Data.release rfl
 
 /-- **The visit step is typed at every scope.** The cursor and the cell's own source stand in
 the fold's body, so each is taken with its typed capture. -/

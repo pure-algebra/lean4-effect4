@@ -1,4 +1,6 @@
 import Effect4.Modules.Pool.Steps
+import Effect4.Laws.Modules.Step
+import Effect4.Modules.Pool.Data
 import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
@@ -602,9 +604,9 @@ theorem selectStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = 
     (typesCell : TypesEach sig cellSrc env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.selectStep countSrc cellSrc) env path types
       (.prod selectReplyTy (Pool.cellTy A)) :=
-  have waiters := types_cellWaiters canonical typesCell
-  types_pair atoms (types_take atoms waiters typesCount)
-    (types_setWaiters canonical typesCell (types_drop atoms waiters typesCount))
+  have normal := cellTy_normal canonical
+  Step.typed sig atoms (Input.types_cons typesCount (Input.types_cons typesCell Input.types_nil))
+    (Data.select A) ⟨⟨⟨normal, trivial⟩, trivial⟩, normal, trivial, ⟨normal, trivial⟩, trivial⟩
 
 /-- **The withdrawal is typed at every scope.** The request's identity stands in the removal's
 fold. -/
@@ -624,10 +626,9 @@ theorem closeStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = n
     {A : Ty} (canonical : A.normalize = A) {cellSrc : TermSrc} {env : Env} {path : List Nat}
     {types : List Ty} (typesCell : TypesEach sig cellSrc env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.closeStep cellSrc) env path types (.prod closeReplyTy (Pool.cellTy A)) :=
-  types_pair atoms
-    (types_tuple2 atoms (types_notT atoms (types_cellClosing canonical typesCell))
-      (types_len atoms (types_cellWaiters canonical typesCell)) rfl rfl rfl rfl)
-    (types_setClosing canonical typesCell (types_bool true))
+  have normal := cellTy_normal canonical
+  Step.typed sig atoms (Input.types_cons typesCell Input.types_nil) (Data.close A)
+    ⟨⟨⟨rfl, rfl, rfl, rfl⟩, ⟨normal, trivial⟩, ⟨normal, trivial⟩⟩, normal, trivial, trivial⟩
 
 /-- **The closer's step is typed at every scope** (decisions row 276, point 2). The closer's
 identity stands in the removal's fold, so it is taken with its typed capture. The hint and the

@@ -4,6 +4,8 @@ import Effect4.Program.Native
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.TyView
 import Effect4.Laws.Modules.Checking
+import Effect4.Laws.Modules.Step
+import Effect4.Modules.Queue.Data
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -694,23 +696,10 @@ theorem pollStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
 @[semantics "store-typing" (requirement := R4)]
 theorem sizeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) :
-    typeAt sig ["s"] [Queue.cellTy A] (Queue.sizeStep A (var "s")) = some .nat := by
-  show (termTy sig [Queue.cellTy A]
-    (.app "length" (.cons (.field .required (.var 0) "msgs") .nil))) = some .nat
-  show ((Record.fieldType false (Queue.cellTy A) "msgs").bind fun t =>
-    (some [t])).bind (sig.atomOf "length") = some .nat
-  rw [cell_msgsTy message.canonical, atoms]
-  have below : Ty.sub (.list A) (.list .unknown) = true := by
-    rw [Ty.sub_args_list]
-    show (Ty.sub A .unknown && true) = true
-    rw [Ty.sub_unknown]
-    rfl
-  show NativeAtom.monoApply [Ty.list .unknown] .nat [Ty.list A] = some .nat
-  unfold NativeAtom.monoApply
-  exact if_pos ⟨rfl, by
-    show (Ty.sub (.list A) (.list .unknown) && true) = true
-    rw [below]
-    rfl⟩
+    typeAt sig ["s"] [Queue.cellTy A] (Queue.sizeStep A (var "s")) = some .nat :=
+  typeAt_of_types (Step.typed sig atoms (env := { names := ["s"] }) (path := [])
+    (types := [Queue.cellTy A]) (Input.types_cons (src0 := var "s") (types_var rfl rfl rfl)
+      Input.types_nil) (Data.size A) ⟨cellTy_normal message.canonical, trivial⟩ false)
 
 /-- **The withdrawal of a take is typed at the cell's type.** -/
 @[semantics "store-typing" (requirement := R4)]

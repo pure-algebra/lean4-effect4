@@ -79,13 +79,17 @@ def cellFields (A : Ty) : List (String × Bool × Ty) :=
   [("items", false, .list (itemTy A)), ("available", false, .list .nat),
    ("waiters", false, .list waiterTy), ("closing", false, .bool), ("next", false, .nat)]
 
-/-- **The cell's type at the resource type `A`**: `cellFields A` in the canonical field order.
-It is the type that the checker answers for `initial A resources`, where `A` is its own normal
-form and at least one resource is given. -/
-def cellTy (A : Ty) : Ty := .record
+/-- The cell's fields at the resource type `A`: `cellFields A` in the canonical field order. A
+step written as data names its fields against this list (`src/Effect4/Modules/Pool/Data.lean`). -/
+def cellRecord (A : Ty) : List (String × Bool × Ty) :=
   [("available", false, .list .nat), ("closing", false, .bool),
    ("items", false, .list (itemTy A)), ("next", false, .nat),
    ("waiters", false, .list waiterTy)]
+
+/-- **The cell's type at the resource type `A`**: `cellFields A` in the canonical field order.
+It is the type that the checker answers for `initial A resources`, where `A` is its own normal
+form and at least one resource is given. -/
+def cellTy (A : Ty) : Ty := .record (cellRecord A)
 
 /-- An idle item's record, at a stamp and a resource. -/
 def mkItem (A : Ty) (stamp resource : TermSrc) : TermSrc :=

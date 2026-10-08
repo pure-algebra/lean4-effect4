@@ -61,11 +61,15 @@ def cellFields : List (String × Bool × Ty) :=
   [("permits", false, .nat), ("taken", false, .nat), ("waiters", false, .list waiterTy),
    ("next", false, .nat)]
 
-/-- **The cell's type**: `cellFields` in the canonical field order. It is the type that the
-checker answers for `empty permits`. -/
-def cellTy : Ty := .record
+/-- The cell's fields: `cellFields` in the canonical field order. A step written as data names
+its fields against this list (`src/Effect4/Modules/Semaphore/Data.lean`). -/
+def cellRecord : List (String × Bool × Ty) :=
   [("next", false, .nat), ("permits", false, .nat), ("taken", false, .nat),
    ("waiters", false, .list waiterTy)]
+
+/-- **The cell's type**: `cellFields` in the canonical field order. It is the type that the
+checker answers for `empty permits`. -/
+def cellTy : Ty := .record cellRecord
 
 /-- **The initial value at a total**: nothing taken, no waiter and the stamp zero. The total is
 a literal, so a caller states a total of at least 1 where it writes the semaphore (decisions

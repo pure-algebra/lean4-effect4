@@ -1,4 +1,5 @@
 import Effect4.Laws.Modules.Queue.Relation
+import Effect4.Laws.Modules.Queue.Data
 import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Program.Typed.ListFold
 import Effect4.Laws.Auto.Obligations
@@ -725,8 +726,9 @@ theorem sizeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
     unfold size isDone
     rw [profile.opened]
     rfl
-  rw [opened]
-  exact (reads_len (reads_field readsCell (cell_msgs _ _ _ _))).to (by rw [List.length_map])
+  rw [opened, ← size_eval tb msg s]
+  exact Step.sound Effect4.Schema.Model.Leaves.opaque (cellInputs tb msg s)
+    (Input.reads_cons (readsCell.to (cellVal_image tb msg s).symm) Input.reads_nil) (Data.size P) rfl
 
 /-- **The withdrawal of a take agrees with the model's `withdrawTake`.** The step accepts no
 offer, its list is the takers that the model wakes, and the stored value is the model's next

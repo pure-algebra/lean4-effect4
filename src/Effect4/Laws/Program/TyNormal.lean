@@ -130,4 +130,15 @@ theorem fields_of_certNormal : (fs : List (String × Bool × Ty)) →
     · exact fields_of_certNormal rest both.2 p later
 end
 
+/-- A certified product: both items are their own normal forms, and neither is a union. The
+typing rule of a tuple of two asks for these four facts. -/
+theorem certNormal_prod_facts {a b : Ty} (h : (Ty.prod a b).certNormal = true) :
+    a.normalize = a ∧ b.normalize = b ∧ a.isFactor = true ∧ b.isFactor = true := by
+  have all : ((cata_ty certNormalAlg a).1 && (cata_ty certNormalAlg b).1 &&
+      (cata_ty certNormalAlg a).2 && (cata_ty certNormalAlg b).2) = true := h
+  simp only [Bool.and_eq_true] at all
+  obtain ⟨⟨⟨ha, hb⟩, fa⟩, fb⟩ := all
+  rw [certNormal_factor] at fa fb
+  exact ⟨Ty.normalize_of_certNormal a ha, Ty.normalize_of_certNormal b hb, fa, fb⟩
+
 end Effect4.Program

@@ -160,4 +160,47 @@ structure Sized where
 #guard_msgs in
 derive_modeled Sized
 
+structure Token where
+  value : Bool
+
+def Token.modeledTy : Nat := 0
+
+-- A generated name that already exists: one refusal, and nothing written.
+/-- error: derive_modeled: Test.Schema.Modeled.Controls.Token.modeledTy already exists -/
+#guard_msgs in
+derive_modeled Token
+
+/-- error: Unknown constant `Token.modeled_checked` -/
+#guard_msgs in
+#print axioms Token.modeled_checked
+
 end Test.Schema.Modeled.Controls
+
+/-! ## A field instance may be opaque: deriving uses its contract alone -/
+
+namespace Test.Schema.Modeled.Opaque
+
+structure Flag where
+  value : Bool
+
+opaque flagModeled : Modeled Flag := {
+  ty := .bool
+  checked := rfl
+  toC := fun x => x.value
+  ofC := fun x => ⟨x⟩
+  to_of := fun _ => rfl
+  of_to := fun ⟨_⟩ => rfl }
+
+attribute [instance] flagModeled
+
+structure Holder where
+  flag : Flag
+  count : Nat
+  deriving Modeled
+
+-- Reader: every holder inhabits its derived type, with the field instance kept opaque.
+example (h : Holder) (alloc : List String) :
+    Val.hasTy ((Modeled.image Holder).toVal h) (Modeled.ty (α := Holder)) alloc = true :=
+  Modeled.member Holder h alloc
+
+end Test.Schema.Modeled.Opaque

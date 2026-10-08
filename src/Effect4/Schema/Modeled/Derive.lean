@@ -17,10 +17,12 @@ declaration before it writes anything:
 - no two fields share a spelling;
 - no field's type depends on another field, and each field's type has a `Modeled` instance.
 
-Each refusal is located at the syntax it is about. Then it writes, under the structure's name:
-the record type in canonical field order (`modeledTy`), its proof of the checked domain by
-`decide` (`modeled_checked`), the two maps to and from the carrier (`modeledToC`, `modeledOfC`),
-their two inverse equations (`modeled_to_of`, `modeled_of_to`), and the instance.
+Each refusal is located at the syntax it is about, and so is a generated name that already
+exists. Then it writes, under the structure's name: the record type in canonical field order
+(`modeledTy`), its proof of the checked domain (`modeled_checked`: the names' order by `decide`,
+and each field instance's own `checked`, so a field instance may be opaque), the two maps to and from the carrier (`modeledToC`, `modeledOfC`),
+their two inverse equations (`modeled_to_of`, `modeled_of_to`), and the instance. If a
+generated declaration fails, the environment is restored: the command keeps all or none.
 -/
 
 public meta section
@@ -111,8 +113,19 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
   let toOfId := mkIdent (`_root_ ++ sName ++ `modeled_to_of)
   let ofToId := mkIdent (`_root_ ++ sName ++ `modeled_of_to)
   let fieldsArr := ofFields.toArray
+  -- Every generated name is free before anything is written (overwatch finding OW-02).
+  for suffix in [`modeledTy, `modeled_checked, `modeledToC, `modeledOfC, `modeled_to_of,
+      `modeled_of_to] do
+    if (← getEnv).contains (sName ++ suffix) then
+      throwErrorAt ref "derive_modeled: {sName ++ suffix} already exists"
+  -- The checked proof composes each field instance's own `checked`, and decides only the names'
+  -- order, so a field instance may be opaque (overwatch finding OW-01).
+  let checkedFields ← liftMacroM <| sorted.foldrM
+    (fun (_, _, t) acc => `(⟨rfl, Effect4.Schema.Modeled.checked (α := $t), $acc⟩)) (← `(trivial))
+  let envBefore ← getEnv
   elabCommand (← `(def $tyId : Effect4.Program.Ty := .record [$(tyItems.toArray),*]))
-  elabCommand (← `(theorem $checkedId : Effect4.Schema.Model.refusal $tyId = none := by decide))
+  elabCommand (← `(theorem $checkedId : Effect4.Schema.Model.refusal $tyId = none :=
+    Effect4.Schema.Model.refusal_record (by decide) $checkedFields))
   elabCommand (← `(def $toId ($sId : $s) : Effect4.Schema.Model.Carrier $tyId := $tuple))
   elabCommand (← `(def $ofId ($cId : Effect4.Schema.Model.Carrier $tyId) : $s :=
     { $fieldsArr:structInstField,* }))
@@ -124,6 +137,9 @@ def deriveModeled (ref : Syntax) (sName : Name) (renames : Array (Ident × Strin
     simp only [$toId:ident, $ofId:ident, Effect4.Schema.Modeled.of_to]))
   elabCommand (← `(instance : Effect4.Schema.Modeled $s :=
     ⟨$tyId, $checkedId, $toId, $ofId, $toOfId, $ofToId⟩))
+  -- A declaration that failed leaves nothing behind: the command keeps all or none.
+  if (← get).messages.hasErrors then
+    setEnv envBefore
 
 /-- `derive_modeled S (field := "spelling")*`: write `S`'s `Modeled` instance, with renames. -/
 syntax (name := deriveModeledCmd) "derive_modeled " ident ("(" ident " := " str ")")* : command

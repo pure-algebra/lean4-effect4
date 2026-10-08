@@ -46,21 +46,26 @@ abbrev M := Σ α : Type, Image α
 /-- The carrier of a constructor outside the checked domain: empty. -/
 def refused : M := ⟨Empty, Image.empty⟩
 
-/-- **An identity context**: the carrier of each identity type, by its role. An identity's
-carrier does not depend on what the handle holds. -/
+/-- **An identity context**: the carrier of each identity type, by its role, and the carrier of
+a type variable. An identity's carrier does not depend on what the handle holds. A type variable
+stands for a module's type parameter: a step's term never reads it. -/
 structure Leaves where
   handle : String → M
   ref : M
   deferred : M
   fiber : M
+  var : M
 
 /-- The context of the checked domain: every identity is refused, since it needs its table. -/
-def Leaves.refused : Leaves := ⟨fun _ => Model.refused, Model.refused, Model.refused, Model.refused⟩
+def Leaves.refused : Leaves :=
+  ⟨fun _ => Model.refused, Model.refused, Model.refused, Model.refused, Model.refused⟩
 
-/-- The context that carries an identity as its own value, with the carrier's own image
-(`Image.ident`). A step reads and writes such a field as it is, and never inspects it. -/
+/-- The context that carries an identity, and a value of a type variable, as its own value, with
+the carrier's own image (`Image.ident`). A step reads and writes such a field as it is, and
+never inspects it. -/
 def Leaves.opaque : Leaves :=
-  ⟨fun _ => ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩⟩
+  ⟨fun _ => ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩, ⟨Val, Image.ident⟩,
+    ⟨Val, Image.ident⟩⟩
 
 /-- A field's carrier: its type's, or empty for an optional field, which has no carrier yet. -/
 def fieldCarrier : Bool → M → M
@@ -95,7 +100,7 @@ def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
   ty_lit _ := refused
   ty_refOf _ := L.ref
   ty_deferredOf _ _ := L.deferred
-  ty_var _ := refused
+  ty_var _ := L.var
   ty_unknown := refused
   ty_record fs := ⟨(columnsOf fs).1, Image.record (columnsOf fs).2⟩
   ty_map _ _ := refused
@@ -161,6 +166,36 @@ def refusalAlg : TyAlgebra (fun _ => Option String) where
 
 /-- The first reason a type is outside the checked domain; `none` inside it. -/
 def refusal (t : Ty) : Option String := cata_ty refusalAlg t
+
+/-- A record's fields are checked: each is required, and its type is in the checked domain. -/
+def FieldsChecked : List (String × Bool × Ty) → Prop
+  | [] => True
+  | (_, o, t) :: rest => o = false ∧ refusal t = none ∧ FieldsChecked rest
+
+theorem fieldsRefusal_of_checked : ∀ fs : List (String × Bool × Ty), FieldsChecked fs →
+    fieldsRefusal (cata_pos_list_prod_string_prod_bool_ty refusalAlg fs) = none
+  | [], _ => rfl
+  | (_, o, t) :: rest, ⟨ho, ht, hrest⟩ => by
+    subst ho
+    show (refusal t).or (fieldsRefusal (cata_pos_list_prod_string_prod_bool_ty refusalAlg rest)) =
+      none
+    rw [ht, fieldsRefusal_of_checked rest hrest]
+    rfl
+
+/-- **A record is in the checked domain** when its names ascend and each field is checked. The
+deriving step proves a structure's type checked this way: it decides the names' order and
+composes each field instance's own proof, so a field instance may be opaque. -/
+theorem refusal_record {fs : List (String × Bool × Ty)} (ascending : Field.Ascending Field.bytesKey fs)
+    (fields : FieldsChecked fs) : refusal (.record fs) = none := by
+  have mapped : Field.Ascending Field.bytesKey
+      (cata_pos_list_prod_string_prod_bool_ty refusalAlg fs) := by
+    rw [cata_pos_list_prod_string_prod_bool_ty_eq]
+    exact List.pairwise_map.mpr ascending
+  show (if Field.Ascending Field.bytesKey (cata_pos_list_prod_string_prod_bool_ty refusalAlg fs)
+      then fieldsRefusal (cata_pos_list_prod_string_prod_bool_ty refusalAlg fs)
+      else some "record fields out of canonical order") = none
+  rw [if_pos mapped]
+  exact fieldsRefusal_of_checked fs fields
 
 end Model
 

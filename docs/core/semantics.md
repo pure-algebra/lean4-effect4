@@ -306,11 +306,13 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   no codec admission (decisions row 330).
 - **A step types at its type (`step-language-typed`)**: A step is data over typed inputs
   (`Step`, `src/Effect4/Modules/Step.lean`), and it has a source term at every scope.
-  Let the caller's terms type at the inputs' types, and let the step pass its typing check.
+  Let the caller's terms type at the inputs' types, and let the step's typing facts hold.
   Then its term types at the step's type, under each literal flag (`Step.typed`,
   `src/Effect4/Laws/Modules/Step.lean`).
-  The check certifies the normal forms that the checker asks for by a fold of `Ty`
-  (`Ty.normalize_of_certNormal`, `src/Effect4/Laws/Program/TyNormal.lean`).
+  A caller proves the facts from premises where a type is a parameter, as Pool and the Queue do
+  from `A.normalize = A`.
+  Or the typing check proves them (`Step.typed_of_normal`): it certifies normal forms by a fold
+  of `Ty` (`Ty.normalize_of_certNormal`, `src/Effect4/Laws/Program/TyNormal.lean`).
   So it closes by `rfl` on a concrete step, a product included.
   It is typing only: no run, and nothing of a fold or an optional field (decisions row 330).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
@@ -1327,6 +1329,16 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   `src/Effect4/Laws/Modules/Step.lean`).
   A module's step written as data inherits its agreement with no proof of its own.
   It establishes nothing of a fold, an optional field, a step's specification or a run
+  (decisions row 330).
+- **The Latch's steps agree with its model (`latch-steps-agree`)**: The Latch is written in the
+  step language from the start (`src/Effect4/Modules/Latch/Steps.lean`).
+  Its model is rc.112's `class Latch`: `isOpen`, `open` and `release` with `scheduleUnsafe`,
+  `flushScheduled` and `closeUnsafe` (`src/Effect4/Laws/Modules/Latch/Model.lean`).
+  A wake posts one flush per batch, and a later wake joins the scheduled batch.
+  The cell's value is the image of the model state's carrier, by definition.
+  So each step's agreement is the reading law and one equation of Lean values
+  (`latch_steps_agree`, `src/Effect4/Laws/Modules/Latch/Steps.lean`).
+  It establishes nothing of `await`, interruption, the posted flush's fiber or liveness
   (decisions row 330).
 - **A step keeps the fields it does not name (`step-frame`)**: Take an update spine of an
   input. A field that no overwrite of the step names keeps its value.

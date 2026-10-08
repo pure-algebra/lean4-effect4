@@ -1,4 +1,5 @@
 import Effect4.Laws.Modules.Semaphore.Reading
+import Effect4.Laws.Modules.Semaphore.Data
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -121,18 +122,11 @@ theorem takeIfAvailableStep_agrees (tb : Table) (s : State) (n : Nat)
     (readsCell : Reads cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.takeIfAvailableStep needSrc cellSrc) env path vals
       (Val.tuple [Val.bool (takeIfAvailable s n).2, cellVal tb (takeIfAvailable s n).1]) := by
-  have taken := reads_field readsCell (cell_taken _ _ _ _)
-  have took := reads_pair (reads_bool true env path vals)
-    (reads_recordSet readsCell (reads_add taken readsNeed) (cell_setTaken _ _ _ _ _))
-  have stays := reads_pair (reads_bool false env path vals) readsCell
-  have whole := reads_ifT (reads_fitsT tb s n readsNeed readsCell) took stays
-  by_cases fitsNow : n ≤ free s
-  · rw [decide_eq_true fitsNow, if_pos rfl] at whole
-    rw [takeIfAvailable_fits fitsNow]
-    exact whole
-  · rw [decide_eq_false fitsNow, if_neg Bool.false_ne_true] at whole
-    rw [takeIfAvailable_stays fitsNow]
-    exact whole
+  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (inputsAt tb s n)
+    (Input.reads_cons readsNeed (Input.reads_cons (readsCell.to (cellVal_image tb s).symm)
+      Input.reads_nil)) Data.takeIfAvailable rfl
+  rw [takeIfAvailable_eval] at reads
+  exact reads.to (by rw [← cellVal_image]; rfl)
 
 /-- **The release step agrees with the model's `release`.** The reply is the free count after
 the release and whether a waiter is enrolled. The stored value is the model's next state. No
@@ -145,15 +139,11 @@ theorem releaseStep_agrees (tb : Table) (s : State) (n : Nat)
     (readsCell : Reads cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.releaseStep countSrc cellSrc) env path vals
       (Val.tuple [releaseReplyVal (release s n).2, cellVal tb (release s n).1]) := by
-  have taken := reads_field readsCell (cell_taken _ _ _ _)
-  have permits := reads_field readsCell (cell_permits _ _ _ _)
-  have waiters := reads_field readsCell (cell_waiters _ _ _ _)
-  have left := reads_sub taken readsCount
-  have reply := reads_tuple2 (reads_sub permits left) (reads_notT (reads_isEmpty waiters))
-  have stored := reads_recordSet readsCell left (cell_setTaken _ _ _ _ _)
-  refine (reads_pair reply stored).to ?_
-  rw [List.length_map, decide_length_zero]
-  rfl
+  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (inputsAt tb s n)
+    (Input.reads_cons readsCount (Input.reads_cons (readsCell.to (cellVal_image tb s).symm)
+      Input.reads_nil)) Data.release rfl
+  rw [release_eval] at reads
+  exact reads.to (by rw [← cellVal_image]; rfl)
 
 /-- **The withdrawal agrees with the model's `withdraw`.** The reply is nothing, and the stored
 value is the model's next state. The table does not change. -/

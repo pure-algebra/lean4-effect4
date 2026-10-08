@@ -75,12 +75,16 @@ def cellFields (A : Ty) : List (String × Bool × Ty) :=
   [("msgs", false, .list A), ("cap", false, .nat), ("takers", false, .list takerTy),
    ("offers", false, .list (offerTy A))]
 
+/-- The cell's fields at the message type `A`: `cellFields A` in the canonical field order. A
+step written as data names its fields against this list (`src/Effect4/Modules/Queue/Data.lean`). -/
+def cellRecord (A : Ty) : List (String × Bool × Ty) :=
+  [("cap", false, .nat), ("msgs", false, .list A), ("offers", false, .list (offerTy A)),
+   ("takers", false, .list takerTy)]
+
 /-- **The cell's type at the message type `A`**: `cellFields A` in the canonical field order.
 It is the type that the checker answers for `empty A capacity`, where `A` is its own normal
 form. -/
-def cellTy (A : Ty) : Ty := .record
-  [("cap", false, .nat), ("msgs", false, .list A), ("offers", false, .list (offerTy A)),
-   ("takers", false, .list takerTy)]
+def cellTy (A : Ty) : Ty := .record (cellRecord A)
 
 /-- **The initial value at a capacity**: no message, no waiting taker and no pending offer. The
 capacity is a literal, so a caller states a positive one where it writes the queue. -/

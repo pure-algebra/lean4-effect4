@@ -2,6 +2,7 @@ module
 
 public import Effect4.Schema.FieldRef
 public import Effect4.Modules.Words
+public import Effect4.Program.Authoring.Tuples
 
 /-!
 # Modules.Step — a module's step as first-order data over `Ty`
@@ -14,10 +15,14 @@ inputs that answers a value (decisions row 330, slice L2). Here a step is data:
   list (`Schema.FieldRef`). The syntax holds no function.
 - **The signature**: an input, the literals `bool`, `nat` and `unit`, the Boolean words `not`,
   `and`, `or` and `ite`, the numeric words `add`, `sub`, `lt`, `eq` and `isZero`, the product
-  words `pair`, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and the list
-  words `emptyLike`, `len`, `snoc`, `append`, `take`, `drop` and `head`.
+  words `pair`, `tuple2`, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and
+  the list words `emptyLike`, `len`, `snoc`, `append`, `take`, `drop` and `head`. `pair` and
+  `tuple2` answer one value, and differ in their atom and in their typing rule.
 - **The algebra and its fold** (`StepAlgebra`, `Step.cata`): one field per constructor, and the
-  one map out of the syntax. Every interpretation below is an algebra.
+  one map out of the syntax. Every interpretation below is an algebra. The two are written by
+  hand: the fold generator (`tools/Effect4Gen/Fold.lean`) writes the algebras of the free objects,
+  and its support of a family indexed by `Ty`, like `Step Γ t`, is not established. `Step.cata`
+  is the one hand recursion over a step.
 
 The arrows out of a step, each a fold:
 
@@ -29,6 +34,7 @@ The arrows out of a step, each a fold:
 | `Step.spine` | footprint | the input whose record it updates, when it is an update spine |
 | `Step.canonical` | check | whether each record it reads or writes has ascending names |
 | `Step.normal` | check | whether each type where the checker needs a normal form is certified to have one |
+| `Step.Facts` | proposition | the normal forms that the checker needs, as facts a caller may prove |
 
 The laws are proved once for the language (`src/Effect4/Laws/Modules/Step.lean`). A step's term
 reads the encoding of its value, at every scope. It types at the step's type, at every scope.
@@ -85,6 +91,7 @@ inductive Step (Γ : List Ty) : Ty → Type where
   | eq : Step Γ .nat → Step Γ .nat → Step Γ .bool
   | isZero : Step Γ .nat → Step Γ .bool
   | pair {a b : Ty} : Step Γ a → Step Γ b → Step Γ (.prod a b)
+  | tuple2 {a b : Ty} : Step Γ a → Step Γ b → Step Γ (.prod a b)
   | fst {a b : Ty} : Step Γ (.prod a b) → Step Γ a
   | snd {a b : Ty} : Step Γ (.prod a b) → Step Γ b
   | some {t : Ty} : Step Γ t → Step Γ (.option t)
@@ -115,6 +122,7 @@ structure StepAlgebra (Γ : List Ty) (R : Ty → Type) where
   eq : R .nat → R .nat → R .bool
   isZero : R .nat → R .bool
   pair : {a b : Ty} → R a → R b → R (.prod a b)
+  tuple2 : {a b : Ty} → R a → R b → R (.prod a b)
   fst : {a b : Ty} → R (.prod a b) → R a
   snd : {a b : Ty} → R (.prod a b) → R b
   some : {t : Ty} → R t → R (.option t)
@@ -149,6 +157,7 @@ def cata {R : Ty → Type} (alg : StepAlgebra Γ R) : {t : Ty} → Step Γ t →
   | _, .eq a b => alg.eq (cata alg a) (cata alg b)
   | _, .isZero a => alg.isZero (cata alg a)
   | _, .pair a b => alg.pair (cata alg a) (cata alg b)
+  | _, .tuple2 a b => alg.tuple2 (cata alg a) (cata alg b)
   | _, .fst p => alg.fst (cata alg p)
   | _, .snd p => alg.snd (cata alg p)
   | _, .some a => alg.some (cata alg a)
@@ -180,6 +189,7 @@ def termAlg (src : {t : Ty} → Input Γ t → TermSrc) : StepAlgebra Γ (fun _ 
   eq a b := app "eq" [a, b]
   isZero a := app "isZero" [a]
   pair a b := app "pair" [a, b]
+  tuple2 a b := tuple [a, b]
   fst p := app "fst" [p]
   snd p := app "snd" [p]
   some a := app "some" [a]
@@ -215,6 +225,7 @@ def evalAlg (L : Leaves) (vs : Inputs L Γ) : StepAlgebra Γ (CarrierAt L) where
   eq := fun (a b : Nat) => decide (a = b)
   isZero := fun (a : Nat) => decide (a = 0)
   pair a b := (a, b)
+  tuple2 a b := (a, b)
   fst p := p.1
   snd p := p.2
   some a := (Option.some a : Option _)
@@ -250,6 +261,7 @@ def writesAlg : StepAlgebra Γ (fun _ => List String) where
   eq a b := a ++ b
   isZero a := a
   pair a b := a ++ b
+  tuple2 a b := a ++ b
   fst p := p
   snd p := p
   some a := a
@@ -282,6 +294,7 @@ def spineAlg : StepAlgebra Γ (fun _ => Option Nat) where
   eq _ _ := none
   isZero _ := none
   pair _ _ := none
+  tuple2 _ _ := none
   fst _ := none
   snd _ := none
   some _ := none
@@ -317,6 +330,7 @@ def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → 
   eq a b := a && b
   isZero a := a
   pair a b := a && b
+  tuple2 {a b} x y := atType (.prod a b) && (x && y)
   fst p := p
   snd p := p
   some a := a
@@ -340,6 +354,44 @@ normal form, and so is the type of each selection and of each list it extends
 (`Ty.certNormal`, `src/Effect4/Program/TyNormal.lean`). It reduces by evaluation. -/
 def normal {t : Ty} (e : Step Γ t) : Bool :=
   cata (checkAlg (fun fs => (Ty.record fs).certNormal) (fun t => t.certNormal)) e
+
+/-- The facts algebra: the normal forms that the checker's rules ask for, as propositions. A
+selection and a list it extends ask for their type's normal form, a tuple for its two items' and
+that neither is a union, and a field's read and overwrite for the record's. -/
+def factsAlg : StepAlgebra Γ (fun _ => Prop) where
+  var _ := True
+  bool _ := True
+  nat _ := True
+  unit := True
+  not a := a
+  and a b := a ∧ b
+  or a b := a ∧ b
+  ite {t} c a b := t.normalize = t ∧ c ∧ a ∧ b
+  add a b := a ∧ b
+  sub a b := a ∧ b
+  lt a b := a ∧ b
+  eq a b := a ∧ b
+  isZero a := a
+  pair a b := a ∧ b
+  tuple2 {a b} x y :=
+    (a.normalize = a ∧ b.normalize = b ∧ a.isFactor = true ∧ b.isFactor = true) ∧ x ∧ y
+  fst p := p
+  snd p := p
+  some a := a
+  get := fun {fs} {_} r _ => Ty.normalize (.record fs) = .record fs ∧ r
+  set := fun {fs} {_} r _ v => Ty.normalize (.record fs) = .record fs ∧ r ∧ v
+  emptyLike xs := xs
+  len xs := xs
+  snoc {t} xs x := t.normalize = t ∧ xs ∧ x
+  append {t} xs ys := t.normalize = t ∧ xs ∧ ys
+  take xs n := xs ∧ n
+  drop xs n := xs ∧ n
+  head xs := xs
+
+/-- **The typing facts**: the normal forms that the checker needs for the step, as one
+proposition. The typing check (`normal`) proves them by evaluation; a caller proves them from
+premises where a type is a parameter. -/
+def Facts {t : Ty} (e : Step Γ t) : Prop := cata factsAlg e
 
 end Step
 end Effect4.Modules

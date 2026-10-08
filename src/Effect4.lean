@@ -99,6 +99,12 @@ import Effect4.Schema.Modeled.Derive
 import Effect4.Program.TyNormal
 import Effect4.Schema.FieldRef
 import Effect4.Modules.Step
+-- Fields by name, and the modules' steps written as data (decisions row 330, slice L3).
+import Effect4.Schema.FieldRef.Elab
+import Effect4.Modules.Semaphore.Data
+import Effect4.Modules.Pool.Data
+import Effect4.Modules.Queue.Data
+import Effect4.Modules.Latch.Steps
 import Effect4.Program.Typing
 import Effect4.Program.Definitions
 import Effect4.Program.Typing.Blame
