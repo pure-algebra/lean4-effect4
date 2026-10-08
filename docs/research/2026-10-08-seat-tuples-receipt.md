@@ -112,3 +112,27 @@ The Queue seat confirms those failures predate this tuple slice.
 `QueueData` and `QueueAgreement` pass unchanged here.
 The checked `Modeled` domain still refuses tuple types.
 The host boundary remains unchanged.
+
+## Interim triple helper cleanup
+
+The coordinator requests removal of unused interim triple image and reading helpers.
+The Queue seat confirms neither helper has an in-flight consumer.
+`Step.eval_tuple3` moves unchanged into `src/Effect4/Laws/Modules/Tuples.lean`.
+The tuple battery applies it at the original flat triple carrier.
+`src/Effect4/Laws/Modules/Tuple3.lean` and its shared Step import are removed.
+The native `reads_tuple3` and `types_tuple3` helpers remain unchanged.
+
+```text
+LEAN_NUM_THREADS=3 lake build Test.Program.StepTuples Test.Program.QueueData Test.Program.QueueAgreement
+passed: 866 jobs
+
+LEAN_NUM_THREADS=3 lake env lean /private/tmp/module-tuples-audit.lean
+passed: 871 declarations in nine changed modules; reached [propext, Quot.sound]
+
+LEAN_NUM_THREADS=3 lake env lean /private/tmp/module-authoring-boundary-review.lean
+passed: a descending-name record constructs, then fails canonical and normal checks
+```
+
+The last probe clarifies the author guide's boundary. Elaboration checks named field construction.
+The Step checks retain canonical-name and formation conditions.
+The coordinator owns the wording correction.

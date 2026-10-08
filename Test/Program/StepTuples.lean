@@ -19,6 +19,11 @@ def three : Step [] (.tuple [.nat,.bool,.unit]) := .tuple3 (.nat 7) (.bool true)
 def four : Step [] (.tuple [.nat,.bool,.unit,.nat]) :=
   .tuple (.cons (.nat 7) (.cons (.bool true) (.cons .unit (.cons (.nat 9) .nil))))
 
+-- The retained triple compatibility corollary reads at the original flat carrier.
+example : three.eval (Γ := []) Leaves.opaque () =
+    ((7 : Nat), ((true : Bool), ((() : Unit), ()))) :=
+  Step.eval_tuple3 (Γ := []) (L := Leaves.opaque) (.nat 7) (.bool true) .unit ()
+
 #guard zero.normal && one.normal && two.normal && three.normal && four.normal
 #guard zero.canonical && one.canonical && two.canonical && three.canonical && four.canonical
 #guard (zero.term (Input.source []) {} []).toOption == some (.app "tuple" .nil)

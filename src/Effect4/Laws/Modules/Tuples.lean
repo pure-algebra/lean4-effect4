@@ -114,4 +114,10 @@ theorem types_tuple_shape {Op : Type} {sig : Signature Op} (atoms : sig.atomOf =
     (h : ∀ const, TypesAll sig sources env path types const ts) (facts : tupleFacts ts) :
     TypesEach sig (Authoring.tuple sources) env path types (tupleShape ts) :=
   fun _ => (types_app (h _) (atomOf_native atoms (nativeAtomTy_tuple ts))).to (tupleFacts_normal ts facts)
+/-- Triple evaluation uses the same required-column carrier as its image. -/
+theorem Step.eval_tuple3 {L : Leaves} {Γ : List Ty} {a b c : Ty}
+    (x : Step Γ a) (y : Step Γ b) (z : Step Γ c) (vs : Inputs L Γ) :
+    (Step.tuple3 x y z).eval L vs = (x.eval L vs, (y.eval L vs, (z.eval L vs, ()))) := rfl
+
+
 end Effect4.Modules

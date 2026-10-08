@@ -6,7 +6,6 @@ import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Modules.Construction
 import Effect4.Laws.Modules.Cons
 import Effect4.Laws.Modules.Option
-import Effect4.Laws.Modules.Tuple3
 import Effect4.Laws.Modules.Tuples
 import Effect4.Laws.Modules.Step.Requirements
 import Effect4.Laws.Schema.Identity
