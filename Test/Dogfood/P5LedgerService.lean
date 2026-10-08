@@ -221,7 +221,7 @@ def measured : Reach :=
 
 /-- The stage p5 reaches today, as `Test/Dogfood/README.md` quotes it: no encoding of the program
 builds. Its signed answer is admitted since decisions row 317, so the language refuses no part
-of it; its subtraction still truncates at zero until the integers packet's slice 5 (`minus`).
+of it. The finite `balanceAfter` control answers -15 with `minus` since decisions row 319.
 The `Account` record in one `Ref` builds since the state plan's T3a, and the pure part of a
 deposit is one atomic `Ref.modify` over it since T3b (section 1). -/
 def stage : Reach :=

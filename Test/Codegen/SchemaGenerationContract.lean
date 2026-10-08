@@ -458,6 +458,27 @@ def codecCases : List (String × Ty × Store.Val × Json) :=
 #guard codecCases.all fun (_, t, v, j) =>
   Ty.encode t v == some j && Ty.decode t j == some v && Ty.isCodecValue t v
 
+/-- Numeric host inputs name independent binary64 data, including the sign of zero.
+The host comparison also reads the public decoder at each expected datum. -/
+def numericCodecCases : List (String × Ty × Store.Val × Json) :=
+  [ ("intZero", .int, .nat 0, .number ⟨0x0000000000000000⟩)
+  , ("intPositive", .int, .nat 404, .number ⟨0x4079400000000000⟩)
+  , ("intNegative", .int, .negInt 14, .number ⟨0xC02E000000000000⟩)
+  , ("intPositiveBound", .int, .nat (2 ^ 53 - 1), .number ⟨0x433FFFFFFFFFFFFF⟩)
+  , ("intNegativeBound", .int, .negInt (2 ^ 53 - 2), .number ⟨0xC33FFFFFFFFFFFFF⟩)
+  , ("numberZero", .number, .nat 0, .number ⟨0x0000000000000000⟩)
+  , ("numberPositive", .number, .nat 3, .number ⟨0x4008000000000000⟩)
+  , ("numberNegative", .number, .negInt 2, .number ⟨0xC008000000000000⟩)
+  , ("numberPositiveFraction", .number, .float 0x3FE0000000000000, .number ⟨0x3FE0000000000000⟩)
+  , ("numberNegativeFraction", .number, .float 0xBFE0000000000000, .number ⟨0xBFE0000000000000⟩)
+  , ("numberNegativeZero", .number, .float 0x8000000000000000, .number ⟨0x8000000000000000⟩)
+  , ("numberPositiveBound", .number, .nat (2 ^ 53 - 1), .number ⟨0x433FFFFFFFFFFFFF⟩)
+  , ("numberNegativeBound", .number, .negInt (2 ^ 53 - 2), .number ⟨0xC33FFFFFFFFFFFFF⟩)
+  , ("numberAboveBound", .number, .nat (2 ^ 53), .number ⟨0x4340000000000000⟩)
+  , ("numberBelowBound", .number, .negInt (2 ^ 53 - 1), .number ⟨0xC340000000000000⟩)
+  , ("numberLargePositive", .number, .nat (2 ^ 60), .number ⟨0x43B0000000000000⟩)
+  , ("numberLargeNegative", .number, .negInt (2 ^ 60 - 1), .number ⟨0xC3B0000000000000⟩) ]
+
 -- The number boundary accepts exactly representable large integers, refusing rounding.
 #guard Ty.encode .nat (.nat (2 ^ 53)) = some (Arch.Json.ofNat (2 ^ 53))
 #guard Ty.encode .nat (.nat (2 ^ 53 + 1)) = none
@@ -592,8 +613,8 @@ did not evaluate to `true`
 -- every contract case reads its key-sorted image, and its image is a fixed point of `N_J`
 #guard codecCases.all fun (_, t, v, j) =>
   Ty.decode t (Schema.Codec.normJ j) == some v && Schema.Codec.normJ j == j
--- S's limitation at `union int (except nat nat)` is not observable here: `int` has no member today
--- (`Val.hasTy v .int = false`), so a `Result` failure round-trips at that union
+-- Integer members and Result failures have distinct JSON layouts, so this Result failure
+-- round-trips at the union without choosing the integer arm.
 #guard Ty.decode (.union .int (.except .nat .nat)) jResultFailure = some (.ctor 0 [.nat 1])
 #guard Ty.encode (.union .int (.except .nat .nat)) (.ctor 0 [.nat 1]) = some jResultFailure
 
