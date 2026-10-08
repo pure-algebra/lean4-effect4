@@ -76,7 +76,11 @@
     "pPoolCloseWaits",
     "pPoolWithdrawn",
     "pPoolClosed",
-    "pPoolClosing"
+    "pPoolClosing",
+    "pDefsTwice",
+    "pDefsEven",
+    "pDefsOdd",
+    "pDefsFork"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
