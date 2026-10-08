@@ -38,7 +38,7 @@ The premises are `DenotesTyped`'s (`Typed/Assembly.lean`; decisions rows 170, 17
 holds (`MachineTyped.sourceWF`, `MachineTyped.services`): a resumed yield is the denotation of the
 yielded effect at its point, typed only at a well-formed source and the source's service table. -/
 def GenProtocol (root : ProgramSource) : Prop :=
-  root.program.layerRefsWF = true →
+  SourceWF root →
     ∀ (w : World), w.serviceTy = root.sig.serviceTy →
       ∀ (p : Point) (body : Stmts NativeOp) (cert : EffTy),
         Node.at_ (.eff root.program) p.path = some (.eff (.gen body)) → PointTyped root w p cert →

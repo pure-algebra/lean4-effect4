@@ -1353,7 +1353,7 @@ theorem loadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : N
 /-- **The typed load for every checked program**: M5 without the lawful-signature and closed-row
 premises, which its proof does not read. -/
 theorem load_typed (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy) :
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
     ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
   load_typed_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped root) checked
 

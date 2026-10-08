@@ -7,6 +7,7 @@ import Effect4.Laws.Program.Eliminators
 import Effect4.Program.Admission
 import Effect4.Program.Bounds
 import Effect4.Laws.Auto.Semantics
+import Effect4.Laws.Program.Definitions
 
 /-!
 # Laws.Program.Typing.Closed — the checker gives a formed program closed types
@@ -806,7 +807,33 @@ def ArgAll (P : Ty → Prop) : ArgF Op (EffSelfCarrier Op) → Prop
   | .optTerm t => ∀ x ∈ t, TermAll P x
   | .optTy ty => ∀ t ∈ ty, P t
   | .op op => (∀ t ∈ ScopedOp.term? op, TermAll P t) ∧ ∀ t ∈ ScopedOp.typeArgs op, P t
+  | .decls ds => ∀ d ∈ ds, P d.request ∧ P d.answer ∧ P d.error
   | _ => True
+
+/-- The declared columns of a definition block, as `ArgAll`. A step of
+`argumentAnnotations_all`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem declAnnotations_all (P : Ty → Prop) (path : List String) (ds : List DefDecl) :
+    allTypes P (Formation.declAnnotations path ds) =
+      ∀ d ∈ ds, P d.request ∧ P d.answer ∧ P d.error := by
+  refine propext ⟨fun h d hd => ?_, fun h x hx => ?_⟩
+  · obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hd
+    have hmem : (d, i) ∈ ds.zipIdx := List.mem_zipIdx_iff_getElem?.mpr hi
+    have hsub : ∀ y ∈ [(path ++ [toString i, "request"], d.request),
+        (path ++ [toString i, "answer"], d.answer), (path ++ [toString i, "error"], d.error)],
+        P y.2 := fun y hy => h y (List.mem_flatMap.mpr ⟨(d, i), hmem, hy⟩)
+    exact ⟨hsub _ List.mem_cons_self, hsub _ (List.mem_cons_of_mem _ List.mem_cons_self),
+      hsub _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
+  · obtain ⟨⟨d, i⟩, hmem, hx⟩ := List.mem_flatMap.mp hx
+    have hd : d ∈ ds := List.mem_iff_getElem?.mpr ⟨i, List.mem_zipIdx_iff_getElem?.mp hmem⟩
+    obtain ⟨hr, ha, he⟩ := h d hd
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact hr
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact ha
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact he
+    exact nomatch hx
 
 /-- The annotations of one argument, as `ArgAll`. A step of `nodeAnnotations_all`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -825,6 +852,7 @@ theorem argumentAnnotations_all (P : Ty → Prop) (path : List String) (index : 
     refine (allTypes_append P _ _).trans ?_
     refine congr (congrArg And (optionTerm_all P _ _)) (allTypes_zipIdx_map P _ _ ?_)
     exact fun _ => rfl
+  | decls ds => exact declAnnotations_all P _ ds
   | _ => exact allTypes_nil P
 
 /-- What a node's own arguments state, in order: a conjunction over the node's view. -/
@@ -1521,8 +1549,16 @@ theorem typeOfProgram_closed {Op : Type} [ScopedOp Op] (sig : Signature Op)
     t.answer.closed = true ∧ t.error.closed = true := by
   unfold typeOfProgram at h
   split at h
-  · exact hasTy_closed closed (effTy_sound sig _ [] t h) ClosedEnv.nil
-      (Formation.annotationsAll_expandRefs _ e (Formation.annotationsClosed_of_formed formed))
+  · have hann := Formation.annotationsAll_expandRefs _ e (Formation.annotationsClosed_of_formed formed)
+    have hm := checkModule_sound sig _ t (Effect4.Laws.Auto.toOption_eq_some.mp h)
+    generalize e.expandRefs = x at hann hm
+    cases hm with
+    -- a block's main program is checked at the block's signature, whose atoms and carriers are
+    -- the signature's (decisions row 328)
+    | @defs decls _ _ _ _ hmain =>
+      exact hasTy_closed (sig := sig.withDefs decls) ⟨closed.atom, closed.service⟩ hmain
+        ClosedEnv.nil hann.2.2
+    | plain hd => exact hasTy_closed closed hd ClosedEnv.nil hann
   · exact nomatch h
 
 /-- A native atom answers a closed type at closed arguments. -/

@@ -88,6 +88,32 @@ theorem Signature.withDefs_rowOf_call (sig : Signature Op) (decls : List DefDecl
     (sig.withDefs decls).rowOf op = d.row.normalizeTypes := by
   simp only [Signature.withDefs, h, hd]
 
+/-- **An empty block changes nothing** at a signature that keeps every invocation outside its
+domain, as an application's does (`SigApp.signature_callsOutside`). A step of `rootCode_typed`
+(`Typed/Assembly.lean`): the source's signature of a program with no block is its tables'. -/
+theorem Signature.withDefs_nil (sig : Signature Op)
+    (h : ∀ op k, sig.callOf op = some k → sig.dom op = false) : sig.withDefs [] = sig := by
+  have e1 : (sig.withDefs []).rowOf = sig.rowOf := funext fun op => by
+    cases hc : sig.callOf op with
+    | none => exact sig.withDefs_rowOf_of_none [] hc
+    | some k => simp only [Signature.withDefs, hc, List.getElem?_nil]
+  have e2 : (sig.withDefs []).dom = sig.dom := funext fun op => by
+    cases hc : sig.callOf op with
+    | none => exact sig.withDefs_dom_of_none [] hc
+    | some k =>
+      rw [sig.withDefs_dom_call [] hc, h op k hc]
+      exact decide_eq_false (Nat.not_lt_zero k)
+  show { sig with rowOf := (sig.withDefs []).rowOf, dom := (sig.withDefs []).dom } = sig
+  rw [e1, e2]
+
+/-- An application's signature keeps every invocation outside its domain (`nativeSignature`). -/
+theorem SigApp.signature_callsOutside (app : SigApp) :
+    ∀ op k, app.signature.callOf op = some k → app.signature.dom op = false := by
+  intro op k h
+  cases op with
+  | call _ => rfl
+  | _ => cases h
+
 /-- The signature with an empty domain and every other field of `sig`. Both `sig` and its block's
 signature extend it, so the reads that do not touch a row agree. A step of `defs_check_agreeOn`. -/
 def Signature.emptyDom (sig : Signature Op) : Signature Op := { sig with dom := fun _ => false }
@@ -280,6 +306,26 @@ inductive ModuleHasTy (sig : Signature Op) : Eff Op → EffTy → Prop
       ModuleHasTy sig (.defs decls bodies main) t
   | plain {e : Eff Op} {t : EffTy} : HasTy sig [] e t → ModuleHasTy sig e t
 
+/-- **The body of a declaration**: where the bodies' judgment holds, each declaration of the block
+has its body, typed in the environment of its declared request at a type the formed declaration
+admits. A step of `bodiesTyped_of_typeOf` (`Typed/Denotation.lean`), the premise of M5's
+invocation arm. -/
+theorem BodiesHasTy.get {sig : Signature Op} :
+    ∀ {decls : List DefDecl} {bodies : Effs Op}, BodiesHasTy sig decls bodies →
+      ∀ {k : Nat} {d : DefDecl}, decls[k]? = some d →
+        ∃ body t, bodies.toList[k]? = some body ∧ HasTy sig [d.request.normalize] body t ∧
+          d.formed = true ∧ d.admits t = true
+  | _, _, .nil, _, _, h => by
+    rw [List.getElem?_nil] at h
+    cases h
+  | _, _, .cons (body := body) (t := t) hf hb ht _, 0, _, h => by
+    rw [List.getElem?_cons_zero, Option.some.injEq] at h
+    subst h
+    exact ⟨body, t, rfl, hb, hf, ht⟩
+  | _, _, .cons _ _ _ hrest, _ + 1, _, h => by
+    rw [List.getElem?_cons_succ] at h
+    exact hrest.get h
+
 /-- What the bodies' check accepts at equal lengths, the bodies' judgment derives. A step of
 `checkModule_sound`. -/
 theorem checkBodies_sound (sig : Signature Op) :
@@ -373,8 +419,8 @@ theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls :
     have hc' : s'.callOf op = some k := by rw [h.callOf]; exact hc
     rw [s.withDefs_dom_call decls hc] at hd
     refine ⟨by rw [s'.withDefs_dom_call decls hc']; exact hd, ?_⟩
-    obtain ⟨d, hdk⟩ := Option.isSome_iff_exists.mp
-      (List.isSome_getElem?.mpr (of_decide_eq_true hd))
+    have hlt : k < decls.length := of_decide_eq_true hd
+    obtain ⟨d, hdk⟩ : ∃ d, decls[k]? = some d := ⟨decls[k], List.getElem?_eq_getElem hlt⟩
     rw [s'.withDefs_rowOf_call decls hc' hdk, s.withDefs_rowOf_call decls hc hdk]
 
 /-- The bodies' judgment along an extension. A step of `moduleHasTy_ext`. -/

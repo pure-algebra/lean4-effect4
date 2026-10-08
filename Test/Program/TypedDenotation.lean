@@ -172,7 +172,7 @@ out — a fork of `chainPoint`, whose child's code would be untyped — is argue
 not compiled. -/
 theorem chain_untyped (rootTy : EffTy) (w : W) (m : RState) : ¬ MachineTyped chainSrc rootTy w m := by
   intro typed
-  have wf : chainRoot.layerRefsWF = true := typed.sourceWF
+  have wf : chainRoot.layerRefsWF = true := typed.sourceWF.refs
   rw [chain_not_wf] at wf
   cases wf
 

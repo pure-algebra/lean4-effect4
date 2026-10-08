@@ -108,6 +108,44 @@ private theorem effsRounds_cons : ∀ (xs : List Nat) (h : NativeEff) (t : Effs 
   | [], _, _ => rfl
   | _ :: xs, h, t => effsRounds_cons xs (Eff.expandRound orig h) (Effs.expandRound orig t)
 
+/-- A block's rounds keep the block: its spine's rounds and its main program's (decisions row 328;
+private like `rounds_raceAll`). A step of `Eff.expandIn_defs`. -/
+private theorem rounds_defs : ∀ (xs : List Nat) (decls : List DefDecl) (bodies : Effs NativeOp)
+    (main : NativeEff),
+    rounds orig xs (.defs decls bodies main) =
+      .defs decls (effsRounds orig xs bodies) (rounds orig xs main)
+  | [], _, _, _ => rfl
+  | _ :: xs, decls, bodies, main =>
+    rounds_defs xs decls (Effs.expandRound orig bodies) (Eff.expandRound orig main)
+
+/-- One round keeps a node that is no block a node that is no block: the round is the identity
+fold but at a layer reference. A step of `Eff.expandIn_ne_defs`. -/
+private theorem expandRound_ne_defs (e : NativeEff) (he : ∀ d b m, e ≠ .defs d b m) :
+    ∀ d b m, Eff.expandRound orig e ≠ .defs d b m := by
+  intro d b m h
+  cases e with
+  | defs d' b' m' => exact he d' b' m' rfl
+  | _ => cases h
+
+private theorem rounds_ne_defs : ∀ (xs : List Nat) (e : NativeEff), (∀ d b m, e ≠ .defs d b m) →
+    ∀ d b m, rounds orig xs e ≠ .defs d b m
+  | [], _, he => he
+  | _ :: xs, e, he => rounds_ne_defs xs _ (expandRound_ne_defs orig e he)
+
+/-- The spine's rounds, entry by entry. A step of `Eff.expandIn_defs`. -/
+private theorem effsRounds_getElem? (xs : List Nat) : ∀ (es : Effs NativeOp) (k : Nat),
+    (effsRounds orig xs es).toList[k]? = (es.toList[k]?).map (rounds orig xs)
+  | .nil, k => by
+    rw [effsRounds_nil]
+    simp only [Effs.toList, List.getElem?_nil, Option.map_none]
+  | .cons h t, 0 => by
+    rw [effsRounds_cons]
+    simp only [Effs.toList, List.getElem?_cons_zero, Option.map_some]
+  | .cons h t, k + 1 => by
+    rw [effsRounds_cons]
+    simp only [Effs.toList, List.getElem?_cons_succ]
+    exact effsRounds_getElem? xs t k
+
 end Rounds
 
 variable (root : NativeEff)
@@ -169,6 +207,21 @@ theorem Eff.expandIn_defs_head (decls : List DefDecl) (bodies : Effs NativeOp) (
   | nil => exact ⟨bodies, main, rfl⟩
   | cons _ rest ih =>
     exact ih (Effs.expandRound (Node.eff root) bodies) (Eff.expandRound (Node.eff root) main)
+
+/-- **A block's expansion** (decisions row 328): the rounds keep the block and its declarations;
+each body and the main program is expanded in place, entry by entry. A step of
+`bodiesTyped_of_typeOf` and `mainChecked_of_typeOf`. -/
+theorem Eff.expandIn_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff) :
+    ∃ bodies' : Effs NativeOp, Eff.expandIn root (.defs decls bodies main) =
+        .defs decls bodies' (Eff.expandIn root main) ∧
+      ∀ k : Nat, bodies'.toList[k]? = (bodies.toList[k]?).map (Eff.expandIn root) :=
+  ⟨_, rounds_defs _ _ decls bodies main, effsRounds_getElem? _ _ bodies⟩
+
+/-- The expansion keeps a program that is no block a program that is no block. A step of
+`rootCode_typed` (`Typed/Assembly.lean`). -/
+theorem Eff.expandIn_ne_defs {e : NativeEff} (he : ∀ d b m, e ≠ .defs d b m) :
+    ∀ d b m, Eff.expandIn root e ≠ .defs d b m :=
+  rounds_ne_defs _ _ e he
 
 theorem Eff.expandIn_restore (saved : Term) (b : NativeEff) :
     Eff.expandIn root (.restore saved b) = .restore saved (Eff.expandIn root b) :=
@@ -984,6 +1037,97 @@ theorem yieldNow_arm {priority : Nat} (hfuel : p.fuel ≠ 0)
   exact .pure (strongExit_success w' _ _ trivial)
 
 end TermArms
+
+/-! ## The definition block (decisions row 328)
+
+A block stands at the root of the program. Its bodies are child `0`, a spine whose head is child
+`0` and rest child `1`, so the body of definition `k` stands at `defBodyPath`'s path; the main
+program is child `1`. The checker's verdict on the whole program, a module check
+(`typeOfProgram`), types each body and the main program at the source's signature, which is the
+tables' signature extended by the block (`ProgramSource.signature`). -/
+
+/-- The body of definition `k` at its path in the bodies' spine. A step of
+`bodiesTyped_of_typeOf`. -/
+theorem Node.at_effs_body : ∀ (bodies : Effs NativeOp) (k : Nat),
+    Node.at_ (.effs bodies) (List.replicate k 1 ++ [0]) = (bodies.toList[k]?).map Node.eff
+  | .nil, 0 => rfl
+  | .nil, _ + 1 => rfl
+  | .cons _ _, 0 => rfl
+  | .cons _ t, k + 1 => Node.at_effs_body t k
+
+/-- The source's signature for a program with a block: the tables' signature extended by it. -/
+theorem ProgramSource.signature_defs {root : ProgramSource} {decls : List DefDecl}
+    {bodies : Effs NativeOp} {main : NativeEff} (hprog : root.program = .defs decls bodies main) :
+    root.signature = root.sig.signature.withDefs decls := by
+  show root.sig.signature.withDefs root.program.defsOf = _
+  rw [hprog]
+  rfl
+
+/-- The module judgment of a checked block, at the source's signature: the checker's verdict on
+the whole program is the module check of its expansion (`typeOfProgram`), and the expansion keeps
+the block (`Eff.expandIn_defs`). A step of `bodiesTyped_of_typeOf` and `mainChecked_of_typeOf`. -/
+theorem moduleHasTy_of_typeOf {root : ProgramSource} {rootTy : EffTy} {decls : List DefDecl}
+    {bodies : Effs NativeOp} {main : NativeEff} (hprog : root.program = .defs decls bodies main)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    ∃ bodies' : Effs NativeOp,
+      (∀ k : Nat, bodies'.toList[k]? = (bodies.toList[k]?).map (Eff.expandIn root.program)) ∧
+      BodiesHasTy root.signature decls bodies' ∧
+      Conform.Effect4.Typing.HasTy root.signature [] (Eff.expandIn root.program main) rootTy := by
+  have wf : root.program.layerRefsWF = true := by
+    have c := checked
+    unfold Program.typeOfProgram at c
+    split at c
+    · assumption
+    · cases c
+  obtain ⟨bodies', hexp, hget⟩ := Eff.expandIn_defs root.program decls bodies main
+  have hexpand : root.program.expandRefs = .defs decls bodies' (Eff.expandIn root.program main) := by
+    rw [← Eff.expandIn_self, ← hexp, ← hprog]
+  rw [typeOfProgram_eq_if_refsWF, if_pos wf, hexpand] at checked
+  have hm := checkModule_sound _ _ _ (Effect4.Laws.Auto.toOption_eq_some.mp checked)
+  rw [ProgramSource.signature_defs hprog]
+  cases hm with
+  | defs hb hmain => exact ⟨bodies', hget, hb, hmain⟩
+  | plain hd => cases hd
+
+/-- **The block's bodies are typed**, from the checker's verdict on the whole program (decisions
+row 328): `BodiesTyped`, M5's premise for the invocation's arm, discharged at the load as the
+references' formation is. A program with no block has no declaration. -/
+theorem bodiesTyped_of_typeOf {root : ProgramSource} {rootTy : EffTy}
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    BodiesTyped root := by
+  intro k d hd
+  have hcases : (∃ decls bodies main, root.program = .defs decls bodies main) ∨
+      root.program.defsOf = [] := by
+    cases root.program with
+    | defs decls bodies main => exact .inl ⟨decls, bodies, main, rfl⟩
+    | _ => exact .inr rfl
+  rcases hcases with ⟨decls, bodies, main, hprog⟩ | hnil
+  · rw [hprog] at hd
+    obtain ⟨bodies', hget, hb, -⟩ := moduleHasTy_of_typeOf hprog checked
+    obtain ⟨body', tb, hbody', htyped, hformed, hadmits⟩ := hb.get hd
+    rw [hget k] at hbody'
+    obtain ⟨body, hbody, rfl⟩ := Option.map_eq_some_iff.mp hbody'
+    have hlt : k < bodies.toList.length := (List.getElem?_eq_some_iff.mp hbody).1
+    refine ⟨0 :: List.replicate k 1 ++ [0], body, tb, ?_, ?_,
+      Conform.Effect4.Typing.check_complete _ _ _ _ htyped _, hformed, hadmits⟩
+    · rw [hprog]
+      exact if_pos hlt
+    · rw [hprog]
+      show Node.at_ (.effs bodies) (List.replicate k 1 ++ [0]) = _
+      rw [Node.at_effs_body, hbody]
+      rfl
+  · rw [hnil, List.getElem?_nil] at hd
+    cases hd
+
+/-- **The main program of a checked block is checked** at the source's signature, at the
+whole program's type, at its path. The load's start (`rootCode_typed`) reads it: a block has no
+step of its own, and the run goes on at its main program (`denoteR_defs`). -/
+theorem mainChecked_of_typeOf {root : ProgramSource} {rootTy : EffTy} {decls : List DefDecl}
+    {bodies : Effs NativeOp} {main : NativeEff} (hprog : root.program = .defs decls bodies main)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    Checker.check root.signature [] [1] (Eff.expandIn root.program main) = .ok rootTy := by
+  obtain ⟨-, -, -, hmain⟩ := moduleHasTy_of_typeOf hprog checked
+  exact Conform.Effect4.Typing.check_complete _ _ _ _ hmain _
 
 /-! ## Arms: `bind`, `select` and the scoped shapes
 
@@ -2978,7 +3122,14 @@ theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨reqTy, -, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hreq
+  -- a built-in row is no invocation, so the block's signature reads the tables' row there
+  have hnone : root.sig.signature.callOf op = none := by
+    cases op with
+    | call _ => exact (hk rfl).elim
+    | _ => rfl
   have hrowOf : root.signature.rowOf op = (NativeOp.row op).normalizeTypes := by
+    show (root.sig.signature.withDefs root.program.defsOf).rowOf op = _
+    rw [root.sig.signature.withDefs_rowOf_of_none _ hnone]
     show (nativeRowOf root.table op).normalizeTypes = _
     rw [nativeRowOf_builtin root.table hk]
   rw [hrowOf] at hrow
@@ -3067,18 +3218,6 @@ theorem external_arm {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
   intro w' ord ans post
   exact .pure post
 
-/-- **No point of an admitted program is an invocation** (decisions row 328): an admitted
-program's signature is an application's, which keeps every invocation outside its domain
-(`nativeSignature`). The admission of a definition block, and with it M5's invocation arm, is
-the next step of slice PROC-2. -/
-theorem call_not_typed {k : Nat} {r : Term} {q : Point} {t : EffTy}
-    (hat : Node.at_ (.eff root.program) q.path = some (.eff (.perform (.call k) r)))
-    (hpt : PointTyped root w q t) : False := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
-  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨reqTy, hdom, -, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
-  cases hdom
-
 /-- **No point of an admitted program is a definition block**: the checker refuses a block below
 the whole module's root (`TypeReason.definitionBlock`), so no point's check answers there. -/
 theorem defs_not_typed {decls : List DefDecl} {bodies : Effs NativeOp} {main : NativeEff}
@@ -3090,17 +3229,75 @@ theorem defs_not_typed {decls : List DefDecl} {bodies : Effs NativeOp} {main : N
   rw [heq] at hcheck
   exact nomatch hcheck
 
-/-- **`perform`**: a host row, the two asynchronous built-in rows, or a store row. -/
-theorem perform_arm {op : NativeOp} {r : Term} (hfuel : p.fuel ≠ 0)
+/-- **An invocation** (decisions row 328, goal G3; the arm of `denote-typed`): the counted step,
+then the definition's body at its path, its one variable the request's value. The checker types
+the invocation by the definition's declared row (`invoke_hasTy`), which the declaration's
+formation keeps closed: the request's value fits the declared request and the node's type is the
+declared columns (`rowTy_closed_some`). The body is typed at its point by the block's typing
+(`BodiesTyped`), one unit of fuel lighter (`Point.redirect`), and its type widens to the declared
+columns (`DefDecl.admits`). Its consumer is `perform_arm`. -/
+theorem call_arm {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.call k) r)))
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hbodies : BodiesTyped root)
+    (hden : ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path) :
+    TypedProg root w ty (denoteR root.program (.perform (.call k) r) p) := by
+  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨reqTy, hdom, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+  -- the block declares definition `k`, and the invocation reads its row
+  have hdomEq : root.signature.dom (.call k) = decide (k < root.program.defsOf.length) :=
+    root.sig.signature.withDefs_dom_call _ rfl
+  rw [hdomEq] at hdom
+  obtain ⟨d, hd⟩ : ∃ d, root.program.defsOf[k]? = some d :=
+    ⟨_, List.getElem?_eq_getElem (of_decide_eq_true hdom)⟩
+  have hrowOf : root.signature.rowOf (.call k) = d.row.normalizeTypes :=
+    root.sig.signature.withDefs_rowOf_call _ rfl hd
+  rw [hrowOf] at hrow
+  obtain ⟨path, body, tb, hpath, hbody, hbcheck, hformed, hadmits⟩ := hbodies k d hd
+  simp only [DefDecl.formed, Bool.and_eq_true] at hformed
+  obtain ⟨⟨⟨hreqc, hansc⟩, herrc⟩, -⟩ := hformed
+  obtain ⟨hsub, rfl⟩ := rowTy_closed_some (row := d.row.normalizeTypes)
+    (Ty.closed_normalize _ hreqc) (Ty.closed_normalize _ hansc) (Ty.closed_normalize _ herrc) hrow
+  simp only [DefDecl.admits, Bool.and_eq_true] at hadmits
+  obtain ⟨⟨hans, herr⟩, -⟩ := hadmits
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hreq
+  rw [denoteR_perform _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
+  refine suspendR_typed root (fun w' o => constructR_typed root (fun w'' o' completed hc => ?_))
+  have o'' := leHost_trans _ _ _ o o'
+  simp only [hv, hpath, hbody]
+  -- the body at its point, typed at its own type, widened to the declared columns
+  refine typedProg_widen root (T := tb) ?_ ?_ (hden body path hbody w''
+    (serviceTy_leHost o'' htie) _ tb (by simp only [Point.redirect, hfuel]; rfl) rfl
+    ⟨body, [d.request.normalize], hbody, hbcheck, ?_, hc⟩)
+  · show Ty.sub tb.answer.normalize d.answer.normalize.normalize.normalize = true
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+    exact hans
+  · show Ty.sub tb.error.normalize d.error.normalize.normalize.normalize = true
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+    exact herr
+  · have hreqFit : Fits w'' v d.request.normalize :=
+      fits_subN w'' (show Ty.sub reqTy.normalize d.request.normalize.normalize = true from hsub)
+        v (fits_mono o'' hfit)
+    exact envTyped_append (envTyped_nil w'') hreqFit
+
+/-- **`perform`**: a host row, the two asynchronous built-in rows, a store row, or an invocation
+(`call_arm`), which reads the block's typing and the induction at the body's point. -/
+theorem perform_arm {op : NativeOp} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hbodies : BodiesTyped root)
+    (hden : ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path) :
     TypedProg root w ty (denoteR root.program (.perform op r) p) := by
+  have hpos : p.fuel ≠ 0 := by rw [hfuel]; exact Nat.succ_ne_zero f
   cases op with
-  | external i => exact external_arm hfuel hat hpt
-  | call k => exact (call_not_typed hat hpt).elim
-  | deferredAwait => exact deferredAwait_arm hfuel hat hpt
-  | sleep => exact sleep_arm hfuel hat hpt
-  | _ => exact syncPerform_arm rfl hfuel hat hpt
+  | external i => exact external_arm hpos hat hpt
+  | call k => exact call_arm hfuel hat hpt htie hbodies hden
+  | deferredAwait => exact deferredAwait_arm hpos hat hpt
+  | sleep => exact sleep_arm hpos hat hpt
+  | _ => exact syncPerform_arm rfl hpos hat hpt
 
 end PerformArms
 
@@ -3336,7 +3533,8 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
         simp only [inlineAsyncYield, hv] at hinline
         exact nomatch hinline
-      | call k => exact (call_not_typed hat hpt).elim
+      -- an invocation has no immediate exit: its row is a program's (`NativeOp.kind`)
+      | call k => exact nomatch hinline
       | sleep =>
         obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
         obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
@@ -3501,7 +3699,7 @@ def ProvideLayerArm (root : ProgramSource) : Prop :=
 /-- **The arms assembled** (by induction on fuel, given the layer family's arm): every node of a
 well-formed program, at every fuel up to `f`, denotes typed programs at its typed points. -/
 theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
-    (hwf : root.program.layerRefsWF = true) :
+    (hwf : root.program.layerRefsWF = true) (hbodies : BodiesTyped root) :
     ∀ (f : Nat), ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path := by
   intro f
@@ -3525,7 +3723,8 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | failCause c => exact failCause_arm hpos hat hqt
       | sync t => exact sync_arm hpos hat hqt
       | suspend b => exact suspend_arm hq hat hqt htie (hch b 0 rfl)
-      | perform op r => exact perform_arm hpos hat hqt
+      | perform op r =>
+        exact perform_arm hq hat hqt htie hbodies (fun c' path' hc' => ih f (Nat.le_refl f) c' path' hc')
       | bind a b => exact bind_arm hq hat hqt htie (hch a 0 rfl) (hch b 1 rfl)
       | gen body => exact gen_arm hq hat hqt
       | catchCause b h => exact catchCause_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl)

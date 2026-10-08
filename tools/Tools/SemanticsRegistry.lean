@@ -378,6 +378,9 @@ def registry : Registry where
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37", relation := "definitionUsed" }
       ] },
+    { id := "invocation-arm", concept := "residual-program-typing", role := .fundamentalProperty
+      title := "An invocation of a checked definition block denotes TypedProg at the declared row: the body at its point, its type widened to the declaration (M5's arm, decisions row 328, G3)"
+      pointer := .witness `Effect4.Program.Typed.call_arm },
     { id := "rebuild-admission", concept := "residual-program-typing", role := .compatibility
       title := "Successful rebuilding checks the exact candidate under the retained host table and row names (Built.rebuild)"
       pointer := .witness `Effect4.Program.Authoring.rebuild_spec },

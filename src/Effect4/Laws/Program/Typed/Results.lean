@@ -55,7 +55,7 @@ admitted tape of a checked program, there is a declaration of the fibers, the ro
 type, under which every exit the frame machine's observation records satisfies
 `Denote.ExitHasTy` at its fiber's type over the observed stores. -/
 theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
     (admitted : AdmittedTape root rootTy fuel tape) :
     ∃ Γ : FiberId → Option EffTy, Γ Api.root = some rootTy ∧
       ∀ id ex, (id, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits →
@@ -76,7 +76,7 @@ theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape :
 the meaning layer's judgment at the program's type (`exits_hasTy` at the root). -/
 theorem root_exit_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (tape : List Api.Decision)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
     (admitted : AdmittedTape root rootTy fuel tape) (ex : ExitV)
     (recorded : (Api.root, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits) :
     Denote.ExitHasTy rootTy.answer rootTy.error

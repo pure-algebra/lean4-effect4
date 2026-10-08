@@ -37,8 +37,9 @@ theorem checkTyping_type (program : Program) (table : RowTable) :
     (checkTyping program table).map TypedProgram.ty = typeOf program table :=
   checkTypedProgram_type _ _
 
-/-- **The facade's equation.** `Api.explain` tests one thing before it answers the structural
-refusal of the expansion: the references are well formed. The equation is the facade's
+/-- **The facade's equation.** `Api.explain` tests one thing before it answers the whole module's
+refusal of the expansion (`Checker.checkModule`, decisions row 328): the references are well
+formed. The equation is the facade's
 definition, so its proof is `rfl`. Until 2026-10-06 the facade had one more arm, for a reference
 site that the expansion keeps. A well-formed program's expansion keeps none
 (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`). The proof at
@@ -50,7 +51,8 @@ row 273, point 2). -/
 theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
     explain program table =
       if program.layerRefsWF then
-        Effect4.Program.explain (nativeSignature table) [] program.expandRefs
+        Effect4.Program.Checker.refusal
+          (Effect4.Program.Checker.checkModule (nativeSignature table) program.expandRefs)
       else some ⟨[], .referencesIllFormed⟩ := rfl
 
 /-- On raw formed input, evidence retention keeps the existing module output. -/

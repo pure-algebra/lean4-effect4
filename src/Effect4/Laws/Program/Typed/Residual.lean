@@ -179,7 +179,8 @@ def FiberCert : FiberOp → Type
   | _ => PUnit
 
 /-- **Row 116's host-row entry, at the row's instance** (decisions row 183, ratified 2026-10-04):
-the operation is in the source signature's domain, and the row's check at some request type
+the operation is in the domain of the signature over the source's tables (a host row is the
+application's, never the program's definition block, decisions row 328), and the row's check at some request type
 (`rowTy`: the template's instance at the request's match) gives columns below the certificate.
 Outside the table the row is the placeholder, whose `never` columns are below every certificate,
 so without the bit the entry held at every certificate at a short table and constrained at a
@@ -188,8 +189,8 @@ longer one (`Test/Program/TypedProgRows.lean`, `typedProg_not_table_monotone_of`
 instead, the entry admitted no certificate a host success could meet at a parameter's position:
 the checked type is the instance, so the host-row arm certifies at it with no bridge. -/
 def bitEntry (root : ProgramSource) (op : NativeOp) (cert : EffTy) : Prop :=
-  root.signature.dom op = true ∧
-    ∃ reqTy t, rowTy (root.signature.rowOf op) reqTy = some t ∧
+  root.sig.signature.dom op = true ∧
+    ∃ reqTy t, rowTy (root.sig.signature.rowOf op) reqTy = some t ∧
       t.answer.sub cert.answer = true ∧ t.error.sub cert.error = true
 
 /-- The type an async registration's answer is certified at: a timer's `unit`, a deferred's
@@ -999,13 +1000,18 @@ variable (src src' : ProgramSource) (t' : RowTable)
   (hsvc : src'.services = src.services)
 include hprog htab hsvc
 
-omit hprog in
 /-- The longer source's signature extends the shorter one's: an appended row table under the
-same service declarations. -/
+same service declarations, and the same program, so the same definition block
+(`SigExtends.withDefs`, decisions row 328). -/
 theorem signature_rows_append : SigExtends src.signature src'.signature := by
-  show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
-  rw [htab, hsvc]
-  exact SigApp.rows_append src.sig t'
+  have htables : SigExtends src.sig.signature src'.sig.signature := by
+    show SigExtends src.sig.signature (SigApp.mk src'.table src'.services).signature
+    rw [htab, hsvc]
+    exact SigApp.rows_append src.sig t'
+  show SigExtends (src.sig.signature.withDefs src.program.defsOf)
+    (src'.sig.signature.withDefs src'.program.defsOf)
+  rw [hprog]
+  exact htables.withDefs _
 
 theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
@@ -1014,7 +1020,7 @@ theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
 
 theorem loopPointTyped_rows_append {w : World} {point : Point} {ty : EffTy} {cursor : Val}
     (h : LoopPointTyped src w point ty cursor) : LoopPointTyped src' w point ty cursor := by
@@ -1024,8 +1030,8 @@ theorem loopPointTyped_rows_append {w : World} {point : Point} {ty : EffTy} {cur
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
-  · rw [(signature_rows_append src src' t' htab hsvc).termTy env initial]
+    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+  · rw [(signature_rows_append src src' t' hprog htab hsvc).termTy env initial]
     exact hc0
 
 theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
@@ -1035,7 +1041,7 @@ theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+    exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
 
 /-- A capture typed under the shorter source is typed under the longer one: its node is the
 same program's, and the checker's verdicts extend along an appended row table. -/
@@ -1046,9 +1052,9 @@ theorem captureTyped_rows_append {w : World} {c : Capture}
   · rw [hprog]
     exact hnode
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' htab hsvc) hcheck
+    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' htab hsvc) hacq
+    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hacq
 
 theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
     (h : FinalizerAdmitted src w fin) : FinalizerAdmitted src' w fin := by
@@ -1082,21 +1088,21 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+      exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
   | memoBuild layer m =>
     obtain ⟨l, lt, hat, hcheck, hcert⟩ := h
     refine ⟨l, lt, ?_, ?_, hcert⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+      exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
   | memoComplete layer m ex =>
     obtain ⟨l, lt, hat, hcheck, hex⟩ := h
     refine ⟨l, lt, ?_, ?_, hex⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (signature_rows_append src src' t' htab hsvc) hcheck
+      exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
   | scopeAdd scope fin =>
     exact ⟨h.1, finalizerAdmitted_rows_append src src' t' hprog htab hsvc h.2⟩
   | _ => exact h

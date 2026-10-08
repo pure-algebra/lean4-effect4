@@ -250,7 +250,7 @@ structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
   liveBelow : ∀ raceId race, m.race? raceId = some race → ∀ id ∈ race.state.live,
     id.value < m.nextId
   /-- The source's layer references are well formed (decisions row 170; `MachineTyped.sourceWF`). -/
-  sourceWF : root.program.layerRefsWF = true
+  sourceWF : SourceWF root
 
 theorem MachineTyped.wide {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     (typed : MachineTyped root rootTy w m) : MachineWide root rootTy w m := by

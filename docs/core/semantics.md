@@ -375,8 +375,17 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   (`load-typed`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
   the load connector whose race-marker premise the root code's typing discharges
   (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
-  The displayed implication abbreviates the premises of `DenotesTyped`. They are well-formed layer
-  references, a world whose service table equals the source's, and an admitted source point whose path selects an effect node.
+  The displayed implication abbreviates the premises of `DenotesTyped`. The first is the source's
+  formation (`SourceWF`): well-formed layer references, and a definition block's bodies typed. The
+  others are a world whose service table equals the source's, and an admitted source point whose
+  path selects an effect node. The load discharges the formation from the checker's verdict
+  (`sourceWF_of_typeOf`, `src/Effect4/Laws/Program/Typed/Assembly.lean`).
+- **The invocation's arm (`invocation-arm`)**: an invocation of a checked block denotes a
+  `TypedProg` at the declared row (`call_arm` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)).
+  The request's value fits the declared request. The body is typed at its point, one unit of fuel
+  lighter, and its type widens to the declared columns. A block has no step of its own: the load
+  types its main program's point (`rootCode_typed`, `src/Effect4/Laws/Program/Typed/Assembly.lean`).
+  It does not establish progress, liveness or the termination of a recursive definition.
 - **Failure handler compatibility (`on-failure-typed`)**: Compatibility lemma for the error recovery bracket `onFailure` (decisions row 148), proved by
   `catchGuard_typed` (`src/Effect4/Laws/Program/Typed/Seq.lean`).
 - **M5 on the layer-free fragment (`denote-typed-layer-free`), and the layer family's arm

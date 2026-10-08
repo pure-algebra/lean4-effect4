@@ -365,12 +365,13 @@ structure MachineTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : 
   services : w.serviceTy = root.sig.serviceTy
   code : LiveCode root w m
   live : MachineLive m
-  /-- The source's layer references are well formed (decisions row 170): a constant fact of the
-  source, carried so a step that creates code from a point reads M5's `DenotesTyped`, whose premise
-  it is (without it a fork of a checked point that denotes `badShapeExit` breaks the step,
-  `E4-TYPED-CE-020`'s shape). The load discharges it from the checker's verdict
-  (`layerRefsWF_of_typeOf`); every step keeps it. A field of `J`, not of `ProgramSource`. -/
-  sourceWF : root.program.layerRefsWF = true
+  /-- The source is formed for M5 (`SourceWF`, decisions rows 170 and 328): its layer references
+  are well formed and its block's bodies are typed. Constant facts of the source, carried so a step
+  that creates code from a point reads M5's `DenotesTyped`, whose premise they are (without the
+  first a fork of a checked point that denotes `badShapeExit` breaks the step, `E4-TYPED-CE-020`'s
+  shape). The load discharges them from the checker's verdict (`layerRefsWF_of_typeOf`,
+  `bodiesTyped_of_typeOf`); every step keeps them. A field of `J`, not of `ProgramSource`. -/
+  sourceWF : SourceWF root
 
 /-- **`I`**, the typed configuration (decisions row 134): the machine with the residue the
 command loop runs. -/
@@ -1192,7 +1193,7 @@ the premise, nor the lawful one: the load is typed for every checked program
 (`load_typed_of_denotesTyped`). The closed row is part two's (the presence clause), which stays
 open. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
-  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+  LawfulSource root → Program.typeOfProgram root.sig.signature root.program = some rootTy →
     rootTy.requires = Env.Requirement.empty →
       ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel)
 
@@ -1208,7 +1209,7 @@ def DecisionKeeps (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (d : Api.
 source whose requirement row is empty is in `J` (the empty row as `LoadsTyped` takes it, rc.112's
 `runPromise`, `Effect.ts:17494-17497`; decisions row 117). -/
 def ReachableTyped (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+  LawfulSource root → Program.typeOfProgram root.sig.signature root.program = some rootTy →
     rootTy.requires = Env.Requirement.empty → RReachable root fuel m →
       ∃ w, MachineTyped root rootTy w m
 
@@ -1229,7 +1230,7 @@ table (`ServicesFit`), at the type the checker reads off the source's (`Checker.
 by `PointTyped` itself (row 175, `E4-TYPED-CE-021`). The three witnesses are
 `Test/Program/TypedDenotation.lean`'s. -/
 def DenotesTyped (root : ProgramSource) : Prop :=
-  root.program.layerRefsWF = true →
+  SourceWF root →
     ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (e : NativeEff) (ty : EffTy),
       Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
         TypedProg root w ty (denoteR root.program e p)
@@ -1316,7 +1317,7 @@ theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compile
 /-- **M5's builder.** `typedState_of_load` with the loaded root's code clause, the quiet machine's
 liveness and the source's well-formedness (decisions row 170, `MachineTyped.sourceWF`). -/
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (sourceWF : root.program.layerRefsWF = true)
+    (sourceWF : SourceWF root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
     (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
       (denoteR root.program root.program (rootPoint compileFuel))) :
@@ -1357,6 +1358,64 @@ theorem layerRefsWF_of_typeOf {Op : Type} {sig : Signature Op} {program : Eff Op
     exact hc
   · cases h
 
+/-- **A checked source is formed for M5** (`SourceWF`, decisions rows 170 and 328): the checker's
+verdict gives its references' formation and its block's typing. -/
+theorem sourceWF_of_typeOf {root : ProgramSource} {rootTy : EffTy}
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    SourceWF root :=
+  ⟨layerRefsWF_of_typeOf checked, bodiesTyped_of_typeOf checked⟩
+
+/-- **The root's code is typed** (decisions rows 148, 153 (b), 175 and 328): at every world whose
+service table is the source's, the program at the root point denotes a program typed at the
+checker's verdict. A program with no block is checked at the root point, at the tables'
+signature, which is the source's (`Signature.withDefs_nil`). A block has no step of its own: the
+run goes on at its main program (`denoteR_defs`), which the verdict checks at its path
+(`mainChecked_of_typeOf`); at a zero budget the root is the live frontier. The consumers are the
+two load connectors. -/
+theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Nat)
+    (denotes : DenotesTyped root)
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (w : World) (htie : w.serviceTy = root.sig.serviceTy) :
+    TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel)) := by
+  have hwf := sourceWF_of_typeOf checked
+  have hcases : (∃ decls bodies main, root.program = .defs decls bodies main) ∨
+      ((∀ decls bodies main, root.program ≠ .defs decls bodies main) ∧
+        root.program.defsOf = []) := by
+    cases root.program with
+    | defs decls bodies main => exact .inl ⟨decls, bodies, main, rfl⟩
+    | _ => exact .inr ⟨(fun _ _ _ h => nomatch h), rfl⟩
+  rcases hcases with ⟨decls, bodies, main, hprog⟩ | ⟨hne, hnil⟩
+  · -- a block: no step of its own, then its main program at child 1
+    by_cases hpos : (rootPoint compileFuel).fuel = 0
+    · exact denoteR_zero_typed _ hpos
+    · have hstep : denoteR root.program root.program (rootPoint compileFuel) =
+          denoteR root.program main ((rootPoint compileFuel).child 1) := by
+        have e1 : denoteR root.program root.program (rootPoint compileFuel) =
+            denoteR root.program (.defs decls bodies main) (rootPoint compileFuel) := by
+          rw [← hprog]
+        rw [e1]
+        exact denoteR_defs (root := root.program) (p := rootPoint compileFuel) decls bodies main hpos
+      rw [hstep]
+      have hat : Node.at_ (.eff root.program) ((rootPoint compileFuel).child 1).path =
+          some (.eff main) := by
+        show Node.at_ (.eff root.program) [1] = _
+        rw [hprog]
+        rfl
+      exact denotes hwf w htie _ main rootTy hat
+        ⟨main, [], hat, mainChecked_of_typeOf hprog checked, envTyped_nil _,
+          fun _ h => nomatch h⟩
+  · -- no block: the root point, checked at the tables' signature
+    have hsig : root.signature = root.sig.signature := ProgramSource.signature_of_defsOf_nil hnil
+    rw [typeOfProgram_eq_if_refsWF, if_pos hwf.refs,
+      checkModule_eq_check _ (e := root.program.expandRefs)
+        (Eff.expandIn_ne_defs root.program hne)] at checked
+    have hcheck : Checker.check root.signature [] (rootPoint compileFuel).path
+        (Eff.expandIn root.program root.program) = .ok rootTy := by
+      rw [hsig]
+      exact Effect4.Laws.Auto.toOption_eq_some.mp checked
+    exact denotes hwf w htie (rootPoint compileFuel) root.program rootTy rfl
+      ⟨root.program, [], rfl, hcheck, envTyped_nil _, fun _ h => nomatch h⟩
+
 /-- **M5 from row 148's fundamental property**, for a loaded head that is not a race marker
 (`InterpR.lean:320`: only a race park builds one). The root point is typed by the checker's
 verdict on the program's expansion (decisions row 153 (b)), so no reference-free premise: before
@@ -1367,17 +1426,10 @@ and the root point an empty completed view (row 175). -/
 theorem load_typed_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (denotes : DenotesTyped root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy) :
-    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) := by
-  have wf := layerRefsWF_of_typeOf checked
-  have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
-    rw [Eff.expandIn_self]
-    rw [typeOfProgram_eq_if_refsWF, if_pos wf] at checked
-    exact checked
-  exact ⟨_, machineTyped_load root rootTy fuel compileFuel wf noMarker
-    (denotes wf _ rfl (rootPoint compileFuel) root.program rootTy rfl
-      ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
-        fun _ h => nomatch h⟩)⟩
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
+  ⟨_, machineTyped_load root rootTy fuel compileFuel (sourceWF_of_typeOf checked) noMarker
+    (rootCode_typed root rootTy compileFuel denotes checked _ rfl)⟩
 
 /-- **M5 from the layer family's arm** (`Typed/Denotation.lean`, `childDenotes_upto`: every arm of
 `denoteR` by induction on fuel). The layer family's arm (`ProvideLayerArm`, decisions row 176 (b)) is
@@ -1385,8 +1437,8 @@ proved at every source in `Typed/LayerArm.lean` (`provideLayerArm`), where this 
 `denotesTyped` (`denotesTyped`). -/
 theorem denotesTyped_of_provideLayer (root : ProgramSource) (hlayer : ProvideLayerArm root) :
     DenotesTyped root := fun hwf w htie p e ty hat hpt =>
-  childDenotes_upto root hlayer hwf p.fuel p.fuel (Nat.le_refl _) e p.path hat w htie p ty rfl rfl
-    hpt
+  childDenotes_upto root hlayer hwf.refs hwf.bodies p.fuel p.fuel (Nat.le_refl _) e p.path hat w
+    htie p ty rfl rfl hpt
 
 /-- **M5 on the layer-free fragment**: a program none of whose nodes is a `provideLayer` satisfies
 the fundamental property; the layer family's arm cannot be reached there
@@ -1708,7 +1760,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
     Prop where
   lawful : LawfulSource root
   emptyTable : root.table = []
-  checked : Program.typeOfProgram root.signature root.program = some rootTy
+  checked : Program.typeOfProgram root.sig.signature root.program = some rootTy
   closedRow : rootTy.requires = Env.Requirement.empty
   answerFree : ∀ d ∈ tape, NoHostAnswer d
 
@@ -1751,7 +1803,7 @@ every raw handle frame since the F-WF repair (`E4-TYPED-CE-040`), so a member of
 in a typed store (`fits_validIn`): it is a consequence of `J` (`exitHandles_valid`,
 `Typed/Commands/Clauses/All.lean`). -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
-  LawfulSource root → Program.typeOfProgram root.signature root.program = some rootTy →
+  LawfulSource root → Program.typeOfProgram root.sig.signature root.program = some rootTy →
     RReachable root fuel m →
       ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → Val.validIn m.state v = true
 

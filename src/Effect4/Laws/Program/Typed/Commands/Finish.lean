@@ -47,19 +47,11 @@ code's typing makes it no race registration marker (`raceRegistrationR_typed`), 
 here, after the marker fact, since `Finish` imports `Assembly`. -/
 theorem load_typed_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     (fuel compileFuel : Nat) (denotes : DenotesTyped root)
-    (checked : Program.typeOfProgram root.signature root.program = some rootTy) :
-    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) := by
-  have wf := layerRefsWF_of_typeOf checked
-  have typed : effTy root.signature [] (Eff.expandIn root.program root.program) = some rootTy := by
-    rw [Eff.expandIn_self]
-    rw [typeOfProgram_eq_if_refsWF, if_pos wf] at checked
-    exact checked
-  have rootTyped := denotes wf (initialWorld rootTy root.sig.serviceTy) rfl (rootPoint compileFuel)
-    root.program rootTy rfl
-    ⟨root.program, [], rfl, Conform.Effect4.Typing.effTy_ok typed _, envTyped_nil _,
-      fun _ h => nomatch h⟩
-  exact load_typed_of_denotesTyped root rootTy fuel compileFuel denotes
-    (raceRegistrationR_typed rootTyped) checked
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
+  load_typed_of_denotesTyped root rootTy fuel compileFuel denotes
+    (raceRegistrationR_typed (rootCode_typed root rootTy compileFuel denotes checked
+      (initialWorld rootTy root.sig.serviceTy) rfl)) checked
 
 /-- M5's proposition from the connector: its lawful and closed-row premises are not read. -/
 theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)

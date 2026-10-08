@@ -591,6 +591,10 @@ theorem atAddress_getElem (path : List Nat) (args : List (ArgF Op TCarrier)) (j 
         simp only [atAddress, List.getElem?_cons_succ, List.take_succ_cons,
           List.countP_cons, isChildArg, argSortOf]
         exact ih j i
+      | decls value =>
+        simp only [atAddress, List.getElem?_cons_succ, List.take_succ_cons,
+          List.countP_cons, isChildArg, argSortOf]
+        exact ih j i
       | forkOptions value =>
         simp only [atAddress, List.getElem?_cons_succ, List.take_succ_cons,
           List.countP_cons, isChildArg, argSortOf]
@@ -1180,6 +1184,7 @@ theorem eraseCapture_printLeaf (sig : Signature Op) (row : Templates.Row)
   | op value => cases printed
   | mode value => cases printed
   | bool value => cases printed
+  | decls value => cases printed
   | nat value => cases printed; rfl
   | key value =>
     simp only [ArgF.fold, printArg, bind_eq_ok] at printed
@@ -2033,6 +2038,7 @@ theorem atAddress_fold_leaf (sig : Signature Op) (ann : List Nat → Option (Lis
   | key value => rfl
   | decision value => rfl
   | optTy value => rfl
+  | decls value => rfl
   | forkOptions value => rfl
   | optTerm value => rfl
   | lit value => rfl

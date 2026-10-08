@@ -446,7 +446,7 @@ structure RestoreBodyBoundary : Prop where
   /-- A typed point at the node denotes a typed program at the node's type: the typed stack
   and the typed captures of M5, at either saved choice. -/
   typed : ∀ (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (saved : Term)
-    (body : NativeEff), root.program.layerRefsWF = true → w.serviceTy = root.sig.serviceTy →
+    (body : NativeEff), SourceWF root → w.serviceTy = root.sig.serviceTy →
     Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)) →
       PointTyped root w p ty → TypedProg root w ty (denoteR root.program (.restore saved body) p)
   /-- A saved value passed as data keeps its choice: it reads back as the bit it was made from,
