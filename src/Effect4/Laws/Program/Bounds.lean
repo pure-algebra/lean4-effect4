@@ -27,9 +27,9 @@ import Effect4.Laws.Auto.Semantics
 * **In reach** (`TemplateOK`, `templateOKb`, `templateOK_of`). A template in the reach of the
   laws is its own normal form, is admissible, and holds no nominal reference.
   `Test/Program/BoundsControls.lean` decides it for every template of the tree.
-* **The binder term** (`matchB_cell_fixed`, `termGuard_modify_use`, `matchTerm_modify_use`). The
-  guard's one general law is `Bounds.matchB_of_matchTerm`
-  (`src/Effect4/Laws/Program/Template.lean`).
+* **The binder term** (`matchB_cell_fixed`, `matchB_modify_use`). The match keeps the cell's
+  parameter and binds the reply's parameter. `bindTerm_some_ok`
+  (`src/Effect4/Laws/Program/Template.lean`) exposes that match to its consumers.
 
 **Placement** (`AGENTS.md`, Trust). Concept `subtyping-algebra` (`docs/core/semantics.md`). The
 claim `template-match-complete` points at `matchB_complete`. `matchArgsB_monotone` is the
@@ -42,8 +42,8 @@ are `NativeAtom.sound_of_poly` (`src/Effect4/Laws/Program/Typed.lean`), the row 
 - A match under a union head or a nominal reference of a template.
 - An upper bound from a contravariant occurrence.
 - That the checker is complete against `HasTy`.
-- Anything of tsgo's inference. The interim guard and the prelude's declarations answer to
-  that, and the truth lane tests them on finite programs.
+- Anything of tsgo's inference. The typed printer and prelude declarations supply the target
+  forms, and the truth lane tests those forms on finite programs.
 - At a binder term's raw type no law is stated.
 -/
 
@@ -1426,34 +1426,7 @@ theorem matchB_refOf_var (X : Ty) : matchB [] (.refOf (.var 0)) (.refOf X) = som
   rw [hinst, hsub]
   rfl
 
-/-- The guard holds at a template of one parameter: one candidate has a greatest one. It is a
-step of `Waiting`, and `matchTerm_one_var` reads it. -/
-theorem termGuard_one_var (X : Ty) : termGuard [] (.var 0) X = true := by
-  dsimp only [termGuard]
-  rw [cands_var]
-  rfl
-
-/-- The guarded match at a template of one parameter (`Ref.make`'s request). It is a step of
-`Waiting`. -/
-theorem matchTerm_one_var (X : Ty) : matchTerm [] (.var 0) X = some [(0, X)] := by
-  unfold matchTerm
-  rw [termGuard_one_var, if_pos rfl, matchB_one_var]
-
-/-- The guard holds at a cell's template: one candidate. It is a step of `Waiting`, and
-`matchTerm_refOf_var` reads it. -/
-theorem termGuard_refOf_var (X : Ty) : termGuard [] (.refOf (.var 0)) (.refOf X) = true := by
-  dsimp only [termGuard]
-  rw [cands, comp_inv, cands_var]
-  rfl
-
-/-- The guarded match at a cell's template (the request of a cell's row). It is a step of
-`Waiting`. -/
-theorem matchTerm_refOf_var (X : Ty) :
-    matchTerm [] (.refOf (.var 0)) (.refOf X) = some [(0, X)] := by
-  unfold matchTerm
-  rw [termGuard_refOf_var, if_pos rfl, matchB_refOf_var]
-
-/-- It is a step of `Waiting`, and `matchTerm_modify_use` reads it. -/
+/-- It is a step of `Waiting`, and `answers_refModifyWith_captured` reads it. -/
 @[semantics "subtyping-algebra" (requirement := R4)]
 theorem matchB_modify_use (C B : Ty) :
     matchB [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = some [(0, C), (1, B)] := by
@@ -1468,23 +1441,6 @@ theorem matchB_modify_use (C B : Ty) :
   have hinst : instantiate [(0, C), (1, B)] (Ty.prod (.var 1) (.var 0)) = .prod B C := rfl
   rw [hinst, hsub]
   rfl
-
-/-! ## The interim guard at a binder term, at a symbolic pair -/
-
-/-- It is a step of `Waiting`, and `matchTerm_modify_use` reads it. -/
-@[semantics "subtyping-algebra" (requirement := R4)]
-theorem termGuard_modify_use (C B : Ty) :
-    termGuard [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = true := by
-  dsimp only [termGuard]
-  rw [cands, cands_var, cands_var, List.cons_append, List.nil_append]
-  rfl
-
-/-- It is a step of `Waiting`, and `TypedScope` reads it. -/
-@[semantics "subtyping-algebra" (requirement := R4)]
-theorem matchTerm_modify_use (C B : Ty) :
-    matchTerm [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = some [(0, C), (1, B)] := by
-  unfold matchTerm
-  rw [termGuard_modify_use, if_pos rfl, matchB_modify_use]
 
 end Effect4.Program.Bounds
 

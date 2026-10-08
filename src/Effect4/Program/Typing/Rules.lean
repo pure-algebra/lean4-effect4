@@ -259,11 +259,8 @@ inductive RowTypingRefusal where
   deriving DecidableEq, Repr
 
 /-- The bindings a row use's binder term extends: the term typed at the parameter's instance,
-its type matched against the result template from the request's bindings `σ`. The match is the
-match of a binder term (`Bounds.matchTerm`): the match by bounds under the interim guard of
-decisions row 299, point 10. It reads the term's raw type. The normal form distributes a product
-over a union, and the guard then refuses two pairs whose first parts have no order, where it
-admits the one pair of their union. -/
+its type matched by bounds against the result template from the request's bindings `σ`
+(`Bounds.matchB`). It reads the term's raw type and joins the offered lower bounds. -/
 def bindTerm (σ : Ty.Subst) : Option TermUse → Except RowTypingRefusal Ty.Subst
   | none => .ok σ
   | some use =>
@@ -271,7 +268,7 @@ def bindTerm (σ : Ty.Subst) : Option TermUse → Except RowTypingRefusal Ty.Sub
     match use.typeAt param with
     | none => .error (.term param)
     | some r =>
-      match Bounds.matchTerm σ use.result.normalize r with
+      match Bounds.matchB σ use.result.normalize r with
       | some σ' => .ok σ'
       | none => .error (.resultNotSubtype r (use.result.normalize.instantiate σ).normalize)
 
@@ -279,14 +276,11 @@ def bindTerm (σ : Ty.Subst) : Option TermUse → Except RowTypingRefusal Ty.Sub
 instantiated columns before normalization. Request mismatch retains precedence when several
 checks would fail (rows 42 and 193). The checker and `rowTy` project this one result.
 
-The request's match is the match by bounds under the interim guard (`Bounds.matchTerm`;
-decisions row 312, point 1): where the request offers a parameter two lower bounds with no
-order, the row refuses, since tsgo forms no join of two inference candidates. A native row
-fixes each parameter by a cell or by the whole request, so the guard refuses nothing there. It
-goes with the binder term's guard, when the TypeScript printer writes a row's type arguments. -/
+The request and the binder term both match by bounds (`Bounds.matchB`). The typed printer
+writes the call's inferred type arguments at a join (`Program.printTyped`). -/
 def checkRow (row : Row) (request : Ty) (use : Option TermUse := none) :
     Except RowTypingRefusal EffTy :=
-  match Bounds.matchTerm [] row.request.normalize request.normalize with
+  match Bounds.matchB [] row.request.normalize request.normalize with
   | none => .error .requestNotSubtype
   | some σ =>
     match bindTerm σ use with

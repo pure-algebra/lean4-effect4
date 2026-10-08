@@ -46,7 +46,7 @@ binder term's (`bindTerm`). The row check instantiates the row's columns with th
 row check answers, it answers that answer's bindings (`checkRow_rowBindings`,
 `Laws/Program/Typing/Call.lean`). -/
 def rowBindings (row : Row) (request : Ty) (use : Option TermUse := none) : Option Ty.Subst :=
-  (Bounds.matchTerm [] row.request.normalize request.normalize).bind fun σ =>
+  (Bounds.matchB [] row.request.normalize request.normalize).bind fun σ =>
     (bindTerm σ use).toOption
 
 /-- **The checked instance of the call at an address.** The focus at the address is a `perform`:

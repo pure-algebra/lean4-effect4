@@ -636,15 +636,12 @@ def captureEnv : TyEnv := [.refOf .nat, .nat]
     (.perform (.refUpdateWith (app2 "add" (.var 2) (.var 1))) (.var 0))) =
   some ⟨[], .binderTerm "refUpdateWith" .nat⟩
 
-/-! ### `B`'s binding and the interim guard (decisions rows 213, 299 and 303)
+/-! ### `B`'s binding by bounds (decisions rows 213, 299 and 303)
 
 `Ref.modify`'s `B` occurs covariantly, in the term's result template `[B, A]`. The match by
-bounds joins the lower bounds that the term's type offers `B`. At a binder term it stands under
-the interim guard (`Bounds.matchTerm`): those lower bounds must have a greatest one. A term whose
-type is a union of two pairs offers `"a"` and `"b"`, which have no order, so the guard refuses the
-term, although `B := "a" | "b"` puts the term's type under the instance. The same function
-written as a pair has the raw product type, offers one lower bound, and binds the union. The
-guard goes when the TypeScript printer writes a row's type arguments at the join. -/
+bounds joins the lower bounds that the term's type offers `B`. A union of two pairs offers
+`"a"` and `"b"`, so `B` binds to their union. A pair of the two components binds the same union.
+The typed printer supplies explicit type arguments at this join (`Program.printTyped`). -/
 
 /-- `["a", number] | ["b", number]`: the type of an outer value that is one of two pairs. -/
 def pairUnion : Ty := .union (.prod (.lit "a") .nat) (.prod (.lit "b") .nat)
@@ -652,13 +649,21 @@ def pairUnion : Ty := .union (.prod (.lit "a") .nat) (.prod (.lit "b") .nat)
 /-- The cell, then the outer pair; the node sits at level 2. -/
 def unionEnv : TyEnv := [.refOf .nat, pairUnion]
 
--- red: the term is the outer variable. Its type offers `B` two lower bounds with no order, and
--- the interim guard refuses
-#guard Checker.refusal (Checker.check nativeSignature unionEnv []
-    (.perform (.refModifyWith (.var 1)) (.var 0))) =
-  some ⟨[], .resultNotSubtype "refModifyWith" pairUnion (.prod .never .nat)⟩
--- yet the binding exists: at `B := "a" | "b"` the term's type is under the instance, and the
--- match by bounds alone answers it
+-- green: the outer variable offers two lower bounds, and the checker answers at their join
+#guard (Checker.check nativeSignature unionEnv []
+    (.perform (.refModifyWith (.var 1)) (.var 0))).toOption.map (·.answer) =
+  some (.union (.lit "a") (.lit "b"))
+
+/-- The two reply alternatives with an optional next cell value, for `Ref.modifySome`. -/
+def optionPairUnion : Ty :=
+  .union (.prod (.lit "a") (.option .nat)) (.prod (.lit "b") (.option .nat))
+
+-- green: the optional-update row also joins the reply's two lower bounds
+#guard (Checker.check nativeSignature [.refOf .nat, optionPairUnion] []
+    (.perform (.refModifySomeWith (.var 1)) (.var 0))).toOption.map (·.answer) =
+  some (.union (.lit "a") (.lit "b"))
+
+-- green: at `B := "a" | "b"` the term's type is under the instance
 #guard Ty.sub pairUnion.normalize
   ((Ty.prod (.var 1) (.var 0)).instantiate [(0, .nat), (1, .union (.lit "a") (.lit "b"))]).normalize
 #guard (Bounds.matchB [(0, .nat)] (.prod (.var 1) (.var 0)) pairUnion).map
