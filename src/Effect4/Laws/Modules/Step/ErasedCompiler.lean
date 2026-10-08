@@ -105,6 +105,11 @@ The consumer is the Queue A/P connector, retaining every source refusal and capt
 theorem Step.term_erase : {Γ : List Ty} → {t : Ty} → (e : Step Γ t) →
     (src : {u : Ty} → Input Γ u → TermSrc) →
     eraseSource (e.term src) = Step.cata Step.erasedTermAlg e src
+  | _, _, .tuple (ts := ts) xs, src => by
+    change eraseSource (Authoring.tuple (ItemResults.map (fun {_} x => x src) ts (Step.cataItems Step.termAlg xs))) = _
+    unfold Authoring.tuple
+    rw [eraseSource_app, Step.items_erase xs src]
+    rfl
   | _, _, .var _, _ => rfl
   | _, _, .bool _, _ => rfl
   | _, _, .nat _, _ => rfl
@@ -139,12 +144,8 @@ theorem Step.term_erase : {Γ : List Ty} → {t : Ty} → (e : Step Γ t) →
   | _, _, .pair a b, src => by
     change eraseSource (app "pair" [a.term src, b.term src]) = app "pair" [Step.cata Step.erasedTermAlg a src, Step.cata Step.erasedTermAlg b src]
     simp only [eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src, Step.term_erase b src]
-  | _, _, .tuple2 a b, src => by
-    change eraseSource (tuple [a.term src, b.term src]) = tuple [Step.cata Step.erasedTermAlg a src, Step.cata Step.erasedTermAlg b src]
-    simp only [Authoring.tuple, eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src, Step.term_erase b src]
-  | _, _, .tuple3 a b c, src => by
-    change eraseSource (tuple [a.term src, b.term src, c.term src]) = tuple [Step.cata Step.erasedTermAlg a src, Step.cata Step.erasedTermAlg b src, Step.cata Step.erasedTermAlg c src]
-    simp only [Authoring.tuple, eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src, Step.term_erase b src, Step.term_erase c src]
+
+
   | _, _, .fst a, src => by
     change eraseSource (app "fst" [a.term src]) = app "fst" [Step.cata Step.erasedTermAlg a src]
     simp only [eraseSource_app, List.map_cons, List.map_nil, Step.term_erase a src]
@@ -240,6 +241,17 @@ theorem Step.fields_erase : {Γ : List Ty} → {fs : List (String × Bool × Ty)
       (name, Step.cata Step.erasedTermAlg value src) ::
         FieldResults.map (fun name {_} value => (name, value src)) _ (Step.cataFields Step.erasedTermAlg rest)
     rw [Step.term_erase value src, Step.fields_erase rest src]
+
+/-- Annotation erasure commutes with the typed tuple child fold. -/
+theorem Step.items_erase : {Γ : List Ty} → {ts : List Ty} → (xs : StepItems Γ ts) →
+    (src : {u : Ty} → Input Γ u → TermSrc) →
+    (ItemResults.map (fun {_} x => x src) ts (Step.cataItems Step.termAlg xs)).map eraseSource =
+    ItemResults.map (fun {_} x => x src) ts (Step.cataItems Step.erasedTermAlg xs)
+  | _, _, .nil, _ => rfl
+  | _, _, .cons x xs, src => by
+    change eraseSource (x.term src) :: _ = Step.cata Step.erasedTermAlg x src :: _
+    simp only [Step.cataItems] at *
+    rw [Step.term_erase x src, Step.items_erase xs src]
 end
 
 end Effect4.Modules

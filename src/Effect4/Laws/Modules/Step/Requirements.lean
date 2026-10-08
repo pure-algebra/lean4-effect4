@@ -1,4 +1,5 @@
 import Effect4.Modules.Step
+import Effect4.Laws.Modules.Tuples
 import Aesop
 
 /-!
@@ -41,7 +42,6 @@ theorem requirements_mono {P Q R S : Prop} (scope : P → R) (identity : Q → S
   | _, _, .lt a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .eq a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .pair a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
-  | _, _, .tuple2 a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .set a _ b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .snoc a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .append a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
@@ -51,8 +51,7 @@ theorem requirements_mono {P Q R S : Prop} (scope : P → R) (identity : Q → S
   | _, _, .cons a b, h => ⟨requirements_mono scope identity a h.1, requirements_mono scope identity b h.2⟩
   | _, _, .ite a b c, h => ⟨requirements_mono scope identity a h.1,
     requirements_mono scope identity b h.2.1, requirements_mono scope identity c h.2.2⟩
-  | _, _, .tuple3 a b c, h => ⟨requirements_mono scope identity a h.1,
-    requirements_mono scope identity b h.2.1, requirements_mono scope identity c h.2.2⟩
+  | _, _, .tuple xs, h => requirements_items_mono scope identity xs h
   | _, _, .fold xs init body, h => ⟨scope h.1, requirements_mono scope identity xs h.2.1,
     requirements_mono scope identity init h.2.2.1, requirements_mono scope identity body h.2.2.2⟩
   | _, _, .record fields, h => requirements_fields_mono scope identity fields h
@@ -67,6 +66,17 @@ theorem requirements_fields_mono {P Q R S : Prop} (scope : P → R) (identity : 
   | _, _, .nil, _ => trivial
   | _, _, .cons _ value rest, h => ⟨requirements_mono scope identity value h.1,
     requirements_fields_mono scope identity rest h.2⟩
+
+/-- Typed tuple children transfer the same structural premises. -/
+theorem requirements_items_mono {P Q R S : Prop} (scope : P → R) (identity : Q → S) :
+    ∀ {Γ : List Ty} {ts : List Ty} (xs : StepItems Γ ts),
+    ItemResults.All (fun {_} value => value) ts (cataItems (requirementsAlg P Q) xs) →
+    ItemResults.All (fun {_} value => value) ts (cataItems (requirementsAlg R S) xs)
+  | _, _, .nil, _ => trivial
+  | _, _, .cons x xs, h => by
+    have parts := (ItemResults.all_cons _ _ _ _).mp h
+    exact (ItemResults.all_cons _ _ _ _).mpr
+      ⟨requirements_mono scope identity x parts.1, requirements_items_mono scope identity xs parts.2⟩
 end
 
 mutual
@@ -130,12 +140,6 @@ theorem requirements_features {P Q : Prop} : ∀ {Γ : List Ty} {t : Ty} (e : St
     rw [requirements_features a, requirements_features b]
     simp only [Bool.or_eq_true]
     aesop
-  | _, _, .tuple2 a b => by
-    change (a.Requirements P Q ∧ b.Requirements P Q) ↔
-      (((a.binds || b.binds) = true → P) ∧ ((a.compares || b.compares) = true → Q))
-    rw [requirements_features a, requirements_features b]
-    simp only [Bool.or_eq_true]
-    aesop
   | _, _, .set a _ b => by
     change (a.Requirements P Q ∧ b.Requirements P Q) ↔
       (((a.binds || b.binds) = true → P) ∧ ((a.compares || b.compares) = true → Q))
@@ -184,12 +188,7 @@ theorem requirements_features {P Q : Prop} : ∀ {Γ : List Ty} {t : Ty} (e : St
     rw [requirements_features a, requirements_features b, requirements_features c]
     simp only [Bool.or_eq_true]
     aesop
-  | _, _, .tuple3 a b c => by
-    change (a.Requirements P Q ∧ b.Requirements P Q ∧ c.Requirements P Q) ↔
-      (((a.binds || (b.binds || c.binds)) = true → P) ∧ ((a.compares || (b.compares || c.compares)) = true → Q))
-    rw [requirements_features a, requirements_features b, requirements_features c]
-    simp only [Bool.or_eq_true]
-    aesop
+  | _, _, .tuple xs => requirements_items_features xs
   | _, _, .fold xs init body => by
     change (P ∧ xs.Requirements P Q ∧ init.Requirements P Q ∧ body.Requirements P Q) ↔
       ((true = true → P) ∧ ((xs.compares || init.compares || body.compares) = true → Q))
@@ -216,6 +215,20 @@ theorem requirements_fields_features {P Q : Prop} :
       (((value.binds || (Step.record rest).binds) = true → P) ∧
         ((value.compares || (Step.record rest).compares) = true → Q))
     rw [requirements_features value, requirements_fields_features rest]
+    simp only [Bool.or_eq_true]
+    aesop
+
+/-- Feature completeness also folds over arbitrary typed tuple items. -/
+theorem requirements_items_features {P Q : Prop} :
+    ∀ {Γ : List Ty} {ts : List Ty} (xs : StepItems Γ ts),
+    ItemResults.All (fun {_} value => value) ts (cataItems (requirementsAlg P Q) xs) ↔
+      (((Step.tuple xs).binds = true → P) ∧ ((Step.tuple xs).compares = true → Q))
+  | _, _, .nil => ⟨fun _ => ⟨(fun h => nomatch h), (fun h => nomatch h)⟩, fun _ => trivial⟩
+  | _, _, .cons (t := t) (ts := ts) x xs => by
+    change ItemResults.All (R := fun _ => Prop) (fun {_} value => value) (t :: ts) (x.Requirements P Q, cataItems (requirementsAlg P Q) xs) ↔
+      (((x.binds || (Step.tuple xs).binds) = true → P) ∧
+        ((x.compares || (Step.tuple xs).compares) = true → Q))
+    rw [ItemResults.all_cons, requirements_features x, requirements_items_features xs]
     simp only [Bool.or_eq_true]
     aesop
 end

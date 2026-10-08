@@ -7,6 +7,7 @@ import Effect4.Laws.Modules.Construction
 import Effect4.Laws.Modules.Cons
 import Effect4.Laws.Modules.Option
 import Effect4.Laws.Modules.Tuple3
+import Effect4.Laws.Modules.Tuples
 import Effect4.Laws.Modules.Step.Requirements
 import Effect4.Laws.Schema.Identity
 import Effect4.Laws.Auto.Semantics
@@ -22,9 +23,10 @@ its own (decisions row 330, slice L2):
 - **Reading** (`Step.sound`; claim `step-language-sound`, concept `translation-simulation`,
   requirement R10): at every scope, for every caller's terms that read the inputs' encodings, a
   step that passes its reading check (`Step.canonical`) has a term that reads the encoding of its
-  value (`Step.eval`). It holds at every identity context, the opaque one included.
+  value (`Step.eval`). Deferred comparisons require an identity capability. Folds require scope alignment.
+  Other constructors retain the opaque interpretation.
 - **Typing** (`Step.typed`; claim `step-language-typed`, concept `store-typing`, requirement
-  R4): at every scope, for every caller's terms typed at the inputs' types, a step that passes
+  R4): at every scope, for every caller's terms typed at the inputs' types, a step with the required normalization and formation facts, or that passes
   its typing check (`Step.normal`) has a term that types at the step's type. The check certifies
   normal forms by a fold of `Ty` (`Ty.certNormal`), so it closes by `rfl` on a concrete step.
 - **Framing** (`Step.frame`, `Step.frame_read`; claim `step-frame`, concept
@@ -116,6 +118,8 @@ theorem check_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂
     (hf : ∀ t, f₁ t = true → f₂ t = true)
     (hr : ∀ fs, r₁ fs = true → r₂ fs = true) (ha : ∀ t, a₁ t = true → a₂ t = true) :
     ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), cata (checkAlg r₁ a₁ f₁) e = true → cata (checkAlg r₂ a₂ f₂) e = true
+  | _, _, .tuple xs, h => and_intro (tupleChecks_mono ha _ (and_true h).1)
+    (check_items_mono hf hr ha xs (and_true h).2)
   | _, _, .var _, _ => rfl
   | _, _, .bool _, _ => rfl
   | _, _, .nat _, _ => rfl
@@ -134,17 +138,8 @@ theorem check_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂
   | _, _, .eq a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
   | _, _, .isZero a, h => check_mono hf hr ha a h
   | _, _, .pair a b, h => and_intro (check_mono hf hr ha a (and_true h).1) (check_mono hf hr ha b (and_true h).2)
-  | _, _, .tuple2 a b, h => by
-    obtain ⟨ht, rest⟩ := and_true h
-    exact and_intro (ha _ ht)
-      (and_intro (check_mono hf hr ha a (and_true rest).1) (check_mono hf hr ha b (and_true rest).2))
-  | _, _, .tuple3 x y z, h =>
-    and_intro (and_intro (ha _ (and_true (and_true h).1).1)
-      (and_intro (ha _ (and_true (and_true (and_true h).1).2).1)
-        (ha _ (and_true (and_true (and_true h).1).2).2)))
-      (and_intro (check_mono hf hr ha x (and_true (and_true h).2).1)
-        (and_intro (check_mono hf hr ha y (and_true (and_true (and_true h).2).2).1)
-          (check_mono hf hr ha z (and_true (and_true (and_true h).2).2).2)))
+
+
   | _, _, .fst p, h => check_mono hf hr ha p h
   | _, _, .snd p, h => check_mono hf hr ha p h
   | _, _, .some a, h => check_mono hf hr ha a h
@@ -198,6 +193,17 @@ theorem check_fields_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a�
   | _, _, .cons _ value rest, h =>
     and_intro (check_mono hf hr ha value (and_true h).1)
       (check_fields_mono hf hr ha rest (and_true h).2)
+
+/-- Tuple child checks transfer independently of arity. -/
+theorem check_items_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂ : Ty → Bool}
+    {f₁ f₂ : Ty → Bool} (hf : ∀ t, f₁ t = true → f₂ t = true)
+    (hr : ∀ fs, r₁ fs = true → r₂ fs = true) (ha : ∀ t, a₁ t = true → a₂ t = true) :
+    ∀ {Γ : List Ty} {ts : List Ty} (xs : StepItems Γ ts),
+    (ItemResults.map (fun {_} x => x) ts (cataItems (checkAlg r₁ a₁ f₁) xs)).all id = true →
+    (ItemResults.map (fun {_} x => x) ts (cataItems (checkAlg r₂ a₂ f₂) xs)).all id = true
+  | _, _, .nil, _ => rfl
+  | _, _, .cons x xs, h => and_intro (check_mono hf hr ha x (and_true h).1)
+      (check_items_mono hf hr ha xs (and_true h).2)
 end
 
 /-- **The typing check implies the reading check**: a record in normal form has ascending
@@ -213,6 +219,13 @@ theorem tree_exists : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     {src : {u : Ty} → Input Γ u → TermSrc} {env : Env} {path : List Nat},
     (∀ {u : Ty} (x : Input Γ u), ∃ tree, src x env path = .ok tree) →
     ∃ tree, e.term src env path = .ok tree
+  | _, _, .tuple (ts := ts) xs, src, env, path, hin => by
+    obtain ⟨trees, resolved⟩ := item_trees_exist xs hin
+    refine ⟨.app "tuple" (termsOfList trees), ?_⟩
+    change ((ItemResults.map (fun {_} x => x src) ts (cataItems termAlg xs)).mapM
+      (fun source => source env path) >>= fun trees => Except.ok (Term.app "tuple" (termsOfList trees))) = _
+    rw [resolved]
+    rfl
   | _, _, .var x, src, env, path, hin => hin x
   | _, _, .bool b, _, _, _, _ => ⟨_, rfl⟩
   | _, _, .nat n, _, _, _, _ => ⟨_, rfl⟩
@@ -286,13 +299,7 @@ theorem tree_exists : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     change (app "pair" [(a.term src), (b.term src)]) env path = _
     simp only [ app, List.mapM_cons, List.mapM_nil, ha, hb]
     rfl
-  | _, _, .tuple2 a b, src, env, path, hin => by
-    obtain ⟨tree_a, ha⟩ := tree_exists a hin
-    obtain ⟨tree_b, hb⟩ := tree_exists b hin
-    refine ⟨.app "tuple" (termsOfList [tree_a, tree_b]), ?_⟩
-    change (Authoring.tuple [(a.term src), (b.term src)]) env path = _
-    simp only [ Authoring.tuple, app, List.mapM_cons, List.mapM_nil, ha, hb]
-    rfl
+
   | _, _, .fst p, src, env, path, hin => by
     obtain ⟨tree_p, hp⟩ := tree_exists p hin
     refine ⟨.app "fst" (termsOfList [tree_p]), ?_⟩
@@ -393,14 +400,7 @@ theorem tree_exists : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     rw [hl, hi, hb]
     rfl
 
-  | _, _, .tuple3 x y z, src, env, path, hin => by
-    obtain ⟨tx, hx⟩ := tree_exists x hin
-    obtain ⟨ty, hy⟩ := tree_exists y hin
-    obtain ⟨tz, hz⟩ := tree_exists z hin
-    refine ⟨.app "tuple" (termsOfList [tx, ty, tz]), ?_⟩
-    change (tuple [x.term src, y.term src, z.term src]) env path = _
-    simp only [Authoring.tuple, app, List.mapM_cons, List.mapM_nil, hx, hy, hz]
-    rfl
+
   | _, _, .record (fs := fs) fields, src, env, path, hin => by
     obtain ⟨trees, htrees⟩ := trees_exist fields hin
     refine ⟨.record fs ((FieldResults.map (fun name {_} value => (name, value src)) fs
@@ -446,6 +446,21 @@ theorem trees_exist : ∀ {Γ : List Ty} {fs : List (String × Bool × Ty)} (fie
     refine ⟨tree :: trees, ?_⟩
     change ((name, value.term src) :: _).mapM (fun entry => entry.2 env path) = _
     simp only [List.mapM_cons, cataFields, ht, hts]
+    rfl
+
+/-- Tuple child sources resolve without carrier inhabitants. -/
+theorem item_trees_exist : ∀ {Γ : List Ty} {ts : List Ty} (xs : StepItems Γ ts)
+    {src : {u : Ty} → Input Γ u → TermSrc} {env : Env} {path : List Nat},
+    (∀ {u : Ty} (x : Input Γ u), ∃ tree, src x env path = .ok tree) →
+    ∃ trees, (ItemResults.map (fun {_} x => x src) ts (cataItems termAlg xs)).mapM
+      (fun source => source env path) = .ok trees
+  | _, _, .nil, _, _, _, _ => ⟨[], rfl⟩
+  | _, _, .cons x xs, src, env, path, hin => by
+    obtain ⟨tree, hx⟩ := tree_exists x hin
+    obtain ⟨trees, hxs⟩ := item_trees_exist xs hin
+    refine ⟨tree :: trees, ?_⟩
+    change (x.term src :: _).mapM (fun source => source env path) = _
+    simp only [cataItems, List.mapM_cons, hx, hxs]
     rfl
 end
 
@@ -570,6 +585,8 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
     (_hin : ∀ {t : Ty} (x : Input Γ t), Reads (src x) env path vals ((imageAt L t).toVal (x.get vs)))
     {s : Ty} (e : Step Γ s), e.canonical = true → (requirements : e.Requirements (vals.length = env.names.length) (Nonempty (DeferredIdentity L))) →
       Reads (e.term src) env path vals ((imageAt L s).toVal (e.eval L vs))
+  | _, vs, src, env, path, vals, hin, _, .tuple (ts := ts) xs, h, req =>
+    reads_tuple_image L ts _ (sound_items hin xs (and_true h).2 req)
   | _, vs, src, env, path, vals, hin, _, .var x, _, _ => hin x
   | _, _, _, env, path, vals, _, _, .bool b, _, _ => reads_bool b env path vals
   | _, _, _, env, path, vals, _, _, .nat n, _, _ => reads_nat n env path vals
@@ -587,7 +604,7 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
   | _, vs, src, env, path, vals, hin, _, .eq a b, h, req => reads_eq (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
   | _, vs, src, env, path, vals, hin, _, .isZero a, h, req => reads_isZero (sound_core (requirements := req) hin a h)
   | _, vs, src, env, path, vals, hin, _, .pair a b, h, req => reads_pair (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
-  | _, vs, src, env, path, vals, hin, _, .tuple2 a b, h, req => reads_tuple2 (sound_core (requirements := req.1) hin a (and_true h).1) (sound_core (requirements := req.2) hin b (and_true h).2)
+
   | _, vs, src, env, path, vals, hin, _, .fst p, h, req => reads_app (.cons (sound_core (requirements := req) hin p h) .nil) rfl
   | _, vs, src, env, path, vals, hin, _, .snd p, h, req => reads_app (.cons (sound_core (requirements := req) hin p h) .nil) rfl
   | _, vs, src, env, path, vals, hin, _, .some a, h, req => reads_some (sound_core (requirements := req) hin a h)
@@ -661,11 +678,7 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
       exact fold_eval_image (imageAt L item) (imageAt L acc)
         (fun a i => body.eval (Γ := acc :: item :: Γ) L ((a, (i, vs)) : Inputs L (acc :: item :: Γ))) vals bt evaluates (xs.eval L vs) (init.eval L vs)
 
-  | _, vs, src, env, path, vals, hin, _, .tuple3 x y z, h, req =>
-    reads_tuple3_image L _ _ _ _ _ _
-      (sound_core (requirements := req.1) hin x (and_true h).1)
-      (sound_core (requirements := req.2.1) hin y (and_true (and_true h).2).1)
-      (sound_core (requirements := req.2.2) hin z (and_true (and_true h).2).2)
+
   | _, vs, src, env, path, vals, hin, _, .record (fs := fs) fields, h, req =>
     reads_record_image L fs _ (of_decide_eq_true (and_true h).1)
       (fields_names fields src) (sound_fields hin fields (and_true (and_true h).2).2 req)
@@ -699,6 +712,22 @@ theorem sound_fields : ∀ {Γ : List Ty} {vs : Inputs L Γ}
   | _, _, _, _, _, _, hin, _, .cons _ value rest, h, req =>
     .cons (sound_core hin value (and_true h).1 req.1)
       (sound_fields hin rest (and_true h).2 req.2)
+
+/-- Tuple children read their value images in declared order. -/
+theorem sound_items : ∀ {Γ : List Ty} {vs : Inputs L Γ}
+    {src : {t : Ty} → Input Γ t → TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (_hin : ∀ {t : Ty} (x : Input Γ t), Reads (src x) env path vals ((imageAt L t).toVal (x.get vs)))
+    {ts : List Ty} (xs : StepItems Γ ts),
+    (ItemResults.map (fun {_} x => x) ts (cataItems
+      (checkAlg (fun fs => decide (Field.Ascending Field.bytesKey fs)) (fun _ => true)) xs)).all id = true →
+    (Step.tuple xs).Requirements (vals.length = env.names.length) (Nonempty (DeferredIdentity L)) →
+    ReadsAll (ItemResults.map (fun {_} x => x src) ts (cataItems termAlg xs)) env path vals
+      (tupleValues L ts (ItemResults.values L vs ts (cataItems (evalAlg L) xs)))
+  | _, _, _, _, _, _, _, _, .nil, _, _ => .nil
+  | _, _, _, _, _, _, hin, _, .cons x xs, h, req => by
+    have parts := (ItemResults.all_cons _ _ _ _).mp req
+    exact .cons (sound_core hin x (and_true h).1 parts.1)
+      (sound_items hin xs (and_true h).2 parts.2)
 end
 
 /-- The reading law, with scope alignment only when a fold occurs. -/
@@ -722,6 +751,8 @@ mutual
 /-- **The typing check gives the typing facts**: each certified type is its own normal form
 (`Ty.normalize_of_certNormal`), and a certified product's items are normal factors. -/
 theorem facts_of_normal : ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), e.normal = true → e.Facts
+  | _, _, .tuple xs, h => ⟨tupleFacts_of_check _ (and_true h).1,
+    item_facts_of_normal xs (and_true h).2⟩
   | _, _, .var _, _ => trivial
   | _, _, .bool _, _ => trivial
   | _, _, .nat _, _ => trivial
@@ -740,10 +771,7 @@ theorem facts_of_normal : ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), e.normal 
   | _, _, .eq a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
   | _, _, .isZero a, h => facts_of_normal a h
   | _, _, .pair a b, h => ⟨facts_of_normal a (and_true h).1, facts_of_normal b (and_true h).2⟩
-  | _, _, .tuple2 a b, h => by
-    obtain ⟨ht, rest⟩ := and_true h
-    exact ⟨certNormal_prod_facts ht, facts_of_normal a (and_true rest).1,
-      facts_of_normal b (and_true rest).2⟩
+
   | _, _, .fst p, h => facts_of_normal p h
   | _, _, .snd p, h => facts_of_normal p h
   | _, _, .some a, h => facts_of_normal a h
@@ -769,13 +797,7 @@ theorem facts_of_normal : ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), e.normal 
     ⟨facts_of_normal xs (and_true (and_true h).1).1,
       facts_of_normal init (and_true (and_true h).1).2, facts_of_normal body (and_true h).2⟩
 
-  | _, _, .tuple3 x y z, h =>
-    ⟨⟨Ty.normalize_of_certNormal _ (and_true (and_true h).1).1,
-      Ty.normalize_of_certNormal _ (and_true (and_true (and_true h).1).2).1,
-      Ty.normalize_of_certNormal _ (and_true (and_true (and_true h).1).2).2⟩,
-      facts_of_normal x (and_true (and_true h).2).1,
-      facts_of_normal y (and_true (and_true (and_true h).2).2).1,
-      facts_of_normal z (and_true (and_true (and_true h).2).2).2⟩
+
   | _, _, .record fields, h =>
     ⟨Ty.normalize_of_certNormal _ (and_true h).1,
       Option.isNone_iff_eq_none.mp (and_true (and_true h).2).1,
@@ -799,6 +821,16 @@ theorem field_facts_of_normal : ∀ {Γ : List Ty} {fs : List (String × Bool ×
   | _, _, .nil, _ => trivial
   | _, _, .cons _ value rest, h =>
     ⟨facts_of_normal value (and_true h).1, field_facts_of_normal rest (and_true h).2⟩
+
+/-- Tuple child checks supply each child's typing facts. -/
+theorem item_facts_of_normal : ∀ {Γ : List Ty} {ts : List Ty} (xs : StepItems Γ ts),
+    (ItemResults.map (fun {_} x => x) ts (cataItems
+      (checkAlg (fun fs => (Ty.record fs).certNormal) (fun t => t.certNormal)
+        (fun t => (Formation.check (Formation.sites false [] t)).isNone)) xs)).all id = true →
+    ItemResults.All (fun {_} x => x) ts (cataItems factsAlg xs)
+  | _, _, .nil, _ => trivial
+  | _, _, .cons x xs, h => (ItemResults.all_cons _ _ _ _).mpr
+    ⟨facts_of_normal x (and_true h).1, item_facts_of_normal xs (and_true h).2⟩
 end
 
 variable {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
@@ -812,6 +844,8 @@ type is a parameter, or by the typing check (`typed_of_normal`). -/
 theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src : {t : Ty} → Input Γ t → TermSrc}
     {env : Env} {path : List Nat} {types : List Ty} (_hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
     {s : Ty} (e : Step Γ s), e.Facts → (requirements : e.Requirements (types.length = env.names.length) True) → TypesEach sig (e.term src) env path types s
+  | _, src, env, path, types, hin, _, .tuple xs, h, req =>
+    types_tuple_shape atoms (typed_items atoms hin xs h.2 req) h.1
   | _, src, env, path, types, hin, _, .var x, _, _ => hin x
   | _, _, _, _, _, _, _, .bool b, _, _ => types_bool b
   | _, _, _, _, _, _, _, .nat n, _, _ => types_nat n
@@ -827,8 +861,7 @@ theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src
   | _, src, env, path, types, hin, _, .eq a b, h, req => types_eq atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
   | _, src, env, path, types, hin, _, .isZero a, h, req => types_isZero atoms (typed_core atoms (requirements := req) hin a h)
   | _, src, env, path, types, hin, _, .pair a b, h, req => types_pair atoms (typed_core atoms (requirements := req.1) hin a h.1) (typed_core atoms (requirements := req.2) hin b h.2)
-  | _, src, env, path, types, hin, _, .tuple2 a b, h, req =>
-    types_tuple2 atoms (typed_core atoms (requirements := req.1) hin a h.2.1) (typed_core atoms (requirements := req.2) hin b h.2.2) h.1.1 h.1.2.1 h.1.2.2.1 h.1.2.2.2
+
   | _, src, env, path, types, hin, _, .fst p, h, req => fun _ => types_app (.cons (typed_core atoms (requirements := req) hin p h _) .nil) (atomOf_native atoms rfl)
   | _, src, env, path, types, hin, _, .snd p, h, req => fun _ => types_app (.cons (typed_core atoms (requirements := req) hin p h _) .nil) (atomOf_native atoms rfl)
   | _, src, env, path, types, hin, _, .some a, h, req => types_some atoms (typed_core atoms (requirements := req) hin a h)
@@ -865,10 +898,7 @@ theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src
       rfl
     · exact argTy_fold_intro const hle hie (Ty.subN_refl acc) hbe (Ty.subN_refl acc)
 
-  | _, src, env, path, types, hin, _, .tuple3 x y z, h, req =>
-    types_tuple3 atoms (typed_core atoms (requirements := req.1) hin x h.2.1)
-      (typed_core atoms (requirements := req.2.1) hin y h.2.2.1)
-      (typed_core atoms (requirements := req.2.2) hin z h.2.2.2) h.1.1 h.1.2.1 h.1.2.2
+
   | _, src, env, path, types, hin, _, .record (fs := fs) fields, h, req =>
     types_record_declared sig fs (ascending_of_normal h.1) h.1 h.2.1
       (fields_names fields src) (typed_fields atoms hin fields h.2.2 req)
@@ -895,6 +925,22 @@ theorem typed_fields (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {s
   | _, _, _, _, _, hin, _, .cons _ value rest, h, req =>
     .cons (typed_core atoms hin value h.1 req.1 true)
       (typed_fields atoms hin rest h.2 req.2)
+
+/-- Tuple children type at exactly their declared item types. -/
+theorem typed_items (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty}
+    {src : {t : Ty} → Input Γ t → TermSrc} {env : Env} {path : List Nat} {types : List Ty}
+    (_hin : ∀ {t : Ty} (x : Input Γ t), TypesEach sig (src x) env path types t)
+    {ts : List Ty} (xs : StepItems Γ ts),
+    ItemResults.All (fun {_} x => x) ts (cataItems factsAlg xs) →
+    (Step.tuple xs).Requirements (types.length = env.names.length) True →
+    ∀ const, TypesAll sig (ItemResults.map (fun {_} x => x src) ts (cataItems termAlg xs))
+      env path types const ts
+  | _, _, _, _, _, _, _, .nil, _, _, _ => .nil
+  | _, _, _, _, _, hin, _, .cons x xs, h, req, const => by
+    have facts := (ItemResults.all_cons _ _ _ _).mp h
+    have parts := (ItemResults.all_cons _ _ _ _).mp req
+    exact .cons (typed_core atoms hin x facts.1 parts.1 const)
+      (typed_items atoms hin xs facts.2 parts.2 const)
 end
 
 include atoms
@@ -922,23 +968,68 @@ variable (L : Leaves) (vs : Inputs L Γ)
 
 /-- **The frame law on carriers** (claim `step-frame`): on an update spine of an input, a field
 that no overwrite names reads as it does in the input. No premise on the record's names. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem frame {fs : List (String × Bool × Ty)} (x : Input Γ (.record fs)) {t : Ty}
-    (g : FieldRef fs t) :
-    ∀ (e : Step Γ (.record fs)), e.spine = Option.some x.index → g.name ∉ e.writes →
-      g.get (e.eval L vs) = g.get (x.get vs)
-  | .var y, hs, _ => by
-    have same : y = x := Input.index_inj y x (Option.some.inj hs)
-    rw [same]
+theorem frame_at {s : Ty} (e : Step Γ s) :
+    ∀ (vs : Inputs L Γ) {fs : List (String × Bool × Ty)} (x : Input Γ (.record fs))
+      {t : Ty} (g : FieldRef fs t) (same : s = .record fs),
+      e.spine = Option.some x.index → g.name ∉ e.writes →
+      g.get (same ▸ e.eval L vs) = g.get (x.get vs) := by
+  refine Step.rec
+    (motive_1 := fun Γ s e => ∀ (vs : Inputs L Γ) {fs : List (String × Bool × Ty)}
+      (x : Input Γ (.record fs)) {t : Ty} (g : FieldRef fs t) (same : s = .record fs),
+      e.spine = Option.some x.index → g.name ∉ e.writes →
+        g.get (same ▸ e.eval L vs) = g.get (x.get vs))
+    (motive_2 := fun _ _ _ => True) (motive_3 := fun _ _ _ => True)
+    (var := ?varCase)
+    (bool := ?boolCase)
+    (nat := ?natCase)
+    (unit := ?unitCase)
+    (not := ?notCase)
+    (and := ?andCase)
+    (or := ?orCase)
+    (ite := ?iteCase)
+    (add := ?addCase)
+    (sub := ?subCase)
+    (lt := ?ltCase)
+    (eq := ?eqCase)
+    (isZero := ?isZeroCase)
+    (pair := ?pairCase)
+    (tuple := ?tupleCase)
+    (fst := ?fstCase)
+    (snd := ?sndCase)
+    (some := ?someCase)
+    (get := ?getCase)
+    (set := ?setCase)
+    (emptyLike := ?emptyLikeCase)
+    (len := ?lenCase)
+    (snoc := ?snocCase)
+    (append := ?appendCase)
+    (take := ?takeCase)
+    (drop := ?dropCase)
+    (head := ?headCase)
+    (fold := ?foldCase)
+    (record := ?recordCase)
+    (nil := ?nilCase)
+    (none := ?noneCase)
+    (getOrElse := ?getOrElseCase)
+    (cons := ?consCase)
+    (sameDeferred := ?sameDeferredCase)
+    ?_ ?_ ?_ ?_ e
+  case varCase =>
+    intro Γ t y vs fs x u g same hs _
+    cases same
+    have equal : y = x := Input.index_inj y x (Option.some.inj hs)
+    rw [equal]
     rfl
-  | .ite c a b, hs, hw => by
+  case iteCase =>
+    intro Γ t c a b _ iha ihb vs fs x u g same hs hw
+    cases same
     have spine : (if a.spine = b.spine then a.spine else Option.none) = Option.some x.index := hs
     by_cases equal : a.spine = b.spine
     · rw [if_pos equal] at spine
       have outside : g.name ∉ c.writes ++ a.writes ++ b.writes := hw
       rw [List.mem_append, List.mem_append, not_or, not_or] at outside
-      have ha := frame x g a spine outside.1.2
-      have hb := frame x g b (equal ▸ spine) outside.2
+      have ha := iha vs x g rfl spine outside.1.2
+      have hb := ihb vs x g rfl (equal ▸ spine) outside.2
       have chosen : ∀ test : Bool,
           g.get ((evalAlg L).ite (t := .record fs) (fun _ => test) (fun _ => a.eval L vs) (fun _ => b.eval L vs) vs) =
             g.get (x.get vs) := by
@@ -949,19 +1040,23 @@ theorem frame {fs : List (String × Bool × Ty)} (x : Input Γ (.record fs)) {t 
       exact chosen (c.eval L vs)
     · rw [if_neg equal] at spine
       exact nomatch spine
-  | .set r f v, hs, hw => by
+  case setCase =>
+    intro Γ fields u r f v ihr _ vs fs x t g same hs hw
+    cases same
     have outside : g.name ∉ r.writes ++ v.writes ++ [f.name] := hw
     rw [List.mem_append, List.mem_append, not_or, not_or, List.mem_singleton] at outside
     show g.get (f.set (r.eval L vs) (v.eval L vs)) = _
     rw [FieldRef.get_set_other f g (r.eval L vs) (v.eval L vs)
       (fun same => outside.2 (FieldRef.name_of_index f g same).symm)]
-    exact frame x g r hs outside.1.1
-  | .get _ _, hs, _ => nomatch hs
-  | .fst _, hs, _ => nomatch hs
-  | .snd _, hs, _ => nomatch hs
-  | .fold _ _ _, hs, _ => nomatch hs
-  | .record _, hs, _ => nomatch hs
-  | .getOrElse _ _, hs, _ => nomatch hs
+    exact ihr vs x g rfl hs outside.1.1
+  all_goals aesop (add norm simp [spine, cata, spineAlg])
+
+@[semantics "translation-simulation" (requirement := R10)]
+theorem frame {fs : List (String × Bool × Ty)} (x : Input Γ (.record fs)) {t : Ty}
+    (g : FieldRef fs t) :
+    ∀ (e : Step Γ (.record fs)), e.spine = Option.some x.index → g.name ∉ e.writes →
+      g.get (e.eval L vs) = g.get (x.get vs) :=
+  fun e hs hw => frame_at L e vs x g rfl hs hw
 
 /-- **The frame law on the machine's record frame**: for a record with ascending names, the
 machine's read of a field that no overwrite names is the same before and after the step. -/

@@ -35,6 +35,8 @@ theorem eval_rename (L : Leaves) : ∀ {Γ Δ : List Ty} {t : Ty}
     (e : Step Γ t) (ρ : Input.Renaming Γ Δ) (vs : Inputs L Γ) (ws : Inputs L Δ),
     (∀ {u : Ty} (x : Input Γ u), (ρ x).get ws = x.get vs) →
       (e.rename ρ).eval L ws = e.eval L vs
+  | _, _, _, .tuple (ts := ts) xs, ρ, vs, ws, h => by
+    exact congrArg (packTuple L ts) (eval_renamedItems L xs ρ vs ws h)
   | _, _, _, .var x, ρ, vs, ws, h => h x
   | _, _, _, .bool b, _, _, _, _ => rfl
   | _, _, _, .nat n, _, _, _, _ => rfl
@@ -63,11 +65,8 @@ theorem eval_rename (L : Leaves) : ∀ {Γ Δ : List Ty} {t : Ty}
     exact congrArg (fun (x : Nat) => decide (x = 0)) (eval_rename L a ρ vs ws h)
   | _, _, _, .pair a b, ρ, vs, ws, h => by
     exact congr2 Prod.mk (eval_rename L a ρ vs ws h) (eval_rename L b ρ vs ws h)
-  | _, _, _, .tuple2 a b, ρ, vs, ws, h => by
-    exact congr2 Prod.mk (eval_rename L a ρ vs ws h) (eval_rename L b ρ vs ws h)
-  | _, _, _, .tuple3 a b c, ρ, vs, ws, h => by
-    exact congr2 (fun x yz => (x, yz)) (eval_rename L a ρ vs ws h)
-      (congr2 (fun y z => (y, (z, ()))) (eval_rename L b ρ vs ws h) (eval_rename L c ρ vs ws h))
+
+
   | _, _, _, .fst a, ρ, vs, ws, h => by
     exact congrArg Prod.fst (eval_rename L a ρ vs ws h)
   | _, _, _, .snd a, ρ, vs, ws, h => by
@@ -128,6 +127,16 @@ theorem eval_renamedFields (L : Leaves) : ∀ {Γ Δ : List Ty} {fs : List (Stri
   | _, _, _, .cons _ value rest, ρ, vs, ws, h => by
     exact congr2 Prod.mk (eval_rename L value ρ vs ws h)
       (eval_renamedFields L rest ρ vs ws h)
+
+/-- Typed tuple child values agree under the same input renaming. -/
+theorem eval_renamedItems (L : Leaves) : ∀ {Γ Δ : List Ty} {ts : List Ty}
+    (xs : StepItems Γ ts) (ρ : Input.Renaming Γ Δ) (vs : Inputs L Γ) (ws : Inputs L Δ),
+    (∀ {u : Ty} (x : Input Γ u), (ρ x).get ws = x.get vs) →
+    ItemResults.values L ws ts (cataItems (evalAlg L) (renamedItems ρ ts (cataItems renameAlg xs))) =
+      ItemResults.values L vs ts (cataItems (evalAlg L) xs)
+  | _, _, _, .nil, _, _, _, _ => rfl
+  | _, _, _, .cons x xs, ρ, vs, ws, h =>
+    congr2 Prod.mk (eval_rename L x ρ vs ws h) (eval_renamedItems L xs ρ vs ws h)
 end
 /-- Insert one unused input above a tree without changing its value. -/
 theorem eval_lift (L : Leaves) {Γ : List Ty} {t u : Ty} (e : Step Γ t)

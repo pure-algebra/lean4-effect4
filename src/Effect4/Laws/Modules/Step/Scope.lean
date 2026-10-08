@@ -110,6 +110,9 @@ theorem scopedAt : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     {src : {u : Ty} → Input Γ u → TermSrc} {env : Env} {path : List Nat},
     (∀ {u : Ty} (x : Input Γ u), SourceScopedAt (src x) env path) →
     SourceScopedAt (e.term src) env path
+  | _, _, .tuple (ts := ts) xs, src, env, path, h => by
+    change SourceScopedAt (app "tuple" (ItemResults.map (fun {_} x => x src) ts (cataItems termAlg xs))) env path
+    exact app_scopedAt _ (items_scopedAt xs h)
   | _, _, .var x, _, _, _, h => h x
   | _, _, .bool b, _, env, path, _ => bool_scoped b |>.holds env path
   | _, _, .nat n, _, env, path, _ => nat_scoped n |>.holds env path
@@ -212,14 +215,7 @@ theorem scopedAt : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     rcases hx with rfl | rfl
     · exact scopedAt a h
     · exact scopedAt b h
-  | _, _, .tuple2 a b, src, env, path, h => by
-    change SourceScopedAt (app "tuple" [a.term src, b.term src]) env path
-    apply app_scopedAt
-    intro x hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl
-    · exact scopedAt a h
-    · exact scopedAt b h
+
   | _, _, .append a b, src, env, path, h => by
     change SourceScopedAt (app "append" [a.term src, b.term src]) env path
     apply app_scopedAt
@@ -277,15 +273,7 @@ theorem scopedAt : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     · exact scopedAt a h
     · exact scopedAt b h
     · exact scopedAt c h
-  | _, _, .tuple3 a b c, src, env, path, h => by
-    change SourceScopedAt (app "tuple" [a.term src, b.term src, c.term src]) env path
-    apply app_scopedAt
-    intro x hx
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
-    rcases hx with rfl | rfl | rfl
-    · exact scopedAt a h
-    · exact scopedAt b h
-    · exact scopedAt c h
+
   | _, _, .get r f, src, _, _, h => field_scopedAt (scopedAt r h) f.name
   | _, _, .set r f v, src, _, _, h => recordSet_scopedAt (scopedAt r h) (scopedAt v h) f.name
   | _, _, .emptyLike a, src, env, path, h => by
@@ -380,6 +368,20 @@ theorem fields_scopedAt : ∀ {Γ : List Ty} {fs : List (String × Bool × Ty)} 
     rcases member with rfl | member
     · exact scopedAt value h
     · exact fields_scopedAt rest h entry member
+
+/-- Tuple children retain the original caller scope. -/
+theorem items_scopedAt : ∀ {Γ : List Ty} {ts : List Ty} (xs : StepItems Γ ts)
+    {src : {u : Ty} → Input Γ u → TermSrc} {env : Env} {path : List Nat},
+    (∀ {u : Ty} (x : Input Γ u), SourceScopedAt (src x) env path) →
+    ∀ source ∈ ItemResults.map (fun {_} x => x src) ts (cataItems termAlg xs),
+      SourceScopedAt source env path
+  | _, _, .nil, _, _, _, _, _, member => by cases member
+  | _, _, .cons x xs, src, env, path, h, source, member => by
+    change source ∈ x.term src :: _ at member
+    simp only [List.mem_cons] at member
+    rcases member with rfl | member
+    · exact scopedAt x h
+    · exact items_scopedAt xs h source member
 end
 
 /-- A module step elaborates only scoped terms when its inputs do. -/

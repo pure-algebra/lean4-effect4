@@ -18,13 +18,13 @@ inputs that answers a value (decisions row 330, slice L2). Here a step is data:
   list (`Schema.FieldRef`). The syntax holds no function.
 - **The signature**: an input, the literals `bool`, `nat` and `unit`, the Boolean words `not`,
   `and`, `or` and `ite`, the numeric words `add`, `sub`, `lt`, `eq` and `isZero`, the product
-  words `pair`, `tuple2`, `tuple3`, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and
+  words `pair`, the typed tuple items, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and
   the list words `nil`, `cons`, `emptyLike`, `len`, `snoc`, `append`, `take`, `drop` and `head`.
   Records carry required `StepFields`. Typed `none` and `nil` use checked ascription.
   `sameDeferred` compares deferred keys under an interpretation capability.
   A `fold` binds the accumulator and item before the outer inputs in its body. `pair` and
   `tuple2` answer one value, and differ in their atom and in their typing rule.
-  `tuple3` answers three flat tuple items, with a required-column carrier.
+  `tuple` answers flat items of any length. `tuple2` and `tuple3` are compatibility builders.
 - **The algebra and its fold** (`StepAlgebra`, `Step.cata`): one field per constructor, and the
   one map out of the syntax. Every interpretation below is an algebra. The two are written by
   hand: the fold generator (`tools/Effect4Gen/Fold.lean`) writes the algebras of the free objects,
@@ -44,7 +44,9 @@ The arrows out of a step, each a fold:
 | `Step.Facts` | proposition | the normal forms that the checker needs, as facts a caller may prove |
 
 The laws are proved once for the language (`src/Effect4/Laws/Modules/Step.lean`). A step's term
-reads the encoding of its value, at every scope. It types at the step's type, at every scope whose depth agrees where a fold occurs.
+reads the encoding of its value under its canonical-name and structural premises.
+It types under its normalization and formation facts, with scope alignment for folds.
+Deferred comparison additionally requires an identity interpretation capability.
 On an update spine, a field that no overwrite names keeps its value. A module's step written as
 data inherits the three, with no proof of its own.
 -/
@@ -82,6 +84,65 @@ def Input.get {L : Leaves} : {Γ : List Ty} → {t : Ty} → Input Γ t → Inpu
   | _, _, .here _ _, vs => vs.1
   | _, _, .there _ x, vs => x.get vs.2
 
+/-- The native tuple checker treats exactly two items as a product. -/
+def tupleShape : List Ty → Ty
+  | [a, b] => .prod a b
+  | ts => .tuple ts
+
+/-- Heterogeneous child results in tuple order. -/
+def ItemResults (R : Ty → Type) : List Ty → Type
+  | [] => Unit
+  | t :: ts => R t × ItemResults R ts
+
+namespace ItemResults
+
+def map {R : Ty → Type} {α : Type} (f : {t : Ty} → R t → α) :
+    (ts : List Ty) → ItemResults R ts → List α
+  | [], _ => []
+  | _ :: ts, xs => f xs.1 :: map f ts xs.2
+
+/-- Omit the terminal true proposition so existing tuple facts keep their shape. -/
+def All {R : Ty → Type} (f : {t : Ty} → R t → Prop) :
+    (ts : List Ty) → ItemResults R ts → Prop
+  | [], _ => True
+  | [_], xs => f xs.1
+  | _ :: t :: ts, xs => f xs.1 ∧ All f (t :: ts) xs.2
+
+def values (L : Leaves) {Γ : List Ty} (vs : Inputs L Γ) :
+    (ts : List Ty) → ItemResults (fun t => Inputs L Γ → CarrierAt L t) ts → Inputs L ts
+  | [], _ => ()
+  | _ :: ts, xs => (xs.1 vs, values L vs ts xs.2)
+end ItemResults
+
+/-- Reconstruct the tuple column carrier from typed input values. -/
+def tupleColumns (L : Leaves) : (ts : List Ty) → Inputs L ts → CarrierAt L (.tuple ts)
+  | [], _ => ()
+  | _ :: ts, xs => (xs.1, tupleColumns L ts xs.2)
+
+/-- Pack the required-column carrier into the native tuple result shape. -/
+def packTuple (L : Leaves) : (ts : List Ty) → Inputs L ts → CarrierAt L (tupleShape ts)
+  | [], _ => ()
+  | [_], xs => xs
+  | [_, _], xs => (xs.1, xs.2.1)
+  | a :: b :: c :: ts, xs => tupleColumns L (a :: b :: c :: ts) xs
+
+/-- The type checks for the native tuple shape. -/
+def tupleChecks (atType : Ty → Bool) : List Ty → Bool
+  | [a, b] => atType (.prod a b)
+  | ts => ts.all atType
+
+/-- Normalization premises, preserving the two- and three-item interfaces. -/
+def tupleFacts : List Ty → Prop
+  | [] => True
+  | [a] => a.normalize = a
+  | [a, b] => a.normalize = a ∧ b.normalize = b ∧ a.isFactor = true ∧ b.isFactor = true
+  | a :: b :: c :: ts => a.normalize = a ∧ tupleNormals (b :: c :: ts)
+where
+  tupleNormals : List Ty → Prop
+    | [] => True
+    | [a] => a.normalize = a
+    | a :: b :: ts => a.normalize = a ∧ tupleNormals (b :: ts)
+
 mutual
 /-- **A step over inputs of the types `Γ` that answers a value of type `t`.** -/
 inductive Step : List Ty → Ty → Type where
@@ -99,8 +160,7 @@ inductive Step : List Ty → Ty → Type where
   | eq {Γ : List Ty} : Step Γ .nat → Step Γ .nat → Step Γ .bool
   | isZero {Γ : List Ty} : Step Γ .nat → Step Γ .bool
   | pair {Γ : List Ty} {a b : Ty} : Step Γ a → Step Γ b → Step Γ (.prod a b)
-  | tuple3 {Γ : List Ty} {a b c : Ty} : Step Γ a → Step Γ b → Step Γ c → Step Γ (.tuple [a, b, c])
-  | tuple2 {Γ : List Ty} {a b : Ty} : Step Γ a → Step Γ b → Step Γ (.prod a b)
+  | tuple {Γ : List Ty} {ts : List Ty} : StepItems Γ ts → Step Γ (tupleShape ts)
   | fst {Γ : List Ty} {a b : Ty} : Step Γ (.prod a b) → Step Γ a
   | snd {Γ : List Ty} {a b : Ty} : Step Γ (.prod a b) → Step Γ b
   | some {Γ : List Ty} {t : Ty} : Step Γ t → Step Γ (.option t)
@@ -129,6 +189,11 @@ inductive StepFields : List Ty → List (String × Bool × Ty) → Type where
   | nil {Γ : List Ty} : StepFields Γ []
   | cons {Γ : List Ty} (name : String) {t : Ty} {fs : List (String × Bool × Ty)} :
       Step Γ t → StepFields Γ fs → StepFields Γ ((name, false, t) :: fs)
+
+/-- Typed tuple items, with no stored arity-specific syntax. -/
+inductive StepItems : List Ty → List Ty → Type where
+  | nil {Γ : List Ty} : StepItems Γ []
+  | cons {Γ : List Ty} {t : Ty} {ts : List Ty} : Step Γ t → StepItems Γ ts → StepItems Γ (t :: ts)
 end
 
 /-- Child results for required fields. An optional field has no construction in this profile. -/
@@ -179,8 +244,7 @@ structure StepAlgebra (R : List Ty → Ty → Type) where
   eq : {Γ : List Ty} → R Γ .nat → R Γ .nat → R Γ .bool
   isZero : {Γ : List Ty} → R Γ .nat → R Γ .bool
   pair : {Γ : List Ty} → {a b : Ty} → R Γ a → R Γ b → R Γ (.prod a b)
-  tuple3 : {Γ : List Ty} → {a b c : Ty} → R Γ a → R Γ b → R Γ c → R Γ (.tuple [a, b, c])
-  tuple2 : {Γ : List Ty} → {a b : Ty} → R Γ a → R Γ b → R Γ (.prod a b)
+  tuple : {Γ : List Ty} → {ts : List Ty} → ItemResults (R Γ) ts → R Γ (tupleShape ts)
   fst : {Γ : List Ty} → {a b : Ty} → R Γ (.prod a b) → R Γ a
   snd : {Γ : List Ty} → {a b : Ty} → R Γ (.prod a b) → R Γ b
   some : {Γ : List Ty} → {t : Ty} → R Γ t → R Γ (.option t)
@@ -210,6 +274,14 @@ namespace Step
 
 variable {Γ : List Ty}
 
+/-- Compatibility builder for the native two-item product. -/
+abbrev tuple2 {a b : Ty} (x : Step Γ a) (y : Step Γ b) : Step Γ (.prod a b) :=
+  .tuple (.cons x (.cons y .nil))
+
+/-- Compatibility builder for a flat native triple. -/
+abbrev tuple3 {a b c : Ty} (x : Step Γ a) (y : Step Γ b) (z : Step Γ c) : Step Γ (.tuple [a,b,c]) :=
+  .tuple (.cons x (.cons y (.cons z .nil)))
+
 mutual
 /-- **The fold**: the one map out of the syntax into an algebra. -/
 def cata {R : List Ty → Ty → Type} (alg : StepAlgebra R) : {Γ : List Ty} → {t : Ty} → Step Γ t → R Γ t
@@ -227,8 +299,7 @@ def cata {R : List Ty → Ty → Type} (alg : StepAlgebra R) : {Γ : List Ty} �
   | _, _, .eq a b => alg.eq (cata alg a) (cata alg b)
   | _, _, .isZero a => alg.isZero (cata alg a)
   | _, _, .pair a b => alg.pair (cata alg a) (cata alg b)
-  | _, _, .tuple3 a b c => alg.tuple3 (cata alg a) (cata alg b) (cata alg c)
-  | _, _, .tuple2 a b => alg.tuple2 (cata alg a) (cata alg b)
+  | _, _, .tuple xs => alg.tuple (cataItems alg xs)
   | _, _, .fst p => alg.fst (cata alg p)
   | _, _, .snd p => alg.snd (cata alg p)
   | _, _, .some a => alg.some (cata alg a)
@@ -254,6 +325,12 @@ def cataFields {R : List Ty → Ty → Type} (alg : StepAlgebra R) :
     {Γ : List Ty} → {fs : List (String × Bool × Ty)} → StepFields Γ fs → FieldResults (R Γ) fs
   | _, _, .nil => ()
   | _, _, .cons _ value rest => (cata alg value, cataFields alg rest)
+
+/-- The tuple-items half of the same fold. -/
+def cataItems {R : List Ty → Ty → Type} (alg : StepAlgebra R) :
+    {Γ : List Ty} → {ts : List Ty} → StepItems Γ ts → ItemResults (R Γ) ts
+  | _, _, .nil => ()
+  | _, _, .cons x xs => (cata alg x, cataItems alg xs)
 end
 
 /-! ## The translation into source terms -/
@@ -288,8 +365,7 @@ def termAlg : StepAlgebra (fun Γ _ => ({t : Ty} → Input Γ t → TermSrc) →
   len xs := fun src => Modules.len (xs src)
   snoc xs x := fun src => Modules.snoc (xs src) (x src)
   head xs := fun src => app "get" [xs src, Authoring.nat 0]
-  tuple3 a b c := fun src => tuple [a src, b src, c src]
-  tuple2 a b := fun src => tuple [a src, b src]
+  tuple {_Γ} {ts} xs := fun src => Authoring.tuple (ItemResults.map (fun {_} x => x src) ts xs)
   add a b := fun src => app "add" [a src, b src]
   sub a b := fun src => app "sub" [a src, b src]
   lt a b := fun src => app "lt" [a src, b src]
@@ -339,8 +415,7 @@ def evalAlg (L : Leaves) : StepAlgebra (fun Γ t => Inputs L Γ → CarrierAt L 
   eq a b := fun vs => (fun (x y : Nat) => decide (x = y)) (a vs) (b vs)
   isZero a := fun vs => (fun (x : Nat) => decide (x = 0)) (a vs)
   pair a b := fun vs => (a vs, b vs)
-  tuple3 a b c := fun vs => (a vs, (b vs, (c vs, ())))
-  tuple2 a b := fun vs => (a vs, b vs)
+  tuple {_Γ} {ts} xs := fun vs => packTuple L ts (ItemResults.values L vs ts xs)
   fst p := fun vs => (p vs).1
   snd p := fun vs => (p vs).2
   some a := fun vs => Option.some (a vs)
@@ -384,8 +459,7 @@ def writesAlg : StepAlgebra (fun _ _ => List String) where
   eq a b := a ++ b
   isZero a := a
   pair a b := a ++ b
-  tuple3 a b c := a ++ b ++ c
-  tuple2 a b := a ++ b
+  tuple {_Γ} {ts} xs := (ItemResults.map (fun {_} x => x) ts xs).flatten
   fst p := p
   snd p := p
   some a := a
@@ -426,8 +500,7 @@ def spineAlg : StepAlgebra (fun _ _ => Option Nat) where
   eq _ _ := Option.none
   isZero _ := Option.none
   pair _ _ := Option.none
-  tuple3 _ _ _ := Option.none
-  tuple2 _ _ := Option.none
+  tuple _ := Option.none
   fst _ := Option.none
   snd _ := Option.none
   some _ := Option.none
@@ -472,8 +545,7 @@ def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → 
   eq a b := a && b
   isZero a := a
   pair a b := a && b
-  tuple3 {_Γ} {a b c} x y z := (atType a && (atType b && atType c)) && (x && (y && z))
-  tuple2 {_Γ} {a b} x y := atType (.prod a b) && (x && y)
+  tuple {_Γ} {ts} xs := tupleChecks atType ts && (ItemResults.map (fun {_} x => x) ts xs).all id
   fst p := p
   snd p := p
   some a := a
@@ -526,10 +598,7 @@ def factsAlg : StepAlgebra (fun _ _ => Prop) where
   eq a b := a ∧ b
   isZero a := a
   pair a b := a ∧ b
-  tuple3 {_Γ} {a b c} x y z :=
-    (a.normalize = a ∧ b.normalize = b ∧ c.normalize = c) ∧ x ∧ y ∧ z
-  tuple2 {_Γ} {a b} x y :=
-    (a.normalize = a ∧ b.normalize = b ∧ a.isFactor = true ∧ b.isFactor = true) ∧ x ∧ y
+  tuple {_Γ} {ts} xs := tupleFacts ts ∧ ItemResults.All (fun {_} x => x) ts xs
   fst p := p
   snd p := p
   some a := a
@@ -590,7 +659,6 @@ def requirementsAlg (scope identity : Prop) : StepAlgebra (fun _ _ => Prop) wher
   lt a b := a ∧ b
   eq a b := a ∧ b
   pair a b := a ∧ b
-  tuple2 a b := a ∧ b
   set a _ b := a ∧ b
   snoc a b := a ∧ b
   append a b := a ∧ b
@@ -599,7 +667,7 @@ def requirementsAlg (scope identity : Prop) : StepAlgebra (fun _ _ => Prop) wher
   getOrElse a b := a ∧ b
   cons a b := a ∧ b
   ite c a b := c ∧ a ∧ b
-  tuple3 a b c := a ∧ b ∧ c
+  tuple {_Γ} {ts} xs := ItemResults.All (fun {_} x => x) ts xs
   fold xs init body := scope ∧ xs ∧ init ∧ body
   record {_Γ} {fs} fields := FieldResults.All (fun {_} value => value) fs fields
   sameDeferred a b := identity ∧ a ∧ b
@@ -624,8 +692,7 @@ def featureAlg (atFold atComparison : Bool) : StepAlgebra (fun _ _ => Bool) wher
   eq a b := a || b
   isZero a := a
   pair a b := a || b
-  tuple3 x y z := x || (y || z)
-  tuple2  x y := x || y
+  tuple {_Γ} {ts} xs := (ItemResults.map (fun {_} x => x) ts xs).any id
   fst p := p
   snd p := p
   some a := a

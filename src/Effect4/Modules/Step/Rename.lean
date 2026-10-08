@@ -30,6 +30,12 @@ def renamedFields {Γ Δ : List Ty} (ρ : Input.Renaming Γ Δ) :
   | (name, false, _) :: fs, children => .cons name (children.1 ρ) (renamedFields ρ fs children.2)
   | (_, true, _) :: _, children => children.elim
 
+/-- Reconstruct typed tuple items from transformed children. -/
+def renamedItems {Γ Δ : List Ty} (ρ : Input.Renaming Γ Δ) :
+    (ts : List Ty) → ItemResults (fun t => {Θ : List Ty} → Input.Renaming Γ Θ → Step Θ t) ts → StepItems Δ ts
+  | [], _ => .nil
+  | _ :: ts, xs => .cons (xs.1 ρ) (renamedItems ρ ts xs.2)
+
 /-- Renaming interprets every Step constructor into the same first-order syntax. -/
 def renameAlg : StepAlgebra (fun Γ t => {Δ : List Ty} → Input.Renaming Γ Δ → Step Δ t) where
   var x := fun ρ => .var (ρ x)
@@ -46,8 +52,7 @@ def renameAlg : StepAlgebra (fun Γ t => {Δ : List Ty} → Input.Renaming Γ Δ
   eq a b := fun ρ => .eq (a ρ) (b ρ)
   isZero a := fun ρ => .isZero (a ρ)
   pair a b := fun ρ => .pair (a ρ) (b ρ)
-  tuple2 a b := fun ρ => .tuple2 (a ρ) (b ρ)
-  tuple3 a b c := fun ρ => .tuple3 (a ρ) (b ρ) (c ρ)
+  tuple {_Γ} {ts} xs := fun ρ => .tuple (renamedItems ρ ts xs)
   fst p := fun ρ => .fst (p ρ)
   snd p := fun ρ => .snd (p ρ)
   some a := fun ρ => .some (a ρ)
