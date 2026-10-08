@@ -6,6 +6,7 @@ import Effect4.Codegen.PrintTyped
 import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
 import Test.Program.PoolPublic
+import Test.Program.DefinitionsControls
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -938,9 +939,18 @@ the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the 
 of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
 interrupt wakes, the two programs of the mask that restores, the five programs of the
-Queue's first operations, the ten programs of Semaphore's first operations, and the ten
-programs of Pool's first operations. Every listed program contributes one manifest entry. -/
+Queue's first operations, the ten programs of Semaphore's first operations, the ten
+programs of Pool's first operations, and four programs with a definition block. Every listed
+program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
+
+/-- Four programs with a definition block (decisions row 328, slice PROC-3): one invocation,
+two definitions that invoke each other to each answer, and an invocation inside a fork. Each
+prints as a module: its definitions are constants before the main declaration. -/
+def pDefsTwice : Api.Program := Test.Program.DefinitionsControls.twiceProg
+def pDefsEven : Api.Program := Test.Program.DefinitionsControls.evenOdd 6
+def pDefsOdd : Api.Program := Test.Program.DefinitionsControls.evenOdd 7
+def pDefsFork : Api.Program := Test.Program.DefinitionsControls.forkProg
 
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
@@ -970,7 +980,9 @@ def corpus : List (String × Api.Program) :=
     ("pPoolLateWake", pPoolLateWake), ("pPoolWake", pPoolWake),
     ("pPoolMakeFails", pPoolMakeFails), ("pPoolCloseWaits", pPoolCloseWaits),
     ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
-    ("pPoolClosing", pPoolClosing)]
+    ("pPoolClosing", pPoolClosing),
+    ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
+    ("pDefsFork", pDefsFork)]
 
 /-! ## The value wire -/
 
@@ -1584,8 +1596,12 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
   let output := fixtureOutput name p table
   let printed := output.map (·.1)
   -- The ordinary block retains its emission certificate. Joined fixtures use the explicit
-  -- fixture adapter, with the same actual typed initializer in both declaration views.
-  let module := output.toOption.bind (·.2)
+  -- fixture adapter, with the same actual typed initializer in both declaration views. A
+  -- program with a definition block has no expression print (a block stands at a module's
+  -- root): its module is the ordinary producer's alone.
+  let module := match output with
+    | .ok (_, m) => m
+    | .error _ => if joinedFixtures.contains name then none else Api.printModule "main" p table
   let decl := module.map fun m => String.join (m.decls.map (TypeScript.Render.decl house0))
   -- the same block with every annotation removed: what the host's compiler infers for the
   -- printed program on its own, which the type oracle compares with Lean's rendered type
@@ -1739,7 +1755,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreScan", "pSemaphoreOvertake", "pSemaphoreBodiesJoined", "pSemaphoreInterrupted",
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
-   "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing"]
+   "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩

@@ -792,6 +792,28 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`printTyped_eq_print`, the claim `typed-print-connector`).
   It establishes nothing that tsgo accepts and nothing of a run of the printed program.
   The tsgo checks of the printed sites are finite checks (`make check-target`).
+- **A module with a definition block reads back (`module-defs-round-trip`)**: The module
+  printer prints each definition as a constant (`printModule`, `src/Effect4/Codegen/Print.lean`).
+  The constants stand before the layers and the main declaration.
+  A definition is an arrow from its request, with its declared result type, around a
+  suspension of its body.
+  An invocation prints as the definition's name applied to its request.
+  The statement fixes declarations with readable columns, an empty requirement row and names
+  with no layer path (`DefDecl.readable`).
+  Each body's suspension, the main program and each layer read back at the block's signature,
+  through the block's spelling map (`defsSpell`).
+  Then the module reads back to the program (`readModule_printModule_defs`,
+  `src/Effect4/Laws/Codegen/Module.lean`; slice PROC-3).
+  The block's spelling map is lawful under the signature's invocation laws and readable names
+  (`LawfulSpelling.withDefs`, `src/Effect4/Laws/Codegen/Definitions.lean`).
+  The native signature and the printer's name check give both (`nativeCalls`,
+  `defsNamed_of_fault`).
+  So the program interface's module round trip holds for a program with a block
+  (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`).
+  The printer refuses an empty block and a layer inside a body, by name.
+  A requirement row other than `never` is printed and not read.
+  It establishes nothing that tsgo accepts and nothing of a run of the printed module.
+  The truth lane runs four block programs on the pin, a finite check (`make check-truth`).
 - **The reader reads the typed print (`typed-print-read`)**: The statement fixes a readable
   program and a lawful spelling.
   After the named erasure, the reader reads a successful typed print back to its program

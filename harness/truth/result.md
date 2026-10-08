@@ -81,5 +81,9 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pPoolWithdrawn | success [[[[],[0],[0],1,false,1],[[],[0],[0],0,false,1],[[0],[],[],0,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,2,1],[2,2,1],[9,1]]] | success [[[[],[0],[0],1,false,1],[[],[0],[0],0,false,1],[[0],[],[],0,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,2,1],[2,2,1],[9,1]]] | yes | yes | yes | runPromiseExit | same value |
 | pPoolClosed | success [{"failure":{"reasons":[{"interrupt":1}]}},[[0],[],[],0,true,0],[[9,1]]] | success [{"failure":{"reasons":[{"interrupt":1}]}},[[0],[],[],0,true,0],[[9,1]]] | yes | yes | yes | runPromiseExit | same value |
 | pPoolClosing | success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]; same value |
+| pDefsTwice | success [21,21] | success [21,21] | yes | yes | yes | runPromiseExit | same value |
+| pDefsEven | success true | success true | yes | yes | yes | runPromiseExit | same value |
+| pDefsOdd | success false | success false | yes | yes | yes | runPromiseExit | same value |
+| pDefsFork | success [4,4] | success [4,4] | yes | yes | yes | runPromiseExit | same value |
 
-PASS: 76 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 80 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

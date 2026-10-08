@@ -227,7 +227,7 @@ printer's readable image, but ignores imports, outer annotations and export name
 Use `checkTyping` on the recovered program for core typing; that check alone does
 not validate the original source envelope. -/
 def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readModule (nativeSignature table) (nativeSpell table) module.decls
+  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call module.decls
 
 /-- Check imports and lexical bindings on the original module, retaining its exact
 syntax in the certificate's index. The caller supplies permitted import origins.

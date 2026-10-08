@@ -297,7 +297,7 @@ theorem admitModule_typed {module : TypeScript.Module}
 theorem admitModule_read {module : TypeScript.Module}
     {r : ModuleReading table name allowed ambient}
     (h : admitModule name module table allowed ambient = .ok r) :
-    Program.readModule (nativeSignature table) (nativeSpell table) module.decls = .ok r.program := by
+    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call module.decls = .ok r.program := by
   rw [← admitModule_module h]
   exact r.read
 
@@ -339,7 +339,7 @@ theorem ModuleReading.typing_eq (r : ModuleReading table name allowed ambient)
 /-- Completeness of source admission against its declared checks, including stored-annotation support. -/
 theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
     (bound : SourceBindings.Checked allowed (withAmbient ambient module))
-    (read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls =
+    (read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call module.decls =
       .ok program)
     (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
@@ -370,7 +370,7 @@ certificate. The host supplies the bindings its prelude provides; everything els
 the printer's own equations. (`readModule_printModule` gives the reading from the pieces'.) -/
 theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : String}
     (e : ModuleEmission program table name)
-    (read : Program.readModule (nativeSignature table) (nativeSpell table) e.module.decls =
+    (read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call e.module.decls =
       .ok program)
     {allowed : List Bindings.Origin} {ambient : List TypeScript.Import}
     (bound : SourceBindings.Checked allowed (withAmbient ambient e.module)) :

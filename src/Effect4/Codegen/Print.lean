@@ -1,5 +1,6 @@
 import Effect4.Codegen.Templates
 import Effect4.Codegen.ClassTable
+import Effect4.Program.Definitions
 
 /-!
 # Codegen.Print — `Eff` into TypeScript: the generated fold over the table of printed clauses
@@ -137,28 +138,96 @@ theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
   refine ⟨{ doc := [], name := name, value := body, type := annotation }, ?_⟩
   simp only [printDecl, ha, bind, Except.bind]
 
+/-! ## A definition block (decisions row 328, slice PROC-3) -/
+
+/-- A program's definition block, when its root holds one: the declarations, the bodies and the
+main program. -/
+def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op)
+  | .defs decls bodies main => some (decls, bodies, main)
+  | _ => none
+
+/-- A program type as target syntax, refused by its rendering when it has none. -/
+def typeRefOf (ty : Ty) : Except PrintRefusal TypeScript.TypeRef :=
+  match Effect4.Codegen.Types.ofTy ty with
+  | some target => .ok target
+  | none => .error (.typeSpelling ty.render)
+
+/-- A definition's declared type: its answer and error columns, and its requirement row. -/
+def DefDecl.effTy (d : DefDecl) : EffTy := ⟨d.answer, d.error, Requirement.ofList d.requires⟩
+
+/-- **A definition as a module constant**: `const name = (a0: Request): Effect.Effect<A, E, R> =>
+Effect.suspend(() => body)`. The parameter is the request, the body's one variable, so the body
+prints at environment length `1`. The body is a suspension, so an invocation is one
+`Effect.suspend`, as the machine's is. The result type is `declarationType` of the declared
+columns: a recursive arrow needs it (TS7023). A layer inside a body is refused by name: printed
+inside the arrow, rc.112 would build one layer object per invocation, where the machine keeps
+one memo entry per path (DB-12). -/
+def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op) :
+    Except PrintRefusal TypeScript.ConstDecl :=
+  if !(body.layerPaths []).isEmpty then .error (.internalAction "defs:layer")
+  else
+    typeRefOf d.request >>= fun request =>
+    declarationType d.effTy sig.scopeKey >>= fun result =>
+    print sig 1 (.suspend body) >>= fun value =>
+    .ok { doc := [], name := d.name,
+          value := .lambda [{ name := Var.name 0, type := some request }] value result }
+
+/-- The definitions of a block, in order, each against its body. A block whose declarations
+and bodies differ in number is refused, as the checker refuses it. -/
+def printDefs (sig : Signature Op) : List DefDecl → Effs Op →
+    Except PrintRefusal (List TypeScript.ConstDecl)
+  | [], .nil => .ok []
+  | d :: ds, .cons body rest => do
+    let c ← printDef sig d body
+    let cs ← printDefs sig ds rest
+    .ok (c :: cs)
+  | _, _ => .error (.internalAction "defs")
+
 /-- The printed program as a declaration block (the host rows slice): one
 `const L_<path> = …` per referenced layer target, in declaration order (`Path.declBefore`: a
 target inside another first, then program order), each hoisted out of the program so that
 its defining site and every reference print as the one identifier (`Refs.lean` `hoistAll`),
 which is one rc.112 layer object and one memo entry; the main declaration last. A program
 with no references is `[printDecl name ty (print …)]`. `readModule` (`Codegen/Read.lean`)
-is the inverse on what this prints. -/
+is the inverse on what this prints.
+
+A program with a definition block prints its definitions first (`printDef`), each at the
+block's signature, so that an invocation prints as the definition's name. They stand before the
+layers: a layer's body runs when its constant is evaluated, and it may invoke a definition. The
+main declaration is the block's main program. -/
 def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     Except PrintRefusal (List TypeScript.ConstDecl) :=
   match e.hoistAll with
   | .error target => .error (.layerRef target)
-  | .ok (main, decls) => do
-    let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
-    let ds ← ordered.mapM fun t =>
-      match decls.find? (·.1 == t) with
-      | some (_, l) => do
-        let x ← printLayer sig l
-        .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
-      | none => .error (.layerRef t)
-    let m ← print sig 0 main
-    let declaration ← printDecl name ty m sig.scopeKey
-    .ok (ds ++ [declaration])
+  | .ok (main, decls) =>
+    match main.block? with
+    | none => do
+      let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
+      let ds ← ordered.mapM fun t =>
+        match decls.find? (·.1 == t) with
+        | some (_, l) => do
+          let x ← printLayer sig l
+          .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
+        | none => .error (.layerRef t)
+      let m ← print sig 0 main
+      let declaration ← printDecl name ty m sig.scopeKey
+      .ok (ds ++ [declaration])
+    -- an empty block would print as its main program alone, and read back as it
+    | some ([], _, _) => .error (.internalAction "defs")
+    | some (d :: ds, bodies, body) => do
+      let defs := d :: ds
+      let sig' := sig.withDefs defs
+      let cs ← printDefs sig' defs bodies
+      let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
+      let ds ← ordered.mapM fun t =>
+        match decls.find? (·.1 == t) with
+        | some (_, l) => do
+          let x ← printLayer sig' l
+          .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
+        | none => .error (.layerRef t)
+      let m ← print sig' 0 body
+      let declaration ← printDecl name ty m sig.scopeKey
+      .ok (cs ++ ds ++ [declaration])
 
 variable [ScopedOp Op]
 
@@ -170,6 +239,17 @@ def annotationRefusal (program : Eff Op) : Option PrintRefusal :=
     match Codegen.Types.ofTy type with
     | some _ => none
     | none => some (.typeSpelling type.render)
+
+/-- The first definition name that is no safe module constant, or `none`. A definition's name
+is an export name (`exportNameSafe`: a binding, no binder, no reserved head, no layer name, no
+helper and no imported name), not the main declaration's, not a row's spelling, and declared
+once. A built-in row's spelling holds a dot, so it is no binding. -/
+def defsNameFault (table : List Row) (name : String) : List DefDecl → Option String
+  | [] => none
+  | d :: ds =>
+    if !exportNameSafe d.name || d.name == name || table.any (·.spelling == d.name) ||
+        ds.any (·.name == d.name) then some d.name
+    else defsNameFault table name ds
 
 /-- Print an admitted program against its row table. Refuses by name if the requested
 export name is unsafe (a printed binder `a0`, a reserved head, a layer reference name, or
@@ -185,6 +265,9 @@ def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : Eff
     match table.find? (fun row => !rowNamesSafe row) with
     | some row => .error (.unsafeName row.spelling)
     | none =>
+      match defsNameFault table name e.defsOf with
+      | some fault => .error (.unsafeName fault)
+      | none =>
       match Effect4.Codegen.ClassTable.moduleClasses sig name ty e with
       | .error why => .error why
       | .ok _ =>
@@ -198,6 +281,7 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
+      defsNameFault table name e.defsOf = none ∧
       (∃ classes, Effect4.Codegen.ClassTable.moduleClasses sig name ty e = .ok classes) ∧
       annotationRefusal e = none ∧ printModule sig name ty e = .ok decls := by
   cases hs : exportNameSafe name with
@@ -208,13 +292,17 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
     | some row => simp only [hr] at h; cases h
     | none =>
       simp only [hr] at h
+      cases hd : defsNameFault table name e.defsOf with
+      | some fault => simp only [hd] at h; cases h
+      | none =>
+      simp only [hd] at h
       cases hc : Effect4.Codegen.ClassTable.moduleClasses sig name ty e with
       | error why => simp only [hc] at h; cases h
       | ok classes =>
         simp only [hc] at h
         cases ha : annotationRefusal e with
         | some why => simp only [ha] at h; cases h
-        | none => exact ⟨rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
+        | none => exact ⟨rfl, rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
 
 /-- Every successful entry retains safe names and the actual module-printer equation. -/
 theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
@@ -222,7 +310,7 @@ theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {t
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
       printModule sig name ty e = .ok decls := by
-  obtain ⟨safe, rows, _, _, printed⟩ := printEntry_checks h
+  obtain ⟨safe, rows, _, _, _, printed⟩ := printEntry_checks h
   exact ⟨safe, rows, printed⟩
 
 /-- A checked entry contains only representable stored annotations (`printed-modules`, R2/R3).
@@ -230,6 +318,6 @@ The exact hypothesis is successful `printEntry`; host execution remains outside 
 theorem printEntry_annotations {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) : annotationRefusal e = none :=
-  (printEntry_checks h).2.2.2.1
+  (printEntry_checks h).2.2.2.2.1
 
 end Effect4.Program

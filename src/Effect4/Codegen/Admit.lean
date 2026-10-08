@@ -112,7 +112,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
     .ok (classes, classDecls)
   annotations : annotationRefusal program = none
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
-  read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls = .ok program
+  read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call module.decls = .ok program
   envelope : envelopeCheck name typing.ty classes module.decls = none
 
 /-- Checked reading: lexical bindings, raw reconstruction, the shared typing certificate,
@@ -124,7 +124,7 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
   match SourceBindings.validate allowed (withAmbient ambient module) with
   | none => .error .unbound
   | some bound =>
-    match hread : Program.readModule (nativeSignature table) (nativeSpell table) module.decls with
+    match hread : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call module.decls with
     | .error why => .error (.read why)
     | .ok program =>
       match hformed : Formation.checkInput program table with

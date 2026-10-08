@@ -973,6 +973,83 @@ the checked boundary compares the classes with the printer's (`Codegen.envelopeC
 def blockClasses (decls : List TypeScript.Decl) : Option Effect4.Codegen.Classes.Classes :=
   Effect4.Codegen.Classes.readClassDecls (splitClasses decls).1
 
+/-! ## A definition block (decisions row 328, slice PROC-3) -/
+
+/-- The leading definition constants of a block's declarations, and the declarations after
+them. A definition constant is a constant whose name carries no layer path (`printDef`); the
+printer refuses a definition name that does. -/
+def defsPrefix : List TypeScript.Decl → List TypeScript.ConstDecl × List TypeScript.Decl
+  | .const c :: rest =>
+    match LayerTerm.readRefName c.name with
+    | none => ((defsPrefix rest).1.cons c, (defsPrefix rest).2)
+    | some _ => ([], .const c :: rest)
+  | ds => ([], ds)
+
+/-- A definition's declaration and its printed body from its constant, the inverse of
+`printDef`'s header: `(a0: Request): Effect.Effect<A, E, never> => body`. Each column is read by
+the checked type reader. A requirement row other than `never` is refused by name: it is printed
+and not read (decisions row 328, slice PROC-3). -/
+def readDefHead (c : TypeScript.ConstDecl) : Except ReadRefusal (DefDecl × Expr) :=
+  match c.value with
+  | .lambda [⟨parameter, some request⟩] body
+      (some (.name ["Effect", "Effect"] [answer, error, .name ["never"] []])) =>
+    if parameter = Var.name 0 then
+      match Effect4.Codegen.Classes.readTyChecked request,
+          Effect4.Codegen.Classes.readTyChecked answer,
+          Effect4.Codegen.Classes.readTyChecked error with
+      | some request, some answer, some error =>
+        .ok ({ name := c.name, request, answer, error }, body)
+      | _, _, _ => .error (.shape "definition")
+    else .error (.shape "definition")
+  | _ => .error (.shape "definition")
+
+/-- **A declaration that reads back from its printed header**: its three columns are readable
+types (`ReadableTy`), its requirement row is empty, and its name carries no layer path. The
+domain of `readDefHead`'s retraction (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
+def DefDecl.readable (d : DefDecl) : Bool :=
+  Effect4.Codegen.Classes.ReadableTy d.request && Effect4.Codegen.Classes.ReadableTy d.answer &&
+    Effect4.Codegen.Classes.ReadableTy d.error && d.requires.isEmpty &&
+    (LayerTerm.readRefName d.name).isNone
+
+/-- The spelling map of a block: a definition's name, with no trailing names, spells the
+invocation of that definition (`call k`); every other spelling is the map's own. -/
+def defsSpell (call : Nat → Op) (decls : List DefDecl) (spell : String → List String → Option Op)
+    (s : String) (names : List String) : Option Op :=
+  match names, decls.findIdx? (·.name == s) with
+  | [], some k => some (call k)
+  | _, _ => spell s names
+
+/-- A definition's body from its printed suspension, read at environment length `1`. -/
+def readDefBody (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (x : Expr) : Except ReadRefusal (Eff Op) := do
+  match ← readEff classes sig spell 1 x with
+  | .suspend body => .ok body
+  | _ => .error (.shape "definition")
+
+/-- The bodies of a block, in order. -/
+def readDefBodies (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) :
+    List (DefDecl × Expr) → Except ReadRefusal (Effs Op)
+  | [] => .ok .nil
+  | (_, x) :: rest => do
+    let body ← readDefBody classes sig spell x
+    let bodies ← readDefBodies classes sig spell rest
+    .ok (.cons body bodies)
+
+/-- A layer declaration back to its path and its layer: `const L_<path> = <layer>`. -/
+def readLayerDecl (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) :
+    TypeScript.Decl → Except ReadRefusal (List Nat × LayerTerm Op)
+  | .const c =>
+    match LayerTerm.readRefName c.name with
+    | some t =>
+      if LayerTerm.refName t = c.name then do
+        let l ← readLayer classes sig spell c.value
+        .ok (t, l)
+      else .error (.shape "module")
+    | none => .error (.shape "module")
+  | _ => .error (.shape "module")
+
 /-- A declaration block back to the program (the host rows slice): its leading class
 declarations read as the payload classes the rest is read under (decisions row 120), every
 `const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
@@ -981,29 +1058,37 @@ The program reconstruction law applies to successfully printed modules under its
 readability and hoisting premises. This raw reader ignores declaration type annotations,
 export flags and the main declaration's name; it is not exact source-module admission.
 A class declaration that does not read back returns `shape "class"`; malformed declaration forms,
-layer paths and failed restoration return `shape "module"`. -/
+layer paths and failed restoration return `shape "module"`.
+
+Leading definition constants (`defsPrefix`) read as a definition block: each header as its
+declaration (`readDefHead`), and the bodies, the layers and the main program at the block's
+signature, through the spelling map that the block extends (`defsSpell`). `call k` is the
+operation that invokes definition `k` (`NativeOp.call` at the native signature). -/
 def readModule (sig : Signature Op) (spell : String → List String → Option Op)
-    (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
+    (call : Nat → Op) (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
   match blockClasses decls with
   | none => .error (.shape "class")
   | some classes =>
     match (splitClasses decls).2.getLast?, (splitClasses decls).2.dropLast with
-    | some (.const main), layerDecls => do
-      let e ← readEff classes sig spell 0 main.value
-      let ds ← layerDecls.mapM fun d =>
-        match d with
-        | .const c =>
-          match LayerTerm.readRefName c.name with
-          | some t =>
-            if LayerTerm.refName t = c.name then do
-              let l ← readLayer classes sig spell c.value
-              .ok (t, l)
-            else .error (.shape "module")
-          | none => .error (.shape "module")
-        | _ => .error (.shape "module")
-      match e.restoreAll ds with
-      | some e' => .ok e'
-      | none => .error (.shape "module")
+    | some (.const main), earlier =>
+      match defsPrefix earlier with
+      | ([], layerDecls) => do
+        let e ← readEff classes sig spell 0 main.value
+        let ds ← layerDecls.mapM (readLayerDecl classes sig spell)
+        match e.restoreAll ds with
+        | some e' => .ok e'
+        | none => .error (.shape "module")
+      | (c :: cs, layerDecls) => do
+        let heads ← (c :: cs).mapM readDefHead
+        let defs := heads.map (·.1)
+        let sig' := sig.withDefs defs
+        let spell' := defsSpell call defs spell
+        let bodies ← readDefBodies classes sig' spell' heads
+        let e ← readEff classes sig' spell' 0 main.value
+        let ds ← layerDecls.mapM (readLayerDecl classes sig' spell')
+        match (Eff.defs defs bodies e).restoreAll ds with
+        | some e' => .ok e'
+        | none => .error (.shape "module")
     | _, _ => .error (.shape "module")
 
 /-- The reader after the printer: the executed shadow of `read_print`, under the classes the

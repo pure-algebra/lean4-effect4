@@ -1264,6 +1264,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | typed-print-connector | compatibility | proved | Effect4.Program.printTyped_eq_print | yes |  |
 | typed-print-erasure | compatibility | proved | Effect4.Codegen.eraseJoinArgs_printTyped | yes |  |
 | typed-print-read | compatibility | proved | Effect4.Codegen.readTyped_printTyped | yes |  |
+| module-defs-round-trip | compatibility | proved | Effect4.Program.readModule_printModule_defs | yes |  |
 
 ### Printed statements
 
@@ -1403,6 +1404,47 @@ Effect4.Program.MaskRowsPremises
         ∀ {x : TypeScript.Expr},
           Eq (Effect4.Program.printTyped sig env0 e) (Except.ok x) →
             Eq (Effect4.Codegen.readTyped classes sig spell (List.length env0) x) (Except.ok e)
+```
+
+**module-defs-round-trip**
+
+```lean
+∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes} {sig : Effect4.Program.Signature Op}
+  {spell : String → List String → Option Op} {call : Nat → Op}
+  {root main body : Effect4.Program.Eff Op} {defs : List Effect4.Program.DefDecl}
+  {bodies : Effect4.Program.Effs Op}
+  {history : List (Prod (List Nat) (Effect4.Program.LayerTerm Op))},
+  Eq root.hoistAll (Except.ok { fst := main, snd := history }) →
+    Eq main.block? (Option.some { fst := defs, snd := { fst := bodies, snd := body } }) →
+      ∀ {classDecls : List TypeScript.ClassDecl},
+        Eq (Effect4.Codegen.Classes.readClassDecls classDecls) (Option.some classes) →
+          (∀ (d : Effect4.Program.DefDecl),
+              List.instMembership.mem defs d → Eq d.readable Bool.true) →
+            (∀ (b : Effect4.Program.Eff Op),
+                List.instMembership.mem bodies.toList b →
+                  Effect4.Program.ReadsBack classes (sig.withDefs defs)
+                    (Effect4.Program.defsSpell call defs spell) 1 b.suspend) →
+              Effect4.Program.ReadsBack classes (sig.withDefs defs)
+                  (Effect4.Program.defsSpell call defs spell) 0 body →
+                (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
+                    List.instMembership.mem history entry →
+                      Effect4.Program.LayerTerm.ReadsBack classes (sig.withDefs defs)
+                        (Effect4.Program.defsSpell call defs spell) entry.snd) →
+                  (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
+                      List.instMembership.mem history entry →
+                        Eq
+                          (Effect4.Program.LayerTerm.readRefName
+                            (Effect4.Program.LayerTerm.refName entry.fst))
+                          (Option.some entry.fst)) →
+                    ∀ {name : String} {ty : Effect4.Program.EffTy}
+                      {decls : List TypeScript.ConstDecl},
+                      Eq (Effect4.Program.printModule sig name ty root) (Except.ok decls) →
+                        Eq
+                          (Effect4.Program.readModule sig spell call
+                            (instHAppendOfAppend.hAppend
+                              (List.map TypeScript.Decl.classDecl classDecls)
+                              (List.map TypeScript.Decl.const decls)))
+                          (Except.ok root)
 ```
 
 ## subtyping-algebra
@@ -2644,7 +2686,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `session_eq_ref` (proved) | `run_eq_ref_table` (goal), `run_eq_ref_table_noPreload` (proved), `handles_of_payloadFieldTy` (proved), `applied_selects` (proved), `control_retires` (proved), `denoteRows_eq_session` (goal), `session_eq_ref` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `run_eq_ref_table`, `denoteRows_eq_session`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
-| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `readModule_printModule_defs` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `held_within_fed` (goal), `queueWorkers` (modulo), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `held_within_fed`, `fed_accounted`, `queue_settled`, `releases_once`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
@@ -5022,6 +5064,7 @@ flowchart LR
   nda2f797a["readTyped_exact<br/>proved"]
   n976e0703["readTyped_printTyped<br/>proved"]
   n57fc528a["readTyped_printTypedAt<br/>proved"]
+  n33203a09["readModule_printModule_defs<br/>proved"]
   nc0798bf4["funded_replays<br/>proved"]
   n12fd91bf["tape_replays<br/>proved"]
   n341b9e67["unsuspended_runs<br/>proved"]
@@ -5029,6 +5072,7 @@ flowchart LR
   n88fa115a["readTerm_printTerm<br/>proved"]
   n8ec132e6["hom_eq_cata_eff<br/>proved"]
   n56edc971["annotate_eq_table<br/>proved"]
+  ndf4cbc08["replaceAt_spec<br/>proved"]
   nc91d9978["journal_replays<br/>proved"]
   n948511f1["run_agrees<br/>proved"]
   nb798cc22["tapeFrom_position_replays<br/>proved"]
@@ -5073,6 +5117,7 @@ flowchart LR
   n976e0703 --> n410cd578
   n57fc528a --> nfe8057fc
   n57fc528a --> n410cd578
+  n33203a09 --> ndf4cbc08
   nc0798bf4 --> nc91d9978
   nc0798bf4 --> n12fd91bf
   n341b9e67 --> n948511f1
@@ -5123,6 +5168,7 @@ flowchart LR
 | `readTyped_exact` | proved | — | `read_exact` |
 | `readTyped_printTyped` | proved | — | `eraseJoinArgs_printTyped`, `read_print` |
 | `readTyped_printTypedAt` | proved | — | `eraseJoinArgs_printTypedAt`, `read_print` |
+| `readModule_printModule_defs` | proved | — | `replaceAt_spec` |
 | `funded_replays` | proved | — | `journal_replays`, `tape_replays` |
 | `tape_replays` | proved | — | — |
 | `unsuspended_runs` | proved | — | `run_agrees` |
@@ -5130,6 +5176,7 @@ flowchart LR
 | `readTerm_printTerm` | proved | — | — |
 | `hom_eq_cata_eff` | proved | — | — |
 | `annotate_eq_table` | proved | — | `check_eq`, `table_eq_tableAt` |
+| `replaceAt_spec` | proved | — | — |
 | `journal_replays` | proved | — | — |
 | `run_agrees` | proved | — | `run_eq_meaning` |
 | `tapeFrom_position_replays` | proved | — | `tape_replays` |
