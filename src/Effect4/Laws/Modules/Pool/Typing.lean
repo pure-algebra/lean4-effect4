@@ -329,10 +329,16 @@ include atoms
 theorem types_withdrawn {id s : TermSrc} (depth : types.length = env.names.length)
     (hid : CapturedTy sig id env path types idTy)
     (hs : TypesEach sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.withdrawn id s) env path types (Pool.cellTy A) :=
-  types_setWaiters canonical hs
-    (types_removeById atoms depth waiterTy_normal waiter_idTy (types_cellWaiters canonical hs)
-      hid)
+    TypesEach sig (Pool.withdrawn id s) env path types (Pool.cellTy A) := by
+  refine Step.typed (Γ := [idTy, Pool.cellTy A]) sig atoms (Input.types_cons hid.atScope (Input.types_cons hs Input.types_nil)) (Data.withdrawn A (.here _ _) (.there _ (.here _ _))) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- `noItem`: no item, at the type of an option of an item. -/
 theorem types_noItem {s : TermSrc} (hs : TypesEach sig s env path types (Pool.cellTy A)) :
@@ -343,10 +349,16 @@ theorem types_noItem {s : TermSrc} (hs : TypesEach sig s env path types (Pool.ce
 term, so the rule holds at every scope, and under another fold's binders too. -/
 theorem types_headStamp {s : TermSrc} (depth : types.length = env.names.length)
     (hs : TypesEach sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.headStamp s) env path types .nat :=
-  fun _ => types_foldWith_same
-    (types_take atoms (types_cellAvailable canonical hs) (types_nat 1) false)
-    (types_nat 0 false) (types_minted_item depth path .nat .nat false) (Ty.subN_refl .nat)
+    TypesEach sig (Pool.headStamp s) env path types .nat := by
+  refine Step.typed (Γ := [Pool.cellTy A]) sig atoms (Input.types_cons hs Input.types_nil) (Data.headStamp A (.here _ _)) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- The test of the lease's two folds, under their binders: the folded item's stamp against
 the front idle stamp of the caller's cell. -/
@@ -365,30 +377,30 @@ theorem types_atFront {s : TermSrc} {accT : Ty} (depth : types.length = env.name
 so it is taken with its typed capture. -/
 theorem types_marked {s : TermSrc} (depth : types.length = env.names.length)
     (hs : CapturedTy sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.marked s) env path types (.list (Pool.itemTy A)) :=
-  fun _ => types_foldWith_same (types_cellItems canonical hs.atScope false)
-    (types_noneOf atoms (types_cellItems canonical hs.atScope) false)
-    (types_snoc atoms (itemTy_normal canonical)
-      (types_minted_acc depth path (.list (Pool.itemTy A)) (Pool.itemTy A))
-      (types_ifT atoms (types_atFront canonical atoms depth hs)
-        (types_leasedItem canonical depth hs)
-        (types_minted_item depth path (.list (Pool.itemTy A)) (Pool.itemTy A))
-        (itemTy_normal canonical)) false)
-    (Ty.subN_refl (.list (Pool.itemTy A)))
+    TypesEach sig (Pool.marked s) env path types (.list (Pool.itemTy A)) := by
+  refine Step.typed (Γ := [Pool.cellTy A]) sig atoms (Input.types_cons hs.atScope Input.types_nil) (Data.marked A (.here _ _)) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- `leasedOf`: the front idle item as its new lease holds it. -/
 theorem types_leasedOf {s : TermSrc} (depth : types.length = env.names.length)
     (hs : CapturedTy sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.leasedOf s) env path types (.list (Pool.itemTy A)) :=
-  fun _ => types_foldWith_same (types_cellItems canonical hs.atScope false)
-    (types_noneOf atoms (types_cellItems canonical hs.atScope) false)
-    ((types_ifT atoms (types_atFront canonical atoms depth hs)
-      (types_snoc atoms (itemTy_normal canonical)
-        (types_minted_acc depth path (.list (Pool.itemTy A)) (Pool.itemTy A))
-        (types_leasedItem canonical depth hs))
-      (types_minted_acc depth path (.list (Pool.itemTy A)) (Pool.itemTy A))
-      (by rw [Ty.normalize, itemTy_normal canonical])) false)
-    (Ty.subN_refl (.list (Pool.itemTy A)))
+    TypesEach sig (Pool.leasedOf s) env path types (.list (Pool.itemTy A)) := by
+  refine Step.typed (Γ := [Pool.cellTy A]) sig atoms (Input.types_cons hs.atScope Input.types_nil) (Data.leasedOf A (.here _ _)) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- `holdsT`: whether a lease holds an item, at one item's record. -/
 theorem types_holdsT {i l it : TermSrc} (hi : TypesEach sig i env path types .nat)
@@ -404,43 +416,45 @@ theorem types_holdsT {i l it : TermSrc} (hi : TypesEach sig i env path types .na
 theorem types_heldBy {i l s : TermSrc} (depth : types.length = env.names.length)
     (hi : CapturedTy sig i env path types .nat) (hl : CapturedTy sig l env path types .nat)
     (hs : TypesEach sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.heldBy i l s) env path types .bool :=
-  fun _ => types_foldWith_same (types_cellItems canonical hs false) (types_bool false false)
-    (types_orT atoms (types_minted_acc depth path .bool (Pool.itemTy A))
-      (types_holdsT canonical atoms (hi.underFold .bool (Pool.itemTy A))
-        (hl.underFold .bool (Pool.itemTy A))
-        (types_minted_item depth path .bool (Pool.itemTy A))) false)
-    (Ty.subN_refl .bool)
+    TypesEach sig (Pool.heldBy i l s) env path types .bool := by
+  refine Step.typed (Γ := Data.returnΓ A) sig atoms (Input.types_cons hi.atScope (Input.types_cons hl.atScope (Input.types_cons hs Input.types_nil))) (Data.heldBy A (Data.returnStamp A) (Data.returnLease A) (Data.returnCell A)) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- `freed`: the items, with the returned item idle again. -/
 theorem types_freed {i l s : TermSrc} (depth : types.length = env.names.length)
     (hi : CapturedTy sig i env path types .nat) (hl : CapturedTy sig l env path types .nat)
     (hs : TypesEach sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.freed i l s) env path types (.list (Pool.itemTy A)) :=
-  fun _ => types_foldWith_same (types_cellItems canonical hs false)
-    (types_noneOf atoms (types_cellItems canonical hs) false)
-    (types_snoc atoms (itemTy_normal canonical)
-      (types_minted_acc depth path (.list (Pool.itemTy A)) (Pool.itemTy A))
-      (types_ifT atoms
-        (types_holdsT canonical atoms (hi.underFold (.list (Pool.itemTy A)) (Pool.itemTy A))
-          (hl.underFold (.list (Pool.itemTy A)) (Pool.itemTy A))
-          (types_minted_item depth path (.list (Pool.itemTy A)) (Pool.itemTy A)))
-        (fun _ => types_recordSet
-          (types_minted_item depth path (.list (Pool.itemTy A)) (Pool.itemTy A) false)
-          (types_bool false true) (item_setBorrowedTy canonical))
-        (types_minted_item depth path (.list (Pool.itemTy A)) (Pool.itemTy A))
-        (itemTy_normal canonical)) false)
-    (Ty.subN_refl (.list (Pool.itemTy A)))
+    TypesEach sig (Pool.freed i l s) env path types (.list (Pool.itemTy A)) := by
+  refine Step.typed (Γ := Data.returnΓ A) sig atoms (Input.types_cons hi.atScope (Input.types_cons hl.atScope (Input.types_cons hs Input.types_nil))) (Data.freed A (Data.returnStamp A) (Data.returnLease A) (Data.returnCell A)) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- `outstanding`: whether a lease is outstanding. A fold whose body reads no caller's term. -/
 theorem types_outstanding {s : TermSrc} (depth : types.length = env.names.length)
     (hs : TypesEach sig s env path types (Pool.cellTy A)) :
-    TypesEach sig (Pool.outstanding s) env path types .bool :=
-  fun _ => types_foldWith_same (types_cellItems canonical hs false) (types_bool false false)
-    (types_orT atoms (types_minted_acc depth path .bool (Pool.itemTy A))
-      (fun _ => types_field (types_minted_item depth path .bool (Pool.itemTy A) false)
-        (item_borrowedTy canonical)) false)
-    (Ty.subN_refl .bool)
+    TypesEach sig (Pool.outstanding s) env path types .bool := by
+  refine Step.typed (Γ := [Pool.cellTy A]) sig atoms (Input.types_cons hs Input.types_nil) (Data.outstanding A (.here _ _)) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- A lease's reply: a Boolean and an option of an item. -/
 theorem types_leaseReply {closed item : TermSrc}
@@ -456,9 +470,11 @@ end Builders
 theorem types_mkWaiter {Op : Type} {sig : Signature Op} {env : Env} {path : List Nat}
     {types : List Ty} {id hint : TermSrc} (hid : TypesEach sig id env path types idTy)
     (hhint : TypesEach sig hint env path types idTy) :
-    TypesEach sig (Pool.mkWaiter id hint) env path types Pool.waiterTy :=
-  fun _ => types_record waiterFields_formed (.cons (hid true) (.cons (hhint true) .nil))
-    waiter_checkTy
+    TypesEach sig (Pool.mkWaiter id hint) env path types Pool.waiterTy := by
+  intro mode
+  exact types_record (fields := Pool.waiterRecord) (by decide)
+    (.cons (hhint true) (.cons (hid true) .nil))
+    (Record.check_declared (fields := Pool.waiterRecord) (by decide))
 
 /-! ## The initial value's items and stamps
 
@@ -535,6 +551,7 @@ theorem initial_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nat
           (.cons (types_bool false true) (.cons (types_nat 0 true) .nil)))))
     (initial_checkTy resource.canonical)
 
+set_option maxHeartbeats 800000 in
 /-- **The lease step is typed at every scope.** The request's identity stands in the removal's
 fold, and the cell's own source stands in the two folds over the items, so each is taken with
 its typed capture. The hint stands outside every fold. -/
@@ -547,28 +564,16 @@ theorem leaseStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = n
     (typesCell : CapturedTy sig cellSrc env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.leaseStep idSrc hintSrc cellSrc) env path types
       (.prod (leaseReplyTy A) (Pool.cellTy A)) := by
-  have cell := typesCell.atScope
-  have gone := types_withdrawn canonical atoms depth typesId cell
-  have none := types_noItem canonical atoms cell
-  have refused := types_pair atoms (types_leaseReply canonical atoms (types_bool true) none) gone
-  have enrolled := types_pair atoms (types_leaseReply canonical atoms (types_bool false) none)
-    (types_setWaiters canonical cell
-      (types_snoc atoms waiterTy_normal
-        (types_removeById atoms depth waiterTy_normal waiter_idTy
-          (types_cellWaiters canonical cell) typesId)
-        (types_mkWaiter typesId.atScope typesHint)))
-  have leased := types_pair atoms
-    (types_leaseReply canonical atoms (types_bool false)
-      (types_head atoms (types_leasedOf canonical atoms depth typesCell)))
-    (types_setNext canonical
-      (types_setAvailable canonical
-        (types_setItems canonical gone (types_marked canonical atoms depth typesCell))
-        (types_drop atoms (types_cellAvailable canonical cell) (types_nat 1)))
-      (types_add atoms (types_cellNext canonical cell) (types_nat 1)))
-  have leaseNormal := Ty.normalize_prod_canonical (leaseReplyTy_normal canonical) (cellTy_normal canonical) rfl rfl
-  exact types_ifT atoms (types_cellClosing canonical cell) refused
-    (types_ifT atoms (types_isEmpty atoms (types_cellAvailable canonical cell)) enrolled leased leaseNormal)
-    leaseNormal
+  refine Step.typed (Γ := Data.leaseΓ A) sig atoms (Input.types_cons typesId.atScope (Input.types_cons typesHint (Input.types_cons typesCell.atScope Input.types_nil))) (Data.lease A) ?_ depth
+  · clear typesId typesHint typesCell atoms depth
+    have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- **The return step is typed at every scope.** The item's stamp and the lease's stamp stand
 in the two folds over the items, so each is taken with its typed capture. -/
@@ -581,18 +586,15 @@ theorem returnStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = 
     (typesCell : TypesEach sig cellSrc env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.returnStep itemSrc leaseSrc cellSrc) env path types
       (.prod returnReplyTy (Pool.cellTy A)) := by
-  have returned := types_pair atoms
-    (types_tuple2 atoms (types_bool true)
-      (types_notT atoms (types_isEmpty atoms (types_cellWaiters canonical typesCell)))
-      rfl rfl rfl rfl)
-    (types_setAvailable canonical
-      (types_setItems canonical typesCell
-        (types_freed canonical atoms depth typesItem typesLease typesCell))
-      (types_front atoms rfl typesItem.atScope (types_cellAvailable canonical typesCell)))
-  have stale := types_pair atoms
-    (types_tuple2 atoms (types_bool false) (types_bool false) rfl rfl rfl rfl) typesCell
-  exact types_ifT atoms (types_heldBy canonical atoms depth typesItem typesLease typesCell)
-    returned stale (Ty.normalize_prod_canonical returnReplyTy_normal (cellTy_normal canonical) rfl rfl)
+  refine Step.typed (Γ := Data.returnΓ A) sig atoms (Input.types_cons typesItem.atScope (Input.types_cons typesLease.atScope (Input.types_cons typesCell Input.types_nil))) (Data.giveBack A) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- **The selection step is typed at every scope.** No fold: each argument is typed at the
 scope alone. -/
@@ -617,8 +619,16 @@ theorem withdrawStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf 
     (typesId : CapturedTy sig idSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.withdrawStep idSrc cellSrc) env path types
-      (.prod .unit (Pool.cellTy A)) :=
-  types_pair atoms types_unit (types_withdrawn canonical atoms depth typesId typesCell)
+      (.prod .unit (Pool.cellTy A)) := by
+  refine Step.typed (Γ := Data.withdrawΓ A) sig atoms (Input.types_cons typesId.atScope (Input.types_cons typesCell Input.types_nil)) (Data.withdraw A) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 /-- **The close's first step is typed at every scope.** No fold. -/
 @[semantics "store-typing" (requirement := R4)]
@@ -642,15 +652,14 @@ theorem drainStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = n
     (typesCell : TypesEach sig cellSrc env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.drainStep idSrc hintSrc cellSrc) env path types
       (.prod .bool (Pool.cellTy A)) := by
-  have enrolled := types_pair atoms (types_bool false)
-    (types_setWaiters canonical typesCell
-      (types_snoc atoms waiterTy_normal
-        (types_removeById atoms depth waiterTy_normal waiter_idTy
-          (types_cellWaiters canonical typesCell) typesId)
-        (types_mkWaiter typesId.atScope typesHint)))
-  have drained := types_pair atoms (types_bool true)
-    (types_withdrawn canonical atoms depth typesId typesCell)
-  exact types_ifT atoms (types_outstanding canonical atoms depth typesCell) enrolled drained
-    (Ty.normalize_prod_canonical rfl (cellTy_normal canonical) rfl rfl)
+  refine Step.typed (Γ := Data.leaseΓ A) sig atoms (Input.types_cons typesId.atScope (Input.types_cons typesHint (Input.types_cons typesCell Input.types_nil))) (Data.drain A) ?_ depth
+  · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
+    have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
+    have cellAliasN := cellTy_normal canonical
+    have itemAliasN := itemTy_normal canonical
+    have replyN := leaseReplyTy_normal canonical
+    dsimp only [Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+      Ty.normalize_option_canonical])
 
 end Effect4.Pool.Model

@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Modules.Pool.Cell
+public import Effect4.Modules.Pool.Data
 public import Effect4.Program.Authoring.Tuples
 
 /-!
@@ -24,12 +24,8 @@ The model is `src/Effect4/Laws/Modules/Pool/Model.lean`. The rules of a step:
 
 - **A step frames every field that it does not change**: it writes the cell by `recordSet`, or
   it answers the cell as it is.
-- **No fold states its accumulator's type.** The empty list at the type of `xs` is `take xs 0`
-  (`noneOf`), and no item at the type of an option of an item is `get (take items 0) 0`. So
-  every step term is inside the reader's domain.
-- **Each pass that folds uses `Authoring.foldWith`**, whose two names are minted. A pass places
-  its caller's term in the fold's body. With fixed names a caller's variable of the same name
-  would read the folded element (`Test/Program/FoldHygiene.lean`).
+- **A pass is Step data.** Its translation resolves the caller's captures before extending a fold scope.
+- **An empty item list follows its input type.** No resource annotation enters the translated term.
 - **The rule of enrolment is on the step**: the lease step adds a waiter only when the pool is
   open and no stamp is idle. An idle item beside enrolled waiters is a state of the cell.
 - **A selection reserves nothing**: it changes the waiters alone. A lease commits in the
@@ -40,9 +36,9 @@ The model is `src/Effect4/Laws/Modules/Pool/Model.lean`. The rules of a step:
   closer where a lease is outstanding. It adds no field to the cell.
 
 The words of a step term are shared (`src/Effect4/Modules/Words.lean`): one application of a
-native atom each. The removal by identity is the shared pass `removeById`. Two stamps are
-compared by the atom `eq`. The term language has no local binding, so a step repeats its
-passes.
+native atom each. The removal pass compares deferred keys. Two stamps are
+compared by the atom `eq`. The step trees share their passes as data. Their translations resolve captures before
+extending a fold's scope.
 
 Nothing here performs an effect, and the module exports no row. The operations over the steps
 are `src/Effect4/Modules/Pool/Ops.lean`: `Pool.make`, `Pool.use`, the close and the wake's
@@ -60,56 +56,61 @@ open Effect4.Modules
 /-! ## The words and the passes -/
 
 /-- A waiter's record. -/
-def mkWaiter (id hint : TermSrc) : TermSrc := record waiterFields [("id", id), ("hint", hint)]
+def mkWaiter (id hint : TermSrc) : TermSrc :=
+  (Data.mkWaiter (.here idTy [idTy]) (.there idTy (.here idTy []))).term
+    (Input.source [id, hint])
 
 /-- The cell without the request `id`: the shared removal pass over the waiters. It folds with
 minted names, and its body reads the field `id` of an entry and the caller's `id`. -/
 def withdrawn (id s : TermSrc) : TermSrc :=
-  recordSet s "waiters" (removeById (field s "waiters") id)
+  (Data.withdrawn (.var 0) (.here idTy [cellTy (.var 0)])
+    (.there idTy (.here (cellTy (.var 0)) []))).term (Input.source [id, s])
 
 /-- No item, at the type of an option of an item. -/
-def noItem (s : TermSrc) : TermSrc := app "get" [noneOf (field s "items"), nat 0]
+def noItem (s : TermSrc) : TermSrc :=
+  (Data.noItem (.var 0) (.here (cellTy (.var 0)) [])).term (Input.source [s])
 
 /-- The stamp at the front of the idle stamps, or zero where none is idle: one fold over the
 first entry. Its body reads no caller's term. -/
 def headStamp (s : TermSrc) : TermSrc :=
-  foldWith (app "take" [field s "available", nat 1]) (nat 0) fun _ stamp => stamp
+  (Data.headStamp (.var 0) (.here (cellTy (.var 0)) [])).term (Input.source [s])
 
 /-- An item as a lease of a stamp holds it. -/
 def leasedAs (lease it : TermSrc) : TermSrc :=
-  recordSet (recordSet it "borrowed" (bool true)) "lease" lease
+  (Data.leasedAs (.var 0) (.var (.here .nat [itemTy (.var 0)]))
+    (.var (.there .nat (.here (itemTy (.var 0)) [])))).term (Input.source [lease, it])
 
 /-- The items, with the front idle item leased at the stamp `next`. The fold's body reads the
 caller's cell: the front stamp and `next`. -/
 def marked (s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (noneOf (field s "items")) fun out it =>
-    snoc out (ifT (app "eq" [field it "stamp", headStamp s]) (leasedAs (field s "next") it) it)
+  (Data.marked (.var 0) (.here (cellTy (.var 0)) [])).term (Input.source [s])
 
 /-- The front idle item as its new lease holds it: a list of at most one item. The fold's body
 reads the caller's cell. -/
 def leasedOf (s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (noneOf (field s "items")) fun kept it =>
-    ifT (app "eq" [field it "stamp", headStamp s]) (snoc kept (leasedAs (field s "next") it)) kept
+  (Data.leasedOf (.var 0) (.here (cellTy (.var 0)) [])).term (Input.source [s])
 
 /-- Whether the lease `l` holds the item `i`, at one item's record. -/
 def holdsT (i l it : TermSrc) : TermSrc :=
-  andT (app "eq" [field it "stamp", i])
-    (andT (field it "borrowed") (app "eq" [field it "lease", l]))
+  (Data.holds (.var 0) (.here .nat [.nat, itemTy (.var 0)])
+    (.there .nat (.here .nat [itemTy (.var 0)]))
+    (.there .nat (.there .nat (.here (itemTy (.var 0)) [])))).term (Input.source [i, l, it])
 
 /-- Whether the lease `l` holds the item `i`. The fold's body reads the caller's two stamps. -/
 def heldBy (i l s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (bool false) fun found it => orT found (holdsT i l it)
+  (Data.heldBy (.var 0) (Data.returnStamp (.var 0)) (Data.returnLease (.var 0))
+    (Data.returnCell (.var 0))).term (Input.source [i, l, s])
 
 /-- The items, with the item that the lease `l` holds at the stamp `i` idle again. The fold's
 body reads the caller's two stamps. -/
 def freed (i l s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (noneOf (field s "items")) fun out it =>
-    snoc out (ifT (holdsT i l it) (recordSet it "borrowed" (bool false)) it)
+  (Data.freed (.var 0) (Data.returnStamp (.var 0)) (Data.returnLease (.var 0))
+    (Data.returnCell (.var 0))).term (Input.source [i, l, s])
 
 /-- Whether a lease is outstanding: whether a lease holds an item. One fold over the items,
 whose body reads no caller's term. -/
 def outstanding (s : TermSrc) : TermSrc :=
-  foldWith (field s "items") (bool false) fun found it => orT found (field it "borrowed")
+  (Data.outstanding (.var 0) (.here (cellTy (.var 0)) [])).term (Input.source [s])
 
 /-! ## The steps -/
 
@@ -123,16 +124,7 @@ The request's own entry leaves first. On every state that the wrapper reaches th
 changes nothing: a selection has already removed a resumed borrower before that borrower runs
 this step again. The removal is here so that no step carries a premise on the request. -/
 def leaseStep (id hint s : TermSrc) : TermSrc :=
-  ifT (field s "closing")
-    (app "pair" [tuple [bool true, noItem s], withdrawn id s])
-    (ifT (isEmpty (field s "available"))
-      (app "pair" [tuple [bool false, noItem s],
-        recordSet s "waiters" (snoc (removeById (field s "waiters") id) (mkWaiter id hint))])
-      (app "pair" [tuple [bool false, app "get" [leasedOf s, nat 0]],
-        recordSet
-          (recordSet (recordSet (withdrawn id s) "items" (marked s)) "available"
-            (app "drop" [field s "available", nat 1]))
-          "next" (app "add" [field s "next", nat 1])]))
+  (Data.lease (.var 0)).term (Input.source [id, hint, s])
 
 /-- **The model's `giveBack`: a return**, as the term of a `Ref.modify`. Reply: `[returned, a
 wake is owed]`. Where the lease `l` holds the item `i`, the item is idle again and its stamp
@@ -140,29 +132,25 @@ joins the front of `available` (decisions row 269). A wake is owed where a waite
 the wrapper posts one helper at the count 1 then. Where the lease holds nothing, the step
 answers the cell as it is: a stale lease frees no item that was leased again. -/
 def returnStep (i l s : TermSrc) : TermSrc :=
-  ifT (heldBy i l s)
-    (app "pair" [tuple [bool true, notT (isEmpty (field s "waiters"))],
-      recordSet (recordSet s "items" (freed i l s)) "available" (front i (field s "available"))])
-    (app "pair" [tuple [bool false, bool false], s])
+  (Data.giveBack (.var 0)).term (Input.source [i, l, s])
 
 /-- **The model's `select`: one selection of the wake at a count**, as the term of a
 `Ref.modify`. Reply: the selected waiters' records, in the order of enrolment. The first
 `count` waiters leave the list, and nothing else changes: a wake reserves nothing. The helper
 then resolves each selected record's hint, in order. The term folds nothing. -/
 def selectStep (count s : TermSrc) : TermSrc :=
-  app "pair" [app "take" [field s "waiters", count],
-    recordSet s "waiters" (app "drop" [field s "waiters", count])]
+  (Data.select (.var 0)).term (Input.source [count, s])
 
 /-- **The model's `withdraw`**, as the term of a `Ref.modify`. Reply: nothing. The request's
 entry leaves. A waiter holds nothing, so no other field changes and nobody is woken. -/
-def withdrawStep (id s : TermSrc) : TermSrc := app "pair" [unit, withdrawn id s]
+def withdrawStep (id s : TermSrc) : TermSrc :=
+  (Data.withdraw (.var 0)).term (Input.source [id, s])
 
 /-- **The model's `close`: the close's first step**, as the term of a `Ref.modify`. Reply:
 `[this step began the close, the count of the waiters]`. The pool refuses new leases from now
 on (decisions row 268). The count is the count of the helper that the close posts. -/
 def closeStep (s : TermSrc) : TermSrc :=
-  app "pair" [tuple [notT (field s "closing"), len (field s "waiters")],
-    recordSet s "closing" (bool true)]
+  (Data.close (.var 0)).term (Input.source [s])
 
 /-- **The model's `drain`: the closer's step** (decisions row 276, point 2), as the term of a
 `Ref.modify`. Reply: whether the pool is drained, which says that no lease is outstanding.
@@ -173,9 +161,6 @@ nothing else changes. The step changes the waiters alone.
 The closer's own entry leaves first, as a borrower's does in `leaseStep`. The step reads the
 items' flags and not `closing`: the close's first step runs before it. -/
 def drainStep (id hint s : TermSrc) : TermSrc :=
-  ifT (outstanding s)
-    (app "pair" [bool false,
-      recordSet s "waiters" (snoc (removeById (field s "waiters") id) (mkWaiter id hint))])
-    (app "pair" [bool true, withdrawn id s])
+  (Data.drain (.var 0)).term (Input.source [id, hint, s])
 
 end Effect4.Pool

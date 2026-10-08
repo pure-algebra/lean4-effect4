@@ -63,15 +63,21 @@ def itemFields (A : Ty) : List (String × Bool × Ty) :=
 
 /-- The type of an item at the resource type `A`: `itemFields A` in the canonical field
 order. -/
-def itemTy (A : Ty) : Ty := .record
+def itemRecord (A : Ty) : List (String × Bool × Ty) :=
   [("borrowed", false, .bool), ("lease", false, .nat), ("resource", false, A),
    ("stamp", false, .nat)]
+
+/-- The item type uses its one canonical field list. -/
+def itemTy (A : Ty) : Ty := .record (itemRecord A)
 
 /-- A waiter as a step writes it: its identity, then its hint. -/
 def waiterFields : List (String × Bool × Ty) := [("id", false, idTy), ("hint", false, idTy)]
 
 /-- The type of a waiter: `waiterFields` in the canonical field order. -/
-def waiterTy : Ty := .record [("hint", false, idTy), ("id", false, idTy)]
+def waiterRecord : List (String × Bool × Ty) := [("hint", false, idTy), ("id", false, idTy)]
+
+/-- The waiter type uses its one canonical field list. -/
+def waiterTy : Ty := .record waiterRecord
 
 /-- The cell as the initial value writes it: the items, the idle stamps, the waiters, whether
 the pool is closing, and the stamp of the next lease. -/

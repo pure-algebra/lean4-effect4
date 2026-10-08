@@ -69,29 +69,6 @@ lease that holds its item. The two refusals are `lease_closed` and `giveBack_sta
 closer's two forms are `drain_enrols` and `drain_drained`
 (`src/Effect4/Laws/Modules/Pool/Profile.lean`). -/
 
-theorem lease_enrols {s : State} (id : Nat) (open_ : s.closing = false)
-    (empty : s.available = []) :
-    lease s id = ({ s with waiters := without s.waiters id ++ [id] }, false, none) := by
-  unfold lease
-  rw [open_, if_neg Bool.false_ne_true, empty]
-
-theorem lease_takes {s : State} (id : Nat) {i : Nat} {rest : List Nat}
-    (open_ : s.closing = false) (front : s.available = i :: rest) :
-    lease s id =
-      ({ s with
-          items := mark s.items i s.next, available := rest,
-          waiters := without s.waiters id, next := s.next + 1 },
-        false, leased s.items i s.next) := by
-  unfold lease
-  rw [open_, if_neg Bool.false_ne_true, front]
-
-theorem giveBack_returns {s : State} {i l : Nat} (held : s.items.any (·.heldBy i l) = true) :
-    giveBack s i l =
-      ({ s with items := freed s.items i l, available := i :: s.available }, true,
-        !s.waiters.isEmpty) := by
-  unfold giveBack
-  rw [if_pos held]
-
 /-! ## The six step goals -/
 
 /-- **The selection step agrees with the model's `select`.** The reply is the selected
@@ -105,14 +82,14 @@ theorem selectStep_agrees (tb : Table) (res : Nat → Val) (s : State) (count : 
     (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
     Reads (Pool.selectStep countSrc cellSrc) env path vals
       (Val.tuple [selectReplyVal tb (select s count).2, cellVal tb res (select s count).1]) := by
-  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (selectInputs tb res s count)
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (selectInputs tb res s count)
     (Input.reads_cons readsCount (Input.reads_cons (readsCell.to (cellVal_image tb res s).symm)
       Input.reads_nil)) (Data.select P) rfl
   rw [select_eval] at reads
   exact reads.to (by
-    show Val.list [(Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.opaque
+    show Val.list [(Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
         (.list waiterTy)).toVal ((select s count).2.map (waiterC tb)),
-      (Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.opaque
+      (Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
         (.record (Pool.cellRecord P))).toVal (cellC tb res (select s count).1)] = _
     rw [selectReply_image, cellVal_image])
 
@@ -125,7 +102,7 @@ theorem closeStep_agrees (tb : Table) (res : Nat → Val) (s : State)
     (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
     Reads (Pool.closeStep cellSrc) env path vals
       (Val.tuple [closeReplyVal (close s).2, cellVal tb res (close s).1]) := by
-  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (cellInputs tb res s)
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (cellInputs tb res s)
     (Input.reads_cons (readsCell.to (cellVal_image tb res s).symm) Input.reads_nil)
     (Data.close P) rfl
   rw [close_eval] at reads
@@ -140,8 +117,14 @@ theorem withdrawStep_agrees (tb : Table) (res : Nat → Val) (s : State) (id : N
     (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
     (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
     Reads (Pool.withdrawStep idSrc cellSrc) env path vals
-      (Val.tuple [Val.unit, cellVal tb res (withdraw s id)]) :=
-  reads_pair reads_unit (reads_withdrawn tb injective res s id depth readsId readsCell)
+      (Val.tuple [Val.unit, cellVal tb res (withdraw s id)]) := by
+  have h := Step.sound (Γ := Data.withdrawΓ P) Effect4.Schema.Model.Leaves.deferredKeys
+    (tb.handle id, (cellC tb res s, ()))
+    (Input.reads_cons readsId.atScope (Input.reads_cons
+      (readsCell.to (cellVal_image tb res s).symm) Input.reads_nil))
+    (Data.withdraw P) rfl depth ⟨Effect4.Schema.DeferredIdentity.deferredKeys⟩
+  rw [withdraw_eval tb injective res s id] at h
+  exact h.to (by rw [← cellVal_image]; rfl)
 
 /-- **The return step agrees with the model's `giveBack`.** The reply is whether the lease
 returned and whether a wake is owed. The stored value is the model's next state: where the
@@ -159,30 +142,20 @@ theorem returnStep_agrees (tb : Table) (res : Nat → Val) (s : State) (item lea
     Reads (Pool.returnStep itemSrc leaseSrc cellSrc) env path vals
       (Val.tuple [returnReplyVal (giveBack s item lease).2,
         cellVal tb res (giveBack s item lease).1]) := by
-  have waiters := reads_field readsCell (cell_waiters _ _ _ _ _)
-  have returned := reads_pair
-    (reads_tuple2 (reads_bool true env path vals) (reads_notT (reads_isEmpty waiters)))
-    (reads_recordSet
-      (reads_recordSet readsCell
-        (reads_freed tb res s item lease depth readsItem readsLease readsCell)
-        (cell_setItems _ _ _ _ _ _))
-      (reads_front readsItem.atScope (reads_field readsCell (cell_available _ _ _ _ _)))
-      (cell_setAvailable _ _ _ _ _ _))
-  have stale := reads_pair
-    (reads_tuple2 (reads_bool false env path vals) (reads_bool false env path vals)) readsCell
-  have whole := reads_ifT
-    (reads_heldBy tb res s item lease depth readsItem readsLease readsCell) returned stale
-  cases held : s.items.any (·.heldBy item lease) with
-  | true =>
-    rw [held, if_pos rfl] at whole
-    rw [giveBack_returns held]
-    refine whole.to ?_
-    rw [List.length_map, decide_length_zero]
-    rfl
-  | false =>
-    rw [held, if_neg Bool.false_ne_true] at whole
-    rw [giveBack_stale held]
-    exact whole
+  have h := Step.sound (Γ := Data.returnΓ P) Effect4.Schema.Model.Leaves.deferredKeys
+    (item, (lease, (cellC tb res s, ())))
+    (Input.reads_cons readsItem.atScope (Input.reads_cons readsLease.atScope
+      (Input.reads_cons (readsCell.to (cellVal_image tb res s).symm) Input.reads_nil)))
+    (Data.giveBack P) rfl depth
+  rw [giveBack_eval tb res s item lease] at h
+  exact h.to (by
+    change Val.list [(Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
+      (.prod .bool .bool)).toVal (giveBack s item lease).2,
+      (Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
+        (Pool.cellTy P)).toVal (cellC tb res (giveBack s item lease).1)] = _
+    rw [returnReply_image]
+    exact congrArg (fun v => Val.list [returnReplyVal (giveBack s item lease).2, v])
+      (cellVal_image tb res (giveBack s item lease).1))
 
 /-- **The lease step agrees with the model's `lease`.** The reply is whether the pool refused,
 and the leased item's record, if any: its stamp, its resource and its lease's stamp. The stored
@@ -201,74 +174,21 @@ theorem leaseStep_agrees (tb : Table) (res : Nat → Val) (s : State) (id : Nat)
     Reads (Pool.leaseStep idSrc hintSrc cellSrc) env path vals
       (Val.tuple [leaseReplyVal res (lease s id).2,
         cellVal (tb.renew id hint) res (lease s id).1]) := by
-  have cell := readsCell.atScope
-  have available := reads_field cell (cell_available _ _ _ _ _)
-  have waiters := reads_field cell (cell_waiters _ _ _ _ _)
-  have next := reads_field cell (cell_next _ _ _ _ _)
-  have gone := reads_withdrawn tb injective res s id depth readsId cell
-  have none := reads_noItem tb res s cell
-  have rest := reads_removeById tb injective (waiterVal tb) (fun w => w)
-    (fun _ => waiter_id _ _) 0 s.waiters id depth waiters readsId
-  -- the request's own entry left, so every waiter that stays is of another identity
-  have others : ∀ w ∈ without s.waiters id, w ≠ id := fun w member => (mem_without.mp member).2
-  have refused := reads_pair (reads_tuple2 (reads_bool true env path vals) none) gone
-  have enrolled := reads_pair (reads_tuple2 (reads_bool false env path vals) none)
-    (reads_recordSet cell (reads_snoc rest (reads_mkWaiter readsId.atScope readsHint))
-      (cell_setWaiters _ _ _ _ _ _))
-  have taken := reads_pair
-    (reads_tuple2 (reads_bool false env path vals)
-      (reads_head (reads_leasedOf tb res s depth readsCell)))
-    (reads_recordSet
-      (reads_recordSet
-        (reads_recordSet gone (reads_marked tb res s depth readsCell) (cell_setItems _ _ _ _ _ _))
-        (reads_drop available (reads_nat 1 env path vals)) (cell_setAvailable _ _ _ _ _ _))
-      (reads_add next (reads_nat 1 env path vals)) (cell_setNext _ _ _ _ _ _))
-  have whole := reads_ifT (reads_field cell (cell_closing _ _ _ _ _)) refused
-    (reads_ifT (reads_isEmpty available) enrolled taken)
-  cases closed : s.closing with
-  | true =>
-    rw [if_pos closed] at whole
-    rw [lease_closed closed id, cellVal_renew tb res (withdraw s id) id hint others]
-    exact whole
-  | false =>
-    rw [if_neg fun refuses => Bool.false_ne_true (closed.symm.trans refuses)] at whole
-    cases front : s.available with
-    | nil =>
-      have noneIdle : decide ((s.available.map Val.nat).length = 0) = true := by
-        rw [front]
-        rfl
-      rw [noneIdle, if_pos rfl] at whole
-      rw [lease_enrols id closed front]
-      refine whole.to ?_
-      show _ = Val.tuple [Val.tuple [Val.bool false, Store.Val.none],
-        cellOf (.list (s.available.map Val.nat)) (.bool s.closing)
-          (.list (s.items.map (itemVal res))) (.nat s.next)
-          (.list ((without s.waiters id ++ [id]).map (waiterVal (tb.renew id hint))))]
-      rw [List.map_append, waiters_renew tb (without s.waiters id) id hint others, List.map_cons,
-        List.map_nil, waiterVal_renewed]
-      rfl
-    | cons i tail =>
-      have someIdle : decide ((s.available.map Val.nat).length = 0) = false := by
-        rw [front]
-        rfl
-      have head : s.available.headD 0 = i := by
-        rw [front]
-        rfl
-      have dropped : (s.available.map Val.nat).drop 1 = tail.map Val.nat := by
-        rw [front]
-        rfl
-      rw [someIdle, if_neg Bool.false_ne_true, head, dropped, List.getElem?_map,
-        leased_flatMap] at whole
-      rw [lease_takes id closed front,
-        cellVal_renew tb res
-          { s with
-            items := mark s.items i s.next, available := tail,
-            waiters := without s.waiters id, next := s.next + 1 }
-          id hint others]
-      refine whole.to ?_
-      cases leased s.items i s.next with
-      | none => rfl
-      | some it => rfl
+  have h := Step.sound (Γ := Data.leaseΓ P) Effect4.Schema.Model.Leaves.deferredKeys
+    (tb.handle id, (hint, (cellC tb res s, ())))
+    (Input.reads_cons readsId.atScope (Input.reads_cons readsHint
+      (Input.reads_cons (readsCell.atScope.to (cellVal_image tb res s).symm) Input.reads_nil)))
+    (Data.lease P) rfl depth ⟨Effect4.Schema.DeferredIdentity.deferredKeys⟩
+  rw [lease_eval tb injective res s id hint] at h
+  exact h.to (by
+    change Val.list [(Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
+      (.prod .bool (.option (Pool.itemTy P)))).toVal
+        ((lease s id).2.1, (lease s id).2.2.map (itemC res)),
+      (Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
+        (Pool.cellTy P)).toVal (cellC (tb.renew id hint) res (lease s id).1)] = _
+    rw [leaseReply_image]
+    exact congrArg (fun v => Val.list [leaseReplyVal res (lease s id).2, v])
+      (cellVal_image (tb.renew id hint) res (lease s id).1))
 
 /-- **The closer's step agrees with the model's `drain`** (decisions row 276, point 2). The
 reply is whether no lease is outstanding. The stored value is the model's next state, through
@@ -285,39 +205,13 @@ theorem drainStep_agrees (tb : Table) (res : Nat → Val) (s : State) (id : Nat)
     (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
     Reads (Pool.drainStep idSrc hintSrc cellSrc) env path vals
       (Val.tuple [Val.bool (drain s id).2, cellVal (tb.renew id hint) res (drain s id).1]) := by
-  have waiters := reads_field readsCell (cell_waiters _ _ _ _ _)
-  have gone := reads_withdrawn tb injective res s id depth readsId readsCell
-  have rest := reads_removeById tb injective (waiterVal tb) (fun w => w)
-    (fun _ => waiter_id _ _) 0 s.waiters id depth waiters readsId
-  -- the closer's own entry left, so every waiter that stays is of another identity
-  have others : ∀ w ∈ without s.waiters id, w ≠ id := fun w member => (mem_without.mp member).2
-  have enrolled := reads_pair (reads_bool false env path vals)
-    (reads_recordSet readsCell (reads_snoc rest (reads_mkWaiter readsId.atScope readsHint))
-      (cell_setWaiters _ _ _ _ _ _))
-  have drained := reads_pair (reads_bool true env path vals) gone
-  have whole := reads_ifT (reads_outstanding tb res s depth readsCell) enrolled drained
-  cases held : s.items.any (·.borrowed) with
-  | true =>
-    rw [held, if_pos rfl] at whole
-    rw [drain_enrols id held]
-    refine whole.to ?_
-    show _ = Val.tuple [Val.bool false,
-      cellOf (.list (s.available.map Val.nat)) (.bool s.closing)
-        (.list (s.items.map (itemVal res))) (.nat s.next)
-        (.list ((without s.waiters id ++ [id]).map (waiterVal (tb.renew id hint))))]
-    rw [List.map_append, waiters_renew tb (without s.waiters id) id hint others, List.map_cons,
-      List.map_nil, waiterVal_renewed]
-    rfl
-  | false =>
-    rw [held, if_neg Bool.false_ne_true] at whole
-    rw [drain_drained id held, cellVal_renew tb res (withdraw s id) id hint others]
-    exact whole
-
-/-! ## The six statements as one
-
-`pool_steps_agree` assembles the six step statements: each field is one of them, word for
-word, and its proof cites that statement. So the plan derives the standing of the whole from
-the six. -/
+  have h := Step.sound (Γ := Data.leaseΓ P) Effect4.Schema.Model.Leaves.deferredKeys
+    (tb.handle id, (hint, (cellC tb res s, ())))
+    (Input.reads_cons readsId.atScope (Input.reads_cons readsHint
+      (Input.reads_cons (readsCell.to (cellVal_image tb res s).symm) Input.reads_nil)))
+    (Data.drain P) rfl depth ⟨Effect4.Schema.DeferredIdentity.deferredKeys⟩
+  rw [drain_eval tb injective res s id hint] at h
+  exact h.to (by rw [← cellVal_image]; rfl)
 
 /-- **Pool's six steps agree with the abstract model**: one field for each step, at the
 statement of its goal. -/

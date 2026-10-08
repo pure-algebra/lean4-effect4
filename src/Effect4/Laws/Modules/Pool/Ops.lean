@@ -1,3 +1,4 @@
+import Effect4.Laws.Modules.Step.Scope
 import Effect4.Modules.Pool.Ops
 import Effect4.Laws.Modules.Waiting
 import Effect4.Laws.Modules.Store
@@ -78,48 +79,36 @@ of each. A record's construction is closed by hand: its entries are pairs. -/
 /-- A waiter's record keeps scope. -/
 theorem mkWaiter_scoped {id hint : TermSrc} (hid : id.Scoped) (hhint : hint.Scoped) :
     (mkWaiter id hint).Scoped :=
-  record_scoped _ (by
-    intro entry member
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-    rcases member with rfl | rfl
-    · exact hid
-    · exact hhint)
+  Step.«scoped» (Data.mkWaiter (.here idTy [idTy]) (.there idTy (.here idTy []))) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_nil))))
 
 /-- The lease step keeps scope. -/
 theorem leaseStep_scoped {id hint s : TermSrc} (hid : id.Scoped) (hhint : hint.Scoped)
-    (hs : s.Scoped) : (leaseStep id hint s).Scoped := by
-  unfold leaseStep withdrawn noItem leasedOf marked headStamp leasedAs removeById snoc isEmpty len
-    ifT same noneOf nilT
-  authoring_scoped
+    (hs : s.Scoped) : (leaseStep id hint s).Scoped :=
+  Step.«scoped» (Data.lease (.var 0)) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_cons hs (TermSrc.Scoped_nil)))))
 
 /-- The return step keeps scope. -/
 theorem returnStep_scoped {i l s : TermSrc} (hi : i.Scoped) (hl : l.Scoped) (hs : s.Scoped) :
-    (returnStep i l s).Scoped := by
-  unfold returnStep heldBy freed holdsT front single snoc isEmpty len notT andT orT ifT noneOf nilT
-  authoring_scoped
+    (returnStep i l s).Scoped :=
+  Step.«scoped» (Data.giveBack (.var 0)) (Input.source_scoped (TermSrc.Scoped_cons hi (TermSrc.Scoped_cons hl (TermSrc.Scoped_cons hs (TermSrc.Scoped_nil)))))
 
 /-- The selection step keeps scope. -/
 theorem selectStep_scoped {count s : TermSrc} (hcount : count.Scoped) (hs : s.Scoped) :
-    (selectStep count s).Scoped := by
-  unfold selectStep
-  authoring_scoped
+    (selectStep count s).Scoped :=
+  Step.«scoped» (Data.select (.var 0)) (Input.source_scoped (TermSrc.Scoped_cons hcount (TermSrc.Scoped_cons hs (TermSrc.Scoped_nil))))
 
 /-- The withdrawal keeps scope. -/
 theorem withdrawStep_scoped {id s : TermSrc} (hid : id.Scoped) (hs : s.Scoped) :
-    (withdrawStep id s).Scoped := by
-  unfold withdrawStep withdrawn removeById snoc ifT same noneOf nilT
-  authoring_scoped
+    (withdrawStep id s).Scoped :=
+  Step.«scoped» (Data.withdraw (.var 0)) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hs (TermSrc.Scoped_nil))))
 
 /-- The close's first step keeps scope. -/
-theorem closeStep_scoped {s : TermSrc} (hs : s.Scoped) : (closeStep s).Scoped := by
-  unfold closeStep len notT
-  authoring_scoped
+theorem closeStep_scoped {s : TermSrc} (hs : s.Scoped) : (closeStep s).Scoped :=
+  Step.«scoped» (Data.close (.var 0)) (Input.source_scoped (TermSrc.Scoped_cons hs (TermSrc.Scoped_nil)))
 
 /-- The closer's step keeps scope. -/
 theorem drainStep_scoped {id hint s : TermSrc} (hid : id.Scoped) (hhint : hint.Scoped)
-    (hs : s.Scoped) : (drainStep id hint s).Scoped := by
-  unfold drainStep outstanding withdrawn removeById snoc orT ifT same noneOf nilT
-  authoring_scoped
+    (hs : s.Scoped) : (drainStep id hint s).Scoped :=
+  Step.«scoped» (Data.drain (.var 0)) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_cons hs (TermSrc.Scoped_nil)))))
 
 /-- An idle item's record keeps scope. -/
 theorem mkItem_scoped (A : Ty) {stamp resource : TermSrc} (hstamp : stamp.Scoped)
