@@ -1,26 +1,30 @@
 import Effect4.Codegen.Print
+import Effect4.Codegen.EraseTypes
 import Effect4.Program.Typing.Call
 
 /-!
 # Codegen.PrintTyped — the print with a call's type arguments at a join
 
 The typed print's slice P2a (`docs/research/2026-10-07-typed-print-design.md`, the addendum).
-tsgo forms no join of two inference candidates (`docs/research/2026-10-06-print-probe.md`). So
-where the checker binds a row's parameter to a join, the printed call must carry the row's
-bindings as its type arguments.
+The retained W1 and W2 controls need explicit bindings at joins
+(`docs/research/2026-10-06-print-probe.md`). The printer supplies these checked bindings
+as call type arguments.
 
 **The print.** `printTypedAt` is the table-driven print (`Templates.printT`) with one more
 input, the node's address. A child's address is its parent's and its index among the node
 arguments (`Node.child`). Every row prints as in `printAlg`, except a call: at an address where
 the annotation answers type arguments, the call carries them on its head (`withHeadTypes`).
 
-**The annotation.** `typeArgsAt` answers a call's type arguments where a binding is a join: the
-guarded match refuses there (`rowBindings`) and the match by bounds with no guard answers
-(`rowBindingsB`). They are the bindings in the order of the row's variables, `.var 0` first.
+**The annotation.** `typeArgsAt` reads the call's checked bindings where inference needs a join.
+`PrintedJoin` detects that printing condition independently of admission.
+The bindings follow the row's template variables, `.var 0` first.
 
-**The connector.** While the guards stand, every typed call's guarded match answers, so the
-annotation answers nothing and the typed print is `print`, byte for byte
-(`printTyped_eq_print`, `Laws/Codegen/PrintTyped.lean`).
+**The connector.** On the existing readable fragment with lawful spelling, every successful
+raw typed print erases to the ordinary print (`eraseJoinArgs_printTypedAt`,
+`Laws/Codegen/PrintTyped.lean`). The named erasure retains operation-carried and row-declared
+arguments. The existing reader after erasure carries read-back and reconstruction at the
+erased input (`readTyped_printTypedAt`, `readTyped_exact`). Target typing and execution remain
+separate evidence.
 -/
 
 set_option autoImplicit false
@@ -56,20 +60,23 @@ def atAddress (path : List Nat) : List (ArgF Op TCarrier) → Nat → List (ArgF
 
 /-- **The row call with type arguments on its head**: the call that `printPerform` prints, with
 the given types on the call's head, each as the type printer prints it. With no type argument
-it is `printPerform`'s call. A type with no printed form refuses the row by its spelling. -/
+it is `printPerform`'s call. Insertion refuses where the operation or its row owns arguments.
+A type with no printed form refuses the row by its spelling. -/
 def printPerformAt (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     Option (List Ty) → Except PrintRefusal TypeScript.Expr
   | none | some [] => printPerform sig n op request
   | some (ty :: tys) =>
-    let call := match Effect4.Codegen.Classes.writeTys (ty :: tys) with
-      | some targets =>
-        (printRow n (sig.rowOf op) request).bind (withHeadTypes (sig.rowOf op).spelling targets)
-      | none => .error (.typeSpelling (sig.rowOf op).spelling)
-    match sig.termOf op with
-    | none => call
-    | some b =>
-      call.bind (withFunction (sig.rowOf op).spelling
-        (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term)))
+    if (sig.typeArgsOf op).isEmpty && (sig.rowOf op).typeArgs.isEmpty then
+      let call := match Effect4.Codegen.Classes.writeTys (ty :: tys) with
+        | some targets =>
+          (printRow n (sig.rowOf op) request).bind (withHeadTypes (sig.rowOf op).spelling targets)
+        | none => .error (.typeSpelling (sig.rowOf op).spelling)
+      match sig.termOf op with
+      | none => call
+      | some b =>
+        call.bind (withFunction (sig.rowOf op).spelling
+          (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term)))
+    else .error (.typeSpelling (sig.rowOf op).spelling)
 
 /-- **The typed print's algebra**: the table's layer function with each child at its address,
 and at a call the type arguments that the annotation answers at the call's address. -/
@@ -88,36 +95,56 @@ namespace Effect4.Program
 
 variable {Op : Type}
 
-/-- **The bindings of a row's use by the match by bounds with no guard**: `rowBindings` with
-`Bounds.matchB` at the request and at the binder term. It answers where `rowBindings` answers,
-and also where a parameter's lower bounds have no greatest member: a join. -/
-def rowBindingsB (row : Row) (request : Ty) (use : Option TermUse := none) : Option Ty.Subst :=
-  (Bounds.matchB [] row.request.normalize request.normalize).bind fun σ =>
-    match use with
-    | none => some σ
-    | some u =>
-      (u.typeAt (TermUse.instParam u.param σ)).bind fun r =>
-        Bounds.matchB σ u.result.normalize r
-
 /-- The bindings in the order of the row's variables, `.var 0` first, up to the greatest bound
 variable; `none` where a variable below it is not bound. -/
 def Ty.Subst.ordered (σ : Ty.Subst) : Option (List Ty) :=
   (List.range (σ.foldr (fun b k => max k (b.1 + 1)) 0)).mapM fun i => List.lookup i σ
 
-/-- **The type arguments a call prints at its address**: where the address holds a call whose
-guarded match refuses and whose match by bounds answers, its bindings in the order of the row's
-variables. `none` elsewhere. -/
-def typeArgsAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
-    Option (List Ty) :=
-  (focusAt s env0 p path).bind fun focus =>
+namespace PrintedJoin
+
+/-- Whether printing needs a type argument for these bounds. Only parameters not fixed by
+`seed` matter. No candidate or one candidate requires no annotation. The consumer is
+`row`, which annotates newly admitted calls without restricting the checker. -/
+def needed (seed : Ty.Subst) (template request : Ty) : Bool :=
+  let cs := Bounds.cands .co template request
+  cs.any fun c =>
+    !(seed.lookup c.1).isSome &&
+      match (Bounds.lowers cs c.1).map Ty.normalize with
+      | [] | [_] => false
+      | candidates => !(candidates.any fun candidate => candidates.all fun lower => Ty.sub lower candidate)
+
+/-- Whether either match of a call needs printed bindings. The request's match supplies the
+binder's fixed parameters. Both matches remain the checker's existing `Bounds.matchB`. -/
+def row (row : Row) (request : Ty) (use : Option TermUse := none) : Bool :=
+  needed [] row.request.normalize request.normalize ||
+    ((Bounds.matchB [] row.request.normalize request.normalize).bind fun seed =>
+      use.bind fun binder =>
+        (binder.typeAt (TermUse.instParam binder.param seed)).map fun result =>
+          needed seed binder.result.normalize result).getD false
+
+/-- Whether a focused call needs explicit type arguments. Addresses outside a checked call
+answer false. The consumer is `typeArgsAt`; this is a printer decision, never admission. -/
+def at_ (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) : Bool :=
+  ((focusAt s env0 p path).bind fun focus =>
     match focus.program with
     | .perform op request =>
-      (termTy s focus.env request).bind fun requestTy =>
-        match rowBindings (s.rowOf op) requestTy (s.termUse focus.env op) with
-        | some _ => none
-        | none => (rowBindingsB (s.rowOf op) requestTy (s.termUse focus.env op)).bind
-            Ty.Subst.ordered
-    | _ => none
+      (termTy s focus.env request).map fun requestTy =>
+        row (s.rowOf op) requestTy (s.termUse focus.env op)
+    | _ => none).getD false
+
+end PrintedJoin
+
+/-- No call needs a join annotation at any checked address. This is the domain of the
+unchanged-print connector. It makes no claim about target compiler inference. -/
+def NoJoin (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : Prop :=
+  ∀ path, PrintedJoin.at_ s env0 p path = false
+
+/-- The row's checked bindings, in template-variable order, only at a call that needs them. -/
+def typeArgsAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
+    Option (List Ty) :=
+  if PrintedJoin.at_ s env0 p path then
+    (callAt s env0 p path).bind fun call => call.bindings.ordered
+  else none
 
 /-- **The typed print of a program**: each call at a join carries its type arguments. -/
 def printTyped (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
