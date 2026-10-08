@@ -74,6 +74,9 @@ theorem eval_rename (L : Leaves) : ∀ {Γ Δ : List Ty} {t : Ty}
     exact congrArg Prod.snd (eval_rename L a ρ vs ws h)
   | _, _, _, .some a, ρ, vs, ws, h => by
     exact congrArg Option.some (eval_rename L a ρ vs ws h)
+  | _, _, _, .getOrElse x fallback, ρ, vs, ws, h => by
+    exact congr2 Option.getD (eval_rename L x ρ vs ws h)
+      (eval_rename L fallback ρ vs ws h)
   | _, _, _, .emptyLike a, ρ, vs, ws, h => by
     rfl
   | _, _, _, .len a, ρ, vs, ws, h => by
@@ -126,5 +129,11 @@ theorem eval_renamedFields (L : Leaves) : ∀ {Γ Δ : List Ty} {fs : List (Stri
     exact congr2 Prod.mk (eval_rename L value ρ vs ws h)
       (eval_renamedFields L rest ρ vs ws h)
 end
+/-- Insert one unused input above a tree without changing its value. -/
+theorem eval_lift (L : Leaves) {Γ : List Ty} {t u : Ty} (e : Step Γ t)
+    (vs : Inputs L Γ) (value : CarrierAt L u) :
+    (e.rename (fun x => .there u x)).eval (Γ := u :: Γ) L (value, vs) = e.eval L vs :=
+  eval_rename L e (fun x => .there u x) vs (value, vs) (fun _ => rfl)
+
 end Step
 end Effect4.Modules

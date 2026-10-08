@@ -43,4 +43,8 @@ def removeBy (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) : Step 
 def any (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) : Step Γ .bool :=
   .fold xs (.bool false) (.or (.var (.here _ _)) (withAccumulator .bool predicate))
 
+/-- The first item, or the supplied fallback where the list is empty. -/
+def headOr (xs : Step Γ (.list a)) (fallback : Step Γ a) : Step Γ a :=
+  .getOrElse (.head xs) fallback
+
 end Effect4.Modules.Step.Lists

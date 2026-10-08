@@ -51,6 +51,7 @@ def renameAlg : StepAlgebra (fun Γ t => {Δ : List Ty} → Input.Renaming Γ Δ
   fst p := fun ρ => .fst (p ρ)
   snd p := fun ρ => .snd (p ρ)
   some a := fun ρ => .some (a ρ)
+  getOrElse x fallback := fun ρ => .getOrElse (x ρ) (fallback ρ)
   get r f := fun ρ => .get (r ρ) f
   set r f v := fun ρ => .set (r ρ) f (v ρ)
   emptyLike xs := fun ρ => .emptyLike (xs ρ)

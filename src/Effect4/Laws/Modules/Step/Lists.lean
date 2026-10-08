@@ -92,4 +92,9 @@ theorem eval_any (L : Leaves) (xs : Step Γ (.list a)) (predicate : Step (a :: �
       (eval_withAccumulator L predicate .bool vs item acc)
   rw [bodies]
   exact (Effect4.Constructive.List.foldl_or_any _ (xs.eval L vs) false).trans (by rfl)
+/-- Head consumption computes the list head with the supplied default. -/
+theorem eval_headOr (L : Leaves) (xs : Step Γ (.list a)) (fallback : Step Γ a)
+    (vs : Inputs L Γ) :
+    (headOr xs fallback).eval L vs = (xs.eval L vs).head?.getD (fallback.eval L vs) := rfl
+
 end Effect4.Modules.Step.Lists
