@@ -1,0 +1,648 @@
+{
+  "kind": "finite-design-review",
+  "reviewed_commit": "29f369ca8acc5ccef2632375357f0bf7a2c4ac22",
+  "commands": [
+    {
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.004,
+      "stdout": "1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "--version"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.161,
+      "stdout": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "build",
+        "Effect4",
+        "Test.Program.SemaphoreScenarios",
+        "Effect4.Laws.Modules.Reading"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.347,
+      "stdout": "Build completed successfully (864 jobs).\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES/LatchProbe.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 4.628,
+      "stdout": "[(true, true), (true, true), (true, true)]\n[(true, true), (true, true), (true, true)]\ntrue\ntrue\ntrue\n[(some 4068, some 5247), (some 3248, some 5251), (some 3157, some 5240)]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES/DenProbe.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 2.361,
+      "stdout": "'DenProbe.closeStep_agrees' depends on axioms: [propext]\n'DenProbe.close_agrees' depends on axioms: [propext]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES/LatchSim.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 2.666,
+      "stdout": "[([[3, 1, 2]], [[3, 1, 2], [3, 2, 1]], []), ([[3, 1, 2]], [[3, 1, 2], [3, 2, 1]], [])]\n[[[2, 3, 1]], []]\n\"written\"\n[[[3, 1, 2]], [[3, 1, 2]], [[3]]]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES/StepAlgProbe.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 1.361,
+      "stdout": "'StepAlgProbe.close_agrees' depends on axioms: [propext]\n'StepAlgProbe.closeM_spec' depends on axioms: [propext]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES/StepText.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 2.384,
+      "stdout": "'StepText.closeS.agrees' depends on axioms: [propext]\n'StepText.releaseS.agrees' depends on axioms: [propext]\n'StepText.openS.agrees' depends on axioms: [propext]\n[(\"close\", [\"open\"], [\"open\"]), (\"release\", [\"open\", \"waiters\"], [\"waiters\"]),\n  (\"open\", [\"open\", \"waiters\"], [\"waiters\", \"open\"])]\n\"{\\\"else\\\":[false,\\\"s\\\"],\\\"if\\\":{\\\"get\\\":\\\"open\\\",\\\"of\\\":\\\"s\\\"},\\\"then\\\":[true,{\\\"of\\\":\\\"s\\\",\\\"set\\\":\\\"open\\\",\\\"to\\\":false}]}\"\n\"L2 answers [true, 1, false]\"\n'StepText.Step.sound' depends on axioms: [propext]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-modules-review/StepFrame.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 1.518,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-modules-review/Answerers.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 1.25,
+      "stdout": "true\ntrue\nsome true\nsome true\nsome false\nfalse\ntrue\ntrue\nfalse\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-modules-review/LatchControls.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 1.296,
+      "stdout": "[some 2, some 3]\nbatch clients admitted and emitted\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bash",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.346,
+      "stdout": "d1 ours: [3,1,2]   Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/ts/eff/node_modules/.bin/tsgo",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/tsconfig.json"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.153,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/d1-lib.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.055,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[3,1,2]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/d1-pin.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.052,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[3,1,2]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/d2-lib.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.054,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[3,1,2]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/d2-pin.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.052,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[3,1,2]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/d3-lib.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.053,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[true,[3]]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/d3-pin.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.052,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[true,[3]]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/batch-lib.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.053,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[1,9,2]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bun",
+        "run",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/batch-pin.ts"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4",
+      "exit": 0,
+      "seconds": 0.051,
+      "stdout": "{\"_tag\":\"Success\",\"value\":[1,2,9]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bash",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/replica",
+      "exit": 0,
+      "seconds": 0.338,
+      "stdout": "d1 ours: [3,1,2]   Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bash",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/replica",
+      "exit": 0,
+      "seconds": 0.366,
+      "stdout": "d1 ours: [999]   Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "bash",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/replica",
+      "exit": 0,
+      "seconds": 0.346,
+      "stdout": "d1 ours:    Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "stderr": "1 | import { Latch, Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\n2 | import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"/private/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/replica/harness/truth/prelude.ts\"\n3 | throw new Error(\"REVIEW_INJECTED_CRASH\")\n              ^\nerror: REVIEW_INJECTED_CRASH\n      at /private/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/tmp.pJCSPcoJ1t/d1-lib.ts:3:11\n\nBun v1.4.2 (macOS arm64)\n"
+    },
+    {
+      "argv": [
+        "bash",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-review-host-sa7zsdic/replica",
+      "exit": 0,
+      "seconds": 0.339,
+      "stdout": "d1 ours: [3,1,2]   Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "stderr": ""
+    }
+  ],
+  "checks": {
+    "effect-pin": {
+      "actual": "4.0.0-rc.112",
+      "expected": "4.0.0-rc.112",
+      "pass": true
+    },
+    "compiler-pin": {
+      "actual": "7.0.0-dev.20260629.1",
+      "expected": "7.0.0-dev.20260629.1",
+      "pass": true
+    },
+    "answerer-controls": {
+      "actual": [
+        "true",
+        "true",
+        "some true",
+        "some true",
+        "some false",
+        "false",
+        "true",
+        "true",
+        "false"
+      ],
+      "expected": [
+        "true",
+        "true",
+        "some true",
+        "some true",
+        "some false",
+        "false",
+        "true",
+        "true",
+        "false"
+      ],
+      "pass": true
+    },
+    "original-native-fixtures": {
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    "native-d1-lib": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "pass": true
+    },
+    "native-d1-pin": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "pass": true
+    },
+    "native-d2-lib": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "pass": true
+    },
+    "native-d2-pin": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          3,
+          1,
+          2
+        ]
+      },
+      "pass": true
+    },
+    "native-d3-lib": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          true,
+          [
+            3
+          ]
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          true,
+          [
+            3
+          ]
+        ]
+      },
+      "pass": true
+    },
+    "native-d3-pin": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          true,
+          [
+            3
+          ]
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          true,
+          [
+            3
+          ]
+        ]
+      },
+      "pass": true
+    },
+    "batch-library": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          1,
+          9,
+          2
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          1,
+          9,
+          2
+        ]
+      },
+      "pass": true
+    },
+    "batch-native": {
+      "actual": {
+        "_tag": "Success",
+        "value": [
+          1,
+          2,
+          9
+        ]
+      },
+      "expected": {
+        "_tag": "Success",
+        "value": [
+          1,
+          2,
+          9
+        ]
+      },
+      "pass": true
+    },
+    "replica-baseline-exit": {
+      "actual": 0,
+      "expected": 0,
+      "pass": true
+    },
+    "wrong-result-script-exit": {
+      "actual": 0,
+      "expected": 0,
+      "pass": true
+    },
+    "wrong-result-was-executed": {
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    "crash-script-exit": {
+      "actual": 0,
+      "expected": 0,
+      "pass": true
+    },
+    "crash-was-executed": {
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    "restored-script-exit": {
+      "actual": 0,
+      "expected": 0,
+      "pass": true
+    },
+    "restored-script-output": {
+      "actual": "d1 ours: [3,1,2]   Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "expected": "d1 ours: [3,1,2]   Effect's: [3,1,2]\nd2 ours: [3,1,2]   Effect's: [3,1,2]\nd3 ours: [true,[3]]   Effect's: [true,[3]]\n  \"version\": \"4.0.0-rc.112\",\n1.4.2\n",
+      "pass": true
+    },
+    "submitted-packet-unchanged": {
+      "actual": {
+        "docs/research/2026-10-08-seat-MODULES/StepText.lean": "e00122d82101eab7f8d24dfcf9ec30d1702d3b4f8798311c43ea251e9984e39e",
+        "docs/research/2026-10-08-seat-MODULES/StepAlgProbe.lean": "1209392a6403cbb54e6dd86579c33fef0df13503b7255f5d1ffd05141a2c4751",
+        "docs/research/2026-10-08-seat-MODULES/LatchProbe.lean": "6078ca366aa89ddd9878957bc1051bf757b23ef74d664cce3726548ae2b4718f",
+        "docs/research/2026-10-08-seat-MODULES/DenProbe.lean": "60b40fd225eec8954e7bc6487c6ed3b5adf40c80ee2bbca9d71eb8fccff833e8",
+        "docs/research/2026-10-08-seat-MODULES/latch-card.json": "a8cde48c273e5f19c5cfe58a0200fa7c9d83135342ff9f5c26fcbb358296bad9",
+        "docs/research/2026-10-08-seat-MODULES/LatchSim.lean": "b695c7bf9bc4dc2b4c574f2fca52bfc83adb63b84a9dc7ea047abb0f4ffb3453",
+        "docs/research/2026-10-08-seat-MODULES/pin/d1-lib.ts": "2d04bb21ec37094d74f3d22812df66e1538eac2bbffb684e5b7e76d432769296",
+        "docs/research/2026-10-08-seat-MODULES/pin/d3-pin.ts": "5ce97a9ab52b9c54c556852532a90da486769e6ecc8a2277eff9fe623b4aed7a",
+        "docs/research/2026-10-08-seat-MODULES/pin/d3-lib.ts": "34f8a334ae9d133f09e9f808268b3cb2e7f4d57153fc826ca2773a3a58b20f9e",
+        "docs/research/2026-10-08-seat-MODULES/pin/d1-pin.ts": "d1be445831fa42122623d451a0bbb8d4dabf870c71700275aef65c0c32708ec8",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh": "677d680d6ddba19902a237feb5aad63f1c3c6b67a6120f8b243b8e333ebd4ab3",
+        "docs/research/2026-10-08-seat-MODULES/pin/d2-pin.ts": "cb0f61216b194ede68fb2bdd2034a0693083c11c2d5f598319cfc0f45b923c82",
+        "docs/research/2026-10-08-seat-MODULES/pin/d2-lib.ts": "6f4a5d7b98cc7dce235d1f050711ff861d0cd060d86cfae722216596f8e9b827"
+      },
+      "expected": {
+        "docs/research/2026-10-08-seat-MODULES/StepText.lean": "e00122d82101eab7f8d24dfcf9ec30d1702d3b4f8798311c43ea251e9984e39e",
+        "docs/research/2026-10-08-seat-MODULES/StepAlgProbe.lean": "1209392a6403cbb54e6dd86579c33fef0df13503b7255f5d1ffd05141a2c4751",
+        "docs/research/2026-10-08-seat-MODULES/LatchProbe.lean": "6078ca366aa89ddd9878957bc1051bf757b23ef74d664cce3726548ae2b4718f",
+        "docs/research/2026-10-08-seat-MODULES/DenProbe.lean": "60b40fd225eec8954e7bc6487c6ed3b5adf40c80ee2bbca9d71eb8fccff833e8",
+        "docs/research/2026-10-08-seat-MODULES/latch-card.json": "a8cde48c273e5f19c5cfe58a0200fa7c9d83135342ff9f5c26fcbb358296bad9",
+        "docs/research/2026-10-08-seat-MODULES/LatchSim.lean": "b695c7bf9bc4dc2b4c574f2fca52bfc83adb63b84a9dc7ea047abb0f4ffb3453",
+        "docs/research/2026-10-08-seat-MODULES/pin/d1-lib.ts": "2d04bb21ec37094d74f3d22812df66e1538eac2bbffb684e5b7e76d432769296",
+        "docs/research/2026-10-08-seat-MODULES/pin/d3-pin.ts": "5ce97a9ab52b9c54c556852532a90da486769e6ecc8a2277eff9fe623b4aed7a",
+        "docs/research/2026-10-08-seat-MODULES/pin/d3-lib.ts": "34f8a334ae9d133f09e9f808268b3cb2e7f4d57153fc826ca2773a3a58b20f9e",
+        "docs/research/2026-10-08-seat-MODULES/pin/d1-pin.ts": "d1be445831fa42122623d451a0bbb8d4dabf870c71700275aef65c0c32708ec8",
+        "docs/research/2026-10-08-seat-MODULES/pin/run.sh": "677d680d6ddba19902a237feb5aad63f1c3c6b67a6120f8b243b8e333ebd4ab3",
+        "docs/research/2026-10-08-seat-MODULES/pin/d2-pin.ts": "cb0f61216b194ede68fb2bdd2034a0693083c11c2d5f598319cfc0f45b923c82",
+        "docs/research/2026-10-08-seat-MODULES/pin/d2-lib.ts": "6f4a5d7b98cc7dce235d1f050711ff861d0cd060d86cfae722216596f8e9b827"
+      },
+      "pass": true
+    }
+  },
+  "original_inputs": {
+    "docs/research/2026-10-08-seat-MODULES/StepText.lean": "e00122d82101eab7f8d24dfcf9ec30d1702d3b4f8798311c43ea251e9984e39e",
+    "docs/research/2026-10-08-seat-MODULES/StepAlgProbe.lean": "1209392a6403cbb54e6dd86579c33fef0df13503b7255f5d1ffd05141a2c4751",
+    "docs/research/2026-10-08-seat-MODULES/LatchProbe.lean": "6078ca366aa89ddd9878957bc1051bf757b23ef74d664cce3726548ae2b4718f",
+    "docs/research/2026-10-08-seat-MODULES/DenProbe.lean": "60b40fd225eec8954e7bc6487c6ed3b5adf40c80ee2bbca9d71eb8fccff833e8",
+    "docs/research/2026-10-08-seat-MODULES/latch-card.json": "a8cde48c273e5f19c5cfe58a0200fa7c9d83135342ff9f5c26fcbb358296bad9",
+    "docs/research/2026-10-08-seat-MODULES/LatchSim.lean": "b695c7bf9bc4dc2b4c574f2fca52bfc83adb63b84a9dc7ea047abb0f4ffb3453",
+    "docs/research/2026-10-08-seat-MODULES/pin/d1-lib.ts": "2d04bb21ec37094d74f3d22812df66e1538eac2bbffb684e5b7e76d432769296",
+    "docs/research/2026-10-08-seat-MODULES/pin/d3-pin.ts": "5ce97a9ab52b9c54c556852532a90da486769e6ecc8a2277eff9fe623b4aed7a",
+    "docs/research/2026-10-08-seat-MODULES/pin/d3-lib.ts": "34f8a334ae9d133f09e9f808268b3cb2e7f4d57153fc826ca2773a3a58b20f9e",
+    "docs/research/2026-10-08-seat-MODULES/pin/d1-pin.ts": "d1be445831fa42122623d451a0bbb8d4dabf870c71700275aef65c0c32708ec8",
+    "docs/research/2026-10-08-seat-MODULES/pin/run.sh": "677d680d6ddba19902a237feb5aad63f1c3c6b67a6120f8b243b8e333ebd4ab3",
+    "docs/research/2026-10-08-seat-MODULES/pin/d2-pin.ts": "cb0f61216b194ede68fb2bdd2034a0693083c11c2d5f598319cfc0f45b923c82",
+    "docs/research/2026-10-08-seat-MODULES/pin/d2-lib.ts": "6f4a5d7b98cc7dce235d1f050711ff861d0cd060d86cfae722216596f8e9b827"
+  },
+  "support_inputs": {
+    "harness/truth/generated/pDefsOdd.ts": "65ae2d33c71ae725a084f1a8c2206438278e2f68d37ccc13a88bfb333ad19319",
+    "harness/truth/prelude.ts": "aa6229893635c354a73f27ce9ea3f91b392e0814c3bd0410171f9dfbeebd4c79",
+    "harness/truth/tsconfig.json": "3aa059d0678689688cfcd43961aff387d9b9af50d60289d9714a1a5a17bdcf90",
+    "vendor/effect-4.0.0-rc.112/src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "ts/eff/package.json": "1f7a29bdf5ec701d8eef07742b2f5db7f3b9fd93bf18c29d8cb8baa888ea3444",
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71"
+  },
+  "tools": {
+    "effect": "4.0.0-rc.112",
+    "compiler": "7.0.0-dev.20260629.1",
+    "bun": "1.4.2",
+    "lean": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+  },
+  "emitted_targets": {
+    "d1-lib.ts": "74239cbe7dbab2d0c5051790b467ee0a5e362365bef14889f78b56d64fb3940e",
+    "d1-pin.ts": "51fc0c3d54c68cdcb25111656dd13bc7bb8b0b8c0c0bdb1e27974261964ce6ab",
+    "d2-lib.ts": "24097e53c02eff5dda2b97a1097092ebd4b1a9588c5b2ec63938c2d862ee1503",
+    "d2-pin.ts": "7450d6fea720736ebc14678d6143e6411fc78c3f604dee5cff3205b2fefe9582",
+    "d3-lib.ts": "bd34850a8a1015d01f5b9916dcec885b6496a89af127fcb43072a313cd78ac2e",
+    "d3-pin.ts": "7b7d9fd883957053dbb9cb36482015173439d0e3f4d4c185ac8a1332b3342580",
+    "batch-lib.ts": "37e4c5938b1c1dbc4d359fb953e7a3942c5b8b5b29400a6c6e6cc24bb0506f4d",
+    "batch-pin.ts": "137562714eb2ec340227cabd0e6eaf1fc34d95a55bd9112934b73212cc64777d"
+  },
+  "target_config": {
+    "extends": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/harness/truth/tsconfig.json",
+    "files": [
+      "d1-lib.ts",
+      "d1-pin.ts",
+      "d2-lib.ts",
+      "d2-pin.ts",
+      "d3-lib.ts",
+      "d3-pin.ts",
+      "batch-lib.ts",
+      "batch-pin.ts"
+    ],
+    "include": [],
+    "exclude": []
+  },
+  "review_inputs": {
+    "docs/research/2026-10-08-modules-review/Answerers.lean": "dc4341f6a208711ed00c82a837f2d6182ccda149306236cd6864dad35db6619f",
+    "docs/research/2026-10-08-modules-review/StepFrame.lean": "b5e073463db694eb672d3f17345d34df09928439af00cb2dce7b0a6f544d7b1f",
+    "docs/research/2026-10-08-modules-review/review.py": "afc48443ee2c71efbfb9d08a41f855c8fd143c2361e5f40619e092aa134ca950",
+    "docs/research/2026-10-08-modules-review/batch-lib.body.ts": "f1f8d1c845322b4dfc2c5c9b8992dd5bd7ec63fab662ae32c0418362cc852684",
+    "docs/research/2026-10-08-modules-review/LatchControls.lean": "b0c0e65e7e6494cdb949d5f7a06300843f6355bfd03a30a5c6755c99e29340ad",
+    "docs/research/2026-10-08-modules-review/batch-pin.body.ts": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257"
+  }
+}
