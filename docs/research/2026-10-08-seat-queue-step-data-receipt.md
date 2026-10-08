@@ -104,3 +104,7 @@ The default bound of 200000 stops during proof elaboration; it does not change t
 These helpers serve the existing Queue take agreement claim under translation-simulation, R10.
 The coordinator owns the unchanged public operation statements and their final proof assembly.
 This slice establishes no host execution or lifecycle observation.
+The QueueData battery reads take_encoded at a one-message state.
+The message value is unit while the declared message type is nat.
+The command LEAN_NUM_THREADS=3 lake env lean Test/Program/QueueData.lean passes.
+The reader retains the injective table premise and checks the exact consumed-cell observation.

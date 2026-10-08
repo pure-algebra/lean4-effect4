@@ -1,5 +1,6 @@
 import Effect4.Modules.Queue.Steps
 import Effect4.Laws.Modules.Step.ErasedCompiler
+import Effect4.Laws.Modules.Queue.Data
 
 /-! Queue stored data controls. These finite evaluations cover generic messages,
 flat triples, key comparison, and annotation-independent reading.
@@ -44,4 +45,16 @@ def declaredRecord : Term := .record [("v", false, .nat)] ["v"] (.cons (.lit .un
 example : evalTerm [] declaredRecord.eraseAnnotations = evalTerm [] declaredRecord :=
   evalTerm_eraseAnnotations declaredRecord []
 #guard evalTerm [] declaredRecord.eraseAnnotations = some (.ctor 0 [.list [.str "v"], .list [.unit]])
+-- The take connector is read at an actual one-message state and an arbitrary unit message.
+example (tb : Effect4.Modules.Table) (injective : tb.Injective) :
+    let s : Effect4.Queue.Model.State := { capacity := some 1, messages := [0] }
+    let vals := [Machine.Val.promise (tb.handle 0), Machine.Val.promise ⟨2⟩,
+      Effect4.Queue.Model.cellVal tb (fun _ => Val.unit) s]
+    Reads (Queue.takeStep .nat (inputSource 0) (inputSource 1) (inputSource 2))
+      { names := ["id", "hint", "cell"] } [] vals
+      (.list [.list [Store.Val.some Val.unit, .list [], .list []],
+        Effect4.Queue.Model.cellVal tb (fun _ => Val.unit) {capacity := some 1}]) := by
+  exact Effect4.Queue.Model.take_encoded .nat tb injective (fun _ => Val.unit)
+    { capacity := some 1, messages := [0] } 0 ⟨2⟩ rfl
+    ⟨.var 0, rfl, rfl⟩ ⟨.var 1, rfl, rfl⟩ ⟨.var 2, rfl, rfl⟩
 end Test.Program.QueueData
