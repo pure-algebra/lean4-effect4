@@ -1,4 +1,5 @@
 import Effect4.Modules.Semaphore.Ops
+import Effect4.Laws.Modules.Step.Scope
 import Effect4.Laws.Modules.Waiting
 import Effect4.Laws.Modules.Store
 import Effect4.Laws.Modules.Semaphore.Steps
@@ -97,33 +98,33 @@ theorem mkWaiter_scoped {id need hint stamp : TermSrc} (hid : id.Scoped) (hneed 
 /-- The take step keeps scope. -/
 theorem takeStep_scoped {need id hint s : TermSrc} (hneed : need.Scoped) (hid : id.Scoped)
     (hhint : hint.Scoped) (hs : s.Scoped) : (takeStep need id hint s).Scoped := by
-  unfold takeStep removeWaiter fitsT freeT removeById snoc notT ifT same noneOf nilT
-  authoring_scoped
+  exact Step.«scoped» Data.take (Input.source_scoped
+    (TermSrc.Scoped_cons hneed (TermSrc.Scoped_cons hid
+      (TermSrc.Scoped_cons hhint (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))))
 
 /-- The take-if-available step keeps scope. -/
 theorem takeIfAvailableStep_scoped {need s : TermSrc} (hneed : need.Scoped) (hs : s.Scoped) :
     (takeIfAvailableStep need s).Scoped := by
-  unfold takeIfAvailableStep fitsT freeT notT ifT
-  authoring_scoped
+  exact Step.«scoped» Data.takeIfAvailable (Input.source_scoped
+    (TermSrc.Scoped_cons hneed (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))
 
 /-- The release step keeps scope. -/
 theorem releaseStep_scoped {count s : TermSrc} (hcount : count.Scoped) (hs : s.Scoped) :
     (releaseStep count s).Scoped := by
-  unfold releaseStep isEmpty len notT
-  authoring_scoped
+  exact Step.«scoped» Data.release (Input.source_scoped
+    (TermSrc.Scoped_cons hcount (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))
 
 /-- The visit step keeps scope. -/
 theorem visitStep_scoped {cursor s : TermSrc} (hcursor : cursor.Scoped) (hs : s.Scoped) :
     (visitStep cursor s).Scoped := by
-  unfold visitStep visitFrom fromFirst eligibleT freeT isEmpty len snoc notT andT orT ifT noneOf
-    nilT
-  authoring_scoped
+  exact Step.«scoped» Data.visit (Input.source_scoped
+    (TermSrc.Scoped_cons hcursor (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))
 
 /-- The withdrawal keeps scope. -/
 theorem withdrawStep_scoped {id s : TermSrc} (hid : id.Scoped) (hs : s.Scoped) :
     (withdrawStep id s).Scoped := by
-  unfold withdrawStep removeWaiter removeById snoc ifT same noneOf nilT
-  authoring_scoped
+  exact Step.«scoped» Data.withdraw (Input.source_scoped
+    (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hs TermSrc.Scoped_nil)))
 
 /-- The initial value keeps scope: it reads no name. -/
 theorem empty_scoped (permits : Nat) : (empty permits).Scoped :=

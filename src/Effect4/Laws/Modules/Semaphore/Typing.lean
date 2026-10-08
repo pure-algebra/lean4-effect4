@@ -294,19 +294,11 @@ theorem takeStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = na
     (typesHint : TypesEach sig hintSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.takeStep needSrc idSrc hintSrc cellSrc) env path types
-      (.prod .bool Semaphore.cellTy) := by
-  have rest := types_removeWaiter atoms depth (types_cellWaiters typesCell) typesId
-  have took := types_pair atoms (types_bool true)
-    (types_setWaiters
-      (types_setTaken typesCell (types_add atoms (types_cellTaken typesCell) typesNeed)) rest)
-  have enrolled := types_pair atoms (types_bool false)
-    (types_setNext
-      (types_setWaiters typesCell
-        (types_snoc atoms waiterTy_normal rest
-          (types_mkWaiter typesId.atScope typesNeed typesHint (types_cellNext typesCell))))
-      (types_add atoms (types_cellNext typesCell) (types_nat 1)))
-  exact types_ifT atoms (types_fitsT atoms typesNeed typesCell) took enrolled
-    (Ty.normalize_prod_canonical rfl cellTy_normal rfl rfl)
+      (.prod .bool Semaphore.cellTy) :=
+  Step.typed_of_normal sig atoms
+    (Input.types_cons typesNeed (Input.types_cons typesId.atScope
+      (Input.types_cons typesHint (Input.types_cons typesCell Input.types_nil))))
+    Data.take rfl depth
 
 /-- **The take-if-available step is typed at every scope.** No fold: each argument is typed at
 the scope alone. -/
@@ -343,7 +335,9 @@ theorem visitStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = n
     (typesCell : CapturedTy sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.visitStep cursorSrc cellSrc) env path types
       (.prod visitReplyTy Semaphore.cellTy) :=
-  types_visitFrom atoms (types_fromFirst atoms depth typesCursor typesCell) typesCell.atScope
+  Step.typed_of_normal sig atoms
+    (Input.types_cons typesCursor.atScope (Input.types_cons typesCell.atScope Input.types_nil))
+    Data.visit rfl depth
 
 /-- **The withdrawal is typed at every scope.** The request's identity stands in the removal's
 fold. -/
@@ -355,8 +349,8 @@ theorem withdrawStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf 
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.withdrawStep idSrc cellSrc) env path types
       (.prod .unit Semaphore.cellTy) :=
-  types_pair atoms types_unit
-    (types_setWaiters typesCell
-      (types_removeWaiter atoms depth (types_cellWaiters typesCell) typesId))
+  Step.typed_of_normal sig atoms
+    (Input.types_cons typesId.atScope (Input.types_cons typesCell Input.types_nil))
+    Data.withdraw rfl depth
 
 end Effect4.Semaphore.Model

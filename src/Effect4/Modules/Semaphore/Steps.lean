@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Modules.Semaphore.Cell
+public import Effect4.Modules.Semaphore.Data
 public import Effect4.Program.Authoring.Tuples
 
 /-!
@@ -25,9 +25,9 @@ The model is `src/Effect4/Laws/Modules/Semaphore/Model.lean`. The rules of a ste
   it answers the cell as it is.
 - **No fold states its accumulator's type.** The empty list at the type of `xs` is `take xs 0`
   (`noneOf`), so every step term is inside the reader's domain.
-- **Each pass that folds uses `Authoring.foldWith`**, whose two names are minted. A pass places
-  its caller's term in the fold's body. With fixed names a caller's variable of the same name
-  would read the folded element (`Test/Program/FoldHygiene.lean`).
+- **The public steps translate captured folds from data.** Their outer inputs resolve at the
+  original scope and are weakened beneath the fold binders. The legacy helper builders use
+  `Authoring.foldWith` with minted names.
 - **A visit reserves nothing**: it leaves `taken`. A permit commits in the waiter's own take
   step, which checks the count again (decisions row 259).
 - **A release is total**: it subtracts by `sub`, the truncated subtraction, so it releases at
@@ -101,39 +101,39 @@ The request's own entry leaves first. On every state that the wrapper reaches th
 changes nothing: a visit has already removed a resumed waiter before that waiter runs this
 step again. The removal is here so that no step carries a premise on the request. -/
 def takeStep (need id hint s : TermSrc) : TermSrc :=
-  let rest := removeWaiter (field s "waiters") id
-  ifT (fitsT need s)
-    (app "pair" [bool true,
-      recordSet (recordSet s "taken" (app "add" [field s "taken", need])) "waiters" rest])
-    (app "pair" [bool false,
-      recordSet (recordSet s "waiters" (snoc rest (mkWaiter id need hint (field s "next"))))
-        "next" (app "add" [field s "next", nat 1])])
+  Data.take.term (Input.source [need, id, hint, s])
 
 /-- **The model's `takeIfAvailable`**, as the term of a `Ref.modify`. Reply: whether the
 request took. It never enrols. -/
 def takeIfAvailableStep (need s : TermSrc) : TermSrc :=
-  ifT (fitsT need s)
-    (app "pair" [bool true, recordSet s "taken" (app "add" [field s "taken", need])])
-    (app "pair" [bool false, s])
+  Data.takeIfAvailable.term (Input.source [need, s])
 
 /-- **The model's `release`**, as the term of a `Ref.modify`. Reply: `[the free count, whether
 a waiter is enrolled]`. `taken` loses the count by `sub`: at most what is taken (decisions row
 261). The wrapper posts one helper where a waiter is enrolled. -/
 def releaseStep (count s : TermSrc) : TermSrc :=
-  let left := app "sub" [field s "taken", count]
-  app "pair" [tuple [app "sub" [field s "permits", left], notT (isEmpty (field s "waiters"))],
-    recordSet s "taken" left]
+  Data.release.term (Input.source [count, s])
 
 /-- **The model's `visit`: one visit of the walk**, as the term of a `Ref.modify`. Reply: the
 selected waiter's record, if any. Where no permit is free it selects nobody. Otherwise it
 selects the first waiter at or after the cursor whose count fits, and that waiter leaves the
 list. `taken` stays: a wake reserves nothing (decisions row 259). The helper resolves the
 selected waiter's hint, and it continues at that waiter's stamp plus one. -/
-def visitStep (cursor s : TermSrc) : TermSrc := visitFrom (fromFirst cursor s) s
+def visitStep (cursor s : TermSrc) : TermSrc := Data.visit.term (Input.source [cursor, s])
 
 /-- **The model's `withdraw`**, as the term of a `Ref.modify`. Reply: nothing. The request's
 entry leaves. A waiter holds nothing, so no other field changes and nobody is woken. -/
 def withdrawStep (id s : TermSrc) : TermSrc :=
-  app "pair" [unit, recordSet s "waiters" (removeWaiter (field s "waiters") id)]
+  Data.withdraw.term (Input.source [id, s])
+
+namespace Data
+
+theorem takeIfAvailableStep_eq (need s : TermSrc) :
+    takeIfAvailableStep need s = Data.takeIfAvailable.term (Input.source [need, s]) := rfl
+
+theorem releaseStep_eq (n s : TermSrc) :
+    releaseStep n s = Data.release.term (Input.source [n, s]) := rfl
+
+end Data
 
 end Effect4.Semaphore

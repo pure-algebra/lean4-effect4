@@ -87,29 +87,6 @@ theorem takeIfAvailable_stays {s : State} {n : Nat} (tooMany : ¬ n ≤ free s) 
   unfold takeIfAvailable
   rw [if_neg tooMany]
 
-/-- **The model's visit where a permit is free, from the waiters that start at the first
-fitting one.** The reply is the first of those waiters, if any. The next state holds the
-waiters before them, then the rest of them. The list is the list without the selected waiter:
-an earlier entry equal to the selected one would fit too, at or after the cursor, so it would
-have been selected first (`fromFirst_find?`). So the removal by position is the model's
-removal, with no premise on the identities. -/
-theorem visit_fromFirst (s : State) (cursor : Nat) (someFree : free s ≠ 0) :
-    visit s cursor =
-      ({ s with
-          waiters :=
-            s.waiters.take (s.waiters.length -
-                (s.waiters.dropWhile (fun w => !fits cursor (free s) w)).length) ++
-              (s.waiters.dropWhile (fun w => !fits cursor (free s) w)).drop 1 },
-        (s.waiters.dropWhile (fun w => !fits cursor (free s) w))[0]?) := by
-  obtain ⟨head, around⟩ := fromFirst_find? (fits cursor (free s)) s.waiters
-  cases found : s.waiters.find? (fits cursor (free s)) with
-  | none =>
-    rw [found] at head around
-    rw [visit_none_fits someFree found, head, around]
-  | some w =>
-    rw [found] at head around
-    rw [visit_some someFree found, head, around]
-
 /-! ## The five step goals -/
 
 /-- **The take-if-available step agrees with the model's `takeIfAvailable`.** The reply is
@@ -122,7 +99,7 @@ theorem takeIfAvailableStep_agrees (tb : Table) (s : State) (n : Nat)
     (readsCell : Reads cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.takeIfAvailableStep needSrc cellSrc) env path vals
       (Val.tuple [Val.bool (takeIfAvailable s n).2, cellVal tb (takeIfAvailable s n).1]) := by
-  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (inputsAt tb s n)
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (inputsAt tb s n)
     (Input.reads_cons readsNeed (Input.reads_cons (readsCell.to (cellVal_image tb s).symm)
       Input.reads_nil)) Data.takeIfAvailable rfl
   rw [takeIfAvailable_eval] at reads
@@ -139,7 +116,7 @@ theorem releaseStep_agrees (tb : Table) (s : State) (n : Nat)
     (readsCell : Reads cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.releaseStep countSrc cellSrc) env path vals
       (Val.tuple [releaseReplyVal (release s n).2, cellVal tb (release s n).1]) := by
-  have reads := Step.sound Effect4.Schema.Model.Leaves.opaque (inputsAt tb s n)
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (inputsAt tb s n)
     (Input.reads_cons readsCount (Input.reads_cons (readsCell.to (cellVal_image tb s).symm)
       Input.reads_nil)) Data.release rfl
   rw [release_eval] at reads
@@ -155,9 +132,12 @@ theorem withdrawStep_agrees (tb : Table) (s : State) (id : Nat) (injective : tb.
     (readsCell : Reads cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.withdrawStep idSrc cellSrc) env path vals
       (Val.tuple [Val.unit, cellVal tb (withdraw s id)]) := by
-  have waiters := reads_field readsCell (cell_waiters _ _ _ _)
-  have removed := reads_removeWaiter tb injective s.waiters id depth waiters readsId
-  exact reads_pair reads_unit (reads_recordSet readsCell removed (cell_setWaiters _ _ _ _ _))
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (withdrawInputs tb s id)
+    (Input.reads_cons readsId.atScope
+      (Input.reads_cons (readsCell.to (cellVal_image tb s).symm) Input.reads_nil))
+    Data.withdraw rfl depth ⟨Effect4.Schema.DeferredIdentity.deferredKeys⟩
+  rw [withdraw_eval tb s id injective] at reads
+  exact reads.to (by rw [← cellVal_image]; rfl)
 
 /-- **The take step agrees with the model's `take`.** The reply is whether the request took.
 The stored value is the model's next state, through the table that holds `hint` at `id`: where
@@ -173,40 +153,13 @@ theorem takeStep_agrees (tb : Table) (s : State) (id n : Nat) (hint : DeferredKe
     (readsCell : Reads cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.takeStep needSrc idSrc hintSrc cellSrc) env path vals
       (Val.tuple [Val.bool (take s id n).2, cellVal (tb.renew id hint) (take s id n).1]) := by
-  have waiters := reads_field readsCell (cell_waiters _ _ _ _)
-  have taken := reads_field readsCell (cell_taken _ _ _ _)
-  have next := reads_field readsCell (cell_next _ _ _ _)
-  have rest := reads_removeWaiter tb injective s.waiters id depth waiters readsId
-  -- the request's own entry left, so every waiter that stays is of another identity
-  have others : ∀ w ∈ without s.waiters id, w.id ≠ id := fun w member => (mem_without.mp member).2
-  have framed := waiters_renew tb (without s.waiters id) id hint others
-  have took := reads_pair (reads_bool true env path vals)
-    (reads_recordSet
-      (reads_recordSet readsCell (reads_add taken readsNeed) (cell_setTaken _ _ _ _ _)) rest
-      (cell_setWaiters _ _ _ _ _))
-  have enrolled := reads_pair (reads_bool false env path vals)
-    (reads_recordSet
-      (reads_recordSet readsCell
-        (reads_snoc rest (reads_mkWaiter readsId.atScope readsNeed readsHint next))
-        (cell_setWaiters _ _ _ _ _))
-      (reads_add next (reads_nat 1 env path vals)) (cell_setNext _ _ _ _ _))
-  have whole := reads_ifT (reads_fitsT tb s n readsNeed readsCell) took enrolled
-  by_cases fitsNow : n ≤ free s
-  · rw [decide_eq_true fitsNow, if_pos rfl] at whole
-    rw [take_fits id fitsNow]
-    refine whole.to ?_
-    show _ = Val.tuple [Val.bool true,
-      cellOf (.nat s.next) (.nat s.permits) (.nat (s.taken + n))
-        (.list ((without s.waiters id).map (waiterVal (tb.renew id hint))))]
-    rw [framed]
-  · rw [decide_eq_false fitsNow, if_neg Bool.false_ne_true] at whole
-    rw [take_enrols id fitsNow]
-    refine whole.to ?_
-    show _ = Val.tuple [Val.bool false,
-      cellOf (.nat (s.next + 1)) (.nat s.permits) (.nat s.taken)
-        (.list ((without s.waiters id ++ [(⟨id, n, s.next⟩ : Waiter)]).map
-          (waiterVal (tb.renew id hint))))]
-    rw [List.map_append, framed, List.map_cons, List.map_nil, waiterVal_renewed]
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (takeInputs tb s id n hint)
+    (Input.reads_cons readsNeed (Input.reads_cons readsId.atScope
+      (Input.reads_cons readsHint
+        (Input.reads_cons (readsCell.to (cellVal_image tb s).symm) Input.reads_nil))))
+    Data.take rfl depth ⟨Effect4.Schema.DeferredIdentity.deferredKeys⟩
+  rw [take_eval tb s id n hint injective] at reads
+  exact reads.to (by rw [← cellVal_image]; rfl)
 
 /-- **The visit step agrees with the model's `visit`.** The reply is the selected waiter's
 record through the table, or nothing. The stored value is the model's next state. The cursor
@@ -225,15 +178,17 @@ theorem visitStep_agrees (tb : Table) (s : State) (cursor : Nat)
     (readsCell : Captured cellSrc env path vals (cellVal tb s)) :
     Reads (Semaphore.visitStep cursorSrc cellSrc) env path vals
       (Val.tuple [visitReplyVal tb (visit s cursor).2, cellVal tb (visit s cursor).1]) := by
-  have rest := reads_fromFirst tb s cursor depth readsCursor readsCell
-  have whole := reads_visitFrom tb s _ rest readsCell.atScope
-  by_cases noneFree : free s = 0
-  · rw [if_pos noneFree] at whole
-    rw [visit_none_free cursor noneFree]
-    exact whole
-  · rw [if_neg noneFree] at whole
-    rw [visit_fromFirst s cursor noneFree]
-    exact whole
+  have reads := Step.sound Effect4.Schema.Model.Leaves.deferredKeys (inputsAt tb s cursor)
+    (Input.reads_cons readsCursor.atScope
+      (Input.reads_cons (readsCell.atScope.to (cellVal_image tb s).symm) Input.reads_nil))
+    Data.visit rfl depth (by trivial)
+  rw [visit_eval] at reads
+  exact reads.to (by
+    change Val.list [(Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys
+      (.option waiterTy)).toVal ((visit s cursor).2.map (waiterC tb)),
+      (Effect4.Schema.Model.imageAt Effect4.Schema.Model.Leaves.deferredKeys (.record cellRecord)).toVal
+        (cellC tb (visit s cursor).1)] = _
+    rw [visitReply_image, cellVal_image])
 
 /-! ## The five statements as one
 

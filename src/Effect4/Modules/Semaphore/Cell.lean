@@ -51,9 +51,12 @@ def waiterFields : List (String × Bool × Ty) :=
    ("stamp", false, .nat)]
 
 /-- The type of a waiter: `waiterFields` in the canonical field order. -/
-def waiterTy : Ty := .record
+def waiterRecord : List (String × Bool × Ty) :=
   [("hint", false, idTy), ("id", false, idTy), ("need", false, .nat),
    ("stamp", false, .nat)]
+
+/-- The canonical waiter type. -/
+def waiterTy : Ty := .record waiterRecord
 
 /-- The cell as the initial value writes it: the total, the permits taken, the waiters and the
 stamp of the next enrolment. -/
