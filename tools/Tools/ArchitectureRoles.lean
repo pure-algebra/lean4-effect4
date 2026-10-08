@@ -224,6 +224,62 @@ def allowed (a b : Area) : Bool :=
   | .tests, _ => true
   | _, _ => true
 
+/-- Who may import a source file by name (decisions row 332). The class is declared data, not
+Lean visibility: an internal module's types may appear in an entry module's signatures. -/
+inductive Exposure
+  /-- every user of the library: the entry modules -/
+  | entry
+  /-- a user who calls a prebuilt composed module -/
+  | library
+  /-- the tree's own modules and its batteries; free to change under the gates -/
+  | internal
+  /-- a module author, a tool, a reviewer: the proof graph -/
+  | proof
+  /-- the tool roots: drivers, generators, the proof-graph tooling -/
+  | tool
+  /-- the batteries and the acceptance programs -/
+  | test
+deriving BEq, Repr, Inhabited, DecidableEq
+
+def Exposure.word : Exposure → String
+  | .entry => "entry" | .library => "module library" | .internal => "internal"
+  | .proof => "proof" | .tool => "tool" | .test => "test"
+
+/-- Each path's exposure; the longest declared prefix decides. An entry module is a file. The
+entry modules of row 332 join this table as their files land: `Effect4.Run` exists today. -/
+def exposures : List (String × Exposure) := [
+  ("src/Effect4", .internal),
+  ("src/Effect4/Run.lean", .entry),
+  ("src/Effect4/Modules/Queue", .library),
+  ("src/Effect4/Modules/Semaphore", .library),
+  ("src/Effect4/Modules/Pool", .library),
+  ("src/Effect4/Modules/Stream", .library),
+  ("src/Effect4/Modules/Latch", .library),
+  ("src/Effect4/Laws", .proof),
+  ("src/OCaml5", .tool),
+  ("tools", .tool),
+  ("Test", .test)
+]
+
+/-- The exposure of a path: its longest declared prefix's, if any. -/
+def exposureOf (p : String) : Option Exposure :=
+  let covers (d : String) : Bool := p == d || p == d ++ ".lean" || p.startsWith (d ++ "/")
+  let longest : Option (String × Exposure) :=
+    (exposures.filter fun entry => covers entry.1).foldl (init := none) fun best entry =>
+      match best with
+      | none => some entry
+      | some b => if entry.1.length > b.1.length then some entry else some b
+  longest.map (·.2)
+
+/-- The files the import gate reads as a library user's: the acceptance programs. -/
+def userRoots : List String := ["Test/Dogfood"]
+
+/-- What a user's file may import by name from the tree. The batteries' own support modules are
+importable, since an acceptance program is a battery too. -/
+def Exposure.userImportable : Exposure → Bool
+  | .entry | .library | .test => true
+  | _ => false
+
 /-- The roots loaded for declaration counts. A module that defines `main` cannot share an
 environment with another such module, so the drivers stay out and are measured from disk. -/
 def roots : List String := [
