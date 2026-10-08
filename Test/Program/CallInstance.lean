@@ -40,6 +40,10 @@ def callFirst : NativeEff := .perform (.external 0) (.var 0)
     some (.list .nat, .option .nat) &&
   (callAt (nativeSignature [first]) [.list .string] callFirst []).map (fun c => (c.request, c.answer)) =
     some (.list .string, .option .string)
+-- finite evaluation: the instance keeps the row's bindings, the template's parameter at the
+-- request's element type
+#guard (callAt (nativeSignature [first]) [.list .nat] callFirst []).map (·.bindings) =
+  some [(0, .nat)]
 -- control: the reply check reads the row's template column. It refuses a member of the instance,
 -- and it admits the one value that is a member of every instance
 #guard externalAdmits [first] 0 (.ofExit (.success (.some (.nat 1)))) = false
