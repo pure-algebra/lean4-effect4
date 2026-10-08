@@ -450,6 +450,32 @@ test("a restore site names the binder of its own mask among two, and a binder th
   ] })
 })
 
+test("a mask getter refuses an imported head shadowed by its own or an enclosing binder", () => {
+  for (const [header, name, head] of [
+    ['import { Effect, Effect as E } from "effect"; ', "E", "E.succeed"],
+    ['import { Effect } from "effect"; import * as E from "effect/Effect"; ', "E", "E.succeed"],
+    ['import { Effect } from "effect"; import { succeed as answer } from "effect/Effect"; ', "answer", "answer"],
+  ]) for (const body of [
+    `Effect.uninterruptibleMask((${name}) => ${head}(${name}))`,
+    `Effect.flatMap(Effect.succeed(0), (${name}) => Effect.uninterruptibleMask((r) => ${head}(r)))`,
+    `Effect.flatMap(Effect.succeed(0), (${name}) => Effect.flatMap(Effect.succeed(1), (x) => Effect.uninterruptibleMask((r) => ${head}(r))))`,
+    `Effect.gen(function* () { const ${name} = yield* Effect.succeed(0); yield* Effect.uninterruptibleMask((r) => ${head}(r)); return undefined })`,
+  ]) expect(refusals(header + `export const program = ${body}`))
+    .toEqual(["E-ARG-CLOSURE unknown closure: Effect.uninterruptibleMask"])
+})
+
+test("a mask getter keeps an unshadowed import alias under an enclosing binder", () => {
+  for (const [header, head] of [
+    ['import { Effect, Effect as E } from "effect"; ', "E.succeed"],
+    ['import { Effect } from "effect"; import * as E from "effect/Effect"; ', "E.succeed"],
+    ['import { Effect } from "effect"; import { succeed as answer } from "effect/Effect"; ', "answer"],
+  ]) for (const eff of lifts(header +
+      `export const program = Effect.flatMap(Effect.succeed(0), (x) => Effect.uninterruptibleMask((r) => ${head}(r)))`)) expect(eff).toEqual({
+    _tag: "bind", first: { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 0 } } },
+    rest: getInterruptible,
+  })
+})
+
 test("any other use of the mask is one refusal in both engines, the native callback spelling among them", () => {
   for (const argument of [
     "(restore) => restore(Effect.succeed(1))",       // the native callback spelling
