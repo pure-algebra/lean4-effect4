@@ -49,7 +49,7 @@ def ofVal : Val → Option (_root_.Effect4.ReferenceKey)
 
 theorem ofVal_toVal (a : _root_.Effect4.ReferenceKey) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.ReferenceKey} (h : ofVal v = some a) :
     v = toVal a := by
@@ -102,7 +102,7 @@ def ofVal : Val → Option (_root_.Effect4.GlobalSymbolKey)
 
 theorem ofVal_toVal (a : _root_.Effect4.GlobalSymbolKey) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.GlobalSymbolKey} (h : ofVal v = some a) :
     v = toVal a := by
@@ -157,7 +157,7 @@ def ofVal : Val → Option (_root_.Effect4.AnnotationEntry)
 
 theorem ofVal_toVal (a : _root_.Effect4.AnnotationEntry) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.AnnotationEntry} (h : ofVal v = some a) :
     v = toVal a := by
@@ -221,22 +221,34 @@ def ofVal : Val → Option (_root_.Effect4.LiteralValue)
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.Bool) v0).map .boolean
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.LiteralValue) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «string» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «number» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «bigint» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «boolean» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.LiteralValue} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -295,22 +307,24 @@ def ofVal : Val → Option (_root_.Effect4.EnumValue)
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Float64) v0).map .number
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.EnumValue) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «string» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «number» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.EnumValue} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -358,7 +372,7 @@ def ofVal : Val → Option (_root_.Effect4.EnumEntry)
 
 theorem ofVal_toVal (a : _root_.Effect4.EnumEntry) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.EnumEntry} (h : ofVal v = some a) :
     v = toVal a := by
@@ -419,22 +433,29 @@ def ofVal : Val → Option (_root_.Effect4.PropertyKey)
   | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.GlobalSymbolKey) v0).map .globalSymbol
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.PropertyKey) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «string» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «number» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «globalSymbol» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.PropertyKey} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -490,7 +511,7 @@ def ofVal : Val → Option (_root_.Effect4.RepresentationAnnotation)
 
 theorem ofVal_toVal (a : _root_.Effect4.RepresentationAnnotation) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.RepresentationAnnotation} (h : ofVal v = some a) :
     v = toVal a := by
@@ -547,22 +568,22 @@ def ofVal : Val → Option (_root_.Effect4.UnionMode)
   | .ctor 1 [] => some .oneOf
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.UnionMode) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «anyOf» => simp only [toVal, ofVal]
+  | «oneOf» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.UnionMode} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.UnionMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -1011,72 +1032,72 @@ theorem rawRepresentation_toValRepresentation (a : _root_.Effect4.Representation
     rawRepresentation (toValRepresentation a) = some a := by
   cases a with
   | «declaration» a0 a1 a2 a3 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL0_toValL0 a2,
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL0_toValL0 a2,
       rawL1_toValL1 a3]
   | «reference» a0 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal]
   | «suspend» a0 a1 a2 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
       rawRepresentation_toValRepresentation a2]
   | «null» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «undefined» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «void» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «never» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «unknown» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «any» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «string» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «number» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «boolean» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «bigint» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «symbol» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «literal» a0 a1 a2 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «uniqueSymbol» a0 a1 a2 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «objectKeyword» a0 a1 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «enum» a0 a1 a2 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1]
   | «templateLiteral» a0 a1 a2 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
       rawL0_toValL0 a2]
   | «arrays» a0 a1 a2 a3 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
       rawL2_toValL2 a2, rawL0_toValL0 a3]
   | «objects» a0 a1 a2 a3 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
       rawL3_toValL3 a2, rawL4_toValL4 a3]
   | «union» a0 a1 a2 a3 =>
-    simp [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
+    simp only [toValRepresentation, rawRepresentation, Canonical.ofVal_toVal, rawL1_toValL1 a1,
       rawL0_toValL0 a2]
 termination_by structural a
 theorem rawCheck_toValCheck (a : _root_.Effect4.Check) :
     rawCheck (toValCheck a) = some a := by
   cases a with
   | «filter» a0 a1 a2 =>
-    simp [toValCheck, rawCheck,
+    simp only [toValCheck, rawCheck,
       rawCheckRepresentationAnnotationOf_toValCheckRepresentationAnnotationOf a0,
       Canonical.ofVal_toVal]
   | «filterGroup» a0 a1 a2 =>
-    simp [toValCheck, rawCheck, rawO5_toValO5 a0, Canonical.ofVal_toVal, rawL1_toValL1 a2]
+    simp only [toValCheck, rawCheck, rawO5_toValO5 a0, Canonical.ofVal_toVal, rawL1_toValL1 a2]
 termination_by structural a
 theorem rawCheckRepresentationAnnotationOf_toValCheckRepresentationAnnotationOf
   (a : @_root_.Effect4.CheckRepresentationAnnotationOf (_root_.Effect4.Representation)) :
     rawCheckRepresentationAnnotationOf (toValCheckRepresentationAnnotationOf a) = some a := by
   cases a with
   | «mk» a0 a1 a2 =>
-    simp [toValCheckRepresentationAnnotationOf, rawCheckRepresentationAnnotationOf,
+    simp only [toValCheckRepresentationAnnotationOf, rawCheckRepresentationAnnotationOf,
       Canonical.ofVal_toVal, rawO7_toValO7 a2]
 termination_by structural a
 theorem rawElementOf_toValElementOf
@@ -1084,7 +1105,7 @@ theorem rawElementOf_toValElementOf
     rawElementOf (toValElementOf a) = some a := by
   cases a with
   | «mk» a0 a1 a2 =>
-    simp [toValElementOf, rawElementOf, Canonical.ofVal_toVal,
+    simp only [toValElementOf, rawElementOf, Canonical.ofVal_toVal,
       rawRepresentation_toValRepresentation a1]
 termination_by structural a
 theorem rawPropertySignatureOf_toValPropertySignatureOf
@@ -1092,7 +1113,7 @@ theorem rawPropertySignatureOf_toValPropertySignatureOf
     rawPropertySignatureOf (toValPropertySignatureOf a) = some a := by
   cases a with
   | «mk» a0 a1 a2 a3 a4 =>
-    simp [toValPropertySignatureOf, rawPropertySignatureOf, Canonical.ofVal_toVal,
+    simp only [toValPropertySignatureOf, rawPropertySignatureOf, Canonical.ofVal_toVal,
       rawRepresentation_toValRepresentation a1]
 termination_by structural a
 theorem rawIndexSignatureOf_toValIndexSignatureOf
@@ -1100,50 +1121,51 @@ theorem rawIndexSignatureOf_toValIndexSignatureOf
     rawIndexSignatureOf (toValIndexSignatureOf a) = some a := by
   cases a with
   | «mk» a0 a1 =>
-    simp [toValIndexSignatureOf, rawIndexSignatureOf, rawRepresentation_toValRepresentation a0,
-      rawRepresentation_toValRepresentation a1]
+    simp only [toValIndexSignatureOf, rawIndexSignatureOf,
+      rawRepresentation_toValRepresentation a0, rawRepresentation_toValRepresentation a1]
 termination_by structural a
 theorem rawL0_toValL0 (xs : @_root_.List (_root_.Effect4.Representation)) :
     rawL0 (toValL0 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL0, rawL0, rawRepresentation_toValRepresentation x, rawL0_toValL0 xs]
+    simp only [toValL0, rawL0, rawRepresentation_toValRepresentation x, rawL0_toValL0 xs]
 termination_by structural xs
 theorem rawL1_toValL1 (xs : @_root_.List (_root_.Effect4.Check)) :
     rawL1 (toValL1 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL1, rawL1, rawCheck_toValCheck x, rawL1_toValL1 xs]
+    simp only [toValL1, rawL1, rawCheck_toValCheck x, rawL1_toValL1 xs]
 termination_by structural xs
 theorem rawL2_toValL2 (xs : @_root_.List (@_root_.Effect4.ElementOf (_root_.Effect4.Representation))) :
     rawL2 (toValL2 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL2, rawL2, rawElementOf_toValElementOf x, rawL2_toValL2 xs]
+    simp only [toValL2, rawL2, rawElementOf_toValElementOf x, rawL2_toValL2 xs]
 termination_by structural xs
 theorem rawL3_toValL3 (xs : @_root_.List (@_root_.Effect4.PropertySignatureOf (_root_.Effect4.Representation))) :
     rawL3 (toValL3 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL3, rawL3, rawPropertySignatureOf_toValPropertySignatureOf x, rawL3_toValL3 xs]
+    simp only [toValL3, rawL3, rawPropertySignatureOf_toValPropertySignatureOf x,
+      rawL3_toValL3 xs]
 termination_by structural xs
 theorem rawL4_toValL4 (xs : @_root_.List (@_root_.Effect4.IndexSignatureOf (_root_.Effect4.Representation))) :
     rawL4 (toValL4 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL4, rawL4, rawIndexSignatureOf_toValIndexSignatureOf x, rawL4_toValL4 xs]
+    simp only [toValL4, rawL4, rawIndexSignatureOf_toValIndexSignatureOf x, rawL4_toValL4 xs]
 termination_by structural xs
 theorem rawO5_toValO5 (o : @_root_.Option (@_root_.Effect4.CheckRepresentationAnnotationOf (_root_.Effect4.Representation))) :
     rawO5 (toValO5 o) = some o := by
   match o with
   | none => rfl
   | some x =>
-    simp [toValO5, rawO5,
+    simp only [toValO5, rawO5,
       rawCheckRepresentationAnnotationOf_toValCheckRepresentationAnnotationOf x]
 termination_by structural o
 theorem rawL6_toValL6 (xs : @_root_.List (_root_.Effect4.Representation)) :
@@ -1151,14 +1173,14 @@ theorem rawL6_toValL6 (xs : @_root_.List (_root_.Effect4.Representation)) :
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL6, rawL6, rawRepresentation_toValRepresentation x, rawL6_toValL6 xs]
+    simp only [toValL6, rawL6, rawRepresentation_toValRepresentation x, rawL6_toValL6 xs]
 termination_by structural xs
 theorem rawO7_toValO7 (o : @_root_.Option (@_root_.List (_root_.Effect4.Representation))) :
     rawO7 (toValO7 o) = some o := by
   match o with
   | none => rfl
   | some x =>
-    simp [toValO7, rawO7, rawL6_toValL6 x]
+    simp only [toValO7, rawO7, rawL6_toValL6 x]
 termination_by structural o
 end
 
@@ -1570,7 +1592,7 @@ def ofVal : Val → Option (_root_.Effect4.ReferenceEntry)
 
 theorem ofVal_toVal (a : _root_.Effect4.ReferenceEntry) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.ReferenceEntry} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1632,7 +1654,7 @@ def ofVal : Val → Option (_root_.Effect4.Document)
 
 theorem ofVal_toVal (a : _root_.Effect4.Document) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Document} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1696,7 +1718,7 @@ def ofVal : Val → Option (_root_.Effect4.MultiDocument)
 
 theorem ofVal_toVal (a : _root_.Effect4.MultiDocument) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.MultiDocument} (h : ofVal v = some a) :
     v = toVal a := by

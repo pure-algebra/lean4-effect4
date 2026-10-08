@@ -47,22 +47,22 @@ def ofVal : Val → Option (_root_.Effect4.Store.PinRole)
   | .ctor 1 [] => some .internal
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Store.PinRole) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «public» => simp only [toVal, ofVal]
+  | «internal» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Store.PinRole} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Store.PinRole) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -114,7 +114,7 @@ def ofVal : Val → Option (_root_.Effect4.Store.Pin)
 
 theorem ofVal_toVal (a : _root_.Effect4.Store.Pin) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7, a8, a9⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Store.Pin} (h : ofVal v = some a) :
     v = toVal a := by
@@ -202,7 +202,7 @@ def ofVal : Val → Option (_root_.Effect4.Store.Tree)
 
 theorem ofVal_toVal (a : _root_.Effect4.Store.Tree) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Store.Tree} (h : ofVal v = some a) :
     v = toVal a := by

@@ -44,7 +44,7 @@ def ofVal : Val → Option (_root_.Effect4.FiberId)
 
 theorem ofVal_toVal (a : _root_.Effect4.FiberId) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.FiberId} (h : ofVal v = some a) :
     v = toVal a := by
@@ -99,7 +99,7 @@ def ofVal : Val → Option (_root_.Effect4.Api.HostProtocol.Key)
 
 theorem ofVal_toVal (a : _root_.Effect4.Api.HostProtocol.Key) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Api.HostProtocol.Key} (h : ofVal v = some a) :
     v = toVal a := by
@@ -156,22 +156,22 @@ def ofVal : Val → Option (_root_.Effect4.Machine.Exhaustion)
   | .ctor 1 [] => some .tape
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Machine.Exhaustion) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «fuel» => simp only [toVal, ofVal]
+  | «tape» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Machine.Exhaustion} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Machine.Exhaustion) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -220,30 +220,40 @@ def ofVal : Val → Option (_root_.Effect4.Api.FrontierReason)
   | .ctor 4 [] => some .awaitDecision
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Api.FrontierReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «commandFuel» => simp only [toVal, ofVal]
+  | «compileFuel» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «awaitHost» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «awaitTimer» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «awaitDecision» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Api.FrontierReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem lift_FiberId (x : _root_.Effect4.FiberId) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.FiberId).root (Canonical.toVal x) = true :=

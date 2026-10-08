@@ -61,22 +61,33 @@ def ofVal : Val → Option (_root_.Effect4.Program.Lit)
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .str
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.Lit) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «unit» => simp only [toVal, ofVal]
+  | «nat» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «bool» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «str» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Lit} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
@@ -130,22 +141,22 @@ def ofVal : Val → Option (_root_.Effect4.FinalizerStrategy)
   | .ctor 1 [] => some .parallel
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.FinalizerStrategy) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «sequential» => simp only [toVal, ofVal]
+  | «parallel» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.FinalizerStrategy} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.FinalizerStrategy) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -182,22 +193,26 @@ def ofVal : Val → Option (_root_.Effect4.Supervision.MaskMode)
   | .ctor 2 [] => some .inherit
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Supervision.MaskMode) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «interruptible» => simp only [toVal, ofVal]
+  | «uninterruptible» => simp only [toVal, ofVal]
+  | «inherit» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.MaskMode} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Supervision.MaskMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -233,22 +248,22 @@ def ofVal : Val → Option (_root_.Effect4.Supervision.ObserverMode)
   | .ctor 1 [] => some .joinEffect
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Supervision.ObserverMode) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «awaitValue» => simp only [toVal, ofVal]
+  | «joinEffect» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.ObserverMode} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Supervision.ObserverMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -288,22 +303,32 @@ def ofVal : Val → Option (_root_.Effect4.Program.Decision)
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .recordTag
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.Decision) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «bool» => simp only [toVal, ofVal]
+  | «option» => simp only [toVal, ofVal]
+  | «tag» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «recordTag» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Decision} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -536,40 +561,40 @@ theorem rawTy_toValTy (a : _root_.Effect4.Program.Ty) :
   | «string» => rfl
   | «bool» => rfl
   | «handle» a0 =>
-    simp [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
   | «option» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy, rawTy_toValTy a0]
   | «list» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy, rawTy_toValTy a0]
   | «prod» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «except» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «exitOf» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «causeOf» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy, rawTy_toValTy a0]
   | «fiberOf» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «union» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «lit» a0 =>
-    simp [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
   | «refOf» a0 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0]
+    simp only [toValTy, rawTy, rawTy_toValTy a0]
   | «deferredOf» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «var» a0 =>
-    simp [toValTy, rawTy, Canonical.ofVal_toVal]
+    simp only [toValTy, rawTy, Canonical.ofVal_toVal]
   | «unknown» => rfl
   | «record» a0 =>
-    simp [toValTy, rawTy, rawL2_toValL2 a0]
+    simp only [toValTy, rawTy, rawL2_toValL2 a0]
   | «map» a0 a1 =>
-    simp [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
+    simp only [toValTy, rawTy, rawTy_toValTy a0, rawTy_toValTy a1]
   | «tuple» a0 =>
-    simp [toValTy, rawTy, rawL3_toValL3 a0]
+    simp only [toValTy, rawTy, rawL3_toValL3 a0]
   | «app» a0 a1 =>
-    simp [toValTy, rawTy, Canonical.ofVal_toVal, rawL3_toValL3 a1]
+    simp only [toValTy, rawTy, Canonical.ofVal_toVal, rawL3_toValL3 a1]
   | «null» => rfl
   | «undefined» => rfl
   | «number» => rfl
@@ -579,27 +604,27 @@ theorem rawP0_toValP0 (p : @_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty
     rawP0 (toValP0 p) = some p := by
   match p with
   | (x, y) =>
-    simp [toValP0, rawP0, Canonical.ofVal_toVal, rawTy_toValTy y]
+    simp only [toValP0, rawP0, Canonical.ofVal_toVal, rawTy_toValTy y]
 termination_by structural p
 theorem rawP1_toValP1 (p : @_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))) :
     rawP1 (toValP1 p) = some p := by
   match p with
   | (x, y) =>
-    simp [toValP1, rawP1, Canonical.ofVal_toVal, rawP0_toValP0 y]
+    simp only [toValP1, rawP1, Canonical.ofVal_toVal, rawP0_toValP0 y]
 termination_by structural p
 theorem rawL2_toValL2 (xs : @_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty)))) :
     rawL2 (toValL2 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL2, rawL2, rawP1_toValP1 x, rawL2_toValL2 xs]
+    simp only [toValL2, rawL2, rawP1_toValP1 x, rawL2_toValL2 xs]
 termination_by structural xs
 theorem rawL3_toValL3 (xs : @_root_.List (_root_.Effect4.Program.Ty)) :
     rawL3 (toValL3 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL3, rawL3, rawTy_toValTy x, rawL3_toValL3 xs]
+    simp only [toValL3, rawL3, rawTy_toValTy x, rawL3_toValL3 xs]
 termination_by structural xs
 end
 
@@ -786,22 +811,22 @@ def ofVal : Val → Option (_root_.Effect4.Program.FieldReadMode)
   | .ctor 1 [] => some .optional
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.FieldReadMode) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «required» => simp only [toVal, ofVal]
+  | «optional» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FieldReadMode} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Program.FieldReadMode) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -925,29 +950,30 @@ theorem rawTerm_toValTerm (a : _root_.Effect4.Program.Term) :
     rawTerm (toValTerm a) = some a := by
   cases a with
   | «var» a0 =>
-    simp [toValTerm, rawTerm, Canonical.ofVal_toVal]
+    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal]
   | «lit» a0 =>
-    simp [toValTerm, rawTerm, Canonical.ofVal_toVal]
+    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal]
   | «app» a0 a1 =>
-    simp [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerms_toValTerms a1]
+    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerms_toValTerms a1]
   | «record» a0 a1 a2 =>
-    simp [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerms_toValTerms a2]
+    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerms_toValTerms a2]
   | «field» a0 a1 a2 =>
-    simp [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1]
+    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1]
   | «recordSet» a0 a1 a2 =>
-    simp [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal, rawTerm_toValTerm a2]
+    simp only [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal,
+      rawTerm_toValTerm a2]
   | «tupleAt» a0 a1 =>
-    simp [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal]
+    simp only [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal]
   | «fold» a0 a1 a2 a3 =>
-    simp [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1, rawTerm_toValTerm a2,
-      rawTerm_toValTerm a3]
+    simp only [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1,
+      rawTerm_toValTerm a2, rawTerm_toValTerm a3]
 termination_by structural a
 theorem rawTerms_toValTerms (a : _root_.Effect4.Program.Terms) :
     rawTerms (toValTerms a) = some a := by
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp [toValTerms, rawTerms, rawTerm_toValTerm a0, rawTerms_toValTerms a1]
+    simp only [toValTerms, rawTerms, rawTerm_toValTerm a0, rawTerms_toValTerms a1]
 termination_by structural a
 end
 
@@ -1157,30 +1183,120 @@ def ofVal : Val → Option (_root_.Effect4.Program.NativeOp)
   | .ctor 31 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refModifySomeWith
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.NativeOp) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «refMake» => simp only [toVal, ofVal]
+  | «refGet» => simp only [toVal, ofVal]
+  | «refSet» => simp only [toVal, ofVal]
+  | «refGetAndSet» => simp only [toVal, ofVal]
+  | «refSetAndGet» => simp only [toVal, ofVal]
+  | «deferredIsDone» => simp only [toVal, ofVal]
+  | «deferredPoll» => simp only [toVal, ofVal]
+  | «deferredSucceed» => simp only [toVal, ofVal]
+  | «deferredFail» => simp only [toVal, ofVal]
+  | «deferredAwait» => simp only [toVal, ofVal]
+  | «scopeMake» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «sleep» => simp only [toVal, ofVal]
+  | «clockNow» => simp only [toVal, ofVal]
+  | «external» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «deferredMakeOf» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «refUpdateWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refGetAndUpdateWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refUpdateAndGetWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refUpdateSomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refGetAndUpdateSomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refUpdateSomeAndGetWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refModifyWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «refModifySomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.NativeOp} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_FinalizerStrategy (x : _root_.Effect4.FinalizerStrategy) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.FinalizerStrategy).root
@@ -1290,7 +1406,7 @@ def ofVal : Val → Option (_root_.Effect4.Supervision.ForkOptions)
 
 theorem ofVal_toVal (a : _root_.Effect4.Supervision.ForkOptions) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1, a2⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.ForkOptions} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1387,13 +1503,13 @@ theorem rawCauseTerm_toValCauseTerm (a : _root_.Effect4.Program.CauseTerm) :
     rawCauseTerm (toValCauseTerm a) = some a := by
   cases a with
   | «fail» a0 =>
-    simp [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
+    simp only [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
   | «die» a0 =>
-    simp [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
+    simp only [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
   | «interrupt» a0 =>
-    simp [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
+    simp only [toValCauseTerm, rawCauseTerm, Canonical.ofVal_toVal]
   | «both» a0 a1 =>
-    simp [toValCauseTerm, rawCauseTerm, rawCauseTerm_toValCauseTerm a0,
+    simp only [toValCauseTerm, rawCauseTerm, rawCauseTerm_toValCauseTerm a0,
       rawCauseTerm_toValCauseTerm a1]
 termination_by structural a
 end
@@ -1467,7 +1583,7 @@ def ofVal : Val → Option (_root_.Effect4.ServiceName)
 
 theorem ofVal_toVal (a : _root_.Effect4.ServiceName) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.ServiceName} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1520,7 +1636,7 @@ def ofVal : Val → Option (_root_.Effect4.ServiceTypeCode)
 
 theorem ofVal_toVal (a : _root_.Effect4.ServiceTypeCode) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.ServiceTypeCode} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1575,7 +1691,7 @@ def ofVal : Val → Option (_root_.Effect4.ServiceKey)
 
 theorem ofVal_toVal (a : _root_.Effect4.ServiceKey) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.ServiceKey} (h : ofVal v = some a) :
     v = toVal a := by
@@ -2096,73 +2212,73 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     rawEff (toValEff a) = some a := by
   cases a with
   | «succeed» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «fail» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «failCause» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «sync» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «suspend» a0 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff, rawEff_toValEff a0]
   | «perform» a0 a1 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «bind» a0 a1 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
   | «gen» a0 =>
-    simp [toValEff, rawEff, rawStmts_toValStmts a0]
+    simp only [toValEff, rawEff, rawStmts_toValStmts a0]
   | «catchCause» a0 a1 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
   | «matchCause» a0 a1 a2 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1, rawEff_toValEff a2]
+    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1, rawEff_toValEff a2]
   | «onExit» a0 a1 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
   | «exit» a0 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff, rawEff_toValEff a0]
   | «uninterruptible» a0 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff, rawEff_toValEff a0]
   | «interruptible» a0 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff, rawEff_toValEff a0]
   | «yieldNow» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «awaitFiber» a0 a1 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «withFiber» a0 =>
-    simp [toValEff, rawEff, rawActionTerm_toValActionTerm a0]
+    simp only [toValEff, rawEff, rawActionTerm_toValActionTerm a0]
   | «scoped» a0 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0]
+    simp only [toValEff, rawEff, rawEff_toValEff a0]
   | «acquireRelease» a0 a1 =>
-    simp [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
+    simp only [toValEff, rawEff, rawEff_toValEff a0, rawEff_toValEff a1]
   | «provideLayer» a0 a1 a2 =>
-    simp [toValEff, rawEff, rawLayerTerm_toValLayerTerm a0, Canonical.ofVal_toVal,
+    simp only [toValEff, rawEff, rawLayerTerm_toValLayerTerm a0, Canonical.ofVal_toVal,
       rawEff_toValEff a2]
   | «service» a0 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal]
   | «provideService» a0 a1 a2 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2]
   | «catchIf» a0 a1 a2 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1, rawEff_toValEff a2]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1, rawEff_toValEff a2]
   | «select» a0 a1 a2 a3 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2, rawEff_toValEff a3]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2, rawEff_toValEff a3]
   | «iterate» a0 a1 a2 a3 a4 a5 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a5]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a5]
   | «restore» a0 a1 =>
-    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
 termination_by structural a
 theorem rawStmt_toValStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     rawStmt (toValStmt a) = some a := by
   cases a with
   | «bindYield» a0 =>
-    simp [toValStmt, rawStmt, rawEff_toValEff a0]
+    simp only [toValStmt, rawStmt, rawEff_toValEff a0]
   | «yieldDiscard» a0 =>
-    simp [toValStmt, rawStmt, rawEff_toValEff a0]
+    simp only [toValStmt, rawStmt, rawEff_toValEff a0]
   | «ret» a0 =>
-    simp [toValStmt, rawStmt, Canonical.ofVal_toVal]
+    simp only [toValStmt, rawStmt, Canonical.ofVal_toVal]
   | «ifElse» a0 a1 a2 =>
-    simp [toValStmt, rawStmt, Canonical.ofVal_toVal, rawStmts_toValStmts a1,
+    simp only [toValStmt, rawStmt, Canonical.ofVal_toVal, rawStmts_toValStmts a1,
       rawStmts_toValStmts a2]
   | «whileTrue» a0 =>
-    simp [toValStmt, rawStmt, rawStmts_toValStmts a0]
+    simp only [toValStmt, rawStmt, rawStmts_toValStmts a0]
   | «breakLoop» => rfl
 termination_by structural a
 theorem rawStmts_toValStmts
@@ -2171,48 +2287,48 @@ theorem rawStmts_toValStmts
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp [toValStmts, rawStmts, rawStmt_toValStmt a0, rawStmts_toValStmts a1]
+    simp only [toValStmts, rawStmts, rawStmt_toValStmt a0, rawStmts_toValStmts a1]
 termination_by structural a
 theorem rawEffs_toValEffs (a : @_root_.Effect4.Program.Effs (_root_.Effect4.Program.NativeOp)) :
     rawEffs (toValEffs a) = some a := by
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp [toValEffs, rawEffs, rawEff_toValEff a0, rawEffs_toValEffs a1]
+    simp only [toValEffs, rawEffs, rawEff_toValEff a0, rawEffs_toValEffs a1]
 termination_by structural a
 theorem rawActionTerm_toValActionTerm
   (a : @_root_.Effect4.Program.ActionTerm (_root_.Effect4.Program.NativeOp)) :
     rawActionTerm (toValActionTerm a) = some a := by
   cases a with
   | «fork» a0 a1 =>
-    simp [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
   | «forkIn» a0 a1 a2 =>
-    simp [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
   | «forkScoped» a0 a1 =>
-    simp [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, rawEff_toValEff a0, Canonical.ofVal_toVal]
   | «runIn» a0 a1 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «interrupt» a0 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «interruptScoped» a0 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «interruptAll» a0 a1 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «awaitAll» a0 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «awaitAllFailFast» a0 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «snapshotChildren» => rfl
   | «awaitNewChildren» a0 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «raceAll» a0 =>
-    simp [toValActionTerm, rawActionTerm, rawEffs_toValEffs a0]
+    simp only [toValActionTerm, rawActionTerm, rawEffs_toValEffs a0]
   | «setContext» a0 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «getContext» => rfl
   | «getId» => rfl
   | «closeScope» a0 a1 =>
-    simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+    simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «getInterruptible» => rfl
 termination_by structural a
 theorem rawLayerTerm_toValLayerTerm
@@ -2220,28 +2336,28 @@ theorem rawLayerTerm_toValLayerTerm
     rawLayerTerm (toValLayerTerm a) = some a := by
   cases a with
   | «succeed» a0 a1 =>
-    simp [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal]
+    simp only [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal]
   | «effect» a0 a1 =>
-    simp [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal, rawEff_toValEff a1]
+    simp only [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal, rawEff_toValEff a1]
   | «effectDiscard» a0 =>
-    simp [toValLayerTerm, rawLayerTerm, rawEff_toValEff a0]
+    simp only [toValLayerTerm, rawLayerTerm, rawEff_toValEff a0]
   | «provide» a0 a1 =>
-    simp [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerm_toValLayerTerm a1]
   | «provideMerge» a0 a1 =>
-    simp [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerm_toValLayerTerm a1]
   | «merge» a0 a1 =>
-    simp [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerm_toValLayerTerm a1]
   | «fresh» a0 =>
-    simp [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0]
+    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0]
   | «orDie» a0 =>
-    simp [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0]
+    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerm_toValLayerTerm a0]
   | «ref» a0 =>
-    simp [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal]
+    simp only [toValLayerTerm, rawLayerTerm, Canonical.ofVal_toVal]
   | «mergeAll» a0 =>
-    simp [toValLayerTerm, rawLayerTerm, rawLayerTerms_toValLayerTerms a0]
+    simp only [toValLayerTerm, rawLayerTerm, rawLayerTerms_toValLayerTerms a0]
 termination_by structural a
 theorem rawLayerTerms_toValLayerTerms
   (a : @_root_.Effect4.Program.LayerTerms (_root_.Effect4.Program.NativeOp)) :
@@ -2249,7 +2365,7 @@ theorem rawLayerTerms_toValLayerTerms
   cases a with
   | «nil» => rfl
   | «cons» a0 a1 =>
-    simp [toValLayerTerms, rawLayerTerms, rawLayerTerm_toValLayerTerm a0,
+    simp only [toValLayerTerms, rawLayerTerms, rawLayerTerm_toValLayerTerm a0,
       rawLayerTerms_toValLayerTerms a1]
 termination_by structural a
 end
@@ -2685,22 +2801,26 @@ def ofVal : Val → Option (_root_.Effect4.Program.RowKind)
   | .ctor 2 [] => some .program
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.RowKind) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «sync» => simp only [toVal, ofVal]
+  | «async» => simp only [toVal, ofVal]
+  | «program» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowKind} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Program.RowKind) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -2742,22 +2862,30 @@ def ofVal : Val → Option (_root_.Effect4.Program.RowShape)
   | .ctor 3 [] => some .method
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.RowShape) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «call» => simp only [toVal, ofVal]
+  | «value» => simp only [toVal, ofVal]
+  | «tupleCall» => simp only [toVal, ofVal]
+  | «method» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowShape} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Program.RowShape) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -2795,22 +2923,22 @@ def ofVal : Val → Option (_root_.Effect4.Program.Registration)
   | .ctor 1 [] => some .external
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.Registration) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «deferred» => simp only [toVal, ofVal]
+  | «external» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Registration} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Program.Registration) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -2873,7 +3001,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.Row)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.Row) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Row} (h : ofVal v = some a) :
     v = toVal a := by
@@ -2974,7 +3102,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.EffTy)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.EffTy) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1, a2⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.EffTy} (h : ofVal v = some a) :
     v = toVal a := by

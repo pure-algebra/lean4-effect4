@@ -46,7 +46,7 @@ def ofVal : Val → Option (_root_.Effect4.Float64)
 
 theorem ofVal_toVal (a : _root_.Effect4.Float64) : ofVal (toVal a) = some a := by
   obtain ⟨a0⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Float64} (h : ofVal v = some a) :
     v = toVal a := by
@@ -171,35 +171,35 @@ theorem rawJson_toValJson (a : _root_.Effect4.Json) :
   cases a with
   | «null» => rfl
   | «bool» a0 =>
-    simp [toValJson, rawJson, Canonical.ofVal_toVal]
+    simp only [toValJson, rawJson, Canonical.ofVal_toVal]
   | «number» a0 =>
-    simp [toValJson, rawJson, Canonical.ofVal_toVal]
+    simp only [toValJson, rawJson, Canonical.ofVal_toVal]
   | «str» a0 =>
-    simp [toValJson, rawJson, Canonical.ofVal_toVal]
+    simp only [toValJson, rawJson, Canonical.ofVal_toVal]
   | «arr» a0 =>
-    simp [toValJson, rawJson, rawL0_toValL0 a0]
+    simp only [toValJson, rawJson, rawL0_toValL0 a0]
   | «obj» a0 =>
-    simp [toValJson, rawJson, rawL2_toValL2 a0]
+    simp only [toValJson, rawJson, rawL2_toValL2 a0]
 termination_by structural a
 theorem rawL0_toValL0 (xs : @_root_.List (_root_.Effect4.Json)) :
     rawL0 (toValL0 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL0, rawL0, rawJson_toValJson x, rawL0_toValL0 xs]
+    simp only [toValL0, rawL0, rawJson_toValJson x, rawL0_toValL0 xs]
 termination_by structural xs
 theorem rawP1_toValP1 (p : @_root_.Prod (_root_.String) (_root_.Effect4.Json)) :
     rawP1 (toValP1 p) = some p := by
   match p with
   | (x, y) =>
-    simp [toValP1, rawP1, Canonical.ofVal_toVal, rawJson_toValJson y]
+    simp only [toValP1, rawP1, Canonical.ofVal_toVal, rawJson_toValJson y]
 termination_by structural p
 theorem rawL2_toValL2 (xs : @_root_.List (@_root_.Prod (_root_.String) (_root_.Effect4.Json))) :
     rawL2 (toValL2 xs) = some xs := by
   match xs with
   | [] => rfl
   | x :: xs =>
-    simp [toValL2, rawL2, rawP1_toValP1 x, rawL2_toValL2 xs]
+    simp only [toValL2, rawL2, rawP1_toValP1 x, rawL2_toValL2 xs]
 termination_by structural xs
 end
 

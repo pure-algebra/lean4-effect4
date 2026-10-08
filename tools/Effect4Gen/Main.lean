@@ -630,7 +630,7 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
         emit s!"  | «{c.name}»{argBinders c} => rfl"
       else
         emit s!"  | «{c.name}»{argBinders c} =>"
-        emitJoin s!"    simp [toVal{m.ident}, raw{m.ident}, "
+        emitJoin s!"    simp only [toVal{m.ident}, raw{m.ident}, "
           (dedup (c.args.toList.mapIdx fun i (_, sl) => rawToValOf st sl s!"a{i}")) ", " "]"
           "      "
     emit "termination_by structural a"
@@ -643,7 +643,7 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
       emit "  match xs with"
       emit "  | [] => rfl"
       emit "  | x :: xs =>"
-      emitJoin s!"    simp [toValL{i}, rawL{i}, "
+      emitJoin s!"    simp only [toValL{i}, rawL{i}, "
         [rawToValOf st a.inner[0]! "x", s!"rawL{i}_toValL{i} xs"] ", " "]" "      "
       emit "termination_by structural xs"
     | .option =>
@@ -652,14 +652,14 @@ def emitRecursive (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit :
       emit "  match o with"
       emit "  | none => rfl"
       emit "  | some x =>"
-      emitJoin s!"    simp [toValO{i}, rawO{i}, " [rawToValOf st a.inner[0]! "x"] ", " "]" "      "
+      emitJoin s!"    simp only [toValO{i}, rawO{i}, " [rawToValOf st a.inner[0]! "x"] ", " "]" "      "
       emit "termination_by structural o"
     | .pair =>
       emit s!"theorem rawP{i}_toValP{i} (p : {a.tyText}) :"
       emit s!"    rawP{i} (toValP{i} p) = some p := by"
       emit "  match p with"
       emit "  | (x, y) =>"
-      emitJoin s!"    simp [toValP{i}, rawP{i}, "
+      emitJoin s!"    simp only [toValP{i}, rawP{i}, "
         (dedup [rawToValOf st a.inner[0]! "x", rawToValOf st a.inner[1]! "y"]) ", " "]" "      "
       emit "termination_by structural p"
   emit "end"
@@ -815,7 +815,7 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
     let binders := String.intercalate ", " (c.args.toList.mapIdx fun i _ => s!"a{i}")
     emit s!"theorem ofVal_toVal (a : {m.tyText}) : ofVal (toVal a) = some a := by"
     emit s!"  obtain ⟨{binders}⟩ := a"
-    emit "  simp [toVal, ofVal, Canonical.ofVal_toVal]"
+    emit "  simp only [toVal, ofVal, Canonical.ofVal_toVal]"
     emit ""
     emit ("theorem ofVal_exact {v : Val} {a : " ++ m.tyText ++ "} (h : ofVal v = some a) :")
     emit "    v = toVal a := by"
@@ -834,46 +834,47 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
     emit "    · exact nomatch h"
     emit "  · exact nomatch h"
   else
-    -- A nullary case of a sum closes without the field law, which the linter reports as an
-    -- unused `simp` argument; the same script is the templates' `LitC.ofVal_toVal`.
-    emit "set_option linter.unusedSimpArgs false in"
+    -- Each case is proved by its own script, chosen by its arity, so no case tries another's:
+    -- `simp only` names the lemmas that `simp?` reports for that arity, and `ofVal_exact` takes
+    -- the arms of `split` in the order of `ofVal`'s cases, then the wildcard's arms.
     emit s!"theorem ofVal_toVal (a : {m.tyText}) : ofVal (toVal a) = some a := by"
-    emit "  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]"
+    emit "  cases a with"
+    for c in m.ctors do
+      let lemmas :=
+        if c.args.isEmpty then "toVal, ofVal"
+        else if c.args.size == 1 then "toVal, ofVal, Canonical.ofVal_toVal, Option.map_some"
+        else "toVal, ofVal, Canonical.ofVal_toVal"
+      emit s!"  | «{c.name}»{argBinders c} => simp only [{lemmas}]"
     emit ""
     emit ("theorem ofVal_exact {v : Val} {a : " ++ m.tyText ++ "} (h : ofVal v = some a) :")
     emit "    v = toVal a := by"
     emit "  unfold ofVal at h"
     emit "  split at h"
-    emit "  all_goals first"
-    emit "    | (injection h with h; subst h; rfl)"
-    emit "    | (rename_i w"
-    emit "       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h"
-    emit "       subst hj"
-    emit "       simp only [toVal]"
-    emit "       rw [Canonical.ofVal_exact hx])"
-    -- One alternative per arity of two or more present in the sum. The inner `match` is split;
-    -- `injection` closes every failing arm (`none = some a`) and reduces the success arm; the
-    -- success arm's `b`s and `h`s (the order `split` introduces them) are named and rewritten;
-    -- `done` makes a wrong-arity alternative fail and fall through. No nested `first`: its
-    -- last alternative would run with error recovery and admit the goal with a `sorry`
-    -- (measured 2026-09-05 on `Effect4.Char.Evidence`, arities 2 and 3 mixed).
-    let arities := ((m.ctors.toList.map fun c => c.args.size).filter (· ≥ 2)).eraseDups
-    for n in arities do
-      let bs := String.intercalate " " ((List.range n).map fun i => s!"b{i}")
-      let hs := String.intercalate " " ((List.range n).map fun i => s!"h{i}")
-      let rws := String.intercalate ", " ((List.range n).map fun i => s!"Canonical.ofVal_exact h{i}")
-      -- `split` puts the success arm first and compiles the wildcard into one or more arms
-      -- with `h : none = some a`; `injection … with` would refuse a name on those, so the
-      -- success arm is focused and the rest closed by `nomatch`.
-      emit "    | (split at h"
-      emit s!"       · rename_i {bs} {hs}"
-      emit "         injection h with h"
-      emit "         subst h"
-      emit "         simp only [toVal]"
-      emit s!"         rw [{rws}]"
-      emit "         done"
-      emit "       all_goals exact nomatch h)"
-    emit "    | exact nomatch h"
+    for c in m.ctors do
+      let n := c.args.size
+      if n == 0 then
+        emit "  · injection h with h"
+        emit "    subst h"
+        emit "    rfl"
+      else if n == 1 then
+        emit "  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h"
+        emit "    subst hj"
+        emit "    simp only [toVal]"
+        emit "    rw [Canonical.ofVal_exact hx]"
+      else
+        -- The inner `match` is split: its success arm comes first, with the `b`s and `h`s in
+        -- the order `split` introduces them; its wildcard arms hold `h : none = some a`.
+        let bs := String.intercalate " " ((List.range n).map fun i => s!"b{i}")
+        let hs := String.intercalate " " ((List.range n).map fun i => s!"h{i}")
+        let rws := String.intercalate ", " ((List.range n).map fun i => s!"Canonical.ofVal_exact h{i}")
+        emit "  · split at h"
+        emit s!"    · rename_i {bs} {hs}"
+        emit "      injection h with h"
+        emit "      subst h"
+        emit "      simp only [toVal]"
+        emit s!"      rw [{rws}]"
+        emit "    all_goals exact nomatch h"
+    emit "  all_goals exact nomatch h"
   emit ""
   for i in [0:nf] do
     let f := st.foreigns[i]!

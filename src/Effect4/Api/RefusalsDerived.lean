@@ -54,22 +54,24 @@ def ofVal : Val → Option (_root_.Effect4.Program.TableRefusal)
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .notAsync
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.TableRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «notExternal» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «notAsync» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TableRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
@@ -116,22 +118,31 @@ def ofVal : Val → Option (_root_.Effect4.Program.FormationReason)
   | .ctor 3 [] => some .typeVariable
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.FormationReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «repeatedField» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «mapKey» => simp only [toVal, ofVal]
+  | «deferredError» => simp only [toVal, ofVal]
+  | «typeVariable» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FormationReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -181,7 +192,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.FormationRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.FormationRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1, a2⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FormationRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -263,22 +274,49 @@ def ofVal : Val → Option (_root_.Effect4.Program.RowReason)
   | .ctor 7 [] => some .notWellScoped
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.RowReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «notExternal» => simp only [toVal, ofVal]
+  | «notAsync» => simp only [toVal, ofVal]
+  | «builtinCollision» => simp only [toVal, ofVal]
+  | «valueRowTrailing» => simp only [toVal, ofVal]
+  | «internalHandle» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «emptyColumn» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «templateNotAdmissible» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «notWellScoped» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -335,22 +373,26 @@ def ofVal : Val → Option (_root_.Effect4.Program.ServiceReason)
   | .ctor 2 [] => some .conflictsBuiltin
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.ServiceReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «reservedName» => simp only [toVal, ofVal]
+  | «nonFlatCarrier» => simp only [toVal, ofVal]
+  | «conflictsBuiltin» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.ServiceReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Program.ServiceReason) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -414,30 +456,48 @@ def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
     | _, _ => none
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.SigRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «row» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «duplicateRow» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «service» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «duplicateCode» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unservedKey» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.SigRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  all_goals exact nomatch h
 
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
@@ -522,22 +582,33 @@ def ofVal : Val → Option (_root_.Effect4.Program.AdmitRefusal)
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FormationRefusal) v0).map .formation
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.AdmitRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «illTyped» => simp only [toVal, ofVal]
+  | «signature» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «emptyColumn» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «formation» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.AdmitRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_SigRefusal (x : _root_.Effect4.Program.SigRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.SigRefusal).root
@@ -609,22 +680,49 @@ def ofVal : Val → Option (_root_.Effect4.Program.Authoring.Reason)
   | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .duplicateRow
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.Authoring.Reason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «unbound» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unboundLayer» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «duplicateLayer» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «placement» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unboundRow» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «reservedName» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «duplicateRow» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Authoring.Reason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -684,7 +782,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.Authoring.Refusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.Authoring.Refusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Authoring.Refusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -787,38 +885,71 @@ def ofVal : Val → Option (_root_.Effect4.Program.RecordTypingReason)
   | .ctor 8 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FormationRefusal) v0).map .declarationFormation
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.RecordTypingReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «duplicateDeclaration» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «duplicateSupplied» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «missingRequired» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unknownSupplied» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «fieldNotSubtype» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «columnLengths» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «missingReadField» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «optionalReadField» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «declarationFormation» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RecordTypingReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 b2 h0 h1 h2
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
-         done
-       all_goals exact nomatch h)
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -902,7 +1033,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.RecordTermRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.RecordTermRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RecordTermRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -964,7 +1095,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.RecordCauseRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.RecordCauseRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RecordCauseRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1022,22 +1153,24 @@ def ofVal : Val → Option (_root_.Effect4.Program.TupleTypingReason)
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .outOfBounds
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.TupleTypingReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «nonTuple» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «outOfBounds» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TupleTypingReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
@@ -1088,7 +1221,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.TupleTermRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.TupleTermRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1, a2⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TupleTermRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1155,7 +1288,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.TupleCauseRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.TupleCauseRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TupleCauseRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1226,30 +1359,35 @@ def ofVal : Val → Option (_root_.Effect4.Program.FoldTypingReason)
     | _, _ => none
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.FoldTypingReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «notList» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «initialNotAccumulator» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «bodyNotAccumulator» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FoldTypingReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  all_goals exact nomatch h
 
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
@@ -1299,7 +1437,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.FoldTermRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.FoldTermRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FoldTermRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1361,7 +1499,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.FoldCauseRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.FoldCauseRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FoldCauseRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1424,22 +1562,29 @@ def ofVal : Val → Option (_root_.Effect4.Program.TermTypingRefusal)
   | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldTermRefusal) v0).map .fold
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.TermTypingRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «record» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «tuple» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «fold» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TermTypingRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_RecordTermRefusal (x : _root_.Effect4.Program.RecordTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordTermRefusal).root
@@ -1499,22 +1644,29 @@ def ofVal : Val → Option (_root_.Effect4.Program.CauseTypingRefusal)
   | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldCauseRefusal) v0).map .fold
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.CauseTypingRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «record» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «tuple» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «fold» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.CauseTypingRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_RecordCauseRefusal (x : _root_.Effect4.Program.RecordCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordCauseRefusal).root
@@ -1749,38 +1901,225 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 36 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0).map .maskRestoreExpected
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.TypeReason) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «term» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «cause» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «errorNotAdmitted» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «outsideDomain» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «requestNotSubtype» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «predicateNotBool» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «notSelectable» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «stepNotCursor» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «initialNotCursor» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «releaseFails» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «notFiber» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «scopeExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «natExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «listOfFibersExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «contextExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «snapshotExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «exitExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «serviceUnknown» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «valueNotSubtype» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «layerReference» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «referencesIllFormed» => simp only [toVal, ofVal]
+  | «mergeAllEmpty» => simp only [toVal, ofVal]
+  | «returnNotLast» => simp only [toVal, ofVal]
+  | «breakOutsideLoop» => simp only [toVal, ofVal]
+  | «literalOutsideAlphabet» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «instantiatedFormation» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «recordTerm» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «recordCause» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «tupleTerm» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «tupleCause» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «errorPayloadField» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «errorSpelling» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «binderTerm» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «resultNotSubtype» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «foldTerm» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «foldCause» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «maskRestoreExpected» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 b2 h0 h1 h2
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
-         done
-       all_goals exact nomatch h)
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_Term (x : _root_.Effect4.Program.Term) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Term).root (Canonical.toVal x) = true :=
@@ -2009,7 +2348,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeRefusal)
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.TypeRefusal) : ofVal (toVal a) = some a := by
   obtain ⟨a0, a1⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -2068,22 +2407,24 @@ def ofVal : Val → Option (_root_.Effect4.Api.AuthorRefusal)
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TypeRefusal) v0).map .typing
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Api.AuthorRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «scope» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «typing» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Api.AuthorRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_Refusal (x : _root_.Effect4.Program.Authoring.Refusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Authoring.Refusal).root
@@ -2139,22 +2480,34 @@ def ofVal : Val → Option (_root_.Effect4.Program.ClassRefusal)
   | .ctor 4 [] => some .unreadable
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.ClassRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «notIdentifier» => simp only [toVal, ofVal]
+  | «collides» => simp only [toVal, ofVal]
+  | «fieldsDiffer» => simp only [toVal, ofVal]
+  | «construction» => simp only [toVal, ofVal]
+  | «unreadable» => simp only [toVal, ofVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.ClassRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
 
 theorem fits (a : _root_.Effect4.Program.ClassRefusal) : shapeDoc.accepts (toVal a) = true := by
   cases a with
@@ -2212,30 +2565,47 @@ def ofVal : Val → Option (_root_.Effect4.Program.PrintRefusal)
   | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .binderTerm
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.PrintRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «internalAction» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «layerRef» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unsafeName» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «typeSpelling» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «payloadClass» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «binderTerm» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.PrintRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 h0 h1
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -2316,22 +2686,53 @@ def ofVal : Val → Option (_root_.Effect4.Program.ReadRefusal)
   | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .annotation
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Program.ReadRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «unknownHead» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unknownIdent» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «arity» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «binder» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «shape» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «negative» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «unsupportedStmt» => simp only [toVal, ofVal]
+  | «annotation» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.ReadRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · injection h with h
+    subst h
+    rfl
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
@@ -2411,30 +2812,37 @@ def ofVal : Val → Option (_root_.Effect4.Api.BuildRefusal)
     | _, _, _ => none
   | _ => none
 
-set_option linter.unusedSimpArgs false in
 theorem ofVal_toVal (a : _root_.Effect4.Api.BuildRefusal) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+  cases a with
+  | «scope» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «typing» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «admission» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «serviceCarrier» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Api.BuildRefusal} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | (split at h
-       · rename_i b0 b1 b2 h0 h1 h2
-         injection h with h
-         subst h
-         simp only [toVal]
-         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
-         done
-       all_goals exact nomatch h)
-    | exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    all_goals exact nomatch h
+  all_goals exact nomatch h
 
 theorem lift_Refusal (x : _root_.Effect4.Program.Authoring.Refusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Authoring.Refusal).root
