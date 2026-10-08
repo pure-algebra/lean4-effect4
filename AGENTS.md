@@ -47,8 +47,9 @@ The OCaml estate is `ocaml/`, one dune workspace, with its Lean half `src/OCaml5
 
 - Canonical program content is first-order data. Lean functions, `Expr`, host closures, promises
   and runtime objects are not stored program syntax.
-- Every rc.112 behaviour that a declaration models names the line it transcribes
-  (`vendor/effect-4.0.0-rc.112/src/…`).
+- Every Effect behaviour that a declaration models names the line it transcribes, in the pin
+  (`vendor/effect-4.0.0-rc.112/src/…`) or in latest (Effect 4.0.1) under
+  `vendor/effect-4.0.1/src/…` (row 331).
 - A theorem that witnesses a census row names the row id in its docstring, and
   `Test/Audit/RuntimeCoverage.lean` joins it. The theorem alone moves no number.
 - Fuel exhaustion and unanswered choices are live frontiers, never typed errors, causes or

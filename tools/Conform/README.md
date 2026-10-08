@@ -39,7 +39,7 @@ each declared report and hashes each artifact. It refuses a declared report with
 format, and it refuses a declared artifact that carries that format.
 
 A refused run publishes nothing, and the earlier receipt stays as it was. The runner keeps the
-latest refused run of a profile under `.lake/conform/attempts/<profile>/`. The folder holds
+newest refused run of a profile under `.lake/conform/attempts/<profile>/`. The folder holds
 the producer's files and `attempt.json`: the command, the exit, the full output and the
 refusal.
 

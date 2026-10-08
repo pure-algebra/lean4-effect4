@@ -129,8 +129,8 @@ TypeScript. Every arrow is one of the kinds in §5 with its obligation met, or i
 6. **WASM,** through the generated OCaml first rather than a new backend. Not yet checked.
 7. **Numbers to DI-56's profile** (row 108). Today one checked program gives three different
    answers on Lean, OCaml and TypeScript, and none refuses. The rule: each face equals the exact
-   Lean reference inside its range and refuses outside it. The owner places it, before WASM at
-   the latest.
+   Lean reference inside its range and refuses outside it. The owner places it, no later than
+   WASM.
 
 **Parked until needed** (written down, not scheduled):
 - **The full host-services contract** (`host-boundary.md` §4; row 97's route part, row 100): the

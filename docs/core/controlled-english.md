@@ -400,6 +400,7 @@ Each entry is one row of six columns:
 | Term | Meaning here | Tree anchor | Literature | Do not use | Qualifier |
 | --- | --- | --- | --- | --- | --- |
 | **Effect** | The TypeScript library, pinned at rc.112 under `vendor/effect-4.0.0-rc.112/`. It is one target profile, not the semantic owner. | — | — | — | — |
+| **latest** | Effect 4.0.1, vendored under `vendor/effect-4.0.1/`. New work transcribes latest wherever it can; each area moves from the pin when a feature needs it (rows 248, 253, 331). | — | — | — | First use: "latest (Effect 4.0.1)". |
 | **operation** (effect) | What a program performs through a row. A handler or the host answers it. | `NativeOp` (`src/Effect4/Program/Native.lean`); `SyncOp` (`src/Effect4/Machine/Stores.lean`); `FiberOp` (`src/Effect4/Laws/Program/Sched.lean`) | algebraic effects (Plotkin and Pretnar 2009, audit P29) | — | — |
 | **row** (operation row) | The typing and printing data of one operation position: name, spelling, shape, kind, request, answer and error. Row N, with a number, is decisions row N. | `Row` (`src/Effect4/Program/Eff.lean`); `nativeRowOf` (`src/Effect4/Program/Native.lean`) | — | — | — |
 | **host row** (external row) | A row that the host answers: an `external` position of the row table. | `NativeOp` (`src/Effect4/Program/Native.lean`); `Registration` (`src/Effect4/Program/Eff.lean`) | — | — | — |

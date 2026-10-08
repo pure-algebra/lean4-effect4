@@ -220,8 +220,8 @@ So the three faces agree only on a bounded range, and none refuses outside it. T
 of the 2026-09-30 pass (`docs/research/2026-09-30-pass/numbers/`) ran one checked program with
 small literals on all three and got three different answers. DI-56's ruling stands: inside its
 profile each face equals the exact Lean reference, and outside it the face refuses, intermediate
-values included. The implementation plan is decisions row 108 (open; the owner places it, before
-WASM at the latest).
+values included. The implementation plan is decisions row 108 (open; the owner places it, no later than
+WASM).
 - **The refusal is written once in Lean**, with the bound as data, so that OCaml and WASM
   inherit it.
 - **Checked TypeScript atoms.**
