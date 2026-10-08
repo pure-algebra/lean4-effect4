@@ -31,6 +31,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `src/Effect4/Modules/`, and their laws in `src/Effect4/Laws/Modules/`. Cache's profile is ruled
   (rows 270 to 272) and not built. The procedure is the
   [module factory plan](research/2026-10-05-claude-lead/module-factory-plan.md).
+  A [native-module comparison](research/2026-10-08-module-compatibility-design.md) records finite target evidence and the selected profiles' differences.
 - **Procedures** (row 328). A program may hold a definition block at its root, and an operation
   call invokes a definition by its declared row. The checker, program admission, the frame
   machine, the OCaml engine and M5 take a block (slices PROC-1 and PROC-2, the
