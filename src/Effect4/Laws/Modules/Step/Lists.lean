@@ -71,6 +71,58 @@ theorem eval_filter (L : Leaves) (xs : Step Γ (.list a)) (predicate : Step (a :
   rw [bodies]
   exact (foldl_filter (fun item => predicate.eval (Γ := a :: Γ) L (item, vs)) (xs.eval L vs) []).trans (List.nil_append _)
 
+/-- Placement: helper of step-language-sound, R10; consumed by eval_filterMapWith
+and Pool's leasedOf_list_eval. The observation is the selected, mapped carrier list.
+The equation holds at every Leaves and input carrier. It establishes no execution cost. -/
+private theorem foldl_filterMap {A B : Type} (p : A → Bool) (f : A → B) : ∀ (xs : List A) (acc : List B),
+    xs.foldl (fun acc item => if p item then acc ++ [f item] else acc) acc = acc ++ (xs.filter p).map f
+  | [], acc => by rw [List.foldl_nil, List.filter_nil, List.map_nil, List.append_nil]
+  | item :: rest, acc => by
+    rw [List.foldl_cons, foldl_filterMap p f rest, List.filter_cons]
+    cases hp : p item
+    · rfl
+    · change (acc ++ [f item]) ++ (rest.filter p).map f = acc ++ f item :: (rest.filter p).map f
+      rw [List.append_assoc]
+      rfl
+
+/-- The fused changing-type pass computes map after filter. -/
+theorem eval_filterMapWith (L : Leaves) (xs : Step Γ (.list a)) (witness : Step Γ (.list b))
+    (predicate : Step (a :: Γ) .bool) (body : Step (a :: Γ) b) (vs : Inputs L Γ) :
+    (filterMapWith xs witness predicate body).eval L vs =
+      ((xs.eval L vs).filter (fun item => predicate.eval (Γ := a :: Γ) L (item, vs))).map
+        (fun item => body.eval (Γ := a :: Γ) L (item, vs)) := by
+  change (xs.eval L vs).foldl
+    (fun (acc : List (CarrierAt L b)) item =>
+      (fun (test : Bool) => if test then
+        acc ++ [(withAccumulator (.list b) body).eval (Γ := .list b :: a :: Γ) L (acc, (item, vs))]
+      else acc) ((withAccumulator (.list b) predicate).eval (Γ := .list b :: a :: Γ) L (acc, (item, vs)))) [] = _
+  have bodies : (fun (acc : List (CarrierAt L b)) item =>
+      (fun (test : Bool) => if test then
+        acc ++ [(withAccumulator (.list b) body).eval (Γ := .list b :: a :: Γ) L (acc, (item, vs))]
+      else acc) ((withAccumulator (.list b) predicate).eval (Γ := .list b :: a :: Γ) L (acc, (item, vs)))) =
+      (fun (acc : List (CarrierAt L b)) item =>
+        (fun (test : Bool) => if test then
+          acc ++ [body.eval (Γ := a :: Γ) L (item, vs)] else acc)
+          (predicate.eval (Γ := a :: Γ) L (item, vs))) := by
+    funext acc item
+    exact (congrArg (fun (test : Bool) => if test then
+      acc ++ [(withAccumulator (.list b) body).eval (Γ := .list b :: a :: Γ) L (acc, (item, vs))] else acc)
+      (eval_withAccumulator L predicate (.list b) vs item acc)).trans
+      (congrArg (fun (value : CarrierAt L b) => (fun (test : Bool) => if test then acc ++ [value] else acc)
+        (predicate.eval (Γ := a :: Γ) L (item, vs)))
+        (eval_withAccumulator L body (.list b) vs item acc))
+  rw [bodies]
+  exact (foldl_filterMap (fun item => predicate.eval (Γ := a :: Γ) L (item, vs))
+    (fun item => body.eval (Γ := a :: Γ) L (item, vs)) (xs.eval L vs) []).trans (List.nil_append _)
+
+/-- The same-type fused pass computes map after filter. -/
+theorem eval_filterMap (L : Leaves) (xs : Step Γ (.list a))
+    (predicate : Step (a :: Γ) .bool) (body : Step (a :: Γ) a) (vs : Inputs L Γ) :
+    (filterMap xs predicate body).eval L vs =
+      ((xs.eval L vs).filter (fun item => predicate.eval (Γ := a :: Γ) L (item, vs))).map
+        (fun item => body.eval (Γ := a :: Γ) L (item, vs)) :=
+  eval_filterMapWith L xs xs predicate body vs
+
 /-- Removal filters by the negated item-only predicate. -/
 theorem eval_removeBy (L : Leaves) (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool)
     (vs : Inputs L Γ) :

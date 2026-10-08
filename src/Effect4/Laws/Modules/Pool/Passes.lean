@@ -194,7 +194,7 @@ theorem leasedOf_list_eval (tb : Table) (res : Nat → Val) (s : State)
     (Data.leasedOf P cell).eval Leaves.deferredKeys vs =
       (s.items.flatMap fun it => if it.stamp = s.available.headD 0 then [it.leasedAs s.next] else []).map (itemC res) := by
   unfold Data.leasedOf
-  rw [Step.Lists.eval_map, Step.Lists.eval_filter]
+  rw [Step.Lists.eval_filterMap]
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
   change (cv.2.2.1.filter (fun (it : ItemCarrier) => decide (it.2.2.2.1 = cv.1.head?.getD 0))).map

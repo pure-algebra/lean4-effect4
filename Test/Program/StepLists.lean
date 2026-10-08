@@ -26,4 +26,39 @@ example : Reads (one.term (Input.source [])) {} [] []
     (Effect4.Store.Val.list [.bool true, .list [.nat 2, .nat 1]]) :=
   Step.sound (Γ := []) Leaves.opaque () Input.reads_nil one rfl (Step.scope_of_alignment one rfl)
 
+-- The fused pass retains duplicate matches and maps only selected items.
+def shifted : Step [.nat] .nat := .add (.var (.here _ _)) (.nat 10)
+def fused := Step.Lists.filterMap duplicates isOne shifted
+def changed := Step.Lists.filterMapWith duplicates (.nil : Step [] (.list .bool)) isOne isOne
+#guard @BEq.beq (List Nat) inferInstance (fused.eval (Γ := []) Leaves.opaque ()) [11, 11]
+#guard @BEq.beq (List Bool) inferInstance (changed.eval (Γ := []) Leaves.opaque ()) [true, true]
+#guard @BEq.beq (List Nat) inferInstance
+  ((Step.Lists.filterMap (.nil : Step [] (.list .nat)) isOne shifted).eval (Γ := []) Leaves.opaque ()) []
+#guard @BEq.beq (List Nat) inferInstance
+  ((Step.Lists.filterMap duplicates (.bool false) shifted).eval (Γ := []) Leaves.opaque ()) []
+private def folds : Effect4.Program.TermAlgebra (fun _ => Nat) where
+  term_var _ := 0
+  term_lit _ := 0
+  term_app _ args := args
+  term_record _ _ values := values
+  term_field _ target _ := target
+  term_recordSet target _ value := target + value
+  term_tupleAt target _ := target
+  term_fold _ list init body := 1 + list + init + body
+  terms_nil := 0
+  terms_cons head tail := head + tail
+-- This finite emitted term contains one fold, including its empty-list witness.
+#guard ((fused.term (Input.source [])) {} []).toOption.map
+  (Effect4.Program.cata_term folds) == some 1
+
+example : TypesEach nativeSignature (changed.term (Input.source [])) {} [] [] (.list .bool) :=
+  Step.typed_of_normal nativeSignature rfl Input.types_nil changed rfl (Step.scope_of_alignment changed rfl)
+example : Reads (fused.term (Input.source [])) {} [] [] (Effect4.Store.Val.list [.nat 11, .nat 11]) :=
+  Step.sound (Γ := []) Leaves.opaque () Input.reads_nil fused rfl (Step.scope_of_alignment fused rfl)
+-- The general equation is read at the changing-type constructor's actual carrier.
+example : changed.eval (Γ := []) Leaves.opaque () =
+    ((duplicates.eval (Γ := []) Leaves.opaque ()).filter fun item => isOne.eval (Γ := [.nat]) Leaves.opaque (item, ())).map
+      (fun item => isOne.eval (Γ := [.nat]) Leaves.opaque (item, ())) :=
+  Step.Lists.eval_filterMapWith Leaves.opaque duplicates .nil isOne isOne ()
+
 end Test.Program.StepLists

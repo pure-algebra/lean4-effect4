@@ -58,10 +58,9 @@ def marked (A : Ty) (cell : Step Γ (cellTy A)) : Step Γ (.list (itemTy A)) :=
 
 def leasedOf (A : Ty) (cell : Step Γ (cellTy A)) : Step Γ (.list (itemTy A)) :=
   let items : Step Γ (.list (itemTy A)) := .get cell (itemsF A)
-  let selected := Step.Lists.filter items (item_step% items with item =>
+  Step.Lists.filterMap items (item_step% items with item =>
     .eq (.get item (itemStampF A)) (headStamp A cell))
-  Step.Lists.map selected (item_step% selected with item =>
-    leasedAs A (.get cell (nextF A)) item)
+    (item_step% items with item => leasedAs A (.get cell (nextF A)) item)
 
 def holds (A : Ty) (stamp lease : Step Γ .nat) (item : Step Γ (itemTy A)) : Step Γ .bool :=
   .and (.eq (.get item (itemStampF A)) stamp)

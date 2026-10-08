@@ -35,6 +35,19 @@ def filter (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) : Step Γ
       (.snoc (.var (.here _ _)) (.var (.there _ (.here _ _))))
       (.var (.here _ _)))
 
+/-- Select and map in one fold, using a typed list as the output's empty witness. -/
+def filterMapWith (xs : Step Γ (.list a)) (outputWitness : Step Γ (.list b))
+    (predicate : Step (a :: Γ) .bool) (body : Step (a :: Γ) b) : Step Γ (.list b) :=
+  .fold xs (.emptyLike outputWitness)
+    (.ite (withAccumulator (.list b) predicate)
+      (.snoc (.var (.here _ _)) (withAccumulator (.list b) body))
+      (.var (.here _ _)))
+
+/-- Select and map at the input's element type without another witness. -/
+def filterMap (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool)
+    (body : Step (a :: Γ) a) : Step Γ (.list a) :=
+  filterMapWith xs xs predicate body
+
 /-- Remove items whose predicate holds. -/
 def removeBy (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) : Step Γ (.list a) :=
   filter xs (.not predicate)
