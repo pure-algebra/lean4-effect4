@@ -1,4 +1,5 @@
-import Effect4.Laws.Codegen.Classes
+import Effect4.Codegen.Classes
+import Effect4.Codegen.ClassTable
 
 /-!
 # The checked type reader, and the types it reads back (the state plan's T5, part B)
@@ -132,25 +133,5 @@ def neverFields : Classes.Fields := [("_tag", false, .lit "X"), ("a", false, .ne
 
 #guard (classDecl "X" neverFields).bind readClassDecl = some ("X", neverFields)
 #guard Types.payloadClass? neverFields = none
-
-/-! ## The laws this battery reads -/
-
-/-- Exactness, at any syntax: what the checked reader accepts prints back to it. -/
-example {x : TypeRef} {ty : Ty} (h : readTyChecked x = some ty) : Types.ofTy ty = some x :=
-  readTyChecked_exact h
-
-/-- The retraction, on the readable types only. -/
-example {ty : Ty} {x : TypeRef} (hr : ReadableTy ty = true) (hp : Types.ofTy ty = some x) :
-    readTyChecked x = some ty :=
-  readTyChecked_of_readable hr hp
-
-/-- The two, item by item. -/
-example {xs : List TypeRef} {tys : List Ty} (h : readTysChecked xs = some tys) :
-    writeTys tys = some xs :=
-  readTysChecked_exact h
-
-example {tys : List Ty} {xs : List TypeRef} (hr : tys.all ReadableTy = true)
-    (hp : writeTys tys = some xs) : readTysChecked xs = some tys :=
-  readTysChecked_of_readable hr hp
 
 end Test.Codegen.TypeReader

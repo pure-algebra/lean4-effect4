@@ -1,8 +1,9 @@
-import Effect4.Laws.Codegen.Tuple
-import Effect4.Laws.Codegen.ReadLeaf
+import Effect4.Codegen.Tuple
+import Effect4.Codegen.Read
 
-/-! Finite controls for exact tuple index syntax. The universal laws below retain the raw
-scope-only domain, including indices outside the JavaScript number profile. -/
+/-! Finite controls for exact tuple index syntax, including indices outside the JavaScript number
+profile. The universal laws are `Tuple.readAt_writeAt` and `Tuple.readAt_exact`
+(`src/Effect4/Laws/Codegen/Tuple.lean`), on the raw scope-only domain. -/
 
 namespace Effect4.Test.TupleCodegen
 open Effect4.Program Effect4.Codegen TypeScript
@@ -52,15 +53,5 @@ def larger : Term := .app "tuple" (.cons (.lit (.nat 7))
 #guard readTerm [] 1 (printTerm 1 (.tupleAt (.var 0) 123456789012345678901234567890)) ==
   .ok (.tupleAt (.var 0) 123456789012345678901234567890)
 #guard readTerm [] 0 (printTerm 0 (.app "tupleAt" .nil)) == .ok (.app "tupleAt" .nil)
-
-example (index : Nat) (target : Expr) :
-    Tuple.readAt (Tuple.writeAt index target) = some (index, target) := Tuple.readAt_writeAt index target
-example (e : Expr) (index : Nat) (target : Expr) (h : Tuple.readAt e = some (index, target)) :
-    Tuple.writeAt index target = e := Tuple.readAt_exact e index target h
-example (classes : Effect4.Codegen.Classes.Classes) (n index : Nat) (target : Term)
-    (h : Term.scoped n target = true) (hc : target.covers classes = true)
-    (hu : target.unannotated = true) :
-    readTerm classes n (printTerm n (.tupleAt target index)) = .ok (.tupleAt target index) :=
-  readTerm_printTerm _ h hc hu
 
 end Effect4.Test.TupleCodegen

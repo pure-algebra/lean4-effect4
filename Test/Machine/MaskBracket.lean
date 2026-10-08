@@ -1,7 +1,6 @@
 import Effect4.Laws.Machine.MaskBracket
 import Effect4.Laws.Program.MaskBracket
 import Test.Program.MaskContract
-import ProofGraph.Plan
 
 /-!
 # Test.Machine.MaskBracket — a region ends with its entry flag: finite controls
@@ -358,7 +357,6 @@ private def finishedWith (f : F) : Option (Exit Nat Nat Nat Nat Nat) :=
 
 private abbrev M := RunMachine Nat Nat Nat Nat Nat Nat Nat Unit Unit
 private abbrev R := RunFiber Nat Nat Nat Nat Nat Nat Nat Unit
-private abbrev D := RunDecision Nat Nat Nat Nat Nat Nat Nat
 private abbrev K := Cmd Nat Nat Nat Nat Nat Nat Nat
 
 /-- The invariant at a table, decided by the law module's instance. -/
@@ -817,40 +815,6 @@ example (p : NativeEff) (bases : List Bool) (m : NativeMachine) (cmds : List NCm
     (cut : LoopCut p [] bases m cmds) (id : FiberId) (y : Bool) (pending : Cmd.loop id y ∈ cmds)
     (f : NFiber) (found : m.fiber? id = some f) : f.exit = none :=
   stepped_live p [] cut.state cut.queue pending rfl found
-
-/-- The bracket between two cuts of one command loop, each with a pending step of the fiber. It
-takes no premise on an exit. -/
-example (p : NativeEff) (bases bases' : List Bool) (m m' : NativeMachine)
-    (cmds cmds' : List NCmd) (entry : LoopCut p [] bases m cmds)
-    (later : LoopCut p [] bases' m' cmds') (grown : bases <+: bases') (id : FiberId)
-    (y y' : Bool) (pending : Cmd.loop id y ∈ cmds) (pending' : Cmd.loop id y' ∈ cmds')
-    (f g : NFiber) (found : m.fiber? id = some f) (found' : m'.fiber? id = some g)
-    (above : List NCode) (inside : g.frame.stack = above ++ f.frame.stack) (value : Val)
-    (unanswered : ((g.frame.own above).getCont Effect4.Arm.contA false none).answer =
-      ContAnswer.empty) (_code : g.frame.current = Prim.success value) :
-    (regionEnd (g.frame.own above) f.frame.stack Effect4.Arm.contA false).interruptible =
-      f.frame.interruptible :=
-  (compiled_region_bracket p [] entry later grown pending pending' rfl rfl found found' inside
-    Effect4.Arm.contA false none unanswered).flag
-
-/-- The general form at the alphabets `Nat`. -/
-private theorem atNat : RegionBracket Nat Nat Nat Nat Nat Nat Nat Unit Unit :=
-  saved_mask_region_bracket Nat Nat Nat Nat Nat Nat Nat Unit Unit
-
-example : ∀ (base entry flag : Bool) (above below : List P), MaskChain base flag (above ++ below) →
-    MaskChain base entry below → MaskChain entry flag above :=
-  atNat.chain
-
-example : ∀ (interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat) (f : F) (below : List P) (next : F),
-    (f.step interp).fst = FrameStep.running next →
-      ((f.under below).step interp).fst = FrameStep.running (next.under below) :=
-  atNat.between
-
-example : ∀ (bases bases' : List Bool) (m m' : M) (f g : R) (above : List P), MaskRuns bases m →
-    MaskRuns bases' m' → bases <+: bases' → f ∈ m.fibers → g ∈ m'.fibers → g.id = f.id →
-      f.exit = none → g.exit = none → g.frame.stack = above ++ f.frame.stack →
-        MaskChain f.frame.interruptible g.frame.interruptible above :=
-  atNat.inside
 
 end Compiled
 

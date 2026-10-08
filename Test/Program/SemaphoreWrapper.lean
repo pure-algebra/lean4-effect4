@@ -1,6 +1,5 @@
 import Test.Program.QueueScenarios
 import Effect4.Laws.Modules.Queue.Ops
-import ProofGraph.Plan
 
 /-!
 # The wrapper's two new forms: the Queue's wrapper does not move (decisions row 276, point 1)
@@ -155,14 +154,5 @@ def takePart (A : Ty) (q : TermSrc) : Waiter :=
 -- at any row table. The union of a Boolean with itself is such a type.
 example (table : RowTable) : ¬ HintTy table (.union .bool .bool) := fun hint =>
   absurd hint.canonical (by decide +kernel)
-
--- The two rules whose proofs now go through a more general form keep their statements.
-example {table : RowTable} {cell : TermSrc} {f : TermSrc → TermSrc} {s : TypedScope} {C B : Ty}
-    (normalC : C.normalize = C) (formedC : NodesFormed C) (normalB : B.normalize = B)
-    (formedB : NodesFormed B) (hcell : Typed (nativeSignature table) cell s (.refOf C))
-    (hstep : ∀ current : TermSrc, Typed (nativeSignature table) current (s.push .current C) C →
-      Typed (nativeSignature table) (f current) (s.push .current C) (.prod B C)) :
-    Answers (nativeSignature table) (Ref.modifyWith cell f) s B :=
-  answers_refModifyWith normalC formedC normalB formedB hcell hstep
 
 end Test.Program.SemaphoreWrapper

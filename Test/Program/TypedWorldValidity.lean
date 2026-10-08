@@ -106,12 +106,6 @@ theorem appended_spelling_admitted :
   unfold ValueOk
   decide
 
-/-- Universal spelling transport already proved in the repository; this adapter reuses it. -/
-theorem valueOk_lookup_transport (w newer : TWorld)
-    (ext : Effect4.Program.Extends w.state.externals.allocated newer.state.externals.allocated)
-    (ty : Ty) (value : Val) (typed : ValueOk w ty value) : ValueOk newer ty value :=
-  Effect4.Program.hasTy_mono ty value _ _ ext typed
-
 /-- Actual leHost, not merely spelling equality: new invalid cells remain unconstrained. -/
 theorem invalid_extension :
     (emptyTables Stores.empty).leHost (emptyTables danglingStore) ∧

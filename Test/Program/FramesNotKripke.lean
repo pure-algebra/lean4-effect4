@@ -1057,16 +1057,6 @@ theorem good_stack_transports :
       [.answer goodNext] :=
   Contracts.stackAccepts_mono w0_le_w1 (stack_good world)
 
-/-- For seat C's ledger (row 87, "monotonicity of every owner predicate of `preds`"): the typed
-state's `SavedOk` owner predicate transports along the host order at a position the world
-already declares; an undeclared position may become declared later, which is why the premise is
-needed. Proved beside its ledger line (`Effect4.Program.Typed.preds_savedOk_mono`, scope
-`M3bWorld`, `Laws/Program/Typed/Assembly.lean`); this is its use here. -/
-theorem preds_savedOk_mono (root : ProgramSource) (w w' : W) (e : Expect) (x : RSaved)
-    (ord : w.leHost w') (declared : (expectOf w e).isSome = true)
-    (h : (preds root).SavedOk w e x) : (preds root).SavedOk w' e x :=
-  Effect4.Program.Typed.preds_savedOk_mono root w w' e x ord declared h
-
 /-- The refusal also follows from the landed transport: the closed judgment at the initial world
 would transport to `w1`, where even the one-world judgment refuses the frame. -/
 theorem bad_not_kripke_by_transport :

@@ -1,5 +1,4 @@
 import Effect4.Laws.Modules.Pool.Profile
-import ProofGraph.Plan
 
 /-!
 # Pool's abstract contract: the named controls and the falsifiers

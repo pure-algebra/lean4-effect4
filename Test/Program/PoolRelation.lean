@@ -2,7 +2,6 @@ import Effect4.Laws.Modules.Pool.Steps
 import Effect4.Laws.Modules.Store
 import Test.Program.PoolAgreement
 import Test.Program.PoolSteps
-import ProofGraph.Plan
 
 /-!
 # Pool's relation and its step goals: finite controls (decisions rows 267 to 269 and 276)

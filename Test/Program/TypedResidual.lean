@@ -1,7 +1,7 @@
 import Effect4.Laws.Program.Typed.Admission
 import Effect4.Laws.Program.Typed.Residual
 
-/-! # Tests for M3a Foundations: Admission, Protocols, Residual Typing, and Settling Cases -/
+/-! # Membership at a world, and the controls of the payload inversions (M3a) -/
 
 set_option autoImplicit false
 
@@ -14,28 +14,6 @@ open Effect4.Program.Typed
 abbrev World := Effect4.Program.Typed.World
 
 /-! ## Positive Witnesses -/
-
-/-- Settling Case 1: polymorphic ref allocation followed by read types in a heterogeneous heap. -/
-theorem test_settling_ref_allocation (root : NativeEff) (w : World) (h0 : HeapTypedAt w ⟨0⟩ .nat) :
-    TypedProg root w (EffTy.pure .bool) refAllocGetProg :=
-  settling_ref_allocation root w h0
-
-/-- Settling Case 1 preservation: allocating a new boolean ref preserves existing nat ref types. -/
-theorem test_settling_ref_preserves_nat (w w' : World) (ordered : w.leHost w') (h0 : HeapTypedAt w ⟨0⟩ .nat) :
-    HeapTypedAt w' ⟨0⟩ .nat :=
-  settling_ref_preserves_nat w w' ordered h0
-
-/-- Settling Case 2: addressed fork admitting child body returns a typed fiber handle. -/
-theorem test_settling_fork (root : NativeEff) (w : World) (child : Body) (cert : EffTy)
-    (hbody : BodyTyped root w child cert) :
-    TypedProg root w (EffTy.pure (.fiberOf cert.answer cert.error)) (forkProg child) :=
-  settling_fork root w child cert hbody
-
-/-- Settling Case 2: addressed mask admitting body preserves its certificate type. -/
-theorem test_settling_mask (root : NativeEff) (w : World) (flag : Bool) (body : Body) (cert : EffTy)
-    (hbody : BodyTyped root w body cert) :
-    TypedProg root w cert (maskProg flag body) :=
-  settling_mask root w flag body cert hbody
 
 /-- Primitive booleans satisfy the membership judgment. -/
 theorem test_fits_bool (w : World) : Fits w (Val.bool true) .bool := trivial

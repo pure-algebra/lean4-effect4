@@ -49,11 +49,4 @@ def genericCause : CauseTerm := .both (.die (.var 5)) (.fail outOfRange)
 #guard (Formation.checkInput (.succeed (.tupleAt
   (.record [("bad", true, .map .nat .nat)] [] .nil) 0) : NativeEff) []).isSome
 
-example {Op : Type} (sig : Signature Op) (env : TyEnv) (path : List Nat) (term : Term) :
-    (Checker.term? sig env path term).toOption = termTy sig env term :=
-  Checker.toOption_term? sig env path term
-example {Op : Type} (sig : Signature Op) (env : TyEnv) (path : List Nat) (cause : CauseTerm) :
-    (Checker.cause? sig env path cause).toOption = causeTy sig env cause :=
-  Checker.toOption_cause? sig env path cause
-
 end Effect4.Test.TupleRefusals

@@ -1,5 +1,4 @@
 import Effect4.Laws.Modules.Queue.Profile
-import ProofGraph.Plan
 
 /-!
 # The Queue's first profile: its finite controls

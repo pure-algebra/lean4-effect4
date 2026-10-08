@@ -113,8 +113,6 @@ def rawFiber : Ty := .fiberOf (.prod (.union .nat .string) .unit) .never
 
 -- Green: at a raw fiber type the rule answers the columns as they are spelled, as the by-shape
 -- rule did.
-example (value error : Ty) : fiberTy (.fiberOf value error) = some (value, error) :=
-  fiberTy_fiberOf value error
 example (value error : Ty) : fiberTy (.fiberOf value error) = some (value, error) := rfl
 #guard fiberTy rawFiber = some (.prod (.union .nat .string) .unit, .never)
 #guard fiberTy rawFiber = Member.fiber rawFiber

@@ -75,9 +75,6 @@ def stringRecord : Ty := .record [("a", false, .string)]
 #guard Record.fieldType false .never "a" = some .never
 #guard Record.fieldType true .never "a" = some .never
 #guard Record.setType .never "a" .nat = some .never
-example (rule : Ty → Option Ty) : lift rule .never = some .never := lift_never rule
-example (rule : Ty → Option (Ty × Ty)) : lift rule .never = some (.never, .never) :=
-  lift_never rule
 
 -- A union of two records: the answers of the two members, joined.
 #guard Ty.join .nat .string = .union .nat .string

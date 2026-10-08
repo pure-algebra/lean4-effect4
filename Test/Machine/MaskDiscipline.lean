@@ -1,6 +1,5 @@
 import Effect4.Laws.Machine.MaskDiscipline
 import Effect4.Laws.Machine.LiveStack
-import ProofGraph.Plan
 
 /-!
 # Test.Machine.MaskDiscipline — the saved mask's chain through a pop: finite controls
@@ -313,48 +312,13 @@ private def broken : List (Bool × List P × F) :=
 #guard !broken.isEmpty
 #guard broken.all fun (_, _, f) => !f.stack.isEmpty
 
-/-! ## The statements, pinned
+/-! ## The placed theorem in use
 
-The placed theorem at every alphabet with the four instances, and each field as it stands, by
-its type at the alphabets `Nat`. -/
-
-example (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
-    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] :
-    MaskPopDiscipline ν σ β ε δ ι α :=
-  saved_mask_pop_discipline ν σ β ε δ ι α
+`saved_mask_pop_discipline` at the alphabets `Nat`, read at concrete fibers. -/
 
 /-- The placed theorem at the alphabets `Nat`. -/
 private theorem atNat : MaskPopDiscipline Nat Nat Nat Nat Nat Nat Nat :=
   saved_mask_pop_discipline Nat Nat Nat Nat Nat Nat Nat
-
-example : ∀ (base : Bool) (demand : Arm) (skip : Bool) (frames : List P) (f : F)
-    (carried : Option C), f.stack = [] → MaskChain base f.interruptible frames →
-      MaskChain base (popFrom demand skip frames f carried).fiber.interruptible
-        (popFrom demand skip frames f carried).fiber.stack :=
-  atNat.pop
-
-example : ∀ (base : Bool) (f : F) (demand : Arm) (skip : Bool) (carried : Option C),
-    MaskChain base f.interruptible f.stack →
-      MaskChain base (f.getCont demand skip carried).fiber.interruptible
-        (f.getCont demand skip carried).fiber.stack :=
-  atNat.getCont
-
-example : ∀ (base : Bool) (f : F), MaskChain base f.interruptible f.stack →
-    MaskChain base (frameExitState f).interruptible (frameExitState f).stack :=
-  atNat.frameExit
-
-example : ∀ (base : Bool) (f : F), MaskChain base f.interruptible f.stack →
-    MaskChain base f.uninterruptible.interruptible f.uninterruptible.stack :=
-  atNat.uninterruptible
-
-example : ∀ (base : Bool) (f : F), MaskChain base f.interruptible f.stack →
-    MaskChain base f.interruptibleRegion.fst.interruptible f.interruptibleRegion.fst.stack :=
-  atNat.interruptibleRegion
-
-example : ∀ (base : Bool) (f g : F), f.stack = g.stack →
-    MaskChain base f.interruptible f.stack → MaskChain base g.interruptible g.stack →
-      f.interruptible = g.interruptible :=
-  atNat.sameFlag
 
 /-- A field in use: the pop of row 3's fiber, with a carried cause, keeps the chain. -/
 example : MaskChain true (nested.getCont .contE true (some cause)).fiber.interruptible

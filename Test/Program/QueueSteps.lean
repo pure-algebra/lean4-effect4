@@ -1,7 +1,6 @@
 import Effect4.Modules.Queue.Steps
 import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Codegen.ListFold
-import ProofGraph.Plan
 
 /-!
 # The Queue's cell and its steps: finite controls of the library module (decisions row 255)

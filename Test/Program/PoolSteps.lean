@@ -4,7 +4,6 @@ import Effect4.Laws.Modules.Pool.Typing
 import Effect4.Laws.Modules.Store
 import Effect4.Laws.Modules.Waiting
 import Test.Program.QueueSteps
-import ProofGraph.Plan
 
 /-!
 # Pool's cell and its steps: finite controls of the library module (rows 267 to 269 and 276)

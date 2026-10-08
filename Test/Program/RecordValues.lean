@@ -44,16 +44,4 @@ example : ¬ NamedFit [("nickname", false, fun v => v = Val.unit)] [] [] := by
   intro h
   exact Bool.noConfusion h.1
 
--- The pair witness retains the name, not merely an inhabited field type.
-example (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val)
-    (h : NamedFit ps ns xs) (q : String × Bool × (Val → Prop))
-    (hq : q ∈ ps) (hr : q.2.1 = false) :
-    ∃ x, (Val.str q.1, x) ∈ ns.zip xs ∧ q.2.2 x :=
-  namedFit_required_pair ps ns xs h q hq hr
-
--- Name and value count mismatch is impossible for every fitting record.
-example (ps : List (String × Bool × (Val → Prop))) (ns xs : List Val)
-    (h : NamedFit ps ns xs) : ns.length = xs.length :=
-  namedFit_lengths ps ns xs h
-
 end Effect4.Test.RecordValues

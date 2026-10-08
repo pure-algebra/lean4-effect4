@@ -1,5 +1,4 @@
 import Effect4.Laws.Slice.Lattice
-import ProofGraph.Plan
 
 /-!
 # The generic theory of type slices: the paper's examples, the red controls

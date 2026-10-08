@@ -63,11 +63,3 @@ theorem external_handle_variable :
   | tail _ member => cases member
 
 end RawHandleControls
-
-/-- The exported helper: registered frames in, registered frames out. -/
-example (t : Effect4.Program.Term) (env : List Effect4.Machine.Val) (v : Effect4.Machine.Val)
-    (registered : ∀ x ∈ env, ∀ code ∈ Effect4.Store.Val.handles x,
-      (Effect4.Machine.HandleKind.ofByte? code.1).isSome = true)
-    (evaluates : Effect4.Program.evalTerm env t = some v) :
-    ∀ code ∈ Effect4.Store.Val.handles v, (Effect4.Machine.HandleKind.ofByte? code.1).isSome = true :=
-  Effect4.Program.RawHandles.evalTerm_registered t env v registered evaluates

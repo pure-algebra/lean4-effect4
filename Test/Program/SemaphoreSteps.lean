@@ -3,7 +3,6 @@ import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Modules.Semaphore.Typing
 import Effect4.Laws.Modules.Store
 import Test.Program.QueueSteps
-import ProofGraph.Plan
 
 /-!
 # Semaphore's cell and its steps: finite controls of the library module (decisions row 265)

@@ -1,4 +1,5 @@
-import Effect4.Laws.Program.Signature
+import Effect4.Program.Native
+import Effect4.Program.Checker
 
 /-!
 Finite record typing refusal controls. These examples check field names, nested term addresses,
@@ -83,9 +84,5 @@ def genericCause : CauseTerm := .both (.die (.var 5)) (.fail missing)
 #guard runCause (.interrupt (some (.lit (.str "not a fiber id")))) =
   .error ⟨[2, 1], .cause (.interrupt (some (.lit (.str "not a fiber id"))))⟩
 #guard runCause (.interrupt none) = .ok ⟨.never, .never, Effect4.Machine.Env.Requirement.empty⟩
-
-example {Op : Type} (sig : Signature Op) (env : TyEnv) (path : List Nat) (term : Term) :
-    (Checker.term? sig env path term).toOption = termTy sig env term :=
-  Checker.toOption_term? sig env path term
 
 end Test.Program.RecordRefusals

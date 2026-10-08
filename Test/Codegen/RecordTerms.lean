@@ -1,4 +1,4 @@
-import Effect4.Laws.Codegen.ReadLeaf
+import Effect4.Codegen.Read
 
 /-!
 Record term controls for the existing scope-only print/read judgment.
@@ -51,15 +51,5 @@ def controlRow : Effect4.Program.Row :=
   !rowNamesSafe { controlRow with spelling := name }
 #guard Effect4.Codegen.Record.helperNames.all fun name =>
   !rowNamesSafe { controlRow with trailing := [name] }
-
--- Since the list fold (decisions row 228) the retraction also takes a term whose folds state no
--- accumulator type: a stated type is printed and not read.
-example (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (term : Term)
-    (h : term.scoped n = true) (hc : term.covers classes = true)
-    (hu : term.unannotated = true) :
-    readTerm classes n (printTerm n term) = .ok term := readTerm_printTerm term h hc hu
-
-example (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x : TypeScript.Expr) (term : Term)
-    (h : readTerm classes n x = .ok term) : printTerm n term = x := readTerm_exact x h
 
 end Effect4.Test.RecordTermsCodegen

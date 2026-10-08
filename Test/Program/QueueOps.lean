@@ -1,7 +1,6 @@
 import Test.Program.QueueScenarios
 import Test.Program.QueueSteps
 import Effect4.Laws.Modules.Queue.Ops
-import ProofGraph.Plan
 
 /-!
 # The Queue's operations: the finite controls of the library module (rows 233, 242 and 255)

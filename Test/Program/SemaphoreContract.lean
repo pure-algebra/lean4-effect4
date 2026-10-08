@@ -1,5 +1,4 @@
 import Effect4.Laws.Modules.Semaphore.Profile
-import ProofGraph.Plan
 
 /-!
 # Semaphore's abstract contract: the named controls and the falsifiers

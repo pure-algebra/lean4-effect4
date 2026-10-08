@@ -1,4 +1,4 @@
-import Effect4.Laws.Codegen.Record
+import Effect4.Codegen.Record
 
 /-!
 Structural wrapper controls. The universal laws are about target expressions, not rendered
@@ -102,11 +102,5 @@ def updateWith (genericKey key : String) (targets values : List Expr) : Expr :=
   [.str "other"]) [.ident "p"])).isNone
 #guard (readField (.call (.call (.generic (.ident "recordRequired") [.literal "nickname"])
   [.str "nickname"]) [.ident "p", .ident "q"])).isNone
-
-example (fs : Fields) (ns : List String) (vs : List Expr) :
-    readRecord (writeRecord fs ns vs) = some (fs, ns, vs) := readRecord_writeRecord fs ns vs
-example (e : Expr) (fs : Fields) (ns : List String) (vs : List Expr)
-    (h : readRecord e = some (fs, ns, vs)) : writeRecord fs ns vs = e :=
-  readRecord_exact e fs ns vs h
 
 end Effect4.Test.Record

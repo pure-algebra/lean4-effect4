@@ -2,7 +2,6 @@ import Effect4.Laws.Modules.Semaphore.Steps
 import Effect4.Laws.Modules.Store
 import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreSteps
-import ProofGraph.Plan
 
 /-!
 # Semaphore's relation and its step goals: finite controls (decisions row 265)

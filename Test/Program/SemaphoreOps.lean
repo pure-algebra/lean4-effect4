@@ -1,6 +1,5 @@
 import Test.Program.SemaphoreScenarios
 import Effect4.Laws.Modules.Semaphore.Ops
-import ProofGraph.Plan
 
 /-!
 # Semaphore's operations: the finite controls of the library module (rows 259 to 261 and 276)

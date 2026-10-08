@@ -1,7 +1,6 @@
 import Test.Program.PoolPublic
 import Test.Program.SemaphoreOps
 import Effect4.Laws.Modules.Pool.Ops
-import ProofGraph.Plan
 
 /-!
 # Pool's operations: the finite controls of the library module's laws (rows 267 to 269, 276, 279)

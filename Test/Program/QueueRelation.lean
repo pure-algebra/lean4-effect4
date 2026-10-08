@@ -1,7 +1,6 @@
 import Effect4.Laws.Modules.Queue.Steps
 import Effect4.Laws.Modules.Store
 import Test.Program.QueueAgreement
-import ProofGraph.Plan
 
 /-!
 # The Queue's relation and its step goals: finite controls (decisions row 255)

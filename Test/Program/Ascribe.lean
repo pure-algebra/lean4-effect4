@@ -3,7 +3,6 @@ import Effect4.Program.Authoring.Ascribe
 import Effect4.Laws.Program.Authoring.Ascribe
 import Effect4.Laws.Modules.Ascribe
 import Test.Dogfood.Stage
-import ProofGraph.Plan
 
 /-!
 # A term at a declared type: the controls of `ascribe`

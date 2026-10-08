@@ -26,9 +26,6 @@ open Effect4.Program.NativeAtom (AtomRow Spec specWellFormed)
 
 #guard NativeAtom.all.all NativeAtom.atomWellFormed
 
-/-- The decided fact, named here so the battery fails with it. -/
-example : NativeAtom.all.all NativeAtom.atomWellFormed = true := NativeAtom.atom_table_wf
-
 /-! ## Rows built by hand, judged by the shipped predicate
 
 `prelude` and `cite` play no part in well-formedness, so they are empty here; every other

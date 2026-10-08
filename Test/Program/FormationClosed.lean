@@ -255,11 +255,6 @@ def declaring (carrier : Ty) : SigApp := { services := [(cellKey, carrier)] }
 #guard closed5.all fun e =>
   Formation.input e [templateRow] = Formation.tableSites [templateRow] ++ Formation.programSites e
 
-/-- An admitted program has closed types, with no premise on its signature. -/
-example {program : NativeEff} {app : SigApp} (admitted : AdmittedProgram program app) :
-    admitted.ty.answer.closed = true ∧ admitted.ty.error.closed = true :=
-  admitted.closed
-
 /-! ## A layer reference: the expansion states what the program states
 
 The whole-program checker types a program's expansion, and formation reads the stored program.

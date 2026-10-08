@@ -1,7 +1,6 @@
 import Effect4.Laws.Api.Codegen
 import Effect4.Laws.Program.CheckedTyping
 import Effect4.Laws.Program.ReferenceTyping
-import ProofGraph.Plan
 
 /-!
 # Test.Program.ReferenceExpansion — the reference expansion on real programs: finite controls
@@ -301,45 +300,5 @@ example (program : NativeEff) (site : List Nat × List Nat) (rest : List (List N
     program.expandRefs.refSites [] ≠ site :: rest := by
   rw [expanded_refs_nil_of_wf program wellFormed]
   exact nofun
-
-/-! ## The statements, pinned
-
-Each statement as it stands, by its type. `typeOfProgram_expandRefs` carried a second premise
-before, that the expansion has no reference site, and `checkTypedProgram_of_hasTy` carried the
-same fact as an equation. The checker's equation and the facade's keep their statements across
-decisions row 273, point 2: each is now its definition's own. -/
-
-example : ∀ {Op : Type} (root : Eff Op), root.layerRefsWF = true →
-    root.expandRefs.refSites [] = [] :=
-  @expanded_refs_nil_of_wf
-
-example : ∀ {Op : Type} (sig : Signature Op) (p : Eff Op),
-    typeOfProgram sig p = if p.layerRefsWF then typeOf sig p.expandRefs else none :=
-  @typeOfProgram_eq_if_refsWF
-
-example : ∀ {Op : Type} (sig : Signature Op) (p : Eff Op), p.layerRefsWF = true →
-    typeOfProgram sig p.expandRefs = typeOfProgram sig p :=
-  @typeOfProgram_expandRefs
-
-example : ∀ {Op : Type} {sig : Signature Op} {program : Eff Op} {ty : EffTy},
-    program.layerRefsWF = true →
-    Conform.Effect4.Typing.HasTy sig [] program.expandRefs ty →
-    ∃ checked, checkTypedProgram sig program = some checked ∧ checked.ty = ty :=
-  @checkTypedProgram_of_hasTy
-
-example : ∀ {Op : Type} {sig : Signature Op} {program : Eff Op},
-    TypedProgram sig program → program.expandRefs.refSites [] = [] :=
-  @TypedProgram.expanded_refSites
-
-example : ∀ (program : Api.Program) (table : RowTable),
-    Api.explain program table =
-      if program.layerRefsWF then
-        Effect4.Program.explain (nativeSignature table) [] program.expandRefs
-      else some ⟨[], .referencesIllFormed⟩ :=
-  @Api.explain_eq_if_refsWF
-
-example : ∀ (program : Api.Program) (table : RowTable),
-    Api.explain program table = none ↔ Api.wellTyped program table = true :=
-  @Api.explain_none_iff
 
 end Test.Program.ReferenceExpansion

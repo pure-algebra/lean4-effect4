@@ -1,5 +1,4 @@
 import Effect4.Laws.Modules.Queue.Invariant
-import ProofGraph.Plan
 
 /-!
 # The Queue model's run invariant: its finite controls

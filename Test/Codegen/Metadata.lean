@@ -1,4 +1,4 @@
-import Effect4.Laws.Codegen.Metadata
+import Effect4.Codegen.Metadata
 
 /-!
 # Structural type metadata controls
@@ -53,8 +53,5 @@ open Effect4.Program Effect4.Store Effect4.Codegen.Metadata TypeScript
 #guard readValue (writeValue (.ctor (2 ^ 90) [.bytes [0, 255], .negInt (2 ^ 75)])) ==
   some (Val.ctor (2 ^ 90) [.bytes [0, 255], .negInt (2 ^ 75)])
 #guard readValue (writeValue (.ref 255 [0, 17, 255])) == some (Val.ref 255 [0, 17, 255])
-
-example (t : Ty) : readTy (writeTy t) = some t := readTy_writeTy t
-example (e : Expr) (t : Ty) (h : readTy e = some t) : writeTy t = e := readTy_exact e t h
 
 end Effect4.Test.Metadata

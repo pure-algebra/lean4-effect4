@@ -1,5 +1,4 @@
 import Effect4.Laws.Modules.Queue.Capacity
-import ProofGraph.Plan
 
 /-!
 # The Queue's capacity statements: their finite controls

@@ -3,7 +3,6 @@ import Effect4.Laws.Codegen.Mask
 import Effect4.Laws.Program.Authoring.Mask
 import Test.Program.MaskContract
 import TypeScript.Render
-import ProofGraph.Plan
 
 /-!
 # The mask's five claims: their statements, and the printed form

@@ -2,7 +2,6 @@ import Effect4.Laws.Machine.MaskRuns
 import Effect4.Laws.Program.MaskRuns
 import Effect4.Laws.Api.MaskRuns
 import Test.Program.MaskContract
-import ProofGraph.Plan
 
 /-!
 # Test.Machine.MaskRuns — the saved mask's chain from one pop to a run: finite controls
@@ -204,33 +203,7 @@ private def answered : F := ⟨.success 0, [value, handler], true, none, false�
 #guard (frameExitState answered).stack == [handler]
 #guard holds true (frameExitState answered)
 
-/-! ## The statements of part A, pinned
-
-The brief's two statements of part A as they stand, by their types at the alphabets `Nat`. -/
-
-example : ∀ (base : Bool) (interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat) (f : F),
-    MaskChain base f.interruptible f.stack → ∀ (next : F),
-      (f.step interp).fst = FrameStep.running next → MaskChain base next.interruptible next.stack :=
-  step_maskChain
-
-example : ∀ (demand : Arm) (skip : Bool) (frames : List P) (f : F), f.stack = [] →
-    (popFrom demand skip frames f).answer = ContAnswer.empty →
-      (popFrom demand skip frames f).fiber.stack = [] :=
-  popFrom_unanswered_stack
-
-example : ∀ (base : Bool) (demand : Arm) (skip : Bool) (frames : List P) (f : F), f.stack = [] →
-    MaskChain base f.interruptible frames →
-      (popFrom demand skip frames f).answer = ContAnswer.empty →
-        (popFrom demand skip frames f).fiber.interruptible = base :=
-  popFrom_unanswered_flag
-
-example : ∀ (base : Bool) (interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat) (f : F),
-    MaskChain base f.interruptible f.stack → ∀ (exit : Exit Nat Nat Nat Nat Nat),
-      (f.step interp).fst = FrameStep.finished exit →
-        (frameExitState f).stack = [] ∧ (frameExitState f).interruptible = base :=
-  fun base interp f valid exit finished =>
-    ⟨step_finished_stack interp f exit finished,
-      step_finished_flag base interp f valid exit finished⟩
+/-! ## A statement of part A in use -/
 
 /-- A statement in use: a step of a fiber of the sweep keeps the chain. -/
 example : ∀ next : F, (answered.step frames).fst = FrameStep.running next →
@@ -612,16 +585,16 @@ private def liveAt (m : Api.Machine) (id : Nat) :
     | some (_, stack), some (_, stack') => stack == stack' && !stack.isEmpty
     | _, _ => false)
 
-/-- The theorem at the program interface: it takes no premise on the program. -/
-example (p : Api.Program) (budget : Nat) :
-    ∃ bases, [true] <+: bases ∧ MaskRuns bases (Api.replay p budget flushes [] [] fuel).machine :=
-  Api.replay_maskRuns p budget flushes [] [] fuel
-
 /-! ### The other entries that return a machine
 
 `Api.runSync`, the checked replay, the journaled run API under a host, and the runner's rows of
 bytes. Each control cuts one run at each command budget below a bound and at the full budget.
-Exactly one table of start flags fits every cut, so each other table is red at some cut. -/
+Exactly one table of start flags fits every cut, so each other table is red at some cut.
+
+Each entry has its law, with no premise on the program: `Api.replay_maskRuns`,
+`Api.runSync_maskRuns`, `Api.replayChecked_maskRuns`, `Run.open_play_maskRuns` and
+`Api.Runner.replayBytes_maskRuns`. Two readers below compose them: the drive under a host,
+and the reading of a run. -/
 
 /-- `Api.runSync`, cut at each command budget below `upTo` and at the full budget. -/
 private def syncCuts (src : Src NativeOp) (upTo : Nat) : List Api.Machine :=
@@ -737,23 +710,6 @@ private def byteCuts (n : Nat) : List Api.Machine :=
 #guard (byteCuts fuel).map shown == (journalCuts fuel).map shown
 #guard fitting ((List.range 60).flatMap byteCuts ++ byteCuts fuel) 2 == [[true, false]]
 
-/-- `Api.runSync` at the program interface: it takes no premise on the program. -/
-example (p : Api.Program) (budget : Nat) :
-    ∃ bases, [true] <+: bases ∧ MaskRuns bases (Api.runSync p budget [] [] fuel).1 :=
-  Api.runSync_maskRuns p budget [] [] fuel
-
-/-- The checked replay: the machine of a refused decision holds the invariant. -/
-example (p : Api.Program) (budget position : Nat) (tape : List Api.Decision)
-    (input : Api.Decision) (why : Api.Refusal) (machine : Api.Machine)
-    (refused : Api.replayChecked p budget tape = .inr (.decision position input why machine)) :
-    ∃ bases, [true] <+: bases ∧ MaskRuns bases machine :=
-  (Api.replayChecked_maskRuns p budget tape [] []).2 position input why machine refused
-
-/-- The journaled run: each journal from an opened run, with no premise on the built program. -/
-example (b : Api.Built) (rows : List Api.Runner.Command) :
-    ∃ bases, [true] <+: bases ∧ MaskRuns bases ((Run.open b "calls").play rows).machine :=
-  Run.open_play_maskRuns b "calls" {} "" rows
-
 /-- The drive under a host, from a started run. -/
 example (b : Api.Built) (r : Run.Reactor Unit) :
     ∃ bases, [true] <+: bases ∧
@@ -761,13 +717,6 @@ example (b : Api.Built) (r : Run.Reactor Unit) :
   obtain ⟨bases, le, kept⟩ := Run.open_play_maskRuns b "calls" {} "" Rows.start
   obtain ⟨bases', le', kept'⟩ := Run.drive_maskRuns _ r () 64 bases kept
   exact ⟨bases', List.IsPrefix.trans le le', kept'⟩
-
-/-- The rows of bytes, from a loaded runner. -/
-example (p : Api.Runner.Runner) (rows : List Effect4.Store.Bytes) (bases : List Bool)
-    (kept : MaskRuns bases p.session.machine) :
-    ∃ bases', bases <+: bases' ∧
-      MaskRuns bases' (Api.Runner.replayBytes p rows).1.session.machine :=
-  Api.Runner.replayBytes_maskRuns p rows bases kept
 
 /-- A reading holds the session's machine, so the invariant at a run is the invariant at its
 reading. -/
@@ -778,46 +727,11 @@ example (s : Run) (bases : List Bool) (kept : MaskRuns bases s.machine) :
 
 end Compiled
 
-/-! ## The statements of part B, pinned -/
+/-! ## Part B's theorem in use -/
 
 /-- The general form at the alphabets `Nat`. -/
 private theorem atNat : MaskChainRuns Nat Nat Nat Nat Nat Nat Nat Unit Unit :=
   saved_mask_chain_runs Nat Nat Nat Nat Nat Nat Nat Unit Unit
-
-example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (bases : List Bool) (m : M)
-    (c : K) (rest : List K), MaskRuns bases m → ClearReady bases m c →
-      ∃ bases', bases <+: bases' ∧ MaskRuns bases' (driveStep interp m c rest).1 :=
-  atNat.command
-
-example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (fuel : Nat)
-    (tape : List D) (bases : List Bool) (m : M), MaskRuns bases m →
-      ∃ bases', bases <+: bases' ∧ MaskRuns bases' (replayEval interp fuel tape m).machine :=
-  atNat.replay
-
-example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (m : M) (f : R) (y : Bool)
-    (exit : Exit Nat Nat Nat Nat Nat),
-    (evaluatePrim interp m f y).outcome = Outcome.finished exit →
-      (evaluatePrim interp m f y).fiber.frame.stack = [] :=
-  atNat.finished
-
-example : ∀ (bases bases' : List Bool) (m : M) (f : R), MaskRuns bases m → MaskRuns bases' m →
-    f ∈ m.fibers → f.exit = none → bases[f.id.value]? = bases'[f.id.value]? :=
-  atNat.sameBase
-
-example : ∀ (bases bases' : List Bool) (m m' : M) (f g : R), MaskRuns bases m →
-    MaskRuns bases' m' → bases <+: bases' → f ∈ m.fibers → g ∈ m'.fibers → g.id = f.id →
-      f.exit = none → g.exit = none → f.frame.stack = g.frame.stack →
-        f.frame.interruptible = g.frame.interruptible :=
-  atNat.sameFlag
-
-/-- The placed statement, as it stands: the compiled program's interpreter under the native
-evaluator. -/
-example : ∀ (root : Program.NativeEff) (table : Program.RowTable) (fuel : Nat)
-    (tape : List Api.Decision) (bases : List Bool) (m : Api.Machine), MaskRuns bases m →
-      ∃ bases', bases <+: bases' ∧ MaskRuns bases'
-        (replayEval (evaluator := Program.evaluatorFor root table) (Program.interpOf root table)
-          fuel tape m).machine :=
-  Program.compiled_mask_chain_runs
 
 /-- A field in use: the empty machine, then a root at flag true. -/
 example : MaskRuns [true] (rooted hosts) :=
