@@ -61,8 +61,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 1. **The cleanup pause** (the owner, 2026-10-07). The generated codec proofs become exact. The
-   batteries that replay a run twice stop doing so. The decisions register closes the open rows
-   whose work has landed. Codex's review repairs follow when the owner relays them.
+   batteries that replay a run twice stop doing so. Codex's review repairs follow when the owner
+   relays them.
 2. **The typed print.** UNGUARD at the row calls, then P2b (the eliminators) and P3 (row 325,
    point 5).
 3. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
