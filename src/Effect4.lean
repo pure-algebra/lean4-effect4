@@ -90,6 +90,10 @@ import Effect4.Program.TyClasses
 import Effect4.Program.Bounds
 import Effect4.Schema.Template
 import Effect4.Schema.TyFaces
+-- Lean types tied to `Ty` by the carrier fold, and their deriving step (decisions row 330).
+import Effect4.Store.Carrier.Image.Record
+import Effect4.Schema.Modeled
+import Effect4.Schema.Modeled.Derive
 import Effect4.Program.Typing
 import Effect4.Program.Definitions
 import Effect4.Program.Typing.Blame

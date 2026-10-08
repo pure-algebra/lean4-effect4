@@ -291,6 +291,19 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   An image holds no handle, so every world and every store keep its membership.
   It establishes no reply admission.
   (`saved_mask_image_membership` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
+- **A modeled value inhabits its type (`modeled-membership`)**: The carrier fold gives each
+  supported `Ty` its Lean carrier and its exact embedding together (`Model.alg`,
+  `src/Effect4/Schema/Modeled.lean`).
+  The refusal fold names the first reason a type is outside the checked domain
+  (`Model.refusalAlg`).
+  It refuses an identity type, an optional field and each constructor with no carrier yet.
+  It refuses a record whose names are not strictly ascending by their bytes.
+  On the checked domain, every carrier value's encoding inhabits its type at every allocation
+  table (`Model.member`, `src/Effect4/Laws/Schema/Modeled.lean`).
+  An instance of `Modeled` proves its type checked, and its image is the fold's.
+  So an instance inherits the law with no proof of its own (`Modeled.member`).
+  It establishes nothing for an identity type, an optional field or a refused constructor, and
+  no codec admission (decisions row 330).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 - **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
@@ -821,6 +834,13 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   It transports the existing `read_print`, and `readTyped_exact` transports `read_exact`.
   The raw reader still refuses an inserted argument before the erasure.
   No equality of raw foreign spellings follows.
+- **A modeled value survives JSON (`modeled-codec`)**: Take a modeled value at the normal form
+  of its type. Decoding its encoding and reading it back answers the value
+  (`Modeled.codec_roundtrip`, `src/Effect4/Laws/Schema/Modeled.lean`).
+  Membership comes from `modeled-membership`, and the step is `decode-encode`.
+  Codec admission at the value (`Ty.isCodecValue`) stays a premise: a natural above 2^53
+  inhabits `nat` and has no exact JSON image.
+  It establishes no TypeScript codec and no target execution (decisions row 330).
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.

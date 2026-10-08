@@ -22,6 +22,7 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | fold-typed-atomic-update | compatibility | proved | Effect4.Program.Typed.fold_typed_atomic_update | yes |  |
 | handle-identity-laws | canonicalForms | proved | Effect4.Program.Typed.handle_identity_laws | yes |  |
 | saved-mask-image-membership | canonicalForms | proved | Effect4.Program.Typed.saved_mask_image_membership | yes |  |
+| modeled-membership | compatibility | proved | Effect4.Schema.Model.member | yes |  |
 | store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
 | semaphore-profile-closed | preservation | proved | Effect4.Semaphore.Model.profile_closed | yes |  |
 | waiting-wrapper-typed | compatibility | proved | Effect4.Modules.waitRetryAt_answers | yes |  |
@@ -125,6 +126,15 @@ Literature: Ahmed2004, audit P1 — analogy
 
 ```lean
 Effect4.Program.Typed.SavedMaskImage
+```
+
+**modeled-membership**
+
+```lean
+∀ (t : Effect4.Program.Ty),
+  Eq (Effect4.Schema.Model.refusal t) Option.none →
+    ∀ (x : Effect4.Schema.Model.Carrier t) (alloc : List String),
+      Eq (Effect4.Program.Val.hasTy ((Effect4.Schema.Model.image t).toVal x) t alloc) Bool.true
 ```
 
 Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
@@ -1265,6 +1275,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | typed-print-erasure | compatibility | proved | Effect4.Codegen.eraseJoinArgs_printTyped | yes |  |
 | typed-print-read | compatibility | proved | Effect4.Codegen.readTyped_printTyped | yes |  |
 | module-defs-round-trip | compatibility | proved | Effect4.Program.readModule_printModule_defs | yes |  |
+| modeled-codec | compatibility | proved | Effect4.Schema.Modeled.codec_roundtrip | yes |  |
 
 ### Printed statements
 
@@ -1445,6 +1456,22 @@ Effect4.Program.MaskRowsPremises
                               (List.map TypeScript.Decl.classDecl classDecls)
                               (List.map TypeScript.Decl.const decls)))
                           (Except.ok root)
+```
+
+**modeled-codec**
+
+```lean
+∀ (α : Type) [m : Effect4.Schema.Modeled α] (a : α),
+  Eq
+      ((Effect4.Program.CTy.ofRaw (m.ty α)).toRaw.isCodecValue
+        ((Effect4.Schema.Modeled.image α).toVal a))
+      Bool.true →
+    Eq
+      (((Effect4.Schema.encode (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw
+                ((Effect4.Schema.Modeled.image α).toVal a)).bind
+            (Effect4.Schema.decode (Effect4.Program.CTy.ofRaw (m.ty α)).toRaw)).bind
+        (Effect4.Schema.Modeled.image α).ofVal)
+      (Option.some a)
 ```
 
 ## subtyping-algebra
@@ -2681,7 +2708,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | --- | --- | --- | --- | --- |
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved), `moduleHasTy_ext` (proved), `typeOfProgram_ext` (proved) | — |
-| R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
+| R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved), `member` (proved), `codec_roundtrip` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `closeStep_types` (proved), `drainStep_types` (proved), `initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lookup_solve_seed` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `perform_scoped_iff` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `session_eq_ref` (proved) | `run_eq_ref_table` (goal), `run_eq_ref_table_noPreload` (proved), `handles_of_payloadFieldTy` (proved), `applied_selects` (proved), `control_retires` (proved), `denoteRows_eq_session` (goal), `session_eq_ref` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `run_eq_ref_table`, `denoteRows_eq_session`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
@@ -3345,10 +3372,13 @@ flowchart LR
   n561e17aa["errOf_ne_boom_of_supported<br/>proved"]
   n1d9fd8ec["errOf_payload<br/>proved"]
   ncc4bbe09["isPayload_of_hasTy_record<br/>proved"]
+  n663a1c99["member<br/>proved"]
+  nef3b473["codec_roundtrip<br/>proved"]
   na46bd7a0["subN_trans<br/>proved"]
   n9d9c3800["normalize_idem<br/>proved"]
   n30801347["subN_refl<br/>proved"]
   n4dc056f1["handles_of_payloadFieldTy<br/>proved"]
+  n42dc9276["decode_encode<br/>proved"]
   n8f1a9253 --> na46bd7a0
   n8f1a9253 --> n9d9c3800
   ne59d24c0 --> na46bd7a0
@@ -3360,6 +3390,10 @@ flowchart LR
   n561e17aa --> n1d9fd8ec
   n561e17aa --> ncc4bbe09
   ncc4bbe09 --> n4dc056f1
+  nef3b473 --> n42dc9276
+  nef3b473 --> n663a1c99
+  nef3b473 --> n13d3cdb0
+  nef3b473 --> n9d9c3800
 ```
 
 | Node | Status | Rests on | Nearest nodes |
@@ -3378,10 +3412,13 @@ flowchart LR
 | `errOf_ne_boom_of_supported` | proved | — | `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record` |
 | `errOf_payload` | proved | — | — |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
+| `member` | proved | — | — |
+| `codec_roundtrip` | proved | — | `decode_encode`, `member`, `hom_eq_cata_ty`, `normalize_idem` |
 | `subN_trans` | proved | — | — |
 | `normalize_idem` | proved | — | — |
 | `subN_refl` | proved | — | — |
 | `handles_of_payloadFieldTy` | proved | — | — |
+| `decode_encode` | proved | — | — |
 
 ### R4: State: the world types every cell at any type, with rows as templates
 

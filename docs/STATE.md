@@ -22,7 +22,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   The approved eliminators read every union member of their input (P2b, row 325).
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
-  Streams have their first profile (row 311).
+  Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
+  `deriving Modeled` (row 330, slice L1). Each of its values inhabits the derived type and
+  survives JSON under codec admission, with no proof of its own.
 - **The machine and the session.** The frame machine agrees with the reference on a session
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
@@ -76,18 +78,20 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **Procedures** (row 328): slice PROC-5, the block's handler laws (the
+1. **The verified module toolkit** (row 330): slice L2, the step language over checked types,
+   then L3 to L6 (the [revision 3 note](research/2026-10-08-seat-MODULES-r3.md), section 6).
+2. **Procedures** (row 328): slice PROC-5, the block's handler laws (the
    [procedures note](research/2026-10-08-seat-PROC-design.md)).
-2. **The simulation across schedules** (row 329): slices S1 to S4 (the
+3. **The simulation across schedules** (row 329): slices S1 to S4 (the
    [simulation note](research/2026-10-08-seat-SIM-design.md)).
-3. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
+4. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
    [session API note](research/2026-10-07-session-api-design.md)).
-4. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
+5. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
 
 ## What the owner must decide
 
-- **The simulation's three questions** (row 329): what every schedule covers, the other side of
-  a module's law, and the clients it covers.
+- **The simulation's first question** (row 329): what every schedule covers. Its questions 2
+  and 3 take row 330's answer as their recommendation.
 - **The frozen contracts' statement pins** (row 301, point 8; the
   [test census](research/2026-10-06-test-cleanup-census.md), proposal 4).
 - **The claims record** (the [application packet](research/2026-10-07-packet-application-claims.md),

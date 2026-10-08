@@ -9,6 +9,7 @@ import Test.Counterexamples.Codegen.TypeScriptRender
 import Test.Schema.RepresentationContract
 import Test.Schema.SubAlphabetContract
 import Test.Schema.PayloadContract
+import Test.Schema.Modeled
 import Test.Data.RowContract
 import Test.Machine.Environment.ContextKeyContract
 import Test.Codegen.ExprContract

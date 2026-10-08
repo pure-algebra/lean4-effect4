@@ -111,6 +111,11 @@ private def auditImplementationModules : List Name :=
   -- The converter (`fold_of`): a command elaborator that adds a hand traversal's algebra, its
   -- homomorphism witness and `eq_cata` to the environment; meta code, no theorem of its own.
   , `Effect4.Program.FoldOf
+  -- The deriving step of `Modeled` (`deriving Modeled`, `derive_modeled`): a command elaborator
+  -- and a deriving handler that check a structure and write its instance; meta code, no theorem
+  -- in the module. The carrier fold and the class (`Effect4.Schema.Modeled`) and their laws stay
+  -- at the ceiling (decisions row 330).
+  , `Effect4.Schema.Modeled.Derive
   -- The position census, its totality gate and the typed-state skeleton emitter: commands over
   -- the environment and declaration constructors; meta code, no theorem in the modules.
   , `Effect4.Laws.Auto.Positions
