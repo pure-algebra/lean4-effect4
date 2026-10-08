@@ -1,0 +1,129 @@
+# Load paths in the proof graph: what carries the claims, and what waits for a load
+
+Status: research note (history, not authority). Base: `d327beff` (`refactor/phase1-phase3`).
+Tool: `tools/Tools/LoadPaths.lean` (`#load_report`, `#load_map`).
+
+On 2026-10-08 the owner offered an analogy, and asked to probe and mechanize it in this session.
+Early structural steel was used everywhere, and buildings were heavier than stone. Engineering
+then learned to place it on load paths, and sparse, strong structures followed. The proof graph
+is dense in the same way, and the work now is consolidation: enclose the edges, and reconfigure
+the supports. The owner added a constraint. No member is removed before we know its use: support, an access
+point, or part of the engineering basis.
+
+## 1. The one thing to know first
+
+- **The analogy holds, and it is measurable.** A theorem carries load when a registered claim
+  rests on it. The tool counts that over the whole proof graph from the proof terms.
+- **Three numbers, for the loaded proof graph of `Effect4.Laws`:**
+  - 13,139 authored theorems; 6,226 are under a registered root, or are one;
+  - 3,392 are used by some theorem, but no registered root reaches them;
+  - 3,521 are used by no theorem. Of these, 1,694 are hand-written, untagged for `simp`, and not
+    named in any battery or tool.
+- **No member is removed on this evidence** (owner, 2026-10-08). "Unconsumed" means "carries no
+  load under the claims registered today". It is a reason to look, not to cut (§5).
+- **A landing has a reuse ratio.** Today's repair of decisions row 333 reuses 6 laws against 8
+  new helpers, and all 10 of its theorems carry load. The shared step laws reuse at 71%.
+
+## 2. The literature
+
+Read from abstracts and summaries on 2026-10-08, not from full texts.
+
+| Work | What it gives here |
+| --- | --- |
+| Michell, *The limits of economy of material in frame-structures*, Philosophical Magazine 8 (1904) | least-weight frames are fully stressed: every member carries load. The numerical method starts from a dense "ground structure" of all possible members, and removes the idle ones for a given set of load cases |
+| Blanchette, Haslbeck, Matichuk and Nipkow, *Mining the Archive of Formal Proofs*, CICM 2015 | a proof library's dependency graph, measured: size, dependencies and reuse across entries |
+| Huch, *Structure in Theorem Proving* (arXiv 2209.13305, 2022) | the in-degree of the archive's dependency graph appears scale-free: a few joints carry most of the use |
+| Li, Peng, Severini and Shafto, *The Network Structure of Mathlib* (arXiv 2604.24797, 2026) | 308,129 declarations and 8.4 million edges. Separate the edges the compiler synthesizes from the explicit ones. Namespaces couple at 50.9%, and an import is used at a median of 1.6% |
+| Kaliszyk, Urban and Vyskočil, *Lemmatization for Stronger Reasoning in Large Theories*, FroCoS 2015, and the lemma mining over HOL Light before it | only a small part of what a library proves is named and reused; mining the inference graph finds the lemmas worth naming |
+| Ringer, Palmskog, Sergey, Gligoric and Tatlock, *QED at Large* (2019) | proof engineering as software engineering: reuse, repair, regression; lemmas stand in for tests, with no coverage measure |
+| Hierarchy Builder (Cohen, Sakaguchi and Tassi, 2020), packed classes (Garillot, Gonthier, Mahboubi and Rideau, 2009) | a structure's theory is proved once and applies to every instance; small factories, built into the larger structures: laws at the algebra |
+
+**The point the owner made, in Michell's terms.** The ground structure method removes a member
+only against a fixed set of load cases. A member idle under one case may carry another. The proof
+graph's load cases are its claims, and the registered ones are not all of them. Planned claims,
+an agent's questions, and the module law (G10) are load cases still to come.
+
+## 3. The definitions
+
+| Word | Definition, as the tool computes it |
+| --- | --- |
+| direct dependency | an authored theorem that a theorem's proof term names, through the generated auxiliaries |
+| root | a registry claim's pointer, or a requirement's top node (`Tools.Semantics.registry`) |
+| load-bearing | a root reaches it along direct dependencies |
+| unconsumed | no theorem of the loaded tree names it, and it is no root |
+| off the roots' paths | some theorem names it, but no root reaches it |
+| reuse ratio of a landing | its edges into the tree outside it, over those and its edges into itself |
+| joints of a landing | the tree theorems it names most |
+
+Edges into Lean's own library and into instances that type-class resolution chose are counted
+apart: they are plumbing, as the Mathlib study separates compiler-synthesized edges.
+
+## 4. Measurements
+
+The environment imports `Effect4.Laws`. The batteries under `Test/` are not loaded, because
+loading them would rebuild them after the session repair of row 333. So the battery consumers
+were found by name, in the sources.
+
+**Landings.**
+
+| Landing | Theorems | Load-bearing | Reuse ratio | Its main joints |
+| --- | --- | --- | --- | --- |
+| `Laws.Program.Typing.Parts` (row 333's repair) | 10 | 10 | 42% | `callAt_rowTy`, `checkModule_sound`, `hasTy_focusAt` |
+| `Laws.Modules.Step` (slice L3) | 97 | 55 | 71% | `ItemResults.all_cons`, `Reads.eval`, `FieldRef.read_law` |
+| `Laws.Program.Typing.{Focus,Replace,Table}` | 32 | 20 | 45% | `effTy_sound`, `effTy_complete`, `check_sound` |
+| `Laws.Program.Sketch` | 18 | 8 | 43% | `check_restrict`, `check_ext`, `check_complete` |
+| `Laws.Modules.Queue` (slice L3, before Codex's fold slice) | 311 | 168 | 45% | `Reads.to` (20), `nodesFormed_of_check`, `normalize_list_canonical` |
+
+**The unconsumed theorems, by what consumes them.**
+
+| Class | Count |
+| --- | --- |
+| used by no theorem of the loaded graph | 3,521 |
+| of these, named in a battery under `Test/` | 1,124 |
+| named in a tool under `tools/` | 209 |
+| named nowhere | 2,188 |
+| of these, tagged for `simp` | 128 |
+| of the rest, in a generated file | 297 |
+| hand-written | 1,694 |
+
+The largest hand-written families: `Pool.Model.types_*` (20), `RunFiberOk.frame_*` (15),
+`Queue.Model.types_*` (15), `Pool.Model.reads_*` (11), `RunMachineOk.frame_*` (11),
+`Refinement.projects_*` (11), `GuardState.frame_*` (10).
+
+## 5. What it means, before any member moves
+
+Each family of unconsumed theorems is triaged into one of four classes. No class removes anything
+by itself.
+
+| Class | Test | Then |
+| --- | --- | --- |
+| access | an agent or an author asks for it: a characterization of a definition, a frame lemma of one field | keep; register it as an access lemma, so the graph counts it |
+| basis | it completes a family whose other members carry load, so the family is a total interface | keep; its load is the family's |
+| subsumed | a shared law now states it, at the algebra (`Step.typed` over a module's per-operation typing) | keep until a connector shows the shared law gives it; then retire it, with the connector as the record |
+| stale | it speaks of a representation that the tree replaced | retire with the representation |
+
+The per-field frame families look like basis. The per-operation `types_*` and `reads_*` families of
+the Queue and the Pool look like candidates for subsumption by Codex's shared step laws. Both
+readings are hypotheses, not findings.
+
+The 3,392 theorems used off the roots' paths are a placement question first: a claim that rests on
+them may be missing from the registry.
+
+## 6. The gauge, and the meta-interface
+
+- **The gauge.** Each landing's receipt reports its reuse ratio, its load-bearing count, and its
+  joints. A consolidation phase should show the ratio rising, and the unconsumed count not
+  growing without a class.
+- **The meta-interface.** For an agent, the roots are the interface of the proof graph, and the
+  joints are its deep modules. `#explain` can report each theorem's load-bearing status and its
+  class, as data, beside its placement.
+
+## 7. What this note does not establish
+
+- The load is counted along proof terms. An `aesop` bank's rule leaves a trace only through the
+  term that the search built. A battery's `simp` use of an untagged lemma is not seen.
+- Battery consumers were found by name in the sources, not from proof terms.
+- The roots are the semantics registry's. A claim that is stated but not registered counts as no load.
+- Four of the five landing rows are of the tree before Codex's fold slice merges.
+- The literature was read from abstracts and summaries. No full text is filed here.
+- Nothing was removed.
