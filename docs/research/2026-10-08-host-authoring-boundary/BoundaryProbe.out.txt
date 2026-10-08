@@ -1,0 +1,29 @@
+# Output of: scratch/lean-slot.sh lake env lean docs/research/2026-10-08-host-authoring-boundary/BoundaryProbe.lean
+# Base 0906b0e7 (sources unchanged at 5c26f121); exit status 0; no error.
+some ((Effect4.Api.HostProtocol.State.awaitingAsync,
+  Effect4.Api.Outcome.frontier,
+  [Effect4.Api.FrontierReason.awaitHost { fiber := { value := 0 }, token := 1 }]),
+ [(0, "host"), (1, "internal")],
+ [],
+ [],
+ [0],
+ 0,
+ 0)
+some ((Effect4.Api.HostProtocol.State.terminated, Effect4.Api.Outcome.finished, []),
+ [],
+ ([], [], [], 0, 0),
+ ["Effect4.Api.HostSession.Phase.progressed", "Effect4.Api.HostSession.Phase.bound",
+  "Effect4.Api.HostSession.Phase.preflight", "Effect4.Api.HostSession.Phase.applied",
+  "Effect4.Api.HostSession.Phase.progressed", "Effect4.Api.HostSession.Phase.progressed"])
+some (1, 0)
+some ((Effect4.Api.HostProtocol.State.parked, Effect4.Api.Outcome.frontier, []),
+ [(0, "internal")],
+ ([], [], [], 0, 0),
+ false,
+ false)
+(some (9, some [1, 0], some (Effect4.Program.Ty.option (Effect4.Program.Ty.nat))), some (0, some [1, 1, 0], none))
+(some "Effect4.Api.HostSession.Phase.preflight",
+  some "Effect4.Api.HostSession.Phase.refused (Effect4.Api.HostSession.Refusal.envelope)",
+  some "Effect4.Api.HostSession.Phase.preflight", some "Effect4.Api.HostSession.Phase.preflight")
+(some (42, 42, 0), some (1, 117, 1))
+some [([], "definitionBlock")]
