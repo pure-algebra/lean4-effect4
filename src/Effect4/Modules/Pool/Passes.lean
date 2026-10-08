@@ -1,8 +1,10 @@
 module
 
 public import Effect4.Modules.Pool.Cell
-public import Effect4.Modules.Step
+public import Effect4.Modules.Step.Lists
+public import Effect4.Modules.Step.Inputs
 meta import Effect4.Schema.FieldRef.Elab
+meta import Effect4.Modules.Step.Elab.Inputs
 
 /-! Pool's pure passes as Step data. Inputs captured by a fold retain their positions after
 its accumulator and element. The independent model remains in the Laws graph. -/
@@ -12,6 +14,15 @@ set_option autoImplicit false
 
 namespace Effect4.Pool.Data
 open Effect4.Program Effect4.Schema Effect4.Modules
+
+step_context% selectInputs (A : Ty) where (count : .nat, cell : cellTy A)
+step_context% closeInputs (A : Ty) where (cell : cellTy A)
+step_context% waiterInputs (id : idTy, hint : idTy)
+step_context% leaseInputs (A : Ty) where (id : idTy, hint : idTy, cell : cellTy A)
+step_context% returnInputs (A : Ty) where (stamp : .nat, lease : .nat, cell : cellTy A)
+step_context% withdrawInputs (A : Ty) where (id : idTy, cell : cellTy A)
+step_context% leaseItemInputs (A : Ty) where (lease : .nat, item : itemTy A)
+step_context% holdsInputs (A : Ty) where (stamp : .nat, lease : .nat, item : itemTy A)
 
 variable {Γ : List Ty}
 
@@ -24,68 +35,50 @@ def itemLeaseF (A : Ty) : FieldRef (itemRecord A) .nat := field_ref% "lease"
 def itemStampF (A : Ty) : FieldRef (itemRecord A) .nat := field_ref% "stamp"
 def waiterIdF : FieldRef waiterRecord idTy := field_ref% "id"
 
-/-- An outer input under the fold's accumulator and element. -/
-def under {t : Ty} (acc item : Ty) (x : Input Γ t) : Input (acc :: item :: Γ) t :=
-  .there _ (.there _ x)
+def headStamp (A : Ty) (cell : Step Γ (cellTy A)) : Step Γ .nat :=
+  Step.Lists.headOr (.get cell (availableF A)) (.nat 0)
 
-def headStamp (A : Ty) (cell : Input Γ (cellTy A)) : Step Γ .nat :=
-  .fold (.take (.get (.var cell) (availableF A)) (.nat 1)) (.nat 0)
-    (.var (.there _ (.here _ _)))
-
-def removed (A : Ty) (id : Input Γ idTy) (cell : Input Γ (cellTy A)) :
+def removed (A : Ty) (id : Step Γ idTy) (cell : Step Γ (cellTy A)) :
     Step Γ (.list waiterTy) :=
-  .fold (.get (.var cell) (passWaitersF A)) (.emptyLike (.get (.var cell) (passWaitersF A)))
-    (.ite (.sameDeferred (.get (.var (.there _ (.here _ _))) waiterIdF)
-        (.var (under (.list waiterTy) waiterTy id)))
-      (.var (.here _ _))
-      (.snoc (.var (.here _ _)) (.var (.there _ (.here _ _)))))
+  let waiters : Step Γ (.list waiterTy) := .get cell (passWaitersF A)
+  Step.Lists.removeBy waiters (item_step% waiters with waiter =>
+    .sameDeferred (.get waiter waiterIdF) id)
 
-def withdrawn (A : Ty) (id : Input Γ idTy) (cell : Input Γ (cellTy A)) : Step Γ (cellTy A) :=
-  .set (.var cell) (passWaitersF A) (removed A id cell)
+def withdrawn (A : Ty) (id : Step Γ idTy) (cell : Step Γ (cellTy A)) : Step Γ (cellTy A) :=
+  .set cell (passWaitersF A) (removed A id cell)
 
 def leasedAs (A : Ty) (lease : Step Γ .nat) (item : Step Γ (itemTy A)) : Step Γ (itemTy A) :=
   .set (.set item (itemBorrowedF A) (.bool true)) (itemLeaseF A) lease
 
-def marked (A : Ty) (cell : Input Γ (cellTy A)) : Step Γ (.list (itemTy A)) :=
-  .fold (.get (.var cell) (itemsF A)) (.emptyLike (.get (.var cell) (itemsF A)))
-    (.snoc (.var (.here _ _))
-      (.ite (.eq (.get (.var (.there _ (.here _ _))) (itemStampF A))
-          (headStamp A (under (.list (itemTy A)) (itemTy A) cell)))
-        (leasedAs A (.get (.var (under (.list (itemTy A)) (itemTy A) cell)) (nextF A))
-          (.var (.there _ (.here _ _))))
-        (.var (.there _ (.here _ _)))))
+def marked (A : Ty) (cell : Step Γ (cellTy A)) : Step Γ (.list (itemTy A)) :=
+  let items : Step Γ (.list (itemTy A)) := .get cell (itemsF A)
+  Step.Lists.map items (item_step% items with item =>
+    .ite (.eq (.get item (itemStampF A)) (headStamp A cell))
+      (leasedAs A (.get cell (nextF A)) item) item)
 
-def leasedOf (A : Ty) (cell : Input Γ (cellTy A)) : Step Γ (.list (itemTy A)) :=
-  .fold (.get (.var cell) (itemsF A)) (.emptyLike (.get (.var cell) (itemsF A)))
-    (.ite (.eq (.get (.var (.there _ (.here _ _))) (itemStampF A))
-        (headStamp A (under (.list (itemTy A)) (itemTy A) cell)))
-      (.snoc (.var (.here _ _))
-        (leasedAs A (.get (.var (under (.list (itemTy A)) (itemTy A) cell)) (nextF A))
-          (.var (.there _ (.here _ _)))))
-      (.var (.here _ _)))
+def leasedOf (A : Ty) (cell : Step Γ (cellTy A)) : Step Γ (.list (itemTy A)) :=
+  let items : Step Γ (.list (itemTy A)) := .get cell (itemsF A)
+  let selected := Step.Lists.filter items (item_step% items with item =>
+    .eq (.get item (itemStampF A)) (headStamp A cell))
+  Step.Lists.map selected (item_step% selected with item =>
+    leasedAs A (.get cell (nextF A)) item)
 
-def holds (A : Ty) (stamp lease : Input Γ .nat) (item : Input Γ (itemTy A)) : Step Γ .bool :=
-  .and (.eq (.get (.var item) (itemStampF A)) (.var stamp))
-    (.and (.get (.var item) (itemBorrowedF A))
-      (.eq (.get (.var item) (itemLeaseF A)) (.var lease)))
+def holds (A : Ty) (stamp lease : Step Γ .nat) (item : Step Γ (itemTy A)) : Step Γ .bool :=
+  .and (.eq (.get item (itemStampF A)) stamp)
+    (.and (.get item (itemBorrowedF A)) (.eq (.get item (itemLeaseF A)) lease))
 
-def heldBy (A : Ty) (stamp lease : Input Γ .nat) (cell : Input Γ (cellTy A)) : Step Γ .bool :=
-  .fold (.get (.var cell) (itemsF A)) (.bool false)
-    (.or (.var (.here _ _))
-      (holds A (under .bool (itemTy A) stamp) (under .bool (itemTy A) lease)
-        (.there _ (.here _ _))))
+def heldBy (A : Ty) (stamp lease : Step Γ .nat) (cell : Step Γ (cellTy A)) : Step Γ .bool :=
+  let items : Step Γ (.list (itemTy A)) := .get cell (itemsF A)
+  Step.Lists.any items (item_step% items with item => holds A stamp lease item)
 
-def freed (A : Ty) (stamp lease : Input Γ .nat) (cell : Input Γ (cellTy A)) :
+def freed (A : Ty) (stamp lease : Step Γ .nat) (cell : Step Γ (cellTy A)) :
     Step Γ (.list (itemTy A)) :=
-  .fold (.get (.var cell) (itemsF A)) (.emptyLike (.get (.var cell) (itemsF A)))
-    (.snoc (.var (.here _ _))
-      (.ite (holds A (under (.list (itemTy A)) (itemTy A) stamp)
-          (under (.list (itemTy A)) (itemTy A) lease) (.there _ (.here _ _)))
-        (.set (.var (.there _ (.here _ _))) (itemBorrowedF A) (.bool false))
-        (.var (.there _ (.here _ _)))))
+  let items : Step Γ (.list (itemTy A)) := .get cell (itemsF A)
+  Step.Lists.map items (item_step% items with item =>
+    .ite (holds A stamp lease item) (.set item (itemBorrowedF A) (.bool false)) item)
 
-def outstanding (A : Ty) (cell : Input Γ (cellTy A)) : Step Γ .bool :=
-  .fold (.get (.var cell) (itemsF A)) (.bool false)
-    (.or (.var (.here _ _)) (.get (.var (.there _ (.here _ _))) (itemBorrowedF A)))
+def outstanding (A : Ty) (cell : Step Γ (cellTy A)) : Step Γ .bool :=
+  let items : Step Γ (.list (itemTy A)) := .get cell (itemsF A)
+  Step.Lists.any items (item_step% items with item => .get item (itemBorrowedF A))
 
 end Effect4.Pool.Data

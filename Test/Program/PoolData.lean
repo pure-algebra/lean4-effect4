@@ -57,6 +57,13 @@ def values (s : State) : List Val :=
   (observe (Pool.closeStep (var "cell")) (values s) =
     some (.list [closeReplyVal (close s).2, cellVal table resources (close s).1]))
 
+-- Same-typed declarations and named sources agree after input order changes.
+step_context% HintFirst (hint : idTy, id : idTy)
+def reorderedWaiter := step_inputs% HintFirst => Pool.Data.mkWaiter id hint
+#guard observe (reorderedWaiter.term (input_sources% (HintFirst) {
+    id := var "id", hint := var "hint"})) (values ⟨[], [], [], false, 1⟩) =
+  some (Pool.Model.waiterOf (.promise ⟨77⟩) (.promise (table.handle 1)))
+
 -- Identity removal does not compare hints, resources, or arbitrary value trees.
 #guard Model.deferredEqual Leaves.deferredKeys ⟨1⟩ ⟨1⟩
 #guard !Model.deferredEqual Leaves.deferredKeys ⟨1⟩ ⟨2⟩

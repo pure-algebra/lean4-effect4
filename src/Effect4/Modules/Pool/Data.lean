@@ -3,6 +3,7 @@ module
 public import Effect4.Modules.Pool.Passes
 public import Effect4.Modules.Step
 meta import Effect4.Schema.FieldRef.Elab
+meta import Effect4.Modules.Step.Elab.Inputs
 
 /-!
 # Modules.Pool.Data — Pool's six operations as Step data
@@ -24,79 +25,97 @@ def closingF (A : Ty) : FieldRef (cellRecord A) .bool := field_ref% "closing"
 def waitersF (A : Ty) : FieldRef (cellRecord A) (.list waiterTy) := field_ref% "waiters"
 
 /-- The select step's inputs: the count, then the cell. -/
-abbrev Γ (A : Ty) : List Ty := [.nat, .record (cellRecord A)]
+abbrev Γ (A : Ty) : List Ty := (selectInputs A).types
 
-def count (A : Ty) : Input (Γ A) .nat := .here _ _
-def cell (A : Ty) : Input (Γ A) (.record (cellRecord A)) := .there _ (.here _ _)
 
 /-- **The model's `select`.** Reply: the first `count` waiters. -/
 def select (A : Ty) : Step (Γ A) (.prod (.list waiterTy) (.record (cellRecord A))) :=
-  .pair (.take (.get (.var (cell A)) (waitersF A)) (.var (count A)))
-    (.set (.var (cell A)) (waitersF A) (.drop (.get (.var (cell A)) (waitersF A)) (.var (count A))))
+  step_inputs% (selectInputs A) =>
+    .pair (.take (.get cell (waitersF A)) count)
+      (.set cell (waitersF A) (.drop (.get cell (waitersF A)) count))
 
-/-- The close's one input: the cell. -/
-def only (A : Ty) : Input [.record (cellRecord A)] (.record (cellRecord A)) := .here _ _
 
 /-- **The model's `close`.** Reply: `[this step began the close, the count of the waiters]`. -/
-def close (A : Ty) : Step [.record (cellRecord A)] (.prod (.prod .bool .nat) (.record (cellRecord A))) :=
-  .pair (.tuple2 (.not (.get (.var (only A)) (closingF A))) (.len (.get (.var (only A)) (waitersF A))))
-    (.set (.var (only A)) (closingF A) (.bool true))
+def close (A : Ty) : Step (closeInputs A).types (.prod (.prod .bool .nat) (.record (cellRecord A))) :=
+  step_inputs% (closeInputs A) =>
+    .pair (.tuple2 (.not (.get cell (closingF A))) (.len (.get cell (waitersF A))))
+      (.set cell (closingF A) (.bool true))
 
 
 /-! ## The passes and the four remaining operations -/
 
 variable {Γ : List Ty}
 
-def noItem (A : Ty) (c : Input Γ (cellTy A)) : Step Γ (.option (itemTy A)) :=
-  .head (.emptyLike (.get (.var c) (itemsF A)))
+def noItem (A : Ty) (c : Step Γ (cellTy A)) : Step Γ (.option (itemTy A)) :=
+  .head (.emptyLike (.get c (itemsF A)))
 
-def mkWaiter (id hint : Input Γ idTy) : Step Γ waiterTy :=
-  .record (.cons "hint" (.var hint) (.cons "id" (.var id) .nil))
+def mkWaiter (id hint : Step Γ idTy) : Step Γ waiterTy :=
+  .record (.cons "hint" hint (.cons "id" id .nil))
 
-abbrev leaseΓ (A : Ty) : List Ty := [idTy, idTy, cellTy A]
-def leaseId (A : Ty) : Input (leaseΓ A) idTy := .here _ _
-def leaseHint (A : Ty) : Input (leaseΓ A) idTy := .there _ (.here _ _)
-def leaseCell (A : Ty) : Input (leaseΓ A) (cellTy A) := .there _ (.there _ (.here _ _))
+abbrev leaseΓ (A : Ty) : List Ty := (leaseInputs A).types
 
 def enrolled (A : Ty) : Step (leaseΓ A) (cellTy A) :=
-  .set (.var (leaseCell A)) (waitersF A)
-    (.snoc (removed A (leaseId A) (leaseCell A)) (mkWaiter (leaseId A) (leaseHint A)))
+  step_inputs% (leaseInputs A) =>
+    .set cell (waitersF A)
+      (.snoc (removed A id cell) (mkWaiter id hint))
 
 def lease (A : Ty) : Step (leaseΓ A) (.prod (.prod .bool (.option (itemTy A))) (cellTy A)) :=
-  .ite (.get (.var (leaseCell A)) (closingF A))
-    (.pair (.tuple2 (.bool true) (noItem A (leaseCell A)))
-      (withdrawn A (leaseId A) (leaseCell A)))
-    (.ite (.isZero (.len (.get (.var (leaseCell A)) (availableF A))))
-      (.pair (.tuple2 (.bool false) (noItem A (leaseCell A))) (enrolled A))
-      (.pair (.tuple2 (.bool false) (.head (leasedOf A (leaseCell A))))
-        (.set
-          (.set (.set (withdrawn A (leaseId A) (leaseCell A)) (itemsF A) (marked A (leaseCell A)))
-            (availableF A) (.drop (.get (.var (leaseCell A)) (availableF A)) (.nat 1)))
-          (nextF A) (.add (.get (.var (leaseCell A)) (nextF A)) (.nat 1)))))
+  step_inputs% (leaseInputs A) =>
+    .ite (.get cell (closingF A))
+      (.pair (.tuple2 (.bool true) (noItem A cell))
+        (withdrawn A id cell))
+      (.ite (.isZero (.len (.get cell (availableF A))))
+        (.pair (.tuple2 (.bool false) (noItem A cell)) (enrolled A))
+        (.pair (.tuple2 (.bool false) (.head (leasedOf A cell)))
+          (.set
+            (.set (.set (withdrawn A id cell) (itemsF A) (marked A cell))
+              (availableF A) (.drop (.get cell (availableF A)) (.nat 1)))
+            (nextF A) (.add (.get cell (nextF A)) (.nat 1)))))
 
-abbrev returnΓ (A : Ty) : List Ty := [.nat, .nat, cellTy A]
-def returnStamp (A : Ty) : Input (returnΓ A) .nat := .here _ _
-def returnLease (A : Ty) : Input (returnΓ A) .nat := .there _ (.here _ _)
-def returnCell (A : Ty) : Input (returnΓ A) (cellTy A) := .there _ (.there _ (.here _ _))
+abbrev returnΓ (A : Ty) : List Ty := (returnInputs A).types
 
 def giveBack (A : Ty) : Step (returnΓ A) (.prod (.prod .bool .bool) (cellTy A)) :=
-  .ite (heldBy A (returnStamp A) (returnLease A) (returnCell A))
-    (.pair (.tuple2 (.bool true) (.not (.isZero (.len (.get (.var (returnCell A)) (waitersF A))))))
-      (.set (.set (.var (returnCell A)) (itemsF A)
-          (freed A (returnStamp A) (returnLease A) (returnCell A)))
-        (availableF A) (.cons (.var (returnStamp A)) (.get (.var (returnCell A)) (availableF A)))))
-    (.pair (.tuple2 (.bool false) (.bool false)) (.var (returnCell A)))
+  step_inputs% (returnInputs A) =>
+    .ite (heldBy A stamp lease cell)
+      (.pair (.tuple2 (.bool true) (.not (.isZero (.len (.get cell (waitersF A))))))
+        (.set (.set cell (itemsF A)
+            (freed A stamp lease cell))
+          (availableF A) (.cons stamp (.get cell (availableF A)))))
+      (.pair (.tuple2 (.bool false) (.bool false)) cell)
 
-abbrev withdrawΓ (A : Ty) : List Ty := [idTy, cellTy A]
-def withdrawId (A : Ty) : Input (withdrawΓ A) idTy := .here _ _
-def withdrawCell (A : Ty) : Input (withdrawΓ A) (cellTy A) := .there _ (.here _ _)
+abbrev withdrawΓ (A : Ty) : List Ty := (withdrawInputs A).types
 
 def withdraw (A : Ty) : Step (withdrawΓ A) (.prod .unit (cellTy A)) :=
-  .pair .unit (withdrawn A (withdrawId A) (withdrawCell A))
+  step_inputs% (withdrawInputs A) =>
+    .pair .unit (withdrawn A id cell)
 
 def drain (A : Ty) : Step (leaseΓ A) (.prod .bool (cellTy A)) :=
-  .ite (outstanding A (leaseCell A))
-    (.pair (.bool false) (enrolled A))
-    (.pair (.bool true) (withdrawn A (leaseId A) (leaseCell A)))
+  step_inputs% (leaseInputs A) =>
+    .ite (outstanding A cell)
+      (.pair (.bool false) (enrolled A))
+      (.pair (.bool true) (withdrawn A id cell))
+
+def waiterPass : Step waiterInputs.types waiterTy :=
+  step_inputs% waiterInputs => mkWaiter id hint
+def withdrawnPass (A : Ty) : Step (withdrawInputs A).types (cellTy A) :=
+  step_inputs% (withdrawInputs A) => withdrawn A id cell
+def noItemPass (A : Ty) : Step (closeInputs A).types (.option (itemTy A)) :=
+  step_inputs% (closeInputs A) => noItem A cell
+def headStampPass (A : Ty) : Step (closeInputs A).types .nat :=
+  step_inputs% (closeInputs A) => headStamp A cell
+def leasedAsPass (A : Ty) : Step (leaseItemInputs A).types (itemTy A) :=
+  step_inputs% (leaseItemInputs A) => leasedAs A lease item
+def markedPass (A : Ty) : Step (closeInputs A).types (.list (itemTy A)) :=
+  step_inputs% (closeInputs A) => marked A cell
+def leasedOfPass (A : Ty) : Step (closeInputs A).types (.list (itemTy A)) :=
+  step_inputs% (closeInputs A) => leasedOf A cell
+def holdsPass (A : Ty) : Step (holdsInputs A).types .bool :=
+  step_inputs% (holdsInputs A) => holds A stamp lease item
+def heldByPass (A : Ty) : Step (returnInputs A).types .bool :=
+  step_inputs% (returnInputs A) => heldBy A stamp lease cell
+def freedPass (A : Ty) : Step (returnInputs A).types (.list (itemTy A)) :=
+  step_inputs% (returnInputs A) => freed A stamp lease cell
+def outstandingPass (A : Ty) : Step (closeInputs A).types .bool :=
+  step_inputs% (closeInputs A) => outstanding A cell
 
 end Effect4.Pool.Data

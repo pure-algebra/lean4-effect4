@@ -114,7 +114,7 @@ theorem reads_withdrawn {id s : TermSrc} (tb : Table) (injective : tb.Injective)
   have h := Step.sound (Γ := [idTy, cellTy P]) Leaves.deferredKeys (tb.handle i, (cellC tb res state, ()))
     (Input.reads_cons hid.atScope (Input.reads_cons
       (hs.to (cellVal_image tb res state).symm) Input.reads_nil))
-    (Data.withdrawn P (.here _ _) (.there _ (.here _ _))) rfl depth
+    (Data.withdrawn P (.var (.here _ _)) (.var (.there _ (.here _ _)))) rfl depth
       ⟨DeferredIdentity.deferredKeys⟩
   rw [withdrawn_eval tb injective res state i (.here idTy [cellTy P])
     (.there idTy (.here (cellTy P) [])) (tb.handle i, (cellC tb res state, ())) rfl rfl] at h
@@ -125,17 +125,17 @@ theorem reads_noItem {s : TermSrc} (tb : Table) (res : Nat → Val) (state : Sta
     (hs : Reads s env path vals (cellVal tb res state)) :
     Reads (Pool.noItem s) env path vals Store.Val.none := by
   have h := Step.sound (Γ := [cellTy P]) Leaves.deferredKeys (cellC tb res state, ())
-    (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.noItem P (.here _ _)) rfl
+    (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.noItem P (.var (.here _ _))) rfl
   exact h.to rfl
 
 /-- `headStamp`: the stamp at the front of the idle stamps, or zero. A fold whose body reads no
 caller's term, so the rule holds at every scope, and under another fold's binders too. -/
 theorem reads_headStamp {s : TermSrc} (tb : Table) (res : Nat → Val) (state : State)
-    (depth : vals.length = env.names.length)
+    (_depth : vals.length = env.names.length)
     (hs : Reads s env path vals (cellVal tb res state)) :
     Reads (Pool.headStamp s) env path vals (Val.nat (state.available.headD 0)) := by
   have h := Step.sound (Γ := [cellTy P]) Leaves.deferredKeys (cellC tb res state, ())
-    (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.headStamp P (.here _ _)) rfl depth
+    (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.headStamp P (.var (.here _ _))) rfl
   rw [headStamp_eval tb res state (.here (cellTy P) []) (cellC tb res state, ()) rfl] at h
   exact h.to rfl
 
@@ -158,7 +158,7 @@ theorem reads_holdsT {i l it : TermSrc} (res : Nat → Val) (x : Item) (item lea
   have h := Step.sound (Γ := [.nat, .nat, itemTy P]) Leaves.deferredKeys (item, (lease, (itemC res x, ())))
     (Input.reads_cons hi (Input.reads_cons hl
       (Input.reads_cons (hit.to (itemVal_image res x).symm) Input.reads_nil)))
-    (Data.holds P (.here _ _) (.there _ (.here _ _)) (.there _ (.there _ (.here _ _)))) rfl
+    (Data.holds P (.var (.here _ _)) (.var (.there _ (.here _ _))) (.var (.there _ (.there _ (.here _ _))))) rfl
   rw [holds_eval res x item lease (.here .nat [.nat, itemTy P])
     (.there .nat (.here .nat [itemTy P])) (.there .nat (.there .nat (.here (itemTy P) [])))
     (item, (lease, (itemC res x, ()))) rfl rfl rfl] at h
@@ -196,7 +196,7 @@ theorem reads_marked {s : TermSrc} (tb : Table) (res : Nat → Val) (state : Sta
     Reads (Pool.marked s) env path vals
       (Val.list ((mark state.items (state.available.headD 0) state.next).map (itemVal res))) := by
   have h := Step.sound (Γ := [cellTy P]) Leaves.deferredKeys (cellC tb res state, ())
-    (Input.reads_cons (hs.atScope.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.marked P (.here _ _)) rfl depth
+    (Input.reads_cons (hs.atScope.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.marked P (.var (.here _ _))) rfl depth
   rw [marked_eval tb res state (.here (cellTy P) []) (cellC tb res state, ()) rfl] at h
   exact h.to (items_image res _)
 
@@ -210,7 +210,7 @@ theorem reads_leasedOf {s : TermSrc} (tb : Table) (res : Nat → Val) (state : S
         if it.stamp = state.available.headD 0 then [it.leasedAs state.next] else []).map
           (itemVal res))) := by
   have h := Step.sound (Γ := [cellTy P]) Leaves.deferredKeys (cellC tb res state, ())
-    (Input.reads_cons (hs.atScope.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.leasedOf P (.here _ _)) rfl depth
+    (Input.reads_cons (hs.atScope.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.leasedOf P (.var (.here _ _))) rfl depth
   rw [leasedOf_list_eval tb res state (.here (cellTy P) []) (cellC tb res state, ()) rfl] at h
   exact h.to (items_image res _)
 
@@ -250,7 +250,7 @@ theorem reads_outstanding {s : TermSrc} (tb : Table) (res : Nat → Val) (state 
     (hs : Reads s env path vals (cellVal tb res state)) :
     Reads (Pool.outstanding s) env path vals (Val.bool (state.items.any (·.borrowed))) := by
   have h := Step.sound (Γ := [cellTy P]) Leaves.deferredKeys (cellC tb res state, ())
-    (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.outstanding P (.here _ _)) rfl depth
+    (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.outstanding P (.var (.here _ _))) rfl depth
   rw [outstanding_eval tb res state (.here (cellTy P) []) (cellC tb res state, ()) rfl] at h
   exact h.to rfl
 
@@ -260,7 +260,7 @@ theorem reads_mkWaiter {id hint : TermSrc} {i h : Val} (hid : Reads id env path 
     Reads (Pool.mkWaiter id hint) env path vals (waiterOf h i) := by
   have h := Step.sound (Γ := [idTy, idTy]) Leaves.opaque (i, (h, ()))
     (Input.reads_cons hid (Input.reads_cons hhint Input.reads_nil))
-    (Data.mkWaiter (.here _ _) (.there _ (.here _ _))) rfl
+    (Data.mkWaiter (.var (.here _ _)) (.var (.there _ (.here _ _)))) rfl
   exact h.to rfl
 
 end Passes

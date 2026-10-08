@@ -79,7 +79,7 @@ of each. A record's construction is closed by hand: its entries are pairs. -/
 /-- A waiter's record keeps scope. -/
 theorem mkWaiter_scoped {id hint : TermSrc} (hid : id.Scoped) (hhint : hint.Scoped) :
     (mkWaiter id hint).Scoped :=
-  Step.«scoped» (Data.mkWaiter (.here idTy [idTy]) (.there idTy (.here idTy []))) (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_nil))))
+  Step.«scoped» Data.waiterPass (Input.source_scoped (TermSrc.Scoped_cons hid (TermSrc.Scoped_cons hhint (TermSrc.Scoped_nil))))
 
 /-- The lease step keeps scope. -/
 theorem leaseStep_scoped {id hint s : TermSrc} (hid : id.Scoped) (hhint : hint.Scoped)

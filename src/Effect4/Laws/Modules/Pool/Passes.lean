@@ -1,5 +1,6 @@
 import Effect4.Laws.Modules.Pool.Data
 import Effect4.Laws.Schema.Identity
+import Effect4.Laws.Modules.Step.Lists
 
 /-! Pool's pass values on the shared Step carriers.
 Concept: Translation Simulation; helpers of the existing `pool-steps-agree` claim, requirement R10.
@@ -8,18 +9,13 @@ Identity removal retains the table's injectivity; list passes retain the indepen
 These equations establish no wrapper, allocation, membership, progress, or host execution law. -/
 
 set_option autoImplicit false
+set_option backward.isDefEq.respectTransparency false
 
 namespace Effect4.Pool.Model
 open Effect4 Effect4.Machine Effect4.Program Effect4.Schema Effect4.Schema.Model Effect4.Modules
 open Effect4.Constructive.List
 
-/-! ## Two facts of Pool's own definitions -/
-
-/-- The fold over the first idle stamp answers the front stamp, or zero. -/
-theorem front_headD : ∀ (stamps : List Nat),
-    (stamps.take 1).foldl (fun _ stamp => stamp) 0 = stamps.headD 0
-  | [] => rfl
-  | _ :: _ => rfl
+/-! ## The independent lease selection -/
 
 /-- The fold that keeps the front item as leased answers the model's `leased`. -/
 theorem leased_flatMap (items : List Item) (i l : Nat) :
@@ -70,25 +66,27 @@ theorem headStamp_eval (tb : Table) (res : Nat → Val) (s : State)
     (cell : Input Γ (cellTy P)) (vs : Inputs Leaves.deferredKeys Γ)
     (hc : cell.get vs = cellC tb res s) :
     (Data.headStamp P cell).eval Leaves.deferredKeys vs = s.available.headD 0 := by
+  unfold Data.headStamp
+  rw [Step.Lists.eval_headOr]
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
-  change (cv.1.take 1).foldl (fun _ stamp => stamp) 0 = _
+  change cv.1.head?.getD 0 = _
   rw [hcv]
-  exact front_headD s.available
+  exact List.headD_eq_head?_getD.symm
 
 /-- The borrowed-item pass evaluates on the independent cell carrier. -/
 theorem outstanding_eval (tb : Table) (res : Nat → Val) (s : State)
     (cell : Input Γ (cellTy P)) (vs : Inputs Leaves.deferredKeys Γ)
     (hc : cell.get vs = cellC tb res s) :
     (Data.outstanding P cell).eval Leaves.deferredKeys vs = s.items.any (·.borrowed) := by
+  unfold Data.outstanding
+  rw [Step.Lists.eval_any]
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
-  change cv.2.2.1.foldl (fun found (it : ItemCarrier) => found || it.1) false = _
+  change cv.2.2.1.any (fun (it : ItemCarrier) => it.1) = _
   rw [hcv]
-  change (s.items.map (fun it => (it.borrowed, (it.lease, (res it.resource, (it.stamp, ())))))).foldl (fun found (it : ItemCarrier) => found || it.1) false = _
-  rw [List.foldl_map]
-  change s.items.foldl (fun found it => found || it.borrowed) false = _
-  rw [foldl_or_any]
+  dsimp only [cellC]
+  rw [List.any_map]
   rfl
 
 
@@ -116,18 +114,19 @@ theorem heldBy_eval (tb : Table) (res : Nat → Val) (s : State) (i l : Nat)
     (hl : lease.get vs = l) (hc : cell.get vs = cellC tb res s) :
     (Data.heldBy P stamp lease cell).eval Leaves.deferredKeys vs =
       s.items.any (fun it => it.heldBy i l) := by
+  unfold Data.heldBy
+  rw [Step.Lists.eval_any]
   let sv : Nat := stamp.get vs
   let lv : Nat := lease.get vs
   have hsv : sv = i := hi
   have hlv : lv = l := hl
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
-  change cv.2.2.1.foldl (fun found (it : ItemCarrier) => found ||
-    (decide (it.2.2.2.1 = sv) && (it.1 && decide (it.2.1 = lv)))) false = _
+  change cv.2.2.1.any (fun (it : ItemCarrier) =>
+    decide (it.2.2.2.1 = sv) && (it.1 && decide (it.2.1 = lv))) = _
   rw [hsv, hlv, hcv]
-  change (s.items.map (fun it => (it.borrowed, (it.lease, (res it.resource, (it.stamp, ())))))).foldl (fun found (it : ItemCarrier) => found ||
-    (decide (it.2.2.2.1 = i) && (it.1 && decide (it.2.1 = l)))) false = _
-  rw [List.foldl_map, foldl_or_any]
+  dsimp only [cellC]
+  rw [List.any_map]
   rfl
 
 /-- The returned-item pass evaluates on the independent model's items. -/
@@ -137,20 +136,20 @@ theorem freed_eval (tb : Table) (res : Nat → Val) (s : State) (i l : Nat)
     (hl : lease.get vs = l) (hc : cell.get vs = cellC tb res s) :
     (Data.freed P stamp lease cell).eval Leaves.deferredKeys vs =
       (freed s.items i l).map (itemC res) := by
+  unfold Data.freed
+  rw [Step.Lists.eval_map]
   let sv : Nat := stamp.get vs
   let lv : Nat := lease.get vs
   have hsv : sv = i := hi
   have hlv : lv = l := hl
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
-  change cv.2.2.1.foldl (fun out (it : ItemCarrier) => out ++
-    [if (decide (it.2.2.2.1 = sv) &&
-      (it.1 && decide (it.2.1 = lv))) then (false, it.2) else it]) [] = _
+  change cv.2.2.1.map (fun (it : ItemCarrier) =>
+    if (decide (it.2.2.2.1 = sv) && (it.1 && decide (it.2.1 = lv)))
+      then (false, it.2) else it) = _
   rw [hsv, hlv, hcv]
-  change (s.items.map (fun it => (it.borrowed, (it.lease, (res it.resource, (it.stamp, ())))))).foldl (fun out (it : ItemCarrier) => out ++
-    [if (decide (it.2.2.2.1 = i) && (it.1 && decide (it.2.1 = l))) then
-      (false, it.2) else it]) [] = _
-  rw [List.foldl_map, foldl_snoc_map, List.nil_append]
+  dsimp only [cellC]
+  rw [List.map_map]
   unfold freed
   rw [List.map_map]
   apply List.map_congr_left
@@ -166,14 +165,17 @@ theorem marked_eval (tb : Table) (res : Nat → Val) (s : State)
     (hc : cell.get vs = cellC tb res s) :
     (Data.marked P cell).eval Leaves.deferredKeys vs =
       (mark s.items (s.available.headD 0) s.next).map (itemC res) := by
+  unfold Data.marked
+  rw [Step.Lists.eval_map]
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
-  change cv.2.2.1.foldl (fun out (it : ItemCarrier) => out ++
-    [if decide (it.2.2.2.1 = (cv.1.take 1).foldl (fun _ stamp => stamp) 0)
-      then (true, (cv.2.2.2.1, it.2.2)) else it]) [] = _
+  change cv.2.2.1.map (fun (it : ItemCarrier) =>
+    if decide (it.2.2.2.1 = cv.1.head?.getD 0)
+      then (true, (cv.2.2.2.1, it.2.2)) else it) = _
   rw [hcv]
-  simp only [cellC, front_headD]
-  rw [List.foldl_map, foldl_snoc_map, List.nil_append]
+  dsimp only [cellC]
+  rw [List.map_map]
+  simp only [← List.headD_eq_head?_getD]
   unfold mark
   rw [List.map_map]
   apply List.map_congr_left
@@ -191,36 +193,27 @@ theorem leasedOf_list_eval (tb : Table) (res : Nat → Val) (s : State)
     (hc : cell.get vs = cellC tb res s) :
     (Data.leasedOf P cell).eval Leaves.deferredKeys vs =
       (s.items.flatMap fun it => if it.stamp = s.available.headD 0 then [it.leasedAs s.next] else []).map (itemC res) := by
+  unfold Data.leasedOf
+  rw [Step.Lists.eval_map, Step.Lists.eval_filter]
   let cv : CellCarrier := cell.get vs
   have hcv : cv = cellC tb res s := hc
-  change (cv.2.2.1.foldl (fun out (it : ItemCarrier) =>
-    if decide (it.2.2.2.1 = (cv.1.take 1).foldl (fun _ stamp => stamp) 0)
-      then out ++ [(true, (cv.2.2.2.1, it.2.2))] else out) []) = _
+  change (cv.2.2.1.filter (fun (it : ItemCarrier) => decide (it.2.2.2.1 = cv.1.head?.getD 0))).map
+    (fun it => (true, (cv.2.2.2.1, it.2.2))) = _
   rw [hcv]
-  simp only [cellC, front_headD]
-  rw [List.foldl_map]
-  have point : (fun (out : List ItemCarrier) (it : Item) =>
-      if decide (it.stamp = s.available.headD 0) then out ++
-        [itemC res (it.leasedAs s.next)] else out) =
-      (fun out it => out ++ (if it.stamp = s.available.headD 0 then
-        [itemC res (it.leasedAs s.next)] else [])) := by
-    funext out it
-    by_cases h : it.stamp = s.available.headD 0
-    · rw [decide_eq_true h, if_pos rfl, if_pos h]
-    · rw [decide_eq_false h, if_neg Bool.false_ne_true, if_neg h, List.append_nil]
-  change (s.items.foldl (fun out it => if decide (it.stamp = s.available.headD 0)
-    then out ++ [itemC res (it.leasedAs s.next)] else out) []) = _
-  rw [point, foldl_append_flatMap, List.nil_append]
-  have gifts : (fun (it : Item) => if it.stamp = s.available.headD 0 then
-      [itemC res (it.leasedAs s.next)] else []) =
-      (fun it => (if it.stamp = s.available.headD 0 then [it.leasedAs s.next] else []).map (itemC res)) := by
-    funext it
-    by_cases h : it.stamp = s.available.headD 0
-    · rw [if_pos h, if_pos h]
-      rfl
-    · rw [if_neg h, if_neg h]
-      rfl
-  rw [gifts, ← List.map_flatMap]
+  dsimp only [cellC]
+  rw [List.filter_map, List.map_map]
+  simp only [← List.headD_eq_head?_getD]
+  change (s.items.filter (fun it => decide (it.stamp = s.available.headD 0))).map
+    (fun it => itemC res (it.leasedAs s.next)) = _
+  rw [Step.Lists.filter_map_eq_flatMap]
+  rw [List.map_flatMap]
+  apply congrArg (fun f => s.items.flatMap f)
+  funext it
+  by_cases h : it.stamp = s.available.headD 0
+  · rw [decide_eq_true h, if_pos rfl, if_pos h]
+    rfl
+  · rw [decide_eq_false h, if_neg Bool.false_ne_true, if_neg h]
+    rfl
 
 
 
@@ -239,17 +232,16 @@ theorem removed_eval (tb : Table) (injective : tb.Injective) (res : Nat → Val)
     (hc : cell.get vs = cellC tb res s) :
     (Data.removed P id cell).eval Leaves.deferredKeys vs =
       (without s.waiters i).map (waiterC tb) := by
+  unfold Data.removed
+  rw [Step.Lists.eval_removeBy]
   let cv : CellCarrier := cell.get vs
   let kv : DeferredKey := id.get vs
   have hcv : cv = cellC tb res s := hc
   have hkv : kv = tb.handle i := hi
-  change cv.2.2.2.2.1.foldl (fun out (w : DeferredKey × DeferredKey × Unit) =>
-    if decide (w.2.1 = kv) then out else out ++ [w]) [] = _
+  change cv.2.2.2.2.1.filter (fun (w : DeferredKey × DeferredKey × Unit) => !decide (w.2.1 = kv)) = _
   rw [hcv, hkv]
-  change (s.waiters.map (waiterC tb)).foldl
-    (fun out w => if decide (w.2.1 = tb.handle i) then out else out ++ [w]) [] = _
-  simp only [decide_eq_true_iff]
-  rw [foldl_keep, List.nil_append, List.filter_map]
+  dsimp only [cellC]
+  rw [List.filter_map]
   change (s.waiters.filter (fun n => !decide (tb.handle n = tb.handle i))).map (waiterC tb) = _
   simp only [injective.decides]
   rfl
@@ -346,7 +338,6 @@ theorem withdraw_eval (tb : Table) (injective : tb.Injective) (res : Nat → Val
     ((tb.handle i, (cellC tb res s, ())) : Inputs Leaves.deferredKeys (Data.withdrawΓ P))) = _
   rw [withdrawn_eval tb injective res s i (Data.withdrawId P) (Data.withdrawCell P)
     (tb.handle i, (cellC tb res s, ())) rfl rfl]
-  rfl
 
 /-- The closer's operation evaluates to the independent drain model. -/
 theorem drain_eval (tb : Table) (injective : tb.Injective) (res : Nat → Val)

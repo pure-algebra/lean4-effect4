@@ -1,6 +1,7 @@
 import Effect4.Modules.Pool.Data
 import Effect4.Laws.Schema.Identity
 import Effect4.Laws.Modules.Pool.Relation
+import Effect4.Modules.Step.Elab.Inputs
 
 /-!
 # Laws.Modules.Pool.Data — Pool's model on the step language's carriers
@@ -21,6 +22,28 @@ Placement: concept `translation-simulation`, requirement R10, helpers of the cla
 -/
 
 set_option autoImplicit false
+
+namespace Effect4.Modules
+/-- Compatibility for Input-valued law readers; authored bodies use Step operands. -/
+instance inputStep {Γ : List Effect4.Program.Ty} {t : Effect4.Program.Ty} :
+    Coe (Input Γ t) (Step Γ t) := ⟨Step.var⟩
+end Effect4.Modules
+
+namespace Effect4.Pool.Data
+open Effect4.Program Effect4.Modules
+/-- Name-derived input aliases serve existing law readers only. -/
+def count (A : Ty) : Input (Γ A) .nat := input_ref% (selectInputs A) count
+def cell (A : Ty) : Input (Γ A) (cellTy A) := input_ref% (selectInputs A) cell
+def only (A : Ty) : Input [.record (cellRecord A)] (cellTy A) := input_ref% (closeInputs A) cell
+def leaseId (A : Ty) : Input (leaseΓ A) idTy := input_ref% (leaseInputs A) id
+def leaseHint (A : Ty) : Input (leaseΓ A) idTy := input_ref% (leaseInputs A) hint
+def leaseCell (A : Ty) : Input (leaseΓ A) (cellTy A) := input_ref% (leaseInputs A) cell
+def returnStamp (A : Ty) : Input (returnΓ A) .nat := input_ref% (returnInputs A) stamp
+def returnLease (A : Ty) : Input (returnΓ A) .nat := input_ref% (returnInputs A) lease
+def returnCell (A : Ty) : Input (returnΓ A) (cellTy A) := input_ref% (returnInputs A) cell
+def withdrawId (A : Ty) : Input (withdrawΓ A) idTy := input_ref% (withdrawInputs A) id
+def withdrawCell (A : Ty) : Input (withdrawΓ A) (cellTy A) := input_ref% (withdrawInputs A) cell
+end Effect4.Pool.Data
 
 namespace Effect4.Pool.Model
 
