@@ -62,6 +62,50 @@ theorem evalTerms_eraseAnnotations : (ts : Terms) → (env : List Val) →
     change evalTerms env (.cons head.eraseAnnotations tail.eraseAnnotations) = _
     simp only [evalTerms, evalTerm_eraseAnnotations head env, evalTerms_eraseAnnotations tail env]
 end
+mutual
+/-- Erasure commutes with scope insertion, including a captured term's own fold binders.
+The consumer is captured-source annotation agreement in Queue's parameter connector. -/
+theorem Term.eraseAnnotations_weaken : (t : Term) → (cut : Nat) →
+    (Term.weaken cut t).eraseAnnotations = Term.weaken cut t.eraseAnnotations
+  | .var _, _ => rfl
+  | .lit _, _ => rfl
+  | .app atom values, cut => by
+    change Term.app atom (Terms.weaken cut values).eraseAnnotations =
+      Term.app atom (Terms.weaken cut values.eraseAnnotations)
+    rw [Terms.eraseAnnotations_weaken values cut]
+  | .record _ names values, cut => by
+    change Term.record [] names (Terms.weaken cut values).eraseAnnotations =
+      Term.record [] names (Terms.weaken cut values.eraseAnnotations)
+    rw [Terms.eraseAnnotations_weaken values cut]
+  | .field mode target name, cut => by
+    change Term.field mode (Term.weaken cut target).eraseAnnotations name =
+      Term.field mode (Term.weaken cut target.eraseAnnotations) name
+    rw [Term.eraseAnnotations_weaken target cut]
+  | .recordSet target name value, cut => by
+    change Term.recordSet (Term.weaken cut target).eraseAnnotations name (Term.weaken cut value).eraseAnnotations =
+      Term.recordSet (Term.weaken cut target.eraseAnnotations) name (Term.weaken cut value.eraseAnnotations)
+    rw [Term.eraseAnnotations_weaken target cut, Term.eraseAnnotations_weaken value cut]
+  | .tupleAt target index, cut => by
+    change Term.tupleAt (Term.weaken cut target).eraseAnnotations index =
+      Term.tupleAt (Term.weaken cut target.eraseAnnotations) index
+    rw [Term.eraseAnnotations_weaken target cut]
+  | .fold _ xs init body, cut => by
+    change Term.fold none (Term.weaken cut xs).eraseAnnotations (Term.weaken cut init).eraseAnnotations
+      (Term.weaken cut body).eraseAnnotations =
+      Term.fold none (Term.weaken cut xs.eraseAnnotations) (Term.weaken cut init.eraseAnnotations)
+        (Term.weaken cut body.eraseAnnotations)
+    rw [Term.eraseAnnotations_weaken xs cut, Term.eraseAnnotations_weaken init cut,
+      Term.eraseAnnotations_weaken body cut]
+/-- The list form serves Term.eraseAnnotations_weaken. -/
+theorem Terms.eraseAnnotations_weaken : (ts : Terms) → (cut : Nat) →
+    (Terms.weaken cut ts).eraseAnnotations = Terms.weaken cut ts.eraseAnnotations
+  | .nil, _ => rfl
+  | .cons head tail, cut => by
+    change Terms.cons (Term.weaken cut head).eraseAnnotations (Terms.weaken cut tail).eraseAnnotations =
+      Terms.cons (Term.weaken cut head.eraseAnnotations) (Terms.weaken cut tail.eraseAnnotations)
+    rw [Term.eraseAnnotations_weaken head cut, Terms.eraseAnnotations_weaken tail cut]
+end
+
 /-- Equal erased trees have equal evaluations, at every value environment. -/
 theorem evalTerm_eq_of_annotations {a b : Term} (same : a.eraseAnnotations = b.eraseAnnotations)
     (env : List Val) : evalTerm env a = evalTerm env b := by
