@@ -63,8 +63,4 @@ def callAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
           ⟨op, requestTy, focus.ty.answer, focus.ty.error, bindings⟩
     | _ => none
 
-/-- **Every call of a program with its checked instance**, in the order of the address table. -/
-def calls (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : List (List Nat × CallInstance Op) :=
-  (Node.addresses (.eff p)).filterMap fun a => (callAt s env0 p a).map fun c => (a, c)
-
 end Effect4.Program

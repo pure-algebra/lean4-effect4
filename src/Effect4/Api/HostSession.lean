@@ -1,4 +1,5 @@
 import Effect4.Api.HostProtocol
+import Effect4.Program.Typing.Parts
 
 /-!
 A checked, keyed host-reply session over the existing Eff machine. The program and
@@ -91,7 +92,7 @@ structure Session (program : Api.Program) (table : RowTable) where
   pending : List ReplySlot := []
   consumed : List Nat := []
   retired : List RetiredCall := []
-  /-- The program's checked call table (`Program.calls`), made once by `start`, so that no
+  /-- The program's checked call table (`Program.programCalls`), made once by `start`, so that no
   reply runs the checker (decisions row 323; the session note's slice DM5). Empty, a session
   admits replies at the rows' own columns alone. -/
   calls : List (List Nat × CallInstance NativeOp) := []
@@ -129,11 +130,13 @@ structure Result (program : Api.Program) (table : RowTable) where
   session : Session program table
 
 /-- **The program's checked call table**, at the signature that admits it (`⟨table, []⟩`), on
-the program with its layer references expanded, as the checker types it (`Program.calls`).
-`start` and `Run.open` make it once (decisions row 323; the session note's slice DM5). -/
+the program with its layer references expanded, as the module check types it
+(`Program.programCalls`): a call in a definition's body or in a block's main program has its
+instance at the block's signature (decisions rows 323 and 333). `start` and `Run.open` make it
+once (the session note's slice DM5). -/
 def callTable (program : Api.Program) (table : RowTable) :
     List (List Nat × CallInstance NativeOp) :=
-  Program.calls (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+  Program.programCalls (SigApp.signature ⟨table, []⟩) [] program.expandRefs
 
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
 refuse. The expected profile is supplied by the binding's explicitly selected profile. The header
@@ -172,13 +175,14 @@ def bindCall {program : Api.Program} {table : RowTable} (s : Session program tab
     pending := s.pending ++ [⟨⟨call.fiber, token⟩, none⟩]
     nextCall := s.nextCall + 1 }⟩
 
-/-- **The checked instance at a call's address** in the session's program (`callAt`), at the
-signature that admitted it (`⟨table, []⟩`), on the program with its layer references expanded,
-as the checker types it. `none` where no call stands at the address. It is the specification of
+/-- **The checked instance at a call's address** in the session's program (`programCallAt`), at
+the signature that admitted it (`⟨table, []⟩`), on the program with its layer references
+expanded, as the module check types it. `none` where no call stands at the address; on an
+admitted program it answers at every call (`instanceAt_complete`). It is the specification of
 the session's table: a session that `start` made answers it (`start_callInstance`). -/
 def instanceAt (program : Api.Program) (table : RowTable) :
     List Nat → Option (CallInstance NativeOp) :=
-  callAt (SigApp.signature ⟨table, []⟩) [] program.expandRefs
+  programCallAt (SigApp.signature ⟨table, []⟩) [] program.expandRefs
 
 /-- The session's checked instance at an address: a lookup in the table that `start` made. -/
 def Session.callInstance {program : Api.Program} {table : RowTable} (s : Session program table)

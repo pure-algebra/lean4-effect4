@@ -279,6 +279,7 @@ import Test.Program.LayerSharingContract
 import Test.Program.BlameContract
 import Test.Program.FocusControls
 import Test.Program.TableControls
+import Test.Program.PartsControls
 import Test.Program.CallInstance
 import Test.Program.QueryControls
 import Test.Program.BoundsControls

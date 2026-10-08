@@ -6,65 +6,12 @@ import Effect4.Laws.Program.Typed.Membership
 import Effect4.Laws.Program.Typed.Admission
 import Effect4.Laws.Program.Typing.Call
 import Effect4.Laws.Program.Typing.Table
+import Effect4.Laws.Program.Typing.Parts
 
 /-! Checked host protocol laws. Receipt commutation is equality of sessions, including
 stored replies and the unchanged machine. Answer application is a separate ordered step.
 Authority: Test/contracts/foundation-wave2.contract.md, T-09 / T-12 amendment. -/
 set_option autoImplicit false
-
-namespace Effect4.Program
-
-/-- A lookup in a table made by `filterMap` over a list of addresses answers the function at an
-address of the list, and nothing elsewhere. A step of `lookup_calls`. -/
-theorem lookup_filterMap_pair {β : Type} (f : List Nat → Option β) (o : List Nat) :
-    ∀ l : List (List Nat),
-      (l.filterMap fun a => (f a).map fun c => (a, c)).lookup o = if o ∈ l then f o else none
-  | [] => rfl
-  | a :: l => by
-    have ih := lookup_filterMap_pair f o l
-    by_cases hoa : o = a
-    · subst hoa
-      cases hf : f o with
-      | none =>
-        rw [List.filterMap_cons, hf, Option.map_none, ih, if_pos List.mem_cons_self]
-        split
-        · exact hf
-        · rfl
-      | some c =>
-        -- `List.lookup_cons_self` reaches `Classical.choice` through its `ReflBEq` instance
-        have hself : (o == o) = true := beq_iff_eq.mpr rfl
-        rw [List.filterMap_cons, hf, Option.map_some, if_pos List.mem_cons_self]
-        simp only [List.lookup, hself]
-    · have hb : (o == a) = false := beq_eq_false_iff_ne.mpr hoa
-      have rhs : (if o ∈ a :: l then f o else none) = (if o ∈ l then f o else none) := by
-        by_cases hl : o ∈ l
-        · rw [if_pos (List.mem_cons_of_mem a hl), if_pos hl]
-        · rw [if_neg (fun h => hl ((List.mem_cons.mp h).resolve_left hoa)), if_neg hl]
-      rw [rhs, ← ih]
-      cases hf : f a with
-      | none => rw [List.filterMap_cons, hf, Option.map_none]
-      | some c =>
-        rw [List.filterMap_cons, hf, Option.map_some]
-        simp only [List.lookup, hb]
-
-/-- **The call table answers at an address exactly what `callAt` answers there**: a call's
-address is an address of the program (`mem_addresses_iff`), so the table misses none. Concept
-`initial-algebras-folds`; a step of the claim `reply-at-call-instance`; consumer:
-`HostSession.start_callInstance`. -/
-theorem lookup_calls {Op : Type} (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (o : List Nat) :
-    (calls s env0 p).lookup o = callAt s env0 p o := by
-  unfold calls
-  rw [lookup_filterMap_pair]
-  split
-  · rfl
-  · rename_i hno
-    cases hc : callAt s env0 p o with
-    | none => rfl
-    | some c =>
-      obtain ⟨request, _, _, hat, _⟩ := callAt_rowTy hc
-      exact absurd ((mem_addresses_iff (.eff p) o).mpr (by rw [hat]; rfl)) hno
-
-end Effect4.Program
 
 namespace Effect4.Api.HostSession
 open Effect4 Effect4.Program
@@ -88,7 +35,7 @@ theorem start_callInstance {program : Api.Program} {table : RowTable} {profile :
           · cases h
           · cases h
             funext o
-            exact lookup_calls _ _ _ o
+            exact lookup_programCalls _ _ _ o
 
 /-- A session whose table is the program's reads the checker's instance at every address. The
 consumer is `Run.open`, which makes the table as `start` does. -/
@@ -98,7 +45,35 @@ theorem callInstance_callTable {program : Api.Program} {table : RowTable}
   funext o
   unfold Session.callInstance
   rw [h]
-  exact lookup_calls _ _ _ o
+  exact lookup_programCalls _ _ _ o
+
+/-- **On an admitted program the session's instance answers at every call**, with the call's
+operation: in a definition's body, in a block's main program, and in a program with no block.
+It is the claim `block-call-instance` (`checkModule_programCallAt`) at the session's program,
+which admission types by the module check (`typeOfProgram`). Before decisions row 333's repair a
+program with a block had no instance at any call. -/
+theorem instanceAt_complete {program : Api.Program} {table : RowTable}
+    (admitted : AdmittedProgram program ⟨table, []⟩) {o : List Nat} {op : NativeOp}
+    {request : Term} (hat : (Node.eff program.expandRefs).at_ o = some (.eff (.perform op request))) :
+    ∃ c, instanceAt program table o = some c ∧ c.op = op := by
+  have ht := admitted.typed
+  unfold typeOfProgram at ht
+  split at ht
+  · cases hc : Checker.checkModule (SigApp.signature ⟨table, []⟩) program.expandRefs with
+    | error _ => rw [hc] at ht; cases ht
+    | ok T => exact checkModule_programCallAt hc hat
+  · cases ht
+
+/-- **A session that `start` made has an instance at every call of its program**: the table's
+lookup is `instanceAt` (`start_callInstance`), which answers at every call of an admitted
+program (`instanceAt_complete`). -/
+theorem start_callInstance_complete {program : Api.Program} {table : RowTable} {profile : String}
+    {header : Header} {compileFuel : Nat} {s : Session program table}
+    (h : start program table profile header compileFuel = .ok s) {o : List Nat} {op : NativeOp}
+    {request : Term} (hat : (Node.eff program.expandRefs).at_ o = some (.eff (.perform op request))) :
+    ∃ c, s.callInstance o = some c ∧ c.op = op := by
+  rw [start_callInstance h]
+  exact instanceAt_complete s.admitted hat
 
 /-- Successful preflight proves the existing envelope for the association selected by key, or,
 where the row's own columns refuse the completion, the envelope at the call's checked instance
