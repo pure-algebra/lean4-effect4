@@ -62,3 +62,9 @@ Enrolment and head selection compute the model identity predicates exactly.
 These six helpers compile in Queue Data and stay within propext and Quot.sound.
 Their trust probe is /private/tmp/queue-model-passes-axioms.lean.
 The operation branches still require their existing profile and notification connectors.
+Hint renewal now computes the renewed encoding table exactly.
+The helpers takerK_renewed and renewHint_value compile in Queue Data.
+Their trust probe is /private/tmp/queue-renew-axioms.lean.
+The first helper uses propext; the second uses propext and Quot.sound.
+Queue Typing and Ops proof bodies transfer to the other module seat.
+The Queue value and reading connectors remain this seat's work.

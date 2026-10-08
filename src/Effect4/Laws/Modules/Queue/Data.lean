@@ -5,19 +5,12 @@ import Effect4.Laws.Modules.Step.ErasedCompiler
 import Effect4.Laws.Modules.Queue.Relation
 
 /-!
-# Laws.Modules.Queue.Data — the Queue's model on the step language's carriers
+# Queue model carriers and operation data connectors
 
-The connector between the Queue's model and its step written as data
-(`src/Effect4/Modules/Queue/Data.lean`; decisions row 330, slice L3). It has the three parts of
-Semaphore's (`src/Effect4/Laws/Modules/Semaphore/Data.lean`): the reading law, once; the
-encoding, once for the module (`cellVal_image`); and the step's value (`size_eval`).
-
-**The message type is a parameter.** The reading is taken with the type variable `P` in
-place of the message type, whose carrier at the opaque context is the value itself, so a message's value is the
-model's `msg` of its name, as in `cellVal`.
-
-Placement: concept `translation-simulation`, requirement R10, a helper of `sizeStep_agrees`
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`). Nothing here covers a step that folds.
+These helpers serve the existing Queue operation agreement claims under translation-simulation and R10.
+Queue Steps consumes the exact encodings, identity passes, and source annotation equalities.
+The message carrier uses the type variable P, so the message map may contain arbitrary values.
+The input and table hypotheses stay explicit. These helpers establish neither progress nor host delivery.
 -/
 
 set_option autoImplicit false
@@ -179,6 +172,40 @@ theorem isHead_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
       (takers.take 1).any (fun t => decide (t.id = id)) :=
   enrolled_value tb injective (.take ts (.nat 1)) request vs (takers.take 1) id
     ((congrArg (fun xs => xs.take 1) hts).trans List.map_take.symm) hid
+
+/-- Renewal changes the matching taker's hint and keeps its request identity. -/
+theorem takerK_renewed (tb : Table) (injective : tb.Injective) (id : Nat)
+    (hint : DeferredKey) (t : Taker) :
+    (if Model.deferredEqual Leaves.deferredKeys (tb.handle t.id) (tb.handle id)
+      then (hint, (tb.handle id, ())) else takerK tb t) = takerK (tb.renew id hint) t := by
+  rw [tableEqual tb injective t.id id]
+  change (if decide (t.id = id) then (hint, (tb.handle id, ())) else
+    (tb.hint t.id, (tb.handle t.id, ()))) =
+    ((if t.id = id then hint else tb.hint t.id), (tb.handle t.id, ()))
+  by_cases same : t.id = id
+  · have yes : decide (t.id = id) = true := decide_eq_true same
+    rw [yes, if_pos rfl, if_pos same, same]
+  · rw [if_neg same]
+    have no : decide (t.id = id) = false := decide_eq_false same
+    rw [no, if_neg (by decide)]
+
+/-- Hint renewal maps to the independent model's renewed table. -/
+theorem renewHint_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
+    (ts : Step Γ (.list takerTy)) (request fresh : Step Γ idTy)
+    (vs : Inputs Leaves.deferredKeys Γ) (takers : List Taker) (id : Nat) (hint : DeferredKey)
+    (hts : ts.eval Leaves.deferredKeys vs = takers.map (takerK tb))
+    (hid : request.eval Leaves.deferredKeys vs = tb.handle id)
+    (hhint : fresh.eval Leaves.deferredKeys vs = hint) :
+    (Data.renewHint ts request fresh).eval Leaves.deferredKeys vs =
+      takers.map (takerK (tb.renew id hint)) := by
+  rw [Data.renewHint_eval, hts, hid, hhint]
+  refine (List.map_map (f := takerK tb)
+    (g := fun (t : DeferredKey × (DeferredKey × Unit)) =>
+      if Model.deferredEqual Leaves.deferredKeys t.2.1 (tb.handle id)
+      then (hint, (tb.handle id, ())) else t) (l := takers)).trans ?_
+  apply congrArg (fun f => takers.map f)
+  funext t
+  exact takerK_renewed tb injective id hint t
 
 abbrev takeInputs (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : Machine.DeferredKey) :
     Inputs Leaves.deferredKeys (Data.takeΓ P) := (tb.handle id, (hint, (cellK tb msg s, ())))
