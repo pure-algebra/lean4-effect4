@@ -104,6 +104,82 @@ theorem cellK_image (tb : Table) (msg : Nat → Val) (s : State) :
   rw [offers]
   rfl
 
+/-- Injective model identities agree with deferred-key comparison. -/
+theorem tableEqual (tb : Table) (injective : tb.Injective) (a b : Nat) :
+    Model.deferredEqual Leaves.deferredKeys (tb.handle a) (tb.handle b) = decide (a = b) :=
+  (DeferredIdentity.deferredKeys.equal_eq _ _).symm.trans (injective.decides a b)
+
+/-- Model filtering negates exactly the compared request identity. -/
+theorem tableNotEqual (tb : Table) (injective : tb.Injective) (a b : Nat) :
+    (!Model.deferredEqual Leaves.deferredKeys (tb.handle a) (tb.handle b)) = (a != b) :=
+  (congrArg Bool.not (tableEqual tb injective a b)).trans
+    (congrArg Bool.not (Lean.Grind.beq_eq_decide_eq a b).symm)
+
+/-- Taker removal computes the independent model's identity filter. -/
+theorem removeTaker_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
+    (ts : Step Γ (.list takerTy)) (request : Step Γ idTy)
+    (vs : Inputs Leaves.deferredKeys Γ) (takers : List Taker) (id : Nat)
+    (hts : ts.eval Leaves.deferredKeys vs = takers.map (takerK tb))
+    (hid : request.eval Leaves.deferredKeys vs = tb.handle id) :
+    (Data.removeTaker ts request).eval Leaves.deferredKeys vs =
+      (takers.filter (fun t => t.id != id)).map (takerK tb) := by
+  rw [Data.removeTaker_eval, hts, hid]
+  change (takers.map (takerK tb)).filter
+    (fun (t : DeferredKey × (DeferredKey × Unit)) => !Model.deferredEqual Leaves.deferredKeys t.2.1 (tb.handle id)) = _
+  refine (List.filter_map (f := takerK tb)
+    (p := fun (t : DeferredKey × (DeferredKey × Unit)) => !Model.deferredEqual Leaves.deferredKeys t.2.1 (tb.handle id))
+    (l := takers)).trans ?_
+  apply congrArg (List.map (takerK tb))
+  apply congrArg (fun predicate => takers.filter predicate)
+  funext t
+  exact tableNotEqual tb injective t.id id
+
+/-- Offer removal computes the independent model's identity filter. -/
+theorem removeOffer_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
+    (msg : Nat → Val) (ts : Step Γ (.list (offerTy P))) (request : Step Γ idTy)
+    (vs : Inputs Leaves.deferredKeys Γ) (takers : List Offer) (id : Nat)
+    (hts : ts.eval Leaves.deferredKeys vs = takers.map (offerK tb msg))
+    (hid : request.eval Leaves.deferredKeys vs = tb.handle id) :
+    (Data.removeOffer P ts request).eval Leaves.deferredKeys vs =
+      (takers.filter (fun t => t.id != id)).map (offerK tb msg) := by
+  rw [Data.removeOffer_eval, hts, hid]
+  change (takers.map (offerK tb msg)).filter
+    (fun (t : Bool × (DeferredKey × (DeferredKey × (List Val × Unit)))) => !Model.deferredEqual Leaves.deferredKeys t.2.2.1 (tb.handle id)) = _
+  refine (List.filter_map (f := offerK tb msg)
+    (p := fun (t : Bool × (DeferredKey × (DeferredKey × (List Val × Unit)))) => !Model.deferredEqual Leaves.deferredKeys t.2.2.1 (tb.handle id))
+    (l := takers)).trans ?_
+  apply congrArg (List.map (offerK tb msg))
+  apply congrArg (fun predicate => takers.filter predicate)
+  funext t
+  exact tableNotEqual tb injective t.id id
+
+/-- Enrolment tests exactly the independent model's request identity. -/
+theorem enrolled_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
+    (ts : Step Γ (.list takerTy)) (request : Step Γ idTy)
+    (vs : Inputs Leaves.deferredKeys Γ) (takers : List Taker) (id : Nat)
+    (hts : ts.eval Leaves.deferredKeys vs = takers.map (takerK tb))
+    (hid : request.eval Leaves.deferredKeys vs = tb.handle id) :
+    (Data.enrolled ts request).eval Leaves.deferredKeys vs =
+      takers.any (fun t => decide (t.id = id)) := by
+  rw [Data.enrolled_eval, hts, hid]
+  refine (List.any_map (f := takerK tb)
+    (p := fun (t : DeferredKey × (DeferredKey × Unit)) => Model.deferredEqual Leaves.deferredKeys t.2.1 (tb.handle id))
+    (l := takers)).trans ?_
+  apply congrArg (fun predicate => takers.any predicate)
+  funext t
+  exact tableEqual tb injective t.id id
+
+/-- Head selection compares exactly the first independent model taker. -/
+theorem isHead_value {Γ : List Ty} (tb : Table) (injective : tb.Injective)
+    (ts : Step Γ (.list takerTy)) (request : Step Γ idTy)
+    (vs : Inputs Leaves.deferredKeys Γ) (takers : List Taker) (id : Nat)
+    (hts : ts.eval Leaves.deferredKeys vs = takers.map (takerK tb))
+    (hid : request.eval Leaves.deferredKeys vs = tb.handle id) :
+    (Data.isHead ts request).eval Leaves.deferredKeys vs =
+      (takers.take 1).any (fun t => decide (t.id = id)) :=
+  enrolled_value tb injective (.take ts (.nat 1)) request vs (takers.take 1) id
+    ((congrArg (fun xs => xs.take 1) hts).trans List.map_take.symm) hid
+
 abbrev takeInputs (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : Machine.DeferredKey) :
     Inputs Leaves.deferredKeys (Data.takeΓ P) := (tb.handle id, (hint, (cellK tb msg s, ())))
 abbrev offerInputs (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hint : Machine.DeferredKey) :

@@ -56,3 +56,9 @@ The six helper declarations use only propext and Quot.sound; message collection 
 The command is LEAN_NUM_THREADS=3 lake build Effect4.Laws.Modules.Queue.Data.
 The trust probe is /private/tmp/queue-passes-axioms.lean.
 Model operation branch connectors and unchanged public typing proofs remain open.
+The injective table specializes deferred comparison to model request equality.
+Taker and offer removal compute the model filters exactly.
+Enrolment and head selection compute the model identity predicates exactly.
+These six helpers compile in Queue Data and stay within propext and Quot.sound.
+Their trust probe is /private/tmp/queue-model-passes-axioms.lean.
+The operation branches still require their existing profile and notification connectors.
