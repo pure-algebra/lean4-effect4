@@ -46,7 +46,7 @@ def runModule (m : Module NativeOp) :=
 #guard runModule ((Echo.make "strings" .string).module
   ((Echo.make "strings" .string).echo (str "ok"))) = some (.success (.str "ok"))
 
-/-- The simple number and string definitions remain in the reader's admitted profile.
+-- The simple number and string definitions remain in the reader's admitted profile.
 #guard [numbers.module (numbers.echo (nat 9)),
     (Echo.make "strings" .string).module ((Echo.make "strings" .string).echo (str "ok"))].all
   fun authored => match Api.Author.build authored with
@@ -70,7 +70,7 @@ def unusual : Echo := Echo.make "numbers.with space_λ" .nat
   fun built => Api.printModule "main" built.program).isSome
 #guard runModule (unusual.module (unusual.echo (nat 3))) = some (.success (.nat 3))
 
--- A caller's written variable keeps its reading through the invocation. -/
+/-- A caller's written variable keeps its reading through the invocation. -/
 def caller : Src NativeOp := eff do
   let value ← succeed (nat 19)
   let operation ← succeed (nat 23)
@@ -213,8 +213,11 @@ in the application
   succeed y
 -/
 #guard_msgs in
-eff_module HigherOrder where
-  op (x : .nat) : .nat := fun y => succeed y
+run_cmd Lean.withoutModifyingEnv do
+  let .ok command := Lean.Parser.runParserCategory (← Lean.getEnv) `command
+      "eff_module HigherOrder where op (x : .nat) : .nat := fun y => succeed y"
+    | Lean.throwError "the negative control does not parse"
+  Lean.Elab.Command.elabCommand command
 
 -- Qualified declaration names follow ordinary Lean namespace rules.
 eff_module Nested.Identity where
