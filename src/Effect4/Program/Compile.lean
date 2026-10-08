@@ -1382,7 +1382,9 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
       -- on the invoking fiber
       | some (Node.eff (.perform (.call k) request)) =>
         match evalTerm p.env request, defBodyPath root k with
-        | some v, some path => resolve root { p.redirect path with env := [v] }
+        -- the environment is built from the point's own (`take 0`, then the request's value), as
+        -- `Point.layerBuild` builds an empty one: the engine keeps it in its environment carrier
+        | some v, some path => resolve root { p.redirect path with env := p.env.take 0 ++ [v] }
         | _, _ => badShape
       | some (Node.eff e) => compileEff e p
       | _ => badShape

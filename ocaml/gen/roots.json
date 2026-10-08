@@ -80,7 +80,8 @@
       ],
       "cap": 2000,
       "types": [
-        "Effect4.Program.RowShape"
+        "Effect4.Program.RowShape",
+        "Effect4.Program.DefDecl"
       ],
       "roots": [
         "Effect4.Api.run",

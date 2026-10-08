@@ -479,7 +479,8 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
       · split
         · next v path hv hp =>
           apply List.Subset.trans (resolve_keys root _)
-          simp only [Point.keys, Point.redirect, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+          simp only [Point.keys, Point.redirect, List.take_zero, List.nil_append, List.flatMap_cons,
+            List.flatMap_nil, List.append_nil]
           exact List.append_subset.mpr ⟨List.subset_append_left _ _, evalTerm_point_keys _ p v hv⟩
         · exact List.nil_subset _
       · exact compileEff_keys _ p
