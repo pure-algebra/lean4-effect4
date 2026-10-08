@@ -2558,7 +2558,7 @@ theorem rowTy_fits {row : Effect4.Program.Row} {reqTy : Ty} {use : Option TermUs
         cases h
         refine ⟨σ, σ', ?_, hbind, bindTerm_widens hbind, rfl,
           (Formation.check_eq_none_iff _).mp hformed⟩
-        have hsub := (Bounds.matchB_sound (Bounds.matchB_of_matchTerm hmatch)).1
+        have hsub := (Bounds.matchB_sound hmatch).1
         rw [(Ty.normal_normalize reqTy).fixed] at hsub
         exact (fits_normalize w _ v).mp (fits_sub w hsub v
           ((fits_normalize w reqTy v).mpr hv))

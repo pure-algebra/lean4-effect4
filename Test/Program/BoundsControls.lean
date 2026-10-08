@@ -20,10 +20,9 @@ evaluations and the readers.
   cell's own content.
 * **Tested: a template atom at a proper union of its argument.** Each list atom and each map
   atom answers at the join, and the prelude's whole form lets tsgo compute it.
-* **Tested: the interim guard at a binder term**, at the result template of `Ref.modify`. A pair
-  whose first part is a union passes. Two pairs whose first parts have no order do not. Two pairs
-  whose first parts have an order pass. The guard does not read the cell's parameter. The match
-  by bounds alone answers each.
+* **Tested: the binder term's match by bounds**, at the result template of `Ref.modify`. A pair
+  whose first part is a union passes, as two pairs with the same next cell value do. The match
+  joins the reply's lower bounds and keeps the cell's parameter.
 * **Red (tested): a signature's admission** refuses a host row with a parameter under a nominal
   reference, and it admits the same row at a closed argument.
 * **Green (proved): three readers** of the laws, at a real row and at a real atom.
@@ -117,10 +116,9 @@ def answersAt (name : String) (arguments : List Ty) (expected : Ty) : Bool :=
 -- red (tested): the list atoms still refuse an argument that is no list
 #guard nativeAtomTy "take" [.union (.list .nat) .nat, .nat] = none
 
-/-! ## The interim guard at a binder term
+/-! ## A binder term's match by bounds
 
-The probe's controls (`docs/research/2026-10-06-seat-BOUNDS-evidence/scripts/FoldsGuard.tail.lean.txt`),
-at the function of the tree. The cell's parameter is the seed's, at `nat`. -/
+The cell's parameter is the seed's, at `nat`. The reply's parameter may bind to a join. -/
 
 /-- The result template of `Ref.modify`: the pair of the reply and the cell's next value. -/
 def modifyResult : Ty := .prod (.var 1) (.var 0)
@@ -129,26 +127,26 @@ def modifyResult : Ty := .prod (.var 1) (.var 0)
 def twoPairs : Ty := .union (.prod .nat .nat) (.prod .string .nat)
 
 -- green (tested): a pair whose first part is a union offers one lower bound
-#guard bound (matchTerm [(0, .nat)] modifyResult (.prod (.union .nat .string) .nat)) 1 =
+#guard bound (matchB [(0, .nat)] modifyResult (.prod (.union .nat .string) .nat)) 1 =
   some (.union .nat .string)
--- red (tested): two pairs whose first parts have no order offer two, and the guard refuses
-#guard matchTerm [(0, .nat)] modifyResult twoPairs == none
--- tested: the match by bounds alone answers there, at the join
+-- green (tested): two pairs whose first parts have no order bind the reply at their join
 #guard bound (matchB [(0, .nat)] modifyResult twoPairs) 1 = some (.union .nat .string)
 -- green (tested): two pairs whose first parts have an order pass
-#guard bound (matchTerm [(0, .nat)] modifyResult
+#guard bound (matchB [(0, .nat)] modifyResult
     (.union (.prod (.lit "a") .nat) (.prod .string .nat))) 1 = some .string
--- green (tested): the guard does not read the cell's parameter
-#guard (matchTerm [(0, .union .nat .string)] modifyResult
+-- green (tested): the seed keeps the cell's parameter
+#guard (matchB [(0, .union .nat .string)] modifyResult
     (.union (.prod .bool .nat) (.prod .bool .string))).isSome
--- red (tested): the raw reading. The pair of a union passes, and its normal form, two pairs,
--- does not
+-- green (tested): a pair of a union and its normal form bind the same reply
 #guard (Ty.prod (.union .nat .string) .nat).normalize == twoPairs.normalize
-#guard matchTerm [(0, .nat)] modifyResult (Ty.prod (.union .nat .string) .nat).normalize == none
+#guard bound (matchB [(0, .nat)] modifyResult (Ty.prod (.union .nat .string) .nat).normalize) 1 =
+  some (.union .nat .string)
+-- red (tested): the result cannot change the cell's fixed element type
+#guard matchB [(0, .nat)] modifyResult (.prod .bool .string) == none
 
-/-! ## The interim guard at a host row's request (decisions row 312, point 1)
+/-! ## A host row's request by bounds
 
-The row check matches a row's request under the same guard (`checkRow`). -/
+The row check binds the request's lower bounds at their join (`checkRow`). -/
 
 /-- A host row with a parameter under a list: `List<A>` to `Option<A>`. -/
 def firstRow : Row :=
@@ -158,9 +156,12 @@ def firstRow : Row :=
 -- green (tested): a list of a union offers one lower bound, and the row answers at it
 #guard rowTy firstRow (.list (.union .nat .string)) =
   some ⟨.option (.union .nat .string), .never, Effect4.Machine.Env.Requirement.empty⟩
--- red (tested): a union of two lists offers two lower bounds with no order, and the row refuses
-#guard checkRow firstRow (.union (.list .nat) (.list .string)) = .error .requestNotSubtype
--- tested: the match by bounds alone answers there, at the join
+-- green (tested): a union of two lists offers two lower bounds, and the row answers at their join
+#guard rowTy firstRow (.union (.list .nat) (.list .string)) =
+  some ⟨.option (.union .nat .string), .never, Effect4.Machine.Env.Requirement.empty⟩
+-- red (tested): a non-list member still refuses at the request
+#guard checkRow firstRow (.union (.list .nat) .nat) = .error .requestNotSubtype
+-- green (tested): the request's match by bounds answers at the join
 #guard (matchB [] firstRow.request.normalize (Ty.union (.list .nat) (.list .string)).normalize).isSome
 
 /-! ## A signature's admission at a nominal reference -/

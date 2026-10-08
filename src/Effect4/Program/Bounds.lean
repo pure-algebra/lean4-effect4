@@ -21,28 +21,19 @@ match by first occurrence and its `join` flag.
 `matchArgsB` matches an argument list: every parameter is solved from every argument, and then
 every argument is checked at the same, final bindings.
 
-**The interim guard at a binder term** (`termGuard`, `matchTerm`; decisions row 299, point 10).
-tsgo infers a type argument by choosing one candidate: the one that every other candidate is
-below, or else the first. It forms no join of two candidates with no order. An operation's own
-term is typed by Effect's declaration of the operation, so the TypeScript printer would have to
-write the join as a type argument, and it does not yet. Until it does, the match of a binder
-term asks that the term's type offers each parameter a greatest lower bound. The guard goes in
-one line: `matchTerm` becomes `matchB`.
-
-An atom needs no guard: its prelude declaration takes an argument's whole type, and tsgo
-computes the join there (`NativeAtom.row`, `src/Effect4/Machine/Term.lean`). A row's request
-takes the same guard (`checkRow`, decisions row 312, point 1): a host row of an application can
-hold a parameter under a list, an option or a map, and tsgo infers its type argument by
-candidates at the application's declaration. A native row fixes each parameter by a cell or by
-the whole request, so the guard refuses nothing there.
+**Requests and binder terms** use the same match by bounds (`checkRow`, `bindTerm`). A match
+may bind a parameter to a join. The typed printer writes the inferred type arguments where
+TypeScript cannot infer the join (`Program.printTyped`, `Codegen/PrintTyped.lean`). An atom's
+prelude declaration takes an argument's whole type, and tsgo computes the join there
+(`NativeAtom.row`, `src/Effect4/Machine/Term.lean`). The match states no target typing law.
 
 **What it is not.**
 - It is no general constraint solver. It computes no upper bound from a contravariant
   occurrence.
 - It does not match under a union head or a nominal reference of a template.
   `Ty.templateAdmissible` refuses both at a signature's admission.
-- It does not model tsgo's inference. The guard and the prelude's declarations keep the checker
-  inside what tsgo accepts, and the truth lane tests that on finite programs.
+- It does not model tsgo's inference. The typed printer and prelude declarations supply the
+  target forms, and the truth lane tests those forms on finite programs.
 
 **Depends on.** `Ty` alone: its order, its normal form and its join.
 
@@ -163,39 +154,6 @@ def matchArgsB (params requests : List Ty) : Option Subst :=
         Ty.sub pr.2.normalize (Ty.instantiate σ pr.1).normalize then some σ
     else none
   else none
-
-/-! ## The interim guard at a binder term -/
-
-/-- A candidate of the list that every candidate of the list is below, in the order of
-`Ty.sub`. The callers pass normal forms. -/
-def greatestOf (ls : List Ty) : Option Ty := ls.find? fun c => ls.all fun d => Ty.sub d c
-
-/-- The candidates have a greatest one. No candidate and one candidate have one, by the shape
-of the list: a symbolic type needs no fact of the order there. -/
-def hasGreatest : List Ty → Bool
-  | [] | [_] => true
-  | ls => (greatestOf ls).isSome
-
-/-- **The interim guard at a binder term** (decisions row 299, point 10). The request offers
-each parameter that the seed does not bind lower bounds with a greatest one, in normal form.
-tsgo then infers the join as its type argument: the join of candidates with a greatest one is
-that candidate.
-
-It refuses a request where two lower bounds of one parameter have no order. The match by
-bounds answers there, with their join. tsgo refuses the printed call where it forms no union of
-the two (`docs/research/2026-10-07-chunk-2-review-evidence/binder_joined.ts.txt`).
-
-**What removes it.** The TypeScript printer writes the type arguments of a row call at the
-join. `matchTerm` then says `matchB`. -/
-def termGuard (seed : Subst) (template request : Ty) : Bool :=
-  let cs := cands .co template request
-  cs.all fun c => (seed.lookup c.1).isSome || hasGreatest ((lowers cs c.1).map Ty.normalize)
-
-/-- **The match of a binder term**: the match by bounds, under the interim guard. It answers
-only where `matchB` answers, with the same bindings (`matchB_of_matchTerm`,
-`src/Effect4/Laws/Program/Template.lean`). -/
-def matchTerm (seed : Subst) (template request : Ty) : Option Subst :=
-  if termGuard seed template request then matchB seed template request else none
 
 end Bounds
 

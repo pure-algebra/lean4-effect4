@@ -6,13 +6,13 @@ import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
 
 /-!
-# Laws.Codegen.PrintTyped — the typed print is the print while the guards stand
+# Laws.Codegen.PrintTyped — reconstruction after named erasure
 
-The typed print's slice P2a (`docs/research/2026-10-07-typed-print-design.md`, the addendum).
-At the empty annotation the typed print is the print, by the uniqueness of the fold
-(`printTypedAt_none`). While the guards stand, the annotation answers nothing at any address
-(`typeArgsAt_none`): a typed call's guarded match answers. So the typed print of every program
-is its print, byte for byte (`printTyped_eq_print`).
+The empty row annotation agrees with the ordinary printer through fold uniqueness.
+`printTyped_eq_print` keeps that equation under `NoJoin`.
+Successful raw typed prints erase to ordinary prints on the existing readable fragment.
+The existing reader's retraction and reconstruction laws follow through that equation.
+Target typing and execution remain separate evidence.
 -/
 
 set_option autoImplicit false
@@ -73,38 +73,21 @@ namespace Effect4.Program
 
 variable {Op : Type}
 
-/-- **While the guards stand, the annotation answers nothing**: at a typed call the row check
-answers, so the guarded match answers (`checkRow_rowBindings`), and no binding is a join. A
-step of `printTyped_eq_print`. It is false after UNGUARD, where the checker types a call at a
-join. -/
+/-- Without a row join annotation, the typed print is the ordinary print.
+This remains the pointer of `typed-print-connector`, exact-codecs, R8.
+The `NoJoin` premise states absence at every checked address.
+It makes no TypeScript typing or execution claim. -/
 @[semantics "exact-codecs" (requirement := R8)]
-theorem typeArgsAt_none (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
-    typeArgsAt s env0 p path = none := by
-  unfold typeArgsAt
-  cases hf : focusAt s env0 p path with
-  | none => rfl
-  | some focus =>
-    obtain ⟨-, typed⟩ := focusAt_typed hf
-    simp only [Option.bind_some]
-    split
-    · rename_i op request hprogram
-      rw [hprogram] at typed
-      cases typed with
-      | perform hdom hterm hrow =>
-        rw [hterm, Option.bind_some]
-        obtain ⟨σ, hσ, -, -⟩ := checkRow_rowBindings (Effect4.Laws.Auto.toOption_eq_some.mp hrow)
-        rw [hσ]
-    · rfl
-
-/-- **The typed print of every program is its print**, byte for byte, while the guards stand:
-no call prints a type argument it did not print before. The pointer of the claim
-`typed-print-connector`. Its consumer is UNGUARD, which removes the guards and leaves this as
-the connector under no join. It does not say that tsgo accepts a printed call. -/
-@[semantics "exact-codecs" (requirement := R8)]
-theorem printTyped_eq_print (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
+theorem printTyped_eq_print (s : Signature Op) (env0 : TyEnv) (p : Eff Op)
+    (noJoin : NoJoin s env0 p) :
     printTyped s env0 p = print s env0.length p := by
+  have annotation : typeArgsAt s env0 p = fun _ => none := by
+    funext path
+    unfold typeArgsAt
+    rw [noJoin path]
+    rfl
   unfold printTyped
-  rw [show typeArgsAt s env0 p = fun _ => none from funext (typeArgsAt_none s env0 p)]
+  rw [annotation]
   exact Effect4.Codegen.Templates.printTypedAt_none s env0.length p
 
 end Effect4.Program
