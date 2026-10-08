@@ -42,5 +42,5 @@ It establishes no host result.
 One overlapping finite-test build was stopped immediately after detection.
 The successful commands above run serially.
 The initial Ops check required the coordinator's tuple law checkpoint c88f9bbf.
-No production declaration uses a goal or an admitted proof.
+No production declaration uses a planned goal or `sorryAx`.
 Roots, registers, and generated reports remain coordinator-owned.

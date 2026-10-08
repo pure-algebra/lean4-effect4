@@ -1,7 +1,7 @@
 import Effect4.Modules.Step.Elab.Inputs
 import Effect4.Laws.Modules.Step.Lists
 import Effect4.Laws.Modules.Step
-import Effect4.Laws.Modules.Tuple3
+import Effect4.Laws.Modules.Tuples
 import Effect4.Laws.Schema.Identity
 open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Modules
 open Effect4.Schema Effect4.Schema.Model Effect4.Machine Effect4.Store

@@ -94,7 +94,7 @@ passed
 The complete audit uses `ProofGraph.Audit.auditedFacts` and `ProofGraph.reachedAxiomsMany`.
 It checks unsafe, partial, axiom, external, replacement, and bodyless opaque flags under the existing safe-recursor policy.
 It refuses missing declarations, exhausted traversal budgets, and any axiom beyond `propext` and `Quot.sound`.
-It audits no meta elaborator module; this slice changes none.
+It audits no Lean elaborator module; this slice changes none.
 
 The tuple battery reads and types lengths zero through four.
 It pins the two-item and three-item term shapes.

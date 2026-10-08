@@ -100,7 +100,7 @@ The focused command LEAN_NUM_THREADS=3 lake build Effect4.Laws.Modules.Queue.Dat
 The trust command LEAN_NUM_THREADS=3 lake env lean /private/tmp/queue-take-axioms.lean passes.
 All five new declarations use only propext and Quot.sound.
 The take_value proof needs a local heartbeat bound of 400000.
-The default bound of 200000 stops during proof elaboration; it does not change the statement.
+The default bound of 200000 stops during Lean elaboration; it does not change the statement.
 These helpers serve the existing Queue take agreement claim under translation-simulation, R10.
 The coordinator owns the unchanged public operation statements and their final proof assembly.
 This slice establishes no host execution or lifecycle observation.

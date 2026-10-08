@@ -1,7 +1,7 @@
 # Independent module boundary audit
 
 The checked capture, named-input, removal, identity, and tuple slices show no semantic defect in these controls.
-The registry descriptions and test-root imports need coordinator integration at the reviewed checkpoint.
+The semantics registry descriptions and test-root imports need coordinator integration at the reviewed checkpoint.
 
 Reviewed base: ce9a2ecbab229d8937ca9ce67272c126b667488e.
 The reviewed production files remain unchanged.
@@ -16,7 +16,7 @@ The independent finite probe checks:
 
 - A used capture's refusal retains its original scope and source path inside a fold.
 - A syntactically used capture refuses during translation even when the runtime loop list is empty.
-- Transparent context and Step-type aliases preserve named source ordering and lifted local inputs.
+- Transparent context and Step-type aliases retain named source ordering and lifted local inputs.
 - A flat triple image retains all three values and rejects a short raw tuple.
 - Model.refusal still refuses tuple types; the exact image supplies no Modeled admission.
 - Equal-looking malformed opaque values supply no native deferred comparison reading.
@@ -33,8 +33,8 @@ The laws establish no allocation validity, run progress, cost, or external host 
 
 At this base, Test.All does not reach StepFolds, StepInputs, StepLists, PoolData, or Schema.Identity.
 The coordinator owns the final root imports.
-The step-language-sound registry title omits the new scope and identity premises and still excludes folds.
-The step-language-typed registry title also still excludes folds.
+The step-language-sound semantics registry title omits the new scope and identity premises and still excludes folds.
+The step-language-typed semantics registry title also still excludes folds.
 The coordinator owns the final claim descriptions.
 A static import traversal finds no Laws module reached from Effect4.
 This source traversal is not a substitute for the library-root gate.

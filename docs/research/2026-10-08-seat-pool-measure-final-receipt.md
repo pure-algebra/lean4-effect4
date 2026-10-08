@@ -29,4 +29,4 @@ No source or artifact in the dependency worktree changes.
 
 Approval review refuses two cross-seat dependency cherry-picks before execution.
 The permitted read-only compiled-dependency setup resolves that boundary.
-The coordinator owns the final integrated build and trust gate.
+The coordinator owns the final integrated build and axiom gate.

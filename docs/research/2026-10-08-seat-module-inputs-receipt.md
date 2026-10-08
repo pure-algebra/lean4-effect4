@@ -29,7 +29,7 @@ fold_step% xs from acc := initial with item => body
 
 A fold lifts every visible local step in the outer input context through `Step.rename`.
 This includes derived local steps and the binders of enclosing folds.
-The elaborator records local aliases for editor information and unused-variable checking.
+The Lean elaborator records local aliases for editor information and unused-variable checking.
 It refuses repeated binders and shadowing of existing locals.
 
 ## Placement and boundary

@@ -314,7 +314,11 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   Or the typing check proves them (`Step.typed_of_normal`): it certifies normal forms by a fold
   of `Ty` (`Ty.normalize_of_certNormal`, `src/Effect4/Laws/Program/TyNormal.lean`).
   So it closes by `rfl` on a concrete step, a product included.
-  It is typing only: no run, and nothing of a fold or an optional field (decisions row 330).
+  The signature assigns the native types to atoms.
+  A fold also requires the caller's type list to match the source scope length.
+  Record construction retains type formation and normality.
+  Empty-value subtyping follows from the shared construction law.
+  It establishes no run, optional field, allocation or host behavior (decisions row 330).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 - **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
@@ -1322,14 +1326,14 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   It establishes no equality with the native spelling and no agreement with a release.
   (`mask_printed_form_profile` (`src/Effect4/Laws/Codegen/Mask.lean`)).
 - **A step reads its value (`step-language-sound`)**: A step is data over typed inputs
-  (`src/Effect4/Modules/Step.lean`), read at any identity context.
-  Let the caller's terms read the encodings of the inputs' values, and let the step pass its
-  reading check.
-  Then its term reads the encoding of its value (`Step.sound`,
-  `src/Effect4/Laws/Modules/Step.lean`).
-  A module's step written as data inherits its agreement with no proof of its own.
-  It establishes nothing of a fold, an optional field, a step's specification or a run
-  (decisions row 330).
+  (`src/Effect4/Modules/Step.lean`).
+  The caller's terms read the input encodings, and the step passes its reading check.
+  A fold requires aligned caller value and source scope lengths.
+  Deferred comparison requires `DeferredIdentity` at the carrier interpretation.
+  Captured caller sources resolve at their original scope.
+  Then the translated term reads the carrier value (`Step.sound`, `src/Effect4/Laws/Modules/Step.lean`).
+  Each module separately proves its value equation against an independent behavior model.
+  The shared law establishes no optional field, allocation, wrapper, run or host behavior (decisions row 330).
 - **The Latch's steps agree with its model (`latch-steps-agree`)**: The Latch is written in the
   step language from the start (`src/Effect4/Modules/Latch/Steps.lean`).
   Its model is rc.112's `class Latch`: `isOpen`, `open` and `release` with `scheduleUnsafe`,
@@ -1340,6 +1344,13 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   (`latch_steps_agree`, `src/Effect4/Laws/Modules/Latch/Steps.lean`).
   It establishes nothing of `await`, interruption, the posted flush's fiber or liveness
   (decisions row 330).
+- **Latch registration agrees with its model (`latch-registration-agrees`)**: Initial construction and registration read their independent model transitions.
+  Registration uses the identity and hint supplied by the encoding table.
+  Withdrawal requires an injective table and aligned caller value and source scope lengths.
+  It removes the first matching registration, including duplicates, and searches live waiters before the attached scheduled batch.
+  It retains the scheduled flag when the batch becomes empty.
+  The connector is `latch_registration_agrees` (`src/Effect4/Laws/Modules/Latch/Registration.lean`).
+  It establishes no interruption delivery, posted-flush execution, liveness or host behavior.
 - **A step keeps the fields it does not name (`step-frame`)**: Take an update spine of an
   input. A field that no overwrite of the step names keeps its value.
   On carriers the law has no premise on the record's names (`Step.frame`).

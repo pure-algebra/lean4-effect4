@@ -28,7 +28,7 @@ Commands:
 The finite control checks map, filter, removal, both any outcomes, an empty map, and normal forms.
 The trust control audits the four shared modules through auditedFacts and reachedAxiomsMany.
 It checks 34 declarations and permits only propext and Quot.sound.
-No declaration rests on an admitted proof.
+No declaration rests on `sorryAx`.
 
 HeadOr waits for the coordinator's getOrElse constructor checkpoint.
 Module pass migration follows the named authoring binder checkpoint.

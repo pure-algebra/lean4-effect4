@@ -47,7 +47,7 @@ The shared finite control checks both nonempty and empty head defaults beside ma
 The trust controls use auditedFacts and reachedAxiomsMany.
 They reject unsafe, partial, axiomatic, external, replaced, and bodyless declarations.
 They permit only propext and Quot.sound.
-No declaration rests on an admitted proof.
+No declaration rests on `sorryAx`.
 
 Intermediate checks exposed anonymous Input arguments after the operand change.
 The final proofs supply explicit Step variables or named specializations.

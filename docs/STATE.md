@@ -25,11 +25,14 @@ A program has folds, a journaled run with replay, and a printed image that reads
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
   `deriving Modeled` (row 330, slice L1). Each of its values inhabits the derived type and
   survives JSON under codec admission, with no proof of its own.
-- **Steps as data** (row 330, slices L2 and L3). A module's step is data over typed inputs
-  (`src/Effect4/Modules/Step.lean`). Its term reads its value and types at its type. It keeps
-  the fields it does not overwrite. Each law is proved once for the language. The steps of
-  Semaphore, Pool and the Queue that fold nothing use it, and so does the Latch, written in it
-  from the start.
+- **Steps as data** (row 330). A module's step is data over typed inputs
+  (`src/Effect4/Modules/Step.lean`). Named inputs, source arguments and binders share their declarations.
+  The language supports captured folds, required records, typed empty values and deferred identity comparison.
+  Shared list operations carry their value equations once.
+  Reading, typing, frame and scope laws connect translated steps to their carrier interpretation under explicit premises.
+  Semaphore, Pool and Queue retain independent model statements.
+  Latch also has initial, registration and first-match cleanup connectors.
+  The [foundation receipt](research/2026-10-08-seat-module-gaps-receipt.md) names the checks and remaining boundaries.
 - **The machine and the session.** The frame machine agrees with the reference on a session
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
@@ -83,8 +86,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The verified module toolkit** (row 330): folds and record construction in the step
-   language, then L4 to L6 (the [L3 receipt](research/2026-10-08-seat-MODULES-L3-receipt.md)).
+1. **The verified module toolkit** (row 330): continue L4 to L6 after the
+   [fold foundation](research/2026-10-08-seat-module-gaps-receipt.md).
+   Common wrapper laws, contextual handle allocation and whole-state deriving remain separate obligations.
 2. **Procedures** (row 328): slice PROC-5, the block's handler laws (the
    [procedures note](research/2026-10-08-seat-PROC-design.md)).
 3. **The simulation across schedules** (row 329): slices S1 to S4 (the

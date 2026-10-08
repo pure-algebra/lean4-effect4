@@ -15,7 +15,7 @@ The reading law requires `DeferredIdentity`; opaque interpretations receive no u
 - Added: `src/Effect4/Schema/Identity.lean`, `src/Effect4/Laws/Schema/Identity.lean`, `Test/Schema/Identity.lean`, and this receipt.
 
 The earlier field-inference commit remains on `codex/module-field-inference`.
-This slice changes no Step, Modeled, root, registry, or ruling file.
+This slice changes no Step, Modeled, root, semantics registry, or ruling file.
 The coordinator owns integration imports.
 
 ## Interface
@@ -55,7 +55,7 @@ All Lean commands run in this worktree with `LEAN_NUM_THREADS=3`.
 | --- | --- |
 | `lake build Effect4.Schema.Identity Effect4.Laws.Schema.Identity` | Final run passes, 473 jobs |
 | `lake build Effect4.Schema.Identity Effect4.Laws.Schema.Identity Test.Schema.Identity` | Passes, 474 jobs |
-| `lake env lean -DwarningAsError=true /private/tmp/deferred-identity-trust.lean` | Passes the whole-module scoped axiom audit |
+| `lake env lean -DwarningAsError=true /private/tmp/deferred-identity-trust.lean` | Passes the whole-module scoped axiom gate |
 | `git diff --check` | Passes |
 
 An initial law build found missing Authoring namespace opens; those were corrected.
@@ -84,5 +84,5 @@ A reference pair also demonstrates why the deferred candidate is role-specific.
 This slice establishes no allocation validity, membership, or whole-state deriving law.
 Comparing deferred keys establishes no equality of abstract Nat request identifiers without the existing table-injectivity premise.
 Other identity and variable leaves remain opaque.
-The coordinator must require the capability only for steps whose syntax uses deferred comparison.
+The coordinator must require the capability only for steps whose stored data uses deferred comparison.
 No full sweep, merge, or push occurs here.

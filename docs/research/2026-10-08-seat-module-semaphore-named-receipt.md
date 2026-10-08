@@ -2,7 +2,7 @@
 
 All five live pure operation bodies use named step inputs.
 Their source applications use the same input declarations.
-The module retains existing public operation signatures and proof statements.
+The module retains existing public operation types and proof statements.
 
 The base is `b024f2ef`, including named inputs, list builders, record aliases, and shared option laws.
 The changed files are `src/Effect4/Modules/Semaphore/Data.lean`, `src/Effect4/Modules/Semaphore/Steps.lean`, and `src/Effect4/Laws/Modules/Semaphore/Data.lean`.

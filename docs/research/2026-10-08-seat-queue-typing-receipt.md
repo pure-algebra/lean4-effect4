@@ -14,7 +14,7 @@ Every existing theorem header remains identical, including binder names and prem
 
 Formation helpers consume the existing `MessageTy` premises.
 They share the message-node and offer-node reasoning previously held in Queue Ops.
-They derive annotation formation without strengthening the admitted message profile.
+They derive annotation formation without strengthening the existing message profile.
 
 ## Placement
 
@@ -22,7 +22,7 @@ Concept: store-typing, requirement R4.
 Question: helpers of `step-language-typed`, consumed by Queue's existing step typing and public operation admission proofs.
 Reach: `TypesEach` under the native atom table, existing `MessageTy`, and existing captured-source and scope premises.
 Exclusions: these laws establish no behavior agreement, allocation, progress, liveness, or host execution.
-Consumer: Queue operation typing and client admission on the R4 spine.
+Consumer: Queue operation typing and program admission on the R4 spine.
 
 ## Checks
 

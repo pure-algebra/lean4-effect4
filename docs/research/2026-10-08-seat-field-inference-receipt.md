@@ -16,7 +16,7 @@ Unresolved schemas still postpone lookup, and opaque schemas still refuse.
 - Added: this receipt.
 
 The change keeps `FieldRef.here` and `FieldRef.there` as the stored data.
-The elaborator resolves the schema before unifying the requested field type.
+The Lean elaborator resolves the schema before unifying the requested field type.
 It postpones failed schema reduction only when the schema contains unresolved metavariables.
 The existing refusals remain in the battery.
 
@@ -66,4 +66,4 @@ An unknown expected schema needs information from another expression before look
 Genuinely opaque schemas remain outside this elaborator's profile.
 
 The checks are compiler and finite evaluations, not host execution evidence.
-No sweep, merge, push, registry edit, root edit, or new ruling occurs in this slice.
+No sweep, merge, push, semantics registry edit, root edit, or new ruling occurs in this slice.

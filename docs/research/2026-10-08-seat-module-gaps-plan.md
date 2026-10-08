@@ -44,7 +44,8 @@ Old builders migrate through explicit reading and typing connectors where their 
 No claim requires byte equality between differently ordered record terms.
 
 Typed empty lists and options use `Authoring.ascribe` in `src/Effect4/Program/Authoring/Ascribe.lean`.
-The typing facts retain declaration formation, normality, and the existing subtype check.
+The typing facts retain declaration formation and normality.
+The shared empty-value rule derives subtyping from covariance and bottom.
 A type variable can pass normality while failing formation outside a template.
 The checks must retain that refusal.
 The list constructor composes the existing native list rule.
@@ -72,6 +73,29 @@ It establishes neither allocation validity nor membership.
 These obligations establish no wrapper scheduling law, progress, liveness, allocation theorem, or native compatibility result.
 The independent models stay independent of generated implementations.
 The Laws graph remains separate from the core import graph.
+
+## Consumer obligations found during migration
+
+Queue's take result has three flat tuple entries.
+Construction must retain that shape and its existing agreement statement.
+The model interpretation reuses `Store.Columns` for a heterogeneous tuple carrier.
+Its exact image encodes the flat tuple and refuses a wrong length or component.
+This extends interpretation, not `Modeled` admission or the membership judgment.
+The shared tuple reading and typing cases serve `step-language-sound` and `step-language-typed`.
+Queue's take agreement and typing statements consume them.
+
+The operation laws require scope independently of typing and evaluation.
+`Step.scoped` serves `operation-data-scoped`, concept `initial-algebras-folds`, requirement R4.
+It assumes scoped caller terms and covers every constructor, including captured folds.
+Its local form proves the captured term scoped only at the actual extended scope.
+The module scope laws consume it before `Api.Author.build` checks each generated program.
+It establishes no evaluation, typing, membership, or host behavior.
+
+Latch adds initial construction, callback registration, and first-match withdrawal.
+The new claim `latch-registration-agrees` serves `translation-simulation`, requirement R10.
+Its independent model transcribes the cited callback and cleanup branches.
+Withdrawal assumes an injective identity table and matching scope lengths.
+The operation wrapper, interruption delivery, and posted flush remain separate obligations.
 
 ## Landing order
 
@@ -101,3 +125,24 @@ The receipt records any remaining wrapper work separately from the step language
 - The receipt names exact commands, changed paths, trust evidence, and remaining boundaries.
 
 No full sweep or push belongs to this request.
+
+## Overwatch findings and decisions
+
+The owner requests repairs of the findings in `docs/research/2026-10-08-claude-overwatch-01.md`.
+
+| Finding | Decision and concrete consumer |
+| --- | --- |
+| CW-01 | One named input declaration orders both indexed inputs and caller sources. Named item and fold binders lift captured step data. All four module families consume them. |
+| CW-02 | `Step.Requirements` folds scope and identity propositions together. Shared reading and typing split those conjunctions once. |
+| CW-03 | Shared map, filter, conditional map, any, removal and first-match removal builders carry ordinary list value laws. Module connectors retain independent state transitions. |
+| CW-04 | `Step.getOrElse` uses the existing native atom. `Step.Lists.headOr` removes Pool's head-reading fold. Both source children remain required by reading. |
+| CW-05 | One typed item list supplies tuples of arbitrary arity. The two- and three-item builders retain existing result types and flat encodings. |
+| CW-06 | One integration branch owns roots, the semantics registry and the final landing. Parallel workers own separate source files. |
+
+Subterm sharing remains a later representation decision because `Term` has no local binding constructor.
+This slice adds no second effect representation.
+Named wrapper replies and a module declaration remain later slices.
+Row 331 rules the module form, transaction representation, Effect 4.0.1 target, and pull boundaries.
+Their implementation still requires placed wrapper obligations and the remaining release relation.
+This foundation retains existing rc.112 observations; it makes no release cut-over.
+Pure step agreement does not establish schedule compatibility, allocation, cancellation delivery or liveness.
