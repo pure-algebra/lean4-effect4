@@ -5,6 +5,7 @@ import Effect4.Laws.Modules.Reading
 import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Modules.Construction
 import Effect4.Laws.Modules.Cons
+import Effect4.Laws.Modules.Tuple3
 import Effect4.Laws.Schema.Identity
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Program.Typed.ListFold
@@ -136,6 +137,13 @@ theorem check_mono {r₁ r₂ : List (String × Bool × Ty) → Bool} {a₁ a₂
     obtain ⟨ht, rest⟩ := and_true h
     exact and_intro (ha _ ht)
       (and_intro (check_mono hf hs hr ha a (and_true rest).1) (check_mono hf hs hr ha b (and_true rest).2))
+  | _, _, .tuple3 x y z, h =>
+    and_intro (and_intro (ha _ (and_true (and_true h).1).1)
+      (and_intro (ha _ (and_true (and_true (and_true h).1).2).1)
+        (ha _ (and_true (and_true (and_true h).1).2).2)))
+      (and_intro (check_mono hf hs hr ha x (and_true (and_true h).2).1)
+        (and_intro (check_mono hf hs hr ha y (and_true (and_true (and_true h).2).2).1)
+          (check_mono hf hs hr ha z (and_true (and_true (and_true h).2).2).2)))
   | _, _, .fst p, h => check_mono hf hs hr ha p h
   | _, _, .snd p, h => check_mono hf hs hr ha p h
   | _, _, .some a, h => check_mono hf hs hr ha a h
@@ -381,6 +389,14 @@ theorem tree_exists : ∀ {Γ : List Ty} {t : Ty} (e : Step Γ t)
     rw [hl, hi, hb]
     rfl
 
+  | _, _, .tuple3 x y z, src, env, path, hin => by
+    obtain ⟨tx, hx⟩ := tree_exists x hin
+    obtain ⟨ty, hy⟩ := tree_exists y hin
+    obtain ⟨tz, hz⟩ := tree_exists z hin
+    refine ⟨.app "tuple" (termsOfList [tx, ty, tz]), ?_⟩
+    change (tuple [x.term src, y.term src, z.term src]) env path = _
+    simp only [Authoring.tuple, app, List.mapM_cons, List.mapM_nil, hx, hy, hz]
+    rfl
   | _, _, .record (fs := fs) fields, src, env, path, hin => by
     obtain ⟨trees, htrees⟩ := trees_exist fields hin
     refine ⟨.record fs ((FieldResults.map (fun name {_} value => (name, value src)) fs
@@ -658,6 +674,11 @@ theorem sound_core : ∀ {Γ : List Ty} {vs : Inputs L Γ}
       exact fold_eval_image (imageAt L item) (imageAt L acc)
         (fun a i => body.eval (Γ := acc :: item :: Γ) L ((a, (i, vs)) : Inputs L (acc :: item :: Γ))) vals bt evaluates (xs.eval L vs) (init.eval L vs)
 
+  | _, vs, src, env, path, vals, hin, _, .tuple3 x y z, h, hs, hi =>
+    reads_tuple3_image L _ _ _ _ _ _
+      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x (and_true h).1)
+      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin y (and_true (and_true h).2).1)
+      (sound_core (identity := identity_mono hi (by intro hb; simp only [compares, cata, featureAlg] at hb ⊢; aesop)) (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin z (and_true (and_true h).2).2)
   | _, vs, src, env, path, vals, hin, _, .record (fs := fs) fields, h, hs, hi =>
     reads_record_image L fs _ (of_decide_eq_true (and_true h).1)
       (fields_names fields src) (sound_fields hin fields (and_true (and_true h).2).2 hs hi)
@@ -763,6 +784,13 @@ theorem facts_of_normal : ∀ {Γ : List Ty} {s : Ty} (e : Step Γ s), e.normal 
     ⟨facts_of_normal xs (and_true (and_true h).1).1,
       facts_of_normal init (and_true (and_true h).1).2, facts_of_normal body (and_true h).2⟩
 
+  | _, _, .tuple3 x y z, h =>
+    ⟨⟨Ty.normalize_of_certNormal _ (and_true (and_true h).1).1,
+      Ty.normalize_of_certNormal _ (and_true (and_true (and_true h).1).2).1,
+      Ty.normalize_of_certNormal _ (and_true (and_true (and_true h).1).2).2⟩,
+      facts_of_normal x (and_true (and_true h).2).1,
+      facts_of_normal y (and_true (and_true (and_true h).2).2).1,
+      facts_of_normal z (and_true (and_true (and_true h).2).2).2⟩
   | _, _, .record fields, h =>
     ⟨Ty.normalize_of_certNormal _ (and_true h).1,
       Option.isNone_iff_eq_none.mp (and_true (and_true h).2).1,
@@ -851,6 +879,10 @@ theorem typed_core (atoms : sig.atomOf = nativeAtomTy) : ∀ {Γ : List Ty} {src
       rfl
     · exact argTy_fold_intro const hle hie (Ty.subN_refl acc) hbe (Ty.subN_refl acc)
 
+  | _, src, env, path, types, hin, _, .tuple3 x y z, h, hs =>
+    types_tuple3 atoms (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin x h.2.1)
+      (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin y h.2.2.1)
+      (typed_core atoms (scope := scope_mono hs (by intro hb; simp only [binds, cata, bindsAlg, featureAlg] at hb ⊢; aesop)) hin z h.2.2.2) h.1.1 h.1.2.1 h.1.2.2
   | _, src, env, path, types, hin, _, .record (fs := fs) fields, h, hs =>
     types_record_declared sig fs (ascending_of_normal h.1) h.1 h.2.1
       (fields_names fields src) (typed_fields atoms hin fields h.2.2 hs)
