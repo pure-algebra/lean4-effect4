@@ -88,6 +88,32 @@ def withAvailable : List (String × Bool × Ty) := ("available", false, .nat) ::
 #guard (field_ref% "taken" : FieldRef Effect4.Semaphore.cellRecord .nat).index == 2 &&
   (field_ref% "taken" : FieldRef withAvailable .nat).index == 3
 
+/-! ## A known schema supplies an inferred field type -/
+
+namespace FieldInference
+
+abbrev fields : List (String × Bool × Ty) := [("xs", false, .list .nat)]
+abbrev input : Step [.record fields] (.record fields) := .var (.here _ _)
+
+-- The list element type is inferred from the named field through `get` and `len`.
+def length : Step [.record fields] .nat := .len (.get input (field_ref% "xs"))
+#guard length.normal && length.canonical
+#guard length.term (Input.source [var "cell"]) { names := ["cell"] } [] ==
+  len (field (var "cell") "xs") { names := ["cell"] } []
+
+-- An inferred result also works when the reference is elaborated directly.
+def xs := (field_ref% "xs" : FieldRef fields _)
+#guard xs.name == "xs"
+
+-- A later argument supplies a schema that is unresolved at the first argument.
+def choose {fs : List (String × Bool × Ty)} (ref : FieldRef fs (.list .nat))
+    (_ : fs = fields) : FieldRef fs (.list .nat) := ref
+
+def delayed := choose (field_ref% "xs") (show fields = fields from rfl)
+#guard delayed.name == "xs"
+
+end FieldInference
+
 /-! ## Red controls -/
 
 -- The fault overwrites `open`, so the frame law's premise fails for it.

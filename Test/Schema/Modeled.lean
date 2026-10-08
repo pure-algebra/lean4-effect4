@@ -170,9 +170,9 @@ def Token.modeledTy : Nat := 0
 #guard_msgs in
 derive_modeled Token
 
-/-- error: Unknown constant `Token.modeled_checked` -/
+/-- error: Unknown constant `Test.Schema.Modeled.Controls.Token.modeled_checked` -/
 #guard_msgs in
-#print axioms Token.modeled_checked
+#check Token.modeled_checked
 
 end Test.Schema.Modeled.Controls
 

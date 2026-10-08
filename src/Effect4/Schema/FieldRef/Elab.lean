@@ -11,6 +11,9 @@ positional reference to the field named `taken` of `fs`. An author names the fie
 is computed from the schema that owns it, so inserting another field moves the position with it
 (overwatch finding OW-03, `docs/research/2026-10-08-seat-MODULES-L3-receipt.md`).
 
+The expected schema determines the field's type, so a caller may leave that type to inference.
+Only an unresolved schema postpones name lookup.
+
 It refuses, at the name's syntax:
 
 - an expected type that is not a `FieldRef` (the schema must be known where the name is
@@ -74,12 +77,16 @@ def elabFieldRef : TermElab := fun stx expected? => do
   match stx with
   | `(field_ref% $n:str) =>
     let target := n.getString
-    let expected ← tryPostponeIfHasMVars expected? "field_ref%: the expected type must be a known FieldRef"
-    let expected ← whnfR expected
+    tryPostponeIfNoneOrMVar expected?
+    let some expected := expected?
+      | throwErrorAt n "field_ref%: the expected type must be a known FieldRef"
+    let expected ← whnfR (← instantiateMVars expected)
     unless expected.isAppOfArity ``Effect4.Schema.FieldRef 2 do
       throwErrorAt n "field_ref%: the expected type {expected} is not a FieldRef"
-    let some fields ← entries 4096 (expected.getArg! 0)
-      | throwErrorAt n "field_ref%: the schema {expected.getArg! 0} does not reduce to a list of literal fields"
+    let schema ← instantiateMVars (expected.getArg! 0)
+    let some fields ← entries 4096 schema | do
+      if schema.hasExprMVar then tryPostpone
+      throwErrorAt n "field_ref%: the schema {schema} does not reduce to a list of literal fields"
     let positions := (List.range fields.length).filter fun i =>
       (fields[i]?.map (·.name)) == some target
     match positions with
