@@ -601,18 +601,19 @@ private def renderPlan (plan : Json) : String := Id.run do
         | "work" => s!"Open, after other work ({waits})"
         | _ => "Open, not triaged"
       out := out ++ s!"- {label}: {field part "text"}\n"
+    -- A node's id is a hash of its name, so a new node adds lines and renumbers none. The counts of
+    -- what a proof brings in stay in the JSON report: they move with every upstream edit.
+    let nodeId := fun (n : String) => "n" ++ String.ofList (Nat.toDigits 16 ((hash n).toNat % 0x100000000))
     out := out ++ "\n```mermaid\nflowchart LR\n"
-    for (n, i) in reach.zipIdx do
-      out := out ++ s!"  n{i}[\"{shown n}<br/>{statusOf n}\"]\n"
-    for (n, i) in reach.zipIdx do
-      for d in nearestOf n do
-        if let some j := reach.idxOf? d then out := out ++ s!"  n{i} --> n{j}\n"
-    out := out ++ "```\n\n| Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |\n| --- | --- | --- | --- | --- | --- |\n"
     for n in reach do
-      let some node := nodeOf n | continue
-      let b := nested node "broughtIn"
-      let count (key : String) := ((b.getObjValAs? Nat key).toOption.getD 0)
-      out := out ++ s!"| `{shown n}` | {statusOf n} | {ticked shown (restsOnOf n)} | {ticked shown (nearestOf n)} | {count "lemmas"} | {count "definitions"} |\n"
+      out := out ++ s!"  {nodeId n}[\"{shown n}<br/>{statusOf n}\"]\n"
+    for n in reach do
+      for d in nearestOf n do
+        if reach.contains d then out := out ++ s!"  {nodeId n} --> {nodeId d}\n"
+    out := out ++ "```\n\n| Node | Status | Rests on | Nearest nodes |\n| --- | --- | --- | --- |\n"
+    for n in reach do
+      if (nodeOf n).isNone then continue
+      out := out ++ s!"| `{shown n}` | {statusOf n} | {ticked shown (restsOnOf n)} | {ticked shown (nearestOf n)} |\n"
   return out
 
 def renderMarkdown (report : Json) : String := Id.run do
