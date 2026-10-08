@@ -1,5 +1,5 @@
 import Effect4.Modules.Queue.Steps
-import Effect4.Laws.Modules.Step.Annotations
+import Effect4.Laws.Modules.Step.ErasedCompiler
 
 /-! Queue stored data controls. These finite evaluations cover generic messages,
 flat triples, key comparison, and annotation-independent reading.
@@ -22,6 +22,11 @@ def encodedOffer : Val :=
   (imageAt Leaves.deferredKeys (.prod (.prod (.option .bool) (.list Queue.takerTy)) (Queue.cellTy P))).toVal
     (Step.eval Leaves.deferredKeys offerInputs (Queue.Data.offer P))
 def encodedCell : Val := (imageAt Leaves.deferredKeys (Queue.cellTy P)).toVal cellC
+
+-- The shared compiler law is read at Queue's actual offer data.
+example (srcs : List TermSrc) : eraseSource ((Queue.Data.offer .nat).term (Input.source srcs)) =
+    Step.cata Step.erasedTermAlg (Queue.Data.offer .nat) (Input.source srcs) :=
+  Step.term_erase (Queue.Data.offer .nat) (Input.source srcs)
 
 -- A message's arbitrary value remains untouched, even under a different declaration.
 #guard run (Queue.offerStep .nat (inputSource 0) (inputSource 1) (inputSource 2) (inputSource 3))
