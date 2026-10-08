@@ -35,7 +35,7 @@ def elabRecordStep : TermElab := fun stx expected? => do
     let expected ← whnfR (← instantiateMVars expected)
     unless expected.isAppOfArity ``Effect4.Modules.Step 2 do
       throwErrorAt stx "record_step%: the expected type {expected} is not a Step"
-    let schema ← whnfR (← instantiateMVars (expected.getArg! 1))
+    let schema ← whnf (← instantiateMVars (expected.getArg! 1))
     unless schema.isAppOfArity ``Effect4.Program.Ty.record 1 do
       if schema.hasExprMVar then tryPostpone
       throwErrorAt stx "record_step%: the expected step must return a known record"

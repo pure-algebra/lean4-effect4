@@ -1,5 +1,6 @@
 import Effect4.Modules.Step.Elab
 import Effect4.Program.Native
+import Effect4.Laws.Modules.Step
 
 /-! Finite checks of the new Step constructors and their field-name notation.
 The shared reading and typing laws own the general statements.
@@ -22,6 +23,15 @@ def made : Step [] (.record fields) := record_step% { ready := .bool true, count
 #guard match made.term (Input.source []) {} [] with
   | .ok t => termTy nativeSignature [] t == some (.record fields)
   | .error _ => false
+
+-- The named constructor accepts the ordinary schema type alias.
+def recordTy : Ty := .record fields
+def aliased : Step [] recordTy := record_step% { count := .nat 7, ready := .bool true }
+example : Reads (aliased.term (Input.source [])) {} [] []
+    (Effect4.Machine.Record.frame [("count", .nat 7), ("ready", .bool true)]) :=
+  Step.sound (Γ := []) Leaves.opaque () Input.reads_nil aliased rfl
+example : TypesEach nativeSignature (aliased.term (Input.source [])) {} [] [] recordTy :=
+  Step.typed_of_normal nativeSignature rfl Input.types_nil aliased rfl
 
 def emptyRecord : Step [] (.record []) := record_step% {}
 #guard emptyRecord.normal && emptyRecord.canonical
