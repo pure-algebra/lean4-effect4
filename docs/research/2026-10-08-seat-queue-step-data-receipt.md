@@ -68,3 +68,11 @@ Their trust probe is /private/tmp/queue-renew-axioms.lean.
 The first helper uses propext; the second uses propext and Quot.sound.
 Queue Typing and Ops proof bodies transfer to the other module seat.
 The Queue value and reading connectors remain this seat's work.
+The withdrawal operation now has a value, reading, and exact encoded-observation connector.
+The reading applies shared Step.sound and transports annotations once.
+The encoded observation retains arbitrary message values and caller depth alignment.
+The model identity filter requires the existing injective table premise.
+The focused Queue Data build passes.
+The three connector declarations use only propext and Quot.sound.
+Their trust probe is /private/tmp/queue-withdraw-axioms.lean.
+The existing public withdrawal theorem still needs its notification proof joined to this connector.

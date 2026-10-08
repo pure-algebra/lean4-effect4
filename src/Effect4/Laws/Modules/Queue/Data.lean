@@ -214,6 +214,31 @@ abbrev offerInputs (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hi
 abbrev withdrawInputs (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) :
     Inputs Leaves.deferredKeys (Data.withdrawΓ P) := (tb.handle id, (cellK tb msg s, ()))
 
+/-- Withdrawal computes the model taker filter and its ordered wake list. -/
+theorem withdrawTake_value (tb : Table) (injective : tb.Injective) (msg : Nat → Val) (s : State) (id : Nat) :
+    (Data.withdrawTake P).eval Leaves.deferredKeys (withdrawInputs tb msg s id) =
+      ((if s.messages.length = 0 then [] else (s.takers.filter (fun t => t.id != id)).take 1).map (takerK tb),
+        cellK tb msg (removeTaker s id)) := by
+  let request : Step (Data.withdrawΓ P) idTy := .var (.here _ _)
+  let state : Step (Data.withdrawΓ P) (cellTy P) := .var (.there _ (.here _ _))
+  let removed := Data.removeTaker (.get state (Data.takersF P)) request
+  have hr := removeTaker_value tb injective (.get state (Data.takersF P)) request
+    (withdrawInputs tb msg s id) s.takers id rfl rfl
+  change ((if (s.messages.map msg).length == 0 then [] else
+    (removed.eval Leaves.deferredKeys (withdrawInputs tb msg s id)).take 1),
+    (s.capacity.getD 0, (s.messages.map msg, (s.offers.map (offerK tb msg),
+      (removed.eval Leaves.deferredKeys (withdrawInputs tb msg s id), ()))))) = _
+  rw [hr, List.length_map]
+  by_cases empty : s.messages.length = 0
+  · rw [if_pos empty]
+    have yes : (s.messages.length == 0) = true := by exact beq_iff_eq.mpr empty
+    rw [yes]
+    rfl
+  · rw [if_neg empty]
+    have no : (s.messages.length == 0) = false := beq_eq_false_iff_ne.mpr empty
+    rw [no]
+    exact congrArg (fun first => (first, cellK tb msg (removeTaker s id))) List.map_take.symm
+
 end Effect4.Queue.Model
 
 namespace Effect4.Queue.Data
@@ -268,3 +293,42 @@ theorem withdrawOffer_parameter (A : Ty) (id s : TermSrc) :
   rfl
 
 end Effect4.Queue.Data
+
+namespace Effect4.Queue.Model
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring Effect4.Schema Effect4.Schema.Model Effect4.Modules
+/-- Shared step reading transports to every message declaration through annotation erasure. -/
+theorem withdrawTake_reads (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+    {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.withdrawTake A idSrc cellSrc) env path vals
+      ((imageAt Leaves.deferredKeys (.prod (.list takerTy) (cellTy P))).toVal
+        ((Data.withdrawTake P).eval Leaves.deferredKeys (withdrawInputs tb msg s id))) := by
+  apply Reads.of_annotations (source := Queue.withdrawTake P idSrc cellSrc)
+    (same := congrFun (congrFun (Data.withdrawTake_parameter A idSrc cellSrc) env) path)
+  exact Step.sound Leaves.deferredKeys (withdrawInputs tb msg s id)
+    (Input.reads_cons readsId (Input.reads_cons (readsCell.to (cellK_image tb msg s).symm) Input.reads_nil))
+    (Data.withdrawTake P) (by decide) (Step.scope_of_alignment _ depth)
+    (by exact ⟨DeferredIdentity.deferredKeys⟩)
+
+/-- The withdrawal reading observes the model cell and ordered encoded takers. -/
+theorem withdrawTake_encoded (A : Ty) (tb : Table) (injective : tb.Injective) (msg : Nat → Val) (s : State) (id : Nat)
+    {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.withdrawTake A idSrc cellSrc) env path vals
+      (Val.tuple [Val.list ((if s.messages.length = 0 then [] else (s.takers.filter (fun t => t.id != id)).take 1).map (takerVal tb)),
+        cellVal tb msg (removeTaker s id)]) := by
+  apply (withdrawTake_reads A tb msg s id depth readsId readsCell).to
+  rw [withdrawTake_value tb injective]
+  let w := if s.messages.length = 0 then [] else (s.takers.filter (fun t => t.id != id)).take 1
+  change Val.tuple [Val.list ((w.map (takerK tb)).map ((imageAt Leaves.deferredKeys takerTy).toVal)),
+    (imageAt Leaves.deferredKeys (cellTy P)).toVal (cellK tb msg (removeTaker s id))] = _
+  rw [List.map_map, cellK_image]
+  have encoded : w.map (fun t => (imageAt Leaves.deferredKeys takerTy).toVal (takerK tb t)) = w.map (takerVal tb) :=
+    List.map_congr_left (fun t _ => takerK_image tb t)
+  exact congrArg (fun values => Val.tuple [Val.list values, cellVal tb msg (removeTaker s id)]) encoded
+
+end Effect4.Queue.Model
