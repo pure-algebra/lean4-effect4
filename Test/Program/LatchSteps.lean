@@ -38,4 +38,25 @@ example (tb : Effect4.Modules.Table) {cellSrc : TermSrc} {env : Env} {path : Lis
       (Val.tuple [Val.tuple [.bool true, .bool true], cellVal tb (wake false s0).1]) :=
   wakeStep_agrees tb s0 readsCell false
 
+-- Finite controls of the independent await and cleanup specification. Cleanup erases one
+-- registration, searches waiters before the scheduled batch, and keeps the posted flush.
+#guard (awaitLatch { isOpen := true, waiters := [1] } 9).2
+#guard (awaitLatch { isOpen := true, waiters := [1] } 9).1.waiters == [1]
+#guard (awaitLatch { isOpen := false, waiters := [1] } 9).1.waiters == [1, 9]
+#guard !(awaitLatch { isOpen := false } 9).2
+#guard (withdraw { isOpen := false, waiters := [1, 1, 2], pending := [1, 9], scheduled := true } 1).1.waiters == [1, 2]
+#guard (withdraw { isOpen := false, waiters := [1, 1, 2], pending := [1, 9], scheduled := true } 1).1.pending == [1, 9]
+#guard (withdraw { isOpen := false, pending := [1, 1, 9], scheduled := true } 1).1.pending == [1, 9]
+#guard (withdraw { isOpen := false, pending := [1], scheduled := true } 1).1.scheduled
+#guard (withdraw { isOpen := false, pending := [1], scheduled := false } 1).1.pending == [1]
+
+-- Detaching a batch separates it from later cleanup and reentrant enrolment. The returned
+-- batch still names its callbacks; newly enrolled waiters stay for the next wake.
+def detached := flush { isOpen := false, pending := [1, 2], scheduled := true }
+def reentered := awaitLatch (withdraw detached.1 1).1 9
+#guard detached.2 == [1, 2]
+#guard reentered.1.waiters == [9]
+#guard reentered.1.pending == []
+#guard !(reentered.1.scheduled)
+
 end Test.Program.LatchSteps
