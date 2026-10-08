@@ -24,7 +24,7 @@ environment, the `@[semantics]` placements and the semantics registry.
   that use it. When the term is a closed step (`Step Γ t`), it reports the step's inputs and
   answer, its two checks (`Step.normal`, `Step.canonical`), its writing footprint
   (`Step.writes`) and its update spine (`Step.spine`), each by reduction, and which shared law
-  each check opens.
+  each check serves, with its remaining premises.
 - `#obligations N` lists every theorem and planned goal declared under the namespace `N`, with
   its standing and placement, the goals the namespace rests on, and the claims that point
   inside it.
@@ -54,7 +54,7 @@ structure StepFacts where
   writes : Option (List String)
   spine : Option Nat
   unreduced : List String
-  /-- the shared laws that the checks open, in words -/
+  /-- the shared laws that the checks serve, with their remaining premises -/
   laws : List String
   deriving Inhabited, Modeled
 
@@ -225,9 +225,9 @@ def stepFacts? (e : Expr) : MetaM (Option StepFacts) := do
   let spine := spine.bind id
   let laws :=
     (if normal == some true then
-      ["typing: `Step.typed_of_normal` applies, its check closing by `rfl`"] else []) ++
+      ["typing: the normality check closes by `rfl`; `Step.typed_of_normal` also requires native atom typing, typed inputs and fold scope alignment where used"] else []) ++
     (if canonical == some true then
-      ["reading: `Step.sound` applies, its check closing by `rfl`"] else []) ++
+      ["reading: the canonicality check closes by `rfl`; `Step.sound` also requires input readings, fold scope alignment and deferred identity interpretation where used"] else []) ++
     (match spine with
       | some i => [s!"frame: `Step.frame` applies on input {i}, outside the writing footprint"]
       | none => [])

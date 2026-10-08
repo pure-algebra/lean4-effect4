@@ -30,8 +30,8 @@ info: Test.Audit.Explain.bump (definition, Test.Audit.Explain)
 step: inputs [{count: nat, ready: bool}]; answers {count: nat, ready: bool}
   checks: normal true, canonical true
   writes: [count]; spine: 0
-  law: typing: `Step.typed_of_normal` applies, its check closing by `rfl`
-  law: reading: `Step.sound` applies, its check closing by `rfl`
+  law: typing: the normality check closes by `rfl`; `Step.typed_of_normal` also requires native atom typing, typed inputs and fold scope alignment where used
+  law: reading: the canonicality check closes by `rfl`; `Step.sound` also requires input readings, fold scope alignment and deferred identity interpretation where used
   law: frame: `Step.frame` applies on input 0, outside the writing footprint
 theorems that state something about it (1):
   Test.Audit.Explain.bump_writes: proved
