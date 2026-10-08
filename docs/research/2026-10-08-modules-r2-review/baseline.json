@@ -1,0 +1,62 @@
+[
+  {
+    "argv": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "docs/research/2026-10-08-seat-MODULES-r2/StepData.lean"
+    ],
+    "exit": 0,
+    "seconds": 10.287,
+    "stdout": "\"{\\\"else\\\":[[true,{\\\"get\\\":\\\"waiters\\\",\\\"of\\\":\\\"input\\\"}],{\\\"of\\\":\\\"input\\\",\\\"set\\\":\\\"waiters\\\",\\\"to\\\":{\\\"emptyLike\\\":{\\\"get\\\":\\\"waiters\\\",\\\"of\\\":\\\"input\\\"}}}],\\\"if\\\":{\\\"get\\\":\\\"open\\\",\\\"of\\\":\\\"input\\\"},\\\"then\\\":[[false,{\\\"emptyLike\\\":{\\\"get\\\":\\\"waiters\\\",\\\"of\\\":\\\"input\\\"}}],\\\"input\\\"]}\"\n'StepData.Step.sound' depends on axioms: [propext, Quot.sound]\n'StepData.read_law' depends on axioms: [propext, Quot.sound]\n'StepData.write_law' depends on axioms: [propext, Quot.sound]\n'StepData.frame_law' depends on axioms: [propext, Quot.sound]\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "docs/research/2026-10-08-seat-MODULES-r2/BatchLatch.lean"
+    ],
+    "exit": 0,
+    "seconds": 0.931,
+    "stdout": "[(\"batch\", true, \"(Val.list [(Val.nat 1), (Val.nat 2), (Val.nat 9)])\"),\n  (\"d1\", true, \"(Val.list [(Val.nat 3), (Val.nat 1), (Val.nat 2)])\"),\n  (\"d3\", true, \"(Val.list [(Val.bool true), (Val.list [(Val.nat 3)])])\")]\nbatch client over the coalescing Latch: admitted and printed\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean"
+    ],
+    "exit": 0,
+    "seconds": 2.047,
+    "stdout": "\"Effect4.Program.Ty.record\\n  [(\\\"open\\\", false, Effect4.Program.Ty.bool),\\n   (\\\"waiters\\\",\\n    false,\\n    Effect4.Program.Ty.list\\n      (Effect4.Program.Ty.record [(\\\"hint\\\", false, Effect4.Program.Ty.nat), (\\\"id\\\", false, Effect4.Program.Ty.nat)]))]\"\nsome \"{ readonly open: boolean; readonly waiters: ReadonlyArray<{ readonly hint: number; readonly id: number }> }\"\n\"{\\n  \\\"_tag\\\": \\\"Objects\\\",\\n  \\\"checks\\\": [],\\n  \\\"propertySignatures\\\": [\\n    {\\n      \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"open\\\" },\\n      \\\"type\\\": { \\\"_tag\\\": \\\"Boolean\\\", \\\"checks\\\": [] },\\n      \\\"isOptional\\\": false,\\n      \\\"isMutable\\\": false,\\n    },\\n    {\\n      \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"waiters\\\" },\\n      \\\"type\\\": {\\n        \\\"_tag\\\": \\\"Arrays\\\",\\n        \\\"checks\\\": [],\\n        \\\"elements\\\": [],\\n        \\\"rest\\\": [\\n          {\\n            \\\"_tag\\\": \\\"Objects\\\",\\n            \\\"checks\\\": [],\\n            \\\"propertySignatures\\\": [\\n              {\\n                \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"hint\\\" },\\n                \\\"type\\\": {\\n                  \\\"_tag\\\": \\\"Number\\\",\\n                  \\\"checks\\\": [\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isInt\\\", \\\"payload\\\": null },\\n                      \\\"aborted\\\": false,\\n                    },\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isGreaterThanOrEqualTo\\\", \\\"payload\\\": { \\\"minimum\\\": new DataView(Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false) } },\\n                      \\\"aborted\\\": false,\\n                    },\\n                  ],\\n                },\\n                \\\"isOptional\\\": false,\\n                \\\"isMutable\\\": false,\\n              },\\n              {\\n                \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"id\\\" },\\n                \\\"type\\\": {\\n                  \\\"_tag\\\": \\\"Number\\\",\\n                  \\\"checks\\\": [\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isInt\\\", \\\"payload\\\": null },\\n                      \\\"aborted\\\": false,\\n                    },\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isGreaterThanOrEqualTo\\\", \\\"payload\\\": { \\\"minimum\\\": new DataView(Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false) } },\\n                      \\\"aborted\\\": false,\\n                    },\\n                  ],\\n                },\\n                \\\"isOptional\\\": false,\\n                \\\"isMutable\\\": false,\\n              },\\n            ],\\n            \\\"indexSignatures\\\": [],\\n          },\\n        ],\\n      },\\n      \\\"isOptional\\\": false,\\n      \\\"isMutable\\\": false,\\n    },\\n  ],\\n  \\\"indexSignatures\\\": [],\\n}\"\n'TyModel.LatchCell.modeled_to_of' depends on axioms: [propext]\n'TyModel.LatchCell.modeled_of_to' depends on axioms: [propext]\n'TyModel.Image.record' depends on axioms: [propext]\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "python3",
+      "docs/research/2026-10-08-seat-MODULES-r2/native.py"
+    ],
+    "exit": 2,
+    "seconds": 0.736,
+    "stdout": "d1: pass  ours {\"_tag\": \"Success\", \"value\": [3, 1, 2]}  Effect's {\"_tag\": \"Success\", \"value\": [3, 1, 2]}\nd2: pass  ours {\"_tag\": \"Success\", \"value\": [3, 1, 2]}  Effect's {\"_tag\": \"Success\", \"value\": [3, 1, 2]}\nd3: pass  ours {\"_tag\": \"Success\", \"value\": [true, [3]]}  Effect's {\"_tag\": \"Success\", \"value\": [true, [3]]}\nbatch: candidate  ours {\"_tag\": \"Success\", \"value\": [1, 9, 2]}  Effect's {\"_tag\": \"Success\", \"value\": [1, 2, 9]}\nbatch-coalesced: pass  ours {\"_tag\": \"Success\", \"value\": [1, 2, 9]}  Effect's {\"_tag\": \"Success\", \"value\": [1, 2, 9]}\neffect 4.0.0-rc.112, tsgo 7.0.0-dev.20260629.1, bun 1.4.2, typecheck exit 0\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "python3",
+      "docs/research/2026-10-08-seat-MODULES-r2/native.py",
+      "--self-test"
+    ],
+    "exit": 0,
+    "seconds": 0.636,
+    "stdout": "self-test: a wrong result, a crash and an unruled difference are each reported\n",
+    "stderr": ""
+  }
+]

@@ -1,0 +1,417 @@
+{
+  "kind": "finite-design-review",
+  "reviewed_commit": "3af74a28",
+  "commands": [
+    {
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "exit": 0,
+      "seconds": 0.005,
+      "stdout": "1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "--version"
+      ],
+      "exit": 0,
+      "seconds": 0.199,
+      "stdout": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "build",
+        "Effect4",
+        "Test.Program.SemaphoreScenarios",
+        "Effect4.Laws.Modules.Reading",
+        "Effect4.Laws.Schema.Codec"
+      ],
+      "exit": 0,
+      "seconds": 0.351,
+      "stdout": "Build completed successfully (869 jobs).\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES-r2/StepData.lean"
+      ],
+      "exit": 0,
+      "seconds": 6.689,
+      "stdout": "\"{\\\"else\\\":[[true,{\\\"get\\\":\\\"waiters\\\",\\\"of\\\":\\\"input\\\"}],{\\\"of\\\":\\\"input\\\",\\\"set\\\":\\\"waiters\\\",\\\"to\\\":{\\\"emptyLike\\\":{\\\"get\\\":\\\"waiters\\\",\\\"of\\\":\\\"input\\\"}}}],\\\"if\\\":{\\\"get\\\":\\\"open\\\",\\\"of\\\":\\\"input\\\"},\\\"then\\\":[[false,{\\\"emptyLike\\\":{\\\"get\\\":\\\"waiters\\\",\\\"of\\\":\\\"input\\\"}}],\\\"input\\\"]}\"\n'StepData.Step.sound' depends on axioms: [propext, Quot.sound]\n'StepData.read_law' depends on axioms: [propext, Quot.sound]\n'StepData.write_law' depends on axioms: [propext, Quot.sound]\n'StepData.frame_law' depends on axioms: [propext, Quot.sound]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES-r2/BatchLatch.lean"
+      ],
+      "exit": 0,
+      "seconds": 0.874,
+      "stdout": "[(\"batch\", true, \"(Val.list [(Val.nat 1), (Val.nat 2), (Val.nat 9)])\"),\n  (\"d1\", true, \"(Val.list [(Val.nat 3), (Val.nat 1), (Val.nat 2)])\"),\n  (\"d3\", true, \"(Val.list [(Val.bool true), (Val.list [(Val.nat 3)])])\")]\nbatch client over the coalescing Latch: admitted and printed\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.997,
+      "stdout": "\"Effect4.Program.Ty.record\\n  [(\\\"open\\\", false, Effect4.Program.Ty.bool),\\n   (\\\"waiters\\\",\\n    false,\\n    Effect4.Program.Ty.list\\n      (Effect4.Program.Ty.record [(\\\"hint\\\", false, Effect4.Program.Ty.nat), (\\\"id\\\", false, Effect4.Program.Ty.nat)]))]\"\nsome \"{ readonly open: boolean; readonly waiters: ReadonlyArray<{ readonly hint: number; readonly id: number }> }\"\n\"{\\n  \\\"_tag\\\": \\\"Objects\\\",\\n  \\\"checks\\\": [],\\n  \\\"propertySignatures\\\": [\\n    {\\n      \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"open\\\" },\\n      \\\"type\\\": { \\\"_tag\\\": \\\"Boolean\\\", \\\"checks\\\": [] },\\n      \\\"isOptional\\\": false,\\n      \\\"isMutable\\\": false,\\n    },\\n    {\\n      \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"waiters\\\" },\\n      \\\"type\\\": {\\n        \\\"_tag\\\": \\\"Arrays\\\",\\n        \\\"checks\\\": [],\\n        \\\"elements\\\": [],\\n        \\\"rest\\\": [\\n          {\\n            \\\"_tag\\\": \\\"Objects\\\",\\n            \\\"checks\\\": [],\\n            \\\"propertySignatures\\\": [\\n              {\\n                \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"hint\\\" },\\n                \\\"type\\\": {\\n                  \\\"_tag\\\": \\\"Number\\\",\\n                  \\\"checks\\\": [\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isInt\\\", \\\"payload\\\": null },\\n                      \\\"aborted\\\": false,\\n                    },\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isGreaterThanOrEqualTo\\\", \\\"payload\\\": { \\\"minimum\\\": new DataView(Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false) } },\\n                      \\\"aborted\\\": false,\\n                    },\\n                  ],\\n                },\\n                \\\"isOptional\\\": false,\\n                \\\"isMutable\\\": false,\\n              },\\n              {\\n                \\\"name\\\": { \\\"type\\\": \\\"string\\\", \\\"value\\\": \\\"id\\\" },\\n                \\\"type\\\": {\\n                  \\\"_tag\\\": \\\"Number\\\",\\n                  \\\"checks\\\": [\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isInt\\\", \\\"payload\\\": null },\\n                      \\\"aborted\\\": false,\\n                    },\\n                    {\\n                      \\\"_tag\\\": \\\"Filter\\\",\\n                      \\\"representation\\\": { \\\"id\\\": \\\"effect/schema/isGreaterThanOrEqualTo\\\", \\\"payload\\\": { \\\"minimum\\\": new DataView(Uint8Array.of(0, 0, 0, 0, 0, 0, 0, 0).buffer).getFloat64(0, false) } },\\n                      \\\"aborted\\\": false,\\n                    },\\n                  ],\\n                },\\n                \\\"isOptional\\\": false,\\n                \\\"isMutable\\\": false,\\n              },\\n            ],\\n            \\\"indexSignatures\\\": [],\\n          },\\n        ],\\n      },\\n      \\\"isOptional\\\": false,\\n      \\\"isMutable\\\": false,\\n    },\\n  ],\\n  \\\"indexSignatures\\\": [],\\n}\"\n'TyModel.LatchCell.modeled_to_of' depends on axioms: [propext]\n'TyModel.LatchCell.modeled_of_to' depends on axioms: [propext]\n'TyModel.Image.record' depends on axioms: [propext]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/research/2026-10-08-seat-MODULES-r2/native.py"
+      ],
+      "exit": 2,
+      "seconds": 0.707,
+      "stdout": "d1: pass  ours {\"_tag\": \"Success\", \"value\": [3, 1, 2]}  Effect's {\"_tag\": \"Success\", \"value\": [3, 1, 2]}\nd2: pass  ours {\"_tag\": \"Success\", \"value\": [3, 1, 2]}  Effect's {\"_tag\": \"Success\", \"value\": [3, 1, 2]}\nd3: pass  ours {\"_tag\": \"Success\", \"value\": [true, [3]]}  Effect's {\"_tag\": \"Success\", \"value\": [true, [3]]}\nbatch: candidate  ours {\"_tag\": \"Success\", \"value\": [1, 9, 2]}  Effect's {\"_tag\": \"Success\", \"value\": [1, 2, 9]}\nbatch-coalesced: pass  ours {\"_tag\": \"Success\", \"value\": [1, 2, 9]}  Effect's {\"_tag\": \"Success\", \"value\": [1, 2, 9]}\neffect 4.0.0-rc.112, tsgo 7.0.0-dev.20260629.1, bun 1.4.2, typecheck exit 0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/research/2026-10-08-seat-MODULES-r2/native.py",
+        "--self-test"
+      ],
+      "exit": 0,
+      "seconds": 0.62,
+      "stdout": "self-test: a wrong result, a crash and an unruled difference are each reported\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-r2-lean-review-461ws0kk/TyControls.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.909,
+      "stdout": "none\ntrue\nfalse\nfalse\nsome \"handle: an identity needs its table\"\ntrue\ntrue\nfalse\ntrue\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-r2-lean-review-461ws0kk/Duplicate.lean"
+      ],
+      "exit": 1,
+      "seconds": 1.717,
+      "stdout": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/modules-r2-lean-review-461ws0kk/Duplicate.lean:302:0: error: unsolved goals\ncase mk\na\u271d b\u271d : Bool\n\u22a2 { a := a\u271d, b := a\u271d } = { a := a\u271d, b := b\u271d }\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/research/2026-10-08-modules-r2-review/native-controls.py"
+      ],
+      "exit": 0,
+      "seconds": 0.214,
+      "stdout": "CONFIRMED: distinct JSON boolean/number observations grade pass\nCONFIRMED: nonexistent ruling text changes an exact mismatch to signed/exit 0\nCONFIRMED: empty client coverage yields exit 0\nCONFIRMED: tsgo accepts both bodies; native emits true versus 1; grading returns pass/exit 0\n{\n  \"tools\": {\n    \"effect\": \"4.0.0-rc.112\",\n    \"tsgo\": \"7.0.0-dev.20260629.1\",\n    \"bun\": \"1.4.2\"\n  },\n  \"inputs\": {\n    \"runtime-value-types-lib\": \"bee6080de080bf3c75b33f2e40741cd49154cb747e24a0c66ce8f1fd05cb3bb1\",\n    \"runtime-value-types-pin\": \"935b5e3ecf1cd3f2dbbed8b81029762da3108fb72aeea74d7b71b338007a8d90\"\n  },\n  \"clients\": {\n    \"runtime-value-types\": {\n      \"runs\": {\n        \"lib\": {\n          \"exit\": 0,\n          \"result\": {\n            \"_tag\": \"Success\",\n            \"value\": true\n          },\n          \"stderr\": \"\"\n        },\n        \"pin\": {\n          \"exit\": 0,\n          \"result\": {\n            \"_tag\": \"Success\",\n            \"value\": 1\n          },\n          \"stderr\": \"\"\n        }\n      },\n      \"outcome\": \"pass\"\n    }\n  },\n  \"typecheck\": {\n    \"exit\": 0,\n    \"output\": \"\"\n  }\n}\n",
+      "stderr": ""
+    }
+  ],
+  "checks": {
+    "effect-pin": {
+      "actual": "4.0.0-rc.112",
+      "expected": "4.0.0-rc.112",
+      "pass": true
+    },
+    "compiler-pin": {
+      "actual": "7.0.0-dev.20260629.1",
+      "expected": "7.0.0-dev.20260629.1",
+      "pass": true
+    },
+    "coalesced-batch-agrees": {
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    "original-batch-stays-candidate": {
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    "carrier-control-results": {
+      "actual": [
+        "none",
+        "true",
+        "false",
+        "false",
+        "some \"handle: an identity needs its table\"",
+        "true",
+        "true",
+        "false",
+        "true"
+      ],
+      "expected": [
+        "none",
+        "true",
+        "false",
+        "false",
+        "some \"handle: an identity needs its table\"",
+        "true",
+        "true",
+        "false",
+        "true"
+      ],
+      "pass": true
+    },
+    "duplicate-rejected-at-inverse-proof": {
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    "submitted-packet-unchanged": {
+      "actual": {
+        "docs/research/2026-10-08-seat-MODULES-r2/BatchLatch.lean": "8fe844d6c23ca7e187a9fd0c8d773f1d7245b6630a89da8e7914559ecdc54279",
+        "docs/research/2026-10-08-seat-MODULES-r2/StepData.lean": "7f8c7feff796698eb126cdb6c0167657c571af59a8c384264ade1ce947fe558e",
+        "docs/research/2026-10-08-seat-MODULES-r2/native.py": "3fb9f4f96037df15b039e1273c2b8042703bf356e5066ce47e0ac937a43d2e53",
+        "docs/research/2026-10-08-seat-MODULES-r2/differences.json": "236c07ecd96dca7f6026cf0de6ee3fea27e1d68b7edc6a5287b7a6a93570e76c",
+        "docs/research/2026-10-08-seat-MODULES-r2/batch-coalesced-lib.body.ts": "83c1165efee39a107efc3b34e4191a3f77587865f4e3d767a6220a7a8931983d",
+        "docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean": "687870da0df80aaf854fcf2c16e360d087b1722c7dfdcc93e58e624e14bd1347",
+        "docs/research/2026-10-08-seat-MODULES-r2/native-results.json": "5c08efde053d814967ddb48951e927000f0c083dd58388cc7510e511a5367bfa",
+        "docs/research/2026-10-08-seat-MODULES-r2.md": "93f3dca4a0bedafaddbe4170a54fb3dfc1340d5077512b0a43efa12e64180e09"
+      },
+      "expected": {
+        "docs/research/2026-10-08-seat-MODULES-r2/BatchLatch.lean": "8fe844d6c23ca7e187a9fd0c8d773f1d7245b6630a89da8e7914559ecdc54279",
+        "docs/research/2026-10-08-seat-MODULES-r2/StepData.lean": "7f8c7feff796698eb126cdb6c0167657c571af59a8c384264ade1ce947fe558e",
+        "docs/research/2026-10-08-seat-MODULES-r2/native.py": "3fb9f4f96037df15b039e1273c2b8042703bf356e5066ce47e0ac937a43d2e53",
+        "docs/research/2026-10-08-seat-MODULES-r2/differences.json": "236c07ecd96dca7f6026cf0de6ee3fea27e1d68b7edc6a5287b7a6a93570e76c",
+        "docs/research/2026-10-08-seat-MODULES-r2/batch-coalesced-lib.body.ts": "83c1165efee39a107efc3b34e4191a3f77587865f4e3d767a6220a7a8931983d",
+        "docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean": "687870da0df80aaf854fcf2c16e360d087b1722c7dfdcc93e58e624e14bd1347",
+        "docs/research/2026-10-08-seat-MODULES-r2/native-results.json": "5c08efde053d814967ddb48951e927000f0c083dd58388cc7510e511a5367bfa",
+        "docs/research/2026-10-08-seat-MODULES-r2.md": "93f3dca4a0bedafaddbe4170a54fb3dfc1340d5077512b0a43efa12e64180e09"
+      },
+      "pass": true
+    }
+  },
+  "submitted_inputs": {
+    "docs/research/2026-10-08-seat-MODULES-r2/BatchLatch.lean": "8fe844d6c23ca7e187a9fd0c8d773f1d7245b6630a89da8e7914559ecdc54279",
+    "docs/research/2026-10-08-seat-MODULES-r2/StepData.lean": "7f8c7feff796698eb126cdb6c0167657c571af59a8c384264ade1ce947fe558e",
+    "docs/research/2026-10-08-seat-MODULES-r2/native.py": "3fb9f4f96037df15b039e1273c2b8042703bf356e5066ce47e0ac937a43d2e53",
+    "docs/research/2026-10-08-seat-MODULES-r2/differences.json": "236c07ecd96dca7f6026cf0de6ee3fea27e1d68b7edc6a5287b7a6a93570e76c",
+    "docs/research/2026-10-08-seat-MODULES-r2/batch-coalesced-lib.body.ts": "83c1165efee39a107efc3b34e4191a3f77587865f4e3d767a6220a7a8931983d",
+    "docs/research/2026-10-08-seat-MODULES-r2/TyModel.lean": "687870da0df80aaf854fcf2c16e360d087b1722c7dfdcc93e58e624e14bd1347",
+    "docs/research/2026-10-08-seat-MODULES-r2/native-results.json": "5c08efde053d814967ddb48951e927000f0c083dd58388cc7510e511a5367bfa",
+    "docs/research/2026-10-08-seat-MODULES-r2.md": "93f3dca4a0bedafaddbe4170a54fb3dfc1340d5077512b0a43efa12e64180e09"
+  },
+  "tools": {
+    "effect": "4.0.0-rc.112",
+    "tsgo": "7.0.0-dev.20260629.1",
+    "bun": "1.4.2",
+    "lean": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+  },
+  "native_baseline": {
+    "tools": {
+      "effect": "4.0.0-rc.112",
+      "tsgo": "7.0.0-dev.20260629.1",
+      "bun": "1.4.2"
+    },
+    "inputs": {
+      "d1-lib": "2d04bb21ec37094d74f3d22812df66e1538eac2bbffb684e5b7e76d432769296",
+      "d1-pin": "d1be445831fa42122623d451a0bbb8d4dabf870c71700275aef65c0c32708ec8",
+      "d2-lib": "6f4a5d7b98cc7dce235d1f050711ff861d0cd060d86cfae722216596f8e9b827",
+      "d2-pin": "cb0f61216b194ede68fb2bdd2034a0693083c11c2d5f598319cfc0f45b923c82",
+      "d3-lib": "34f8a334ae9d133f09e9f808268b3cb2e7f4d57153fc826ca2773a3a58b20f9e",
+      "d3-pin": "5ce97a9ab52b9c54c556852532a90da486769e6ecc8a2277eff9fe623b4aed7a",
+      "batch-lib": "f1f8d1c845322b4dfc2c5c9b8992dd5bd7ec63fab662ae32c0418362cc852684",
+      "batch-pin": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257",
+      "batch-coalesced-lib": "83c1165efee39a107efc3b34e4191a3f77587865f4e3d767a6220a7a8931983d",
+      "batch-coalesced-pin": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257"
+    },
+    "clients": {
+      "d1": {
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          }
+        },
+        "outcome": "pass"
+      },
+      "d2": {
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          }
+        },
+        "outcome": "pass"
+      },
+      "d3": {
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                true,
+                [
+                  3
+                ]
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                true,
+                [
+                  3
+                ]
+              ]
+            },
+            "stderr": ""
+          }
+        },
+        "outcome": "pass"
+      },
+      "batch": {
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                9,
+                2
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                2,
+                9
+              ]
+            },
+            "stderr": ""
+          }
+        },
+        "difference": "latch.wake-batch",
+        "outcome": "candidate"
+      },
+      "batch-coalesced": {
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                2,
+                9
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                2,
+                9
+              ]
+            },
+            "stderr": ""
+          }
+        },
+        "outcome": "pass"
+      }
+    },
+    "typecheck": {
+      "exit": 0,
+      "output": ""
+    }
+  },
+  "support_inputs": {
+    "harness/truth/generated/pDefsOdd.ts": "65ae2d33c71ae725a084f1a8c2206438278e2f68d37ccc13a88bfb333ad19319",
+    "harness/truth/prelude.ts": "aa6229893635c354a73f27ce9ea3f91b392e0814c3bd0410171f9dfbeebd4c79",
+    "harness/truth/tsconfig.json": "3aa059d0678689688cfcd43961aff387d9b9af50d60289d9714a1a5a17bdcf90",
+    "vendor/effect-4.0.0-rc.112/src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "ts/eff/package.json": "1f7a29bdf5ec701d8eef07742b2f5db7f3b9fd93bf18c29d8cb8baa888ea3444",
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71"
+  },
+  "review_inputs": {
+    "docs/research/2026-10-08-modules-r2-review/duplicate.inc.lean": "f7028b7798b50a16e3f5e474746083b4dc562509d02db7a957190dbfb1e2d061",
+    "docs/research/2026-10-08-modules-r2-review/review.py": "dd9efb5f2456fe407759eb854a09cee21fd6ba5e7107998731fa12bf4d40b3a4",
+    "docs/research/2026-10-08-modules-r2-review/ty-controls.inc.lean": "7a5a5e142606c79292c18a059b7ada5a199e9a0b938031666fde1be587871da1",
+    "docs/research/2026-10-08-modules-r2-review/baseline.json": "d5d16acdf54e965793dd3728ea422351b755c586528cda3bdfb7e62713cbc6dd",
+    "docs/research/2026-10-08-modules-r2-review/native-controls.py": "d47228b865bb6c01b6a9d715890d188c3b511f0d69d4a49ae044be2cbba9ae50"
+  }
+}
