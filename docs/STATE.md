@@ -62,16 +62,22 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The typed print.** UNGUARD at the row calls, then P2b (the eliminators) and P3 (row 325,
-   point 5).
-2. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
+1. **The typed print**, by Codex: P3 and UNGUARD in one landing, then P2b after its hearing
+   (row 325, point 5; the [widenings note](research/2026-10-08-unguard-widenings.md)).
+2. **Procedures** (row 328): slices PROC-1 and PROC-2 after UNGUARD (the
+   [procedures note](research/2026-10-08-seat-PROC-design.md)).
+3. **The simulation across schedules** (row 329), after the typed print: slices S1 to S4 (the
+   [simulation note](research/2026-10-08-seat-SIM-design.md)).
+4. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
    [session API note](research/2026-10-07-session-api-design.md)).
-3. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
+5. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
 
 ## What the owner must decide
 
-- **UNGUARD's widenings** (row 325, point 5): each rule that moves to the match by bounds admits
-  programs that the guard refuses today.
+- **UNGUARD's widenings** (row 325, point 5): assigned to Codex on the note's four
+  recommendations; a finding that changes one comes back to the owner.
+- **The simulation's three questions** (row 329): what every schedule covers, the other side of
+  a module's law, and the clients it covers.
 - **The frozen contracts' statement pins** (row 301, point 8; the
   [test census](research/2026-10-06-test-cleanup-census.md), proposal 4).
 - **The claims record** (the [application packet](research/2026-10-07-packet-application-claims.md),
