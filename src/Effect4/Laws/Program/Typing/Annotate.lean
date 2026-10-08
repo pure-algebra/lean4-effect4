@@ -33,7 +33,8 @@ its specification (`annotate_eq_table`).
 ## Placement
 
 Concept `initial-algebras-folds` (`docs/core/semantics.md` §2.7), requirement R14.
-`annotate_eq_table` is the one-traversal implementation of the claim `address-table`, whose
+`annotate_eq_table` is the pointer of the claim proposed as `annotate-table` (role
+compatibility). It is the one-traversal implementation of the claim `address-table`, whose
 specification is the table. It serves the open part `marking-agrees` of R14, in its clause on
 one traversal that answers every address. Its consumers are the typed print's slice P2
 (`printTyped` reads each node's entry) and the session's call instances. Each helper below

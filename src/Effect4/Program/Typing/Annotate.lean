@@ -3,50 +3,49 @@ module
 public import Effect4.Program.Typing.Table
 
 /-!
-# Program.Typing.Annotate — the address table in one pass
+# Program.Typing.Annotate — the address table in one traversal
 
 **The question.** The address table (`table`, `Program/Typing/Table.lean`) gives the
-environment and the checker's answer at every address of a program. It is a specification:
-each entry asks `Node.envAt` from the root and the checker at the address. The typed print
-(slice PRINT, steps P2 and after) reads an answer at every node, so it needs the table at the
-cost of one check. This module computes it in one pass, `annotate`, and
-`annotate_eq_table` (`Laws/Program/Typing/Annotate.lean`) proves it equal to the table.
+environment and the checker's answer at every address of a program. It is a specification: each
+entry asks `Node.envAt` from the root and the checker at the address. The typed print (slice
+PRINT, step P2 and after) reads an answer at every node. So it needs the table at the cost of
+one check. This module computes it in one traversal, `annotate`. `annotate_eq_table`
+(`Laws/Program/Typing/Annotate.lean`) proves it equal to the table.
 
-## The pass
+## The traversal
 
 `Annotate.check` and its six siblings are the checker's seven functions (`Checker.check`,
-`Program/Checker.lean`) with a record at each node. Each takes the environment and the path
-that its checker function takes, and it answers two things: the entries of the node's subtree,
-in the order of `Node.addresses`, and the checker's answer at the node.
+`Program/Checker.lean`) with a record at each node. Each takes the environment and the path that
+its checker function takes. It answers two things: the entries of the node's subtree, in the
+order of `Node.addresses`, and the checker's answer at the node.
 
-- **A node is checked once.** Its answer comes from its children's answers by its checker
-  arm. A leaf has no child, so its answer is the checker's own at it.
+- **A node is checked once.** Its answer comes from its children's answers by its checker arm.
+  A leaf has no child, so its answer is the checker's own at it.
 - **A child's environment comes from the answers before it.** The eleven reads of the step
-  function (`Node.childEnv`, `Program/Typing/Focus.lean`) take the answer that the pass has
-  already computed: the answer of an earlier sibling, or the type of a term of the node, read
-  once.
+  function (`Node.childEnv`, `Program/Typing/Focus.lean`) take an answer that the traversal has
+  computed already: an earlier sibling's, or the type of a term of the node, typed once.
 - **A refused read leaves a subtree not reached.** Where a child reads a refused sibling, each
-  address of the child's subtree gets an entry with no environment and no answer, in address
-  order (`Annotate.unreached`). A later child that reads nothing refused is still visited: the
-  second arm of `select`, the failure branch of `matchCause`, the rest of a race's entrants.
+  address of the child's subtree gets an entry with no environment and no answer
+  (`Annotate.unreached`). A later child that reads nothing refused is still visited: the second
+  arm of `select`, the failure branch of `matchCause`, the rest of a race's entrants.
 - **The statements after a head** are visited where the checker checks them: at the head's
   environment, extended by what the head binds. After a refused `bindYield`, whose answer they
   read, they are not reached. After any other refused head they are visited at the head's
-  environment, which the checker never reaches.
+  environment, where the checker never goes.
 
 ## The cost
 
-Each node's checker arm runs once, and each term that a rule reads is typed once. A subtree
-that is not reached costs its address list. The entries of a node's children are joined by
-`List.append`, which copies the left list: a deep left spine of two-child nodes pays that copy
-at each node on it.
+The cost is read off the definition, and no theorem counts it. Each node's checker arm runs
+once, and each term that a rule reads is typed once. A subtree that is not reached costs its
+address list. `List.append` joins the entries of a node's children and copies the left list. So
+a deep left spine of two-child nodes pays that copy at each of its nodes.
 
 ## What this module is not
 
 - It is not a second checker. Its answers are `Checker.check`'s, and the law says so.
 - It marks nothing past a refusal: a subtree after a refused read is not reached.
-- It is not the typed tree of the design note, which keeps a call's bindings. The entries are
-  `Table.Entry`, and slice P2 decides what the printer reads from them.
+- It is not the typed tree of the design note. Its entries are `Table.Entry`, and a call's
+  bindings stand in the call's instance (`callAt`, `Program/Typing/Call.lean`).
 -/
 
 @[expose] public section
@@ -62,8 +61,8 @@ variable {Op : Type}
 
 namespace Annotate
 
-/-- What the pass answers at a node: the entries of its subtree, in address order, and the
-checker's answer at it. -/
+/-- What the traversal answers at a node: the entries of its subtree, in address order, and
+the checker's answer at it. -/
 abbrev Out (α : Type) : Type := List Table.Entry × Except TypeRefusal α
 
 /-- **The entries of a subtree that is not reached**: one for each address of the node `n`,
@@ -435,7 +434,7 @@ end
 
 end Annotate
 
-/-- **The address table of a program, in one pass.** It equals `table s env0 p`
+/-- **The address table of a program, in one traversal.** It equals `table s env0 p`
 (`annotate_eq_table`, `Laws/Program/Typing/Annotate.lean`), and it checks each node once. -/
 def annotate (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : List Table.Entry :=
   (Annotate.check s env0 [] p).1
