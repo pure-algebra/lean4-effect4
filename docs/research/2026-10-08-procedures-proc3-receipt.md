@@ -15,7 +15,7 @@ Two parts of the design note are not landed:
 ## Base and head
 
 - Base: `ef1412f0` on `refactor/phase1-phase3` (Codex's P2b merged, its claims recorded).
-- Head: the commit that carries this receipt, on the same branch.
+- Head: `a3f6015f` (the slice) and `9edd0db5` (the target selection), on the same branch.
 
 ## What landed
 
@@ -111,8 +111,11 @@ Run in the main checkout, each through `scratch/lean-slot.sh`, with
 | `make check-truth` | PASS: 80 programs agree, 1 signed divergence; the regenerated modules type-check under tsgo `7.0.0-dev.20260629.1` |
 | `make check-ts-reader` | PASS: 489 files, 416 matched, 0 mismatched; 15 refused with no oracle (the four block modules among them); tsgo type-checks `ts/eff`; 742 tests pass |
 | `make gen-semantics` | `module-defs-round-trip` proved |
+| `make check` | PASS: `check-gen` (every Lean-only group) and `check-docs` (76 documents), after the commit |
+| `make check-target` | PASS once the selection names the four block programs: 92 expected, 92 resolved, 0 mismatching; 28 tests pass |
 
-`make check` and `make check-target` are recorded in the commit message of this slice.
+Not run: `make check-ocaml`, `make check-compiler` and the engine cut. The slice changes neither
+the program syntax nor the machine, so nothing they read moved.
 
 ## Bounded evidence
 
