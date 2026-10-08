@@ -76,7 +76,7 @@ Three logs in the machine, two above it:
 2. **The host's answers**: a queue of completions consumed in encounter order.
 3. **The event trace**: twenty-one kinds, from host-visible exits down to frame pushes and pops.
 4. **The host session's ledger** (`src/Effect4/Api/HostSession.lean:84-93`).
-5. **The run's journal of played rows** (`src/Effect4/Run.lean:57-59`), from which a fresh run
+5. **The run's journal of played rows** (`src/Effect4/Run/Basic.lean`, `Run`), from which a fresh run
    replays.
 
 What the correctness theorems compare is every fiber's exit plus the stores
@@ -234,7 +234,7 @@ that hides order or allocation policy.
 | Context and captures | `Machine/Stores.lean`, `Program/Compile.lean` | persistent path | service identity, override, inheritance, static types, capture lifetime |
 | External allocations and replies | `Machine/Stores.lean`, `Program/Admit.lean` | dense arena plus a keyed host table | prepared-value relation, target extension, no allocation on a refused reply |
 | Session and capability ledgers | `Api/HostSession.lean` | append sequence and keyed table | call ids distinct from tokens, exact active, pending, consumed and retired sets |
-| Journal and diagnostics | `Run.lean`, `Api/Runner.lean`, the trace | append sequence | authoritative command replay; semantic, holder and diagnostic projections kept apart |
+| Journal and diagnostics | `Run/Basic.lean`, `Api/Runner.lean`, the trace | append sequence | authoritative command replay; semantic, holder and diagnostic projections kept apart |
 
 **Two patterns.**
 

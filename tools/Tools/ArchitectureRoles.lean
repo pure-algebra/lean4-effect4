@@ -80,9 +80,13 @@ def areas : List Area := [
   ⟨"src/Effect4/Codegen", .runtime, 5, "Codegen", "the pinned Effect profile: print and read, the template table, forms, bindings, module admission", false, true⟩,
   ⟨"src/Effect4/Ingest", .runtime, 5, "Ingest", "the ingest taxonomy", false, true⟩,
   ⟨"src/Effect4/Api", .runtime, 6, "Api", "the application face: author and build, run, the host session and protocol, supervision, inspection", false, true⟩,
-  ⟨"src/Effect4/Run.lean", .runtime, 7, "Run", "the run API over `Api`: commands, the journal, replay", false, true⟩,
+  ⟨"src/Effect4/Run.lean", .runtime, 8, "Run", "the entry module for running a built program: re-exports the run API and the tape (decisions row 332)", false, true⟩,
+  ⟨"src/Effect4/Run/Basic.lean", .runtime, 7, "Run/Basic", "the run API over `Api`: commands, the journal, replay", false, true⟩,
   ⟨"src/Effect4/Run/Tape.lean", .runtime, 7, "Run/Tape", "what a tool reads off a run, in `Effect4.Run`: the machine's view, the decision of a journal row, the raw replay of a decision tape (`replayFrom`, `machineOf`, `enoughFor`), the tape of a journal (`tapeFrom`), a funded run and a machine at rest", false, true⟩,
-  ⟨"src/Effect4.lean", .runtime, 8, "Effect4", "the root: the face and the functional utilities; never Laws", false, true⟩,
+  ⟨"src/Effect4/Author.lean", .runtime, 8, "Author", "the entry module for writing a program or a module: re-exports program authoring, `deriving Modeled`, the step language and the wrappers (decisions row 332)", false, true⟩,
+  ⟨"src/Effect4/Emit.lean", .runtime, 8, "Emit", "the entry module for what leaves the tree: re-exports the printer, Schema documents, the codec and the runner's byte boundary (decisions row 332)", false, true⟩,
+  ⟨"src/Effect4/Library.lean", .runtime, 8, "Library", "the entry module of the prebuilt composed modules (decisions rows 332 and 335)", false, true⟩,
+  ⟨"src/Effect4.lean", .runtime, 9, "Effect4", "the root: the face and the functional utilities; never Laws", false, true⟩,
   -- the proof graph
   ⟨"src/Effect4/Laws/Effects", .laws, 0, "Laws/Effects", "layer 0 of the typed-state invariant: the protocol-typed predicate on the free monad, its lifts and order, and the signature sum as the coproduct of the free monads; imports the pinned `Effects` only", false, true⟩,
   ⟨"src/Effect4/Laws/Auto", .laws, 1, "Laws/Auto", "the instruments: the censuses, the position gate, `#typed_state`, `#frame_rules`, the obligation ledger, the aesop banks", false, true⟩,
@@ -121,7 +125,8 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Modules/Semaphore", .laws, 5, "Laws/Modules/Semaphore", "Semaphore's abstract transition model, its first profile with the profile's closure and two facts of a visit; the typing of the cell and its steps, the relation to the model, and the five step statements (decisions row 265); the laws of the first operations (`Ops.lean`): scope, the typing at every scope and the attempt laws", true, true⟩,
   ⟨"src/Effect4/Laws/Modules/Pool", .laws, 5, "Laws/Modules/Pool", "Pool's abstract transition model, its first profile with the profile's closure and the model's facts of an enrolment, a selection, a return, the close's first step and the closer's step; the typing of the cell and its steps, the relation to the model, and the six step statements (decisions rows 267 to 269 and 276); the laws of the operations (`Ops.lean`): scope, the typing at every scope and the attempt laws", true, true⟩,
   ⟨"src/Effect4/Laws/Modules/Stream", .laws, 5, "Laws/Modules/Stream", "the stream cursor model and its whole-loop drain laws (`Model.lean`), the step agreement laws (`Steps.lean`), the step typing laws (`Typing.lean`), and the scope laws of the source and operations (`Ops.lean`)", true, true⟩,
-  ⟨"src/Effect4/Laws.lean", .laws, 6, "Effect4.Laws", "the root of the proof graph", false, true⟩,
+  ⟨"src/Effect4/Laws/Author.lean", .laws, 6, "Laws/Author", "the entry module of the laws an author reads: re-exports the semantics attribute, the authoring laws, the run API's laws and the shared step laws (decisions row 332)", false, true⟩,
+  ⟨"src/Effect4/Laws.lean", .laws, 7, "Effect4.Laws", "the root of the proof graph", false, true⟩,
   -- the tool roots
   ⟨"tools/ProofGraph", .tools, 0, "ProofGraph", "checked theorem references, rolled-back search, published theorems, the obligation join; below Laws and Conform", false, true⟩,
   ⟨"tools/Conform", .tools, 1, "Conform", "generic conformance: source descriptions, reports and evidence, obligations, the LCNF walkers and semantics, layouts, models, the `Std.Do` pilot", false, true⟩,
@@ -245,11 +250,15 @@ def Exposure.word : Exposure → String
   | .entry => "entry" | .library => "module library" | .internal => "internal"
   | .proof => "proof" | .tool => "tool" | .test => "test"
 
-/-- Each path's exposure; the longest declared prefix decides. An entry module is a file. The
-entry modules of row 332 join this table as their files land: `Effect4.Run` exists today. -/
+/-- Each path's exposure; the longest declared prefix decides. An entry module is a file: the
+five of row 332 re-export what their users import. -/
 def exposures : List (String × Exposure) := [
   ("src/Effect4", .internal),
+  ("src/Effect4/Author.lean", .entry),
   ("src/Effect4/Run.lean", .entry),
+  ("src/Effect4/Emit.lean", .entry),
+  ("src/Effect4/Library.lean", .entry),
+  ("src/Effect4/Laws/Author.lean", .entry),
   ("src/Effect4/Modules/Queue", .library),
   ("src/Effect4/Modules/Semaphore", .library),
   ("src/Effect4/Modules/Pool", .library),

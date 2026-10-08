@@ -1,9 +1,9 @@
-import Effect4.Run
+import Effect4.Run.Basic
 
 /-!
 # Run.Tape — what a tool reads off a run: the machine's view, the raw replay, and the tape
 
-A `Run` holds a checked session, and the session holds the machine (`src/Effect4/Run.lean`).
+A `Run` holds a checked session, and the session holds the machine (`src/Effect4/Run/Basic.lean`).
 This module holds the readings of a run that a tool may call. Each is an executable definition
 over the run API, under the `Effect4` root. So a tool that inspects a recorded run needs no
 import of the law graph. The laws of these definitions stand there
@@ -31,7 +31,7 @@ Each definition came here with its body unchanged (decisions row 284, point 5). 
 `replayFrom` and `enoughFor` stood in `src/Effect4/Laws/Run.lean`, where their laws still
 stand. The others stood in the scenario support (`Test/Dogfood/Scenario.lean`).
 
-This file is no `module` file. It imports `Effect4.Run`, an importer of the specialization
+This file is no `module` file. It imports `Effect4.Run.Basic`, an importer of the specialization
 sites of decisions row 202. `replayFrom` and `enoughFor` take the machine's functions at a
 program's own interpreter, as those sites do.
 -/

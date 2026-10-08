@@ -11,6 +11,8 @@ open Tools.Architecture Tools.Exposure
 -- An entry module is a file, and it wins over its directory's class.
 #guard exposureOf "src/Effect4/Run.lean" == some .entry
 #guard exposureOf "src/Effect4/Run/Tape.lean" == some .internal
+-- An entry module inside the proof graph wins over the graph's class.
+#guard exposureOf "src/Effect4/Laws/Author.lean" == some .entry
 -- A composed module's directory is the module library; the shared step language is internal.
 #guard exposureOf "src/Effect4/Modules/Queue/Ops.lean" == some .library
 #guard exposureOf "src/Effect4/Modules/Step.lean" == some .internal

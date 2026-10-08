@@ -263,6 +263,8 @@ import Effect4.Laws.Modules.Stream.Typing
 import Effect4.Laws.Modules.Stream.Ops
 import Effect4.Laws.Program.Typing.TermIntro
 import Effect4.Laws.Slice.Lattice
+-- The entry module of the laws an author reads (decisions row 332).
+import Effect4.Laws.Author
 
 /-!
 # Effect4 proof graph

@@ -190,6 +190,11 @@ import Effect4.Api.Supervision
 import Effect4.Run
 -- What a tool reads off a run: the machine's view, the raw replay, the tape, a funded run, rest.
 import Effect4.Run.Tape
+-- The entry modules a user imports (decisions row 332): authoring, emitting, and the prebuilt
+-- composed modules. `Effect4.Run` above is the fourth, and `Effect4.Laws.Author` the fifth.
+import Effect4.Author
+import Effect4.Emit
+import Effect4.Library
 -- Foreign-source ingestion tables and constructed target spellings.
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
