@@ -292,6 +292,7 @@ attribute [aesop safe forward] readTerm_exact readCause_exact readLiteral_exact 
   readForkOptions_exact Effect4.Codegen.Classes.readTyChecked_exact
 
 set_option maxRecDepth 4096 in
+set_option maxHeartbeats 400000 in
 /-- A leaf read has the sort it was read at, and prints back to what was read at the depth it
 was read at: a term's printing reads the environment's length (`printTerm`). -/
 theorem readLeaf_exact {sig : Signature Op} {d : Nat} {daemon : Bool} {s : ArgSort} {a : Arg}

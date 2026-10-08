@@ -2172,6 +2172,9 @@ theorem NativeOp.row_hygiene (op : NativeOp) :
   | external i =>
     exact (by decide : (NativeOp.externalPlaceholder.shape = .value →
       NativeOp.externalPlaceholder.trailing = []) ∧ rowNamesSafe NativeOp.externalPlaceholder = true)
+  | call k =>
+    exact (by decide : (NativeOp.callPlaceholder.shape = .value →
+      NativeOp.callPlaceholder.trailing = []) ∧ rowNamesSafe NativeOp.callPlaceholder = true)
   | _ => decide
 
 theorem lawfulTable_member (table : RowTable) (h : LawfulTable table = true)
@@ -2228,6 +2231,8 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     -- `Deferred.make`: its key names the row alone, and the spelling reads its face back, the
     -- instance that `NativeOp.spelled` holds, whatever type arguments the operation carries
     | deferredMakeOf value error => rfl
+    -- an invocation is outside the native signature's domain: only a block's signature has it
+    | call k => simp [nativeSignature] at hd
     | _ => rfl
   row_of_spell := by
     intro s names op hs

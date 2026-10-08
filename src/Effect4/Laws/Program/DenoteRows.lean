@@ -108,6 +108,8 @@ def StraightRows (table : RowTable) : NativeEff → Bool
   | .provideService _ _ _ => false
   | .iterate _ _ _ _ _ _ => false
   | .restore _ _ => false
+  -- a definition block's invocations hop into a body (decisions row 328)
+  | .defs _ _ _ => false
 
 /-! ## The denotation -/
 
@@ -278,6 +280,7 @@ theorem StraightRows.perform_sync {table : RowTable} {op : NativeOp} {r : Term}
   rw [NativeOp.row_kind]
   cases op with
   | external i => exact absurd rfl (hop i)
+  | call _ => contradiction
   | sleep => contradiction
   | deferredAwait => contradiction
   | scopeMake strategy => cases strategy <;> rfl

@@ -141,7 +141,8 @@ theorem denoteWith_badShape : ∀ (e : NativeEff) (env : List Val),
   | .gen _, _ | .uninterruptible _, _ | .interruptible _, _
   | .iterate _ _ _ _ _ _, _ | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
-  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _ => by
+  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _
+  | .defs _ _ _, _ => by
     rw [denoteWith, denote]
     all_goals (intros; rename_i heq; cases heq)
 

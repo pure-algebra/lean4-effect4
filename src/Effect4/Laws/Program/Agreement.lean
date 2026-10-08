@@ -495,6 +495,7 @@ theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.perform op r) p =
       (match op with
        | .external _ => asyncRoute op r p
+       | .call _ => Prim.suspend (EffThunk.body p)
        | _ => match op.kind with
          | .sync =>
            match evalTerm p.env r with
@@ -520,9 +521,17 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
   cases op with
   | scopeMake strategy => cases strategy <;> rfl
   | external i => cases hkind
+  | call k => cases hkind
   | deferredAwait => cases hkind
   | sleep => cases hkind
   | _ => rfl
+
+/-- A definition block has no step of its own: its main program at child 1 (decisions row
+328). -/
+theorem compileEff_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
+    (hf : p.fuel = k + 1) : compileEff (.defs decls bodies main) p = compileEff main (p.child 1) := by
+  conv => lhs; unfold compileEff
+  rw [hf]
 
 theorem compileEff_bind (a b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.bind a b) p =
@@ -1389,15 +1398,32 @@ theorem suspendBodyAt_suspend {root : NativeEff} {q : Point} {k : Nat} {b : Nati
     suspendBodyAt root (EffThunk.body q) = resolve root (q.child 0) := by
   simp only [suspendBodyAt, hf, h]
 
+/-- An invocation's suspension body (decisions row 328): the request evaluated at the point,
+then the definition's body resolved at its point of the root, the request its one variable. -/
+theorem suspendBodyAt_call {root : NativeEff} {q : Point} {k : Nat} {index : Nat} {r : Term}
+    (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.perform (.call index) r))) :
+    suspendBodyAt root (EffThunk.body q) =
+      match evalTerm q.env r, defBodyPath root index with
+      | some v, some path => resolve root { q.redirect path with env := [v] }
+      | _, _ => badShape := by
+  simp only [suspendBodyAt, hf, h]
+  rfl
+
 /-- The law of the complement of `Eff.suspendDecided`: outside the heads the suspension
 decides itself, the thunk body is the node compiled at its point. -/
 theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : NativeEff}
     (hf : q.fuel = k + 1) (h : Node.at_ (Node.eff root) q.path = some (Node.eff e))
     (hnd : e.suspendDecided = false) :
     suspendBodyAt root (EffThunk.body q) = compileEff e q := by
-  cases e <;> first
-    | (simp [Eff.suspendDecided] at hnd; done)
-    | simp [suspendBodyAt, hf, h]
+  cases e with
+  | perform op r =>
+    cases op with
+    -- an invocation is a decided head
+    | call k => cases hnd
+    | _ => simp [suspendBodyAt, hf, h]
+  | suspend _ | select _ _ _ _ | gen _ | iterate _ _ _ _ _ _ | provideLayer _ _ _ => cases hnd
+  | _ => simp [suspendBodyAt, hf, h]
 
 /-- `Effect.provide`'s suspension answers the scope allocation (the join). -/
 theorem suspendBodyAt_provideLayer {root : NativeEff} {q : Point} {k : Nat}

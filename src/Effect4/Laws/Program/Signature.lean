@@ -280,10 +280,13 @@ theorem rows_append (t t' : RowTable) :
   cases op with
   | external i =>
     have hi : i < t.length := of_decide_eq_true hd
-    refine ⟨decide_eq_true (Nat.lt_of_lt_of_le hi (by simp only [List.length_append]; omega)), ?_⟩
+    refine ⟨show decide (i < (t ++ t').length) = true from
+      decide_eq_true (Nat.lt_of_lt_of_le hi (by simp only [List.length_append]; omega)), ?_⟩
     show ((nativeRowOf (t ++ t') (.external i)).normalizeTypes) =
       (nativeRowOf t (.external i)).normalizeTypes
     simp only [nativeRowOf, List.getElem?_append_left hi]
+  -- an invocation is in no native signature's domain
+  | call k => cases hd
   | _ => exact ⟨rfl, rfl⟩
 
 /-! ## Σ_app (`SigApp`, `Program/SigApp.lean`) -/
@@ -403,6 +406,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   eff_select : alg₁.eff_select = alg₂.eff_select
   eff_iterate : alg₁.eff_iterate = alg₂.eff_iterate
   eff_restore : alg₁.eff_restore = alg₂.eff_restore
+  eff_defs : alg₁.eff_defs = alg₂.eff_defs
   stmt_bindYield : alg₁.stmt_bindYield = alg₂.stmt_bindYield
   stmt_yieldDiscard : alg₁.stmt_yieldDiscard = alg₂.stmt_yieldDiscard
   stmt_ret : alg₁.stmt_ret = alg₂.stmt_ret
@@ -473,6 +477,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
   eff_select _ _ r2 r3 := r2 ∧ r3
   eff_iterate _ _ _ _ _ r5 := r5
   eff_restore _ r1 := r1
+  eff_defs _ r1 r2 := r1 ∧ r2
   stmt_bindYield r0 := r0
   stmt_yieldDiscard r0 := r0
   stmt_ret _ := True
@@ -610,6 +615,10 @@ theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Eff Op)
   | restore a0 a1 =>
     show alg₁.eff_restore a0 (cata_eff alg₁ a1) = alg₂.eff_restore a0 (cata_eff alg₂ a1)
     rw [h.eff_restore, cata_eff_congr_on h a1 hr]
+  | defs a0 a1 a2 =>
+    show alg₁.eff_defs a0 (cata_effs alg₁ a1) (cata_eff alg₁ a2) =
+      alg₂.eff_defs a0 (cata_effs alg₂ a1) (cata_eff alg₂ a2)
+    rw [h.eff_defs, cata_effs_congr_on h a1 hr.1, cata_eff_congr_on h a2 hr.2]
 termination_by structural e
 
 /-- Fold congruence at `Stmt`. -/
@@ -864,6 +873,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     eff_select := by simp only [Checker.check.alg, hterm]
     eff_iterate := by simp only [Checker.check.alg, hterm]
     eff_restore := by simp only [Checker.check.alg, hterm]
+    eff_defs := rfl
     stmt_bindYield := rfl
     stmt_yieldDiscard := rfl
     stmt_ret := by simp only [Checker.check.alg, hterm]

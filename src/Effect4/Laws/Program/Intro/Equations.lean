@@ -21,12 +21,13 @@ variable {p : Point} {k : Nat}
 
 /-- Every non-sync native operation is an async built-in or an external index. -/
 theorem compileEff_perform_nonsync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
-    (hkind : (NativeOp.row op).kind ≠ .sync) :
+    (hkind : (NativeOp.row op).kind ≠ .sync) (hcall : ∀ i, op ≠ .call i) :
     compileEff (.perform op r) p = asyncRoute op r p := by
   rw [compileEff_perform op r hf]
   cases op with
   | scopeMake strategy => cases strategy <;> exact absurd rfl hkind
   | external i => rfl
+  | call i => exact absurd rfl (hcall i)
   | deferredAwait => rfl
   | sleep => rfl
   | _ => exact absurd rfl hkind
@@ -35,20 +36,23 @@ theorem compileEff_perform_async (op : NativeOp) (r : Term) (hf : p.fuel = k + 1
     (hkind : (NativeOp.row op).kind = .async) :
     compileEff (.perform op r) p = asyncRoute op r p :=
   compileEff_perform_nonsync op r hf (by rw [hkind]; exact nofun)
+    (fun i hi => by subst hi; cases hkind)
 
-/-- The only native placeholder of program kind is external; it now registers. -/
+/-- The native placeholders of program kind are external and an invocation (decisions row 328);
+an external one registers. -/
 theorem compileEff_perform_program (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
-    (hkind : (NativeOp.row op).kind = .program) :
+    (hkind : (NativeOp.row op).kind = .program) (hcall : ∀ i, op ≠ .call i) :
     compileEff (.perform op r) p = asyncRoute op r p :=
-  compileEff_perform_nonsync op r hf (by rw [hkind]; exact nofun)
+  compileEff_perform_nonsync op r hf (by rw [hkind]; exact nofun) hcall
 
 theorem denoteR_perform_nonsync (root : NativeEff) (op : NativeOp) (r : Term)
-    (hpos : p.fuel ≠ 0) (hkind : (NativeOp.row op).kind ≠ .sync) :
+    (hpos : p.fuel ≠ 0) (hkind : (NativeOp.row op).kind ≠ .sync) (hcall : ∀ i, op ≠ .call i) :
     denoteR root (.perform op r) p = denoteAsyncRoute op r p := by
   rw [denoteR_perform root op r hpos]
   cases op with
   | scopeMake strategy => cases strategy <;> exact absurd rfl hkind
   | external i => rfl
+  | call i => exact absurd rfl (hcall i)
   | deferredAwait => rfl
   | sleep => rfl
   | _ => exact absurd rfl hkind

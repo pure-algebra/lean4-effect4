@@ -159,6 +159,17 @@ theorem Eff.expandIn_scoped (b : NativeEff) :
     Eff.expandIn root (.scoped b) = .scoped (Eff.expandIn root b) :=
   rounds_one _ Eff.scoped (fun _ => rfl) _ b
 
+/-- A definition block keeps its head and its declarations through the expansion's rounds
+(decisions row 328): each round folds the block into a block. A step of `defs_not_typed`. -/
+theorem Eff.expandIn_defs_head (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff) :
+    ∃ bodies' main', Eff.expandIn root (.defs decls bodies main) = .defs decls bodies' main' := by
+  unfold Eff.expandIn
+  generalize List.range ((root.refSites []).length + 1) = rounds
+  induction rounds generalizing bodies main with
+  | nil => exact ⟨bodies, main, rfl⟩
+  | cons _ rest ih =>
+    exact ih (Effs.expandRound (Node.eff root) bodies) (Eff.expandRound (Node.eff root) main)
+
 theorem Eff.expandIn_restore (saved : Term) (b : NativeEff) :
     Eff.expandIn root (.restore saved b) = .restore saved (Eff.expandIn root b) :=
   rounds_one _ (Eff.restore saved) (fun _ => rfl) _ b
@@ -2718,7 +2729,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
       exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 1 post))
     | refMake | refGet | refSet | refGetAndSet | refSetAndGet | deferredIsDone | deferredPoll
     | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
-    | deferredMakeOf _ _ => cases hb
+    | deferredMakeOf _ _ | call _ => cases hb
   | none =>
   -- the rows without a term: the request's bindings stand
   have huse : root.signature.termUse tys op = none := by
@@ -2922,6 +2933,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
   | deferredAwait => cases hk
   | sleep => cases hk
   | external _ => cases hk
+  | call _ => cases hk
 
 /-- A built-in operation reads its own row; only a host operation reads the table. -/
 theorem nativeRowOf_builtin (table : RowTable) {op : NativeOp}
@@ -3055,6 +3067,29 @@ theorem external_arm {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
   intro w' ord ans post
   exact .pure post
 
+/-- **No point of an admitted program is an invocation** (decisions row 328): an admitted
+program's signature is an application's, which keeps every invocation outside its domain
+(`nativeSignature`). The admission of a definition block, and with it M5's invocation arm, is
+the next step of slice PROC-2. -/
+theorem call_not_typed {k : Nat} {r : Term} {q : Point} {t : EffTy}
+    (hat : Node.at_ (.eff root.program) q.path = some (.eff (.perform (.call k) r)))
+    (hpt : PointTyped root w q t) : False := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨reqTy, hdom, -, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+  cases hdom
+
+/-- **No point of an admitted program is a definition block**: the checker refuses a block below
+the whole module's root (`TypeReason.definitionBlock`), so no point's check answers there. -/
+theorem defs_not_typed {decls : List DefDecl} {bodies : Effs NativeOp} {main : NativeEff}
+    {q : Point} {t : EffTy}
+    (hat : Node.at_ (.eff root.program) q.path = some (.eff (.defs decls bodies main)))
+    (hpt : PointTyped root w q t) : False := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨bodies', main', heq⟩ := Eff.expandIn_defs_head (root := root.program) decls bodies main
+  rw [heq] at hcheck
+  exact nomatch hcheck
+
 /-- **`perform`**: a host row, the two asynchronous built-in rows, or a store row. -/
 theorem perform_arm {op : NativeOp} {r : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
@@ -3062,6 +3097,7 @@ theorem perform_arm {op : NativeOp} {r : Term} (hfuel : p.fuel ≠ 0)
     TypedProg root w ty (denoteR root.program (.perform op r) p) := by
   cases op with
   | external i => exact external_arm hfuel hat hpt
+  | call k => exact (call_not_typed hat hpt).elim
   | deferredAwait => exact deferredAwait_arm hfuel hat hpt
   | sleep => exact sleep_arm hfuel hat hpt
   | _ => exact syncPerform_arm rfl hfuel hat hpt
@@ -3300,6 +3336,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
         simp only [inlineAsyncYield, hv] at hinline
         exact nomatch hinline
+      | call k => exact (call_not_typed hat hpt).elim
       | sleep =>
         obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
         obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
@@ -3377,6 +3414,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       | false =>
         exact ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
           (pointTyped_child hat rfl rfl hcb henv hview) hinline
+    | defs decls bodies main => exact (defs_not_typed hat hpt).elim
     | _ => exact nomatch hinline
 
 section ExitArm
@@ -3509,6 +3547,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl)
       | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt
       | restore saved b => exact restore_arm hq hat hqt htie (hch b 0 rfl)
+      | defs decls bodies main => exact (defs_not_typed hat hqt).elim
 
 /-- **No node of the program is a `provideLayer`**: the fragment on which the layer family's arm
 cannot be reached. -/

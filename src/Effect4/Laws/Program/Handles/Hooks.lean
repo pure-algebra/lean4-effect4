@@ -475,6 +475,13 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
         · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
         · exact List.nil_subset _
       · sub_tac
+      -- an invocation: the body's point holds the request's value and the completed view
+      · split
+        · next v path hv hp =>
+          apply List.Subset.trans (resolve_keys root _)
+          simp only [Point.keys, Point.redirect, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+          exact List.append_subset.mpr ⟨List.subset_append_left _ _, evalTerm_point_keys _ p v hv⟩
+        · exact List.nil_subset _
       · exact compileEff_keys _ p
       · exact List.nil_subset _
   | memoLookup q m scope => simp only [suspendBodyAt]; sub_tac

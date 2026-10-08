@@ -942,8 +942,8 @@ theorem effAll_onRef (P : Ty → Prop) (f : List Nat → LayerTerm Op)
     (hf : ∀ target, layerAll P (f target) = True) (node : Eff Op) :
     effAll P (cata_eff (refAlgebra f) node) = effAll P node := by
   cases node <;> simp only [effAll, cata_eff, EffAlgebra.id, foldMap_eff, NodeAll, view, view_eff,
-    ArgsAll, ArgAll, effAll_onRef P f hf, stmtsAll_onRef P f hf, actionAll_onRef P f hf,
-    layerAll_onRef P f hf]
+    ArgsAll, ArgAll, effAll_onRef P f hf, stmtsAll_onRef P f hf, effsAll_onRef P f hf,
+    actionAll_onRef P f hf, layerAll_onRef P f hf]
 
 /-- `effAll_onRef` at a statement. -/
 @[semantics "subtyping-algebra" (requirement := R14)]

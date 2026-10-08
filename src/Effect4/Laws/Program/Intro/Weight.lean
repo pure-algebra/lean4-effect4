@@ -56,6 +56,14 @@ theorem weight_redirect_le (p : Point) (target : List Nat) :
     (p.redirect target).weight ≤ p.weight := by
   simp only [Point.weight, Point.redirect]; omega
 
+/-- An invocation's hop (decisions row 328) spends one fuel at a point with fuel: strictly
+lighter, whatever its completed view and its environment. A step of `code_intro_aux`'s
+invocation case. -/
+theorem weight_redirect_lt (p : Point) (target : List Nat) (h : p.fuel ≠ 0)
+    (completed : List (FiberId × ExitV)) (env : List Val) :
+    ({ p.redirect target with completed, env } : Point).weight < p.weight := by
+  simp only [Point.weight, Point.redirect]; omega
+
 /-- The spine of a `mergeAll` walked `i` steps in from a point (`Node.child`'s
 `layers (.cons _ t), 1`), peeled from the head, so that a statement about the spine descends
 with its term. -/

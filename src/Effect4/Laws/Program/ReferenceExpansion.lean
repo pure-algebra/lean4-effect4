@@ -94,7 +94,7 @@ private theorem refSites_onRef_eff (f : List Nat → LayerTerm Op) (node : Eff O
       (foldMapAt_eff [] (· ++ ·) q node (f_layer := LayerTerm.refSite)).flatMap (sitesAt f p) := by
   cases node <;> simp only [cata_eff, EffAlgebra.id, foldMapAt_eff, List.flatMap_append,
     List.flatMap_nil, List.nil_append, List.append_assoc, refSites_onRef_eff f,
-    refSites_onRef_stmts f, refSites_onRef_action f, refSites_onRef_layer f]
+    refSites_onRef_stmts f, refSites_onRef_effs f, refSites_onRef_action f, refSites_onRef_layer f]
 
 /-- The law at `Stmt`. -/
 private theorem refSites_onRef_stmt (f : List Nat → LayerTerm Op) (node : Stmt Op)
