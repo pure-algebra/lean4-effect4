@@ -1,0 +1,54 @@
+# Brief: author as many composed modules as the step language allows
+
+Status: brief for Codex (history, not authority). Base: the merge of `codex/module-folds`. Owner,
+2026-10-08: author as many modules as possible with the step language, to keep finding where the
+interfaces and the ergonomics should settle. Be honest about the gaps.
+
+## The one thing to know first
+
+Each module is a probe of the interface as much as a product. Its receipt lists every place where
+the author repeated work, wrote positions, or proved by cases what a shared law should give. That
+list is the output the owner wants, beside the module.
+
+## The catalogue, in order
+
+Sizes are the line counts of latest (Effect 4.0.1), at `vendor/effect-4.0.1/src/<M>.ts`, mostly
+documentation. "Today" means the step language, named inputs, the list builders and the existing
+operation forms, with no new wrapper.
+
+| Order | Module | Kind | Today | It tests | Blocked part, by gap |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `Ref` (1672) | cell | all | the smallest cell; `modify`, `getAndUpdate` as steps | none |
+| 2 | `PartitionedSemaphore` (805) | cell with waiters | all | a keyed cell; reuse of the Semaphore's steps | none |
+| 3 | `PubSub` (3459), bounded strategy first | cell with waiters | the pure steps | subscribers as a list, the publish fold, three strategies as one step each | wake delivery, G1 |
+| 4 | `SubscriptionRef` (2105) | composed of `Ref` and `PubSub` | the steps | one module built from two: the first composition | the composition law, G10 |
+| 5 | `RcRef` (244), `RcMap` (1245) | cell with a scope | the counting steps | a reference count as a step | finalizers, G7 |
+| 6 | `Cache` (2684) | keyed cell with deferred entries | the map steps | a map of deferred entries; the identity table | time to live, G6; the lookup program, G5 |
+| 7 | `SynchronizedRef` (1269) | cell guarded by a lock | the pure `modify` | a client's program inside the lock | G5 |
+| 8 | `TxRef` (474), `TxQueue` (1880), `TxSemaphore` (1177) | transactional | none | the attempt as one step | G4 |
+
+Stop at a gap. Write the module's pure steps and model, and prove its value equations. Record
+the blocked operations in the receipt with their gap's number.
+
+## The gaps, honestly
+
+| Gap | What is missing | State |
+| --- | --- | --- |
+| G1 | named wrapper reply records, and one law per wrapper: atomic, waitRetry, waitAnswer, scheduled | operations are assembled by hand; wrappers have scope and typing laws only |
+| G2 | the module form, `module Q mirrors "Q.ts"` (row 331) | not built |
+| G3 | `derive_step` with its certificate | probe DERIVE-1 only; each value equation is proved by hand |
+| G4 | the transaction attempt as one machine step (row 331) | not built |
+| G5 | a client's program run by a module, in the law's observation (row 333, point 2) | ruled; no wrapper |
+| G6 | the scheduled wrapper and time to live | the machine has timers; no wrapper |
+| G7 | finalizers of a module's scope | `scoped` and `acquireRelease` exist in `Eff`; no wrapper |
+| G8 | subterm sharing in a step's term | `Term` has no local binding; Pool's lease is 167 nodes |
+| G9 | identity tables with injectivity (slice L6) | carried as a premise |
+| G10 | the module law: agreement across schedules (row 329) | open |
+
+## Rules for each module
+
+- The model transcribes latest by line (`AGENTS.md`, row 331) and never reads the step.
+- A heartbeat raise in a value proof is a finding: name the step and the carrier it unfolds.
+  The fold slice added five, in the Queue's and the Pool's typing and data laws.
+- One receipt per module, with the obligations placed by the five fields of `AGENTS.md`.
+- Narrow builds only. No sweep, no push.
