@@ -1,0 +1,15 @@
+{
+  "originalPath": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/harness/truth/P2b.lean",
+  "originalSha256": "8a4d6afed839646af1375b7849a434e139ca9318db50dcff400b223664341480",
+  "originalSavedPath": "/private/tmp/codex-unguard/p2b-target/baseline/P2b-original.lean",
+  "originalBytes": 12193,
+  "prefixBytes": 11931,
+  "prefixSha256": "992452a9189700bf29a1fa20e0db41d70dff8ad35058c68beb63a5f3ea656081",
+  "runnerSha256": "7671a1c0b823195da04fcf28ce092e51240daac53291687301518b29f9b2ee0f",
+  "runnerPath": "/private/tmp/codex-unguard/p2b-target/baseline/SingleBaseline.lean",
+  "selectionDelta": "Only main changes. It selects P2bTarget.fixtures.filter fun fixture => !fixture.joined and calls the unchanged P2bTarget.emit.",
+  "removedMain": "\ndef main (args : List String) : IO Unit := do\n  let [output] := args | throw (IO.userError \"expected one output path\")\n  match P2bTarget.manifest with\n  | .error why => throw (IO.userError why)\n  | .ok value => IO.FS.writeFile output (value.pretty 100 ++ \"\\n\")\n",
+  "replacementMain": "\ndef main (args : List String) : IO Unit := do\n  let [output] := args | throw (IO.userError \"expected one output path\")\n  let baseline : Except String Lean.Json := do\n    let selected := P2bTarget.fixtures.filter fun fixture => !fixture.joined\n    return Lean.Json.mkObj [\n      (\"format\", Lean.toJson \"effect4-p2b-single-baseline-v1\"),\n      (\"evidence\", Lean.toJson \"actual Program.printTyped; unchanged single-member companions; type-only\"),\n      (\"fixtures\", Lean.Json.arr (\u2190 selected.mapM P2bTarget.emit).toArray)]\n  match baseline with\n  | .error why => throw (IO.userError why)\n  | .ok value => IO.FS.writeFile output (value.pretty 100 ++ \"\\n\")\n",
+  "status": "corrected original exporter elaborates exit0; actual single-member runner emits exit0; pinned batched compiler comparison completes",
+  "manifestSha256": "3c55815e17d63fed5379b8433e4b9b8707a1eb43578cc2ba26d9444b60face15"
+}

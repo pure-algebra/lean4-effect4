@@ -1,0 +1,19 @@
+import Effect4.Laws.Codegen.PrintTyped
+import Effect4.Laws.Modules.Waiting
+import Effect4.Laws.Program.Typed.Denotation
+import Effect4.Laws.Program.Typing.Annotate
+
+#print axioms Effect4.Program.printTyped_eq_print
+#print axioms Effect4.Program.bindTerm_some_ok
+#print axioms Effect4.Program.rowTy_closed
+#print axioms Effect4.Program.rowTy_closed_some
+#print axioms Effect4.Program.rowTy_instantiated_formed
+#print axioms Effect4.Program.checkRow_formation_iff
+#print axioms Effect4.Program.checkRow_request_iff
+#print axioms Effect4.Modules.rowTy_intro
+#print axioms Effect4.Modules.bindTerm_intro
+#print axioms Effect4.Modules.answers_refMake
+#print axioms Effect4.Modules.answers_refGet
+#print axioms Effect4.Modules.answers_refModifyWith_captured
+#print axioms Effect4.Program.Typed.rowTy_fits
+#print axioms Effect4.Program.annotate_eq_table

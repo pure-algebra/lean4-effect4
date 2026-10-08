@@ -1,0 +1,248 @@
+{
+  "compiler": "@typescript/native-preview 7.0.0-dev.20260629.1",
+  "effect": "4.0.0-rc.112",
+  "packageMetadata": {
+    "effect": {
+      "name": "effect",
+      "type": "module",
+      "version": "4.0.0-rc.112",
+      "license": "MIT",
+      "description": "The missing standard library for TypeScript, for writing production-grade software.",
+      "homepage": "https://effect.website",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Effect-TS/effect.git",
+        "directory": "packages/effect"
+      },
+      "bugs": {
+        "url": "https://github.com/Effect-TS/effect/issues"
+      },
+      "tags": [
+        "typescript",
+        "error-handling",
+        "concurrency",
+        "observability"
+      ],
+      "keywords": [
+        "typescript",
+        "error-handling",
+        "concurrency",
+        "observability"
+      ],
+      "sideEffects": [],
+      "exports": {
+        "./package.json": "./package.json",
+        ".": "./dist/index.js",
+        "./testing": "./dist/testing/index.js",
+        "./unstable/ai": "./dist/unstable/ai/index.js",
+        "./unstable/cli": "./dist/unstable/cli/index.js",
+        "./unstable/cluster": "./dist/unstable/cluster/index.js",
+        "./unstable/devtools": "./dist/unstable/devtools/index.js",
+        "./unstable/encoding": "./dist/unstable/encoding/index.js",
+        "./unstable/eventlog": "./dist/unstable/eventlog/index.js",
+        "./unstable/http": "./dist/unstable/http/index.js",
+        "./unstable/httpapi": "./dist/unstable/httpapi/index.js",
+        "./unstable/observability": "./dist/unstable/observability/index.js",
+        "./unstable/persistence": "./dist/unstable/persistence/index.js",
+        "./unstable/process": "./dist/unstable/process/index.js",
+        "./unstable/reactivity": "./dist/unstable/reactivity/index.js",
+        "./unstable/rpc": "./dist/unstable/rpc/index.js",
+        "./unstable/schema": "./dist/unstable/schema/index.js",
+        "./unstable/socket": "./dist/unstable/socket/index.js",
+        "./unstable/sql": "./dist/unstable/sql/index.js",
+        "./unstable/workflow": "./dist/unstable/workflow/index.js",
+        "./unstable/workers": "./dist/unstable/workers/index.js",
+        "./*": "./dist/*.js",
+        "./internal/*": null,
+        "./unstable/cli/internal/*": null,
+        "./unstable/cluster/internal/*": null,
+        "./index": null,
+        "./*/index": null
+      },
+      "files": [
+        "src/**/*.ts",
+        "dist/**/*.js",
+        "dist/**/*.js.map",
+        "dist/**/*.d.ts",
+        "dist/**/*.d.ts.map",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "ai-docs/**/*"
+      ],
+      "publishConfig": {
+        "access": "public",
+        "provenance": true
+      },
+      "devDependencies": {
+        "@types/node": "^26.2.0",
+        "ajv": "^8.20.0",
+        "ajv-draft-04": "^1.0.0",
+        "ast-types": "^0.14.2",
+        "immer": "^11.1.18",
+        "protobufjs": "^7.6.5",
+        "tinybench": "^6.1.3",
+        "valibot": "^1.4.2"
+      },
+      "dependencies": {
+        "fast-check": "^4.9.0",
+        "msgpackr": "^2.0.5"
+      },
+      "scripts": {
+        "codegen": "effect-utils codegen",
+        "build": "tsc -b tsconfig.json && pnpm babel",
+        "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
+        "check": "tsc -b tsconfig.json"
+      }
+    },
+    "compiler": {
+      "name": "@typescript/native-preview",
+      "version": "7.0.0-dev.20260629.1",
+      "license": "Apache-2.0",
+      "author": "Microsoft Corp.",
+      "homepage": "https://www.typescriptlang.org/",
+      "description": "Preview CLI and JS API for the native TypeScript compiler port",
+      "keywords": [
+        "TypeScript",
+        "Microsoft",
+        "compiler",
+        "language",
+        "javascript",
+        "tsgo"
+      ],
+      "bugs": {
+        "url": "https://github.com/microsoft/typescript-go/issues"
+      },
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/microsoft/typescript-go.git"
+      },
+      "type": "module",
+      "preferUnplugged": true,
+      "engines": {
+        "node": ">=16.20.0"
+      },
+      "files": [
+        "bin",
+        "lib",
+        "dist",
+        "vendor",
+        "NOTICE.txt"
+      ],
+      "bin": {
+        "tsgo": "./bin/tsgo"
+      },
+      "exports": {
+        "./package.json": "./package.json",
+        ".": "./lib/version.cjs",
+        "./unstable/sync": "./dist/api/sync/api.js",
+        "./unstable/async": "./dist/api/async/api.js",
+        "./unstable/fs": "./dist/api/fs.js",
+        "./unstable/proto": "./dist/api/proto.js",
+        "./unstable/ast": "./dist/ast/index.js",
+        "./unstable/ast/is": "./dist/ast/is.js",
+        "./unstable/ast/factory": "./dist/ast/factory.generated.js",
+        "./unstable/ast/utils": "./dist/ast/utils.js",
+        "./unstable/ast/scanner": "./dist/ast/scanner.js",
+        "./unstable/ast/visitor": "./dist/ast/visitor.js",
+        "./unstable/ast/clone": "./dist/ast/clone.js"
+      },
+      "imports": {
+        "#getExePath": "./lib/getExePath.js",
+        "#enums/*": {
+          "types": "./dist/enums/*.enum.d.ts",
+          "default": "./dist/enums/*.js"
+        },
+        "#vscode-jsonrpc/node": "./vendor/vscode-jsonrpc/lib/node/main.js"
+      },
+      "scripts": {
+        "node": "node --experimental-strip-types --no-warnings --conditions @typescript/source",
+        "generate": "npm run generate:ast && npm run generate:encoder && npm run generate:enums && npm run generate:sync",
+        "generate:ast": "node --experimental-strip-types --no-warnings ../../_scripts/generate-ts-ast.ts",
+        "generate:encoder": "npm run node -- ../../_scripts/generate-encoder.ts",
+        "generate:sync": "npm run node -- scripts/generateSync.ts",
+        "generate:enums": "npx hereby generate:enums --herebyfile ../../Herebyfile.mjs",
+        "prebuild": "npm run generate",
+        "build": "tsc -b",
+        "prebuild:test": "npm run generate",
+        "build:test": "tsc -b test",
+        "test:only": "npm run node -- --test './test/**/*.test.ts'",
+        "pretest": "npm run generate",
+        "test": "npm run test:only"
+      },
+      "devDependencies": {
+        "@types/node": "^25.9.4",
+        "tinybench": "^6.0.2",
+        "vscode-jsonrpc": "^9.0.0"
+      },
+      "gitHead": "f7c4664176a1ac8be4ba7b4981d0b17c0457a74c",
+      "publishConfig": {
+        "access": "public",
+        "tag": "latest"
+      },
+      "optionalDependencies": {
+        "@typescript/native-preview-win32-x64": "7.0.0-dev.20260629.1",
+        "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260629.1",
+        "@typescript/native-preview-linux-x64": "7.0.0-dev.20260629.1",
+        "@typescript/native-preview-linux-arm": "7.0.0-dev.20260629.1",
+        "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260629.1",
+        "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260629.1",
+        "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260629.1"
+      }
+    }
+  },
+  "truthConfig": {
+    "//": [
+      "DI-49: type-check the printed modules, their prelude, the actual recorder, and the new session boundary under the pinned compiler.",
+      "check-truth.py keeps fresh generated modules beside this config and explicitly names the original recorder/session sources so their relative imports retain the repository topology.",
+      "TracedScheduler delegates to the pinned MixedScheduler and wraps only dispatch recording; the focused scheduler comparison checks the observed event sequences.",
+      "These are finite compiler/execution receipts, not a host adequacy theorem."
+    ],
+    "compilerOptions": {
+      "target": "ES2022",
+      "module": "ESNext",
+      "moduleResolution": "bundler",
+      "strict": true,
+      "exactOptionalPropertyTypes": true,
+      "noUncheckedIndexedAccess": true,
+      "verbatimModuleSyntax": true,
+      "allowImportingTsExtensions": true,
+      "noEmit": true,
+      "resolveJsonModule": true,
+      "skipLibCheck": true,
+      "types": [
+        "bun"
+      ]
+    },
+    "include": [
+      "prelude.ts",
+      "records.typecheck.ts",
+      "tuples.typecheck.ts",
+      "folds.typecheck.ts",
+      "term-rows.typecheck.ts",
+      "literals.typecheck.ts",
+      "queue-steps.typecheck.ts",
+      "mask.typecheck.ts",
+      "select-controls.ts",
+      "generated",
+      "run-truth.ts",
+      "session/*.ts"
+    ]
+  },
+  "observedCompilerOptions": {
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": true,
+    "module": 99,
+    "moduleResolution": 100,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": 9,
+    "types": [
+      "bun"
+    ],
+    "verbatimModuleSyntax": true,
+    "configFilePath": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tsconfig.json"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "status": "Patch applied by root. Static quote-equivalence and current source identity verified here; final parser/build gates pending.",
+  "cause": "Effect4.Laws imports TypedStateDecl, whose typedState command registers ordinary keyword columns globally. ProofStyle.scanFile uses that whole environment for all source files.",
+  "source": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:typedState",
+  "scan": "tools/ProofGraph/ProofStyle.lean:scanFile",
+  "scope": "Only quoted identifier tokens at definition and actual references. Declared Lean names, statements and bodies remain the same after identifier decoding. No syntax/gate/baseline edit.",
+  "files": [
+    {
+      "path": "src/Effect4/Codegen/PrintEliminators.lean",
+      "before_sha256": "7489b11b049cc6d6dcc974f54d6fd6ea2ce7a0976a97328df00d711517a27cfb",
+      "candidate_sha256": "99c73a784690031ae53faf2173ac266857a38bc973243bd08c64ee0ca72962b3",
+      "quoted_occurrences": 7,
+      "identity_check": "Removing only the guillemets restores the exact original source bytes.",
+      "applied_sha256": "99c73a784690031ae53faf2173ac266857a38bc973243bd08c64ee0ca72962b3",
+      "applied_identity_check": "Actual applied bytes, after removing only guillemets, hash exactly to the retained pre-quote source."
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "before_sha256": "e61cff712e7f1b39a7a79e102a21524b4f8b9932c70213a67a1efbdc681232b7",
+      "candidate_sha256": "eda9ef10eb910afb9357573cebc2434e38bcd60272f7866f5dd10f53392d2dee",
+      "quoted_occurrences": 15,
+      "identity_check": "Removing only the guillemets restores the exact original source bytes.",
+      "applied_sha256": "eda9ef10eb910afb9357573cebc2434e38bcd60272f7866f5dd10f53392d2dee",
+      "applied_identity_check": "Actual applied bytes, after removing only guillemets, hash exactly to the retained pre-quote source."
+    }
+  ],
+  "source_declaration": "Effect4.Laws.Auto.TypedStateDecl.typedState",
+  "declaration_identity": {
+    "written_identifier": "\u00abcolumns\u00bb",
+    "declared_name": "Effect4.Codegen.PrintEliminators.columns",
+    "change": "Identifier quotation only; exact same decoded name, type, definition and references."
+  },
+  "source_evidence": [
+    {
+      "path": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+      "sha256": "827f080609d35bb3ccce45fa8a4bdfd0a74acd7703cf60c1134955c8b6db62fa"
+    },
+    {
+      "path": "src/Effect4/Laws.lean",
+      "sha256": "77b069e274015058a9990181bebfd37677cbb8518c72eb2d30f12a690bdeaede"
+    },
+    {
+      "path": "tools/ProofGraph/ProofStyle.lean",
+      "sha256": "24a8584eac3895ee5ae9c80144fdd73ef3ddee82aace24ca48b0120872e34255"
+    },
+    {
+      "path": "Test/Audit/ProofStyle.lean",
+      "sha256": "184cb641eec7e98c59685c317f16f2163ac3a4b8e2e7e2678cd17b31410b48c5"
+    }
+  ]
+}

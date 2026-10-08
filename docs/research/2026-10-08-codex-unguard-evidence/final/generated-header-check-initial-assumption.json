@@ -1,0 +1,736 @@
+{
+  "checks": [
+    {
+      "path": "harness/truth/generated/p42.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pAcquire.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pAcquireClosed.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pAcquireHandle.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pAwait.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pBind.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pCatch.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pCatchError.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pCatchIfHit.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pCatchIfMiss.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pCatchIfRetained.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pDeferredGate.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pDiamond.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pFailBoomText.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pFailPayload.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pFailTagged.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pFailText.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pFold.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pFork.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pGen.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pInterruptEscape.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pInterruptedWait.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pKv.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pLateSeen.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pLoop.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pMaskWait.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pMaskedRestore.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pMergeAll.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pModifyFold.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pOptionNone.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pOptionSome.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolCloseWaits.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolClosed.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolClosing.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolLateWake.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolMakeFails.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolOrder.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolReuse.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolWaiters.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolWake.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pPoolWithdrawn.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pProvide.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pProvideMerge.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pProvideTwice.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pQueueFull.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pQueueInterrupted.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pQueueMasked.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pQueueOffer.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pQueueOrder.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pQueueWake.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pRateRequest.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pScope.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreBodies.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreBodiesJoined.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreHandoff.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreIfAvailable.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreInterrupted.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreMasked.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreOvertake.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreProtected.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreProtectedJoined.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSemaphoreScan.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSqlCatch.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSqlExit.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSqlFail.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSqlOrDie.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pSqlite.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pTagHit.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pTagMiss.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pTagPayload.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pTagTwoFail.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pTextOrDie.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    },
+    {
+      "path": "harness/truth/generated/pTwo.ts",
+      "passed": false,
+      "changes": [
+        [
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"",
+          "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\""
+        ]
+      ]
+    }
+  ],
+  "passed": 0,
+  "failed": 73
+}

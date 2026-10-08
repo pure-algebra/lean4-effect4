@@ -1,0 +1,649 @@
+{
+  "checks": [
+    {
+      "check": "corpus.json original identities retained",
+      "passed": true
+    },
+    {
+      "check": "corpus.json exactly four additions",
+      "passed": true,
+      "added": [
+        "pJoinedFirstNumber",
+        "pJoinedFirstString",
+        "pJoinedModifyNumber",
+        "pJoinedModifyString"
+      ]
+    },
+    {
+      "check": "corpus.json unchanged p42",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pBind",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pFork",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pAwait",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pGen",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pLoop",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pCatch",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pScope",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pTwo",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pAcquire",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pAcquireClosed",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pProvide",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pProvideMerge",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pProvideTwice",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pDiamond",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pMergeAll",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pAcquireHandle",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pFailTagged",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSqlite",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pKv",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSqlFail",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSqlCatch",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSqlExit",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSqlOrDie",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pFailText",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pFailBoomText",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pTextOrDie",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pCatchError",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pCatchIfHit",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pCatchIfMiss",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pCatchIfRetained",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pTagHit",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pTagMiss",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pTagTwoFail",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pOptionSome",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pOptionNone",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pFailPayload",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pTagPayload",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pInterruptEscape",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pFold",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pModifyFold",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pQueueOffer",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pRateRequest",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pDeferredGate",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pInterruptedWait",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pMaskWait",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pMaskedRestore",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pLateSeen",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pQueueWake",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pQueueFull",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pQueueInterrupted",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pQueueMasked",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pQueueOrder",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreProtectedJoined",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreScan",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreOvertake",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreBodiesJoined",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreInterrupted",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreIfAvailable",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreMasked",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreHandoff",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreProtected",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pSemaphoreBodies",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolReuse",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolOrder",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolWaiters",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolLateWake",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolWake",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolMakeFails",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolCloseWaits",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolWithdrawn",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolClosed",
+      "passed": true
+    },
+    {
+      "check": "corpus.json unchanged pPoolClosing",
+      "passed": true
+    },
+    {
+      "check": "result.json original identities retained",
+      "passed": true
+    },
+    {
+      "check": "result.json exactly four additions",
+      "passed": true,
+      "added": [
+        "pJoinedFirstNumber",
+        "pJoinedFirstString",
+        "pJoinedModifyNumber",
+        "pJoinedModifyString"
+      ]
+    },
+    {
+      "check": "result.json unchanged p42",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pBind",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pFork",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pAwait",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pGen",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pLoop",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pCatch",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pScope",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pTwo",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pAcquire",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pAcquireClosed",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pProvide",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pProvideMerge",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pProvideTwice",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pDiamond",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pMergeAll",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pAcquireHandle",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pFailTagged",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSqlite",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pKv",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSqlFail",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSqlCatch",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSqlExit",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSqlOrDie",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pFailText",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pFailBoomText",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pTextOrDie",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pCatchError",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pCatchIfHit",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pCatchIfMiss",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pCatchIfRetained",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pTagHit",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pTagMiss",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pTagTwoFail",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pOptionSome",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pOptionNone",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pFailPayload",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pTagPayload",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pInterruptEscape",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pFold",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pModifyFold",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pQueueOffer",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pRateRequest",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pDeferredGate",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pInterruptedWait",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pMaskWait",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pMaskedRestore",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pLateSeen",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pQueueWake",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pQueueFull",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pQueueInterrupted",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pQueueMasked",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pQueueOrder",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreProtectedJoined",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreScan",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreOvertake",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreBodiesJoined",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreInterrupted",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreIfAvailable",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreMasked",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreHandoff",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreProtected",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pSemaphoreBodies",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolReuse",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolOrder",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolWaiters",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolLateWake",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolWake",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolMakeFails",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolCloseWaits",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolWithdrawn",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolClosed",
+      "passed": true
+    },
+    {
+      "check": "result.json unchanged pPoolClosing",
+      "passed": true
+    },
+    {
+      "check": "pJoinedFirstNumber exit schedule sync agreement",
+      "passed": true
+    },
+    {
+      "check": "pJoinedFirstString exit schedule sync agreement",
+      "passed": true
+    },
+    {
+      "check": "pJoinedModifyNumber exit schedule sync agreement",
+      "passed": true
+    },
+    {
+      "check": "pJoinedModifyString exit schedule sync agreement",
+      "passed": true
+    },
+    {
+      "check": "generated/corpus-index.tsv frozen bytes",
+      "passed": true,
+      "sha256": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad"
+    },
+    {
+      "check": "harness/truth/corpus-results.tsv frozen bytes",
+      "passed": true,
+      "sha256": "85c12d1e7bff9b72a8827fe58093c382afcc57f260e610c57a1508be3a943af5"
+    },
+    {
+      "check": "generated/tsdiag-agreement.tsv frozen bytes",
+      "passed": true,
+      "sha256": "4ad61b504ba662367e3d0937f7b68822d5ec64ef180f092b2d3d66ab810ccfe1"
+    }
+  ],
+  "passed": 157,
+  "failed": 0
+}

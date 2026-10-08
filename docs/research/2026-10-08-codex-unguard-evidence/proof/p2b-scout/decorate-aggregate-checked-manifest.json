@@ -1,0 +1,81 @@
+{
+  "status": "checked whole local aggregate; exclusive Lean lease returned to host",
+  "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true /private/tmp/codex-unguard/p2b-scout/DecorateFiniteBundle.lean",
+  "axiom_ceiling": [
+    "propext",
+    "Quot.sound"
+  ],
+  "public_hypotheses": "actual source node; actual environment depth; source view; selected row; rigid template; successful actual typed printArgs; actual template instantiation; successful decorator",
+  "desired_erasure_premise": false,
+  "whole_program_typing_premise": false,
+  "production_edits": [],
+  "section_order": [
+    "NodeInverseLaws.lean",
+    "runIn-inverse-law.lean.txt",
+    "DecorateSiteLaws.lean",
+    "TemplateSiteShapes.lean",
+    "SelectedSiteTemplates.lean",
+    "ActualTagCapture.lean",
+    "DecorateAggregate.lean"
+  ],
+  "checked_files": [
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/NodeInverseLaws.lean",
+      "sha256": "738d1e146f6c5520dfab299c548787970db7032b9b6690a31b5dcc6a8133a051"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/runIn-inverse-law.lean.txt",
+      "sha256": "25605b6c78615ddfe7607fa405b83b7b9c146b5304602927c845adfabcf64c2b"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/DecorateSiteLaws.lean",
+      "sha256": "200296fdd60ddb996cf0a5b0aafe11c5867a4a81e758f3d14b063099bdee31e4"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/TemplateSiteShapes.lean",
+      "sha256": "62305979ed71bc9867f1610db530b4719a1cfe1506ce961ba42a7eb084f4fd56"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/SelectedSiteTemplates.lean",
+      "sha256": "ede0b7365ad4820e0251f2a0e626fc8d7f85c12bdd8c606f56c7d8f765a34fb5"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/ActualTagCapture.lean",
+      "sha256": "c8110654bb9371f9a05c4034b89059300be845fbfe423e68ba2be6b747826fb5"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/DecorateAggregate.lean",
+      "sha256": "81640eabe34ca0b179564f3bc1a297f4483e11e21afa427764b57fc0aef5ea1a"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/DecorateFiniteBundle.lean",
+      "sha256": "69282cdab3a9020fd11bb2b5a4e266cefc9d59de05e14d87706ccd68e720d4bf"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/decorate-finite-5.log",
+      "sha256": "d22d0b9ae0f534841abf173ecc1fa26e400b5762abf67cd3b6f902103ed5a914"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p2b-scout/node-inverses-runIn-1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "production_inputs": [
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Codegen/PrintEliminators.lean",
+      "sha256": "7489b11b049cc6d6dcc974f54d6fd6ea2ce7a0976a97328df00d711517a27cfb"
+    },
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Codegen/EraseTermTypes.lean",
+      "sha256": "0f9edf5e9f524f70e5ae4348e6a19a4a655364c74ce21a563c785e1c989d4ac8"
+    },
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "sha256": "522f909b0cbbe7d23208333bc11f06c2d526f676b433abfa6705d20e28d45a0a"
+    },
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Codegen/Templates.lean",
+      "sha256": "6f47138fd6f325c4d607cc3f9da1db3f4faeed0f3c6a570e9988aeb8d60fada4"
+    }
+  ]
+}

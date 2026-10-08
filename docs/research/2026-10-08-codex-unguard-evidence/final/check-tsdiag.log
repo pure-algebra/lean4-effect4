@@ -1,0 +1,14 @@
+COMMAND scratch/lean-slot.sh make -j1 -o ts/eff/node_modules -o harness/truth/node_modules check-tsdiag
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+set -o pipefail; lake build 2>&1 | tee .lake/gen/build.log
+ℹ [1432/1434] Replayed Test.All
+info: Test/All.lean:305:0: Effect4 library-root gate: 197 API/utility modules, 349 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:305:0: Effect4 module and axiom gate: checked 850 modules and 97885 declarations; phases (ms): sources and closure 25, library roots 384, declarations 4110, resolution 1469, axioms 24138, exemptions 442; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:305:0: Effect4 goal gate: 30 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 12 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (1434 jobs).
+node harness/tsdiag/run-tsdiag.mjs /Users/pooks/.codex/worktrees/unguard/lean4-effect4/.lake/corpus /Users/pooks/.codex/worktrees/unguard/lean4-effect4/.lake/tsdiag
+tsdiag: 11 controls hold: the clean project, and 10 defective projects refused by their reasons (the prelude has 8 files)
+tsdiag: 408 programs, one native run in 0.21s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed

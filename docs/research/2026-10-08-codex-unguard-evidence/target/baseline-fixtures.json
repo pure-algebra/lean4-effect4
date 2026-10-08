@@ -1,0 +1,51 @@
+{
+  "format": "effect4-p2b-single-baseline-v1",
+  "evidence": "actual Program.printTyped; unchanged single-member companions; type-only",
+  "fixtures": [
+    {
+      "request": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+      "name": "fiberAwaitAllSingle",
+      "joined": false,
+      "initializer": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.awaitAll(a0)",
+      "family": "fibers",
+      "declaration": "export const fiberAwaitAllSingle = (a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.awaitAll(a0)\n",
+      "companion": "fiberAwaitAllJoined",
+      "columns": {
+        "R": "never",
+        "E": "never",
+        "A": "ReadonlyArray<Exit.Exit<number, never>>"
+      },
+      "body": "Fiber.awaitAll(a0)"
+    },
+    {
+      "request": "[{ readonly left: boolean; readonly x: number }]",
+      "name": "recordOptionalSingle",
+      "joined": false,
+      "initializer": "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordOptional<\"x\">(\"x\")(a0))",
+      "family": "tag-record",
+      "declaration": "export const recordOptionalSingle = (a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordOptional<\"x\">(\"x\")(a0))\n",
+      "companion": "recordOptionalJoined",
+      "columns": {
+        "R": "never",
+        "E": "never",
+        "A": "Option.Option<number>"
+      },
+      "body": "Effect.succeed(recordOptional<\"x\">(\"x\")(a0))"
+    },
+    {
+      "request": "[{ readonly left: boolean; readonly x: number }]",
+      "name": "recordSetSingle",
+      "joined": false,
+      "initializer": "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))",
+      "family": "tag-record",
+      "declaration": "export const recordSetSingle = (a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))\n",
+      "companion": "recordSetJoined",
+      "columns": {
+        "R": "never",
+        "E": "never",
+        "A": "{ readonly left: boolean; readonly x: boolean }"
+      },
+      "body": "Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))"
+    }
+  ]
+}

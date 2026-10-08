@@ -1,0 +1,269 @@
+{
+  "helperObservations": [
+    {
+      "id": "singleRecordUnionPayload",
+      "source": "/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "callable",
+        "subject": "typeof Controls.singleRecordUnionPayload",
+        "receiver": null,
+        "imports": [
+          "import type { Option } from \"effect\"",
+          "import * as Controls from \"/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<string | number> | Option.Some<string | number>",
+          "expected": "Option.Option<number | string>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[value: { readonly x: number | string; }]",
+          "expected": "[{ readonly x: number | string }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(value: {\n    readonly x: number | string;\n}) => Option.Option<string | number>",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "{ readonly x: number | string; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": "actual helper signature controls; not Lean-emitted program fixtures"
+    },
+    {
+      "id": "optionalRecordUnion",
+      "source": "/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "callable",
+        "subject": "typeof Controls.optionalRecordUnion",
+        "receiver": null,
+        "imports": [
+          "import type { Option } from \"effect\"",
+          "import * as Controls from \"/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.Option<string> | Option.Option<number>",
+          "expected": "Option.Option<number> | Option.Option<string>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[value: { readonly x?: number; readonly left: boolean; } | { readonly x?: string; readonly right: boolean; }]",
+          "expected": "[{ readonly x?: number; readonly left: boolean } | { readonly x?: string; readonly right: boolean }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(value: {\n    readonly x?: number;\n    readonly left: boolean;\n} | {\n    readonly x?: string;\n    readonly right: boolean;\n}) => Option.Option<string> | Option.Option<number>",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "{ readonly x?: number; readonly left: boolean; } | { readonly x?: string; readonly right: boolean; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": "actual helper signature controls; not Lean-emitted program fixtures"
+    },
+    {
+      "id": "neverReceiver",
+      "source": "/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts",
+      "status": "refused",
+      "binding": {
+        "kind": "callable",
+        "subject": "typeof Controls.neverReceiver",
+        "receiver": null,
+        "imports": [
+          "import type { Option } from \"effect\"",
+          "import * as Controls from \"/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "any",
+          "expected": "never",
+          "actualToExpected": null,
+          "expectedToActual": null,
+          "agreement": null
+        },
+        "request": {
+          "actual": "[value: never]",
+          "expected": "[never]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [
+        {
+          "code": "unresolved-any",
+          "axis": "A",
+          "message": "actual A contains any"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": 2322,
+          "file": "ts/eff/__target_queries__/q2.ts",
+          "line": 10,
+          "column": 14,
+          "message": "Type 'any' is not assignable to type 'never'."
+        }
+      ],
+      "signatures": [
+        {
+          "text": "(value: never) => never",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "never",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": "actual helper signature controls; not Lean-emitted program fixtures"
+    },
+    {
+      "id": "ownUndefinedType",
+      "source": "/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "callable",
+        "subject": "typeof Controls.ownUndefinedType",
+        "receiver": null,
+        "imports": [
+          "import type { Option } from \"effect\"",
+          "import * as Controls from \"/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<undefined> | Option.Some<undefined>",
+          "expected": "Option.Option<undefined>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[value: { readonly x?: undefined; }]",
+          "expected": "[{ readonly x?: undefined }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(value: {\n    readonly x?: undefined;\n}) => Option.Option<undefined>",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "{ readonly x?: undefined; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": "actual helper signature controls; not Lean-emitted program fixtures"
+    }
+  ],
+  "neverActualCall": {
+    "format": "effect4-assignability-report-v1",
+    "versions": {
+      "compiler": "@typescript/native-preview",
+      "typescript": "7.0.0-dev.20260629.1",
+      "effect": "4.0.0-rc.112",
+      "lean": "leanprover/lean4:v4.33.1"
+    },
+    "compilerOptions": {
+      "allowImportingTsExtensions": true,
+      "exactOptionalPropertyTypes": true,
+      "module": 99,
+      "moduleResolution": 100,
+      "noEmit": true,
+      "noUncheckedIndexedAccess": true,
+      "resolveJsonModule": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "target": 9,
+      "typeRoots": [
+        "<repo>/ts/eff/node_modules/@types"
+      ],
+      "types": [
+        "bun"
+      ],
+      "verbatimModuleSyntax": true,
+      "configFilePath": "<repo>/ts/eff/__assignability__/tsconfig.json"
+    },
+    "observations": [
+      {
+        "id": "actual-never-call",
+        "left": "typeof import(\"/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-never.ts\").neverValue",
+        "right": "never",
+        "leftText": "never",
+        "rightText": "never",
+        "leftToRight": {
+          "assignable": true,
+          "statement": true
+        },
+        "rightToLeft": {
+          "assignable": true,
+          "statement": true
+        },
+        "issues": [],
+        "diagnostics": []
+      }
+    ],
+    "limitations": [
+      "Compiler: @typescript/native-preview 7.0.0-dev.20260629.1 (tsgo, decisions row 57), under ts/eff/tsconfig.json.",
+      "Two readings per direction: the checker's own relation (isTypeAssignableTo) and one ordinary assignment statement. They are reported side by side; a row where they differ is a finding, not a verdict.",
+      "A finite set of pairs over a small alphabet per head. No claim about types outside it, and no claim that the target's order and `Ty.sub` agree beyond these rows.",
+      "The any/unknown guard of the program lane does not run: `unknown` is the top of this algebra (decisions row 46) and is a compared type here."
+    ]
+  },
+  "projectionBoundary": "The generic callable query refuses ReturnType of the never-returning function as any. Its displayed signature supplies no proof. The actual call probe checks typeof neverValue against never in both directions.",
+  "runtime": {
+    "missingProperty": "None",
+    "ownUndefined": "Some(undefined)",
+    "inheritedProperty": "None"
+  },
+  "undeclaredPropertyDiagnostic": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/missing-record-property.ts(2,103): error TS2559: Type '{ readonly present: number; }' has no properties in common with type '{ readonly missing?: unknown; }'.\n",
+  "positiveTypecheckLog": "",
+  "existingTypecheckLog": ""
+}

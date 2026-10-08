@@ -1,0 +1,95 @@
+{
+  "status": "bounded observation source changes implemented; TS tools checked; revised Lean exporter elaborates; joined emission pending",
+  "files": [
+    {
+      "path": "harness/truth/P2b.lean",
+      "sha256": "19a21d427e8521b78bd596118a7d4c733304bbc6a836d510bba1c9e29810ddf7"
+    },
+    {
+      "path": "tools/target/checker.ts",
+      "sha256": "791cd340973fb72f3e53ddcdbd9e2d22edc3e1ca2d534e9f02cceecda14a97b3"
+    },
+    {
+      "path": "tools/target/oracle.ts",
+      "sha256": "4c0d65c54a3a7d44411d4104bddfed3ce9b357136d618715f80a9291b45aad10"
+    },
+    {
+      "path": "scripts/check-truth.py",
+      "sha256": "a6eef390c4264ad499eeeee75cb6f84991eea24ad6a3e3dd886cbab582644bc7"
+    },
+    {
+      "path": "harness/truth/module-imports.ts",
+      "sha256": "6595ecadbe83277b480b741eaac141c23c6bcd037613e2128255ce41f9e03a8b"
+    },
+    {
+      "path": "harness/truth/prelude.ts",
+      "sha256": "cc7d4d177007bd5d7d77f1f58bfb53c961079c48d2286655a6768fc7011d45c6"
+    },
+    {
+      "path": "harness/truth/prelude-atoms.gen.ts",
+      "sha256": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1"
+    },
+    {
+      "path": "harness/truth/records.ts",
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "harness/truth/tuples.ts",
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "ts/eff/package.json",
+      "sha256": "1f7a29bdf5ec701d8eef07742b2f5db7f3b9fd93bf18c29d8cb8baa888ea3444"
+    },
+    {
+      "path": "ts/eff/node_modules/@typescript/native-preview/package.json",
+      "sha256": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478"
+    },
+    {
+      "path": "ts/eff/node_modules/@typescript/native-preview/dist/api/sync/api.js",
+      "sha256": "02af76ecddc432087db2bbb3893c4c02b2f145ea220eb9678ac06b422cd76d98"
+    },
+    {
+      "path": "ts/eff/node_modules/effect/package.json",
+      "sha256": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "8382832fdc071056f3b7bf0fda893e6110bf4846e802a479269df97cb86a22df"
+    }
+  ],
+  "baselineInputManifest": [
+    {
+      "path": "harness/truth/P2b.lean",
+      "sha256": "8a4d6afed839646af1375b7849a434e139ca9318db50dcff400b223664341480"
+    },
+    {
+      "path": "tools/target/checker.ts",
+      "sha256": "2f47414e39d329f540f3d3a5d5fedd38334466680d824fe0eb2e6d013f54f32e"
+    },
+    {
+      "path": "tools/target/oracle.ts",
+      "sha256": "c460d0c6083b4e46b9558410b910568f49c2b1be2e3d674b5997e715149aba94"
+    },
+    {
+      "path": "harness/truth/module-imports.ts",
+      "sha256": "6595ecadbe83277b480b741eaac141c23c6bcd037613e2128255ce41f9e03a8b"
+    },
+    {
+      "path": "harness/truth/prelude.ts",
+      "sha256": "cc7d4d177007bd5d7d77f1f58bfb53c961079c48d2286655a6768fc7011d45c6"
+    },
+    {
+      "path": "harness/truth/prelude-atoms.gen.ts",
+      "sha256": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1"
+    },
+    {
+      "path": "harness/truth/records.ts",
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "harness/truth/tuples.ts",
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    }
+  ]
+}

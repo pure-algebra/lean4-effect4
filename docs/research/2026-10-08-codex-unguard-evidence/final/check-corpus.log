@@ -1,0 +1,17 @@
+COMMAND scratch/lean-slot.sh make -j1 -o ts/eff/node_modules -o harness/truth/node_modules check-corpus
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+set -o pipefail; lake build 2>&1 | tee .lake/gen/build.log
+ℹ [1428/1430] Replayed Test.All
+info: Test/All.lean:305:0: Effect4 library-root gate: 197 API/utility modules, 349 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:305:0: Effect4 module and axiom gate: checked 850 modules and 97885 declarations; phases (ms): sources and closure 25, library roots 384, declarations 4110, resolution 1469, axioms 24138, exemptions 442; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:305:0: Effect4 goal gate: 30 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 12 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (1430 jobs).
+python3 scripts/check-corpus.py
+wrote 400 generated programs at depth 4 to /Users/pooks/.codex/worktrees/unguard/lean4-effect4/harness/truth/corpus-check/corpus.json
+{"kind":"signed-divergence-controls","checks":9,"failures":[]}
+emitted 400 of 400 programs (128 with an unannotated block)
+corpus types: 128 queried; 115 agree, 6 mismatch, 7 refused
+corpus: 400 programs, 75 in the straight-line fragment; run {'untyped': 272, 'agree': 122, 'differ': 6}; sync {'n/a': 272, 'agree': 122, 'differs': 6}; tsc {'errors': 255, 'clean': 145}; types {'untyped': 272, 'agree': 115, 'mismatch-A': 6, 'refused': 7}
+PASS corpus: 400 programs match the committed results; 25 registered disagreement(s)

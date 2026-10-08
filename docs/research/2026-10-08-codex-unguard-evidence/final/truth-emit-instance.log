@@ -1,0 +1,27 @@
+COMMAND scratch/lean-slot.sh lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+harness/truth/Truth.lean:385:62: error(lean.invalidDottedIdent): Invalid dotted identifier notation: The expected type of `.option` could not be determined
+
+Hint: Using one of these would be unambiguous:
+  [apply] `Aesop.TraceOption.option`
+  [apply] `Lean.Doc.option`
+  [apply] `AdmitsExtend.option`
+  [apply] `AdmitsMono.option`
+  [apply] `AdmitsNormalize.option`
+  [apply] `AdmitsSub.option`
+  [apply] `Decision.option`
+  [apply] `Member.option`
+  [apply] `Ty.option`
+  [apply] `TyCtor.option`
+  [apply] `TyTable.option`
+  [apply] `Store.Image.option`
+  [apply] `Store.Shape.option`
+  [apply] `Lean.Doc.DocHighlight.option`
+  [apply] `Lean.Elab.CompletionInfo.option`
+  [apply] `Config.ConfigTerm.option`
+  [apply] `Ty.Normal.option`
+  [apply] `Lean.Elab.ConfigEval.ConfigItem.option`
+  [apply] `Lean.Elab.Tactic.ConfigItemView.option`
+  [apply] `Ty.Normal.below.option`
+harness/truth/Truth.lean:382:0: error: cannot evaluate code because 'List.all._at_._private.harness.truth.Truth.0._tmp._@.harness.truth.Truth.794553080._hygCtx._hyg.87.spec_2' uses 'sorry' and/or contains errors

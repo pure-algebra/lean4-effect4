@@ -1,0 +1,41 @@
+{
+  "status": "scratch proposal only; no production edit or Lean command",
+  "before_sha256": "e131cba104e4edeb933c26ed5b678c4bec3dde2ded7c70a321e08e4aa2484d51",
+  "after_sha256": "e61cff712e7f1b39a7a79e102a21524b4f8b9932c70213a67a1efbdc681232b7",
+  "removed_blocks": [
+    {
+      "name": "Effect4.Codegen.EraseTermTypes.typedTerms_original",
+      "block": "theorem typedTerms_original (sig : Signature Op) (ts : Terms) :\n    (cata_terms (PrintEliminators.termAlg sig) ts).1 = ts :=\n  (hom_eq_cata_terms (typedOriginalHom sig) ts).trans (cata_id_terms ts)\n\n",
+      "original_line": 3585
+    },
+    {
+      "name": "Effect4.Codegen.EraseTermTypes.eraseTerms_printTerms",
+      "block": "theorem eraseTerms_printTerms (sig : Signature Op) (ts : Terms) (env : TyEnv) (const : Bool)\n    {xs : List Expr} (hp : (cata_terms (PrintEliminators.termAlg sig) ts).2 env const = .ok xs) :\n    xs.map (eraseTerm env.length) = printTerms env.length ts := by\n  have h := (cata_terms (typedCertificateAlg sig) ts).property env const xs\n  have folded := hom_eq_cata_terms (typedCertificateHom sig) ts\n  change (cata_terms (typedCertificateAlg sig) ts).val = cata_terms (PrintEliminators.termAlg sig) ts at folded\n  rw [folded] at h\n  have result := h hp\n  rw [typedTerms_original] at result\n  exact result\n\n",
+      "original_line": 3940
+    }
+  ],
+  "source_wide_references": {
+    "typedTerms_original": [
+      {
+        "path": "src/Effect4/Laws/Codegen/PrintTyped.lean",
+        "line": 3585,
+        "text": "theorem typedTerms_original (sig : Signature Op) (ts : Terms) :"
+      },
+      {
+        "path": "src/Effect4/Laws/Codegen/PrintTyped.lean",
+        "line": 3948,
+        "text": "rw [typedTerms_original] at result"
+      }
+    ],
+    "eraseTerms_printTerms": [
+      {
+        "path": "src/Effect4/Laws/Codegen/PrintTyped.lean",
+        "line": 3940,
+        "text": "theorem eraseTerms_printTerms (sig : Signature Op) (ts : Terms) (env : TyEnv) (const : Bool)"
+      }
+    ]
+  },
+  "searched_lean_files": 1013,
+  "remaining_laws_helpers_without_current_scoped_consumer_path": [],
+  "remaining_manifest_declarations": 474
+}

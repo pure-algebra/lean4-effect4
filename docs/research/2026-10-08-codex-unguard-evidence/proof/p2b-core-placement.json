@@ -1,0 +1,174 @@
+{
+  "entries": [
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_eq_some_iff",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_agrees",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_refused",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_never",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_of_extend",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_closed_pair",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "extendAll_closed",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_adjoint",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_upper",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_least",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_bot",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_isSome_iff",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_mono",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_lift",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/UnionRule.lean",
+      "name": "Eliminator.extendAll_laws",
+      "concept": "subtyping-algebra",
+      "requirement": "R14",
+      "claim": "union-rule-extend",
+      "role": "theorem",
+      "evidence": "production narrow build and explicit axiom query pass; full Test gate pending",
+      "reach": "member-rule raw success first, full normalized-member fallback; exact theorem hypotheses retained",
+      "excluded": "whole checker monotonicity; target compiler or execution agreement"
+    }
+  ],
+  "source_hashes": {
+    "src/Effect4/Laws/Program/UnionRule.lean": "ac91fd838847f20b3dc3143a5a44bbd5d1632dd7f0cdc4c6cf85f080ace8e98a",
+    "src/Effect4/Laws/Program/Eliminators.lean": "6e56ac5d1f00614edef111619f9a02137bbf6f4c11f845e0c50b78001ab6d23e",
+    "src/Effect4/Laws/Program/Typing/Closed.lean": "b57c2c1558db5de7b2a25c6098a04f5a76c25bac5500ea2135d1423ef7b4b5db"
+  }
+}

@@ -1,0 +1,8 @@
+COMMAND scratch/lean-slot.sh lake build Effect4.Laws.Codegen.PrintTyped Test.Codegen.PrintTyped
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+✔ [341/344] Built Effect4.Codegen.PrintEliminators (1.6s)
+✔ [342/344] Built Effect4.Codegen.PrintTyped (879ms)
+✔ [343/344] Built Effect4.Laws.Codegen.PrintTyped (138s)
+✔ [344/344] Built Test.Codegen.PrintTyped (4.5s)
+Build completed successfully (344 jobs).

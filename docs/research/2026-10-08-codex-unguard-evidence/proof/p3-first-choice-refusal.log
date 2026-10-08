@@ -1,0 +1,29 @@
+'Effect4.Codegen.TargetFold.expr' does not depend on any axioms
+'Effect4.Codegen.TargetFold.stmt' does not depend on any axioms
+'Effect4.Codegen.mapCalls' does not depend on any axioms
+'Effect4.Codegen.EraseTermTypes.eraseTerm' depends on axioms: [propext]
+'Effect4.Codegen.EraseTermTypes.eraseCause' depends on axioms: [propext]
+'Effect4.Codegen.EraseTermTypes.eraseNode' depends on axioms: [propext]
+'Effect4.Codegen.eraseNode_size' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseRowJoin' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseRowChildren' depends on axioms: [propext]
+'Effect4.Codegen.eraseCapture' depends on axioms: [propext]
+'Effect4.Codegen.eraseCaptures' depends on axioms: [propext]
+'Effect4.Codegen.eraseExprRow' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseStmtRow' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseT' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Codegen.eraseSpine' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Codegen.eraseStmts' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Codegen.eraseJoinArgs' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Codegen.readTyped' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Codegen.Templates.printPerformAt' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.EraseTermTypes.eraseTerm_printTerm_identity' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.EraseTermTypes.eraseTerms_printTerms_identity' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.EraseTermTypes.eraseCause_printCause_identity' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseCaptures_printArgs' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseCapture_printLeaf' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseCaptureValue_printLeaf' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseRowChildren_printPerformAt' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Codegen.eraseRowJoin_readPerform' depends on axioms: [propext, Quot.sound]
+/private/tmp/codex-unguard/p3-scout/P3Axioms.lean:30:14: error(lean.unknownIdentifier): Unknown constant `Effect4.Codegen.eraseNode_printPerformAt`
+/private/tmp/codex-unguard/p3-scout/P3Axioms.lean:31:14: error(lean.unknownIdentifier): Unknown constant `Effect4.Codegen.eraseT_action_none_of_printPerformAt`

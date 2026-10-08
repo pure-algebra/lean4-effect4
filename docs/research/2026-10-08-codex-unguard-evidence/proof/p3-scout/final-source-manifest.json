@@ -1,0 +1,79 @@
+{
+  "base": "c51f9e6b7c456d952d0fe408a274432f4c9aebd5",
+  "head": "6c18faf47fcab4e3cf4cb6e8210dbaf9fe69073c",
+  "sources": {
+    "src/Effect4/Codegen/TargetFold.lean": {
+      "sha256": "1172ad7f4f797eeef8a640eefe7d7de6b5e39e40e915313a01f2fbd80fafcfd4",
+      "base_blob": null,
+      "base_sha256": null,
+      "new_named_declarations": 13,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    },
+    "src/Effect4/Codegen/EraseTermTypes.lean": {
+      "sha256": "0f9edf5e9f524f70e5ae4348e6a19a4a655364c74ce21a563c785e1c989d4ac8",
+      "base_blob": null,
+      "base_sha256": null,
+      "new_named_declarations": 7,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    },
+    "src/Effect4/Codegen/EraseTypes.lean": {
+      "sha256": "466c17f9979f13bf78bb4c60cbbace03406315812aa7b7b463ed21efc9730c47",
+      "base_blob": null,
+      "base_sha256": null,
+      "new_named_declarations": 12,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    },
+    "src/Effect4/Codegen/PrintTyped.lean": {
+      "sha256": "6b299dfb56044a4ad0cd3361005295c4a6b61ccd40cf3ff18bd84ea1da7796f5",
+      "base_blob": "fc657dfd2418a5e3ba84a4a58bbfc0669454bfcf",
+      "base_sha256": "667d8cdf5067910b9bbc6136d4c19bbf9ea2928cfc38f53fedc29e3290ef5500",
+      "new_named_declarations": 6,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    },
+    "src/Effect4/Codegen/PrintEliminators.lean": {
+      "sha256": "99c73a784690031ae53faf2173ac266857a38bc973243bd08c64ee0ca72962b3",
+      "base_blob": null,
+      "base_sha256": null,
+      "new_named_declarations": 36,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    },
+    "src/Effect4/Laws/Codegen/PrintTyped.lean": {
+      "sha256": "eda9ef10eb910afb9357573cebc2434e38bcd60272f7866f5dd10f53392d2dee",
+      "base_blob": "4274be85dd99b9dbaca29e6805cec37f8b776f40",
+      "base_sha256": "5afcb3f30512a85c82e4332f610e8c0b485d5a0e5f84bc13c9974da7f8581070",
+      "new_named_declarations": 385,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    },
+    "Test/Codegen/PrintTyped.lean": {
+      "sha256": "006ac2d423fa7997898bfc86d57c0897269c814ec645ceb78ea01b789944bb16",
+      "base_blob": "ea3ffa2a30353b62809741ba1bbfaf5fb8683235",
+      "base_sha256": "314cbac6ba4fccc37dc03a54cd6699ca6c01f94a01d0f5b6138c4a237d6e51d7",
+      "new_named_declarations": 15,
+      "evidence_status": "Applied source identity; final gate acceptance pending."
+    }
+  },
+  "source_identity_status": "Current applied bytes after two unused theorem removals and quote-only columns references; final gates pending. No candidate_status remains.",
+  "unchanged_declared_name": {
+    "written_identifier": "\u00abcolumns\u00bb",
+    "declared_name": "Effect4.Codegen.PrintEliminators.columns",
+    "change": "Identifier quotation only; exact same decoded name, type, definition and references."
+  },
+  "proof_style_source_evidence": [
+    {
+      "path": "src/Effect4/Laws/Program/Typed/TypedStateDecl.lean",
+      "sha256": "827f080609d35bb3ccce45fa8a4bdfd0a74acd7703cf60c1134955c8b6db62fa"
+    },
+    {
+      "path": "src/Effect4/Laws.lean",
+      "sha256": "77b069e274015058a9990181bebfd37677cbb8518c72eb2d30f12a690bdeaede"
+    },
+    {
+      "path": "tools/ProofGraph/ProofStyle.lean",
+      "sha256": "24a8584eac3895ee5ae9c80144fdd73ef3ddee82aace24ca48b0120872e34255"
+    },
+    {
+      "path": "Test/Audit/ProofStyle.lean",
+      "sha256": "184cb641eec7e98c59685c317f16f2163ac3a4b8e2e7e2678cd17b31410b48c5"
+    }
+  ]
+}

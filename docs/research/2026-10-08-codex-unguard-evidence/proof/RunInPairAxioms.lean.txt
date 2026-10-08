@@ -1,0 +1,18 @@
+import Effect4.Laws.Codegen.PrintTyped
+#print axioms Effect4.Codegen.EraseTermTypes.eraseNode
+#print axioms Effect4.Codegen.eraseNode_size
+#print axioms Effect4.Codegen.TypedRowShapeSupport.eraseNode_of_genericHead_not_reserved
+#print axioms Effect4.Codegen.TypedRowShapeSupport.eraseNode_printPerformAt
+#print axioms Effect4.Codegen.eraseNode_of_exprHead_except_runIn
+#print axioms Effect4.Codegen.rawRunInTpl
+#print axioms Effect4.Codegen.isRawRunInTpl
+#print axioms Effect4.Codegen.rawWithFiberRow
+#print axioms Effect4.Codegen.table_rawWithFiberRow
+#print axioms Effect4.Codegen.rawRunInTpl_of_head
+#print axioms Effect4.Codegen.eraseNode_rawRunIn
+#print axioms Effect4.Codegen.inst_rawRunIn_shape
+#print axioms Effect4.Codegen.eraseNode_of_table_inst
+#print axioms Effect4.Codegen.typed_action_image_normal
+#print axioms Effect4.Codegen.eraseJoinArgs_printTypedAt
+#print axioms Effect4.Codegen.readTyped_printTypedAt
+#print axioms Effect4.Codegen.readTyped_exact

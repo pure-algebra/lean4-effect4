@@ -1,0 +1,150 @@
+[
+  {
+    "command": [
+      "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh",
+      "lake",
+      "env",
+      "lean",
+      "-M4096",
+      "--run",
+      "harness/truth/P2b.lean",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/p2b-manifest.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "elapsedSeconds": 2.1050744999665767,
+    "LEAN_NUM_THREADS": "2 internally in lean-slot.sh"
+  },
+  {
+    "command": [
+      "node",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/checker.ts",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/p2b-request.json",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/p2b-receipt.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "elapsedSeconds": 1.0669257908593863,
+    "compilerPin": "7.0.0-dev.20260629.1",
+    "kind": "Actual retained Lean-emitted fixture bytes; compiler-only recheck after fail-closed metadata guard; no Lean/runtime execution",
+    "sources": {
+      "/private/tmp/codex-unguard/p2b-row/actual-target/p2b-manifest.json": "dde1de264d129bd2563a1a5209dea6f5d5320cc79300c8e7ad674918eaccecb6",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts": "ac985f254e05828f8fd733b255c805cdd188e562e03202a38ceef0ef0b028df7",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/checker.ts": "51d8c35629aa86e1f21912356f559ddb14740acc657a83f01189337f8498975b",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/oracle.ts": "8e765194b8c1d04a70a09506ebc2c79f41e209f108150e2d3869ec5d7a6f9858",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/harness/truth/records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee"
+    }
+  },
+  {
+    "command": [
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/ts/eff/node_modules/.bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "tools/target/tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": [
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/ts/eff/node_modules/.bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "tools/target/tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "elapsedSeconds": 0.2742541250772774,
+    "compiler": "7.0.0-dev.20260629.1"
+  },
+  {
+    "command": [
+      "node",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/checker.ts",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/p2b-request.json",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/old-alias-report.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "fixedAliasSha256": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "oldAliasSha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4",
+    "expectedGateConforms": false,
+    "observedGateConforms": false,
+    "mutation": "Only records.ts OptionalResult type alias returns to its original form"
+  },
+  {
+    "command": [
+      "node",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/checker.ts",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/never-request.json",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/never-report.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": [
+      "bun",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/optional-record-controls.ts"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "evidence": "finite helper execution only; no P2b program runtime claim"
+  },
+  {
+    "command": [
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/ts/eff/node_modules/.bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/existing-records-tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": [
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/ts/eff/node_modules/.bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/positive-records-tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": [
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/ts/eff/node_modules/.bin/tsgo",
+      "--noEmit",
+      "--pretty",
+      "false",
+      "-p",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/missing-record-property-tsconfig.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 1
+  },
+  {
+    "command": [
+      "node",
+      "/private/tmp/codex-unguard/p2b-row/metadata-control/checker-api-missing.ts",
+      "/private/tmp/codex-unguard/p2b-row/metadata-control/request.json",
+      "/private/tmp/codex-unguard/p2b-row/metadata-control/report.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "elapsedSeconds": 0.8839507498778403,
+    "compiler": "@typescript/native-preview",
+    "version": "7.0.0-dev.20260629.1",
+    "injection": "Only q1 actual A and q2 expected A API results become undefined. q0 retains the real compiler types.",
+    "checkerSHA256": "51d8c35629aa86e1f21912356f559ddb14740acc657a83f01189337f8498975b",
+    "controlSourceSHA256": "dd540f6f1d93ed0fb9fad4ffd96f30d6c1ffef17656756e39bb0defcc97ae40b"
+  }
+]

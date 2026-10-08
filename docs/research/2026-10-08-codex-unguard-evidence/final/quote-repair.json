@@ -1,0 +1,14 @@
+[
+  {
+    "path": "src/Effect4/Codegen/PrintEliminators.lean",
+    "before": "7489b11b049cc6d6dcc974f54d6fd6ea2ce7a0976a97328df00d711517a27cfb",
+    "after": "99c73a784690031ae53faf2173ac266857a38bc973243bd08c64ee0ca72962b3",
+    "decoded_identifiers_unchanged": true
+  },
+  {
+    "path": "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "before": "e61cff712e7f1b39a7a79e102a21524b4f8b9932c70213a67a1efbdc681232b7",
+    "after": "eda9ef10eb910afb9357573cebc2434e38bcd60272f7866f5dd10f53392d2dee",
+    "decoded_identifiers_unchanged": true
+  }
+]

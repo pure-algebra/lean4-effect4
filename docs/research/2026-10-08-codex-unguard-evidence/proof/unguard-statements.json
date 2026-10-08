@@ -1,0 +1,153 @@
+{
+  "evidence": "source comparison only; not compiled",
+  "new_theorems": [],
+  "removed_theorems": 8,
+  "statement_changes": 5,
+  "declarations": [
+    {
+      "path": "src/Effect4/Laws/Modules/Waiting.lean",
+      "name": "rowTy_intro",
+      "change": "statement changed",
+      "before": {
+        "statement": "theorem rowTy_intro {row : Effect4.Program.Row} {request : Ty} {use : Option TermUse} {\u03c3 bindings : Ty.Subst}\n    (matched : Bounds.matchTerm [] row.request.normalize request.normalize = some \u03c3)\n    (bound : bindTerm \u03c3 use = .ok bindings)\n    (formed : Formation.Formed (Formation.instantiatedSites row bindings)) :\n    rowTy row request use =\n      some \u27e8(row.answer.instantiate bindings).normalize,\n        (row.error.instantiate bindings).normalize, Requirement.ofList row.requires\u27e9",
+        "attribute": null
+      },
+      "after": {
+        "statement": "theorem rowTy_intro {row : Effect4.Program.Row} {request : Ty} {use : Option TermUse} {\u03c3 bindings : Ty.Subst}\n    (matched : Bounds.matchB [] row.request.normalize request.normalize = some \u03c3)\n    (bound : bindTerm \u03c3 use = .ok bindings)\n    (formed : Formation.Formed (Formation.instantiatedSites row bindings)) :\n    rowTy row request use =\n      some \u27e8(row.answer.instantiate bindings).normalize,\n        (row.error.instantiate bindings).normalize, Requirement.ofList row.requires\u27e9",
+        "attribute": null
+      }
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Waiting.lean",
+      "name": "bindTerm_intro",
+      "change": "statement changed",
+      "before": {
+        "statement": "theorem bindTerm_intro {\u03c3 \u03c3' : Ty.Subst} {use : TermUse} {r : Ty}\n    (typed : use.typeAt (TermUse.instParam use.param \u03c3) = some r)\n    (matched : Bounds.matchTerm \u03c3 use.result.normalize r = some \u03c3') :\n    bindTerm \u03c3 (some use) = .ok \u03c3'",
+        "attribute": null
+      },
+      "after": {
+        "statement": "theorem bindTerm_intro {\u03c3 \u03c3' : Ty.Subst} {use : TermUse} {r : Ty}\n    (typed : use.typeAt (TermUse.instParam use.param \u03c3) = some r)\n    (matched : Bounds.matchB \u03c3 use.result.normalize r = some \u03c3') :\n    bindTerm \u03c3 (some use) = .ok \u03c3'",
+        "attribute": null
+      }
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Bounds.lean",
+      "name": "termGuard_one_var",
+      "change": "removed",
+      "before": {
+        "statement": "theorem termGuard_one_var (X : Ty) : termGuard [] (.var 0) X = true",
+        "attribute": null
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Bounds.lean",
+      "name": "matchTerm_one_var",
+      "change": "removed",
+      "before": {
+        "statement": "theorem matchTerm_one_var (X : Ty) : matchTerm [] (.var 0) X = some [(0, X)]",
+        "attribute": null
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Bounds.lean",
+      "name": "termGuard_refOf_var",
+      "change": "removed",
+      "before": {
+        "statement": "theorem termGuard_refOf_var (X : Ty) : termGuard [] (.refOf (.var 0)) (.refOf X) = true",
+        "attribute": null
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Bounds.lean",
+      "name": "matchTerm_refOf_var",
+      "change": "removed",
+      "before": {
+        "statement": "theorem matchTerm_refOf_var (X : Ty) :\n    matchTerm [] (.refOf (.var 0)) (.refOf X) = some [(0, X)]",
+        "attribute": null
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Bounds.lean",
+      "name": "termGuard_modify_use",
+      "change": "removed",
+      "before": {
+        "statement": "theorem termGuard_modify_use (C B : Ty) :\n    termGuard [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = true",
+        "attribute": "@[semantics \"subtyping-algebra\" (requirement := R4)]"
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Bounds.lean",
+      "name": "matchTerm_modify_use",
+      "change": "removed",
+      "before": {
+        "statement": "theorem matchTerm_modify_use (C B : Ty) :\n    matchTerm [(0, C)] (.prod (.var 1) (.var 0)) (.prod B C) = some [(0, C), (1, B)]",
+        "attribute": "@[semantics \"subtyping-algebra\" (requirement := R4)]"
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Template.lean",
+      "name": "Bounds.matchTerm_closed",
+      "change": "removed",
+      "before": {
+        "statement": "theorem Bounds.matchTerm_closed (seed : Ty.Subst) (t r : Ty) (h : t.closed = true) :\n    Bounds.matchTerm seed t r = if Ty.sub r.normalize t.normalize then some seed else none",
+        "attribute": null
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Template.lean",
+      "name": "Bounds.matchB_of_matchTerm",
+      "change": "removed",
+      "before": {
+        "statement": "theorem Bounds.matchB_of_matchTerm {seed \u03c3 : Ty.Subst} {template request : Ty}\n    (h : Bounds.matchTerm seed template request = some \u03c3) :\n    Bounds.matchB seed template request = some \u03c3",
+        "attribute": null
+      },
+      "after": null
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Template.lean",
+      "name": "rowTy_instantiated_formed",
+      "change": "statement changed",
+      "before": {
+        "statement": "theorem rowTy_instantiated_formed {row : Row} {request : Ty} {use : Option TermUse} {ty : EffTy}\n    (accepted : rowTy row request use = some ty) :\n    \u2203 \u03c3 bindings, Bounds.matchTerm [] row.request.normalize request.normalize = some \u03c3 \u2227\n      bindTerm \u03c3 use = .ok bindings \u2227\n      Formation.Formed (Formation.instantiatedSites row bindings)",
+        "attribute": null
+      },
+      "after": {
+        "statement": "theorem rowTy_instantiated_formed {row : Row} {request : Ty} {use : Option TermUse} {ty : EffTy}\n    (accepted : rowTy row request use = some ty) :\n    \u2203 \u03c3 bindings, Bounds.matchB [] row.request.normalize request.normalize = some \u03c3 \u2227\n      bindTerm \u03c3 use = .ok bindings \u2227\n      Formation.Formed (Formation.instantiatedSites row bindings)",
+        "attribute": null
+      }
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Template.lean",
+      "name": "checkRow_formation_iff",
+      "change": "statement changed",
+      "before": {
+        "statement": "theorem checkRow_formation_iff (row : Row) (request : Ty) (use : Option TermUse)\n    (why : FormationRefusal) :\n    checkRow row request use = .error (.formation why) \u2194\n      \u2203 \u03c3 bindings, Bounds.matchTerm [] row.request.normalize request.normalize = some \u03c3 \u2227\n        bindTerm \u03c3 use = .ok bindings \u2227\n        Formation.check (Formation.instantiatedSites row bindings) = some why",
+        "attribute": null
+      },
+      "after": {
+        "statement": "theorem checkRow_formation_iff (row : Row) (request : Ty) (use : Option TermUse)\n    (why : FormationRefusal) :\n    checkRow row request use = .error (.formation why) \u2194\n      \u2203 \u03c3 bindings, Bounds.matchB [] row.request.normalize request.normalize = some \u03c3 \u2227\n        bindTerm \u03c3 use = .ok bindings \u2227\n        Formation.check (Formation.instantiatedSites row bindings) = some why",
+        "attribute": null
+      }
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Template.lean",
+      "name": "checkRow_request_iff",
+      "change": "statement changed",
+      "before": {
+        "statement": "theorem checkRow_request_iff (row : Row) (request : Ty) (use : Option TermUse) :\n    checkRow row request use = .error .requestNotSubtype \u2194\n      Bounds.matchTerm [] row.request.normalize request.normalize = none",
+        "attribute": null
+      },
+      "after": {
+        "statement": "theorem checkRow_request_iff (row : Row) (request : Ty) (use : Option TermUse) :\n    checkRow row request use = .error .requestNotSubtype \u2194\n      Bounds.matchB [] row.request.normalize request.normalize = none",
+        "attribute": null
+      }
+    }
+  ]
+}

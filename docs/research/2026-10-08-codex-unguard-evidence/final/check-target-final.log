@@ -1,0 +1,71 @@
+COMMAND scratch/lean-slot.sh make -j1 -o ts/eff/node_modules -o harness/truth/node_modules check-target
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+set -o pipefail; lake build 2>&1 | tee .lake/gen/build.log
+ℹ [1432/1434] Replayed Test.All
+info: Test/All.lean:305:0: Effect4 library-root gate: 197 API/utility modules, 349 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:305:0: Effect4 module and axiom gate: checked 850 modules and 97885 declarations; phases (ms): sources and closure 25, library roots 384, declarations 4110, resolution 1469, axioms 24138, exemptions 442; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:305:0: Effect4 goal gate: 30 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 12 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (1434 jobs).
+lake env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv --check
+PASS row-types: generated/row-types.tsv is what Ty.renderRaw prints for every selectable row
+node ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
+bun test tools/target
+bun test v1.4.2 (744846f84)
+
+tools/target/profile.test.ts:
+(pass) the row signatures are Lean's, one line per selectable row, and cover the selection [0.26ms]
+(pass) the receiver of a selected member is the object type the compiler parsed [258.40ms]
+(pass) requirements: full keys have bounded identities and only the exact scope key is special [0.28ms]
+(pass) requirements: distinct keys keep distinct identities when their carriers coincide [0.03ms]
+(pass) requirements: unknown and absent carriers retain the key identity [0.03ms]
+(pass) requirements: malformed carrier metadata is rejected [0.09ms]
+(pass) the hand-selection lane binds the same full requirement identity as the corpus lane (DI-93) [0.43ms]
+(pass) handle targets are bound by declaration, and structured types preserve nesting [0.23ms]
+(pass) selected IDs cannot vanish with absent metadata and unexpected inventory is refused [88.29ms]
+
+tools/target/prelude.test.ts:
+(pass) Boolean tag tests retain the host error bound and work as ordinary data [243.31ms]
+(pass) option defaults preserve nested payloads, unit, and object identity [0.06ms]
+
+tools/target/oracle.test.ts:
+(pass) synthetic assignments compare all three independent Effect columns [206.50ms]
+(pass) program errors may be strictly contained while other contracts stay exact [411.72ms]
+(pass) program containment cannot accept unresolved error bounds or failed extraction [209.19ms]
+(pass) request, receiver, optional and rest parameters are independently compared [202.97ms]
+(pass) unresolved types, absent metadata and unsupported signatures are refusals [207.58ms]
+(pass) all diagnostics count and repeated reports are stable [394.93ms]
+(pass) non-Effect and never subjects cannot agree through never-valued extraction helpers [197.86ms]
+(pass) one compiler: no second checker is constructed anywhere in the tree (row 57) [58.48ms]
+(pass) E4-CATCH-CE-001: an explicit absent fallback selects the data-first overload [194.79ms]
+
+tools/target/assignability.test.ts:
+(pass) the four verdicts follow the direction of the disagreement, not the pair's name [0.15ms]
+(pass) the two readings of a direction are reported, never conflated [1.09ms]
+(pass) the vectors are read exactly, and the table keeps every column [0.22ms]
+
+tools/target/rows.test.ts:
+(pass) a template atom agrees at its probes, and a wrong template or instantiation does not [203.36ms]
+
+tools/target/cli.test.ts:
+(pass) real command positive exits 0 [248.29ms]
+(pass) real command negative exits 1 [245.83ms]
+(pass) real command refuses missing query input with exit 2 [46.45ms]
+(pass) declarative query input refuses malformed controls [0.32ms]
+
+ 28 pass
+ 0 fail
+ 218 expect() calls
+Ran 28 tests across 6 files. [3.50s]
+bun tools/target/cli.ts --repo .
+target conformance [effect@4.0.0-rc.112/adapter]: PASS; 88 expected, 88 attempted, 88 resolved, 0 mismatching, 0 refused
+report: /Users/pooks/.codex/worktrees/unguard/lean4-effect4/.lake/target/report.json
+wrote 600 pairs to .lake/target/ty-vectors.tsv
+bun tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
+assignability: 600 pairs; agree 594, cut 6
+assignability: red control (refOf covariant): 10 pair(s) move, 10 caught by the differential
+PASS assignability: no pair the order accepts is refused by the target
+bun tools/target/rows.ts --repo .
+rows: 67 queried (22 rows, 45 atoms); agree 42, mismatch 3, refused 22
+PASS rows: the table is what this run observed

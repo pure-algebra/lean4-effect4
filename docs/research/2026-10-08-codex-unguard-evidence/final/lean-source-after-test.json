@@ -1,0 +1,52 @@
+{
+  "checks": [
+    {
+      "path": "Test/Codegen/PrintTyped.lean",
+      "evidence": "test-final",
+      "passed": true
+    },
+    {
+      "path": "Test/Program/FocusControls.lean",
+      "evidence": "test-final",
+      "passed": true
+    },
+    {
+      "path": "harness/truth/P2b.lean",
+      "evidence": "truth-emit-instance-final",
+      "passed": true
+    },
+    {
+      "path": "harness/truth/Truth.lean",
+      "evidence": "truth-emit-instance-final",
+      "passed": true
+    },
+    {
+      "path": "src/Effect4/Codegen/EraseTermTypes.lean",
+      "evidence": "test-final",
+      "passed": true
+    },
+    {
+      "path": "src/Effect4/Codegen/EraseTypes.lean",
+      "evidence": "test-final",
+      "passed": true
+    },
+    {
+      "path": "src/Effect4/Codegen/PrintEliminators.lean",
+      "evidence": "test-final",
+      "passed": true
+    },
+    {
+      "path": "src/Effect4/Codegen/PrintTyped.lean",
+      "evidence": "test-final",
+      "passed": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "evidence": "test-final",
+      "passed": true
+    }
+  ],
+  "passed": 9,
+  "failed": 0,
+  "note": "Library and battery sources bind to Test. The later standalone truth producer binds to its successful final elaboration and final truth gate."
+}

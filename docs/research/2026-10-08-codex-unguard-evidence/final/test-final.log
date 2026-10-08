@@ -1,0 +1,20 @@
+COMMAND scratch/lean-slot.sh lake build Test
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+✔ [784/887] Built Effect4 (2.1s)
+✔ [915/920] Built Conform.Effect4.LcnfMl (3.4s)
+✔ [918/1008] Built Test.Audit.AxiomGate (3.4s)
+✔ [1124/1130] Built Effect4.Laws (5.3s)
+✔ [1126/1273] Built Test.Audit.LetReturn (5.9s)
+✔ [1347/1356] Built Test.Program.TableControls (2.3s)
+✔ [1351/1357] Built Test.Program.BoundsControls (2.4s)
+✔ [1352/1367] Built Test.Program.QueryControls (2.5s)
+✔ [1365/1371] Built Test.Dogfood.Scenario.TodoPaged (2.7s)
+✔ [1368/1371] Built Test.Audit.ProofStyle (14s)
+ℹ [1369/1371] Built Test.All (33s)
+info: Test/All.lean:305:0: Effect4 library-root gate: 197 API/utility modules, 349 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:305:0: Effect4 module and axiom gate: checked 850 modules and 97885 declarations; phases (ms): sources and closure 25, library roots 384, declarations 4110, resolution 1469, axioms 24138, exemptions 442; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:305:0: Effect4 goal gate: 30 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 12 declaration(s) rest on goals; no other declaration reaches sorryAx
+✔ [1370/1371] Built Test (2.4s)
+Build completed successfully (1371 jobs).

@@ -1,0 +1,3849 @@
+{
+  "format": "effect4-p2b-target-report-v1",
+  "conforms": true,
+  "moduleCompiles": true,
+  "exactColumnsAgree": true,
+  "mutantsConform": true,
+  "expectedNegativesConform": true,
+  "scope": {
+    "exactSuccesses": [
+      "optionJoined",
+      "optionSingle",
+      "foldInferredJoined",
+      "foldInferredSingle",
+      "foldStoredJoined",
+      "foldStoredSingle",
+      "fiberJoinJoined",
+      "fiberJoinSingle",
+      "fiberAwaitJoined",
+      "fiberAwaitSingle",
+      "fiberInterruptJoined",
+      "fiberInterruptSingle",
+      "fiberRunInJoined",
+      "fiberRunInSingle",
+      "fiberInterruptAllJoined",
+      "fiberInterruptAllSingle",
+      "fiberInterruptAllAsJoined",
+      "fiberInterruptAllAsSingle",
+      "fiberAwaitAllFirstJoined",
+      "fiberAwaitAllFirstSingle",
+      "forkChildJoined",
+      "forkChildSingle",
+      "forkDetachJoined",
+      "forkDetachSingle",
+      "forkScopedJoined",
+      "forkScopedSingle",
+      "forkInJoined",
+      "forkInSingle",
+      "scopeCloseJoined",
+      "scopeCloseSingle",
+      "scopedJoined",
+      "scopedSingle",
+      "acquireReleaseJoined",
+      "acquireReleaseSingle",
+      "causeIsFailJoined",
+      "causeIsFailSingle",
+      "causeIsDieJoined",
+      "causeIsDieSingle",
+      "causeIsInterruptJoined",
+      "causeIsInterruptSingle",
+      "causeErrorJoined",
+      "causeErrorSingle",
+      "tagJoined",
+      "tagSingle",
+      "recordTagJoined",
+      "recordTagSingle",
+      "recordRequiredJoined",
+      "recordRequiredSingle",
+      "recordOptionalJoined",
+      "recordOptionalSingle",
+      "recordSetJoined",
+      "recordSetSingle"
+    ],
+    "expectedNegativeComparisons": [
+      "rawFiberAwaitAllJoined",
+      "rawFiberAwaitAllSingle",
+      "recordSetLiteralSingle"
+    ],
+    "observation": "awaitAll success observes the first Exit through get; recordSet success supplies a Boolean parameter; original standalone comparisons remain nonconforming"
+  },
+  "moduleDiagnostics": [],
+  "pairs": [
+    {
+      "joined": "optionJoined",
+      "single": "optionSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "foldInferredJoined",
+      "single": "foldInferredSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "foldStoredJoined",
+      "single": "foldStoredSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberJoinJoined",
+      "single": "fiberJoinSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberAwaitJoined",
+      "single": "fiberAwaitSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberInterruptJoined",
+      "single": "fiberInterruptSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberRunInJoined",
+      "single": "fiberRunInSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberInterruptAllJoined",
+      "single": "fiberInterruptAllSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberInterruptAllAsJoined",
+      "single": "fiberInterruptAllAsSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "fiberAwaitAllFirstJoined",
+      "single": "fiberAwaitAllFirstSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "forkChildJoined",
+      "single": "forkChildSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "forkDetachJoined",
+      "single": "forkDetachSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "forkScopedJoined",
+      "single": "forkScopedSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "forkInJoined",
+      "single": "forkInSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "scopeCloseJoined",
+      "single": "scopeCloseSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "scopedJoined",
+      "single": "scopedSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "acquireReleaseJoined",
+      "single": "acquireReleaseSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "causeIsFailJoined",
+      "single": "causeIsFailSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "causeIsDieJoined",
+      "single": "causeIsDieSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "causeIsInterruptJoined",
+      "single": "causeIsInterruptSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "causeErrorJoined",
+      "single": "causeErrorSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "tagJoined",
+      "single": "tagSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "recordTagJoined",
+      "single": "recordTagSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "recordRequiredJoined",
+      "single": "recordRequiredSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "recordOptionalJoined",
+      "single": "recordOptionalSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    },
+    {
+      "joined": "recordSetJoined",
+      "single": "recordSetSingle",
+      "joinedStatus": "agree",
+      "singleStatus": "agree"
+    }
+  ],
+  "refusals": [
+    {
+      "reason": "interruptScoped",
+      "name": "interruptScoped",
+      "checkerAdmits": true
+    },
+    {
+      "reason": "awaitAllFailFast",
+      "name": "awaitAllFailFast",
+      "checkerAdmits": true
+    },
+    {
+      "reason": "snapshotChildren",
+      "name": "snapshotChildren",
+      "checkerAdmits": true
+    },
+    {
+      "reason": "awaitNewChildren",
+      "name": "awaitNewChildren",
+      "checkerAdmits": true
+    },
+    {
+      "reason": "forkIn:child",
+      "name": "forkInChild",
+      "checkerAdmits": true
+    },
+    {
+      "reason": "forkScoped:child",
+      "name": "forkScopedChild",
+      "checkerAdmits": true
+    }
+  ],
+  "limitations": [
+    "Finite type-only observations of actual Program.printTyped syntax at explicit source environments.",
+    "Module compilation, mutual column assignments, and intended missing-member diagnostics are separate results.",
+    "Every success fixture requires exact A/E/R/request columns, including optional-record fixtures.",
+    "Standalone mutable-array and literal comparisons remain explicit nonconforming observations with their failed reverse assignments.",
+    "This fixture consumer neither executes these functions nor creates a ModuleEmission certificate."
+  ],
+  "versions": {
+    "compiler": "@typescript/native-preview",
+    "typescript": "7.0.0-dev.20260629.1",
+    "effect": "4.0.0-rc.112",
+    "lean": "leanprover/lean4:v4.33.1"
+  },
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": true,
+    "module": 99,
+    "moduleResolution": 100,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": 9,
+    "types": [
+      "bun"
+    ],
+    "verbatimModuleSyntax": true,
+    "configFilePath": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tsconfig.json"
+  },
+  "observations": [
+    {
+      "id": "optionJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.optionJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Option.Option<string> | Option.Option<number>]",
+          "expected": "[Option.Option<number> | Option.Option<string>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Option.Option<number> | Option.Option<string>) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Option.Option<string> | Option.Option<number>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "options",
+        "companion": "optionSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "optionSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.optionSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Option.Option<number>]",
+          "expected": "[Option.Option<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Option.Option<number>) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Option.None<number> | Option.Some<number>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "options",
+        "companion": "optionJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "foldInferredJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.foldInferredJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly string[] | readonly number[], a1: string | number]",
+          "expected": "[ReadonlyArray<number> | ReadonlyArray<string>, number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly string[] | readonly number[]",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "list-fold",
+        "companion": "foldInferredSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "foldInferredSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.foldInferredSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly number[], a1: number]",
+          "expected": "[ReadonlyArray<number>, number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<number>, a1: number) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly number[]",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "list-fold",
+        "companion": "foldInferredJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "foldStoredJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.foldStoredJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly string[] | readonly number[], a1: string | number]",
+          "expected": "[ReadonlyArray<number> | ReadonlyArray<string>, number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly string[] | readonly number[]",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "list-fold",
+        "companion": "foldStoredSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "foldStoredSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.foldStoredSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly number[], a1: number]",
+          "expected": "[ReadonlyArray<number>, number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<number>, a1: number) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly number[]",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "list-fold",
+        "companion": "foldStoredJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberJoinJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberJoinJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>]",
+          "expected": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Effect.Effect<string | number, boolean, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberJoinSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberJoinSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberJoinSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<number, never>]",
+          "expected": "[Fiber.Fiber<number, never>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never>) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberJoinJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberAwaitJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberAwaitJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Exit.Failure<string | number, boolean> | Exit.Success<string | number, boolean>",
+          "expected": "Exit.Exit<number | string, boolean>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>]",
+          "expected": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Effect.Effect<Exit.Exit<string | number, boolean>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberAwaitSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberAwaitSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberAwaitSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Exit.Failure<number, never> | Exit.Success<number, never>",
+          "expected": "Exit.Exit<number, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<number, never>]",
+          "expected": "[Fiber.Fiber<number, never>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never>) => Effect.Effect<Exit.Exit<number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberAwaitJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberInterruptJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberInterruptJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>]",
+          "expected": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberInterruptSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberInterruptSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberInterruptSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<number, never>]",
+          "expected": "[Fiber.Fiber<number, never>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberInterruptJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberRunInJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberRunInJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>, a1: Scope.Scope]",
+          "expected": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>, Scope.Scope]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>, a1: Scope.Scope) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<string, boolean> | Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "Scope.Scope",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberRunInSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberRunInSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberRunInSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Fiber.Fiber<number, never>, a1: Scope.Scope]",
+          "expected": "[Fiber.Fiber<number, never>, Scope.Scope]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Fiber.Fiber<number, never>, a1: Scope.Scope) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Fiber.Fiber<number, never>",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "Scope.Scope",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberRunInJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberInterruptAllJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberInterruptAllJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<string, boolean>[] | readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<string, boolean>[] | readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberInterruptAllSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberInterruptAllSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberInterruptAllSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberInterruptAllJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberInterruptAllAsJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberInterruptAllAsJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<string, boolean>[] | readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<string, boolean>[] | readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberInterruptAllAsSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberInterruptAllAsSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberInterruptAllAsSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberInterruptAllAsJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberAwaitAllFirstJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberAwaitAllFirstJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<Exit.Exit<string | number, boolean>> | Option.Some<Exit.Exit<string | number, boolean>>",
+          "expected": "Option.Option<Exit.Exit<number | string, boolean>>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<string, boolean>[] | readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Effect.Effect<Option.Option<Exit.Exit<string | number, boolean>>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<string, boolean>[] | readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberAwaitAllFirstSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "fiberAwaitAllFirstSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberAwaitAllFirstSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<Exit.Exit<number, never>> | Option.Some<Exit.Exit<number, never>>",
+          "expected": "Option.Option<Exit.Exit<number, never>>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Effect.Effect<Option.Option<Exit.Exit<number, never>>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "fiberAwaitAllFirstJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkChildJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkChildJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<string | number, never>",
+          "expected": "Fiber.Fiber<number | string, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: string | number]",
+          "expected": "[number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number | string) => Effect.Effect<Fiber.Fiber<string | number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkChildSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkChildSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkChildSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<number, never>",
+          "expected": "Fiber.Fiber<number, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: number]",
+          "expected": "[number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number) => Effect.Effect<Fiber.Fiber<number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkChildJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkDetachJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkDetachJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<string | number, never>",
+          "expected": "Fiber.Fiber<number | string, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: string | number]",
+          "expected": "[number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number | string) => Effect.Effect<Fiber.Fiber<string | number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkDetachSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkDetachSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkDetachSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<number, never>",
+          "expected": "Fiber.Fiber<number, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: number]",
+          "expected": "[number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number) => Effect.Effect<Fiber.Fiber<number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkDetachJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkScopedJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkScopedJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<string | number, never>",
+          "expected": "Fiber.Fiber<number | string, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "Scope.Scope",
+          "expected": "Scope.Scope",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: string | number]",
+          "expected": "[number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number | string) => Effect.Effect<Fiber.Fiber<string | number, never>, never, Scope.Scope>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkScopedSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkScopedSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkScopedSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<number, never>",
+          "expected": "Fiber.Fiber<number, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "Scope.Scope",
+          "expected": "Scope.Scope",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: number]",
+          "expected": "[number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number) => Effect.Effect<Fiber.Fiber<number, never>, never, Scope.Scope>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkScopedJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkInJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkInJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<string | number, never>",
+          "expected": "Fiber.Fiber<number | string, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: string | number, a1: Scope.Scope]",
+          "expected": "[number | string, Scope.Scope]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number | string, a1: Scope.Scope) => Effect.Effect<Fiber.Fiber<string | number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "Scope.Scope",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkInSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "forkInSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.forkInSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Fiber.Fiber<number, never>",
+          "expected": "Fiber.Fiber<number, never>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: number, a1: Scope.Scope]",
+          "expected": "[number, Scope.Scope]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number, a1: Scope.Scope) => Effect.Effect<Fiber.Fiber<number, never>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "Scope.Scope",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "fibers",
+        "companion": "forkInJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "scopeCloseJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.scopeCloseJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Scope.Scope, a1: Exit.Exit<string, boolean> | Exit.Exit<number, never>]",
+          "expected": "[Scope.Scope, Exit.Exit<number, never> | Exit.Exit<string, boolean>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Scope.Scope, a1: Exit.Exit<number, never> | Exit.Exit<string, boolean>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Scope.Scope",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "Exit.Exit<string, boolean> | Exit.Exit<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "exit-scope",
+        "companion": "scopeCloseSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "scopeCloseSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.scopeCloseSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "void",
+          "expected": "void",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Scope.Scope, a1: Exit.Exit<number, never>]",
+          "expected": "[Scope.Scope, Exit.Exit<number, never>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Scope.Scope, a1: Exit.Exit<number, never>) => Effect.Effect<void, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Scope.Scope",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "Exit.Failure<number, never> | Exit.Success<number, never>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "exit-scope",
+        "companion": "scopeCloseJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "scopedJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.scopedJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: string | number]",
+          "expected": "[number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number | string) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "exit-scope",
+        "companion": "scopedSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "scopedSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.scopedSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: number]",
+          "expected": "[number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "exit-scope",
+        "companion": "scopedJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "acquireReleaseJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.acquireReleaseJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "Scope.Scope",
+          "expected": "Scope.Scope",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: string | number]",
+          "expected": "[number | string]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number | string) => Effect.Effect<string | number, never, Scope.Scope>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "string | number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "exit-scope",
+        "companion": "acquireReleaseSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "acquireReleaseSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.acquireReleaseSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "Scope.Scope",
+          "expected": "Scope.Scope",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: number]",
+          "expected": "[number]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: number) => Effect.Effect<number, never, Scope.Scope>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "number",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "exit-scope",
+        "companion": "acquireReleaseJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeIsFailJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeIsFailJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number> | Exit.Exit<void, string>]",
+          "expected": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.Effect<boolean, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number> | Exit.Exit<void, string>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeIsFailSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeIsFailSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeIsFailSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number>]",
+          "expected": "[Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Cause.Cause<number>) => Effect.Effect<boolean, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeIsFailJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeIsDieJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeIsDieJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number> | Exit.Exit<void, string>]",
+          "expected": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.Effect<boolean, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number> | Exit.Exit<void, string>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeIsDieSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeIsDieSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeIsDieSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number>]",
+          "expected": "[Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Cause.Cause<number>) => Effect.Effect<boolean, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeIsDieJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeIsInterruptJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeIsInterruptJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number> | Exit.Exit<void, string>]",
+          "expected": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.Effect<boolean, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number> | Exit.Exit<void, string>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeIsInterruptSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeIsInterruptSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeIsInterruptSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "boolean",
+          "expected": "boolean",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number>]",
+          "expected": "[Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Cause.Cause<number>) => Effect.Effect<boolean, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeIsInterruptJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeErrorJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeErrorJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<string | number> | Option.Some<string | number>",
+          "expected": "Option.Option<number | string>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number> | Exit.Exit<void, string>]",
+          "expected": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.Effect<Option.Option<string | number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number> | Exit.Exit<void, string>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeErrorSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "causeErrorSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.causeErrorSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<number> | Option.Some<number>",
+          "expected": "Option.Option<number>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: Cause.Cause<number>]",
+          "expected": "[Cause.Cause<number>]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: Cause.Cause<number>) => Effect.Effect<Option.Option<number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "Cause.Cause<number>",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "cause",
+        "companion": "causeErrorJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "tagJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.tagJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly [\"hit\", number] | readonly [\"miss\", string]]",
+          "expected": "[readonly [\"hit\", number] | readonly [\"miss\", string]]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: readonly [\n    \"hit\",\n    number\n] | readonly [\n    \"miss\",\n    string\n]) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly [\"hit\", number] | readonly [\"miss\", string]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "tagSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "tagSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.tagSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: readonly [\"hit\", number]]",
+          "expected": "[readonly [\"hit\", number]]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: readonly [\n    \"hit\",\n    number\n]) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly [\"hit\", number]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "tagJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordTagJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordTagJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly _tag: \"hit-tag\"; readonly x: number; } | { readonly _tag: \"miss-tag\"; readonly x: string; }]",
+          "expected": "[{ readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly _tag: \"hit-tag\";\n    readonly x: number;\n} | {\n    readonly _tag: \"miss-tag\";\n    readonly x: string;\n}) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly _tag: \"hit-tag\"; readonly x: number; } | { readonly _tag: \"miss-tag\"; readonly x: string; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordTagSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordTagSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordTagSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly _tag: \"hit-tag\"; readonly x: number; }]",
+          "expected": "[{ readonly _tag: \"hit-tag\"; readonly x: number }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly _tag: \"hit-tag\";\n    readonly x: number;\n}) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly _tag: \"hit-tag\"; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordTagJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordRequiredJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordRequiredJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "string | number",
+          "expected": "number | string",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n} | {\n    readonly right: boolean;\n    readonly x: string;\n}) => Effect.Effect<string | number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordRequiredSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordRequiredSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordRequiredSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "number",
+          "expected": "number",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n}) => Effect.Effect<number, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordRequiredJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordOptionalJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordOptionalJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.Option<string> | Option.Option<number>",
+          "expected": "Option.Option<number> | Option.Option<string>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n} | {\n    readonly right: boolean;\n    readonly x: string;\n}) => Effect.Effect<Option.Option<string> | Option.Option<number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordOptionalSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordOptionalSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordOptionalSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<number> | Option.Some<number>",
+          "expected": "Option.Option<number>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n}) => Effect.Effect<Option.Option<number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordOptionalJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordSetJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordSetJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "(Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: boolean; }) | (Omit<{ readonly right: boolean; readonly x: string; }, \"x\"> & { readonly x: boolean; })",
+          "expected": "{ readonly left: boolean; readonly x: boolean } | { readonly right: boolean; readonly x: boolean }",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }, a1: boolean]",
+          "expected": "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }, boolean]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n} | {\n    readonly right: boolean;\n    readonly x: string;\n}, a1: boolean) => Effect.Effect<(Omit<{\n    readonly left: boolean;\n    readonly x: number;\n}, \"x\"> & {\n    readonly x: boolean;\n}) | (Omit<{\n    readonly right: boolean;\n    readonly x: string;\n}, \"x\"> & {\n    readonly x: boolean;\n}), never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "boolean",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordSetSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordSetSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordSetSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: boolean; }",
+          "expected": "{ readonly left: boolean; readonly x: boolean }",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; }, a1: boolean]",
+          "expected": "[{ readonly left: boolean; readonly x: number }, boolean]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n}, a1: boolean) => Effect.Effect<Omit<{\n    readonly left: boolean;\n    readonly x: number;\n}, \"x\"> & {\n    readonly x: boolean;\n}, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            },
+            {
+              "name": "a1",
+              "type": "boolean",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordSetJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    }
+  ]
+}

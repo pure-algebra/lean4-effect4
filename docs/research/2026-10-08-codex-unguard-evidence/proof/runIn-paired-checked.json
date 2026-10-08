@@ -1,0 +1,34 @@
+{
+  "result": "Coherent production narrow build exit0; all17 named roots <= [propext,Quot.sound]",
+  "commands": [
+    "scratch/lean-slot.sh lake build Effect4.Laws.Codegen.PrintTyped",
+    "scratch/lean-slot.sh lake env lean -DwarningAsError=true /private/tmp/codex-unguard/p3-scout/RunInPairAxioms.lean"
+  ],
+  "scope": "Exact nested runIn inverse, syntax-size proof, actual raw template normalization, raw action image and owned row head preservation. Original public P3 theorem premises unchanged. No runtime or target typing claim.",
+  "files": [
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Codegen/EraseTermTypes.lean",
+      "sha256": "0f9edf5e9f524f70e5ae4348e6a19a4a655364c74ce21a563c785e1c989d4ac8"
+    },
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Codegen/EraseTypes.lean",
+      "sha256": "466c17f9979f13bf78bb4c60cbbace03406315812aa7b7b463ed21efc9730c47"
+    },
+    {
+      "path": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "sha256": "522f909b0cbbe7d23208333bc11f06c2d526f676b433abfa6705d20e28d45a0a"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p3-scout/runIn-paired-build-7.log",
+      "sha256": "27a6ad70451f438e68009b318aebbb7ff207cc81547af0aaa45703a18d189cdb"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p3-scout/RunInPairAxioms.lean",
+      "sha256": "770449ccb9f38d69f58ff1993322fb7bd3b17e565cfa41f8c310dfc15a86644a"
+    },
+    {
+      "path": "/private/tmp/codex-unguard/p3-scout/runIn-paired-axioms-1.log",
+      "sha256": "ccd35799daf7c884d0741bffed33afb40bcf439cc7513ec1d00b53f67e3bf4d4"
+    }
+  ]
+}
