@@ -1,3 +1,4 @@
+import Effect4.Laws.Modules.Waiting
 import Effect4.Modules.Queue.Steps
 import Effect4.Program.Typing
 import Effect4.Program.Native
@@ -438,6 +439,43 @@ at every scope; `sig.atomOf = nativeAtomTy`; `MessageTy A`. They establish no ag
 model, no typing of a wrapper and nothing of a target. Consumers: the wrapper's law at its own
 scope, and the statement of the same step. -/
 
+/-- Formation helpers for the R4 Queue step typing laws below. These discharge record and
+ascription checks from the existing MessageTy premise; they establish no program admission. -/
+@[semantics "store-typing" (requirement := R4)]
+theorem message_nodes_for_steps {A : Ty} (message : MessageTy A) : NodesFormed A := fun t member =>
+  nodesFormed_of_check message.cell t (by
+    show t ∈ [Ty.record (Queue.cellFields A)] ++ (([Ty.list A] ++ Formation.nodes A) ++ _)
+    exact List.mem_append_right _ (List.mem_append_left _ (List.mem_append_right _ member)))
+
+@[semantics "store-typing" (requirement := R4)]
+theorem offer_nodes_for_steps {A : Ty} (message : MessageTy A) : NodesFormed (Queue.offerTy A) := by
+  intro t member
+  have member' : t ∈ [Queue.offerTy A] ++ (Formation.nodes .bool ++
+      (Formation.nodes Queue.answerTy ++ (Formation.nodes idTy ++
+        (Formation.nodes (.list A) ++ [])))) := member
+  simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at member'
+  rcases member' with rfl | h | h | h | h
+  · show (["batch", "hint", "id", "rest"] : List String).Nodup
+    decide
+  · exact nodesFormed_of_check (T := .bool) (by decide) t h
+  · exact nodesFormed_of_check (T := Queue.answerTy) (by decide) t h
+  · exact nodesFormed_of_check (T := idTy) (by decide) t h
+  · exact nodesFormed_list (message_nodes_for_steps message) t h
+
+/-- Formation of a one-field annotation, consumed by the R4 Queue step typing laws. -/
+@[semantics "store-typing" (requirement := R4)]
+theorem ascribe_formed_for_steps (T : Ty) (formed : NodesFormed T) :
+    Formation.check (Formation.sites false [] (.record (ascribeFields T))) = none := by
+  apply (Formation.check_eq_none_iff _).mpr
+  apply formed_sites
+  intro t member
+  change t ∈ [.record (ascribeFields T)] ++ (Formation.nodes T ++ []) at member
+  simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at member
+  rcases member with rfl | member
+  · show (["v"] : List String).Nodup
+    decide
+  · exact formed t member
+
 /-- **The withdrawal of an offer is typed at every scope.** -/
 @[semantics "store-typing" (requirement := R4)]
 theorem withdrawOffer_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
@@ -447,13 +485,19 @@ theorem withdrawOffer_types (sig : Signature NativeOp) (atoms : sig.atomOf = nat
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.withdrawOffer A idSrc cellSrc) env path types
       (.prod wakeReplyTy (Queue.cellTy A)) := by
-  have canonical := message.canonical
-  have removed := types_removeOffer atoms canonical depth
-    (types_cellOffers canonical typesCell) typesId
-  have woken := types_wake atoms (types_cellTakers canonical typesCell)
-    (types_cellMsgs canonical typesCell)
-  have stored := types_setOffers canonical typesCell removed
-  exact types_pair atoms woken stored
+  refine Step.typed (Γ := Data.withdrawΓ A) sig atoms
+    (Input.types_cons typesId.atScope (Input.types_cons typesCell Input.types_nil))
+    (Data.withdrawOffer A) ?_ depth
+  have cellN := cellTy_normal message.canonical
+  have offerN := offerTy_normal message.canonical
+  dsimp only [Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy,
+    Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg,
+    Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.cataItems, Step.factsAlg,
+    tupleFacts, tupleFacts.tupleNormals, ItemResults.All,
+    FieldResults.All, Data.withdrawTake, Data.withdrawOffer, Data.removeTaker,
+    Data.removeOffer, Data.wake, Data.mkTaker, Queue.takerRecord]
+  aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+    Ty.normalize_option_canonical])
 
 /-- **The withdrawal of a take is typed at every scope.** -/
 @[semantics "store-typing" (requirement := R4)]
@@ -464,12 +508,21 @@ theorem withdrawTake_types (sig : Signature NativeOp) (atoms : sig.atomOf = nati
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.withdrawTake A idSrc cellSrc) env path types
       (.prod wakeReplyTy (Queue.cellTy A)) := by
-  have canonical := message.canonical
-  have removed := types_removeTaker atoms depth (types_cellTakers canonical typesCell) typesId
-  have woken := types_wake atoms removed (types_cellMsgs canonical typesCell)
-  have stored := types_setTakers canonical typesCell removed
-  exact types_pair atoms woken stored
+  refine Step.typed (Γ := Data.withdrawΓ A) sig atoms
+    (Input.types_cons typesId.atScope (Input.types_cons typesCell Input.types_nil))
+    (Data.withdrawTake A) ?_ depth
+  have cellN := cellTy_normal message.canonical
+  have offerN := offerTy_normal message.canonical
+  dsimp only [Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy,
+    Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg,
+    Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.cataItems, Step.factsAlg,
+    tupleFacts, tupleFacts.tupleNormals, ItemResults.All,
+    FieldResults.All, Data.withdrawTake, Data.withdrawOffer, Data.removeTaker,
+    Data.removeOffer, Data.wake, Data.mkTaker, Queue.takerRecord]
+  aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+    Ty.normalize_option_canonical])
 
+set_option maxHeartbeats 800000 in
 /-- **The poll step is typed at every scope.** The arm that consumes answers a message, and the
 arm that does not answers none: the step has the first arm's type. -/
 @[semantics "store-typing" (requirement := R4)]
@@ -479,35 +532,34 @@ theorem pollStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.pollStep A cellSrc) env path types
       (.prod (pollReplyTy A) (Queue.cellTy A)) := by
+  refine Step.typed (Γ := [Queue.cellTy A]) sig atoms
+    (Input.types_cons typesCell Input.types_nil) (Data.poll A) ?_ (depth)
   have canonical := message.canonical
-  have cellNormal := cellTy_normal canonical
-  have optionNormal : (Ty.option A).normalize = .option A :=
-    Ty.normalize_option_canonical canonical
-  have offersNormal : (Ty.list (Queue.offerTy A)).normalize = .list (Queue.offerTy A) :=
-    Ty.normalize_list_canonical (offerTy_normal canonical)
-  -- the parts of the term, each at its type
-  have msgs := types_cellMsgs canonical typesCell
-  have offers := types_cellOffers canonical typesCell
-  have takers := types_cellTakers canonical typesCell
-  have cap := types_cellCap canonical typesCell
-  have rest := types_drop atoms msgs (types_nat 1)
-  have room := types_sub atoms cap (types_len atoms rest)
-  have gained := types_gained atoms canonical depth room rest offers
-  have entering := types_entering atoms room offers
-  have staying := types_staying atoms room offers
-  have consumed := types_setOffers canonical (types_setMsgs canonical typesCell gained) staying
-  have yes := types_pair atoms
-    (types_tuple2 atoms (types_head atoms msgs) entering optionNormal offersNormal rfl rfl)
-    consumed
-  have no := types_pair atoms
-    (types_tuple2 atoms (types_noneT atoms) (types_noneOf atoms offers) rfl offersNormal rfl rfl)
-    typesCell
-  have test := types_andT atoms (types_notT atoms (types_isEmpty atoms msgs))
-    (types_isEmpty atoms takers)
-  exact types_ifT_below atoms test yes no
-    (Ty.normalize_prod_canonical (pollReplyTy_normal canonical) cellNormal rfl rfl)
-    (idlePair_sub A _ _)
+  have optionF := ascribe_formed_for_steps (.option A) (nodesFormed_option (message_nodes_for_steps message))
+  have boolF := ascribe_formed_for_steps (.option .bool) (nodesFormed_of_check (by decide))
+  have listF := ascribe_formed_for_steps (.list A) (nodesFormed_list (message_nodes_for_steps message))
+  have takerF : Formation.check (Formation.sites false [] (.record Queue.takerRecord)) = none := by decide
+  have offerF := (Formation.check_eq_none_iff _).mpr (formed_sites (offer_nodes_for_steps message) [])
+  have cellN := cellTy_normal message.canonical
+  have offerN := offerTy_normal message.canonical
+  have cellRecordN : (Ty.record (Queue.cellRecord A)).normalize = .record (Queue.cellRecord A) := cellN
+  have offerRecordN : (Ty.record (Queue.offerRecord A)).normalize = .record (Queue.offerRecord A) := offerN
+  have takeN := takeReplyTy_normal message.canonical
+  have pollN := pollReplyTy_normal message.canonical
+  have takerN := takerTy_normal
+  clear typesCell atoms depth
+  dsimp only [Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy,
+    Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg,
+    Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.cataItems, Step.factsAlg,
+    tupleFacts, tupleFacts.tupleNormals, ItemResults.All,
+    FieldResults.All, Data.take, Data.offer, Data.poll, Data.gained, Data.entering,
+    Data.staying, Data.fitting, Data.enrolled, Data.isHead, Data.renewHint,
+    Data.removeTaker, Data.removeOffer, Data.wake, Data.mkTaker, Data.mkOffer,
+    Queue.takerRecord, Queue.offerRecord]
+  aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+    Ty.normalize_option_canonical])
 
+set_option maxHeartbeats 800000 in
 /-- **The offer step is typed at every scope.** No fold of the step holds a caller's term, so
 each argument is typed at the scope alone. The message has the cell's message type itself. -/
 @[semantics "store-typing" (requirement := R4)]
@@ -520,41 +572,34 @@ theorem offerStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeA
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.offerStep A idSrc hintSrc messageSrc cellSrc) env path types
       (.prod offerReplyTy (Queue.cellTy A)) := by
+  refine Step.typed (Γ := Data.offerΓ A) sig atoms
+    (Input.types_cons typesId (Input.types_cons typesHint (Input.types_cons typesMessage (Input.types_cons typesCell Input.types_nil)))) (Data.offer A) ?_ (by trivial)
   have canonical := message.canonical
-  have cellNormal := cellTy_normal canonical
-  have takersNormal : (Ty.list Queue.takerTy).normalize = .list Queue.takerTy := rfl
-  -- the parts of the term, each at its type
-  have msgs := types_cellMsgs canonical typesCell
-  have offers := types_cellOffers canonical typesCell
-  have takers := types_cellTakers canonical typesCell
-  have cap := types_cellCap canonical typesCell
-  have newOffer := types_mkOffer message typesId typesHint (types_bool false)
-    (types_single atoms canonical typesMessage)
-  have pending := types_setOffers canonical typesCell
-    (types_snoc atoms (offerTy_normal canonical) offers newOffer)
-  have longer := types_snoc atoms canonical msgs typesMessage
-  have accepted := types_setMsgs canonical typesCell longer
-  have behind := types_pair atoms
-    (types_tuple2 atoms (types_noneT atoms) (types_noneOf atoms takers) rfl takersNormal rfl rfl)
-    pending
-  have room := types_pair atoms
-    (types_tuple2 atoms (types_some atoms (types_bool true)) (types_wake atoms takers longer)
-      rfl takersNormal rfl rfl)
-    accepted
-  have full := types_pair atoms
-    (types_tuple2 atoms (types_noneT atoms) (types_wake atoms takers msgs) rfl takersNormal
-      rfl rfl)
-    pending
-  have hasPending := types_notT atoms (types_isEmpty atoms offers)
-  have hasRoom := types_lt atoms (types_len atoms msgs) cap
-  have inner := types_ifT_below atoms hasRoom room full
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_prod_canonical rfl takersNormal rfl rfl) cellNormal rfl rfl)
-    (idlePair_sub .bool _ _)
-  exact types_ifT_above atoms hasPending behind inner (idlePair_sub .bool _ _)
-    (Ty.normalize_prod_canonical
-      (Ty.normalize_prod_canonical rfl takersNormal rfl rfl) cellNormal rfl rfl)
+  have optionF := ascribe_formed_for_steps (.option A) (nodesFormed_option (message_nodes_for_steps message))
+  have boolF := ascribe_formed_for_steps (.option .bool) (nodesFormed_of_check (by decide))
+  have listF := ascribe_formed_for_steps (.list A) (nodesFormed_list (message_nodes_for_steps message))
+  have takerF : Formation.check (Formation.sites false [] (.record Queue.takerRecord)) = none := by decide
+  have offerF := (Formation.check_eq_none_iff _).mpr (formed_sites (offer_nodes_for_steps message) [])
+  have cellN := cellTy_normal message.canonical
+  have offerN := offerTy_normal message.canonical
+  have cellRecordN : (Ty.record (Queue.cellRecord A)).normalize = .record (Queue.cellRecord A) := cellN
+  have offerRecordN : (Ty.record (Queue.offerRecord A)).normalize = .record (Queue.offerRecord A) := offerN
+  have takeN := takeReplyTy_normal message.canonical
+  have pollN := pollReplyTy_normal message.canonical
+  have takerN := takerTy_normal
+  clear typesId typesHint typesMessage typesCell atoms
+  dsimp only [Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy,
+    Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg,
+    Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.cataItems, Step.factsAlg,
+    tupleFacts, tupleFacts.tupleNormals, ItemResults.All,
+    FieldResults.All, Data.take, Data.offer, Data.poll, Data.gained, Data.entering,
+    Data.staying, Data.fitting, Data.enrolled, Data.isHead, Data.renewHint,
+    Data.removeTaker, Data.removeOffer, Data.wake, Data.mkTaker, Data.mkOffer,
+    Queue.takerRecord, Queue.offerRecord]
+  aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+    Ty.normalize_option_canonical])
 
+set_option maxHeartbeats 800000 in
 /-- **The take step is typed at every scope.** The request's identity and its hint stand in a
 fold's body, so each is taken with its typed capture. The arm that consumes answers a message,
 and the arm that waits answers none: the step has the first arm's type. -/
@@ -567,50 +612,32 @@ theorem takeStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.takeStep A idSrc hintSrc cellSrc) env path types
       (.prod (takeReplyTy A) (Queue.cellTy A)) := by
+  refine Step.typed (Γ := Data.takeΓ A) sig atoms
+    (Input.types_cons typesId.atScope (Input.types_cons typesHint.atScope (Input.types_cons typesCell Input.types_nil))) (Data.take A) ?_ (depth)
   have canonical := message.canonical
-  have cellNormal := cellTy_normal canonical
-  have optionNormal : (Ty.option A).normalize = .option A :=
-    Ty.normalize_option_canonical canonical
-  have offersNormal : (Ty.list (Queue.offerTy A)).normalize = .list (Queue.offerTy A) :=
-    Ty.normalize_list_canonical (offerTy_normal canonical)
-  have takersNormal : (Ty.list Queue.takerTy).normalize = .list Queue.takerTy := rfl
-  -- the cell's fields
-  have msgs := types_cellMsgs canonical typesCell
-  have offers := types_cellOffers canonical typesCell
-  have takers := types_cellTakers canonical typesCell
-  have cap := types_cellCap canonical typesCell
-  -- the test: a message is buffered, and it is the request's turn
-  have enrolled := types_enrolled atoms depth takers typesId
-  have turn := types_orT atoms (types_isHead atoms depth takers typesId)
-    (types_andT atoms (types_notT atoms enrolled) (types_isEmpty atoms takers))
-  have test := types_andT atoms (types_notT atoms (types_isEmpty atoms msgs)) turn
-  -- the arm that consumes
-  have rest := types_drop atoms msgs (types_nat 1)
-  have room := types_sub atoms cap (types_len atoms rest)
-  have removed := types_removeTaker atoms depth takers typesId
-  have gained := types_gained atoms canonical depth room rest offers
-  have entering := types_entering atoms room offers
-  have staying := types_staying atoms room offers
-  have consumed := types_setOffers canonical
-    (types_setTakers canonical (types_setMsgs canonical typesCell gained) removed) staying
-  have yes := types_pair atoms
-    (types_tuple3 atoms (types_head atoms msgs) entering (types_wake atoms removed gained)
-      optionNormal offersNormal takersNormal)
-    consumed
-  -- the arm that waits
-  have renewed := types_renewHint atoms depth takers typesId typesHint
-  have appended := types_snoc atoms takerTy_normal takers
-    (types_mkTaker typesId.atScope typesHint.atScope)
-  have waiting := types_setTakers canonical typesCell (types_ifT atoms enrolled renewed appended takersNormal)
-  have no := types_pair atoms
-    (types_tuple3 atoms (types_noneT atoms) (types_noneOf atoms offers)
-      (types_noneOf atoms takers) rfl offersNormal takersNormal)
-    waiting
-  exact types_ifT_below atoms test yes no
-    (Ty.normalize_prod_canonical (takeReplyTy_normal canonical) cellNormal rfl rfl)
-    (idleTriple_sub A _ _ _)
-
-/-! ## The statements -/
+  have optionF := ascribe_formed_for_steps (.option A) (nodesFormed_option (message_nodes_for_steps message))
+  have boolF := ascribe_formed_for_steps (.option .bool) (nodesFormed_of_check (by decide))
+  have listF := ascribe_formed_for_steps (.list A) (nodesFormed_list (message_nodes_for_steps message))
+  have takerF : Formation.check (Formation.sites false [] (.record Queue.takerRecord)) = none := by decide
+  have offerF := (Formation.check_eq_none_iff _).mpr (formed_sites (offer_nodes_for_steps message) [])
+  have cellN := cellTy_normal message.canonical
+  have offerN := offerTy_normal message.canonical
+  have cellRecordN : (Ty.record (Queue.cellRecord A)).normalize = .record (Queue.cellRecord A) := cellN
+  have offerRecordN : (Ty.record (Queue.offerRecord A)).normalize = .record (Queue.offerRecord A) := offerN
+  have takeN := takeReplyTy_normal message.canonical
+  have pollN := pollReplyTy_normal message.canonical
+  have takerN := takerTy_normal
+  clear typesId typesHint typesCell atoms depth
+  dsimp only [Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy,
+    Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg,
+    Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.cataItems, Step.factsAlg,
+    tupleFacts, tupleFacts.tupleNormals, ItemResults.All,
+    FieldResults.All, Data.take, Data.offer, Data.poll, Data.gained, Data.entering,
+    Data.staying, Data.fitting, Data.enrolled, Data.isHead, Data.renewHint,
+    Data.removeTaker, Data.removeOffer, Data.wake, Data.mkTaker, Data.mkOffer,
+    Queue.takerRecord, Queue.offerRecord]
+  aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
+    Ty.normalize_option_canonical])
 
 /-- **The initial value has the cell's type**, at every capacity and in every scope. -/
 @[semantics "store-typing" (requirement := R4)]
@@ -699,7 +726,7 @@ theorem sizeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
     typeAt sig ["s"] [Queue.cellTy A] (Queue.sizeStep A (var "s")) = some .nat :=
   typeAt_of_types (Step.typed sig atoms (env := { names := ["s"] }) (path := [])
     (types := [Queue.cellTy A]) (Input.types_cons (src0 := var "s") (types_var rfl rfl rfl)
-      Input.types_nil) (Data.size A) ⟨cellTy_normal message.canonical, trivial⟩ false)
+      Input.types_nil) (Data.size A) ⟨cellTy_normal message.canonical, trivial⟩ (by trivial) false)
 
 /-- **The withdrawal of a take is typed at the cell's type.** -/
 @[semantics "store-typing" (requirement := R4)]
