@@ -1183,23 +1183,11 @@ private def checkWitnesses : CommandElabM Unit := do
 private def denominatorRows : List Row :=
   censusRows.filter fun row => !excludedDispositions.contains row.disposition
 
+/-- The census's shape and its witness join. A pass prints nothing: the counts are the report
+scripts' (`scripts/report-effect-runtime-coverage.sh`). -/
 private def checkRuntimeCoverage : CommandElabM Unit := do
   checkRowShape
   checkWitnesses
-  let total := censusRows.length
-  let denominator := denominatorRows.length
-  let excluded := total - denominator
-  let green := (denominatorRows.filter fun row => row.coverage == "green").length
-  let partial_ := (denominatorRows.filter fun row => row.coverage == "partial").length
-  let absent := (denominatorRows.filter fun row => row.coverage == "absent").length
-  let diverged := (denominatorRows.filter fun row => row.coverage == "diverged").length
-  let ownedGreen :=
-    (denominatorRows.filter fun row => row.disposition == "owned" && row.coverage == "green").length
-  let partialIds := (denominatorRows.filter fun row => row.coverage == "partial").map Row.id
-  let absentIds := (denominatorRows.filter fun row => row.coverage == "absent").map Row.id
-  logInfo m!"Effect v4 runtime coverage: {total} census rows; {excluded} excluded by disposition; denominator {denominator}; owned-with-green {ownedGreen}/{denominator}; green {green}, partial {partial_}, absent {absent}, diverged {diverged}"
-  logInfo m!"partial rows: {partialIds}"
-  logInfo m!"absent rows: {absentIds}"
 
 /-- The machine-readable rows that `scripts/report-effect-runtime-coverage.sh` and
 `scripts/check-effect-runtime-census.sh` read. They print only when a script asks (`E4RTCOV=1`),

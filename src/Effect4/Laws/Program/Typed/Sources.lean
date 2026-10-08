@@ -5,9 +5,9 @@ import Effect4.Laws.Program.Typed.Vocabulary
 
 The one hand-written input of the typed-state invariant
 (`docs/research/2026-09-18-position-census-design.md` §2B). `#position_census` derives the
-positions from the types reachable from `RState`, `RCmd`, `RInterp` and `RIter`
-(`Test/Audit/PositionCensus.lean`); this table says, for each, where its type comes from and
-what the invariant states there (`Typed/Vocabulary.lean`). The totality gate refuses a
+positions from the types reachable from `RState`, `RCmd`, `RInterp` and `RIter`; this table
+says, for each, where its type comes from and what the invariant states there
+(`Typed/Vocabulary.lean`). The totality gate (`#position_gate`, run in `Typed/State.lean`) refuses a
 position without a field or owner row and a row outside the census, so adding a field to any state structure
 fails the build until it is sourced here. Edge rows name a field that reaches a structure: the
 expectation a child is typed at (`nested`), a predicate over the whole field (`custom`), a

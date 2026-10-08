@@ -20,6 +20,8 @@ def sources : List Row := [
   ("Test.IndexedColumnDraft.Sample.cells", .column "PromiseCell" (some "Effect4.Machine.DeferredKey.mk")),
   ("Test.IndexedColumnDraft.Cell.payload", .column "PromiseTable")]
 
+/-- info: typed state: 1 predicates, 2 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.IndexedColumnDraft.Sample using sources
 -- The exact occurrence owns Cell.payload: no PromiseTable field may be emitted here.
 def onlyLeafPredicates : Preds Unit := ⟨fun _ _ _ => True, fun _ _ _ => True⟩
@@ -65,6 +67,8 @@ def sources : List Row := [
 #guard_msgs in
 #typed_state Test.IndexedColumnDraft.Sibling.Sample using sources
 
+/-- info: typed state: 1 predicates, 2 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.IndexedColumnDraft.Sibling.Sample using sources columns Test.IndexedColumnDraft.Sibling.Sample
 -- Owning cells cannot make the sibling due occurrence disappear.
 theorem due_required {W : Type} (P : Preds W) (w : W) (x : Sample) :
@@ -124,6 +128,8 @@ def sources : List Row := [
   ("Test.IndexedColumnDraft.NatDirect.Sample.items",
     .column "NatCell" (some "Effect4.Machine.RefKey.mk"))]
 
+/-- info: typed state: 1 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.IndexedColumnDraft.NatDirect.Sample using sources
 
 -- Nat is a census stop, but the explicit indexed field still supplies one leaf and column.
@@ -149,6 +155,8 @@ def sources : List Row := [
   ("Test.IndexedColumnDraft.NatNested.Leaf.items",
     .column "NatCell" (some "Effect4.Machine.RefKey.mk"))]
 
+/-- info: typed state: 2 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.IndexedColumnDraft.NatNested.Sample using sources
 
 -- The child must be entered from actual constructor metadata, after dropping its parameter.

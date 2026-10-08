@@ -13,9 +13,10 @@ First phase (2026-09-23, before the repair): 33 of the 77 entries reached a row 
 `True`, which refuses every program consuming its answer (`E4-SCHED-CE-013`). After the repair
 (typed-state admission audit §6) no consumed row has a `True` post; `fiberPostTrivial_sound`
 checks the two that keep one (`suspend`, `refuse`) against the protocol. The shape-only rows the
-repair left (the context read, the memo lookup) were closed by decision row 90 (2026-09-24). The
-census now reports the rows reached and the correlated ones, whose certified type the state
-predicate or the host protocol pins.
+repair left (the context read, the memo lookup) were closed by decision row 90 (2026-09-24).
+`footprint` gives the rows an entry reaches, and `correlatedEntries` the entries that reach a
+correlated row, whose certified type the state predicate or the host protocol pins. Evaluate them
+in a scratch file: a build prints none.
 
 This is a report, not a proof: the walk follows one answer per operation and under-approximates
 the rows a program reaches, and a program the report calls clear is a candidate, not an
@@ -147,18 +148,5 @@ def footprint (e : Entry) : List Reach :=
 /-- Entries whose code reaches a correlated row. -/
 def correlatedEntries : List String :=
   (entries.filter fun e => (footprint e).any (·.bearing == .correlated)).map (·.name)
-
--- The census report: the rows the corpus reaches, and the entries reaching a correlated row.
--- Printed, not pinned.
-run_cmd do
-  let env ← Lean.getEnv
-  let names (n : Lean.Name) : List String := match env.find? n with
-    | some (.inductInfo info) => info.ctors.map fun c => c.componentsRev.head!.toString
-    | _ => []
-  let fiber := names ``Effect4.Program.Sched.FiberOp
-  let store := names ``Effect4.Machine.SyncOp
-  let label (r : Reach) := if r.store then "store." ++ store.getD r.index "?" else "fiber." ++ fiber.getD r.index "?"
-  let rows := (programs.flatMap fun e => (footprint e).map label).eraseDups
-  Lean.logInfo m!"admission census: {programs.length} programs reach {rows.length} protocol rows, none with a consumed `True` post\nentries reaching a correlated row: {correlatedEntries}"
 
 end Test.Program.AdmissionCensus

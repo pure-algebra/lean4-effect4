@@ -1172,6 +1172,8 @@ structure GuardState (m : NativeMachine) : Prop where
   frameCodes : ∀ f ∈ m.fibers, FrameCodeOwned m f
   internalCodes : InternalCodeNoRace m
 
+/-- info: frame rules: 11 checked theorems, 138 reused clauses, 27 explicit premises -/
+#guard_msgs in
 #frame_rules GuardState
 
 /-- Keys already removed from a dispatcher are still reserved while its snapshot runs. -/

@@ -246,7 +246,6 @@ import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
 import Test.Audit.LetReturn
 import Test.Audit.AxiomGate
-import Test.Audit.PositionCensus
 import Test.Audit.PositionAnalysis
 import Test.Audit.TypedStateDecl
 import Test.Audit.FrameRules

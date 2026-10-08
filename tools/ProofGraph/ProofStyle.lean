@@ -110,7 +110,8 @@ private def scanAll (dir : String) : CommandElabM (Array Occurrence) := do
     occs := occs ++ (← scanFile env f)
   return occs
 
-/-- `#proof_style_check "dir" "baseline"`: refuse a new use or a stale baseline entry. -/
+/-- `#proof_style_check "dir" "baseline"`: refuse a new use or a stale baseline entry. A pass
+prints nothing; `#proof_style_record` reports the counts. -/
 syntax (name := proofStyleCheck) "#proof_style_check " str str : command
 
 @[command_elab proofStyleCheck] def elabProofStyleCheck : CommandElab := fun stx => do
@@ -134,10 +135,6 @@ syntax (name := proofStyleCheck) "#proof_style_check " str str : command
       problems := problems.push s!"stale entry: {kind} in {decl} ({file}): {found} < {n} recorded; rerun #proof_style_record"
   unless problems.isEmpty do
     throwError "proof style: {problems.size} finding(s)\n{"\n".intercalate problems.toList}"
-  let unread := occs.filter (·.kind == "unread")
-  let uses := occs.size - unread.size
-  let where_ := "\n".intercalate (unread.toList.map fun o => s!"  {o.file}:{o.line} {o.decl}")
-  logInfo m!"proof style: {uses} recorded uses and {unread.size} recorded unread commands in {now.size} entries; the unread commands:\n{where_}"
 
 /-- `#proof_style_record "dir" "baseline"`: write the baseline from the tree as it stands. -/
 syntax (name := proofStyleRecord) "#proof_style_record " str str : command

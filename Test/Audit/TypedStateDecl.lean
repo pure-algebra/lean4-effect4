@@ -10,6 +10,8 @@ inductive Expect | root
 structure Sample where
   value : Effect4.Store.Val
 def sources : List Row := [("Test.TypedStateDecl.Positive.Sample.value", .custom "ValueOk")]
+/-- info: typed state: 1 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.Positive.Sample using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Sample)
     (h : P.ValueOk w e x.value) : SampleOk P w e x := ⟨h⟩
@@ -51,6 +53,8 @@ structure Parent where
 def sources : List Row := [
   ("Test.TypedStateDecl.Mixed.Child.payload", .value .inherited),
   ("Test.TypedStateDecl.Mixed.Parent.pair", .value .inherited)]
+/-- info: typed state: 2 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.Mixed.Parent using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent)
     (h : ParentOk P w e x) : P.value w e x.pair.1 ∧ ChildOk P w e x.pair.2 := ⟨h.c0, h.c1⟩
@@ -63,6 +67,8 @@ inductive Expect | root
 inductive Box where
   | mk (payload : Effect4.Store.Val)
 def sources : List Row := [("Test.TypedStateDecl.Single.Box.payload", .value .inherited)]
+/-- info: typed state: 1 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.Single.Box using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (v : Effect4.Store.Val)
     (h : BoxOk P w e (.mk v)) : P.value w e v := h
@@ -75,6 +81,8 @@ structure Store where
 structure Parent where
   store : Store
 def sources : List Row := [("Test.TypedStateDecl.ColumnOnly.Store.payload", .column "Heap")]
+/-- info: typed state: 2 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.ColumnOnly.Parent using sources columns Test.TypedStateDecl.ColumnOnly.Store
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent)
     (h : ParentOk P w e x) : P.Heap w x.store := h.c0.c0
@@ -134,6 +142,8 @@ structure Sample where
   value : Effect4.Store.Val
   token : Nat
 def sources : List Row := [("Test.TypedStateDecl.WholeOwner.Sample", .owner "Whole")]
+/-- info: typed state: 1 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.WholeOwner.Sample using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Sample)
     (h : SampleOk P w e x) : P.Whole w e x := h.c0
@@ -162,6 +172,8 @@ inductive Task where
   | done
   | resume (target : Nat) (token : Nat) (answer : Effect4.Store.Val)
 def sources : List Row := [("Test.TypedStateDecl.ConstructorOwner.Task.resume", .owner "Resume")]
+/-- info: typed state: 1 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.ConstructorOwner.Task using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (target token : Nat)
     (answer : Effect4.Store.Val) : TaskOk P w e (.resume target token answer) ↔
@@ -173,6 +185,8 @@ inductive Expect | root
 inductive Box where
   | pack (token : Nat) (value : Effect4.Store.Val)
 def sources : List Row := [("Test.TypedStateDecl.SingleConstructorOwner.Box.pack", .owner "Packed")]
+/-- info: typed state: 1 predicates, 1 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.SingleConstructorOwner.Box using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (token : Nat) (value : Effect4.Store.Val) :
     BoxOk P w e (.pack token value) ↔ P.Packed w e token value := Iff.rfl
@@ -190,6 +204,8 @@ structure Parent where
 def sources : List Row := [
   ("Test.TypedStateDecl.SharedOwner.Wrapped", .owner "Whole"),
   ("Test.TypedStateDecl.SharedOwner.Child.value", .value .inherited)]
+/-- info: typed state: 3 predicates, 2 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.SharedOwner.Parent using sources
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent)
     (h : ParentOk P w e x) : P.Whole w e x.owned ∧ P.value w e x.shared.value :=
@@ -220,6 +236,8 @@ def sources : List Row := [
   ("Test.TypedStateDecl.Each.Child.payload", .value .inherited),
   ("Test.TypedStateDecl.Each.Parent.one", .each "Typed"),
   ("Test.TypedStateDecl.Each.Parent.many", .each "Typed")]
+/-- info: typed state: 2 predicates, 2 carrier predicates, 0 refusals -/
+#guard_msgs in
 #typed_state Test.TypedStateDecl.Each.Parent using sources
 -- the hand predicate, then the child's own clause, at the field and at each entry of the list
 example {W : Type} (P : Preds W) (w : W) (e : Expect) (x : Parent) (h : ParentOk P w e x) :

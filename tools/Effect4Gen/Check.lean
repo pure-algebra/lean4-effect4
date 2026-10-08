@@ -200,7 +200,7 @@ def candidates (short : String) : MetaM (Array Name) := do
       if let .inductInfo _ := ci then hits := hits.push n
   return hits.qsort (fun a b => a.toString < b.toString)
 
-/-- Check one generated file. Returns `true` when it refused. -/
+/-- Check one generated file. Returns `true` when it refused, and prints only the refusals. -/
 def checkFile (path : String) : MetaM Bool := do
   let text ← IO.FS.readFile path
   let tags ← Tools.WireTags.load
@@ -219,7 +219,7 @@ def checkFile (path : String) : MetaM Bool := do
       let e ← envSkeleton tags c
       if e.agrees s then agreed := some c else report := report.push s!"      {c}: {e.render}"
     match agreed with
-    | some c => IO.println s!"ok      {path}: {s.name} projects {c} ({s.cases.length} cases)"
+    | some _ => pure ()
     | none =>
       IO.println s!"REFUSED {path}: shape \"{s.name}\" projects no carrier in the environment"
       IO.println s!"        generated: {s.render}"
