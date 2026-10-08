@@ -104,7 +104,12 @@ function validatePlan(report) {
       for (const p of r.openParts) {
         if (!p || !isStr(p.text) || !['untriaged', 'proposed', 'ruling', 'definition', 'work'].includes(p.state)) {
           problems.push(`${r.id} has an open part without its text or its state`);
+          continue;
         }
+        if (typeof p.on !== 'string')
+          problems.push(`${r.id}: an open part's on is missing or is not a string`);
+        else if (['ruling', 'definition', 'work'].includes(p.state) && p.on.length === 0)
+          problems.push(`${r.id}: an open part in state ${p.state} has empty on`);
       }
     }
   }

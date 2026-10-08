@@ -11,6 +11,8 @@
 // - a copy with that field present and empty passes;
 // - a reference in the other shape fails: a requirement's top node given as a bare name, and a
 //   node's nearest node given as an object. The view reads each field in one shape only.
+// - an open part's prerequisite is a string; work, definition and ruling require a nonempty
+//   prerequisite, while untriaged and proposed allow an empty one. Whitespace remains a string.
 //
 // Usage: node scripts/check-proofgraph-input.mjs [semantics.json]
 import { readFileSync } from 'node:fs';
@@ -48,11 +50,35 @@ const cases = [
   ['open part as a bare text', (r) => { r.plan.requirements[0].openParts = ['a part']; }, 'open part without its text or its state'],
   ['open part in an unknown state', (r) => { r.plan.requirements[0].openParts = [{ text: 'a part', state: 'done', on: '' }]; }, 'open part without its text or its state'],
 ];
+const openStates = ['untriaged', 'proposed', 'ruling', 'definition', 'work'];
+const waitingStates = ['ruling', 'definition', 'work'];
+for (const state of openStates) {
+  cases.push(
+    [`${state} open part without on`, (r) => { r.plan.requirements[0].openParts = [{ text: 'a part', state }]; }, "open part's on is missing or is not a string"],
+    [`${state} open part with object on`, (r) => { r.plan.requirements[0].openParts = [{ text: 'a part', state, on: {} }]; }, "open part's on is missing or is not a string"],
+  );
+}
+for (const state of waitingStates) cases.push(
+  [`${state} open part with empty on`, (r) => { r.plan.requirements[0].openParts = [{ text: 'a part', state, on: '' }]; }, `open part in state ${state} has empty on`],
+);
 for (const [label, mutate, expected] of cases) {
   const broken = copy();
   mutate(broken);
   const problems = validatePlan(broken);
   if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
+}
+
+const validParts = [
+  ...openStates.map((state) => ({ text: 'a part', state, on: 'the prerequisite' })),
+  ...['untriaged', 'proposed'].map((state) => ({ text: 'a part', state, on: '' })),
+  // The producer checks String.isEmpty, so whitespace is not a new refusal here.
+  ...waitingStates.map((state) => ({ text: 'a part', state, on: ' ' })),
+];
+for (const part of validParts) {
+  const valid = copy();
+  valid.plan.requirements[0].openParts = [part];
+  const problems = validatePlan(valid);
+  if (problems.length) fail(`${part.state} open part with on ${JSON.stringify(part.on)}: expected no problem, got ${JSON.stringify(problems)}`);
 }
 
 // A field that the drawings read: absent, it is a problem that names it; empty, it is a value.
@@ -97,7 +123,7 @@ for (const [label, mutate, expected] of shapes) {
   const problems = validatePlan(reshaped);
   if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
 }
-console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${fields.length} absent fields refused, and the same fields accepted when empty; ${shapes.length} references in the wrong shape refused`);
+console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${validParts.length} valid open parts accepted; ${fields.length} absent fields refused, and the same fields accepted when empty; ${shapes.length} references in the wrong shape refused`);
 
 
 // The model must retain a plan node's explicit concept when no named claim or population
