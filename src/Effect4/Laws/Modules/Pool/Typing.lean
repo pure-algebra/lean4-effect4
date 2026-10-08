@@ -346,11 +346,12 @@ theorem types_noItem {s : TermSrc} (hs : TypesEach sig s env path types (Pool.ce
     TypesEach sig (Pool.noItem s) env path types (.option (Pool.itemTy A)) :=
   types_head atoms (types_noneOf atoms (types_cellItems canonical hs))
 
-/-- `headStamp`: the stamp at the front of the idle stamps. A fold whose body reads no caller's
-term, so the rule holds at every scope, and under another fold's binders too. -/
-theorem types_headStamp {s : TermSrc} (_depth : types.length = env.names.length)
+/-- `headStamp` reads the first idle stamp or zero through the native option operation.
+The former fold-scope premise remains for source compatibility. -/
+theorem types_headStamp {s : TermSrc} (depth : types.length = env.names.length)
     (hs : TypesEach sig s env path types (Pool.cellTy A)) :
     TypesEach sig (Pool.headStamp s) env path types .nat := by
+  have _retainedScope := depth
   refine Step.typed (Γ := [Pool.cellTy A]) sig atoms (Input.types_cons hs Input.types_nil) (Data.headStamp A (.var (.here _ _))) ?_
   · have cellN : (Ty.record (Pool.cellRecord A)).normalize = Ty.record (Pool.cellRecord A) := cellTy_normal canonical
     have itemN : (Ty.record (Pool.itemRecord A)).normalize = Ty.record (Pool.itemRecord A) := itemTy_normal canonical
@@ -572,7 +573,7 @@ theorem leaseStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = n
     have cellAliasN := cellTy_normal canonical
     have itemAliasN := itemTy_normal canonical
     have replyN := leaseReplyTy_normal canonical
-    dsimp only [Step.Lists.headOr, Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy, Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg, Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    dsimp only [Step.Lists.headOr, Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy, Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg, Step.renamedFields, Step.Facts, Step.cata, Step.cataItems, ItemResults.All, tupleFacts, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
     aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
       Ty.normalize_option_canonical])
 
@@ -593,7 +594,7 @@ theorem returnStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = 
     have cellAliasN := cellTy_normal canonical
     have itemAliasN := itemTy_normal canonical
     have replyN := leaseReplyTy_normal canonical
-    dsimp only [Step.Lists.headOr, Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy, Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg, Step.renamedFields, Step.Facts, Step.cata, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
+    dsimp only [Step.Lists.headOr, Step.Lists.map, Step.Lists.mapWith, Step.Lists.filter, Step.Lists.removeBy, Step.Lists.any, Step.Lists.withAccumulator, Step.rename, Step.renameAlg, Step.renamedFields, Step.Facts, Step.cata, Step.cataItems, ItemResults.All, tupleFacts, Step.cataFields, Step.factsAlg, FieldResults.All, Data.lease, Data.giveBack, Data.drain, Data.withdraw, Data.enrolled, Data.mkWaiter, Data.withdrawn, Data.removed, Data.marked, Data.leasedOf, Data.headStamp, Data.leasedAs, Data.holds, Data.heldBy, Data.freed, Data.outstanding, Data.noItem, Pool.waiterRecord]
     aesop (add safe apply [Ty.normalize_prod_canonical, Ty.normalize_list_canonical,
       Ty.normalize_option_canonical])
 

@@ -28,22 +28,12 @@ example {Op : Type} (sig : Signature Op) {env : Env} {path : List Nat} {types : 
 example {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
     {env : Env} {path : List Nat} {types : List Ty} :
     TypesEach sig (ascribe (.list .nat) nilT) env path types (.list .nat) :=
-  types_nil_ascribe sig atoms .nat rfl rfl (by
-    unfold Ty.subN
-    change Ty.sub (.list .never) (.list .nat) = true
-    rw [Ty.sub_args_list]
-    change (Ty.sub .never .nat && true) = true
-    rw [Ty.OrderProof.sub_never, Bool.and_true])
+  types_nil_ascribe sig atoms .nat rfl rfl
 
 example {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
     {env : Env} {path : List Nat} {types : List Ty} :
     TypesEach sig (ascribe (.option .bool) noneT) env path types (.option .bool) :=
-  types_none_ascribe sig atoms .bool rfl rfl (by
-    unfold Ty.subN
-    change Ty.sub (.option .never) (.option .bool) = true
-    rw [Ty.sub_args_option]
-    change (Ty.sub .never .bool && true) = true
-    rw [Ty.OrderProof.sub_never, Bool.and_true])
+  types_none_ascribe sig atoms .bool rfl rfl
 
 -- Normality does not discharge formation of a type variable outside a template.
 #guard (.list (.var 0) : Ty).normalize == .list (.var 0)

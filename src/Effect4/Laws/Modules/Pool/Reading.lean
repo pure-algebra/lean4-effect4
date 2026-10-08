@@ -128,12 +128,13 @@ theorem reads_noItem {s : TermSrc} (tb : Table) (res : Nat → Val) (state : Sta
     (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.noItem P (.var (.here _ _))) rfl
   exact h.to rfl
 
-/-- `headStamp`: the stamp at the front of the idle stamps, or zero. A fold whose body reads no
-caller's term, so the rule holds at every scope, and under another fold's binders too. -/
+/-- `headStamp` reads the first idle stamp or zero through the native option operation.
+The former fold-scope premise remains for source compatibility. -/
 theorem reads_headStamp {s : TermSrc} (tb : Table) (res : Nat → Val) (state : State)
-    (_depth : vals.length = env.names.length)
+    (depth : vals.length = env.names.length)
     (hs : Reads s env path vals (cellVal tb res state)) :
     Reads (Pool.headStamp s) env path vals (Val.nat (state.available.headD 0)) := by
+  have _retainedScope := depth
   have h := Step.sound (Γ := [cellTy P]) Leaves.deferredKeys (cellC tb res state, ())
     (Input.reads_cons (hs.to (cellVal_image tb res state).symm) Input.reads_nil) (Data.headStamp P (.var (.here _ _))) rfl
   rw [headStamp_eval tb res state (.here (cellTy P) []) (cellC tb res state, ()) rfl] at h
