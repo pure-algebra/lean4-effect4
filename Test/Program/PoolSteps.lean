@@ -157,24 +157,24 @@ The term language has no local binding, so a step repeats its passes. The measur
 Queue battery's two algebras of the generated term fold: nodes, then folds. -/
 
 #guard measure ["id", "hint", "s"] (Pool.leaseStep (var "id") (var "hint") (var "s")) =
-  some (166, 7)
+  some (167, 5)
 #guard measure ["item", "lease", "s"] (Pool.returnStep (var "item") (var "lease") (var "s")) =
-  some (69, 2)
+  some (67, 2)
 #guard measure ["count", "s"] (Pool.selectStep (var "count") (var "s")) = some (11, 0)
-#guard measure ["id", "s"] (Pool.withdrawStep (var "id") (var "s")) = some (22, 1)
+#guard measure ["id", "s"] (Pool.withdrawStep (var "id") (var "s")) = some (23, 1)
 #guard measure ["s"] (Pool.closeStep (var "s")) = some (11, 0)
 #guard measure ["id", "hint", "s"] (Pool.drainStep (var "id") (var "hint") (var "s")) =
-  some (59, 3)
--- The passes. The lease's two folds over the items hold the fold of the front stamp in their
--- bodies: two folds each.
-#guard measure ["s"] (Pool.headStamp (var "s")) = some (7, 1)
-#guard measure ["s"] (Pool.marked (var "s")) = some (29, 2)
-#guard measure ["s"] (Pool.leasedOf (var "s")) = some (29, 2)
+  some (61, 3)
+-- The head stamp folds nothing. Marking uses one map. Selecting leased items uses
+-- one fused conditional map.
+#guard measure ["s"] (Pool.headStamp (var "s")) = some (6, 0)
+#guard measure ["s"] (Pool.marked (var "s")) = some (28, 1)
+#guard measure ["s"] (Pool.leasedOf (var "s")) = some (28, 1)
 #guard measure ["item", "lease", "s"] (Pool.heldBy (var "item") (var "lease") (var "s")) =
   some (18, 1)
 #guard measure ["item", "lease", "s"] (Pool.freed (var "item") (var "lease") (var "s")) =
   some (28, 1)
-#guard measure ["id", "s"] (Pool.withdrawn (var "id") (var "s")) = some (20, 1)
+#guard measure ["id", "s"] (Pool.withdrawn (var "id") (var "s")) = some (21, 1)
 #guard measure ["s"] (Pool.outstanding (var "s")) = some (8, 1)
 -- The initial value folds nothing: 14 nodes at one resource, and 12 more for each resource.
 #guard measure [] (Pool.initial .nat [nat 1]) = some (14, 0)
