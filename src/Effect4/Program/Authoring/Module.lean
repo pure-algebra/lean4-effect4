@@ -48,8 +48,6 @@ def parseModuleBinders (binders : Array Syntax) : MacroM (Array (Ident × TSynta
       Macro.throwErrorAt name "a parameter needs one simple name"
     if out.any (fun entry => entry.1.getId == name.getId) then
       Macro.throwErrorAt name "duplicate parameter name"
-    if [`instanceName, `definitionName].contains name.getId then
-      Macro.throwErrorAt name "parameter name is reserved by the generated constructor"
     out := out.push (name, ty)
   return out
 
@@ -97,15 +95,13 @@ macro_rules
       if group.any (fun pair => pair.1.getId == selfId.getId) ||
           operations.any (fun op => op.params.any (fun pair => pair.1.getId == selfId.getId)) then
         Macro.throwErrorAt selfId "call record name collides with a parameter"
-      if [`instanceName, `definitionName].contains selfId.getId then
-        Macro.throwErrorAt selfId "call record name is reserved by the generated constructor"
     let fields ← operations.mapM fun op => do
       let ty ← termArrows op.params.size (← `(Effect4.Program.Authoring.Src Effect4.Program.NativeOp))
       `(Lean.Parser.Command.structSimpleBinder| $[$op.doc:docComment]? $op.name:ident : $ty)
     let record ← `(command| $[$doc:docComment]? structure $name:ident where
       defs : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)
       $[$fields:structSimpleBinder]*)
-    let instanceId := mkIdent `instanceName
+    let instanceId ← withFreshMacroScope `(ident| instanceName)
     let callsTyId := mkIdentFrom name (name.getId ++ `Calls)
     let callsId := mkIdentFrom name (name.getId ++ `calls)
     let mut callsDecls : Array Syntax := #[]
@@ -144,7 +140,7 @@ macro_rules
       let ty ← termArrows args.size (← `(Effect4.Program.Authoring.Src Effect4.Program.NativeOp))
       let body ← if args.isEmpty then pure op.body else `(fun $args* => $op.body)
       let definitionId := mkIdentFrom op.name (name.getId ++ `definition ++ op.name.getId)
-      let fullNameId := mkIdent `definitionName
+      let fullNameId ← withFreshMacroScope `(ident| definitionName)
       let definition ← `(command| $[$op.doc:docComment]? def $definitionId ($fullNameId : String)
           $groupBinders:bracketedBinder* $selfBinders:bracketedBinder* : Effect4.Program.Authoring.Defined $ty :=
         Effect4.Program.Authoring.Def.of $fullNameId [$params,*]
@@ -164,14 +160,17 @@ macro_rules
     let moduleId := mkIdentFrom name (name.getId ++ `module)
     let makeDecl ← `(command| def $makeId ($instanceId : String) $groupBinders:bracketedBinder* :
       $name := $result)
-    let install ← `(command| def $installId (self : $name)
-        (m : Effect4.Program.Authoring.Module Effect4.Program.NativeOp) :
+    let selfArg ← withFreshMacroScope `(ident| self)
+    let moduleArg ← withFreshMacroScope `(ident| m)
+    let mainArg ← withFreshMacroScope `(ident| main)
+    let install ← `(command| def $installId ($selfArg : $name)
+        ($moduleArg : Effect4.Program.Authoring.Module Effect4.Program.NativeOp) :
         Effect4.Program.Authoring.Module Effect4.Program.NativeOp :=
-      { m with defs := self.defs ++ m.defs })
-    let asModule ← `(command| def $moduleId (self : $name)
-        (main : Effect4.Program.Authoring.Src Effect4.Program.NativeOp) :
+      { $moduleArg with defs := ($selfArg).defs ++ ($moduleArg).defs })
+    let asModule ← `(command| def $moduleId ($selfArg : $name)
+        ($mainArg : Effect4.Program.Authoring.Src Effect4.Program.NativeOp) :
         Effect4.Program.Authoring.Module Effect4.Program.NativeOp :=
-      $installId self { main := main })
+      $installId $selfArg { main := $mainArg })
     return mkNullNode (#[record.raw] ++ callsDecls ++ definitions ++ #[makeDecl.raw, install.raw, asModule.raw])
 
 end Effect4.Program.Authoring

@@ -46,7 +46,16 @@ def runModule (m : Module NativeOp) :=
 #guard runModule ((Echo.make "strings" .string).module
   ((Echo.make "strings" .string).echo (str "ok"))) = some (.success (.str "ok"))
 
-/-- Multiple compile-time parameters remain ordinary Lean arguments.
+/-- The simple number and string definitions remain in the reader's admitted profile.
+#guard [numbers.module (numbers.echo (nat 9)),
+    (Echo.make "strings" .string).module ((Echo.make "strings" .string).echo (str "ok"))].all
+  fun authored => match Api.Author.build authored with
+    | .error _ => false
+    | .ok built => match Api.printModule "main" built.program built.table with
+      | none => false
+      | some printed => decide (Api.readModule printed built.table = .ok built.program)
+
+-- Multiple compile-time parameters remain ordinary Lean arguments.
 eff_module Labelled (A : Ty) (label : String) where
   identity (value : A) : A := succeed value;
   text : .string := succeed (str label)
@@ -170,10 +179,13 @@ eff_module Reserved where
 eff_module ReservedDefinition where
   definition : .nat := succeed (nat 1)
 
-/-- error: parameter name is reserved by the generated constructor -/
-#guard_msgs in
-eff_module ReservedGroup (instanceName : Ty) where
-  op : .nat := succeed (nat 1)
+-- Internal helper names never reserve an author's parameter spelling.
+eff_module InternalSpellings (instanceName : String) (definitionName : Ty) where
+  op (definition : definitionName) : definitionName := succeed definition;
+  label : .string := succeed (str instanceName)
+
+#guard runModule ((InternalSpellings.make "scoped" "label" .nat).module
+  (InternalSpellings.make "scoped" "label" .nat).label) = some (.success (.str "label"))
 
 /-- error: call record name collides with a parameter -/
 #guard_msgs in
@@ -210,5 +222,48 @@ eff_module Nested.Identity where
 
 #guard runModule ((Nested.Identity.make "nested").module (Nested.Identity.make "nested").value) =
   some (.success (.nat 8))
+
+namespace BodyHygiene
+
+/-- An author's global shares the spelling of an internal helper binder. -/
+def definitionName : String := "constant"
+
+eff_module Captured where
+  read : .string := succeed (str definitionName)
+
+#guard runModule ((Captured.make "instance").module (Captured.make "instance").read) =
+  some (.success (.str "constant"))
+
+end BodyHygiene
+
+namespace ColumnHygiene
+
+/-- An author's type shares the spelling of the definition helper's name argument. -/
+def definitionName : Ty := .nat
+
+/-- An author's type shares the spelling of the instance constructor's name argument. -/
+def instanceName : Ty := .string
+
+eff_module Columns where
+  number (value : definitionName) : definitionName := succeed value;
+  text (value : instanceName) : instanceName := succeed value
+
+#guard (Columns.make "columns").defs.map (·.params) =
+  [[("value", .nat)], [("value", .string)]]
+#guard (Columns.make "columns").defs.map (·.answer) = [.nat, .string]
+#guard runModule ((Columns.make "columns").module
+  ((Columns.make "columns").number (nat 13))) = some (.success (.nat 13))
+#guard runModule ((Columns.make "columns").module
+  ((Columns.make "columns").text (str "metadata"))) = some (.success (.str "metadata"))
+
+end ColumnHygiene
+
+-- The deliberately bound call record can use any otherwise valid parameter spelling.
+eff_module SelfSpelling using definitionName where
+  first : .nat := definitionName.last;
+  last : .nat := succeed (nat 12)
+
+#guard runModule ((SelfSpelling.make "self").module (SelfSpelling.make "self").first) =
+  some (.success (.nat 12))
 
 end Test.Program.AuthoringModule
