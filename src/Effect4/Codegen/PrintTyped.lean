@@ -1,4 +1,5 @@
 import Effect4.Codegen.Print
+import Effect4.Codegen.EraseTypes
 import Effect4.Program.Typing.Call
 
 /-!
@@ -18,9 +19,12 @@ the annotation answers type arguments, the call carries them on its head (`withH
 guarded match refuses there (`rowBindings`) and the match by bounds with no guard answers
 (`rowBindingsB`). They are the bindings in the order of the row's variables, `.var 0` first.
 
-**The connector.** While the guards stand, every typed call's guarded match answers, so the
-annotation answers nothing and the typed print is `print`, byte for byte
-(`printTyped_eq_print`, `Laws/Codegen/PrintTyped.lean`).
+**The connector.** On the existing readable fragment with lawful spelling, every successful
+raw typed print erases to the ordinary print (`eraseJoinArgs_printTypedAt`,
+`Laws/Codegen/PrintTyped.lean`). The named erasure retains operation-carried and row-declared
+arguments. The existing reader after erasure carries read-back and reconstruction at the
+erased input (`readTyped_printTypedAt`, `readTyped_exact`). Target typing and execution remain
+separate evidence.
 -/
 
 set_option autoImplicit false
@@ -55,20 +59,23 @@ def atAddress (path : List Nat) : List (ArgF Op TCarrier) → Nat → List (ArgF
 
 /-- **The row call with type arguments on its head**: the call that `printPerform` prints, with
 the given types on the call's head, each as the type printer prints it. With no type argument
-it is `printPerform`'s call. A type with no printed form refuses the row by its spelling. -/
+it is `printPerform`'s call. Insertion refuses where the operation or its row owns arguments.
+A type with no printed form refuses the row by its spelling. -/
 def printPerformAt (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     Option (List Ty) → Except PrintRefusal TypeScript.Expr
   | none | some [] => printPerform sig n op request
   | some (ty :: tys) =>
-    let call := match Effect4.Codegen.Classes.writeTys (ty :: tys) with
-      | some targets =>
-        (printRow n (sig.rowOf op) request).bind (withHeadTypes (sig.rowOf op).spelling targets)
-      | none => .error (.typeSpelling (sig.rowOf op).spelling)
-    match sig.termOf op with
-    | none => call
-    | some b =>
-      call.bind (withFunction (sig.rowOf op).spelling
-        (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term)))
+    if (sig.typeArgsOf op).isEmpty && (sig.rowOf op).typeArgs.isEmpty then
+      let call := match Effect4.Codegen.Classes.writeTys (ty :: tys) with
+        | some targets =>
+          (printRow n (sig.rowOf op) request).bind (withHeadTypes (sig.rowOf op).spelling targets)
+        | none => .error (.typeSpelling (sig.rowOf op).spelling)
+      match sig.termOf op with
+      | none => call
+      | some b =>
+        call.bind (withFunction (sig.rowOf op).spelling
+          (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term)))
+    else .error (.typeSpelling (sig.rowOf op).spelling)
 
 /-- **The typed print's algebra**: the table's layer function with each child at its address,
 and at a call the type arguments that the annotation answers at the call's address. -/
