@@ -1038,8 +1038,8 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   (`src/Effect4/Laws/Program/Typing/Replace.lean`); `check_replace_focusAt`
   (`src/Effect4/Laws/Program/Typing/Focus.lean`)). The step has one case for each arm of
   `Node.child`. It answers nothing after a sibling that the checker refuses. It stores
-  nothing, and one answer costs up to one check of the program. One pass that answers every
-  address is not built.
+  nothing, and one answer costs up to one check of the program. One pass answers every
+  address (`annotate-table`, below).
 - **The address table (`address-table`)**: the table has one entry for each address of a node,
   and no other (`mem_addresses_iff` (`src/Effect4/Laws/Program/Typing/Table.lean`), from
   `Node.mem_foldList_iff` (`src/Effect4/Laws/Program/PathFold.lean`)). An entry of a program
@@ -1047,9 +1047,16 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   (`table` (`src/Effect4/Program/Typing/Table.lean`)). The distinct refusals of the entries
   start with the located refusal of `explain`, and the list is empty exactly when the checker
   admits the program (`refusals_head`, `refusals_nil_iff`). An entry after a refused sibling is
-  not reached. The table is the specification of a pass that checks each node once, and each
-  of its entries costs up to one check of the program. No law orders the refusals after the
-  head, and no theorem states the frame of an edit.
+  not reached. The table is a specification, and each of its entries costs up to one check
+  of the program. No law orders the refusals after the head, and no theorem states the frame
+  of an edit.
+- **The table in one traversal (`annotate-table`)**: `annotate` is the checker's seven
+  functions with a record at each node (`src/Effect4/Program/Typing/Annotate.lean`). It
+  answers the address table at every program, entry for entry and in its order
+  (`annotate_eq_table` (`src/Effect4/Laws/Program/Typing/Annotate.lean`)). Each node's checker
+  arm runs once, and a child's environment comes from the answers before it. Past a refused
+  read the subtree is not reached, as in the table. No theorem counts the cost. The left
+  child's entries are copied at each node.
 - **The slot table (`term-slot-environment`)**: a term has no address. Five term slots read an
   extension of their node's typing environment, and the slot table answers it
   (`Node.extSlotEnv` (`src/Effect4/Program/Typing/Table.lean`)). On a typed node the term in

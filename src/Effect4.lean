@@ -110,6 +110,7 @@ import Effect4.Program.Authoring.Mask
 -- A term at a declared type (`ascribe`): reachable from this root, imported by no module of the API.
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Codegen.Print
+import Effect4.Codegen.PrintTyped
 import Effect4.Codegen.Diagnostics
 import Effect4.Codegen.Read
 import Effect4.Codegen.Metadata

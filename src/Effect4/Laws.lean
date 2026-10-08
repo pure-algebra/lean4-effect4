@@ -142,6 +142,7 @@ import Effect4.Laws.Codegen.Metadata
 import Effect4.Laws.Codegen.Record
 import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
+import Effect4.Laws.Codegen.PrintTyped
 import Effect4.Laws.Api.ModuleReadable
 import Effect4.Laws.Store.CanonicalSpec
 import Effect4.Laws.Schema.Codec
