@@ -27,6 +27,10 @@ syntax (name := inputSourcesStx) "input_sources% " "(" term ")" "{" (ident " := 
 
 syntax (name := foldStepStx) "fold_step% " term " from " ident " := " term " with " ident " => " term : term
 
+syntax (name := itemStepStx) "item_step% " term " with " ident " => " term : term
+
+syntax (name := inputRefStx) "input_ref% " "(" term ")" ident : term
+
 private def duplicate (names : Array Ident) : TermElabM Unit := do
   for name in names do
     if (names.filter fun other => other.getId.eraseMacroScopes == name.getId.eraseMacroScopes).size > 1 then
@@ -77,6 +81,29 @@ private def contextEntries (stx : Syntax) : TermElabM (Array (String × Expr)) :
       return #[(name, pair.getArg! 3)] ++ rest
   read 4096 context
 
+private def inputAt (entries : Array (String × Expr)) (index : Nat) : TermElabM Expr := do
+  let types := entries.map Prod.snd
+  let rest ← mkListLit (Lean.mkConst ``Effect4.Program.Ty) (types.toList.drop (index + 1))
+  let mut input ← mkAppM ``Effect4.Modules.Input.here #[entries[index]!.2, rest]
+  for prior in (types.toList.take index).reverse do
+    input ← mkAppM ``Effect4.Modules.Input.there #[prior, input]
+  return input
+
+@[term_elab inputRefStx]
+def elabInputRef : TermElab := fun stx expected? => do
+  match stx with
+  | `(input_ref% ($context:term) $name:ident) =>
+    let entries ← contextEntries context
+    let key := name.getId.toString (escape := false)
+    let Option.some index := entries.findIdx? (fun entry => entry.1 == key)
+      | throwErrorAt name "input_ref%: unknown input {name}"
+    let result ← inputAt entries index
+    if let Option.some expected := expected? then
+      unless ← isDefEq (← inferType result) expected do
+        throwErrorAt stx "input_ref%: declared input type differs from expected type"
+    return result
+  | _ => throwUnsupportedSyntax
+
 private def withInputs (entries : Array (String × Expr)) (body : Syntax) (expected? : Option Expr) : TermElabM Expr := do
   for (name, _) in entries do
     if (← getLCtx).findFromUserName? (Name.mkSimple name) |>.isSome then
@@ -89,10 +116,7 @@ private def withInputs (entries : Array (String × Expr)) (body : Syntax) (expec
   let rec bind (index : Nat) (locals : Array Expr) : TermElabM Expr := do
     if index < entries.size then
       let (name, inputTy) := entries[index]!
-      let rest ← mkListLit ty (types.toList.drop (index + 1))
-      let mut input ← mkAppM ``Effect4.Modules.Input.here #[inputTy, rest]
-      for prior in (types.toList.take index).reverse do
-        input ← mkAppM ``Effect4.Modules.Input.there #[prior, input]
+      let input ← inputAt entries index
       let value ← mkAppM ``Effect4.Modules.Step.var #[input]
       let localTy := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) context inputTy
       withLetDecl (Name.mkSimple name) localTy value fun inputLocal => bind (index + 1) (locals.push inputLocal)
@@ -129,6 +153,34 @@ def elabInputSources : TermElab := fun stx expected? => do
     elabTerm (← `(Effect4.Modules.Input.source [$ordered,*])) expected?
   | _ => throwUnsupportedSyntax
 
+private def withLiftedSteps (context bodyContext rho : Expr)
+    (binders : Array (Name × Expr × Expr)) (body : Syntax) (expected : Expr) : TermElabM Expr := do
+  let lctx ← getLCtx
+  let mut captured : Array (Name × Expr × Expr × Option FVarId) := #[]
+  for decl in lctx do
+    if decl.isImplementationDetail then continue
+    if let Option.some visible := lctx.findFromUserName? decl.userName then
+      if visible.fvarId != decl.fvarId then continue
+    let localType ← whnf decl.type
+    if localType.isAppOfArity ``Effect4.Modules.Step 2 then
+      if ← isDefEq (localType.getArg! 0) context then
+        let value ← mkAppM ``Effect4.Modules.Step.rename #[rho, decl.toExpr]
+        let newType := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) bodyContext (localType.getArg! 1)
+        captured := captured.push (decl.userName, newType, value, Option.some decl.fvarId)
+  for (name, type, value) in binders do
+    captured := captured.push (name, type, value, Option.none)
+  let rec bind (index : Nat) (locals : Array Expr) : TermElabM Expr := do
+    if index < captured.size then
+      let (name, type, value, original?) := captured[index]!
+      withLetDecl name type value fun inputLocal => do
+        if let Option.some original := original? then
+          pushInfoLeaf (.ofFVarAliasInfo { id := inputLocal.fvarId!, baseId := original, userName := name })
+        bind (index + 1) (locals.push inputLocal)
+    else
+      let term ← elabTermEnsuringType body expected
+      mkLetFVars locals term
+  bind 0 #[]
+
 @[term_elab foldStepStx]
 def elabFoldStep : TermElab := fun stx expected? => do
   match stx with
@@ -161,17 +213,6 @@ def elabFoldStep : TermElab := fun stx expected? => do
         let itemLift ← mkAppM ``Effect4.Modules.Input.there #[itemTy, input]
         let accLift ← mkAppM ``Effect4.Modules.Input.there #[accTy, itemLift]
         mkLambdaFVars #[t, input] accLift
-    let mut captured : Array (Name × Expr × Expr × Option FVarId) := #[]
-    for decl in lctx do
-      if decl.isImplementationDetail then continue
-      if let Option.some visible := lctx.findFromUserName? decl.userName then
-        if visible.fvarId != decl.fvarId then continue
-      let localType ← whnf decl.type
-      if localType.isAppOfArity ``Effect4.Modules.Step 2 then
-        if ← isDefEq (localType.getArg! 0) context then
-          let value ← mkAppM ``Effect4.Modules.Step.rename #[rho, decl.toExpr]
-          let newType := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) bodyContext (localType.getArg! 1)
-          captured := captured.push (decl.userName, newType, value, Option.some decl.fvarId)
     let accInput ← mkAppM ``Effect4.Modules.Input.here #[accTy, itemContext]
     let accValue ← mkAppM ``Effect4.Modules.Step.var #[accInput]
     let itemInput ← mkAppM ``Effect4.Modules.Input.here #[itemTy, context]
@@ -179,23 +220,46 @@ def elabFoldStep : TermElab := fun stx expected? => do
     let itemValue ← mkAppM ``Effect4.Modules.Step.var #[itemInput]
     let accStep := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) bodyContext accTy
     let itemStep := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) bodyContext itemTy
-    captured := captured.push (accName.getId, accStep, accValue, Option.none)
-    captured := captured.push (itemName.getId, itemStep, itemValue, Option.none)
-    let rec bind (index : Nat) (locals : Array Expr) : TermElabM Expr := do
-      if index < captured.size then
-        let (name, type, value, original?) := captured[index]!
-        withLetDecl name type value fun inputLocal => do
-          if let Option.some original := original? then
-            pushInfoLeaf (.ofFVarAliasInfo { id := inputLocal.fvarId!, baseId := original, userName := name })
-          bind (index + 1) (locals.push inputLocal)
-      else
-        let term ← elabTermEnsuringType body accStep
-        mkLetFVars locals term
-    let bodyTerm ← bind 0 #[]
+    let bodyTerm ← withLiftedSteps context bodyContext rho
+      #[(accName.getId, accStep, accValue), (itemName.getId, itemStep, itemValue)] body accStep
     let result ← mkAppM ``Effect4.Modules.Step.fold #[list, init, bodyTerm]
     if let Option.some expected := expected? then
       unless ← isDefEq (← inferType result) expected do
         throwErrorAt stx "fold_step%: result differs from expected type"
+    instantiateMVars result
+  | _ => throwUnsupportedSyntax
+
+@[term_elab itemStepStx]
+def elabItemStep : TermElab := fun stx expected? => do
+  match stx with
+  | `(item_step% $xs:term with $itemName:ident => $body:term) =>
+    if (← getLCtx).any (fun decl => !decl.isImplementationDetail &&
+        decl.userName.eraseMacroScopes == itemName.getId.eraseMacroScopes) then
+      throwErrorAt itemName "item_step%: binder {itemName} shadows an existing local"
+    let list ← elabTerm xs Option.none
+    let listType ← whnf (← inferType list)
+    unless listType.isAppOfArity ``Effect4.Modules.Step 2 do
+      throwErrorAt xs "item_step%: source must be a Step list"
+    let context := listType.getArg! 0
+    let listResult ← whnf (listType.getArg! 1)
+    unless listResult.isAppOfArity ``Effect4.Program.Ty.list 1 do
+      throwErrorAt xs "item_step%: source step must answer a list"
+    let itemTy := listResult.getArg! 0
+    let ty := Lean.mkConst ``Effect4.Program.Ty
+    let bodyContext ← mkAppM ``List.cons #[itemTy, context]
+    let resultTy ← mkFreshExprMVar ty
+    let expected := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) bodyContext resultTy
+    let rho ← withLocalDecl `t BinderInfo.implicit ty fun t => do
+      withLocalDeclD `input (mkApp2 (Lean.mkConst ``Effect4.Modules.Input) context t) fun input => do
+        let lift ← mkAppM ``Effect4.Modules.Input.there #[itemTy, input]
+        mkLambdaFVars #[t, input] lift
+    let itemInput ← mkAppM ``Effect4.Modules.Input.here #[itemTy, context]
+    let itemValue ← mkAppM ``Effect4.Modules.Step.var #[itemInput]
+    let itemStep := mkApp2 (Lean.mkConst ``Effect4.Modules.Step) bodyContext itemTy
+    let result ← withLiftedSteps context bodyContext rho #[(itemName.getId, itemStep, itemValue)] body expected
+    if let Option.some outer := expected? then
+      unless ← isDefEq (← inferType result) outer do
+        throwErrorAt stx "item_step%: result differs from expected type"
     instantiateMVars result
   | _ => throwUnsupportedSyntax
 

@@ -1,5 +1,6 @@
 import Effect4.Modules.Step.Elab.Inputs
 import Effect4.Laws.Modules.Step.Scope
+import Effect4.Modules.Step.Lists
 
 /-! Named input and fold authoring readers and controls.
 The interface elaborates to existing Step data.
@@ -66,6 +67,21 @@ step_context% Repeated (same : .nat, same : .nat)
 /-- error: fold_step%: binder n shadows an existing local -/
 #guard_msgs in
 #check step_inputs% FoldInputs => fold_step% xs from n := .nat 0 with element => element
+
+def itemPass := step_inputs% FoldInputs =>
+  let derived : Step _ .nat := .add n (.nat 1)
+  Step.Lists.map xs (item_step% xs with element => .add derived element)
+def itemResult : List Nat := Step.eval (Γ := [.list .nat, .nat]) Schema.Model.Leaves.deferredKeys
+  (([1, 2] : List Nat), ((2 : Nat), ())) itemPass
+#guard itemResult == [4, 5]
+example : (input_ref% (IdFirst) id) = Input.here .nat [.nat] := by rfl
+example : (input_ref% (HintFirst) id) = Input.there .nat (Input.here .nat []) := by rfl
+/-- error: item_step%: binder n shadows an existing local -/
+#guard_msgs in
+#check step_inputs% FoldInputs => item_step% xs with n => n
+/-- error: input_ref%: unknown input other -/
+#guard_msgs in
+#check input_ref% (IdFirst) other
 
 def repeatedMetadata : InputContext := [("id", .nat), ("id", .nat)]
 /-- error: step inputs: declaration repeats id -/
