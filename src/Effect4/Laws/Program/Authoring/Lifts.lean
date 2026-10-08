@@ -324,6 +324,18 @@ theorem restore_scoped {Op : Type} [ScopedOp Op] {saved : TermSrc} {body : Src O
   have s1 := h1.holds _ _ _ hx1
   simp [s0, s1]
 
+theorem defs_scoped {Op : Type} [ScopedOp Op] (request : String) (decls : List Effect4.Program.DefDecl) {bodies : List (Src Op)} {main : Src Op} (h1 : ∀ s ∈ bodies, s.Scoped) (h2 : main.Scoped) :
+    ((defs request decls bodies main) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold defs at h
+  obtain ⟨x1, hx1, h⟩ := bind_ok h
+  obtain ⟨x2, hx2, h⟩ := bind_ok h
+  cases h
+  have s1 := elabEffs_scoped h1 hx1
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s1
+  have s2 := h2.holds _ _ _ hx2
+  simp [s1, s2]
+
 theorem Action.fork_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options : Effect4.Supervision.ForkOptions) (h0 : program.Scoped) :
     ((Action.fork program options) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩

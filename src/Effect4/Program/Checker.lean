@@ -264,6 +264,9 @@ mutual
       let s ← term? sig env p saved
       if Ty.sub s.normalize Ty.maskRestore then check sig env (p ++ [0]) body
       else throw ⟨p, .maskRestoreExpected s⟩
+    -- A definition block is typed at the root of the whole program (`checkModule`,
+    -- `Program/Definitions.lean`), never structurally (decisions row 328).
+    | .defs _ _ _ => throw ⟨p, .definitionBlock⟩
 
   /-- `layerTy` and `explainLayer` as one. -/
   def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy

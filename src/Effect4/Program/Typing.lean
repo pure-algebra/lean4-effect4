@@ -142,7 +142,7 @@ mutual
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .yieldNow _
     | .withFiber _ | .scoped _ | .acquireRelease _ _
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _
-    | .iterate _ _ _ _ _ _ | .restore _ _ => by
+    | .iterate _ _ _ _ _ _ | .restore _ _ | .defs _ _ _ => by
       simp only [Eff.weaken, check, toOption_bind, toOption_pure, toOption_throw, toOption_expect,
         toOption_term?, toOption_cause?, apply_ite Except.toOption, termTy_weaken, causeTy_weaken,
         catchIfError_weaken, List.append_assoc, List.cons_append, check_weaken sig hw,

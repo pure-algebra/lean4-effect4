@@ -244,6 +244,11 @@ mutual
         let st ← Checker.term? s env p saved
         if Ty.sub st.normalize Ty.maskRestore then b.2
         else throw ⟨p, .maskRestoreExpected st⟩) b.1
+    -- a definition block below the root: the checker refuses at the node, and no child is
+    -- reached (decisions row 328; `Node.childEnv` answers none at a block's children)
+    | .defs decls bodies main =>
+      atProgram p env (Checker.check s env p (.defs decls bodies main))
+        (unreached (p ++ [0]) (.effs bodies) ++ unreached (p ++ [1]) (.eff main))
 
   /-- `Checker.checkLayer` with a record at each node. -/
   def checkLayer (s : Signature Op) (p : List Nat) : LayerTerm Op → Out LayerTy

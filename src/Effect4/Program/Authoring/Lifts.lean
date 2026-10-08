@@ -203,6 +203,13 @@ def restore {Op : Type} (saved : TermSrc) (body : Src Op) : Src Op :=
     let x1 ← body env (p ++ [0])
     .ok (.restore x0 x1)
 
+/-- `Effect4.Program.Eff.defs`: `bodies` sees `request`. -/
+def defs {Op : Type} (request : String) (decls : List Effect4.Program.DefDecl) (bodies : List (Src Op)) (main : Src Op) : Src Op :=
+  fun env p => do
+    let x1 ← elabEffs bodies (env.push [request]) (p ++ [0])
+    let x2 ← main env (p ++ [1])
+    .ok (.defs decls x1 x2)
+
 /-- `Effect4.Program.ActionTerm.fork`. -/
 def Action.fork {Op : Type} (program : Src Op) (options : Effect4.Supervision.ForkOptions) : ActionSrc Op :=
   fun env p => do

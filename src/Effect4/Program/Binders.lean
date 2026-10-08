@@ -22,6 +22,7 @@ variable {Op : Type}
 (`tools/Effect4Gen/binders.json`), which `effTy` follows with the types. -/
 def binders : Node Op → Nat → Nat
   | .eff (.bind _ _), 1 => 1
+  | .eff (.defs _ _ _), 0 => 1
   | .eff (.catchCause _ _), 1 => 1
   | .eff (.catchIf _ _ _), 1 => 1
   | .eff (.select _ (.option) _ _), 1 => 1

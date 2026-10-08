@@ -108,6 +108,10 @@ structure Signature (Op : Type) where
   (`Codegen/Read.lean`). The laws a reader needs of this update and of `withTerm`, and their
   independence, are `LawfulTypeArgs` there. The identity by default. -/
   withTypeArgs : Op → List Ty → Op := fun op _ => op
+  /-- The definition an operation invokes: `some k` for the invocation of definition `k` of the
+  program's definition block (decisions row 328), `none` for every other operation. A block's
+  signature reads it (`Signature.withDefs`, `Program/Definitions.lean`). None by default. -/
+  callOf : Op → Option Nat := fun _ => none
 
 variable {Op : Type}
 

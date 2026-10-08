@@ -145,5 +145,8 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   -- A restore site whose saved term is no saved state, `pipe(body, true)`: no observation of the
   -- diagnostics lane names this reason yet, so no code is claimed.
   | .maskRestoreExpected _ => []
+  -- A definition block (decisions row 328): the printer prints no block yet, so no observation
+  -- names these reasons.
+  | .definitionBlock | .definitionsMismatch _ _ | .definitionColumns _ | .bodyNotDeclared _ _ => []
 
 end Effect4.Codegen

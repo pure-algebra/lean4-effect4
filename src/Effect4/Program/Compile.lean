@@ -612,6 +612,9 @@ def compileEff : NativeEff → Point → NCode
       | .perform op request =>
         match op with
         | .external _ => asyncRoute op request p
+        -- an invocation (decisions row 328): one counted suspension, whose body
+        -- `suspendBodyAt` decides, as at a source `suspend`
+        | .call _ => Prim.suspend (EffThunk.body p)
         | _ => match op.kind with
           | .sync =>
             match evalTerm p.env request with
@@ -685,6 +688,8 @@ def compileEff : NativeEff → Point → NCode
         | some true => Prim.withFiber (EffThunk.act p)
         | some false => compileEff body (p.child 0)
         | none => badShape
+      -- a definition block (decisions row 328): no step of its own; the main program at child 1
+      | .defs _ _ main => compileEff main (p.child 1)
 
 /-- The program at a point of the root: the subterm compiled there, or the frontier. -/
 def resolve (root : NativeEff) (p : Point) : NCode :=
@@ -1324,14 +1329,24 @@ def syncValueAt (root : NativeEff) : EffThunk → Val
 
 /-- The heads whose suspension body `suspendBodyAt` decides itself instead of compiling the
 node at its point: a source `suspend`, the value-decided `select`, the two iterators `gen` and
-`iterate`, and `provideLayer`'s scope allocation. The match below is the definition; this
+`iterate`, `provideLayer`'s scope allocation, and an invocation's hop into its definition's
+body. The match below is the definition; this
 Boolean names the set it decides, and `Agreement.suspendBodyAt_of_at` is the law of the
 complement (every other head's body is `compileEff` at the point), which stops building the
 moment the match gains an arm this list lacks. -/
-def Eff.suspendDecided {Op : Type} : Eff Op → Bool
+def Eff.suspendDecided : NativeEff → Bool
   | .suspend _ | .select _ _ _ _ | .gen _
-  | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ => true
+  | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ | .perform (.call _) _ => true
   | _ => false
+
+/-- **The path of definition `k`'s body** in a program's root block (decisions row 328): the
+bodies are the block's child `0`, and in their spine the head is child `0` and the rest child
+`1`. `none` when the program has no block or no definition `k`. -/
+def defBodyPath (root : NativeEff) (k : Nat) : Option (List Nat) :=
+  match root with
+  | .defs _ bodies _ =>
+    if k < bodies.toList.length then some (0 :: List.replicate k 1 ++ [0]) else none
+  | _ => none
 
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
 point's environment, the iterator of a generator (`Effect.gen`'s `fromIteratorUnsafe`,
@@ -1362,6 +1377,13 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         Prim.onSuccess
           (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
           (EffName.provideLayerWith p)
+      -- an invocation (decisions row 328): the request evaluated once here, then the body of the
+      -- definition at its point of the root, with the request as its one variable, one fuel down,
+      -- on the invoking fiber
+      | some (Node.eff (.perform (.call k) request)) =>
+        match evalTerm p.env request, defBodyPath root k with
+        | some v, some path => resolve root { p.redirect path with env := [v] }
+        | _, _ => badShape
       | some (Node.eff e) => compileEff e p
       | _ => badShape
   -- `getOrElseMemoize` (`Layer.ts:451`): the lookup, then `memoize` on its answer

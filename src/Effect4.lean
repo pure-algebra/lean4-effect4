@@ -91,6 +91,7 @@ import Effect4.Program.Bounds
 import Effect4.Schema.Template
 import Effect4.Schema.TyFaces
 import Effect4.Program.Typing
+import Effect4.Program.Definitions
 import Effect4.Program.Typing.Blame
 -- A sketch (decisions row 288): a program with its hole table, and its check. Reachable from
 -- this root, imported by no module of the API.
