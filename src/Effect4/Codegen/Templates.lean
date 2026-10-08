@@ -188,6 +188,8 @@ def effRows : List Row :=
   -- its first, so `pipe(body, saved)` is `saved(body)`. Its head is reserved (`Head.pipe`): a
   -- method skeleton, `body.pipe(saved)`, has no head for the separation of the rows to read
   , ⟨.eff, "restore", [], .tpl (call "pipe" [h 1, h 0])⟩
+  -- a definition block (decisions row 328): refused by name until slice PROC-3 prints the block
+  , ⟨.eff, "defs", [], .refuse "defs"⟩
   , ⟨.eff, "gen", [], .tpl (call genHead [.generator (.hole 0)])⟩
   , ⟨.eff, "withFiber", [], .tpl (h 0)⟩
   , ⟨.eff, "perform", [], .rowCall⟩ ]

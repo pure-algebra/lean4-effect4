@@ -45,6 +45,7 @@
       "Effect4.Program.Eff.gen"
     ],
     "machineOnly": [
+      "Effect4.Program.Eff.defs",
       "Effect4.Program.ActionTerm.interruptScoped", "Effect4.Program.ActionTerm.awaitAllFailFast",
       "Effect4.Program.ActionTerm.snapshotChildren", "Effect4.Program.ActionTerm.awaitNewChildren",
       "Effect4.Program.ActionTerm.setContext"

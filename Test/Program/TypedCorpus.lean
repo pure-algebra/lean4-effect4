@@ -177,10 +177,12 @@ def allCases : List (Test.Program.Gen.Head × String) :=
   casesOf "Eff" EffShape ++ casesOf "Stmt" StmtShape ++ casesOf "ActionTerm" ActionTermShape ++
     casesOf "LayerTerm" LayerTermShape
 
-/-- The cases no typed program of this corpus uses. -/
+/-- The cases no typed program of this corpus uses, but a definition block: admission does not
+take one yet (decisions row 328). -/
 def missing : List String :=
   let covered := (programs.flatMap fun e => heads e.program).eraseDups
-  (allCases.filter fun c => !covered.contains c.1).map fun c => c.1.1 ++ "." ++ c.2
+  (allCases.filter fun c => !covered.contains c.1 && c.2 != "defs").map fun c =>
+    c.1.1 ++ "." ++ c.2
 
 #guard missing = []
 end Coverage
@@ -190,12 +192,14 @@ def performed : List Nat :=
   (programs.flatMap fun e =>
     foldMap_eff [] (· ++ ·) e.program (f_eff := fun | .perform op _ => [op.ctorIdx] | _ => [])).eraseDups
 
--- Every `NativeOp` constructor is performed by some typed program.
+-- Every `NativeOp` constructor is performed by some typed program, but an invocation: it needs a
+-- definition block, which admission does not take yet (decisions row 328).
 run_cmd do
   let env ← Lean.getEnv
   let some (.inductInfo info) := env.find? ``Effect4.Program.NativeOp
     | throwError "NativeOp is not an inductive"
-  let absent := (info.ctors.zipIdx.filter fun (_, i) => !performed.contains i).map (·.1)
+  let absent := (info.ctors.zipIdx.filter fun (c, i) =>
+    !performed.contains i && c != ``Effect4.Program.NativeOp.call).map (·.1)
   unless absent.isEmpty do throwError "typed corpus: operations never performed: {absent}"
 
 end Test.Program.TypedCorpus

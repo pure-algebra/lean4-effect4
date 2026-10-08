@@ -195,7 +195,9 @@ theorem Looped.suspendDecided_iff {e : NativeEff} (hl : Looped e = true) :
         (∃ c i t st r b, e = .iterate c i t st r b) := by
   cases e with
   -- an invocation is a decided head and outside the fragment
-  | perform op r => cases op <;> simp [Eff.suspendDecided, Looped] at hl ⊢
+  | perform op r =>
+    cases op <;> simp only [Looped, NativeOp.kind, Eff.suspendDecided, Bool.false_eq_true,
+      reduceCtorEq, exists_false, or_self] at hl ⊢
   | _ => simp [Eff.suspendDecided, Looped] at hl ⊢
 
 /-- The forms the budgeted meaning descends into. Every other form is a leaf. -/

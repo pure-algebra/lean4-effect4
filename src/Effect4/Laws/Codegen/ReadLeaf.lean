@@ -2232,7 +2232,7 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     -- instance that `NativeOp.spelled` holds, whatever type arguments the operation carries
     | deferredMakeOf value error => rfl
     -- an invocation is outside the native signature's domain: only a block's signature has it
-    | call k => simp [nativeSignature] at hd
+    | call k => exact absurd hd Bool.false_ne_true
     | _ => rfl
   row_of_spell := by
     intro s names op hs

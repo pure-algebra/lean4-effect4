@@ -178,7 +178,9 @@ theorem Straight.suspendDecided_iff {e : NativeEff} (hs : Straight e = true) :
       (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) := by
   cases e with
   -- an invocation is a decided head and outside the fragment
-  | perform op r => cases op <;> simp [Eff.suspendDecided, Straight] at hs ⊢
+  | perform op r =>
+    cases op <;> simp only [Straight, NativeOp.kind, Eff.suspendDecided, Bool.false_eq_true,
+      reduceCtorEq, exists_false, or_self] at hs ⊢
   | _ => simp [Eff.suspendDecided, Straight] at hs ⊢
 
 /-! ## The equations of the meaning -/
