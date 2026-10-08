@@ -266,6 +266,32 @@ theorem headK_image (msg : Nat → Val) (messages : List Nat) :
   | nil => rfl
   | cons m ms => rfl
 
+/-- Waiting taker carriers have exactly the existing ordered taker encoding. -/
+theorem takersK_image (tb : Table) (takers : List Taker) :
+    (imageAt Leaves.deferredKeys (.list takerTy)).toVal (takers.map (takerK tb)) =
+      Val.list (takers.map (takerVal tb)) := by
+  change Val.list ((takers.map (takerK tb)).map ((imageAt Leaves.deferredKeys takerTy).toVal)) = _
+  rw [List.map_map]
+  exact congrArg Val.list (List.map_congr_left (fun t _ => takerK_image tb t))
+
+/-- A fresh waiting taker appends the same hint and identity record bytes. -/
+theorem snocTakerK_image (tb : Table) (takers : List Taker) (id : Nat) (hint : DeferredKey) :
+    (imageAt Leaves.deferredKeys (.list takerTy)).toVal
+      ((takers.map (takerK tb) : List (DeferredKey × (DeferredKey × Unit))) ++ [(hint, (tb.handle id, ()))]) =
+      Val.list (takers.map (takerVal tb) ++ [takerOf (Val.promise hint) (Val.promise (tb.handle id))]) := by
+  let image : (DeferredKey × (DeferredKey × Unit)) → Val := (imageAt Leaves.deferredKeys takerTy).toVal
+  have expand : (((takers.map (takerK tb) : List (DeferredKey × (DeferredKey × Unit))) ++ [(hint, (tb.handle id, ()))]).map image) =
+      (takers.map (takerK tb)).map image ++ [image (hint, (tb.handle id, ()))] := List.map_append
+  have old : (takers.map (takerK tb)).map image = takers.map (takerVal tb) :=
+    List.map_map.trans (List.map_congr_left (fun t _ => takerK_image tb t))
+  exact (congrArg Val.list expand).trans
+    (congrArg (fun values => Val.list (values ++ [takerOf (Val.promise hint) (Val.promise (tb.handle id))])) old)
+
+/-- Arbitrary message values keep the existing list encoding. -/
+theorem messagesK_image (msg : Nat → Val) (messages : List Nat) :
+    (imageAt Leaves.deferredKeys (.list P)).toVal (messages.map msg) = Val.list (messages.map msg) :=
+  messages_image msg messages
+
 abbrev takeInputs (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : Machine.DeferredKey) :
     Inputs Leaves.deferredKeys (Data.takeΓ P) := (tb.handle id, (hint, (cellK tb msg s, ())))
 abbrev offerInputs (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hint : Machine.DeferredKey) :
@@ -349,6 +375,77 @@ theorem poll_value (tb : Table) (msg : Nat → Val) (s : State) :
         ((Data.staying P room os).eval Leaves.deferredKeys vs, (s.takers.map (takerK tb), ())))))
     else ((none, []), cellK tb msg s)) = _
   rw [List.length_map, List.length_map, hg, he, hs]
+  rfl
+
+set_option maxHeartbeats 400000 in
+/-- Take computes the exact consuming and waiting carrier branches. -/
+theorem take_value (tb : Table) (injective : tb.Injective) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey) :
+    (Data.take P).eval Leaves.deferredKeys (takeInputs tb msg s id hint) =
+      let r := s.capacity.getD 0 - (s.messages.drop 1).length
+      let entering := s.offers.take (Nat.min r s.offers.length)
+      let newMessages := s.messages.drop 1 ++ entering.flatMap (·.rest)
+      let remaining := s.takers.filter (fun t => t.id != id)
+      if (!decide (s.messages.length = 0) &&
+        ((s.takers.take 1).any (fun t => decide (t.id = id)) ||
+          (!s.takers.any (fun t => decide (t.id = id)) && decide (s.takers.length = 0)))) then
+        (((s.messages.map msg).head?, (entering.map (offerK tb msg),
+          ((if newMessages.length = 0 then [] else remaining.take 1).map (takerK tb), ()))),
+          cellK tb msg {s with messages := newMessages, offers := s.offers.drop (Nat.min r s.offers.length), takers := remaining})
+      else ((none, ([], ([], ()))),
+        (s.capacity.getD 0, (s.messages.map msg, (s.offers.map (offerK tb msg),
+          ((if s.takers.any (fun t => decide (t.id = id)) then s.takers.map (takerK (tb.renew id hint))
+            else (s.takers.map (takerK tb) : List (DeferredKey × (DeferredKey × Unit))) ++ [(hint, (tb.handle id, ()))]), ()))))) := by
+  let vs := takeInputs tb msg s id hint
+  let request : Step (Data.takeΓ P) idTy := .var (.here _ _)
+  let fresh : Step (Data.takeΓ P) idTy := .var (.there _ (.here _ _))
+  let state : Step (Data.takeΓ P) (cellTy P) := .var (.there _ (.there _ (.here _ _)))
+  let ms := Step.get state (Data.msgsF P)
+  let ts := Step.get state (Data.takersF P)
+  let os := Step.get state (Data.offersF P)
+  let rest := Step.drop ms (.nat 1)
+  let room := Step.sub (.get state (Data.capF P)) (.len rest)
+  let removed := Data.removeTaker ts request
+  let gained := Data.gained P room rest os
+  have hrest : rest.eval Leaves.deferredKeys vs = (s.messages.drop 1).map msg := List.map_drop.symm
+  have hr : room.eval Leaves.deferredKeys vs = s.capacity.getD 0 - (s.messages.drop 1).length := by
+    change s.capacity.getD 0 - (rest.eval Leaves.deferredKeys vs).length = _
+    rw [hrest]
+    exact congrArg (fun n => s.capacity.getD 0 - n) (List.length_map (f := msg) (as := s.messages.drop 1))
+  have hg := gained_value tb msg room rest os vs _ (s.messages.drop 1) s.offers hr hrest rfl
+  have he := entering_value tb msg room os vs _ s.offers hr rfl
+  have hs := staying_value tb msg room os vs _ s.offers hr rfl
+  have ht := removeTaker_value tb injective ts request vs s.takers id rfl rfl
+  have hn := renewHint_value tb injective ts request fresh vs s.takers id hint rfl rfl rfl
+  have henrolled := enrolled_value tb injective ts request vs s.takers id rfl rfl
+  have hhead := isHead_value tb injective ts request vs s.takers id rfl rfl
+  let newMessages := s.messages.drop 1 ++ (s.offers.take (Nat.min (s.capacity.getD 0 - (s.messages.drop 1).length) s.offers.length)).flatMap (·.rest)
+  let remaining := s.takers.filter (fun t => t.id != id)
+  have hw : (Data.wake P removed gained).eval Leaves.deferredKeys vs =
+      (if newMessages.length = 0 then [] else remaining.take 1).map (takerK tb) := by
+    change (if decide ((gained.eval Leaves.deferredKeys vs).length = 0) then [] else
+      (removed.eval Leaves.deferredKeys vs).take 1) = _
+    rw [hg, ht]
+    refine (congrArg (fun n : Nat => if decide (n = 0) then [] else (remaining.map (takerK tb)).take 1)
+      (List.length_map (f := msg) (as := newMessages))).trans ?_
+    by_cases empty : newMessages.length = 0
+    · rw [decide_eq_true empty, if_pos rfl, if_pos empty]
+      rfl
+    · rw [decide_eq_false empty, if_neg (by decide), if_neg empty]
+      exact List.map_take.symm
+  let enrolled : Bool := (Data.enrolled ts request).eval Leaves.deferredKeys vs
+  have henrolledValue : enrolled = s.takers.any (fun t => decide (t.id = id)) := henrolled
+  change (if (!decide ((s.messages.map msg).length = 0) &&
+    ((Data.isHead ts request).eval Leaves.deferredKeys vs ||
+      (!enrolled && decide ((s.takers.map (takerK tb)).length = 0)))) then
+    (((s.messages.map msg).head?, ((Data.entering P room os).eval Leaves.deferredKeys vs,
+      ((Data.wake P removed gained).eval Leaves.deferredKeys vs, ()))),
+      (s.capacity.getD 0, (gained.eval Leaves.deferredKeys vs,
+        ((Data.staying P room os).eval Leaves.deferredKeys vs, (removed.eval Leaves.deferredKeys vs, ())))))
+    else ((none, ([], ([], ()))), (s.capacity.getD 0, (s.messages.map msg, (s.offers.map (offerK tb msg),
+      ((if enrolled then
+        (Data.renewHint ts request fresh).eval Leaves.deferredKeys vs
+        else (s.takers.map (takerK tb) : List (DeferredKey × (DeferredKey × Unit))) ++ [(hint, (tb.handle id, ()))]), ())))))) = _
+  rw [List.length_map, List.length_map, henrolledValue, hhead, hg, he, hs, ht, hn, hw]
   rfl
 
 end Effect4.Queue.Model
@@ -551,5 +648,72 @@ theorem poll_encoded (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
   · rw [if_neg accepted, if_neg accepted]
     change Val.tuple [Val.tuple [Store.Val.none, Val.list []], (imageAt Leaves.deferredKeys (cellTy P)).toVal (cellK tb msg s)] = _
     rw [cellK_image]
+
+/-- Take reading observes the exact consuming and waiting model branches. -/
+theorem take_encoded (A : Ty) (tb : Table) (injective : tb.Injective) (msg : Nat → Val)
+    (s : State) (id : Nat) (hint : DeferredKey)
+    {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val}
+    (depth : vals.length = env.names.length)
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsHint : Reads hintSrc env path vals (Val.promise hint))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.takeStep A idSrc hintSrc cellSrc) env path vals
+      (let r := s.capacity.getD 0 - (s.messages.drop 1).length
+       let entering := s.offers.take (Nat.min r s.offers.length)
+       let newMessages := s.messages.drop 1 ++ entering.flatMap (·.rest)
+       let remaining := s.takers.filter (fun t => t.id != id)
+       if (!decide (s.messages.length = 0) &&
+         ((s.takers.take 1).any (fun t => decide (t.id = id)) ||
+           (!s.takers.any (fun t => decide (t.id = id)) && decide (s.takers.length = 0)))) then
+         Val.tuple [Val.tuple [pollReplyVal msg s.messages.head?, Val.list (entering.map (offerVal tb msg)),
+           Val.list ((if newMessages.length = 0 then [] else remaining.take 1).map (takerVal tb))],
+           cellVal tb msg {s with messages := newMessages, offers := s.offers.drop (Nat.min r s.offers.length), takers := remaining}]
+       else Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+         if s.takers.any (fun t => decide (t.id = id)) then
+           cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg)) (.list (s.offers.map (offerVal tb msg)))
+             (.list (s.takers.map (takerVal (tb.renew id hint))))
+         else cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg)) (.list (s.offers.map (offerVal tb msg)))
+           (.list (s.takers.map (takerVal tb) ++ [takerOf (Val.promise hint) (Val.promise (tb.handle id))]))]) := by
+  apply (take_reads A tb msg s id hint depth readsId readsHint readsCell).to
+  rw [take_value tb injective]
+  dsimp only
+  let r := s.capacity.getD 0 - (s.messages.drop 1).length
+  let entering := s.offers.take (Nat.min r s.offers.length)
+  let newMessages := s.messages.drop 1 ++ entering.flatMap (·.rest)
+  let remaining := s.takers.filter (fun t => t.id != id)
+  by_cases accepted : (!decide (s.messages.length = 0) &&
+    ((s.takers.take 1).any (fun t => decide (t.id = id)) ||
+      (!s.takers.any (fun t => decide (t.id = id)) && decide (s.takers.length = 0)))) = true
+  · rw [if_pos accepted, if_pos accepted]
+    change Val.tuple [Val.tuple [(imageAt Leaves.deferredKeys (.option P)).toVal ((s.messages.map msg).head?),
+      (imageAt Leaves.deferredKeys (.list (offerTy P))).toVal (entering.map (offerK tb msg)),
+      (imageAt Leaves.deferredKeys (.list takerTy)).toVal ((if newMessages.length = 0 then [] else remaining.take 1).map (takerK tb))],
+      (imageAt Leaves.deferredKeys (cellTy P)).toVal (cellK tb msg {s with messages := newMessages, offers := s.offers.drop (Nat.min r s.offers.length), takers := remaining})] = _
+    rw [headK_image, offersK_image, takersK_image, cellK_image]
+  · rw [if_neg accepted, if_neg accepted]
+    change Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+      cellOf (.nat (s.capacity.getD 0))
+        ((imageAt Leaves.deferredKeys (.list P)).toVal (s.messages.map msg))
+        ((imageAt Leaves.deferredKeys (.list (offerTy P))).toVal (s.offers.map (offerK tb msg)))
+        ((imageAt Leaves.deferredKeys (.list takerTy)).toVal
+          (if s.takers.any (fun t => decide (t.id = id)) then s.takers.map (takerK (tb.renew id hint))
+            else (s.takers.map (takerK tb) : List (DeferredKey × (DeferredKey × Unit))) ++ [(hint, (tb.handle id, ()))]))] = _
+    rw [messagesK_image, offersK_image]
+    let renewed : List (DeferredKey × (DeferredKey × Unit)) := s.takers.map (takerK (tb.renew id hint))
+    let appended : List (DeferredKey × (DeferredKey × Unit)) :=
+      (s.takers.map (takerK tb) : List (DeferredKey × (DeferredKey × Unit))) ++ [(hint, (tb.handle id, ()))]
+    let encode : List (DeferredKey × (DeferredKey × Unit)) → Val := (imageAt Leaves.deferredKeys (.list takerTy)).toVal
+    change Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+      cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg)) (.list (s.offers.map (offerVal tb msg)))
+        (encode (if s.takers.any (fun t => decide (t.id = id)) then renewed else appended))] = _
+    by_cases enrolled : s.takers.any (fun t => decide (t.id = id)) = true
+    · rw [if_pos enrolled, if_pos enrolled]
+      exact congrArg (fun value => Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+        cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg)) (.list (s.offers.map (offerVal tb msg))) value])
+        (takersK_image (tb.renew id hint) s.takers)
+    · rw [if_neg enrolled, if_neg enrolled]
+      exact congrArg (fun value => Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+        cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg)) (.list (s.offers.map (offerVal tb msg))) value])
+        (snocTakerK_image tb s.takers id hint)
 
 end Effect4.Queue.Model
