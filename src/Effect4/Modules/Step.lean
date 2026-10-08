@@ -3,6 +3,9 @@ module
 public import Effect4.Schema.FieldRef
 public import Effect4.Modules.Words
 public import Effect4.Program.Authoring.Tuples
+public import Effect4.Program.Authoring.Ascribe
+public import Effect4.Schema.Identity
+public import Effect4.Program.Formation
 
 /-!
 # Modules.Step — a module's step as first-order data over `Ty`
@@ -16,7 +19,10 @@ inputs that answers a value (decisions row 330, slice L2). Here a step is data:
 - **The signature**: an input, the literals `bool`, `nat` and `unit`, the Boolean words `not`,
   `and`, `or` and `ite`, the numeric words `add`, `sub`, `lt`, `eq` and `isZero`, the product
   words `pair`, `tuple2`, `fst` and `snd`, `some`, a field's read `get` and overwrite `set`, and
-  the list words `emptyLike`, `len`, `snoc`, `append`, `take`, `drop` and `head`. `pair` and
+  the list words `nil`, `cons`, `emptyLike`, `len`, `snoc`, `append`, `take`, `drop` and `head`.
+  Records carry required `StepFields`. Typed `none` and `nil` use checked ascription.
+  `sameDeferred` compares deferred keys under an interpretation capability.
+  A `fold` binds the accumulator and item before the outer inputs in its body. `pair` and
   `tuple2` answer one value, and differ in their atom and in their typing rule.
 - **The algebra and its fold** (`StepAlgebra`, `Step.cata`): one field per constructor, and the
   one map out of the syntax. Every interpretation below is an algebra. The two are written by
@@ -37,7 +43,7 @@ The arrows out of a step, each a fold:
 | `Step.Facts` | proposition | the normal forms that the checker needs, as facts a caller may prove |
 
 The laws are proved once for the language (`src/Effect4/Laws/Modules/Step.lean`). A step's term
-reads the encoding of its value, at every scope. It types at the step's type, at every scope.
+reads the encoding of its value, at every scope. It types at the step's type, at every scope whose depth agrees where a fold occurs.
 On an update spine, a field that no overwrite names keeps its value. A module's step written as
 data inherits the three, with no proof of its own.
 -/
@@ -75,6 +81,7 @@ def Input.get {L : Leaves} : {Γ : List Ty} → {t : Ty} → Input Γ t → Inpu
   | _, _, .here _ _, vs => vs.1
   | _, _, .there _ x, vs => x.get vs.2
 
+mutual
 /-- **A step over inputs of the types `Γ` that answers a value of type `t`.** -/
 inductive Step : List Ty → Ty → Type where
   | var {Γ : List Ty} {t : Ty} : Input Γ t → Step Γ t
@@ -107,6 +114,51 @@ inductive Step : List Ty → Ty → Type where
   | head {Γ : List Ty} {t : Ty} : Step Γ (.list t) → Step Γ (.option t)
   | fold {Γ : List Ty} {acc item : Ty} : Step Γ (.list item) → Step Γ acc →
       Step (acc :: item :: Γ) acc → Step Γ acc
+  | record {Γ : List Ty} {fs : List (String × Bool × Ty)} : StepFields Γ fs → Step Γ (.record fs)
+  | nil {Γ : List Ty} {t : Ty} : Step Γ (.list t)
+  | none {Γ : List Ty} {t : Ty} : Step Γ (.option t)
+  | cons {Γ : List Ty} {t : Ty} : Step Γ t → Step Γ (.list t) → Step Γ (.list t)
+  | sameDeferred {Γ : List Ty} {a e b f : Ty} :
+      Step Γ (.deferredOf a e) → Step Γ (.deferredOf b f) → Step Γ .bool
+
+/-- Required record fields, one typed step per field, in the schema's order. -/
+inductive StepFields : List Ty → List (String × Bool × Ty) → Type where
+  | nil {Γ : List Ty} : StepFields Γ []
+  | cons {Γ : List Ty} (name : String) {t : Ty} {fs : List (String × Bool × Ty)} :
+      Step Γ t → StepFields Γ fs → StepFields Γ ((name, false, t) :: fs)
+end
+
+/-- Child results for required fields. An optional field has no construction in this profile. -/
+def FieldResults (R : Ty → Type) : List (String × Bool × Ty) → Type
+  | [] => Unit
+  | (_, false, t) :: fs => R t × FieldResults R fs
+  | (_, true, _) :: _ => Empty
+
+namespace FieldResults
+
+/-- Read each result in schema order, retaining its name. -/
+def map {R : Ty → Type} {α : Type} (f : (name : String) → {t : Ty} → R t → α) :
+    (fs : List (String × Bool × Ty)) → FieldResults R fs → List α
+  | [], _ => []
+  | (name, false, _) :: fs, x => f name x.1 :: map f fs x.2
+  | (_, true, _) :: _, x => x.elim
+
+/-- Conjoin child predicates without evaluating or translating a step again. -/
+def All {R : Ty → Type} (f : {t : Ty} → R t → Prop) :
+    (fs : List (String × Bool × Ty)) → FieldResults R fs → Prop
+  | [], _ => True
+  | (_, false, _) :: fs, x => f x.1 ∧ All f fs x.2
+  | (_, true, _) :: _, x => x.elim
+
+/-- The record carrier from the child value interpretations. -/
+def values (L : Leaves) {Γ : List Ty} (vs : Inputs L Γ) :
+    (fs : List (String × Bool × Ty)) →
+      FieldResults (fun t => Inputs L Γ → CarrierAt L t) fs → CarrierAt L (.record fs)
+  | [], _ => ()
+  | (_, false, _) :: fs, x => (x.1 vs, values L vs fs x.2)
+  | (_, true, _) :: _, x => x.elim
+
+end FieldResults
 
 /-- **The step algebra**: a carrier at each type, and one field per constructor. -/
 structure StepAlgebra (R : List Ty → Ty → Type) where
@@ -141,11 +193,19 @@ structure StepAlgebra (R : List Ty → Ty → Type) where
 
   fold : {Γ : List Ty} → {acc item : Ty} → R Γ (.list item) → R Γ acc →
     R (acc :: item :: Γ) acc → R Γ acc
+  record : {Γ : List Ty} → {fs : List (String × Bool × Ty)} →
+    FieldResults (R Γ) fs → R Γ (.record fs)
+  nil : {Γ : List Ty} → {t : Ty} → R Γ (.list t)
+  none : {Γ : List Ty} → {t : Ty} → R Γ (.option t)
+  cons : {Γ : List Ty} → {t : Ty} → R Γ t → R Γ (.list t) → R Γ (.list t)
+  sameDeferred : {Γ : List Ty} → {a e b f : Ty} →
+    R Γ (.deferredOf a e) → R Γ (.deferredOf b f) → R Γ .bool
 
 namespace Step
 
 variable {Γ : List Ty}
 
+mutual
 /-- **The fold**: the one map out of the syntax into an algebra. -/
 def cata {R : List Ty → Ty → Type} (alg : StepAlgebra R) : {Γ : List Ty} → {t : Ty} → Step Γ t → R Γ t
   | _, _, .var x => alg.var x
@@ -176,6 +236,18 @@ def cata {R : List Ty → Ty → Type} (alg : StepAlgebra R) : {Γ : List Ty} �
   | _, _, .drop xs n => alg.drop (cata alg xs) (cata alg n)
   | _, _, .head xs => alg.head (cata alg xs)
   | _, _, .fold xs init body => alg.fold (cata alg xs) (cata alg init) (cata alg body)
+  | _, _, .record fields => alg.record (cataFields alg fields)
+  | _, _, .nil => alg.nil
+  | _, _, .none => alg.none
+  | _, _, .cons x xs => alg.cons (cata alg x) (cata alg xs)
+  | _, _, .sameDeferred a b => alg.sameDeferred (cata alg a) (cata alg b)
+
+/-- The child-results half of the same fold, for a record's required fields. -/
+def cataFields {R : List Ty → Ty → Type} (alg : StepAlgebra R) :
+    {Γ : List Ty} → {fs : List (String × Bool × Ty)} → StepFields Γ fs → FieldResults (R Γ) fs
+  | _, _, .nil => ()
+  | _, _, .cons _ value rest => (cata alg value, cataFields alg rest)
+end
 
 /-! ## The translation into source terms -/
 
@@ -227,7 +299,14 @@ def termAlg : StepAlgebra (fun Γ _ => ({t : Ty} → Input Γ t → TermSrc) →
     let i ← init src env path
     let b ← body (foldSources src env path)
       (env.push [env.mint "acc", env.mint "item"]) path
-    .ok (.fold none l i b)
+    .ok (.fold Option.none l i b)
+
+  record {_Γ} {fs} fields := fun src =>
+    Authoring.record fs (FieldResults.map (fun name {_} value => (name, value src)) fs fields)
+  nil {_Γ} {t} := fun _ => ascribe (.list t) nilT
+  none {_Γ} {t} := fun _ => ascribe (.option t) noneT
+  cons x xs := fun src => app "cons" [x src, xs src]
+  sameDeferred a b := fun src => Modules.same (a src) (b src)
 
 /-- The source term; fold bodies never re-resolve a caller source at their extended scope. -/
 def term (src : {t : Ty} → Input Γ t → TermSrc) {t : Ty} (e : Step Γ t) : TermSrc :=
@@ -266,6 +345,12 @@ def evalAlg (L : Leaves) : StepAlgebra (fun Γ t => Inputs L Γ → CarrierAt L 
   head xs := fun vs => (xs vs).head?
   fold xs init body := fun vs => (xs vs).foldl (fun acc item => body (acc, (item, vs))) (init vs)
 
+  record {_Γ} {fs} fields := fun vs => FieldResults.values L vs fs fields
+  nil := fun _ => []
+  none := fun _ => Option.none
+  cons x xs := fun vs => x vs :: xs vs
+  sameDeferred a b := fun vs => Model.deferredEqual L (a vs) (b vs)
+
 /-- The value at the identity context and the inputs. -/
 def eval (L : Leaves) (vs : Inputs L Γ) {t : Ty} (e : Step Γ t) : CarrierAt L t :=
   cata (evalAlg L) e vs
@@ -303,39 +388,51 @@ def writesAlg : StepAlgebra (fun _ _ => List String) where
   head xs := xs
   fold xs init body := xs ++ init ++ body
 
+  record {_Γ} {fs} fields := (FieldResults.map (fun _ {_} value => value) fs fields).flatten
+  nil := []
+  none := []
+  cons x xs := x ++ xs
+  sameDeferred a b := a ++ b
+
 /-- **The names of the fields that the step's overwrites name.** -/
 def writes {t : Ty} (e : Step Γ t) : List String := cata writesAlg e
 
 /-- The spine algebra: the position of the input whose record the step updates, or `none`. -/
 def spineAlg : StepAlgebra (fun _ _ => Option Nat) where
   var x := Option.some x.index
-  bool _ := none
-  nat _ := none
-  unit := none
-  not _ := none
-  and _ _ := none
-  or _ _ := none
-  ite _ a b := if a = b then a else none
-  add _ _ := none
-  sub _ _ := none
-  lt _ _ := none
-  eq _ _ := none
-  isZero _ := none
-  pair _ _ := none
-  tuple2 _ _ := none
-  fst _ := none
-  snd _ := none
-  some _ := none
-  get _ _ := none
+  bool _ := Option.none
+  nat _ := Option.none
+  unit := Option.none
+  not _ := Option.none
+  and _ _ := Option.none
+  or _ _ := Option.none
+  ite _ a b := if a = b then a else Option.none
+  add _ _ := Option.none
+  sub _ _ := Option.none
+  lt _ _ := Option.none
+  eq _ _ := Option.none
+  isZero _ := Option.none
+  pair _ _ := Option.none
+  tuple2 _ _ := Option.none
+  fst _ := Option.none
+  snd _ := Option.none
+  some _ := Option.none
+  get _ _ := Option.none
   set r _ _ := r
-  emptyLike _ := none
-  len _ := none
-  snoc _ _ := none
-  append _ _ := none
-  take _ _ := none
-  drop _ _ := none
-  head _ := none
-  fold _ _ _ := none
+  emptyLike _ := Option.none
+  len _ := Option.none
+  snoc _ _ := Option.none
+  append _ _ := Option.none
+  take _ _ := Option.none
+  drop _ _ := Option.none
+  head _ := Option.none
+  fold _ _ _ := Option.none
+
+  record _ := Option.none
+  nil := Option.none
+  none := Option.none
+  cons _ _ := Option.none
+  sameDeferred _ _ := Option.none
 
 /-- **The update spine**: the input whose record the step answers, with some fields overwritten.
 An input, a choice between two spines of one input, and an overwrite of a spine are spines. -/
@@ -343,7 +440,8 @@ def spine {t : Ty} (e : Step Γ t) : Option Nat := cata spineAlg e
 
 /-- A check algebra: the conjunction of the children's checks, and a node's own test at a field's
 read and overwrite. -/
-def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → Bool) :
+def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → Bool)
+    (atFormation : Ty → Bool := fun _ => true) (atSubtype : Ty → Ty → Bool := fun _ _ => true) :
     StepAlgebra (fun _ _ => Bool) where
   var _ := true
   bool _ := true
@@ -374,8 +472,17 @@ def checkAlg (atRecord : List (String × Bool × Ty) → Bool) (atType : Ty → 
   head xs := xs
   fold xs init body := xs && init && body
 
+  record {_Γ} {fs} fields := atRecord fs && (atFormation (.record fs) &&
+    (FieldResults.map (fun _ {_} value => value) fs fields).all id)
+  nil {_Γ} {t} := atType (.list t) && (atFormation (.record (ascribeFields (.list t))) &&
+    atSubtype (.list .never) (.list t))
+  none {_Γ} {t} := atType (.option t) && (atFormation (.record (ascribeFields (.option t))) &&
+    atSubtype (.option .never) (.option t))
+  cons {_Γ} {t} x xs := atType t && (x && xs)
+  sameDeferred a b := a && b
+
 /-- **The reading check**: each record that the step reads or writes has strictly ascending
-names, so the machine's read and overwrite are the field's. -/
+names, so construction, reading and overwriting use the carrier's field order. -/
 def canonical {t : Ty} (e : Step Γ t) : Bool :=
   cata (checkAlg (fun fs => decide (Field.Ascending Field.bytesKey fs)) (fun _ => true)) e
 
@@ -383,7 +490,8 @@ def canonical {t : Ty} (e : Step Γ t) : Bool :=
 normal form, and so is the type of each selection and of each list it extends
 (`Ty.certNormal`, `src/Effect4/Program/TyNormal.lean`). It reduces by evaluation. -/
 def normal {t : Ty} (e : Step Γ t) : Bool :=
-  cata (checkAlg (fun fs => (Ty.record fs).certNormal) (fun t => t.certNormal)) e
+  cata (checkAlg (fun fs => (Ty.record fs).certNormal) (fun t => t.certNormal)
+    (fun t => (Formation.check (Formation.sites false [] t)).isNone) (fun a b => Ty.sub a.normalize b.normalize)) e
 
 /-- The facts algebra: the normal forms that the checker's rules ask for, as propositions. A
 selection and a list it extends ask for their type's normal form, a tuple for its two items' and
@@ -419,6 +527,18 @@ def factsAlg : StepAlgebra (fun _ _ => Prop) where
   head xs := xs
   fold xs init body := xs ∧ init ∧ body
 
+  record {_Γ} {fs} fields := Ty.normalize (.record fs) = .record fs ∧
+    Formation.check (Formation.sites false [] (.record fs)) = Option.none ∧
+    FieldResults.All (fun {_} value => value) fs fields
+  nil {_Γ} {t} := Ty.normalize (.list t) = .list t ∧
+    Formation.check (Formation.sites false [] (.record (ascribeFields (.list t)))) = Option.none ∧
+    Ty.sub (Ty.normalize (.list .never)) (Ty.normalize (.list t)) = true
+  none {_Γ} {t} := Ty.normalize (.option t) = .option t ∧
+    Formation.check (Formation.sites false [] (.record (ascribeFields (.option t)))) = Option.none ∧
+    Ty.sub (Ty.normalize (.option .never)) (Ty.normalize (.option t)) = true
+  cons {_Γ} {t} x xs := t.normalize = t ∧ x ∧ xs
+  sameDeferred a b := a ∧ b
+
 /-- **The typing facts**: the normal forms that the checker needs for the step, as one
 proposition. The typing check (`normal`) proves them by evaluation; a caller proves them from
 premises where a type is a parameter. -/
@@ -430,7 +550,7 @@ end Effect4.Modules
 namespace Effect4.Modules.Step
 open Effect4.Program Effect4.Program.Authoring
 /-- Whether a step needs binder slots in its caller's scope. -/
-def bindsAlg : StepAlgebra (fun _ _ => Bool) where
+def featureAlg (atFold atComparison : Bool) : StepAlgebra (fun _ _ => Bool) where
   var _ := false
   bool _ := false
   nat _ := false
@@ -458,11 +578,26 @@ def bindsAlg : StepAlgebra (fun _ _ => Bool) where
   take xs n := xs || n
   drop xs n := xs || n
   head xs := xs
-  fold _ _ _ := true
+  fold xs init body := atFold || xs || init || body
+  record {_Γ} {fs} fields := (FieldResults.map (fun _ {_} value => value) fs fields).any id
+  nil := false
+  none := false
+  cons x xs := x || xs
+  sameDeferred a b := atComparison || a || b
+
+/-- Binder requirements are an interpretation of the common feature algebra. -/
+def bindsAlg : StepAlgebra (fun _ _ => Bool) := featureAlg true false
 
 def binds {Γ : List Ty} {t : Ty} (e : Step Γ t) : Bool := cata bindsAlg e
 
 /-- Scope alignment is required only for a step containing a fold. -/
 def ScopeFacts {Γ : List Ty} {t : Ty} (e : Step Γ t) (env : Effect4.Program.Authoring.Env)
     (length : Nat) : Prop := if e.binds then length = env.names.length else True
+
+/-- Whether a step invokes deferred identity comparison. -/
+def compares {Γ : List Ty} {t : Ty} (e : Step Γ t) : Bool := cata (featureAlg false true) e
+
+/-- A comparison requires a deferred identity interpretation, only where the step uses it. -/
+def IdentityFacts (L : Effect4.Schema.Model.Leaves) {Γ : List Ty} {t : Ty} (e : Step Γ t) : Prop :=
+  if e.compares then Nonempty (Effect4.Schema.DeferredIdentity L) else True
 end Effect4.Modules.Step
