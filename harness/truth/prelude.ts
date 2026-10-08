@@ -57,11 +57,10 @@ import * as Atoms from "./prelude-atoms.gen.ts"
  * clause, `src/Effect4/Machine/Term.lean`). `reduce` with an initial value has that order.
  *
  * Without a type argument both parameters are inferred: `B` from `init`, where a fresh literal
- * widens as Lean's literal rule does, and `A` from the list. A stated accumulator type is the
- * call's one type argument, `fold<B>(…)`. TypeScript infers no type argument once one is
- * written, so the element type then takes its default, `any`: the body of a fold with a stated
- * type is checked against `B` and not against its element. Lean's checker types the element
- * (`argTy`'s fold arm); this lane does not repeat that check for a stated type. */
+ * widens as Lean's literal rule does, and `A` from the list. The ordinary printer writes a
+ * stated accumulator as `fold<B>(…)`. TypeScript then uses the default `any` for `A`.
+ * At a joined input, the typed printer supplies both checked arguments, `fold<B, A>(…)`.
+ * Lean's checker types the element in either case (`argTy`'s fold arm). */
 export const fold = <B, A = any>(xs: ReadonlyArray<A>, init: B, step: (acc: B, x: A) => B): B =>
   xs.reduce(step, init)
 
@@ -229,6 +228,14 @@ export const Host = {
 }
 /** Type-only namespace for printed annotations; the runtime Host object is unchanged. */
 export namespace Host { export type Resource = HostResource }
+
+/** UNGUARD W1's fixture row (`Test.Program.BoundsControls.firstRow`). Its one type parameter
+ * is the row's `.var 0`. The reply comes from the actual request, on the pinned Effect runtime.
+ * The truth fixture supplies deterministic Lean replies beside its program, as pAcquireHandle does. */
+export const L = {
+  first: <A>(xs: ReadonlyArray<A>): Effect.Effect<Option.Option<A>> =>
+    Effect.sync(() => xs.length === 0 ? Option.none() : Option.some(xs[0]!))
+}
 
 // ---- the canonical package tables (host rows step 6, 2026-09-09) -----------------------
 //

@@ -1,0 +1,648 @@
+{"refusals":
+ [{"reason": "interruptScoped", "name": "interruptScoped", "checkerAdmits": true},
+  {"reason": "awaitAllFailFast", "name": "awaitAllFailFast", "checkerAdmits": true},
+  {"reason": "snapshotChildren", "name": "snapshotChildren", "checkerAdmits": true},
+  {"reason": "awaitNewChildren", "name": "awaitNewChildren", "checkerAdmits": true},
+  {"reason": "forkIn:child", "name": "forkInChild", "checkerAdmits": true},
+  {"reason": "forkScoped:child", "name": "forkScopedChild", "checkerAdmits": true}],
+ "negativeObservations":
+ [{"request":
+   "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+   "name": "rawFiberAwaitAllJoined",
+   "joined": true,
+   "initializer":
+   "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Fiber.awaitAll<Fiber.Fiber<number | string, boolean>>(a0)",
+   "family": "fibers",
+   "expectedDiagnostic": 4104,
+   "difference": "mutable Array versus checked ReadonlyArray",
+   "declaration":
+   "export const rawFiberAwaitAllJoined = (a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Fiber.awaitAll<Fiber.Fiber<number | string, boolean>>(a0)\n",
+   "companion": "rawFiberAwaitAllSingle",
+   "columns":
+   {"R": "never", "E": "never", "A": "ReadonlyArray<Exit.Exit<number | string, boolean>>"},
+   "body": "Fiber.awaitAll<Fiber.Fiber<number | string, boolean>>(a0)"},
+  {"request": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+   "name": "rawFiberAwaitAllSingle",
+   "joined": false,
+   "initializer": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.awaitAll(a0)",
+   "family": "fibers",
+   "expectedDiagnostic": 4104,
+   "difference": "mutable Array versus checked ReadonlyArray",
+   "declaration":
+   "export const rawFiberAwaitAllSingle = (a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.awaitAll(a0)\n",
+   "companion": "rawFiberAwaitAllJoined",
+   "columns": {"R": "never", "E": "never", "A": "ReadonlyArray<Exit.Exit<number, never>>"},
+   "body": "Fiber.awaitAll(a0)"},
+  {"request": "[{ readonly left: boolean; readonly x: number }]",
+   "name": "recordSetLiteralSingle",
+   "joined": false,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))",
+   "family": "tag-record",
+   "expectedDiagnostic": 2322,
+   "difference": "literal true versus checked boolean",
+   "declaration":
+   "export const recordSetLiteralSingle = (a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))\n",
+   "companion": "recordSetSingle",
+   "columns": {"R": "never", "E": "never", "A": "{ readonly left: boolean; readonly x: boolean }"},
+   "body": "Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))"}],
+ "format": "effect4-p2b-target-v1",
+ "fixtures":
+ [{"request": "[Option.Option<number> | Option.Option<string>]",
+   "name": "optionJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Option.Option<number> | Option.Option<string>) => optionCase<number | string, number, never, never, number | string, never, never>(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))",
+   "family": "options",
+   "declaration":
+   "export const optionJoined = (a0: Option.Option<number> | Option.Option<string>) => optionCase<number | string, number, never, never, number | string, never, never>(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))\n",
+   "companion": "optionSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body":
+   "optionCase<number | string, number, never, never, number | string, never, never>(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))"},
+  {"request": "[Option.Option<number>]",
+   "name": "optionSingle",
+   "joined": false,
+   "initializer":
+   "(a0: Option.Option<number>) => optionCase(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))",
+   "family": "options",
+   "declaration":
+   "export const optionSingle = (a0: Option.Option<number>) => optionCase(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))\n",
+   "companion": "optionJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body": "optionCase(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))"},
+  {"request": "[ReadonlyArray<number> | ReadonlyArray<string>, number | string]",
+   "name": "foldInferredJoined",
+   "joined": true,
+   "initializer":
+   "(a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.succeed(fold(a0, a1, (a2: number | string, a3: number | string) => a3))",
+   "family": "list-fold",
+   "declaration":
+   "export const foldInferredJoined = (a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.succeed(fold(a0, a1, (a2: number | string, a3: number | string) => a3))\n",
+   "companion": "foldInferredSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body": "Effect.succeed(fold(a0, a1, (a2: number | string, a3: number | string) => a3))"},
+  {"request": "[ReadonlyArray<number>, number]",
+   "name": "foldInferredSingle",
+   "joined": false,
+   "initializer":
+   "(a0: ReadonlyArray<number>, a1: number) => Effect.succeed(fold(a0, a1, (a2, a3) => a3))",
+   "family": "list-fold",
+   "declaration":
+   "export const foldInferredSingle = (a0: ReadonlyArray<number>, a1: number) => Effect.succeed(fold(a0, a1, (a2, a3) => a3))\n",
+   "companion": "foldInferredJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body": "Effect.succeed(fold(a0, a1, (a2, a3) => a3))"},
+  {"request": "[ReadonlyArray<number> | ReadonlyArray<string>, number | string]",
+   "name": "foldStoredJoined",
+   "joined": true,
+   "initializer":
+   "(a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.succeed(fold<number | string, number | string>(a0, a1, (a2: number | string, a3) => a3))",
+   "family": "list-fold",
+   "declaration":
+   "export const foldStoredJoined = (a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.succeed(fold<number | string, number | string>(a0, a1, (a2: number | string, a3) => a3))\n",
+   "companion": "foldStoredSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body":
+   "Effect.succeed(fold<number | string, number | string>(a0, a1, (a2: number | string, a3) => a3))"},
+  {"request": "[ReadonlyArray<number>, number]",
+   "name": "foldStoredSingle",
+   "joined": false,
+   "initializer":
+   "(a0: ReadonlyArray<number>, a1: number) => Effect.succeed(fold<number>(a0, a1, (a2, a3) => a3))",
+   "family": "list-fold",
+   "declaration":
+   "export const foldStoredSingle = (a0: ReadonlyArray<number>, a1: number) => Effect.succeed(fold<number>(a0, a1, (a2, a3) => a3))\n",
+   "companion": "foldStoredJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body": "Effect.succeed(fold<number>(a0, a1, (a2, a3) => a3))"},
+  {"request": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>]",
+   "name": "fiberJoinJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.join<number | string, boolean>(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberJoinJoined = (a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.join<number | string, boolean>(a0)\n",
+   "companion": "fiberJoinSingle",
+   "columns": {"R": "never", "E": "boolean", "A": "number | string"},
+   "body": "Fiber.join<number | string, boolean>(a0)"},
+  {"request": "[Fiber.Fiber<number, never>]",
+   "name": "fiberJoinSingle",
+   "joined": false,
+   "initializer": "(a0: Fiber.Fiber<number, never>) => Fiber.join(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberJoinSingle = (a0: Fiber.Fiber<number, never>) => Fiber.join(a0)\n",
+   "companion": "fiberJoinJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body": "Fiber.join(a0)"},
+  {"request": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>]",
+   "name": "fiberAwaitJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.await<number | string, boolean>(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberAwaitJoined = (a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.await<number | string, boolean>(a0)\n",
+   "companion": "fiberAwaitSingle",
+   "columns": {"R": "never", "E": "never", "A": "Exit.Exit<number | string, boolean>"},
+   "body": "Fiber.await<number | string, boolean>(a0)"},
+  {"request": "[Fiber.Fiber<number, never>]",
+   "name": "fiberAwaitSingle",
+   "joined": false,
+   "initializer": "(a0: Fiber.Fiber<number, never>) => Fiber.await(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberAwaitSingle = (a0: Fiber.Fiber<number, never>) => Fiber.await(a0)\n",
+   "companion": "fiberAwaitJoined",
+   "columns": {"R": "never", "E": "never", "A": "Exit.Exit<number, never>"},
+   "body": "Fiber.await(a0)"},
+  {"request": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>]",
+   "name": "fiberInterruptJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.interrupt<number | string, boolean>(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberInterruptJoined = (a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.interrupt<number | string, boolean>(a0)\n",
+   "companion": "fiberInterruptSingle",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Fiber.interrupt<number | string, boolean>(a0)"},
+  {"request": "[Fiber.Fiber<number, never>]",
+   "name": "fiberInterruptSingle",
+   "joined": false,
+   "initializer": "(a0: Fiber.Fiber<number, never>) => Fiber.interrupt(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberInterruptSingle = (a0: Fiber.Fiber<number, never>) => Fiber.interrupt(a0)\n",
+   "companion": "fiberInterruptJoined",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Fiber.interrupt(a0)"},
+  {"request": "[Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>, Scope.Scope]",
+   "name": "fiberRunInJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>, a1: Scope.Scope) => Effect.withFiber(() => {\n  Fiber.runIn<number | string, boolean>(a0, a1)\n  return Effect.void\n})",
+   "family": "fibers",
+   "declaration":
+   "export const fiberRunInJoined = (a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>, a1: Scope.Scope) => Effect.withFiber(() => {\n  Fiber.runIn<number | string, boolean>(a0, a1)\n  return Effect.void\n})\n",
+   "companion": "fiberRunInSingle",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body":
+   "Effect.withFiber(() => {\n  Fiber.runIn<number | string, boolean>(a0, a1)\n  return Effect.void\n})"},
+  {"request": "[Fiber.Fiber<number, never>, Scope.Scope]",
+   "name": "fiberRunInSingle",
+   "joined": false,
+   "initializer":
+   "(a0: Fiber.Fiber<number, never>, a1: Scope.Scope) => Effect.withFiber(() => {\n  Fiber.runIn(a0, a1)\n  return Effect.void\n})",
+   "family": "fibers",
+   "declaration":
+   "export const fiberRunInSingle = (a0: Fiber.Fiber<number, never>, a1: Scope.Scope) => Effect.withFiber(() => {\n  Fiber.runIn(a0, a1)\n  return Effect.void\n})\n",
+   "companion": "fiberRunInJoined",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Effect.withFiber(() => {\n  Fiber.runIn(a0, a1)\n  return Effect.void\n})"},
+  {"request":
+   "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+   "name": "fiberInterruptAllJoined",
+   "joined": true,
+   "initializer":
+   "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Fiber.interruptAll<ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>>(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberInterruptAllJoined = (a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Fiber.interruptAll<ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>>(a0)\n",
+   "companion": "fiberInterruptAllSingle",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body":
+   "Fiber.interruptAll<ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>>(a0)"},
+  {"request": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+   "name": "fiberInterruptAllSingle",
+   "joined": false,
+   "initializer": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.interruptAll(a0)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberInterruptAllSingle = (a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.interruptAll(a0)\n",
+   "companion": "fiberInterruptAllJoined",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Fiber.interruptAll(a0)"},
+  {"request":
+   "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+   "name": "fiberInterruptAllAsJoined",
+   "joined": true,
+   "initializer":
+   "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Fiber.interruptAllAs<ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>>(a0, 7)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberInterruptAllAsJoined = (a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Fiber.interruptAllAs<ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>>(a0, 7)\n",
+   "companion": "fiberInterruptAllAsSingle",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body":
+   "Fiber.interruptAllAs<ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>>(a0, 7)"},
+  {"request": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+   "name": "fiberInterruptAllAsSingle",
+   "joined": false,
+   "initializer": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.interruptAllAs(a0, 7)",
+   "family": "fibers",
+   "declaration":
+   "export const fiberInterruptAllAsSingle = (a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.interruptAllAs(a0, 7)\n",
+   "companion": "fiberInterruptAllAsJoined",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Fiber.interruptAllAs(a0, 7)"},
+  {"request":
+   "[ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>]",
+   "name": "fiberAwaitAllFirstJoined",
+   "joined": true,
+   "initializer":
+   "(a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Effect.flatMap(Fiber.awaitAll<Fiber.Fiber<number | string, boolean>>(a0), (a1) => Effect.succeed(get(a1, 0)))",
+   "family": "fibers",
+   "declaration":
+   "export const fiberAwaitAllFirstJoined = (a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Effect.flatMap(Fiber.awaitAll<Fiber.Fiber<number | string, boolean>>(a0), (a1) => Effect.succeed(get(a1, 0)))\n",
+   "companion": "fiberAwaitAllFirstSingle",
+   "columns":
+   {"R": "never", "E": "never", "A": "Option.Option<Exit.Exit<number | string, boolean>>"},
+   "body":
+   "Effect.flatMap(Fiber.awaitAll<Fiber.Fiber<number | string, boolean>>(a0), (a1) => Effect.succeed(get(a1, 0)))"},
+  {"request": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+   "name": "fiberAwaitAllFirstSingle",
+   "joined": false,
+   "initializer":
+   "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Effect.flatMap(Fiber.awaitAll(a0), (a1) => Effect.succeed(get(a1, 0)))",
+   "family": "fibers",
+   "declaration":
+   "export const fiberAwaitAllFirstSingle = (a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Effect.flatMap(Fiber.awaitAll(a0), (a1) => Effect.succeed(get(a1, 0)))\n",
+   "companion": "fiberAwaitAllFirstJoined",
+   "columns": {"R": "never", "E": "never", "A": "Option.Option<Exit.Exit<number, never>>"},
+   "body": "Effect.flatMap(Fiber.awaitAll(a0), (a1) => Effect.succeed(get(a1, 0)))"},
+  {"request": "[number | string]",
+   "name": "forkChildJoined",
+   "joined": true,
+   "initializer":
+   "(a0: number | string) => Effect.forkChild<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkChildJoined = (a0: number | string) => Effect.forkChild<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkChildSingle",
+   "columns": {"R": "never", "E": "never", "A": "Fiber.Fiber<number | string, never>"},
+   "body":
+   "Effect.forkChild<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number]",
+   "name": "forkChildSingle",
+   "joined": false,
+   "initializer":
+   "(a0: number) => Effect.forkChild(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkChildSingle = (a0: number) => Effect.forkChild(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkChildJoined",
+   "columns": {"R": "never", "E": "never", "A": "Fiber.Fiber<number, never>"},
+   "body":
+   "Effect.forkChild(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number | string]",
+   "name": "forkDetachJoined",
+   "joined": true,
+   "initializer":
+   "(a0: number | string) => Effect.forkDetach<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkDetachJoined = (a0: number | string) => Effect.forkDetach<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkDetachSingle",
+   "columns": {"R": "never", "E": "never", "A": "Fiber.Fiber<number | string, never>"},
+   "body":
+   "Effect.forkDetach<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number]",
+   "name": "forkDetachSingle",
+   "joined": false,
+   "initializer":
+   "(a0: number) => Effect.forkDetach(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkDetachSingle = (a0: number) => Effect.forkDetach(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkDetachJoined",
+   "columns": {"R": "never", "E": "never", "A": "Fiber.Fiber<number, never>"},
+   "body":
+   "Effect.forkDetach(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number | string]",
+   "name": "forkScopedJoined",
+   "joined": true,
+   "initializer":
+   "(a0: number | string) => Effect.forkScoped<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkScopedJoined = (a0: number | string) => Effect.forkScoped<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkScopedSingle",
+   "columns": {"R": "Scope.Scope", "E": "never", "A": "Fiber.Fiber<number | string, never>"},
+   "body":
+   "Effect.forkScoped<Effect.Effect<number | string, never, never>>(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number]",
+   "name": "forkScopedSingle",
+   "joined": false,
+   "initializer":
+   "(a0: number) => Effect.forkScoped(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkScopedSingle = (a0: number) => Effect.forkScoped(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkScopedJoined",
+   "columns": {"R": "Scope.Scope", "E": "never", "A": "Fiber.Fiber<number, never>"},
+   "body":
+   "Effect.forkScoped(Effect.succeed(a0), { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number | string, Scope.Scope]",
+   "name": "forkInJoined",
+   "joined": true,
+   "initializer":
+   "(a0: number | string, a1: Scope.Scope) => Effect.forkIn<number | string, never, never>(Effect.succeed(a0), a1, { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkInJoined = (a0: number | string, a1: Scope.Scope) => Effect.forkIn<number | string, never, never>(Effect.succeed(a0), a1, { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkInSingle",
+   "columns": {"R": "never", "E": "never", "A": "Fiber.Fiber<number | string, never>"},
+   "body":
+   "Effect.forkIn<number | string, never, never>(Effect.succeed(a0), a1, { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[number, Scope.Scope]",
+   "name": "forkInSingle",
+   "joined": false,
+   "initializer":
+   "(a0: number, a1: Scope.Scope) => Effect.forkIn(Effect.succeed(a0), a1, { startImmediately: true, uninterruptible: \"inherit\" })",
+   "family": "fibers",
+   "declaration":
+   "export const forkInSingle = (a0: number, a1: Scope.Scope) => Effect.forkIn(Effect.succeed(a0), a1, { startImmediately: true, uninterruptible: \"inherit\" })\n",
+   "companion": "forkInJoined",
+   "columns": {"R": "never", "E": "never", "A": "Fiber.Fiber<number, never>"},
+   "body":
+   "Effect.forkIn(Effect.succeed(a0), a1, { startImmediately: true, uninterruptible: \"inherit\" })"},
+  {"request": "[Scope.Scope, Exit.Exit<number, never> | Exit.Exit<string, boolean>]",
+   "name": "scopeCloseJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Scope.Scope, a1: Exit.Exit<number, never> | Exit.Exit<string, boolean>) => Scope.close<number | string, boolean>(a0, a1)",
+   "family": "exit-scope",
+   "declaration":
+   "export const scopeCloseJoined = (a0: Scope.Scope, a1: Exit.Exit<number, never> | Exit.Exit<string, boolean>) => Scope.close<number | string, boolean>(a0, a1)\n",
+   "companion": "scopeCloseSingle",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Scope.close<number | string, boolean>(a0, a1)"},
+  {"request": "[Scope.Scope, Exit.Exit<number, never>]",
+   "name": "scopeCloseSingle",
+   "joined": false,
+   "initializer": "(a0: Scope.Scope, a1: Exit.Exit<number, never>) => Scope.close(a0, a1)",
+   "family": "exit-scope",
+   "declaration":
+   "export const scopeCloseSingle = (a0: Scope.Scope, a1: Exit.Exit<number, never>) => Scope.close(a0, a1)\n",
+   "companion": "scopeCloseJoined",
+   "columns": {"R": "never", "E": "never", "A": "void"},
+   "body": "Scope.close(a0, a1)"},
+  {"request": "[number | string]",
+   "name": "scopedJoined",
+   "joined": true,
+   "initializer":
+   "(a0: number | string) => Effect.scoped<number | string, never, Scope.Scope>(Effect.flatMap(Effect.service(Scope.Scope), (a1) => Effect.succeed(a0)))",
+   "family": "exit-scope",
+   "declaration":
+   "export const scopedJoined = (a0: number | string) => Effect.scoped<number | string, never, Scope.Scope>(Effect.flatMap(Effect.service(Scope.Scope), (a1) => Effect.succeed(a0)))\n",
+   "companion": "scopedSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body":
+   "Effect.scoped<number | string, never, Scope.Scope>(Effect.flatMap(Effect.service(Scope.Scope), (a1) => Effect.succeed(a0)))"},
+  {"request": "[number]",
+   "name": "scopedSingle",
+   "joined": false,
+   "initializer":
+   "(a0: number) => Effect.scoped(Effect.flatMap(Effect.service(Scope.Scope), (a1) => Effect.succeed(a0)))",
+   "family": "exit-scope",
+   "declaration":
+   "export const scopedSingle = (a0: number) => Effect.scoped(Effect.flatMap(Effect.service(Scope.Scope), (a1) => Effect.succeed(a0)))\n",
+   "companion": "scopedJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body":
+   "Effect.scoped(Effect.flatMap(Effect.service(Scope.Scope), (a1) => Effect.succeed(a0)))"},
+  {"request": "[number | string]",
+   "name": "acquireReleaseJoined",
+   "joined": true,
+   "initializer":
+   "(a0: number | string) => Effect.acquireRelease<number | string, never, never, never>(Effect.succeed(a0), (a1, a2) => Effect.succeed(undefined))",
+   "family": "exit-scope",
+   "declaration":
+   "export const acquireReleaseJoined = (a0: number | string) => Effect.acquireRelease<number | string, never, never, never>(Effect.succeed(a0), (a1, a2) => Effect.succeed(undefined))\n",
+   "companion": "acquireReleaseSingle",
+   "columns": {"R": "Scope.Scope", "E": "never", "A": "number | string"},
+   "body":
+   "Effect.acquireRelease<number | string, never, never, never>(Effect.succeed(a0), (a1, a2) => Effect.succeed(undefined))"},
+  {"request": "[number]",
+   "name": "acquireReleaseSingle",
+   "joined": false,
+   "initializer":
+   "(a0: number) => Effect.acquireRelease(Effect.succeed(a0), (a1, a2) => Effect.succeed(undefined))",
+   "family": "exit-scope",
+   "declaration":
+   "export const acquireReleaseSingle = (a0: number) => Effect.acquireRelease(Effect.succeed(a0), (a1, a2) => Effect.succeed(undefined))\n",
+   "companion": "acquireReleaseJoined",
+   "columns": {"R": "Scope.Scope", "E": "never", "A": "number"},
+   "body": "Effect.acquireRelease(Effect.succeed(a0), (a1, a2) => Effect.succeed(undefined))"},
+  {"request": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+   "name": "causeIsFailJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsFail<unknown, number | string>(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeIsFailJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsFail<unknown, number | string>(a0))\n",
+   "companion": "causeIsFailSingle",
+   "columns": {"R": "never", "E": "never", "A": "boolean"},
+   "body": "Effect.succeed(causeIsFail<unknown, number | string>(a0))"},
+  {"request": "[Cause.Cause<number>]",
+   "name": "causeIsFailSingle",
+   "joined": false,
+   "initializer": "(a0: Cause.Cause<number>) => Effect.succeed(causeIsFail(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeIsFailSingle = (a0: Cause.Cause<number>) => Effect.succeed(causeIsFail(a0))\n",
+   "companion": "causeIsFailJoined",
+   "columns": {"R": "never", "E": "never", "A": "boolean"},
+   "body": "Effect.succeed(causeIsFail(a0))"},
+  {"request": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+   "name": "causeIsDieJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsDie<unknown, number | string>(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeIsDieJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsDie<unknown, number | string>(a0))\n",
+   "companion": "causeIsDieSingle",
+   "columns": {"R": "never", "E": "never", "A": "boolean"},
+   "body": "Effect.succeed(causeIsDie<unknown, number | string>(a0))"},
+  {"request": "[Cause.Cause<number>]",
+   "name": "causeIsDieSingle",
+   "joined": false,
+   "initializer": "(a0: Cause.Cause<number>) => Effect.succeed(causeIsDie(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeIsDieSingle = (a0: Cause.Cause<number>) => Effect.succeed(causeIsDie(a0))\n",
+   "companion": "causeIsDieJoined",
+   "columns": {"R": "never", "E": "never", "A": "boolean"},
+   "body": "Effect.succeed(causeIsDie(a0))"},
+  {"request": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+   "name": "causeIsInterruptJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsInterrupt<unknown, number | string>(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeIsInterruptJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsInterrupt<unknown, number | string>(a0))\n",
+   "companion": "causeIsInterruptSingle",
+   "columns": {"R": "never", "E": "never", "A": "boolean"},
+   "body": "Effect.succeed(causeIsInterrupt<unknown, number | string>(a0))"},
+  {"request": "[Cause.Cause<number>]",
+   "name": "causeIsInterruptSingle",
+   "joined": false,
+   "initializer": "(a0: Cause.Cause<number>) => Effect.succeed(causeIsInterrupt(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeIsInterruptSingle = (a0: Cause.Cause<number>) => Effect.succeed(causeIsInterrupt(a0))\n",
+   "companion": "causeIsInterruptJoined",
+   "columns": {"R": "never", "E": "never", "A": "boolean"},
+   "body": "Effect.succeed(causeIsInterrupt(a0))"},
+  {"request": "[Exit.Exit<void, string> | Cause.Cause<number>]",
+   "name": "causeErrorJoined",
+   "joined": true,
+   "initializer":
+   "(a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeError<unknown, number | string>(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeErrorJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeError<unknown, number | string>(a0))\n",
+   "companion": "causeErrorSingle",
+   "columns": {"R": "never", "E": "never", "A": "Option.Option<number | string>"},
+   "body": "Effect.succeed(causeError<unknown, number | string>(a0))"},
+  {"request": "[Cause.Cause<number>]",
+   "name": "causeErrorSingle",
+   "joined": false,
+   "initializer": "(a0: Cause.Cause<number>) => Effect.succeed(causeError(a0))",
+   "family": "cause",
+   "declaration":
+   "export const causeErrorSingle = (a0: Cause.Cause<number>) => Effect.succeed(causeError(a0))\n",
+   "companion": "causeErrorJoined",
+   "columns": {"R": "never", "E": "never", "A": "Option.Option<number>"},
+   "body": "Effect.succeed(causeError(a0))"},
+  {"request": "[readonly [\"hit\", number] | readonly [\"miss\", string]]",
+   "name": "tagJoined",
+   "joined": true,
+   "initializer":
+   "(a0: readonly [\"hit\", number] | readonly [\"miss\", string]) => caseTag<readonly [\"hit\", number] | readonly [\"miss\", string], \"hit\", number, never, never, string, never, never>(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))",
+   "family": "tag-record",
+   "declaration":
+   "export const tagJoined = (a0: readonly [\"hit\", number] | readonly [\"miss\", string]) => caseTag<readonly [\"hit\", number] | readonly [\"miss\", string], \"hit\", number, never, never, string, never, never>(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))\n",
+   "companion": "tagSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body":
+   "caseTag<readonly [\"hit\", number] | readonly [\"miss\", string], \"hit\", number, never, never, string, never, never>(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))"},
+  {"request": "[readonly [\"hit\", number]]",
+   "name": "tagSingle",
+   "joined": false,
+   "initializer":
+   "(a0: readonly [\"hit\", number]) => caseTag(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))",
+   "family": "tag-record",
+   "declaration":
+   "export const tagSingle = (a0: readonly [\"hit\", number]) => caseTag(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))\n",
+   "companion": "tagJoined",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body": "caseTag(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))"},
+  {"request":
+   "[{ readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }]",
+   "name": "recordTagJoined",
+   "joined": true,
+   "initializer":
+   "(a0: { readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }) => caseTagR<{ readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }, \"hit-tag\", number, never, never, string, never, never>(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordTagJoined = (a0: { readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }) => caseTagR<{ readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }, \"hit-tag\", number, never, never, string, never, never>(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))\n",
+   "companion": "recordTagSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body":
+   "caseTagR<{ readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }, \"hit-tag\", number, never, never, string, never, never>(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))"},
+  {"request": "[{ readonly _tag: \"hit-tag\"; readonly x: number }]",
+   "name": "recordTagSingle",
+   "joined": false,
+   "initializer":
+   "(a0: { readonly _tag: \"hit-tag\"; readonly x: number }) => caseTagR(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordTagSingle = (a0: { readonly _tag: \"hit-tag\"; readonly x: number }) => caseTagR(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))\n",
+   "companion": "recordTagJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body":
+   "caseTagR(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))"},
+  {"request":
+   "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }]",
+   "name": "recordRequiredJoined",
+   "joined": true,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }) => Effect.succeed(recordRequired<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordRequiredJoined = (a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }) => Effect.succeed(recordRequired<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0))\n",
+   "companion": "recordRequiredSingle",
+   "columns": {"R": "never", "E": "never", "A": "number | string"},
+   "body":
+   "Effect.succeed(recordRequired<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0))"},
+  {"request": "[{ readonly left: boolean; readonly x: number }]",
+   "name": "recordRequiredSingle",
+   "joined": false,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordRequired<\"x\">(\"x\")(a0))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordRequiredSingle = (a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordRequired<\"x\">(\"x\")(a0))\n",
+   "companion": "recordRequiredJoined",
+   "columns": {"R": "never", "E": "never", "A": "number"},
+   "body": "Effect.succeed(recordRequired<\"x\">(\"x\")(a0))"},
+  {"request":
+   "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }]",
+   "name": "recordOptionalJoined",
+   "joined": true,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }) => Effect.succeed(recordOptional<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordOptionalJoined = (a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }) => Effect.succeed(recordOptional<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0))\n",
+   "companion": "recordOptionalSingle",
+   "columns": {"R": "never", "E": "never", "A": "Option.Option<number> | Option.Option<string>"},
+   "body":
+   "Effect.succeed(recordOptional<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0))"},
+  {"request": "[{ readonly left: boolean; readonly x: number }]",
+   "name": "recordOptionalSingle",
+   "joined": false,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordOptional<\"x\">(\"x\")(a0))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordOptionalSingle = (a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordOptional<\"x\">(\"x\")(a0))\n",
+   "companion": "recordOptionalJoined",
+   "columns": {"R": "never", "E": "never", "A": "Option.Option<number>"},
+   "body": "Effect.succeed(recordOptional<\"x\">(\"x\")(a0))"},
+  {"request":
+   "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }, boolean]",
+   "name": "recordSetJoined",
+   "joined": true,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }, a1: boolean) => Effect.succeed(recordSet<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0)<boolean>(a1))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordSetJoined = (a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }, a1: boolean) => Effect.succeed(recordSet<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0)<boolean>(a1))\n",
+   "companion": "recordSetSingle",
+   "columns":
+   {"R": "never",
+    "E": "never",
+    "A":
+    "{ readonly left: boolean; readonly x: boolean } | { readonly right: boolean; readonly x: boolean }"},
+   "body":
+   "Effect.succeed(recordSet<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }>(a0)<boolean>(a1))"},
+  {"request": "[{ readonly left: boolean; readonly x: number }, boolean]",
+   "name": "recordSetSingle",
+   "joined": false,
+   "initializer":
+   "(a0: { readonly left: boolean; readonly x: number }, a1: boolean) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(a1))",
+   "family": "tag-record",
+   "declaration":
+   "export const recordSetSingle = (a0: { readonly left: boolean; readonly x: number }, a1: boolean) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(a1))\n",
+   "companion": "recordSetJoined",
+   "columns": {"R": "never", "E": "never", "A": "{ readonly left: boolean; readonly x: boolean }"},
+   "body": "Effect.succeed(recordSet<\"x\">(\"x\")(a0)(a1))"}],
+ "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"}

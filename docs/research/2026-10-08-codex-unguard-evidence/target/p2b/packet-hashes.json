@@ -1,0 +1,21 @@
+{
+  "record-controls.json": "b42e84f2dfc25da2567091413a763d364bc957571b01c7f02c20a3edbace032c",
+  "receipt.md": "093b1aa85dcf677c22d91b1aacd44f8dfc5b554e2262d94916b1c454aa264d12",
+  "old-alias-red.json": "39446301ea0151b126ba783495136b0b68b88f2fc084c553f68441cb9f7658a8",
+  "source-hashes.json": "a647baf0fc8e0a1955f9d2c7c3e259f2899df7962a1cf49efa06b47d81cd0054",
+  "printed.ts": "ac985f254e05828f8fd733b255c805cdd188e562e03202a38ceef0ef0b028df7",
+  "check-metadata-boundary.py": "e5da1ebc87c90caac8c408b1b599fd88bc1f8367706524d450c57d8bb0bd0d6b",
+  "retained-negative-observations.json": "dd21200eb4f038920c3f9a81d982fca24feedc6fdf45c38cda652ea611bacd73",
+  "commands.json": "f49976727bc54f704ed7880649708cc594f7e8a97ad3e9863afb607bebafba9f",
+  "missing-record-property.ts": "060ed8b2050ff0d7aa629bb95377b37a72163625cdc545630e9cd6fa45120f16",
+  "optional-record-controls.ts": "7d86b3f2bc54a63a888d2cb3288f9139d3a1aa121e34dcf3205d49e40f181e87",
+  "versions-config.json": "f7c40833b9863758e0265d1978991f66a229107a05876aa059033c07b321f097",
+  "missing-member-controls.json": "26ab4a2f53dda82291466c956d7f97ac2db30ec6776f4fc6ee12e205bded27f1",
+  "p2b-manifest.json": "dde1de264d129bd2563a1a5209dea6f5d5320cc79300c8e7ad674918eaccecb6",
+  "records-fixed.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+  "optional-record-never.ts": "5b99e91fa03d584b368e072d4cbef9ce3d010e00dbb37c7fb2d978e10aecaff4",
+  "target-results.json": "a38956aa994a3330824a4d22fdca1cade5da0aac71302c349582f5cfa31a2739",
+  "checker-api-missing.ts": "dd540f6f1d93ed0fb9fad4ffd96f30d6c1ffef17656756e39bb0defcc97ae40b",
+  "records-original.ts": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4",
+  "metadata-control.json": "ebeb417088b39be1eb85bdf0e9d250d1bf3cfa60e2bbcb7ba5b3958b3a157100"
+}

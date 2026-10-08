@@ -27,9 +27,9 @@ holds at its answer. These are the fixtures, on the example of `Test/Program/Ske
 * **The first consumer (tested): a term of two members at an eliminator.** A term has no
   address. Its type is `termTy` at the environment of its node. Under `length` the term is a
   list of numbers or a list of strings, and the function answers both members.
-* **The same shape, refused (tested).** With two fiber types under a join the checker refuses
-  the program as `notFiber`. The focus at the refused node has no type. The environment there
-  still answers, and so do the term's two members: what a printer of type arguments reads.
+* **The same shape, admitted (tested).** With two fiber types under a join the checker answers
+  the union of their answers. The focus retains the input members and that joined answer.
+  A union containing a number still refuses as `notFiber`, and that node has no focus.
 * **Tested: the three shapes of environment.** A statement and a loop's body read the loop flag.
   A layer's body is typed closed, under an environment that is not empty.
 * **Red (tested): no address of a program**, and an address of a statement: the focus is none,
@@ -172,19 +172,32 @@ def twoFibers : NativeEff :=
 /-- `f = twoFibers; join f`: the same shape, with a join over a term of two members. -/
 def joinOf : NativeEff := .bind twoFibers (.awaitFiber (.var 0) .joinEffect)
 
--- red (tested): the checker refuses the program at the join, as no fiber
-#guard refusedAt (Checker.check sig [] [] joinOf) = some ([1], "notFiber")
--- red (tested): the focus at the refused node has no type
-#guard (focusAt sig [] joinOf [1]).isNone
--- green (tested): the environment at the refused node answers, and the term has its two
+-- green (tested): both fiber members contribute to the answer
+#guard Checker.check sig [] [] joinOf = .ok ⟨.union .nat .string, .never, Requirement.empty⟩
+-- green (tested): the focus retains the source environment and joined answer
+#guard ((focusAt sig [] joinOf [1]).map fun f => (f.env, f.ty)) =
+  some ([.union (.fiberOf .nat .never) (.fiberOf .string .never)],
+    ⟨.union .nat .string, .never, Requirement.empty⟩)
+-- green (tested): the environment at the admitted node answers, and the term has its two
 -- members there: what a printer of the join's type arguments reads
 #guard (Node.eff joinOf).envAt sig (.env []) [1] =
   some (.env [.union (.fiberOf .nat .never) (.fiberOf .string .never)])
 #guard (termTyAt joinOf [1] (.var 0)).map Ty.members =
   some [.fiberOf .nat .never, .fiberOf .string .never]
--- tested: the sibling before the refused node keeps its focus
+-- tested: the preceding sibling keeps its focus
 #guard ((focusAt sig [] joinOf [0]).map fun f => (f.env, f.ty.answer.members)) =
   some ([], [.fiberOf .nat .never, .fiberOf .string .never])
+
+/-- One retained member is a number, outside the fiber rule. -/
+def mixedJoin : NativeEff := .bind
+  (.select (.lit (.bool true)) .bool
+    (.withFiber (.fork (.succeed (.lit (.nat 1))) forkOptions))
+    (.succeed (.lit (.nat 2))))
+  (.awaitFiber (.var 0) .joinEffect)
+
+-- red (tested): admitting several fibers does not admit a non-fiber member
+#guard refusedAt (Checker.check sig [] [] mixedJoin) = some ([1], "notFiber")
+#guard (focusAt sig [] mixedJoin [1]).isNone
 
 /-! ## The three shapes of environment -/
 

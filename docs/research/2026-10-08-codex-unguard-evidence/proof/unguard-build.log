@@ -1,0 +1,9 @@
+✔ [479/484] Built Effect4.Codegen.PrintTyped (523ms)
+✔ [480/484] Built Effect4.Codegen.PrintTyped:c.o (450ms)
+✔ [481/484] Built Effect4 (1.3s)
+✔ [483/699] Built Effect4:shared (254ms)
+✔ [697/832] Built Test.Program.BoundsControls (2.6s)
+✔ [837/839] Built Test.Program.TypedContract (3.0s)
+✔ [838/839] Built Effect4.Laws.Codegen.PrintTyped (34s)
+✔ [839/839] Built Test.Codegen.PrintTyped (4.7s)
+Build completed successfully (839 jobs).

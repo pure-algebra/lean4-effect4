@@ -1,0 +1,4 @@
+COMMAND scratch/lean-slot.sh lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+wrote 77 programs to harness/truth/corpus.json

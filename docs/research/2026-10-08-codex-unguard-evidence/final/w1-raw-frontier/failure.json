@@ -1,0 +1,237 @@
+{
+  "scope": "New W1 fixtures at the unchanged raw template-reply registration boundary; not a claimed core regression.",
+  "programs": [
+    {
+      "wellTyped": true,
+      "type": {
+        "requiresEmpty": true,
+        "requires": [],
+        "error": "never",
+        "answer": "Option.Option<number | string>"
+      },
+      "straight": false,
+      "scenario": null,
+      "runSync": {
+        "sync": false,
+        "exitKind": "die",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "die": "asyncFiber"
+              }
+            ]
+          }
+        }
+      },
+      "run": {
+        "schedule": [
+          "started 0",
+          "parked 0"
+        ],
+        "outcome": "frontier",
+        "internal": [],
+        "frames": 2,
+        "fibers": [
+          {
+            "parkedToken": 0,
+            "id": 0,
+            "exited": false,
+            "exit": null
+          }
+        ],
+        "fiberCount": 1,
+        "exitKind": null,
+        "exit": null,
+        "events": [
+          "started 0",
+          "parkedOn 0 token=0"
+        ]
+      },
+      "name": "pJoinedFirstNumber",
+      "exprRefusal": null,
+      "expr": "Effect.flatMap(Effect.succeed(ite(true, cons(1, nil()), strings(\"negative\"))), (a0) => L.first<number | string>(a0))",
+      "declInferred": "export const main = Effect.flatMap(Effect.succeed(ite(true, cons(1, nil()), strings(\"negative\"))), (a0) => L.first<number | string>(a0))\n",
+      "decl": "export const main: Effect.Effect<Option.Option<number | string>, never, never> = Effect.flatMap(Effect.succeed(ite(true, cons(1, nil()), strings(\"negative\"))), (a0) => L.first<number | string>(a0))\n"
+    },
+    {
+      "wellTyped": true,
+      "type": {
+        "requiresEmpty": true,
+        "requires": [],
+        "error": "never",
+        "answer": "Option.Option<number | string>"
+      },
+      "straight": false,
+      "scenario": null,
+      "runSync": {
+        "sync": false,
+        "exitKind": "die",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "die": "asyncFiber"
+              }
+            ]
+          }
+        }
+      },
+      "run": {
+        "schedule": [
+          "started 0",
+          "parked 0"
+        ],
+        "outcome": "frontier",
+        "internal": [],
+        "frames": 2,
+        "fibers": [
+          {
+            "parkedToken": 0,
+            "id": 0,
+            "exited": false,
+            "exit": null
+          }
+        ],
+        "fiberCount": 1,
+        "exitKind": null,
+        "exit": null,
+        "events": [
+          "started 0",
+          "parkedOn 0 token=0"
+        ]
+      },
+      "name": "pJoinedFirstString",
+      "exprRefusal": null,
+      "expr": "Effect.flatMap(Effect.succeed(ite(false, cons(1, nil()), strings(\"negative\"))), (a0) => L.first<number | string>(a0))",
+      "declInferred": "export const main = Effect.flatMap(Effect.succeed(ite(false, cons(1, nil()), strings(\"negative\"))), (a0) => L.first<number | string>(a0))\n",
+      "decl": "export const main: Effect.Effect<Option.Option<number | string>, never, never> = Effect.flatMap(Effect.succeed(ite(false, cons(1, nil()), strings(\"negative\"))), (a0) => L.first<number | string>(a0))\n"
+    }
+  ],
+  "rows": [
+    {
+      "program": "pJoinedFirstNumber",
+      "leanExit": "parked (frontier, root parked)",
+      "hostExit": "success {\"some\":1}",
+      "entry": "runPromiseExit",
+      "exitAgree": false,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
+      "notes": [
+        "Lean parks, rc.112 settles",
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\""
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": {
+            "some": 1
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":{\"some\":1}}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:Sync"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": {
+            "some": 1
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":{\"some\":1}}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:Sync"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pJoinedFirstString",
+      "leanExit": "parked (frontier, root parked)",
+      "hostExit": "success {\"some\":\"negative\"}",
+      "entry": "runPromiseExit",
+      "exitAgree": false,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
+      "notes": [
+        "Lean parks, rc.112 settles",
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\""
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": {
+            "some": "negative"
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":{\"some\":\"negative\"}}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:Sync"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": {
+            "some": "negative"
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":{\"some\":\"negative\"}}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:Sync"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    }
+  ],
+  "corpus_sha256": "612fa1eb3d0cadbdd8c225f1aa66da3e9f29584fcd7998f449b81de1edf91240",
+  "result_sha256": "67206c8c222ff12074cd088adb7354c048a47f4e6002b26899ee8e66f41f1870"
+}

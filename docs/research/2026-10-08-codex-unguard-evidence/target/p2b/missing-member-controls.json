@@ -1,0 +1,2055 @@
+{
+  "mutants": [
+    {
+      "fixture": "optionJoined",
+      "companion": "optionSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const optionJoined = (a0: Option.Option<number> | Option.Option<string>) => optionCase<number, number, never, never, number | string, never, never>(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))\n\n",
+      "sourceHash": "fc7da29d11d0522f66f28e57cbb61b850a09d2aa75a6aab2c5f4d32a243d1993",
+      "changedSpan": {
+        "start": 711,
+        "end": 726,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 772,
+        "end": 774
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude.ts",
+        "start": 5563,
+        "end": 5876
+      },
+      "intendedCode": 2379,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2379,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+          "line": 4,
+          "column": 156,
+          "message": "Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string>' is not assignable to type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 772,
+          "end": 774,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+            "pos": 772,
+            "end": 774,
+            "code": 2379,
+            "category": 1,
+            "text": "Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                "pos": 772,
+                "end": 774,
+                "code": 2375,
+                "category": 1,
+                "text": "Type 'None<string>' is not assignable to type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                    "pos": 772,
+                    "end": 774,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'None<string>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                        "pos": 772,
+                        "end": 774,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "foldStoredJoined",
+      "companion": "foldStoredSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const foldStoredJoined = (a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.succeed(fold<number | string, number>(a0, a1, (a2: number | string, a3) => a3))\n\n",
+      "sourceHash": "75b7e8fc180b0148a3f3c5e604345f6d0448bbcfdb77c1fd9f66f818f7d21f0f",
+      "changedSpan": {
+        "start": 762,
+        "end": 777,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 770,
+        "end": 772
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude.ts",
+        "start": 4371,
+        "end": 4471
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+          "line": 4,
+          "column": 154,
+          "message": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'. Type 'readonly string[]' is not assignable to type 'readonly number[]'. Type 'string' is not assignable to type 'number'.",
+          "start": 770,
+          "end": 772,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+            "pos": 770,
+            "end": 772,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+                "pos": 770,
+                "end": 772,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'readonly string[]' is not assignable to type 'readonly number[]'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+                    "pos": 770,
+                    "end": 772,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'string' is not assignable to type 'number'."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "foldInferredJoined",
+      "companion": "foldInferredSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const foldInferredJoined = (a0: ReadonlyArray<number> | ReadonlyArray<string>, a1: number | string) => Effect.succeed(fold(a0, a1, (a2: number | string, a3: number) => a3))\n\n",
+      "sourceHash": "4ec82a2faec124ea54963eed32a7f407d4f2193050a647d4608f0c1750eab25a",
+      "changedSpan": {
+        "start": 781,
+        "end": 796,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 747,
+        "end": 749
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude.ts",
+        "start": 4371,
+        "end": 4471
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+          "line": 4,
+          "column": 131,
+          "message": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'. Type 'readonly string[]' is not assignable to type 'readonly number[]'. Type 'string' is not assignable to type 'number'.",
+          "start": 747,
+          "end": 749,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+            "pos": 747,
+            "end": 749,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+                "pos": 747,
+                "end": 749,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'readonly string[]' is not assignable to type 'readonly number[]'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+                    "pos": 747,
+                    "end": 749,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'string' is not assignable to type 'number'."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "fiberJoinJoined",
+      "companion": "fiberJoinSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const fiberJoinJoined = (a0: Fiber.Fiber<number, never> | Fiber.Fiber<string, boolean>) => Fiber.join<number, boolean>(a0)\n\n",
+      "sourceHash": "c4e234876cafad86fdc27699870f88a21e5c1d9db3ee05e557ee7018ee596174",
+      "changedSpan": {
+        "start": 726,
+        "end": 741,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 743,
+        "end": 745
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../Dev/lean4-effect4/ts/eff/node_modules/effect/dist/Fiber.d.ts",
+        "start": 8284,
+        "end": 8325
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+          "line": 4,
+          "column": 127,
+          "message": "Argument of type 'Fiber<string, boolean> | Fiber<number, never>' is not assignable to parameter of type 'Fiber<number, boolean>'. Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'. Type 'string' is not assignable to type 'number'.",
+          "start": 743,
+          "end": 745,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+            "pos": 743,
+            "end": 745,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'Fiber<string, boolean> | Fiber<number, never>' is not assignable to parameter of type 'Fiber<number, boolean>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+                "pos": 743,
+                "end": 745,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+                    "pos": 743,
+                    "end": 745,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'string' is not assignable to type 'number'."
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "fiberAwaitAllFirstJoined",
+      "companion": "fiberAwaitAllFirstSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const fiberAwaitAllFirstJoined = (a0: ReadonlyArray<Fiber.Fiber<number, never>> | ReadonlyArray<Fiber.Fiber<string, boolean>>) => Effect.flatMap(Fiber.awaitAll<Fiber.Fiber<number, boolean>>(a0), (a1) => Effect.succeed(get(a1, 0)))\n\n",
+      "sourceHash": "ccd977146ee2e4658ae1815a6a4295db4c5adc0fa2c2df439f3a055c45650fb3",
+      "changedSpan": {
+        "start": 796,
+        "end": 811,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 814,
+        "end": 816
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../Dev/lean4-effect4/ts/eff/node_modules/effect/dist/Fiber.d.ts",
+        "start": 7172,
+        "end": 7341
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+          "line": 4,
+          "column": 198,
+          "message": "Argument of type 'readonly Fiber<string, boolean>[] | readonly Fiber<number, never>[]' is not assignable to parameter of type 'Iterable<Fiber<number, boolean>>'. Type 'readonly Fiber<string, boolean>[]' is not assignable to type 'Iterable<Fiber<number, boolean>>'. The types returned by '[Symbol.iterator]().next(...)' are incompatible between these types. Type 'IteratorResult<Fiber<string, boolean>, undefined>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorYieldResult<Fiber<number, boolean>>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'. Type 'string' is not assignable to type 'number'.",
+          "start": 814,
+          "end": 816,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+            "pos": 814,
+            "end": 816,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'readonly Fiber<string, boolean>[] | readonly Fiber<number, never>[]' is not assignable to parameter of type 'Iterable<Fiber<number, boolean>>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                "pos": 814,
+                "end": 816,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'readonly Fiber<string, boolean>[]' is not assignable to type 'Iterable<Fiber<number, boolean>>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                    "pos": 814,
+                    "end": 816,
+                    "code": 2201,
+                    "category": 1,
+                    "text": "The types returned by '[Symbol.iterator]().next(...)' are incompatible between these types.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                        "pos": 814,
+                        "end": 816,
+                        "code": 2375,
+                        "category": 1,
+                        "text": "Type 'IteratorResult<Fiber<string, boolean>, undefined>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                            "pos": 814,
+                            "end": 816,
+                            "code": 2375,
+                            "category": 1,
+                            "text": "Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                            "messageChain": [
+                              {
+                                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                                "pos": 814,
+                                "end": 816,
+                                "code": 2375,
+                                "category": 1,
+                                "text": "Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorYieldResult<Fiber<number, boolean>>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                                "messageChain": [
+                                  {
+                                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                                    "pos": 814,
+                                    "end": 816,
+                                    "code": 2322,
+                                    "category": 1,
+                                    "text": "Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'.",
+                                    "messageChain": [
+                                      {
+                                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                                        "pos": 814,
+                                        "end": 816,
+                                        "code": 2322,
+                                        "category": 1,
+                                        "text": "Type 'string' is not assignable to type 'number'."
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "scopeCloseJoined",
+      "companion": "scopeCloseSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const scopeCloseJoined = (a0: Scope.Scope, a1: Exit.Exit<number, never> | Exit.Exit<string, boolean>) => Scope.close<number, boolean>(a0, a1)\n\n",
+      "sourceHash": "fe718d9ecf2a1f18a09bb7cfe5fef341a8b84afdc6f6b8794b139c8121b4dca1",
+      "changedSpan": {
+        "start": 741,
+        "end": 756,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 762,
+        "end": 764
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../Dev/lean4-effect4/ts/eff/node_modules/effect/dist/Scope.d.ts",
+        "start": 16788,
+        "end": 16841
+      },
+      "intendedCode": 2379,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2379,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+          "line": 4,
+          "column": 146,
+          "message": "Argument of type 'Exit<string, boolean> | Exit<number, never>' is not assignable to parameter of type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Failure<string, boolean>' is not assignable to type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Failure<string, boolean>' is not assignable to type 'Failure<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 762,
+          "end": 764,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+            "pos": 762,
+            "end": 764,
+            "code": 2379,
+            "category": 1,
+            "text": "Argument of type 'Exit<string, boolean> | Exit<number, never>' is not assignable to parameter of type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                "pos": 762,
+                "end": 764,
+                "code": 2375,
+                "category": 1,
+                "text": "Type 'Failure<string, boolean>' is not assignable to type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                    "pos": 762,
+                    "end": 764,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'Failure<string, boolean>' is not assignable to type 'Failure<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                        "pos": 762,
+                        "end": 764,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "causeIsFailJoined",
+      "companion": "causeIsFailSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const causeIsFailJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsFail<unknown, number>(a0))\n\n",
+      "sourceHash": "dc9057bb0ac91a8b6e171e86606247df657400a926a0dd3a580529267374c6f1",
+      "changedSpan": {
+        "start": 741,
+        "end": 756,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 749,
+        "end": 751
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude-atoms.gen.ts",
+        "start": 4663,
+        "end": 4758
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+          "line": 4,
+          "column": 133,
+          "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 749,
+          "end": 751,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+            "pos": 749,
+            "end": 751,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                "pos": 749,
+                "end": 751,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                    "pos": 749,
+                    "end": 751,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                        "pos": 749,
+                        "end": 751,
+                        "code": 2375,
+                        "category": 1,
+                        "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                            "pos": 749,
+                            "end": 751,
+                            "code": 2322,
+                            "category": 1,
+                            "text": "Type 'string' is not assignable to type 'number'."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "causeIsDieJoined",
+      "companion": "causeIsDieSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const causeIsDieJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsDie<unknown, number>(a0))\n\n",
+      "sourceHash": "afe02829685a7178dcca93a2fd86f66944b23ce61f8a70817f52dedcfa50fdec",
+      "changedSpan": {
+        "start": 739,
+        "end": 754,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 747,
+        "end": 749
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude-atoms.gen.ts",
+        "start": 5169,
+        "end": 5263
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+          "line": 4,
+          "column": 131,
+          "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 747,
+          "end": 749,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+            "pos": 747,
+            "end": 749,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                "pos": 747,
+                "end": 749,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                    "pos": 747,
+                    "end": 749,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                        "pos": 747,
+                        "end": 749,
+                        "code": 2375,
+                        "category": 1,
+                        "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                            "pos": 747,
+                            "end": 749,
+                            "code": 2322,
+                            "category": 1,
+                            "text": "Type 'string' is not assignable to type 'number'."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "causeIsInterruptJoined",
+      "companion": "causeIsInterruptSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const causeIsInterruptJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeIsInterrupt<unknown, number>(a0))\n\n",
+      "sourceHash": "1a792fd239338e3c9d0098246a770080f6b7fe578ff25a5f469761d5678b7d60",
+      "changedSpan": {
+        "start": 751,
+        "end": 766,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 759,
+        "end": 761
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude-atoms.gen.ts",
+        "start": 5368,
+        "end": 5468
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+          "line": 4,
+          "column": 143,
+          "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 759,
+          "end": 761,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+            "pos": 759,
+            "end": 761,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                "pos": 759,
+                "end": 761,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                    "pos": 759,
+                    "end": 761,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                        "pos": 759,
+                        "end": 761,
+                        "code": 2375,
+                        "category": 1,
+                        "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                            "pos": 759,
+                            "end": 761,
+                            "code": 2322,
+                            "category": 1,
+                            "text": "Type 'string' is not assignable to type 'number'."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "causeErrorJoined",
+      "companion": "causeErrorSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const causeErrorJoined = (a0: Exit.Exit<void, string> | Cause.Cause<number>) => Effect.succeed(causeError<unknown, number>(a0))\n\n",
+      "sourceHash": "9a34efb3e21c6852d3b5500b1837bf3ccc4ef941a739e56a6deccc54bc7da140",
+      "changedSpan": {
+        "start": 739,
+        "end": 754,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 747,
+        "end": 749
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude-atoms.gen.ts",
+        "start": 4965,
+        "end": 5076
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+          "line": 4,
+          "column": 131,
+          "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 747,
+          "end": 749,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+            "pos": 747,
+            "end": 749,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                "pos": 747,
+                "end": 749,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                    "pos": 747,
+                    "end": 749,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                        "pos": 747,
+                        "end": 749,
+                        "code": 2375,
+                        "category": 1,
+                        "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                            "pos": 747,
+                            "end": 749,
+                            "code": 2322,
+                            "category": 1,
+                            "text": "Type 'string' is not assignable to type 'number'."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "tagJoined",
+      "companion": "tagSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const tagJoined = (a0: readonly [\"hit\", number] | readonly [\"miss\", string]) => caseTag<readonly [\"hit\", number], \"hit\", number, never, never, string, never, never>(a0, \"hit\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(\"miss\"))\n\n",
+      "sourceHash": "43deb2c873157481c6cd248406e19608d66acd6250d54540015e1064e18a26be",
+      "changedSpan": {
+        "start": 712,
+        "end": 764,
+        "replacement": "readonly [\"hit\", number]"
+      },
+      "intendedSpan": {
+        "start": 789,
+        "end": 791
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude.ts",
+        "start": 6368,
+        "end": 6838
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+          "line": 4,
+          "column": 173,
+          "message": "Argument of type 'readonly [\"hit\", number] | readonly [\"miss\", string]' is not assignable to parameter of type 'readonly [\"hit\", number]'. Type 'readonly [\"miss\", string]' is not assignable to type 'readonly [\"hit\", number]'. Type at position 0 in source is not compatible with type at position 0 in target. Type '\"miss\"' is not assignable to type '\"hit\"'.",
+          "start": 789,
+          "end": 791,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+            "pos": 789,
+            "end": 791,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type 'readonly [\"hit\", number] | readonly [\"miss\", string]' is not assignable to parameter of type 'readonly [\"hit\", number]'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+                "pos": 789,
+                "end": 791,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'readonly [\"miss\", string]' is not assignable to type 'readonly [\"hit\", number]'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+                    "pos": 789,
+                    "end": 791,
+                    "code": 2626,
+                    "category": 1,
+                    "text": "Type at position 0 in source is not compatible with type at position 0 in target.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+                        "pos": 789,
+                        "end": 791,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type '\"miss\"' is not assignable to type '\"hit\"'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "recordTagJoined",
+      "companion": "recordTagSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const recordTagJoined = (a0: { readonly _tag: \"hit-tag\"; readonly x: number } | { readonly _tag: \"miss-tag\"; readonly x: string }) => caseTagR<{ readonly _tag: \"hit-tag\"; readonly x: number }, \"hit-tag\", number, never, never, string, never, never>(a0, \"hit-tag\", (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)), (a1) => Effect.succeed(recordRequired<\"x\">(\"x\")(a1)))\n\n",
+      "sourceHash": "b9655e20643a5aac5738fce3d6c71d1b85edc572f4092d3c3bd716b3d517d507",
+      "changedSpan": {
+        "start": 767,
+        "end": 867,
+        "replacement": "{ readonly _tag: \"hit-tag\"; readonly x: number }"
+      },
+      "intendedSpan": {
+        "start": 872,
+        "end": 874
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/records.ts",
+        "start": 2027,
+        "end": 2643
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+          "line": 4,
+          "column": 256,
+          "message": "Argument of type '{ readonly _tag: \"hit-tag\"; readonly x: number; } | { readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to parameter of type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'. Type '{ readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'. Types of property '_tag' are incompatible. Type '\"miss-tag\"' is not assignable to type '\"hit-tag\"'.",
+          "start": 872,
+          "end": 874,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+            "pos": 872,
+            "end": 874,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type '{ readonly _tag: \"hit-tag\"; readonly x: number; } | { readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to parameter of type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+                "pos": 872,
+                "end": 874,
+                "code": 2322,
+                "category": 1,
+                "text": "Type '{ readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+                    "pos": 872,
+                    "end": 874,
+                    "code": 2326,
+                    "category": 1,
+                    "text": "Types of property '_tag' are incompatible.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+                        "pos": 872,
+                        "end": 874,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type '\"miss-tag\"' is not assignable to type '\"hit-tag\"'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "recordRequiredJoined",
+      "companion": "recordRequiredSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const recordRequiredJoined = (a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }) => Effect.succeed(recordRequired<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number }>(a0))\n\n",
+      "sourceHash": "2b520ad2ca0c5e5a34ac20528088b43e8585e527aa5086c28c590b924bb6a9f2",
+      "changedSpan": {
+        "start": 799,
+        "end": 895,
+        "replacement": "{ readonly left: boolean; readonly x: number }"
+      },
+      "intendedSpan": {
+        "start": 847,
+        "end": 849
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/records.ts",
+        "start": 591,
+        "end": 665
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+          "line": 4,
+          "column": 231,
+          "message": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'. Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+          "start": 847,
+          "end": 849,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+            "pos": 847,
+            "end": 849,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+                "pos": 847,
+                "end": 849,
+                "code": 2741,
+                "category": 1,
+                "text": "Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+                "relatedInformation": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+                    "pos": 810,
+                    "end": 814,
+                    "code": 2728,
+                    "category": 3,
+                    "text": "'left' is declared here."
+                  }
+                ]
+              }
+            ],
+            "relatedInformation": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+                "pos": 810,
+                "end": 814,
+                "code": 2728,
+                "category": 3,
+                "text": "'left' is declared here."
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "recordOptionalJoined",
+      "companion": "recordOptionalSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const recordOptionalJoined = (a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }) => Effect.succeed(recordOptional<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number }>(a0))\n\n",
+      "sourceHash": "3252ff2fdbc2d1b84a25ec365487c5e1d637d56867f5a0fa9c667327556a471d",
+      "changedSpan": {
+        "start": 799,
+        "end": 895,
+        "replacement": "{ readonly left: boolean; readonly x: number }"
+      },
+      "intendedSpan": {
+        "start": 847,
+        "end": 849
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/records.ts",
+        "start": 992,
+        "end": 1200
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+          "line": 4,
+          "column": 231,
+          "message": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'. Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+          "start": 847,
+          "end": 849,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+            "pos": 847,
+            "end": 849,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+                "pos": 847,
+                "end": 849,
+                "code": 2741,
+                "category": 1,
+                "text": "Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+                "relatedInformation": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+                    "pos": 810,
+                    "end": 814,
+                    "code": 2728,
+                    "category": 3,
+                    "text": "'left' is declared here."
+                  }
+                ]
+              }
+            ],
+            "relatedInformation": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+                "pos": 810,
+                "end": 814,
+                "code": 2728,
+                "category": 3,
+                "text": "'left' is declared here."
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    },
+    {
+      "fixture": "recordSetJoined",
+      "companion": "recordSetSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const recordSetJoined = (a0: { readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }, a1: boolean) => Effect.succeed(recordSet<\"x\">(\"x\")<{ readonly left: boolean; readonly x: number }>(a0)<boolean>(a1))\n\n",
+      "sourceHash": "2cd3f73f4c9c73142cb6ea02f12580d5f67dbdb4b5b664ef3fcc4af4d26a065f",
+      "changedSpan": {
+        "start": 802,
+        "end": 898,
+        "replacement": "{ readonly left: boolean; readonly x: number }"
+      },
+      "intendedSpan": {
+        "start": 850,
+        "end": 852
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/records.ts",
+        "start": 1552,
+        "end": 1742
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2345,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+          "line": 4,
+          "column": 234,
+          "message": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'. Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+          "start": 850,
+          "end": 852,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+            "pos": 850,
+            "end": 852,
+            "code": 2345,
+            "category": 1,
+            "text": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+                "pos": 850,
+                "end": 852,
+                "code": 2741,
+                "category": 1,
+                "text": "Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+                "relatedInformation": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+                    "pos": 813,
+                    "end": 817,
+                    "code": 2728,
+                    "category": 3,
+                    "text": "'left' is declared here."
+                  }
+                ]
+              }
+            ],
+            "relatedInformation": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+                "pos": 813,
+                "end": 817,
+                "code": 2728,
+                "category": 3,
+                "text": "'left' is declared here."
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": true
+    }
+  ],
+  "positiveDiagnostics": [
+    {
+      "code": 4104,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q52.ts",
+      "line": 17,
+      "column": 14,
+      "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<string | number, boolean>[]'.",
+      "start": 900,
+      "end": 920,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q52.ts",
+        "pos": 900,
+        "end": 920,
+        "code": 4104,
+        "category": 1,
+        "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<string | number, boolean>[]'."
+      }
+    },
+    {
+      "code": 4104,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q53.ts",
+      "line": 17,
+      "column": 14,
+      "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'.",
+      "start": 889,
+      "end": 909,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q53.ts",
+        "pos": 889,
+        "end": 909,
+        "code": 4104,
+        "category": 1,
+        "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'."
+      }
+    },
+    {
+      "code": 2322,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+      "line": 17,
+      "column": 14,
+      "message": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'. Type '__Expected_A' is not assignable to type '{ readonly x: true; }'. Types of property 'x' are incompatible. Type 'boolean' is not assignable to type 'true'.",
+      "start": 897,
+      "end": 917,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+        "pos": 897,
+        "end": 917,
+        "code": 2322,
+        "category": 1,
+        "text": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+            "pos": 897,
+            "end": 917,
+            "code": 2322,
+            "category": 1,
+            "text": "Type '__Expected_A' is not assignable to type '{ readonly x: true; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+                "pos": 897,
+                "end": 917,
+                "code": 2326,
+                "category": 1,
+                "text": "Types of property 'x' are incompatible.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+                    "pos": 897,
+                    "end": 917,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'boolean' is not assignable to type 'true'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "redDiagnostics": [
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+      "line": 4,
+      "column": 131,
+      "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+      "start": 747,
+      "end": 749,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+        "pos": 747,
+        "end": 749,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+            "pos": 747,
+            "end": 749,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                "pos": 747,
+                "end": 749,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                    "pos": 747,
+                    "end": 749,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeErrorJoined.missing-member.ts",
+                        "pos": 747,
+                        "end": 749,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+      "line": 4,
+      "column": 131,
+      "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+      "start": 747,
+      "end": 749,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+        "pos": 747,
+        "end": 749,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+            "pos": 747,
+            "end": 749,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                "pos": 747,
+                "end": 749,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                    "pos": 747,
+                    "end": 749,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsDieJoined.missing-member.ts",
+                        "pos": 747,
+                        "end": 749,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+      "line": 4,
+      "column": 133,
+      "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+      "start": 749,
+      "end": 751,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+        "pos": 749,
+        "end": 751,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+            "pos": 749,
+            "end": 751,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                "pos": 749,
+                "end": 751,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                    "pos": 749,
+                    "end": 751,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsFailJoined.missing-member.ts",
+                        "pos": 749,
+                        "end": 751,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+      "line": 4,
+      "column": 143,
+      "message": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'. Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+      "start": 759,
+      "end": 761,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+        "pos": 759,
+        "end": 761,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'Cause<number> | Exit<void, string>' is not assignable to parameter of type 'Cause<number> | Exit<unknown, number>'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+            "pos": 759,
+            "end": 761,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Exit<unknown, number>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                "pos": 759,
+                "end": 761,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'Failure<void, string>' is not assignable to type 'Cause<number> | Failure<unknown, number>'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                    "pos": 759,
+                    "end": 761,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'Failure<void, string>' is not assignable to type 'Failure<unknown, number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/causeIsInterruptJoined.missing-member.ts",
+                        "pos": 759,
+                        "end": 761,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+      "line": 4,
+      "column": 198,
+      "message": "Argument of type 'readonly Fiber<string, boolean>[] | readonly Fiber<number, never>[]' is not assignable to parameter of type 'Iterable<Fiber<number, boolean>>'. Type 'readonly Fiber<string, boolean>[]' is not assignable to type 'Iterable<Fiber<number, boolean>>'. The types returned by '[Symbol.iterator]().next(...)' are incompatible between these types. Type 'IteratorResult<Fiber<string, boolean>, undefined>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorYieldResult<Fiber<number, boolean>>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'. Type 'string' is not assignable to type 'number'.",
+      "start": 814,
+      "end": 816,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+        "pos": 814,
+        "end": 816,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'readonly Fiber<string, boolean>[] | readonly Fiber<number, never>[]' is not assignable to parameter of type 'Iterable<Fiber<number, boolean>>'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+            "pos": 814,
+            "end": 816,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'readonly Fiber<string, boolean>[]' is not assignable to type 'Iterable<Fiber<number, boolean>>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                "pos": 814,
+                "end": 816,
+                "code": 2201,
+                "category": 1,
+                "text": "The types returned by '[Symbol.iterator]().next(...)' are incompatible between these types.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                    "pos": 814,
+                    "end": 816,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'IteratorResult<Fiber<string, boolean>, undefined>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                        "pos": 814,
+                        "end": 816,
+                        "code": 2375,
+                        "category": 1,
+                        "text": "Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorResult<Fiber<number, boolean>, any>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                            "pos": 814,
+                            "end": 816,
+                            "code": 2375,
+                            "category": 1,
+                            "text": "Type 'IteratorYieldResult<Fiber<string, boolean>>' is not assignable to type 'IteratorYieldResult<Fiber<number, boolean>>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                            "messageChain": [
+                              {
+                                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                                "pos": 814,
+                                "end": 816,
+                                "code": 2322,
+                                "category": 1,
+                                "text": "Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'.",
+                                "messageChain": [
+                                  {
+                                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberAwaitAllFirstJoined.missing-member.ts",
+                                    "pos": 814,
+                                    "end": 816,
+                                    "code": 2322,
+                                    "category": 1,
+                                    "text": "Type 'string' is not assignable to type 'number'."
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+      "line": 4,
+      "column": 127,
+      "message": "Argument of type 'Fiber<string, boolean> | Fiber<number, never>' is not assignable to parameter of type 'Fiber<number, boolean>'. Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'. Type 'string' is not assignable to type 'number'.",
+      "start": 743,
+      "end": 745,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+        "pos": 743,
+        "end": 745,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'Fiber<string, boolean> | Fiber<number, never>' is not assignable to parameter of type 'Fiber<number, boolean>'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+            "pos": 743,
+            "end": 745,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'Fiber<string, boolean>' is not assignable to type 'Fiber<number, boolean>'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/fiberJoinJoined.missing-member.ts",
+                "pos": 743,
+                "end": 745,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'string' is not assignable to type 'number'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+      "line": 4,
+      "column": 131,
+      "message": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'. Type 'readonly string[]' is not assignable to type 'readonly number[]'. Type 'string' is not assignable to type 'number'.",
+      "start": 747,
+      "end": 749,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+        "pos": 747,
+        "end": 749,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+            "pos": 747,
+            "end": 749,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'readonly string[]' is not assignable to type 'readonly number[]'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldInferredJoined.missing-member.ts",
+                "pos": 747,
+                "end": 749,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'string' is not assignable to type 'number'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+      "line": 4,
+      "column": 154,
+      "message": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'. Type 'readonly string[]' is not assignable to type 'readonly number[]'. Type 'string' is not assignable to type 'number'.",
+      "start": 770,
+      "end": 772,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+        "pos": 770,
+        "end": 772,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'readonly string[] | readonly number[]' is not assignable to parameter of type 'readonly number[]'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+            "pos": 770,
+            "end": 772,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'readonly string[]' is not assignable to type 'readonly number[]'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/foldStoredJoined.missing-member.ts",
+                "pos": 770,
+                "end": 772,
+                "code": 2322,
+                "category": 1,
+                "text": "Type 'string' is not assignable to type 'number'."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2379,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+      "line": 4,
+      "column": 156,
+      "message": "Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string>' is not assignable to type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+      "start": 772,
+      "end": 774,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+        "pos": 772,
+        "end": 774,
+        "code": 2379,
+        "category": 1,
+        "text": "Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+            "pos": 772,
+            "end": 774,
+            "code": 2375,
+            "category": 1,
+            "text": "Type 'None<string>' is not assignable to type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                "pos": 772,
+                "end": 774,
+                "code": 2375,
+                "category": 1,
+                "text": "Type 'None<string>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                    "pos": 772,
+                    "end": 774,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'string' is not assignable to type 'number'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 4104,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q52.ts",
+      "line": 17,
+      "column": 14,
+      "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<string | number, boolean>[]'.",
+      "start": 900,
+      "end": 920,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q52.ts",
+        "pos": 900,
+        "end": 920,
+        "code": 4104,
+        "category": 1,
+        "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<string | number, boolean>[]'."
+      }
+    },
+    {
+      "code": 4104,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q53.ts",
+      "line": 17,
+      "column": 14,
+      "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'.",
+      "start": 889,
+      "end": 909,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q53.ts",
+        "pos": 889,
+        "end": 909,
+        "code": 4104,
+        "category": 1,
+        "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'."
+      }
+    },
+    {
+      "code": 2322,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+      "line": 17,
+      "column": 14,
+      "message": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'. Type '__Expected_A' is not assignable to type '{ readonly x: true; }'. Types of property 'x' are incompatible. Type 'boolean' is not assignable to type 'true'.",
+      "start": 897,
+      "end": 917,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+        "pos": 897,
+        "end": 917,
+        "code": 2322,
+        "category": 1,
+        "text": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+            "pos": 897,
+            "end": 917,
+            "code": 2322,
+            "category": 1,
+            "text": "Type '__Expected_A' is not assignable to type '{ readonly x: true; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+                "pos": 897,
+                "end": 917,
+                "code": 2326,
+                "category": 1,
+                "text": "Types of property 'x' are incompatible.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+                    "pos": 897,
+                    "end": 917,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'boolean' is not assignable to type 'true'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+      "line": 4,
+      "column": 231,
+      "message": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'. Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+      "start": 847,
+      "end": 849,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+        "pos": 847,
+        "end": 849,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+            "pos": 847,
+            "end": 849,
+            "code": 2741,
+            "category": 1,
+            "text": "Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+            "relatedInformation": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+                "pos": 810,
+                "end": 814,
+                "code": 2728,
+                "category": 3,
+                "text": "'left' is declared here."
+              }
+            ]
+          }
+        ],
+        "relatedInformation": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordOptionalJoined.missing-member.ts",
+            "pos": 810,
+            "end": 814,
+            "code": 2728,
+            "category": 3,
+            "text": "'left' is declared here."
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+      "line": 4,
+      "column": 231,
+      "message": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'. Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+      "start": 847,
+      "end": 849,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+        "pos": 847,
+        "end": 849,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+            "pos": 847,
+            "end": 849,
+            "code": 2741,
+            "category": 1,
+            "text": "Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+            "relatedInformation": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+                "pos": 810,
+                "end": 814,
+                "code": 2728,
+                "category": 3,
+                "text": "'left' is declared here."
+              }
+            ]
+          }
+        ],
+        "relatedInformation": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordRequiredJoined.missing-member.ts",
+            "pos": 810,
+            "end": 814,
+            "code": 2728,
+            "category": 3,
+            "text": "'left' is declared here."
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+      "line": 4,
+      "column": 234,
+      "message": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'. Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+      "start": 850,
+      "end": 852,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+        "pos": 850,
+        "end": 852,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type '{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }' is not assignable to parameter of type '{ readonly left: boolean; readonly x: number; }'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+            "pos": 850,
+            "end": 852,
+            "code": 2741,
+            "category": 1,
+            "text": "Property 'left' is missing in type '{ readonly right: boolean; readonly x: string; }' but required in type '{ readonly left: boolean; readonly x: number; }'.",
+            "relatedInformation": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+                "pos": 813,
+                "end": 817,
+                "code": 2728,
+                "category": 3,
+                "text": "'left' is declared here."
+              }
+            ]
+          }
+        ],
+        "relatedInformation": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordSetJoined.missing-member.ts",
+            "pos": 813,
+            "end": 817,
+            "code": 2728,
+            "category": 3,
+            "text": "'left' is declared here."
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+      "line": 4,
+      "column": 256,
+      "message": "Argument of type '{ readonly _tag: \"hit-tag\"; readonly x: number; } | { readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to parameter of type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'. Type '{ readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'. Types of property '_tag' are incompatible. Type '\"miss-tag\"' is not assignable to type '\"hit-tag\"'.",
+      "start": 872,
+      "end": 874,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+        "pos": 872,
+        "end": 874,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type '{ readonly _tag: \"hit-tag\"; readonly x: number; } | { readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to parameter of type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+            "pos": 872,
+            "end": 874,
+            "code": 2322,
+            "category": 1,
+            "text": "Type '{ readonly _tag: \"miss-tag\"; readonly x: string; }' is not assignable to type '{ readonly _tag: \"hit-tag\"; readonly x: number; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+                "pos": 872,
+                "end": 874,
+                "code": 2326,
+                "category": 1,
+                "text": "Types of property '_tag' are incompatible.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/recordTagJoined.missing-member.ts",
+                    "pos": 872,
+                    "end": 874,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type '\"miss-tag\"' is not assignable to type '\"hit-tag\"'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2379,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+      "line": 4,
+      "column": 146,
+      "message": "Argument of type 'Exit<string, boolean> | Exit<number, never>' is not assignable to parameter of type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Failure<string, boolean>' is not assignable to type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Failure<string, boolean>' is not assignable to type 'Failure<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+      "start": 762,
+      "end": 764,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+        "pos": 762,
+        "end": 764,
+        "code": 2379,
+        "category": 1,
+        "text": "Argument of type 'Exit<string, boolean> | Exit<number, never>' is not assignable to parameter of type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+            "pos": 762,
+            "end": 764,
+            "code": 2375,
+            "category": 1,
+            "text": "Type 'Failure<string, boolean>' is not assignable to type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                "pos": 762,
+                "end": 764,
+                "code": 2375,
+                "category": 1,
+                "text": "Type 'Failure<string, boolean>' is not assignable to type 'Failure<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                    "pos": 762,
+                    "end": 764,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type 'string' is not assignable to type 'number'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "code": 2345,
+      "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+      "line": 4,
+      "column": 173,
+      "message": "Argument of type 'readonly [\"hit\", number] | readonly [\"miss\", string]' is not assignable to parameter of type 'readonly [\"hit\", number]'. Type 'readonly [\"miss\", string]' is not assignable to type 'readonly [\"hit\", number]'. Type at position 0 in source is not compatible with type at position 0 in target. Type '\"miss\"' is not assignable to type '\"hit\"'.",
+      "start": 789,
+      "end": 791,
+      "compiler": {
+        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+        "pos": 789,
+        "end": 791,
+        "code": 2345,
+        "category": 1,
+        "text": "Argument of type 'readonly [\"hit\", number] | readonly [\"miss\", string]' is not assignable to parameter of type 'readonly [\"hit\", number]'.",
+        "messageChain": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+            "pos": 789,
+            "end": 791,
+            "code": 2322,
+            "category": 1,
+            "text": "Type 'readonly [\"miss\", string]' is not assignable to type 'readonly [\"hit\", number]'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+                "pos": 789,
+                "end": 791,
+                "code": 2626,
+                "category": 1,
+                "text": "Type at position 0 in source is not compatible with type at position 0 in target.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/tagJoined.missing-member.ts",
+                    "pos": 789,
+                    "end": 791,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type '\"miss\"' is not assignable to type '\"hit\"'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,538 @@
+{
+  "versions": {
+    "compiler": "@typescript/native-preview",
+    "typescript": "7.0.0-dev.20260629.1",
+    "effect": "4.0.0-rc.112",
+    "lean": "leanprover/lean4:v4.33.1"
+  },
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "exactOptionalPropertyTypes": true,
+    "module": 99,
+    "moduleResolution": 100,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": 9,
+    "typeRoots": [
+      "<repo>/ts/eff/node_modules/@types"
+    ],
+    "types": [
+      "bun"
+    ],
+    "verbatimModuleSyntax": true,
+    "configFilePath": "<repo>/ts/eff/__target_queries__/tsconfig.json"
+  },
+  "conforms": false,
+  "inventory": [
+    {
+      "id": "optionSingle",
+      "status": "agree"
+    },
+    {
+      "id": "foldInferredSingle",
+      "status": "agree"
+    },
+    {
+      "id": "foldStoredSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberJoinSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberAwaitSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberInterruptSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberRunInSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberInterruptAllSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberInterruptAllAsSingle",
+      "status": "agree"
+    },
+    {
+      "id": "fiberAwaitAllSingle",
+      "status": "refused"
+    },
+    {
+      "id": "forkChildSingle",
+      "status": "agree"
+    },
+    {
+      "id": "forkDetachSingle",
+      "status": "agree"
+    },
+    {
+      "id": "forkScopedSingle",
+      "status": "agree"
+    },
+    {
+      "id": "forkInSingle",
+      "status": "agree"
+    },
+    {
+      "id": "scopeCloseSingle",
+      "status": "agree"
+    },
+    {
+      "id": "scopedSingle",
+      "status": "agree"
+    },
+    {
+      "id": "acquireReleaseSingle",
+      "status": "agree"
+    },
+    {
+      "id": "causeIsFailSingle",
+      "status": "agree"
+    },
+    {
+      "id": "causeIsDieSingle",
+      "status": "agree"
+    },
+    {
+      "id": "causeIsInterruptSingle",
+      "status": "agree"
+    },
+    {
+      "id": "causeErrorSingle",
+      "status": "agree"
+    },
+    {
+      "id": "tagSingle",
+      "status": "agree"
+    },
+    {
+      "id": "recordTagSingle",
+      "status": "agree"
+    },
+    {
+      "id": "recordRequiredSingle",
+      "status": "agree"
+    },
+    {
+      "id": "recordOptionalSingle",
+      "status": "agree"
+    },
+    {
+      "id": "recordSetSingle",
+      "status": "mismatch"
+    }
+  ],
+  "moduleDependencyDiagnostics": [],
+  "observations": [
+    {
+      "id": "fiberAwaitAllSingle",
+      "source": "/private/tmp/codex-unguard/p2b-target/baseline/printed.ts",
+      "status": "refused",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.fiberAwaitAllSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"/private/tmp/codex-unguard/p2b-target/baseline/printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Exit.Exit<number, never>[]",
+          "expected": "ReadonlyArray<Exit.Exit<number, never>>",
+          "actualToExpected": null,
+          "expectedToActual": null,
+          "agreement": null
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": null,
+          "expectedToActual": null,
+          "agreement": null
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": null,
+          "expectedToActual": null,
+          "agreement": null
+        },
+        "request": {
+          "actual": "[a0: readonly Fiber.Fiber<number, never>[]]",
+          "expected": "[ReadonlyArray<Fiber.Fiber<number, never>>]",
+          "actualToExpected": null,
+          "expectedToActual": null,
+          "agreement": null
+        }
+      },
+      "issues": [
+        {
+          "code": "query-diagnostic",
+          "message": "Unresolved or invalid query/type binding; see diagnostics"
+        }
+      ],
+      "diagnostics": [
+        {
+          "code": 4104,
+          "file": "ts/eff/__target_queries__/q9.ts",
+          "line": 17,
+          "column": 14,
+          "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'."
+        }
+      ],
+      "signatures": [
+        {
+          "text": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Effect.Effect<Exit.Exit<number, never>[], never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "readonly Fiber.Fiber<number, never>[]",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "printer": "Effect4.Program.printTyped",
+        "selection": "unchanged single-member companion",
+        "family": "fibers",
+        "companion": "fiberAwaitAllJoined",
+        "initializer": "(a0: ReadonlyArray<Fiber.Fiber<number, never>>) => Fiber.awaitAll(a0)",
+        "body": "Fiber.awaitAll(a0)"
+      }
+    },
+    {
+      "id": "recordOptionalSingle",
+      "source": "/private/tmp/codex-unguard/p2b-target/baseline/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordOptionalSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"/private/tmp/codex-unguard/p2b-target/baseline/printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<number> | Option.Some<number>",
+          "expected": "Option.Option<number>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n}) => Effect.Effect<Option.Option<number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "printer": "Effect4.Program.printTyped",
+        "selection": "unchanged single-member companion",
+        "family": "tag-record",
+        "companion": "recordOptionalJoined",
+        "initializer": "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordOptional<\"x\">(\"x\")(a0))",
+        "body": "Effect.succeed(recordOptional<\"x\">(\"x\")(a0))"
+      }
+    },
+    {
+      "id": "recordSetSingle",
+      "source": "/private/tmp/codex-unguard/p2b-target/baseline/printed.ts",
+      "status": "mismatch",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordSetSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"/private/tmp/codex-unguard/p2b-target/baseline/printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }",
+          "expected": "{ readonly left: boolean; readonly x: boolean }",
+          "actualToExpected": true,
+          "expectedToActual": false,
+          "agreement": "mismatch"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [
+        {
+          "code": 2322,
+          "file": "ts/eff/__target_queries__/q25.ts",
+          "line": 17,
+          "column": 14,
+          "message": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'. Type '__Expected_A' is not assignable to type '{ readonly x: true; }'. Types of property 'x' are incompatible. Type 'boolean' is not assignable to type 'true'."
+        }
+      ],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n}) => Effect.Effect<Omit<{\n    readonly left: boolean;\n    readonly x: number;\n}, \"x\"> & {\n    readonly x: true;\n}, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "printer": "Effect4.Program.printTyped",
+        "selection": "unchanged single-member companion",
+        "family": "tag-record",
+        "companion": "recordSetJoined",
+        "initializer": "(a0: { readonly left: boolean; readonly x: number }) => Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))",
+        "body": "Effect.succeed(recordSet<\"x\">(\"x\")(a0)(true))"
+      }
+    }
+  ],
+  "supplementalActualDirections": {
+    "format": "effect4-p2b-single-baseline-directions-v1",
+    "compiler": "7.0.0-dev.20260629.1",
+    "effect": "4.0.0-rc.112",
+    "observations": [
+      {
+        "fixture": "fiberAwaitAllSingle",
+        "actualToExpected": true,
+        "expectedToActual": false,
+        "assignments": [
+          {
+            "direction": "actualToExpected",
+            "start": 870,
+            "end": 917,
+            "diagnostics": [],
+            "accepted": true
+          },
+          {
+            "direction": "expectedToActual",
+            "start": 931,
+            "end": 978,
+            "diagnostics": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/fiberAwaitAllSingle.ts",
+                "pos": 931,
+                "end": 951,
+                "code": 4104,
+                "category": 1,
+                "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'."
+              }
+            ],
+            "accepted": false
+          }
+        ],
+        "diagnostics": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/fiberAwaitAllSingle.ts",
+            "pos": 931,
+            "end": 951,
+            "code": 4104,
+            "category": 1,
+            "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'."
+          }
+        ]
+      },
+      {
+        "fixture": "recordOptionalSingle",
+        "actualToExpected": true,
+        "expectedToActual": true,
+        "assignments": [
+          {
+            "direction": "actualToExpected",
+            "start": 853,
+            "end": 900,
+            "diagnostics": [],
+            "accepted": true
+          },
+          {
+            "direction": "expectedToActual",
+            "start": 914,
+            "end": 961,
+            "diagnostics": [],
+            "accepted": true
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "fixture": "recordSetSingle",
+        "actualToExpected": true,
+        "expectedToActual": false,
+        "assignments": [
+          {
+            "direction": "actualToExpected",
+            "start": 874,
+            "end": 921,
+            "diagnostics": [],
+            "accepted": true
+          },
+          {
+            "direction": "expectedToActual",
+            "start": 935,
+            "end": 982,
+            "diagnostics": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                "pos": 935,
+                "end": 955,
+                "code": 2322,
+                "category": 1,
+                "text": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                    "pos": 935,
+                    "end": 955,
+                    "code": 2322,
+                    "category": 1,
+                    "text": "Type '__Expected_A' is not assignable to type '{ readonly x: true; }'.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                        "pos": 935,
+                        "end": 955,
+                        "code": 2326,
+                        "category": 1,
+                        "text": "Types of property 'x' are incompatible.",
+                        "messageChain": [
+                          {
+                            "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                            "pos": 935,
+                            "end": 955,
+                            "code": 2322,
+                            "category": 1,
+                            "text": "Type 'boolean' is not assignable to type 'true'."
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "accepted": false
+          }
+        ],
+        "diagnostics": [
+          {
+            "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+            "pos": 935,
+            "end": 955,
+            "code": 2322,
+            "category": 1,
+            "text": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                "pos": 935,
+                "end": 955,
+                "code": 2322,
+                "category": 1,
+                "text": "Type '__Expected_A' is not assignable to type '{ readonly x: true; }'.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                    "pos": 935,
+                    "end": 955,
+                    "code": 2326,
+                    "category": 1,
+                    "text": "Types of property 'x' are incompatible.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-target/baseline/directions/recordSetSingle.ts",
+                        "pos": 935,
+                        "end": 955,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'boolean' is not assignable to type 'true'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "Supplemental pinned API relation and AST-located ordinary assignments for actual emitted baseline exports.",
+      "The existing target gate report and its TS4104 refusal remain unchanged.",
+      "No fixture runtime or semantic theorem is checked."
+    ]
+  },
+  "scope": "Actual printed single-member source; no host execution. Main oracle keeps TS4104 refused with null direction fields."
+}

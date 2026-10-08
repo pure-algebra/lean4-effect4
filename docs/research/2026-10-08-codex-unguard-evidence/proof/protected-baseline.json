@@ -1,0 +1,59 @@
+{
+  "base": "c51f9e6b7c456d952d0fe408a274432f4c9aebd5",
+  "paths": [
+    {
+      "path": "AGENTS.md",
+      "base_sha256": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e",
+      "current_sha256": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e",
+      "unchanged": true
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "base_sha256": "365149fefee34d04d28e1225a87c59e3017b500364aa9ef72dec2c0fa3c96765",
+      "current_sha256": "365149fefee34d04d28e1225a87c59e3017b500364aa9ef72dec2c0fa3c96765",
+      "unchanged": true
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "base_sha256": "4fb93b30ebbfdb5e6b79e5ec3fa73b5fd9f1bc9b93fa4f7cad2e96aaa0346140",
+      "current_sha256": "4fb93b30ebbfdb5e6b79e5ec3fa73b5fd9f1bc9b93fa4f7cad2e96aaa0346140",
+      "unchanged": true
+    },
+    {
+      "path": "generated/semantics.md",
+      "base_sha256": "797963b11e9e26c61af99b01adc1b1b07fa33f9b13797cae6ab82f3404b1e820",
+      "current_sha256": "797963b11e9e26c61af99b01adc1b1b07fa33f9b13797cae6ab82f3404b1e820",
+      "unchanged": true
+    },
+    {
+      "path": "lakefile.toml",
+      "base_sha256": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323",
+      "current_sha256": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323",
+      "unchanged": true
+    },
+    {
+      "path": "docs/STATE.md",
+      "base_sha256": "5367942873d184bde408512a6ebaaa0b198576a4a6a2b2c42ebed3275222f13a",
+      "current_sha256": "5367942873d184bde408512a6ebaaa0b198576a4a6a2b2c42ebed3275222f13a",
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Annotate.lean",
+      "base_sha256": "384d0c936338424d5a4c1e251953c4237c23131d01f0f40818a1b73a73213c2d",
+      "current_sha256": "384d0c936338424d5a4c1e251953c4237c23131d01f0f40818a1b73a73213c2d",
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Annotate.lean",
+      "base_sha256": "55f47dacedd44dbdd0544a31568003d03219414586c635569e335c7aed5b8ca6",
+      "current_sha256": "55f47dacedd44dbdd0544a31568003d03219414586c635569e335c7aed5b8ca6",
+      "unchanged": true
+    },
+    {
+      "path": "generated/corpus-index.tsv",
+      "base_sha256": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad",
+      "current_sha256": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad",
+      "unchanged": true
+    }
+  ]
+}

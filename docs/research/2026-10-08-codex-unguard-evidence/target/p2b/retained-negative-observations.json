@@ -1,0 +1,176 @@
+[
+  {
+    "fixture": "rawFiberAwaitAllJoined",
+    "difference": "mutable Array versus checked ReadonlyArray",
+    "oracleStatus": "refused",
+    "relations": {
+      "A": {
+        "actualToExpected": true,
+        "expectedToActual": false
+      },
+      "E": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      },
+      "R": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      },
+      "request": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      }
+    },
+    "intendedCode": 4104,
+    "intendedSpan": {
+      "start": 900,
+      "end": 947
+    },
+    "diagnostics": [
+      {
+        "code": 4104,
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q52.ts",
+        "line": 17,
+        "column": 14,
+        "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<string | number, boolean>[]'.",
+        "start": 900,
+        "end": 920,
+        "compiler": {
+          "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q52.ts",
+          "pos": 900,
+          "end": 920,
+          "code": 4104,
+          "category": 1,
+          "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<string | number, boolean>[]'."
+        }
+      }
+    ],
+    "conforms": true
+  },
+  {
+    "fixture": "rawFiberAwaitAllSingle",
+    "difference": "mutable Array versus checked ReadonlyArray",
+    "oracleStatus": "refused",
+    "relations": {
+      "A": {
+        "actualToExpected": true,
+        "expectedToActual": false
+      },
+      "E": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      },
+      "R": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      },
+      "request": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      }
+    },
+    "intendedCode": 4104,
+    "intendedSpan": {
+      "start": 889,
+      "end": 936
+    },
+    "diagnostics": [
+      {
+        "code": 4104,
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q53.ts",
+        "line": 17,
+        "column": 14,
+        "message": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'.",
+        "start": 889,
+        "end": 909,
+        "compiler": {
+          "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q53.ts",
+          "pos": 889,
+          "end": 909,
+          "code": 4104,
+          "category": 1,
+          "text": "The type '__Expected_A' is 'readonly' and cannot be assigned to the mutable type 'Exit<number, never>[]'."
+        }
+      }
+    ],
+    "conforms": true
+  },
+  {
+    "fixture": "recordSetLiteralSingle",
+    "difference": "literal true versus checked boolean",
+    "oracleStatus": "mismatch",
+    "relations": {
+      "A": {
+        "actualToExpected": true,
+        "expectedToActual": false
+      },
+      "E": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      },
+      "R": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      },
+      "request": {
+        "actualToExpected": true,
+        "expectedToActual": true
+      }
+    },
+    "intendedCode": 2322,
+    "intendedSpan": {
+      "start": 897,
+      "end": 944
+    },
+    "diagnostics": [
+      {
+        "code": 2322,
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+        "line": 17,
+        "column": 14,
+        "message": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'. Type '__Expected_A' is not assignable to type '{ readonly x: true; }'. Types of property 'x' are incompatible. Type 'boolean' is not assignable to type 'true'.",
+        "start": 897,
+        "end": 917,
+        "compiler": {
+          "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+          "pos": 897,
+          "end": 917,
+          "code": 2322,
+          "category": 1,
+          "text": "Type '__Expected_A' is not assignable to type 'Omit<{ readonly left: boolean; readonly x: number; }, \"x\"> & { readonly x: true; }'.",
+          "messageChain": [
+            {
+              "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+              "pos": 897,
+              "end": 917,
+              "code": 2322,
+              "category": 1,
+              "text": "Type '__Expected_A' is not assignable to type '{ readonly x: true; }'.",
+              "messageChain": [
+                {
+                  "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+                  "pos": 897,
+                  "end": 917,
+                  "code": 2326,
+                  "category": 1,
+                  "text": "Types of property 'x' are incompatible.",
+                  "messageChain": [
+                    {
+                      "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q54.ts",
+                      "pos": 897,
+                      "end": 917,
+                      "code": 2322,
+                      "category": 1,
+                      "text": "Type 'boolean' is not assignable to type 'true'."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "conforms": true
+  }
+]

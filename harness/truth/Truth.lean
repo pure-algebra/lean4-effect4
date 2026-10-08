@@ -1,6 +1,8 @@
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Codegen.TermRows
 import Test.Program.MaskContract
+import Test.Program.BoundsControls
+import Effect4.Codegen.PrintTyped
 import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
 import Test.Program.PoolPublic
@@ -79,9 +81,9 @@ Behaviours held:
   it runs out, never a hang (by construction);
 * complete over the corpus — every program of `corpus` has one entry, names are unique
   (tested: the `#guard`s at the end);
-* honest about refusals — a print refusal or an ill-typed program is recorded as such, the
-  program is never patched (by construction: `expr`/`decl` are `Api.print`/`Api.printDecl`
-  verbatim);
+* honest about refusals — a print refusal or an ill-typed program is recorded as such.
+  Ordinary fixtures retain the raw producer. Joined fixtures retain `Program.printTyped`
+  verbatim through the explicitly restricted fixture adapter;
 * one numbering — each compared field writes a fiber under its number in the recorder's
   first-seen order (`numbering`), so the two faces are compared up to one renaming of the
   fibers, and the machine's allocation order is compared in no field (tested: the receipts on
@@ -230,6 +232,56 @@ def pAcquireHandle : Api.Program :=
 def acquireHandleAnswers : List (Completion Val Err Defect FiberId Ann) :=
   [.ofExit (.success (.nat 0)), .ofExit (.success .unit), .ofExit (.success (.nat 1))]
 
+/-- The host row whose request supplies two list element bounds (UNGUARD W1). -/
+def joinedFirstTable : RowTable := [Test.Program.BoundsControls.firstRow]
+
+/-- A call term, using the native atom alphabet. -/
+def joinedCall (name : String) (args : List Term) : Term :=
+  .app name (args.foldr .cons .nil)
+
+/-- W1 retains a union of two lists in the input term, with both branches present. -/
+def joinedFirstInput (numeric : Bool) : Term :=
+  joinedCall "ite"
+    [.lit (.bool numeric), joinedCall "cons" [.lit (.nat 1), joinedCall "nil" []],
+     joinedCall "strings" [.lit (.str "negative")]]
+
+-- Finite control: the request is a union of lists, before the row matches its element bounds.
+#guard [true, false].all fun numeric =>
+  (termTy (nativeSignature joinedFirstTable) [] (joinedFirstInput numeric)).map Ty.normalize ==
+    some Test.Program.BoundsControls.twoLists.normalize
+
+/-- W1 supplies each member of the same two-list union to the actual host row. -/
+def joinedFirst (numeric : Bool) : Api.Program :=
+  .bind (.succeed (joinedFirstInput numeric)) (.perform (.external 0) (.var 0))
+
+def pJoinedFirstNumber : Api.Program := joinedFirst true
+def pJoinedFirstString : Api.Program := joinedFirst false
+
+/-- W2 joins the reply while the next stored value stays a number. -/
+def joinedModify (initial : Nat) : Api.Program :=
+  .bind (.perform .refMake (.lit (.nat initial)))
+    (.bind
+      (.perform
+        (.refModifyWith
+          (joinedCall "ite"
+            [ joinedCall "lt" [.lit (.nat 0), .var 1]
+            , joinedCall "pair" [.lit (.nat 1), joinedCall "succ" [.var 1]]
+            , joinedCall "pair"
+                [joinedCall "concat" [.lit (.str "negative"), .lit (.str "")],
+                 joinedCall "succ" [.var 1]] ]))
+        (.var 0))
+      (.bind (.perform .refGet (.var 0))
+        (.succeed (joinedCall "ite"
+          [joinedCall "eq" [.var 2, .lit (.nat (initial + 1))], .var 1,
+           joinedCall "concat" [.lit (.str "joinedModify: wrong cell value"), .lit (.str "")]]))))
+
+def pJoinedModifyNumber : Api.Program := joinedModify 1
+def pJoinedModifyString : Api.Program := joinedModify 0
+
+/-- Only these fixtures use the typed expression adapter below. -/
+def joinedFixtures : List String :=
+  ["pJoinedFirstNumber", "pJoinedFirstString", "pJoinedModifyNumber", "pJoinedModifyString"]
+
 def strs (xs : List String) : Term := .app "strings" (xs.foldr (fun s t => .cons (.lit (.str s)) t) .nil)
 def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
 
@@ -305,9 +357,45 @@ built-in oracle answers of a unit-declared fixture (`pAcquireHandle`); a canonic
 fixture's answers come from its tape, appended by `main`. -/
 def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
   if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers)
+  else if name == "pJoinedFirstNumber" then
+    (joinedFirstTable, [.ofExit (.success (.some (.nat 1)))])
+  else if name == "pJoinedFirstString" then
+    (joinedFirstTable, [.ofExit (.success (.some (.str "negative")))])
   else if sqliteFixtures.contains name then (Packages.sqliteBun, [])
   else if name == "pKv" then (Packages.keyValueStoreMemory, [])
   else ([], [])
+
+/-- Only W1 closes its single runtime row at the checker's actual call instance.
+Typing and printing keep `firstRow`. The raw runner does not instantiate a template reply.
+This finite adapter establishes no general runtime-table substitution law. -/
+def fixtureRuntimeTable (name : String) (p : Api.Program) (table : RowTable) : Option RowTable := do
+  if name != "pJoinedFirstNumber" && name != "pJoinedFirstString" then return table
+  guard (table.length == 1)
+  let row ← table[0]?
+  let sig := nativeSignature table
+  guard ((Program.calls sig [] p).length == 1)
+  let call ← Program.callAt sig [] p [1]
+  guard (call.op == .external 0)
+  return [{ row with request := call.request, answer := call.answer, error := call.error }]
+
+-- finite evaluation: the same checked union instance serves both runtime branches
+#guard [pJoinedFirstNumber, pJoinedFirstString].all fun p =>
+  (fixtureRuntimeTable "pJoinedFirstNumber" p joinedFirstTable).map
+    (fun rows => rows.map fun row => (row.request, row.answer, row.error)) ==
+      some [(Test.Program.BoundsControls.twoLists.normalize, (Ty.option (.union .nat .string)).normalize, .never)]
+-- red: a value of the instance remains refused at the raw template column
+#guard externalAdmits joinedFirstTable 0 (.ofExit (.success (.some (.nat 1)))) == false
+-- green: the exact closed instance admits that value
+#guard (fixtureRuntimeTable "pJoinedFirstNumber" pJoinedFirstNumber joinedFirstTable).any
+  (fun rows => externalAdmits rows 0 (.ofExit (.success (.some (.nat 1)))))
+-- finite controls: the other union member is admitted, while a Boolean payload still refuses
+#guard externalAdmits joinedFirstTable 0 (.ofExit (.success (.some (.str "negative")))) == false
+#guard (fixtureRuntimeTable "pJoinedFirstString" pJoinedFirstString joinedFirstTable).any
+  (fun rows => externalAdmits rows 0 (.ofExit (.success (.some (.str "negative")))))
+#guard (fixtureRuntimeTable "pJoinedFirstNumber" pJoinedFirstNumber joinedFirstTable).any
+  (fun rows => !(externalAdmits rows 0 (.ofExit (.success (.some (.bool true))))))
+-- red: the adapter refuses a different source shape instead of guessing an instance
+#guard (fixtureRuntimeTable "pJoinedFirstNumber" (.succeed (.lit .unit)) joinedFirstTable).isNone
 
 /-- A failure with the tagged package error of DB-15: `Effect.fail(pair("SqlError", "boom"))`
 fails with the pair, which the host wires as a two-string array and the machine reads as
@@ -863,6 +951,8 @@ def corpus : List (String × Api.Program) :=
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
     ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
+    ("pJoinedFirstNumber", pJoinedFirstNumber), ("pJoinedFirstString", pJoinedFirstString),
+    ("pJoinedModifyNumber", pJoinedModifyNumber), ("pJoinedModifyString", pJoinedModifyString),
     ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer),
     ("pRateRequest", pRateRequest), ("pDeferredGate", pDeferredGate),
     ("pInterruptedWait", pInterruptedWait), ("pMaskWait", pMaskWait),
@@ -1455,22 +1545,54 @@ def unannotated : TypeScript.Decl → TypeScript.Decl
   | .const c => .const { c with type := none }
   | d => d
 
+/-- A fixture-only typed expression and declaration. Ordinary emission supplies admission,
+not a certificate for the replacement initializer. Classes and hoisted layers refuse here. -/
+def joinedOutput (p : Api.Program) (table : RowTable) :
+    Except String (TypeScript.Expr × TypeScript.Module) := do
+  let emission ← (Api.emitModule "main" p table).mapError fun
+    | .illTyped => "typed fixture: ordinary admission refuses typing"
+    | .formation why => s!"typed fixture: ordinary admission refuses raw formation {repr why}"
+    | .print why => "typed fixture: ordinary emission refuses " ++ refusalText why
+  unless emission.classDecls.isEmpty do
+    throw "typed fixture: payload classes need the ordinary module producer"
+  match emission.declarations with
+  | [raw] =>
+    unless raw.name == "main" && raw.exported do
+      throw "typed fixture: expected one exported main declaration"
+  | _ => throw "typed fixture: hoisted layers need the ordinary module producer"
+  let sig := nativeSignature table
+  let expression ← (Program.printTyped sig [] p).mapError refusalText
+  let declaration ← (Program.printDecl "main" emission.typing.ty expression sig.scopeKey).mapError refusalText
+  pure (expression, { header := [], imports := [], decls := [.const declaration] })
+
+/-- Widening fixtures retain the actual typed initializer in both module views.
+All other fixtures use the existing expression and ordinary module producers. -/
+def fixtureOutput (name : String) (p : Api.Program) (table : RowTable) :
+    Except String (TypeScript.Expr × Option TypeScript.Module) :=
+  if joinedFixtures.contains name then
+    (joinedOutput p table).map fun (expression, module) => (expression, some module)
+  else
+    (Api.print p table).mapError refusalText |>.map fun expression =>
+      (expression, Api.printModule "main" p table)
+
 def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect FiberId Ann))
     (name : String) (p : Api.Program) : J :=
   let (table, builtIn) := hostInputs name
+  let runtimeTable := fixtureRuntimeTable name p table
   let answers := builtIn ++ tapes name
   let ty := Api.typeOf p table
-  let printed := Api.print p table
-  -- the declaration block (`Api.printModule`, the host rows slice): one `const L_<path>` per
-  -- referenced layer target, then `main`; one declaration for a program with no references
-  let module := Api.printModule "main" p table
+  let output := fixtureOutput name p table
+  let printed := output.map (·.1)
+  -- The ordinary block retains its emission certificate. Joined fixtures use the explicit
+  -- fixture adapter, with the same actual typed initializer in both declaration views.
+  let module := output.toOption.bind (·.2)
   let decl := module.map fun m => String.join (m.decls.map (TypeScript.Render.decl house0))
   -- the same block with every annotation removed: what the host's compiler infers for the
   -- printed program on its own, which the type oracle compares with Lean's rendered type
   -- (an annotated `main` would only hand Lean's type back to itself)
   let declInferred := module.map fun m =>
     String.join (m.decls.map fun d => TypeScript.Render.decl house0 (unannotated d))
-  Lean.Json.mkObj
+  Lean.Json.mkObj <|
     [ ("name", Lean.Json.str name)
     , ("scenario", if name == "pInterruptEscape" then Lean.Json.str "U-01" else Lean.Json.null)
     , ("wellTyped", Lean.Json.bool ty.isSome)
@@ -1481,15 +1603,21 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
         | .error _ => Lean.Json.null)
     , ("exprRefusal", match printed with
         | .ok _ => Lean.Json.null
-        | .error why => Lean.Json.str (refusalText why))
+        | .error why => Lean.Json.str why)
     , ("decl", match decl with
         | some text => Lean.Json.str text
         | none => Lean.Json.null)
     , ("declInferred", match declInferred with
         | some text => Lean.Json.str text
         | none => Lean.Json.null)
-    , ("run", runJson p fuel table answers name)
-    , ("runSync", runSyncJson p fuel table answers) ]
+    , ("run", (runtimeTable.map fun rows => runJson p fuel rows answers name).getD Lean.Json.null)
+    , ("runSync", (runtimeTable.map fun rows => runSyncJson p fuel rows answers).getD Lean.Json.null) ] ++
+    (if name == "pJoinedFirstNumber" || name == "pJoinedFirstString" then
+      [("genericRows", Lean.Json.arr (table.map Tools.ProfileJson.rowJson).toArray),
+       ("runtimeInstanceRows", match runtimeTable with
+        | some rows => Lean.Json.arr (rows.map Tools.ProfileJson.rowJson).toArray
+        | none => Lean.Json.null)]
+     else [])
 
 /-- The whole manifest; `tapes` gives each program the answers rc.112 recorded for its package
 rows (the empty list for a program without a tape, which then parks at its first row). -/
@@ -1604,7 +1732,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
-   "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
+   "pInterruptEscape", "pJoinedFirstNumber", "pJoinedFirstString", "pJoinedModifyNumber", "pJoinedModifyString",
+   "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
    "pInterruptedWait", "pMaskWait", "pMaskedRestore", "pLateSeen", "pQueueWake", "pQueueFull",
    "pQueueInterrupted", "pQueueMasked", "pQueueOrder", "pSemaphoreProtectedJoined",
    "pSemaphoreScan", "pSemaphoreOvertake", "pSemaphoreBodiesJoined", "pSemaphoreInterrupted",
@@ -2309,7 +2438,9 @@ def main (args : List String) : IO Unit := do
   let tapes ← readTapes tapeDir
   for (name, p) in OCaml5.Truth.corpus do
     let (table, builtIn) := OCaml5.Truth.hostInputs name
-    let m := (OCaml5.Truth.fixtureRun name p fuel table (builtIn ++ tapes name)).machine
+    let some runtimeTable := OCaml5.Truth.fixtureRuntimeTable name p table
+      | throw (IO.userError s!"runtime call instance missing for {name}")
+    let m := (OCaml5.Truth.fixtureRun name p fuel runtimeTable (builtIn ++ tapes name)).machine
     unless OCaml5.Truth.observesReasons .fuel m && OCaml5.Truth.observesReasons .tape m do
       throw (IO.userError s!"observation reasons disagree for {name}")
     -- the fiber numbers: the allocation order, or the pinned late sights (`lateSights`)

@@ -1,0 +1,23 @@
+COMMAND scratch/lean-slot.sh make -j1 -o ts/eff/node_modules -o harness/truth/node_modules check-cases
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+set -o pipefail; lake build 2>&1 | tee .lake/gen/build.log
+ℹ [1432/1434] Replayed Test.All
+info: Test/All.lean:305:0: Effect4 library-root gate: 197 API/utility modules, 349 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:305:0: Effect4 module and axiom gate: checked 850 modules and 97885 declarations; phases (ms): sources and closure 25, library roots 384, declarations 4110, resolution 1469, axioms 24138, exemptions 442; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:305:0: Effect4 goal gate: 30 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 12 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (1434 jobs).
+python3 scripts/check-conform.py cases
+✔ [248/255] Built Conform.Effect4.NormalizationInputs (771ms)
+✔ [250/280] Built Conform.Effect4.LcnfSemantics (4.2s)
+✔ [259/280] Built Conform.Effect4.CompilerControls (3.7s)
+✔ [264/280] Built Conform.Cli.LcnfMl (1.7s)
+✔ [272/281] Built Conform.Cli.LcnfSemantics (1.6s)
+✔ [273/282] Built OCaml5.Eff.World (1.8s)
+✔ [276/417] Built Conform.Effect4.Normalization (2.3s)
+✔ [452/455] Built Conform.Effect4.LayoutWorld (1.5s)
+✔ [453/455] Built Conform.Effect4.TargetLeanNative (1.3s)
+✔ [454/455] Built Conform.Effect4.NativeMain (1.6s)
+Build completed successfully (455 jobs).
+conform cases: PASS, exit 0; .lake/conform/cases.json

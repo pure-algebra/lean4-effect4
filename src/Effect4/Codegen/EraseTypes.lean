@@ -30,6 +30,8 @@ theorem eraseNode_size (n : Nat) (x : Expr) :
   fun_cases EraseTermTypes.eraseNode n x <;>
     simp only [Expr.call.sizeOf_spec, Expr.generic.sizeOf_spec, Expr.ident.sizeOf_spec,
       Expr.arrow.sizeOf_spec, Expr.lambda.sizeOf_spec, Expr.str.sizeOf_spec,
+      Expr.arrowBlock.sizeOf_spec, TypeScript.Stmt.exprStmt.sizeOf_spec,
+      TypeScript.Stmt.ret.sizeOf_spec,
       List.cons.sizeOf_spec, List.nil.sizeOf_spec, Nat.le_refl] <;> omega
 
 /-- Remove a generic call head only when the existing reader recognizes the bare operation

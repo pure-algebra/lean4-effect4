@@ -1,0 +1,5 @@
+COMMAND scratch/lean-slot.sh lake build Test.Program.FocusControls
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+✔ [688/688] Built Test.Program.FocusControls (2.0s)
+Build completed successfully (688 jobs).

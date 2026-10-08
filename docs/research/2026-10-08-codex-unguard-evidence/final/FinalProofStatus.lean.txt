@@ -1,0 +1,41 @@
+import Effect4.Laws.Codegen.PrintTyped
+import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
+import Effect4.Laws.Program.Typing.Closed
+import Effect4.Laws.Program.Template
+import Effect4.Laws.Program.Typing.Annotate
+import ProofGraph.Plan
+
+open Lean Meta Elab Command
+set_option pp.universes true
+set_option pp.proofs false
+set_option maxRecDepth 4096
+set_option maxHeartbeats 16000000
+
+-- Receipt-only query; no library declaration or battery pin is introduced.
+run_cmd liftTermElabM do
+  let tops := #[
+    ``Effect4.Codegen.eraseJoinArgs_printTypedAt,
+    ``Effect4.Codegen.readTyped_printTypedAt,
+    ``Effect4.Codegen.readTyped_exact,
+    ``Effect4.Codegen.eraseJoinArgs_printTypedSitesAt,
+    ``Effect4.Codegen.eraseJoinArgs_printTyped,
+    ``Effect4.Codegen.readTyped_printTyped,
+    ``Effect4.Program.printTyped_eq_print,
+    ``Effect4.Program.UnionRule.Eliminator.extendAll_laws,
+    ``Effect4.Program.UnionRule.Eliminator.extendAll_mono,
+    ``Effect4.Program.closed_optionTy,
+    ``Effect4.Program.closed_fiberTy,
+    ``Effect4.Program.closed_listOf,
+    ``Effect4.Program.closed_exitOf,
+    ``Effect4.Program.closed_causeInputError,
+    ``Effect4.Program.checkRow_request_iff,
+    ``Effect4.Program.annotate_eq_table]
+  let plan ← ProofGraph.buildPlan [`Effect4] tops (← IO.mkRef {})
+  logInfo (← plan.describe tops)
+  for name in tops do
+    let info ← getConstInfo name
+    let some node := plan.find? name | throwError "Missing queried plan node {name}"
+    logInfo m!"UNIVERSES {name}: {info.levelParams}"
+    logInfo m!"STATEMENT {name}: {← ppExpr info.type}"
+    logInfo m!"AXIOMS {name}: {node.axioms.toList}"

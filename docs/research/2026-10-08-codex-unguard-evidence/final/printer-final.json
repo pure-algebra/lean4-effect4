@@ -1,0 +1,199 @@
+{
+  "started": "2026-10-08T10:43:52.436139+00:00",
+  "duration_seconds": 145.956,
+  "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+  "command": [
+    "scratch/lean-slot.sh",
+    "lake",
+    "build",
+    "Effect4.Laws.Codegen.PrintTyped",
+    "Test.Codegen.PrintTyped"
+  ],
+  "exit_code": 0,
+  "branch": "codex/unguard",
+  "head": "6c18faf47fcab4e3cf4cb6e8210dbaf9fe69073c",
+  "base": "c51f9e6b7c456d952d0fe408a274432f4c9aebd5",
+  "lean_toolchain": "leanprover/lean4:v4.33.1",
+  "slot_script_sha256": "b340ae3d3e6a2df7a18232f60f31c800526bf366e0a630f57fcd6e67d5fd6b6b",
+  "changed_inputs_before": {
+    "Makefile": "8382832fdc071056f3b7bf0fda893e6110bf4846e802a479269df97cb86a22df",
+    "Test/Codegen/PrintTyped.lean": "006ac2d423fa7997898bfc86d57c0897269c814ec645ceb78ea01b789944bb16",
+    "Test/Program/BoundsControls.lean": "0e18c3497a398b8e12917fa0d0b1e051b63b76519c7261a659fbcb2e197978e9",
+    "Test/Program/Eliminators.lean": "99caa34cbe062ce4a83770c7c8525f7f398299a5a41d1e38bf36b939acad322b",
+    "Test/Program/FocusControls.lean": "8acae0047836f94e41420dffdc03bacb454c323a247c91a89a73203a80c83664",
+    "Test/Program/TypedContract.lean": "4aae6e8583184453f53e30f3588caf773540573cfad6c3af6c5c5a98fdef05e6",
+    "Test/fixtures/target/selection.json": "a62c5b9b84cd116265d67261cdceea8ed4a15811c1a641a2b2e39b2e69f38b3e",
+    "docs/core/host-boundary.md": "c87eb10bbeee87a575f4cd9bc8168071ec63e3ca2ae67484a9597c59021e21f6",
+    "docs/research/2026-10-08-codex-unguard-plan.md": "6107196da95a44e2f26dc00bda09b8c3f6bfba83e760983475d6ed8528e9c747",
+    "docs/research/2026-10-08-p2b-widenings.md": "195cfb5e130f78b7eae454e1a87655f800ea62aac35546fe6a14ad684e5d1a1c",
+    "harness/truth/P2b.lean": "19a21d427e8521b78bd596118a7d4c733304bbc6a836d510bba1c9e29810ddf7",
+    "harness/truth/Truth.lean": "435192de69114f3dbd282dc0572c45e1df2e7d6b35b00818c39824cfcc7fc518",
+    "harness/truth/module-imports.ts": "6595ecadbe83277b480b741eaac141c23c6bcd037613e2128255ce41f9e03a8b",
+    "harness/truth/prelude.ts": "aa6229893635c354a73f27ce9ea3f91b392e0814c3bd0410171f9dfbeebd4c79",
+    "harness/truth/records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "scripts/check-truth.py": "a6eef390c4264ad499eeeee75cb6f84991eea24ad6a3e3dd886cbab582644bc7",
+    "src/Effect4/Codegen/EraseTermTypes.lean": "0f9edf5e9f524f70e5ae4348e6a19a4a655364c74ce21a563c785e1c989d4ac8",
+    "src/Effect4/Codegen/EraseTypes.lean": "466c17f9979f13bf78bb4c60cbbace03406315812aa7b7b463ed21efc9730c47",
+    "src/Effect4/Codegen/PrintEliminators.lean": "99c73a784690031ae53faf2173ac266857a38bc973243bd08c64ee0ca72962b3",
+    "src/Effect4/Codegen/PrintTyped.lean": "6b299dfb56044a4ad0cd3361005295c4a6b61ccd40cf3ff18bd84ea1da7796f5",
+    "src/Effect4/Codegen/TargetFold.lean": "1172ad7f4f797eeef8a640eefe7d7de6b5e39e40e915313a01f2fbd80fafcfd4",
+    "src/Effect4/Laws/Codegen/PrintTyped.lean": "eda9ef10eb910afb9357573cebc2434e38bcd60272f7866f5dd10f53392d2dee",
+    "src/Effect4/Laws/Modules/Waiting.lean": "b39270405b0c2c6a831237e46d9596d530b895a9a7b317d36d5804ea65659ced",
+    "src/Effect4/Laws/Program/Bounds.lean": "0b49e92535b374172cd9cac13091953069522521443e6db95519438ce78ca8f0",
+    "src/Effect4/Laws/Program/Eliminators.lean": "6e56ac5d1f00614edef111619f9a02137bbf6f4c11f845e0c50b78001ab6d23e",
+    "src/Effect4/Laws/Program/Template.lean": "25277bf60b9a7b570d6c5aeae49535105db79fc364fdd030dcbc9a010565f03e",
+    "src/Effect4/Laws/Program/Typed/Denotation.lean": "a80c654593e7bdeeb8474fe2975903d1b60ccfadcaa1bbcf89e7fc7e99c93805",
+    "src/Effect4/Laws/Program/Typing/Closed.lean": "b57c2c1558db5de7b2a25c6098a04f5a76c25bac5500ea2135d1423ef7b4b5db",
+    "src/Effect4/Laws/Program/UnionRule.lean": "ac91fd838847f20b3dc3143a5a44bbd5d1632dd7f0cdc4c6cf85f080ace8e98a",
+    "src/Effect4/Program/Bounds.lean": "e8cc96f2b52060a609aef96fdda23f3543aa4d38a8ac2a65edaacadf4da0dc6a",
+    "src/Effect4/Program/Decision.lean": "1d4fb56c8d9b2b55920f08765abd142f36bd0885b4903071315923c0f5037ff7",
+    "src/Effect4/Program/NativeAtom.lean": "89bc304b7635ced4f8c818edaf46dfbf7d78e64b5b820497cf62b45098272e4d",
+    "src/Effect4/Program/Typing/Call.lean": "ce44ab3e10021815a9b5e48daa599ae8e6a681d24430f22159a2b0c376cc1dd1",
+    "src/Effect4/Program/Typing/Rules.lean": "ffa436cebd9829cf5e995cd011ef1ecec2b7a6e8d7e4ff3ede6d70f053362f7b",
+    "src/Effect4/Program/Typing/Table.lean": "6a8a856b8c0e5174544dfbca1fda93af616ddc82daf52e4bc7e73bd8ec8d3a04",
+    "src/Effect4/Program/UnionRule.lean": "679946aa97bade28239cda6e3ffeb3f8d71a3253727d43b30468d72e41ae6fe8",
+    "tools/target/checker.ts": "51d8c35629aa86e1f21912356f559ddb14740acc657a83f01189337f8498975b",
+    "tools/target/oracle.ts": "8e765194b8c1d04a70a09506ebc2c79f41e209f108150e2d3869ec5d7a6f9858"
+  },
+  "changed_inputs_after": {
+    "Makefile": "8382832fdc071056f3b7bf0fda893e6110bf4846e802a479269df97cb86a22df",
+    "Test/Codegen/PrintTyped.lean": "006ac2d423fa7997898bfc86d57c0897269c814ec645ceb78ea01b789944bb16",
+    "Test/Program/BoundsControls.lean": "0e18c3497a398b8e12917fa0d0b1e051b63b76519c7261a659fbcb2e197978e9",
+    "Test/Program/Eliminators.lean": "99caa34cbe062ce4a83770c7c8525f7f398299a5a41d1e38bf36b939acad322b",
+    "Test/Program/FocusControls.lean": "8acae0047836f94e41420dffdc03bacb454c323a247c91a89a73203a80c83664",
+    "Test/Program/TypedContract.lean": "4aae6e8583184453f53e30f3588caf773540573cfad6c3af6c5c5a98fdef05e6",
+    "Test/fixtures/target/selection.json": "a62c5b9b84cd116265d67261cdceea8ed4a15811c1a641a2b2e39b2e69f38b3e",
+    "docs/core/host-boundary.md": "c87eb10bbeee87a575f4cd9bc8168071ec63e3ca2ae67484a9597c59021e21f6",
+    "docs/research/2026-10-08-codex-unguard-plan.md": "6107196da95a44e2f26dc00bda09b8c3f6bfba83e760983475d6ed8528e9c747",
+    "docs/research/2026-10-08-p2b-widenings.md": "195cfb5e130f78b7eae454e1a87655f800ea62aac35546fe6a14ad684e5d1a1c",
+    "harness/truth/P2b.lean": "19a21d427e8521b78bd596118a7d4c733304bbc6a836d510bba1c9e29810ddf7",
+    "harness/truth/Truth.lean": "435192de69114f3dbd282dc0572c45e1df2e7d6b35b00818c39824cfcc7fc518",
+    "harness/truth/module-imports.ts": "6595ecadbe83277b480b741eaac141c23c6bcd037613e2128255ce41f9e03a8b",
+    "harness/truth/prelude.ts": "aa6229893635c354a73f27ce9ea3f91b392e0814c3bd0410171f9dfbeebd4c79",
+    "harness/truth/records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "scripts/check-truth.py": "a6eef390c4264ad499eeeee75cb6f84991eea24ad6a3e3dd886cbab582644bc7",
+    "src/Effect4/Codegen/EraseTermTypes.lean": "0f9edf5e9f524f70e5ae4348e6a19a4a655364c74ce21a563c785e1c989d4ac8",
+    "src/Effect4/Codegen/EraseTypes.lean": "466c17f9979f13bf78bb4c60cbbace03406315812aa7b7b463ed21efc9730c47",
+    "src/Effect4/Codegen/PrintEliminators.lean": "99c73a784690031ae53faf2173ac266857a38bc973243bd08c64ee0ca72962b3",
+    "src/Effect4/Codegen/PrintTyped.lean": "6b299dfb56044a4ad0cd3361005295c4a6b61ccd40cf3ff18bd84ea1da7796f5",
+    "src/Effect4/Codegen/TargetFold.lean": "1172ad7f4f797eeef8a640eefe7d7de6b5e39e40e915313a01f2fbd80fafcfd4",
+    "src/Effect4/Laws/Codegen/PrintTyped.lean": "eda9ef10eb910afb9357573cebc2434e38bcd60272f7866f5dd10f53392d2dee",
+    "src/Effect4/Laws/Modules/Waiting.lean": "b39270405b0c2c6a831237e46d9596d530b895a9a7b317d36d5804ea65659ced",
+    "src/Effect4/Laws/Program/Bounds.lean": "0b49e92535b374172cd9cac13091953069522521443e6db95519438ce78ca8f0",
+    "src/Effect4/Laws/Program/Eliminators.lean": "6e56ac5d1f00614edef111619f9a02137bbf6f4c11f845e0c50b78001ab6d23e",
+    "src/Effect4/Laws/Program/Template.lean": "25277bf60b9a7b570d6c5aeae49535105db79fc364fdd030dcbc9a010565f03e",
+    "src/Effect4/Laws/Program/Typed/Denotation.lean": "a80c654593e7bdeeb8474fe2975903d1b60ccfadcaa1bbcf89e7fc7e99c93805",
+    "src/Effect4/Laws/Program/Typing/Closed.lean": "b57c2c1558db5de7b2a25c6098a04f5a76c25bac5500ea2135d1423ef7b4b5db",
+    "src/Effect4/Laws/Program/UnionRule.lean": "ac91fd838847f20b3dc3143a5a44bbd5d1632dd7f0cdc4c6cf85f080ace8e98a",
+    "src/Effect4/Program/Bounds.lean": "e8cc96f2b52060a609aef96fdda23f3543aa4d38a8ac2a65edaacadf4da0dc6a",
+    "src/Effect4/Program/Decision.lean": "1d4fb56c8d9b2b55920f08765abd142f36bd0885b4903071315923c0f5037ff7",
+    "src/Effect4/Program/NativeAtom.lean": "89bc304b7635ced4f8c818edaf46dfbf7d78e64b5b820497cf62b45098272e4d",
+    "src/Effect4/Program/Typing/Call.lean": "ce44ab3e10021815a9b5e48daa599ae8e6a681d24430f22159a2b0c376cc1dd1",
+    "src/Effect4/Program/Typing/Rules.lean": "ffa436cebd9829cf5e995cd011ef1ecec2b7a6e8d7e4ff3ede6d70f053362f7b",
+    "src/Effect4/Program/Typing/Table.lean": "6a8a856b8c0e5174544dfbca1fda93af616ddc82daf52e4bc7e73bd8ec8d3a04",
+    "src/Effect4/Program/UnionRule.lean": "679946aa97bade28239cda6e3ffeb3f8d71a3253727d43b30468d72e41ae6fe8",
+    "tools/target/checker.ts": "51d8c35629aa86e1f21912356f559ddb14740acc657a83f01189337f8498975b",
+    "tools/target/oracle.ts": "8e765194b8c1d04a70a09506ebc2c79f41e209f108150e2d3869ec5d7a6f9858"
+  },
+  "compiler": {
+    "name": "@typescript/native-preview",
+    "version": "7.0.0-dev.20260629.1"
+  },
+  "protected_before": [
+    {
+      "path": "AGENTS.md",
+      "expected": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e",
+      "actual": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e"
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "expected": "365149fefee34d04d28e1225a87c59e3017b500364aa9ef72dec2c0fa3c96765",
+      "actual": "365149fefee34d04d28e1225a87c59e3017b500364aa9ef72dec2c0fa3c96765"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "expected": "4fb93b30ebbfdb5e6b79e5ec3fa73b5fd9f1bc9b93fa4f7cad2e96aaa0346140",
+      "actual": "4fb93b30ebbfdb5e6b79e5ec3fa73b5fd9f1bc9b93fa4f7cad2e96aaa0346140"
+    },
+    {
+      "path": "generated/semantics.md",
+      "expected": "797963b11e9e26c61af99b01adc1b1b07fa33f9b13797cae6ab82f3404b1e820",
+      "actual": "797963b11e9e26c61af99b01adc1b1b07fa33f9b13797cae6ab82f3404b1e820"
+    },
+    {
+      "path": "lakefile.toml",
+      "expected": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323",
+      "actual": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323"
+    },
+    {
+      "path": "docs/STATE.md",
+      "expected": "5367942873d184bde408512a6ebaaa0b198576a4a6a2b2c42ebed3275222f13a",
+      "actual": "5367942873d184bde408512a6ebaaa0b198576a4a6a2b2c42ebed3275222f13a"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Annotate.lean",
+      "expected": "384d0c936338424d5a4c1e251953c4237c23131d01f0f40818a1b73a73213c2d",
+      "actual": "384d0c936338424d5a4c1e251953c4237c23131d01f0f40818a1b73a73213c2d"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Annotate.lean",
+      "expected": "55f47dacedd44dbdd0544a31568003d03219414586c635569e335c7aed5b8ca6",
+      "actual": "55f47dacedd44dbdd0544a31568003d03219414586c635569e335c7aed5b8ca6"
+    },
+    {
+      "path": "generated/corpus-index.tsv",
+      "expected": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad",
+      "actual": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad"
+    }
+  ],
+  "protected_after": [
+    {
+      "path": "AGENTS.md",
+      "expected": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e",
+      "actual": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e"
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "expected": "365149fefee34d04d28e1225a87c59e3017b500364aa9ef72dec2c0fa3c96765",
+      "actual": "365149fefee34d04d28e1225a87c59e3017b500364aa9ef72dec2c0fa3c96765"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "expected": "4fb93b30ebbfdb5e6b79e5ec3fa73b5fd9f1bc9b93fa4f7cad2e96aaa0346140",
+      "actual": "4fb93b30ebbfdb5e6b79e5ec3fa73b5fd9f1bc9b93fa4f7cad2e96aaa0346140"
+    },
+    {
+      "path": "generated/semantics.md",
+      "expected": "797963b11e9e26c61af99b01adc1b1b07fa33f9b13797cae6ab82f3404b1e820",
+      "actual": "797963b11e9e26c61af99b01adc1b1b07fa33f9b13797cae6ab82f3404b1e820"
+    },
+    {
+      "path": "lakefile.toml",
+      "expected": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323",
+      "actual": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323"
+    },
+    {
+      "path": "docs/STATE.md",
+      "expected": "5367942873d184bde408512a6ebaaa0b198576a4a6a2b2c42ebed3275222f13a",
+      "actual": "5367942873d184bde408512a6ebaaa0b198576a4a6a2b2c42ebed3275222f13a"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Annotate.lean",
+      "expected": "384d0c936338424d5a4c1e251953c4237c23131d01f0f40818a1b73a73213c2d",
+      "actual": "384d0c936338424d5a4c1e251953c4237c23131d01f0f40818a1b73a73213c2d"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Annotate.lean",
+      "expected": "55f47dacedd44dbdd0544a31568003d03219414586c635569e335c7aed5b8ca6",
+      "actual": "55f47dacedd44dbdd0544a31568003d03219414586c635569e335c7aed5b8ca6"
+    },
+    {
+      "path": "generated/corpus-index.tsv",
+      "expected": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad",
+      "actual": "fad6f11d31d8bfa469a0886372ff88290535b831af6660fc6177c57fdc4600ad"
+    }
+  ],
+  "protected_unchanged": true,
+  "log": "/private/tmp/codex-unguard/final-checks/printer-final.log",
+  "log_sha256": "5d42f2025a80579859f9d65d502e72f3401b4c618e07c633a69a5a1501b08eb4"
+}

@@ -1,0 +1,321 @@
+{
+  "mutation": {
+    "command": [
+      "node",
+      "/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/checker.ts",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/p2b-request.json",
+      "/private/tmp/codex-unguard/p2b-row/actual-target/old-alias-report.json"
+    ],
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0,
+    "fixedAliasSha256": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "oldAliasSha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4",
+    "expectedGateConforms": false,
+    "observedGateConforms": false,
+    "mutation": "Only records.ts OptionalResult type alias returns to its original form"
+  },
+  "claims": {
+    "moduleCompiles": true,
+    "exactColumnsAgree": false,
+    "mutantsConform": true,
+    "expectedNegativesConform": true,
+    "conforms": false
+  },
+  "observations": [
+    {
+      "id": "recordOptionalJoined",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "mismatch",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordOptionalJoined",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<string | number> | Option.Some<string | number>",
+          "expected": "Option.Option<number> | Option.Option<string>",
+          "actualToExpected": false,
+          "expectedToActual": true,
+          "agreement": "mismatch"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number } | { readonly right: boolean; readonly x: string }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [
+        {
+          "code": 2375,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/q48.ts",
+          "line": 16,
+          "column": 14,
+          "message": "Type 'Option<string | number>' is not assignable to type '__Expected_A' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string | number>' is not assignable to type '__Expected_A' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string | number>' is not assignable to type 'None<string> | None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string | number>' is not assignable to type 'None<string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string | number' is not assignable to type 'string'. Type 'number' is not assignable to type 'string'."
+        }
+      ],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n} | {\n    readonly right: boolean;\n    readonly x: string;\n}) => Effect.Effect<Option.Option<string | number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; } | { readonly right: boolean; readonly x: string; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordOptionalSingle",
+        "joined": true,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    },
+    {
+      "id": "recordOptionalSingle",
+      "source": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/printed.ts",
+      "status": "agree",
+      "binding": {
+        "kind": "function",
+        "subject": "typeof Printed.recordOptionalSingle",
+        "receiver": null,
+        "imports": [
+          "import type { Cause, Context, Deferred, Exit, Fiber, Option, Ref, Result, Scope } from \"effect\"",
+          "import * as Printed from \"./printed.ts\""
+        ],
+        "unknownPolicy": []
+      },
+      "columns": {
+        "A": {
+          "actual": "Option.None<number> | Option.Some<number>",
+          "expected": "Option.Option<number>",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "E": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "R": {
+          "actual": "never",
+          "expected": "never",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        },
+        "request": {
+          "actual": "[a0: { readonly left: boolean; readonly x: number; }]",
+          "expected": "[{ readonly left: boolean; readonly x: number }]",
+          "actualToExpected": true,
+          "expectedToActual": true,
+          "agreement": "exact"
+        }
+      },
+      "issues": [],
+      "diagnostics": [],
+      "signatures": [
+        {
+          "text": "(a0: {\n    readonly left: boolean;\n    readonly x: number;\n}) => Effect.Effect<Option.Option<number>, never, never>",
+          "parameters": [
+            {
+              "name": "a0",
+              "type": "{ readonly left: boolean; readonly x: number; }",
+              "optional": false,
+              "rest": false
+            }
+          ]
+        }
+      ],
+      "provenance": {
+        "family": "tag-record",
+        "companion": "recordOptionalJoined",
+        "joined": false,
+        "printer": "Effect4.Program.printTyped",
+        "evidence": "finite type-only; actual Program.printTyped; no ModuleEmission certificate"
+      }
+    }
+  ],
+  "originalFirstGate": {
+    "moduleCompiles": true,
+    "exactColumnsAgree": false,
+    "mutantsConform": false,
+    "expectedNegativesConform": true,
+    "conforms": false
+  },
+  "originalFirstMutantFailures": [
+    {
+      "fixture": "optionJoined",
+      "companion": "optionSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const optionJoined = (a0: Option.Option<number> | Option.Option<string>) => optionCase<number, number, never, never, number | string, never, never>(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1))\n\n",
+      "sourceHash": "fc7da29d11d0522f66f28e57cbb61b850a09d2aa75a6aab2c5f4d32a243d1993",
+      "changedSpan": {
+        "start": 711,
+        "end": 726,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 772,
+        "end": 774
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/prelude.ts",
+        "start": 5563,
+        "end": 5876
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2379,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+          "line": 4,
+          "column": 156,
+          "message": "Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string>' is not assignable to type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'None<string>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 772,
+          "end": 774,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+            "pos": 772,
+            "end": 774,
+            "code": 2379,
+            "category": 1,
+            "text": "Argument of type 'Option<string> | Option<number>' is not assignable to parameter of type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                "pos": 772,
+                "end": 774,
+                "code": 2375,
+                "category": 1,
+                "text": "Type 'None<string>' is not assignable to type 'Option<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                    "pos": 772,
+                    "end": 774,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'None<string>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/optionJoined.missing-member.ts",
+                        "pos": 772,
+                        "end": 774,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": false
+    },
+    {
+      "fixture": "scopeCloseJoined",
+      "companion": "scopeCloseSingle",
+      "source": "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from \"effect\"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, ite, some, none, mul, nil, cons, get, length, append, sub, div, mod, concat, mapEmpty, mapGet, mapSet, mapKeys, mapEntries, mapFromEntries, tuple, take, drop, sameHandle, plus, minus, Host, L, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tupleAt, fold, optionCase, caseTag, caseTagR, type MaskRestore } from \"../prelude.ts\"\n\nexport const scopeCloseJoined = (a0: Scope.Scope, a1: Exit.Exit<number, never> | Exit.Exit<string, boolean>) => Scope.close<number, boolean>(a0, a1)\n\n",
+      "sourceHash": "fe718d9ecf2a1f18a09bb7cfe5fef341a8b84afdc6f6b8794b139c8121b4dca1",
+      "changedSpan": {
+        "start": 741,
+        "end": 756,
+        "replacement": "number"
+      },
+      "intendedSpan": {
+        "start": 762,
+        "end": 764
+      },
+      "resolvedDeclaration": {
+        "file": "../../../../Dev/lean4-effect4/ts/eff/node_modules/effect/dist/Scope.d.ts",
+        "start": 16788,
+        "end": 16841
+      },
+      "intendedCode": 2345,
+      "baselineDiagnostics": [],
+      "diagnostics": [
+        {
+          "code": 2379,
+          "file": "../../../../../../private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+          "line": 4,
+          "column": 146,
+          "message": "Argument of type 'Exit<string, boolean> | Exit<number, never>' is not assignable to parameter of type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Failure<string, boolean>' is not assignable to type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'Failure<string, boolean>' is not assignable to type 'Failure<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties. Type 'string' is not assignable to type 'number'.",
+          "start": 762,
+          "end": 764,
+          "compiler": {
+            "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+            "pos": 762,
+            "end": 764,
+            "code": 2379,
+            "category": 1,
+            "text": "Argument of type 'Exit<string, boolean> | Exit<number, never>' is not assignable to parameter of type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+            "messageChain": [
+              {
+                "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                "pos": 762,
+                "end": 764,
+                "code": 2375,
+                "category": 1,
+                "text": "Type 'Failure<string, boolean>' is not assignable to type 'Exit<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                "messageChain": [
+                  {
+                    "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                    "pos": 762,
+                    "end": 764,
+                    "code": 2375,
+                    "category": 1,
+                    "text": "Type 'Failure<string, boolean>' is not assignable to type 'Failure<number, boolean>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.",
+                    "messageChain": [
+                      {
+                        "fileName": "/private/tmp/codex-unguard/p2b-row/actual-target/__p2b__/scopeCloseJoined.missing-member.ts",
+                        "pos": 762,
+                        "end": 764,
+                        "code": 2322,
+                        "category": 1,
+                        "text": "Type 'string' is not assignable to type 'number'."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "conforms": false
+    }
+  ]
+}

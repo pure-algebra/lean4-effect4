@@ -1,0 +1,59 @@
+{
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1919,
+      "sha256": "32d0f64b0582410d6359ccd839e05ca8565810ff0aa290d9dbb811cf98dc00b9"
+    },
+    {
+      "path": "baseline-commands.json",
+      "bytes": 867,
+      "sha256": "cd695921abfe262e4f15bf7971b9780702bee4afd5331817c577bd8c69b0e1e9"
+    },
+    {
+      "path": "baseline-compiled-inputs.json",
+      "bytes": 820,
+      "sha256": "17362e87cb196a633324bc5c4186f2e7a95ef13a965be313afe1b00c8f3438a7"
+    },
+    {
+      "path": "baseline-compiler-observations.json",
+      "bytes": 17151,
+      "sha256": "fe63be0d8d7aaddee4efafa7024271ba863606c32f60a5c65a6a027a891660e4"
+    },
+    {
+      "path": "baseline-fixtures.json",
+      "bytes": 2137,
+      "sha256": "a2fa0836aebeaa18fa410ccc76b557772bdb95433b1b9a61a8d5eff51ee9ffa5"
+    },
+    {
+      "path": "baseline-runner-provenance.json",
+      "bytes": 1975,
+      "sha256": "f63f55019725ba5011c4dd70c4de848ca105b3cd84e0b5fff4a98bc665aab830"
+    },
+    {
+      "path": "baseline-runner.lean",
+      "bytes": 12586,
+      "sha256": "7671a1c0b823195da04fcf28ce092e51240daac53291687301518b29f9b2ee0f"
+    },
+    {
+      "path": "baseline-source.lean",
+      "bytes": 12193,
+      "sha256": "8a4d6afed839646af1375b7849a434e139ca9318db50dcff400b223664341480"
+    },
+    {
+      "path": "consumer-scope.md",
+      "bytes": 2544,
+      "sha256": "6dbc0a98ae6e24e6ca1416f5135a71bdb06541c656a4be4e6996db4202455e9a"
+    },
+    {
+      "path": "current-tool-checks.json",
+      "bytes": 1133,
+      "sha256": "371bf762e8b12e4985915d842f1490fbb7e62755c8fd82f4954d4b1f6916f2d5"
+    },
+    {
+      "path": "working-source-manifest.json",
+      "bytes": 3320,
+      "sha256": "13f13fd01df06ffbdf52fea22a80a2e449c0217beae630bccceac4cd89716c75"
+    }
+  ]
+}

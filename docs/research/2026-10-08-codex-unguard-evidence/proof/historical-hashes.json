@@ -1,0 +1,92 @@
+[
+  {
+    "path": "p3-build.log",
+    "source": "/private/tmp/codex-unguard/p3-scout/build-full-p3-1.log",
+    "sha256": "5378c42742d5d3e5d902418e067ec1fba695d6088eefdecf6dcada428110e0f6"
+  },
+  {
+    "path": "p3-axioms.log",
+    "source": "/private/tmp/codex-unguard/p3-scout/p3-axioms-3.log",
+    "sha256": "18bb411505f9a54ad8c18931fa72a9bd3a32673f78ca621a344ecebec75de717"
+  },
+  {
+    "path": "p3-first-choice-refusal.log",
+    "source": "/private/tmp/codex-unguard/p3-scout/p3-axioms-1.log",
+    "sha256": "f856554cb34494bc981d181f068a5a8012975d64051922604299a54f83c42c1e"
+  },
+  {
+    "path": "P3Axioms.lean.txt",
+    "source": "/private/tmp/codex-unguard/p3-scout/P3Axioms.lean",
+    "sha256": "4a7ecaaf1f601c0f1fecbffe0e17fe4be210f8dd12f7f36971b37f833989fbf1"
+  },
+  {
+    "path": "p3-placement.json",
+    "source": "/private/tmp/codex-unguard/p3-scout/theorem-placement-manifest.json",
+    "sha256": "60d9902a9be9330a6e838dcaccd1bf2df1ed24bf55ba9e0fca613766ffe27680"
+  },
+  {
+    "path": "unguard-build.log",
+    "source": "/private/tmp/codex-unguard/unguard-narrow-2.log",
+    "sha256": "cdd33c2979b3083926b57bd22d80c4e5cb1537fe81a891f2a7e40c7f08bffa92"
+  },
+  {
+    "path": "unguard-axioms.log",
+    "source": "/private/tmp/codex-unguard/unguard-axioms-1.log",
+    "sha256": "00b8434ce33aaa301de4437dcecda9dd6754bd9e7f5a1065a15cefe982bee90a"
+  },
+  {
+    "path": "UnguardAxioms.lean.txt",
+    "source": "/private/tmp/codex-unguard/UnguardAxioms.lean",
+    "sha256": "8015545272ebbfd7a50eaa764464b62ee8bcbaea1c65251af886e28f040cefa7"
+  },
+  {
+    "path": "unguard-statements.json",
+    "source": "/private/tmp/codex-unguard/core-migration/theorem-delta.json",
+    "sha256": "fff4e2752aaeb27548f07eb789347057ef1d7b3705d5362bf998c82bc49c31c2"
+  },
+  {
+    "path": "p2b-initial-build.log",
+    "source": "/private/tmp/codex-unguard/p2b-narrow-3.log",
+    "sha256": "f149dee680c587d17c1a4b275870eb130e238f7cf8e7737db75783e657325db2"
+  },
+  {
+    "path": "p2b-initial-axioms.log",
+    "source": "/private/tmp/codex-unguard/p2b-axioms-1.log",
+    "sha256": "69300e95f2a1d4c653e8fc5c9cb87dc7a1e6bf0b3f037259691ef00365bc5328"
+  },
+  {
+    "path": "P2bAxioms.lean.txt",
+    "source": "/private/tmp/codex-unguard/P2bAxioms.lean",
+    "sha256": "2ec8754512d99688b037889f99f00c4960b27cabcf3d85e49a255adf2db320c3"
+  },
+  {
+    "path": "p2b-core-placement.json",
+    "source": "/private/tmp/codex-unguard/p2b-core-placements.json",
+    "sha256": "e2544630630dc054ee0abd2c84f89e369571f84d0f91bc0222542dcbd316dc79"
+  },
+  {
+    "path": "runIn-paired-build.log",
+    "source": "/private/tmp/codex-unguard/p3-scout/runIn-paired-build-7.log",
+    "sha256": "27a6ad70451f438e68009b318aebbb7ff207cc81547af0aaa45703a18d189cdb"
+  },
+  {
+    "path": "runIn-paired-axioms.log",
+    "source": "/private/tmp/codex-unguard/p3-scout/runIn-paired-axioms-1.log",
+    "sha256": "ccd35799daf7c884d0741bffed33afb40bcf439cc7513ec1d00b53f67e3bf4d4"
+  },
+  {
+    "path": "RunInPairAxioms.lean.txt",
+    "source": "/private/tmp/codex-unguard/p3-scout/RunInPairAxioms.lean",
+    "sha256": "770449ccb9f38d69f58ff1993322fb7bd3b17e565cfa41f8c310dfc15a86644a"
+  },
+  {
+    "path": "runIn-paired-checked.json",
+    "source": "/private/tmp/codex-unguard/p3-scout/runIn-paired-checked.json",
+    "sha256": "276bd6ebd3bf7d7a680e3f0ef4f1d85d64a2bbf9af195adc590c2b53737fc479"
+  },
+  {
+    "path": "protected-baseline.json",
+    "source": "/private/tmp/codex-unguard/protected-baseline.json",
+    "sha256": "c9e1d001e7003a957be95e804974d57140ed9d4af1ad6aeb87e6926c72788d53"
+  }
+]

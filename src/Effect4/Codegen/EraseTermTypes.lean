@@ -93,6 +93,12 @@ def eraseCause (n : Nat) (x : Expr) : Expr := eraseTerm n x
 Their heads are reserved from operation rows under the existing LawfulSpelling premise. -/
 def eraseNode (n : Nat) (x : Expr) : Expr :=
   match x with
+  | .call (.ident "Effect.withFiber")
+      [.arrowBlock [] [.exprStmt (.call (.generic (.ident "Fiber.runIn") [_, _])
+        [receiver, scope]), .ret (.ident "Effect.void")] none] =>
+    .call (.ident "Effect.withFiber")
+      [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [receiver, scope]),
+        .ret (.ident "Effect.void")] none]
   | .call (.generic (.ident "optionCase") [_, _, _, _, _, _, _])
       [input, .arrow none onNone, .lambda ps onSome none] =>
     if decide (ps = Template.params n [0]) then

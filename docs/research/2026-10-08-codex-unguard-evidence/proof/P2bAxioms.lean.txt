@@ -1,0 +1,35 @@
+import Effect4.Laws.Program.UnionRule
+import Effect4.Laws.Program.Eliminators
+import Effect4.Laws.Program.Typing.Closed
+import Effect4.Laws.Codegen.PrintTyped
+
+#print axioms Effect4.Program.UnionRule.extendAll_eq_some_iff
+#print axioms Effect4.Program.UnionRule.extendAll_agrees
+#print axioms Effect4.Program.UnionRule.extendAll_refused
+#print axioms Effect4.Program.UnionRule.extendAll_never
+#print axioms Effect4.Program.UnionRule.extendAll_of_extend
+#print axioms Effect4.Program.UnionRule.extendAll_closed_pair
+#print axioms Effect4.Program.UnionRule.extendAll_closed
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_adjoint
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_upper
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_least
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_bot
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_isSome_iff
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_mono
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_lift
+#print axioms Effect4.Program.UnionRule.Eliminator.extendAll_laws
+#print axioms Effect4.Program.fiberTy_fiberOf
+#print axioms Effect4.Program.fiberTy_upper
+#print axioms Effect4.Program.listOf_list
+#print axioms Effect4.Program.listOf_upper
+#print axioms Effect4.Program.exitOf_exitOf
+#print axioms Effect4.Program.exitOf_upper
+#print axioms Effect4.Program.optionTy_upper
+#print axioms Effect4.Program.optionTy_eq_normal
+#print axioms Effect4.Program.causeInputError_upper
+#print axioms Effect4.Program.closed_optionTy
+#print axioms Effect4.Program.closed_fiberTy
+#print axioms Effect4.Program.closed_listOf
+#print axioms Effect4.Program.closed_exitOf
+#print axioms Effect4.Program.closed_causeInputError
+#print axioms Effect4.Program.printTyped_eq_print

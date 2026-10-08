@@ -1,0 +1,33 @@
+COMMAND scratch/lean-slot.sh lake env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+harness/truth/Truth.lean:1690:0: error: Expression
+  decide
+    (List.map (fun x => x.fst) corpus =
+      let y :=
+        let y :=
+          let y :=
+            let y := ["pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing"];
+            "pPoolReuse" :: "pPoolOrder" :: "pPoolWaiters" :: "pPoolLateWake" :: "pPoolWake" :: y;
+          let y :=
+            "pSemaphoreIfAvailable" ::
+              "pSemaphoreMasked" :: "pSemaphoreHandoff" :: "pSemaphoreProtected" :: "pSemaphoreBodies" :: y;
+          "pSemaphoreScan" :: "pSemaphoreOvertake" :: "pSemaphoreBodiesJoined" :: "pSemaphoreInterrupted" :: y;
+        let y :=
+          let y :=
+            "pQueueFull" :: "pQueueInterrupted" :: "pQueueMasked" :: "pQueueOrder" :: "pSemaphoreProtectedJoined" :: y;
+          "pMaskWait" :: "pMaskedRestore" :: "pLateSeen" :: "pQueueWake" :: y;
+        let y := "pModifyFold" :: "pQueueOffer" :: "pRateRequest" :: "pDeferredGate" :: "pInterruptedWait" :: y;
+        "pFailPayload" :: "pTagPayload" :: "pInterruptEscape" :: "pFold" :: y;
+      let y :=
+        let y :=
+          let y := "pTagHit" :: "pTagMiss" :: "pTagTwoFail" :: "pOptionSome" :: "pOptionNone" :: y;
+          "pCatchError" :: "pCatchIfHit" :: "pCatchIfMiss" :: "pCatchIfRetained" :: y;
+        let y := "pSqlExit" :: "pSqlOrDie" :: "pFailText" :: "pFailBoomText" :: "pTextOrDie" :: y;
+        "pSqlite" :: "pKv" :: "pSqlFail" :: "pSqlCatch" :: y;
+      let y :=
+        let y := "pProvideTwice" :: "pDiamond" :: "pMergeAll" :: "pAcquireHandle" :: "pFailTagged" :: y;
+        "pAcquire" :: "pAcquireClosed" :: "pProvide" :: "pProvideMerge" :: y;
+      let y := "pGen" :: "pLoop" :: "pCatch" :: "pScope" :: "pTwo" :: y;
+      "p42" :: "pBind" :: "pFork" :: "pAwait" :: y)
+did not evaluate to `true`

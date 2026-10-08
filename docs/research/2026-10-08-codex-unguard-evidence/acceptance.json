@@ -1,0 +1,254 @@
+{
+  "base": "c51f9e6b7c456d952d0fe408a274432f4c9aebd5",
+  "implementation_head": "e1aaf620b58d0b62bd8252e8ed7b3124d504cde0",
+  "recorded_at": "2026-10-08T11:12:56.911728+00:00",
+  "commands": [
+    {
+      "name": "printer-final",
+      "command": [
+        "scratch/lean-slot.sh",
+        "lake",
+        "build",
+        "Effect4.Laws.Codegen.PrintTyped",
+        "Test.Codegen.PrintTyped"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 145.956,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/printer-final.log",
+      "record": "final/printer-final.json",
+      "log_sha256": "5d42f2025a80579859f9d65d502e72f3401b4c618e07c633a69a5a1501b08eb4"
+    },
+    {
+      "name": "test-final",
+      "command": [
+        "scratch/lean-slot.sh",
+        "lake",
+        "build",
+        "Test"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 62.527,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/test-final.log",
+      "record": "final/test-final.json",
+      "log_sha256": "c0da3b72f8fe984ef966fe215b55a3a89cd705ab04abc0ba88a7539040d8dd03"
+    },
+    {
+      "name": "proof-status-final",
+      "command": [
+        "scratch/lean-slot.sh",
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/private/tmp/codex-unguard/FinalProofStatus.lean"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 9.19,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/proof-status-final.log",
+      "record": "final/proof-status-final.json",
+      "log_sha256": "5c6a5f8a8f2879fadda00867153902e088ade32cfc6aacb56006f2594ab22ad8"
+    },
+    {
+      "name": "check-cases",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-cases"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 25.805,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-cases.log",
+      "record": "final/check-cases.json",
+      "log_sha256": "80b518e93fdd45216288654428fb9bc3c055053752d7d080594b09a19630c7e3"
+    },
+    {
+      "name": "check-proof-style",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-proof-style"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 18.25,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-proof-style.log",
+      "record": "final/check-proof-style.json",
+      "log_sha256": "09a01c4e05bdfa733a114d6d5c09fdfecdf2292938eb85c24e7a37af1034060a"
+    },
+    {
+      "name": "check-ts-reader",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-ts-reader"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 12.594,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-ts-reader.log",
+      "record": "final/check-ts-reader.json",
+      "log_sha256": "a6092795a4d71c4c3eee211d944da7e1d54622ea29cd98e0ce8248e9973ac458"
+    },
+    {
+      "name": "check-truth",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-truth"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 62.434,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-truth.log",
+      "record": "final/check-truth.json",
+      "log_sha256": "eb34374ca5d8db7a226749466cb6dcff0704f4ac2a646f1c604ec68fbc753307"
+    },
+    {
+      "name": "check-target-final",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-target"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 14.481,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-target-final.log",
+      "record": "final/check-target-final.json",
+      "log_sha256": "37aedcc4c598f22eaaf1e95fc9d350cd29d6e6372fa51c9a35846f36b061581c"
+    },
+    {
+      "name": "check-corpus",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-corpus"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 109.112,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-corpus.log",
+      "record": "final/check-corpus.json",
+      "log_sha256": "74b436a803fcdbfaf938136fb7bd7cc48b5635cc6ce93588f37007891e54a507"
+    },
+    {
+      "name": "check-tsdiag",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-tsdiag"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 1.886,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-tsdiag.log",
+      "record": "final/check-tsdiag.json",
+      "log_sha256": "93d55b7b2f21958fdd8f4e202608d85045c70e070f08803a8e3f6c84fb54608b"
+    },
+    {
+      "name": "check-ingest",
+      "command": [
+        "scratch/lean-slot.sh",
+        "make",
+        "-j1",
+        "-o",
+        "ts/eff/node_modules",
+        "-o",
+        "harness/truth/node_modules",
+        "check-ingest"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+      "exit_code": 0,
+      "duration_seconds": 181.177,
+      "compiler": {
+        "name": "@typescript/native-preview",
+        "version": "7.0.0-dev.20260629.1"
+      },
+      "log": "final/check-ingest.log",
+      "record": "final/check-ingest.json",
+      "log_sha256": "df0597929cba93cb8ad018e5ca189805a1065700082e78832720341af00c73c4"
+    }
+  ],
+  "protected_files_unchanged": true,
+  "proof_status": "16 selected public roots proved, no next goals; whole Test audits all declarations",
+  "historical_status": "Stage-specific pending labels in proof/ and target/ precede and are superseded by this acceptance record."
+}

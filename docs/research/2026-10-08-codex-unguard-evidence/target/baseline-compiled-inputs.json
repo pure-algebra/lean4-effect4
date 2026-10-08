@@ -1,0 +1,20 @@
+{
+  "unchangedAcrossEmission": true,
+  "files": [
+    {
+      "path": ".lake/build/lib/lean/Effect4/Codegen/PrintTyped.olean",
+      "sha256": "d1c3933e36609a52f7e75b58e1b37857bc353f6ecf31a8310c86c334ce7ed7c3",
+      "afterSha256": "d1c3933e36609a52f7e75b58e1b37857bc353f6ecf31a8310c86c334ce7ed7c3"
+    },
+    {
+      "path": ".lake/build/lib/lean/Effect4/Codegen/Print.olean",
+      "sha256": "0617b36cbd01af9bd4a22ee3f258203db3b0fefb8b9d9d8ccae6296ec141f32c",
+      "afterSha256": "0617b36cbd01af9bd4a22ee3f258203db3b0fefb8b9d9d8ccae6296ec141f32c"
+    },
+    {
+      "path": ".lake/build/lib/lean/Effect4/Program/Typing/Rules.olean",
+      "sha256": "013ddf311b4b80cba3c0092ebadacae68dcb41a46a4965f5d14e81d20822f527",
+      "afterSha256": "013ddf311b4b80cba3c0092ebadacae68dcb41a46a4965f5d14e81d20822f527"
+    }
+  ]
+}

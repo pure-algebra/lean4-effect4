@@ -1,0 +1,97 @@
+COMMAND scratch/lean-slot.sh make -j1 -o ts/eff/node_modules -o harness/truth/node_modules check-target
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+set -o pipefail; lake build 2>&1 | tee .lake/gen/build.log
+ℹ [1432/1434] Replayed Test.All
+info: Test/All.lean:305:0: Effect4 library-root gate: 197 API/utility modules, 349 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:305:0: Effect4 module and axiom gate: checked 850 modules and 97885 declarations; phases (ms): sources and closure 25, library roots 384, declarations 4110, resolution 1469, axioms 24138, exemptions 442; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:305:0: Effect4 goal gate: 30 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 12 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (1434 jobs).
+lake env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv --check
+PASS row-types: generated/row-types.tsv is what Ty.renderRaw prints for every selectable row
+node ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
+bun test tools/target
+bun test v1.4.2 (744846f84)
+
+tools/target/profile.test.ts:
+(pass) the row signatures are Lean's, one line per selectable row, and cover the selection [0.25ms]
+(pass) the receiver of a selected member is the object type the compiler parsed [257.31ms]
+(pass) requirements: full keys have bounded identities and only the exact scope key is special [0.32ms]
+(pass) requirements: distinct keys keep distinct identities when their carriers coincide [0.03ms]
+(pass) requirements: unknown and absent carriers retain the key identity [0.03ms]
+(pass) requirements: malformed carrier metadata is rejected [0.09ms]
+(pass) the hand-selection lane binds the same full requirement identity as the corpus lane (DI-93) [0.47ms]
+(pass) handle targets are bound by declaration, and structured types preserve nesting [0.23ms]
+108 |   const programIds = corpus.programs.map((entry: { name: string }) => `program/${entry.name}`)
+109 |   const rowIds = selection.rows.map((row: { table: string; name: string }) => `row/${row.table}/${row.name}`)
+110 |   const queries = queriesFromInputs(repo, selection, { programs: [] }, [])
+111 |   // Exact identities come from the independent corpus and row selection, not a count pin.
+112 |   expect(programIds.length).toBeGreaterThan(0)
+113 |   expect(queries.map(q => q.id)).toEqual([...programIds, ...rowIds])
+                                       ^
+error: expect(received).toEqual(expected)
+
+@@ -36,16 +36,16 @@
+    "program/pOptionSome",
+    "program/pOptionNone",
+    "program/pFailPayload",
+    "program/pTagPayload",
+    "program/pInterruptEscape",
++   "program/pFold",
++   "program/pModifyFold",
+    "program/pJoinedFirstNumber",
+    "program/pJoinedFirstString",
+    "program/pJoinedModifyNumber",
+    "program/pJoinedModifyString",
+-   "program/pFold",
+-   "program/pModifyFold",
+    "program/pQueueOffer",
+    "program/pRateRequest",
+    "program/pDeferredGate",
+    "program/pInterruptedWait",
+    "program/pMaskWait",
+
+- Expected  - 2
++ Received  + 2
+
+      at <anonymous> (/Users/pooks/.codex/worktrees/unguard/lean4-effect4/tools/target/profile.test.ts:113:34)
+(fail) selected IDs cannot vanish with absent metadata and unexpected inventory is refused [92.40ms]
+
+tools/target/prelude.test.ts:
+(pass) Boolean tag tests retain the host error bound and work as ordinary data [231.60ms]
+(pass) option defaults preserve nested payloads, unit, and object identity [0.05ms]
+
+tools/target/oracle.test.ts:
+(pass) synthetic assignments compare all three independent Effect columns [209.53ms]
+(pass) program errors may be strictly contained while other contracts stay exact [419.71ms]
+(pass) program containment cannot accept unresolved error bounds or failed extraction [203.53ms]
+(pass) request, receiver, optional and rest parameters are independently compared [208.45ms]
+(pass) unresolved types, absent metadata and unsupported signatures are refusals [209.67ms]
+(pass) all diagnostics count and repeated reports are stable [386.63ms]
+(pass) non-Effect and never subjects cannot agree through never-valued extraction helpers [194.66ms]
+(pass) one compiler: no second checker is constructed anywhere in the tree (row 57) [50.78ms]
+(pass) E4-CATCH-CE-001: an explicit absent fallback selects the data-first overload [197.38ms]
+
+tools/target/assignability.test.ts:
+(pass) the four verdicts follow the direction of the disagreement, not the pair's name [0.13ms]
+(pass) the two readings of a direction are reported, never conflated [0.02ms]
+(pass) the vectors are read exactly, and the table keeps every column [0.17ms]
+
+tools/target/rows.test.ts:
+(pass) a template atom agrees at its probes, and a wrong template or instantiation does not [198.79ms]
+
+tools/target/cli.test.ts:
+(pass) real command positive exits 0 [245.21ms]
+(pass) real command negative exits 1 [243.21ms]
+(pass) real command refuses missing query input with exit 2 [50.38ms]
+(pass) declarative query input refuses malformed controls [0.33ms]
+
+1 tests failed:
+(fail) selected IDs cannot vanish with absent metadata and unexpected inventory is refused [92.40ms]
+
+ 27 pass
+ 1 fail
+ 212 expect() calls
+Ran 28 tests across 6 files. [3.48s]
+make: *** [.lake/check/target] Error 1

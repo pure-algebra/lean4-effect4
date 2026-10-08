@@ -1,4 +1,5 @@
 import Effect4.Codegen.Print
+import Effect4.Codegen.PrintEliminators
 import Effect4.Codegen.EraseTypes
 import Effect4.Program.Typing.Call
 
@@ -89,6 +90,24 @@ def printTypedAt (sig : Signature Op) (ann : List Nat → Option (List Ty)) (n :
     (e : Eff Op) : Except PrintRefusal TypeScript.Expr :=
   cata_eff (typedAlg sig ann) e [] n
 
+/-- The full typed printer uses the same address fold and the checked node/slot environments.
+The earlier row-only `typedAlg` remains available for its existing connector and controls. -/
+def typedSitesAlg (sig : Signature Op) (ann : List Nat → Option (List Ty))
+    (ctx : List Nat → Option (Effect4.Codegen.PrintEliminators.Context Op)) :
+    EffAlgebra Op TCarrier :=
+  EffAlgebra.ofLayer (fun fam ctor args path =>
+    match ctx path with
+    | some context => Effect4.Codegen.PrintEliminators.layer sig context (ann path)
+        fam ctor (atAddress path args 0)
+    | none => Effect4.Codegen.PrintEliminators.missing fam)
+
+/-- All approved typed sites, using actual checked data at each address. -/
+def printTypedSitesAt (sig : Signature Op) (ann : List Nat → Option (List Ty))
+    (ctx : List Nat → Option (Effect4.Codegen.PrintEliminators.Context Op))
+    (n : Nat) (e : Eff Op) : Except PrintRefusal TypeScript.Expr :=
+  cata_eff (typedSitesAlg sig ann ctx) e [] n
+
+
 end Effect4.Codegen.Templates
 
 namespace Effect4.Program
@@ -137,7 +156,8 @@ end PrintedJoin
 /-- No call needs a join annotation at any checked address. This is the domain of the
 unchanged-print connector. It makes no claim about target compiler inference. -/
 def NoJoin (s : Signature Op) (env0 : TyEnv) (p : Eff Op) : Prop :=
-  ∀ path, PrintedJoin.at_ s env0 p path = false
+  (∀ path, PrintedJoin.at_ s env0 p path = false) ∧
+    Effect4.Codegen.PrintEliminators.NoSiteTypes s env0 p
 
 /-- The row's checked bindings, in template-variable order, only at a call that needs them. -/
 def typeArgsAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
@@ -146,9 +166,16 @@ def typeArgsAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) 
     (callAt s env0 p path).bind fun call => call.bindings.ordered
   else none
 
-/-- **The typed print of a program**: each call at a join carries its type arguments. -/
+/-- The typed print adds the approved site types when a checked site needs them.
+The shared annotation table supplies every site context and child result.
+Without site annotations, the row-only printer keeps its existing raw behavior. -/
 def printTyped (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
     Except PrintRefusal TypeScript.Expr :=
-  Effect4.Codegen.Templates.printTypedAt s (typeArgsAt s env0 p) env0.length p
+  let entries := annotate s env0 p
+  if Effect4.Codegen.PrintEliminators.needsSitesAt s entries p then
+    Effect4.Codegen.Templates.printTypedSitesAt s (typeArgsAt s env0 p)
+      (Effect4.Codegen.PrintEliminators.contextAtTable entries p) env0.length p
+  else
+    Effect4.Codegen.Templates.printTypedAt s (typeArgsAt s env0 p) env0.length p
 
 end Effect4.Program

@@ -1,0 +1,22 @@
+[
+  {
+    "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean harness/truth/P2b.lean",
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -M4096 --run /private/tmp/codex-unguard/p2b-target/baseline/SingleBaseline.lean /private/tmp/codex-unguard/p2b-target/baseline/manifest.json",
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": "python3 /private/tmp/codex-unguard/p2b-target/baseline/check-baseline.py",
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  },
+  {
+    "command": "node /private/tmp/codex-unguard/p2b-target/baseline/directions.mjs",
+    "cwd": "/Users/pooks/.codex/worktrees/unguard/lean4-effect4",
+    "exit": 0
+  }
+]

@@ -1,0 +1,165 @@
+COMMAND scratch/lean-slot.sh lake env lean -DwarningAsError=true /private/tmp/codex-unguard/FinalProofStatus.lean
+CWD /Users/pooks/.codex/worktrees/unguard/lean4-effect4
+COMPILER @typescript/native-preview 7.0.0-dev.20260629.1
+Effect4.Codegen.eraseJoinArgs_printTypedAt: proved; nearest []; 613 lemmas, 689 definitions
+Effect4.Codegen.readTyped_printTypedAt: proved; nearest [Effect4.Codegen.eraseJoinArgs_printTypedAt]; 409 lemmas, 624 definitions
+Effect4.Codegen.readTyped_exact: proved; nearest []; 251 lemmas, 563 definitions
+Effect4.Codegen.eraseJoinArgs_printTypedSitesAt: proved; nearest [Effect4.Program.annotate_eq_table]; 767 lemmas, 935 definitions
+Effect4.Codegen.eraseJoinArgs_printTyped: proved; nearest [Effect4.Codegen.eraseJoinArgs_printTypedSitesAt, Effect4.Codegen.eraseJoinArgs_printTypedAt]; 127 lemmas, 764 definitions
+Effect4.Codegen.readTyped_printTyped: proved; nearest [Effect4.Codegen.eraseJoinArgs_printTyped]; 425 lemmas, 873 definitions
+Effect4.Program.printTyped_eq_print: proved; nearest []; 168 lemmas, 620 definitions
+Effect4.Program.UnionRule.Eliminator.extendAll_laws: proved; nearest []; 178 lemmas, 67 definitions
+Effect4.Program.UnionRule.Eliminator.extendAll_mono: proved; nearest []; 172 lemmas, 65 definitions
+Effect4.Program.closed_optionTy: proved; nearest []; 83 lemmas, 62 definitions
+Effect4.Program.closed_fiberTy: proved; nearest []; 85 lemmas, 64 definitions
+Effect4.Program.closed_listOf: proved; nearest []; 85 lemmas, 63 definitions
+Effect4.Program.closed_exitOf: proved; nearest []; 85 lemmas, 64 definitions
+Effect4.Program.closed_causeInputError: proved; nearest []; 85 lemmas, 63 definitions
+Effect4.Program.checkRow_request_iff: proved; nearest []; 54 lemmas, 110 definitions
+Effect4.Program.annotate_eq_table: proved; nearest []; 165 lemmas, 296 definitions
+next goals: 0
+UNIVERSES Effect4.Codegen.eraseJoinArgs_printTypedAt: []
+STATEMENT Effect4.Codegen.eraseJoinArgs_printTypedAt: ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes}
+  {sig : Effect4.Program.Signature Op} {spell : String → List.{0} String → Option.{0} Op}
+  {ann : List.{0} Nat → Option.{0} (List.{0} Effect4.Program.Ty)},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {n : Nat} {e : Effect4.Program.Eff Op},
+      Eq.{1} (Effect4.Program.Readable classes sig n e) true →
+        ∀ {x : TypeScript.Expr},
+          Eq.{1} (Effect4.Codegen.Templates.printTypedAt sig ann n e) (Except.ok.{0, 0} x) →
+            Eq.{1} (Effect4.Program.print sig n e)
+              (Except.ok.{0, 0} (Effect4.Codegen.eraseJoinArgs classes sig spell n x))
+AXIOMS Effect4.Codegen.eraseJoinArgs_printTypedAt: [propext, Quot.sound]
+UNIVERSES Effect4.Codegen.readTyped_printTypedAt: []
+STATEMENT Effect4.Codegen.readTyped_printTypedAt: ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes}
+  {sig : Effect4.Program.Signature Op} {spell : String → List.{0} String → Option.{0} Op}
+  {ann : List.{0} Nat → Option.{0} (List.{0} Effect4.Program.Ty)},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {n : Nat} {e : Effect4.Program.Eff Op},
+      Eq.{1} (Effect4.Program.Readable classes sig n e) true →
+        ∀ {x : TypeScript.Expr},
+          Eq.{1} (Effect4.Codegen.Templates.printTypedAt sig ann n e) (Except.ok.{0, 0} x) →
+            Eq.{1} (Effect4.Codegen.readTyped classes sig spell n x) (Except.ok.{0, 0} e)
+AXIOMS Effect4.Codegen.readTyped_printTypedAt: [propext, Quot.sound]
+UNIVERSES Effect4.Codegen.readTyped_exact: []
+STATEMENT Effect4.Codegen.readTyped_exact: ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes}
+  {sig : Effect4.Program.Signature Op} {spell : String → List.{0} String → Option.{0} Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {n : Nat} {x : TypeScript.Expr} {e : Effect4.Program.Eff Op},
+      Eq.{1} (Effect4.Codegen.readTyped classes sig spell n x) (Except.ok.{0, 0} e) →
+        Eq.{1} (Effect4.Program.print sig n e) (Except.ok.{0, 0} (Effect4.Codegen.eraseJoinArgs classes sig spell n x))
+AXIOMS Effect4.Codegen.readTyped_exact: [propext, Quot.sound]
+UNIVERSES Effect4.Codegen.eraseJoinArgs_printTypedSitesAt: []
+STATEMENT Effect4.Codegen.eraseJoinArgs_printTypedSitesAt: ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes}
+  {sig : Effect4.Program.Signature Op} {spell : String → List.{0} String → Option.{0} Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {env0 : Effect4.Program.TyEnv} {e : Effect4.Program.Eff Op}
+      {ann : List.{0} Nat → Option.{0} (List.{0} Effect4.Program.Ty)},
+      Eq.{1} (Effect4.Program.Readable classes sig (List.length.{0} env0) e) true →
+        ∀ {x : TypeScript.Expr},
+          Eq.{1}
+              (Effect4.Codegen.Templates.printTypedSitesAt sig ann
+                (Effect4.Codegen.PrintEliminators.contextAtTable (Effect4.Program.annotate sig env0 e) e)
+                (List.length.{0} env0) e)
+              (Except.ok.{0, 0} x) →
+            Eq.{1} (Effect4.Program.print sig (List.length.{0} env0) e)
+              (Except.ok.{0, 0} (Effect4.Codegen.eraseJoinArgs classes sig spell (List.length.{0} env0) x))
+AXIOMS Effect4.Codegen.eraseJoinArgs_printTypedSitesAt: [propext, Quot.sound]
+UNIVERSES Effect4.Codegen.eraseJoinArgs_printTyped: []
+STATEMENT Effect4.Codegen.eraseJoinArgs_printTyped: ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes}
+  {sig : Effect4.Program.Signature Op} {spell : String → List.{0} String → Option.{0} Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {env0 : Effect4.Program.TyEnv} {e : Effect4.Program.Eff Op},
+      Eq.{1} (Effect4.Program.Readable classes sig (List.length.{0} env0) e) true →
+        ∀ {x : TypeScript.Expr},
+          Eq.{1} (Effect4.Program.printTyped sig env0 e) (Except.ok.{0, 0} x) →
+            Eq.{1} (Effect4.Program.print sig (List.length.{0} env0) e)
+              (Except.ok.{0, 0} (Effect4.Codegen.eraseJoinArgs classes sig spell (List.length.{0} env0) x))
+AXIOMS Effect4.Codegen.eraseJoinArgs_printTyped: [propext, Quot.sound]
+UNIVERSES Effect4.Codegen.readTyped_printTyped: []
+STATEMENT Effect4.Codegen.readTyped_printTyped: ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes}
+  {sig : Effect4.Program.Signature Op} {spell : String → List.{0} String → Option.{0} Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {env0 : Effect4.Program.TyEnv} {e : Effect4.Program.Eff Op},
+      Eq.{1} (Effect4.Program.Readable classes sig (List.length.{0} env0) e) true →
+        ∀ {x : TypeScript.Expr},
+          Eq.{1} (Effect4.Program.printTyped sig env0 e) (Except.ok.{0, 0} x) →
+            Eq.{1} (Effect4.Codegen.readTyped classes sig spell (List.length.{0} env0) x) (Except.ok.{0, 0} e)
+AXIOMS Effect4.Codegen.readTyped_printTyped: [propext, Quot.sound]
+UNIVERSES Effect4.Program.printTyped_eq_print: []
+STATEMENT Effect4.Program.printTyped_eq_print: ∀ {Op : Type} (s : Effect4.Program.Signature Op)
+  (env0 : Effect4.Program.TyEnv) (p : Effect4.Program.Eff Op),
+  Effect4.Program.NoJoin s env0 p →
+    Eq.{1} (Effect4.Program.printTyped s env0 p) (Effect4.Program.print s (List.length.{0} env0) p)
+AXIOMS Effect4.Program.printTyped_eq_print: [propext, Quot.sound]
+UNIVERSES Effect4.Program.UnionRule.Eliminator.extendAll_laws: []
+STATEMENT Effect4.Program.UnionRule.Eliminator.extendAll_laws: ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option.{0} α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    (∀ {t : Effect4.Program.Ty} {a : α},
+        Eq.{1} (rule t) (some.{0} a) → Eq.{1} (Effect4.Program.UnionRule.extendAll rule t) (some.{0} a)) ∧
+      (∀ {t : Effect4.Program.Ty},
+          Eq.{1} (rule t) none.{0} →
+            Eq.{1} (Effect4.Program.UnionRule.extendAll rule t) (Effect4.Program.UnionRule.lift rule t)) ∧
+        (Exists.{1} fun a =>
+            Eq.{1} (Effect4.Program.UnionRule.extendAll rule Effect4.Program.Ty.never) (some.{0} a) ∧
+              ∀ (b : α), Effect4.Program.UnionRule.AnswerOrder.le a b) ∧
+          (∀ {t : Effect4.Program.Ty} {a : α},
+              Eq.{1} (Effect4.Program.UnionRule.extendAll rule t) (some.{0} a) →
+                Eq.{1} (t.subN (C a)) true ∧
+                  ∀ (b : α), Effect4.Program.UnionRule.AnswerOrder.le a b ↔ Eq.{1} (t.subN (C b)) true) ∧
+            ∀ {t : Effect4.Program.Ty} {a : α},
+              Eq.{1} (Effect4.Program.UnionRule.extend rule t) (some.{0} a) →
+                Eq.{1} (Effect4.Program.UnionRule.extendAll rule t) (some.{0} a)
+AXIOMS Effect4.Program.UnionRule.Eliminator.extendAll_laws: [propext, Quot.sound]
+UNIVERSES Effect4.Program.UnionRule.Eliminator.extendAll_mono: []
+STATEMENT Effect4.Program.UnionRule.Eliminator.extendAll_mono: ∀ {α : Type} [inst : Effect4.Program.UnionRule.Answer α]
+  [inst_1 : Effect4.Program.UnionRule.AnswerOrder α] {rule : Effect4.Program.Ty → Option.{0} α}
+  {C : α → Effect4.Program.Ty},
+  Effect4.Program.UnionRule.Eliminator rule C →
+    ∀ {s t : Effect4.Program.Ty},
+      Eq.{1} (s.subN t) true →
+        ∀ {b : α},
+          Eq.{1} (Effect4.Program.UnionRule.extendAll rule t) (some.{0} b) →
+            Exists.{1} fun a =>
+              Eq.{1} (Effect4.Program.UnionRule.extendAll rule s) (some.{0} a) ∧
+                Effect4.Program.UnionRule.AnswerOrder.le a b
+AXIOMS Effect4.Program.UnionRule.Eliminator.extendAll_mono: [propext, Quot.sound]
+UNIVERSES Effect4.Program.closed_optionTy: []
+STATEMENT Effect4.Program.closed_optionTy: ∀ {t item : Effect4.Program.Ty},
+  Eq.{1} t.closed true → Eq.{1} (Effect4.Program.optionTy t) (some.{0} item) → Eq.{1} item.closed true
+AXIOMS Effect4.Program.closed_optionTy: [propext, Quot.sound]
+UNIVERSES Effect4.Program.closed_fiberTy: []
+STATEMENT Effect4.Program.closed_fiberTy: ∀ {t value error : Effect4.Program.Ty},
+  Eq.{1} t.closed true →
+    Eq.{1} (Effect4.Program.fiberTy t) (some.{0} (Prod.mk.{0, 0} value error)) →
+      Eq.{1} value.closed true ∧ Eq.{1} error.closed true
+AXIOMS Effect4.Program.closed_fiberTy: [propext, Quot.sound]
+UNIVERSES Effect4.Program.closed_listOf: []
+STATEMENT Effect4.Program.closed_listOf: ∀ {t item : Effect4.Program.Ty},
+  Eq.{1} t.closed true → Eq.{1} (Effect4.Program.Checker.listOf? t) (some.{0} item) → Eq.{1} item.closed true
+AXIOMS Effect4.Program.closed_listOf: [propext, Quot.sound]
+UNIVERSES Effect4.Program.closed_exitOf: []
+STATEMENT Effect4.Program.closed_exitOf: ∀ {t : Effect4.Program.Ty}
+  {pair : Prod.{0, 0} Effect4.Program.Ty Effect4.Program.Ty},
+  Eq.{1} t.closed true →
+    Eq.{1} (Effect4.Program.Checker.exitOf? t) (some.{0} pair) →
+      Eq.{1} (Prod.fst.{0, 0} pair).closed true ∧ Eq.{1} (Prod.snd.{0, 0} pair).closed true
+AXIOMS Effect4.Program.closed_exitOf: [propext, Quot.sound]
+UNIVERSES Effect4.Program.closed_causeInputError: []
+STATEMENT Effect4.Program.closed_causeInputError: ∀ {input error : Effect4.Program.Ty},
+  Eq.{1} input.closed true → Eq.{1} (Effect4.Program.causeInputError? input) (some.{0} error) → Eq.{1} error.closed true
+AXIOMS Effect4.Program.closed_causeInputError: [propext, Quot.sound]
+UNIVERSES Effect4.Program.checkRow_request_iff: []
+STATEMENT Effect4.Program.checkRow_request_iff: ∀ (row : Effect4.Program.Row) (request : Effect4.Program.Ty)
+  (use : Option.{0} Effect4.Program.TermUse),
+  Eq.{1} (Effect4.Program.checkRow row request use)
+      (Except.error.{0, 0} Effect4.Program.RowTypingRefusal.requestNotSubtype) ↔
+    Eq.{1} (Effect4.Program.Bounds.matchB List.nil.{0} row.request.normalize request.normalize) none.{0}
+AXIOMS Effect4.Program.checkRow_request_iff: [propext, Quot.sound]
+UNIVERSES Effect4.Program.annotate_eq_table: []
+STATEMENT Effect4.Program.annotate_eq_table: ∀ {Op : Type} (s : Effect4.Program.Signature Op)
+  (env0 : Effect4.Program.TyEnv) (p : Effect4.Program.Eff Op),
+  Eq.{1} (Effect4.Program.annotate s env0 p) (Effect4.Program.table s env0 p)
+AXIOMS Effect4.Program.annotate_eq_table: [propext, Quot.sound]
