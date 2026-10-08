@@ -38,6 +38,9 @@ structure State where
   scheduled : Bool := false
   deriving DecidableEq, Repr
 
+/-- The initial state, with the chosen open flag and no registrations or scheduled batch. -/
+def initial (isOpen : Bool) : State := { isOpen }
+
 /-- The state after a wake: opened for `open`, as it is for `release`. -/
 def opened (setOpen : Bool) (s : State) : State := if setOpen then { s with isOpen := true } else s
 

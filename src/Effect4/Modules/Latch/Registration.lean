@@ -1,7 +1,10 @@
 module
 
 public import Effect4.Modules.Latch.Steps
+public import Effect4.Modules.Step.Inputs
+public import Effect4.Modules.Step.Lists
 meta import Effect4.Modules.Step.Elab
+meta import Effect4.Modules.Step.Elab.Inputs
 
 /-!
 # Latch registration and cleanup
@@ -24,45 +27,41 @@ namespace Data
 /-- The identity of a registration, through the canonical waiter schema. -/
 def waiterIdF : FieldRef waiterRecord idTy := field_ref% "id"
 
+step_context% InitialInputs (opened : .bool)
+step_context% AwaitInputs (id : idTy, hint : idTy, cell : cellTy)
+step_context% WithdrawInputs (id : idTy, cell : cellTy)
+
 /-- A cell with the supplied open flag and no registrations or scheduled batch. -/
-def initial : Step [.bool] cellTy := record_step% {
-  «open» := .var (.here _ _), pending := .nil, scheduled := .bool false, waiters := .nil }
+def initial : Step InitialInputs.types cellTy := step_inputs% InitialInputs => record_step% {
+  «open» := opened, pending := .nil, scheduled := .bool false, waiters := .nil }
 
 /-- The callback answers immediately when open, or appends one registration when closed. -/
-def awaitLatch : Step [idTy, idTy, cellTy] (.prod .bool cellTy) :=
-  let c := Step.var (.there _ (.there _ (.here _ _)))
-  let waiter : Step [idTy, idTy, cellTy] waiterTy := record_step% {
-    id := .var (.here _ _), hint := .var (.there _ (.here _ _)) }
-  .ite (.get c openF) (.pair (.bool true) c)
-    (.pair (.bool false) (.set c waitersF (.snoc (.get c waitersF) waiter)))
+def awaitLatch : Step AwaitInputs.types (.prod .bool cellTy) := step_inputs% AwaitInputs =>
+  let waiter : Step _ waiterTy := record_step% { id := id, hint := hint }
+  .ite (.get cell openF) (.pair (.bool true) cell)
+    (.pair (.bool false) (.set cell waitersF (.snoc (.get cell waitersF) waiter)))
 
 /-- A single pass removes the first matching registration and reports whether it found one. -/
-def removeFirst {Γ : List Ty} (id : Input Γ idTy) (xs : Step Γ (.list waiterTy)) :
+def removeFirst {Γ : List Ty} (id : Step Γ idTy) (xs : Step Γ (.list waiterTy)) :
     Step Γ (.prod .bool (.list waiterTy)) :=
-  .fold xs (.pair (.bool false) (.emptyLike xs))
-    (.ite (.fst (.var (.here _ _)))
-      (.pair (.bool true) (.snoc (.snd (.var (.here _ _))) (.var (.there _ (.here _ _)))))
-      (.ite (.sameDeferred (.get (.var (.there _ (.here _ _))) waiterIdF)
-          (.var (.there _ (.there _ id))))
-        (.pair (.bool true) (.snd (.var (.here _ _))))
-        (.pair (.bool false) (.snoc (.snd (.var (.here _ _))) (.var (.there _ (.here _ _)))))))
+  Step.Lists.removeFirst xs (item_step% xs with waiter =>
+    .sameDeferred (.get waiter waiterIdF) id)
 
 /-- Cleanup searches waiters first, then the still-attached scheduled batch. -/
-def withdraw : Step [idTy, cellTy] (.prod .unit cellTy) :=
-  let c := Step.var (.there _ (.here _ _))
-  let removed := removeFirst (.here _ _) (.get c waitersF)
-  .ite (.fst removed) (.pair .unit (.set c waitersF (.snd removed)))
-    (.ite (.get c scheduledF)
-      (.pair .unit (.set c pendingF (.snd (removeFirst (.here _ _) (.get c pendingF)))))
-      (.pair .unit c))
+def withdraw : Step WithdrawInputs.types (.prod .unit cellTy) := step_inputs% WithdrawInputs =>
+  let removed := removeFirst id (.get cell waitersF)
+  .ite (.fst removed) (.pair .unit (.set cell waitersF (.snd removed)))
+    (.ite (.get cell scheduledF)
+      (.pair .unit (.set cell pendingF (.snd (removeFirst id (.get cell pendingF)))))
+      (.pair .unit cell))
 
 end Data
 
 /-- Construct the initial cell through the shared step translation. -/
-def initialStep (isOpen : TermSrc) : TermSrc := Data.initial.term (Input.source [isOpen])
+def initialStep (isOpen : TermSrc) : TermSrc := Data.initial.term (input_sources% (Data.InitialInputs) {opened := isOpen})
 /-- Register a callback through the shared step translation. -/
-def awaitStep (id hint cell : TermSrc) : TermSrc := Data.awaitLatch.term (Input.source [id, hint, cell])
+def awaitStep (id hint cell : TermSrc) : TermSrc := Data.awaitLatch.term (input_sources% (Data.AwaitInputs) {id := id, hint := hint, cell := cell})
 /-- Remove one registration through the shared step translation. -/
-def withdrawStep (id cell : TermSrc) : TermSrc := Data.withdraw.term (Input.source [id, cell])
+def withdrawStep (id cell : TermSrc) : TermSrc := Data.withdraw.term (input_sources% (Data.WithdrawInputs) {id := id, cell := cell})
 
 end Effect4.Latch
