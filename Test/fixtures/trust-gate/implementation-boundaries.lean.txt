@@ -119,4 +119,36 @@ run_elab do
   logInfo m!"PASS exact private resolution, rendering receipts, and base ceiling for {theorems.size} semantic declarations"
   logInfo "PASS fresh choice-bearing semantic helper exceeds its selected ceiling"
 
+-- The same comparison used by the gate sees a balanced replacement of actual goal dependents.
+run_elab do
+  let environment ← Lean.getEnv
+  let (facts, _, missing) := ProofGraph.Audit.auditedFacts environment belongsToAuditedTree
+  unless missing.isEmpty do throwError "missing declarations in goal identity control: {missing}"
+  let declarations := facts.map (·.name)
+  let isGoal := ProofGraph.isGoal environment
+  let (reachedAll, _) := ProofGraph.reachedAxiomsMany environment declarations {} isGoal
+  let mut actual : Array Lean.Name := #[]
+  for (name, reached) in declarations.zip reachedAll do
+    let some axioms := reached | throwError "axiom collection exhausted at {name}"
+    if !isGoal name && axioms.any isGoal then actual := actual.push name
+  unless actual.contains `Test.Audit.SemanticsCensus.restingWitness do
+    throwError "the goal identity control did not reach its real dependent"
+  unless restingDifference actual actual.reverse == (#[], #[]) do
+    throwError "the goal identity comparison depends on declaration order"
+  let removedName := actual[0]!
+  let addedName := ``Effect4.Program.requestOf
+  let (reached, _) := ProofGraph.reachedAxiomsMany environment #[addedName] {} isGoal
+  let some addedAxioms := reached[0]! | throwError "replacement collection exhausted"
+  if actual.contains addedName || addedAxioms.any isGoal then
+    throwError "replacement must be an existing declaration independent of goals"
+  let balanced := (actual.filter (· != removedName)).push addedName
+  unless balanced.size == actual.size do throwError "replacement changed the count"
+  unless restingDifference actual balanced == (#[addedName], #[removedName]) do
+    throwError "balanced replacement escaped the goal identity comparison"
+  unless restingDifference actual (actual.push addedName) == (#[addedName], #[]) do
+    throwError "new dependent escaped the goal identity comparison"
+  unless restingDifference actual (actual.filter (· != removedName)) == (#[], #[removedName]) do
+    throwError "freed dependent escaped the goal identity comparison"
+  logInfo m!"PASS goal identity comparison: {actual.size} actual dependents; order control, balanced replacement, addition and removal"
+
 end Test.Audit

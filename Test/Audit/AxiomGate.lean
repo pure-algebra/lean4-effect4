@@ -362,13 +362,28 @@ private def admittedInitializedHandles : List Name :=
   [`Effect4.Laws.Auto.semanticsAttribute]
 
 /--
-The count of declarations that rest on a planned goal, pinned at the default audit root (decisions
-rows 301 and 302). A battery no longer pins "proved" on a statement, so this one number holds the
-same for the whole tree: a declaration that comes to rest on a goal moves the count, and so does a
-goal's proof that frees one. The gate then refuses until the pin moves, which is a review event.
-The slow root reads more modules: it logs its count and pins none.
+The declarations that rest on planned goals at the default audit root (decisions rows 301 and 302).
+The gate refuses any addition or removal, including a replacement that leaves the count unchanged.
+A change to this list is a review event. The slow root logs its count and pins no names.
 -/
-private def restingPin : Nat := 12
+private def restingPin : Array Name := #[
+  `Test.Audit.SemanticsCensus.placedSketch,
+  `Test.Audit.SemanticsCensus.restingWitness,
+  `Test.Audit.SemanticsCensus.sketchedGoal,
+  `Test.Dogfood.Scenario.Atomic.atomic,
+  `Test.Dogfood.Scenario.QueueWorkers.queueWorkers,
+  `Test.Dogfood.Scenario.Routing.routing,
+  `Test.Dogfood.Scenario.Timeout.timeout,
+  `Test.Dogfood.Scenario.Workers.workers,
+  `Test.Obligations.resting,
+  `Test.ProofGraphPlan.m7Modulo,
+  `Test.ProofGraphPlan.sketched,
+  `Test.ProofGraphPlan.top]
+
+/-- Compare identities, independently of the environment's declaration order. -/
+private def restingDifference (expected actual : Array Name) : Array Name × Array Name :=
+  (actual.filter fun name => !expected.contains name,
+    expected.filter fun name => !actual.contains name)
 
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
@@ -471,7 +486,7 @@ elab "#effect4_axiom_gate" : command => do
   let (reachedAll, memoAll) := ProofGraph.reachedAxiomsMany environment declarations {} isGoal
   let mut memo : ProofGraph.AxiomMemo := memoAll
   let mut goalCount := 0
-  let mut resting := 0
+  let mut resting : Array Name := #[]
   for (declaration, reached) in declarations.zip reachedAll do
     let some axioms := reached
       | throwError "Effect4 axiom gate: axiom collection exhausted its step budget at {declaration}"
@@ -491,7 +506,7 @@ elab "#effect4_axiom_gate" : command => do
           throwError "Effect4 goal gate: goal {declaration} carries no requirement; place it with @[semantics \"concept\" (requirement := Rn)] (decisions row 207)"
       goalCount := goalCount + 1
       continue
-    if axioms.any isGoal then resting := resting + 1
+    if axioms.any isGoal then resting := resting.push declaration
     -- An auxiliary or equation lemma inherits the admission of the declaration
     -- it was generated from; see `admissionAncestors` for which parents count.
     let bound :=
@@ -546,9 +561,10 @@ elab "#effect4_axiom_gate" : command => do
   let t6 ← liftIO IO.monoMsNow
   logInfo
     m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; phases (ms): sources and closure {t1 - t0}, library roots {t2 - t1}, declarations {t3 - t2}, resolution {t4 - t3}, axioms {t5 - t4}, exemptions {t6 - t5}; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
-  if !slowRoot && resting != restingPin then
-    throwError "Effect4 goal gate: {resting} declaration(s) rest on planned goals, and the pin is {restingPin}; a declaration came to rest on a goal, or a goal's proof freed one: read which, then move `restingPin` in Test/Audit/AxiomGate.lean"
-  logInfo m!"Effect4 goal gate: {goalCount} planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; {resting} declaration(s) rest on goals; no other declaration reaches sorryAx"
+  let (added, removed) := restingDifference restingPin resting
+  if !slowRoot && (!added.isEmpty || !removed.isEmpty) then
+    throwError "Effect4 goal gate: declarations resting on planned goals changed; added: {added}; removed: {removed}; review the dependencies, then update `restingPin` in Test/Audit/AxiomGate.lean"
+  logInfo m!"Effect4 goal gate: {goalCount} planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; {resting.size} declaration(s) rest on goals; no other declaration reaches sorryAx"
 
 /-!
 ## Re-pinning the exact choice list
