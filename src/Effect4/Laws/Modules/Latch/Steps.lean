@@ -108,6 +108,7 @@ theorem wakeStep_agrees (setOpen : Bool) :
         cellVal tb (wake setOpen s).1]) := by
   have reads := Step.sound Leaves.opaque (inputsAt tb s)
     (Input.reads_cons readsCell Input.reads_nil) (Data.wake setOpen) (by cases setOpen <;> rfl)
+    (by cases setOpen <;> trivial) (by cases setOpen <;> trivial)
   rw [wake_eval] at reads
   exact reads
 
@@ -178,7 +179,7 @@ theorem wakeStep_types (setOpen : Bool) :
     TypesEach sig (Latch.wakeStep setOpen cellSrc) env path types
       (.prod (.prod .bool .bool) cellTy) :=
   Step.typed_of_normal sig atoms (Input.types_cons typesCell Input.types_nil) (Data.wake setOpen)
-    (by cases setOpen <;> rfl)
+    (by cases setOpen <;> rfl) (by cases setOpen <;> trivial)
 
 @[semantics "store-typing" (requirement := R4)]
 theorem flushStep_types :

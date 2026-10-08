@@ -29,9 +29,9 @@ A wake moves the waiters into the batch. It posts one flush only when no flush i
 and otherwise it appends to the batch already scheduled, as `scheduleUnsafe` does. So two wakes
 before a flush resume their waiters in one batch, in the order of enrolment (probe MODS-10).
 
-`await` and its interruption are not here: an interrupted waiter leaves the waiters or the batch
-by identity, which needs a fold in the step language. The wrapper (the posted flush, each
-waiter's wait) is not here either. The laws are in `src/Effect4/Laws/Modules/Latch/`.
+Registration, cleanup, and the initial cell are in `Modules.Latch.Registration`.
+The wrapper owns the posted flush and each waiter's suspension.
+The laws are in `src/Effect4/Laws/Modules/Latch/`.
 -/
 
 @[expose] public section
@@ -41,7 +41,10 @@ namespace Effect4.Latch
 open Effect4.Program Effect4.Program.Authoring Effect4.Schema Effect4.Modules
 
 /-- A waiter's record: its hint, then its identity. -/
-def waiterTy : Ty := .record [("hint", false, idTy), ("id", false, idTy)]
+def waiterRecord : List (String × Bool × Ty) := [("hint", false, idTy), ("id", false, idTy)]
+
+/-- A waiter uses the one declared field list. -/
+def waiterTy : Ty := .record waiterRecord
 
 /-- The cell's fields in the canonical order. -/
 def cellRecord : List (String × Bool × Ty) :=
