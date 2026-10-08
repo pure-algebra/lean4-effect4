@@ -16,16 +16,21 @@ Sizes are the line counts of latest (Effect 4.0.1), at `vendor/effect-4.0.1/src/
 documentation. "Today" means the step language, named inputs, the list builders and the existing
 operation forms, with no new wrapper.
 
-| Order | Module | Kind | Today | It tests | Blocked part, by gap |
+The order follows latest's own building blocks, upward
+(`docs/research/2026-10-08-effect-building-blocks.md`): a module comes after what it is built from.
+
+| Order | Module | Built from, in latest | Today | It tests | Blocked part, by gap |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `Ref` (1672) | cell | all | the smallest cell; `modify`, `getAndUpdate` as steps | none |
-| 2 | `PartitionedSemaphore` (805) | cell with waiters | all | a keyed cell; reuse of the Semaphore's steps | none |
-| 3 | `PubSub` (3459), bounded strategy first | cell with waiters | the pure steps | subscribers as a list, the publish fold, three strategies as one step each | wake delivery, G1 |
-| 4 | `SubscriptionRef` (2105) | composed of `Ref` and `PubSub` | the steps | one module built from two: the first composition | the composition law, G10 |
-| 5 | `RcRef` (244), `RcMap` (1245) | cell with a scope | the counting steps | a reference count as a step | finalizers, G7 |
-| 6 | `Cache` (2684) | keyed cell with deferred entries | the map steps | a map of deferred entries; the identity table | time to live, G6; the lookup program, G5 |
-| 7 | `SynchronizedRef` (1269) | cell guarded by a lock | the pure `modify` | a client's program inside the lock | G5 |
-| 8 | `TxRef` (474), `TxQueue` (1880), `TxSemaphore` (1177) | transactional | none | the attempt as one step | G4 |
+| 1 | `Ref` (1672) | `MutableRef` | all | the smallest cell; `modify`, `getAndUpdate` as steps | none |
+| 2 | `PartitionedSemaphore` (805) | a keyed map of permits | all | a keyed cell; reuse of the Semaphore's steps | none |
+| 3 | `PubSub` (3459), bounded strategy first | `Deferred`, `Latch`, `MutableList`, `Scope` | the pure steps | subscribers as a list, the publish fold, three strategies as one step each | wake delivery, G1 |
+| 4 | `SynchronizedRef` (1269) | `Ref`, `Semaphore` | the pure `modify` | a client's program inside the lock | G5 |
+| 5 | `RcRef` (244), `RcMap` (1245) | `Deferred`, `Fiber`, `Scope` | the counting steps | a reference count as a step | finalizers, G7 |
+| 6 | `FiberSet`, `FiberMap`, `FiberHandle` | `Deferred`, `Fiber` | the bookkeeping steps | fibers as entries of a cell | interruption delivery, G1 |
+| 7 | `Cache` (2684) | `Deferred`, a map | the map steps | a map of deferred entries; the identity table | time to live, G6; the lookup program, G5 |
+| 8 | `Pull`, then `Channel` | `Effect`; then `Queue`, `PubSub`, `Latch`, `Semaphore`, `Scope`, `Fiber` | the pull protocol | a pull transformer as a stored definition with captures (row 331) | the pullLoop wrapper, G1 |
+| 9 | `SubscriptionRef` (2105) | `PubSub`, `Semaphore`, `Stream` | the steps | the first module built from two others | the composition law, G10 |
+| 10 | `TxRef` (474), `TxQueue` (1880), `TxSemaphore` (1177) | `TxRef`, over `Effect.tx` | none | the attempt as one step | G4 |
 
 Stop at a gap. Write the module's pure steps and model, and prove its value equations. Record
 the blocked operations in the receipt with their gap's number.
