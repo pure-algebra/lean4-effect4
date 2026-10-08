@@ -20,8 +20,8 @@ public meta section
 namespace Effect4.Modules.Step.Elab.Inputs
 open Lean Meta Elab Term Command
 
-syntax (name := stepContextStx) "step_context% " ident " (" (ident " : " term),* ")" : command
-syntax (name := paramStepContextStx) "step_context% " ident bracketedBinder* " where " "(" (ident " : " term),* ")" : command
+syntax (name := stepContextStx) (Lean.Parser.Command.docComment)? "step_context% " ident " (" (ident " : " term),* ")" : command
+syntax (name := paramStepContextStx) (Lean.Parser.Command.docComment)? "step_context% " ident bracketedBinder* " where " "(" (ident " : " term),* ")" : command
 syntax (name := namedInputsStx) "step_inputs% " term " => " term : term
 syntax (name := inputSourcesStx) "input_sources% " "(" term ")" "{" (ident " := " term),* "}" : term
 
@@ -39,25 +39,25 @@ private def duplicate (names : Array Ident) : TermElabM Unit := do
 @[command_elab stepContextStx]
 def elabStepContext : CommandElab := fun stx => do
   match stx with
-  | `(step_context% $name:ident ($[$names:ident : $types:term],*)) =>
+  | `($[$doc:docComment]? step_context% $name:ident ($[$names:ident : $types:term],*)) =>
     for input in names do
       if (names.filter fun other => other.getId.eraseMacroScopes == input.getId.eraseMacroScopes).size > 1 then
         throwErrorAt input "step_context%: repeated name {input}"
     let pairs ← names.zip types |>.mapM fun (input, ty) => do
       `(( $(quote (input.getId.toString (escape := false))), $ty ))
-    elabCommand (← `(abbrev $name : Effect4.Modules.InputContext := [$pairs,*]))
+    elabCommand (← `(command| $[$doc:docComment]? abbrev $name : Effect4.Modules.InputContext := [$pairs,*]))
   | _ => throwUnsupportedSyntax
 
 @[command_elab paramStepContextStx]
 def elabParamStepContext : CommandElab := fun stx => do
   match stx with
-  | `(step_context% $name:ident $binders:bracketedBinder* where ($[$names:ident : $types:term],*)) =>
+  | `($[$doc:docComment]? step_context% $name:ident $binders:bracketedBinder* where ($[$names:ident : $types:term],*)) =>
     for input in names do
       if (names.filter fun other => other.getId.eraseMacroScopes == input.getId.eraseMacroScopes).size > 1 then
         throwErrorAt input "step_context%: repeated name {input}"
     let pairs ← names.zip types |>.mapM fun (input, ty) => do
       `(( $(quote (input.getId.toString (escape := false))), $ty ))
-    elabCommand (← `(abbrev $name $binders* : Effect4.Modules.InputContext := [$pairs,*]))
+    elabCommand (← `(command| $[$doc:docComment]? abbrev $name $binders* : Effect4.Modules.InputContext := [$pairs,*]))
   | _ => throwUnsupportedSyntax
 
 private def contextEntries (stx : Syntax) : TermElabM (Array (String × Expr)) := do

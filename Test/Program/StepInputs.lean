@@ -10,6 +10,7 @@ set_option backward.isDefEq.respectTransparency false
 namespace Test.Program.StepInputs
 open Effect4 Effect4.Program Effect4.Modules Effect4.Program.Authoring
 
+/-- Same-typed inputs with distinct roles. -/
 step_context% IdFirst (id : .nat, hint : .nat)
 step_context% HintFirst (hint : .nat, id : .nat)
 def first := step_inputs% IdFirst => id
@@ -19,6 +20,7 @@ example : reordered = (Step.var (.there .nat (.here .nat []))) := by rfl
 #guard first.term (input_sources% (IdFirst) {hint := nat 9, id := nat 3}) {} [] == .ok (.lit (.nat 3))
 #guard reordered.term (input_sources% (HintFirst) {id := nat 3, hint := nat 9}) {} [] == .ok (.lit (.nat 3))
 
+/-- A documented context may retain a type parameter. -/
 step_context% Payload (A : Ty) where (value : A, count : .nat)
 def generic (A : Ty) := step_inputs% (Payload A) => value
 example (A : Ty) : generic A = (Step.var (.here A [.nat])) := by rfl

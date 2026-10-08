@@ -1,6 +1,7 @@
 module
 
-public import Effect4.Modules.Step
+public import Effect4.Modules.Step.Inputs
+meta import Effect4.Modules.Step.Elab.Inputs
 meta import Effect4.Schema.FieldRef.Elab
 
 /-!
@@ -61,10 +62,11 @@ def pendingF : FieldRef cellRecord (.list waiterTy) := field_ref% "pending"
 def scheduledF : FieldRef cellRecord .bool := field_ref% "scheduled"
 def waitersF : FieldRef cellRecord (.list waiterTy) := field_ref% "waiters"
 
-/-- A step's one input: the cell. -/
-abbrev Γ : List Ty := [.record cellRecord]
+/-- The cell input has one declaration for both stored steps and source applications. -/
+step_context% CellInputs (cell : cellTy)
+abbrev Γ : List Ty := CellInputs.types
 
-def cell : Input Γ (.record cellRecord) := .here _ _
+abbrev cell : Input Γ (.record cellRecord) := input_ref% (CellInputs) cell
 
 /-- The cell, as a step. -/
 abbrev c : Step Γ (.record cellRecord) := .var cell
@@ -108,9 +110,9 @@ end Data
 
 /-! ## The terms: each the step's term -/
 
-def isOpenStep (s : TermSrc) : TermSrc := Data.isOpen.term (Input.source [s])
-def wakeStep (setOpen : Bool) (s : TermSrc) : TermSrc := (Data.wake setOpen).term (Input.source [s])
-def flushStep (s : TermSrc) : TermSrc := Data.flush.term (Input.source [s])
-def closeStep (s : TermSrc) : TermSrc := Data.close.term (Input.source [s])
+def isOpenStep (s : TermSrc) : TermSrc := Data.isOpen.term (input_sources% (Data.CellInputs) {cell := s})
+def wakeStep (setOpen : Bool) (s : TermSrc) : TermSrc := (Data.wake setOpen).term (input_sources% (Data.CellInputs) {cell := s})
+def flushStep (s : TermSrc) : TermSrc := Data.flush.term (input_sources% (Data.CellInputs) {cell := s})
+def closeStep (s : TermSrc) : TermSrc := Data.close.term (input_sources% (Data.CellInputs) {cell := s})
 
 end Effect4.Latch
