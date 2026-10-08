@@ -181,6 +181,9 @@ import Test.Program.QueueProfile
 import Test.Program.QueueSteps
 import Test.Program.QueueScenarios
 import Test.Program.QueueDefs
+import Test.Program.AuthoringDefs
+import Test.Program.AuthoringModule
+import Test.Program.ModuleDefinitions
 import Test.Program.QueueOps
 import Test.Program.QueueTraces
 import Test.Program.QueueInvariant
