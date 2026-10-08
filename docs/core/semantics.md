@@ -1141,7 +1141,7 @@ structure Protocol where
 def allows (source : State) (label : Label) (target : State) : Bool :=
   hostProtocol.transitions.contains ⟨source, label.tag, target⟩
 ```
-(`src/Effect4/Api/HostProtocol.lean:48`). External answers are submitted through `HostSession.submit` and applied via `HostSession.answer`.
+(`src/Effect4/Api/HostProtocol.lean:48`). External answers are submitted through `HostSession.submit` and applied via `HostSession.applyReply`.
 
 #### 4. Required Properties and Obligations
 - **Allowed answer step (`allows-answer`)**: Async answering is an allowed transition from `.awaitingAsync`.

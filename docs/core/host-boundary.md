@@ -328,7 +328,9 @@ one side and observed on the other:
 compiler would infer; at B-row, project at the adapter, never in the program.
 
 **Route A, the one boundary decode route** (row 122). Host data enters a program as a typed host
-answer checked by membership at the reply (§4.4): every reply the session accepts at a row is a
-member at the row's answer type in the new world. The host adapter decodes with the row's own
-schema; the session checks a `Val`, and nothing in the program parses. A reply that is not a
+answer checked by membership at the reply (§4.4): every reply the session accepts at a call is a
+member at the call's answer type in the new world. At a row with no type parameter that type is
+the row's answer column. At a template row it is the call's checked instance (decisions row 323).
+So a row from `List<A>` to `Option<A>`, called at a list of numbers, takes `some 1`. So the host adapter decodes with the call's instantiated schema, not the row's template;
+the session checks a `Val`, and nothing in the program parses. A reply that is not a
 member is refused with a located `envelope` refusal; an internal handle is refused by §5's rule.
