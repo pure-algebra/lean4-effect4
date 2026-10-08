@@ -21,12 +21,13 @@
 //   ForkOptions (Effect4.Supervision.ForkOptions, struct): mk(startImmediately: boolean, daemon: boolean, maskMode: MaskMode)
 //   ObserverMode (Effect4.Supervision.ObserverMode, literals): awaitValue joinEffect
 //   FinalizerStrategy (Effect4.FinalizerStrategy, literals): sequential parallel
-//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number) deferredMakeOf(value: Ty, error: Ty) refUpdateWith(f: Term) refGetAndUpdateWith(f: Term) refUpdateAndGetWith(f: Term) refUpdateSomeWith(f: Term) refGetAndUpdateSomeWith(f: Term) refUpdateSomeAndGetWith(f: Term) refModifyWith(f: Term) refModifySomeWith(f: Term)
+//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number) deferredMakeOf(value: Ty, error: Ty) refUpdateWith(f: Term) refGetAndUpdateWith(f: Term) refUpdateAndGetWith(f: Term) refUpdateSomeWith(f: Term) refGetAndUpdateSomeWith(f: Term) refUpdateSomeAndGetWith(f: Term) refModifyWith(f: Term) refModifySomeWith(f: Term) call(index: number)
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
 //   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string) recordTag(tag: string)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff)
+//   DefDecl (Effect4.Program.DefDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff) defs(decls: ReadonlyArray<DefDecl>, bodies: ReadonlyArray<Eff>, main: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
@@ -194,6 +195,7 @@ export type NativeOp =
   | { readonly _tag: "refUpdateSomeAndGetWith"; readonly f: Term }
   | { readonly _tag: "refModifyWith"; readonly f: Term }
   | { readonly _tag: "refModifySomeWith"; readonly f: Term }
+  | { readonly _tag: "call"; readonly index: number }
 
 export const NativeOp = Schema.TaggedUnion({
   refMake: {},
@@ -219,6 +221,7 @@ export const NativeOp = Schema.TaggedUnion({
   refUpdateSomeAndGetWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
   refModifyWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
   refModifySomeWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  call: { index: Schema.Int },
 })
 
 export const ServiceName = Schema.Struct({
@@ -250,6 +253,15 @@ export const Decision = Schema.TaggedUnion({
   recordTag: { tag: Schema.String },
 })
 
+export const DefDecl = Schema.Struct({
+  name: Schema.String,
+  request: Schema.suspend((): Schema.Codec<Ty> => Ty),
+  answer: Schema.suspend((): Schema.Codec<Ty> => Ty),
+  error: Schema.suspend((): Schema.Codec<Ty> => Ty),
+  requires: Schema.Array(ServiceKey),
+})
+export type DefDecl = typeof DefDecl.Type
+
 export type Eff =
   | { readonly _tag: "succeed"; readonly value: Term }
   | { readonly _tag: "fail"; readonly error: Term }
@@ -277,6 +289,7 @@ export type Eff =
   | { readonly _tag: "select"; readonly scrutinee: Term; readonly decision: Decision; readonly arm0: Eff; readonly arm1: Eff }
   | { readonly _tag: "iterate"; readonly cursorTy: Ty | null; readonly initial: Term; readonly test: Term; readonly step: Term; readonly result: Term; readonly body: Eff }
   | { readonly _tag: "restore"; readonly saved: Term; readonly body: Eff }
+  | { readonly _tag: "defs"; readonly decls: ReadonlyArray<DefDecl>; readonly bodies: ReadonlyArray<Eff>; readonly main: Eff }
 
 export const Eff = Schema.TaggedUnion({
   succeed: { value: Schema.suspend((): Schema.Codec<Term> => Term) },
@@ -305,6 +318,7 @@ export const Eff = Schema.TaggedUnion({
   select: { scrutinee: Schema.suspend((): Schema.Codec<Term> => Term), decision: Schema.suspend((): Schema.Codec<Decision> => Decision), arm0: Schema.suspend((): Schema.Codec<Eff> => Eff), arm1: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   iterate: { cursorTy: Schema.NullOr(Schema.suspend((): Schema.Codec<Ty> => Ty)), initial: Schema.suspend((): Schema.Codec<Term> => Term), test: Schema.suspend((): Schema.Codec<Term> => Term), step: Schema.suspend((): Schema.Codec<Term> => Term), result: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   restore: { saved: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  defs: { decls: Schema.Array(DefDecl), bodies: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)), main: Schema.suspend((): Schema.Codec<Eff> => Eff) },
 })
 
 export type Stmt =

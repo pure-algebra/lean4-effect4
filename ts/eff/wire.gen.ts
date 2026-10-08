@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -268,6 +268,7 @@ const writeNativeOp = (w: Writer, v: NativeOp): void => {
     case "refUpdateSomeAndGetWith": return w.ctor(29, [() => writeTerm(w, v.f)])
     case "refModifyWith": return w.ctor(30, [() => writeTerm(w, v.f)])
     case "refModifySomeWith": return w.ctor(31, [() => writeTerm(w, v.f)])
+    case "call": return w.ctor(32, [() => w.nat(v.index)])
     default: throw new TypeError("wire NativeOp constructor")
   }
 }
@@ -314,6 +315,14 @@ export const decisionWire = (v: Decision): Uint8Array => {
   return w.finish(() => writeDecision(w, v))
 }
 
+const writeDefDecl = (w: Writer, v: DefDecl): void => {
+  w.ctor(0, [() => w.str(v.name), () => writeTy(w, v.request), () => writeTy(w, v.answer), () => writeTy(w, v.error), () => w.list(v.requires, (y) => writeServiceKey(w, y))])
+}
+export const defDeclWire = (v: DefDecl): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeDefDecl(w, v))
+}
+
 const writeEff = (w: Writer, v: Eff): void => {
   switch (v._tag) {
     case "succeed": return w.ctor(0, [() => writeTerm(w, v.value)])
@@ -342,6 +351,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "select": return w.ctor(27, [() => writeTerm(w, v.scrutinee), () => writeDecision(w, v.decision), () => writeEff(w, v.arm0), () => writeEff(w, v.arm1)])
     case "iterate": return w.ctor(28, [() => w.option(v.cursorTy, (y) => writeTy(w, y)), () => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeTerm(w, v.result), () => writeEff(w, v.body)])
     case "restore": return w.ctor(29, [() => writeTerm(w, v.saved), () => writeEff(w, v.body)])
+    case "defs": return w.ctor(30, [() => w.list(v.decls, (y) => writeDefDecl(w, y)), () => writeEffs(w, v.bodies), () => writeEff(w, v.main)])
     default: throw new TypeError("wire Eff constructor")
   }
 }
