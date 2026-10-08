@@ -43,6 +43,16 @@ def removeBy (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) : Step 
 def any (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) : Step Γ .bool :=
   .fold xs (.bool false) (.or (.var (.here _ _)) (withAccumulator .bool predicate))
 
+/-- Remove only the first match and report whether the predicate matched any item. -/
+def removeFirst (xs : Step Γ (.list a)) (predicate : Step (a :: Γ) .bool) :
+    Step Γ (.prod .bool (.list a)) :=
+  .fold xs (.pair (.bool false) (.emptyLike xs))
+    (.ite (.fst (.var (.here _ _)))
+      (.pair (.bool true) (.snoc (.snd (.var (.here _ _))) (.var (.there _ (.here _ _)))))
+      (.ite (withAccumulator (.prod .bool (.list a)) predicate)
+        (.pair (.bool true) (.snd (.var (.here _ _))))
+        (.pair (.bool false) (.snoc (.snd (.var (.here _ _))) (.var (.there _ (.here _ _)))))))
+
 /-- The first item, or the supplied fallback where the list is empty. -/
 def headOr (xs : Step Γ (.list a)) (fallback : Step Γ a) : Step Γ a :=
   .getOrElse (.head xs) fallback

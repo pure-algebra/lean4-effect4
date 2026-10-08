@@ -92,6 +92,70 @@ theorem eval_any (L : Leaves) (xs : Step Γ (.list a)) (predicate : Step (a :: �
       (eval_withAccumulator L predicate .bool vs item acc)
   rw [bodies]
   exact (Effect4.Constructive.List.foldl_or_any _ (xs.eval L vs) false).trans (by rfl)
+/-- The first-match pass copies every item after the match. A helper of eval_removeFirst. -/
+private theorem removeFirst_found {A : Type} (p : A → Bool) : ∀ (xs acc : List A),
+    xs.foldl (fun state item => if state.1 then (true, state.2 ++ [item])
+      else if p item then (true, state.2) else (false, state.2 ++ [item])) (true, acc) =
+      (true, acc ++ xs)
+  | [], acc => by rw [List.foldl_nil, List.append_nil]
+  | item :: rest, acc => by
+    change rest.foldl _ (true, acc ++ [item]) = _
+    rw [removeFirst_found p rest, List.append_assoc]
+    rfl
+
+/-- The first-match pass reports membership and erases one item. A helper of eval_removeFirst. -/
+private theorem removeFirst_search {A : Type} (p : A → Bool) : ∀ (xs acc : List A),
+    xs.foldl (fun state item => if state.1 then (true, state.2 ++ [item])
+      else if p item then (true, state.2) else (false, state.2 ++ [item])) (false, acc) =
+      (xs.any p, acc ++ xs.eraseP p)
+  | [], acc => by rw [List.foldl_nil, List.eraseP_nil, List.append_nil]; rfl
+  | item :: rest, acc => by
+    rw [List.foldl_cons, List.any_cons, List.eraseP_cons]
+    cases hp : p item
+    · change rest.foldl _ (false, acc ++ [item]) = _
+      rw [removeFirst_search p rest, List.append_assoc]
+      rfl
+    · change rest.foldl _ (true, acc) = _
+      rw [removeFirst_found]
+      rfl
+
+/-- First-match removal computes ordinary eraseP and reports whether a match exists. -/
+theorem eval_removeFirst (L : Leaves) (xs : Step Γ (.list a))
+    (predicate : Step (a :: Γ) .bool) (vs : Inputs L Γ) :
+    (removeFirst xs predicate).eval L vs =
+      ((xs.eval L vs).any (fun item => predicate.eval (Γ := a :: Γ) L (item, vs)),
+       (xs.eval L vs).eraseP (fun item => predicate.eval (Γ := a :: Γ) L (item, vs))) := by
+  change (xs.eval L vs).foldl
+    (fun (state : Bool × List (CarrierAt L a)) item => if state.1 then (true, state.2 ++ [item])
+      else (fun (test : Bool) => if test then (true, state.2) else (false, state.2 ++ [item]))
+        ((withAccumulator (.prod .bool (.list a)) predicate).eval
+          (Γ := .prod .bool (.list a) :: a :: Γ) L (state, (item, vs)))) (false, []) = _
+  have bodies : (fun (state : Bool × List (CarrierAt L a)) item => if state.1 then (true, state.2 ++ [item])
+      else (fun (test : Bool) => if test then (true, state.2) else (false, state.2 ++ [item]))
+        ((withAccumulator (.prod .bool (.list a)) predicate).eval
+          (Γ := .prod .bool (.list a) :: a :: Γ) L (state, (item, vs)))) =
+      (fun (state : Bool × List (CarrierAt L a)) item => if state.1 then (true, state.2 ++ [item])
+        else (fun (test : Bool) => if test then (true, state.2) else (false, state.2 ++ [item]))
+          (predicate.eval (Γ := a :: Γ) L (item, vs))) := by
+    funext state item
+    exact congrArg (fun (test : Bool) => if state.1 then (true, state.2 ++ [item])
+      else if test then (true, state.2) else (false, state.2 ++ [item]))
+        (eval_withAccumulator L predicate (.prod .bool (.list a)) vs item state)
+  rw [bodies]
+  exact (removeFirst_search (fun item => predicate.eval (Γ := a :: Γ) L (item, vs))
+    (xs.eval L vs) []).trans (by rfl)
+
+/-- Map after selection is singleton flatMap; Pool's lease connector consumes this equation. -/
+theorem filter_map_eq_flatMap {A B : Type} (p : A → Bool) (f : A → B) : ∀ xs : List A,
+    (xs.filter p).map f = xs.flatMap (fun item => if p item then [f item] else [])
+  | [] => rfl
+  | item :: rest => by
+    rw [List.filter_cons, List.flatMap_cons]
+    cases hp : p item
+    · exact filter_map_eq_flatMap p f rest
+    · change f item :: (rest.filter p).map f = f item :: rest.flatMap _
+      rw [filter_map_eq_flatMap]
+
 /-- Head consumption computes the list head with the supplied default. -/
 theorem eval_headOr (L : Leaves) (xs : Step Γ (.list a)) (fallback : Step Γ a)
     (vs : Inputs L Γ) :
