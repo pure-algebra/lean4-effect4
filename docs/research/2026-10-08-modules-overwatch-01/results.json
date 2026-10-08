@@ -1,0 +1,345 @@
+{
+  "kind": "finite-overwatch-review",
+  "reviewed_commit": "a2d1dc7aa7e8bfea426b71cb7e00f5e821dc08a9",
+  "commands": [
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "--version"
+      ],
+      "exit": 0,
+      "seconds": 0.207,
+      "stdout": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Schema.Modeled.Derive",
+        "Effect4.Laws.Schema.Modeled",
+        "Test.Schema.Modeled",
+        "Tools.SemanticsRegistry"
+      ],
+      "exit": 0,
+      "seconds": 0.245,
+      "stdout": "Build completed successfully (289 jobs).\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/positive.lean"
+      ],
+      "exit": 0,
+      "seconds": 4.781,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/opaque-composed.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.836,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/audit.lean"
+      ],
+      "exit": 0,
+      "seconds": 2.064,
+      "stdout": "Effect4.Store.Carrier.Image.Record: 56 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Schema.Modeled: 67 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Schema.Modeled.Derive: 17 declarations; 5 named meta exceptions; ceiling checked\nEffect4.Laws.Schema.Modeled: 49 declarations; 0 named meta exceptions; ceiling checked\nTest.Schema.Modeled: 195 declarations; 0 named meta exceptions; ceiling checked\ncore/law import separation checked\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/opaque.lean"
+      ],
+      "exit": 1,
+      "seconds": 1.405,
+      "stdout": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/opaque.lean:22:0: error: Tactic `decide` failed for proposition\n  Model.refusal Holder.modeledTy = none\nbecause its `Decidable` instance\n  (Model.refusal Holder.modeledTy).decidableEqNone\ndid not reduce to `isTrue` or `isFalse`.\n\nAfter unfolding the instances `List.decidableBAll`, `List.instDecidablePairwise`, `Option.decidableEqNone`, `Model.instDecidableAscendingBytesKey`, and `Model.instDecidableAscendingBytesKey._aux_1`, reduction got stuck at the `Decidable` instance\n  match Model.refusal Holder.modeledTy with\n  | none => isTrue \u22ef\n  | some val => isFalse \u22ef\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean"
+      ],
+      "exit": 1,
+      "seconds": 1.134,
+      "stdout": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: `DeriveCollisionReview.Token.modeledTy` has already been declared\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: Type mismatch\n  (Modeled.toC s.value, ())\nhas type\n  Model.Carrier (Modeled.ty Nat) \u00d7 Unit\nbut is expected to have type\n  Model.Carrier Token.modeledTy\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: Invalid projection: Projections extract constructor fields for one-constructor inductive types. The expression\n  c\nhas type `Nat` which is not a one-constructor inductive type.\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: Type mismatch\n  (x0, ())\nhas type\n  ?m.3 \u00d7 Unit\nbut is expected to have type\n  Model.Carrier Token.modeledTy\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: unsolved goals\ncase mk\nvalue\u271d : Nat\n\u22a2 { value := Modeled.ofC sorry } = { value := value\u271d }\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: declaration uses `sorry`\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: declaration uses `sorry`\nDeriveCollisionReview.Token.modeled_checked : Model.refusal Token.modeledTy = none\nDeriveCollisionReview.Token.modeledToC (s : Token) : Model.Carrier Token.modeledTy\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/research/2026-10-08-seat-MODULES-r3/native.py"
+      ],
+      "exit": 0,
+      "seconds": 0.753,
+      "stdout": "d1: pass (expected pass)  ours {\"_tag\":\"Success\",\"value\":[3,1,2]}  Effect's {\"_tag\":\"Success\",\"value\":[3,1,2]}\nd2: pass (expected pass)  ours {\"_tag\":\"Success\",\"value\":[3,1,2]}  Effect's {\"_tag\":\"Success\",\"value\":[3,1,2]}\nd3: pass (expected pass)  ours {\"_tag\":\"Success\",\"value\":[true,[3]]}  Effect's {\"_tag\":\"Success\",\"value\":[true,[3]]}\nbatch-coalesced: pass (expected pass)  ours {\"_tag\":\"Success\",\"value\":[1,2,9]}  Effect's {\"_tag\":\"Success\",\"value\":[1,2,9]}\nbatch-original: counterexample (expected counterexample)  ours {\"_tag\":\"Success\",\"value\":[1,9,2]}  Effect's {\"_tag\":\"Success\",\"value\":[1,2,9]}\ntools {'effect': '4.0.0-rc.112', 'tsgo': '7.0.0-dev.20260629.1', 'bun': '1.4.2'}, typecheck exit 0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "docs/research/2026-10-08-seat-MODULES-r3/native.py",
+        "--self-test"
+      ],
+      "exit": 0,
+      "seconds": 1.053,
+      "stdout": "self-test: unequal types, a crash, a false ruling, no client, a stale row and wrong pins are each reported\n",
+      "stderr": ""
+    }
+  ],
+  "checks": {
+    "pinned:src/Effect4/Schema/Modeled.lean": true,
+    "pinned:src/Effect4/Schema/Modeled/Derive.lean": true,
+    "pinned:src/Effect4/Laws/Schema/Modeled.lean": true,
+    "pinned:src/Effect4/Store/Carrier/Image/Record.lean": true,
+    "pinned:Test/Schema/Modeled.lean": true,
+    "pinned:Test/Audit/AxiomGate.lean": true,
+    "pinned:tools/Tools/SemanticsRegistry.lean": true,
+    "pinned:docs/research/2026-10-08-seat-MODULES-r3/native.py": true,
+    "pinned:docs/core/decisions.md": true,
+    "opaque-valid-instance-fails-at-computed-check": true,
+    "collision-leaves-helpers-in-failed-environment": true,
+    "reviewed-source-unchanged": true
+  },
+  "source_digests": {
+    "src/Effect4/Schema/Modeled.lean": "e002b7b0c8a34e2724b877e9c81204f07998cfab9b416b4fc149ff06a8b7ea40",
+    "src/Effect4/Schema/Modeled/Derive.lean": "b4ac39e8950202136d57284fbdefe0a0299fa6381bdfdf0ab734f32218e9dae5",
+    "src/Effect4/Laws/Schema/Modeled.lean": "7615f3950201c269abb0759a95787915bf94d4ff316d2120d208ce387456b49d",
+    "src/Effect4/Store/Carrier/Image/Record.lean": "08343666e85ee849151b25c87e179e84b9fdc54bc23e99c4a2427a7c40575305",
+    "Test/Schema/Modeled.lean": "d0b1ee20da2a6e897f72c56e49cb2b13f0e3e0ca47b95871fc2a8be938a2cb91",
+    "Test/Audit/AxiomGate.lean": "cf17697a5b7022bdec0bf187b4fca596933ce8cdc0815c0b550085723b5f20bb",
+    "tools/Tools/SemanticsRegistry.lean": "744570dfb291937c52c6834a5124b861bbd6c7771a31078842fc05e0dd052d36",
+    "docs/research/2026-10-08-seat-MODULES-r3/native.py": "6e5d6180fcd29b5f8643b057b559524044530574292eba8d077bbf07a896a7b4",
+    "docs/core/decisions.md": "a75059cc6e957d3655fe76ed959e6f834f0ecd3d8aebaa8e70fb2078fa814ed1"
+  },
+  "tools": {
+    "lean": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+  },
+  "native_baseline": {
+    "pins": {
+      "effect": "4.0.0-rc.112",
+      "tsgo": "7.0.0-dev.20260629.1",
+      "bun": "1.4.2"
+    },
+    "tools": {
+      "effect": "4.0.0-rc.112",
+      "tsgo": "7.0.0-dev.20260629.1",
+      "bun": "1.4.2"
+    },
+    "clients": {
+      "d1": {
+        "expected": "pass",
+        "outcome": "pass",
+        "reason": "equal observations, typed",
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          }
+        }
+      },
+      "d2": {
+        "expected": "pass",
+        "outcome": "pass",
+        "reason": "equal observations, typed",
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                3,
+                1,
+                2
+              ]
+            },
+            "stderr": ""
+          }
+        }
+      },
+      "d3": {
+        "expected": "pass",
+        "outcome": "pass",
+        "reason": "equal observations, typed",
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                true,
+                [
+                  3
+                ]
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                true,
+                [
+                  3
+                ]
+              ]
+            },
+            "stderr": ""
+          }
+        }
+      },
+      "batch-coalesced": {
+        "expected": "pass",
+        "outcome": "pass",
+        "reason": "equal observations, typed",
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                2,
+                9
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                2,
+                9
+              ]
+            },
+            "stderr": ""
+          }
+        }
+      },
+      "batch-original": {
+        "expected": "counterexample",
+        "outcome": "counterexample",
+        "reason": "unequal observations that no difference row predicts",
+        "runs": {
+          "lib": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                9,
+                2
+              ]
+            },
+            "stderr": ""
+          },
+          "pin": {
+            "exit": 0,
+            "result": {
+              "_tag": "Success",
+              "value": [
+                1,
+                2,
+                9
+              ]
+            },
+            "stderr": ""
+          }
+        }
+      }
+    },
+    "refusals": [],
+    "inputs": {
+      "d1-lib": "2d04bb21ec37094d74f3d22812df66e1538eac2bbffb684e5b7e76d432769296",
+      "d1-pin": "d1be445831fa42122623d451a0bbb8d4dabf870c71700275aef65c0c32708ec8",
+      "d2-lib": "6f4a5d7b98cc7dce235d1f050711ff861d0cd060d86cfae722216596f8e9b827",
+      "d2-pin": "cb0f61216b194ede68fb2bdd2034a0693083c11c2d5f598319cfc0f45b923c82",
+      "d3-lib": "34f8a334ae9d133f09e9f808268b3cb2e7f4d57153fc826ca2773a3a58b20f9e",
+      "d3-pin": "5ce97a9ab52b9c54c556852532a90da486769e6ecc8a2277eff9fe623b4aed7a",
+      "batch-coalesced-lib": "83c1165efee39a107efc3b34e4191a3f77587865f4e3d767a6220a7a8931983d",
+      "batch-coalesced-pin": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257",
+      "batch-original-lib": "f1f8d1c845322b4dfc2c5c9b8992dd5bd7ec63fab662ae32c0418362cc852684",
+      "batch-original-pin": "9e444e3d73bac198313bc7eecd63b71d254da5c48a7097d44d699790b389e257",
+      "runner": "6e5d6180fcd29b5f8643b057b559524044530574292eba8d077bbf07a896a7b4",
+      "prelude": "aa6229893635c354a73f27ce9ea3f91b392e0814c3bd0410171f9dfbeebd4c79"
+    },
+    "typecheck": {
+      "exit": 0,
+      "output": ""
+    }
+  },
+  "probe_digests": {
+    "opaque.lean": "4244eca2cf4ea54a9b47b19a3eeeed8de8c9ade21b938e1fed575d6751f6dd70",
+    "opaque-composed.lean": "90c4241ecae6e81d4ee08293743746e477e483f02f20ff532bddf7fb55aa9b6f",
+    "review.py": "589a3e76a897b279379f848c87516c862c9b72c31a10546ba9a004beb6ba7f2d",
+    "positive.lean": "d4c238bf1b0fff02695af70801180f87fbc26749aa0361245a4cf6905f6afab6",
+    "audit.lean": "9485a00b84d47ee7b6fc76ddcdeca7a0148184d14a3cc023faffe1918a2075fa",
+    "l2-snapshot.json": "c1a25a8af42ef71c87b9d4d4393c4636ed1fe5f1e5b8004bc6d4c92b22f5b81c",
+    "collision.lean": "5f1507afd5a340a4a4f18b67f9bbdde2b62d2880da84100a042d02dcda14e8dc"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "source-inspection-only",
+  "base_commit": "a2d1dc7aa7e8bfea426b71cb7e00f5e821dc08a9",
+  "claude_session": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50",
+  "sha256": {
+    "src/Effect4/Schema/Modeled.lean": "ed5b9bb63f3f2e7433ec6d98d601785af0ca443f6c3a779c321411a791c34ecf",
+    "src/Effect4/Schema/FieldRef.lean": "d28f5d8aa21087baf7920c3461ef04b1ab981767aaea99b487b037be1bfa3b9c",
+    "src/Effect4/Laws/Schema/FieldRef.lean": "7e1ed2d5194b477c37f2c7d8ebbe246c10a646060f0ffcafa54f05fdac2ceae0"
+  },
+  "agent_snapshot": {
+    "src/Effect4/Schema/Modeled.lean": "ed5b9bb63f3f2e7433ec6d98d601785af0ca443f6c3a779c321411a791c34ecf",
+    "src/Effect4/Schema/FieldRef.lean": "d28f5d8aa21087baf7920c3461ef04b1ab981767aaea99b487b037be1bfa3b9c",
+    "src/Effect4/Laws/Schema/FieldRef.lean": "d851d5b8553fa3af94670c08ac4d712b01a23ffe38d47029d0ebe09319e1c51d"
+  }
+}
