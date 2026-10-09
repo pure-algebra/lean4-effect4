@@ -7,8 +7,9 @@ import Effect4.Laws.Step.Waiting
 # Reading and typing a captured step callback
 
 Placement: helpers of step-language-sound under R10 and step-language-typed under R4.
-The consumer is Ref callback agreement and the typing of checked Ref callers.
-Reach: one inserted binder, aligned caller scope, and successful captured source readings or typings.
+Consumers are Ref callback agreement and the typing of Ref and SynchronizedRef callers.
+Reading retains one inserted binder, aligned caller scope, and successful captured source readings.
+Typing also covers appended wrapper slots under the existing typed-scope reach premise.
 The callback term additionally requires Step.canonical or Step.Facts and its identity facts.
 These laws establish no source admission, allocation, scheduling, host callback, or whole run.
 -/
@@ -16,6 +17,56 @@ These laws establish no source admission, allocation, scheduling, host callback,
 set_option autoImplicit false
 namespace Effect4.Modules.Step
 open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Schema Effect4.Schema.Model
+
+/-- Relocation preserves typing after arbitrary appended slots.
+Helper of freeze_kept and callback_capture_types.
+Consumers: Ref callback typing and SynchronizedRef.modify_answers. -/
+theorem relocate_types {Op : Type} (sig : Signature Op) (before more : List Ty)
+    (const : Bool) (term : Term) :
+    argTy sig (before ++ more) const (relocate before.length more.length term) =
+      argTy sig before const term := by
+  induction more with
+  | nil => simp only [List.append_nil, List.length_nil, relocate]
+  | cons X more ih =>
+    simp only [List.length_cons, relocate]
+    rw [argTy_weaken, ih]
+
+/-- Reached scopes append exactly their newly introduced slots.
+Helper of freeze_kept, consumed by SynchronizedRef.modify_answers. -/
+theorem reached_slots {s t : TypedScope} (reach : s.Reaches t) :
+    ∃ more, t.types = s.types ++ more ∧ t.env.names.length = s.env.names.length + more.length := by
+  induction reach with
+  | here => exact ⟨[], (List.append_nil _).symm, (Nat.add_zero _).symm⟩
+  | @push t stem X _ ih =>
+    obtain ⟨more, types, names⟩ := ih
+    refine ⟨more ++ [X], ?_, ?_⟩
+    · change t.types ++ [X] = _
+      rw [types, List.append_assoc]
+    · change (t.env.push [_]).names.length = _
+      simp only [Env.push_length, List.length_append, List.length_cons, List.length_nil, names,
+        Nat.add_assoc]
+  | @push2 t first second X Y _ ih =>
+    obtain ⟨more, types, names⟩ := ih
+    refine ⟨more ++ [X, Y], ?_, ?_⟩
+    · change t.types ++ [X, Y] = _
+      rw [types, List.append_assoc]
+    · change (t.env.push [_, _]).names.length = _
+      simp only [Env.push_length, List.length_append, List.length_cons, List.length_nil, names,
+        Nat.add_assoc]
+
+/-- A caller's typed source remains typed after freezing at its original path.
+Consumer: SynchronizedRef.modify_answers under R4.
+No capture stability premise is required. -/
+theorem freeze_kept {sig : Signature NativeOp} {source : TermSrc} {s : TypedScope}
+    {path : List Nat} {T : Ty} (typed : TypesEach sig source s.env path s.types T) :
+    Kept sig (freeze source s.env path) s T := by
+  intro t reach innerPath const
+  obtain ⟨more, types, names⟩ := reached_slots reach
+  obtain ⟨term, tree, checked⟩ := typed const
+  refine ⟨relocate s.types.length more.length term, ?_, ?_⟩
+  · simp only [freeze, tree, names, Nat.add_sub_cancel_left, Except.map, s.depth]
+  · rw [types, relocate_types]
+    exact checked
 
 /-- Freezing and one-slot relocation retain the original capture's reading.
 Helper of callback_term_reads, serving step-language-sound and Ref callback agreement. -/
@@ -26,7 +77,7 @@ theorem callback_capture_reads {source : TermSrc} {env : Env} {path : List Nat}
     Reads (callbackCapture source env path) (env.push [name]) path (vals ++ [current]) v := by
   obtain ⟨term, tree, value⟩ := reads
   refine ⟨term.weaken env.names.length, ?_, ?_⟩
-  · simp only [callbackCapture, tree, Except.map]
+  · simp only [callbackCapture, relocate, tree, Except.map]
   · rw [← depth]
     have lifted := evalTerm_weaken vals [] current term
     simp only [List.append_nil] at lifted
@@ -43,10 +94,10 @@ theorem callback_capture_types {Op : Type} {sig : Signature Op} {source : TermSr
   intro const
   obtain ⟨term, tree, checked⟩ := typed const
   refine ⟨term.weaken env.names.length, ?_, ?_⟩
-  · simp only [callbackCapture, tree, Except.map]
+  · simp only [callbackCapture, relocate, tree, Except.map]
   · rw [← depth]
-    have lifted := argTy_weaken sig types [] C const term
-    simp only [List.append_nil] at lifted
+    have lifted := relocate_types sig types [C] const term
+    simp only [List.length_cons, List.length_nil, relocate] at lifted
     rw [lifted]
     exact checked
 

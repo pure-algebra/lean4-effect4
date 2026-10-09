@@ -14,17 +14,6 @@ set_option autoImplicit false
 namespace Effect4.SynchronizedRef
 open Effect4.Program Effect4.Program.Authoring Effect4.Modules
 
-/-- Relocate a term's internal binders after inserting several caller slots. -/
-def relocate (cut : Nat) : Nat → Term → Term
-  | 0, term => term
-  | n + 1, term => Term.weaken cut (relocate cut n term)
-
-/-- Resolve at the original environment and path, then relocate under wrapper locals.
-The source never resolves its names against the wrapper's environment. -/
-def freeze (source : TermSrc) (env : Env) (path : List Nat) : TermSrc :=
-  fun inner _ => (source env path).map
-    (relocate env.names.length (inner.names.length - env.names.length))
-
 /-- Allocate a backing reference and one permit, as latest's makeUnsafe does at 66–71.
 The record declaration checks the requested backing value type. -/
 def make (A : Ty) (initial : TermSrc) : Src NativeOp :=
@@ -42,8 +31,8 @@ def modify {A B : Ty} {Γ : List Ty} (self : TermSrc)
     (body : Step (A :: Γ) (.prod B A))
     (captures : {t : Ty} → Input Γ t → TermSrc) : Src NativeOp :=
   fun env path =>
-    let held := freeze self env path
-    let inputs : {t : Ty} → Input Γ t → TermSrc := fun x => freeze (captures x) env path
+    let held := Step.freeze self env path
+    let inputs : {t : Ty} → Input Γ t → TermSrc := fun x => Step.freeze (captures x) env path
     Semaphore.withPermits (field held "semaphore") (nat 1)
       (Step.callback body inputs (Ref.modifyWith (field held "backing"))) env path
 

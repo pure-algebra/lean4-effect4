@@ -6,7 +6,8 @@ public import Effect4.Step
 # A step as a callback of an existing operation
 
 The connector freezes each captured source at the caller's scope and path.
-One inserted slot relocates binders inside the captured term.
+The shared relocation uses existing weakening for each appended caller slot.
+A callback adds one slot; a wrapper may add several.
 The existing operation supplies the current-value binder and emits the sole Eff syntax.
 The connector introduces neither a cell nor an operation family.
 The program checker still checks captured source types and the operation's required callback result.
@@ -18,10 +19,21 @@ set_option autoImplicit false
 namespace Effect4.Modules.Step
 open Effect4.Program Effect4.Program.Authoring
 
+/-- Relocate a term's internal binders after inserting several caller slots. -/
+def relocate (cut : Nat) : Nat → Term → Term
+  | 0, term => term
+  | n + 1, term => Term.weaken cut (relocate cut n term)
+
+/-- Resolve at the original environment and path, then relocate under wrapper locals.
+The source never resolves its names against the wrapper's environment. -/
+def freeze (source : TermSrc) (env : Env) (path : List Nat) : TermSrc :=
+  fun inner _ => (source env path).map
+    (relocate env.names.length (inner.names.length - env.names.length))
+
 /-- Freeze a source before one callback binder enters its scope.
 The weakening relocates the captured term's own binders. -/
 def callbackCapture (source : TermSrc) (env : Env) (path : List Nat) : TermSrc :=
-  fun _ _ => (source env path).map (Term.weaken env.names.length)
+  fun _ _ => (source env path).map (relocate env.names.length 1)
 
 /-- Supply the callback's current value and its frozen outer inputs. -/
 def callbackSources {C : Ty} {Γ : List Ty}

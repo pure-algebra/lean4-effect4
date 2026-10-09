@@ -13,54 +13,6 @@ set_option autoImplicit false
 namespace Effect4.SynchronizedRef
 open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Modules
 
-/-- Relocation preserves typing after arbitrary appended slots.
-Helper of freeze_kept, consumed by modify_answers. -/
-theorem relocate_types {Op : Type} (sig : Signature Op) (before more : List Ty)
-    (const : Bool) (term : Term) :
-    argTy sig (before ++ more) const (relocate before.length more.length term) =
-      argTy sig before const term := by
-  induction more with
-  | nil => simp only [List.append_nil, List.length_nil, relocate]
-  | cons X more ih =>
-    simp only [List.length_cons, relocate]
-    rw [argTy_weaken, ih]
-
-/-- Reached scopes append exactly their newly introduced slots.
-Helper of freeze_kept, consumed by modify_answers. -/
-theorem reached_slots {s t : TypedScope} (reach : s.Reaches t) :
-    ∃ more, t.types = s.types ++ more ∧ t.env.names.length = s.env.names.length + more.length := by
-  induction reach with
-  | here => exact ⟨[], (List.append_nil _).symm, (Nat.add_zero _).symm⟩
-  | @push t stem X _ ih =>
-    obtain ⟨more, types, names⟩ := ih
-    refine ⟨more ++ [X], ?_, ?_⟩
-    · change t.types ++ [X] = _
-      rw [types, List.append_assoc]
-    · change (t.env.push [_]).names.length = _
-      simp only [Env.push_length, List.length_append, List.length_cons, List.length_nil, names,
-        Nat.add_assoc]
-  | @push2 t first second X Y _ ih =>
-    obtain ⟨more, types, names⟩ := ih
-    refine ⟨more ++ [X, Y], ?_, ?_⟩
-    · change t.types ++ [X, Y] = _
-      rw [types, List.append_assoc]
-    · change (t.env.push [_, _]).names.length = _
-      simp only [Env.push_length, List.length_append, List.length_cons, List.length_nil, names,
-        Nat.add_assoc]
-
-/-- A caller's typed source remains typed after freezing at its original path.
-Helper of modify_answers; no capture stability premise is required. -/
-theorem freeze_kept {sig : Signature NativeOp} {source : TermSrc} {s : TypedScope}
-    {path : List Nat} {T : Ty} (typed : TypesEach sig source s.env path s.types T) :
-    Kept sig (freeze source s.env path) s T := by
-  intro t reach innerPath const
-  obtain ⟨more, types, names⟩ := reached_slots reach
-  obtain ⟨term, tree, checked⟩ := typed const
-  refine ⟨relocate s.types.length more.length term, ?_, ?_⟩
-  · simp only [freeze, tree, names, Nat.add_sub_cancel_left, Except.map, s.depth]
-  · rw [types, relocate_types]
-    exact checked
-
 /-- The handle's declaration is canonical when its backing type is canonical.
 Helper of make_answers, get_answers, and modify_answers. -/
 theorem handle_normal {A : Ty} (normal : A.normalize = A) :
@@ -140,14 +92,14 @@ theorem modify_answers {table : RowTable} {A B : Ty} {Γ : List Ty} {self : Term
     (facts : body.Facts) :
     Answers (nativeSignature table) (modify self body captures) s B := by
   intro path
-  have held := freeze_kept (typed path)
+  have held := Step.freeze_kept (typed path)
   have captured : ∀ {t : Ty} (x : Input Γ t),
-      Kept (nativeSignature table) (freeze (captures x) s.env path) s t :=
-    fun x => freeze_kept (inputs x path)
+      Kept (nativeSignature table) (Step.freeze (captures x) s.env path) s t :=
+    fun x => Step.freeze_kept (inputs x path)
   have wrapped := Semaphore.withPermits_types (b := EffTy.pure B)
     (held.field (semaphore_type normalA)) (kept_nat 1 s)
     (fun t reach => (Effect4.Ref.modify_callback_answers body
-      (fun x => freeze (captures x) s.env path) normalA formedA normalB formedB
+      (fun x => Step.freeze (captures x) s.env path) normalA formedA normalB formedB
       ((held.field (backing_type normalA)) t reach)
       (fun x => captured x t reach) facts).has)
   exact wrapped.answers path
