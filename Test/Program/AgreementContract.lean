@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Segment
 import Test.Program.CompileContract
 
 /-!

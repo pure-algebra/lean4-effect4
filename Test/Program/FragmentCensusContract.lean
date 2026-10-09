@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.FragmentLoopedRows
 import Effect4.Laws.Program.Folds.Straight
 import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.DenoteRows
@@ -8,7 +9,7 @@ import Effect4.Program.Authoring
 /-!
 # Fragment census — which constructors each proved fragment admits
 
-`Straight`, `Looped`, and `StraightRows` use one generator classification table.
+`Straight`, `Looped`, `StraightRows` and `LoopedRows` use one generator classification table.
 The generated predicates name every constructor. Unknown constructors refuse generation.
 This battery compares its samples with the generated family's constructor inventory.
 Each constructor therefore needs both an explicit classification and a sample.
@@ -70,6 +71,11 @@ def admitted (fragment : NativeEff → Bool) : List String :=
   ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "catchCause",
    "matchCause", "onExit", "exit", "catchIf", "select"]
 
+-- H8's machine half: the loop and `catchIf` together, and a call of any host row
+#guard admitted LoopedRows =
+  ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "catchCause",
+   "matchCause", "onExit", "exit", "catchIf", "select", "iterate"]
+
 private def data : Row := (Authoring.Row.host "data" .unit .nat .never "fragment control").row
 private def handle : Row := (Authoring.Row.host "handle" .unit NativeOp.kvTy .never "fragment control").row
 
@@ -78,6 +84,7 @@ private def handle : Row := (Authoring.Row.host "handle" .unit NativeOp.kvTy .ne
 #guard !StraightRows [data] (.perform (.external 1) t)
 #guard !Straight (.perform (.external 0) t)
 #guard !Looped (.perform (.external 0) t)
+#guard LoopedRows (.perform (.external 7) t)
 #guard !StraightRows [data] (.perform .deferredAwait t)
 #guard !StraightRows [data] (.perform (.call 0) t)
 
@@ -91,8 +98,11 @@ private def rejectedChildren : List NativeEff :=
    .matchCause no u u, .matchCause u no u, .matchCause u u no,
    .onExit no u, .onExit u no]
 
-#guard rejectedChildren.all (fun e => !Straight e && !Looped e && !StraightRows [data] e)
+#guard rejectedChildren.all (fun e =>
+  !Straight e && !Looped e && !StraightRows [data] e && !LoopedRows e)
 #guard !Looped (.iterate none t t t t (.yieldNow 0))
+#guard !LoopedRows (.iterate none t t t t (.yieldNow 0))
+#guard !LoopedRows (.catchIf t u (.yieldNow 0))
 #guard !StraightRows [data] (.catchIf t (.yieldNow 0) u)
 #guard !StraightRows [data] (.catchIf t u (.yieldNow 0))
 

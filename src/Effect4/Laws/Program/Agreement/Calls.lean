@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Segment
 import Effect4.Laws.Program.DenoteRowsR
 
 /-!
@@ -7,9 +7,10 @@ import Effect4.Laws.Program.DenoteRowsR
 Slice H8 of `docs/research/2026-10-07-packet-host-meaning.md` (decisions row 310), by the frame
 machine's route: the local run of `Program/Agreement.lean`, with the host calls of the fragment
 `StraightRows` answered from a reply tape. A host call, as the compile writes it, is an external
-registration (`asyncRoute`); the local run with calls (`localRunC`) gives it the answer that the
-machine's answer decision prepares from the next exit of the reply tape (`prepareExternalAnswer`),
-and waits when the tape is empty (`RunEnd.waits`). Every other step is the local step.
+registration (`asyncRoute`); the local run with calls (`localRunC`, `Agreement/Segment.lean`)
+gives it the answer that the machine's answer decision prepares from the next exit of the reply
+tape (`prepareExternalAnswer`), and waits when the tape is empty (`RunEnd.waits`). Every other
+step is the local step.
 
 **The law** (`localRunC_compile`): a program of the fragment, compiled at an address of the root
 and run with calls from any outer stack, goes where its meaning under the reply tape goes
@@ -29,7 +30,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Prog
 
 variable {table : RowTable}
 
-/-! ## The local run with calls -/
+/-! ## A host call's answer at a data row -/
 
 /-- A row answer that is no handle takes the value as it is, and allocates nothing. -/
 theorem externalValue_data {ty : Ty} (hty : ∀ t, ty ≠ .handle t) {alloc : List String}
@@ -76,82 +77,6 @@ theorem prepareExternalAnswer_data {j : Nat} (hrow : dataRow table j = true) (v 
       simp only [prepareExternalAnswer, hne, Bool.false_eq_true, if_false]
       rfl
 
-/-- **One local step with calls.** A host call takes the next exit of the reply tape, and the
-fiber goes on with the answer the machine's answer decision prepares from it
-(`prepareExternalAnswer`; at a data row, the exit itself over the same stores,
-`prepareExternalAnswer_data`); with no reply left, the call is the frontier (`none`). Every
-other step is the local step, and reads no reply. -/
-def localStepC (table : RowTable) (root : NativeEff) (fr : NFiber) (s : Stores) (r : ReplyTape) :
-    Option (LocalStep × ReplyTape) :=
-  if IsCall fr.current then
-    match r with
-    | [] => none
-    | ex :: rest =>
-      let answer := prepareExternalAnswer table (some fr.current) (.ofExit ex) s
-      some (.running { fr with current := answer.2 } answer.1, rest)
-  else some (localStep root fr s, r)
-
-/-- Where the local run with calls stops within its budget: the fiber's exit with its stores and
-the replies left, or a host call with no reply left, where it waits. -/
-inductive RunEnd where
-  | exit (ex : ExitV) (s : Stores) (r : ReplyTape)
-  | waits
-
-/-- The local run with calls: `n` steps at most; where it stops, or `none` when the steps run
-out first. -/
-def localRunC (table : RowTable) (root : NativeEff) :
-    Nat → NFiber → Stores → ReplyTape → Option RunEnd
-  | 0, _, _, _ => none
-  | n + 1, fr, s, r =>
-    match localStepC table root fr s r with
-    | some (.running fr' s', r') => localRunC table root n fr' s' r'
-    | some (.finished ex s', r') => some (.exit ex s' r')
-    | none => some .waits
-
-/-- **A relation on final observations**: at every budget, the local run with calls from `fr`
-given `c` more steps stops where the run from `fr'` stops (`RunEnd`), or neither stops. It is no
-path: two waiting calls over different stores relate (the H8 review, finding H8R-01). A run that
-waits and a run that diverges do not relate: the first stops with `RunEnd.waits`. -/
-def ReachesC (table : RowTable) (root : NativeEff) (c : Nat) (fr : NFiber) (s : Stores)
-    (r : ReplyTape) (fr' : NFiber) (s' : Stores) (r' : ReplyTape) : Prop :=
-  ∀ n, localRunC table root (n + c) fr s r = localRunC table root n fr' s' r'
-
-theorem ReachesC.refl (table : RowTable) (root : NativeEff) (fr : NFiber) (s : Stores)
-    (r : ReplyTape) : ReachesC table root 0 fr s r fr s r := fun _ => rfl
-
-theorem ReachesC.trans {root : NativeEff} {c₁ c₂ : Nat} {fr₁ fr₂ fr₃ : NFiber}
-    {s₁ s₂ s₃ : Stores} {r₁ r₂ r₃ : ReplyTape} (h₁ : ReachesC table root c₁ fr₁ s₁ r₁ fr₂ s₂ r₂)
-    (h₂ : ReachesC table root c₂ fr₂ s₂ r₂ fr₃ s₃ r₃) : ReachesC table root (c₁ + c₂) fr₁ s₁ r₁ fr₃ s₃ r₃ := by
-  intro n
-  rw [← Nat.add_assoc, Nat.add_right_comm, h₁, h₂]
-
-/-- A step that is no call reads no reply. -/
-theorem ReachesC.step {root : NativeEff} {fr fr' : NFiber} {s s' : Stores}
-    (h : localStep root fr s = .running fr' s') (hc : IsCall fr.current = false) (r : ReplyTape) :
-    ReachesC table root 1 fr s r fr' s' r := by
-  intro n
-  show localRunC table root (n + 1) fr s r = _
-  simp only [localRunC, localStepC, hc, Bool.false_eq_true, if_false, h]
-
-/-- Two fibers that are no call and take the same next step reach each other for free. -/
-theorem ReachesC.same {root : NativeEff} {fr fr' : NFiber} (s : Stores) (r : ReplyTape)
-    (h : ∀ s, localStep root fr s = localStep root fr' s) (hc : IsCall fr.current = false)
-    (hc' : IsCall fr'.current = false) : ReachesC table root 0 fr s r fr' s r := by
-  intro n
-  cases n with
-  | zero => rfl
-  | succ n => simp only [localRunC, localStepC, hc, hc', Bool.false_eq_true, if_false, h]
-
-/-- **A host call takes the next reply**, as the answer its preparation gives. -/
-theorem ReachesC.answer {root : NativeEff} {fr : NFiber} (s : Stores) (hc : IsCall fr.current = true)
-    (ex : ExitV) (rest : ReplyTape) {s' : Stores} {code : NCode}
-    (hp : prepareExternalAnswer table (some fr.current) (.ofExit ex) s = (s', code)) :
-    ReachesC table root 1 fr s (ex :: rest) { fr with current := code } s' rest := by
-  intro n
-  show localRunC table root (n + 1) fr s (ex :: rest) = _
-  simp only [localRunC, localStepC, hc, if_true, hp]
-
-theorem isCall_ofExit (ex : ExitV) : IsCall (Prim.ofExit ex) = false := by cases ex <;> rfl
 
 /-- **Where the local run with calls goes for an outcome of the meaning.** For an exit with its
 stores and the replies left, it reaches the exit's fiber over the stack `K` with mask `i`; for

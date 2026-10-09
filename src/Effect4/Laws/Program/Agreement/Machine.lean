@@ -1,20 +1,22 @@
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.FragmentLoopedRows
 import Effect4.Laws.Program.Agreement.LoopSteps
 import Effect4.Laws.Machine.Clauses
 import Effect4.Laws.Machine.Approximation
 import Effect4.Api
 
 /-!
-# Program.Agreement.Machine — the command loop over one plain fiber is the local run
+# Program.Agreement.Machine — the command loop over one plain fiber, one command at a time
 
 Packet: `Test/contracts/program-denotation.contract.md`; plan
 `docs/research/2026-09-05-slice-1-compile-ground.md` §9. This module is the machine half of
-the packet's theorem. `Agreement.lean` showed that the frame machine, run locally over the
-stores, takes a compiled straight-line program to its meaning. Here the fiber machine's
-command loop (`Fibers.lean`, `driveState`) is shown to do exactly what the local run does, one
-command per local step (two when a store `sync` owes a drain), for the one fiber `Api.load`
-makes, and the packet's theorem `run_eq_meaning` follows over `Api.run`.
+the packet's theorem, one command at a time. `Agreement.lean` showed that the frame machine,
+run locally over the stores, takes a compiled straight-line program to its meaning. Here each
+command of the fiber machine's loop (`Fibers.lean`, `driveState`) is shown to do what one local
+step does (two commands when a store `sync` owes a drain), for the one fiber `Api.load` makes.
+`Agreement/Segment.lean` chains the commands into segments (`drive_seg`) and states the packet's
+theorem `run_eq_meaning` over `Api.run`.
 
 Three invariants carry the simulation, all decidable:
 
@@ -23,14 +25,13 @@ Three invariants carry the simulation, all decidable:
   and no park but a host call's (`IsCall`), so off a host call the loop's fiber-level arms
   (`Fibers.lean:771-853`) never fire and `evaluatePrim` is the local step
   (`evaluatePrim_localStep`), the `onExit` frame's finalizer program included. A host call
-  parks the root; `Agreement/Hosted.lean` takes it from there;
+  parks the root (`drive_loop_call`, `Agreement/Segment.lean`);
 * `Quiet`: the stores owe no resume, so `Cmd.drainDue` changes nothing — a straight-line
   program never registers a waiter, and a completion with no waiter owes nothing;
 * the op count is what the yield watches: under `defaultBudget` no yield is injected, and
-  when the count reaches it the root parks on its own dispatcher (`Myield`), `flush` fires
-  it back into the loop at count zero, and the rounds go on until the exit; each round that
-  yields again has spent at least `defaultBudget - 1` steps of the run, so the rounds the
-  fuel allows are enough (`E4-DEN-CE-005`, repaired).
+  when the count reaches it the root parks on its own dispatcher (`Myield`, `drive_loop_yield`),
+  and `flush` fires it back into the loop at count zero (`fire_Myield`) (`E4-DEN-CE-005`,
+  repaired).
 
 The trace is never pinned: the commands emit frame events the algebra has no producer for
 (`E4-DEN-CE-003`), and every equation here quantifies the trace away.
@@ -46,44 +47,10 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 -- reads no row; a table changes only an external registration and its answer.
 variable {table : RowTable}
 
-/-! ## The fragment with host calls -/
+/-! ## The fragment with host calls
 
-/-- **The loop-bearing fragment with host calls**: `Looped`'s clauses, with a call of a host
-row and `catchIf`, the two forms `StraightRows` adds to `Straight`. Every constructor is named,
-as in `Looped`. -/
-def LoopedRows : NativeEff → Bool
-  | .succeed _ => true
-  | .fail _ => true
-  | .failCause _ => true
-  | .sync _ => true
-  | .perform op _ =>
-    match op with
-    | .external _ => true
-    | _ => match op.kind with
-      | .sync => true
-      | _ => false
-  | .iterate _ _ _ _ _ body => LoopedRows body
-  | .suspend b => LoopedRows b
-  | .bind a b => LoopedRows a && LoopedRows b
-  | .select _ _ a b => LoopedRows a && LoopedRows b
-  | .exit b => LoopedRows b
-  | .catchCause b h => LoopedRows b && LoopedRows h
-  | .catchIf _ b h => LoopedRows b && LoopedRows h
-  | .matchCause b v c => LoopedRows b && LoopedRows v && LoopedRows c
-  | .onExit b f => LoopedRows b && LoopedRows f
-  | .gen _ => false
-  | .uninterruptible _ => false
-  | .interruptible _ => false
-  | .yieldNow _ => false
-  | .awaitFiber _ _ => false
-  | .withFiber _ => false
-  | .scoped _ => false
-  | .acquireRelease _ _ => false
-  | .provideLayer _ _ _ => false
-  | .service _ => false
-  | .provideService _ _ _ => false
-  | .restore _ _ => false
-  | .defs _ _ _ => false
+`LoopedRows` (generated, `Laws/Program/FragmentLoopedRows.lean`) is `Looped` with a call of any
+host row and `catchIf`, the two forms `StraightRows` adds to `Straight`. -/
 
 /-- The loop-bearing fragment lies inside it. -/
 theorem LoopedRows.of_looped : ∀ (e : NativeEff), Looped e = true → LoopedRows e = true
@@ -560,25 +527,6 @@ theorem eq_async_of_isCall {cur : NCode} (h : IsCall cur = true) :
   cases cur with
   | async n w c => exact ⟨n, w, c, rfl⟩
   | _ => simp only [IsCall, Bool.false_eq_true] at h
-
-/-- So the local run never finishes through a host call. -/
-theorem localRun_async (root : NativeEff) (n' : EffName) (w : Bool) (c : Option EffName)
-    (K : List NCode) (i : Bool) (s : Stores) :
-    ∀ n, localRun root n (fiberOf (Prim.async n' w c) K i) s = none
-  | 0 => rfl
-  | n + 1 => by
-    rw [localRun_running (localStep_async root n' w c K i s)]
-    exact localRun_async root n' w c K i s n
-
-/-- A fiber whose local run finishes is at no host call. -/
-theorem isCall_false_of_localRun {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
-    {s : Stores} {n : Nat} {ex : ExitV} {s' : Stores}
-    (h : localRun root n (fiberOf cur K i) s = some (ex, s')) : IsCall cur = false := by
-  cases hc : IsCall cur
-  · rfl
-  · obtain ⟨n', w, c, rfl⟩ := eq_async_of_isCall hc
-    rw [localRun_async] at h
-    cases h
 
 /-- A fiber whose local step finishes is at no host call. -/
 theorem isCall_false_of_finished {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
@@ -1798,354 +1746,5 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
   try dsimp only
   rw [M_update]
   rfl
-
-/-! ## The simulation: the command loop is the local run -/
-
-/-- The next command the loop owes: the loop itself, or the delivery of an answered `sync`. -/
-def cmdOf : Bool → NCmd
-  | false => Cmd.loop Api.root false
-  | true => Cmd.deliver Api.root false
-
-/-- What the command loop owes a local run of `n` steps from `cur` over `s` at count `k`:
-within `2n` commands it either reaches the exit path of the run's exit over its stores, or
-the count reaches `defaultBudget` first and the root parks on a yield with the rest of the
-run — `n₁` steps, at least `defaultBudget - k - 1` fewer than `n` — still to do. -/
-def Owes (root : NativeEff) (table : RowTable) (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores)
-    (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (d : Bool) (ex : ExitV)
-    (s' : Stores) : Prop :=
-  ∃ c, c ≤ 2 * n ∧
-    ((∃ fr k' tr', Quiet s' ∧ ∀ fuel,
-        driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
-          driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (M fr s' k' tr' nt) (Cmd.finish Api.root ex :: rest)) ∨
-      (∃ cur₁ K₁ i₁ s₁ n₁ k₁ tr', n₁ + defaultBudget ≤ n + k + 1 ∧
-        PlainCode cur₁ = true ∧ PlainStack K₁ ∧ Quiet s₁ ∧
-        localRun root n₁ (fiberOf cur₁ K₁ i₁) s₁ = some (ex, s') ∧ ∀ fuel,
-          driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
-            driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt) rest))
-
-/-- One or two commands in front of what is owed. -/
-theorem Owes.step (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
-    {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {d : Bool} {ex : ExitV}
-    {s' : Stores} {cur₁ : NCode} {K₁ : List NCode} {i₁ : Bool} {s₁ : Stores} {k₁ : Nat}
-    {tr₁ : NTrace} (d₁ : Bool) (a : Nat) (ha : a ≤ 2) (hk : k₁ ≤ k + 1)
-    (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + a) (M (fiberOf cur K i) s k tr nt)
-      (cmdOf d :: rest) =
-      driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt) (cmdOf d₁ :: rest))
-    (h : Owes root table n cur₁ K₁ i₁ s₁ k₁ tr₁ nt rest d₁ ex s') :
-    Owes root table (n + 1) cur K i s k tr nt rest d ex s' := by
-  obtain ⟨c, hc, h⟩ := h
-  refine ⟨c + a, by omega, ?_⟩
-  rcases h with ⟨fr, k', tr', hq', hrec⟩ |
-    ⟨cur₂, K₂, i₂, s₂, n₂, k₂, tr', hn, hpl, hK, hq, hrun, hrec⟩
-  · exact Or.inl ⟨fr, k', tr', hq', fun fuel => by
-      rw [show fuel + (c + a) = fuel + c + a by omega, hdrv, hrec]⟩
-  · exact Or.inr ⟨cur₂, K₂, i₂, s₂, n₂, k₂, tr', by omega, hpl, hK, hq, hrun, fun fuel => by
-      rw [show fuel + (c + a) = fuel + c + a by omega, hdrv, hrec]⟩
-
-/-- The exit path, one command away. -/
-theorem Owes.finish (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
-    {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {d : Bool} {ex : ExitV}
-    {k' : Nat} {tr' : NTrace} {fr : NFiber} (hq : Quiet s)
-    (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + 1) (M (fiberOf cur K i) s k tr nt)
-      (cmdOf d :: rest) =
-      driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (M fr s k' tr' nt)
-        (Cmd.finish Api.root ex :: rest)) :
-    Owes root table (n + 1) cur K i s k tr nt rest d ex s :=
-  ⟨1, by omega, Or.inl ⟨fr, k', tr', hq, hdrv⟩⟩
-
-/-- The yield, two commands away: at the loop with the count about to reach the budget, the
-root parks with the whole run still to do. -/
-theorem Owes.yield (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
-    {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {ex : ExitV}
-    {s' : Stores} (hk : defaultBudget ≤ k + 1) (hpl : PlainCode cur = true) (hK : PlainStack K)
-    (hq : Quiet s) (hrun : localRun root (n + 1) (fiberOf cur K i) s = some (ex, s')) :
-    Owes root table (n + 1) cur K i s k tr nt rest false ex s' := by
-  obtain ⟨tr', h⟩ := drive_loop_yield root cur K i s k tr nt rest hk
-  exact ⟨2, by omega, Or.inr ⟨cur, K, i, s, n + 1, k + 2, tr', by omega,
-    hpl, hK, hq, hrun, h⟩⟩
-
-/-- The command loop over one plain fiber does what the local run does: if the local run
-finishes within `n` steps with `ex` over `s'`, the loop, from any count and any token,
-either reaches the exit path of `ex` over `s'` within `2n` commands, or reaches the budget
-first and parks the root on a yield with the rest of the run to do (`Owes`). -/
-theorem drive_localRun (root : NativeEff) (hroot : LoopedRows root = true) :
-    ∀ (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace)
-      (nt : Nat) (rest : List NCmd) (d : Bool) (ex : ExitV) (s' : Stores),
-      PlainCode cur = true → PlainStack K → Quiet s →
-      (d = true → ∀ t, cur ≠ Prim.sync t) →
-      localRun root n (fiberOf cur K i) s = some (ex, s') →
-      Owes root table n cur K i s k tr nt rest d ex s'
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hrun => by
-    simp [localRun] at hrun
-  | n + 1, cur, K, i, s, k, tr, nt, rest, d, ex, s', hpl, hK, hq, hd, hrun => by
-    -- a finishing run is at no host call
-    have hnc : IsCall cur = false := isCall_false_of_localRun hrun
-    cases d with
-    | true =>
-      -- the delivery: no `sync` here, the step is the frame machine's, and no count
-      have hns := hd rfl
-      rcases hstep : localStep root (fiberOf cur K i) s with ⟨fr₁, s₁⟩ | ⟨ex₁, s₁⟩
-      · rw [localRun_running hstep] at hrun
-        have hs₁ := localStep_stores hns hstep
-        subst hs₁
-        obtain ⟨cur₁, K₁, i₁, rfl, hpl₁, hK₁⟩ :=
-          localStep_plain hroot cur K i s fr₁ s hpl hK hstep
-        obtain ⟨tr₁, hdrv⟩ :=
-          drive_deliver_running root cur K i s k tr nt rest cur₁ K₁ i₁ hpl hK hns hnc hstep
-        exact Owes.step root false 1 (by omega) (by omega) hdrv
-          (drive_localRun root hroot n cur₁ K₁ i₁ s k tr₁ nt rest false ex s' hpl₁ hK₁ hq
-            (fun h => by cases h) hrun)
-      · rw [localRun_finished hstep] at hrun
-        simp only [Option.some.injEq, Prod.mk.injEq] at hrun
-        have hex : ex = ex₁ := hrun.1.symm
-        have hs' : s' = s₁ := hrun.2.symm
-        subst hex
-        subst hs'
-        have hs₁ := localStep_finished_stores hstep
-        subst hs₁
-        obtain ⟨tr₁, hdrv⟩ := drive_deliver_finish root cur K i s k tr nt rest ex hpl hns hstep
-        exact Owes.finish root hq hdrv
-    | false =>
-      rcases Nat.lt_or_ge (k + 1) defaultBudget with hk | hk
-      · rcases hstep : localStep root (fiberOf cur K i) s with ⟨fr₁, s₁⟩ | ⟨ex₁, s₁⟩
-        · -- one more local step at the loop
-          rw [localRun_running hstep] at hrun
-          cases hsy : isSync cur
-          · have hns := not_sync_of_isSync_false hsy
-            have hs₁ := localStep_stores hns hstep
-            subst hs₁
-            obtain ⟨cur₁, K₁, i₁, rfl, hpl₁, hK₁⟩ :=
-              localStep_plain hroot cur K i s fr₁ s hpl hK hstep
-            obtain ⟨tr₁, hdrv⟩ :=
-              drive_loop_running root cur K i s k tr nt rest cur₁ K₁ i₁ hpl hK hns hnc hk hstep
-            exact Owes.step root false 1 (by omega) (by omega) hdrv
-              (drive_localRun root hroot n cur₁ K₁ i₁ s (k + 1) tr₁ nt rest false ex s' hpl₁ hK₁
-                hq (fun h => by cases h) hrun)
-          · -- a `sync`: answered at the loop, delivered next
-            obtain ⟨t, rfl⟩ := eq_sync_of_isSync hsy
-            cases t <;> simp only [PlainCode, Bool.false_eq_true] at hpl
-            · -- pure
-              rename_i p
-              rw [step_sync_pure] at hstep
-              simp only [LocalStep.running.injEq] at hstep
-              obtain ⟨hfr, hs⟩ := hstep
-              subst hfr
-              subst hs
-              obtain ⟨tr₁, hdrv⟩ := drive_loop_sync_pure root p K i s k tr nt rest hk
-              exact Owes.step root true 1 (by omega) (by omega) hdrv
-                (drive_localRun root hroot n _ K i s (k + 1) tr₁ nt rest true ex s' rfl hK hq
-                  (fun _ t h => by cases h) hrun)
-            · -- a store operation
-              rename_i o
-              rw [step_sync_op] at hstep
-              rcases hso : syncOpStep o s with _ | ⟨s₂, v⟩ <;> rw [hso] at hstep <;>
-                simp only [LocalStep.running.injEq] at hstep <;> obtain ⟨hfr, hs⟩ := hstep <;>
-                subst hfr <;> subst hs
-              · obtain ⟨tr₁, hdrv⟩ := drive_loop_sync_op_none root o K i s k tr nt rest hk hso
-                exact Owes.step root true 1 (by omega) (by omega) hdrv
-                  (drive_localRun root hroot n _ K i s (k + 1) tr₁ nt rest true ex s' rfl hK hq
-                    (fun _ t h => by cases h) hrun)
-              · have hq₂ : Quiet s₂ := syncOpStep_quiet hso hq
-                obtain ⟨tr₁, hdrv⟩ := drive_loop_sync_op root o K i s k tr nt rest s₂ v hk hso
-                have hdrain := drive_drainDue (table := table) root
-                  (m := M (fiberOf (Prim.success v) K i) s₂ (k + 1) tr₁ nt)
-                  (rest := Cmd.deliver Api.root false :: rest) (hs := rfl) (hq := hq₂)
-                refine Owes.step root true 2 (by omega) (by omega) (fun fuel => ?_)
-                  (drive_localRun root hroot n _ K i s₂ (k + 1) tr₁ nt rest true ex s' rfl hK hq₂
-                    (fun _ t h => by cases h) hrun)
-                simp only [cmdOf]
-                rw [show fuel + 2 = fuel + 1 + 1 by omega, hdrv, hdrain]
-        · -- the last local step at the loop: the exit
-          rw [localRun_finished hstep] at hrun
-          simp only [Option.some.injEq, Prod.mk.injEq] at hrun
-          have hex : ex = ex₁ := hrun.1.symm
-          have hs' : s' = s₁ := hrun.2.symm
-          subst hex
-          subst hs'
-          have hs₁ := localStep_finished_stores hstep
-          subst hs₁
-          cases hsy : isSync cur
-          · have hns := not_sync_of_isSync_false hsy
-            obtain ⟨tr₁, hdrv⟩ :=
-              drive_loop_finish root cur K i s k tr nt rest ex hpl hns hk hstep
-            exact Owes.finish root hq hdrv
-          · -- a `sync` never finishes the fiber
-            obtain ⟨t, rfl⟩ := eq_sync_of_isSync hsy
-            cases t <;> simp only [PlainCode, Bool.false_eq_true] at hpl
-            · rw [step_sync_pure] at hstep
-              cases hstep
-            · rename_i o
-              rw [step_sync_op] at hstep
-              rcases hso : syncOpStep o s with _ | ⟨s₂, v⟩ <;> rw [hso] at hstep <;> cases hstep
-      · -- the count is at the budget: the loop yields before anything else
-        exact Owes.yield root hk hpl hK hq hrun
-
-/-! ## The rounds of `flush` after a yield -/
-
-/-- Each round of `flush` fires the root's dispatcher and returns to its code at count one,
-and the loop runs on to the exit path or to the next yield; a round that yields again has
-lost at least `defaultBudget - 2` steps of the run, so the rounds the fuel allows are
-enough. -/
-theorem flushAll_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
-    ∀ (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
-      (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),
-      PlainCode cur = true → PlainStack K → Quiet s →
-      localRun root n (fiberOf cur K i) s = some (ex, s') →
-      n + 1 ≤ rounds → 2 * n + 6 ≤ fuel →
-      ∃ fr k' tr' nt', flushAllState (evaluator := evaluatorFor root table) (interpOf root table) fuel rounds
-        (Myield (fiberOf cur K i) s k tr nt) = (Mexit root ex fr s' k' tr' nt', true)
-  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hr, _ => absurd hr (Nat.not_succ_le_zero _)
-  | rounds + 1, n, cur, K, i, s, k, tr, nt, ex, s', fuel, hpl, hK, hq, hrun, hr, hf => by
-    have hB : defaultBudget = 2048 := rfl
-    obtain ⟨f₂, rfl⟩ : ∃ f₂, fuel = f₂ + 1 + 1 + 1 := ⟨fuel - 3, by omega⟩
-    change ∃ fr k' tr' nt',
-      (let r := fireState (evaluator := evaluatorFor root table) (interpOf root table) (f₂ + 1 + 1 + 1)
-          (Myield (fiberOf cur K i) s k tr nt) Api.root
-       if r.2 then flushAllState (evaluator := evaluatorFor root table) (interpOf root table) (f₂ + 1 + 1 + 1) rounds r.1 else r) =
-        (Mexit root ex fr s' k' tr' nt', true)
-    obtain ⟨tr₁, hfire⟩ := fire_Myield root cur K i s k tr nt
-    rw [hfire]
-    obtain ⟨c, hc, h⟩ := drive_localRun root hroot n cur K i s 1 tr₁ (nt + 1) [Cmd.drainDue]
-      false ex s' hpl hK hq (fun h => by cases h) hrun
-    simp only [cmdOf] at h
-    rcases h with ⟨fr, k', tr', hq', hrec⟩ |
-      ⟨cur₁, K₁, i₁, s₁, n₁, k₁, tr', hn, hpl₁, hK₁, hq₁, hrun₁, hrec⟩
-    · -- the exit path: the exit is stored, the two drains do nothing, nothing is armed
-      obtain ⟨f₄, rfl⟩ : ∃ f₄, f₂ = f₄ + 1 + 1 + 1 + c := ⟨f₂ - 3 - c, by omega⟩
-      obtain ⟨tr'', hfin⟩ := drive_finish_M root ex fr s' k' tr' (nt + 1) [Cmd.drainDue]
-      rw [hrec, hfin, drive_drainDue root _ _ _ rfl hq', drive_drainDue root _ _ _ rfl hq',
-        drive_nil]
-      simp only [stepDecisionState.loop, settled, List.isEmpty_nil, Bool.true_or, ↓reduceIte]
-      rw [flushAll_Mexit]
-      exact ⟨fr, k', tr'', nt + 1, rfl⟩
-    · -- another yield: the drain does nothing, the next round takes it from there
-      obtain ⟨f₄, rfl⟩ : ∃ f₄, f₂ = f₄ + 1 + c := ⟨f₂ - 1 - c, by omega⟩
-      rw [hrec, drive_drainDue root _ _ _ rfl hq₁, drive_nil]
-      simp only [stepDecisionState.loop, settled, List.isEmpty_nil, Bool.true_or, ↓reduceIte]
-      exact flushAll_Myield root hroot rounds n₁ cur₁ K₁ i₁ s₁ k₁ tr' (nt + 1) ex s' _
-        hpl₁ hK₁ hq₁ hrun₁ (by omega) (by omega)
-
-/-! ## The packet's theorem -/
-
-theorem replayEval_cons [evaluator : FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode NFiber
-      (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)]
-    (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
-    (fuel : Nat) (d : Api.Decision) (tape : List Api.Decision) (m : Api.Machine)
-    (hs : m.stuck = none) (hr : (stepDecisionState interp fuel m d).2 = true) :
-    replayEval interp fuel (d :: tape) m =
-      replayEval interp fuel tape (stepDecisionState interp fuel m d).1 := by
-  simp [replayEval, hs, hr]
-
-theorem replayEval_nil_finished
-    [evaluator : FiberEvaluator EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode NFiber
-      (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)]
-    (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) (fuel : Nat)
-    (m : Api.Machine) (hs : m.stuck = none) (hf : m.finished = true) :
-    replayEval interp fuel [] m = ReplayResult.finished m := by
-  simp [replayEval, hs, hf]
-
-/-- **The closing step, for any finished local run.** A program of the loop-bearing fragment
-whose local run from the root finishes within `N` steps is replayed by the machine, at any
-fuel covering twice that count and the four commands, to the finished machine holding that
-exit over those stores: under the op budget directly, past it through the yield and the rounds
-of `flush`. The straight theorem and the loop theorem are both this, at their own `N`. -/
-theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e = true)
-    (ex : ExitV) (s' : Stores)
-    (hrun : localRun e N (fiberOf (compile e fuel) []) Stores.empty = some (ex, s'))
-    (hfuel : 2 * N + 4 ≤ fuel) :
-    ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
-      ReplayResult.finished (Mexit e ex fr s' k' tr' nt') := by
-  have hB : defaultBudget = 2048 := rfl
-  obtain ⟨c, hc, h⟩ :=
-    drive_localRun e (LoopedRows.of_looped e hl) N (compile e fuel) [] true Stores.empty 0
-      [RunEvent.started Api.root] 0 [Cmd.drainDue] false ex
-      s' (plainCode_compileEff e _ (LoopedRows.of_looped e hl))
-      PlainStack.nil Quiet.empty
-      (fun h => by cases h) hrun
-  simp only [cmdOf] at h
-  rcases h with ⟨fr, k', tr', hq', hsim⟩ |
-    ⟨cur₁, K₁, i₁, s₁, n₁, k₁, tr', hn, hpl₁, hK₁, hq₁, hrun₁, hsim⟩
-  · -- under the budget: `evaluate` reaches the exit, `flush` finds nothing armed
-    obtain ⟨tr'', hfin⟩ := drive_finish_M e ex fr
-      s' k' tr' 0 [Cmd.drainDue]
-    have hchain : ∀ F, c + 4 ≤ F →
-        driveState (evaluator := evaluatorFor e table) (interpOf e table) F (Api.load e fuel) [Cmd.evaluate Api.root, Cmd.drainDue] =
-          (Mexit e ex fr s' k' tr'' 0, []) := by
-      intro F hF
-      obtain ⟨f₄, rfl⟩ : ∃ f₄, F = f₄ + 1 + 1 + 1 + c + 1 := ⟨F - (c + 4), by omega⟩
-      rw [drive_evaluate_load e fuel _ _, hsim, hfin,
-        drive_drainDue e _ _ _ rfl hq', drive_drainDue e _ _ _ rfl hq']
-      exact drive_nil e _ _
-    refine ⟨fr, k', tr'', 0, ?_⟩
-    have heval : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel (Api.load e fuel) Api.evaluate =
-        (Mexit e ex fr s' k' tr'' 0, true) := by
-      change stepDecisionState.loop (driveState (evaluator := evaluatorFor e table) _ _ _ _) = _
-      rw [hchain fuel (by omega)]
-      rfl
-    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [heval]), heval]
-    have hflush : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel
-        (Mexit e ex fr s' k' tr'' 0)
-        Api.flush =
-        (Mexit e ex fr s' k' tr'' 0, true) :=
-      flushAll_Mexit _ _ _ _ _ _ _ _ _
-    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [hflush]), hflush]
-    exact replayEval_nil_finished (evaluator := evaluatorFor e table) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
-  · -- past the budget: `evaluate` parks the root on a yield, `flush` runs the rounds
-    have hchain : ∀ F, c + 2 ≤ F →
-        driveState (evaluator := evaluatorFor e table) (interpOf e table) F (Api.load e fuel) [Cmd.evaluate Api.root, Cmd.drainDue] =
-          (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' 0, []) := by
-      intro F hF
-      obtain ⟨f₄, rfl⟩ : ∃ f₄, F = f₄ + 1 + c + 1 := ⟨F - (c + 2), by omega⟩
-      rw [drive_evaluate_load e fuel _ _, hsim, drive_drainDue e _ _ _ rfl hq₁]
-      exact drive_nil e _ _
-    obtain ⟨fr, k', tr'', nt', hfl⟩ :=
-      flushAll_Myield e (LoopedRows.of_looped e hl) fuel n₁ cur₁ K₁ i₁ s₁ k₁ tr' 0 ex
-        s' fuel hpl₁ hK₁ hq₁ hrun₁ (by omega) (by omega)
-    refine ⟨fr, k', tr'', nt', ?_⟩
-    have heval : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel (Api.load e fuel) Api.evaluate =
-        (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' 0, true) := by
-      change stepDecisionState.loop (driveState (evaluator := evaluatorFor e table) _ _ _ _) = _
-      rw [hchain fuel (by omega)]
-      rfl
-    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [heval]), heval]
-    have hflush : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel
-        (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' 0) Api.flush =
-        (Mexit e ex fr s' k' tr'' nt', true) := hfl
-    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [hflush]), hflush]
-    exact replayEval_nil_finished (evaluator := evaluatorFor e table) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
-
-/-- The ordinary run ends in the exited machine of the meaning, whatever the road: under the
-op budget, `evaluate` runs the root to its exit and `flush` finds nothing armed; past it,
-the root yields, parks, and `flush` fires its dispatcher round after round until the exit. -/
-theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)
-    (hd : depth e ≤ fuel) (hfuel : 2 * steps e + 6 ≤ fuel) :
-    ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
-      ReplayResult.finished
-        (Mexit e (meaning e [] Stores.empty).1 fr (meaning e [] Stores.empty).2 k' tr' nt') :=
-  replay_Mexit_of_localRun e fuel (steps e + 1) (Looped.of_straight e hpl) _ _
-    (localRun_root e fuel hpl hd) (by omega)
-
-/-- The ordinary run of a straight-line program, with fuel for its depth and its commands,
-finishes with the exit and the stores of its meaning — under the op budget or past it, where
-the root yields, parks, and `flush` fires its dispatcher round after round (`E4-DEN-CE-005`,
-repaired). The trace is not pinned (`E4-DEN-CE-003`). -/
-theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)
-    (hd : depth e ≤ fuel) (hfuel : 2 * steps e + 6 ≤ fuel) :
-    (Api.run e fuel).outcome = Api.Outcome.finished ∧
-      (Api.run e fuel).exit = some (meaning e [] Stores.empty).1 ∧
-      (Api.run e fuel).stores = (meaning e [] Stores.empty).2 := by
-  have hpl : Straight e = true := hs
-  obtain ⟨fr, k', tr', nt', hrep⟩ := replay_Mexit e fuel hpl hd hfuel
-  have hrun_eq : Api.run e fuel =
-      ⟨Api.Outcome.finished,
-        Mexit e (meaning e [] Stores.empty).1 fr (meaning e [] Stores.empty).2 k' tr' nt', []⟩ := by
-    unfold Api.run Api.replay
-    rw [hrep]
-  refine ⟨?_, ?_, ?_⟩
-  · rw [hrun_eq]
-  · rw [hrun_eq]
-    exact Mexit_exit _ _ _ _ _ _ _
-  · rw [hrun_eq]
-    rfl
 
 end Effect4.Program.Agreement

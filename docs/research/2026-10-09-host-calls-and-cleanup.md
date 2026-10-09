@@ -125,7 +125,7 @@ The sweep ran on `bd65164b`, the merged tree with the fixed walk, on 2026-10-09.
 | C5 | preloaded answers | `ExternalStore.answers`; H8 needs the premise that it is empty; `run_eq_ref_table` waits on its removal | delete the field (DI-23, row 310) | a day |
 | C6 | generated docstrings lost their reasons | the old `Straight` named why each constructor is in or out | a reason column in the classification table | hours |
 | C7 | seat audits use Lean's collector | section 3.3 | one command, `#axiom_audit`, over named modules with the gate's walk | hours |
-| C8 | the proof-style baseline | 1128 recorded uses: 706 `simp` without `only`, 192 `first`, 111 `try`, 72 `simp_all` | cut the file with the most uses each week; the ratchet holds the count | ongoing |
+| C8 | the proof-style baseline | 1128 rows holding 1598 uses: 1140 `simp` without `only`, 227 `first`, 155 `try`, 76 `simp_all`; and 53 unread commands (corrected in section 4.1) | cut the file with the most uses each week; the ratchet holds the count | ongoing |
 
 The build profile of the sweep (`make build-profile`) rebuilt 482 modules in 2749 summed
 seconds. Its critical path is 269 s over five modules, and one module takes 184 s of it.
@@ -134,6 +134,47 @@ seconds. Its critical path is 269 s over five modules, and one module takes 184 
 | --- | --- | --- | --- | --- |
 | C9 | the critical path | `Effect4.Laws.Codegen.PrintTyped`, 184 s, on the path between `Typing.Annotate` and the Laws root | split it by printer phase, so that its parts build in parallel; read its slowest proofs with `#auto_census` | hours |
 | C10 | the slowest law modules off the path | `Library.Queue.Typing` 116 s, `Library.Pool.Typing` 94 s, `Library.Queue.Data` 70 s | the same split, by operation | hours each |
+
+### 4.1 C1 to C3, landed on 2026-10-09
+
+The owner asked for C1 to C3 while Codex reviews this note. They landed in one commit after
+`673fd9de`. Two rows of the table above were wrong, and this section corrects them.
+
+- **C1.** `LoopedRows` is the fourth profile of the generated table: the group
+  `FragmentLoopedRows` writes `src/Effect4/Laws/Program/FragmentLoopedRows.lean`. The three
+  other outputs regenerate byte-identical. A scratch check gave both predicates `fold_of` and
+  proved their folds equal by `rfl` on the algebras, with the axioms `[propext]`. The hand
+  definition is deleted.
+- **C2 was no duplicate.** The older family (`drive_localRun`, `Owes`, `flushAll_Myield`) proved
+  that a run ends within a fuel bound. H8's family (`drive_seg`) proved only where a segment
+  ends, if it ends. Deleting the older family would have lost the fuel bound of
+  `run_eq_meaning`. So `SegOwes` now counts the local steps of a segment. Its commands are at
+  most twice the steps, plus two, and a yield comes only after the steps the op budget allowed.
+  `flushAll_Myield` and `replay_Mexit_of_localRun` are proved again from `drive_seg`. Their
+  statements and the fuel bound `2N + 4` are unchanged. The older family is deleted.
+- **One drive module.** `src/Effect4/Laws/Program/Agreement/Segment.lean` holds the local run
+  with calls, the host-call park, the segment law, the rounds of `flush` and the packet's
+  theorem. `Agreement/Calls.lean` keeps the compile law with calls, and `Agreement/Hosted.lean`
+  keeps the positions and a host's decisions.
+- **C3, the machine half.** `localRunC_of_localRun` connects the two local runs: a finished
+  local run is the local run with calls at every reply tape. The machine half reads only
+  `localRunC` now.
+- **C3, the compile half, is open.** `localRun` stays the run of the two compile laws:
+  `localRun_compile` on `Straight` (`Program/Agreement.lean`) and the loop law
+  (`Agreement/Loop.lean`). Both carry a step bound and a depth premise that `localRunC_compile`
+  lacks, and the step bound is what gives `run_eq_meaning` its fuel. To derive them from
+  `localRunC_compile`, that theorem needs a step bound and a clause that a run within the depth
+  never reaches the frontier. Size: a day. It would remove about 400 lines of
+  `Program/Agreement.lean` and the `Reaches` family.
+- **C8's numbers were rows.** The baseline held 1128 rows, one for each declaration and kind,
+  and 1598 uses. Moving two lemmas out of `Machine.lean` and deleting `drive_localRun` removed
+  three rows; the re-recorded baseline only lost rows.
+
+The checks: the law root and five batteries built (1270 jobs); the ratchet and `check-docs`
+passed. The exact walk read 1210 declarations of eight modules on the agreement route, all at
+`[propext, Quot.sound]`. The statements of `run_eq_meaning` and `loopAgreement` did not change.
+The line count of the four agreement modules barely moved (3828 to 3782 lines with the new
+module). The gain is one drive induction where there were two.
 
 **Space.** On 2026-10-09 the data volume held 10 GB free of 460 GB. The cleanup removed eight
 merged and clean Claude worktrees and their branches. It then ran `lake cache clean`, which freed

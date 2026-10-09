@@ -140,9 +140,9 @@ bytes), has no carrier since the labels went; every committed group is *reproduc
 
 ## Fragment predicates
 
-The derived group includes `Fragments`, `FragmentLooped`, and `FragmentRows` from `tools/Effect4Gen/Fragments.lean`.
+The derived group includes `Fragments`, `FragmentLooped`, `FragmentRows`, and `FragmentLoopedRows` from `tools/Effect4Gen/Fragments.lean`.
 They generate the existing fragment predicates from one classification table and the program family metadata.
-The outputs are `src/Effect4/Program/Fragment.lean` and `src/Effect4/Laws/Program/Fragment{Looped,Rows}.lean`.
+The outputs are `src/Effect4/Program/Fragment.lean` and `src/Effect4/Laws/Program/Fragment{Looped,Rows,LoopedRows}.lean`.
 The existing fold connectors remain in the Laws graph.
 `docs/core/traversal-census.md` owns the classification rules and their limits.
 

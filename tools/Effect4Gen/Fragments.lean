@@ -75,13 +75,32 @@ private def childControl : LayerView.Arg :=
 #guard !(validate [("leaf", .operation)] [leafControl]).isOk
 
 inductive Profile where
-  | straight | looped | rows
+  | straight | looped | rows | loopedRows
   deriving BEq
 
 def Profile.name : Profile → String
   | .straight => "Straight"
   | .looped => "Looped"
   | .rows => "StraightRows"
+  | .loopedRows => "LoopedRows"
+
+/-- A loop rule visits its body. -/
+def Profile.loops : Profile → Bool
+  | .looped | .loopedRows => true
+  | .straight | .rows => false
+
+/-- A conditional rule visits its children. -/
+def Profile.conditionals : Profile → Bool
+  | .rows | .loopedRows => true
+  | .straight | .looped => false
+
+/-- The pattern variable and the admission of a host row's call, for a profile that admits one:
+`StraightRows` admits a data row of its table (`dataRow`), and `LoopedRows` admits every row,
+since the machine half of H8 reads no row (`Agreement/Hosted.lean`). -/
+def Profile.hostCall : Profile → Option (String × String)
+  | .rows => some ("i", "dataRow table i")
+  | .loopedRows => some ("_", "true")
+  | .straight | .looped => none
 
 /-- Operation-kind admission has one template, including the row-aware specialization. -/
 def syncOperation (op : String) : String :=
@@ -96,8 +115,8 @@ def emitPredicate (profile : Profile) (ctors : List Ctor) : Except String String
   for c in ctors do
     let some rule := rules.lookup c.short
       | throw s!"Fragments: missing constructor classification {c.short}"
-    let descends := rule == .children || (rule == .loop && profile == .looped) ||
-      (rule == .conditional && profile == .rows)
+    let descends := rule == .children || (rule == .loop && profile.loops) ||
+      (rule == .conditional && profile.conditionals)
     let used := c.args.filter fun a =>
       (descends && a.recFam == some "eff") || (rule == .operation && a.sort == "op")
     let pattern := String.intercalate " " (c.args.map fun a =>
@@ -108,10 +127,11 @@ def emitPredicate (profile : Profile) (ctors : List Ctor) : Except String String
       else if rule == .operation then
         match used with
         | [op] =>
-          if profile == .rows then
-            pure (s!"\n    match {op.name} with\n    | .external i => dataRow table i\n    | _ => " ++
+          match profile.hostCall with
+          | some (var, admit) =>
+            pure (s!"\n    match {op.name} with\n    | .external {var} => {admit}\n    | _ => " ++
               (syncOperation op.name).replace "\n    " "\n      ")
-          else pure ("\n    " ++ syncOperation op.name)
+          | none => pure ("\n    " ++ syncOperation op.name)
         | _ => throw s!"Fragments: {c.short} has no unique operation field"
       else pure "false"
     let separator := if rhs.startsWith "\n" then "" else " "
@@ -125,6 +145,7 @@ def run (args : Args) : MetaM String := do
     | "Fragments" => pure [Profile.straight]
     | "FragmentLooped" => pure [Profile.looped]
     | "FragmentRows" => pure [Profile.rows]
+    | "FragmentLoopedRows" => pure [Profile.loopedRows]
     | other => throwError "Fragments: unknown group {other}"
   let (_, block) ← LayerView.readBlock `Effect4.Program.Eff
   let ctors := block.filter (·.fam == "eff")

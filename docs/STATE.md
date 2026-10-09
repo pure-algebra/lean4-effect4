@@ -43,7 +43,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   under its reply tape. Between decisions the machine is in one of four
   forms: loaded, parked on a yield, parked on a host call, exited
   (`src/Effect4/Laws/Program/Agreement/Hosted.lean`). Each host decision moves it to another,
-  and the local run with calls moves the same way.
+  and the local run with calls moves the same way. One drive law serves H8 and the packet's
+  theorem: `drive_seg` (`src/Effect4/Laws/Program/Agreement/Segment.lean`). It relates a segment
+  of commands to the local run with calls and counts its steps. `run_eq_meaning` follows from it.
 - **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import
@@ -155,7 +157,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 0. **The host call in one form** (the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md), section 6). Codex reviews and
    probes it first ([the brief](research/2026-10-09-host-calls-codex-brief.md)). Then come
-   cleanup C1 to C3 and the slices HC-1 to HC-7.
+   the slices HC-1 to HC-7. Cleanup C3's compile half is open (the note, section 4.1).
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);

@@ -12,7 +12,7 @@ lists):
 `src/Effect4/Laws/Program/Denote.lean`,
 `src/Effect4/Laws/Program/Agreement.lean` (the frame machine's local run reaches the meaning),
 `src/Effect4/Laws/Program/Agreement/Machine.lean` (the command loop is the local run;
-`run_eq_meaning`),
+`run_eq_meaning`, in `src/Effect4/Laws/Program/Agreement/Segment.lean` since 2026-10-09),
 `src/Effect4/Laws/Program/Progress.lean` (the first join: `Denote.StoreFits`, `progress`)
 
 Lean batteries:
@@ -238,12 +238,14 @@ The agreement, `Effect4.Program.Agreement` (two modules, landed with the lanes):
 29. Historical first-landing `finalizerOr_plain` excluded OnExit from plain
     stacks. After its admission, `evaluatePrim_localStep` relates the actual
     program-finalizer path as well as the pure frame step.
-30. `drive_localRun`: the command loop over the one fiber `Api.load` makes does what the
-    local run does, at most two commands per local step, from any op count and any resume
-    token: it owes the exit path, or — when the count reaches `defaultBudget` first — a
-    yield with the rest of the run still to do (`Owes` records the bound from
-    its incoming count). After the D7 resume step, each further round removes
-    at least `defaultBudget - 2` local steps.
+30. `drive_seg` (`src/Effect4/Laws/Program/Agreement/Segment.lean`; `drive_localRun` until
+    2026-10-09) relates the command loop over the one fiber `Api.load` makes to the local run
+    with calls. It takes at most two commands per local step, from any op count and any resume
+    token. It owes the exit path, a host call, or a yield with the rest of the run still to do.
+    The yield comes when the count reaches `defaultBudget` first. `SegOwes` records the
+    bounds. A finished local run is the local run with calls at every reply tape
+    (`localRunC_of_localRun`). After the D7 resume step, each further round removes at least
+    `defaultBudget - 2` local steps.
 31. `run_eq_meaning`, above — since the same evening on `Straight` itself (`Plain`, the
     copy, gained `onExit` that evening and was deleted 2026-09-16, B5); the local step's exit arm `exitFrom` mirrors the
     machine's `finalizerOr`, the fiber carries its interruptible flag, and `maskStack` is the

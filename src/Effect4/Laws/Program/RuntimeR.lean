@@ -2,7 +2,7 @@ import Effect4.Laws.Program.EvaluateR
 import Effect4.Laws.Machine.Book
 import Effect4.Laws.Program.Means
 import Effect4.Laws.Program.Simulation.Drive
-import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Segment
 import Effect4.Api
 
 /-!

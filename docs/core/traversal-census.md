@@ -567,6 +567,8 @@ These checks do not reject every change to constructor arguments whose sorts are
 The `Fragments` manifest group generates `Straight` in `src/Effect4/Program/Fragment.lean`.
 The `FragmentLooped` group generates `Looped` in `src/Effect4/Laws/Program/FragmentLooped.lean`.
 The `FragmentRows` group generates `StraightRows` in `src/Effect4/Laws/Program/FragmentRows.lean`.
+The `FragmentLoopedRows` group generates `LoopedRows` in `src/Effect4/Laws/Program/FragmentLoopedRows.lean`.
+It admits the loop, `catchIf` and a call of any host row, since the machine half of H8 reads no row.
 `dataRow` in `src/Effect4/Laws/Program/FragmentRowAdmission.lean` owns host-row admission.
 The manifest is `tools/Effect4Gen/manifest.json`.
 Decisions row 59 keeps the predicates with only proof consumers in the Laws graph.

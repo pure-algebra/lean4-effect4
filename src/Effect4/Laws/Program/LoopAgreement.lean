@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.DenoteB
-import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Segment
 
 /-!
 # The loop agreement: the statement, and the part that is proved

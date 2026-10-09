@@ -1295,7 +1295,7 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   (`rootTy.requires = empty`). Non-empty host tables are deferred to R6 (DI-57).
 
 #### 3. Project Definition and Judgment
-Agreement theorems and fragment definitions are modeled in `src/Effect4/Laws/Program/Agreement/Machine.lean`
+Agreement theorems and fragment definitions are modeled in `src/Effect4/Laws/Program/Agreement/Segment.lean`
 and `src/Effect4/Laws/Program/Typed/Assembly.lean`:
 ```lean
 theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true) ...
@@ -1307,11 +1307,11 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   closedRow : rootTy.requires = Env.Requirement.empty
   answerFree : ∀ d ∈ tape, NoHostAnswer d
 ```
-(`src/Effect4/Laws/Program/Agreement/Machine.lean:1922`, `src/Effect4/Laws/Program/Typed/Assembly.lean:1478`).
+(`run_eq_meaning` in `src/Effect4/Laws/Program/Agreement/Segment.lean`, `M7Fragment` in `src/Effect4/Laws/Program/Typed/Assembly.lean`).
 
 #### 4. Required Properties and Obligations
 - **Straight program agreement (`run-eq-meaning`)**: Frame machine execution matches denotational meaning on `Straight`.
-  (`run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Machine.lean`)).
+  (`run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Segment.lean`)).
 - **Loop agreement (`loop-agreement`)**: Replay agreement holds across straight loop steps
   (`loopAgreement_of_straight` (`src/Effect4/Laws/Program/LoopAgreement.lean`)).
 - **Reference machine simulation (`run-eq-ref`)**: Frame machine replay matches term reference replay at empty host table

@@ -1,6 +1,6 @@
 import Effect4.Api.Author
 import Effect4.Program.Authoring.Loops
-import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Segment
 import Effect4.Laws.Program.Agreement.Loop
 import Test.Program.QueueRelation
 

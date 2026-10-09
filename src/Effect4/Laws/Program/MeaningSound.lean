@@ -2,7 +2,7 @@ import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.Progress
 import Effect4.Laws.Program.Typed.ExitConnector
 import Effect4.Laws.Program.Typing.Inversion
-import Effect4.Laws.Program.Agreement.Machine
+import Effect4.Laws.Program.Agreement.Segment
 
 /-!
 # Type soundness of the meaning

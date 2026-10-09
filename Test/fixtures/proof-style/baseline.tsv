@@ -397,7 +397,6 @@ src/Effect4/Laws/Program/Agreement/Machine.lean	Quiet.empty	simp-without-only	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	child_plain	first	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	child_plain	simp-without-only	2
 src/Effect4/Laws/Program/Agreement/Machine.lean	child_plain	simp_all	1
-src/Effect4/Laws/Program/Agreement/Machine.lean	drive_localRun	simp-without-only	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	drive_loop_finish	try	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	drive_loop_finished	simp-without-only	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	drive_loop_running	try	1
@@ -439,8 +438,6 @@ src/Effect4/Laws/Program/Agreement/Machine.lean	plainFrame_onExit	simp-without-o
 src/Effect4/Laws/Program/Agreement/Machine.lean	plain_at	simp-without-only	2
 src/Effect4/Laws/Program/Agreement/Machine.lean	popOf_plain_not_scoped	simp-without-only	7
 src/Effect4/Laws/Program/Agreement/Machine.lean	popOf_plain_not_scoped	try	1
-src/Effect4/Laws/Program/Agreement/Machine.lean	replayEval_cons	simp-without-only	1
-src/Effect4/Laws/Program/Agreement/Machine.lean	replayEval_nil_finished	simp-without-only	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	suspendBodyAt_iterate_at	simp-without-only	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	suspendBodyAt_missing	simp-without-only	1
 src/Effect4/Laws/Program/Agreement/Machine.lean	suspendBodyAt_other	simp-without-only	1
