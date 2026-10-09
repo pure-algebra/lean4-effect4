@@ -1,6 +1,7 @@
 import Effect4.Program.FoldOf
 import Effect4.Program.Typing.Annotate
 import Effect4.Laws.Program.Typing.Sound
+import Effect4.Laws.Program.Address
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -18,7 +19,8 @@ its specification (`annotate_eq_table`).
 - **One step of it** (`tableAt_eq_cons`): the node's own entry, then each child's table at the
   child's address, from the environment that the step function (`Node.childEnv`) gives the
   child. The proof reads the address list one step down (`Node.addresses_eq_cons`). That rests
-  on a shift of the address fold's base path (`foldMapAt_eff_paths_shift` and six siblings).
+  on a shift of the address fold's base path (`foldMapAt_eff_paths_shift` and six siblings),
+  the address yield's instance of the path fold's naturality (`Laws/Program/Address.lean`).
 - **The traversal against it** (`Annotate.check_eq` and six siblings) is one mutual induction
   over the seven sorts. Each case unfolds one arm of the traversal and one arm of
   `Checker.check`. Where a child reads an answer, the case splits on that answer. The checker's
@@ -59,19 +61,19 @@ fold_of Effect4.Program.Annotate.check
 
 /-! ## The address list, one step down -/
 
-mutual
-
 /-- **The address fold from a base path is the fold from a shorter one, under the rest of the
-base.** At a program. A step of `annotate-table`. Its consumer is `foldMapAt_eff_paths_cons`. -/
+base.** At a program. The address yield's instance of the path fold's naturality
+(`foldMapAt_eff_base`, `foldMapAt_eff_hom`, `Laws/Program/Address.lean`). A step of
+`annotate-table`. Its consumer is `foldMapAt_eff_paths_cons`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem foldMapAt_eff_paths_shift (e : Eff Op) (q r : List Nat) :
     foldMapAt_eff [] (· ++ ·) (q ++ r) e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_eff [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_eff, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_eff_paths_shift, foldMapAt_stmts_paths_shift,
-    foldMapAt_effs_paths_shift, foldMapAt_action_paths_shift, foldMapAt_layer_paths_shift]
+  rw [foldMapAt_eff_base, foldMapAt_eff_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- `foldMapAt_eff_paths_shift` at a statement. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -80,8 +82,9 @@ theorem foldMapAt_stmt_paths_shift (e : Stmt Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_stmt [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_stmt, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_eff_paths_shift, foldMapAt_stmts_paths_shift]
+  rw [foldMapAt_stmt_base, foldMapAt_stmt_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- `foldMapAt_eff_paths_shift` at a statement list. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -90,8 +93,9 @@ theorem foldMapAt_stmts_paths_shift (e : Stmts Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_stmts [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_stmts, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_stmt_paths_shift, foldMapAt_stmts_paths_shift]
+  rw [foldMapAt_stmts_base, foldMapAt_stmts_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- `foldMapAt_eff_paths_shift` at a race's entrants. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -100,8 +104,9 @@ theorem foldMapAt_effs_paths_shift (e : Effs Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_effs [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_effs, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_eff_paths_shift, foldMapAt_effs_paths_shift]
+  rw [foldMapAt_effs_base, foldMapAt_effs_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- `foldMapAt_eff_paths_shift` at a fiber action. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -110,8 +115,9 @@ theorem foldMapAt_action_paths_shift (e : ActionTerm Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_action [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_action, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_eff_paths_shift, foldMapAt_effs_paths_shift]
+  rw [foldMapAt_action_base, foldMapAt_action_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- `foldMapAt_eff_paths_shift` at a layer. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -120,9 +126,9 @@ theorem foldMapAt_layer_paths_shift (e : LayerTerm Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_layer [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_layer, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_eff_paths_shift, foldMapAt_layer_paths_shift,
-    foldMapAt_layers_paths_shift]
+  rw [foldMapAt_layer_base, foldMapAt_layer_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- `foldMapAt_eff_paths_shift` at a layer list. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -131,10 +137,9 @@ theorem foldMapAt_layers_paths_shift (e : LayerTerms Op) (q r : List Nat) :
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) =
       (foldMapAt_layers [] (· ++ ·) r e (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])
         (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p]) (fun _ p => [p])).map (q ++ ·) := by
-  cases e <;> simp only [foldMapAt_layers, List.map_append, List.map_cons, List.map_nil,
-    List.append_assoc, foldMapAt_layer_paths_shift, foldMapAt_layers_paths_shift]
-
-end
+  rw [foldMapAt_layers_base, foldMapAt_layers_hom (List.map (q ++ ·)) (unit' := [])
+    (fun a b => List.map_append)]
+  rfl
 
 /-- **The address fold from a child's base path is the fold from the root's, under that base.**
 At a program. A step of `annotate-table`. Its consumer is `Node.addresses_eq_cons`. -/

@@ -489,7 +489,7 @@ theorem at_yield {root : NativeEff} {p : Point} {pc : List Nat} {s : Stmt Native
       | _ => cases h
   have e1 : p.path ++ [0] ++ pc ++ [0, 0] = ((p.path ++ [0] ++ pc) ++ [0]) ++ [0] := by
     simp [List.append_assoc]
-  rw [e1, Node.at_append, Node.at_append, hb]
+  rw [e1, Agreement.Node.at_append, Agreement.Node.at_append, hb]
   rcases hs with rfl | rfl <;> rfl
 
 /-- One yield step of the two walks agrees, given that the walks agree at the fuel below. -/

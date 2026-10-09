@@ -20,12 +20,12 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Prog
 theorem at_child_of {root : NativeEff} {p : Point} {n : Node NativeOp}
     (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) :
     Node.at_ (Node.eff root) (p.child i).path = n.child i := by
-  simp only [Point.child, Node.at_append, h, Option.bind]
+  simp only [Point.child, Agreement.Node.at_append, h, Option.bind]
 
 theorem at_childWith_of {root : NativeEff} {p : Point} {n : Node NativeOp}
     (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) (v : Val) :
     Node.at_ (Node.eff root) (p.childWith i v).path = n.child i := by
-  simp only [Point.childWith, Node.at_append, h, Option.bind]
+  simp only [Point.childWith, Agreement.Node.at_append, h, Option.bind]
 
 theorem denoteAt_of_at {root : NativeEff} {q : Point} {e : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff e)) :

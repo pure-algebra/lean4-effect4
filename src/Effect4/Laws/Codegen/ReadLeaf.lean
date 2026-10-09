@@ -31,13 +31,16 @@ variable {Op : Type}
 @[simp] theorem map_ok {ε α β : Type} (f : α → β) (a : α) :
     (Except.ok a : Except ε α).map f = .ok (f a) := rfl
 
+/-- The inversion of a bind that succeeds: `Laws.Auto.bind_eq_ok` (`Laws/Auto/Inversion.lean`),
+whose statement it is. -/
 theorem bind_eq_ok {ε α β : Type} {m : Except ε α} {f : α → Except ε β} {b : β} :
-    (m >>= f) = .ok b ↔ ∃ a, m = .ok a ∧ f a = .ok b := by
-  cases m <;> simp [Bind.bind, Except.bind]
+    (m >>= f) = .ok b ↔ ∃ a, m = .ok a ∧ f a = .ok b :=
+  Effect4.Laws.Auto.bind_eq_ok
 
+/-- The inversion of a map that succeeds: `Laws.Auto.map_eq_ok`, whose statement it is. -/
 theorem map_eq_ok {ε α β : Type} {m : Except ε α} {f : α → β} {b : β} :
-    m.map f = .ok b ↔ ∃ a, m = .ok a ∧ f a = b := by
-  cases m <;> simp [Except.map]
+    m.map f = .ok b ↔ ∃ a, m = .ok a ∧ f a = b :=
+  Effect4.Laws.Auto.map_eq_ok
 
 /-! ## Binders are injective
 

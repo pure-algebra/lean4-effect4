@@ -87,12 +87,10 @@ src/Effect4/Laws/Codegen/PrintReadable.lean	kind_type	simp_all	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	<Lean.Parser.Command.macro>	first	2
 src/Effect4/Laws/Codegen/ReadLeaf.lean	Var.read_exact	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	addReceiver_rowAnswer	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	bind_eq_ok	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_cons_none	first	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_cons_none	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_exact	simp-without-only	3
 src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_map	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	map_eq_ok	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	methodLawful	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeLawful	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeRowOf_external	simp-without-only	1
@@ -356,7 +354,6 @@ src/Effect4/Laws/Program/Admit.lean	hasTy_join_right	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	isTagTy_string	simp-without-only	2
 src/Effect4/Laws/Program/Admit.lean	replayCheckedFrom_answersValid	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	valOfErr_errOf_rawSupported	simp-without-only	5
-src/Effect4/Laws/Program/Agreement.lean	Node.at_append	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	buildWithScopeK_context	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	compileEff_bind	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	compileEff_catchCause	simp-without-only	1

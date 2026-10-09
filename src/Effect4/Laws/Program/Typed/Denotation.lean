@@ -306,12 +306,12 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
       simp only [List.getElem?_cons_succ, List.getElem?_nil] at ht
       cases ht
 
-/-- The node at a child's path is the node's child there (`Agreement.Node.at_append`). -/
+/-- The node at a child's path is the node's child there: the address law
+(`Effect4.Program.Node.at_child`, `Laws/Program/Address.lean`) at a program's root. -/
 theorem node_at_child {root : NativeEff} {path : List Nat} {n : Node NativeOp} {i : Nat}
     {c : Node NativeOp} (hat : Node.at_ (.eff root) path = some n)
-    (hc : n.child i = some c) : Node.at_ (.eff root) (path ++ [i]) = some c := by
-  rw [Agreement.Node.at_append, hat]
-  exact hc
+    (hc : n.child i = some c) : Node.at_ (.eff root) (path ++ [i]) = some c :=
+  Effect4.Program.Node.at_child hat hc
 
 /-- The world order keeps the service table, so a later world is one `J` ranges over too. -/
 theorem serviceTy_leHost {root : ProgramSource} {w w' : World} (ord : w.leHost w')

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Denote
+import Effect4.Laws.Program.Address
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.Obligations
 
@@ -414,14 +415,17 @@ end frames
 
 /-! ## Addresses -/
 
-theorem Node.at_append (n : Node NativeOp) : ∀ (path : List Nat) (i : Nat),
-    Node.at_ n (path ++ [i]) = (Node.at_ n path).bind fun m => m.child i
-  | [], _ => by simp [Node.at_]
-  | j :: rest, i => by
-    simp only [List.cons_append, Node.at_]
-    rcases n.child j with _ | m
-    · rfl
-    · exact Node.at_append m rest i
+/-- The node at one more child index: the address law (`Effect4.Program.Node.at_append`,
+`Laws/Program/Address.lean`) at a rest of one index. -/
+theorem Node.at_append (n : Node NativeOp) (path : List Nat) (i : Nat) :
+    Node.at_ n (path ++ [i]) = (Node.at_ n path).bind fun m => m.child i := by
+  rw [Effect4.Program.Node.at_append]
+  cases Node.at_ n path with
+  | none => rfl
+  | some m =>
+    show m.at_ [i] = m.child i
+    simp only [Node.at_]
+    cases m.child i <;> rfl
 
 theorem at_child {root : NativeEff} {p : Point} {e : NativeEff}
     (h : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (i : Nat) :
