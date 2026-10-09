@@ -232,7 +232,7 @@ def printArgs (sig : Signature Op) (ctx : Context Op) (fam : EffFam) (n : Nat) (
 
 /-- Typed row shape printing. It keeps row-declared and operation-carried arguments intact. -/
 def row (sig : Signature Op) (env : TyEnv) (r : Effect4.Program.Row) (request : Term) : Except PrintRefusal Expr := do
-  let trailing := r.trailing.map Expr.ident
+  let trailing := r.trailing.map RowArg.print
   let tupleArgs (q : Term) : Except PrintRefusal (List Expr) := do
     match pairArgs? q with
     | some (a, b) => return [← term sig env false a, ← term sig env false b]

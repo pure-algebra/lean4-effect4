@@ -27,7 +27,7 @@ def commands : List Command :=
 
 def refusals : List HostSession.Refusal :=
   [.version, .session, .profile, .table, .program .illTyped,
-   .program (.signature (.duplicateRow ("Db", ["get"]))), .program (.signature (.row 2 .notAsync)),
+   .program (.signature (.duplicateRow ("Db", [.name "get"]))), .program (.signature (.row 2 .notAsync)),
    .program (.emptyColumn ["program", "answer"]),
    .program (.signature (.row 1 (.internalHandle "answer"))), .duplicateCall, .protocol,
    .selectionRequired, .pendingReply, .callOrder, .noCall, .staleCall, .envelope,

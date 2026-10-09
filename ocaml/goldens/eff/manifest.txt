@@ -24,6 +24,7 @@ LayerTerms: nil cons
 RowKind: sync async program
 RowShape: call value tupleCall method
 Registration: deferred external
+RowArg: name str
 Row: name spelling shape trailing kind request answer error requires cite typeArgs registration
 EffTy: answer error requires
 tags: bool=1 nat=2 string=3 list=4 pair=5 none=6 some=7 bytes=8 unit=9 ctor=10 ref=11 handle=12 int=13 float=14

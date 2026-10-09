@@ -9,7 +9,7 @@ public import Effect4.Program.Native
 1. Unique keys (`(table.map rowKey).Nodup`).
 2. No collision with a built-in spelling key (`builtinKeys`): checked by key, since no list holds
    every built-in operation (`Deferred.make` carries its type arguments).
-3. Value rows (`shape = .value`) have no trailing names (`row.trailing = []`).
+3. Value rows (`shape = .value`) have no trailing arguments (`row.trailing = []`).
 
 Name safety (avoiding binder collision with `a0`, `a1`, ... and reserved expression heads)
 is a printer and reader concern (`Codegen/Print.lean`, `Codegen/Read.lean`), kept strictly
@@ -20,10 +20,10 @@ out of the program plane so that admission never imports codegen.
 
 namespace Effect4.Program
 
-/-- The key identifying an operation in a table: its spelling and its trailing argument names. -/
-def rowKey (row : Row) : String × List String := (row.spelling, row.trailing)
+/-- The key identifying an operation in a table: its spelling and its trailing arguments. -/
+def rowKey (row : Row) : String × List RowArg := (row.spelling, row.trailing)
 
-def Row.key (row : Row) : String × List String := rowKey row
+def Row.key (row : Row) : String × List RowArg := rowKey row
 
 /-- Uniqueness makes the first matching row exactly the supplied position. -/
 theorem rowIndex_roundTrip (table : List Row) (hn : (table.map rowKey).Nodup)
@@ -43,7 +43,7 @@ theorem rowIndex_roundTrip (table : List Row) (hn : (table.map rowKey).Nodup)
       simp [List.findIdx?_cons, hne, ih hnodup.2 i hi']
 
 /-- A successful lookup names an existing row with exactly the supplied key. -/
-theorem rowIndex_exact (table : List Row) (key : String × List String) (i : Nat)
+theorem rowIndex_exact (table : List Row) (key : String × List RowArg) (i : Nat)
     (h : table.findIdx? (fun row => decide (rowKey row = key)) = some i) :
     ∃ hi : i < table.length, rowKey table[i] = key := by
   induction table generalizing i with
@@ -59,7 +59,7 @@ theorem rowIndex_exact (table : List Row) (key : String × List String) (i : Nat
       exact ⟨Nat.succ_lt_succ hlt, hk⟩
 
 /-- The built-in spelling keys: one per representative of `NativeOp.spelled`. -/
-def builtinKeys : List (String × List String) := NativeOp.spelled.map (rowKey ∘ NativeOp.row)
+def builtinKeys : List (String × List RowArg) := NativeOp.spelled.map (rowKey ∘ NativeOp.row)
 
 /-- **Every built-in operation has a built-in key**: a row's spelling and trailing names depend
 neither on the type arguments its operation carries nor on its binder term, which the faces print
@@ -70,24 +70,24 @@ theorem NativeOp.rowKey_mem (op : NativeOp) (h : ∀ i, op ≠ .external i)
   cases op with
   | external i => exact absurd rfl (h i)
   | call k => exact absurd rfl (hc k)
-  | deferredMakeOf _ _ => exact (by decide : ("Deferred.make", ([] : List String)) ∈ builtinKeys)
+  | deferredMakeOf _ _ => exact (by decide : ("Deferred.make", ([] : List RowArg)) ∈ builtinKeys)
   | scopeMake s => cases s <;> decide
-  | refUpdateWith _ => exact (by decide : ("Ref.update", ([] : List String)) ∈ builtinKeys)
+  | refUpdateWith _ => exact (by decide : ("Ref.update", ([] : List RowArg)) ∈ builtinKeys)
   | refGetAndUpdateWith _ =>
-    exact (by decide : ("Ref.getAndUpdate", ([] : List String)) ∈ builtinKeys)
+    exact (by decide : ("Ref.getAndUpdate", ([] : List RowArg)) ∈ builtinKeys)
   | refUpdateAndGetWith _ =>
-    exact (by decide : ("Ref.updateAndGet", ([] : List String)) ∈ builtinKeys)
-  | refUpdateSomeWith _ => exact (by decide : ("Ref.updateSome", ([] : List String)) ∈ builtinKeys)
+    exact (by decide : ("Ref.updateAndGet", ([] : List RowArg)) ∈ builtinKeys)
+  | refUpdateSomeWith _ => exact (by decide : ("Ref.updateSome", ([] : List RowArg)) ∈ builtinKeys)
   | refGetAndUpdateSomeWith _ =>
-    exact (by decide : ("Ref.getAndUpdateSome", ([] : List String)) ∈ builtinKeys)
+    exact (by decide : ("Ref.getAndUpdateSome", ([] : List RowArg)) ∈ builtinKeys)
   | refUpdateSomeAndGetWith _ =>
-    exact (by decide : ("Ref.updateSomeAndGet", ([] : List String)) ∈ builtinKeys)
-  | refModifyWith _ => exact (by decide : ("Ref.modify", ([] : List String)) ∈ builtinKeys)
+    exact (by decide : ("Ref.updateSomeAndGet", ([] : List RowArg)) ∈ builtinKeys)
+  | refModifyWith _ => exact (by decide : ("Ref.modify", ([] : List RowArg)) ∈ builtinKeys)
   | refModifySomeWith _ =>
-    exact (by decide : ("Ref.modifySome", ([] : List String)) ∈ builtinKeys)
+    exact (by decide : ("Ref.modifySome", ([] : List RowArg)) ∈ builtinKeys)
   | _ => decide
 
-theorem builtinLookup_none (key : String × List String) (h : key ∉ builtinKeys) :
+theorem builtinLookup_none (key : String × List RowArg) (h : key ∉ builtinKeys) :
     NativeOp.spelled.find? (fun op => decide (rowKey op.row = key)) = none := by
   apply List.find?_eq_none.mpr
   intro op hop heq
@@ -99,7 +99,7 @@ namespace Table
 /-- The three program-plane table requirements:
 1. Unique keys (`table.map rowKey`).
 2. No collision with a built-in spelling key (`builtinKeys`).
-3. Value rows (`shape = .value`) have empty trailing names (`row.trailing.isEmpty`). -/
+3. Value rows (`shape = .value`) have no trailing arguments (`row.trailing.isEmpty`). -/
 def lawful (table : RowTable) : Bool :=
   decide (table.map rowKey).Nodup &&
     table.all (fun row => !builtinKeys.contains (rowKey row)) &&

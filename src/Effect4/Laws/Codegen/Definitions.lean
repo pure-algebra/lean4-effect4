@@ -31,7 +31,7 @@ variable {Op : Type}
 /-- What a signature's invocations owe a block's spelling map. `call k` invokes definition `k`;
 an invocation is its own face; replacing an operation's term or its type arguments keeps the
 definition it invokes; and the signature's own spelling map answers no invocation. -/
-structure LawfulCalls (sig : Signature Op) (spell : String → List String → Option Op)
+structure LawfulCalls (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (call : Nat → Op) : Prop where
   callOf_call : ∀ k, sig.callOf (call k) = some k
   face_call : ∀ op k, sig.callOf op = some k → sig.face op = call k
@@ -41,10 +41,10 @@ structure LawfulCalls (sig : Signature Op) (spell : String → List String → O
 
 /-- The names of a block that its spelling map reads back: distinct, spelled by no row of the
 signature, no printed binder and no reserved head. -/
-structure DefsNamed (spell : String → List String → Option Op) (defs : List DefDecl) :
+structure DefsNamed (spell : String → List RowArg → Option Op) (defs : List DefDecl) :
     Prop where
   distinct : (defs.map (·.name)).Nodup
-  unspelled : ∀ d ∈ defs, spell d.name [] = none
+  unspelled : ∀ d ∈ defs, ∀ names, spell d.name names = none
   notBinder : ∀ d ∈ defs, ∀ i, d.name ≠ Var.name i
   notReserved : ∀ d ∈ defs, d.name ∉ reserved
 
@@ -99,7 +99,7 @@ spelling, under the signature's `LawfulCalls` and a block whose names are `DefsN
 block's spelling map is lawful at the block's signature. So `read_print` and `read_exact` hold
 at a block's signature. A step of the claim `module-defs-round-trip`; its consumer is the module
 round trip on the readable domain (`readModule_printModule_readable`). -/
-theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List String → Option Op}
+theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List RowArg → Option Op}
     {call : Nat → Op} (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
     {defs : List DefDecl} (named : DefsNamed spell defs) :
     LawfulSpelling (sig.withDefs defs) (defsSpell call defs spell) where
@@ -122,7 +122,7 @@ theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List St
         | none => simp only [defsSpell, hf, base]
         | some k =>
           obtain ⟨d, hdk, hname⟩ := findIdx_some hf
-          have unspelled := named.unspelled d (List.mem_of_getElem? hdk)
+          have unspelled := named.unspelled d (List.mem_of_getElem? hdk) []
           rw [hname, base] at unspelled
           cases unspelled
     | some k =>
@@ -268,6 +268,21 @@ theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List St
       withTypeArgs_withTerm := hl.typeArgs.withTypeArgs_withTerm
       termOf_withTypeArgs := hl.typeArgs.termOf_withTypeArgs
       typeArgsOf_withTerm := hl.typeArgs.typeArgsOf_withTerm }
+  -- an invocation's spelling is its definition's name, which no key of the signature spells
+  literal_alone := by
+    intro op v names hd hp
+    change defsSpell call defs spell ((sig.withDefs defs).rowOf op).spelling (.str v :: names) =
+      none
+    simp only [defsSpell]
+    cases hc : sig.callOf op with
+    | none =>
+      rw [Signature.withDefs_dom_of_none sig defs hc] at hd
+      rw [Signature.withDefs_rowOf_of_none sig defs hc] at hp ⊢
+      exact hl.literal_alone op v names hd hp
+    | some k =>
+      rw [Signature.withDefs_dom_call sig defs hc, decide_eq_true_eq] at hd
+      rw [Signature.withDefs_rowOf_call sig defs hc (List.getElem?_eq_getElem hd)]
+      exact named.unspelled defs[k] (List.getElem_mem hd) _
 
 /-- The operations the native spelling map answers invoke no definition. -/
 theorem nativeSpelled_callOf : ∀ op ∈ NativeOp.spelled, (nativeSignature []).callOf op = none := by
@@ -361,19 +376,22 @@ theorem defsNamed_of_fault {table : RowTable} {name : String} {defs : List DefDe
       obtain ⟨⟨⟨hsafe, _⟩, htable⟩, hrest⟩ := hfault
       obtain ⟨hbinding, hbinder, hreserved⟩ := exportNameSafe_facts hsafe
       have rest := ih h
-      have unspelled : nativeSpell table d.name [] = none := by
+      have unspelled : ∀ names, nativeSpell table d.name names = none := by
+        intro names
         unfold nativeSpell
-        cases hf : NativeOp.spelled.find? (fun op => decide (rowKey op.row = (d.name, []))) with
+        cases hf : NativeOp.spelled.find? (fun op => decide (rowKey op.row = (d.name, names))) with
         | some op =>
           have mem := List.mem_of_find?_eq_some hf
           have key := of_decide_eq_true
-            (List.find?_some (p := fun op : NativeOp => decide (rowKey op.row = (d.name, []))) hf)
+            (List.find?_some (p := fun op : NativeOp => decide (rowKey op.row = (d.name, names)))
+              hf)
           have spelling : op.row.spelling = d.name := congrArg Prod.fst key
           have plain := List.all_eq_true.mp spelled_not_binding op mem
           rw [spelling, hbinding] at plain
           cases plain
         | none =>
-          have absent : table.findIdx? (fun row => decide (rowKey row = (d.name, []))) = none := by
+          have absent :
+              table.findIdx? (fun row => decide (rowKey row = (d.name, names))) = none := by
             apply List.findIdx?_eq_none_iff.mpr
             intro row mem
             apply decide_eq_false

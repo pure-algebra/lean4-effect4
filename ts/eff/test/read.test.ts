@@ -64,7 +64,7 @@ describe("exits and literals", () => {
 })
 
 describe("rows: the shape the grammar could not decide", () => {
-  test('Scope.make("parallel") is the unit-request row with a trailing name', () => {
+  test('Scope.make("parallel") is the unit-request row with a trailing string literal', () => {
     expect(json('Scope.make("parallel")')).toBe('["perform",["scopeMake",["parallel"]],["lit",["unit"]]]')
     expect(json("Scope.make()")).toBe('["perform",["scopeMake",["sequential"]],["lit",["unit"]]]')
   })

@@ -27,6 +27,7 @@ let wire_families = [
   ("RowKind", ["sync"; "async"; "program"]);
   ("RowShape", ["call"; "value"; "tupleCall"; "method"]);
   ("Registration", ["deferred"; "external"]);
+  ("RowArg", ["name"; "str"]);
   ("Row", ["name"; "spelling"; "shape"; "trailing"; "kind"; "request"; "answer"; "error"; "requires"; "cite"; "typeArgs"; "registration"]);
   ("EffTy", ["answer"; "error"; "requires"])
 ]
@@ -54,5 +55,6 @@ let wire_tags = [
   ("LayerTerms", [("nil", 0); ("cons", 1)]);
   ("RowKind", [("sync", 0); ("async", 1); ("program", 2)]);
   ("RowShape", [("call", 0); ("value", 1); ("tupleCall", 2); ("method", 3)]);
-  ("Registration", [("deferred", 0); ("external", 1)])
+  ("Registration", [("deferred", 0); ("external", 1)]);
+  ("RowArg", [("name", 0); ("str", 1)])
 ]

@@ -857,11 +857,27 @@ let ctor_name_registration : registration -> string = function
 let ctor_names_registration : string list = ["deferred"; "external"]
 
 
+type row_arg =
+  | Row_arg_name of string
+  | Row_arg_str of string
+
+let ctor_index_row_arg : row_arg -> int = function
+  | Row_arg_name _ -> 0
+  | Row_arg_str _ -> 1
+let wire_tag_row_arg : row_arg -> int = function
+  | Row_arg_name _ -> 0
+  | Row_arg_str _ -> 1
+let ctor_name_row_arg : row_arg -> string = function
+  | Row_arg_name _ -> "name"
+  | Row_arg_str _ -> "str"
+let ctor_names_row_arg : string list = ["name"; "str"]
+
+
 type row = {
   row_name : string;
   row_spelling : string;
   row_shape : row_shape;
-  row_trailing : string list;
+  row_trailing : row_arg list;
   row_kind : row_kind;
   row_request : ty;
   row_answer : ty;

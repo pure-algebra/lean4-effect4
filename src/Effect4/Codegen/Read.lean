@@ -267,19 +267,21 @@ def readForkOptions (daemon : Bool) (x : Expr) :
 
 /-! ## Rows
 
-The reader takes `spell : String → List String → Option Op`, the inverse of a row's
-(spelling, trailing names): the trailing names are part of a row's identity in the image
-(`Ref.update(ref, incr)` and `Ref.update(ref, double)` are two rows of one spelling). A call
-row's argument list is the trailing names alone on a `unit` request, and the request
-followed by the trailing names otherwise; the reader tries both readings, and
-`LawfulSpelling` is what makes at most one succeed. -/
+The reader takes `spell : String → List RowArg → Option Op`, the inverse of a row's
+(spelling, trailing arguments): the trailing arguments are part of a row's identity in the image
+(`Scope.make()` and `Scope.make("parallel")` are two rows of one spelling). A call row's argument
+list is the trailing arguments alone on a `unit` request, and the request followed by the
+trailing arguments otherwise; the reader tries both readings, and `LawfulSpelling` is what makes
+at most one succeed. -/
 
 variable {Op : Type}
 
-/-- The names of an argument list made of identifiers only. -/
-def idents? : List Expr → Option (List String)
+/-- The trailing arguments an argument list reads as, when every argument is one: an
+identifier as a name, a string literal as itself (the inverse of `RowArg.print`). -/
+def rowArgs? : List Expr → Option (List RowArg)
   | [] => some []
-  | .ident s :: rest => (idents? rest).map (s :: ·)
+  | .ident s :: rest => (rowArgs? rest).map (.name s :: ·)
+  | .str v :: rest => (rowArgs? rest).map (.str v :: ·)
   | _ :: _ => none
 
 /-- The reading of a row: a `perform`, the one invocation form. The row's kind selects the
@@ -288,7 +290,7 @@ four row shapes keep one signature.) -/
 def rowAnswer (_row : Row) (op : Op) (request : Term) : Eff Op := .perform op request
 
 /-- A bare identifier as a value row. -/
-def readRowValue (sig : Signature Op) (spell : String → List String → Option Op)
+def readRowValue (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (s : String) : Except ReadRefusal (Eff Op) :=
   match spell s [] with
   | some op =>
@@ -329,17 +331,17 @@ def readTupleArgs (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x y : E
 
 /-- A call as a call row; `none` when no row of the table has this head and argument
 shape, so the caller may read an atom application instead. A call row's argument list is
-the trailing names alone on a `unit` request, and the request followed by the trailing
-names otherwise; a tuple-call row's is its two request arguments followed by the trailing
-names. The three readings are tried in that order, and `LawfulSpelling` is what makes at
+the trailing arguments alone on a `unit` request, and the request followed by the trailing
+arguments otherwise; a tuple-call row's is its two request arguments followed by the trailing
+arguments. The three readings are tried in that order, and `LawfulSpelling` is what makes at
 most one succeed. -/
 def readRowCall (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat)
+    (spell : String → List RowArg → Option Op) (n : Nat)
     (s : String) (typeArgs : List TypeScript.TypeRef) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
   -- the call's type arguments must be exactly the ones the row declares: a row that needs
   -- them refuses a bare call, and a row that declares none refuses a call that carries any
   -- (`E4-CHECK-CE-013`)
-  match (idents? args).bind (spell s) with
+  match (rowArgs? args).bind (spell s) with
   | some op =>
     some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request = Ty.unit ∧
         rowTypeArgs (sig.rowOf op) = some typeArgs then
@@ -348,7 +350,7 @@ def readRowCall (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
   | none =>
     match args with
     | request :: rest =>
-      match (idents? rest).bind (spell s) with
+      match (rowArgs? rest).bind (spell s) with
       | some op =>
         some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request ≠ Ty.unit ∧
             rowTypeArgs (sig.rowOf op) = some typeArgs then
@@ -357,7 +359,7 @@ def readRowCall (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
       | none =>
         match rest with
         | second :: names =>
-          match (idents? names).bind (spell s) with
+          match (rowArgs? names).bind (spell s) with
           | some op =>
             some (if (sig.rowOf op).shape = .tupleCall ∧
                 rowTypeArgs (sig.rowOf op) = some typeArgs then
@@ -381,7 +383,7 @@ def addReceiver (sig : Signature Op) (receiver : Term) : Eff Op → Except ReadR
 
 /-- Method arguments use the same three arity readings as ordinary row calls. -/
 def readRowMethod (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat)
+    (spell : String → List RowArg → Option Op) (n : Nat)
     (receiver : Expr) (s : String) (typeArgs : List TypeScript.TypeRef) (args : List Expr) :
     Except ReadRefusal (Eff Op) := do
   let recv ← readTerm classes n receiver
@@ -391,7 +393,7 @@ def readRowMethod (classes : Effect4.Codegen.Classes.Classes) (sig : Signature O
 
 /-- Methods have their own receiver syntax. Empty generic lists are outside the printed image. -/
 def readMethod (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat)
+    (spell : String → List RowArg → Option Op) (n : Nat)
     (x : Expr) : Except ReadRefusal (Eff Op) :=
   match x with
   | .method receiver s args => readRowMethod classes sig spell n receiver s [] args
@@ -616,7 +618,7 @@ a call as a call row, a method call as a method row. A reserved head no row matc
 by its argument list when it heads a program clause, and by its name otherwise. What it reads is
 the operation the row spells, its face (`Signature.face`): the row's call shows no binder term,
 and `readPerform` installs the function that follows the call's arguments. -/
-def readPerformFace (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def readPerformFace (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match x with
   | .ident s =>
@@ -701,7 +703,7 @@ type argument is, and must name an operation that carries none (`typeFree`). The
 do not overlap: a row's declared type arguments are checked in the same arm of the face reader
 with or without them on the head (`readRowCall_typeArgs_ne`, `Laws/Codegen/ReadLeaf.lean`). -/
 def readCall (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match splitHeadTypes x with
   | some (bare, targets) =>
     match readPerformFace classes sig spell n bare with
@@ -736,7 +738,7 @@ call: an annotation and a wrong argument list are two refusals a consumer routes
 argument reads (`readCall`) to an operation that carries a term, and the last argument is a
 function with such an annotation. -/
 def functionAnnotation (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Option ReadRefusal :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) : Option ReadRefusal :=
   (lastArgument? x).bind fun split =>
     (annotationSite split.2).bind fun site =>
       match readCall classes sig spell n split.1 with
@@ -755,7 +757,7 @@ independent (`LawfulTypeArgs`). Where the reading refuses and the tree is a term
 annotated function, the refusal is the annotation's (`functionAnnotation`): what is accepted
 does not change. -/
 def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match splitFunction n x with
   | some (call, body) => do
     let typed ← readCall classes sig spell n call
@@ -798,7 +800,7 @@ the readers of what it captures are handed in, each with the fact that makes the
 terminate (a rigid skeleton's captures are strictly inside the tree, `match_below`; a
 transparent row hands the SAME tree to a strictly lower family). So what is true of a row is
 stated and proved here, once, with the recursion as a hypothesis. -/
-def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
+def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op) (fam : EffFam)
     (n : Nat) (x : Expr) (row : Templates.Row) (k : Nat)
     (child : (fam' : EffFam) → Nat → (y : Expr) → sizeOf y < sizeOf x →
       Except ReadFailure (EffSelfCarrier Op fam'))
@@ -889,7 +891,7 @@ def readStmtRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
 mutual
   /-- `readT sig spell fam n x`: the first row of `fam` that reads `x` (`readRow`); `none` when
   no row matches. -/
-  def readT (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+  def readT (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
       (fam : EffFam) (n : Nat) (x : Expr) : Option (Except ReadFailure (EffSelfCarrier Op fam)) :=
     Templates.table.zipIdx.findSome? fun (row, k) =>
       readRow classes sig spell fam n x row k
@@ -900,7 +902,7 @@ mutual
   termination_by (sizeOf x, famRank fam)
 
   /-- A spine of programs or of layers, item by item. -/
-  def readSpine (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+  def readSpine (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
       (fam : EffFam) (n : Nat) (xs : List Expr) : Except ReadFailure (EffSelfCarrier Op fam) :=
     match fam, xs with
     | .effs, [] => .ok .nil
@@ -921,7 +923,7 @@ mutual
   /-- The spine of statements: each statement through the first statement row that reads it
   (`readStmtRow`), the rest under the binders that row's skeleton declares, as the printer's
   spine threads them. -/
-  def readStmts (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+  def readStmts (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
       (n : Nat) (stmts : List TypeScript.Stmt) : Except ReadFailure (Stmts Op) :=
     match stmts with
     | [] => .ok .nil
@@ -941,21 +943,21 @@ mutual
 end
 
 /-- A program from a tree, at environment length `n`, under the module's payload classes. -/
-def readEffAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def readEffAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (n : Nat) (x : Expr) : Except ReadFailure (Eff Op) :=
   (readT classes sig spell .eff n x).getD (.error (.here (unread .eff)))
 
 /-- The same with the refusal alone: where it happened is `readEffAt`'s. -/
-def readEff (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def readEff (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   (readEffAt classes sig spell n x).mapError (·.why)
 
 /-- A layer from a tree. A layer is closed: its bodies are read at environment length `0`. -/
-def readLayerAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def readLayerAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (x : Expr) : Except ReadFailure (LayerTerm Op) :=
   (readT classes sig spell .layer 0 x).getD (.error (.here (unread .layer)))
 
-def readLayer (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def readLayer (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
   (readLayerAt classes sig spell x).mapError (·.why)
 
@@ -1011,24 +1013,24 @@ def DefDecl.readable (d : DefDecl) : Bool :=
     Effect4.Codegen.Classes.ReadableTy d.error && d.requires.isEmpty &&
     (LayerTerm.readRefName d.name).isNone
 
-/-- The spelling map of a block: a definition's name, with no trailing names, spells the
+/-- The spelling map of a block: a definition's name, with no trailing arguments, spells the
 invocation of that definition (`call k`); every other spelling is the map's own. -/
-def defsSpell (call : Nat → Op) (decls : List DefDecl) (spell : String → List String → Option Op)
-    (s : String) (names : List String) : Option Op :=
+def defsSpell (call : Nat → Op) (decls : List DefDecl) (spell : String → List RowArg → Option Op)
+    (s : String) (names : List RowArg) : Option Op :=
   match names, decls.findIdx? (·.name == s) with
   | [], some k => some (call k)
   | _, _ => spell s names
 
 /-- A definition's body from its printed suspension, read at environment length `1`. -/
 def readDefBody (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (x : Expr) : Except ReadRefusal (Eff Op) := do
+    (spell : String → List RowArg → Option Op) (x : Expr) : Except ReadRefusal (Eff Op) := do
   match ← readEff classes sig spell 1 x with
   | .suspend body => .ok body
   | _ => .error (.shape "definition")
 
 /-- The bodies of a block, in order. -/
 def readDefBodies (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) :
+    (spell : String → List RowArg → Option Op) :
     List (DefDecl × Expr) → Except ReadRefusal (Effs Op)
   | [] => .ok .nil
   | (_, x) :: rest => do
@@ -1038,7 +1040,7 @@ def readDefBodies (classes : Effect4.Codegen.Classes.Classes) (sig : Signature O
 
 /-- A layer declaration back to its path and its layer: `const L_<path> = <layer>`. -/
 def readLayerDecl (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) :
+    (spell : String → List RowArg → Option Op) :
     TypeScript.Decl → Except ReadRefusal (List Nat × LayerTerm Op)
   | .const c =>
     match LayerTerm.readRefName c.name with
@@ -1064,7 +1066,7 @@ Leading definition constants (`defsPrefix`) read as a definition block: each hea
 declaration (`readDefHead`), and the bodies, the layers and the main program at the block's
 signature, through the spelling map that the block extends (`defsSpell`). `call k` is the
 operation that invokes definition `k` (`NativeOp.call` at the native signature). -/
-def readModule (sig : Signature Op) (spell : String → List String → Option Op)
+def readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (call : Nat → Op) (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
   match blockClasses decls with
   | none => .error (.shape "class")
@@ -1095,7 +1097,7 @@ def readModule (sig : Signature Op) (spell : String → List String → Option O
 program's constructions name (`classesOf`, what its module declares; an operation's binder term
 is read through `ScopedOp.term?`). The printer's refusal alphabet is not the reader's, so a
 printer refusal is reported as the `shape` named `printer`. -/
-def roundTrip [ScopedOp Op] (sig : Signature Op) (spell : String → List String → Option Op)
+def roundTrip [ScopedOp Op] (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (n : Nat) (e : Eff Op) : Except ReadRefusal (Eff Op) :=
   match print sig n e with
   | .ok x => readEff (classesOf e) sig spell n x
@@ -1104,14 +1106,14 @@ def roundTrip [ScopedOp Op] (sig : Signature Op) (spell : String → List String
 /-- The program comes back from its own printing: the domain of the round trip, as the round
 trip. What it excludes is listed in the module note. -/
 def readable [DecidableEq Op] [ScopedOp Op] (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (e : Eff Op) : Bool :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (e : Eff Op) : Bool :=
   match roundTrip sig spell n e with
   | .ok e' => decide (e' = e)
   | .error _ => false
 
 /-- `readable` is the round trip. -/
 theorem roundTrip_eq [DecidableEq Op] [ScopedOp Op] {sig : Signature Op}
-    {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
+    {spell : String → List RowArg → Option Op} {n : Nat} {e : Eff Op}
     (hr : readable sig spell n e = true) : roundTrip sig spell n e = .ok e := by
   unfold readable at hr
   split at hr
@@ -1122,16 +1124,16 @@ theorem roundTrip_eq [DecidableEq Op] [ScopedOp Op] {sig : Signature Op}
 /-- The program reads back from whatever the printer prints of it, under a module's payload
 classes: the premise the module law composes, stated of any reader. -/
 def ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (e : Eff Op) : Prop :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (e : Eff Op) : Prop :=
   ∀ x, print sig n e = .ok x → readEff classes sig spell n x = .ok e
 
 /-- The same of a layer. -/
 def LayerTerm.ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (l : LayerTerm Op) : Prop :=
+    (spell : String → List RowArg → Option Op) (l : LayerTerm Op) : Prop :=
   ∀ x, printLayer sig l = .ok x → readLayer classes sig spell x = .ok l
 
 theorem ReadsBack.of_readable [DecidableEq Op] [ScopedOp Op] {sig : Signature Op}
-    {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
+    {spell : String → List RowArg → Option Op} {n : Nat} {e : Eff Op}
     (hr : readable sig spell n e = true) : ReadsBack (classesOf e) sig spell n e := by
   intro x hp
   have h := roundTrip_eq hr
@@ -1141,23 +1143,25 @@ theorem ReadsBack.of_readable [DecidableEq Op] [ScopedOp Op] {sig : Signature Op
 
 /-! ## What the printer loses -/
 
-/-- The identifiers an argument list prints as, when every argument prints as one: a
-variable as its binder, the unit literal as `undefined`. -/
-def Terms.names? : Terms → Option (List String)
+/-- The trailing arguments an argument list prints as, when every argument prints as one: a
+variable as its binder's name, the unit literal as the name `undefined`, a string literal as
+itself (`rowArgs?` of `printTerms`). -/
+def Terms.rowArgs? : Terms → Option (List RowArg)
   | .nil => some []
-  | .cons (.var index) rest => (names? rest).map (Var.name index :: ·)
-  | .cons (.lit .unit) rest => (names? rest).map ("undefined" :: ·)
+  | .cons (.var index) rest => (rowArgs? rest).map (.name (Var.name index) :: ·)
+  | .cons (.lit .unit) rest => (rowArgs? rest).map (.name "undefined" :: ·)
+  | .cons (.lit (.str v)) rest => (rowArgs? rest).map (.str v :: ·)
   | .cons _ _ => none
 
 /-- No row of the table reads the head `atom` on these arguments, in either of the two
 readings `readRowCall` tries. -/
-def noRow (spell : String → List String → Option Op) (atom : String) (args : Terms) : Bool :=
-  ((args.names?).bind (spell atom)).isNone &&
+def noRow (spell : String → List RowArg → Option Op) (atom : String) (args : Terms) : Bool :=
+  ((args.rowArgs?).bind (spell atom)).isNone &&
     match args with
     | .cons _ rest =>
-      ((rest.names?).bind (spell atom)).isNone &&
+      ((rest.rowArgs?).bind (spell atom)).isNone &&
         match rest with
-        | .cons _ names => ((names.names?).bind (spell atom)).isNone
+        | .cons _ names => ((names.rowArgs?).bind (spell atom)).isNone
         | .nil => true
     | .nil => true
 
@@ -1245,7 +1249,7 @@ leaves the other's reading as it is. The laws hold for any signature; nothing he
 the native constructors happen to separate the two. -/
 structure LawfulTypeArgs (sig : Signature Op) : Prop where
   /-- The columns of the row that a printed call shows do not depend on the operation's type
-  arguments: the spelling, the shape, the trailing names, the request and the declared type
+  arguments: the spelling, the shape, the trailing arguments, the request and the declared type
   arguments. -/
   call : ∀ op tys, (sig.rowOf (sig.withTypeArgs op tys)).callColumns = (sig.rowOf op).callColumns
   /-- Replacing the type arguments by a list of the operation's own arity installs the list. -/
@@ -1284,16 +1288,18 @@ theorem LawfulTypeArgs.ofNone {sig : Signature Op} (hnone : ∀ op, sig.typeArgs
   termOf_withTypeArgs := fun op tys => by rw [hfixed]
   typeArgsOf_withTerm := fun op f => by rw [hnone, hnone]
 
-/-- `spell` inverts the row table on (spelling, trailing names) at every row whose head reads
-back (`rowHeadReadable`), up to the operation's binder term and its type arguments: it answers
-the operation's face (`Signature.face`), since a row's key shows neither. A value row has no
-trailing names (the printer drops them), and no spelling or trailing name is a binder name,
-`undefined`, or a reserved head. The next five laws are what a reader needs of an operation's
-binder term (`Signature.termOf`, `Signature.withTerm`): the row does not depend on it, and
-replacing it is an exact update. A signature with the default hooks, which carries no term,
-meets each by computation. The last field is what a reader needs of an operation's type
-arguments (`LawfulTypeArgs`). -/
-structure LawfulSpelling (sig : Signature Op) (spell : String → List String → Option Op) :
+/-- **The laws of a signature's row keys.** `spell` inverts the row table on (spelling, trailing
+arguments) at every row whose head reads back (`rowHeadReadable`), up to the operation's binder
+term and its type arguments: it answers the operation's face (`Signature.face`), since a row's
+key shows neither. A value row has no trailing arguments (the printer drops them), and no
+spelling or trailing name is a binder name, `undefined`, or a reserved head. The next five laws
+are what a reader needs of an operation's binder term (`Signature.termOf`,
+`Signature.withTerm`): the row does not depend on it, and replacing it is an exact update. A
+signature with the default hooks, which carries no term, meets each by computation. The last
+field is what a reader needs of an operation's type arguments (`LawfulTypeArgs`). The method
+view of a signature keeps these laws (`methodLawful`); `LawfulSpelling` adds the one it does
+not keep. -/
+structure LawfulKeys (sig : Signature Op) (spell : String → List RowArg → Option Op) :
     Prop where
   spell_row : ∀ op, sig.dom op = true → rowHeadReadable (sig.rowOf op) = true →
     spell (sig.rowOf op).spelling (sig.rowOf op).trailing = some (sig.face op)
@@ -1302,8 +1308,8 @@ structure LawfulSpelling (sig : Signature Op) (spell : String → List String �
   value_trailing : ∀ op, (sig.rowOf op).shape = .value → (sig.rowOf op).trailing = []
   spelling_ne_name : ∀ op i, (sig.rowOf op).spelling ≠ Var.name i
   spelling_not_reserved : ∀ op, (sig.rowOf op).spelling ∉ reserved
-  trailing_ne_name : ∀ op i, Var.name i ∉ (sig.rowOf op).trailing
-  trailing_ne_undefined : ∀ op, "undefined" ∉ (sig.rowOf op).trailing
+  trailing_ne_name : ∀ op i, RowArg.name (Var.name i) ∉ (sig.rowOf op).trailing
+  trailing_ne_undefined : ∀ op, RowArg.name "undefined" ∉ (sig.rowOf op).trailing
   /-- An operation's row does not depend on its binder term: the faces print the term as a
   function after the row's call (the state plan's T5). -/
   withTerm_row : ∀ op f, sig.rowOf (sig.withTerm op f) = sig.rowOf op
@@ -1320,9 +1326,22 @@ structure LawfulSpelling (sig : Signature Op) (spell : String → List String �
   /-- The laws of an operation's type arguments, and their independence of the term's. -/
   typeArgs : LawfulTypeArgs sig
 
+/-- **What a reader needs of a signature**: the laws of its keys (`LawfulKeys`), and that a
+trailing string literal is told apart from a printed request. `s("v")` is the call of a row
+whose request prints as `"v"`, and the call of a row of the same spelling whose trailing
+arguments begin with the literal `"v"`. So under the spelling of a row of the domain that
+prints its request (`Row.printsRequest`), no key begins with a string literal.
+`Scope.make("parallel")` meets it: the one other row of its spelling is `Scope.make()`. The
+method view does not keep this law, since there every non-method row prints a request; it reads
+method rows alone, and for those the law of the signature itself is what it needs. -/
+structure LawfulSpelling (sig : Signature Op) (spell : String → List RowArg → Option Op) : Prop
+    extends LawfulKeys sig spell where
+  literal_alone : ∀ op v names, sig.dom op = true → (sig.rowOf op).printsRequest = true →
+    spell (sig.rowOf op).spelling (.str v :: names) = none
+
 /-! ## The native profile
 
-`nativeSpell` inverts `NativeOp.row` on (spelling, trailing names) over one representative per
+`nativeSpell` inverts `NativeOp.row` on (spelling, trailing arguments) over one representative per
 key (`NativeOp.spelled`): each of the eight read-modify-write rows at its face, whose term the
 reader replaces by the function it read (`NativeOp.withTerm`), the two `Scope.make` rows told
 apart by the `"parallel"` strategy, and `Deferred.make` at its face, the instance `(nat, nat)`,
@@ -1330,15 +1349,33 @@ whose type arguments the reader replaces by the two it read on the call's head
 (`NativeOp.withTypeArgs`). `nativeLawful` is the receipt that the native table meets
 `LawfulSpelling`; the two theorems specialise to it below. -/
 
-/-- The four table requirements: unique keys, no built-in collision, no dropped
-trailing names on a value row, and names outside the reserved/binder alphabets.
-Split between the program plane (`Table.lawful`) and the codegen name-safety hygiene (`rowNamesSafe`). -/
+/-- Whether a row's trailing arguments begin with a string literal. -/
+def Row.literalHead (row : Row) : Bool :=
+  match row.trailing with
+  | .str _ :: _ => true
+  | _ => false
+
+/-- No row whose trailing arguments begin with a string literal shares its spelling with a row
+that prints its request: `LawfulSpelling.literal_alone`, decided over a list of rows. -/
+def literalsAlone (rows : List Row) : Bool :=
+  rows.all fun r => !r.literalHead ||
+    rows.all fun r' => r'.spelling != r.spelling || !r'.printsRequest
+
+/-- The rows the native signature over `table` answers, up to binder terms and type
+arguments: one per built-in key (`NativeOp.spelled`), then the table's. -/
+def nativeRows (table : RowTable) : List Row := NativeOp.spelled.map NativeOp.row ++ table
+
+/-- The five table requirements: unique keys, no built-in collision, no dropped trailing
+argument on a value row, names outside the reserved/binder alphabets, and no trailing string
+literal a printed request could be taken for, over the built-in rows and the table's.
+Split between the program plane (`Table.lawful`) and the codegen hygiene (`rowNamesSafe`,
+`literalsAlone`). -/
 def LawfulTable (table : RowTable) : Bool :=
-  Table.lawful table && table.all rowNamesSafe
+  Table.lawful table && table.all rowNamesSafe && literalsAlone (nativeRows table)
 
 /-- Built-ins are checked first; the external key identifies its position in the
 supplied table. No external index is recovered by parsing an identifier. -/
-def nativeSpell (table : RowTable := []) (s : String) (names : List String) : Option NativeOp :=
+def nativeSpell (table : RowTable := []) (s : String) (names : List RowArg) : Option NativeOp :=
   match NativeOp.spelled.find? (fun op => decide (rowKey op.row = (s, names))) with
   | some op => some op
   | none => (table.findIdx? (fun row => decide (rowKey row = (s, names)))).map NativeOp.external

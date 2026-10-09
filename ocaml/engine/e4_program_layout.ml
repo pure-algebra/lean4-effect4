@@ -157,11 +157,12 @@ module type PROGRAM_TYPES = sig
   | RowShape_tupleCall
   | RowShape_method
   type registration = Registration_deferred | Registration_external
+  type row_arg = Placeholder_row_arg
   type row = {
   name : string;
   spelling : string;
   shape : row_shape;
-  trailing : string list;
+  trailing : row_arg list;
   kind : row_kind;
   request : ty;
   answer : ty;

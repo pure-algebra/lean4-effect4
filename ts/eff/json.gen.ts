@@ -12,7 +12,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -250,11 +250,18 @@ export const rowShapeJson = (v: RowShape): Json => [v]
 
 export const registrationJson = (v: Registration): Json => [v]
 
+export const rowArgJson = (v: RowArg): Json => {
+  switch (v._tag) {
+    case "name": return ["name", v.spelling]
+    case "str": return ["str", v.value]
+  }
+}
+
 export const rowJson = (v: Row): Json => ({
   name: v.name,
   spelling: v.spelling,
   shape: rowShapeJson(v.shape),
-  trailing: v.trailing.map((y) => y),
+  trailing: v.trailing.map((y) => rowArgJson(y)),
   kind: rowKindJson(v.kind),
   request: tyJson(v.request),
   answer: tyJson(v.answer),

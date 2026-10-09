@@ -188,7 +188,7 @@ def firstDup {α : Type} [DecidableEq α] : List α → Option α
 position, a repeated row key or service code, a required key with no carrier. -/
 inductive SigRefusal
   | row (index : Nat) (reason : RowReason)
-  | duplicateRow (key : String × List String)
+  | duplicateRow (key : String × List RowArg)
   | service (index : Nat) (reason : ServiceReason)
   | duplicateCode (code : ServiceTypeCode)
   | unservedKey (row : Nat) (key : ServiceKey)

@@ -27,9 +27,13 @@ def registrationV : Registration → V
   | .deferred => .ctor ``Registration.deferred []
   | .external => .ctor ``Registration.external []
 
+def rowArgV : RowArg → V
+  | .name s => .ctor ``RowArg.name [.str s]
+  | .str v => .ctor ``RowArg.str [.str v]
+
 def rowV (r : Row) : V := .struct ``Row [
   ("name", .str r.name), ("spelling", .str r.spelling), ("shape", shapeV r.shape),
-  ("trailing", .list (r.trailing.map V.str)), ("kind", kindV r.kind),
+  ("trailing", .list (r.trailing.map rowArgV)), ("kind", kindV r.kind),
   ("request", tyV r.request), ("answer", tyV r.answer), ("error", tyV r.error),
   ("requires", .list (r.requires.map keyV)), ("cite", .str r.cite),
   ("typeArgs", .list (r.typeArgs.map V.str)), ("registration", registrationV r.registration)]
@@ -65,7 +69,7 @@ def keys : List Effect4.ServiceKey := [⟨⟨1⟩, ⟨2⟩⟩, ⟨⟨1⟩, ⟨3�
 
 def selectedRow : Row := {
   name := "metadata-example", spelling := "Metadata.example", shape := .method,
-  trailing := ["handler"], kind := .async, request := .prod (.handle "Host.Resource") .string,
+  trailing := [.name "handler", .str "parallel"], kind := .async, request := .prod (.handle "Host.Resource") .string,
   answer := .option (.list .nat), error := .union .nat (.prod .string .string),
   requires := keys, cite := "selected metadata fixture", typeArgs := ["string"],
   registration := .external }

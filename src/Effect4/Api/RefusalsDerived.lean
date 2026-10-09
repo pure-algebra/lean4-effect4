@@ -418,14 +418,14 @@ def shapeDoc : ShapeDoc :=
      [("row", 0, [("index", (shape _root_.Nat).root),
         ("reason", (shape _root_.Effect4.Program.RowReason).root)]),
       ("duplicateRow", 1, [
-        ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root)]),
+        ("key", (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))).root)]),
       ("service", 2, [("index", (shape _root_.Nat).root),
         ("reason", (shape _root_.Effect4.Program.ServiceReason).root)]),
       ("duplicateCode", 3, [("code", (shape _root_.Effect4.ServiceTypeCode).root)]),
       ("unservedKey", 4, [("row", (shape _root_.Nat).root),
         ("key", (shape _root_.Effect4.ServiceKey).root)])],
    (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.RowReason).defs ++
-     (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).defs ++
+     (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))).defs ++
      (shape _root_.Effect4.Program.ServiceReason).defs ++
      (shape _root_.Effect4.ServiceTypeCode).defs ++ (shape _root_.Effect4.ServiceKey).defs⟩
 
@@ -442,7 +442,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.SigRefusal)
         Canonical.ofVal (α := _root_.Effect4.Program.RowReason) v1 with
     | some a0, some a1 => some (.row a0 a1)
     | _, _ => none
-  | .ctor 1 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) v0).map .duplicateRow
+  | .ctor 1 [v0] => (Canonical.ofVal (α := (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))) v0).map .duplicateRow
   | .ctor 2 [v0, v1] =>
     match Canonical.ofVal (α := _root_.Nat) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.ServiceReason) v1 with
@@ -508,8 +508,8 @@ theorem lift_RowReason (x : _root_.Effect4.Program.RowReason) :
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
-theorem lift_ProdStringListString (x : (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))) :
-    acceptsIn shapeDoc.defs (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.String)))).root
+theorem lift_ProdStringListRowArg (x : (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.Prod (_root_.String) (@_root_.List (_root_.Effect4.Program.RowArg)))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
@@ -536,7 +536,7 @@ theorem fits (a : _root_.Effect4.Program.SigRefusal) : shapeDoc.accepts (toVal a
         (acceptsFields_cons _ _ _ _ _ _ (lift_RowReason a1) (acceptsFields_nil _)))
   | «duplicateRow» a0 =>
     exact accepts_sum _ _ _ 1 "duplicateRow" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_ProdStringListString a0) (acceptsFields_nil _))
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ProdStringListRowArg a0) (acceptsFields_nil _))
   | «service» a0 a1 =>
     exact accepts_sum _ _ _ 2 "service" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
@@ -3026,7 +3026,7 @@ def rowReasons : List RowReason :=
 def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
 
 def signatures : List SigRefusal :=
-  rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", ["get"])] ++
+  rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", [.name "get"])] ++
     serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
 
 def admissions : List AdmitRefusal :=

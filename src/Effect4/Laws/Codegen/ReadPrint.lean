@@ -453,7 +453,7 @@ def Readable (classes : Classes) (sig : Signature Op) (n : Nat) (e : Eff Op) : B
 
 /-- A capture reads to a node at a depth: what the recursion establishes of each child, and the
 theorem of the whole tree. -/
-def ReadsTo (classes : Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def ReadsTo (classes : Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (d : Nat) :
     (fam : EffFam) → EffSelfCarrier Op fam → Arg → Prop
   | .eff, v, .expr y => readT classes sig spell .eff d y = some (.ok v)
@@ -977,7 +977,7 @@ theorem table_actionHeaded : table.all actionRowHeaded = true := by decide
 
 section Node
 
-variable {sig : Signature Op} {spell : String → List String → Option Op}
+variable {sig : Signature Op} {spell : String → List RowArg → Option Op}
 
 /-- What the printer did at a node of an expression family. -/
 theorem rowPrint_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Carrier)} {n : Nat}
@@ -1810,12 +1810,12 @@ end Node
 
 section Theorem
 
-variable {sig : Signature Op} {spell : String → List String → Option Op}
+variable {sig : Signature Op} {spell : String → List RowArg → Option Op}
 
 /-- Everything readable whose image has size at most `m` reads back from its image; the
 images of the expression families are node-like. -/
 def PrintsBackUpTo (classes : Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (m : Nat) : Prop :=
+    (spell : String → List RowArg → Option Op) (m : Nat) : Prop :=
   (∀ fam n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m → ReadableAt classes sig fam e n →
     PrintsTo sig n fam e (.expr x) → readT classes sig spell fam n x = some (.ok e) ∧ nodeLike x = true) ∧
   (∀ fam n (e : EffSelfCarrier Op fam) (xs : List Expr), sizeOf xs ≤ m → ReadableAt classes sig fam e n →

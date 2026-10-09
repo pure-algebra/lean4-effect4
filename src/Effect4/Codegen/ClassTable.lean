@@ -89,7 +89,8 @@ the export name, and the qualified root and trailing names of every row the prog
 def takenNames (exportName : String) (rows : List Program.Row) : List String :=
   effectNamespaces ++ NativeAtom.names ++ SourceBindings.builtins.map (·.name) ++
     [exportName] ++
-    rows.flatMap fun row => (SourceBindings.qualifiedRoot row.spelling).getD row.spelling :: row.trailing
+    rows.flatMap fun row =>
+      (SourceBindings.qualifiedRoot row.spelling).getD row.spelling :: RowArg.names row.trailing
 
 /-- Why a class's name cannot be declared, if it cannot: the tag is no identifier, or it
 collides with a taken name or with what `exportNameSafe` excludes. -/

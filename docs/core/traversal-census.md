@@ -114,7 +114,7 @@ costs 17 hand edits today and one algebra field each after.
 
 ### 3.3 `Term` — 14 hand traversals, `cata_term`/`cata_terms` unused
 
-`printTerm`/`printTerms` (`Codegen/PrintLeaf`), `Terms.names?`/`noRow` (`Codegen/Read`),
+`printTerm`/`printTerms` (`Codegen/PrintLeaf`), `Terms.rowArgs?`/`noRow` (`Codegen/Read`),
 `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken` (`Eff.lean`),
 `evalTerm`/`evalTerms` (`Native`), `termTy`/`termsTy`/`argTy` (`Typing`). Same verdict as `Ty`.
 
@@ -263,7 +263,7 @@ ever reduces a matcher on a constructor, never the recursion's `brecOn`. Connect
 | `Laws/Program/Folds/Ty.lean` | `Val.hasTy`, `Codec.encodeRaw`, `Codec.decodeRaw` (`findInt` went with decisions row 317) — **`Ty` is 16 of 17** (`instReprTy.repr` remains) |
 | `Laws/Program/Folds/Provision.lean` | `Provision.build` / `buildAll` |
 | `Laws/Program/Folds/Denote.lean` | `denote`, `denoteB`, `denoteWith`, `denoteBWith` (**row 30's `denote` onto the fold**), `Agreement.depth`, `steps`, `depthB`, `boundB` |
-| `Laws/Program/Folds/Term.lean` | `printTerm`/`printTerms`, `Terms.names?`, `noRow`, `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken`, `evalTerm`/`evalTerms`, `argTy` — **`Term` is 12 of 14** |
+| `Laws/Program/Folds/Term.lean` | `printTerm`/`printTerms`, `Terms.rowArgs?`, `noRow`, `Terms.toList`, `Term.scoped`/`Terms.scoped`, `Term.weaken`/`Terms.weaken`, `evalTerm`/`evalTerms`, `argTy` — **`Term` is 12 of 14** |
 
 The census now marks a hand traversal that has its fold beside it: **`Eff` 18 of 40, `Ty` 16
 of 17, `Term` 12 of 14**; `Representation` 0 of 5 and `Val` 0 of 17. `Val` had no fold at all;

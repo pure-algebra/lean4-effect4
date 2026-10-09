@@ -96,7 +96,7 @@ def shortApplied : Session program table := (applyPending pending0 1).session
 #guard (bindCall parked { call0 with version := 99 } 0).phase = .refused .version
 #guard (bindCall parked { call0 with session := "session-B" } 0).phase = .refused .session
 #guard (bindCall parked { call0 with table := [] } 0).phase = .refused .table
-#guard (bindCall parked { call0 with table := [{ Profile.Scalar.waitRow with trailing := ["x"] }] } 0).phase = .refused .table
+#guard (bindCall parked { call0 with table := [{ Profile.Scalar.waitRow with trailing := [.name "x"] }] } 0).phase = .refused .table
 #guard (bindCall parked { call0 with fiber := ⟨1⟩ } 0).phase = .refused .staleCall
 #guard (bindCall parked { call0 with op := .external 1 } 0).phase = .refused .staleCall
 #guard (bindCall parked { call0 with request := .nat 4 } 0).phase = .refused .staleCall

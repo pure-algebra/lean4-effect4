@@ -213,11 +213,11 @@ structure MaskRowsPremises : Prop where
   /-- `read_print` and `read_exact` keep their statements, at every signature with a lawful
   spelling and at every program, the two constructors included. -/
   readPrint : ∀ (classes : Classes) (sig : Signature NativeOp)
-    (spell : String → List String → Option NativeOp), LawfulSpelling sig spell →
+    (spell : String → List RowArg → Option NativeOp), LawfulSpelling sig spell →
     ∀ (n : Nat) (e : Eff NativeOp) (x : Expr), Readable classes sig n e = true →
       print sig n e = .ok x → readEff classes sig spell n x = .ok e
   readExact : ∀ (classes : Classes) (sig : Signature NativeOp)
-    (spell : String → List String → Option NativeOp), LawfulSpelling sig spell →
+    (spell : String → List RowArg → Option NativeOp), LawfulSpelling sig spell →
     ∀ (n : Nat) (x : Expr) (e : Eff NativeOp), readEff classes sig spell n x = .ok e →
       print sig n e = .ok x
 
@@ -328,7 +328,7 @@ structure MaskFormProfile : Prop where
   and what it prints reads back to it. -/
   readable : ∀ (classes : Classes) (sig : Signature NativeOp) (n : Nat) (body : Eff NativeOp),
     Readable classes sig n (maskForm body) = Readable classes sig (n + 1) body
-  roundTrip : ∀ (sig : Signature NativeOp) (spell : String → List String → Option NativeOp),
+  roundTrip : ∀ (sig : Signature NativeOp) (spell : String → List RowArg → Option NativeOp),
     LawfulSpelling sig spell → ∀ (n : Nat) (body : Eff NativeOp),
     Readable (classesOf (maskForm body)) sig n (maskForm body) = true →
       Program.roundTrip sig spell n (maskForm body) = .ok (maskForm body)

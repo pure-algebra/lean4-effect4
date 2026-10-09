@@ -76,7 +76,7 @@ def rowOf : Fin 4 → Row
   | 1 => ⟨"count", "cell.count", .value, [], .sync, .unit, .nat, .never, [], "Ref.ts:210", [], .deferred⟩
   | 2 => ⟨"await", "Deferred.await", .call, [], .async,
            .handle "Deferred.Deferred<number, never>", .nat, .never, [], "Deferred.ts:120", [], .deferred⟩
-  | 3 => ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit,
+  | 3 => ⟨"update", "Ref.update", .call, [.name "incr"], .sync, .handle "Ref.Ref<number>", .unit,
            .never, [], "Ref.ts:1273-1276", [], .deferred⟩
 
 def sig : Signature (Fin 4) :=
@@ -84,12 +84,12 @@ def sig : Signature (Fin 4) :=
   , atomOf := fun atom args => if atom = "succ" ∧ args = [Ty.nat] then some Ty.nat else none
   , scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
-/-- The inverse of the table on (spelling, trailing names). -/
-def spell (s : String) (names : List String) : Option (Fin 4) :=
+/-- The inverse of the table on (spelling, trailing arguments). -/
+def spell (s : String) (names : List RowArg) : Option (Fin 4) :=
   if s = "Ref.get" ∧ names = [] then some 0
   else if s = "cell.count" ∧ names = [] then some 1
   else if s = "Deferred.await" ∧ names = [] then some 2
-  else if s = "Ref.update" ∧ names = ["incr"] then some 3
+  else if s = "Ref.update" ∧ names = [.name "incr"] then some 3
   else none
 
 theorem lawful : LawfulSpelling sig spell where
@@ -114,10 +114,11 @@ theorem lawful : LawfulSpelling sig spell where
     exact (Var.name_ne (h op) i).symm
   spelling_not_reserved := by decide
   trailing_ne_name := by
-    intro op i
-    have h : ∀ op : Fin 4, ∀ s ∈ (rowOf op).trailing, s.toByteArray.data.toList.head? ≠ some 97 := by
+    intro op i hm
+    have h : ∀ op : Fin 4, ∀ s ∈ RowArg.names (rowOf op).trailing,
+        s.toByteArray.data.toList.head? ≠ some 97 := by
       decide
-    exact name_notin _ (h op) i
+    exact name_notin _ (h op) i (RowArg.mem_names.mpr hm)
   trailing_ne_undefined := by decide
   -- the default hooks: no operation carries a term
   withTerm_row := fun _ _ => rfl
@@ -127,6 +128,10 @@ theorem lawful : LawfulSpelling sig spell where
   withTerm_none := fun _ _ _ => rfl
   -- and none carries a type argument
   typeArgs := LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)
+  -- no key begins with a string literal
+  literal_alone := by
+    intro op v names _ _
+    simp [spell]
 
 /-! ## Tuple-call rows: the canonical wrapper, scoping and trailing-name order
 
@@ -148,7 +153,7 @@ def genericSig : Signature Bool :=
         ["number", "number"], .deferred⟩
   , atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
-def genericSpell (s : String) (names : List String) : Option Bool :=
+def genericSpell (s : String) (names : List RowArg) : Option Bool :=
   if s = "Deferred.make" ∧ names = [] then some true else none
 
 -- the printed head carries the declared arguments, and reads back to the row
@@ -196,16 +201,16 @@ instances, the readable types and the red controls are in `Test/Codegen/TermRows
 def tupleRowOf : Bool → Row
   | false => ⟨"tuple", "Fixture.tuple", .tupleCall, [], .sync,
       .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", [], .deferred⟩
-  | true => ⟨"tupleAsync", "Fixture.tuple", .tupleCall, ["first", "second"], .async,
+  | true => ⟨"tupleAsync", "Fixture.tuple", .tupleCall, [.name "first", .name "second"], .async,
       .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture with trailing names", [], .deferred⟩
 
 def tupleSig : Signature Bool :=
   { rowOf := tupleRowOf, atomOf := fun _ _ => none, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩
   , serviceTy := fun _ => none }
 
-def tupleSpell (s : String) (names : List String) : Option Bool :=
+def tupleSpell (s : String) (names : List RowArg) : Option Bool :=
   if s = "Fixture.tuple" ∧ names = [] then some false
-  else if s = "Fixture.tuple" ∧ names = ["first", "second"] then some true
+  else if s = "Fixture.tuple" ∧ names = [.name "first", .name "second"] then some true
   else none
 
 theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
@@ -224,8 +229,8 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
     cases op <;> exact (Var.name_ne (by decide) i).symm
   spelling_not_reserved := by decide
   trailing_ne_name := by
-    intro op i
-    cases op <;> exact name_notin _ (by decide) i
+    intro op i hm
+    cases op <;> exact name_notin _ (by decide) i (RowArg.mem_names.mpr hm)
   trailing_ne_undefined := by decide
   -- the default hooks: no operation carries a term
   withTerm_row := fun _ _ => rfl
@@ -235,6 +240,10 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
   withTerm_none := fun _ _ _ => rfl
   -- and none carries a type argument
   typeArgs := LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)
+  -- no key begins with a string literal
+  literal_alone := by
+    intro op v names _ _
+    simp [tupleSpell]
 
 -- The wrapper head is gone: `Reflect.apply` is an ordinary unknown atom (source-repairs §18).
 #guard headOf "Reflect.apply" = none
@@ -794,6 +803,12 @@ open Effect4.Api in
 #guard roundTrip (.bind (.perform (.scopeMake .parallel) (.lit .unit))
     (.perform (.scopeMake .sequential) (.lit .unit)))
   = .ok (.bind (.perform (.scopeMake .parallel) (.lit .unit)) (.perform (.scopeMake .sequential) (.lit .unit)))
+-- a parsed `Scope.make("parallel")`: the string literal is the row's trailing argument
+#guard readEff [] nativeSignature nativeSpell 0 (.call (.ident "Scope.make") [.str "parallel"]) =
+  .ok (.perform (.scopeMake .parallel) (.lit .unit))
+-- control: the same text as an identifier is no row's argument
+#guard (readEff [] nativeSignature nativeSpell 0
+  (.call (.ident "Scope.make") [.ident "\"parallel\""])).isOk = false
 
 open Effect4.Api in
 #guard roundTrip (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit)) (.perform .deferredAwait (.var 0)))

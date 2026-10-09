@@ -769,7 +769,7 @@ and row = {
   name : string;
   spelling : string;
   shape : row_shape;
-  trailing : string list;
+  trailing : row_arg list;
   kind : row_kind;
   request : ty;
   answer : ty;
@@ -1001,6 +1001,7 @@ and deferred_key = int
 and memo_map_id = int
 and scope_store = scope_entry M.t
 and ref_key = int
+and row_arg = Placeholder_row_arg
 and payload = val_
 and service_name = int
 and service_type_code = int

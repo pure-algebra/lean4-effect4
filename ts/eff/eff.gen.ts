@@ -37,7 +37,8 @@
 //   RowKind (Effect4.Program.RowKind, literals): sync async program
 //   RowShape (Effect4.Program.RowShape, literals): call value tupleCall method
 //   Registration (Effect4.Program.Registration, literals): deferred external
-//   Row (Effect4.Program.Row, struct): mk(name: string, spelling: string, shape: RowShape, trailing: ReadonlyArray<string>, kind: RowKind, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, cite: string, typeArgs: ReadonlyArray<string>, registration: Registration)
+//   RowArg (Effect4.Program.RowArg, tagged union): name(spelling: string) str(value: string)
+//   Row (Effect4.Program.Row, struct): mk(name: string, spelling: string, shape: RowShape, trailing: ReadonlyArray<RowArg>, kind: RowKind, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, cite: string, typeArgs: ReadonlyArray<string>, registration: Registration)
 //   EffTy (Effect4.Program.EffTy, struct): mk(answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>)
 
 import { Schema } from "effect"
@@ -417,11 +418,20 @@ export type RowShape = typeof RowShape.Type
 export const Registration = Schema.Literals(["deferred", "external"])
 export type Registration = typeof Registration.Type
 
+export type RowArg =
+  | { readonly _tag: "name"; readonly spelling: string }
+  | { readonly _tag: "str"; readonly value: string }
+
+export const RowArg = Schema.TaggedUnion({
+  name: { spelling: Schema.String },
+  str: { value: Schema.String },
+})
+
 export const Row = Schema.Struct({
   name: Schema.String,
   spelling: Schema.String,
   shape: RowShape,
-  trailing: Schema.Array(Schema.String),
+  trailing: Schema.Array(Schema.suspend((): Schema.Codec<RowArg> => RowArg)),
   kind: RowKind,
   request: Schema.suspend((): Schema.Codec<Ty> => Ty),
   answer: Schema.suspend((): Schema.Codec<Ty> => Ty),

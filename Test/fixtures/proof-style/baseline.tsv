@@ -87,10 +87,6 @@ src/Effect4/Laws/Codegen/PrintReadable.lean	kind_type	simp_all	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	<Lean.Parser.Command.macro>	first	2
 src/Effect4/Laws/Codegen/ReadLeaf.lean	Var.read_exact	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	addReceiver_rowAnswer	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_cons_none	first	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_cons_none	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_exact	simp-without-only	3
-src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_map	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	methodLawful	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeLawful	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeRowOf_external	simp-without-only	1
@@ -103,7 +99,7 @@ src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_exact	simp-without-only	3
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_none	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_printTupleArgs	simp-without-only	4
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_request	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_tuple	simp-without-only	4
+src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_tuple	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowCall_unit	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowMethod_exact	simp-without-only	2
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readRowValue_exact	simp-without-only	1

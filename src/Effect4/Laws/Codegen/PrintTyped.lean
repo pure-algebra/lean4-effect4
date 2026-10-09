@@ -106,7 +106,7 @@ open TypeScript
 open Effect4.Program
 
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 /-- The target fold's list component is the list map of its expression component.
 Its consumer is the template erasure relation of the proposed typed-print erasure claim. -/
@@ -641,7 +641,7 @@ The helpers serve first-match separation in typed-print erasure.
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
   {fam : EffFam} {n : Nat} {x : Expr}
   {child : EffFam → Nat → (y : Expr) → sizeOf y < sizeOf x → Expr}
   {children : EffFam → Nat → (ys : List Expr) → sizeOf ys < sizeOf x → List Expr}
@@ -1193,11 +1193,13 @@ open TypeScript Effect4.Program
 
 variable (fixed : ∀ d t, EraseTermTypes.eraseTerm d (printTerm d t) = printTerm d t)
 
-theorem eraseTerm_trailing (n : Nat) (names : List String) :
-    (names.map Expr.ident).map (EraseTermTypes.eraseTerm n) = names.map Expr.ident := by
-  induction names with
+theorem eraseTerm_trailing (n : Nat) (args : List RowArg) :
+    (args.map RowArg.print).map (EraseTermTypes.eraseTerm n) = args.map RowArg.print := by
+  induction args with
   | nil => rfl
-  | cons name rest ih => simp only [List.map_cons, EraseTermTypes.eraseTerm, mapCalls_ident, ih]
+  | cons a rest ih =>
+    rw [List.map_cons, List.map_cons, ih]
+    cases a <;> rfl
 
 include fixed in
 theorem eraseTerm_printTupleArgs (n : Nat) (request : Term) :
@@ -1461,7 +1463,7 @@ theorem eraseCaptures_lookup (row : Templates.Row) (sorts : List ArgSort) (n : N
 /-- A rigid template reconstructs the ordinary image from agreeing erased captures.
 This serves the proposed typed-print erasure claim (exact-codecs, R8); capture agreement stays explicit. -/
 theorem eraseExprRow_rigid_inst (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (fam : EffFam) (n : Nat) (x : Expr)
+    (spell : String → List RowArg → Option Op) (fam : EffFam) (n : Nat) (x : Expr)
     (row : Templates.Row)
     (child : EffFam → Nat → (y : Expr) → sizeOf y < sizeOf x → Expr)
     (children : EffFam → Nat → (ys : List Expr) → sizeOf ys < sizeOf x → List Expr)
@@ -1572,7 +1574,7 @@ No typing or runtime property follows from this syntax property.
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 theorem splitHeadTypes_bare_none {x bare : Expr} {targets : List TypeRef}
     (h : splitHeadTypes x = some (bare, targets)) : splitHeadTypes bare = none := by
@@ -1756,7 +1758,7 @@ theorem findSome?_of_index {α β : Type} (f : α → Option β) :
     exact ih
 
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {fam : EffFam} {n k : Nat}
+  {spell : String → List RowArg → Option Op} {fam : EffFam} {n k : Nat}
   {input x plain : Expr}
 
 /-- The normalized typed image selects the same existing table row.
@@ -1928,7 +1930,7 @@ namespace Effect4.Codegen.TypedRowShapeSupport
 open TypeScript Effect4.Program Template Templates
 
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 /-- The row owns every top-level identifier call head, bare or generic.
 The generic clause records the actual spelling hidden from exprHead?. -/
@@ -2262,7 +2264,7 @@ namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 /-- Every successful raw row annotation erases to its ordinary complete call.
 This serves the row branch of typed-print erasure (exact-codecs, R8), under the old readable premises. -/
@@ -2324,7 +2326,7 @@ This file expects the checked TypedPrintsTo definition in Laws.Codegen.PrintType
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
 
 /-- The generated typed spine has two children, at indices zero and one.
 The tail extends the source address; it does not reuse the head's address. -/
@@ -2470,7 +2472,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
 
 /-- A prior statement template cannot consume the later template's printed former. -/
 theorem eraseStmtRow_earlier_none {n : Nat} {s : TypeScript.Stmt}
@@ -2670,7 +2672,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
 
 /-- The generated statement spine passes the head's declared count to its tail. -/
 theorem typed_stmts_cons (st : Program.Stmt Op) (ss : Stmts Op) (path : List Nat) (n : Nat) :
@@ -2861,7 +2863,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
 
 set_option maxHeartbeats 2000000 in
 theorem typed_child_at_hole {fam : EffFam} {n : Nat} {path : List Nat}
@@ -3079,7 +3081,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
 
 theorem readable_expr_prints {fam : EffFam} {e : EffSelfCarrier Op fam} {n : Nat}
     (family : fam = .eff ∨ fam = .action ∨ fam = .layer)
@@ -3332,10 +3334,10 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
 
 def TypedErasesUpTo (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (ann : List Nat → Option (List Ty)) (m : Nat) : Prop :=
+    (spell : String → List RowArg → Option Op) (ann : List Nat → Option (List Ty)) (m : Nat) : Prop :=
   (∀ fam path n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m →
     ReadableAt classes sig fam e n → TypedPrintsTo sig ann path n fam e (.expr x) →
     (∃ plain, eraseT classes sig spell fam n x = some plain ∧ PrintsTo sig n fam e (.expr plain)) ∧
@@ -4189,7 +4191,7 @@ theorem site_context_matches {sig : Signature Op} {root : Eff Op} {env0 : TyEnv}
   exact ⟨sameNode, by rw [henv]; exact length⟩
 
 def SitesEraseUpTo (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (root : Eff Op) (env0 : TyEnv)
+    (spell : String → List RowArg → Option Op) (root : Eff Op) (env0 : TyEnv)
     (ann : List Nat → Option (List Ty)) (m : Nat) : Prop :=
   let alg := typedSitesAlg sig ann (PrintEliminators.contextAtTable (annotate sig env0 root) root)
   (∀ fam path n (source : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m →
@@ -4591,7 +4593,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 /-! Placement: exact-codecs R8; actual typed-site rigid row reconstruction.
 Consumer: full source/address erasure induction.
 Only smaller captured outputs enter the recursive premises. -/
@@ -5244,7 +5246,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 
 /-- Successful statement printing supplies its actual context at the statement address. -/
@@ -5448,7 +5450,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 
 /-- The statement templates declare exactly the source binder count. -/
@@ -5758,7 +5760,7 @@ variable {Op : Type}
 -- Consumer: transparent eff.withFiber, using the IH on original typed action syntax.
 -- No source, typing, spelling, or whole-erasure premise is introduced here.
 theorem eraseT_normalize_root (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (fam : EffFam) (n : Nat) (x : Expr) :
+    (spell : String → List RowArg → Option Op) (fam : EffFam) (n : Nat) (x : Expr) :
     eraseT classes sig spell fam n (EraseTermTypes.eraseNode n x) =
       eraseT classes sig spell fam n x := by
   conv =>
@@ -5776,7 +5778,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {root : Eff Op} {env0 : TyEnv}
+  {spell : String → List RowArg → Option Op} {root : Eff Op} {env0 : TyEnv}
   {ann : List Nat → Option (List Ty)}
 
 set_option maxHeartbeats 3000000 in
@@ -5884,7 +5886,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 
 /-- The expression spine's head receives its parent's actual environment.
@@ -6720,8 +6722,8 @@ def method (sig : Signature Op) (env : TyEnv) (r : Effect4.Program.Row)
     else if argsRow.request = .unit then pure []
     else do pure [← PrintEliminators.term sig env false args]
   let declared ← PrintEliminators.need r.spelling (rowTypeArgs r)
-  if declared.isEmpty then return .method targetExpr r.spelling (argsExpr ++ r.trailing.map Expr.ident)
-  else return .call (.generic (.member targetExpr r.spelling) declared) (argsExpr ++ r.trailing.map Expr.ident)
+  if declared.isEmpty then return .method targetExpr r.spelling (argsExpr ++ r.trailing.map RowArg.print)
+  else return .call (.generic (.member targetExpr r.spelling) declared) (argsExpr ++ r.trailing.map RowArg.print)
 
 theorem need_some {α : Type} {name : String} {value : Option α} {x : α}
     (hp : PrintEliminators.need name value = .ok x) : value = some x := by
@@ -6734,7 +6736,7 @@ theorem methodArgs_erases (sig : Signature Op) (env : TyEnv) (r : Effect4.Progra
     (hp : (if (methodArgsRow r).shape = .tupleCall then tupleArgs sig env args
       else if (methodArgsRow r).request = .unit then pure []
       else do pure [← PrintEliminators.term sig env false args]) = .ok xs) :
-    (xs ++ r.trailing.map Expr.ident).map (EraseTermTypes.eraseTerm env.length) =
+    (xs ++ r.trailing.map RowArg.print).map (EraseTermTypes.eraseTerm env.length) =
       printMethodArgs env.length r args := by
   unfold printMethodArgs
   split at hp
@@ -6765,8 +6767,8 @@ theorem method_as_bind (sig : Signature Op) (env : TyEnv) (r : Effect4.Program.R
           else if (methodArgsRow r).request = .unit then pure []
           else do pure [← PrintEliminators.term sig env false args]).bind (fun argsExpr =>
             (PrintEliminators.need r.spelling (rowTypeArgs r)).bind (fun declared =>
-              if declared.isEmpty then .ok (.method targetExpr r.spelling (argsExpr ++ r.trailing.map Expr.ident))
-              else .ok (.call (.generic (.member targetExpr r.spelling) declared) (argsExpr ++ r.trailing.map Expr.ident))))) := by
+              if declared.isEmpty then .ok (.method targetExpr r.spelling (argsExpr ++ r.trailing.map RowArg.print))
+              else .ok (.call (.generic (.member targetExpr r.spelling) declared) (argsExpr ++ r.trailing.map RowArg.print))))) := by
   unfold method
   cases hr : PrintEliminators.term sig env false receiver with
   | error why => rfl
@@ -6805,7 +6807,7 @@ theorem method_erases (sig : Signature Op) (env : TyEnv) (r : Effect4.Program.Ro
     change (Except.ok (Expr.call (.generic (.member (printTerm env.length receiver) r.spelling) (ty :: tys))
       (printMethodArgs env.length r args)) : Except PrintRefusal Expr) =
       Except.ok (Expr.call (.generic (.member (EraseTermTypes.eraseTerm env.length receiverExpr) r.spelling)
-        (ty :: tys)) ((argsExpr ++ r.trailing.map Expr.ident).map (EraseTermTypes.eraseTerm env.length)))
+        (ty :: tys)) ((argsExpr ++ r.trailing.map RowArg.print).map (EraseTermTypes.eraseTerm env.length)))
     rw [hr', ha']
 
 theorem row_erases (sig : Signature Op) (env : TyEnv) (r : Effect4.Program.Row)
@@ -7107,7 +7109,7 @@ namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 /-- The P2b row template erases typed term children before the unchanged complete-call reader.
 Placement: exact-codecs, R8; consumer: the full typedSitesAlg structural erasure connector. -/
@@ -7185,7 +7187,7 @@ namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates TypedRowShapeSupport
 
 variable {Op : Type} {sig : Signature Op} {classes : Classes.Classes}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 /-- The actual P2b row owns its head before its typed term children erase.
 Placement: exact-codecs, R8; consumer: rowCall first-match separation in the full connector. -/
@@ -7266,7 +7268,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 
 /-- An actual successfully decorated action retains its table-owned head after normalization.
@@ -7317,7 +7319,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 /-! Placement: exact-codecs R8; expression source-image erasure.
 Consumer: SitesEraseUpTo and the public successful typed print connector.
@@ -7561,7 +7563,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op} {ann : List Nat → Option (List Ty)}
+  {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 /-! Placement: exact-codecs R8; actual source/address full erasure induction.
 Consumer: public typed print erasure and old read-law composition.
@@ -7630,7 +7632,7 @@ set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
-  {spell : String → List String → Option Op}
+  {spell : String → List RowArg → Option Op}
 
 /-- The full site printer reconstructs today's ordinary print after named join erasure.
 Placement: exact-codecs R8; consumer: Program.printTyped and the existing reader laws. -/

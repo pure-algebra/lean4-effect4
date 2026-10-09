@@ -151,6 +151,12 @@ def selected_view(descriptor, engine, allowance=()):
         declaration = actual.get(name)
         if declaration is None:
             boundaries.append({'family':path,'reason':'absent-frozen-engine-family'}); continue
+        if declaration.body.strip() == 'Placeholder_' + name:
+            # The LCNF cut declares a family the engine carries but never inspects as one
+            # placeholder constructor (`row_arg` inside `row`): the mirror keeps the declaration,
+            # so the records that hold it still type, and mirrors none of its constructors.
+            boundaries.append({'family':path,'reason':'opaque-engine-family'})
+            common.append((family, declaration, None)); continue
         constructors = family['constructors']
         if [c['ordinal'] for c in constructors] != list(range(len(constructors))):
             raise ValueError(path + ': invalid source ordinals')

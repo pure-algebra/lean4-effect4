@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -486,8 +486,20 @@ export const registrationWire = (v: Registration): Uint8Array => {
   return w.finish(() => writeRegistration(w, v))
 }
 
+const writeRowArg = (w: Writer, v: RowArg): void => {
+  switch (v._tag) {
+    case "name": return w.ctor(0, [() => w.str(v.spelling)])
+    case "str": return w.ctor(1, [() => w.str(v.value)])
+    default: throw new TypeError("wire RowArg constructor")
+  }
+}
+export const rowArgWire = (v: RowArg): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeRowArg(w, v))
+}
+
 const writeRow = (w: Writer, v: Row): void => {
-  w.ctor(0, [() => w.str(v.name), () => w.str(v.spelling), () => writeRowShape(w, v.shape), () => w.list(v.trailing, (y) => w.str(y)), () => writeRowKind(w, v.kind), () => writeTy(w, v.request), () => writeTy(w, v.answer), () => writeTy(w, v.error), () => w.list(v.requires, (y) => writeServiceKey(w, y)), () => w.str(v.cite), () => w.list(v.typeArgs, (y) => w.str(y)), () => writeRegistration(w, v.registration)])
+  w.ctor(0, [() => w.str(v.name), () => w.str(v.spelling), () => writeRowShape(w, v.shape), () => w.list(v.trailing, (y) => writeRowArg(w, y)), () => writeRowKind(w, v.kind), () => writeTy(w, v.request), () => writeTy(w, v.answer), () => writeTy(w, v.error), () => w.list(v.requires, (y) => writeServiceKey(w, y)), () => w.str(v.cite), () => w.list(v.typeArgs, (y) => w.str(y)), () => writeRegistration(w, v.registration)])
 }
 export const rowWire = (v: Row): Uint8Array => {
   const w = new Writer()

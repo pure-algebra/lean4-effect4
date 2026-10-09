@@ -8,8 +8,8 @@
 --    Effect4.Supervision.ForkOptions Effect4.Program.CauseTerm Effect4.ServiceName \
 --    Effect4.ServiceTypeCode Effect4.ServiceKey Effect4.Program.DefDecl \
 --    Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.RowKind \
---    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.Row \
---    Effect4.Program.EffTy
+--    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.RowArg \
+--    Effect4.Program.Row Effect4.Program.EffTy
 -- Carriers read from: Effect4.Machine.Term, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.TyCore, Effect4.Program.Native, Effect4.Program.Eff, Effect4.Machine.Key, Effect4.Program.Typing.Rules
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/program.lean
 module
@@ -3067,12 +3067,70 @@ instance instCanonical : Canonical (_root_.Effect4.Program.Registration) :=
 
 end RegistrationC
 
+namespace RowArgC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "RowArg"
+     [("name", 0, [("spelling", (shape _root_.String).root)]),
+      ("str", 1, [("value", (shape _root_.String).root)])],
+   (shape _root_.String).defs⟩
+
+def toVal : _root_.Effect4.Program.RowArg → Val
+  | .name a0 => .ctor 0 [Canonical.toVal a0]
+  | .str a0 => .ctor 1 [Canonical.toVal a0]
+
+def ofVal : Val → Option (_root_.Effect4.Program.RowArg)
+  | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .name
+  | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .str
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.RowArg) : ofVal (toVal a) = some a := by
+  cases a with
+  | «name» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «str» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RowArg} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
+  all_goals exact nomatch h
+
+theorem lift_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => hp)
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.RowArg) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «name» a0 =>
+    exact accepts_sum _ _ _ 0 "name" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «str» a0 =>
+    exact accepts_sum _ _ _ 1 "str" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.RowArg) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end RowArgC
+
 namespace RowC
 
 def shapeDoc : ShapeDoc :=
   ⟨.struct "Row" [("name", (shape _root_.String).root), ("spelling", (shape _root_.String).root),
      ("shape", (shape _root_.Effect4.Program.RowShape).root),
-     ("trailing", (shape (@_root_.List (_root_.String))).root),
+     ("trailing", (shape (@_root_.List (_root_.Effect4.Program.RowArg))).root),
      ("kind", (shape _root_.Effect4.Program.RowKind).root),
      ("request", (shape _root_.Effect4.Program.Ty).root),
      ("answer", (shape _root_.Effect4.Program.Ty).root),
@@ -3082,9 +3140,10 @@ def shapeDoc : ShapeDoc :=
      ("typeArgs", (shape (@_root_.List (_root_.String))).root),
      ("registration", (shape _root_.Effect4.Program.Registration).root)],
    (shape _root_.String).defs ++ (shape _root_.Effect4.Program.RowShape).defs ++
-     (shape (@_root_.List (_root_.String))).defs ++
+     (shape (@_root_.List (_root_.Effect4.Program.RowArg))).defs ++
      (shape _root_.Effect4.Program.RowKind).defs ++ (shape _root_.Effect4.Program.Ty).defs ++
      (shape (@_root_.List (_root_.Effect4.ServiceKey))).defs ++
+     (shape (@_root_.List (_root_.String))).defs ++
      (shape _root_.Effect4.Program.Registration).defs⟩
 
 def toVal : _root_.Effect4.Program.Row → Val
@@ -3097,7 +3156,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.Row)
   | .ctor 0 [v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11] =>
     match Canonical.ofVal (α := _root_.String) v0, Canonical.ofVal (α := _root_.String) v1,
         Canonical.ofVal (α := _root_.Effect4.Program.RowShape) v2,
-        Canonical.ofVal (α := (@_root_.List (_root_.String))) v3,
+        Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.RowArg))) v3,
         Canonical.ofVal (α := _root_.Effect4.Program.RowKind) v4,
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v5,
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v6,
@@ -3134,29 +3193,34 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.Row} (h : ofVal v = so
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_RowShape (x : _root_.Effect4.Program.RowShape) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RowShape).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
-theorem lift_ListString (x : (@_root_.List (_root_.String))) :
-    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.String))).root
+theorem lift_ListRowArg (x : (@_root_.List (_root_.Effect4.Program.RowArg))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.RowArg))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_RowKind (x : _root_.Effect4.Program.RowKind) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RowKind).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_ListServiceKey (x : (@_root_.List (_root_.Effect4.ServiceKey))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.ServiceKey))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_ListString (x : (@_root_.List (_root_.String))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.String))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
@@ -3173,7 +3237,7 @@ theorem fits (a : _root_.Effect4.Program.Row) : shapeDoc.accepts (toVal a) = tru
     (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a1)
         (acceptsFields_cons _ _ _ _ _ _ (lift_RowShape a2)
-          (acceptsFields_cons _ _ _ _ _ _ (lift_ListString a3)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_ListRowArg a3)
             (acceptsFields_cons _ _ _ _ _ _ (lift_RowKind a4)
               (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a5)
                 (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a6)

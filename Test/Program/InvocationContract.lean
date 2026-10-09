@@ -222,7 +222,7 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
   = some (.signature (.row 0 .builtinCollision))
 #guard refusal (.succeed (.lit (.nat 1))) [goodRow, goodRow]
   = some (.signature (.duplicateRow ("Host.wait", [])))
-#guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with shape := .value, trailing := ["x"] }]
+#guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with shape := .value, trailing := [.name "x"] }]
   = some (.signature (.row 0 .valueRowTrailing))
 #guard match Program.printEntry [{ goodRow with spelling := "a1" }] (nativeSignature [{ goodRow with spelling := "a1" }]) "main" (EffTy.pure .unit) (.succeed (.lit .unit)) with
   | .error (.unsafeName "a1") => true

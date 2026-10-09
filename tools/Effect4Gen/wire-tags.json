@@ -117,6 +117,10 @@
     "Effect4.Program.Registration": {
       "active": {"deferred": 0, "external": 1},
       "retired": {}
+    },
+    "Effect4.Program.RowArg": {
+      "active": {"name": 0, "str": 1},
+      "retired": {}
     }
   }
 }

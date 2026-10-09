@@ -197,11 +197,12 @@ def termHelperNames : List String :=
   Effect4.Codegen.Record.helperNames ++ Effect4.Codegen.Tuple.helperNames ++
     Effect4.Codegen.ListFold.helperNames
 
-/-- The names in a row cannot capture a printed binder or a reserved program head. -/
+/-- The names in a row cannot capture a printed binder or a reserved program head. A trailing
+string literal prints as a literal, so only the trailing names are checked. -/
 def rowNamesSafe (row : Row) : Bool :=
   (firstByte row.spelling != some 97 && !reserved.contains row.spelling &&
-    row.trailing.all (fun name => firstByte name != some 97 && name != "undefined" &&
-      !termHelperNames.contains name)) &&
+    (RowArg.names row.trailing).all (fun name => firstByte name != some 97 &&
+      name != "undefined" && !termHelperNames.contains name)) &&
     !termHelperNames.contains row.spelling
 
 /-- The binder minted for environment position `index`: `a0`, `a1`, … The environment is
@@ -258,6 +259,12 @@ def printLit : Lit → TypeScript.Expr
   | .unit => .ident "undefined"
   | .nat value => .int (Int.ofNat value)
   | .bool value => .bool value
+  | .str value => .str value
+
+/-- A row's trailing argument as target syntax: a name as an identifier, a string literal as the
+quoted string (`Scope.make("parallel")`). -/
+def RowArg.print : RowArg → TypeScript.Expr
+  | .name s => .ident s
   | .str value => .str value
 
 mutual
@@ -365,7 +372,7 @@ theorem methodArgsRow_shape (row : Row) :
   split <;> simp
 
 def printMethodArgs (n : Nat) (row : Row) (args : Term) : List TypeScript.Expr :=
-  let trailing := row.trailing.map TypeScript.Expr.ident
+  let trailing := row.trailing.map RowArg.print
   if (methodArgsRow row).shape = .tupleCall then printTupleArgs n args ++ trailing
   else if (methodArgsRow row).request = Ty.unit then trailing
   else printTerm n args :: trailing
@@ -382,10 +389,10 @@ def printMethod (n : Nat) (row : Row) (receiver args : Term) :
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
 `spelling()`, and every other call row is `spelling(request)`. A tuple-call row receives
 `printTupleArgs` of its request as two ordinary arguments, then the declared trailing
-names. A row that declares type arguments carries them on the head. The request prints at the
+arguments. A row that declares type arguments carries them on the head. The request prints at the
 node's level `n` (`printTerm`). -/
 def printRow (n : Nat) (row : Row) (request : Term) : Except PrintRefusal TypeScript.Expr := do
-  let trailing := row.trailing.map TypeScript.Expr.ident
+  let trailing := row.trailing.map RowArg.print
   match row.shape with
   | .value => .ok (.ident row.spelling)
   | .call =>
@@ -401,15 +408,25 @@ def printRow (n : Nat) (row : Row) (request : Term) : Except PrintRefusal TypeSc
     | none =>
       printMethod n row (.app "fst" (.cons request .nil)) (.app "snd" (.cons request .nil))
 
+/-- Whether a row's printed call shows its request ahead of the trailing arguments
+(`printRow`): every row but a value and a call on a `unit` request. A method row counts, whatever
+its arguments. Such a request, printed as a string literal, reads like a trailing string literal
+(`LawfulSpelling.literal_alone`). -/
+def Row.printsRequest (row : Row) : Bool :=
+  match row.shape with
+  | .value => false
+  | .call => !decide (row.request = Ty.unit)
+  | .tupleCall | .method => true
+
 /-- **The columns of a row that its printed call shows**, and that a reader reads back: the
-spelling, the shape, the trailing names, the request and the declared type arguments (the legacy
+spelling, the shape, the trailing arguments, the request and the declared type arguments (the legacy
 spellings a supplied row holds). `printRow` reads these five and nothing else
 (`printRow_congr`). The answer column, the error column and the requirements are not among them.
 An operation's own type arguments (`Signature.typeArgsOf`) move its row's answer and error:
 `Deferred.make<A, E>` answers `Deferred<A, E>`. They leave these five as they are
 (`LawfulTypeArgs.call`, `Codegen/Read.lean`), so a reader states its laws on them and not on the
 whole row (the state plan's T5, part B). -/
-def Row.callColumns (row : Row) : String × RowShape × List String × Ty × List String :=
+def Row.callColumns (row : Row) : String × RowShape × List RowArg × Ty × List String :=
   (row.spelling, row.shape, row.trailing, row.request, row.typeArgs)
 
 /-- Two rows with the same call columns print the same call on every request. The consumer is
@@ -455,7 +472,7 @@ def printCall {Op : Type} (sig : Signature Op) (n : Nat) (op : Op) (request : Te
       (printRow n (sig.rowOf op) request).bind (withHeadTypes (sig.rowOf op).spelling targets)
     | none => .error (.typeSpelling (sig.rowOf op).spelling)
 
-/-- A printed row call with one more argument, after the request and the trailing names: the
+/-- A printed row call with one more argument, after the request and the trailing arguments: the
 function an operation's binder term prints as (`Binders.write`, `Codegen/ListFold.lean`). A call
 and a method call carry it. A value row prints a bare name, which carries no argument: such a
 row is refused by its spelling. -/

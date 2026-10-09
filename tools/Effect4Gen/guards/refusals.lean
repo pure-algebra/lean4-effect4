@@ -33,7 +33,7 @@ def rowReasons : List RowReason :=
 def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
 
 def signatures : List SigRefusal :=
-  rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", ["get"])] ++
+  rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", [.name "get"])] ++
     serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
 
 def admissions : List AdmitRefusal :=

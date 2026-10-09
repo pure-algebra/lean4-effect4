@@ -15,7 +15,7 @@
 
 import { Result } from "effect"
 import { parseSync } from "oxc-parser"
-import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, NativeOp, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
+import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, NativeOp, Row, RowArg, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
@@ -135,8 +135,8 @@ const again = (f: Result.Failure<unknown, Refusal>): Result.Result<never, Refusa
 
 // profile.gen.ts is generated and checks its own stamp at import. Each entry is already a
 // `NativeOp` node and a `Row` node, decoded through the generated schemas; the reader
-// derives what it needs from the row (`printRow` in Print.lean: a value row is the bare
-// spelling, a call row on a `unit` request prints the trailing names alone).
+// derives what it needs from the row (`printRow` in PrintLeaf.lean: a value row is the bare
+// spelling, a call row on a `unit` request prints the trailing arguments alone).
 
 /** The supplied table's rows as entries: the operation of the row at position `i` is
  * `NativeOp.external i` (`Read.lean` `nativeSpell`: an external index is the row's position,
@@ -168,12 +168,16 @@ export const withClasses = <A>(classes: ReadonlyArray<readonly [string, RecordFi
   }
 }
 
-/** The entry a (spelling, trailing names) pair names: `nativeSpell` of `Read.lean`, the
+/** Two trailing arguments are one: the same name, or the same string literal. */
+export const sameRowArg = (a: RowArg, b: RowArg): boolean =>
+  a._tag === "name" ? b._tag === "name" && a.spelling === b.spelling : b._tag === "str" && a.value === b.value
+
+/** The entry a (spelling, trailing arguments) pair names: `nativeSpell` of `Read.lean`, the
  * built-in rows first and then the supplied table. */
-const spell = (spelling: string, trailing: ReadonlyArray<string>): Entry | undefined => {
+const spell = (spelling: string, trailing: ReadonlyArray<RowArg>): Entry | undefined => {
   const named = (e: Entry): boolean =>
     e.row.spelling === spelling && e.row.trailing.length === trailing.length &&
-    e.row.trailing.every((name, i) => name === trailing[i])
+    e.row.trailing.every((a, i) => sameRowArg(a, trailing[i]!))
   return rows.find(named) ?? supplied.find(named)
 }
 
@@ -1169,20 +1173,21 @@ const readForkOptions = (daemon: boolean, x: Expr): Read<ForkOptions> => {
   return shape
 }
 
-/**
- * The names an argument list spells, when every argument is a name: an identifier, or a
- * string literal as its quoted rendering. The Lean printer carries the quotes of
- * `Scope.make("parallel")` inside an identifier's name; oxc parses the same bytes as a string
- * literal, so a trailing name is matched by rendered text, exactly as the table spells it.
- */
-const namesOf = (args: ReadonlyArray<Expr>): ReadonlyArray<string> | undefined => {
-  const names: string[] = []
+/** The trailing argument an argument reads as, if it reads as one: an identifier as a name, a
+ * string literal as itself (Lean `rowArgs?`, one argument). */
+export const rowArgOf = (a: Expr): RowArg | undefined =>
+  a._tag === "ident" ? { _tag: "name", spelling: a.name } : a._tag === "str" ? { _tag: "str", value: a.value } : undefined
+
+/** The trailing arguments an argument list reads as, when every argument reads as one
+ * (Lean `rowArgs?`): `Scope.make("parallel")`'s literal is the row's string-literal argument. */
+const argsOf = (args: ReadonlyArray<Expr>): ReadonlyArray<RowArg> | undefined => {
+  const out: RowArg[] = []
   for (const a of args) {
-    if (a._tag === "ident") names.push(a.name)
-    else if (a._tag === "str") names.push(JSON.stringify(a.value))
-    else return undefined
+    const r = rowArgOf(a)
+    if (r === undefined) return undefined
+    out.push(r)
   }
-  return names
+  return out
 }
 
 /** The reading of a row: a `perform`, the one invocation form, with the operation the row spells,
@@ -1228,9 +1233,9 @@ const readTupleArgs = (n: number, x: Expr, y: Expr): Read<Term> => {
 /**
  * A call as a call row; `undefined` when no row of the table has this head and argument
  * shape, so the caller may read an atom application instead. A call row's argument list is
- * the trailing names alone on a `unit` request, and the request followed by the trailing
- * names otherwise; a tuple-call row's is its two request arguments followed by the trailing
- * names. The three readings are tried in that order, and the table lets at most one succeed
+ * the trailing arguments alone on a `unit` request, and the request followed by the trailing
+ * arguments otherwise; a tuple-call row's is its two request arguments followed by the trailing
+ * arguments. The three readings are tried in that order, and the table lets at most one succeed
  * (Lean `readRowCall`).
  */
 const readRowCall = (
@@ -1244,16 +1249,16 @@ const readRowCall = (
     e.row.typeArgs.length === typeArgs.length && e.row.typeArgs.every((a, i) => a === typeArgs[i])
   // `view` is the identity for a call, and the method-argument view of the row for a method
   // call (`methodSignature` of Read.lean): the row identity is the spelled entry either way.
-  const find = (names: ReadonlyArray<string>): Entry | undefined => {
+  const find = (names: ReadonlyArray<RowArg>): Entry | undefined => {
     const e = spell(s, names)
     return e === undefined ? undefined : view(e)
   }
-  const all = namesOf(args)
+  const all = argsOf(args)
   const asTrailing = all ? find(all) : undefined
   if (asTrailing) return asTrailing.row.shape === "call" && unitRequest(asTrailing) && typed(asTrailing) ? ok(rowAnswer(asTrailing, unit)) : refuse({ _tag: "arity", head: s })
   const [request, ...rest] = args
   if (request === undefined) return undefined
-  const restNames = namesOf(rest)
+  const restNames = argsOf(rest)
   const withRequest = restNames ? find(restNames) : undefined
   if (withRequest) {
     return withRequest.row.shape === "call" && !unitRequest(withRequest) && typed(withRequest)
@@ -1262,7 +1267,7 @@ const readRowCall = (
   }
   const [second, ...names] = rest
   if (second === undefined) return undefined
-  const tupleNames = namesOf(names)
+  const tupleNames = argsOf(names)
   const asTuple = tupleNames ? find(tupleNames) : undefined
   if (!asTuple) return undefined
   return asTuple.row.shape === "tupleCall" && typed(asTuple)

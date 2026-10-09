@@ -255,15 +255,33 @@ inductive Registration
   | external
 deriving DecidableEq, Repr
 
+/-- An argument a row prints after its request, the same at every call: a name the target binds
+(a supplied row's handler), or a string literal (`Scope.make("parallel")`'s strategy). The
+printer writes a name as an identifier and a literal as a literal, so a value is never printed
+as a name. -/
+inductive RowArg
+  | name (spelling : String)
+  | str (value : String)
+deriving DecidableEq, Repr
+
+/-- The name an argument is, if it is one. -/
+def RowArg.name? : RowArg → Option String
+  | .name s => some s
+  | .str _ => none
+
+/-- The names among a row's trailing arguments: what the target must bind for them. -/
+def RowArg.names (args : List RowArg) : List String := args.filterMap RowArg.name?
+
 structure Row where
   name : String
   /-- What the printer prints the operation as: the qualified export on the native route
   (`Ref.get`), the receiver's method on the service route (`refs.get`). -/
   spelling : String
   shape : RowShape := .call
-  /-- Literal arguments printed after the request: the pure function of a read-modify-write
-  row (`Ref.update(ref, incr)`), a scope's strategy. Names, never values. -/
-  trailing : List String := []
+  /-- Arguments printed after the request, fixed by the row: a name or a string literal
+  (`RowArg`). `Scope.make("parallel")` is the unit-request row whose one trailing argument is
+  the literal `"parallel"`. They are part of the row's key (`rowKey`). -/
+  trailing : List RowArg := []
   kind : RowKind
   request : Ty
   answer : Ty

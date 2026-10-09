@@ -480,7 +480,7 @@ end Args
 
 section Row
 
-variable {sig : Signature Op} {spell : String → List String → Option Op}
+variable {sig : Signature Op} {spell : String → List RowArg → Option Op}
 
 /-- The decided facts, at a row of the table: distinct holes, no hole for an argument the
 classifier fixes, and every hole an argument. -/
@@ -725,7 +725,7 @@ end Row
 
 section Exact
 
-variable {sig : Signature Op} {spell : String → List String → Option Op}
+variable {sig : Signature Op} {spell : String → List RowArg → Option Op}
 
 /-- The spines print item by item; the statement spine threads what each statement declares. -/
 theorem cata_effs_cons (e : Eff Op) (es : Effs Op) (n : Nat) :
@@ -744,7 +744,7 @@ theorem cata_stmts_cons (st : Program.Stmt Op) (ss : Stmts Op) (n : Nat) :
         cata_stmts (printAlg sig) ss (n + p.2) >>= fun t => pure (p.1 :: t)) := rfl
 
 /-- Everything of size at most `m` that the reader accepts prints back to what was read. -/
-def ExactUpTo (classes : Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+def ExactUpTo (classes : Classes) (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (m : Nat) : Prop :=
   (∀ fam n (x : Expr) v, sizeOf x ≤ m → readT classes sig spell fam n x = some (.ok v) →
     PrintsTo sig n fam v (.expr x)) ∧
