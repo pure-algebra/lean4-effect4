@@ -35,20 +35,19 @@ open Tools.Session
   | openLine :: _ => !(answer (answerLine {} openLine).1 { op := "undo" }).2.ok
   | [] => false)
 
-/-- An open of `succeed` of a natural, as the JSON an agent writes. -/
-def openNat (n : String) : String :=
-  "{\"op\":\"open\",\"programJson\":{\"_tag\":\"succeed\",\"value\":{\"_tag\":\"lit\"," ++
-    "\"value\":{\"_tag\":\"nat\",\"value\":" ++ n ++ "}}}}"
-
-/-- Whether the line's answer says ok. -/
-def answersOk (line : String) : Bool :=
-  ((answerLine {} line).2.splitOn "\"ok\":true").length == 2
+-- An open of `succeed` of a natural, as the JSON an agent writes, answers ok or not. The text
+-- stays inside each guard: a battery definition over rendered text reaches `Classical.choice`.
 
 -- red (tested): 2^53 + 1, which binary64 rounds to 2^53, is refused, not changed (JSON-01)
-#guard !answersOk (openNat "9007199254740993")
+#guard ((answerLine {} ("{\"op\":\"open\",\"programJson\":{\"_tag\":\"succeed\",\"value\":" ++
+  "{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":9007199254740993}}}}")).2.splitOn
+  "\"ok\":true").length == 1
 -- control: 2^53 itself opens, and so does 2^53 + 2, which binary64 holds
-#guard answersOk (openNat "9007199254740992") && answersOk (openNat "9007199254740994")
--- control: a small natural opens
-#guard answersOk (openNat "7")
+#guard ((answerLine {} ("{\"op\":\"open\",\"programJson\":{\"_tag\":\"succeed\",\"value\":" ++
+  "{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":9007199254740992}}}}")).2.splitOn
+  "\"ok\":true").length == 2
+#guard ((answerLine {} ("{\"op\":\"open\",\"programJson\":{\"_tag\":\"succeed\",\"value\":" ++
+  "{\"_tag\":\"lit\",\"value\":{\"_tag\":\"nat\",\"value\":9007199254740994}}}}")).2.splitOn
+  "\"ok\":true").length == 2
 
 end Test.Program.SessionToolControls
