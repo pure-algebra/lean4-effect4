@@ -19,8 +19,8 @@ as both.
 
 | Operation | Takes | Answers | The laws it names |
 | --- | --- | --- | --- |
-| `open` | `program` (hex) or `programJson`, and `holes` if any | the view | `EditSession.reached_view`; `Canonical.ofJson_exact` for JSON |
-| `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view | the splice law the delta took, and `EditSession.reached_view`; `Canonical.ofJson_exact` for JSON |
+| `open` | `program` (hex) or `programJson`, and `holes` if any | the view | `EditSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJson_exact` for JSON |
+| `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view | the splice law the delta took, and `EditSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJson_exact` for JSON |
 | `omit` | `path`, `holeName` | the delta and the view; the hole row declares the focus's type | the same |
 | `view` | `path`, or none | at an address, its entry; with none, the whole table | `EditSession.reached_view`; `Table.typedAt_table` at an address |
 | `undo` | nothing | the last fill taken back: the delta and the view | `EditSession.feed_undo` |
@@ -101,7 +101,7 @@ reading names. -/
 def programFrom? (hex : Option String) (json : Option Json) : Option NativeEff × List Lean.Name :=
   match hex, json with
   | some h, _ => (programOfHex h, [])
-  | none, some j => (programOfJson j, [``Canonical.ofJson_exact])
+  | none, some j => (programOfJson j, [``Tools.JsonBridge.ofLeanJson_num, ``Canonical.ofJson_exact])
   | none, none => (none, [])
 
 /-- A value's JSON print, as Lean's JSON. -/
