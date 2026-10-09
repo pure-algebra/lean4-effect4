@@ -1,0 +1,30 @@
+{
+  "format": "effect4-edit-session-overwatch-v1",
+  "reviewedCommit": "fdbae937259f2516645147a045a2d7ce9beaee5e",
+  "featureCommit": "ff87466d42813a02e5f89c2c9a653b15ebd1669c",
+  "sourceHashes": {
+    "src/Effect4/Program/Edit.lean": "f1b7c9c5eaa65148c3a1078cac977c4941ce01a8e59d1e59a77eac0c94c921fd",
+    "src/Effect4/Laws/Program/Edit.lean": "6c7789f636d7687373c776ed9574004e12c29c92fc710b18ff39265489b1a5fa",
+    "src/Effect4/Program/Typing/Splice.lean": "e0ec0caa58fa629a860655f0f0e5c2087d494401369b45ebee9e0cbf63f132fe",
+    "src/Effect4/Laws/Program/Typing/Splice.lean": "3a986d854e2be92011a929aef65854fb54c4d4c48894ca2c7cb7212ec091f38f",
+    "src/Effect4/Author.lean": "58467501e06938805c78070afbe57e4d53c4a933fb94fa1a1a090e09f43b953c",
+    "src/Effect4/Laws/Author.lean": "2f15ce80f4f6f04481c82be8304c087fca820d1154448f026a9d763683d430e4",
+    "tools/ProofGraph/Registry.lean": "a88ae411a1fa2ec65a5cc70a3050b1c2c4e595e50a3d7efdd1822d026f81716a",
+    "Test/Program/EditControls.lean": "403bb102fc159db22621bfcbd34e26ba6deae1bc966ddb860abf05e547c84724",
+    "docs/core/decisions.md": "1396e4ae8c102abe0941bb00ce6ff22e76554b22f1ab535fcb72c961fb30e298",
+    "docs/research/2026-10-08-seat-ORG-theory-map.md": "123e2a628d43bb5fc332270860af900ab6ee4bb5e5b34fbde81f24e040e4fb11",
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "lakefile.toml": "c9dbfed374506ceed83ad152ec73954e28b5c631a0f3c1c35184fa8f129c0323",
+    "lake-manifest.json": "448045a73fe9e702e93b255af45592c8bc2ba02d86bac9fbf7b684ba28843afe"
+  },
+  "compiler": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "compiledOriginalSha256": "8b255bf7ddff3821167ae1712495d70925bbda6b178c905105795bee319f9f4b",
+  "compiledCandidateSha256": "2dc36577652d829c9a2fce6c6762aeafb03994589268d6ff5d6f9bc7103bdcc8",
+  "finiteGuardCount": 15,
+  "compiledInspection": {
+    "original": "whole annotation before either table lookup, then subtree check; successful splice discards the full annotation result",
+    "candidate": "subtree check first; whole annotation only at the four fallback branches; successful splice returns before that block",
+    "candidateFallbackLabel": "v___jp_23_"
+  },
+  "scope": "Kernel equality and finite Lean controls; generated C inspection, not a latency benchmark or host/compiler theorem"
+}
