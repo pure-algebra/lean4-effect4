@@ -192,6 +192,46 @@ first-order layer has its Effect4 consumer.
    As a `Protocol` of `RowSig`, it is what the session admits. A host that meets it is never
    refused.
 
+### 5.3 Program in, program out
+
+The owner's preferred abstraction (2026-10-09): a handler that takes a program over one signature
+to a program over another. `Effects` has it: a `Handler S (Program T)` implements each operation
+of `S` by a program over `T`, and `interpret_through` composes two such layers. A stack reads
+top to bottom:
+
+```mermaid
+flowchart TB
+  APP["the application program, over its service signature S"]
+  APP -->|"Handler S (Program T): a verified service"| MID["a program over T: the services it uses"]
+  MID -->|"Handler T (Program U)"| LOW["a program over U: host rows and store operations"]
+  LOW -->|"a comodel of U: the hosts"| OUT["the answers, the final state, the exit"]
+```
+
+Each arrow has one law at `interpret`, and the bottom arrow is the comodel of section 3.2. A
+picture of a session draws the same stack. The program stands at the top, then each layer's
+translation, then the hosts' answers at the bottom, joined by the session's moves.
+
+### 5.4 Types meet the coalgebra
+
+A signature's operations and answers carry types from the type algebra (`Ty`). A typed
+signature reads each operation's request type and answer type from the program's call table.
+Its protocol is membership: an answer is admitted when it is a member of the answer type at the
+call instance. So the protocol of section 3.3 is not written by hand; it is the type algebra's
+membership judgment, read at each call. A handler that implements `S` by programs over `T` is
+well typed when each implementation checks at the types `S` declares. The indexed layer of CO-7
+extends this to promises: an answer of a promise type opens an operation whose answer type is the
+promise's.
+
+### 5.5 Effect TypeScript: a verified service
+
+An Effect service is a signature: a record of operations, each returning an `Effect` with its
+answer and error types. A `Layer` that provides the service is a handler. So a stack of section
+5.3 prints as an Effect service: a `Context.Tag` for `S` and a `Layer` built from the handler's
+programs over `T`. A regular Effect TypeScript program then uses the verified service through
+its tag, with no knowledge of the proofs. The definition blocks of row 328 already print as
+functions. Slice CO-6b, after CO-6, prints a block as a service and its handler as a layer. The same shape serves standards libraries: a WHATWG interface is a
+signature, and its implementation a handler.
+
 ## 6. Placement of the obligations
 
 | Obligation | Concept and role | Reach | Not established | Consumer |
@@ -212,6 +252,7 @@ first-order layer has its Effect4 consumer.
 5. **CO-5** (Effect4): H9 at every comodel; reply admission at the call instance; the battery's
    repository lines as readers.
 6. **CO-6** (Effect4): host utilities on `Run.drive`; the typed protocol of a call table.
+   **CO-6b**: a definition block printed as an Effect service with its `Layer`.
 7. **CO-7** (`Effects`, then Effect4): indexed signatures; promises and handle rows.
 
 This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 and HC-7 stand.
