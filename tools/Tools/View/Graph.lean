@@ -1,4 +1,4 @@
-import Tools.View.Grid
+import Tools.View.Place
 
 /-!
 # A graph: ranks, order, places, routes
@@ -15,11 +15,12 @@ before, with no engine:
    nodes' order (`ranks`). Every forward edge descends at least one rank (`ranks_forward`).
 3. **Order and places.** A forward edge that spans several ranks passes through one point in each
    rank between. Each rank is ordered by the barycentre of its neighbours in the rank above, then
-   below, and packed left to right on the cell grid; the ranks are centred.
-4. **Routes.** Each edge is its own path of cubic segments. A forward edge leaves its source at a
-   port of the box's bottom, the ports in the order of the edges' next items, and steps down to
-   its target's port on the top, passing straight through each rank between. A step is vertical
-   at both ends, so it bends only where the edge moves across. A back edge is one arc out of its
+   below. Each item then stands across by Brandes and Köpf (`Tools.View.Place`): aligned with
+   its neighbours' medians, so most edges run straight and a long edge's run stays straight.
+4. **Routes.** Each edge is its own path of cubic segments. A forward edge leaves the middle of
+   its source's bottom and steps down to the middle of its target's top, passing straight through
+   each rank between. A step is vertical at both ends, so it bends only where the edge moves
+   across: the edge aligned with its box runs straight, and the others branch from it. A back edge is one arc out of its
    source's right side, through a lane of its own at the right, into its target's right side. An
    edge from a node to itself is a small drop off its right side.
 
@@ -262,21 +263,25 @@ def orders (g : Graph) (rk : List Nat) : List (List Key) :=
       acc ++ [if i == 0 then o else reorder o (acc.getD (i - 1) []) downs]) []).reverse)
   up (down (up (down start)))
 
-/-- **The layout** of a graph: the ranks, the order of each rank, each item packed left to right
-on the cell grid with each rank centred, the routes, and the lanes of the back edges. -/
+/-- **The layout** of a graph: the ranks, the order of each rank, each item's place across by
+Brandes and Köpf (`Tools.View.Place.centres`), the routes, and the lanes of the back edges. -/
 def layout (g : Graph) : Laid :=
   let rk := ranks g
   let its := items g rk
   let width (k : Key) : Nat := ((its.find? (·.key == k)).map (·.width)).getD GAP
   let os := orders g rk
-  let rankCells (o : List Key) : Nat := o.foldl (fun s k => s + width k) 0 + GAP * (o.length - 1)
-  let widest := os.foldl (fun m o => max m (rankCells o)) 0
+  let ls := links g rk
+  let ups (k : Key) := ls.filterMap fun (a, b) => if b == k then some a else none
+  let downs (k : Key) := ls.filterMap fun (a, b) => if a == k then some b else none
+  let isPoint (k : Key) : Bool := ((its.find? (·.key == k)).map (·.node.isNone)).getD false
+  let centre := Place.centres os width ups downs ls isPoint
+  -- a centre in half cells, less the item's width, is its left edge in half cells: four pixels each
+  let left (k : Key) : Int := (CELL / 2) * (centre.getD k 0 - width k)
+  let widest : Int := (os.flatten.foldl (fun m k => max m (centre.getD k 0 + width k)) 0 + 1) / 2
   let placed : List Placed := os.zipIdx.flatMap fun (o, r) =>
-    let left := (widest - rankCells o) / 2
-    (o.foldl (fun (acc : Nat × List Placed) k =>
-      let node := (its.find? (·.key == k)).bind (·.node)
-      (acc.1 + width k + GAP,
-        acc.2 ++ [{ key := k, x := CELL * acc.1, y := ROWH * LEVEL * r, w := CELL * width k, node }])) (left, [])).2
+    o.map fun k =>
+      { key := k, x := left k, y := ROWH * LEVEL * r, w := CELL * width k,
+        node := (its.find? (·.key == k)).bind (·.node) }
   let backs := g.edges.toList.filter fun e => e.dst < e.src
   let key (i : Nat) : Key := ((g.nodes[i]?).map (·.key)).getD ""
   let routes : List Route :=
@@ -322,41 +327,13 @@ abbrev Pt := Int × Int
 /-- The middle of an item across: a box's middle, or a point's pass. -/
 def middle (p : Placed) : Int := p.x + (if p.node.isSome then p.w / 2 else CELL)
 
-/-- The forward routes that leave the item `k`, left to right by the place of the item each goes
-to next. -/
-def leaving (l : Laid) (k : Key) : List Key :=
-  let next := l.routes.toList.filterMap fun
-    | .down rk (a :: b :: _) _ => if a == k then (l.find b).map fun p => (rk, middle p) else none
-    | _ => none
-  (next.mergeSort fun a b => decide (a.2 ≤ b.2)).map (·.1)
+/-- Where an edge leaves an item downward: the middle of its bottom. Every edge of a box leaves
+from one point and enters at one point, so the edge aligned with the box (`Tools.View.Place`)
+runs straight and the others branch from it, as a tree's limbs do. -/
+def exitAt (p : Placed) : Pt := (middle p, p.y + ROWH * BOXROWS)
 
-/-- The forward routes that enter the item `k`, left to right by the place of the item each comes
-from. -/
-def entering (l : Laid) (k : Key) : List Key :=
-  let prev := l.routes.toList.filterMap fun
-    | .down rk ks _ =>
-      match ks.reverse with
-      | b :: a :: _ => if b == k then (l.find a).map fun p => (rk, middle p) else none
-      | _ => none
-    | _ => none
-  (prev.mergeSort fun a b => decide (a.2 ≤ b.2)).map (·.1)
-
-/-- The `i`th of `n` ports along a side of a box from `x`, `w` wide: the middles of `n` equal parts
-of the side less a cell at each end; one port is the side's middle. -/
-def port (x w : Int) (i n : Nat) : Int :=
-  if n ≤ 1 then x + w / 2 else x + CELL + (w - 2 * CELL) * (2 * i + 1) / (2 * n)
-
-/-- Where the route `rk` leaves the item `p` downward: its port on the box's bottom, among the
-routes that leave it, so that no two edges share a stem; a point's pass. -/
-def exitAt (l : Laid) (p : Placed) (rk : Key) : Pt :=
-  let rs := l.leaving p.key
-  (if p.node.isSome then port p.x p.w (Graph.posIn rs rk) rs.length else middle p, p.y + ROWH * BOXROWS)
-
-/-- Where the route `rk` enters the item `p` from above: its port on the box's top, among the
-routes that enter it. -/
-def entryAt (l : Laid) (p : Placed) (rk : Key) : Pt :=
-  let rs := l.entering p.key
-  (if p.node.isSome then port p.x p.w (Graph.posIn rs rk) rs.length else middle p, p.y)
+/-- Where an edge enters an item from above: the middle of its top. -/
+def entryAt (p : Placed) : Pt := (middle p, p.y)
 
 /-- **A step down** from `a` to `b`: one cubic segment, vertical at both ends, its controls half the
 drop from each end (the vertical link of d3, dot's splines between ranks). Two ends in one column
@@ -368,13 +345,13 @@ def stepDown (a b : Pt) : Cubic :=
 /-- A straight segment from `a` to `b`. -/
 def straight (a b : Pt) : Cubic := ⟨a, a, b, b⟩
 
-/-- **A route as cubic segments**, from its source to its target. A forward route leaves its
-source at its port, steps down to each point and passes straight through the point's rank, then
-steps down to its target's port. A back route is one arc: out of its source's right side, around
+/-- **A route as cubic segments**, from its source to its target. A forward route leaves the
+middle of its source's bottom, steps down to each point and passes straight through the point's
+rank, then steps down to the middle of its target's top. A back route is one arc: out of its source's right side, around
 through its lane, into its target's right side, so a return reads as a return. A loop is a small
 drop off a box's right side. -/
 def segments (l : Laid) : Route → List Cubic
-  | .down rk ks _ =>
+  | .down _ ks _ =>
     let ps := ks.filterMap l.find
     if ps.length != ks.length then [] else
     match ps with
@@ -383,12 +360,12 @@ def segments (l : Laid) : Route → List Cubic
       let n := rest.length
       (rest.zipIdx.foldl (fun (acc : List Cubic × Pt) (b, i) =>
         if i + 1 == n then
-          let into := l.entryAt b rk
+          let into := entryAt b
           (acc.1 ++ [stepDown acc.2 into], into)
         else
           let into : Pt := (middle b, b.y)
           let out : Pt := (middle b, b.y + ROWH * BOXROWS)
-          (acc.1 ++ [stepDown acc.2 into, straight into out], out)) ([], l.exitAt a rk)).1
+          (acc.1 ++ [stepDown acc.2 into, straight into out], out)) ([], exitAt a)).1
   | .back _ s d lane _ =>
     match l.find s, l.find d with
     | some a, some b =>

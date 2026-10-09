@@ -21,9 +21,9 @@ data as the pattern). The pattern, recalled from D3's selections and transitions
   (`lowerCall_move`).
 
 **The choreography** (`Choreography`) is data with defaults: the kept elements make room first
-(ease in and out); then, level by level from the top, each new edge draws from its source toward
-its target (ease out), and the box at its end expands out with a slight overshoot (ease out,
-back); a new or changed line writes itself cell by cell, each a little after the one before; an
+and settle with weight (a critically damped spring); then, level by level from the top, each new
+edge draws from its source toward its target (ease out), and the box at its end expands out on a
+spring that overshoots a little and settles; a new or changed line writes itself cell by cell, each a little after the one before; an
 old element shrinks or unwrites (ease in). A step's sample at its end is the next frame: the
 driver checks it on every transition.
 -/
@@ -33,10 +33,28 @@ namespace Tools.View
 /-! ## Easing -/
 
 /-- An easing: a progress in per mille to an eased progress in per mille. `outBack` overshoots a
-little before it settles. -/
+little before it settles. `settle` and `spring` are a mass on a damped spring released toward its
+rest, so a moving element has weight: `settle` is critically damped, the fastest approach with no
+overshoot; `spring` is underdamped, a small overshoot that dies away. -/
 inductive Ease where
-  | linear | in_ | out | inOut | outBack
+  | linear | in_ | out | inOut | outBack | settle | spring
 deriving Repr, DecidableEq
+
+/-- A critically damped spring released at rest from 0 toward 1, `1 - (1 + ωs)e^(-ωs)` with
+`ω = 7.4` over one step, scaled to end at 1; per mille at every twentieth of the step. -/
+def settleTable : List Int :=
+  [0, 54, 171, 306, 438, 555, 654, 734, 799, 849, 888, 918, 941, 958, 970, 980, 986, 992, 995, 998, 1000]
+
+/-- An underdamped spring, damping ratio `ζ = 0.7` and `ω = 7.5` over one step, scaled to end at 1:
+it overshoots by 4.5% at about three fifths of the step and settles; per mille at every twentieth. -/
+def springTable : List Int :=
+  [0, 59, 195, 363, 531, 681, 804, 898, 964, 1007, 1032, 1043, 1045, 1041, 1034, 1026, 1019, 1012, 1007, 1003, 1000]
+
+/-- A table read at `p` per mille: the line between its two nearest entries; past its end, 1. -/
+def tableAt (t : List Int) (p : Nat) : Int :=
+  let a := t.getD (p / 50) 1000
+  let b := t.getD (p / 50 + 1) 1000
+  a + (b - a) * ((p % 50 : Nat) : Int) / 50
 
 /-- The eased progress at `p` per mille (cubic curves; `outBack` with the usual 1.70158). -/
 def Ease.at : Ease → Nat → Int
@@ -48,6 +66,8 @@ def Ease.at : Ease → Nat → Int
   | .outBack, p =>
     let q : Int := (p : Int) - 1000
     1000 + 2702 * q ^ 3 / 1000000000 + 1702 * q ^ 2 / 1000000
+  | .settle, p => tableAt settleTable p
+  | .spring, p => tableAt springTable p
 
 /-- Every easing starts at 0. -/
 theorem Ease.at_start (e : Ease) : e.at 0 = 0 := by cases e <;> rfl
@@ -137,8 +157,8 @@ theorem join_old {α : Type} (key : α → Key) (old new : List α) (o : α) (h 
 
 /-- **The choreography**: the transition of each selection. -/
 structure Choreography where
-  /-- the kept elements move to their new places -/
-  move : Transition := { duration := 450, ease := .inOut }
+  /-- the kept elements move to their new places, and settle there with weight -/
+  move : Transition := { duration := 450, ease := .settle }
   /-- the old elements shrink or unwrite -/
   leave : Transition := { duration := 250, ease := .in_ }
   /-- a new or changed line writes itself, cell by cell -/
@@ -149,8 +169,8 @@ structure Choreography where
   enterFrom : Nat := 300
   /-- a new edge draws from its source toward its target -/
   draw : Transition := { duration := 220, ease := .out }
-  /-- the box at its end expands out -/
-  expand : Transition := { duration := 300, ease := .outBack }
+  /-- the box at its end expands out, on a spring -/
+  expand : Transition := { duration := 360, ease := .spring }
 deriving Repr
 
 /-- A transition started later is done at the step's end too. -/
