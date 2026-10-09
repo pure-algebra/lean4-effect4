@@ -1,0 +1,172 @@
+{
+  "format": "effect4-pull-protocol-receipt-v1",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "positive": 8,
+  "wrongCatchControls": 2,
+  "wrongCatchDetected": true,
+  "rows": [
+    {
+      "id": "batchPayload",
+      "observed": 2
+    },
+    {
+      "id": "endPayload",
+      "observed": 142
+    },
+    {
+      "id": "inputFailure",
+      "observed": 3
+    },
+    {
+      "id": "catchDoneEnd",
+      "observed": 42
+    },
+    {
+      "id": "retainedRefState",
+      "observed": 7
+    },
+    {
+      "id": "finalizerFailure",
+      "observed": 8
+    },
+    {
+      "id": "successHandlerEscape",
+      "observed": 42
+    },
+    {
+      "id": "endHandlerEscape",
+      "observed": 42
+    },
+    {
+      "id": "wrongSuccessCatch",
+      "observed": 99
+    },
+    {
+      "id": "wrongEndCatch",
+      "observed": 99
+    }
+  ],
+  "compilerDiagnostics": "",
+  "commands": [
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "--run",
+        "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/harness/pull-protocol/Produce.lean",
+        "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/docs/research/2026-10-09-pull-protocol-evidence"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea/tsconfig.json",
+        "--listFilesOnly"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea"
+    },
+    {
+      "argv": [
+        "bun",
+        "--no-install",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea/observe.ts",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea"
+    },
+    {
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/pull-protocol-0tg2j7ea"
+    }
+  ],
+  "sourceHashes": {
+    "harness/ts_packet.py": "745672fbdbff1067ab046285a41948231e1d61c1d737f28bab31bf838bb1d109",
+    "harness/pull-protocol/Produce.lean": "ba2fef93fce64f9ebd8724065b67e6449b4104bce5835d7407d9563229d91954",
+    "harness/pull-protocol/observe.ts": "85cb4f05897b6b04486bc7bb6799eafc8c2e351262f17bb30f8197ce106ef1be",
+    "harness/pull-protocol/run.py": "780c12de39b5ba41316bd2e703ec02eccda8e944fc7c0458367bdf35d134dec4",
+    "Test/Program/Pull.lean": "94be3009d13a841d48c543f50bc63ac2fa4a9ee8aede1a2fbd1adf132cd996da",
+    "src/Effect4/Program/Stream.lean": "92dd7517253d11685e11e605d7c280207c9e2f3b4fde9172affcccfca76c19b3",
+    "src/Effect4/Library/Pull/Ops.lean": "d5c7e5739089cf972ad0d24ef8cfce316385008e6be56a8641bb74e364fee6c9",
+    "src/Effect4/Laws/Library/Pull/Protocol.lean": "da6fffdea28354d26f49581621a582010dad5e262dd198ee9b451977cf70231c",
+    "src/Effect4/Laws/Library/Pull/Scope.lean": "8e82383e5b53bffa154c615e44f9ac60f408bf7b10e60a3c2f53cf16d16c6d43",
+    "src/Effect4/Library/Stream/ArrayDefs.lean": "b2aad51200279d1cd2a83c887f0e1e5914952880708709201a8a31c6d28d8c4c",
+    "src/Effect4/Library/Stream/ArrayModel.lean": "2905a67d79f9e6e1f9a391bb46106a633bd2b0d7f5ea9d8d316f839615c335fd",
+    "src/Effect4/Library/Stream/ArrayOps.lean": "4282e20b0574b61fe0f55009f388c3a34c62e33e9732dff03012372e75c05821",
+    "src/Effect4/Library/Stream/ArraySteps.lean": "0fdb3e5ca4dc07f9a258461bff17c8bb75c947d03ee2f4aba1bf705d811dc55e",
+    "src/Effect4/Library/Stream/Model.lean": "99f208f7212b513c513c048ef9565af59e62008c329b8395371c0c7135c4bd17",
+    "src/Effect4/Library/Stream/Ops.lean": "f43955d326c43d5b3bdb7c8127181ca50e2ec55a29da6b971c738ed8a345d9b9",
+    "src/Effect4/Library/Stream/Source.lean": "804d4232a0b4a9b69034d1bca0315634765283a4c6e649028df7e4294123193c",
+    "src/Effect4/Library/Stream/Steps.lean": "9232de045321156205efb3244f5482e0be60f5937959118ad6323f75d0abfc62"
+  },
+  "toolchainHashes": {
+    "effectPackage": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "compilerPackage": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478"
+  },
+  "manifestHash": "b4845c5b697eb172a89f68ef98f31dec1d6115bbf8a5c877e9e07addae799445",
+  "emittedHashes": {
+    "batchPayload.ts": "94cb188ca1b2f9533998696f8a9e8ceb430f2bfba5763287eadd83288d053445",
+    "endPayload.ts": "d003eb8a52b3a98b0b16d5a50d6be37a1c5b22afc39e05cfd62e6fd8dfc1d455",
+    "inputFailure.ts": "a6f0802db2ea70abb372097ff0f37a946adaa091e620d13583a435af5eae84d2",
+    "catchDoneEnd.ts": "81443046854f06ab1427f8d778b3f0c1bd01b311a7178cfe87a547546b358d57",
+    "retainedRefState.ts": "706ff0682a38f1c858d2a9e91008f7b3a27302ef5cd7c45bf74087f2b01e9f15",
+    "finalizerFailure.ts": "3dd9d2ad5b9e9a966af0cb5decf1ab3007ff107d19479d167e6a1d553cba7a1f",
+    "successHandlerEscape.ts": "fa7c8fb20ab2ec5d6d3092aeaec9018fa784c9d7044d21d86b3648eb25dfe226",
+    "endHandlerEscape.ts": "a1dd990e3e8ea9baa01af9249a84edc825ec615a0d4866e05d6146f0436858dd",
+    "wrongSuccessCatch.ts": "14ef1ba861d2b160d4d7e5624af9d962a8df406ad40c5367672af658e879a2cd",
+    "wrongEndCatch.ts": "a17653b5083d119a110c51d33eff867179662516323ddb359fe493d16f23dde7"
+  },
+  "compiledHashes": {
+    "batchPayload.ts": "2eb12a16554281a0ccaadc4badf78820cdc8e99a4d51ad419b283f8ef2cf3aa6",
+    "endPayload.ts": "8404b7d6ae1d0ff91c86ae1a96698c39abf550af24889b3de086547dccb83a45",
+    "inputFailure.ts": "58a3a88869446b903a25aaa8cf2b74a8cfd3b49a55eb474b3a6d56d542b16634",
+    "catchDoneEnd.ts": "9f7b38a1fdece5aeb8434afbb42d249e8e3942441b2b7d5c73083513e18da9d2",
+    "retainedRefState.ts": "5c7a4f61cb2bdc2fc08e96a98550844039f70a3aff1a15aab5b560f9a9ca3d47",
+    "finalizerFailure.ts": "01a75e83f96544790e2cd3aeb47ad49cd439b7000e458824c7b906a61c2ec745",
+    "successHandlerEscape.ts": "b3cead946f863949751b270525ad250c8043db9fa24fc33d18b140c50e08ff84",
+    "endHandlerEscape.ts": "b424bf64a46e13f97b79ecba3e5c4de30ecfeecf78cf89080de2353e1d0f2cdb",
+    "wrongSuccessCatch.ts": "42c7a097402f64357ee85b228c269f5427aa221d20cd058da2d36540c47df469",
+    "wrongEndCatch.ts": "d2aa16f12a44f0290b9ef350fc3d77acd5079dbba441f2bcaee668d91ea0c8e6",
+    "observe.ts": "85cb4f05897b6b04486bc7bb6799eafc8c2e351262f17bb30f8197ce106ef1be",
+    "prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+    "prelude.ts": "9afe38a9374dbfba70a6495ede3d2074029db8b5afee4beb76720dbc1aea4f55",
+    "tsconfig.json": "93d702782c1b06cc596ce069762498a312431b2dc8d63ce9977dadafbef3bdc9",
+    "manifest.json": "b4845c5b697eb172a89f68ef98f31dec1d6115bbf8a5c877e9e07addae799445"
+  },
+  "scope": "Finite exact emitted numeric callers of the Chunk/End protocol; no native Pull.Done, mixed-cause adapter, asynchronous progress or outside-runtime simulation"
+}

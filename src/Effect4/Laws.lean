@@ -279,6 +279,7 @@ import Effect4.Laws.Library.PartitionedSemaphore.Steps
 import Effect4.Laws.Library.Stream.Array
 import Effect4.Laws.Library.SynchronizedRef.Ops
 import Effect4.Laws.Library.PubSub.Steps
+import Effect4.Laws.Library.Pull.Protocol
 
 /-!
 # Effect4 proof graph

@@ -1351,6 +1351,19 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   It retains the scheduled flag when the batch becomes empty.
   The connector is `latch_registration_agrees` (`src/Effect4/Laws/Library/Latch/Registration.lean`).
   It establishes no interruption delivery, posted-flush execution, liveness or host behavior.
+- **Pull selects its protocol handler (`pull-protocol-selection`)**: The input answers an exact batch or End value, or fails with its full cause.
+  Authoring elaboration accepts all handlers, and source and value scopes have equal lengths.
+  The selected handler receives the input's resulting stores.
+  Its full exit and final stores are the result.
+  The law is `Pull.matchEffect_protocol` (`src/Effect4/Laws/Library/Pull/Protocol.lean`).
+  It uses the existing denotation and establishes no scheduler, host Done, nonempty-batch admission or whole-stream agreement.
+- **Pull propagates completion recovery (`pull-completion-recovery`)**: An input failure retains its cause and resulting stores.
+  An input success runs the answer handler with those stores.
+  A failure from that handler escapes unchanged.
+  The law requires successful input and handler authoring elaboration.
+  The law is `Pull.catchDone_meaning` (`src/Effect4/Laws/Library/Pull/Protocol.lean`).
+  Exact answer selection uses `Pull.matchAnswer_meaning` in the same file.
+  Neither law establishes host completion correspondence.
 - **A step keeps the fields it does not name (`step-frame`)**: Take an update spine of an
   input. A field that no overwrite of the step names keeps its value.
   On carriers the law has no premise on the record's names (`Step.frame`).

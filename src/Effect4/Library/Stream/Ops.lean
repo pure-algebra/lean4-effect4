@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Library.Stream.Source
+public import Effect4.Library.Pull.Ops
 public import Effect4.Library.Stream.Steps
 public import Effect4.Program.Authoring.Loops
 public import Effect4.Program.Authoring.Sugar
@@ -26,11 +27,11 @@ def drain (src : Source) (accTy : Ty) (zero : TermSrc) (h : TermSrc)
       while_ := fun c => notT (app "isSome" [app "snd" [c]])
       body := fun c =>
         bindWith (src.pull h) fun answer =>
-          selectTagWith answer "End"
-            (fun leftover => succeed (endStep (app "fst" [c]) leftover))
+          Pull.matchAnswer answer
             (fun chunk =>
-              bindWith (gain (app "fst" [c]) (app "snd" [chunk])) fun next =>
+              bindWith (gain (app "fst" [c]) chunk) fun next =>
                 succeed (chunkStep next))
+            (fun leftover => succeed (endStep (app "fst" [c]) leftover))
       step := fun _ next => next }
 
 /-- **Open, drain, close**: the stream is opened inside a scope of its own, and its close is the

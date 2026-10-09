@@ -1,0 +1,26 @@
+[
+  {
+    "id": "pull-protocol-selection",
+    "role": "compatibility",
+    "concept": "translation-simulation",
+    "status": "proved",
+    "name": "Effect4.Pull.matchEffect_protocol",
+    "axioms": [
+      "Quot.sound",
+      "propext"
+    ],
+    "restsOn": []
+  },
+  {
+    "id": "pull-completion-recovery",
+    "role": "compatibility",
+    "concept": "translation-simulation",
+    "status": "proved",
+    "name": "Effect4.Pull.catchDone_meaning",
+    "axioms": [
+      "Quot.sound",
+      "propext"
+    ],
+    "restsOn": []
+  }
+]

@@ -1,0 +1,9 @@
+Effect4.Library.Pull.Ops: 24 declarations; axiom ceiling checked
+Effect4.Laws.Library.Pull.Scope: 14 declarations; axiom ceiling checked
+Effect4.Laws.Library.Pull.Protocol: 12 declarations; axiom ceiling checked
+Effect4.Library.Stream.Ops: 4 declarations; axiom ceiling checked
+Effect4.Library.Stream.ArrayOps: 6 declarations; axiom ceiling checked
+Effect4.Laws.Library.Stream.Ops: 16 declarations; axiom ceiling checked
+Test.Program.Pull: 52 declarations; axiom ceiling checked
+Test.Program.StreamArray: 33 declarations; axiom ceiling checked
+core/law import separation checked
