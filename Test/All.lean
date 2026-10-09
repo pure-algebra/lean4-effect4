@@ -315,6 +315,11 @@ import Test.Dogfood.Scenario.Todo
 import Test.Dogfood.Scenario.TodoPaged
 import Test.Program.ScopedOpContract
 import Test.Program.SliceLattice
+import Test.Program.StepCallback
+import Test.Program.RefModel
+import Test.Program.RefAgreement
+import Test.Program.RefPrograms
+import Test.Program.RefFaces
 
 /-!
 # Effect4 test battery

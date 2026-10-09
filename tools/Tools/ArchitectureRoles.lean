@@ -197,7 +197,9 @@ def areas : List Area := [
   ⟨"docs/research", .docs, 0, "docs/research", "history, not authority, and not walked (two gigabytes of evidence trees); the notes that matter are force-added", false, false⟩,
   ⟨"docs/design", .docs, 0, "docs/design", "the design language notes", false, true⟩,
   -- pinned references
-  ⟨"vendor/effect-4.0.0-rc.112", .vendor, 0, "effect rc.112", "the behavioral reference every citation points into", false, false⟩
+  ⟨"vendor/effect-4.0.0-rc.112", .vendor, 0, "effect rc.112", "the behavioral reference every citation points into", false, false⟩,
+  ⟨"src/Effect4/Library/Ref", .runtime, 4, "Library/Ref", "the independent Ref model and native operations with typed step callbacks", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/Ref", .laws, 5, "Laws/Library/Ref", "the Ref model agreement and typed callback connectors", true, true⟩
 ]
 
 /-- Lean files that are not modules: fixtures a gate reads as text, and the fragments the
@@ -274,7 +276,8 @@ def exposures : List (String × Exposure) := [
   ("src/Effect4/Laws", .proof),
   ("src/OCaml5", .tool),
   ("tools", .tool),
-  ("Test", .test)
+  ("Test", .test),
+  ("src/Effect4/Library/Ref", .library)
 ]
 
 /-- The exposure of a path: its longest declared prefix's, if any. -/

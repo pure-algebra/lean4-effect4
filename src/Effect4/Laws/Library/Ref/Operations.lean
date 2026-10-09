@@ -29,7 +29,7 @@ def resultStores {A B : Type} (I : Image A) (r : Model.Result A B) (q : RefKey)
     (stores : Stores) : Stores :=
   { stores with refs := refWriteBack stores.refs q (r.write.map I.toVal) }
 
-/-- Helper of ref-steps-agree; the thirteen public agreement laws consume this connector. -/
+/-- Helper of ref-steps-agree; the nonallocating agreement laws consume this connector. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem kernel_agrees {A B : Type} (I : Image A) (reply : B → Val) (a : A)
     (r : Model.Result A B) {stores : Stores} {q : RefKey} {op : SyncOp} {kernel : RefKernel}

@@ -13,6 +13,7 @@ public import Effect4.Library.Latch.Steps
 public import Effect4.Library.Latch.Registration
 public import Effect4.Library.Stream.Ops
 public import Effect4.Program.Stream
+public import Effect4.Library.Ref
 
 /-!
 # Effect4.Library — the entry module of the prebuilt composed modules (decisions row 332)

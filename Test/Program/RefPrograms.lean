@@ -1,8 +1,5 @@
 import Effect4.Author
-import Effect4.Codegen.Authoring.Forms
 import Effect4.Run
-import Effect4.Step.Callback
-import Effect4.Step.Elab.Inputs
 
 /-! Finite callers of the thirteen effectful Ref rows on latest's pure callback profile.
 Each observation contains the operation's reply and the cell read afterward.

@@ -26,6 +26,7 @@ import Effect4.Laws.Step.Store
 import Effect4.Laws.Step.Table
 import Effect4.Laws.Step.Tuples
 import Effect4.Laws.Step.Waiting
+import Effect4.Laws.Step.Callback
 
 /-!
 # Effect4.Laws.Author — the entry module of the laws an author reads (decisions row 332)
