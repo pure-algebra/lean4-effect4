@@ -86,7 +86,8 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
 | `tools/Tools/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
-| `tools/Tools/Code/TypeScript.lean` | printed TypeScript as a document, case by case with the pinned renderer |
+| `tools/Tools/Code/TsFold.lean` | the fold of TypeScript's syntax: its algebra and uniqueness (generated, group `TsFold`) |
+| `tools/Tools/Code/TypeScript.lean` | printed TypeScript as two algebras of its syntax: the house and the readable layout |
 | `tools/Tools/Code/Module.lean` | a generated module: its exact imports, its header, its checks; the code plane |
 | `tools/Drivers/Emit.lean` | the driver: the generated folder |
 | `tools/Drivers/View.lean` | the driver: frames to `.draw`, `.svg` and text |
@@ -111,9 +112,11 @@ Proved in `tools/Tools/View/`, each resting on `[propext, Quot.sound]` or less:
 - `lines_at`: a program's lines at any address and depth are its lines at the root, moved there.
   So a splice redraws its own subtree alone.
 - `undo_layout`: undo the breaks a layout took, and the flat print comes back, at every width.
-- `Ts.flat_expr`: the flat print of a printed expression is the pinned house print. It rests on
-  `Classical.choice` through the pinned renderer it is stated about (`TypeScript.Render.expr`),
-  whose character folds the axiom gate exempts by name.
+- `render_eq_expr` (`tools/Tools/Code/TypeScript.lean`): the pinned renderer is the fold of the
+  house's algebra of TypeScript's syntax (`renderAlg`).
+- `flat_fold_expr`: the readable layout's fold, laid flat, is the house's. The flat print is a map
+  of algebras (`flatHom`), one square for each constructor. These rest on `Classical.choice`
+  through the pinned renderer's string functions, which the axiom gate exempts by name.
 
 The layout is a tool's (decisions row 334): these laws are statements of the tool, not registry
 claims.

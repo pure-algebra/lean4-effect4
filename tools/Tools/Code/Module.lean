@@ -17,7 +17,7 @@ reads as it is. The module is `Api.emitModule`'s declarations with three additio
 - **a header**: the program's content address (SHA-256 of its canonical bytes, `Api.bytesOf`), its
   type, and the checks below;
 - **its layout**: Effect's width, 120 columns (`Tools.Code.Ts.decl`). Undone, a layout is the
-  house print (`undo_layout`, `Ts.flat_expr`), which the checks read.
+  house print (`undo_layout`, `Ts.flat_fold_expr`), which the checks read.
 
 The checks are the core's, run on the module as written: the reading boundary admits it
 (`Effect4.Codegen.admitModule`: bindings, read-back to the program, typing, envelope), and

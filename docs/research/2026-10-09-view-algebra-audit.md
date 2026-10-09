@@ -45,7 +45,7 @@ Each row is one operation of the view plane. *Today* says how its code reads the
 | the build's fillings | `Build.filling` | `Eff` | a search over every address for the nearest children | **one layer**: `view_eff` with each child replaced by its hole |
 | the build's order | `Build.requests` | `Eff` | the core's address list, filtered | `foldMapAt_eff` into the free monoid of layers, in the fold's order |
 | the splice check | `Motion.keptUnchanged` | two pages | a finite check in the driver | a consequence of the lines' fold: a subtree's lines depend on the subtree alone |
-| the code plane | `Tools.Code.Ts.expr` | the TypeScript syntax | a hand mutual traversal, mirroring the pinned printer | the fold of a TypeScript algebra, which lean4-typescript does not have yet |
+| the code plane | `Tools.Code.Ts.docAlg` | the TypeScript syntax | **fold** since slice F: `cata_expr docAlg`; before, a hand mutual traversal | the same |
 | the code's layout | `Doc.go`, `Doc.flat` | `Doc` | structural folds of the document | the same; `Doc.flat` is a fold, `undo` a map of monoids (`undo_append`) |
 | the drawing | `Page.pageCalls`, `Laid.calls` | the scene | lists of calls joined by `++` | the free monoid of calls; the drawing of a whole is the join of its parts' drawings |
 | the lowering | `Picture.lowerAll` | `List (Keyed Call)` | `flatMap` | a map of monoids (`lowerAll_append`) that commutes with the move (`lowerAll_move`) |
@@ -203,12 +203,12 @@ The placement of both, as AGENTS.md asks before any proof:
 
 | Slice | What | Consumer |
 | --- | --- | --- |
-| A | `cata_prod` and `lines_at` (this note, section 5) | the line channels; the splice |
+| A | **landed**: `cata_prod` and `lines_at` (this note, section 5) | the line channels; the splice |
 | B | `Build.filling` as one layer through `view_eff`; the build order by `foldMapAt_eff` | the build frames; a law that the build gives back the program |
 | C | the splice law: `lines_at` with the core's `replaceAt`, so the driver's check becomes a reader of a law | the motion of an edit |
 | D | the program's graph as a fold into algebraic graphs, with ranks and places as folds | a new view, after the rulings of section 7 |
 | E | the depth of the Z-plane as an inherited attribute, in the product with the lines | the Z-plane, after its ruling |
-| F | upstream: a generated algebra for lean4-typescript's syntax; the printer and the layout as two of its algebras | replaces `Ts.flat_expr`'s pairwise proof |
+| F | **landed in tools**: the generated algebra of TypeScript's syntax (`TsFold`); the house and the layout as two of its algebras; `flat_fold_expr` replaces the pairwise `Ts.flat_expr`. Upstream to lean4-typescript is next | the code plane; readable modules |
 | G | the fork edges as a fold of the journal into graphs | the run's graph, drawn as forks and waits |
 
 ## 7. Rulings the owner must make

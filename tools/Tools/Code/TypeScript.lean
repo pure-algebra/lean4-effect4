@@ -1,15 +1,27 @@
 import Tools.Code.Doc
+import Tools.Code.TsFold
 import TypeScript.Render
 
 /-!
-# Printed TypeScript as a document
+# Printed TypeScript: the house and the layout, two algebras of one syntax
 
 The readable form of the printer's TypeScript (`Effect4.Codegen`, the pinned `TypeScript.Syntax`).
-Each function here follows its namesake in `TypeScript.Render` case by case, so the flat print of
-a document is the house print (`flat_expr`), and a layout only breaks lines. A call's arguments,
-an inline object's fields and an inline array's items form a group: flat as the house writes it,
-or one item a line. A block (a generator's body, a loop's, a branch's) is the house's block. A
-member the house writes inline stays one text: what the house decides is never undone.
+TypeScript's syntax (`Expr`, `Stmt`, `ObjectEntry`) is a free object whose fold is generated
+(`Tools/Code/TsFold.lean`; slice F of `docs/research/2026-10-09-view-algebra-audit.md`). Two
+printers are algebras of it:
+
+- **the house** (`renderAlg`): the pinned renderer's text at each depth. The pinned renderer is
+  its fold (`render_eq_expr`, `render_eq_stmt`), by uniqueness (`hom_eq_cata_expr`);
+- **the layout** (`docAlg`): a document at each depth (`Tools.Code.Doc`). A call's arguments, an
+  inline object's fields and an inline array's items form a group: flat as the house writes it,
+  or one item a line. A block is the house's block. Where the house chooses between inline and
+  multiline, the layout asks the same question of its children's flat prints.
+
+They agree because their algebras do. The flat print is a map of algebras from the layout to the
+house (`flatHom`): one square for each constructor, which assumes nothing of the children. So the
+layout's fold, laid flat, is the house's fold (`flat_fold_expr`, `flat_fold_stmt`), and a laid
+out file differs from the checked bytes only in whitespace at breaks (`undo_layout`). No proof
+walks a whole expression: the fold does the walking, once, for every algebra.
 
 The width of Effect's own source is 120 columns (`vendor/effect-4.0.1/src/internal/effect.ts`:
 one line of 6,978 is longer), and generated files use it (`width`).
@@ -45,141 +57,6 @@ def braces (head : String) (body : Doc) : Doc := .text head ++ .block 2 body ++ 
 def labelText : Option String → String
   | some l => l ++ ": "
   | none => ""
-
-mutual
-
-/-- An expression at the house's depth `d`. -/
-def expr (d : Nat) : Expr → Doc
-  | .ident name => .text name
-  | .str value => .text (Render.quoted house value)
-  | .int value => .text (toString value)
-  | .float64Bits bits => .text (Render.float64Bits bits)
-  | .bool value => .text (if value then "true" else "false")
-  | .jsNull => .text "null"
-  | .call fn args => expr d fn ++ delimited "(" ")" "" (exprs d args)
-  | .object fields =>
-    if fields.isEmpty then .text "{}"
-    else
-      let rendered := Render.objectFields house (d + 1) fields
-      if rendered.all (fun field => !hasNewline field.2) then
-        delimited "{" "}" " " (rendered.map fun p => .text (p.1 ++ ": " ++ p.2))
-      else
-        multiline "{" "}" ((objectFields (d + 1) fields).map fun p => .text (p.1 ++ ": ") ++ p.2 ++ .text ",")
-  | .objectML fields =>
-    if fields.isEmpty then .text "{}"
-    else
-      multiline "{" "}" ((objectFields (d + 1) fields).map fun p => .text (p.1 ++ ": ") ++ p.2 ++ .text ",")
-  | .objectQuoted fields =>
-    if fields.isEmpty then .text "{}"
-    else
-      let rendered := Render.objectFields house (d + 1) fields
-      if rendered.all (fun field => !hasNewline field.2) then
-        delimited "{" "}" " " (rendered.map fun p => .text (Render.quoted house p.1 ++ ": " ++ p.2))
-      else
-        multiline "{" "}" ((objectFields (d + 1) fields).map fun p =>
-          .text (Render.quoted house p.1 ++ ": ") ++ p.2 ++ .text ",")
-  | .objectQuotedML fields =>
-    if fields.isEmpty then .text "{}"
-    else
-      multiline "{" "}" ((objectFields (d + 1) fields).map fun p =>
-        .text (Render.quoted house p.1 ++ ": ") ++ p.2 ++ .text ",")
-  | .objectFromEntries fields =>
-    .text "Object.fromEntries(" ++
-      delimited "[" "]" "" ((objectFields d fields).map fun p =>
-        .text ("[" ++ Render.quoted house p.1 ++ ", ") ++ p.2 ++ .text "]") ++
-      .text ")"
-  | .arr items =>
-    if items.isEmpty then .text "[]"
-    else
-      let rendered := Render.exprs house (d + 1) items
-      if rendered.all (fun item => !hasNewline item) then
-        delimited "[" "]" "" (rendered.map .text)
-      else
-        multiline "[" "]" ((exprs (d + 1) items).map fun item => item ++ .text ",")
-  | .arrow returnType body =>
-    .text ("()" ++ Render.annotation house returnType ++ " => ") ++ expr d body
-  | .generic fn typeArgs =>
-    expr d fn ++ .text ("<" ++ String.intercalate ", " (Render.types house typeArgs) ++ ">")
-  | .lambda params body returnType =>
-    .text ("(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
-      Render.annotation house returnType ++ " => ") ++ expr d body
-  | .method target name args =>
-    expr d target ++ .text ("." ++ name) ++ delimited "(" ")" "" (exprs d args)
-  | .member target name => expr d target ++ .text ("." ++ name)
-  | .generator body => braces "function* () {" (stmts (d + 1) body)
-  | .cond test thenBranch elseBranch =>
-    expr d test ++ .text " ? " ++ expr d thenBranch ++ .text " : " ++ expr d elseBranch
-  | .arrowBlock params body returnType =>
-    braces ("(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
-      Render.annotation house returnType ++ " => {") (stmts (d + 1) body)
-  | .index target key => expr d target ++ .text "[" ++ expr d key ++ .text "]"
-  | .new callee args => .text "new " ++ expr d callee ++ delimited "(" ")" "" (exprs d args)
-  | .objectWith keys entries =>
-    if entries.isEmpty then .text "{}"
-    else
-      let rendered := Render.objectEntries house keys (d + 1) entries
-      if rendered.all (fun entry => !hasNewline entry.2) then
-        delimited "{" "}" " " (rendered.map fun p => .text (p.1 ++ p.2))
-      else
-        multiline "{" "}" ((objectEntries keys (d + 1) entries).map fun p => .text p.1 ++ p.2 ++ .text ",")
-
-/-- Expressions, each at the depth `d`. -/
-def exprs (d : Nat) : List Expr → List Doc
-  | [] => []
-  | item :: rest => expr d item :: exprs d rest
-
-/-- An object's fields, each value at the depth `d`. -/
-def objectFields (d : Nat) : List (String × Expr) → List (String × Doc)
-  | [] => []
-  | (name, value) :: rest => (name, expr d value) :: objectFields d rest
-
-/-- An `objectWith` literal's entries: each head as the house spells it, and its value. -/
-def objectEntries (keys : KeyForm) (d : Nat) : List ObjectEntry → List (String × Doc)
-  | [] => []
-  | .property name value :: rest =>
-    (Render.propertyName house keys name ++ ": ", expr d value) :: objectEntries keys d rest
-  | .spread value :: rest => ("...", expr d value) :: objectEntries keys d rest
-
-/-- A statement, without the indent the house writes before it. -/
-def stmt (d : Nat) : Stmt → Doc
-  | .constYield name value declaredType =>
-    .text ("const " ++ name ++ Render.annotation house declaredType ++ " = yield* ") ++ expr d value
-  | .ret value => .text "return " ++ expr d value
-  | .yieldDiscard value => .text "yield* " ++ expr d value
-  | .letDefinite name declaredType => .text ("let " ++ name ++ "!: " ++ Render.type house declaredType)
-  | .letInit name value declaredType =>
-    .text ("let " ++ name ++ Render.annotation house declaredType ++ " = ") ++ expr d value
-  | .assign name value => .text (name ++ " = ") ++ expr d value
-  | .whileTrue label body => braces (labelText label ++ "while (true) {") (stmts (d + 1) body)
-  | .switch scrutinee cases =>
-    .text "switch (" ++ expr d scrutinee ++ braces ") {" (switchCases (d + 1) cases)
-  | .ifElse condition thenBranch elseBranch =>
-    .text "if (" ++ expr d condition ++ braces ") {" (stmts (d + 1) thenBranch) ++
-      (if elseBranch.isEmpty then .nil else braces " else {" (stmts (d + 1) elseBranch))
-  | .labelled label body => braces (label ++ ": {") (stmts (d + 1) body)
-  | .scopedGen name body onExit =>
-    braces ("const " ++ name ++ " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {")
-      (stmts (d + 1) body) ++ .text "), " ++ expr d onExit ++ .text "))"
-  | .scopedGenMasked name body onExit =>
-    braces ("const " ++ name ++
-      " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {")
-      (stmts (d + 1) body) ++ .text "), " ++ expr d onExit ++ .text ")))"
-  | .breakTo label => .text ("break" ++ (match label with | some l => " " ++ l | none => ""))
-  | .continueTo label => .text ("continue" ++ (match label with | some l => " " ++ l | none => ""))
-  | .exprStmt value => expr d value
-
-/-- Statements, each on its own line. -/
-def stmts (d : Nat) : List Stmt → Doc
-  | [] => .nil
-  | first :: rest => .hard ++ stmt d first ++ stmts d rest
-
-/-- A switch's cases, each on its own line with its block. -/
-def switchCases (d : Nat) : List (Nat × List Stmt) → Doc
-  | [] => .nil
-  | (index, body) :: rest =>
-    .hard ++ braces ("case " ++ toString index ++ ": {") (stmts (d + 1) body) ++ switchCases d rest
-
-end
 
 /-! ## The house's clauses
 
@@ -294,7 +171,7 @@ theorem house_objectWith (keys : KeyForm) (entries : List ObjectEntry) :
 
 end House
 
-/-! ## The flat print is the house print -/
+/-! ## Laying a literal flat -/
 
 /-- The lines of a multiline literal, laid flat at the indent `c`, against the house's lines joined
 by newlines: each line is the indent and its item's flat print. -/
@@ -337,336 +214,706 @@ theorem flat_inline {β : Type} (b : Nat) (op cl pad : String) (xs : List β) (T
 break. -/
 theorem nl_split (y x : String) (h : x ++ "\n" = y := by rfl) : y = x ++ "\n" := h.symm
 
-mutual
+/-! ## The house as an algebra -/
 
-/-- **The flat print of an expression is the house print**, at every depth. -/
-theorem flat_expr (d : Nat) : ∀ e : Expr, (expr d e).flat (2 * d) = Render.expr house d e
-  | .ident _ => rfl
-  | .str _ => rfl
-  | .int _ => rfl
-  | .float64Bits _ => rfl
-  | .bool _ => rfl
-  | .jsNull => rfl
-  | .call fn args => by
-    have ih := flat_exprs d args
-    simp only [expr, house_call, Doc.append_def, Doc.flat, flat_expr d fn, String.append_assoc]
-    rw [← ih]
-    generalize exprs d args = xs
-    cases xs with
-    | nil => simp only [flat_delimited_nil, List.map_nil, String.intercalate_nil, String.empty_append]
-    | cons x xs =>
-      rw [flat_delimited _ _ _ _ _ (List.cons_ne_nil x xs)]
-      simp only [String.append_empty, String.append_assoc]
-  | .object fields => by
-    have ihf := flat_objectFields (d + 1) fields
-    simp only [expr, house_object, houseObject]
-    cases fields with
-    | nil => rfl
-    | cons f fs =>
-      have hx : objectFields (d + 1) (f :: fs) ≠ [] := by
-        obtain ⟨n, v⟩ := f
-        exact List.cons_ne_nil _ _
-      have hr : Render.objectFields house (d + 1) (f :: fs) ≠ [] := by
-        rw [← ihf]; simpa only [ne_eq, List.map_eq_nil_iff] using hx
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
-      by_cases hn : ((Render.objectFields house (d + 1) (f :: fs)).all fun field => !hasNewline field.2) = true
-      · simp only [hn, ↓reduceIte]
-        rw [flat_inline _ _ _ _ _ _ hr]
-        simp only [String.append_assoc]
-        rfl
-      · simp only [hn, Bool.false_eq_true, ↓reduceIte]
-        rw [← ihf, flat_multiline d "{" "}" _ _ (fun p => (p.1, p.2.flat (2 * (d + 1))))
-          (fun q => Render.indentOf house (d + 1) ++ q.1 ++ ": " ++ q.2 ++ ",") hx
-          (fun a => by simp only [Doc.append_def, Doc.flat, String.append_assoc]; rfl),
-          nl_split "{\n" "{"]
-        simp only [String.append_assoc]
-  | .objectML fields => by
-    have ihf := flat_objectFields (d + 1) fields
-    simp only [expr, house_objectML, houseObjectML]
-    cases fields with
-    | nil => rfl
-    | cons f fs =>
-      have hx : objectFields (d + 1) (f :: fs) ≠ [] := by
-        obtain ⟨n, v⟩ := f
-        exact List.cons_ne_nil _ _
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
-      rw [← ihf, flat_multiline d "{" "}" _ _ (fun p => (p.1, p.2.flat (2 * (d + 1))))
-        (fun q => Render.indentOf house (d + 1) ++ q.1 ++ ": " ++ q.2 ++ ",") hx
-        (fun a => by simp only [Doc.append_def, Doc.flat, String.append_assoc]; rfl),
-        nl_split "{\n" "{"]
-      simp only [String.append_assoc]
-  | .objectQuoted fields => by
-    have ihf := flat_objectFields (d + 1) fields
-    simp only [expr, house_objectQuoted, houseObject]
-    cases fields with
-    | nil => rfl
-    | cons f fs =>
-      have hx : objectFields (d + 1) (f :: fs) ≠ [] := by
-        obtain ⟨n, v⟩ := f
-        exact List.cons_ne_nil _ _
-      have hr : Render.objectFields house (d + 1) (f :: fs) ≠ [] := by
-        rw [← ihf]; simpa only [ne_eq, List.map_eq_nil_iff] using hx
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
-      by_cases hn : ((Render.objectFields house (d + 1) (f :: fs)).all fun field => !hasNewline field.2) = true
-      · simp only [hn, ↓reduceIte]
-        rw [flat_inline _ _ _ _ _ _ hr]
-        simp only [String.append_assoc]
-        rfl
-      · simp only [hn, Bool.false_eq_true, ↓reduceIte]
-        rw [← ihf, flat_multiline d "{" "}" _ _ (fun p => (p.1, p.2.flat (2 * (d + 1))))
-          (fun q => Render.indentOf house (d + 1) ++ Render.quoted house q.1 ++ ": " ++ q.2 ++ ",") hx
-          (fun a => by simp only [Doc.append_def, Doc.flat, String.append_assoc]; rfl),
-          nl_split "{\n" "{"]
-        simp only [String.append_assoc]
-  | .objectQuotedML fields => by
-    have ihf := flat_objectFields (d + 1) fields
-    simp only [expr, house_objectQuotedML, houseObjectML]
-    cases fields with
-    | nil => rfl
-    | cons f fs =>
-      have hx : objectFields (d + 1) (f :: fs) ≠ [] := by
-        obtain ⟨n, v⟩ := f
-        exact List.cons_ne_nil _ _
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
-      rw [← ihf, flat_multiline d "{" "}" _ _ (fun p => (p.1, p.2.flat (2 * (d + 1))))
-        (fun q => Render.indentOf house (d + 1) ++ Render.quoted house q.1 ++ ": " ++ q.2 ++ ",") hx
-        (fun a => by simp only [Doc.append_def, Doc.flat, String.append_assoc]; rfl),
-        nl_split "{\n" "{"]
-      simp only [String.append_assoc]
-  | .objectFromEntries fields => by
-    have ihf := flat_objectFields d fields
-    simp only [expr, house_objectFromEntries, Doc.append_def, Doc.flat]
-    rw [← ihf]
-    generalize objectFields d fields = xs
-    cases xs with
-    | nil => rfl
-    | cons x xs =>
-      rw [flat_delimited _ _ _ _ _ (mt List.map_eq_nil_iff.mp (List.cons_ne_nil x xs)), List.map_map,
-        List.map_map, show ("Object.fromEntries([" : String) = "Object.fromEntries(" ++ "[" from rfl,
-        show ("])" : String) = "]" ++ ")" from rfl]
-      simp only [Function.comp_def, Doc.flat, String.append_assoc, String.empty_append]
-  | .arr items => by
-    have ihx := flat_exprs (d + 1) items
-    simp only [expr, house_arr]
-    cases items with
-    | nil => rfl
-    | cons i is =>
-      have hx : exprs (d + 1) (i :: is) ≠ [] := List.cons_ne_nil _ _
-      have hr : Render.exprs house (d + 1) (i :: is) ≠ [] := List.cons_ne_nil _ _
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
-      by_cases hn : ((Render.exprs house (d + 1) (i :: is)).all fun item => !hasNewline item) = true
-      · simp only [hn, ↓reduceIte]
-        rw [flat_inline _ _ _ _ _ _ hr]
-        simp only [List.map_id', String.append_empty, String.append_assoc]
-      · simp only [hn, Bool.false_eq_true, ↓reduceIte]
-        rw [← ihx, flat_multiline d "[" "]" _ _ (·.flat (2 * (d + 1)))
-          (fun item => Render.indentOf house (d + 1) ++ item ++ ",") hx
-          (fun a => by simp only [Doc.append_def, Doc.flat, String.append_assoc]; rfl),
-          nl_split "[\n" "["]
-        simp only [String.append_assoc]
-  | .arrow returnType body => by
-    simp only [expr, house_arrow, Doc.append_def, Doc.flat, flat_expr d body, String.append_assoc]
-  | .generic fn typeArgs => by
-    simp only [expr, house_generic, Doc.append_def, Doc.flat, flat_expr d fn, String.append_assoc]
-  | .lambda params body returnType => by
-    simp only [expr, house_lambda, Doc.append_def, Doc.flat, flat_expr d body, String.append_assoc]
-  | .method target name args => by
-    have ih := flat_exprs d args
-    simp only [expr, house_method, Doc.append_def, Doc.flat, flat_expr d target, String.append_assoc]
-    rw [← ih]
-    generalize exprs d args = xs
-    cases xs with
-    | nil => simp only [flat_delimited_nil, List.map_nil, String.intercalate_nil, String.empty_append]
-    | cons x xs =>
-      rw [flat_delimited _ _ _ _ _ (List.cons_ne_nil x xs)]
-      simp only [String.append_empty, String.append_assoc]
-  | .member target name => by
-    simp only [expr, house_member, Doc.append_def, Doc.flat, flat_expr d target, String.append_assoc]
-  | .generator body => by
-    have ih := flat_stmts (d + 1) body (Render.indentOf house d ++ "}")
-    simp only [expr, house_generator, braces, Doc.append_def, Doc.flat]
-    rw [nl_split "function* () {\n" "function* () {"]
-    simp only [String.append_assoc]
-    rw [ih]
-    rfl
-  | .cond test thenBranch elseBranch => by
-    simp only [expr, house_cond, Doc.append_def, Doc.flat, flat_expr d test, flat_expr d thenBranch,
-      flat_expr d elseBranch, String.append_assoc]
-  | .arrowBlock params body returnType => by
-    have ih := flat_stmts (d + 1) body (Render.indentOf house d ++ "}")
-    simp only [expr, house_arrowBlock, braces, Doc.append_def, Doc.flat]
-    rw [nl_split " => {\n" " => {"]
-    simp only [String.append_assoc]
-    rw [ih]
-    rfl
-  | .index target key => by
-    simp only [expr, house_index, Doc.append_def, Doc.flat, flat_expr d target, flat_expr d key,
-      String.append_assoc]
-  | .new callee args => by
-    have ih := flat_exprs d args
-    simp only [expr, house_new, Doc.append_def, Doc.flat, flat_expr d callee, String.append_assoc]
-    rw [← ih]
-    generalize exprs d args = xs
-    cases xs with
-    | nil => simp only [flat_delimited_nil, List.map_nil, String.intercalate_nil, String.empty_append]
-    | cons x xs =>
-      rw [flat_delimited _ _ _ _ _ (List.cons_ne_nil x xs)]
-      simp only [String.append_empty, String.append_assoc]
-  | .objectWith keys entries => by
-    have ihe := flat_objectEntries keys (d + 1) entries
-    simp only [expr, house_objectWith]
-    cases entries with
-    | nil => rfl
-    | cons e es =>
-      have hx : objectEntries keys (d + 1) (e :: es) ≠ [] := by
-        cases e <;> exact List.cons_ne_nil _ _
-      have hr : Render.objectEntries house keys (d + 1) (e :: es) ≠ [] := by
-        rw [← ihe]; simpa only [ne_eq, List.map_eq_nil_iff] using hx
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
-      by_cases hn : ((Render.objectEntries house keys (d + 1) (e :: es)).all fun entry => !hasNewline entry.2) = true
-      · simp only [hn, ↓reduceIte]
-        rw [flat_inline _ _ _ _ _ _ hr]
-        simp only [String.append_assoc]
-        rfl
-      · simp only [hn, Bool.false_eq_true, ↓reduceIte]
-        rw [← ihe, flat_multiline d "{" "}" _ _ (fun p => (p.1, p.2.flat (2 * (d + 1))))
-          (fun q => Render.indentOf house (d + 1) ++ q.1 ++ q.2 ++ ",") hx
-          (fun a => by simp only [Doc.append_def, Doc.flat, String.append_assoc]; rfl),
-          nl_split "{\n" "{"]
-        simp only [String.append_assoc]
+/-- What the house writes for each sort: an expression's text and a statement's text at a depth;
+an object entry's head and value at a key form and a depth. -/
+abbrev Text : ExprFam → Type
+  | .expr => Nat → String
+  | .stmt => Nat → String
+  | .objectentry => KeyForm → Nat → String × String
 
-/-- Expressions laid flat are the house's. -/
-theorem flat_exprs (d : Nat) : ∀ es : List Expr,
-    (exprs d es).map (·.flat (2 * d)) = Render.exprs house d es
+/-- Statements' texts at a depth, one a line, each followed by a newline. -/
+def stmtsText : List (Nat → String) → Nat → String
+  | [], _ => ""
+  | s :: rest, d => s d ++ "\n" ++ stmtsText rest d
+
+/-- A switch's cases' texts at a depth: each case's head, its block, and its brace. -/
+def casesText : List (Nat × List (Nat → String)) → Nat → String
+  | [], _ => ""
+  | (i, body) :: rest, d =>
+    Render.indentOf house d ++ "case " ++ toString i ++ ": {\n" ++ stmtsText body (d + 1) ++
+      Render.indentOf house d ++ "}\n" ++ casesText rest d
+
+/-- The house's object literal over its rendered fields: inline when no field holds a newline,
+else one field a line; each field's name written by `name`. -/
+def objectText (name : String → String) (rendered : List (String × String)) (d : Nat) : String :=
+  if rendered.isEmpty then "{}"
+  else if rendered.all (fun field => !hasNewline field.2) then
+    "{ " ++ String.intercalate ", " (rendered.map fun (n, value) => name n ++ ": " ++ value) ++ " }"
+  else
+    "{\n" ++ String.intercalate "\n" (rendered.map fun (n, value) =>
+      Render.indentOf house (d + 1) ++ name n ++ ": " ++ value ++ ",") ++ "\n" ++
+      Render.indentOf house d ++ "}"
+
+/-- The house's multiline object literal over its rendered fields. -/
+def objectMLText (name : String → String) (rendered : List (String × String)) (d : Nat) : String :=
+  if rendered.isEmpty then "{}"
+  else
+    "{\n" ++ String.intercalate "\n" (rendered.map fun (n, value) =>
+      Render.indentOf house (d + 1) ++ name n ++ ": " ++ value ++ ",") ++ "\n" ++
+      Render.indentOf house d ++ "}"
+
+/-- The fields of an object, each value at the depth `d`. -/
+def at_ (fields : List (String × (Nat → String))) (d : Nat) : List (String × String) :=
+  fields.map fun p => (p.1, p.2 d)
+
+/-- **The house**, an algebra of the syntax: each field is a clause of `TypeScript.Render`, written
+over its children's texts. -/
+def renderAlg : ExprAlgebra Text where
+  expr_ident name := fun _ => name
+  expr_str value := fun _ => Render.quoted house value
+  expr_int value := fun _ => toString value
+  expr_float64Bits bits := fun _ => Render.float64Bits bits
+  expr_bool value := fun _ => if value then "true" else "false"
+  expr_jsNull := fun _ => "null"
+  expr_call fn args := fun d => fn d ++ "(" ++ String.intercalate ", " (args.map (· d)) ++ ")"
+  expr_object fields := fun d => objectText (fun n => n) (at_ fields (d + 1)) d
+  expr_objectML fields := fun d => objectMLText (fun n => n) (at_ fields (d + 1)) d
+  expr_objectQuoted fields := fun d => objectText (Render.quoted house) (at_ fields (d + 1)) d
+  expr_objectQuotedML fields := fun d => objectMLText (Render.quoted house) (at_ fields (d + 1)) d
+  expr_objectFromEntries fields := fun d =>
+    "Object.fromEntries([" ++ String.intercalate ", " ((at_ fields d).map fun (name, value) =>
+      "[" ++ Render.quoted house name ++ ", " ++ value ++ "]") ++ "])"
+  expr_arr items := fun d =>
+    if items.isEmpty then "[]"
+    else
+      let rendered := items.map (· (d + 1))
+      if rendered.all (fun item => !hasNewline item) then "[" ++ String.intercalate ", " rendered ++ "]"
+      else
+        "[\n" ++ String.intercalate "\n" (rendered.map fun item =>
+          Render.indentOf house (d + 1) ++ item ++ ",") ++ "\n" ++ Render.indentOf house d ++ "]"
+  expr_arrow returnType body := fun d => "()" ++ Render.annotation house returnType ++ " => " ++ body d
+  expr_generic fn typeArgs := fun d =>
+    fn d ++ "<" ++ String.intercalate ", " (Render.types house typeArgs) ++ ">"
+  expr_lambda params body returnType := fun d =>
+    "(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
+      Render.annotation house returnType ++ " => " ++ body d
+  expr_method target name args := fun d =>
+    target d ++ "." ++ name ++ "(" ++ String.intercalate ", " (args.map (· d)) ++ ")"
+  expr_member target name := fun d => target d ++ "." ++ name
+  expr_generator body := fun d =>
+    "function* () {\n" ++ stmtsText body (d + 1) ++ Render.indentOf house d ++ "}"
+  expr_cond test thenBranch elseBranch := fun d =>
+    test d ++ " ? " ++ thenBranch d ++ " : " ++ elseBranch d
+  expr_arrowBlock params body returnType := fun d =>
+    "(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
+      Render.annotation house returnType ++ " => {\n" ++ stmtsText body (d + 1) ++
+      Render.indentOf house d ++ "}"
+  expr_index target key := fun d => target d ++ "[" ++ key d ++ "]"
+  expr_new callee args := fun d =>
+    "new " ++ callee d ++ "(" ++ String.intercalate ", " (args.map (· d)) ++ ")"
+  expr_objectWith keys entries := fun d =>
+    if entries.isEmpty then "{}"
+    else
+      let rendered := entries.map (· keys (d + 1))
+      if rendered.all (fun entry => !hasNewline entry.2) then
+        "{ " ++ String.intercalate ", " (rendered.map fun (head, value) => head ++ value) ++ " }"
+      else
+        "{\n" ++ String.intercalate "\n" (rendered.map fun (head, value) =>
+          Render.indentOf house (d + 1) ++ head ++ value ++ ",") ++ "\n" ++
+          Render.indentOf house d ++ "}"
+  stmt_constYield name value declaredType := fun d =>
+    Render.indentOf house d ++ "const " ++ name ++ Render.annotation house declaredType ++
+      " = yield* " ++ value d
+  stmt_ret value := fun d => Render.indentOf house d ++ "return " ++ value d
+  stmt_yieldDiscard value := fun d => Render.indentOf house d ++ "yield* " ++ value d
+  stmt_letDefinite name declaredType := fun d =>
+    Render.indentOf house d ++ "let " ++ name ++ "!: " ++ Render.type house declaredType
+  stmt_letInit name value declaredType := fun d =>
+    Render.indentOf house d ++ "let " ++ name ++ Render.annotation house declaredType ++ " = " ++ value d
+  stmt_assign name value := fun d => Render.indentOf house d ++ name ++ " = " ++ value d
+  stmt_whileTrue label body := fun d =>
+    Render.indentOf house d ++ (match label with | some l => l ++ ": " | none => "") ++
+      "while (true) {\n" ++ stmtsText body (d + 1) ++ Render.indentOf house d ++ "}"
+  stmt_switch scrutinee cases := fun d =>
+    Render.indentOf house d ++ "switch (" ++ scrutinee d ++ ") {\n" ++ casesText cases (d + 1) ++
+      Render.indentOf house d ++ "}"
+  stmt_ifElse condition thenBranch elseBranch := fun d =>
+    Render.indentOf house d ++ "if (" ++ condition d ++ ") {\n" ++ stmtsText thenBranch (d + 1) ++
+      Render.indentOf house d ++ "}" ++
+      (if elseBranch.isEmpty then ""
+       else " else {\n" ++ stmtsText elseBranch (d + 1) ++ Render.indentOf house d ++ "}")
+  stmt_labelled label body := fun d =>
+    Render.indentOf house d ++ label ++ ": {\n" ++ stmtsText body (d + 1) ++ Render.indentOf house d ++ "}"
+  stmt_scopedGen name body onExit := fun d =>
+    Render.indentOf house d ++ "const " ++ name ++
+      " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {\n" ++
+      stmtsText body (d + 1) ++ Render.indentOf house d ++ "}), " ++ onExit d ++ "))"
+  stmt_scopedGenMasked name body onExit := fun d =>
+    Render.indentOf house d ++ "const " ++ name ++
+      " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {\n" ++
+      stmtsText body (d + 1) ++ Render.indentOf house d ++ "}), " ++ onExit d ++ ")))"
+  stmt_breakTo label := fun d =>
+    Render.indentOf house d ++ "break" ++ (match label with | some l => " " ++ l | none => "")
+  stmt_continueTo label := fun d =>
+    Render.indentOf house d ++ "continue" ++ (match label with | some l => " " ++ l | none => "")
+  stmt_exprStmt value := fun d => Render.indentOf house d ++ value d
+  objectentry_property name value := fun keys d => (Render.propertyName house keys name ++ ": ", value d)
+  objectentry_spread value := fun _ d => ("...", value d)
+
+/-! ## The pinned renderer is the house's fold -/
+
+/-- An object entry as the house writes it: its head and its value. -/
+def houseEntry (e : ObjectEntry) : KeyForm → Nat → String × String :=
+  fun keys d => match e with
+    | .property name value => (Render.propertyName house keys name ++ ": ", Render.expr house d value)
+    | .spread value => ("...", Render.expr house d value)
+
+theorem exprs_eq (d : Nat) : ∀ xs : List Expr, Render.exprs house d xs = (xs.map fun e d => Render.expr house d e).map (· d)
   | [] => rfl
-  | e :: es => by
-    simp only [exprs, Render.exprs, List.map_cons, flat_expr d e, flat_exprs d es]
+  | x :: xs => by simp only [Render.exprs, exprs_eq d xs, List.map_cons, List.map_map]
 
-/-- An object's fields laid flat are the house's. -/
-theorem flat_objectFields (d : Nat) : ∀ fs : List (String × Expr),
-    (objectFields d fs).map (fun p => (p.1, p.2.flat (2 * d))) = Render.objectFields house d fs
+theorem objectFields_eq (d : Nat) : ∀ fs : List (String × Expr),
+    Render.objectFields house d fs = at_ (fs.map (prodMapSnd fun e d => Render.expr house d e)) d
   | [] => rfl
-  | (name, value) :: rest => by
-    simp only [objectFields, Render.objectFields, List.map_cons, flat_expr d value,
-      flat_objectFields d rest]
+  | (n, v) :: fs => by simp only [Render.objectFields, objectFields_eq d fs, at_, List.map_cons, prodMapSnd_mk]
 
-/-- An `objectWith` literal's entries laid flat are the house's. -/
-theorem flat_objectEntries (keys : KeyForm) (d : Nat) : ∀ es : List ObjectEntry,
-    (objectEntries keys d es).map (fun p => (p.1, p.2.flat (2 * d))) = Render.objectEntries house keys d es
+theorem objectEntries_eq (keys : KeyForm) (d : Nat) : ∀ es : List ObjectEntry,
+    Render.objectEntries house keys d es = (es.map houseEntry).map (· keys d)
   | [] => rfl
-  | .property name value :: rest => by
-    simp only [objectEntries, Render.objectEntries, List.map_cons, flat_expr d value,
-      flat_objectEntries keys d rest]
-  | .spread value :: rest => by
-    simp only [objectEntries, Render.objectEntries, List.map_cons, flat_expr d value,
-      flat_objectEntries keys d rest]
+  | .property n v :: es => by simp only [Render.objectEntries, objectEntries_eq keys d es, List.map_cons, houseEntry]
+  | .spread v :: es => by simp only [Render.objectEntries, objectEntries_eq keys d es, List.map_cons, houseEntry]
 
-/-- A statement as the house writes it: its indent, then its flat print. -/
-theorem flat_stmt (d : Nat) : ∀ s : Stmt,
-    Render.stmt house d s = Render.indentOf house d ++ (stmt d s).flat (2 * d)
-  | .constYield name value declaredType => by
-    simp only [stmt, Render.stmt, Doc.append_def, Doc.flat, flat_expr d value, String.append_assoc]
-  | .ret value => by
-    simp only [stmt, Render.stmt, Doc.append_def, Doc.flat, flat_expr d value, String.append_assoc]
-  | .yieldDiscard value => by
-    simp only [stmt, Render.stmt, Doc.append_def, Doc.flat, flat_expr d value, String.append_assoc]
-  | .letDefinite name declaredType => by
-    simp only [stmt, Render.stmt, Doc.flat, String.append_assoc]
-  | .letInit name value declaredType => by
-    simp only [stmt, Render.stmt, Doc.append_def, Doc.flat, flat_expr d value, String.append_assoc]
-  | .assign name value => by
-    simp only [stmt, Render.stmt, Doc.append_def, Doc.flat, flat_expr d value, String.append_assoc]
-  | .whileTrue label body => by
-    have ih := flat_stmts (d + 1) body (Render.indentOf house d ++ "}")
-    simp only [stmt, Render.stmt, braces, Doc.append_def, Doc.flat]
-    rw [nl_split "while (true) {\n" "while (true) {"]
-    simp only [String.append_assoc]
-    rw [ih]
-    cases label <;> rfl
-  | .switch scrutinee cases => by
-    have ih := flat_switchCases (d + 1) cases (Render.indentOf house d ++ "}")
-    simp only [stmt, Render.stmt, braces, Doc.append_def, Doc.flat, flat_expr d scrutinee]
-    rw [nl_split ") {\n" ") {"]
-    simp only [String.append_assoc]
-    rw [ih]
-    rfl
-  | .ifElse condition thenBranch elseBranch => by
-    have iht := flat_stmts (d + 1) thenBranch
-    have ihe := flat_stmts (d + 1) elseBranch (Render.indentOf house d ++ "}")
-    simp only [stmt, Render.stmt, braces, Doc.append_def, Doc.flat, flat_expr d condition]
-    rw [nl_split ") {\n" ") {"]
-    cases elseBranch with
-    | nil =>
-      simp only [List.isEmpty_nil, ↓reduceIte, Doc.flat, String.append_empty, String.append_assoc]
-      rw [iht]
-      rfl
-    | cons e es =>
-      simp only [List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte, Doc.flat]
-      rw [nl_split " else {\n" " else {"]
-      simp only [String.append_assoc]
-      rw [iht, ihe]
-      rfl
-  | .labelled label body => by
-    have ih := flat_stmts (d + 1) body (Render.indentOf house d ++ "}")
-    simp only [stmt, Render.stmt, braces, Doc.append_def, Doc.flat]
-    rw [nl_split ": {\n" ": {"]
-    simp only [String.append_assoc]
-    rw [ih]
-    rfl
-  | .scopedGen name body onExit => by
-    have ih := flat_stmts (d + 1) body (Render.indentOf house d ++ ("}), " ++ (Render.expr house d onExit ++ "))")))
-    simp only [stmt, Render.stmt, braces, Doc.append_def, Doc.flat, flat_expr d onExit]
-    rw [nl_split " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {\n" " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {"]
-    simp only [String.append_assoc]
-    rw [ih, show ("}), " : String) = "}" ++ "), " from rfl]
-    simp only [String.append_assoc]
-    rfl
-  | .scopedGenMasked name body onExit => by
-    have ih := flat_stmts (d + 1) body (Render.indentOf house d ++ ("}), " ++ (Render.expr house d onExit ++ ")))")))
-    simp only [stmt, Render.stmt, braces, Doc.append_def, Doc.flat, flat_expr d onExit]
-    rw [nl_split " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {\n" " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {"]
-    simp only [String.append_assoc]
-    rw [ih, show ("}), " : String) = "}" ++ "), " from rfl]
-    simp only [String.append_assoc]
-    rfl
-  | .breakTo label => by
-    cases label <;> simp only [stmt, Render.stmt, Doc.flat, String.append_assoc]
-  | .continueTo label => by
-    cases label <;> simp only [stmt, Render.stmt, Doc.flat, String.append_assoc]
-  | .exprStmt value => by
-    simp only [stmt, Render.stmt, flat_expr d value]
+theorem stmts_eq (d : Nat) : ∀ ss : List Stmt,
+    Render.stmts house d ss = stmtsText (ss.map fun s d => Render.stmt house d s) d
+  | [] => rfl
+  | s :: ss => by simp only [Render.stmts, stmts_eq d ss, List.map_cons, stmtsText]
 
-/-- Statements as the house writes them, one a line: after a newline, they are the flat print of
-their document, and a newline. -/
-theorem flat_stmts (d : Nat) : ∀ (ss : List Stmt) (rest : String),
-    "\n" ++ (Render.stmts house d ss ++ rest) = (stmts d ss).flat (2 * d) ++ ("\n" ++ rest)
-  | [], rest => by simp only [Render.stmts, stmts, Doc.flat, String.empty_append]
+theorem switchCases_eq (d : Nat) : ∀ cs : List (Nat × List Stmt),
+    Render.switchCases house d cs =
+      casesText (cs.map (prodMapSnd (List.map fun s d => Render.stmt house d s))) d
+  | [] => rfl
+  | (i, body) :: cs => by
+    simp only [Render.switchCases, switchCases_eq d cs, stmts_eq, List.map_cons, prodMapSnd_mk, casesText]
+
+/-- The pinned renderer, as a homomorphism of the house's algebra. -/
+def renderHom : ExprHom renderAlg := by
+  apply ExprHom.mk (f_expr := fun e d => Render.expr house d e) (f_stmt := fun s d => Render.stmt house d s)
+    (f_objectentry := houseEntry)
+  all_goals intros
+  all_goals funext d
+  case h_expr_call => rw [house_call, exprs_eq]; rfl
+  case h_expr_method => rw [house_method, exprs_eq]; rfl
+  case h_expr_new => rw [house_new, exprs_eq]; rfl
+  case h_expr_object =>
+    simp only [renderAlg, house_object, houseObject, objectText, objectFields_eq, at_, List.isEmpty_map]
+    rfl
+  case h_expr_objectML =>
+    simp only [renderAlg, house_objectML, houseObjectML, objectMLText, objectFields_eq, at_, List.isEmpty_map]
+  case h_expr_objectQuoted =>
+    simp only [renderAlg, house_objectQuoted, houseObject, objectText, objectFields_eq, at_, List.isEmpty_map]
+    rfl
+  case h_expr_objectQuotedML =>
+    simp only [renderAlg, house_objectQuotedML, houseObjectML, objectMLText, objectFields_eq, at_, List.isEmpty_map]
+  case h_expr_objectFromEntries => rw [house_objectFromEntries, objectFields_eq]; rfl
+  case h_expr_arr => simp only [renderAlg, house_arr, exprs_eq, List.isEmpty_map]
+  case h_expr_generator => rw [house_generator, stmts_eq]; rfl
+  case h_expr_arrowBlock => rw [house_arrowBlock, stmts_eq]; rfl
+  case h_expr_objectWith => simp only [renderAlg, house_objectWith, objectEntries_eq, List.isEmpty_map]
+  case h_stmt_whileTrue => simp only [Render.stmt, stmts_eq]; rfl
+  case h_stmt_switch => simp only [Render.stmt, switchCases_eq]; rfl
+  case h_stmt_ifElse => simp only [renderAlg, Render.stmt, stmts_eq, List.isEmpty_map]
+  case h_stmt_labelled => simp only [Render.stmt, stmts_eq]; rfl
+  case h_stmt_scopedGen => simp only [Render.stmt, stmts_eq]; rfl
+  case h_stmt_scopedGenMasked => simp only [Render.stmt, stmts_eq]; rfl
+  all_goals rfl
+
+/-- **The pinned renderer is the house's fold**, for an expression. -/
+theorem render_eq_expr (e : Expr) (d : Nat) : cata_expr renderAlg e d = Render.expr house d e :=
+  (congrFun (hom_eq_cata_expr renderHom e) d).symm
+
+/-- The pinned renderer is the house's fold, for a statement. -/
+theorem render_eq_stmt (s : Stmt) (d : Nat) : cata_stmt renderAlg s d = Render.stmt house d s :=
+  (congrFun (hom_eq_cata_stmt renderHom s) d).symm
+
+/-! ## The readable layout as an algebra -/
+
+/-- What the layout gives each sort: an expression's document and a statement's document (without
+its indent) at a depth; an object entry's head and its value's document. -/
+abbrev Laid : ExprFam → Type
+  | .expr => Nat → Doc
+  | .stmt => Nat → Doc
+  | .objectentry => KeyForm → Nat → String × Doc
+
+/-- Statements' documents at a depth, each after a hard break. -/
+def stmtsDoc : List (Nat → Doc) → Nat → Doc
+  | [], _ => .nil
+  | s :: rest, d => .hard ++ s d ++ stmtsDoc rest d
+
+/-- A switch's cases' documents at a depth, each after a hard break with its block. -/
+def casesDoc : List (Nat × List (Nat → Doc)) → Nat → Doc
+  | [], _ => .nil
+  | (i, body) :: rest, d =>
+    .hard ++ braces ("case " ++ toString i ++ ": {") (stmtsDoc body (d + 1)) ++ casesDoc rest d
+
+/-- An expression's document laid flat at its depth: the house's text, by `flat_fold_expr`. -/
+def flatE (r : Nat → Doc) : Nat → String := fun d => (r d).flat (2 * d)
+
+/-- A statement's document laid flat after its indent. -/
+def flatS (r : Nat → Doc) : Nat → String := fun d => Render.indentOf house d ++ (r d).flat (2 * d)
+
+/-- An object entry's head, and its value laid flat. -/
+def flatO (r : KeyForm → Nat → String × Doc) : KeyForm → Nat → String × String :=
+  fun keys d => ((r keys d).1, (r keys d).2.flat (2 * d))
+
+/-- An object literal's document: inline when no field's flat print holds a newline, as the house
+decides, else one field a line. -/
+def objectDoc (name : String → String) (fields : List (String × (Nat → Doc))) (d : Nat) : Doc :=
+  if fields.isEmpty then .text "{}"
+  else
+    let rendered := at_ (fields.map (prodMapSnd flatE)) (d + 1)
+    if rendered.all (fun field => !hasNewline field.2) then
+      delimited "{" "}" " " (rendered.map fun p => .text (name p.1 ++ ": " ++ p.2))
+    else
+      multiline "{" "}" (fields.map fun p => .text (name p.1 ++ ": ") ++ p.2 (d + 1) ++ .text ",")
+
+/-- A multiline object literal's document. -/
+def objectMLDoc (name : String → String) (fields : List (String × (Nat → Doc))) (d : Nat) : Doc :=
+  if fields.isEmpty then .text "{}"
+  else multiline "{" "}" (fields.map fun p => .text (name p.1 ++ ": ") ++ p.2 (d + 1) ++ .text ",")
+
+/-- **The readable layout**, an algebra of the syntax: a call's arguments, an inline object's
+fields and an inline array's items form a group, flat when they fit and one a line when not; a
+block is the house's block. Where the house chooses between inline and multiline, the layout
+asks the same question of its children's flat prints. -/
+def docAlg : ExprAlgebra Laid where
+  expr_ident name := fun _ => .text name
+  expr_str value := fun _ => .text (Render.quoted house value)
+  expr_int value := fun _ => .text (toString value)
+  expr_float64Bits bits := fun _ => .text (Render.float64Bits bits)
+  expr_bool value := fun _ => .text (if value then "true" else "false")
+  expr_jsNull := fun _ => .text "null"
+  expr_call fn args := fun d => fn d ++ delimited "(" ")" "" (args.map (· d))
+  expr_object fields := objectDoc (fun n => n) fields
+  expr_objectML fields := objectMLDoc (fun n => n) fields
+  expr_objectQuoted fields := objectDoc (Render.quoted house) fields
+  expr_objectQuotedML fields := objectMLDoc (Render.quoted house) fields
+  expr_objectFromEntries fields := fun d =>
+    .text "Object.fromEntries(" ++
+      delimited "[" "]" "" (fields.map fun p => .text ("[" ++ Render.quoted house p.1 ++ ", ") ++ p.2 d ++ .text "]") ++
+      .text ")"
+  expr_arr items := fun d =>
+    if items.isEmpty then .text "[]"
+    else
+      let rendered := (items.map flatE).map (· (d + 1))
+      if rendered.all (fun item => !hasNewline item) then delimited "[" "]" "" (rendered.map .text)
+      else multiline "[" "]" (items.map fun item => item (d + 1) ++ .text ",")
+  expr_arrow returnType body := fun d => .text ("()" ++ Render.annotation house returnType ++ " => ") ++ body d
+  expr_generic fn typeArgs := fun d =>
+    fn d ++ .text ("<" ++ String.intercalate ", " (Render.types house typeArgs) ++ ">")
+  expr_lambda params body returnType := fun d =>
+    .text ("(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
+      Render.annotation house returnType ++ " => ") ++ body d
+  expr_method target name args := fun d =>
+    target d ++ .text ("." ++ name) ++ delimited "(" ")" "" (args.map (· d))
+  expr_member target name := fun d => target d ++ .text ("." ++ name)
+  expr_generator body := fun d => braces "function* () {" (stmtsDoc body (d + 1))
+  expr_cond test thenBranch elseBranch := fun d =>
+    test d ++ .text " ? " ++ thenBranch d ++ .text " : " ++ elseBranch d
+  expr_arrowBlock params body returnType := fun d =>
+    braces ("(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
+      Render.annotation house returnType ++ " => {") (stmtsDoc body (d + 1))
+  expr_index target key := fun d => target d ++ .text "[" ++ key d ++ .text "]"
+  expr_new callee args := fun d => .text "new " ++ callee d ++ delimited "(" ")" "" (args.map (· d))
+  expr_objectWith keys entries := fun d =>
+    if entries.isEmpty then .text "{}"
+    else
+      let rendered := (entries.map flatO).map (· keys (d + 1))
+      if rendered.all (fun entry => !hasNewline entry.2) then
+        delimited "{" "}" " " (rendered.map fun p => .text (p.1 ++ p.2))
+      else
+        multiline "{" "}" (entries.map fun e => .text (e keys (d + 1)).1 ++ (e keys (d + 1)).2 ++ .text ",")
+  stmt_constYield name value declaredType := fun d =>
+    .text ("const " ++ name ++ Render.annotation house declaredType ++ " = yield* ") ++ value d
+  stmt_ret value := fun d => .text "return " ++ value d
+  stmt_yieldDiscard value := fun d => .text "yield* " ++ value d
+  stmt_letDefinite name declaredType := fun _ => .text ("let " ++ name ++ "!: " ++ Render.type house declaredType)
+  stmt_letInit name value declaredType := fun d =>
+    .text ("let " ++ name ++ Render.annotation house declaredType ++ " = ") ++ value d
+  stmt_assign name value := fun d => .text (name ++ " = ") ++ value d
+  stmt_whileTrue label body := fun d => braces (labelText label ++ "while (true) {") (stmtsDoc body (d + 1))
+  stmt_switch scrutinee cases := fun d =>
+    .text "switch (" ++ scrutinee d ++ braces ") {" (casesDoc cases (d + 1))
+  stmt_ifElse condition thenBranch elseBranch := fun d =>
+    .text "if (" ++ condition d ++ braces ") {" (stmtsDoc thenBranch (d + 1)) ++
+      (if elseBranch.isEmpty then .nil else braces " else {" (stmtsDoc elseBranch (d + 1)))
+  stmt_labelled label body := fun d => braces (label ++ ": {") (stmtsDoc body (d + 1))
+  stmt_scopedGen name body onExit := fun d =>
+    braces ("const " ++ name ++ " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {")
+      (stmtsDoc body (d + 1)) ++ .text "), " ++ onExit d ++ .text "))"
+  stmt_scopedGenMasked name body onExit := fun d =>
+    braces ("const " ++ name ++
+      " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {")
+      (stmtsDoc body (d + 1)) ++ .text "), " ++ onExit d ++ .text ")))"
+  stmt_breakTo label := fun _ => .text ("break" ++ (match label with | some l => " " ++ l | none => ""))
+  stmt_continueTo label := fun _ => .text ("continue" ++ (match label with | some l => " " ++ l | none => ""))
+  stmt_exprStmt value := value
+  objectentry_property name value := fun keys d => (Render.propertyName house keys name ++ ": ", value d)
+  objectentry_spread value := fun _ d => ("...", value d)
+
+/-! ## The flat print is a map of algebras -/
+
+/-- Statements laid flat, after a newline: the house's lines of their flat prints. -/
+theorem flat_stmtsDoc (d : Nat) : ∀ (ss : List (Nat → Doc)) (rest : String),
+    "\n" ++ (stmtsText (ss.map flatS) d ++ rest) = (stmtsDoc ss d).flat (2 * d) ++ ("\n" ++ rest)
+  | [], rest => by simp only [List.map_nil, stmtsText, stmtsDoc, Doc.flat, String.empty_append]
   | s :: ss, rest => by
-    have ih := flat_stmts d ss rest
-    simp only [Render.stmts, stmts, Doc.append_def, Doc.flat, flat_stmt d s, String.append_assoc]
+    have ih := flat_stmtsDoc d ss rest
+    simp only [List.map_cons, stmtsText, stmtsDoc, Doc.append_def, Doc.flat, flatS, String.append_assoc]
     rw [ih]
     rfl
 
-/-- A switch's cases as the house writes them, after a newline. -/
-theorem flat_switchCases (d : Nat) : ∀ (cs : List (Nat × List Stmt)) (rest : String),
-    "\n" ++ (Render.switchCases house d cs ++ rest) = (switchCases d cs).flat (2 * d) ++ ("\n" ++ rest)
-  | [], rest => by simp only [Render.switchCases, switchCases, Doc.flat, String.empty_append]
-  | (index, body) :: cs, rest => by
-    have ihb := flat_stmts (d + 1) body (Render.indentOf house d ++ ("}" ++ ("\n" ++ (Render.switchCases house d cs ++ rest))))
-    have ih := flat_switchCases d cs rest
-    simp only [Render.switchCases, switchCases, braces, Doc.append_def, Doc.flat, String.append_assoc]
+/-- A switch's cases laid flat, after a newline: the house's cases. -/
+theorem flat_casesDoc (d : Nat) : ∀ (cs : List (Nat × List (Nat → Doc))) (rest : String),
+    "\n" ++ (casesText (cs.map (prodMapSnd (List.map flatS))) d ++ rest) =
+      (casesDoc cs d).flat (2 * d) ++ ("\n" ++ rest)
+  | [], rest => by simp only [List.map_nil, casesText, casesDoc, Doc.flat, String.empty_append]
+  | (i, body) :: cs, rest => by
+    have ihb := flat_stmtsDoc (d + 1) body
+      (Render.indentOf house d ++ ("}" ++ ("\n" ++ (casesText (cs.map (prodMapSnd (List.map flatS))) d ++ rest))))
+    have ih := flat_casesDoc d cs rest
+    simp only [List.map_cons, prodMapSnd_mk, casesText, casesDoc, braces, Doc.append_def, Doc.flat,
+      String.append_assoc]
     rw [nl_split ": {\n" ": {", show ("}\n" : String) = "}" ++ "\n" from rfl]
     simp only [String.append_assoc]
     rw [ihb, ih]
     rfl
 
-end
+/-- A delimited list laid flat: its items' flat prints joined by `", "`, between its delimiters. -/
+theorem flat_delimited_any (b : Nat) (op cl : String) : ∀ xs : List Doc,
+    (delimited op cl "" xs).flat b = op ++ String.intercalate ", " (xs.map (·.flat b)) ++ cl
+  | [] => by simp only [flat_delimited_nil, List.map_nil, String.intercalate_nil, String.append_empty]
+  | x :: xs => by
+    rw [flat_delimited b op cl "" _ (List.cons_ne_nil x xs)]
+    simp only [String.append_empty]
+
+/-- The fields of an object, laid flat at a depth. -/
+theorem at_flat (fields : List (String × (Nat → Doc))) (d : Nat) :
+    at_ (fields.map (prodMapSnd flatE)) d = fields.map fun p => (p.1, flatE p.2 d) := by
+  simp only [at_, List.map_map]
+  rfl
+
+/-- An object literal's document laid flat is the house's object literal over the fields' flat
+prints. -/
+theorem flat_objectDoc (name : String → String) (fields : List (String × (Nat → Doc))) (d : Nat) :
+    (objectDoc name fields d).flat (2 * d) = objectText name (at_ (fields.map (prodMapSnd flatE)) (d + 1)) d := by
+  cases fields with
+  | nil => rfl
+  | cons f fs =>
+    have hr : at_ ((f :: fs).map (prodMapSnd flatE)) (d + 1) ≠ [] := by
+      simp only [at_, List.map_cons]; exact List.cons_ne_nil _ _
+    simp only [objectDoc, objectText, List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
+    have hne : (at_ ((f :: fs).map (prodMapSnd flatE)) (d + 1)).isEmpty = false := by
+      simp only [at_, List.map_cons, List.isEmpty_cons]
+    rw [hne]
+    simp only [Bool.false_eq_true, ↓reduceIte]
+    by_cases hn : ((at_ ((f :: fs).map (prodMapSnd flatE)) (d + 1)).all fun field => !hasNewline field.2) = true
+    · simp only [hn, ↓reduceIte]
+      rw [flat_inline _ _ _ _ _ _ hr]
+      simp only [String.append_assoc]
+      rfl
+    · simp only [hn, Bool.false_eq_true, ↓reduceIte]
+      rw [at_flat, flat_multiline d "{" "}" _ _ (fun p => (p.1, flatE p.2 (d + 1)))
+        (fun q => Render.indentOf house (d + 1) ++ name q.1 ++ ": " ++ q.2 ++ ",") (List.cons_ne_nil f fs)
+        (fun a => by simp only [Doc.append_def, Doc.flat, flatE, String.append_assoc]; rfl),
+        nl_split "{\n" "{"]
+      simp only [String.append_assoc]
+
+/-- A multiline object literal's document laid flat is the house's. -/
+theorem flat_objectMLDoc (name : String → String) (fields : List (String × (Nat → Doc))) (d : Nat) :
+    (objectMLDoc name fields d).flat (2 * d) = objectMLText name (at_ (fields.map (prodMapSnd flatE)) (d + 1)) d := by
+  cases fields with
+  | nil => rfl
+  | cons f fs =>
+    have hne : (at_ ((f :: fs).map (prodMapSnd flatE)) (d + 1)).isEmpty = false := by
+      simp only [at_, List.map_cons, List.isEmpty_cons]
+    simp only [objectMLDoc, objectMLText, List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
+    rw [hne]
+    simp only [Bool.false_eq_true, ↓reduceIte]
+    rw [at_flat, flat_multiline d "{" "}" _ _ (fun p => (p.1, flatE p.2 (d + 1)))
+      (fun q => Render.indentOf house (d + 1) ++ name q.1 ++ ": " ++ q.2 ++ ",") (List.cons_ne_nil f fs)
+      (fun a => by simp only [Doc.append_def, Doc.flat, flatE, String.append_assoc]; rfl),
+      nl_split "{\n" "{"]
+    simp only [String.append_assoc]
+
+/-- A block of statements laid flat: its head, a newline, the house's lines, the indent and the
+brace, then whatever follows. -/
+theorem flat_block (head : String) (ss : List (Nat → Doc)) (d : Nat) (tail : String) :
+    (braces head (stmtsDoc ss (d + 1))).flat (2 * d) ++ tail =
+      head ++ ("\n" ++ (stmtsText (ss.map flatS) (d + 1) ++ (Render.indentOf house d ++ ("}" ++ tail)))) := by
+  rw [flat_stmtsDoc (d + 1) ss]
+  simp only [braces, Doc.append_def, Doc.flat, String.append_assoc]
+  rfl
+
+/-- A switch's block of cases laid flat. -/
+theorem flat_blockCases (head : String) (cs : List (Nat × List (Nat → Doc))) (d : Nat) (tail : String) :
+    (braces head (casesDoc cs (d + 1))).flat (2 * d) ++ tail =
+      head ++ ("\n" ++ (casesText (cs.map (prodMapSnd (List.map flatS))) (d + 1) ++
+        (Render.indentOf house d ++ ("}" ++ tail)))) := by
+  rw [flat_casesDoc (d + 1) cs]
+  simp only [braces, Doc.append_def, Doc.flat, String.append_assoc]
+  rfl
+
+/-- An array literal's document laid flat is the house's array over the items' flat prints. -/
+theorem flat_arr (items : List (Nat → Doc)) (d : Nat) :
+    (docAlg.expr_arr items d).flat (2 * d) = renderAlg.expr_arr (items.map flatE) d := by
+  cases items with
+  | nil => rfl
+  | cons x xs =>
+    have hr : ((x :: xs).map flatE).map (· (d + 1)) ≠ [] := by
+      simp only [List.map_cons]; exact List.cons_ne_nil _ _
+    have hne : ((x :: xs).map flatE).isEmpty = false := by simp only [List.map_cons, List.isEmpty_cons]
+    simp only [docAlg, renderAlg, List.isEmpty_cons, hne, Bool.false_eq_true, ↓reduceIte]
+    by_cases hn : ((((x :: xs).map flatE).map (· (d + 1))).all fun item => !hasNewline item) = true
+    · simp only [hn, ↓reduceIte]
+      rw [flat_delimited_any, List.map_map]
+      exact congrArg (fun t => "[" ++ String.intercalate ", " t ++ "]") (List.map_id'' (fun _ => rfl) _)
+    · simp only [hn, Bool.false_eq_true, ↓reduceIte]
+      rw [flat_multiline d "[" "]" (x :: xs) (fun item => item (d + 1) ++ .text ",") (fun item => flatE item (d + 1))
+        (fun q => Render.indentOf house (d + 1) ++ q ++ ",") (List.cons_ne_nil x xs)
+        (fun a => by simp only [Doc.append_def, Doc.flat, flatE, String.append_assoc]; rfl),
+        nl_split "[\n" "["]
+      simp only [String.append_assoc, List.map_map]
+      rfl
+
+/-- An object literal of entries laid flat is the house's over the entries' flat prints. -/
+theorem flat_objectWith (keys : KeyForm) (entries : List (KeyForm → Nat → String × Doc)) (d : Nat) :
+    (docAlg.expr_objectWith keys entries d).flat (2 * d) = renderAlg.expr_objectWith keys (entries.map flatO) d := by
+  cases entries with
+  | nil => rfl
+  | cons x xs =>
+    have hr : ((x :: xs).map flatO).map (· keys (d + 1)) ≠ [] := by
+      simp only [List.map_cons]; exact List.cons_ne_nil _ _
+    have hne : ((x :: xs).map flatO).isEmpty = false := by simp only [List.map_cons, List.isEmpty_cons]
+    simp only [docAlg, renderAlg, List.isEmpty_cons, hne, Bool.false_eq_true, ↓reduceIte]
+    by_cases hn : ((((x :: xs).map flatO).map (· keys (d + 1))).all fun entry => !hasNewline entry.2) = true
+    · simp only [hn, ↓reduceIte]
+      rw [flat_inline _ _ _ _ _ _ hr]
+      simp only [String.append_assoc]
+      rfl
+    · simp only [hn, Bool.false_eq_true, ↓reduceIte]
+      rw [flat_multiline d "{" "}" (x :: xs) (fun e => .text (e keys (d + 1)).1 ++ (e keys (d + 1)).2 ++ .text ",")
+        (fun e => flatO e keys (d + 1)) (fun q => Render.indentOf house (d + 1) ++ q.1 ++ q.2 ++ ",")
+        (List.cons_ne_nil x xs) (fun a => by simp only [Doc.append_def, Doc.flat, flatO, String.append_assoc]; rfl),
+        nl_split "{\n" "{"]
+      simp only [String.append_assoc, List.map_map]
+      rfl
+
+/-! ### One square for each constructor that holds a list or a block
+
+Each states: lay the layout's node flat, or write the house's node over its children laid flat,
+and the text is the same. The other constructors' squares hold by unfolding alone. -/
+
+theorem sq_object (fields : List (String × (Nat → Doc))) :
+    flatE (docAlg.expr_object fields) = renderAlg.expr_object (fields.map (prodMapSnd flatE)) :=
+  by
+    funext d
+    simp only [flatE, docAlg, renderAlg]
+    exact flat_objectDoc _ fields d
+
+theorem sq_objectML (fields : List (String × (Nat → Doc))) :
+    flatE (docAlg.expr_objectML fields) = renderAlg.expr_objectML (fields.map (prodMapSnd flatE)) :=
+  by
+    funext d
+    simp only [flatE, docAlg, renderAlg]
+    exact flat_objectMLDoc _ fields d
+
+theorem sq_objectQuoted (fields : List (String × (Nat → Doc))) :
+    flatE (docAlg.expr_objectQuoted fields) = renderAlg.expr_objectQuoted (fields.map (prodMapSnd flatE)) :=
+  by
+    funext d
+    simp only [flatE, docAlg, renderAlg]
+    exact flat_objectDoc _ fields d
+
+theorem sq_objectQuotedML (fields : List (String × (Nat → Doc))) :
+    flatE (docAlg.expr_objectQuotedML fields) = renderAlg.expr_objectQuotedML (fields.map (prodMapSnd flatE)) :=
+  by
+    funext d
+    simp only [flatE, docAlg, renderAlg]
+    exact flat_objectMLDoc _ fields d
+
+theorem sq_objectFromEntries (fields : List (String × (Nat → Doc))) :
+    flatE (docAlg.expr_objectFromEntries fields) = renderAlg.expr_objectFromEntries (fields.map (prodMapSnd flatE)) := by
+  funext d
+  simp only [flatE, docAlg, renderAlg, Doc.append_def, Doc.flat, flat_delimited_any, List.map_map, at_]
+  rw [show ("Object.fromEntries([" : String) = "Object.fromEntries(" ++ "[" from rfl,
+    show ("])" : String) = "]" ++ ")" from rfl]
+  simp only [String.append_assoc, Function.comp_def, Doc.flat, prodMapSnd, flatE]
+
+theorem sq_arr (items : List (Nat → Doc)) : flatE (docAlg.expr_arr items) = renderAlg.expr_arr (items.map flatE) :=
+  funext (flat_arr items)
+
+theorem sq_objectWith (keys : KeyForm) (entries : List (KeyForm → Nat → String × Doc)) :
+    flatE (docAlg.expr_objectWith keys entries) = renderAlg.expr_objectWith keys (entries.map flatO) :=
+  funext (flat_objectWith keys entries)
+
+theorem sq_generator (body : List (Nat → Doc)) :
+    flatE (docAlg.expr_generator body) = renderAlg.expr_generator (body.map flatS) := by
+  funext d
+  have h := flat_block "function* () {" body d ""
+  simp only [String.append_empty] at h
+  refine h.trans ?_
+  simp only [renderAlg]
+  rw [nl_split "function* () {\n" "function* () {"]
+  simp only [String.append_assoc]
+
+theorem sq_arrowBlock (params : List Parameter) (body : List (Nat → Doc)) (returnType : Option TypeRef) :
+    flatE (docAlg.expr_arrowBlock params body returnType) =
+      renderAlg.expr_arrowBlock params (body.map flatS) returnType := by
+  funext d
+  have h := flat_block ("(" ++ String.intercalate ", " (params.map (Render.parameter house)) ++ ")" ++
+    Render.annotation house returnType ++ " => {") body d ""
+  simp only [String.append_empty] at h
+  refine h.trans ?_
+  simp only [renderAlg]
+  rw [nl_split " => {\n" " => {"]
+  simp only [String.append_assoc]
+
+theorem sq_whileTrue (label : Option String) (body : List (Nat → Doc)) :
+    flatS (docAlg.stmt_whileTrue label body) = renderAlg.stmt_whileTrue label (body.map flatS) := by
+  funext d
+  have h := flat_block (labelText label ++ "while (true) {") body d ""
+  simp only [String.append_empty] at h
+  simp only [flatS, docAlg]
+  rw [h]
+  simp only [renderAlg]
+  rw [nl_split "while (true) {\n" "while (true) {"]
+  simp only [String.append_assoc]
+  cases label <;> rfl
+
+theorem sq_labelled (label : String) (body : List (Nat → Doc)) :
+    flatS (docAlg.stmt_labelled label body) = renderAlg.stmt_labelled label (body.map flatS) := by
+  funext d
+  have h := flat_block (label ++ ": {") body d ""
+  simp only [String.append_empty] at h
+  simp only [flatS, docAlg]
+  rw [h]
+  simp only [renderAlg]
+  rw [nl_split ": {\n" ": {"]
+  simp only [String.append_assoc]
+
+theorem sq_switch (scrutinee : Nat → Doc) (cases : List (Nat × List (Nat → Doc))) :
+    flatS (docAlg.stmt_switch scrutinee cases) =
+      renderAlg.stmt_switch (flatE scrutinee) (cases.map (prodMapSnd (List.map flatS))) := by
+  funext d
+  have h := flat_blockCases ") {" cases d ""
+  simp only [String.append_empty] at h
+  simp only [flatS, docAlg, Doc.append_def, Doc.flat]
+  rw [h]
+  simp only [renderAlg, flatE]
+  rw [nl_split ") {\n" ") {"]
+  simp only [String.append_assoc]
+
+theorem sq_ifElse (condition : Nat → Doc) (thenBranch elseBranch : List (Nat → Doc)) :
+    flatS (docAlg.stmt_ifElse condition thenBranch elseBranch) =
+      renderAlg.stmt_ifElse (flatE condition) (thenBranch.map flatS) (elseBranch.map flatS) := by
+  funext d
+  cases elseBranch with
+  | nil =>
+    have h := flat_block ") {" thenBranch d ""
+    simp only [String.append_empty] at h
+    simp only [flatS, flatE, docAlg, renderAlg, Doc.append_def, Doc.flat, List.isEmpty_nil, ↓reduceIte,
+      List.map_nil, String.append_empty]
+    rw [h, nl_split ") {\n" ") {"]
+    simp only [String.append_assoc]
+  | cons x xs =>
+    have he := flat_block " else {" (x :: xs) d ""
+    have ht := flat_block ") {" thenBranch d ((braces " else {" (stmtsDoc (x :: xs) (d + 1))).flat (2 * d))
+    simp only [String.append_empty] at he
+    simp only [flatS, flatE, docAlg, renderAlg, Doc.append_def, Doc.flat, List.isEmpty_cons, List.map_cons,
+      Bool.false_eq_true, ↓reduceIte, String.append_assoc]
+    rw [ht, he, nl_split ") {\n" ") {", nl_split " else {\n" " else {"]
+    simp only [String.append_assoc, List.map_cons]
+
+theorem sq_scopedGen (name : String) (body : List (Nat → Doc)) (onExit : Nat → Doc) :
+    flatS (docAlg.stmt_scopedGen name body onExit) = renderAlg.stmt_scopedGen name (body.map flatS) (flatE onExit) := by
+  funext d
+  have h := flat_block ("const " ++ name ++ " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {")
+    body d ("), " ++ ((onExit d).flat (2 * d) ++ "))"))
+  simp only [flatS, docAlg, Doc.append_def, Doc.flat, String.append_assoc]
+  simp only [String.append_assoc] at h
+  rw [h]
+  simp only [renderAlg, flatE]
+  rw [nl_split " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {\n"
+    " = yield* Effect.scoped(Effect.onExit(Effect.gen(function* () {", show ("}), " : String) = "}" ++ "), " from rfl]
+  simp only [String.append_assoc]
+
+theorem sq_scopedGenMasked (name : String) (body : List (Nat → Doc)) (onExit : Nat → Doc) :
+    flatS (docAlg.stmt_scopedGenMasked name body onExit) =
+      renderAlg.stmt_scopedGenMasked name (body.map flatS) (flatE onExit) := by
+  funext d
+  have h := flat_block ("const " ++ name ++
+    " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {")
+    body d ("), " ++ ((onExit d).flat (2 * d) ++ ")))"))
+  simp only [flatS, docAlg, Doc.append_def, Doc.flat, String.append_assoc]
+  simp only [String.append_assoc] at h
+  rw [h]
+  simp only [renderAlg, flatE]
+  rw [nl_split " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {\n"
+    " = yield* Effect.uninterruptible(Effect.scoped(Effect.onExit(Effect.gen(function* () {",
+    show ("}), " : String) = "}" ++ "), " from rfl]
+  simp only [String.append_assoc]
+
+/-- A switch's cases with their statements mapped twice are mapped once by the composite. -/
+theorem cases_map {α β γ : Type} (cs : List (Nat × List α)) (f : α → β) (g : β → γ) :
+    (cs.map (prodMapSnd (List.map f))).map (prodMapSnd (List.map g)) =
+      cs.map (prodMapSnd (List.map fun x => g (f x))) := by
+  simp only [List.map_map]
+  congr 1
+  funext c
+  simp only [Function.comp, prodMapSnd, List.map_map]
+  rfl
+
+/-- **The flat print, as a homomorphism of the house's algebra**: the layout's fold, laid flat. Each
+equation is one constructor's square. -/
+def flatHom : ExprHom renderAlg := by
+  apply ExprHom.mk (f_expr := fun e => flatE (cata_expr docAlg e)) (f_stmt := fun s => flatS (cata_stmt docAlg s))
+    (f_objectentry := fun o => flatO (cata_objectentry docAlg o))
+  all_goals intros
+  all_goals simp only [cata_expr, cata_stmt, cata_objectentry, cata_pos_list_expr_eq,
+    cata_pos_list_prod_string_expr_eq, cata_pos_list_stmt_eq, cata_pos_list_objectentry_eq,
+    cata_pos_list_prod_nat_list_stmt_eq]
+  case h_expr_object => rw [sq_object, List.map_map]; rfl
+  case h_expr_objectML => rw [sq_objectML, List.map_map]; rfl
+  case h_expr_objectQuoted => rw [sq_objectQuoted, List.map_map]; rfl
+  case h_expr_objectQuotedML => rw [sq_objectQuotedML, List.map_map]; rfl
+  case h_expr_objectFromEntries => rw [sq_objectFromEntries, List.map_map]; rfl
+  case h_expr_arr => rw [sq_arr, List.map_map]; rfl
+  case h_expr_generator => rw [sq_generator, List.map_map]; rfl
+  case h_expr_arrowBlock => rw [sq_arrowBlock, List.map_map]; rfl
+  case h_expr_objectWith => rw [sq_objectWith, List.map_map]; rfl
+  case h_stmt_whileTrue => rw [sq_whileTrue, List.map_map]; rfl
+  case h_stmt_switch => rw [sq_switch, cases_map]
+  case h_stmt_ifElse => rw [sq_ifElse, List.map_map, List.map_map]; rfl
+  case h_stmt_labelled => rw [sq_labelled, List.map_map]; rfl
+  case h_stmt_scopedGen => rw [sq_scopedGen, List.map_map]; rfl
+  case h_stmt_scopedGenMasked => rw [sq_scopedGenMasked, List.map_map]; rfl
+  case h_objectentry_property => rfl
+  case h_objectentry_spread => rfl
+  all_goals funext d
+  all_goals simp only [flatE, flatS, flatO, docAlg, renderAlg, Doc.append_def, Doc.flat, flat_delimited_any,
+    List.map_map, Function.comp_def, String.append_assoc]
+
+/-- **The flat print of the layout is the house print**, for an expression at every depth: the
+two folds agree because their algebras do (`flatHom`, `hom_eq_cata_expr`), and the house's fold is
+the pinned renderer (`render_eq_expr`). So a laid-out file differs from the checked bytes only in
+whitespace at breaks (`undo_layout`). -/
+theorem flat_fold_expr (e : Expr) (d : Nat) : (cata_expr docAlg e d).flat (2 * d) = Render.expr house d e :=
+  (congrFun (hom_eq_cata_expr flatHom e) d).trans (render_eq_expr e d)
+
+/-- The flat print of the layout is the house print, for a statement after its indent. -/
+theorem flat_fold_stmt (s : Stmt) (d : Nat) :
+    Render.indentOf house d ++ (cata_stmt docAlg s d).flat (2 * d) = Render.stmt house d s :=
+  (congrFun (hom_eq_cata_stmt flatHom s) d).trans (render_eq_stmt s d)
+
+/-! ## Declarations -/
 
 /-- An exported constant: the house's doc block, then the declaration as a document. -/
 def constDecl (declaration : ConstDecl) : String × Doc :=
   (Render.docBlock declaration.doc,
     .text ((if declaration.exported then "export " else "") ++ "const " ++ declaration.name ++
-      Render.annotation house declaration.type ++ " = ") ++ expr 0 declaration.value)
+      Render.annotation house declaration.type ++ " = ") ++ cata_expr docAlg declaration.value 0)
 
 /-- A declaration laid out at the width `w`. A constant is a document; the house writes the
 others, which hold no program. -/

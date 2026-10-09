@@ -10,7 +10,7 @@ A break that a layout takes keeps what the flat print had there. So the only fre
 is the choice, at each group, between flat and broken, and `undo_layout` states it: undo every
 break that a layout took, and the flat print comes back, at every width. The flat print of a
 printed TypeScript expression is the pinned house print, byte for byte
-(`Tools.Code.Ts.flat_expr`, `tools/Tools/Code/TypeScript.lean`). Together: a readable file is
+(`Tools.Code.Ts.flat_fold_expr`, `tools/Tools/Code/TypeScript.lean`). Together: a readable file is
 the checked bytes with whitespace changed at breaks, and nothing else.
 
 Two indents. A `nest` indents the lines of its broken groups; a `block` indents every line
