@@ -140,9 +140,11 @@ flowchart LR
 
 - The laws: `join_new` and `join_old` (every element is in a selection), `Ease.at_start` and
   `Ease.at_end`, `Transition.within_at_end`, `ranks_forward`, `lowerCall_move`.
-- The finite check of the end: on every step of the corpus builds, a run and the specimen, the
-  moment at the end draws the same rows as the next frame (27 of 27).
-- Not yet a theorem: `sample g1 g2 1000 = g2` for a still `g2`. Its parts are the laws above.
+- **The end law** (`sample_end`, proved): sampling the step from any page to a page at rest, at
+  its end, gives that page. Its parts: `lineAt_end`, `sampleLines_end`, `placedAt_end`,
+  `routeAt_end`, `sampleLaid_end`. The finite check that preceded it (27 of 27 steps) is retired.
+- Every law of the view rests on `[propext, Quot.sound]` or less; `frameSides_move` lost its
+  `omega` call, which had reached `Classical.choice`.
 
 **Tracked, at the owner's word, for after this core:**
 

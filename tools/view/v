@@ -16,6 +16,8 @@
 # Left steps back, Home and End, Q quits.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
+# lake comes from elan; a shell whose profile does not add it still finds it here
+command -v lake > /dev/null 2>&1 || PATH="$HOME/.elan/bin:$PATH"
 root=$(cd "$here/../.." && pwd)
 mode=window; motion=20; file=""; plain=""; cmd=build
 while [ $# -gt 0 ]; do

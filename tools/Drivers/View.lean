@@ -44,8 +44,8 @@ def writePicture (out : System.FilePath) (name : String) (W H : Int) (calls : Li
   IO.FS.writeFile (out / s!"{name}.svg") (svg W.toNat H.toNat 1 (lowerAll 1 calls) ++ "\n")
 
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
-first: the moments of the step from the frame before (`sample`). Check that each step's moment at
-its end draws exactly the next frame. Report the splice check: the lines
+first: the moments of the step from the frame before (`sample`). Each step's moment at its end is
+the next frame by `sample_end`, so no check repeats it. Report the splice check: the lines
 outside each spliced edit's subtree keep their text, type and note (`keptUnchanged`). -/
 def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Nat) : IO Unit := do
   IO.FS.createDirAll out
@@ -54,8 +54,6 @@ def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Na
   let mut kept := 0
   let mut same := 0
   let mut spliced := 0
-  let mut steps := 0
-  let mut ends := 0
   for (f, i) in frames.zipIdx do
     let g := f.page
     let name := frameName (i + 1)
@@ -64,12 +62,6 @@ def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Na
         let moment := sample {} g0 g (k * 1000 / motion)
         let (W, H) := pageSize width moment
         writePicture out s!"{name}-{frameName k}" W H (pageCalls width moment)
-      let atEnd := sample {} g0 g 1000
-      let rows (page : Page) : List String :=
-        let (W, H) := pageSize width page
-        stream W.toNat H.toNat 2 (lowerAll 2 (pageCalls width page))
-      steps := steps + 1
-      if rows atEnd == rows g then ends := ends + 1
       if f.spliced then
         if let some a := f.edit then
           let (n, k) := keptUnchanged g0 g (Program.bracket a)
@@ -84,7 +76,6 @@ def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Na
   let graphs := frames.filterMap fun f => f.page.graph.map (·.2)
   IO.println s!"view: {frames.length} frames in {out}, {motion - 1} between each two"
   IO.println s!"C\tkept-lines-unchanged\t{spliced} spliced edits\t{same} of {kept} lines"
-  IO.println s!"C\tstep-ends-at-next-frame\t{steps} steps\t{ends} equal"
   IO.println s!"C\tgraph-boxes-apart\t{graphs.length} graphs\t{(graphs.filter Laid.boxesApart).length} apart"
 
 /-- Read a request file: one JSON object a line; a blank line is skipped. -/

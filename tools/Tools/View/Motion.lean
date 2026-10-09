@@ -156,34 +156,64 @@ deriving Repr
 /-- The value `e` per mille of the way from `u` to `v`. -/
 def lerp (u v e : Int) : Int := v + (u - v) * (1000 - e) / 1000
 
+/-- A transition started later is done at the step's end too. -/
+theorem Transition.after_at_end (tr : Transition) (d : Nat) : (tr.after d).at 1000 = 1000 :=
+  Transition.within_at_end _
+
+/-- At the end, the value is the target. -/
+theorem lerp_end (u v : Int) : lerp u v 1000 = v := by
+  simp only [lerp, Int.sub_self, Int.mul_zero, Int.zero_ediv, Int.add_zero]
+
+/-- A line to be written: no old line has its key and its text. -/
+def fresh (old : List Line) (n : Line) : Bool := !(old.any fun o => o.key == n.key && o.text == n.text)
+
+/-- **The update and the enter of a line**: the new line `n` at row `i`, at the moment `t`, when the
+kept lines have moved `moved` per mille. A kept line stands off its row by what remains of its
+move; a fresh line is written as far as its own transition. -/
+def lineAt (c : Choreography) (old writing : List Line) (moved : Int) (t : Nat) (n : Line) (i : Nat) :
+    Line :=
+  let m : Line := if old.any (·.key == n.key) then
+      { n with shift := ROWH * ((old.findIdx (·.key == n.key) : Int) - i) * (1000 - moved) / 1000 }
+    else n
+  if fresh old n then
+    { m with reveal := ((c.write.after (writing.findIdx (·.key == n.key) * c.stagger)).at t).toNat }
+  else m
+
+/-- **The exit of a line**: the old line `o`, from row `i`, standing below the `k`-th of the new
+lines, unwritten as far as its transition. -/
+def lineGone (c : Choreography) (newCount : Nat) (t : Nat) (o : Line) (i k : Nat) : Line :=
+  { o with shift := ROWH * ((i : Int) - (newCount + k)), reveal := (1000 - c.leave.within.at t).toNat,
+           state := .plain }
+
 /-- The lines at the moment `t` of the step from `g1` to `g2`: the kept lines move from their old
 rows; a new line, or a kept one whose text changed, writes itself after the ones before it; an old
 line unwrites at its old row. -/
 def sampleLines (c : Choreography) (g1 g2 : Page) (t : Nat) : Array Line :=
   let old := g1.lines.toList
   let new := g2.lines.toList
-  let rowOf (k : Key) : Nat := old.findIdx (·.key == k)
-  let fresh (n : Line) : Bool := !(old.any fun o => o.key == n.key && o.text == n.text)
-  let writing := new.filter fresh
-  let moved := c.move.within.at t
-  let kept := new.zipIdx.map fun (n, i) =>
-    let m : Line := if old.any (·.key == n.key) then
-        { n with shift := ROWH * ((rowOf n.key : Int) - i) * (1000 - moved) / 1000 }
-      else n
-    if fresh n then
-      { m with reveal := ((c.write.after (writing.findIdx (·.key == n.key) * c.stagger)).at t).toNat }
-    else m
+  let writing := new.filter (fresh old)
+  let kept := new.zipIdx.map fun (n, i) => lineAt c old writing (c.move.within.at t) t n i
   let leaving : List Line := if 1000 ≤ t then [] else
     ((old.zipIdx.filter fun (o, _) => !(new.any (·.key == o.key))).zipIdx.map fun ((o, i), k) =>
-      { o with shift := ROWH * ((i : Int) - (new.length + k)),
-               reveal := (1000 - c.leave.within.at t).toNat, state := .plain })
+      lineGone c new.length t o i k)
   (kept ++ leaving).toArray
+
+/-- **The update and the enter of a placed item**: a kept item moves `moved` per mille of the way
+from its old place; a new one grows as far as `grow` says. -/
+def placedAt (a : Laid) (moved : Int) (grow : Placed → Nat) (p : Placed) : Placed :=
+  match a.find p.key with
+  | some q => { p with x := lerp q.x p.x moved, y := lerp q.y p.y moved }
+  | none => { p with grow := grow p }
+
+/-- **The update and the enter of a route**: a kept route is drawn whole, and a new one as far as
+`reveal` says. -/
+def routeAt (a : Laid) (reveal : Route → Nat) (r : Route) : Route :=
+  if a.routes.toList.any (·.key == r.key) then r else r.withReveal (reveal r)
 
 /-- The layout at the moment `t` of the step from `a` to `b`: the kept items move; level by level
 from the top, each new edge draws and then the boxes at its end expand; the old items shrink and
 retract. -/
 def sampleLaid (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
-  let moved := c.move.within.at t
   let left := c.leave.within.at t
   let newBoxes := b.placed.toList.filter fun p => (a.find p.key).isNone
   let newRoutes := b.routes.toList.filter fun r => !(a.routes.toList.any (·.key == r.key))
@@ -199,12 +229,8 @@ def sampleLaid (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
   let expandAt (y : Int) : Transition :=
     ({ c.expand with duration := min c.expand.duration (slot * 60 / 100) } : Transition).after
       (start y + slot * 40 / 100)
-  let placed := b.placed.toList.map fun p =>
-    match a.find p.key with
-    | some q => { p with x := lerp q.x p.x moved, y := lerp q.y p.y moved }
-    | none => { p with grow := ((expandAt p.y).at t).toNat }
-  let routes := b.routes.toList.map fun r =>
-    if a.routes.toList.any (·.key == r.key) then r else r.withReveal ((drawAt (targetY r)).at t).toNat
+  let placed := b.placed.toList.map (placedAt a (c.move.within.at t) fun p => ((expandAt p.y).at t).toNat)
+  let routes := b.routes.toList.map (routeAt a fun r => ((drawAt (targetY r)).at t).toNat)
   let gone := if 1000 ≤ t then [] else
     (a.placed.toList.filter fun p => (b.find p.key).isNone).map fun p => { p with grow := (1000 - left).toNat }
   let retracting := if 1000 ≤ t then [] else
@@ -223,6 +249,80 @@ def sample (c : Choreography) (g1 g2 : Page) (t : Nat) : Page :=
       | some (_, a), some (title, b) => some (title, sampleLaid c a b t)
       | _, some (title, b) => some (title, sampleLaid c {} b t)
       | _, none => none }
+
+/-! ## The end law: a step's last moment is the next frame -/
+
+/-- A layout at rest: every box grown whole, every route drawn whole. -/
+def Laid.AtRest (l : Laid) : Prop :=
+  (∀ p ∈ l.placed.toList, p.grow = 1000) ∧ (∀ r ∈ l.routes.toList, r.reveal = 1000)
+
+/-- A page at rest: its lines and its graph. A still frame is at rest. -/
+def Page.AtRest (g : Page) : Prop :=
+  (∀ l ∈ g.lines.toList, l.AtRest) ∧ ∀ x, g.graph = some x → x.2.AtRest
+
+/-- A line at rest is its own update and enter at the end. -/
+theorem lineAt_end (c : Choreography) (old writing : List Line) (n : Line) (i : Nat)
+    (h : n.AtRest) : lineAt c old writing 1000 1000 n i = n := by
+  obtain ⟨hs, hr⟩ := h
+  simp only [lineAt, Int.sub_self, Int.mul_zero, Int.zero_ediv, Transition.after_at_end]
+  cases n
+  simp only at hs hr
+  subst hs hr
+  split <;> split <;> rfl
+
+/-- The lines at a step's end are the next frame's. -/
+theorem sampleLines_end (c : Choreography) (g1 g2 : Page) (h : ∀ l ∈ g2.lines.toList, l.AtRest) :
+    sampleLines c g1 g2 1000 = g2.lines := by
+  simp only [sampleLines, Transition.within_at_end, Nat.le_refl, ↓reduceIte, List.append_nil]
+  rw [List.map_congr_left (g := Prod.fst), List.zipIdx_map_fst, Array.toArray_toList]
+  intro ⟨n, i⟩ hmem
+  have hn := List.mem_map_of_mem (f := Prod.fst) hmem
+  rw [List.zipIdx_map_fst] at hn
+  exact lineAt_end c _ _ n i (h n hn)
+
+/-- A placed item at rest is its own update and enter at the end. -/
+theorem placedAt_end (a : Laid) (grow : Placed → Nat) (p : Placed) (h : p.grow = 1000)
+    (hg : grow p = 1000) : placedAt a 1000 grow p = p := by
+  unfold placedAt
+  split
+  · simp only [lerp_end]
+  · rw [hg, ← h]
+
+/-- A route at rest is its own update and enter at the end. -/
+theorem routeAt_end (a : Laid) (reveal : Route → Nat) (r : Route) (h : r.reveal = 1000)
+    (hr : reveal r = 1000) : routeAt a reveal r = r := by
+  unfold routeAt
+  split
+  · rfl
+  · rw [hr, ← h, Route.withReveal_self]
+
+/-- The layout at a step's end is the next frame's. -/
+theorem sampleLaid_end (c : Choreography) (a b : Laid) (h : b.AtRest) : sampleLaid c a b 1000 = b := by
+  obtain ⟨hp, hr⟩ := h
+  simp only [sampleLaid, Nat.le_refl, ↓reduceIte, List.nil_append, Transition.within_at_end,
+    Transition.after_at_end]
+  rw [List.map_congr_left (g := id) fun p hm => placedAt_end a _ p (hp p hm) rfl,
+    List.map_congr_left (g := id) fun r hm => routeAt_end a _ r (hr r hm) rfl,
+    List.map_id, List.map_id, Array.toArray_toList, Array.toArray_toList]
+
+/-- **The end law.** A step's last moment is the next frame: sampling the step from any page to a
+page at rest, at its end, gives that page. -/
+theorem sample_end (c : Choreography) (g1 g2 : Page) (h : g2.AtRest) : sample c g1 g2 1000 = g2 := by
+  obtain ⟨hl, hg⟩ := h
+  unfold sample
+  rw [sampleLines_end c g1 g2 hl]
+  cases g2 with
+  | mk title judgment heads lines foot place gutter marks graph =>
+    cases graph with
+    | none => cases g1.graph <;> rfl
+    | some x =>
+      obtain ⟨name, b⟩ := x
+      have hrest := hg (name, b) rfl
+      cases g1.graph with
+      | none => simp only [sampleLaid_end c {} b hrest]
+      | some y =>
+        obtain ⟨_, a⟩ := y
+        simp only [sampleLaid_end c a b hrest]
 
 /-! ## The splice, read on two frames -/
 

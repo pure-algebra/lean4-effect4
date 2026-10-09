@@ -250,9 +250,8 @@ theorem devFill_move (role : Role) (value : Nat) (b : Rect) (r dx dy : Int) :
 /-- The sides of a moved frame are the sides, moved. -/
 theorem frameSides_move (b : Rect) (w dx dy : Int) :
     frameSides (b.move dx dy) w = (frameSides b w).map (Rect.move dx dy) := by
-  simp only [frameSides, Rect.move, List.map_cons, List.map_nil, List.cons.injEq, Rect.mk.injEq,
-    and_true, true_and]
-  omega
+  simp only [frameSides, Rect.move, List.map_cons, List.map_nil, Int.sub_eq_add_neg,
+    Int.add_right_comm _ dx, Int.add_right_comm _ dy]
 
 /-- A moved frame lowers to the frame's device calls, moved. -/
 theorem devFrame_move (role : Role) (value : Nat) (b : Rect) (w r dx dy : Int) :
