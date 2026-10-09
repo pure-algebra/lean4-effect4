@@ -230,7 +230,7 @@ structure StepsAgree : Prop where
 Placement: concept `translation-simulation`, requirement R10. Reach: allocation for any exact
 image; every other operation on one allocated cell holding the encoded value, with a callback
 that evaluates to the encoded next value. Each law observes the reply and the final stores. Not
-established: final-store equality does not observe writing an unchanged value; no scheduling,
+established: the laws compare replies and final stores, not write events; no scheduling,
 whole run, host object identity, callback exception or reentrant mutation. Consumers: the typed
 callback connector (`src/Effect4/Laws/Library/Ref/Callback.lean`), then SynchronizedRef and the
 keyed cells (decisions row 335). -/
