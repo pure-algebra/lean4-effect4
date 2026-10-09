@@ -356,6 +356,18 @@ theorem Table.splice_three {a : List Nat} {X Y Z sub : List Table.Entry}
     Table.splice (X ++ (Y ++ Z)) a sub = X ++ (Table.splice Y a sub ++ Z) := by
   rw [Table.splice_append_out_left hX, Table.splice_append_out_right hY hZ]
 
+/-- **Every entry of a splice is an entry of the new subtree's table or of the old table.** A step
+of `edit-repaint-set`. Its consumer is `EditSession.feed_repaint` (`Laws/Program/Edit.lean`). -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.mem_splice {old sub : List Table.Entry} {a : List Nat} {x : Table.Entry}
+    (hx : x ∈ Table.splice old a sub) : x ∈ sub ∨ x ∈ old := by
+  unfold Table.splice at hx
+  rcases List.mem_append.mp hx with hx | hx
+  · rcases List.mem_append.mp hx with hx | hx
+    · exact .inr ((List.takeWhile_sublist _).subset hx)
+    · exact .inl hx
+  · exact .inr ((List.dropWhile_sublist _).subset ((List.dropWhile_sublist _).subset hx))
+
 /-! ## The splice law -/
 
 /-- **The splice at a node**, by induction along the path: the table of the edited node is the
