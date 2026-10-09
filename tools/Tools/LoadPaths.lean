@@ -1,5 +1,6 @@
 import Lean
 import ProofGraph.Population
+import ProofGraph.Goal
 import ProofGraph.Registry
 
 /-!
@@ -210,5 +211,69 @@ elab "#load_map " k:num : command => do
     let r := measure env g rs load [a]
     lines := lines.push s!"{a}: {r.members} theorems, {r.loadBearing} load-bearing, {r.unconsumed.size} unconsumed, {r.offPath.size} off the roots' paths; reuse {r.ratio}% ({r.tree} tree, {r.local_} local)"
   logInfo (String.intercalate "\n" lines.toList)
+
+/-! ## The landing plan: a prediction before a slice
+
+A slice's top theorems are written first, as a decomposition whose open steps are planned goals
+(`proof_goal`, or the parts that `proof_sketch` makes). Their proofs then name what the slice
+reuses and what it still owes, before any step is proved. `#landing_plan T₁ …` walks from the
+tops through the theorems of their own modules, and sorts what the walk reaches:
+
+| Reached | Means |
+| --- | --- |
+| a planned goal | a step the slice still owes: what has to land |
+| a theorem of the tops' modules | a local step, already proved |
+| a theorem of the tree outside them | a joint the slice reuses, with its load-bearing standing |
+
+The predicted reuse ratio is the joints over the joints and the owed and local steps. After the
+landing, `#load_report` on the tops' modules measures the same quantities, so the prediction can be
+compared with what landed. -/
+
+/-- What a landing plan reaches from its tops. -/
+structure Prediction where
+  owed : Array Name := #[]
+  localSteps : Array Name := #[]
+  joints : Std.HashMap Name Nat := {}
+
+/-- Walk from `tops` through the authored theorems of `modules`, stopping at planned goals and at
+theorems outside `modules`. -/
+def predict (env : Environment) (modules : List Name) (tops : Array Name) : Prediction := Id.run do
+  let mut pr : Prediction := {}
+  let mut seen : Std.HashSet Name := {}
+  let mut stack := tops
+  for _ in [0:walkBudget] do
+    let some c := stack.back? | break
+    stack := stack.pop
+    if seen.contains c then continue
+    seen := seen.insert c
+    if ProofGraph.isGoal env c then
+      pr := { pr with owed := pr.owed.push c }
+    else if within modules (moduleOf env c) then
+      unless tops.contains c do pr := { pr with localSteps := pr.localSteps.push c }
+      stack := stack ++ ((directTheorems env c).getD #[])
+    else if within treeScopes (moduleOf env c) && !Meta.isInstanceCore env c then
+      pr := { pr with joints := pr.joints.insert c (pr.joints.getD c 0 + 1) }
+  return pr
+
+/-- `#landing_plan T₁ …`: the prediction of a slice from its top theorems. -/
+elab "#landing_plan " ts:ident+ : command => do
+  let env ← getEnv
+  let tops ← ts.mapM fun t => liftCoreM (realizeGlobalConstNoOverloadWithInfo t)
+  let modules := (tops.map (moduleOf env)).toList.eraseDups
+  let pr := predict env modules tops
+  let g := buildGraph env
+  let load := loadBearing g (roots env)
+  let joints := pr.joints.toArray.qsort fun a b => a.2 > b.2 || (a.2 == b.2 && a.1.toString < b.1.toString)
+  let carrying := joints.filter fun (n, _) => load.contains n
+  let denominator := joints.size + pr.owed.size + pr.localSteps.size
+  let ratio := if denominator = 0 then 0 else 100 * joints.size / denominator
+  let lines := [
+    s!"landing plan for {tops.toList} in {modules}",
+    s!"  to land ({pr.owed.size} planned goals): {pr.owed.toList}",
+    s!"  local steps, proved ({pr.localSteps.size}): {pr.localSteps.toList}",
+    s!"  joints reused ({joints.size}, {carrying.size} of them load-bearing): " ++
+      s!"{joints.toList.map fun (n, k) => s!"{n}{if load.contains n then "" else " (off the roots' paths)"}{if k > 1 then s!" ×{k}" else ""}"}",
+    s!"  predicted reuse: {ratio}% ({joints.size} joints against {pr.owed.size} owed and {pr.localSteps.size} local steps)"]
+  logInfo (String.intercalate "\n" lines)
 
 end Tools.LoadPaths

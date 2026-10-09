@@ -214,13 +214,33 @@ def sigAt (s : Sketch) (app : SigApp) (path : List Nat) : Signature NativeOp :=
   ((s.program.partAt (app.withHoles s.holes).signature [] path).map (·.1.sig)).getD
     (app.withHoles s.holes).signature
 
-/-- The address table of a sketch under its hole-extended signature. -/
-def table (s : Sketch) (app : SigApp := {}) : List Table.Entry :=
-  Effect4.Program.table (app.withHoles s.holes).signature [] s.program
+/-- **One entry of a sketch's address table**: the root's entry holds the sketch's check. Any
+other address is read in the part that holds it (`Eff.partAt`): its environment, and the checker's
+answer on its sub-program at the part's signature, located at the whole program's address. An
+address of a block's bodies' spine is in no part, and has neither. -/
+def tableEntry (s : Sketch) (app : SigApp) : List Nat → Table.Entry
+  | [] => ⟨[], some (.env []), some (s.check app)⟩
+  | a@(_ :: _) =>
+    match s.program.partAt (app.withHoles s.holes).signature [] a with
+    | some (part, rest) =>
+      let env := (Node.eff part.program).envAt part.sig (.env part.env) rest
+      ⟨a, env, match (Node.eff part.program).at_ rest, env with
+        | some (.eff q), some (.env tys) => some (Checker.check part.sig tys a q)
+        | _, _ => none⟩
+    | none => ⟨a, none, none⟩
 
-/-- The distinct refusals of a sketch under its hole-extended signature. -/
+/-- **The address table of a sketch**: one entry for each address of the whole program, in the
+order of `Node.addresses` (`tableEntry`). On a program with no block it is the program's table
+(`table`, `Program/Typing/Table.lean`); a block's parts are read at the block's signature, as the
+module check reads them (cutover slice S1). -/
+def table (s : Sketch) (app : SigApp := {}) : List Table.Entry :=
+  (Node.addresses (.eff s.program)).map (s.tableEntry app)
+
+/-- **The refusals of a sketch**: the distinct refusals of its table's entries, in the table's
+order. The head is the sketch's check's refusal, and the list is empty exactly when the sketch
+checks (`Sketch.refusals_nil_iff`, `Laws/Program/Sketch.lean`). -/
 def refusals (s : Sketch) (app : SigApp := {}) : List TypeRefusal :=
-  Effect4.Program.refusals (app.withHoles s.holes).signature [] s.program
+  ((s.table app).filterMap fun e => e.result.bind Checker.refusal).eraseDups
 
 end Sketch
 

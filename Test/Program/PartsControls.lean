@@ -102,4 +102,9 @@ def sketchOf (m : Module NativeOp) : Option (Sketch × SigApp) :=
 #guard (sketchOf definedClient).map (fun (s, app) => ((s.focusAt app [1, 1, 0]).isSome,
   (s.focusAt app []).isSome, (s.focusAt app [0]).isSome)) = some (true, true, false)
 
+-- finite evaluation (slice S1b): the sketch of filling 2 has no refusal, and its table's root
+-- entry holds the module check's answer, where the checker alone refuses the block
+#guard (sketchOf definedClient).map (fun (s, app) => ((s.refusals app).isEmpty,
+  ((s.table app).head?.bind (·.result)).map (·.toOption.isSome))) = some (true, some true)
+
 end Test.Program.PartsControls

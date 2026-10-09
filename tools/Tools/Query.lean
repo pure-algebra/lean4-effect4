@@ -21,8 +21,8 @@ prints one answer for each: it is `answerLine` and nothing more.
 | `check` | `Sketch.check` | `Sketch.check_program` |
 | `addresses` | `Node.addresses` | `mem_addresses_iff` |
 | `focus` | `Sketch.focusAt` | `focusAt_typed`, where the focus is answered |
-| `table` | `Sketch.table` | `mem_addresses_iff`, `table_head` |
-| `refusals` | `Sketch.refusals` | `refusals_head`, `refusals_nil_iff` |
+| `table` | `Sketch.table` | `mem_addresses_iff`, `Sketch.table_head` |
+| `refusals` | `Sketch.refusals` | `Sketch.refusals_head`, `Sketch.refusals_nil_iff` |
 | `slots` | `Node.extSlotTerm`, `Node.extSlotEnv` | `hasTy_extSlotEnv`, where the node is typed and has a slot |
 | `omit` | `Sketch.omitAt` | `Sketch.check_omit_focusAt`, where its premises hold |
 | `fill` | `Sketch.fillAt` | `Sketch.check_fill_focusAt`, where its premises hold |
@@ -285,10 +285,10 @@ def answer (req : Request) : Answer :=
       let focus := sketch.focusAt {} req.path
       done (if focus.isSome then [``focusAt_typed] else []) (focusJson focus)
     | "table" =>
-      done [``mem_addresses_iff, ``table_head]
+      done [``mem_addresses_iff, ``Sketch.table_head]
         (Json.arr ((sketch.table {}).map entryJson).toArray)
     | "refusals" =>
-      done [``refusals_head, ``refusals_nil_iff]
+      done [``Sketch.refusals_head, ``Sketch.refusals_nil_iff]
         (Json.arr ((sketch.refusals {}).map refusalJson).toArray)
     | "slots" =>
       let slots := slotsAt program req.path (req.slot.map ([·]) |>.getD allSlots)

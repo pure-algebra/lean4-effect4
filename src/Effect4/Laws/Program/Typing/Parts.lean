@@ -469,4 +469,46 @@ theorem checkModule_replace_programFocusAt {s s' : Signature Op} {p q' : Eff Op}
     hext hpart' (check_sound _ q' f.env pq f.ty hq')
   exact ⟨p', hrep, checkModule_complete s' p' T hm⟩
 
+/-! ### The parts are typed (cutover slice S1b) -/
+
+/-- **A typed spine's body is typed**: the part that `Part.bodyAt` answers has a type at the
+block's signature and its declared request. A step of `moduleHasTy_partAt_typed`, toward the
+proposed claim `module-address-table`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem BodiesHasTy.bodyAt_typed {Op : Type} {sig : Signature Op} {part : Part Op}
+    {rest : List Nat} {decls : List DefDecl} {bodies : Effs Op} {path : List Nat}
+    (hb : BodiesHasTy sig decls bodies) (h : Part.bodyAt sig decls bodies path = some (part, rest)) :
+    ∃ t, HasTy part.sig part.env part.program t := by
+  induction hb generalizing path with
+  | nil => cases path <;> cases h
+  | cons _ hbody _ _ ih =>
+    cases path with
+    | nil => cases h
+    | cons i r =>
+      rcases i with _ | _ | i
+      · cases h
+        exact ⟨_, hbody⟩
+      · exact ih (path := r) h
+      · cases h
+
+/-- **Every part of a typed whole program is typed**, at its signature and its environment. A
+step of `Sketch.table_result_refusal_none`, toward the proposed claim `module-address-table`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem moduleHasTy_partAt_typed {Op : Type} {s : Signature Op} {p : Eff Op} {T : EffTy}
+    {a : List Nat} {part : Part Op} {rest : List Nat} (hp : ModuleHasTy s p T)
+    (h : p.partAt s [] a = some (part, rest)) :
+    ∃ t, HasTy part.sig part.env part.program t := by
+  cases hp with
+  | defs hb hm =>
+    simp only [Eff.partAt] at h
+    split at h
+    · exact BodiesHasTy.bodyAt_typed hb h
+    · cases h
+      exact ⟨_, hm⟩
+    · cases h
+  | plain hd =>
+    rw [Eff.partAt_of_hasTy hd a] at h
+    cases h
+    exact ⟨_, hd⟩
+
 end Effect4.Program

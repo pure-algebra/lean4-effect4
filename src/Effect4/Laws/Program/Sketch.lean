@@ -490,4 +490,111 @@ theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List N
       { s with holes := s.holes ++ [Row.hole name t.answer t.error t.requires.elems] }
       app path) hhole) [])
 
+/-! ## The address table and the refusals of a whole program (cutover slice S1b)
+
+Placement. Concept `initial-algebras-folds`, requirement R14; the proposed claim
+`module-address-table`, role completeness, with the pointer `Sketch.refusals_nil_iff`: the list
+of refusals of a sketch is empty exactly when the sketch checks, block included. It is
+`refusals_nil_iff` (`Laws/Program/Typing/Table.lean`) for the module check. Reach: every sketch
+and every application. Not established: the order of the refusals after the head, and agreement
+with the program's table off a block (the table of a program with no block is entrywise the
+program's, and no law states it yet). Consumer: the query tool's refusals and table. -/
+
+/-- The root's entry is first, and it holds the sketch's check. A step of
+`Sketch.refusals_head`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.table_head (s : Sketch) (app : SigApp) :
+    ∃ rest, s.table app = ⟨[], some (.env []), some (s.check app)⟩ :: rest := by
+  obtain ⟨rest, h⟩ := addresses_eff_head s.program
+  unfold Sketch.table
+  rw [h]
+  exact ⟨_, rfl⟩
+
+/-- On a sketch that checks no entry of its table holds a refusal: each part is typed, so the
+checker answers a type at every address of a program inside it. A step of
+`Sketch.refusals_of_check`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.table_result_refusal_none {s : Sketch} {app : SigApp} {T : EffTy}
+    (hs : s.check app = .ok T) {e : Table.Entry} (he : e ∈ s.table app) :
+    e.result.bind Checker.refusal = none := by
+  have hsm : Checker.checkModule (app.withHoles s.holes).signature s.program = .ok T := hs
+  unfold Sketch.table at he
+  simp only [List.mem_map] at he
+  obtain ⟨a, -, rfl⟩ := he
+  cases a with
+  | nil =>
+    show (some (s.check app)).bind Checker.refusal = none
+    rw [hs]
+    rfl
+  | cons i r =>
+    simp only [Sketch.tableEntry]
+    split
+    · rename_i part rest hpart
+      obtain ⟨_, hty⟩ := moduleHasTy_partAt_typed (checkModule_sound _ _ T hsm) hpart
+      dsimp only
+      split
+      · rename_i q tys hat henv
+        obtain ⟨env, t, hf⟩ := hasTy_focusAt hty hat
+        obtain ⟨-, henv', hfty⟩ := focusAt_eq_some.mp hf
+        have hsame : env = tys := by
+          injection henv'.symm.trans henv with h1
+          injection h1
+        subst hsame
+        rw [check_complete _ q env t (effTy_sound _ q env t hfty) (i :: r)]
+        rfl
+      · rfl
+    · rfl
+
+/-- On a sketch that checks the list of refusals is empty. A step of `Sketch.refusals_head` and
+`Sketch.refusals_nil_iff`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.refusals_of_check {s : Sketch} {app : SigApp} {T : EffTy}
+    (hs : s.check app = .ok T) : s.refusals app = [] := by
+  unfold Sketch.refusals
+  have hnil : (s.table app).filterMap (fun e => e.result.bind Checker.refusal) = [] := by
+    rw [List.filterMap_eq_nil_iff]
+    intro e he
+    exact Sketch.table_result_refusal_none hs he
+  rw [hnil]
+  rfl
+
+/-- **The head of a sketch's refusals is its check's refusal.** The root's entry is first. It
+says nothing of the order after the head. A step of `Sketch.refusals_nil_iff`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.refusals_head (s : Sketch) (app : SigApp) :
+    (s.refusals app).head? = Checker.refusal (s.check app) := by
+  cases h : s.check app with
+  | ok T =>
+    rw [Sketch.refusals_of_check h]
+    rfl
+  | error ref =>
+    unfold Sketch.refusals
+    obtain ⟨rest, htable⟩ := Sketch.table_head s app
+    rw [htable, h]
+    simp only [List.filterMap_cons, Option.bind_some]
+    have href : Checker.refusal (.error ref : Except TypeRefusal EffTy) = some ref := rfl
+    rw [href, List.eraseDups_cons]
+    rfl
+
+/-- **The list of refusals of a sketch is empty exactly when the sketch checks**, block
+included: the proposed claim `module-address-table`. Its consumer is the query tool's refusals. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.refusals_nil_iff (s : Sketch) (app : SigApp) :
+    s.refusals app = [] ↔ (s.check app).toOption.isSome = true := by
+  constructor
+  · intro h
+    have hhead : (s.refusals app).head? = none := by rw [h]; rfl
+    rw [Sketch.refusals_head] at hhead
+    cases hc : s.check app with
+    | ok _ => rfl
+    | error _ =>
+      rw [hc] at hhead
+      cases hhead
+  · intro h
+    cases hc : s.check app with
+    | ok _ => exact Sketch.refusals_of_check hc
+    | error _ =>
+      rw [hc] at h
+      cases h
+
 end Effect4.Program

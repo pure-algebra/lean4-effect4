@@ -1725,6 +1725,7 @@ Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniquenes
 | typed-replacement | substitution | proved | Effect4.Program.NodeHasTy.replace | yes |  |
 | focus-function | inversion | proved | Effect4.Program.NodeHasTy.replace_envAt | yes |  |
 | address-table | compatibility | proved | Effect4.Program.refusals_nil_iff | yes |  |
+| module-address-table | compatibility | proved | Effect4.Program.Sketch.refusals_nil_iff | yes |  |
 | call-instance-address | inversion | proved | Effect4.Program.callAt_rowTy | yes |  |
 | annotate-table | compatibility | proved | Effect4.Program.annotate_eq_table | yes |  |
 | term-slot-environment | inversion | proved | Effect4.Program.hasTy_extSlotEnv | yes |  |
@@ -1923,6 +1924,13 @@ Literature: TAPL, §16.1, p. 210 — adaptedResult
   (p : Effect4.Program.Eff Op),
   Iff (Eq (Effect4.Program.refusals s env0 p) List.nil)
     (Eq (Effect4.Program.effTy s env0 p).isSome Bool.true)
+```
+
+**module-address-table**
+
+```lean
+∀ (s : Effect4.Program.Sketch) (app : Effect4.Program.SigApp),
+  Iff (Eq (s.refusals app) List.nil) (Eq (s.check app).toOption.isSome Bool.true)
 ```
 
 **call-instance-address**
@@ -2826,7 +2834,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
-| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `annotate_eq_table` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_eq` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `checkStmt_step_binds` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `partAt_resig` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `at_layers_nil` (proved), `at_stmts_nil` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `mem_foldList_iff` (proved), `replaceAt_eff` (proved), `sizeOf_child_lt` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_filled` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `fillAt_of_replaceAt` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `focusAt_typed` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `refusals_head` (proved), `refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_none` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | — |
+| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `annotate_eq_table` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_eq` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `checkStmt_step_binds` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `partAt_resig` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `at_layers_nil` (proved), `at_stmts_nil` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `mem_foldList_iff` (proved), `replaceAt_eff` (proved), `sizeOf_child_lt` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_filled` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `fillAt_of_replaceAt` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `Sketch.table_head` (proved), `table_result_refusal_none` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `focusAt_typed` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_none` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | — |
 
 **Next goals** (16): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `run_eq_ref_table`, `denoteRows_eq_session`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -6846,7 +6854,7 @@ flowchart LR
   n298104a1["NodeHasTy.replace<br/>proved"]
   na67188f4["replace_envAt<br/>proved"]
   n2c42cc06["check_closed<br/>proved"]
-  nd155b033["refusals_nil_iff<br/>proved"]
+  nd155b033["Program.refusals_nil_iff<br/>proved"]
   na287df6d["hasTy_extSlotEnv<br/>proved"]
   nded34831["callAt_rowTy<br/>proved"]
   n56edc971["annotate_eq_table<br/>proved"]
@@ -6863,6 +6871,7 @@ flowchart LR
   n8b89e295["checkStmt_eq<br/>proved"]
   n6dd6d11c["checkStmts_eq<br/>proved"]
   n5152adc0["check_eq<br/>proved"]
+  n263992e9["bodyAt_typed<br/>proved"]
   n4a4bfd7a["BodiesHasTy.replace<br/>proved"]
   n6ea604b9["matchArgsB_monotone<br/>proved"]
   nb277ceb8["checkStmt_step_binds<br/>proved"]
@@ -6963,9 +6972,14 @@ flowchart LR
   n35314480["check_program<br/>proved"]
   na71afa55["fillAt_of_replaceAt<br/>proved"]
   n66641611["Sketch.focusAt_nil<br/>proved"]
+  ne2119dd2["Sketch.refusals_head<br/>proved"]
+  n23c724c1["Sketch.refusals_nil_iff<br/>proved"]
+  n613e89aa["refusals_of_check<br/>proved"]
   n9c0536ca["sigAt_extends<br/>proved"]
   ne4f979["sigAt_nil<br/>proved"]
   n102fbac9["sigAt_part<br/>proved"]
+  n493b711c["Sketch.table_head<br/>proved"]
+  nb33e10c6["table_result_refusal_none<br/>proved"]
   naef9fffd["closed_project<br/>proved"]
   n3b627199["closed_typeAt<br/>proved"]
   n4e283f13["closedSubst_matchArgsB<br/>proved"]
@@ -7148,12 +7162,13 @@ flowchart LR
   n5606ba1c["listOf_list<br/>proved"]
   nb1d18964["listOf_upper<br/>proved"]
   n38d8c6ad["mem_addresses_iff<br/>proved"]
+  n89229ec6["moduleHasTy_partAt_typed<br/>proved"]
   n34cbc6ea["moduleHasTy_programFocusAt<br/>proved"]
   n949ae45b["moduleHasTy_replace_programFocusAt<br/>proved"]
   ne5313ff5["optionTy_eq_normal<br/>proved"]
   n4a3c5276["optionTy_option<br/>proved"]
   n6e2bceb9["optionTy_upper<br/>proved"]
-  n5bf295ba["refusals_head<br/>proved"]
+  n5bf295ba["Program.refusals_head<br/>proved"]
   nb2dbd8a3["refusals_of_hasTy<br/>proved"]
   nd4b0458a["sketch_more_holes<br/>proved"]
   nadbe65f0["sketch_reads_its_holes<br/>proved"]
@@ -7165,7 +7180,7 @@ flowchart LR
   n6ee43dfd["tableAt_none<br/>proved"]
   n2d07ed3a["tableEntryAt_nil<br/>proved"]
   n974a1675["table_eq_tableAt<br/>proved"]
-  n962cf896["table_head<br/>proved"]
+  n962cf896["Program.table_head<br/>proved"]
   n465abf3["table_result_refusal_none_of_hasTy<br/>proved"]
   n1ae65159["termTy_closed<br/>proved"]
   n5cb7d87b["termTy_of_term?<br/>proved"]
@@ -7243,8 +7258,8 @@ flowchart LR
   n30801347["subN_refl<br/>proved"]
   ndf4cbc08["replaceAt_spec<br/>proved"]
   n39739397["checkModule_eq_check<br/>proved"]
-  ne7743baf["subN_equiv_iff<br/>proved"]
   nf68b98e1["checkModule_sound<br/>proved"]
+  ne7743baf["subN_equiv_iff<br/>proved"]
   n6b5389fd["moduleHasTy_ext<br/>proved"]
   nb45e257a["checkModule_complete<br/>proved"]
   n6de917e3["partAt_of_hasTy<br/>proved"]
@@ -7509,8 +7524,20 @@ flowchart LR
   n1509b27b --> n85733cc1
   n1509b27b --> n2ac4a9d4
   n35314480 --> n8b622345
+  ne2119dd2 --> n613e89aa
+  ne2119dd2 --> n493b711c
+  n23c724c1 --> n613e89aa
+  n23c724c1 --> ne2119dd2
+  n613e89aa --> nb33e10c6
   n9c0536ca --> nd81f4085
   n9c0536ca --> nb625dbc4
+  n493b711c --> n3f21aba3
+  nb33e10c6 --> n4c593752
+  nb33e10c6 --> n5a230c5
+  nb33e10c6 --> nc2f645e6
+  nb33e10c6 --> n44468c14
+  nb33e10c6 --> nf68b98e1
+  nb33e10c6 --> n89229ec6
   naef9fffd --> n4905bbf9
   n3b627199 --> naef9fffd
   n4e283f13 --> n87f4fc9d
@@ -7889,6 +7916,8 @@ flowchart LR
   n38d8c6ad --> nb1b6d23f
   n38d8c6ad --> ndd05ddcb
   n38d8c6ad --> nac649e50
+  n89229ec6 --> n6de917e3
+  n89229ec6 --> n263992e9
   n34cbc6ea --> n6de917e3
   n34cbc6ea --> n44468c14
   n34cbc6ea --> n37a040a7
@@ -8027,9 +8056,9 @@ flowchart LR
   n8769a70b --> n88a158ea
   n8769a70b --> n376be49d
   n8769a70b --> ncbd97dc
+  nf68b98e1 --> n4c593752
   ne7743baf --> ndfcf43b
   ne7743baf --> n9d9c3800
-  nf68b98e1 --> n4c593752
   nb45e257a --> n39739397
   nb45e257a --> n5a230c5
   n8e60bcb6 --> n4c593752
@@ -8109,7 +8138,7 @@ flowchart LR
 | `NodeHasTy.replace` | proved | — | `replace_envAt` |
 | `replace_envAt` | proved | — | `child_step` |
 | `check_closed` | proved | — | `annotationsClosed_of_formed`, `check_sound`, `hasTy_closed` |
-| `refusals_nil_iff` | proved | — | `check_sound`, `refusals_of_hasTy`, `refusals_head` |
+| `Program.refusals_nil_iff` | proved | — | `check_sound`, `refusals_of_hasTy`, `Program.refusals_head` |
 | `hasTy_extSlotEnv` | proved | — | `check_complete`, `check_sound` |
 | `callAt_rowTy` | proved | — | `check_sound`, `focusAt_eq_some` |
 | `annotate_eq_table` | proved | — | `check_eq`, `table_eq_tableAt` |
@@ -8126,6 +8155,7 @@ flowchart LR
 | `checkStmt_eq` | proved | — | `tableAt_eq_cons`, `checkStmt_step_binds`, `tableAt_none`, `effTy_of_check`, `termTy_of_term?` |
 | `checkStmts_eq` | proved | — | `tableAt_eq_cons`, `checkStmt_step_binds`, `tableAt_none`, `effTy_of_check`, `termTy_of_term?` |
 | `check_eq` | proved | — | `tableAt_eq_cons`, `checkStmt_step_binds`, `tableAt_none`, `effTy_of_check`, `termTy_of_term?` |
+| `bodyAt_typed` | proved | — | — |
 | `BodiesHasTy.replace` | proved | — | `hasTy_replace_focusAt`, `focusAt_typed`, `replaceAt_eff` |
 | `matchArgsB_monotone` | proved | — | `matchArgsB_least`, `matchArgsB_complete`, `matchArgsB_sound` |
 | `checkStmt_step_binds` | proved | — | — |
@@ -8226,9 +8256,14 @@ flowchart LR
 | `check_program` | proved | — | `withHoles_nil` |
 | `fillAt_of_replaceAt` | proved | — | — |
 | `Sketch.focusAt_nil` | proved | — | — |
+| `Sketch.refusals_head` | proved | — | `refusals_of_check`, `Sketch.table_head` |
+| `Sketch.refusals_nil_iff` | proved | — | `refusals_of_check`, `Sketch.refusals_head` |
+| `refusals_of_check` | proved | — | `table_result_refusal_none` |
 | `sigAt_extends` | proved | — | `extends_withDefs`, `bodyAt_sig` |
 | `sigAt_nil` | proved | — | — |
 | `sigAt_part` | proved | — | — |
+| `Sketch.table_head` | proved | — | `addresses_eff_head` |
+| `table_result_refusal_none` | proved | — | `check_sound`, `check_complete`, `focusAt_eq_some`, `hasTy_focusAt`, `checkModule_sound`, `moduleHasTy_partAt_typed` |
 | `closed_project` | proved | — | `closed_join` |
 | `closed_typeAt` | proved | — | `closed_project` |
 | `closedSubst_matchArgsB` | proved | — | `closed_joinCands`, `closed_cands` |
@@ -8411,12 +8446,13 @@ flowchart LR
 | `listOf_list` | proved | — | `extendAll_agrees` |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `mem_addresses_iff` | proved | — | `yieldAt_addressYield`, `mem_foldList_iff`, `addresses_eq_foldList` |
+| `moduleHasTy_partAt_typed` | proved | — | `partAt_of_hasTy`, `bodyAt_typed` |
 | `moduleHasTy_programFocusAt` | proved | — | `partAt_of_hasTy`, `hasTy_focusAt`, `bodyAt` |
 | `moduleHasTy_replace_programFocusAt` | proved | — | `partAt_of_hasTy`, `hasTy_replace_focusAt`, `focusAt_typed`, `replaceAt_eff`, `BodiesHasTy.replace`, `bodyAt_sig` |
 | `optionTy_eq_normal` | proved | — | `liftOne_eq` |
 | `optionTy_option` | proved | — | `lift_member` |
 | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
-| `refusals_head` | proved | — | `table_head`, `check_sound`, `refusals_of_hasTy` |
+| `Program.refusals_head` | proved | — | `Program.table_head`, `check_sound`, `refusals_of_hasTy` |
 | `refusals_of_hasTy` | proved | — | `table_result_refusal_none_of_hasTy` |
 | `sketch_more_holes` | proved | — | `withHoles_extends`, `check_ext`, `withHoles_withHoles` |
 | `sketch_reads_its_holes` | proved | — | `withHoles_extends`, `check_restrict`, `withHoles_withHoles` |
@@ -8428,7 +8464,7 @@ flowchart LR
 | `tableAt_none` | proved | — | — |
 | `tableEntryAt_nil` | proved | — | — |
 | `table_eq_tableAt` | proved | — | — |
-| `table_head` | proved | — | `addresses_eff_head` |
+| `Program.table_head` | proved | — | `addresses_eff_head` |
 | `table_result_refusal_none_of_hasTy` | proved | — | `check_sound`, `check_complete`, `focusAt_eq_some`, `hasTy_focusAt` |
 | `termTy_closed` | proved | — | `argTy_closed` |
 | `termTy_of_term?` | proved | — | — |
@@ -8506,8 +8542,8 @@ flowchart LR
 | `subN_refl` | proved | — | — |
 | `replaceAt_spec` | proved | — | — |
 | `checkModule_eq_check` | proved | — | — |
-| `subN_equiv_iff` | proved | — | `sub_antisymm_canonical`, `normalize_idem` |
 | `checkModule_sound` | proved | — | `check_sound` |
+| `subN_equiv_iff` | proved | — | `sub_antisymm_canonical`, `normalize_idem` |
 | `moduleHasTy_ext` | proved | — | — |
 | `checkModule_complete` | proved | — | `checkModule_eq_check`, `check_complete` |
 | `partAt_of_hasTy` | proved | — | — |
