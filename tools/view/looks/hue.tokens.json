@@ -1,0 +1,4 @@
+{
+  "$description": "The dark look with the hue on: the host, a failure and a resource each in its own hue.",
+  "$extensions": {"effect4.view": {"hue": true}}
+}

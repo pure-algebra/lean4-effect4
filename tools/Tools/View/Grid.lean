@@ -1,4 +1,4 @@
-import Tools.View.Picture
+import Tools.View.Look
 
 /-!
 # The grid

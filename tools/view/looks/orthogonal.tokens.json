@@ -1,0 +1,4 @@
+{
+  "$description": "Edges as orthogonal steps, down, across at the middle, down: the routing of ELK's orthogonal router, for comparison with the curves.",
+  "stroke": {"edge": {"$type": "dimension", "$value": {"value": 1, "unit": "px"}, "$extensions": {"effect4.view": {"curve": "stepY"}}}}
+}

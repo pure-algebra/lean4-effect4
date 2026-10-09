@@ -40,10 +40,10 @@ static int count(const char *path) {
     kinds[(unsigned char)k & 127]++;
     if (k == 'K') cuts++;
     else if (k == 'k') cuts--;
-    else if (!strchr("PFCTH\n", k)) bad++;
+    else if (!strchr("PRYFBCTH\n", k)) bad++;
   }
   free(row); fclose(fp);
-  printf("fills %ld  data texts %ld  other texts %ld  cuts %ld  pointer boxes %ld\n", kinds['F'], kinds['C'], kinds['T'], kinds['K'], kinds['H']);
+  printf("fills %ld  curves %ld  data texts %ld  other texts %ld  cuts %ld  pointer boxes %ld\n", kinds['F'], kinds['B'], kinds['C'], kinds['T'], kinds['K'], kinds['H']);
   if (bad || cuts) { fprintf(stderr, "draw: %d rows are no call, %d cuts stay open\n", bad, cuts); return 1; }
   return 0;
 }
@@ -65,14 +65,13 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (!strcmp(argv[2], "--png") && argc >= 4) {
-    PaintFaces faces;
-    if (!paint_faces_open(&faces)) { fprintf(stderr, "draw: a face does not open\n"); return 1; }
+    Replay rp; memset(&rp, 0, sizeof rp);
     int bad = 0;
-    cairo_surface_t *surface = replay_stream(stream, &faces, &bad);
-    if (!surface) { fprintf(stderr, "draw: %s has no target row\n", stream); paint_faces_close(&faces); return 1; }
+    cairo_surface_t *surface = replay_stream(stream, &rp, &bad);
+    if (!surface) { fprintf(stderr, "draw: %s has no target row, or its faces do not open\n", stream); replay_close(&rp); return 1; }
     cairo_surface_write_to_png(surface, argv[3]);
     cairo_surface_destroy(surface);
-    paint_faces_close(&faces);
+    replay_close(&rp);
     if (bad) { fprintf(stderr, "draw: %d rows are no call or cuts stay open\n", bad); return 1; }
     return 0;
   }

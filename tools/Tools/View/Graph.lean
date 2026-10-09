@@ -304,7 +304,7 @@ def find (l : Laid) (k : Key) : Option Placed := l.placed.find? (·.key == k)
 
 /-- A box, grown about its centre as far as its `grow`: its ground, its band when lit, its frame;
 its two lines and its pointer box once it has grown whole. -/
-def boxCalls (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
+def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
   if p.grow = 0 then [] else
   let h := ROWH * BOXROWS
   let w' := p.w * p.grow / 1000
@@ -313,8 +313,8 @@ def boxCalls (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
   let y := dy + p.y + (h - h') / 2
   let room : Int := p.w / CELL - 2
   [⟨p.key, .fill .ground 1000 x y w' h'⟩] ++
-    (if n.lit then [⟨p.key, .fill .rule 500 x y w' h'⟩] else []) ++
-    [⟨p.key, .frame .ink x y w' h' 1⟩] ++
+    (if n.lit then [⟨p.key, .fill .rule L.band x y w' h'⟩] else []) ++
+    [⟨p.key, .frame .ink x y w' h' L.strokes.frame⟩] ++
     (if 1000 ≤ p.grow then
       cellsAt p.key (dx + p.x + CELL) (dy + p.y + BASE) n.line1 room ++
         cellsAt p.key (dx + p.x + CELL) (dy + p.y + ROWH + BASE) n.line2 room ++
@@ -335,22 +335,31 @@ def exitAt (p : Placed) : Pt := (middle p, p.y + ROWH * BOXROWS)
 /-- Where an edge enters an item from above: the middle of its top. -/
 def entryAt (p : Placed) : Pt := (middle p, p.y)
 
-/-- **A step down** from `a` to `b`: one cubic segment, vertical at both ends, its controls half the
-drop from each end (the vertical link of d3, dot's splines between ranks). Two ends in one column
-make a straight step: a route bends only where it moves across. -/
-def stepDown (a b : Pt) : Cubic :=
-  let h := (b.2 - a.2) / 2
-  ⟨a, (a.1, a.2 + h), (b.1, b.2 - h), b⟩
-
 /-- A straight segment from `a` to `b`. -/
 def straight (a b : Pt) : Cubic := ⟨a, a, b, b⟩
+
+/-- **A step down** from `a` to `b`, in the look's form (`Curve`). A `bumpY` step is one cubic
+segment, vertical at both ends, each control `reach` per mille of the drop from its end: at 500,
+half the drop, it is d3's vertical link and dot's spline between ranks. A `stepY` step turns at
+the middle of the drop. Two ends in one column make a straight step in every form: a route bends
+only where it moves across. -/
+def stepDown (L : Look) (a b : Pt) : List Cubic :=
+  match L.curve with
+  | .bumpY =>
+    let h := (b.2 - a.2) * L.reach / 1000
+    [⟨a, (a.1, a.2 + h), (b.1, b.2 - h), b⟩]
+  | .linear => [straight a b]
+  | .stepY =>
+    if a.1 = b.1 then [straight a b] else
+    let m := (a.2 + b.2) / 2
+    [straight a (a.1, m), straight (a.1, m) (b.1, m), straight (b.1, m) b]
 
 /-- **A route as cubic segments**, from its source to its target. A forward route leaves the
 middle of its source's bottom, steps down to each point and passes straight through the point's
 rank, then steps down to the middle of its target's top. A back route is one arc: out of its source's right side, around
 through its lane, into its target's right side, so a return reads as a return. A loop is a small
 drop off a box's right side. -/
-def segments (l : Laid) : Route → List Cubic
+def segments (L : Look) (l : Laid) : Route → List Cubic
   | .down _ ks _ =>
     let ps := ks.filterMap l.find
     if ps.length != ks.length then [] else
@@ -361,11 +370,11 @@ def segments (l : Laid) : Route → List Cubic
       (rest.zipIdx.foldl (fun (acc : List Cubic × Pt) (b, i) =>
         if i + 1 == n then
           let into := entryAt b
-          (acc.1 ++ [stepDown acc.2 into], into)
+          (acc.1 ++ stepDown L acc.2 into, into)
         else
           let into : Pt := (middle b, b.y)
           let out : Pt := (middle b, b.y + ROWH * BOXROWS)
-          (acc.1 ++ [stepDown acc.2 into, straight into out], out)) ([], exitAt a)).1
+          (acc.1 ++ stepDown L acc.2 into ++ [straight into out], out)) ([], exitAt a)).1
   | .back _ s d lane _ =>
     match l.find s, l.find d with
     | some a, some b =>
@@ -387,24 +396,25 @@ def segments (l : Laid) : Route → List Cubic
 
 /-- **Segments drawn from their start for `budget` of size**: each whole segment within the budget,
 then the part of the next one that the budget reaches. -/
-def drawn (key : Key) (dx dy : Int) : List Cubic → Int → List (Keyed Call)
+def drawn (key : Key) (weight : Nat) (dx dy : Int) : List Cubic → Int → List (Keyed Call)
   | [], _ => []
   | c :: rest, budget =>
     if budget ≤ 0 then []
-    else if c.size ≤ budget then ⟨key, .curve .ink (c.move dx dy) 1⟩ :: drawn key dx dy rest (budget - c.size)
-    else [⟨key, .curve .ink ((c.upTo (budget * 1000 / c.size)).move dx dy) 1⟩]
+    else if c.size ≤ budget then
+      ⟨key, .curve .ink (c.move dx dy) weight⟩ :: drawn key weight dx dy rest (budget - c.size)
+    else [⟨key, .curve .ink ((c.upTo (budget * 1000 / c.size)).move dx dy) weight⟩]
 
-/-- A route's calls: its segments, drawn as far as its reveal. -/
-def routeCalls (l : Laid) (dx dy : Int) (rt : Route) : List (Keyed Call) :=
-  let cs := l.segments rt
-  drawn rt.key dx dy cs ((cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000)
+/-- A route's calls: its segments, drawn as far as its reveal, at the look's weight of an edge. -/
+def routeCalls (L : Look) (l : Laid) (dx dy : Int) (rt : Route) : List (Keyed Call) :=
+  let cs := l.segments L rt
+  drawn rt.key L.strokes.edge dx dy cs ((cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000)
 
 /-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the routes first, then the
 boxes over them. -/
-def calls (l : Laid) (dx dy : Int) : List (Keyed Call) :=
-  l.routes.toList.flatMap (l.routeCalls dx dy) ++
+def calls (L : Look) (l : Laid) (dx dy : Int) : List (Keyed Call) :=
+  l.routes.toList.flatMap (l.routeCalls L dx dy) ++
     l.placed.toList.flatMap fun p => match p.node with
-      | some n => boxCalls dx dy p n
+      | some n => boxCalls L dx dy p n
       | none => []
 
 /-- No two boxes share a pixel: a finite check of a layout. -/

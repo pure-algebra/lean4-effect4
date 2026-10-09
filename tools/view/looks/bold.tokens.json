@@ -1,0 +1,8 @@
+{
+  "$description": "Edges and frames two pixels wide.",
+  "stroke": {
+    "$type": "dimension",
+    "edge": {"$value": {"value": 2, "unit": "px"}},
+    "frame": {"$value": {"value": 2, "unit": "px"}}
+  }
+}

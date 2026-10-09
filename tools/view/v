@@ -10,6 +10,8 @@
 #   v -p NAME        write a PNG of every frame and every picture of motion
 #   v -m N ...       N pictures of motion between two frames (default 20; 1 draws none)
 #   v -P ...         no marks: the plain page (the marks wait for the owner's ruling)
+#   v -l LOOK ...    in a look: a name of tools/view/looks (paper, hue, sans, ...) or a token file
+#   v -L             every look side by side: tools/view/out/looks/index.html and a PNG of each
 #
 # NAME is a program of the wire corpus: p42 pBind pFork pAwait pGen pLoop pCatch pScope.
 # The frames go to tools/view/out/NAME. In the window: Right or Space plays to the next frame,
@@ -19,7 +21,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 # lake comes from elan; a shell whose profile does not add it still finds it here
 command -v lake > /dev/null 2>&1 || PATH="$HOME/.elan/bin:$PATH"
 root=$(cd "$here/../.." && pwd)
-mode=window; motion=20; file=""; plain=""; cmd=build
+mode=window; motion=20; file=""; plain=""; look=""; cmd=build
 while [ $# -gt 0 ]; do
   case "$1" in
     -t) mode=text ;;
@@ -27,13 +29,31 @@ while [ $# -gt 0 ]; do
     -f) shift; file=$1 ;;
     -m) shift; motion=$1 ;;
     -P) plain=--plain ;;
+    -l) shift; look=$1 ;;
+    -L) cmd=looks ;;
     -r) cmd=run ;;
     -g) cmd=specimen ;;
-    -h|--help) sed -n 2,17p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n 2,18p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) break ;;
   esac
   shift
 done
+if [ "$cmd" = looks ]; then
+  out="$here/out/looks"
+  rm -rf "$out"
+  (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean looks tools/view/looks "$out")
+  "$here/build.sh"
+  for f in "$out"/*/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done
+  echo "$out/index.html"
+  exit 0
+fi
+case $look in
+  ''|*/*) ;;
+  *) [ -f "$here/looks/$look.tokens.json" ] || [ "$look" = dark ] || { echo "v: no look $look in $here/looks" >&2; exit 2; } ;;
+esac
+case $look in
+  */*) look=$(cd "$(dirname "$look")" && pwd)/$(basename "$look") ;;
+esac
 if [ "$cmd" = specimen ]; then
   name=specimen; out="$here/out/specimen"
   set -- specimen "$out"
@@ -46,6 +66,7 @@ else
   set -- "$cmd" "$name" "$out"
 fi
 rm -rf "$out"
+if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
 (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean --motion "$motion" $plain "$@")
 "$here/build.sh"
 case $mode in

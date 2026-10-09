@@ -1,0 +1,8 @@
+{
+  "$description": "A step of 400 ms, and no overshoot: every element eases out.",
+  "motion": {
+    "step": {"$type": "duration", "$value": {"value": 400, "unit": "ms"}},
+    "move": {"$type": "transition", "$value": {"duration": {"value": 180, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": [0.333, 1, 0.667, 1]}, "$extensions": {"effect4.view": {"easing": "out"}}},
+    "expand": {"$type": "transition", "$value": {"duration": {"value": 144, "unit": "ms"}, "delay": {"value": 0, "unit": "ms"}, "timingFunction": [0.333, 1, 0.667, 1]}, "$extensions": {"effect4.view": {"easing": "out"}}}
+  }
+}

@@ -207,30 +207,30 @@ def pageSize (W : Int) (g : Page) : Int × Int :=
 /-- A page's code as calls: each line at its row in the data face, past a rule from the heads to
 the foot of the body. The code carries no key yet: the map from an address to its text is the
 printer's span map, still to come. -/
-def codeCalls (W : Int) (g : Page) : List (Keyed Call) :=
+def codeCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
   match g.code with
   | none => []
   | some c =>
     let x := col (codeCol g)
     let room := (W - LEFT - x) / CELL
-    [⟨"", .vrule .rule (col (codeCol g - CODE_RULE)) HEAD_RULE (TOP + ROWH * bodyRows g - HEAD_RULE) 1⟩] ++
+    [⟨"", .vrule .rule (col (codeCol g - CODE_RULE)) HEAD_RULE (TOP + ROWH * bodyRows g - HEAD_RULE) L.strokes.rule⟩] ++
       c.lines.toList.zipIdx.flatMap fun (s, i) => cellsAt "" x (TOP + ROWH * i + BASE) s room
 
 /-- A page's graph as calls: its title in the label face, then the graph below. -/
-def graphCalls (g : Page) : List (Keyed Call) :=
+def graphCalls (L : Look) (g : Page) : List (Keyed Call) :=
   match g.graph with
   | none => []
   | some p => textAt "" .label LEFT (graphTop g - ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM ++
-      p.laid.calls LEFT (graphTop g)
+      p.laid.calls L LEFT (graphTop g)
 
 /-- One line at its row: the band of a lit line, the gutter, then inside a cut the text, the
 type and the note; a refused line is framed; last, the box that answers the pointer. -/
-def lineCalls (W B : Int) (row : Nat) (l : Line) (marks : Bool := true) : List (Keyed Call) :=
-  let calls := lineAt W B row l marks
+def lineCalls (L : Look) (W B : Int) (row : Nat) (l : Line) (marks : Bool := true) : List (Keyed Call) :=
+  let calls := lineAt L W B row l marks
   if l.shift = 0 then calls else calls.map (Keyed.move 0 l.shift)
 where
   /-- The line at its row, written as far as its reveal. -/
-  lineAt (W B : Int) (row : Nat) (l : Line) (marks : Bool) : List (Keyed Call) :=
+  lineAt (L : Look) (W B : Int) (row : Nat) (l : Line) (marks : Bool) : List (Keyed Call) :=
   let whole := 1000 ≤ l.reveal
   let part := (l.text.take (l.text.length * l.reveal / 1000)).toString
   let l : Line := if whole then l else { l with text := part, type := "", mark := none, note := "" }
@@ -244,7 +244,7 @@ where
   let mark := if marks then l.mark else none
   let (end0, end1, end2) := lineEnds B cols l mark.isSome
   let k := l.key
-  (if l.state = .lit then [⟨k, .fill .rule 500 0 y W ROWH⟩] else []) ++
+  (if l.state = .lit then [⟨k, .fill .rule L.band 0 y W ROWH⟩] else []) ++
     cellsAt k (col 0) base l.gutter (B - 1) ++
     [⟨k, .cut (col B - CUT_INSET) y W ROWH⟩] ++
     (if l.state = .refused then
@@ -265,7 +265,7 @@ where
 def groundCalls (W H : Int) : List (Keyed Call) := [⟨"", .fill .ground 1000 0 0 W H⟩]
 
 /-- The title block and the foot of a page of height `H`. Their calls carry no key. -/
-def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
+def chromeCalls (L : Look) (W H : Int) (g : Page) : List (Keyed Call) :=
   let right := W - LEFT
   let cols := (W - 2 * LEFT) / CELL
   let B := gutterCols g
@@ -279,17 +279,17 @@ def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
     (match g.code with
       | some c => textAt none' .label (col (codeCol g)) HEADS c.head HEAD_ROOM
       | none => []) ++
-    [⟨none', .hrule .rule LEFT HEAD_RULE (right - LEFT) 1⟩,
-      ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) 1⟩] ++
+    [⟨none', .hrule .rule LEFT HEAD_RULE (right - LEFT) L.strokes.rule⟩,
+      ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) L.strokes.rule⟩] ++
     cellsAt none' LEFT (H - FOOT_BASE) g.foot cols
 
-/-- A whole page as calls, at the width `W`: the ground, the lines, then the title block and
-the foot. -/
-def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
+/-- A whole page as calls in a look, at the width `W`: the ground, the lines, then the title block
+and the foot. -/
+def pageCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
   let (W, H) := pageSize W g
   groundCalls W H ++
-    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls (linesWidth W g) (gutterCols g) i l g.marks) ++
-    codeCalls W g ++ graphCalls g ++ chromeCalls W H g
+    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls L (linesWidth W g) (gutterCols g) i l g.marks) ++
+    codeCalls L W g ++ graphCalls L g ++ chromeCalls L W H g
 
 /-! ## The terminal: the same page as characters -/
 

@@ -24,7 +24,31 @@ tools/view/v -t pFork       # the frames in this terminal
 tools/view/v -p pFork       # a PNG of every frame and every picture of motion
 tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
+tools/view/v -l paper pFork # in a look of tools/view/looks/
+tools/view/v -L             # every look side by side: tools/view/out/looks/index.html
 ```
+
+## Looks
+
+Every choice of style is data (`tools/Tools/View/Look.lean`). A look holds the colour of each role,
+the faces, the weight of each stroke, the form of an edge, and the timing of motion. A look is a file of
+the W3C design-token format, 2025.10, that names only what it changes from the dark look, the
+base (`tools/view/looks/`). A token the look does not have, or a value out of its range, is
+refused with its path and the reason.
+
+From one look come three outputs, so the native view and the web agree:
+
+- the stream's look rows, from which `paint.h` takes every colour and face; it holds none;
+- the SVG's classes (`e4-fill-<role>`, `e4-stroke-<role>`, `e4-face-<face>`) beside the look's
+  values;
+- CSS custom properties (`--e4-color-ink`, `--e4-motion-move-easing`, …), with the class rules
+  that restyle any picture's SVG on a web page.
+
+An edge's form is a curve of d3-shape (`bumpY`, `linear`, `stepY`). An easing is written as CSS's
+`linear()` easing function, exact at twenty-one points, and as the nearest cubic Bézier, fitted
+by least squares (`Ease.bezier`). Durations are milliseconds; the window paces a step by the
+look's step. `v -L` writes each look's whole token file and CSS, and reports whether each look
+comes back from its own written file (`look-round-trip`).
 
 A page of a program shows its code beside its tree: the TypeScript the code generator prints for
 it, laid out at 80 columns. While a program is built, the code grows with the tree, and each hole
@@ -37,8 +61,8 @@ lake env lean --run tools/Drivers/Emit.lean OUT   # OUT/README.md indexes every 
 ```
 
 Each program has a module (`OUT/corpus/NAME.ts`) and its tree (`NAME.tree.txt`). A module imports
-exactly the names it uses, carries its program's address and type in a header, and is laid out at
-Effect's own width, 120 columns. The index says whether the core's reading boundary admits each
+exactly the names it uses, and its header carries its program's address and type. It is laid out
+at Effect's own width, 120 columns. The index says whether the core's reading boundary admits each
 module as written.
 
 In the window: Right or Space plays the motion to the next frame, Left steps back, Home and End
@@ -49,11 +73,15 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 
 | Path | What it holds |
 | --- | --- |
-| `tools/Tools/View/Picture.lean` | drawing calls and device calls, each with a key; the lowering; the stream and SVG outputs; the move law |
+| `tools/Tools/View/Picture.lean` | drawing calls and device calls, each with a key; the lowering; the move law |
+| `tools/Tools/View/Look.lean` | the look: palette, faces, strokes, the form of an edge, easings, transitions and the choreography |
+| `tools/Tools/View/Tokens.lean` | a look as design tokens (written and read over a base) and as CSS |
+| `tools/Tools/View/Output.lean` | the stream and SVG of a picture, in a look |
+| `tools/view/looks/` | the looks besides the dark one, as token files |
 | `tools/Tools/View/Grid.lean` | the grid and every constant a picture is placed by |
 | `tools/Tools/View/Page.lean` | a page of lines, its marks, and its terminal form |
 | `tools/Tools/View/Graph.lean` | a graph's layout: back edges by the order, ranks, order, places, routes |
-| `tools/Tools/View/Motion.lean` | the data join, transitions, easings and the choreography; `sample` and its end law |
+| `tools/Tools/View/Motion.lean` | the data join and the moments of a step; `sample` and its end law |
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
 | `tools/Tools/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |

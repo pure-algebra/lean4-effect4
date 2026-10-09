@@ -1,0 +1,4 @@
+{
+  "$description": "Curved edges whose controls reach 85% of the drop: steeper at the ranks, a shorter run across.",
+  "stroke": {"edge": {"$type": "dimension", "$value": {"value": 1, "unit": "px"}, "$extensions": {"effect4.view": {"reach": 0.85}}}}
+}

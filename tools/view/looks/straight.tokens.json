@@ -1,0 +1,4 @@
+{
+  "$description": "Edges as straight segments between ranks, d3's curveLinear.",
+  "stroke": {"edge": {"$type": "dimension", "$value": {"value": 1, "unit": "px"}, "$extensions": {"effect4.view": {"curve": "linear"}}}}
+}

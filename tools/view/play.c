@@ -21,7 +21,7 @@
 #include "replay.h"
 
 #define MOST 4096
-#define STEP_MS 16   /* the time each picture of a motion stays on the screen: 60 a second */
+#define STEP_MS 16   /* a picture's time on the screen when a stream names no step: 60 a second */
 
 static char *names[MOST];
 static int count;
@@ -48,7 +48,7 @@ static int load(const char *dir) {
 typedef struct Screen {
   SDL_Window *window;
   SDL_Renderer *renderer;
-  const PaintFaces *faces;
+  Replay *replay;   /* the look's colours and faces, kept from one picture to the next */
   const char *dir;
   int shown;   /* the index of the picture on the screen */
 } Screen;
@@ -64,7 +64,7 @@ static void draw(Screen *s, int i, int present) {
   double W = 0, H = 0, ratio = 1;
   if (!replay_target(path, &W, &H, &ratio)) return;
   int bad = 0;
-  cairo_surface_t *surface = replay_stream(path, s->faces, &bad);
+  cairo_surface_t *surface = replay_stream(path, s->replay, &bad);
   if (!surface) return;
   cairo_surface_flush(surface);
   int w = cairo_image_surface_get_width(surface), h = cairo_image_surface_get_height(surface);
@@ -82,7 +82,8 @@ static void draw(Screen *s, int i, int present) {
   if (natH * fit > (double)outH) fit = (double)outH / natH;
   SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
   SDL_FRect dst = {0.0f, 0.0f, (float)(natW * fit), (float)(natH * fit)};
-  SDL_SetRenderDrawColor(s->renderer, 0x14, 0x11, 0x0d, 0xff);   /* the ground of PAINT_DARK */
+  const uint32_t ground = s->replay->tokens.ground;   /* the look's ground, from the stream */
+  SDL_SetRenderDrawColor(s->renderer, (Uint8)(ground >> 16), (Uint8)(ground >> 8), (Uint8)ground, 0xff);
   SDL_RenderClear(s->renderer);
   SDL_RenderTexture(s->renderer, texture, NULL, &dst);
   if (present) SDL_RenderPresent(s->renderer);
@@ -94,11 +95,19 @@ static void draw(Screen *s, int i, int present) {
   s->shown = i;
 }
 
-/* Play every picture from the one shown to picture `to`, one after another. */
+/* Play every picture from the one shown to picture `to`, one after another, in the look's time:
+ * picture k of n stands at k/n of the step's milliseconds from the start, or STEP_MS after the
+ * one before when the stream names no step. A picture that takes longer to draw is not skipped. */
 static void play_to(Screen *s, int to) {
-  for (int i = s->shown + 1; i <= to; i++) {
+  const int n = to - s->shown;
+  const Uint64 start = SDL_GetTicks();
+  for (int i = s->shown + 1, k = 1; i <= to; i++, k++) {
     show(s, i);
-    if (i < to) SDL_Delay(STEP_MS);
+    if (i == to) break;
+    const double step = s->replay->step;
+    const Uint64 due = step > 0 ? start + (Uint64)(step * k / n) : SDL_GetTicks() + STEP_MS;
+    const Uint64 now = SDL_GetTicks();
+    if (due > now) SDL_Delay((Uint32)(due - now));
   }
 }
 
@@ -112,11 +121,10 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof path, "%s/%s", argv[1], names[i]);
     if (replay_target(path, &W, &H, &ratio) && H > most) most = H;
   }
-  PaintFaces faces;
-  if (!paint_faces_open(&faces)) { fprintf(stderr, "play: a face does not open\n"); return 1; }
+  Replay replay; memset(&replay, 0, sizeof replay);
   if (!SDL_Init(SDL_INIT_VIDEO)) { fprintf(stderr, "play: %s\n", SDL_GetError()); return 1; }
   Screen s = {0};
-  s.faces = &faces;
+  s.replay = &replay;
   s.dir = argv[1];
   s.window = SDL_CreateWindow("play", (int)W, (int)most, SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_RESIZABLE);
   s.renderer = s.window ? SDL_CreateRenderer(s.window, NULL) : NULL;
@@ -135,7 +143,7 @@ int main(int argc, char **argv) {
     SDL_DestroyRenderer(s.renderer);
     SDL_DestroyWindow(s.window);
     SDL_Quit();
-    paint_faces_close(&faces);
+    replay_close(&replay);
     printf("%s: %s\n", names[n], saved ? argv[4] : SDL_GetError());
     for (int i = 0; i < count; i++) free(names[i]);
     return saved ? 0 : 1;
@@ -166,7 +174,7 @@ int main(int argc, char **argv) {
   SDL_DestroyRenderer(s.renderer);
   SDL_DestroyWindow(s.window);
   SDL_Quit();
-  paint_faces_close(&faces);
+  replay_close(&replay);
   for (int i = 0; i < count; i++) free(names[i]);
   return 0;
 }

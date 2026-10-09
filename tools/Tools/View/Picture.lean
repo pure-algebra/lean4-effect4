@@ -12,9 +12,9 @@ frames, and it answers the pointer.
   a role. A text is left to the host, with its face, its place and its room.
 - `lower`: a call to device calls, at a whole ratio of device pixels to logical pixels.
 
-Two outputs read a list of device calls: the stream that `tools/view/draw.c` replays
-(`Dev.row`), and SVG (`svg`). Neither decides a place: each writes the boxes and texts it is
-given.
+Two outputs read a list of device calls in a look (`Tools.View.Output`): the stream that
+`tools/view/draw.c` replays, and SVG. Neither decides a place: each writes the boxes and texts it
+is given.
 
 The layout is a tool's, so the laws below are statements of the tool, not registry claims
 (decisions row 334, point 3). They are the probe's five, less the two shapes that no page here
@@ -359,87 +359,5 @@ theorem lower_move (r dx dy : Int) (c : Keyed Call) :
 theorem lowerAll_move (r dx dy : Int) (cs : List (Keyed Call)) :
     lowerAll r (cs.map (Keyed.move dx dy)) = (lowerAll r cs).map (Keyed.moveDev r dx dy) := by
   simp only [lowerAll, List.flatMap_map, List.map_flatMap, lower_move]
-
-/-! ## The stream that `draw.c` replays -/
-
-/-- A text with no tab or line break, so one row holds it. -/
-def oneLine (s : String) : String := (s.replace "\t" " ").replace "\n" " "
-
-/-- One row of the stream. A key ends each row that draws, after the fields `draw.c` reads. -/
-def Dev.row (key : Key) : Dev → String
-  | .fill role value r =>
-    s!"F\t{role.code}\t{value}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}\t{oneLine key}"
-  | .curve role c w =>
-    s!"B\t{role.code}\t{w}\t{c.p0.1}\t{c.p0.2}\t{c.p1.1}\t{c.p1.2}\t{c.p2.1}\t{c.p2.2}\t{c.p3.1}\t{c.p3.2}\t{oneLine key}"
-  | .cells x base room s => s!"C\t{x * 1000}\t{base * 1000}\t{room}\t1000\t{oneLine s}\t{oneLine key}"
-  | .text face x base room s =>
-    s!"T\t{face.code}\t{x * 1000}\t{base * 1000}\t{room * 1000}\t1000\t{oneLine s}\t{oneLine key}"
-  | .cut x y w h => s!"K\t{x * 1000}\t{y * 1000}\t{w * 1000}\t{h * 1000}"
-  | .uncut => "k"
-  | .hit r => s!"H\t{oneLine key}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}"
-
-/-- The stream of a picture of `W` by `H` logical pixels at the ratio `r`: the target, then
-one row for each device call. -/
-def stream (W H r : Nat) (ds : List (Keyed Dev)) : List String :=
-  s!"P\t{W * 1000}\t{H * 1000}\t{r * 1000}\t0\t0" :: ds.map fun d => d.call.row d.key
-
-/-! ## SVG: the same device calls in a web standard -/
-
-/-- The dark tokens of `paint.h` (`PAINT_DARK`), as CSS colours. With the hue off, the role of
-an agent (the host, a failure, a resource) is drawn in the ink, as `paint__source` draws it (P9):
-the base is black and white. -/
-def Role.css (hue : Bool := false) : Role → String
-  | .ground => "#14110d" | .ink => "#f3f4f6" | .rule => "#45433f"
-  | .host => if hue then "#c0851f" else "#f3f4f6"
-  | .failure => if hue then "#bd3931" else "#f3f4f6"
-  | .resource => if hue then "#359b75" else "#f3f4f6"
-
-/-- The families of `paint_faces_open`, and each face's size in logical pixels, as text. The data
-face's size is the one whose advance is one cell of 8 pixels in Menlo, 13.288 pixels (the forms
-note, section 5). -/
-def Face.css : Face → String × String × String
-  | .data => ("Menlo, DejaVu Sans Mono, monospace", "normal", "13.288")
-  | .name => ("Georgia, Charter, serif", "normal", "15")
-  | .label => ("Georgia, Charter, serif", "italic", "13.5")
-  | .title => ("Georgia, Charter, serif", "normal", "20")
-
-/-- XML's five escapes. -/
-def escape (s : String) : String :=
-  ((((s.replace "&" "&amp;").replace "<" "&lt;").replace ">" "&gt;").replace "\"" "&quot;").replace
-    "'" "&apos;"
-
-/-- A tone's value as an opacity. -/
-def opacity (value : Nat) : String :=
-  if value ≥ 1000 then "1" else s!"0.{(toString (value + 1000)).drop 1}"
-
-/-- The attribute that names a call's object, when it has one. -/
-def keyAttr (key : Key) : String := if key.isEmpty then "" else s!" data-key=\"{escape key}\""
-
-/-- One device call as SVG, in device pixels at the ratio `r`. A cut opens a group that clips to
-its box, and its end closes the group. A pointer box is an invisible rectangle with its key. -/
-def Dev.svg (r : Nat) (key : Key) (id : Nat) : Dev → String
-  | .fill role value b =>
-    s!"<rect x=\"{b.x0}\" y=\"{b.y0}\" width=\"{b.x1 - b.x0}\" height=\"{b.y1 - b.y0}\" fill=\"{role.css false}\" fill-opacity=\"{opacity value}\"{keyAttr key}/>"
-  | .curve role c w =>
-    s!"<path d=\"M {c.p0.1} {c.p0.2} C {c.p1.1} {c.p1.2}, {c.p2.1} {c.p2.2}, {c.p3.1} {c.p3.2}\" fill=\"none\" stroke=\"{role.css false}\" stroke-width=\"{w}\"{keyAttr key}/>"
-  | .cells x base room s =>
-    let (family, style, size) := Face.css .data
-    let shown := if s.length ≤ room then s else (s.take (room - 1)).toString ++ "…"
-    s!"<text x=\"{x}\" y=\"{base}\" font-family=\"{family}\" font-style=\"{style}\" font-size=\"{size}\" transform=\"scale({r})\" fill=\"{Role.css false .ink}\" xml:space=\"preserve\"{keyAttr key}>{escape shown}</text>"
-  | .text face x base _ s =>
-    let (family, style, size) := face.css
-    s!"<text x=\"{x}\" y=\"{base}\" font-family=\"{family}\" font-style=\"{style}\" font-size=\"{size}\" transform=\"scale({r})\" fill=\"{Role.css false .ink}\" xml:space=\"preserve\"{keyAttr key}>{escape s}</text>"
-  | .cut x y w h =>
-    s!"<clipPath id=\"c{id}\"><rect x=\"{r * x}\" y=\"{r * y}\" width=\"{r * w}\" height=\"{r * h}\"/></clipPath><g clip-path=\"url(#c{id})\">"
-  | .uncut => "</g>"
-  | .hit b =>
-    s!"<rect x=\"{b.x0}\" y=\"{b.y0}\" width=\"{b.x1 - b.x0}\" height=\"{b.y1 - b.y0}\" fill=\"none\" pointer-events=\"all\"{keyAttr key}/>"
-
-/-- A picture of `W` by `H` logical pixels at the ratio `r`, as one SVG document. -/
-def svg (W H r : Nat) (ds : List (Keyed Dev)) : String :=
-  let body := ds.zipIdx.map fun (d, i) => d.call.svg r d.key i
-  "\n".intercalate
-    ([s!"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{W}\" height=\"{H}\" viewBox=\"0 0 {r * W} {r * H}\">"] ++
-      body ++ ["</svg>"])
 
 end Tools.View

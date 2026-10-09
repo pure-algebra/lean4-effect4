@@ -74,7 +74,7 @@
 #define PAINT_BASE 16.0     /* a row's baseline, below its top: two thirds of the row */
 #define PAINT_MIN_TEXT 6.5  /* a text is drawn where the data face has this many pixels or more */
 
-/* ---------- 2. the tokens: two grounds, three agents ---------- */
+/* ---------- 2. the tokens: a ground, the base, three agents ---------- */
 
 typedef struct PaintTokens {
   uint32_t ground, ink, rule;        /* the base, as 0xRRGGBB */
@@ -83,11 +83,8 @@ typedef struct PaintTokens {
   double span;                       /* the same, in a span inside a line */
 } PaintTokens;
 
-/* The hues passed the palette validator on their ground (hues-run.txt of the round-3 probe).
- * The band stands midway in lightness between the ground and a rule, on both grounds
- * (`specimen --metrics`, the tones). */
-static const PaintTokens PAINT_DARK = {0x14110d, 0xf3f4f6, 0x45433f, 0xc0851f, 0xbd3931, 0x359b75, 0.50, 0.75};
-static const PaintTokens PAINT_PAPER = {0xf7f4ee, 0x1b1f2a, 0xc9ccd3, 0xa97416, 0xac312a, 0x349470, 0.50, 0.75};
+/* The painter holds no palette of its own: a look's colours come from Lean, one `R` row of the
+ * stream for each role (tools/Tools/View/Look.lean, `Look`; replay.h). */
 
 typedef enum PaintRole { PAINT_GROUND, PAINT_INK, PAINT_RULE, PAINT_HOST, PAINT_FAILURE, PAINT_RESOURCE } PaintRole;
 
@@ -109,6 +106,15 @@ typedef enum PaintFace {
   PAINT_TITLE,  /* the display face, larger: the title of a page */
   PAINT_FACE_COUNT
 } PaintFace;
+
+/* A face as a look names it: its families as one pango list, its size in logical pixels (the
+ * data face's is measured from the cell), its weight (100 to 900) and whether it is italic. */
+typedef struct PaintFaceSpec {
+  char family[256];
+  double px;
+  int weight;
+  int italic;
+} PaintFaceSpec;
 
 typedef struct PaintFaces {
   PangoFontDescription *face[PAINT_FACE_COUNT];
@@ -186,20 +192,20 @@ static inline void paint_faces_close(PaintFaces *faces) {
   memset(faces, 0, sizeof *faces);
 }
 
-/* Open the four faces. The data face takes the size whose advance is one cell, measured under
- * the painter's own options and then confirmed at that size. Answers 1, or 0 when a
- * description does not parse. The caller closes the faces. */
-static inline int paint_faces_open(PaintFaces *faces) {
-  static const char *const family[PAINT_FACE_COUNT] = {
-    "Menlo, DejaVu Sans Mono, monospace", "Georgia, Charter, serif", "Georgia, Charter, serif Italic", "Georgia, Charter, serif"};
-  static const double px[PAINT_FACE_COUNT] = {0.0, 15.0, 13.5, 20.0};
+/* Open the four faces of a look. The data face takes the size whose advance is one cell,
+ * measured under the painter's own options and then confirmed at that size: its own size in
+ * the spec is not read. Answers 1, or 0 when a description does not parse. The caller closes
+ * the faces. */
+static inline int paint_faces_open(PaintFaces *faces, const PaintFaceSpec spec[PAINT_FACE_COUNT]) {
   const int cell = (int)(PAINT_CELL * PANGO_SCALE);
   memset(faces, 0, sizeof *faces);
   for (int i = 0; i < PAINT_FACE_COUNT; i++) {
-    faces->face[i] = pango_font_description_from_string(family[i]);
+    faces->face[i] = pango_font_description_from_string(spec[i].family);
     if (!faces->face[i]) { paint_faces_close(faces); return 0; }
-    faces->px[i] = px[i];
-    if (px[i] > 0) pango_font_description_set_absolute_size(faces->face[i], px[i] * PANGO_SCALE);
+    pango_font_description_set_style(faces->face[i], spec[i].italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL);
+    pango_font_description_set_weight(faces->face[i], (PangoWeight)spec[i].weight);
+    faces->px[i] = i == PAINT_DATA ? 0.0 : spec[i].px;
+    if (faces->px[i] > 0) pango_font_description_set_absolute_size(faces->face[i], faces->px[i] * PANGO_SCALE);
   }
   cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_A8, 32, 32);
   cairo_t *cr = cairo_create(surface);

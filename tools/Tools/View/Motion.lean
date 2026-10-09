@@ -10,8 +10,9 @@ data as the pattern). The pattern, recalled from D3's selections and transitions
 - **The join.** A frame's elements are joined to the next frame's by key (`join`): the new keys
   *enter*, the kept keys *update*, the old keys *exit*. Every element falls in one of them
   (`join_new`, `join_old`).
-- **Transitions.** Each selection takes a transition: a delay, a duration and an easing, in per
-  mille of one step (`Transition`). A transition held in its step ends at exactly one
+- **Transitions.** Each selection takes a transition of the look's choreography
+  (`Tools.View.Look`): a delay, a duration and an easing, in milliseconds, read here in per mille
+  of one step (`Choreography.norm`). A transition held in its step ends at exactly one
   (`Transition.within_at_end`), and every easing starts at 0 and ends at 1 (`Ease.at_start`,
   `Ease.at_end`).
 - **Attributes as fields of the scene.** A line's offset and how much of it is written, a box's
@@ -20,97 +21,15 @@ data as the pattern). The pattern, recalled from D3's selections and transitions
   other (`sample`), drawn by the one drawing, and the move law makes each moved call exact
   (`lowerCall_move`).
 
-**The choreography** (`Choreography`) is data with defaults: the kept elements make room first
-and settle with weight (a critically damped spring); then, level by level from the top, each new
-edge draws from its source toward its target (ease out), and the box at its end expands out on a
-spring that overshoots a little and settles; a new or changed line writes itself cell by cell, each a little after the one before; an
-old element shrinks or unwrites (ease in). A step's sample at its end is the next frame: the
-driver checks it on every transition.
+**The choreography** (`Choreography`, a field of the look) has defaults: the kept elements make
+room first and settle with weight (a critically damped spring); then, level by level from the
+top, each new edge draws from its source toward its target (ease out), and the box at its end
+expands out on a spring that overshoots a little and settles; a new or changed line writes itself
+cell by cell, each a little after the one before; an old element shrinks or unwrites (ease in). A
+step's sample at its end is the next frame: the driver checks it on every transition.
 -/
 
 namespace Tools.View
-
-/-! ## Easing -/
-
-/-- An easing: a progress in per mille to an eased progress in per mille. `outBack` overshoots a
-little before it settles. `settle` and `spring` are a mass on a damped spring released toward its
-rest, so a moving element has weight: `settle` is critically damped, the fastest approach with no
-overshoot; `spring` is underdamped, a small overshoot that dies away. -/
-inductive Ease where
-  | linear | in_ | out | inOut | outBack | settle | spring
-deriving Repr, DecidableEq
-
-/-- A critically damped spring released at rest from 0 toward 1, `1 - (1 + ωs)e^(-ωs)` with
-`ω = 7.4` over one step, scaled to end at 1; per mille at every twentieth of the step. -/
-def settleTable : List Int :=
-  [0, 54, 171, 306, 438, 555, 654, 734, 799, 849, 888, 918, 941, 958, 970, 980, 986, 992, 995, 998, 1000]
-
-/-- An underdamped spring, damping ratio `ζ = 0.7` and `ω = 7.5` over one step, scaled to end at 1:
-it overshoots by 4.5% at about three fifths of the step and settles; per mille at every twentieth. -/
-def springTable : List Int :=
-  [0, 59, 195, 363, 531, 681, 804, 898, 964, 1007, 1032, 1043, 1045, 1041, 1034, 1026, 1019, 1012, 1007, 1003, 1000]
-
-/-- A table read at `p` per mille: the line between its two nearest entries; past its end, 1. -/
-def tableAt (t : List Int) (p : Nat) : Int :=
-  let a := t.getD (p / 50) 1000
-  let b := t.getD (p / 50 + 1) 1000
-  a + (b - a) * ((p % 50 : Nat) : Int) / 50
-
-/-- The eased progress at `p` per mille (cubic curves; `outBack` with the usual 1.70158). -/
-def Ease.at : Ease → Nat → Int
-  | .linear, p => p
-  | .in_, p => (p : Int) ^ 3 / 1000000
-  | .out, p => 1000 - (1000 - (p : Int)) ^ 3 / 1000000
-  | .inOut, p =>
-    if p < 500 then 4 * (p : Int) ^ 3 / 1000000 else 1000 - (2 * (1000 - (p : Int))) ^ 3 / 2000000
-  | .outBack, p =>
-    let q : Int := (p : Int) - 1000
-    1000 + 2702 * q ^ 3 / 1000000000 + 1702 * q ^ 2 / 1000000
-  | .settle, p => tableAt settleTable p
-  | .spring, p => tableAt springTable p
-
-/-- Every easing starts at 0. -/
-theorem Ease.at_start (e : Ease) : e.at 0 = 0 := by cases e <;> rfl
-
-/-- Every easing ends at 1. -/
-theorem Ease.at_end (e : Ease) : e.at 1000 = 1000 := by cases e <;> rfl
-
-/-! ## Transitions -/
-
-/-- A transition: a delay, a duration and an easing, in per mille of one step. -/
-structure Transition where
-  delay : Nat := 0
-  duration : Nat := 1000
-  ease : Ease := .inOut
-deriving Repr
-
-/-- The eased progress of a transition at the moment `t` of a step. -/
-def Transition.at (tr : Transition) (t : Nat) : Int :=
-  if tr.delay + tr.duration ≤ t then 1000
-  else if t ≤ tr.delay then tr.ease.at 0
-  else tr.ease.at ((t - tr.delay) * 1000 / tr.duration)
-
-/-- A transition is done at its end. -/
-theorem Transition.at_end (tr : Transition) (t : Nat) (h : tr.delay + tr.duration ≤ t) :
-    tr.at t = 1000 := by
-  simp only [Transition.at, h, if_true]
-
-/-- A transition held inside its step: it starts by the step's end and ends by it. -/
-def Transition.within (tr : Transition) : Transition :=
-  { tr with delay := min tr.delay 1000, duration := min tr.duration (1000 - min tr.delay 1000) }
-
-/-- A held transition ends by the step's end. -/
-theorem Transition.within_end (tr : Transition) : tr.within.delay + tr.within.duration ≤ 1000 := by
-  simp only [Transition.within]
-  omega
-
-/-- So it is done at the step's end. -/
-theorem Transition.within_at_end (tr : Transition) : tr.within.at 1000 = 1000 :=
-  tr.within.at_end 1000 tr.within_end
-
-/-- A transition started `d` later, held inside its step. -/
-def Transition.after (tr : Transition) (d : Nat) : Transition :=
-  ({ tr with delay := tr.delay + d } : Transition).within
 
 /-! ## The join -/
 
@@ -153,29 +72,7 @@ theorem join_old {α : Type} (key : α → Key) (old new : List α) (o : α) (h 
     obtain ⟨n, hn, he⟩ := List.any_eq_true.mp hany
     exact ⟨n, hn, beq_iff_eq.mp he⟩
 
-/-! ## The choreography, and a moment of a step -/
-
-/-- **The choreography**: the transition of each selection. -/
-structure Choreography where
-  /-- the kept elements move to their new places, and settle there with weight -/
-  move : Transition := { duration := 450, ease := .settle }
-  /-- the old elements shrink or unwrite -/
-  leave : Transition := { duration := 250, ease := .in_ }
-  /-- a new or changed line writes itself, cell by cell -/
-  write : Transition := { delay := 300, duration := 300, ease := .linear }
-  /-- the delay from one new line to the next -/
-  stagger : Nat := 60
-  /-- when the new parts of a graph start, after the room is made -/
-  enterFrom : Nat := 300
-  /-- a new edge draws from its source toward its target -/
-  draw : Transition := { duration := 220, ease := .out }
-  /-- the box at its end expands out, on a spring -/
-  expand : Transition := { duration := 360, ease := .spring }
-deriving Repr
-
-/-- A transition started later is done at the step's end too. -/
-theorem Transition.after_at_end (tr : Transition) (d : Nat) : (tr.after d).at 1000 = 1000 :=
-  Transition.within_at_end _
+/-! ## A moment of a step -/
 
 /-- A line to be written: no old line has its key and its text. -/
 def fresh (old : List Line) (n : Line) : Bool := !(old.any fun o => o.key == n.key && o.text == n.text)
@@ -254,11 +151,12 @@ def sampleLaid (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
     height := if 1000 ≤ t then b.height else max a.height b.height }
 
 /-- **The moment `t` of the step from `g1` to `g2`**, as a page: `g2`'s, with its lines and its
-graph sampled. A graph that appears enters from an empty one. -/
+graph sampled in the choreography's per mille of its step. A graph that appears enters from an
+empty one. -/
 def sample (c : Choreography) (g1 g2 : Page) (t : Nat) : Page :=
   { g2 with
-    lines := sampleLines c g1 g2 t
-    graph := g2.graph.map fun p => { p with laid := sampleLaid c ((g1.graph.map (·.laid)).getD {}) p.laid t } }
+    lines := sampleLines c.norm g1 g2 t
+    graph := g2.graph.map fun p => { p with laid := sampleLaid c.norm ((g1.graph.map (·.laid)).getD {}) p.laid t } }
 
 /-! ## The end law: a step's last moment is the next frame -/
 
@@ -320,12 +218,12 @@ page at rest, at its end, gives that page. -/
 theorem sample_end (c : Choreography) (g1 g2 : Page) (h : g2.AtRest) : sample c g1 g2 1000 = g2 := by
   obtain ⟨hl, hg⟩ := h
   unfold sample
-  rw [sampleLines_end c g1 g2 hl]
+  rw [sampleLines_end _ g1 g2 hl]
   cases g2 with
   | mk title judgment heads lines foot place gutter marks graph =>
     cases graph with
     | none => rfl
-    | some p => simp only [Option.map_some, sampleLaid_end c _ p.laid (hg p rfl)]
+    | some p => simp only [Option.map_some, sampleLaid_end _ _ p.laid (hg p rfl)]
 
 /-! ## The splice, read on two frames -/
 
