@@ -30,7 +30,9 @@ prints one answer for each: it is `answerLine` and nothing more.
 **A named law is a claim.** An answer names a law only where this function has decided the
 law's premises (`omitPremises`, `fillPremises`, and a typed focus at `slots`). Elsewhere the
 answer is a computed check, and it names no law. The names are checked when this file is
-compiled: each is a name literal that must resolve.
+compiled: each is a name literal that must resolve. The two deciders are sound
+(`fillPremises_sound`, `omitPremises_sound`): where one answers `true`, the edit applies and the
+sketch keeps its type, so a `fill` or `omit` answer that names its law is a theorem's instance.
 
 **The application is the empty one**, and each answer says so. A request carries no hole table.
 So the program that `omit` answers performs a hole row that its bytes do not carry: it cannot be
@@ -252,6 +254,56 @@ def fillPremises (sketch : Sketch) (path : List Nat) (focus : Focus NativeOp)
     (filling : NativeEff) : Bool :=
   (sketch.check {}).toOption.isSome &&
     effTy (sketch.sigAt {} path) focus.env filling == some focus.ty
+
+/-- **The fill decider is sound.** Where `fillPremises` answers `true` at the focus that the
+sketch answers, the filling applies and keeps the sketch's type: the conclusion of
+`Sketch.check_fill_focusAt`, the law that the `fill` answer names. So that answer is an instance
+of a theorem, not a tested claim (seat ORG's theory map, section 5.3). -/
+theorem fillPremises_sound {sketch : Sketch} {path : List Nat} {focus : Focus NativeOp}
+    {filling : NativeEff} (hf : sketch.focusAt {} path = some focus)
+    (h : fillPremises sketch path focus filling = true) :
+    ∃ T s', sketch.check {} = .ok T ∧ sketch.fillAt path filling = some s' ∧
+      s'.check {} = .ok T := by
+  simp only [fillPremises, Bool.and_eq_true] at h
+  obtain ⟨hcheck, hty⟩ := h
+  obtain ⟨T, hT⟩ : ∃ T, sketch.check {} = .ok T := by
+    cases hc : sketch.check {} with
+    | ok T => exact ⟨T, rfl⟩
+    | error e =>
+      rw [hc] at hcheck
+      cases hcheck
+  have hty' : effTy (sketch.sigAt {} path) focus.env filling = some focus.ty := eq_of_beq hty
+  have hs0 : ({ sketch with holes := sketch.holes ++ [] } : Sketch) = sketch := by
+    cases sketch
+    simp only [List.append_nil]
+  have hq : Checker.check (Sketch.sigAt { sketch with holes := sketch.holes ++ [] } {} path)
+      focus.env path filling = .ok focus.ty := by
+    rw [hs0]
+    exact Conform.Effect4.Typing.check_complete _ _ _ _
+      (Conform.Effect4.Typing.effTy_sound _ _ _ _ hty') path
+  obtain ⟨s', hfill, hs'⟩ := Sketch.check_fill_focusAt sketch {} hT hf [] hq
+  rw [hs0] at hfill
+  exact ⟨T, s', hT, hfill, hs'⟩
+
+/-- **The omit decider is sound.** Where `omitPremises` answers `true` at the focus that the
+sketch answers, the omission applies and keeps the sketch's type: the conclusion of
+`Sketch.check_omit_focusAt`, the law that the `omit` answer names. -/
+theorem omitPremises_sound {sketch : Sketch} {path : List Nat} {name : String}
+    {focus : Focus NativeOp} (hf : sketch.focusAt {} path = some focus)
+    (h : omitPremises sketch name focus = true) :
+    ∃ T s', sketch.check {} = .ok T ∧ sketch.omitAt {} path (holeRow name focus) = some s' ∧
+      s'.check {} = .ok T := by
+  simp only [omitPremises, Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨⟨⟨⟨⟨hcheck, hans⟩, herr⟩, hansN⟩, herrN⟩, hform⟩ := h
+  obtain ⟨T, hT⟩ : ∃ T, sketch.check {} = .ok T := by
+    cases hc : sketch.check {} with
+    | ok T => exact ⟨T, rfl⟩
+    | error e =>
+      rw [hc] at hcheck
+      cases hcheck
+  obtain ⟨s', homit, hs'⟩ := Sketch.check_omit_focusAt sketch {} hT hf name hans herr hansN herrN
+    ((Formation.check_eq_none_iff _).mp (Option.isNone_iff_eq_none.mp hform))
+  exact ⟨T, s', hT, homit, hs'⟩
 
 /-! ## The operations -/
 
