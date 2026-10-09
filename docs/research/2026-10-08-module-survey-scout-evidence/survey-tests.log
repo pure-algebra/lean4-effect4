@@ -1,0 +1,18 @@
+bun test v1.4.2 (744846f84)
+
+tools/ModuleSurvey/survey.test.mjs:
+(pass) value dependencies exclude type-only imports and keep side effects and value reexports [1.20ms]
+(pass) direct helper sites name their owning declaration and resolve import aliases [0.36ms]
+(pass) shadowed imports and dynamic member calls remain unresolved [0.30ms]
+(pass) invalid source refuses instead of producing a partial map [0.85ms]
+(pass) source pins and output are deterministic [0.85ms]
+(pass) dependency cycles remain groups rather than a false module order [0.11ms]
+(pass) class names and switch bindings shadow import names [0.10ms]
+(pass) computed class keys and destructured defaults retain executed helper sites [0.12ms]
+(pass) parameter defaults precede body var shadowing [0.06ms]
+(pass) a later exported alias does not make its local declaration private [0.03ms]
+
+ 10 pass
+ 0 fail
+ 25 expect() calls
+Ran 10 tests across 1 file. [85.00ms]

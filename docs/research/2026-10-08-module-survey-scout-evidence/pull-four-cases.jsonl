@@ -1,0 +1,4 @@
+{"name":"done","isDone":true,"resultTag":"Success","exitTag":"Success","leftover":"tail"}
+{"name":"doneInterrupt","isDone":true,"resultTag":"Success","exitTag":"Success","leftover":"tail"}
+{"name":"doneFail","isDone":true,"resultTag":"Failure","exitTag":"Failure","retained":["ordinary"]}
+{"name":"noDone","isDone":false,"resultTag":"Failure","exitTag":"Failure","retained":["ordinary"]}
