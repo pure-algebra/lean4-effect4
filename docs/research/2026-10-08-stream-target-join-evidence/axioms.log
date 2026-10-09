@@ -1,0 +1,15 @@
+'Effect4.Stream.arrayStep_eval' depends on axioms: [propext]
+'Effect4.Stream.arrayStep_agrees' depends on axioms: [propext, Quot.sound]
+'Effect4.Stream.arrayBatch_answers' depends on axioms: [propext, Quot.sound]
+'Effect4.Stream.arrayOpen' does not depend on any axioms
+'Effect4.Stream.arrayBatch' depends on axioms: [propext]
+'Effect4.Stream.arrayPull' depends on axioms: [propext]
+'Effect4.Stream.fromArray' depends on axioms: [propext]
+'Effect4.Stream.ArrayDefinitions.make' depends on axioms: [propext]
+graph: 9002 theorems of the tree, 115 roots, 4476 load-bearing
+landing [Effect4.Laws.Library.Stream.Array]: 3 theorems, 0 of them roots
+  edges: 1 local, 2 tree, 2 core, 0 instance; reuse ratio 66%
+  load-bearing: 0 of 3
+  unconsumed (2): [Effect4.Stream.arrayBatch_answers, Effect4.Stream.arrayStep_agrees]
+  reached by a consumer, but by no root (1): [Effect4.Stream.arrayStep_eval]
+  joints: [Effect4.Ref.modify_callback_agrees ×1, Effect4.Ref.modify_callback_answers ×1]

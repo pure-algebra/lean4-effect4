@@ -1,0 +1,10 @@
+../../../tmp/stream-target-join-ts/old.ts(3,572): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", undefined], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", undefined], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", undefined]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../tmp/stream-target-join-ts/old.ts(3,785): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", undefined], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", undefined], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", undefined]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.

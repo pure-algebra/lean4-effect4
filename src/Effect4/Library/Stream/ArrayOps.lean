@@ -34,9 +34,8 @@ def arrayBatch (A : Ty) (receiver : TermSrc) : Src NativeOp :=
 /-- Emit a nonempty batch, or end immediately when no batch remains. -/
 def arrayPull (A : Ty) (receiver : TermSrc) : Src NativeOp :=
   bindWith (arrayBatch A receiver) fun batch =>
-    ifElse (isEmpty batch)
-      (succeed (app "pair" [str "End", unit]))
-      (succeed (app "pair" [str "Chunk", batch]))
+    succeed (app "ite" [isEmpty batch,
+      app "pair" [str "End", unit], app "pair" [str "Chunk", batch]])
 
 /-- Close an array source; its Ref needs no external release. -/
 def arrayClose (_receiver : TermSrc) : Src NativeOp := succeed unit
