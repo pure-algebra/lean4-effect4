@@ -1,0 +1,11 @@
+✔ [589/604] Built Effect4.Program.Authoring.Module (2.0s)
+✔ [599/604] Built Effect4.Author (4.1s)
+✔ [601/616] Built Effect4 (1.5s)
+✔ [613/731] Built Test.Program.ModuleDeclarations (1.9s)
+✔ [614/731] Built Test.Program.Channel (1.9s)
+✔ [915/987] Built Test.Program.AuthoringModule (2.1s)
+✔ [984/987] Built Test.Program.QueueDefs (1.7s)
+✔ [985/987] Built Test.Program.ModuleDefinitions (1.5s)
+✔ [986/987] Built Effect4.Laws.Library.Stream.Array (3.1s)
+✔ [987/987] Built Test.Program.StreamArray (1.5s)
+Build completed successfully (987 jobs).

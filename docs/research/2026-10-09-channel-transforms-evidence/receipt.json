@@ -1,0 +1,174 @@
+{
+  "format": "effect4-channel-transforms-receipt-v1",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "positive": 8,
+  "wrongTransformControls": 2,
+  "wrongTransformDetected": true,
+  "sourceReading": "Expected definition-header refusal retained for every module; no read-back claim",
+  "rows": [
+    {
+      "id": "batchMap",
+      "observed": 30
+    },
+    {
+      "id": "effectMap",
+      "observed": 2
+    },
+    {
+      "id": "completionMap",
+      "observed": 43
+    },
+    {
+      "id": "nestedCompletion",
+      "observed": 43
+    },
+    {
+      "id": "collectClose",
+      "observed": 103
+    },
+    {
+      "id": "forEachClose",
+      "observed": 103
+    },
+    {
+      "id": "upstreamState",
+      "observed": 7
+    },
+    {
+      "id": "mapperState",
+      "observed": 8
+    },
+    {
+      "id": "wrongBatchIdentity",
+      "observed": 10
+    },
+    {
+      "id": "wrongNoIncrement",
+      "observed": 42
+    }
+  ],
+  "compilerDiagnostics": "",
+  "commands": [
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "--run",
+        "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/harness/channel-transforms/Produce.lean",
+        "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/docs/research/2026-10-09-channel-transforms-evidence"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z/tsconfig.json",
+        "--listFilesOnly"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z"
+    },
+    {
+      "argv": [
+        "bun",
+        "--no-install",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z/observe.ts",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z"
+    },
+    {
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-waz4mm2z"
+    }
+  ],
+  "sourceHashes": {
+    "harness/ts_packet.py": "745672fbdbff1067ab046285a41948231e1d61c1d737f28bab31bf838bb1d109",
+    "harness/channel-transforms/Produce.lean": "a022187c956aee97ee71c0d015fcf8b7ecac97a8c4939f35d74539a991708459",
+    "harness/channel-transforms/observe.ts": "85cb4f05897b6b04486bc7bb6799eafc8c2e351262f17bb30f8197ce106ef1be",
+    "harness/channel-transforms/run.py": "04ed507cfafad90f5633f3187284bc13423b861f492d4aa5480e90daf13d27d9",
+    "Test/Program/Channel.lean": "795299b107e8a57466f749d76f73e8a8852df07d16839e72979b53eb4845c7fe",
+    "src/Effect4/Program/Stream.lean": "92dd7517253d11685e11e605d7c280207c9e2f3b4fde9172affcccfca76c19b3",
+    "src/Effect4/Program/Authoring/Module.lean": "18afba564e7fd1949fc3a0c32cd36b37f284294a01df04668a0887e1781904de",
+    "src/Effect4/Library/Channel/Ops.lean": "954710e95f280c4c01db9a0f92d636296d08bc0511ab62f0318443f3a0176dd5",
+    "src/Effect4/Codegen/Read.lean": "e3a9d959480f4328a360608ab7cce16fd401b7eaee7cdc9f161368fb211bdff5",
+    "src/Effect4/Library/Pull/Ops.lean": "d5c7e5739089cf972ad0d24ef8cfce316385008e6be56a8641bb74e364fee6c9",
+    "src/Effect4/Library/Stream/Source.lean": "804d4232a0b4a9b69034d1bca0315634765283a4c6e649028df7e4294123193c",
+    "src/Effect4/Library/Stream/Definitions.lean": "d9e36f7483d3ff33c6970d8dd1d19cc3bd845b873517bebe2bfa13db8df4c105",
+    "src/Effect4/Library/Stream/Ops.lean": "f43955d326c43d5b3bdb7c8127181ca50e2ec55a29da6b971c738ed8a345d9b9",
+    "src/Effect4/Library/Stream/Steps.lean": "9232de045321156205efb3244f5482e0be60f5937959118ad6323f75d0abfc62",
+    "src/Effect4/Laws/Library/Stream/Definitions.lean": "6e20b29544453bb44dbb747af444835aa53499be08ab8bfd76f9200e972fa077",
+    "src/Effect4/Laws/Library/Channel/Scope.lean": "ae2b702e189f8d807111408cb9c665b93b6df6018020cf268aa374c2e080fe7b",
+    "src/Effect4/Laws/Library/Channel/Protocol.lean": "13114d2428916720f2ca49b18b7d6e46968d633e58e7defce01f716a23895f8d",
+    "vendor/effect-4.0.1/src/Channel.ts": "dd663d349d7f401db8c3108c1c9a69c6b71f5ba949f3054ae76537aeec1cf702"
+  },
+  "toolchainHashes": {
+    "effectPackage": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "compilerPackage": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478"
+  },
+  "manifestHash": "91ea9686ac95419019faff2023214dfbaf132e02312acebd22f1a47c8886cff2",
+  "emittedHashes": {
+    "batchMap.ts": "c46b80e704bde432dcffbead1656b4e93c3257f3730c73b6fa2f2564859e82da",
+    "effectMap.ts": "a98f37d6d108e2bf9b784a0780ff7bd6738526e1c144419074944d6369042137",
+    "completionMap.ts": "a38cbd789cf55e95533267aeab0745e635e385189059c6c9bdaf9262460d90cb",
+    "nestedCompletion.ts": "0bb6ed163b004881b7ba4d01115bbb3196bdf93886a613ac7ab638e03b567c59",
+    "collectClose.ts": "6129526c4e9a1ef88e67dd054ce1656504f112e6d590f8b548bd0d1145c4e8e3",
+    "forEachClose.ts": "4c2bd16930959649462061f9c4f546a1e6fdf53536a94852bb8a0c72d295cd91",
+    "upstreamState.ts": "a4b3ccce8c698daca169daa34bd19ac61d88ef484a7c5a50f8e9f0a69aab7de3",
+    "mapperState.ts": "620e2cf38f27da4fc78baa3d52991f230e83da6ca80cd048067f863d8644c651",
+    "wrongBatchIdentity.ts": "4aa7b4113ab96a2f7d5c8e1b62ad4d5cf40d1b92eb4f9c71cb7bb3e1be149885",
+    "wrongNoIncrement.ts": "710f39a4d17cc0ca991d7c4b3a3fb7e6c6c1dc6b25f2a6599c25c39642bb2cb0"
+  },
+  "compiledHashes": {
+    "batchMap.ts": "8bf7c91a083981bfe262101ff6188d2b3dfce9ba2a05a5dbee4854af52a24af2",
+    "effectMap.ts": "dd474d063fa4f9bb0eb77c501dc64d8dc58846ec3c4d046c4a78156e80c5543e",
+    "completionMap.ts": "01256f4ee837d0e0392c47a77031c653c34052fb4b09cd4889217ca336b92b2e",
+    "nestedCompletion.ts": "87d992e32e8c9f481270dd60c9a3c2f8452fac43f0dcdf406fbfd287fd3ae0d0",
+    "collectClose.ts": "d38ee2fd3e9e8ea5ef02f41a0bcedba7c1ff14018b509141487359a8d2581183",
+    "forEachClose.ts": "817c208071007cf3f7c024bffcd897598b2d29fdf2a4fe4737b4ad0a7f0fe0f9",
+    "upstreamState.ts": "a8f12e8eda36d430293137196554840c71873de533de0eea58219553ce7624bf",
+    "mapperState.ts": "554f4f3f293975a78c3b5c699a07d4906b3292034be11c5cb65558b44a39d9bc",
+    "wrongBatchIdentity.ts": "188cdd0fd459e182af95a3ad064c3e85d8bf9e0c5849314f4083020abdf239da",
+    "wrongNoIncrement.ts": "34ed5cfcb62569a8fd29511d0fb5370fd350845e60b0567c853a8fd176b41d9a",
+    "observe.ts": "85cb4f05897b6b04486bc7bb6799eafc8c2e351262f17bb30f8197ce106ef1be",
+    "prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+    "prelude.ts": "9afe38a9374dbfba70a6495ede3d2074029db8b5afee4beb76720dbc1aea4f55",
+    "tsconfig.json": "581d46bd2e2b5ae0519b455909d4168ae27942299859880040cd10758db289ca",
+    "manifest.json": "91ea9686ac95419019faff2023214dfbaf132e02312acebd22f1a47c8886cff2"
+  },
+  "scope": "Finite exact emitted numeric stored modules using whole-batch Channel maps and signed End values; no native Channel Done-cause correspondence, asynchronous progress or whole-stream target simulation"
+}

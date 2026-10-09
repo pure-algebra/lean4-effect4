@@ -205,6 +205,8 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Library/SynchronizedRef", .laws, 5, "Laws/Library/SynchronizedRef", "typing of the composed operations through shared callback and captured-source laws", true, true⟩,
   ⟨"src/Effect4/Library/PubSub", .runtime, 4, "Library/PubSub", "capacity-one replay-zero natural-message broadcast bookkeeping and independent model", true, true⟩,
   ⟨"src/Effect4/Laws/Library/PubSub", .laws, 5, "Laws/Library/PubSub", "value, reading and typing connections for six bounded bookkeeping sources", true, true⟩,
+  ⟨"src/Effect4/Library/Channel", .runtime, 4, "Library/Channel", "batch and completion transformations over stored upstream definitions and captured requests", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/Channel", .laws, 5, "Laws/Library/Channel", "scope and conditional protocol transformation laws", true, true⟩,
   ⟨"src/Effect4/Library/Pull", .runtime, 4, "Library/Pull", "batch and completion value builders and outcome handlers over the existing stream protocol", true, true⟩,
   ⟨"src/Effect4/Laws/Library/Pull", .laws, 5, "Laws/Library/Pull", "source scope, constructor typing and protocol selection under the existing denotation", true, true⟩,
   ⟨"src/Effect4/Library/PartitionedSemaphore", .runtime, 4, "Library/PartitionedSemaphore", "PartitionedSemaphore scalar bookkeeping: independent natural-count model, derived record and four typed steps; waiting and delivery remain open", true, true⟩,
@@ -290,6 +292,7 @@ def exposures : List (String × Exposure) := [
   ("src/Effect4/Library/SynchronizedRef", .library),
   ("src/Effect4/Library/PubSub", .library),
   ("src/Effect4/Library/Pull", .library),
+  ("src/Effect4/Library/Channel", .library),
   ("src/Effect4/Library/PartitionedSemaphore", .library)
 ]
 

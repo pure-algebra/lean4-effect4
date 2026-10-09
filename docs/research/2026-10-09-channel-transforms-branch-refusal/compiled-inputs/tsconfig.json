@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ]
+  },
+  "files": [
+    "batchMap.ts",
+    "effectMap.ts",
+    "completionMap.ts",
+    "nestedCompletion.ts",
+    "collectClose.ts",
+    "forEachClose.ts",
+    "upstreamState.ts",
+    "mapperState.ts",
+    "wrongBatchIdentity.ts",
+    "wrongNoIncrement.ts",
+    "observe.ts"
+  ],
+  "include": []
+}

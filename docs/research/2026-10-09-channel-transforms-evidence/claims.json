@@ -1,0 +1,77 @@
+[
+  {
+    "title": "An accepted definition-backed Stream source derives its normalized batch/completion protocol, open and close state requests, and unit close answer from the supplied operation declarations; each invocation uses the corresponding declaration name; no body admission, nonempty batch, execution, finalization or host behavior follows",
+    "status": {
+      "witness": {
+        "withinSemanticAxiomCeiling": true,
+        "statement": "\u2200 {opened pull close : Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp}\n  {arguments : List Effect4.Program.Authoring.TermSrc} {source : Effect4.Stream.Source},\n  Eq (Effect4.Stream.Source.fromDefinitions opened pull close arguments) (Except.ok source) \u2192\n    And\n      (Eq pull.answer.normalize (Effect4.Program.Stream.pulledTy source.elem source.done).normalize)\n      (And (Eq opened.answer.normalize pull.decl.request.normalize)\n        (And (Eq close.decl.request.normalize pull.decl.request.normalize)\n          (And (Eq close.answer.normalize Effect4.Program.Ty.unit)\n            (And (Eq source.opened (Effect4.Program.Authoring.Def.invoke opened.name arguments))\n              (And\n                (\u2200 (state : Effect4.Program.Authoring.TermSrc),\n                  Eq (source.pull state)\n                    (Effect4.Program.Authoring.Def.invoke pull.name (List.cons state List.nil)))\n                (\u2200 (state : Effect4.Program.Authoring.TermSrc),\n                  Eq (source.close state)\n                    (Effect4.Program.Authoring.Def.invoke close.name\n                      (List.cons state List.nil))))))))",
+        "restsOn": [],
+        "name": "Effect4.Stream.Source.fromDefinitions_declarations",
+        "module": "Effect4.Laws.Library.Stream.Definitions",
+        "levels": [],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      "goal": null,
+      "by": "theorem",
+      "_tag": "proved"
+    },
+    "role": "compatibility",
+    "literature": [],
+    "id": "stream-source-declarations",
+    "contestedBy": [],
+    "concept": "store-typing"
+  },
+  {
+    "title": "The authored Channel batch dispatcher selects the wrapped batch transformation only for an exact Chunk input, selects unchanged completion for End, and propagates input failure with its resulting stores; actual handler elaboration and aligned scopes are premises; the selected handler's complete meaning includes its failure and stores; no execution of stored definition calls, nonempty output, scheduling or host simulation",
+    "status": {
+      "witness": {
+        "withinSemanticAxiomCeiling": true,
+        "statement": "\u2200 {self : Effect4.Program.Authoring.Src Effect4.Program.NativeOp}\n  {transform :\n    Effect4.Program.Authoring.TermSrc \u2192 Effect4.Program.Authoring.Src Effect4.Program.NativeOp}\n  {env : Effect4.Program.Authoring.Env} {path : List Nat} {vals : List Effect4.Machine.Val}\n  {body success done : Effect4.Program.NativeEff},\n  Eq vals.length (List.length env.names) \u2192\n    \u2200\n      (outcome :\n        Effect4.Exit (Except Effect4.Machine.Val (List Effect4.Machine.Val)) Effect4.Machine.Err\n          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)\n      (stores after : Effect4.Machine.Stores),\n      Eq (self env (instHAppendOfAppend.hAppend path (List.cons 0 List.nil))) (Except.ok body) \u2192\n        Eq (Effect4.Program.Denote.meaning body vals stores)\n            (Effect4.Channel.bindAnswer_protocol.match_1\u271d\n              (fun outcome => Prod Effect4.Machine.ExitV Effect4.Machine.Stores) outcome\n              (fun leftover =>\n                { fst := Effect4.Exit.success (Effect4.Program.Stream.endVal leftover),\n                  snd := after })\n              (fun items =>\n                { fst := Effect4.Exit.success (Effect4.Program.Stream.chunkVal items),\n                  snd := after })\n              fun cause => { fst := Effect4.Exit.failure cause, snd := after }) \u2192\n          Eq\n              (Effect4.Program.Authoring.succeed\n                (Effect4.Pull.endValue\n                  (Effect4.Program.Authoring.minted\n                    ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"payload\")))\n                ((env.push (List.cons (env.mint \"answer\") List.nil)).push\n                  (List.cons ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"payload\")\n                    List.nil))\n                (instHAppendOfAppend.hAppend\n                  (instHAppendOfAppend.hAppend path (List.cons 1 List.nil)) (List.cons 0 List.nil)))\n              (Except.ok done) \u2192\n            Eq\n                (Effect4.Program.Authoring.bindWith\n                  (transform\n                    (Effect4.Program.Authoring.app \"snd\"\n                      (List.cons\n                        (Effect4.Program.Authoring.minted\n                          ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"rest\"))\n                        List.nil)))\n                  (fun mapped => Effect4.Program.Authoring.succeed (Effect4.Pull.chunkValue mapped))\n                  ((env.push (List.cons (env.mint \"answer\") List.nil)).push\n                    (List.cons ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"rest\")\n                      List.nil))\n                  (instHAppendOfAppend.hAppend\n                    (instHAppendOfAppend.hAppend path (List.cons 1 List.nil))\n                    (List.cons 1 List.nil)))\n                (Except.ok success) \u2192\n              Exists fun tree =>\n                And\n                  (Eq (Effect4.Channel.Internal.mapEffectOf self transform env path)\n                    (Except.ok tree))\n                  (Eq (Effect4.Program.Denote.meaning tree vals stores)\n                    (Effect4.Channel.bindAnswer_protocol.match_1\u271d\n                      (fun outcome => Prod Effect4.Machine.ExitV Effect4.Machine.Stores) outcome\n                      (fun leftover =>\n                        Effect4.Program.Denote.meaning done\n                          (instHAppendOfAppend.hAppend\n                            (instHAppendOfAppend.hAppend vals\n                              (List.cons (Effect4.Program.Stream.endVal leftover) List.nil))\n                            (List.cons leftover List.nil))\n                          after)\n                      (fun items =>\n                        Effect4.Program.Denote.meaning success\n                          (instHAppendOfAppend.hAppend\n                            (instHAppendOfAppend.hAppend vals\n                              (List.cons (Effect4.Program.Stream.chunkVal items) List.nil))\n                            (List.cons (Effect4.Program.Stream.chunkVal items) List.nil))\n                          after)\n                      fun cause => { fst := Effect4.Exit.failure cause, snd := after }))",
+        "restsOn": [],
+        "name": "Effect4.Channel.Internal.mapEffectOf_protocol",
+        "module": "Effect4.Laws.Library.Channel.Protocol",
+        "levels": [],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      "goal": null,
+      "by": "theorem",
+      "_tag": "proved"
+    },
+    "role": "compatibility",
+    "literature": [],
+    "id": "channel-batch-transform",
+    "contestedBy": [],
+    "concept": "translation-simulation"
+  },
+  {
+    "title": "The authored Channel completion dispatcher selects the wrapped completion transformation only for an exact End input, selects unchanged batches for Chunk, and propagates input failure with its resulting stores; actual handler elaboration and aligned scopes are premises; no execution of stored definition calls, nonempty output, scheduling or host simulation",
+    "status": {
+      "witness": {
+        "withinSemanticAxiomCeiling": true,
+        "statement": "\u2200 {self : Effect4.Program.Authoring.Src Effect4.Program.NativeOp}\n  {transform :\n    Effect4.Program.Authoring.TermSrc \u2192 Effect4.Program.Authoring.Src Effect4.Program.NativeOp}\n  {env : Effect4.Program.Authoring.Env} {path : List Nat} {vals : List Effect4.Machine.Val}\n  {body success done : Effect4.Program.NativeEff},\n  Eq vals.length (List.length env.names) \u2192\n    \u2200\n      (outcome :\n        Effect4.Exit (Except Effect4.Machine.Val (List Effect4.Machine.Val)) Effect4.Machine.Err\n          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)\n      (stores after : Effect4.Machine.Stores),\n      Eq (self env (instHAppendOfAppend.hAppend path (List.cons 0 List.nil))) (Except.ok body) \u2192\n        Eq (Effect4.Program.Denote.meaning body vals stores)\n            (Effect4.Channel.bindAnswer_protocol.match_1\u271d\n              (fun outcome => Prod Effect4.Machine.ExitV Effect4.Machine.Stores) outcome\n              (fun leftover =>\n                { fst := Effect4.Exit.success (Effect4.Program.Stream.endVal leftover),\n                  snd := after })\n              (fun items =>\n                { fst := Effect4.Exit.success (Effect4.Program.Stream.chunkVal items),\n                  snd := after })\n              fun cause => { fst := Effect4.Exit.failure cause, snd := after }) \u2192\n          Eq\n              (Effect4.Program.Authoring.bindWith\n                (transform\n                  (Effect4.Program.Authoring.minted\n                    ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"payload\")))\n                (fun mapped => Effect4.Program.Authoring.succeed (Effect4.Pull.endValue mapped))\n                ((env.push (List.cons (env.mint \"answer\") List.nil)).push\n                  (List.cons ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"payload\")\n                    List.nil))\n                (instHAppendOfAppend.hAppend\n                  (instHAppendOfAppend.hAppend path (List.cons 1 List.nil)) (List.cons 0 List.nil)))\n              (Except.ok done) \u2192\n            Eq\n                (Effect4.Program.Authoring.succeed\n                  (Effect4.Pull.chunkValue\n                    (Effect4.Program.Authoring.app \"snd\"\n                      (List.cons\n                        (Effect4.Program.Authoring.minted\n                          ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"rest\"))\n                        List.nil)))\n                  ((env.push (List.cons (env.mint \"answer\") List.nil)).push\n                    (List.cons ((env.push (List.cons (env.mint \"answer\") List.nil)).mint \"rest\")\n                      List.nil))\n                  (instHAppendOfAppend.hAppend\n                    (instHAppendOfAppend.hAppend path (List.cons 1 List.nil))\n                    (List.cons 1 List.nil)))\n                (Except.ok success) \u2192\n              Exists fun tree =>\n                And\n                  (Eq (Effect4.Channel.Internal.mapDoneEffectOf self transform env path)\n                    (Except.ok tree))\n                  (Eq (Effect4.Program.Denote.meaning tree vals stores)\n                    (Effect4.Channel.bindAnswer_protocol.match_1\u271d\n                      (fun outcome => Prod Effect4.Machine.ExitV Effect4.Machine.Stores) outcome\n                      (fun leftover =>\n                        Effect4.Program.Denote.meaning done\n                          (instHAppendOfAppend.hAppend\n                            (instHAppendOfAppend.hAppend vals\n                              (List.cons (Effect4.Program.Stream.endVal leftover) List.nil))\n                            (List.cons leftover List.nil))\n                          after)\n                      (fun items =>\n                        Effect4.Program.Denote.meaning success\n                          (instHAppendOfAppend.hAppend\n                            (instHAppendOfAppend.hAppend vals\n                              (List.cons (Effect4.Program.Stream.chunkVal items) List.nil))\n                            (List.cons (Effect4.Program.Stream.chunkVal items) List.nil))\n                          after)\n                      fun cause => { fst := Effect4.Exit.failure cause, snd := after }))",
+        "restsOn": [],
+        "name": "Effect4.Channel.Internal.mapDoneEffectOf_protocol",
+        "module": "Effect4.Laws.Library.Channel.Protocol",
+        "levels": [],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      "goal": null,
+      "by": "theorem",
+      "_tag": "proved"
+    },
+    "role": "compatibility",
+    "literature": [],
+    "id": "channel-completion-transform",
+    "contestedBy": [],
+    "concept": "translation-simulation"
+  }
+]

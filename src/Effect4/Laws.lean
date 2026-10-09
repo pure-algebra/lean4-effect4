@@ -280,6 +280,8 @@ import Effect4.Laws.Library.Stream.Array
 import Effect4.Laws.Library.SynchronizedRef.Ops
 import Effect4.Laws.Library.PubSub.Steps
 import Effect4.Laws.Library.Pull.Protocol
+import Effect4.Laws.Library.Channel.Protocol
+import Effect4.Laws.Library.Stream.Definitions
 
 /-!
 # Effect4 proof graph
