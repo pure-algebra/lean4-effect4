@@ -46,10 +46,17 @@ def natCandidate (bits : UInt64) : Nat :=
   if b = 0 then 0
   else if 1023 + 52 ≤ e then sig * 2 ^ (e - (1023 + 52)) else sig / 2 ^ ((1023 + 52) - e)
 
-/-- **The natural a binary64 datum spells**, where the datum is the binary64 of that natural
-(`binary64OfNat`). A fraction, a negative number or an inexact spelling reads as none. -/
+/-- **The natural a binary64 datum spells**, where the datum is a non-negative finite binary64
+(a pattern below `binary64Infinity`) and is the binary64 of that natural (`binary64OfNat`). Its
+domain is the naturals binary64 holds exactly: below 2^1024, with at most 53 significant bits,
+every natural up to 2^53 among them (the MCP face's profile is the naturals up to 2^53). A
+negative or non-finite datum, a fraction and an inexact spelling read as none, so the natural
+read is the number a binary64 host reads (`natOfBinary64_finite`). -/
 def natOfBinary64 (bits : UInt64) : Option Nat :=
-  if Effect4.Arch.binary64OfNat (natCandidate bits) = bits then some (natCandidate bits) else none
+  if bits.toNat < Effect4.Arch.binary64Infinity ∧
+      Effect4.Arch.binary64OfNat (natCandidate bits) = bits then
+    some (natCandidate bits)
+  else none
 
 /-- **Bytes from their hex spelling**, where the spelling is the canonical one (`hexString`). The
 spelling is read through its UTF-8 bytes, since a hex digit is one ASCII byte: a traversal of the

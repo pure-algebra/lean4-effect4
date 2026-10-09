@@ -16,9 +16,12 @@ only of the printers, and the printers outlive the alphabet. The namespace stays
 (`Surface/Entity.lean:532`, `Surface/Api.lean:1855`, `Surface/Deploy.lean:520`,
 `Codegen/JsonSchema.lean:428-601`, `Ingest/JsonSchema.lean:280`, `Evidence/Views.lean`,
 `StdLib/Entry.lean:68`), and the store's own printer (`Store/Shape.lean`) reads them
-the same way. The law that is not here: `binary64OfNat` is exact below 2^53 and truncates
-toward zero above it, so it is not injective on `Nat` (`Surface/Annotate.lean:58`); its
-inverse and that theorem are owed.
+the same way. `binary64OfNat` is a binary64 datum only below 2^1024: exact for a natural of at
+most 53 significant bits (every natural up to 2^53), truncated toward zero for any other, so it
+is not injective on `Nat` (`Surface/Annotate.lean:58`). From 2^1024 up the biased exponent leaves
+its eleven bits: 2^1024 gets the pattern of `+Infinity` and 2^2048 that of `-1.0`. Its inverse
+is `Store.natOfBinary64` (`Store/Domain/ShapeRead.lean`), which reads only a pattern below
+`binary64Infinity`; the theorem that it reads back every natural binary64 holds exactly is owed.
 -/
 
 @[expose] public section
@@ -35,10 +38,13 @@ where
     | 0, _, acc => acc
     | fuel + 1, m, acc => if m < 2 then acc else go fuel (m / 2) (acc + 1)
 
-/-- The binary64 bit pattern of a natural, exact below 2^53 and truncated
-toward zero above it: sign 0, biased exponent `1023 + e` where `e` is the
-highest bit, and the 52 bits after it as the significand. Built from the
-number's bits alone, so it reaches no `Float` primitive and no axiom. -/
+/-- The binary64 bit pattern of a natural below 2^1024: sign 0, biased exponent `1023 + e` where
+`e` is the highest bit, and the 52 bits after it as the significand. It is exact for a natural of
+at most 53 significant bits, every natural up to 2^53 among them, and truncated toward zero for
+any other. From 2^1024 up the exponent leaves its field and the pattern is no binary64 of the
+natural (`+Infinity`'s at 2^1024, `-1.0`'s at 2^2048); the read refuses it
+(`Store.natOfBinary64`). Built from the number's bits alone, so it reaches no `Float` primitive
+and no axiom. -/
 def binary64OfNat (n : Nat) : UInt64 :=
   if n = 0 then 0
   else
@@ -46,7 +52,12 @@ def binary64OfNat (n : Nat) : UInt64 :=
     let significand := if e ≤ 52 then (n <<< (52 - e)) - (1 <<< 52) else (n >>> (e - 52)) - (1 <<< 52)
     UInt64.ofNat (((1023 + e) <<< 52) + significand)
 
-/-- A JSON number from a natural: the binary64 the host would parse. -/
+/-- The bit pattern of `+Infinity`, `0x7FF0000000000000`: the least pattern that is no
+non-negative finite binary64. Every pattern from it up has the sign bit set or the exponent's
+eleven bits all set (infinity and NaN). -/
+def binary64Infinity : Nat := 0x7FF0000000000000
+
+/-- A JSON number from a natural: the binary64 the host would parse, below 2^1024. -/
 def Json.ofNat (n : Nat) : Json := .number ⟨binary64OfNat n⟩
 
 -- The two exact anchors and the first truncation: `2^53` is the last exact integer, `2^53 + 1`

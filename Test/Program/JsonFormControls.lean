@@ -14,6 +14,8 @@ trip, which no theorem states.
   Queue's definitions read back from their prints.
 * **Tested: any order.** With every object's entries reversed, the strict reader refuses, and
   the reader in any order reads the program back.
+* **Controls: a number reads only from a non-negative finite binary64** (`natOfBinary64_finite`).
+  From 2^1024 up the write's pattern is no binary64 of the natural, and the read refuses it.
 -/
 
 set_option autoImplicit false
@@ -52,5 +54,12 @@ end
 #guard ((Canonical.ofJson (reverseObjs (Canonical.print original)) : Option NativeEff).isNone,
   (Canonical.ofJsonAnyOrder (reverseObjs (Canonical.print original)) : Option NativeEff).map
     hexOf == some (hexOf original)) == (true, true)
+
+-- control: 2^1024's pattern is +Infinity's, and 2^2048's is -1.0's; the read refuses both
+#guard (Effect4.Arch.binary64OfNat (2 ^ 1024), Effect4.Arch.binary64OfNat (2 ^ 2048)) ==
+  (0x7FF0000000000000, 0xBFF0000000000000)
+#guard (natOfBinary64 0x7FF0000000000000, natOfBinary64 0xBFF0000000000000) == (none, none)
+-- tested: the top of the MCP face's profile, 2^53, reads back
+#guard natOfBinary64 (Effect4.Arch.binary64OfNat (2 ^ 53)) == some (2 ^ 53)
 
 end Test.Program.JsonFormControls

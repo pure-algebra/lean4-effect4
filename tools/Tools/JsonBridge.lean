@@ -1,5 +1,5 @@
 import Lean.Data.Json
-import Effect4.Store.Domain.ShapeRead
+import Effect4.Laws.Store.ShapeRead
 
 /-!
 # Tools.JsonBridge — Lean's JSON and the tree's JSON, both ways
@@ -12,7 +12,8 @@ module moves a value between the two.
 - **Lean's to the tree's** (`ofLeanJson`): an object's entries in Lean's order, sorted by key,
   which the shape's order puts right (`ShapeDoc.order`); a number only where it is a natural that
   binary64 holds exactly, as the binary64 the canonical print writes. A natural that binary64
-  rounds is refused, not changed (`ofLeanJson_num`; Codex's JSON-01). Anything else is none.
+  rounds is refused, not changed (`ofLeanJson_num`; Codex's JSON-01), and so is one from 2^1024
+  up, whose pattern is no binary64 of it. Anything else is none.
   `fuel` bounds the depth; a request line's length is enough.
 - **The tree's to Lean's** (`toLeanJson`): a number where it spells a natural, and `null` where
   it does not.
@@ -39,19 +40,21 @@ def ofLeanJson : Nat → Lean.Json → Option Effect4.Json
       .obj
 
 /-- **A number converts only to the natural it was.** Whatever `ofLeanJson` makes of a JSON
-number is a binary64 datum from which the reader takes back that number's natural
-(`natOfBinary64`, the step `readIn` takes at `.nat`). A step of `json-read-exact` at the tool:
-with `Canonical.ofJson_exact`, the program a request admits holds the naturals the request wrote.
+number is a non-negative finite binary64 datum from which the reader takes back that number's
+natural (`natOfBinary64`, the step `readIn` takes at `.nat`), and that natural is below 2^1024
+(`natOfBinary64_finite`). A step of `json-read-exact` at the tool: with `Canonical.ofJson_exact`,
+the program a request admits holds the naturals the request wrote, as binary64 hosts read them.
 Its consumer is `Tools.Session.programFrom?`, whose answers name it. -/
 theorem ofLeanJson_num {fuel : Nat} {n : Lean.JsonNumber} {j : Effect4.Json}
     (h : ofLeanJson (fuel + 1) (.num n) = some j) :
     ∃ x : Effect4.Float64, j = .number x ∧ n.exponent = 0 ∧ 0 ≤ n.mantissa ∧
-      natOfBinary64 x.bits = some n.mantissa.toNat := by
+      natOfBinary64 x.bits = some n.mantissa.toNat ∧
+      x.bits.toNat < Effect4.Arch.binary64Infinity ∧ n.mantissa.toNat < 2 ^ 1024 := by
   unfold ofLeanJson at h
   split at h
   · rename_i hn
     cases h
-    exact ⟨_, rfl, hn.1, hn.2.1, hn.2.2⟩
+    exact ⟨_, rfl, hn.1, hn.2.1, hn.2.2, natOfBinary64_finite hn.2.2⟩
   · cases h
 
 mutual
