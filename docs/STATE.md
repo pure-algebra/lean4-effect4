@@ -95,7 +95,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   them in a window; SVG and the console are two more outputs of the same calls. A graph of any
   shape lays out by ranks (`ranks_forward`), with cycles as back edges; a run draws its fibers as
   one (`v -r NAME`). Motion is a join by key with transitions: a moment of a step is a page, and
-  every step ends at exactly the next frame (a finite check).
+  every step ends at exactly the next frame (a finite check). The window is SDL3's, vendored by
+  pin and built static (`vendor/SDL3-3.4.16/build.sh`).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
@@ -128,7 +129,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 1. **The visual pipeline** (row 336, point 10; the
    [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0 to V3 and the graph are
    landed. Next: the end law as a theorem; the graph view's consumers (the proof graph, the
-   lowering); a fiber's program address; Effect schemas drawn; SDL3 once it builds.
+   lowering); a fiber's program address; Effect schemas drawn; a console player on termbox2.
 2. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
    address, search by type and by explanation, wrap, extract and inline, each shown as frames.
    Seat ORG's L9 (`rebaseRefs`, point 6) and its rank 5 (a program in the store) come first.
@@ -152,8 +153,6 @@ API's slices (row 326), and H8.
 - **The vendoring list** (row 336, point 5): the C libraries of the
   [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. Each is confirmed at
   its own repository before a download.
-- **A build tool for SDL3** (row 336, point 5): SDL3 builds with CMake or Xcode, and this machine
-  has neither. Homebrew's CMake is the smallest step.
 - **The choreography's values** (the visual pipeline note, the motion): the defaults are drawn;
   their timing and the overshoot are yours to tune.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each

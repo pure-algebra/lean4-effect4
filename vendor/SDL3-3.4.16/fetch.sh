@@ -18,9 +18,10 @@ fail() { echo "fetch.sh: $1" >&2; rm -f "$tarball" "$tarball.sig"; exit 1; }
 want=$(cut -d' ' -f1 "$here/SHA256SUMS")
 got=$(shasum -a 256 "$tarball" | cut -d' ' -f1)
 [ "$want" = "$got" ] || fail "SHA-256 differs: $got"
-ring=$(mktemp -d "${TMPDIR:-/tmp}/sdl3-keys.XXXXXX")
+# The keyring stands in a short path: gpg's agent socket refuses a long one.
+ring=$(mktemp -d /tmp/sdl3k.XXXXXX)
 chmod 700 "$ring"
-gpg --homedir "$ring" --quiet --import "$here"/keys/*.asc 2>/dev/null
+gpg --homedir "$ring" --quiet --import "$here"/keys/*.asc 2>/dev/null || { rm -rf "$ring"; fail "the keys do not import"; }
 good=$(gpg --homedir "$ring" --status-fd 1 --verify "$tarball.sig" "$tarball" 2>/dev/null | grep -c '^\[GNUPG:\] VALIDSIG' || true)
 rm -rf "$ring"
 [ "$good" = 2 ] || fail "expected two valid signatures, found $good"

@@ -3,6 +3,10 @@
  *
  *   play DIR    the pictures of DIR in name order: `NNN.draw` is a frame, `NNN-TTT.draw` a
  *               picture of the motion that leads to frame NNN (tools/Drivers/View.lean writes both)
+ *   play DIR --shot N FILE   draw the Nth picture through the window's renderer, read its pixels
+ *               back and save them as BMP: the check of this path with no screen
+ *
+ * The window is SDL3's (vendor/SDL3-3.4.16, built static by its build.sh into tools/view/sdl3).
  *
  * Keys: Right or Space plays the motion to the next frame; Left steps back to the frame before,
  * with no motion; Home and End go to the first and the last frame; Q or Escape quits.
@@ -11,7 +15,7 @@
  * is Lean's too: each picture between two frames is a moment of the step (`Tools.View.sample`).
  */
 #define _GNU_SOURCE
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <dirent.h>
 
 #include "replay.h"
@@ -49,8 +53,12 @@ typedef struct Screen {
   int shown;   /* the index of the picture on the screen */
 } Screen;
 
-/* Replay picture `i` and put it on the screen, at one logical pixel for one point. */
-static void show(Screen *s, int i) {
+/* Replay picture `i` and draw it, at one logical pixel for one point; present it unless only a
+ * reading of the pixels follows. */
+static void draw(Screen *s, int i, int present);
+static void show(Screen *s, int i) { draw(s, i, 1); }
+
+static void draw(Screen *s, int i, int present) {
   char path[4096];
   snprintf(path, sizeof path, "%s/%s", s->dir, names[i]);
   double W = 0, H = 0, ratio = 1;
@@ -64,13 +72,14 @@ static void show(Screen *s, int i) {
   SDL_UpdateTexture(texture, NULL, cairo_image_surface_get_data(surface), cairo_image_surface_get_stride(surface));
   int winW = 1, winH = 1, outW = 1, outH = 1;
   SDL_GetWindowSize(s->window, &winW, &winH);
-  SDL_GetRendererOutputSize(s->renderer, &outW, &outH);
+  SDL_GetCurrentRenderOutputSize(s->renderer, &outW, &outH);
   const double scale = (double)outW / (double)winW;   /* device pixels of the screen for one point */
-  SDL_Rect dst = {0, 0, (int)((double)w * scale / ratio), (int)((double)h * scale / ratio)};
+  SDL_SetRenderScale(s->renderer, 1.0f, 1.0f);
+  SDL_FRect dst = {0.0f, 0.0f, (float)((double)w * scale / ratio), (float)((double)h * scale / ratio)};
   SDL_SetRenderDrawColor(s->renderer, 0x14, 0x11, 0x0d, 0xff);   /* the ground of PAINT_DARK */
   SDL_RenderClear(s->renderer);
-  SDL_RenderCopy(s->renderer, texture, NULL, &dst);
-  SDL_RenderPresent(s->renderer);
+  SDL_RenderTexture(s->renderer, texture, NULL, &dst);
+  if (present) SDL_RenderPresent(s->renderer);
   SDL_DestroyTexture(texture);
   cairo_surface_destroy(surface);
   char title[512];
@@ -88,7 +97,8 @@ static void play_to(Screen *s, int to) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) { fprintf(stderr, "usage: play DIR\n"); return 2; }
+  const int shot = argc == 5 && !strcmp(argv[2], "--shot");
+  if (argc != 2 && !shot) { fprintf(stderr, "usage: play DIR [--shot N FILE]\n"); return 2; }
   if (!load(argv[1])) { fprintf(stderr, "play: no .draw file in %s\n", argv[1]); return 1; }
   double W = 0, H = 0, most = 0, ratio = 1;
   for (int i = 0; i < count; i++) {
@@ -98,24 +108,39 @@ int main(int argc, char **argv) {
   }
   PaintFaces faces;
   if (!paint_faces_open(&faces)) { fprintf(stderr, "play: a face does not open\n"); return 1; }
-  if (SDL_Init(SDL_INIT_VIDEO) != 0) { fprintf(stderr, "play: %s\n", SDL_GetError()); return 1; }
+  if (!SDL_Init(SDL_INIT_VIDEO)) { fprintf(stderr, "play: %s\n", SDL_GetError()); return 1; }
   Screen s = {0};
   s.faces = &faces;
   s.dir = argv[1];
-  s.window = SDL_CreateWindow("play", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, (int)W, (int)most,
-                              SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
-  s.renderer = s.window ? SDL_CreateRenderer(s.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC) : NULL;
-  if (s.window && !s.renderer) s.renderer = SDL_CreateRenderer(s.window, -1, SDL_RENDERER_SOFTWARE);
+  s.window = SDL_CreateWindow("play", (int)W, (int)most, SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_RESIZABLE);
+  s.renderer = s.window ? SDL_CreateRenderer(s.window, NULL) : NULL;
+  if (s.window && !s.renderer) s.renderer = SDL_CreateRenderer(s.window, SDL_SOFTWARE_RENDERER);
+  if (s.renderer) SDL_SetRenderVSync(s.renderer, 1);
   if (!s.renderer) { fprintf(stderr, "play: %s\n", SDL_GetError()); return 1; }
   int first = 0;
   while (first < count - 1 && !is_frame(first)) first++;
+  if (shot) {
+    const int n = atoi(argv[3]);
+    if (n < 0 || n >= count) { fprintf(stderr, "play: no picture %d of %d\n", n, count); return 1; }
+    draw(&s, n, 0);
+    SDL_Surface *pixels = SDL_RenderReadPixels(s.renderer, NULL);
+    const int saved = pixels && SDL_SaveBMP(pixels, argv[4]);
+    if (pixels) SDL_DestroySurface(pixels);
+    SDL_DestroyRenderer(s.renderer);
+    SDL_DestroyWindow(s.window);
+    SDL_Quit();
+    paint_faces_close(&faces);
+    printf("%s: %s\n", names[n], saved ? argv[4] : SDL_GetError());
+    for (int i = 0; i < count; i++) free(names[i]);
+    return saved ? 0 : 1;
+  }
   show(&s, first);
   for (SDL_Event e; SDL_WaitEvent(&e);) {
-    if (e.type == SDL_QUIT) break;
-    if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_EXPOSED) show(&s, s.shown);
-    if (e.type != SDL_KEYDOWN) continue;
-    const SDL_Keycode key = e.key.keysym.sym;
-    if (key == SDLK_q || key == SDLK_ESCAPE) break;
+    if (e.type == SDL_EVENT_QUIT) break;
+    if (e.type == SDL_EVENT_WINDOW_EXPOSED || e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) show(&s, s.shown);
+    if (e.type != SDL_EVENT_KEY_DOWN) continue;
+    const SDL_Keycode key = e.key.key;
+    if (key == SDLK_Q || key == SDLK_ESCAPE) break;
     if (key == SDLK_RIGHT || key == SDLK_SPACE) {
       int next = s.shown + 1;
       while (next < count && !is_frame(next)) next++;

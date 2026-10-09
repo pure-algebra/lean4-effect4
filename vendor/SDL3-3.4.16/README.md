@@ -18,7 +18,13 @@ keeps the pin, the keys and `fetch.sh`, which downloads the tarball and refuses 
 SHA-256 and both signatures hold. A build extracts the tarball in a temporary folder, keeps the
 built library, and removes the source.
 
-**What a build needs.** SDL3 builds with CMake or with its Xcode project. This machine has
-neither (2026-10-09), so the build waits for the owner's choice of a build tool.
+**The build.** `build.sh OUT` fetches and verifies the tarball, builds a static `libSDL3.a` with
+CMake in a temporary folder, installs the headers, the library and `sdl3.pc` under `OUT`, and
+removes the source. `tools/view/build.sh` runs it once into `tools/view/sdl3` (ignored by git) and
+links the player against it. CMake 4.4.4 came from Homebrew (the owner's yes, 2026-10-09); the
+build took 36 seconds on this machine.
+
+The keyring of `fetch.sh` stands in a short path under `/tmp`: gpg's agent socket refuses a long
+one, and the verification then failed silently under a long `TMPDIR` (found 2026-10-09).
 
 Why it fits: it answers input as events and presents a picture; it lays nothing out.
