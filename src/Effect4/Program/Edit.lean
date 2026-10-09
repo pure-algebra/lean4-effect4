@@ -36,10 +36,12 @@ sketch:
   checker gives `q` the old sub-program's type in its environment, at the signature of the part
   that holds the address (`Sketch.sigAt`). The table is spliced, and the new subtree's addresses
   are the addresses to show again.
-- **rechecked**: any other edit of a program, and every omission. The table is computed again,
-  part by part. An omission extends the hole table, so the signature grows; the law that a typed
-  sketch's table stays under a grown hole table is a planned goal (`Sketch.table_more_holes`,
-  `Laws/Program/Edit.lean`), and the omission's splice waits on it.
+- **rechecked**: any other edit of a program. The table is computed again, part by part.
+
+An omission splices too, below the root, where the table types the root and the address and the
+hole row declares exactly the focus's type, with closed, normal and formed columns: the hole's
+one entry replaces the subtree's segment (`Sketch.table_omit`). A typed sketch's table stays under
+a grown hole table (`Sketch.table_more_holes`), so the grown signature changes no other entry.
 - **unchanged**: the address holds no program. Nothing changes.
 
 The session's invariant is that its table is its sketch's table (`EditSession.Coherent`). The open
@@ -119,7 +121,19 @@ def feed (l : EditSession) : Edit → EditSession × Edit.Delta
     | none => (l, .unchanged)
   | .omitAt a row =>
     match l.sketch.omitAt l.app a row with
-    | some s' => ({ l with sketch := s', table := s'.annotate l.app }, .rechecked)
+    | some s' =>
+      let rechecked : EditSession × Edit.Delta :=
+        ({ l with sketch := s', table := s'.annotate l.app }, .rechecked)
+      match a, Table.typedAt l.table [], Table.typedAt l.table a with
+      | _ :: _, some _, some (tys, ty) =>
+        if row = Row.hole row.name ty.answer ty.error ty.requires.elems ∧
+            ty.answer.closed = true ∧ ty.error.closed = true ∧
+            ty.answer.normalize = ty.answer ∧ ty.error.normalize = ty.error ∧
+            (Formation.check (Formation.instantiatedSites row.normalizeTypes [])).isNone = true then
+          let entry : Table.Entry := ⟨a, some (.env tys), some (.ok ty)⟩
+          ({ l with sketch := s', table := Table.splice l.table a [entry] }, .spliced [a])
+        else rechecked
+      | _, _, _ => rechecked
     | none => (l, .unchanged)
 
 /-- **A run of edits**: the fold of `feed`. -/

@@ -73,8 +73,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   hole table and gives back an omission's (`sketch-wire`).
 - **The edit session** (row 334). `EditSession` (`src/Effect4/Program/Edit.lean`) keeps a sketch
   and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
-  one into a hole. A fill that keeps its focus's type checks only the new subtree; an omission
-  checks again until `omit-splices-table`, a planned goal, is proved. After any run of edits the view is the checker's answer on the
+  one into a hole. A fill that keeps its focus's type checks only the new subtree, and an
+  omission at the focus's type adds one entry (`omit-splices-table`). After any run of edits the view is the checker's answer on the
   sketch (`edit-session-coherent`). An edit can be undone exactly (`edit-session-undo`), and a
   spliced edit repaints only its subtree (`edit-repaint-set`).
 - **Addresses** (seat ORG's [theory map](research/2026-10-08-seat-ORG-theory-map.md)). The laws

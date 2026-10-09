@@ -136,6 +136,8 @@ the same quantities.
 | the edit session over a program (`edit-session-coherent`, first form) | 5 goals owed; 2 local steps; 6 joints, all load-bearing; reuse 46% | the 5, and no other lemma; 9 joints, the 3 more (`focusAt_eq_some`, `focusAt_nil`, `table_head`) forecast in words; reuse 66% by edges |
 | the view and repaint tops, written as bare goals | 2 goals owed; 0 local steps; 0 joints | a bare goal names nothing, so the plan predicts nothing; each top was sketched, then proved from the landed steps |
 | the splice over a whole program's parts (`module-table-splices`, `module-annotate-table`) | 14 goals owed; 4 local steps; 15 joints, all load-bearing; reuse 45% | the 14, and 7 more: five entry and address facts and the two spine edits forecast in words; 24 joints, 7 of the 9 more forecast in words; reuse 57% by edges; no heartbeat raise |
+| H1 on a whole program (`module-holes-conservative`) | 1 goal owed; 2 local steps; 3 joints; reuse 50% | exactly the prediction: the one goal, no other lemma, the same 3 joints |
+| the omission's splice (`omit-splices-table`) | 6 goals owed, one behind another goal; 3 local steps; 10 joints; reuse 55% | the 6, and small steps: the converse of the focus law (forecast in words), the focus's program, an entry's path, a key step, the bodies' case; 30 joints, the 20 more the extension's field laws that the algebra's agreement reads (forecast in words); reuse 68% |
 
 The prediction was exact because the decomposition went down to the new lemmas. Its cost is the
 statements and the skeleton of the proof; the leaves are the work it predicts.
@@ -149,7 +151,10 @@ Four readings of the four predictions:
 - **The unforecast lemmas are small facts**: list facts, address facts, one entry at a spine. Seat
   ORG's address module and list homes (`docs/research/2026-10-08-seat-ORG-theory-map.md`, ranks 1
   and 4) would turn them into joints.
-- **Reuse rises from the plan to the landing**, from 35 to 54, 46 to 66 and 45 to 57 percent.
+- **Reuse rises from the plan to the landing**, from 35 to 54, 46 to 66, 45 to 57 and 55 to 68
+  percent.
+- **The plan stops at a module's border and at a goal.** A goal behind a joint of another module,
+  or behind another goal, is not listed. Name a top in each module of the slice.
 
 **The same reading on an area before work starts.** The session's laws are
 `Laws.Api.HostSession`, `Laws.Api.SessionMeaning` and `Laws.Run`. They hold 142 theorems, 59

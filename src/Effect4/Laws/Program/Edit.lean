@@ -1,5 +1,6 @@
 import Effect4.Program.Edit
 import Effect4.Laws.Program.Typing.PartsTable
+import Effect4.Laws.Program.Typing.Restrict
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -18,6 +19,7 @@ time. This module holds its laws.
 | `EditSession.reached_view` | after an open and any edits, the view shows the sketch's refusals and type | coherence, `run_keeps` |
 | `EditSession.feed_repaint` | a spliced edit shows again exactly the new subtree's addresses, and keeps every other entry | `Annotate.check_eq`, `Table.mem_splice` |
 | `EditSession.feed_undo` | an edit, then the edit that puts back the old sub-program, restores a coherent session | `replaceAt_spec`, coherence |
+| `Sketch.table_omit` | an omission at the focus's type splices the table with the hole's one entry | `Sketch.table_more_holes`, `Sketch.table_fill` |
 
 ## Placement
 
@@ -29,8 +31,9 @@ Requirement R14 (program as data: regions, the focus, holes), under decisions ro
   Reach: one application; every sketch, definition block and holes included; every list of edits
   `fill`. The splice is taken only below the root, where the table types the root and the address
   and the checker gives the new sub-program the old type at the part's signature; every other
-  edit computes the table again. Not established: an edit of the hole table; a run; the cost,
-  which no theorem counts. Consumers: a tool's view of a sketch under edits.
+  edit computes the table again. An omission splices where its hole row declares the focus's
+  type (the claim `omit-splices-table`). Not established: a run; the cost, which no theorem
+  counts. Consumers: a tool's view of a sketch under edits.
 - **`edit-session-undo`** (claim, role compatibility; pointer `EditSession.feed_undo`). Reach: a
   coherent session, and an edit that applied. Not established: that two edits at disjoint
   addresses commute; an undo of a run. Consumer: a tool's undo, as one more edit.
@@ -45,6 +48,7 @@ set_option autoImplicit false
 namespace Effect4.Program
 
 open Conform.Effect4.Typing
+open Effect4.Machine.Env (Requirement)
 
 /-! ## The table answers the focus -/
 
@@ -100,30 +104,171 @@ theorem Table.typedAt_table_nil (s : Sketch) (app : SigApp) :
   rw [ht]
   cases s.check app <;> rfl
 
-/-! ## An omission: planned -/
+/-! ## An omission -/
 
-/-- **A typed sketch's table stays under a grown hole table.** Every entry of a typed sketch is
-typed, and a typed sub-program keeps its environment and its answer at an extension of the
-signature (`check_ext`). A step of `omit-splices-table`. Its consumer is `Sketch.table_omit`. -/
+/-- **A typed sketch's table stays under a grown hole table.** A typed sketch reads only its
+signature (`moduleHasTy_sigProgram`), and the table part by part answers the same at an
+extension (`annotateModule_restrict`); the root keeps its check (`Sketch.check_more_holes`). A
+step of `omit-splices-table`. Its consumer is `Sketch.table_omit`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.table_more_holes {s : Sketch} {app : SigApp} {T : EffTy}
+theorem Sketch.table_more_holes {s : Sketch} {app : SigApp} {T : EffTy}
     (hs : s.check app = .ok T) (more : RowTable) :
-    ({ s with holes := s.holes ++ more } : Sketch).table app = s.table app
+    ({ s with holes := s.holes ++ more } : Sketch).table app = s.table app := by
+  rw [← Sketch.annotate_eq_table, ← Sketch.annotate_eq_table]
+  have hmod := moduleHasTy_sigProgram (checkModule_sound _ _ _ hs)
+  have hext : SigExtends (app.withHoles s.holes).signature
+      (app.withHoles (s.holes ++ more)).signature := by
+    rw [← SigApp.withHoles_withHoles]
+    exact SigApp.withHoles_extends _ more
+  unfold Sketch.annotate
+  rw [Sketch.check_more_holes s app more hs, hs]
+  exact annotateModule_restrict hext (.ok T) hmod
+
+/-- An entry of a sketch's table stands at its address. A step of `omit-splices-table`. Its
+consumer is `Table.typedAt_table_of_focusAt`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.tableEntry_path (s : Sketch) (app : SigApp) (x : List Nat) :
+    (s.tableEntry app x).path = x := by
+  cases x with
+  | nil => rfl
+  | cons i r =>
+    simp only [Sketch.tableEntry]
+    split <;> rfl
+
+/-- The focus's program is the node at the address. A step of `omit-splices-table`. Its
+consumers are `Table.typedAt_table_of_focusAt` and `Sketch.focusAt_more_holes`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.focusAt_at {s : Sketch} {app : SigApp} {a : List Nat} {f : Focus NativeOp}
+    (hf : s.focusAt app a = some f) : (Node.eff s.program).at_ a = some (.eff f.program) := by
+  cases a with
+  | nil =>
+    have hf' : (s.check app).toOption.map (fun t => (⟨s.program, [], t⟩ : Focus NativeOp)) =
+        some f := hf
+    obtain ⟨t, -, rfl⟩ := Option.map_eq_some_iff.mp hf'
+    rfl
+  | cons i r =>
+    have hfp : programFocusAt (app.withHoles s.holes).signature [] s.program (i :: r) = some f := hf
+    unfold programFocusAt at hfp
+    obtain ⟨⟨part, rest⟩, hpart, hfoc⟩ := Option.bind_eq_some_iff.mp hfp
+    rw [Eff.partAt_at hpart]
+    exact (focusAt_typed hfoc).1
+
+/-- **The table holds the focus's type at the focus**: the converse of `Table.typedAt_table`. A
+step of `omit-splices-table`. Its consumer is `Sketch.focusAt_more_holes`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.typedAt_table_of_focusAt {s : Sketch} {app : SigApp} {a : List Nat}
+    {f : Focus NativeOp} (hf : s.focusAt app a = some f) (ha : a ≠ []) :
+    Table.typedAt (s.table app) a = some (f.env, f.ty) := by
+  have hat := Sketch.focusAt_at hf
+  have hmem : a ∈ Node.addresses (.eff s.program) :=
+    (mem_addresses_iff _ _).mpr (by rw [hat]; rfl)
+  have hfind : (s.table app).find? (fun e => decide (e.path = a)) = some (s.tableEntry app a) := by
+    unfold Sketch.table
+    rw [List.find?_map]
+    have hcomp : ((fun e => decide (e.path = a)) ∘ s.tableEntry app) = fun x => decide (x = a) := by
+      funext x
+      simp only [Function.comp, Sketch.tableEntry_path]
+    rw [hcomp]
+    obtain ⟨y, hy⟩ := Option.isSome_iff_exists.mp
+      ((List.find?_isSome (p := fun x => decide (x = a))).mpr ⟨a, hmem, decide_eq_true rfl⟩)
+    have hya := List.find?_some hy
+    rw [decide_eq_true_eq] at hya
+    subst hya
+    rw [hy]
+    rfl
+  unfold Table.typedAt
+  rw [hfind]
+  obtain ⟨i, r, rfl⟩ := List.exists_cons_of_ne_nil ha
+  have hfp : programFocusAt (app.withHoles s.holes).signature [] s.program (i :: r) = some f := hf
+  unfold programFocusAt at hfp
+  obtain ⟨⟨part, rest⟩, hpart, hfoc⟩ := Option.bind_eq_some_iff.mp hfp
+  obtain ⟨hat', henv, hty⟩ := focusAt_eq_some.mp hfoc
+  have hchk := check_complete _ _ _ _ (effTy_sound _ _ _ _ hty) (i :: r)
+  simp only [Sketch.tableEntry, hpart, hat', henv, hchk]
+
+/-- A typed sketch's focus stays under a grown hole table: the grown sketch's table is the
+sketch's (`Sketch.table_more_holes`), and a table answers the focus (`Table.typedAt_table`). A step
+of `omit-splices-table`. Its consumer is `Sketch.table_omit`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.focusAt_more_holes {s : Sketch} {app : SigApp} {T : EffTy} {path : List Nat}
+    {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
+    (more : RowTable) : ({ s with holes := s.holes ++ more } : Sketch).focusAt app path = some f := by
+  cases path with
+  | nil =>
+    rw [Sketch.focusAt_nil hs] at hf
+    cases hf
+    exact Sketch.focusAt_nil (Sketch.check_more_holes s app more hs)
+  | cons i r =>
+    have ht := Table.typedAt_table_of_focusAt hf (List.cons_ne_nil i r)
+    rw [← Sketch.table_more_holes hs more] at ht
+    obtain ⟨q, hq⟩ := Table.typedAt_table ht (List.cons_ne_nil i r)
+    have h1 := Sketch.focusAt_at hq
+    have h2 := Sketch.focusAt_at hf
+    have hsame : q = f.program := by
+      have h12 := h1.symm.trans h2
+      injection h12 with h3
+      injection h3
+    rw [hq, hsame]
+
+/-- The new hole has the focus's type at the part's signature, when its row declares the focus's
+closed, normal and formed columns. A step of `omit-splices-table`. Its consumer is
+`Sketch.table_omit`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.hole_hasTy_focus {s : Sketch} {app : SigApp} {path : List Nat}
+    {f : Focus NativeOp} (name : String) (hans : f.ty.answer.closed = true)
+    (herr : f.ty.error.closed = true) (hansN : f.ty.answer.normalize = f.ty.answer)
+    (herrN : f.ty.error.normalize = f.ty.error)
+    (formed : Formation.Formed (Formation.instantiatedSites
+      (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems).normalizeTypes [])) :
+    HasTy (({ s with holes := s.holes ++ [Row.hole name f.ty.answer f.ty.error
+        f.ty.requires.elems] } : Sketch).sigAt app path) f.env (Sketch.hole app s.holes.length) f.ty := by
+  have hhole := Sketch.hole_hasTy app
+    (s.holes ++ [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems]) s.holes.length f.env
+    List.getElem?_concat_length hans herr formed
+  have hreq : Requirement.ofList f.ty.requires.elems = f.ty.requires :=
+    Row.normalize_of_ascending f.ty.requires.elems f.ty.requires.ascending
+  rw [hansN, herrN, hreq] at hhole
+  exact hasTy_ext (Sketch.sigAt_extends
+    { s with holes := s.holes ++ [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems] }
+    app path) hhole
+
+/-- A call's table is its one entry. A step of `omit-splices-table`. Its consumer is
+`Sketch.table_omit`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem tableAt_perform {Op : Type} {s : Signature Op} {env : TyEnv} {op : Op} {request : Term}
+    (a : List Nat) :
+    tableAt s (some (.env env)) (.eff (.perform op request)) a =
+      [⟨a, some (.env env), some (Checker.check s env a (.perform op request))⟩] := by
+  rw [tableAt_eq_cons]
+  simp only [childTableAt, Node.child, nodeAnswer, List.append_nil]
 
 /-- **An omission at the focus's type splices the table**: the hole row declares the focus's
 three columns, and the table is the old one with the subtree's segment replaced by the hole's one
-entry. Its proof is `Sketch.table_more_holes`, then `Sketch.table_fill` at the grown sketch with
-the hole as the filling (`Sketch.hole_hasTy`). The pointer of `omit-splices-table`; the edit
-session's `omitAt` splices once it is proved. -/
+entry. The grown sketch keeps its table (`Sketch.table_more_holes`), and the hole is a filling of
+the focus's type (`Sketch.table_fill`). The pointer of `omit-splices-table`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.table_omit {s s' : Sketch} {app : SigApp} {T : EffTy} {path : List Nat}
+theorem Sketch.table_omit {s s' : Sketch} {app : SigApp} {T : EffTy} {path : List Nat}
     {f : Focus NativeOp} (name : String) (hs : s.check app = .ok T) (hnil : path ≠ [])
     (hf : s.focusAt app path = some f) (hans : f.ty.answer.closed = true)
     (herr : f.ty.error.closed = true) (hansN : f.ty.answer.normalize = f.ty.answer)
     (herrN : f.ty.error.normalize = f.ty.error)
-    (homit : s.omitAt app path (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems) = some s') :
+    (formed : Formation.Formed (Formation.instantiatedSites
+      (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems).normalizeTypes []))
+    (homit : s.omitAt app path (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems) =
+      some s') :
     s'.table app = Table.splice (s.table app) path
-      [⟨path, some (.env f.env), some (.ok f.ty)⟩]
+      [⟨path, some (.env f.env), some (.ok f.ty)⟩] := by
+  have hs1 := Sketch.check_more_holes s app
+    [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems] hs
+  have hf1 := Sketch.focusAt_more_holes hs hf
+    [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems]
+  have hq := Sketch.hole_hasTy_focus (s := s) (app := app) (path := path) name hans herr hansN
+    herrN formed
+  have h := Sketch.table_fill hs1 hnil hf1 hq homit
+  rw [h, Sketch.table_more_holes hs]
+  have hc := check_complete _ _ _ _ hq path
+  simp only [Sketch.hole] at hc ⊢
+  rw [tableAt_perform, hc]
 
 namespace EditSession
 
@@ -182,7 +327,35 @@ theorem feed_coherent {l : EditSession} (h : l.Coherent) (e : Edit) : (l.feed e)
   | omitAt a row =>
     simp only [feed]
     split
-    next s' _ => exact Sketch.annotate_eq_table s' l.app
+    next s' homit =>
+      split
+      next i r root tys ty hroot hat =>
+        split
+        next hcond =>
+          obtain ⟨hrow, hans, herr, hansN, herrN, hform⟩ := hcond
+          rw [h] at hroot hat
+          obtain ⟨_, T⟩ := root
+          have hs : l.sketch.check l.app = .ok T := by
+            have h0 := Table.typedAt_table_nil l.sketch l.app
+            rw [hroot] at h0
+            cases hc : l.sketch.check l.app with
+            | ok t =>
+              rw [hc] at h0
+              cases h0
+              rfl
+            | error e =>
+              rw [hc] at h0
+              cases h0
+          obtain ⟨q, hf⟩ := Table.typedAt_table hat (List.cons_ne_nil i r)
+          rw [hrow] at homit hform
+          have formed := (Formation.check_eq_none_iff _).mp (Option.isNone_iff_eq_none.mp hform)
+          show Table.splice l.table (i :: r) [⟨i :: r, some (.env tys), some (.ok ty)⟩] =
+            s'.table l.app
+          rw [h]
+          exact (Sketch.table_omit (f := ⟨q, tys, ty⟩) row.name hs (List.cons_ne_nil i r) hf hans
+            herr hansN herrN formed homit).symm
+        next => exact Sketch.annotate_eq_table s' l.app
+      next => exact Sketch.annotate_eq_table s' l.app
     next => exact h
 
 /-- **A run of edits keeps a session coherent**: the fold of `feed_coherent`. A step of
@@ -239,7 +412,12 @@ theorem feed_keeps (l : EditSession) (e : Edit) :
   | omitAt a row =>
     refine ⟨?_, fun a' q' s'' he _ => by cases he⟩
     simp only [feed]
-    split <;> rfl
+    split
+    next =>
+      split
+      next => split <;> rfl
+      next => rfl
+    next => rfl
 
 /-- **A run of edits keeps the application.** A step of `edit-session-coherent`. Its consumer is
 `reached_view`. -/

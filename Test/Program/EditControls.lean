@@ -15,7 +15,9 @@ Readers and finite evaluations of the edit session (`src/Effect4/Program/Edit.le
   - at seat HOST's client with the Queue's definitions installed (a block at the root), every
     sub-program wrapped in `suspend`, which keeps its type: inside a body and inside the main
     program alike, each edit below the root splices;
-  - at a sketch with one hole, the hole filled at its declared type.
+  - at a sketch with one hole, the hole filled at its declared type;
+  - omissions at the focus's exact type, at the sketch battery's program and at every typed
+    address of the client's program.
 * **Reader.** The undo law at the real session.
 -/
 
@@ -74,6 +76,26 @@ def wrapReport (s : Sketch) (app : SigApp) : List (List Nat) × List (List Nat) 
 #guard (let l := EditSession.open {} (sketchAt .nat)
   let l' := l.feed (.fill [0] (.succeed (.lit (.nat 5))))
   (shownOf l'.2, l'.1.view.type.isSome, l'.1.view.refusals.length)) = (some [[0]], true, 0)
+
+/-- The omission at an address with the hole row that declares the focus's type exactly. -/
+def omitExact (l : EditSession) (a : List Nat) : Option Edit :=
+  (l.sketch.focusAt l.app a).map fun f =>
+    .omitAt a (Row.hole "h" f.ty.answer f.ty.error f.ty.requires.elems)
+
+-- finite evaluation (the claim `omit-splices-table`): omitting the last statement at its type
+-- splices one entry, the hole's, and the sketch keeps its type and has no refusal
+#guard ((omitExact opened [1, 1, 1]).map fun e =>
+  let l' := opened.feed e
+  (shownOf l'.2, l'.1.view.type == opened.view.type, l'.1.view.refusals.length)) =
+  some (some [[1, 1, 1]], true, 0)
+
+-- finite evaluation: at the client with the Queue's definitions, every omission at a typed
+-- address below the root with its exact row splices, inside the bodies and the main program
+#guard (sketchOf definedClient).map (fun (s, app) =>
+  let l := EditSession.open app s
+  let results : List (List Nat × Edit.Delta) := (Node.addresses (.eff s.program)).filterMap fun a =>
+    if a = [] then none else (omitExact l a).map fun e => (a, (l.feed e).2)
+  (results.length, (results.filter fun r => (shownOf r.2).isSome).length)) = some (103, 103)
 
 -- reader: the undo law at the opened session; both premises are evaluations of the lens
 example : ((opened.feed keep).1.feed (.fill [0] (.succeed (.lit (.nat 5))))).1 = opened :=
