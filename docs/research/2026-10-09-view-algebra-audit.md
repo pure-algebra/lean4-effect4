@@ -209,6 +209,7 @@ The placement of both, as AGENTS.md asks before any proof:
 | D | the program's graph as a fold into algebraic graphs, with ranks and places as folds | a new view, after the rulings of section 7 |
 | E | the depth of the Z-plane as an inherited attribute, in the product with the lines | the Z-plane, after its ruling |
 | F | **landed in tools**: the generated algebra of TypeScript's syntax (`TsFold`); the house and the layout as two of its algebras; `flat_fold_expr` replaces the pairwise `Ts.flat_expr`. Upstream to lean4-typescript is next | the code plane; readable modules |
+| F2 | breaks that change whitespace alone (`WsBreaks`, a predicate on `Doc`); the layout and the flat print equal with whitespace removed, for such documents; the layout's algebra keeps the predicate (fold induction on TypeScript's fold) | the claim of the generated header and of `Doc.lean` that a readable file differs from the checked bytes only in whitespace (Codex's review, CP-03) |
 | G | the fork edges as a fold of the journal into graphs | the run's graph, drawn as forks and waits |
 
 ## 7. Rulings the owner must make

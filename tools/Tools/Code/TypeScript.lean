@@ -19,9 +19,11 @@ printers are algebras of it:
 
 They agree because their algebras do. The flat print is a map of algebras from the layout to the
 house (`flatHom`): one square for each constructor, which assumes nothing of the children. So the
-layout's fold, laid flat, is the house's fold (`flat_fold_expr`, `flat_fold_stmt`), and a laid
-out file differs from the checked bytes only in whitespace at breaks (`undo_layout`). No proof
-walks a whole expression: the fold does the walking, once, for every algebra.
+layout's fold, laid flat, is the house's fold (`flat_fold_expr`, `flat_fold_stmt`), and undoing a
+layout's breaks gives it back (`undo_layout`). Every break of the layout is `delimited`'s, whose
+alternatives differ only in whitespace, so a laid out file differs from the checked bytes only in
+whitespace at breaks: by construction, until slice F2 of the algebra audit states it as a law. No
+proof walks a whole expression: the fold does the walking, once, for every algebra.
 
 The width of Effect's own source is 120 columns (`vendor/effect-4.0.1/src/internal/effect.ts`:
 one line of 6,978 is longer), and generated files use it (`width`).

@@ -10,8 +10,14 @@ A break that a layout takes keeps what the flat print had there. So the only fre
 is the choice, at each group, between flat and broken, and `undo_layout` states it: undo every
 break that a layout took, and the flat print comes back, at every width. The flat print of a
 printed TypeScript expression is the pinned house print, byte for byte
-(`Tools.Code.Ts.flat_fold_expr`, `tools/Tools/Code/TypeScript.lean`). Together: a readable file is
-the checked bytes with whitespace changed at breaks, and nothing else.
+(`Tools.Code.Ts.flat_fold_expr`, `tools/Tools/Code/TypeScript.lean`).
+
+The law holds for every document, and says no more than it states: a `line` may hold different
+text in its two alternatives, and undoing still restores the flat print. The TypeScript layout's
+breaks differ only in whitespace (`delimited`: `", "` or `","`, and its padding or nothing), so
+for it a readable file is the checked bytes with whitespace changed at breaks. That reading is by
+construction; the law that states it is planned (`docs/research/2026-10-09-view-algebra-audit.md`,
+slice F2; Codex's code plane review, CP-03).
 
 Two indents. A `nest` indents the lines of its broken groups; a `block` indents every line
 inside it, and starts its contents in the broken mode, so each statement of a block finds its

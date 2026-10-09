@@ -40,10 +40,12 @@ def index (gs : List Generated) : String :=
   "# Generated TypeScript\n\n" ++
   "Written by `lake env lean --run tools/Drivers/Emit.lean OUT`. Do not edit; regenerate.\n\n" ++
   "Each program has a module and its tree. The module imports `effect` and `prelude/prelude.ts`, " ++
-  "exactly the names it uses. A module **reads back** when the core's reading boundary admits it " ++
-  "as written (`Effect4.Codegen.admitModule`): its bindings, its read-back to the program, its " ++
-  "typing and its envelope. **Straight** says whether `run_eq_meaning` covers the program. The " ++
-  "address is the SHA-256 of the program's canonical bytes.\n\n" ++
+  "exactly the names it uses. A module **reads back** when the core's reading boundary admits the " ++
+  "structured module its text is laid out from (`Effect4.Codegen.admitModule`: its bindings, its " ++
+  "read-back, its typing and its envelope), and the program read back is equal to this program. " ++
+  "The text is not parsed here; its flat form is the house print (`Tools.Code.Ts.flat_fold_expr`). " ++
+  "**Straight** says whether `run_eq_meaning` covers the program. The address is the SHA-256 of " ++
+  "the program's canonical bytes.\n\n" ++
   "| Program | Type | Files | Reads back | Straight | Address |\n| --- | --- | --- | --- | --- | --- |\n" ++
   String.join (gs.map (indexRow · ++ "\n"))
 
