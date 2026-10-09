@@ -267,6 +267,7 @@ import Effect4.Laws.Slice.Lattice
 import Effect4.Laws.Author
 import Effect4.Laws.Library.Ref.Operations
 import Effect4.Laws.Library.Ref.Callback
+import Effect4.Laws.Library.PartitionedSemaphore.Steps
 
 /-!
 # Effect4 proof graph

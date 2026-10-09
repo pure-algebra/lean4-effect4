@@ -200,7 +200,9 @@ def areas : List Area := [
   -- pinned references
   ⟨"vendor/effect-4.0.0-rc.112", .vendor, 0, "effect rc.112", "the behavioral reference every citation points into", false, false⟩,
   ⟨"src/Effect4/Library/Ref", .runtime, 4, "Library/Ref", "the independent Ref model and native operations with typed step callbacks", true, true⟩,
-  ⟨"src/Effect4/Laws/Library/Ref", .laws, 5, "Laws/Library/Ref", "the Ref model agreement and typed callback connectors", true, true⟩
+  ⟨"src/Effect4/Laws/Library/Ref", .laws, 5, "Laws/Library/Ref", "the Ref model agreement and typed callback connectors", true, true⟩,
+  ⟨"src/Effect4/Library/PartitionedSemaphore", .runtime, 4, "Library/PartitionedSemaphore", "PartitionedSemaphore scalar bookkeeping: independent natural-count model, derived record and four typed steps; waiting and delivery remain open", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/PartitionedSemaphore", .laws, 5, "Laws/Library/PartitionedSemaphore", "the scalar value, reading and typing connections to the independent model", true, true⟩
 ]
 
 /-- Lean files that are not modules: fixtures a gate reads as text, and the fragments the
@@ -278,7 +280,8 @@ def exposures : List (String × Exposure) := [
   ("src/OCaml5", .tool),
   ("tools", .tool),
   ("Test", .test),
-  ("src/Effect4/Library/Ref", .library)
+  ("src/Effect4/Library/Ref", .library),
+  ("src/Effect4/Library/PartitionedSemaphore", .library)
 ]
 
 /-- The exposure of a path: its longest declared prefix's, if any. -/

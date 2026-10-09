@@ -1,0 +1,37 @@
+{
+  "format": "effect4-partitioned-bookkeeping-proof-receipt-v1",
+  "producerCommand": "LEAN_NUM_THREADS=3 lake exe semantics-report .lake/gen/partitioned-bookkeeping-report",
+  "reportSha256": "bcc0e0808788e92e73e05d930ae1a571a24cc1bbaebc3757512cf9eb3e9890d8",
+  "sourceHashes": {
+    "tools/ProofGraph/Registry.lean": "227d6c0eba557dab3c695591316df398b606c1be138611b22b849452285c219e",
+    "src/Effect4/Laws/Library/PartitionedSemaphore/Data.lean": "cc0822d174a23de92e7b724a8f618b0ba92f637d0c51ecc9b23419eaa653f8e5",
+    "src/Effect4/Laws/Library/PartitionedSemaphore/Steps.lean": "fb2854e04a6c80dbffa9be5e56f2d232e83fa2d8e57fbf63e219f6a67638ab6b",
+    "docs/research/2026-10-08-partitioned-bookkeeping-audit.lean": "ef2015455af61684ede0bc85013090cf392945b122d7d20e8381825ae24f4c41",
+    "generated/semantics.md": "e505b2ca73b218791621e1fa1078d05a5f49393b047934f474083ddc66eb77ed"
+  },
+  "claim": {
+    "title": "PartitionedSemaphore's four scalar step terms read the independent natural-count model: initialization, availability, attempted acquisition, and reservation of the unmet need; reservation assumes insufficient availability and a request within capacity; initialization returns the scalar record, availability returns its count, and attempted acquisition and reservation return their replies with next scalar records, under successful readings of the input images; no waiter registration, identity allocation, wake delivery, cancellation, wrapper, schedule, progress, codec admission or host behavior (decisions rows 330, 331 and 335)",
+    "status": {
+      "witness": {
+        "withinSemanticAxiomCeiling": true,
+        "statement": "And\n  (\u2200 (capacity : Nat) (source : Effect4.Program.Authoring.TermSrc)\n    (env : Effect4.Program.Authoring.Env) (path : List Nat) (vals : List Effect4.Store.Val),\n    Effect4.Modules.Reads source env path vals (Effect4.Store.Val.nat capacity) \u2192\n      Effect4.Modules.Reads (Effect4.PartitionedSemaphore.initialStep source) env path vals\n        ((Effect4.Schema.Modeled.image Effect4.PartitionedSemaphore.Model.Counts).toVal\n          (Effect4.PartitionedSemaphore.Model.initial capacity)))\n  (And\n    (\u2200 (s : Effect4.PartitionedSemaphore.Model.Counts) (source : Effect4.Program.Authoring.TermSrc)\n      (env : Effect4.Program.Authoring.Env) (path : List Nat) (vals : List Effect4.Store.Val),\n      Effect4.Modules.Reads source env path vals\n          ((Effect4.Schema.Modeled.image Effect4.PartitionedSemaphore.Model.Counts).toVal s) \u2192\n        Effect4.Modules.Reads (Effect4.PartitionedSemaphore.availableStep source) env path vals\n          (Effect4.Store.Val.nat (Effect4.PartitionedSemaphore.Model.available s)))\n    (And\n      (\u2200 (s : Effect4.PartitionedSemaphore.Model.Counts) (n : Nat)\n        (amount source : Effect4.Program.Authoring.TermSrc) (env : Effect4.Program.Authoring.Env)\n        (path : List Nat) (vals : List Effect4.Store.Val),\n        Effect4.Modules.Reads amount env path vals (Effect4.Store.Val.nat n) \u2192\n          Effect4.Modules.Reads source env path vals\n              ((Effect4.Schema.Modeled.image Effect4.PartitionedSemaphore.Model.Counts).toVal s) \u2192\n            Effect4.Modules.Reads (Effect4.PartitionedSemaphore.tryTakeStep amount source) env path\n              vals\n              ((Effect4.Store.Image.bool.tuple2\n                    (Effect4.Schema.Modeled.image Effect4.PartitionedSemaphore.Model.Counts)).toVal\n                (Effect4.PartitionedSemaphore.Model.tryTake s n)))\n      (\u2200 (s : Effect4.PartitionedSemaphore.Model.Counts) (n : Nat)\n        (amount source : Effect4.Program.Authoring.TermSrc) (env : Effect4.Program.Authoring.Env)\n        (path : List Nat) (vals : List Effect4.Store.Val),\n        Effect4.Modules.Reads amount env path vals (Effect4.Store.Val.nat n) \u2192\n          Effect4.Modules.Reads source env path vals\n              ((Effect4.Schema.Modeled.image Effect4.PartitionedSemaphore.Model.Counts).toVal s) \u2192\n            instLTNat.lt s.available n \u2192\n              instLENat.le n s.capacity \u2192\n                Effect4.Modules.Reads (Effect4.PartitionedSemaphore.reserveStep amount source) env\n                  path vals\n                  ((Effect4.Store.Image.nat.tuple2\n                        (Effect4.Schema.Modeled.image\n                          Effect4.PartitionedSemaphore.Model.Counts)).toVal\n                    (Effect4.PartitionedSemaphore.Model.reserve s n)))))",
+        "restsOn": [],
+        "name": "Effect4.PartitionedSemaphore.Model.bookkeeping_agrees",
+        "module": "Effect4.Laws.Library.PartitionedSemaphore.Steps",
+        "levels": [],
+        "axioms": [
+          "Quot.sound",
+          "propext"
+        ]
+      },
+      "goal": null,
+      "by": "theorem",
+      "_tag": "proved"
+    },
+    "role": "simulation",
+    "literature": [],
+    "id": "partitioned-semaphore-bookkeeping",
+    "contestedBy": [],
+    "concept": "translation-simulation"
+  }
+}

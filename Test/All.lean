@@ -321,6 +321,9 @@ import Test.Program.RefModel
 import Test.Program.RefAgreement
 import Test.Program.RefPrograms
 import Test.Program.RefFaces
+import Test.Program.PartitionedSemaphorePrograms
+import Test.Program.PartitionedSemaphoreFaces
+import Test.Program.PartitionedSemaphoreBookkeeping
 
 /-!
 # Effect4 test battery

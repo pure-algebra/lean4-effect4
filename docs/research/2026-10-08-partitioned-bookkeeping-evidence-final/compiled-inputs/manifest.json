@@ -1,0 +1,17 @@
+{"fuel": 1000,
+ "format": "effect4-partitioned-bookkeeping-v1",
+ "cases":
+ [{"id": "initialZero", "file": "initialZero.ts", "expected": [0, 0, 0]},
+  {"id": "initialFive", "file": "initialFive.ts", "expected": [5, 5, 0]},
+  {"id": "zeroOnZero", "file": "zeroOnZero.ts", "expected": [true, [0, 0, 0]]},
+  {"id": "positiveOnZero", "file": "positiveOnZero.ts", "expected": [false, [0, 0, 0]]},
+  {"id": "zeroAfterTake", "file": "zeroAfterTake.ts", "expected": [true, [5, 3, 0]]},
+  {"id": "takeCapacity", "file": "takeCapacity.ts", "expected": [true, [5, 0, 0]]},
+  {"id": "insufficient", "file": "insufficient.ts", "expected": [false, [5, 2, 0]]},
+  {"id": "excessive", "file": "excessive.ts", "expected": [false, [5, 5, 0]]},
+  {"id": "secondTake", "file": "secondTake.ts", "expected": [true, [5, 2, 0]]},
+  {"id": "reservePartial", "file": "reservePartial.ts", "expected": [2, [5, 0, 2]]},
+  {"id": "reserveEmpty", "file": "reserveEmpty.ts", "expected": [3, [5, 0, 3]]},
+  {"id": "reserveCapacity", "file": "reserveCapacity.ts", "expected": [3, [5, 0, 3]]},
+  {"id": "twoReservations", "file": "twoReservations.ts", "expected": [1, [5, 0, 3]]},
+  {"id": "forgotDeduction", "file": "forgotDeduction.ts", "expected": [true, [5, 5, 0]]}]}

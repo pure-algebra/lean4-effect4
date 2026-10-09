@@ -1,0 +1,210 @@
+{
+  "format": "effect4-partitioned-bookkeeping-receipt-v1",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "positive": 13,
+  "wrongUpdateDetected": true,
+  "rows": [
+    {
+      "id": "initialZero",
+      "observed": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "initialFive",
+      "observed": [
+        5,
+        5,
+        0
+      ]
+    },
+    {
+      "id": "zeroOnZero",
+      "observed": [
+        true,
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "positiveOnZero",
+      "observed": [
+        false,
+        [
+          0,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "zeroAfterTake",
+      "observed": [
+        true,
+        [
+          5,
+          3,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "takeCapacity",
+      "observed": [
+        true,
+        [
+          5,
+          0,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "insufficient",
+      "observed": [
+        false,
+        [
+          5,
+          2,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "excessive",
+      "observed": [
+        false,
+        [
+          5,
+          5,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "secondTake",
+      "observed": [
+        true,
+        [
+          5,
+          2,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "reservePartial",
+      "observed": [
+        2,
+        [
+          5,
+          0,
+          2
+        ]
+      ]
+    },
+    {
+      "id": "reserveEmpty",
+      "observed": [
+        3,
+        [
+          5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "id": "reserveCapacity",
+      "observed": [
+        3,
+        [
+          5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "id": "twoReservations",
+      "observed": [
+        1,
+        [
+          5,
+          0,
+          3
+        ]
+      ]
+    },
+    {
+      "id": "forgotDeduction",
+      "observed": [
+        true,
+        [
+          5,
+          5,
+          0
+        ]
+      ]
+    }
+  ],
+  "compilerDiagnostics": "",
+  "sourceHashes": {
+    "harness/partitioned-bookkeeping/Produce.lean": "a4831fafd330174f0573e60bf58e82e4ba0b911a54786fefd677f989aa85b5cf",
+    "harness/partitioned-bookkeeping/observe.ts": "0bd1b15cbcaacb0a7f277dc03253385b8f328d94c821b760b1e0b0d882463ee5",
+    "harness/partitioned-bookkeeping/run.py": "fdcfcc085ebc97b4c4c197fdc9eaf8766dc34ddee920e7efe3ee39d89ee84424",
+    "Test/Program/PartitionedSemaphorePrograms.lean": "4353ae9050d178d01a28a7015035d0f182accc98e0e3146c1f236302f410fcc3",
+    "Test/Program/PartitionedSemaphoreFaces.lean": "f6fb83e2424eadf073a568e7a38c6b7b0bf5254bc8d9fc74e8ae5001d4605b1e",
+    "src/Effect4/Library/PartitionedSemaphore/Cell.lean": "d17753e7654c0a12be0813a995ef6f7591bf27d00dccbcd71b548f6989093b2e",
+    "src/Effect4/Library/PartitionedSemaphore/Data.lean": "bc37a6e7e723461dedfd3b374ceb4a9ebb971d70beb02bdedad55e4052e580b7",
+    "src/Effect4/Library/PartitionedSemaphore/Model.lean": "15a92b48f53cda2845a7de9461011b635bc28f6dcaec963e69c4a71c3c40224b",
+    "src/Effect4/Library/PartitionedSemaphore/Steps.lean": "a5aa2c702db84cbe258874dd7985d7b9e22c59086d717de4a91ad7d2ca3d3826"
+  },
+  "emittedHashes": {
+    "initialZero.ts": "6939301ba510aa99d1ec9f5d735d9bc2ef89d187d670dda10e99f3acd375edb1",
+    "initialFive.ts": "90a5b41e04e2da8994722a7104ac59ad497cdc9797bf6eb318982358a9198514",
+    "zeroOnZero.ts": "d8b63b725bdad7eaf2a36592c6b48465a96348841248bccad8ffaffcda48064f",
+    "positiveOnZero.ts": "8ea5ca52590d5c422b79d3cdc74e274a36698bd8ef33376d114bd0e67cd2b9f0",
+    "zeroAfterTake.ts": "4ea1a6a72db2b179e0b3bd924661510f7a2f174079e5086486cbb8e8406ae985",
+    "takeCapacity.ts": "b9dcfda91eb259090cd7edee1146cfcb6cfc1d6a52ceef38ef03d88f71b9e0e7",
+    "insufficient.ts": "afcaed1fb5e1e1b042fa0e5d5e5a00bbdb01666e7dd5b0f9595241504076d790",
+    "excessive.ts": "88201daf266f0a41c73140b5bc54e3dba616ba8705b60f005ffecce1d8296147",
+    "secondTake.ts": "90b2873015ef2c70789ecdc03419af7a38523fda9ed5ea0afcd9fa74f13168ba",
+    "reservePartial.ts": "cf3a2b643dc8a4c211260e10f8161e779d680acdab04d718681643d4f54be18d",
+    "reserveEmpty.ts": "0051dcf3cc9b608063281ab849d432c1e15134d8ecc874a0b9a8dd40675e4292",
+    "reserveCapacity.ts": "868ce6d5a90c1928c3450250f4bfc3ca9e159571e6273bd7fc5f9c74653cd20d",
+    "twoReservations.ts": "8d272c6ac8aea173ecb384d310462445a78c207284b4421829fc3b7cf51cd828",
+    "forgotDeduction.ts": "a94091d58197d27506cf5d224a29aacafe1fc2045df6832d27f99382b4d599f3"
+  },
+  "compiledHashes": {
+    "initialZero.ts": "9e022ea7666bbeae6225376961495bae75bccc2a31af1511d16eb87eb12f5b2d",
+    "initialFive.ts": "6e588524e0fe6af175967ca804676957cb6c6e664b44c8c5036e488f05be3698",
+    "zeroOnZero.ts": "c509d154c88e7f8e812a8572faaa76a7a1df676bf64497192661717c4cf100be",
+    "positiveOnZero.ts": "a27055b021843c3c53b6094540bcc8ac7938e9b2b2ec7948b1afb48e6dc2a087",
+    "zeroAfterTake.ts": "68b734ee7b19bd0f33105279c8fa053dc9d9afebbd9128d7aaef8ba260e9dfe4",
+    "takeCapacity.ts": "b753b32f1b4c9602f70e4037b86ebfd08eac7381cb680f05d58a24d24d3687dd",
+    "insufficient.ts": "11828e4bd3c0cf819bd81a272897112d9f0d09df98158bc14512c5a73d1dce03",
+    "excessive.ts": "b27cede6f5e6e60de888d057c9545e2806952e3a47db2170a61f3d87df834e79",
+    "secondTake.ts": "31b41578c96d02879b37d510673d551eda8212e9e3a901f06b495ee7f097f77b",
+    "reservePartial.ts": "2d6d0b3cf6eede718dd479ebd2ed80f74238cf9955bb336cb279e811e027d0a9",
+    "reserveEmpty.ts": "ff0366baa8f76cf9a930a4da03d381c3fa75df704bbd901d88a141759df4de13",
+    "reserveCapacity.ts": "f8de77b2601a5803e3b8323f5419fdf3333ba5f2f631650ffbc30f70723c24ab",
+    "twoReservations.ts": "7f63cdab50968d2365520b13d64e6742397c1559d31e419c39d3530f62945fea",
+    "forgotDeduction.ts": "e319e02289048d67edfcbe86d3b0375f503ce2ae41606985a223ac707214ef58",
+    "observe.ts": "0bd1b15cbcaacb0a7f277dc03253385b8f328d94c821b760b1e0b0d882463ee5",
+    "prelude-atoms.gen.ts": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "prelude.ts": "00a9898dca96955da272e3b31de05f5367d6aeb3d3380f99daf5a3da1bbe5191",
+    "tsconfig.json": "c2027e61ec9f7df80478d319b4cca68f145125813a00fceac237d20e7605eea7",
+    "manifest.json": "d046253b833bf0f78829ff1a1fe2c351e4dd45453084d7e130c5babcfa48eecd"
+  },
+  "scope": "Finite emitted scalar callers through Effect Ref; no native PartitionedSemaphore wrapper comparison"
+}
