@@ -194,4 +194,47 @@ theorem modifySome_agrees (fn : A → B × Option A) (f : Term) (captured : List
   rfl
 
 end Operations
+
+/-- **Ref's thirteen effectful operations agree with the independent model**: one field for each
+operation of latest (Effect 4.0.1), at the statement of its law above. Each field's type is the
+law's own (`type_of%`), so no statement is written twice. -/
+structure StepsAgree : Prop where
+  /-- `Ref.make`: `make_agrees`. -/
+  make : type_of% @make_agrees
+  /-- `Ref.get`: `get_agrees`. -/
+  get : type_of% @get_agrees
+  /-- `Ref.set`: `set_agrees`. -/
+  set : type_of% @set_agrees
+  /-- `Ref.getAndSet`: `getAndSet_agrees`. -/
+  getAndSet : type_of% @getAndSet_agrees
+  /-- `Ref.setAndGet`: `setAndGet_agrees`. -/
+  setAndGet : type_of% @setAndGet_agrees
+  /-- `Ref.update`: `update_agrees`. -/
+  update : type_of% @update_agrees
+  /-- `Ref.getAndUpdate`: `getAndUpdate_agrees`. -/
+  getAndUpdate : type_of% @getAndUpdate_agrees
+  /-- `Ref.updateAndGet`: `updateAndGet_agrees`. -/
+  updateAndGet : type_of% @updateAndGet_agrees
+  /-- `Ref.updateSome`: `updateSome_agrees`. -/
+  updateSome : type_of% @updateSome_agrees
+  /-- `Ref.getAndUpdateSome`: `getAndUpdateSome_agrees`. -/
+  getAndUpdateSome : type_of% @getAndUpdateSome_agrees
+  /-- `Ref.updateSomeAndGet`: `updateSomeAndGet_agrees`. -/
+  updateSomeAndGet : type_of% @updateSomeAndGet_agrees
+  /-- `Ref.modify`: `modify_agrees`. -/
+  modify : type_of% @modify_agrees
+  /-- `Ref.modifySome`: `modifySome_agrees`. -/
+  modifySome : type_of% @modifySome_agrees
+
+/-- **The thirteen operation laws hold** (the claim `ref-steps-agree`, role simulation).
+Placement: concept `translation-simulation`, requirement R10. Reach: allocation for any exact
+image; every other operation on one allocated cell holding the encoded value, with a callback
+that evaluates to the encoded next value. Each law observes the reply and the final stores. Not
+established: final-store equality does not observe writing an unchanged value; no scheduling,
+whole run, host object identity, callback exception or reentrant mutation. Consumers: the typed
+callback connector (`src/Effect4/Laws/Library/Ref/Callback.lean`), then SynchronizedRef and the
+keyed cells (decisions row 335). -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem ref_steps_agree : StepsAgree := ⟨@make_agrees, @get_agrees, @set_agrees, @getAndSet_agrees, @setAndGet_agrees, @update_agrees, @getAndUpdate_agrees, @updateAndGet_agrees, @updateSome_agrees, @getAndUpdateSome_agrees, @updateSomeAndGet_agrees, @modify_agrees, @modifySome_agrees⟩
+
 end Effect4.Ref

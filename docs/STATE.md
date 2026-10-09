@@ -41,8 +41,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The step language is
   `src/Effect4/Step.lean`, and its shared laws are in `src/Effect4/Laws/Step/`.
-- **Composed modules.** Queue, Semaphore, Pool, Latch and Stream have their models, cells, steps
-  and operations in `src/Effect4/Library/`, and their laws in `src/Effect4/Laws/Library/`. Each
+- **Composed modules.** Queue, Semaphore, Pool, Latch, Stream and Ref have their models, cells,
+  steps and operations in `src/Effect4/Library/`, and their laws in `src/Effect4/Laws/Library/`. Each
   keeps the module name and building blocks of latest (Effect 4.0.1) (row 335). Cache's profile is ruled
   (rows 270 to 272) and not built. The procedure is the
   [module factory plan](research/2026-10-05-claude-lead/module-factory-plan.md).
