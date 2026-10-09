@@ -1,4 +1,5 @@
 import Tools.View.Program
+import Tools.Code.Module
 import Effect4.Run
 import Effect4.Api.Author
 
@@ -108,7 +109,9 @@ def frame (name : String) (program : NativeEff) (before : Option Run) (s : Run) 
   let lit := newForks.head?.map (·.site)
   let page := Program.sessionPage session lit (name ++ " · run · " ++ what) (runText s) ""
     s!"journal: {s.journal.length} rows"
-  { page with graph := some { title := "fibers", laid := (fiberGraph s.machine changed).layout } }
+  { page with
+    graph := some { title := "fibers", laid := (fiberGraph s.machine changed).layout }
+    code := Tools.Code.codePanel program [] }
 
 /-- **The frames of a run** of a program with no host row: its opening, then one frame after each
 control, until no control is planned or `most` controls have run. `none` when the program is not
@@ -129,6 +132,8 @@ def frames (name : String) (program : NativeEff) (most : Nat := 64) : Option (Li
     let pages := frame name program none s0 "open" :: go most s0
     let n := pages.length
     let gutter := pages.foldl (fun m g => max m (ownGutter g)) 0
-    some (pages.zipIdx.map fun (g, i) => { g with place := s!"{i + 1} / {n}", gutter })
+    let pages := pages.map fun g => { g with gutter }
+    let codeAt := pages.foldl (fun m g => max m (ownCodeAt g)) 0
+    some (pages.zipIdx.map fun (g, i) => { g with place := s!"{i + 1} / {n}", codeAt })
 
 end Tools.View.Run

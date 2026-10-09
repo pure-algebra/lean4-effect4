@@ -39,6 +39,15 @@ def GUTTER_PAD : Nat := 2
 /-- The space under the lines before a graph: a gap, then a row for the graph's title. -/
 def GRAPH_GAP : Int := 8
 
+/-! ## The code plane -/
+
+/-- The cells between the widest line of a page and its code, and from the rule between them to
+the code. -/
+def CODE_GAP : Nat := 6
+def CODE_RULE : Nat := 3
+/-- The width the code plane lays the program's TypeScript out at, in cells. -/
+def CODE_WIDTH : Nat := 80
+
 /-! ## A line -/
 
 /-- How far left of its first column a line's cut starts: the width of a refusal's frame. -/

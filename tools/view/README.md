@@ -26,6 +26,21 @@ tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
 ```
 
+A page of a program shows its code beside its tree: the TypeScript the code generator prints for
+it, laid out at 80 columns. While a program is built, the code grows with the tree, and each hole
+is a call the host answers until it is filled.
+
+The code generator's output, as files to read:
+
+```sh
+lake env lean --run tools/Drivers/Emit.lean OUT   # OUT/README.md indexes every program
+```
+
+Each program has a module (`OUT/corpus/NAME.ts`) and its tree (`NAME.tree.txt`). A module imports
+exactly the names it uses, carries its program's address and type in a header, and is laid out at
+Effect's own width, 120 columns. The index says whether the core's reading boundary admits each
+module as written.
+
 In the window: Right or Space plays the motion to the next frame, Left steps back, Home and End
 go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwait`, `pGen`,
 `pLoop`, `pCatch` and `pScope` (`Effect4.Program.Wire.Corpus.all`).
@@ -41,6 +56,10 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Motion.lean` | the data join, transitions, easings and the choreography; `sample` and its end law |
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
+| `tools/Tools/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
+| `tools/Tools/Code/TypeScript.lean` | printed TypeScript as a document, case by case with the pinned renderer |
+| `tools/Tools/Code/Module.lean` | a generated module: its exact imports, its header, its checks; the code plane |
+| `tools/Drivers/Emit.lean` | the driver: the generated folder |
 | `tools/Drivers/View.lean` | the driver: frames to `.draw`, `.svg` and text |
 | `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG, the window, the shared replay, the painter |
 | `build.sh`, `v` | the C build (every warning an error), and the one command |
@@ -56,6 +75,10 @@ Proved in `tools/Tools/View/`, each resting on `[propext, Quot.sound]` or less:
 - `join_new`, `join_old`: every element of two frames is entered, updated or exited.
 - `Ease.at_start`, `Ease.at_end`, `Transition.within_at_end`: motion starts at 0 and ends at 1.
 - `sample_end`: a step's moment at its end is the next frame.
+- `undo_layout`: undo the breaks a layout took, and the flat print comes back, at every width.
+- `Ts.flat_expr`: the flat print of a printed expression is the pinned house print. It rests on
+  `Classical.choice` through the pinned renderer it is stated about (`TypeScript.Render.expr`),
+  whose character folds the axiom gate exempts by name.
 
 The layout is a tool's (decisions row 334): these laws are statements of the tool, not registry
 claims.

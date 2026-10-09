@@ -75,7 +75,13 @@ static void draw(Screen *s, int i, int present) {
   SDL_GetCurrentRenderOutputSize(s->renderer, &outW, &outH);
   const double scale = (double)outW / (double)winW;   /* device pixels of the screen for one point */
   SDL_SetRenderScale(s->renderer, 1.0f, 1.0f);
-  SDL_FRect dst = {0.0f, 0.0f, (float)((double)w * scale / ratio), (float)((double)h * scale / ratio)};
+  /* The picture at its size, or smaller to fit the window: one factor for both sides, never larger. */
+  const double natW = (double)w * scale / ratio, natH = (double)h * scale / ratio;
+  double fit = 1.0;
+  if (natW > (double)outW) fit = (double)outW / natW;
+  if (natH * fit > (double)outH) fit = (double)outH / natH;
+  SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
+  SDL_FRect dst = {0.0f, 0.0f, (float)(natW * fit), (float)(natH * fit)};
   SDL_SetRenderDrawColor(s->renderer, 0x14, 0x11, 0x0d, 0xff);   /* the ground of PAINT_DARK */
   SDL_RenderClear(s->renderer);
   SDL_RenderTexture(s->renderer, texture, NULL, &dst);

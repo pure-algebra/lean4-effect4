@@ -125,6 +125,12 @@ structure Panel where
   laid : Laid
 deriving Repr
 
+/-- A panel of code beside a page's lines: its head, and its text, one line a row. -/
+structure CodePanel where
+  head : String
+  lines : Array String
+deriving Repr
+
 /-- A page: its title, the line under it, the heads of the two columns, its lines and its foot. -/
 structure Page where
   title : String
@@ -141,6 +147,11 @@ structure Page where
   marks : Bool := true
   /-- a panel below the lines: a laid-out graph and its title -/
   graph : Option Panel := none
+  /-- the program's code, beside the lines: the code plane -/
+  code : Option CodePanel := none
+  /-- the column of the code in cells, when a sequence of pages fixes it: so the code of every
+  frame stands at one column -/
+  codeAt : Option Nat := none
 deriving Repr
 
 /-- The width of the gutter in cells that a page's own lines need: its widest address, and two
@@ -152,14 +163,58 @@ def ownGutter (g : Page) : Nat :=
 /-- The width of the gutter in cells: the sequence's, or the page's own. -/
 def gutterCols (g : Page) : Int := g.gutter.getD (ownGutter g)
 
-/-- The top of a page's graph: below its lines and a head for the graph's title. -/
-def graphTop (g : Page) : Int := TOP + ROWH * g.lines.size + GRAPH_GAP + ROWH * 2
+/-- Where a line's parts end, in cells from the left margin, with the gutter `B` and a room of
+`cols` cells: its text, then its type, then its mark. The text and the type are cut at the room. -/
+def lineEnds (B cols : Int) (l : Line) (mark : Bool) : Int × Int × Int :=
+  let c0 : Int := B + INDENT * l.depth
+  let end0 := c0 + shown l.text (cols - c0) + INDENT
+  let end1 := if l.type.isEmpty then end0 else end0 + 2 + shown l.type (cols - end0 - 2) + INDENT
+  let end2 := if mark then end1 + MARKCOLS + 1 else end1
+  (end0, end1, end2)
 
-/-- The size of a page in logical pixels, at least `W` wide: its lines, then its graph. -/
+/-- The cells a line takes, with no room cut: its parts and its note. -/
+def lineCells (B : Int) (l : Line) (mark : Bool) : Int :=
+  let room : Int := B + INDENT * l.depth + l.text.length + l.type.length + 3 * INDENT + 2
+  (lineEnds B room l (mark && l.mark.isSome)).2.2 + l.note.length
+
+/-- The column a page's own code needs: past its widest line, and a gap. -/
+def ownCodeAt (g : Page) : Nat :=
+  (g.lines.foldl (fun n l => max n (lineCells (gutterCols g) l g.marks)) 0).toNat + CODE_GAP
+
+/-- The column of the code in cells: the sequence's, or the page's own. -/
+def codeCol (g : Page) : Int := g.codeAt.getD (ownCodeAt g)
+
+/-- The rows a page's body takes: its lines, or its code when that is longer. -/
+def bodyRows (g : Page) : Nat := max g.lines.size ((g.code.map (·.lines.size)).getD 0)
+
+/-- The width the lines take: up to the code when there is code, else the whole page. -/
+def linesWidth (W : Int) (g : Page) : Int :=
+  if g.code.isSome then col (codeCol g - CODE_RULE) - CELL else W
+
+/-- The top of a page's graph: below its body and a head for the graph's title. -/
+def graphTop (g : Page) : Int := TOP + ROWH * bodyRows g + GRAPH_GAP + ROWH * 2
+
+/-- The size of a page in logical pixels, at least `W` wide: its lines and its code, then its
+graph. -/
 def pageSize (W : Int) (g : Page) : Int × Int :=
+  let W := match g.code with
+    | some c => max W (col (codeCol g) + CELL * c.lines.foldl (fun n s => max n s.length) 0 + LEFT)
+    | none => W
   match g.graph with
-  | none => (W, TOP + ROWH * g.lines.size + GRAPH_GAP + FOOT)
+  | none => (W, TOP + ROWH * bodyRows g + GRAPH_GAP + FOOT)
   | some p => (max W (p.laid.width + 2 * LEFT), graphTop g + p.laid.height + ROWH + FOOT)
+
+/-- A page's code as calls: each line at its row in the data face, past a rule from the heads to
+the foot of the body. The code carries no key yet: the map from an address to its text is the
+printer's span map, still to come. -/
+def codeCalls (W : Int) (g : Page) : List (Keyed Call) :=
+  match g.code with
+  | none => []
+  | some c =>
+    let x := col (codeCol g)
+    let room := (W - LEFT - x) / CELL
+    [⟨"", .vrule .rule (col (codeCol g - CODE_RULE)) HEAD_RULE (TOP + ROWH * bodyRows g - HEAD_RULE) 1⟩] ++
+      c.lines.toList.zipIdx.flatMap fun (s, i) => cellsAt "" x (TOP + ROWH * i + BASE) s room
 
 /-- A page's graph as calls: its title in the label face, then the graph below. -/
 def graphCalls (g : Page) : List (Keyed Call) :=
@@ -185,11 +240,9 @@ where
   let cols : Int := (W - 2 * LEFT) / CELL
   let right : Int := W - LEFT
   let n := shown l.text (cols - c0)
-  let end0 := c0 + n + INDENT
   let typed := !l.type.isEmpty
-  let end1 := if typed then end0 + 2 + shown l.type (cols - end0 - 2) + INDENT else end0
   let mark := if marks then l.mark else none
-  let end2 := if mark.isSome then end1 + MARKCOLS + 1 else end1
+  let (end0, end1, end2) := lineEnds B cols l mark.isSome
   let k := l.key
   (if l.state = .lit then [⟨k, .fill .rule 500 0 y W ROWH⟩] else []) ++
     cellsAt k (col 0) base l.gutter (B - 1) ++
@@ -223,6 +276,9 @@ def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
     cellsAt none' LEFT JUDGMENT_BASE g.judgment cols ++
     textAt none' .label LEFT HEADS g.heads.1 (CELL * B) ++
     textAt none' .label (col B) HEADS g.heads.2 HEAD_ROOM ++
+    (match g.code with
+      | some c => textAt none' .label (col (codeCol g)) HEADS c.head HEAD_ROOM
+      | none => []) ++
     [⟨none', .hrule .rule LEFT HEAD_RULE (right - LEFT) 1⟩,
       ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) 1⟩] ++
     cellsAt none' LEFT (H - FOOT_BASE) g.foot cols
@@ -232,8 +288,8 @@ the foot. -/
 def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
   let (W, H) := pageSize W g
   groundCalls W H ++
-    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls W (gutterCols g) i l g.marks) ++
-    graphCalls g ++ chromeCalls W H g
+    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls (linesWidth W g) (gutterCols g) i l g.marks) ++
+    codeCalls W g ++ graphCalls g ++ chromeCalls W H g
 
 /-! ## The terminal: the same page as characters -/
 
@@ -241,7 +297,8 @@ def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
 def padTo (n : Nat) (s : String) : String := s.pushn ' ' (n - s.length)
 
 /-- A page as lines of characters: the title and its place, the judgment, the heads, the lines
-and the foot. A lit line is marked `▸` in the gutter's first column, and a refused line `✗`. -/
+and the foot. A lit line is marked `▸` in the gutter's first column, and a refused line `✗`. The
+code stands beside the lines, past a rule, at the code's column. -/
 def pageText (g : Page) : List String :=
   let B := (gutterCols g).toNat
   let line (l : Line) : String :=
@@ -256,8 +313,19 @@ def pageText (g : Page) : List String :=
         | none => "") ++
       (if l.note.isEmpty then "" else "   " ++ l.note)
     mark ++ padTo (B - 1) l.gutter ++ body
-  [g.title ++ (if g.place.isEmpty then "" else "   " ++ g.place), g.judgment,
-    " " ++ padTo (B - 1) g.heads.1 ++ g.heads.2] ++
-    g.lines.toList.map line ++ [g.foot]
+  let body := g.lines.toList.map line
+  let besideCode (left right : List String) : List String :=
+    let column := (codeCol g).toNat
+    let rule := column - CODE_RULE
+    (List.range (max left.length right.length)).map fun i =>
+      padTo rule (left.getD i "") ++ padTo (column - rule) "│" ++ right.getD i ""
+  match g.code with
+  | none =>
+    [g.title ++ (if g.place.isEmpty then "" else "   " ++ g.place), g.judgment,
+      " " ++ padTo (B - 1) g.heads.1 ++ g.heads.2] ++ body ++ [g.foot]
+  | some c =>
+    [g.title ++ (if g.place.isEmpty then "" else "   " ++ g.place), g.judgment] ++
+      besideCode [" " ++ padTo (B - 1) g.heads.1 ++ g.heads.2] [c.head] ++
+      besideCode body c.lines.toList ++ [g.foot]
 
 end Tools.View

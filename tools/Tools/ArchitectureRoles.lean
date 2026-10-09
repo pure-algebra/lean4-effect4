@@ -149,6 +149,7 @@ def areas : List Area := [
   ⟨"tools/Tools", .tools, 2, "Tools", "shared descriptions, stamps, inventory and neutral tool utilities", false, true⟩,
   ⟨"tools/Drivers", .tools, 4, "Drivers", "Effect4 drivers that consume the OCaml5 projection", false, true⟩,
   ⟨"tools/TestSupport", .tools, 2, "TestSupport", "shared immutable fixtures consumed by tooling and batteries; no runtime imports", false, true⟩,
+  ⟨"tools/Tools/Code", .tools, 2, "Tools/Code", "the code plane: printed TypeScript as a document laid out at a width, a generated module's exact imports, header and checks, and the layout laws", true, true⟩,
   ⟨"tools/Tools/View", .tools, 2, "Tools/View", "the view: a picture as keyed data (pages, drawing and device calls), the frames of a program built and run, the graph layout, motion as a data join, and their laws", true, true⟩,
   ⟨"src/OCaml5", .tools, 3, "OCaml5", "the Lean half of the OCaml estate: the `Eff` closed world and emitters, the LCNF → OCaml backend, the OCaml language model, the drivers", false, true⟩,
   ⟨"src/OCaml5/Eff", .tools, 3, "OCaml5/Eff", "the closed world, the emitters, the goldens", true, true⟩,

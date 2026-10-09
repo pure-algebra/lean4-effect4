@@ -1,4 +1,5 @@
 import Tools.View.Program
+import Tools.Code.Module
 import Tools.View.Motion
 import Tools.Session
 
@@ -117,10 +118,15 @@ def frames (title : String) (reqs : List Tools.Session.Request) : List Frame :=
         let laws := "laws: " ++ ", ".intercalate (ans.laws.map lawText)
         let page := Program.sessionPage l lit (title ++ " · " ++ requestText r)
           (delta ++ sessionText l) "" laws
+        let holes := l.sketch.holes.map (·.name)
+        let code := Tools.Code.codePanel l.sketch.program (l.app.withHoles l.sketch.holes).rows holes
+        let page := { page with code }
         (st', out ++ [{ page, edit := lit, spliced }])
   let out := (reqs.foldl step ({}, [])).2
   let n := out.length
   let gutter := out.foldl (fun m f => max m (ownGutter f.page)) 0
-  out.zipIdx.map fun (f, i) => { f with page := { f.page with place := s!"{i + 1} / {n}", gutter } }
+  let out := out.map fun f => { f with page := { f.page with gutter } }
+  let codeAt := out.foldl (fun m f => max m (ownCodeAt f.page)) 0
+  out.zipIdx.map fun (f, i) => { f with page := { f.page with place := s!"{i + 1} / {n}", codeAt } }
 
 end Tools.View.Build
