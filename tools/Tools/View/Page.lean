@@ -76,17 +76,18 @@ def dotCalls (key : Key) (a b top pitch : Int) : List (Keyed Call) :=
 /-- One shape at a part's left edge `x` and the baseline `base`: a band of seven pixels above
 the baseline holds the squares. -/
 def shapeCalls (key : Key) (x base : Int) : Shape → List (Keyed Call)
-  | .square x0 => [⟨key, .fill .ink 1000 (x + x0) (base - 7) 7 7⟩]
-  | .ring x0 => [⟨key, .frame .ink (x + x0) (base - 7) 7 7 1⟩]
-  | .dots x0 x1 pitch => dotCalls key (x + x0) (x + x1) (base - 4) pitch
-  | .post x0 x1 reach role => [⟨key, .fill role 1000 (x + x0) (base - 7 - reach) (x1 - x0) (7 + 2 * reach)⟩]
-  | .over x0 x1 => [⟨key, .fill .ink 1000 (x + x0) (base - 7) (x1 - x0) 1⟩]
+  | .square x0 => [⟨key, .fill .ink 1000 (x + x0) (base - MARK_BAND) MARK_BAND MARK_BAND⟩]
+  | .ring x0 => [⟨key, .frame .ink (x + x0) (base - MARK_BAND) MARK_BAND MARK_BAND 1⟩]
+  | .dots x0 x1 pitch => dotCalls key (x + x0) (x + x1) (base - MARK_DOTS_UP) pitch
+  | .post x0 x1 reach role =>
+    [⟨key, .fill role 1000 (x + x0) (base - MARK_BAND - reach) (x1 - x0) (MARK_BAND + 2 * reach)⟩]
+  | .over x0 x1 => [⟨key, .fill .ink 1000 (x + x0) (base - MARK_BAND) (x1 - x0) 1⟩]
   | .under x0 x1 => [⟨key, .fill .ink 1000 (x + x0) (base - 1) (x1 - x0) 1⟩]
 
 /-- A mark at `x`: each part at its cells, from left to right. -/
 def markCalls (key : Key) (x base : Int) (m : Mark) : List (Keyed Call) :=
   (m.foldl (fun (acc : Nat × List (Keyed Call)) p =>
-    (acc.1 + p.cells, acc.2 ++ p.shapes.flatMap (shapeCalls key (x + 8 * acc.1) base))) (0, [])).2
+    (acc.1 + p.cells, acc.2 ++ p.shapes.flatMap (shapeCalls key (x + CELL * acc.1) base))) (0, [])).2
 
 /-- A mark's glyphs, for a terminal. -/
 def Mark.glyphs (m : Mark) : String := String.join (m.map (·.glyph))
@@ -118,6 +119,12 @@ deriving Repr
 /-- A line at rest: no offset, and written whole. A still frame's lines are at rest. -/
 def Line.AtRest (l : Line) : Prop := l.shift = 0 ∧ l.reveal = 1000
 
+/-- A panel: a laid-out graph and its title. -/
+structure Panel where
+  title : String
+  laid : Laid
+deriving Repr
+
 /-- A page: its title, the line under it, the heads of the two columns, its lines and its foot. -/
 structure Page where
   title : String
@@ -132,34 +139,34 @@ structure Page where
   gutter : Option Nat := none
   /-- whether the lines' marks are drawn -/
   marks : Bool := true
-  /-- a laid-out graph below the lines, and its title -/
-  graph : Option (String × Laid) := none
+  /-- a panel below the lines: a laid-out graph and its title -/
+  graph : Option Panel := none
 deriving Repr
 
 /-- The width of the gutter in cells that a page's own lines need: its widest address, and two
 more. -/
 def ownGutter (g : Page) : Nat :=
   let n := g.lines.foldl (fun n l => max n l.gutter.length) g.heads.1.length
-  if n + 2 < 8 then 8 else n + 2
+  if n + GUTTER_PAD < GUTTER_MIN then GUTTER_MIN else n + GUTTER_PAD
 
 /-- The width of the gutter in cells: the sequence's, or the page's own. -/
 def gutterCols (g : Page) : Int := g.gutter.getD (ownGutter g)
 
 /-- The top of a page's graph: below its lines and a head for the graph's title. -/
-def graphTop (g : Page) : Int := TOP + ROWH * g.lines.size + 8 + ROWH * 2
+def graphTop (g : Page) : Int := TOP + ROWH * g.lines.size + GRAPH_GAP + ROWH * 2
 
 /-- The size of a page in logical pixels, at least `W` wide: its lines, then its graph. -/
 def pageSize (W : Int) (g : Page) : Int × Int :=
   match g.graph with
-  | none => (W, TOP + ROWH * g.lines.size + 8 + FOOT)
-  | some (_, l) => (max W (l.width + 2 * LEFT), graphTop g + l.height + ROWH + FOOT)
+  | none => (W, TOP + ROWH * g.lines.size + GRAPH_GAP + FOOT)
+  | some p => (max W (p.laid.width + 2 * LEFT), graphTop g + p.laid.height + ROWH + FOOT)
 
 /-- A page's graph as calls: its title in the label face, then the graph below. -/
 def graphCalls (g : Page) : List (Keyed Call) :=
   match g.graph with
   | none => []
-  | some (title, l) => textAt "" .label LEFT (graphTop g - ROWH + BASE - 8) title 400 ++
-      l.calls LEFT (graphTop g)
+  | some p => textAt "" .label LEFT (graphTop g - ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM ++
+      p.laid.calls LEFT (graphTop g)
 
 /-- One line at its row: the band of a lit line, the gutter, then inside a cut the text, the
 type and the note; a refused line is framed; last, the box that answers the pointer. -/
@@ -186,8 +193,10 @@ where
   let k := l.key
   (if l.state = .lit then [⟨k, .fill .rule 500 0 y W ROWH⟩] else []) ++
     cellsAt k (col 0) base l.gutter (B - 1) ++
-    [⟨k, .cut (col B - 7) y W ROWH⟩] ++
-    (if l.state = .refused then [⟨k, .frame .failure (col c0 - 6) (y + 2) (CELL * n + 12) (ROWH - 4) 2⟩]
+    [⟨k, .cut (col B - CUT_INSET) y W ROWH⟩] ++
+    (if l.state = .refused then
+      [⟨k, .frame .failure (col c0 - REFUSED_SIDE) (y + REFUSED_TOP) (CELL * n + 2 * REFUSED_SIDE)
+        (ROWH - 2 * REFUSED_TOP) REFUSED_WEIGHT⟩]
       else []) ++
     cellsAt k (col c0) base l.text (cols - c0) ++
     (if typed then cellsAt k (col end0) base ":" 1 ++ cellsAt k (col (end0 + 2)) base l.type (cols - end0 - 2)
@@ -209,14 +218,14 @@ def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
   let B := gutterCols g
   let n : Int := g.place.length
   let none' : Key := ""
-  cellsAt none' (col (cols - n)) 40 g.place n ++
-    textAt none' .title LEFT 40 g.title (right - LEFT - CELL * (n + 3)) ++
-    cellsAt none' LEFT 64 g.judgment cols ++
+  cellsAt none' (col (cols - n)) TITLE_BASE g.place n ++
+    textAt none' .title LEFT TITLE_BASE g.title (right - LEFT - CELL * (n + 3)) ++
+    cellsAt none' LEFT JUDGMENT_BASE g.judgment cols ++
     textAt none' .label LEFT HEADS g.heads.1 (CELL * B) ++
-    textAt none' .label (col B) HEADS g.heads.2 400 ++
+    textAt none' .label (col B) HEADS g.heads.2 HEAD_ROOM ++
     [⟨none', .hrule .rule LEFT HEAD_RULE (right - LEFT) 1⟩,
       ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) 1⟩] ++
-    cellsAt none' LEFT (H - 12) g.foot cols
+    cellsAt none' LEFT (H - FOOT_BASE) g.foot cols
 
 /-- A whole page as calls, at the width `W`: the ground, the lines, then the title block and
 the foot. -/

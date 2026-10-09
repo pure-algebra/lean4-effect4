@@ -191,11 +191,6 @@ structure Laid where
   height : Int := 0
 deriving Repr
 
-/-- The rows of a rank, and of a box. -/
-def LEVEL : Int := 3
-def BOXROWS : Int := 2
-/-- The cells between two items of a rank, and from the widest rank to the first lane. -/
-def GAP : Nat := 2
 
 namespace Graph
 
@@ -210,7 +205,7 @@ structure Item where
 def pointKey (k : Key) (r : Nat) : Key := k ++ "@" ++ toString r
 
 /-- The width in cells of a node's box: its longer line and a cell each side; six at least. -/
-def boxWidth (n : GNode) : Nat := max 6 (max n.line1.length n.line2.length + 2)
+def boxWidth (n : GNode) : Nat := max BOX_MIN (max n.line1.length n.line2.length + BOX_PAD)
 
 /-- A forward edge's items, from its source to its target, through a point at each rank between. -/
 def chain (g : Graph) (rk : List Nat) (e : GEdge) : List Key :=
@@ -348,14 +343,14 @@ def points (l : Laid) : Route → List Pt
     match l.find s, l.find d with
     | some a, some b =>
       let lx := l.width - CELL * (2 * lane + 1)
-      [(a.x + a.w, a.y + ROWH), (lx, a.y + ROWH), (lx, b.y + ROWH - 4), (b.x + b.w, b.y + ROWH - 4)]
+      [(a.x + a.w, a.y + ROWH), (lx, a.y + ROWH), (lx, b.y + ROWH - BACK_RISE), (b.x + b.w, b.y + ROWH - BACK_RISE)]
     | _, _ => []
   | .loop _ k _ =>
     match l.find k with
     | some a =>
       let x := a.x + a.w
       let y := a.y + ROWH
-      [(x, y - 8), (x + 2 * CELL, y - 8), (x + 2 * CELL, y + 8), (x, y + 8)]
+      [(x, y - LOOP_HALF), (x + LOOP_REACH, y - LOOP_HALF), (x + LOOP_REACH, y + LOOP_HALF), (x, y + LOOP_HALF)]
     | none => []
 
 /-- The length of one straight piece of a path. -/

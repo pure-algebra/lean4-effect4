@@ -190,6 +190,56 @@ reports.
   window needs widgets that Lean does not draw.
 - ThorVG when motion is ruled, as the player of SVG and Lottie exports.
 
+### Graph layout libraries: evaluated, not vendored (2026-10-09)
+
+The owner asked for the best library where one fits our semantics, and our own work where it does
+not. Read on 2026-10-09: Graphviz (C, `dot`; orthogonal routing ignores ports), OGDF (C++, the
+richest layered and orthogonal layouts), libavoid of Adaptagrams (C++, connector routing around
+obstacles), igraph (C, a Sugiyama layout with bend points).
+
+**Decision: none is vendored now.** The layout is the picture's semantics, and its laws are ours
+(`ranks_forward`, boxes apart). An engine in C++ would compute the picture outside them. The
+pieces of value are published algorithms of modest size: crossing reduction by the transpose
+heuristic, and coordinate assignment by Brandes and Köpf. They land in `Graph.lean`, each with
+its law. A layered graph routes in the channels between ranks, so libavoid's obstacle routing
+answers no need here. Lean compiles to C, so the layout already runs natively.
+
+**If an outside comparison is wanted** (crossings of our layout against `dot` or OGDF), the
+pins read on 2026-10-09 are: OGDF `foxglove-202510` (commit `5b679565`, tarball SHA-256
+`e0496c2a…99b5`); Adaptagrams commit `840ebcff` (tarball SHA-256 `a9de2720…f3b`). Neither
+tarball carries an agent instruction file.
+
+## 6a. Interaction: the requirements, and how they keep the semantics
+
+The owner's next requirements for the window: tooltips, overlays, statistics, sidebars, and a
+side-by-side view of the Effect code, the graph, and the meta representation.
+
+**The split.** Lean owns what is shown and why; the C host owns the moment of the person's
+attention.
+
+- The *scene* (pages, layouts, motion) is computed in Lean, as now.
+- The *inspector* is data computed in Lean: for each key of a frame, its facets (address, type,
+  refusal, the laws named, a fork site, counts). It travels beside the frame's stream.
+- The *interaction state* is data held by the host: the pointer, the hovered key, the selection,
+  the open panels, the camera, the moment on the timeline.
+- The host draws the ephemeral chrome (a tooltip box, a sidebar's list) with the same painter and
+  tokens, from the inspector. `pick` and `pick_append` say which key the pointer is on.
+
+| Requirement | What it needs | Owner of the data |
+| --- | --- | --- |
+| a tooltip on hover | the pointer's key (`pick`); its facets | Lean (facets), host (pointer) |
+| a selection lit everywhere | one key joins the program, the graph and the print | Lean (keys) |
+| overlays toggled (types, marks, laws, refusals) | a layer per overlay, each a list of keyed calls | Lean |
+| statistics | counts and sizes per frame and per sequence | Lean |
+| a sidebar | a list of keys with their facets; a click selects | Lean (list), host (scroll) |
+| the side-by-side view | the Effect print with a span for each address | Lean: the printer's span map |
+| a timeline | the frames and their steps as data; scrubbing is sampling | Lean (`sample`) |
+
+**The side-by-side view needs one core piece**: the span map of the printer, the print with a
+span for each address (the tangible authoring note, section 4). With it, a key lights its span
+in the Effect code, its node in the graph and its facts in the meta view. Its law, the print
+splice, is a planned R14 step. So the view's next requirement and the core's next step are one.
+
 ## 7. What this note does not establish
 
 - A run's frame shows where fibers were forked, not where each runs: the machine records no

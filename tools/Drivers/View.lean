@@ -73,7 +73,7 @@ def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Na
     text := text ++ (pageText g).toArray ++ #[""]
     prev := some g
   IO.FS.writeFile (out / "frames.txt") ("\n".intercalate text.toList)
-  let graphs := frames.filterMap fun f => f.page.graph.map (·.2)
+  let graphs := frames.filterMap fun f => f.page.graph.map (·.laid)
   IO.println s!"view: {frames.length} frames in {out}, {motion - 1} between each two"
   IO.println s!"C\tkept-lines-unchanged\t{spliced} spliced edits\t{same} of {kept} lines"
   IO.println s!"C\tgraph-boxes-apart\t{graphs.length} graphs\t{(graphs.filter Laid.boxesApart).length} apart"

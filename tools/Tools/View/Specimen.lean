@@ -53,6 +53,6 @@ def frames : List Page :=
     let g : Graph := { g with nodes := g.nodes.map fun (v : GNode) => { v with lit := v.key == d } }
     ({ title := s!"graph · add {s} → {d}", judgment := why, place := s!"{i + 1} / {n}",
        heads := ("", ""), foot := s!"{g.nodes.size} nodes, {g.edges.size} edges",
-       graph := some ("", g.layout) } : Page))
+       graph := some { title := "", laid := g.layout } } : Page))
 
 end Tools.View.Specimen

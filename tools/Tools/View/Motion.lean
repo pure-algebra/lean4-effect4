@@ -245,10 +245,7 @@ graph sampled. A graph that appears enters from an empty one. -/
 def sample (c : Choreography) (g1 g2 : Page) (t : Nat) : Page :=
   { g2 with
     lines := sampleLines c g1 g2 t
-    graph := match g1.graph, g2.graph with
-      | some (_, a), some (title, b) => some (title, sampleLaid c a b t)
-      | _, some (title, b) => some (title, sampleLaid c {} b t)
-      | _, none => none }
+    graph := g2.graph.map fun p => { p with laid := sampleLaid c ((g1.graph.map (·.laid)).getD {}) p.laid t } }
 
 /-! ## The end law: a step's last moment is the next frame -/
 
@@ -258,7 +255,7 @@ def Laid.AtRest (l : Laid) : Prop :=
 
 /-- A page at rest: its lines and its graph. A still frame is at rest. -/
 def Page.AtRest (g : Page) : Prop :=
-  (∀ l ∈ g.lines.toList, l.AtRest) ∧ ∀ x, g.graph = some x → x.2.AtRest
+  (∀ l ∈ g.lines.toList, l.AtRest) ∧ ∀ p, g.graph = some p → p.laid.AtRest
 
 /-- A line at rest is its own update and enter at the end. -/
 theorem lineAt_end (c : Choreography) (old writing : List Line) (n : Line) (i : Nat)
@@ -314,15 +311,8 @@ theorem sample_end (c : Choreography) (g1 g2 : Page) (h : g2.AtRest) : sample c 
   cases g2 with
   | mk title judgment heads lines foot place gutter marks graph =>
     cases graph with
-    | none => cases g1.graph <;> rfl
-    | some x =>
-      obtain ⟨name, b⟩ := x
-      have hrest := hg (name, b) rfl
-      cases g1.graph with
-      | none => simp only [sampleLaid_end c {} b hrest]
-      | some y =>
-        obtain ⟨_, a⟩ := y
-        simp only [sampleLaid_end c a b hrest]
+    | none => rfl
+    | some p => simp only [Option.map_some, sampleLaid_end c _ p.laid (hg p rfl)]
 
 /-! ## The splice, read on two frames -/
 
