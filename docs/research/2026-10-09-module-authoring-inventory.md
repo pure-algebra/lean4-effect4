@@ -57,6 +57,39 @@ A comparison needs its own observation, assumptions and retained evidence.
 | Target checking and execution | Existing tsgo 7 and host harnesses; `docs/GENERATED.md` | Printing, target acceptance and finite execution are different observations | Record each stage's command and result |
 | Evidence reporting | `Reach`, `PartReach`; `Test/Dogfood/Stage.lean` | Existing reports already distinguish admission, output, printing and reading | Extend projections and receipts when a consumer needs them |
 
+## TypeScript reader consolidation
+
+The shared selection plan is `docs/research/2026-10-09-ingest-form-selection-plan.md`.
+The implementation deepens `expandForm` in `ts/eff/ingest/forms.ts`.
+Each reader supplies a recognized head, ordered argument classes and the existing argument readers.
+The generated `forms` table chooses the expansion and owns its inserted binders.
+The argument-class type projects that table instead of repeating an enumeration.
+The interface replaces the former string-identifier entrypoint.
+It introduces no program representation or foreign spelling.
+
+CK and OXC share the parser under decisions row 168.
+Their separate walks remain in `ts/eff/ingest/ck.ts` and `ts/eff/ingest/oxc.ts`.
+Their agreement compares walks, not independent parsers.
+The before-and-after comparison retains each reader's full verdict, including its source positions and refusal details.
+Existing independent expected trees check the shared expansion at several binder depths.
+
+| Responsibility | Current owner | Consolidation or next scoped change |
+| --- | --- | --- |
+| Recognize source and captures | Each reader's existing walk | Keep TypeScript syntax checks and refusal ordering local |
+| Select and expand a derived form | `expandForm` and `expandTemplate` in `ts/eff/ingest/forms.ts` | Select through generated heads and argument classes; remove reader-owned variant names |
+| Construct canonical expressions | `exprForms` in `ts/eff/ingest/oxc.ts` | A future writer can consume `ts/eff/templates.gen.ts` instead of repeating canonical spellings |
+| Construct output records | Each `recognizeSource` and `ts/eff/ingest/contract.ts` | Consider one result constructor for wire bytes and generated refusal details; leave refusal selection with each reader |
+| Read printed selection forms | `CompilerReader` and the generated canonical reader in `ts/eff/read.ts` | Repair CK's missing option and tag heads through a named printed-image contract |
+
+The retained `canonical-gaps.ts` probe uses printed-source entrypoints only.
+Its directory is `docs/research/2026-10-09-ingest-form-selection-evidence/`.
+CK refuses `optionCase` and `caseTag`; OXC and the canonical reader recover the same trees.
+The neighboring branch and payload controls pass through all three readers.
+This finite observation uses closed expressions and an empty row table.
+It establishes no typing or execution claim.
+Adding those heads widens CK's printed-image domain and requires a separate source reader slice.
+It leaves the foreign source domain unchanged.
+
 ## Observed authoring gaps
 
 | Observation | Kind and evidence | Smallest useful response |

@@ -1,0 +1,989 @@
+{
+  "format": "effect4-canonical-reader-gaps-v1",
+  "commit": "e5a5a41b98ecc63f3c2ca64915b157ad9d8a1174",
+  "runtime": "1.4.2",
+  "domain": "One canonical printed expression, zero outer binders, empty host row table; syntax reading only, no foreign recognition or typing claim",
+  "APIs": {
+    "ck": "ingest/ck.ts readPrintedSource",
+    "oxc": "ingest/oxc.ts readPrintedSource",
+    "canonical": "read.ts readTypeScript"
+  },
+  "generatedSelectionRows": [
+    {
+      "fam": "eff",
+      "ctor": "select",
+      "fixed": [
+        [
+          1,
+          {
+            "_tag": "decisionBool"
+          }
+        ]
+      ],
+      "depth": [
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        }
+      ],
+      "out": {
+        "_tag": "tpl",
+        "tpl": {
+          "_tag": "call",
+          "head": {
+            "_tag": "ident",
+            "name": "ifCase"
+          },
+          "args": [
+            {
+              "_tag": "arrow",
+              "body": {
+                "_tag": "hole",
+                "i": 0
+              }
+            },
+            {
+              "_tag": "arrow",
+              "body": {
+                "_tag": "hole",
+                "i": 2
+              }
+            },
+            {
+              "_tag": "arrow",
+              "body": {
+                "_tag": "hole",
+                "i": 3
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fam": "eff",
+      "ctor": "select",
+      "fixed": [
+        [
+          1,
+          {
+            "_tag": "decisionOption"
+          }
+        ]
+      ],
+      "depth": [
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 1
+        }
+      ],
+      "out": {
+        "_tag": "tpl",
+        "tpl": {
+          "_tag": "call",
+          "head": {
+            "_tag": "ident",
+            "name": "optionCase"
+          },
+          "args": [
+            {
+              "_tag": "hole",
+              "i": 0
+            },
+            {
+              "_tag": "arrow",
+              "body": {
+                "_tag": "hole",
+                "i": 2
+              }
+            },
+            {
+              "_tag": "lambda",
+              "binders": [
+                0
+              ],
+              "body": {
+                "_tag": "hole",
+                "i": 3
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fam": "eff",
+      "ctor": "select",
+      "fixed": [
+        [
+          1,
+          {
+            "_tag": "decisionTag"
+          }
+        ]
+      ],
+      "depth": [
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 1
+        },
+        {
+          "_tag": "rel",
+          "k": 1
+        }
+      ],
+      "out": {
+        "_tag": "tpl",
+        "tpl": {
+          "_tag": "call",
+          "head": {
+            "_tag": "ident",
+            "name": "caseTag"
+          },
+          "args": [
+            {
+              "_tag": "hole",
+              "i": 0
+            },
+            {
+              "_tag": "strHole",
+              "i": 1
+            },
+            {
+              "_tag": "lambda",
+              "binders": [
+                0
+              ],
+              "body": {
+                "_tag": "hole",
+                "i": 2
+              }
+            },
+            {
+              "_tag": "lambda",
+              "binders": [
+                0
+              ],
+              "body": {
+                "_tag": "hole",
+                "i": 3
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fam": "eff",
+      "ctor": "select",
+      "fixed": [
+        [
+          1,
+          {
+            "_tag": "decisionRecordTag"
+          }
+        ]
+      ],
+      "depth": [
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 0
+        },
+        {
+          "_tag": "rel",
+          "k": 1
+        },
+        {
+          "_tag": "rel",
+          "k": 1
+        }
+      ],
+      "out": {
+        "_tag": "tpl",
+        "tpl": {
+          "_tag": "call",
+          "head": {
+            "_tag": "ident",
+            "name": "caseTagR"
+          },
+          "args": [
+            {
+              "_tag": "hole",
+              "i": 0
+            },
+            {
+              "_tag": "hole",
+              "i": 1
+            },
+            {
+              "_tag": "lambda",
+              "binders": [
+                0
+              ],
+              "body": {
+                "_tag": "hole",
+                "i": 2
+              }
+            },
+            {
+              "_tag": "lambda",
+              "binders": [
+                0
+              ],
+              "body": {
+                "_tag": "hole",
+                "i": 3
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sourceHashes": {
+    "ts/eff/ingest/ck.ts": "47e68978655eb90f6d8230351c6b7c9c07fceded185c83efbc346c7187151d21",
+    "ts/eff/ingest/oxc.ts": "a296ba7647c427a2186461b41205f78c3e6dcbdbe19f0d20f9e2e1b0b337bc3e",
+    "ts/eff/read.ts": "8b7910b5aeb6c0d0b9399259e888e927da4f7c0947e29aa6b3a10ac896f38acf",
+    "ts/eff/templates.gen.ts": "4b3cf400cd40cbce64599156a04e2324d3c58ca020abd91b4a1e032f59fe5b41",
+    "ts/eff/test/read.test.ts": "561b0fc862aea64536fe69088494f54c26481f134970bcad25ce1d192a127426"
+  },
+  "rows": [
+    {
+      "id": "neighbor-bind",
+      "source": "Effect.flatMap(Effect.succeed(1), (a0) => Effect.succeed(a0))",
+      "ck": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "lit",
+              [
+                "nat",
+                1
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      },
+      "oxc": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "lit",
+              [
+                "nat",
+                1
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      },
+      "canonical": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "lit",
+              [
+                "nat",
+                1
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "neighbor-bool",
+      "source": "Effect.flatMap(Effect.succeed(true), (a0) => ifCase(() => a0, () => Effect.succeed(1), () => Effect.succeed(2)))",
+      "ck": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "lit",
+              [
+                "bool",
+                true
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "bool"
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  1
+                ]
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  2
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "oxc": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "lit",
+              [
+                "bool",
+                true
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "bool"
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  1
+                ]
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  2
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "canonical": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "lit",
+              [
+                "bool",
+                true
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "bool"
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  1
+                ]
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  2
+                ]
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "neighbor-option-payload",
+      "source": "Effect.flatMap(Effect.succeed(some(1)), (a0) => Effect.succeed(a0))",
+      "ck": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "some",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "nat",
+                    1
+                  ]
+                ],
+                [
+                  "nil"
+                ]
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      },
+      "oxc": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "some",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "nat",
+                    1
+                  ]
+                ],
+                [
+                  "nil"
+                ]
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      },
+      "canonical": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "some",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "nat",
+                    1
+                  ]
+                ],
+                [
+                  "nil"
+                ]
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "neighbor-tag-payload",
+      "source": "Effect.flatMap(Effect.succeed(pair(\"cons\", 1)), (a0) => Effect.succeed(a0))",
+      "ck": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "pair",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "str",
+                    "cons"
+                  ]
+                ],
+                [
+                  "cons",
+                  [
+                    "lit",
+                    [
+                      "nat",
+                      1
+                    ]
+                  ],
+                  [
+                    "nil"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      },
+      "oxc": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "pair",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "str",
+                    "cons"
+                  ]
+                ],
+                [
+                  "cons",
+                  [
+                    "lit",
+                    [
+                      "nat",
+                      1
+                    ]
+                  ],
+                  [
+                    "nil"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      },
+      "canonical": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "pair",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "str",
+                    "cons"
+                  ]
+                ],
+                [
+                  "cons",
+                  [
+                    "lit",
+                    [
+                      "nat",
+                      1
+                    ]
+                  ],
+                  [
+                    "nil"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "succeed",
+            [
+              "var",
+              0
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "option",
+      "source": "Effect.flatMap(Effect.succeed(some(1)), (a0) => optionCase(a0, () => Effect.succeed(0), (a1) => Effect.succeed(a1)))",
+      "ck": {
+        "accepted": false,
+        "error": "literal"
+      },
+      "oxc": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "some",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "nat",
+                    1
+                  ]
+                ],
+                [
+                  "nil"
+                ]
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "option"
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  0
+                ]
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "var",
+                1
+              ]
+            ]
+          ]
+        ]
+      },
+      "canonical": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "some",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "nat",
+                    1
+                  ]
+                ],
+                [
+                  "nil"
+                ]
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "option"
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  0
+                ]
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "var",
+                1
+              ]
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "id": "tag",
+      "source": "Effect.flatMap(Effect.succeed(pair(\"cons\", 1)), (a0) => caseTag(a0, \"cons\", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(0)))",
+      "ck": {
+        "accepted": false,
+        "error": "literal"
+      },
+      "oxc": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "pair",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "str",
+                    "cons"
+                  ]
+                ],
+                [
+                  "cons",
+                  [
+                    "lit",
+                    [
+                      "nat",
+                      1
+                    ]
+                  ],
+                  [
+                    "nil"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "tag",
+              "cons"
+            ],
+            [
+              "succeed",
+              [
+                "var",
+                1
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  0
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "canonical": {
+        "accepted": true,
+        "value": [
+          "bind",
+          [
+            "succeed",
+            [
+              "app",
+              "pair",
+              [
+                "cons",
+                [
+                  "lit",
+                  [
+                    "str",
+                    "cons"
+                  ]
+                ],
+                [
+                  "cons",
+                  [
+                    "lit",
+                    [
+                      "nat",
+                      1
+                    ]
+                  ],
+                  [
+                    "nil"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "select",
+            [
+              "var",
+              0
+            ],
+            [
+              "tag",
+              "cons"
+            ],
+            [
+              "succeed",
+              [
+                "var",
+                1
+              ]
+            ],
+            [
+              "succeed",
+              [
+                "lit",
+                [
+                  "nat",
+                  0
+                ]
+              ]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

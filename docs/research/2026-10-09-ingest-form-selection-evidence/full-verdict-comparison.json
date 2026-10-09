@@ -1,0 +1,11 @@
+{
+  "name": "full-verdict-comparison",
+  "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4",
+  "argv": [
+    "bun",
+    "--no-install",
+    "docs/research/2026-10-09-ingest-form-selection-evidence/compare.ts",
+    "after"
+  ],
+  "exitCode": 0
+}

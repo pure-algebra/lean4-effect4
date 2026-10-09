@@ -15,7 +15,7 @@ import type { Package } from "../packages.gen.ts"
 import { withTable, readTypeText } from "../read.ts"
 import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, packageTable } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
-import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments } from "./forms.ts"
+import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments, type FormSelection } from "./forms.ts"
 
 /** The ingest's one parse entry (decisions row 168): oxc's TypeScript grammar, module goal.
  * `byName` reads a `.tsx` file as TSX and every other name as TypeScript (the foreign
@@ -98,8 +98,8 @@ const exprForms: FormAlgebra<Expr, Expr> = {
   acquireRelease: (acquire, release, depth) => call("Effect.acquireRelease", [acquire,
     { _tag: "lambda", params: [`a${depth}`, `a${depth + 1}`], body: release }]),
 }
-const lowerForm = (name: string, depth: number, args: FormArguments<Expr, Expr>): Expr => {
-  const result = expandForm(name, depth, args, exprForms)
+const lowerForm = (selection: FormSelection, depth: number, args: FormArguments<Expr, Expr>): Expr => {
+  const result = expandForm(selection, depth, args, exprForms)
   return result.ok ? result.value : reject("E-NODE", `form lowering: ${result.error}`)
 }
 const admitted = new Set<string>([...heads, ...rows.map(r => r.row.spelling), ...forms.rows.map(r => r.head)])
@@ -512,26 +512,24 @@ class Normalize {
     }
     if (h === "Effect.andThen" || h === "Effect.tap") {
       arity(2); const first = p(0), n = unwrap(arg(1))
-      const base = h === "Effect.tap" ? "tap" : "andThen"
       if (n.type === "ArrowFunctionExpression" && list(n, "params").length) {
         const fn = k(1)
         if (fn._tag !== "lambda") return reject("E-NODE", "continuation")
-        return lowerForm(`${base}Continuation`, env.length,
+        return lowerForm({ head: h, arguments: ["effect", "continuation"] }, env.length,
           { effects: [fixedEffect(first), fixedEffect(fn.body)] })
       }
-      const name = base === "andThen" && n.type === "ArrowFunctionExpression" ? "andThenThunk" : `${base}Effect`
       const body = n.type === "ArrowFunctionExpression" ? node(n, "body") : n
-      return lowerForm(name, env.length, { effects: [fixedEffect(first),
+      return lowerForm({ head: h, arguments: ["effect", h === "Effect.andThen" && n.type === "ArrowFunctionExpression" ? "thunk" : "effect"] }, env.length, { effects: [fixedEffect(first),
         effectSlot(env, env.length, inner => this.program(body, inner))] })
     }
     if (h === "Effect.as" || h === "Effect.asVoid") {
       arity(h === "Effect.as" ? 2 : 1)
-      return lowerForm(h === "Effect.as" ? "as" : "asVoid", env.length,
+      return lowerForm({ head: h, arguments: h === "Effect.as" ? ["effect", "literal"] : ["effect"] }, env.length,
         { effects: [fixedEffect(p(0))], terms: h === "Effect.as" ? [this.literal(arg(1))] : [] })
     }
     if (h === "Effect.ensuring") {
       arity(2)
-      return lowerForm("ensuring", env.length, { effects: [fixedEffect(p(0)),
+      return lowerForm({ head: h, arguments: ["effect", "effect"] }, env.length, { effects: [fixedEffect(p(0)),
         effectSlot(env, env.length, inner => this.program(arg(1), inner))] })
     }
     if (h === "Effect.matchCause" || h === "Effect.matchCauseEffect") {
@@ -544,15 +542,15 @@ class Normalize {
       }
       const onSuccess = result("onSuccess"), onFailure = result("onFailure")
       return h === "Effect.matchCause"
-        ? lowerForm("matchCause", env.length, { effects: [fixedEffect(first)], terms: [onSuccess, onFailure] })
-        : lowerForm("matchCauseEffect", env.length,
+        ? lowerForm({ head: h, arguments: ["effect", "termArm", "termArm"] }, env.length, { effects: [fixedEffect(first)], terms: [onSuccess, onFailure] })
+        : lowerForm({ head: h, arguments: ["effect", "handlers"] }, env.length,
           { effects: [fixedEffect(first), fixedEffect(onSuccess), fixedEffect(onFailure)] })
     }
     if (["Effect.exit", "Effect.uninterruptible", "Effect.interruptible", "Effect.scoped"].includes(h)) { arity(1); return call(h, [p(0)]) }
     if (["Effect.forkChild", "Effect.forkDetach", "Effect.forkScoped", "Effect.forkIn"].includes(h)) {
       const base = h === "Effect.forkIn" ? 2 : 1
       if (length !== base && length !== base + 1) return reject("E-BIND-SHAPE", "arity")
-      if (length === base) return lowerForm(`${h.slice("Effect.".length)}Default`, env.length,
+      if (length === base) return lowerForm({ head: h, arguments: h === "Effect.forkIn" ? ["effect", "term"] : ["effect"] }, env.length,
         { effects: [fixedEffect(p(0))], terms: base === 2 ? [t(1)] : [] })
       const values = [p(0)]
       if (base === 2) values.push(t(1))
@@ -562,7 +560,7 @@ class Normalize {
     if (h === "Effect.acquireRelease") {
       arity(2); const first = p(0), n = unwrap(arg(1)), ps = list(n, "params")
       if (n.type !== "ArrowFunctionExpression" || ps.length < 1 || ps.length > 2 || ps.some(p => p.type !== "Identifier")) return reject("E-ARG-CLOSURE", "release")
-      if (ps.length === 1) return lowerForm("releaseOne", env.length, { effects: [fixedEffect(first),
+      if (ps.length === 1) return lowerForm({ head: h, arguments: ["effect", "releaseOne"] }, env.length, { effects: [fixedEffect(first),
         effectSlot([...env, str(ps[0]!, "name")], env.length, inner => this.program(node(n, "body"), inner))] })
       const inner = [...env, str(ps[0]!, "name"), str(ps[1]!, "name")]
       return call(h, [first, { _tag: "lambda", params: [`a${env.length}`, `a${env.length + 1}`], body: this.program(node(n, "body"), inner) }])
@@ -840,7 +838,7 @@ class Normalize {
       const i = env.lastIndexOf(str(n, "name"))
       if (i >= 0 || n.name === "undefined") return this.term(n, env)
       const value = unwrap(this.declaration(n))
-      if (value.type === "CallExpression" && this.head(node(value, "callee").type === "CallExpression" ? node(node(value, "callee"), "callee") : node(value, "callee")) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(n, env)] })
+      if (value.type === "CallExpression" && this.head(node(value, "callee").type === "CallExpression" ? node(node(value, "callee"), "callee") : node(value, "callee")) === "Context.Service") return lowerForm({ head: "yield* Key", arguments: ["key"] }, env.length, { effects: [], keys: [this.key(n, env)] })
       const previous = this.referenceCut
       this.referenceCut = offset(this.declarations.get(str(n, "name"))!, "start")
       try { return this.program(value, env) }
@@ -863,14 +861,14 @@ class Normalize {
       // A package key in program position (`yield* SqlClient.SqlClient`) is its service; a
       // property of a binder (`sql.reserve`) is a head the table does not carry.
       const pkg = this.packageOf(n)
-      if (pkg) return lowerForm("yieldKey", env.length, { effects: [], keys: [this.packageKey(pkg)] })
+      if (pkg) return lowerForm({ head: "yield* Key", arguments: ["key"] }, env.length, { effects: [], keys: [this.packageKey(pkg)] })
       if (n.type === "MemberExpression" && !n.computed) {
         const object = unwrap(node(n, "object"))
         if (object.type === "Identifier" && env.lastIndexOf(str(object, "name")) >= 0) return reject("E-OP-UNKNOWN", str(node(n, "property"), "name"))
       }
       const h = this.head(n)
       return h === "Effect.void" || h === "Effect.yieldNow"
-        ? lowerForm(h.slice("Effect.".length), env.length, { effects: [] }) : id(h)
+        ? lowerForm({ head: h, arguments: [] }, env.length, { effects: [] }) : id(h)
     }
     const callee = unwrap(node(n, "callee")), a = list(n, "arguments")
     if (n.optional || callee.optional) return reject("E-SPINE-ESCAPE", "optional")
@@ -929,7 +927,7 @@ class Normalize {
     if (h === "Effect.fail" || h === "Effect.die") {
       arity(1); let value: Expr
       try { value = this.literal(arg(0)) } catch { return reject("E-FAIL-NOT-DOCUMENTED", "literal required") }
-      return h === "Effect.fail" ? call(h, [value]) : lowerForm("die", env.length, { effects: [], terms: [value] })
+      return h === "Effect.fail" ? call(h, [value]) : lowerForm({ head: h, arguments: ["literal"] }, env.length, { effects: [], terms: [value] })
     }
     if (h === "Effect.provideService") {
       arity(3)

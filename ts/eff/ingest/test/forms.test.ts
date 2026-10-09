@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test"
 import { Result } from "effect"
 import type { Eff, Term } from "../../eff.gen.ts"
+import { forms } from "../../forms.gen.ts"
 import { readEff } from "../../read.ts"
 import { recognizeSource as ck } from "../ck.ts"
 import { recognizeSource as oxc } from "../oxc.ts"
-import { effectSlot, expandForm, expandTemplate, fixedEffect, type FormAlgebra } from "../forms.ts"
+import { effectSlot, expandForm, expandTemplate, fixedEffect, type FormAlgebra, type FormSelection } from "../forms.ts"
 
 const variable = (index: number): Term => ({ _tag: "var", index })
 const nat = (value: number): Term => ({ _tag: "lit", value: { _tag: "nat", value } })
@@ -44,6 +45,7 @@ for (const depth of [0, 1, 2, 5]) {
     ["andThenThunk", `Effect.andThen(${sourceFirst}, () => ${sourceSecond})`, bind(first, second)],
     ["andThenContinuation", `Effect.andThen(${sourceFirst}, ${sourceCont})`, bind(first, continuation)],
     ["tapEffect", `Effect.tap(${sourceFirst}, ${sourceSecond})`, bind(first, bind(second, succeed(variable(depth))))],
+    ["tapZeroArgumentEffect", `Effect.tap(${sourceFirst}, () => ${sourceSecond})`, bind(first, bind(second, succeed(variable(depth))))],
     ["tapContinuation", `Effect.tap(${sourceFirst}, ${sourceCont})`, bind(first, bind(continuation, succeed(variable(depth))))],
     ["as", `Effect.as(${sourceFirst}, 8)`, bind(first, succeed(nat(8)))],
     ["asVoid", `Effect.asVoid(${sourceFirst})`, bind(first, succeed({ _tag: "lit", value: { _tag: "unit" } }))],
@@ -155,16 +157,76 @@ const symbolic: FormAlgebra<string, string> = {
   forkScoped: (body, options) => `forkScoped(${body},${JSON.stringify(options)})`,
   acquireRelease: (acquire, release, depth) => `acquireRelease(${acquire},${release},${depth})`,
 }
+// The requested selections and symbolic results are independent of the generated rows.
+// Existing source controls above exercise their core trees and captured binders in both readers.
+const selectedCases: readonly (readonly [FormSelection, string])[] = [
+  [{ head: "Effect.void", arguments: [] }, '{"_tag":"unit"}'],
+  [{ head: "Effect.die", arguments: ["literal"] }, "die(t0)"],
+  [{ head: "yield* Key", arguments: ["key"] }, "service(K)"],
+  [{ head: "Effect.andThen", arguments: ["effect", "effect"] }, "e0[0,0];e1[0,1]"],
+  [{ head: "Effect.andThen", arguments: ["effect", "continuation"] }, "e0[0,0];e1[0,0]"],
+  [{ head: "Effect.andThen", arguments: ["effect", "thunk"] }, "e0[0,0];e1[0,1]"],
+  [{ head: "Effect.as", arguments: ["effect", "literal"] }, "e0[0,0];t0"],
+  [{ head: "Effect.asVoid", arguments: ["effect"] }, 'e0[0,0];{"_tag":"unit"}'],
+  [{ head: "Effect.tap", arguments: ["effect", "continuation"] }, "e0[0,0];e1[0,0];v0"],
+  [{ head: "Effect.tap", arguments: ["effect", "effect"] }, "e0[0,0];e1[0,1];v0"],
+  [{ head: "Effect.ensuring", arguments: ["effect", "effect"] }, "e0[0,0]!e1[0,1]"],
+  [{ head: "Effect.matchCause", arguments: ["effect", "termArm", "termArm"] }, "e0[0,0]?t0:t1"],
+  [{ head: "Effect.matchCauseEffect", arguments: ["effect", "handlers"] }, "e0[0,0]?e1[0,0]:e2[0,0]"],
+  [{ head: "Effect.yieldNow", arguments: [] }, "yield(0)"],
+  [{ head: "Effect.forkChild", arguments: ["effect"] }, 'fork(e0[0,0],{"startImmediately":false,"daemon":false,"maskMode":"inherit"})'],
+  [{ head: "Effect.forkDetach", arguments: ["effect"] }, 'fork(e0[0,0],{"startImmediately":false,"daemon":true,"maskMode":"inherit"})'],
+  [{ head: "Effect.forkIn", arguments: ["effect", "term"] }, 'forkIn(e0[0,0],t0,{"startImmediately":false,"daemon":true,"maskMode":"inherit"})'],
+  [{ head: "Effect.forkScoped", arguments: ["effect"] }, 'forkScoped(e0[0,0],{"startImmediately":false,"daemon":true,"maskMode":"inherit"})'],
+  [{ head: "Effect.acquireRelease", arguments: ["effect", "releaseOne"] }, "acquireRelease(e0[0,0],e1[1,1],0)"],
+]
+
+test("all generated selections are unique and selected through the one expansion entrypoint", () => {
+  const selections = forms.rows.map(row => JSON.stringify([row.head, row.arguments]))
+  expect(new Set(selections).size).toBe(selections.length)
+  expect(selections.sort()).toEqual(selectedCases.map(([selection]) => JSON.stringify([selection.head, selection.arguments])).sort())
+  const args = {
+    effects: [0, 1, 2].map(index => (offset: number, count: number) => `e${index}[${offset},${count}]`),
+    terms: ["t0", "t1"], keys: ["K"],
+  }
+  for (const [selection, value] of selectedCases)
+    expect(expandForm(selection, 0, args, symbolic)).toEqual({ ok: true, value })
+})
+
+test("unknown heads, kinds, arities, and argument order refuse selection", () => {
+  for (const selection of [
+    { head: "absent", arguments: [] },
+    { head: "Effect.as", arguments: ["effect", "effect"] },
+    { head: "Effect.as", arguments: ["literal", "effect"] },
+    { head: "Effect.void", arguments: ["effect"] },
+    { head: "Effect.tap", arguments: ["effect", "thunk"] },
+    { head: "Effect.matchCauseEffect", arguments: ["effect", "termArm", "termArm"] },
+  ] satisfies readonly FormSelection[])
+    expect(expandForm(selection, 0, { effects: [] }, symbolic)).toEqual({ ok: false,
+      error: `unknown form selection ${selection.head}(${selection.arguments.join(", ")})` })
+})
+
+test("an ambiguous generated selection refuses instead of selecting the first row", () => {
+  // A temporary repeated row tests the internal table guard, then restores the generated data.
+  const rows = forms.rows as unknown as Array<(typeof forms.rows)[number]>
+  const size = rows.length
+  try {
+    rows.push(rows[0]!)
+    expect(expandForm({ head: "Effect.void", arguments: [] }, 0, { effects: [] }, symbolic))
+      .toEqual({ ok: false, error: "ambiguous form selection Effect.void()" })
+  } finally { rows.splice(size) }
+})
+
 test("missing slots and invalid template indices are internal refusals", () => {
-  expect(expandForm("andThenEffect", 0, { effects: [] }, symbolic)).toEqual({ ok: false, error: "missing effect slot 0" })
-  expect(expandForm("as", 0, { effects: [fixedEffect("first")] }, symbolic)).toEqual({ ok: false, error: "missing term slot 0" })
-  expect(expandForm("andThenEffect", 0, { effects: [fixedEffect("first"), fixedEffect("second")] }, symbolic)).toEqual({ ok: false, error: "insertion requires an argument reader" })
-  expect(expandForm("yieldKey", 0, { effects: [] }, symbolic)).toEqual({ ok: false, error: "missing key slot 0" })
-  expect(expandForm("yieldKey", 0, { effects: [], keys: [] }, symbolic)).toEqual({ ok: false, error: "missing key slot 0" })
-  expect(expandForm("yieldKey", 0, { effects: [], keys: ["K"] }, symbolic)).toEqual({ ok: true, value: "service(K)" })
+  expect(expandForm({ head: "Effect.andThen", arguments: ["effect", "effect"] }, 0, { effects: [] }, symbolic)).toEqual({ ok: false, error: "missing effect slot 0" })
+  expect(expandForm({ head: "Effect.as", arguments: ["effect", "literal"] }, 0, { effects: [fixedEffect("first")] }, symbolic)).toEqual({ ok: false, error: "missing term slot 0" })
+  expect(expandForm({ head: "Effect.andThen", arguments: ["effect", "effect"] }, 0, { effects: [fixedEffect("first"), fixedEffect("second")] }, symbolic)).toEqual({ ok: false, error: "insertion requires an argument reader" })
+  expect(expandForm({ head: "yield* Key", arguments: ["key"] }, 0, { effects: [] }, symbolic)).toEqual({ ok: false, error: "missing key slot 0" })
+  expect(expandForm({ head: "yield* Key", arguments: ["key"] }, 0, { effects: [], keys: [] }, symbolic)).toEqual({ ok: false, error: "missing key slot 0" })
+  expect(expandForm({ head: "yield* Key", arguments: ["key"] }, 0, { effects: [], keys: ["K"] }, symbolic)).toEqual({ ok: true, value: "service(K)" })
   expect(expandTemplate({ _tag: "service", keySlot: -1 }, 0, { effects: [], keys: ["K"] }, symbolic)).toEqual({ ok: false, error: "non-natural template index" })
   expect(expandTemplate({ _tag: "service", keySlot: 0.5 }, 0, { effects: [], keys: ["K"] }, symbolic)).toEqual({ ok: false, error: "non-natural template index" })
-  expect(expandForm("absent", 0, { effects: [] }, symbolic)).toEqual({ ok: false, error: "unknown form absent" })
+  expect(expandForm({ head: "absent", arguments: [] }, 0, { effects: [] }, symbolic)).toEqual({ ok: false, error: "unknown form selection absent()" })
 })
 
 test("slot insertion checks its cut and shifts a local binder after multiple slots", () => {

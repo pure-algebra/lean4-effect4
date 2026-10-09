@@ -1,0 +1,82 @@
+{
+  "base": "e5a5a41b98ecc63f3c2ca64915b157ad9d8a1174",
+  "diffSha256": "1dfc4826c058ef0f6fd3e8e752e499eaf6481d9446cc03f533fd8648520b14d4",
+  "sourceHashes": {
+    "ts/eff/ingest/forms.ts": "15f849abe3444a6af24de6bbfeb97a24f4b904e8ac6d7253429a0962d9ea941d",
+    "ts/eff/ingest/ck.ts": "47e68978655eb90f6d8230351c6b7c9c07fceded185c83efbc346c7187151d21",
+    "ts/eff/ingest/oxc.ts": "a296ba7647c427a2186461b41205f78c3e6dcbdbe19f0d20f9e2e1b0b337bc3e",
+    "ts/eff/ingest/test/forms.test.ts": "82727b45becf991b55905fec6a5e6156c2b1ed906e0686e84c47a1fb4cc94adc"
+  },
+  "generatedTablesUnchanged": [
+    "ts/eff/forms.gen.ts",
+    "ts/eff/templates.gen.ts"
+  ],
+  "compiler": "7.0.0-dev.20260629.1",
+  "effect": "4.0.0-rc.112",
+  "bun": "1.4.2",
+  "comparison": {
+    "inputs": 84,
+    "variants": 19,
+    "exactPerEngineVerdicts": true,
+    "verdicts": {
+      "ck": {
+        "lifted": 61,
+        "refusals": 27
+      },
+      "oxc": {
+        "lifted": 61,
+        "refusals": 27
+      }
+    }
+  },
+  "checks": {
+    "focused-tests": {
+      "name": "focused-tests",
+      "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/ts/eff",
+      "argv": [
+        "bun",
+        "--no-install",
+        "test",
+        "ingest/test/forms.test.ts",
+        "ingest/test/printer.test.ts",
+        "ingest/test/foreign.test.ts",
+        "ingest/test/refusals.test.ts",
+        "ingest/test/properties.test.ts",
+        "ingest/test/services.test.ts",
+        "ingest/test/packages.test.ts",
+        "ingest/test/gate.test.ts"
+      ],
+      "exitCode": 0
+    },
+    "pinned-tsgo": {
+      "name": "pinned-tsgo",
+      "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/ts/eff",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native-preview/bin/tsgo",
+        "--noEmit",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exitCode": 0
+    },
+    "full-verdict-comparison": {
+      "name": "full-verdict-comparison",
+      "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4",
+      "argv": [
+        "bun",
+        "--no-install",
+        "docs/research/2026-10-09-ingest-form-selection-evidence/compare.ts",
+        "after"
+      ],
+      "exitCode": 0
+    }
+  },
+  "scope": "Finite TypeScript reader checks; no Lean declaration changes, no universal source-admission or host-simulation claim",
+  "sourceReview": {
+    "agent": "partitioned_core",
+    "model": "GPT-6.1 Sol",
+    "diffSha256": "1dfc4826c058ef0f6fd3e8e752e499eaf6481d9446cc03f533fd8648520b14d4",
+    "result": "No actionable defect in the final four-file diff; source review only"
+  }
+}

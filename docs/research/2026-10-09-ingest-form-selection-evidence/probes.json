@@ -1,0 +1,249 @@
+{
+  "variants": [
+    "void",
+    "die",
+    "yieldKey",
+    "andThenEffect",
+    "andThenThunk",
+    "andThenContinuation",
+    "tapEffect",
+    "tapContinuation",
+    "as",
+    "asVoid",
+    "ensuring",
+    "matchCause",
+    "matchCauseEffect",
+    "yieldNow",
+    "forkChildDefault",
+    "forkDetachDefault",
+    "forkInDefault",
+    "forkScopedDefault",
+    "releaseOne"
+  ],
+  "probes": [
+    {
+      "id": "void-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.void)"
+    },
+    {
+      "id": "void-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.void)))"
+    },
+    {
+      "id": "die-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.die(\"defect\"))"
+    },
+    {
+      "id": "die-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.die(\"defect\"))))"
+    },
+    {
+      "id": "yieldKey-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.gen(function* () { const resource = yield* K; return resource; }))"
+    },
+    {
+      "id": "yieldKey-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.gen(function* () { const resource = yield* K; return resource; }))))"
+    },
+    {
+      "id": "andThenEffect-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.andThen(Effect.succeed(true), Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "andThenEffect-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.andThen(Effect.succeed(true), Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "andThenThunk-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.andThen(Effect.succeed(true), () => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "andThenThunk-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.andThen(Effect.succeed(true), () => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "andThenContinuation-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.andThen(Effect.succeed(true), answer => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(pair(answer, local)))))"
+    },
+    {
+      "id": "andThenContinuation-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.andThen(Effect.succeed(true), answer => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(pair(answer, local)))))))"
+    },
+    {
+      "id": "tapEffect-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.tap(Effect.succeed(true), Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "tapEffect-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.tap(Effect.succeed(true), Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "tapContinuation-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.tap(Effect.succeed(true), answer => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(pair(answer, local)))))"
+    },
+    {
+      "id": "tapContinuation-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.tap(Effect.succeed(true), answer => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(pair(answer, local)))))))"
+    },
+    {
+      "id": "as-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.as(Effect.succeed(true), 8))"
+    },
+    {
+      "id": "as-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.as(Effect.succeed(true), 8))))"
+    },
+    {
+      "id": "asVoid-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.asVoid(Effect.succeed(true)))"
+    },
+    {
+      "id": "asVoid-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.asVoid(Effect.succeed(true)))))"
+    },
+    {
+      "id": "ensuring-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.ensuring(Effect.succeed(true), Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "ensuring-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.ensuring(Effect.succeed(true), Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "matchCause-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.matchCause(Effect.succeed(true), {onSuccess: value => value, onFailure: cause => cause}))"
+    },
+    {
+      "id": "matchCause-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.matchCause(Effect.succeed(true), {onSuccess: value => value, onFailure: cause => cause}))))"
+    },
+    {
+      "id": "matchCauseEffect-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.matchCauseEffect(Effect.succeed(true), {onSuccess: value => Effect.succeed(value), onFailure: cause => Effect.succeed(cause)}))"
+    },
+    {
+      "id": "matchCauseEffect-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.matchCauseEffect(Effect.succeed(true), {onSuccess: value => Effect.succeed(value), onFailure: cause => Effect.succeed(cause)}))))"
+    },
+    {
+      "id": "yieldNow-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.yieldNow)"
+    },
+    {
+      "id": "yieldNow-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.yieldNow)))"
+    },
+    {
+      "id": "forkChildDefault-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.forkChild(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "forkChildDefault-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.forkChild(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "forkDetachDefault-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.forkDetach(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "forkDetachDefault-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.forkDetach(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "forkInDefault-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.forkIn(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local))), outer))"
+    },
+    {
+      "id": "forkInDefault-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.forkIn(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local))), outer))))"
+    },
+    {
+      "id": "forkScopedDefault-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.forkScoped(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))"
+    },
+    {
+      "id": "forkScopedDefault-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.forkScoped(Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(succ(local)))))))"
+    },
+    {
+      "id": "releaseOne-depth1",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.acquireRelease(Effect.succeed(true), answer => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(pair(answer, local)))))"
+    },
+    {
+      "id": "releaseOne-depth3",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), capture1 => Effect.flatMap(Effect.succeed(0), capture0 => Effect.flatMap(Effect.succeed(7), outer => Effect.acquireRelease(Effect.succeed(true), answer => Effect.flatMap(Effect.succeed(outer), local => Effect.succeed(pair(answer, local)))))))"
+    },
+    {
+      "id": "tap-zero",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.tap(Effect.succeed(1), () => Effect.succeed(2))"
+    },
+    {
+      "id": "andThen-last",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.andThen(Effect.succeed(2))(Effect.succeed(1))"
+    },
+    {
+      "id": "andThen-pipe",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.succeed(1).pipe(Effect.andThen(Effect.succeed(2)))"
+    },
+    {
+      "id": "tap-last",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.tap(answer => Effect.succeed(answer))(Effect.succeed(1))"
+    },
+    {
+      "id": "tap-pipe",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.succeed(1).pipe(Effect.tap(answer => Effect.succeed(answer)))"
+    },
+    {
+      "id": "bad-empty",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.andThen()"
+    },
+    {
+      "id": "bad-extra",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.as(Effect.succeed(1), 2, 3)"
+    },
+    {
+      "id": "bad-handler",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.matchCause(Effect.succeed(1), { onSuccess: x => x })"
+    },
+    {
+      "id": "shadow-Effect",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(1), Effect => Effect.as(Effect.succeed(1), 2))"
+    },
+    {
+      "id": "shadow-capture",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.flatMap(Effect.succeed(7), outer => Effect.tap(Effect.succeed(1), outer => Effect.succeed(outer)))"
+    },
+    {
+      "id": "forkChild-last",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.forkChild()(Effect.succeed(3))"
+    },
+    {
+      "id": "forkChild-pipe",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.succeed(3).pipe(Effect.forkChild())"
+    },
+    {
+      "id": "forkDetach-last",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.forkDetach()(Effect.succeed(3))"
+    },
+    {
+      "id": "forkDetach-pipe",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.succeed(3).pipe(Effect.forkDetach())"
+    },
+    {
+      "id": "forkIn-last",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.forkIn(7)(Effect.succeed(3))"
+    },
+    {
+      "id": "forkIn-pipe",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.succeed(3).pipe(Effect.forkIn(7))"
+    },
+    {
+      "id": "forkScoped-last",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.forkScoped()(Effect.succeed(3))"
+    },
+    {
+      "id": "forkScoped-pipe",
+      "source": "import { Context, Effect } from \"effect\"; const K = Context.Service<number>(\"K\"); export const main = Effect.succeed(3).pipe(Effect.forkScoped())"
+    }
+  ]
+}

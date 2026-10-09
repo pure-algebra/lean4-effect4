@@ -1,0 +1,12 @@
+{
+  "name": "pinned-tsgo",
+  "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/ts/eff",
+  "argv": [
+    "node",
+    "node_modules/@typescript/native-preview/bin/tsgo",
+    "--noEmit",
+    "-p",
+    "tsconfig.json"
+  ],
+  "exitCode": 0
+}
