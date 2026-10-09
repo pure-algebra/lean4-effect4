@@ -211,8 +211,8 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
-- **The coalgebra note's three questions** (its section 8): `Effects` as the home of the generic
-  layer; Codex as the breaker of its packet; filing the comodel and runner papers.
+- **The coalgebra note's three questions** (its section 8). Is `Effects` the home of the generic
+  layer? Is Codex the breaker of its packet? Should the comodel and runner papers be filed?
 
 ## Process
 
