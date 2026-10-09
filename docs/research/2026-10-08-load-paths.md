@@ -120,6 +120,30 @@ them may be missing from the registry.
   joints are its deep modules. `#explain` can report each theorem's load-bearing status and its
   class, as data, beside its placement.
 
+## 6a. Prediction before a slice (cutover slice S1, 2026-10-08)
+
+A slice's top theorems are written first, with each new lemma left as a planned goal. Their proofs
+then name what the slice reuses and what it still owes. `#landing_plan T` walks from the tops
+through their own modules. It sorts what it reaches into goals owed, local steps, and the tree's
+joints with their load-bearing standing. After the landing, `#landing_plan` and `#load_report` measure
+the same quantities.
+
+| Slice | Predicted | Landed |
+| --- | --- | --- |
+| S1b, the sketch's table and refusals | 1 goal owed, with its one step named; 4 local steps; 6 joints, all load-bearing; reuse 54% | the 2 owed lemmas, the same 4 steps and the same 6 joints; the 2 proofs reused no tree theorem |
+| S1a, the sketch's focus and fill (measured after) | not predicted | sketch laws 50% reuse, parts laws 60%; joints: the module check's soundness, `focusAt_typed`, `hasTy_replace_focusAt` |
+
+The prediction was exact because the decomposition went down to the new lemmas. Its cost is the
+statements and the skeleton of the proof; the leaves are the work it predicts.
+
+**The same reading on an area before work starts.** The session's laws are
+`Laws.Api.HostSession`, `Laws.Api.SessionMeaning` and `Laws.Run`. They hold 142 theorems, 59
+load-bearing and 45 unconsumed. Their reuse is 18%: 152 local edges against 35 into the tree, and
+897 into Lean's own library.
+Their strongest joints are small option facts. So a session slice that plans today should expect
+little reuse, unless shared laws of runs and journals are factored first. The lowering's Lean half
+(`src/OCaml5`) is outside the tool's scopes, and joins them when the tool reads it.
+
 ## 7. What this note does not establish
 
 - The load is counted along proof terms. An `aesop` bank's rule leaves a trace only through the
