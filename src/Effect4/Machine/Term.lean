@@ -294,7 +294,12 @@ def row : NativeAtom → AtomRow
   | .eq => { name := "eq", arity := some 2, constGeneric := false,
              prelude := "(a: number | string, b: number | string): boolean => a === b" }
   | .pair => { name := "pair", arity := some 2, constGeneric := true,
-               prelude := "<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] => [a, b] as readonly [Wide<A>, Wide<B>]" }
+               prelude := "(() => {\n  \
+          function build<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>]\n  \
+          function build<const P extends readonly [unknown, unknown]>(...items: P): WideProduct<P[0], P[1]>\n  \
+          function build<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] {\n    \
+            return [a, b] as readonly [Wide<A>, Wide<B>]\n  \
+          }\n  return build\n})()" }
   | .fst => { name := "fst", arity := some 1, constGeneric := false,
               prelude := "<P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]" }
   | .snd => { name := "snd", arity := some 1, constGeneric := false,
@@ -396,7 +401,12 @@ def row : NativeAtom → AtomRow
 
   | .tuple =>
       { name := "tuple", arity := none, constGeneric := true,
-        prelude := "<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }" }
+        prelude := "(() => {\n  \
+          function build<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> }\n  \
+          function build<const A, const B>(a: A, b: B): WideProduct<A, B>\n  \
+          function build<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } {\n    \
+            return items as { readonly [I in keyof A]: Wide<A[I]> }\n  \
+          }\n  return build\n})()" }
   | .listTake =>
       { name := "take", arity := some 2, constGeneric := false,
         prelude := "<A, X extends ReadonlyArray<unknown> = ReadonlyArray<A>>(xs: X, n: number): ReadonlyArray<X[number]> => xs.slice(0, n) as ReadonlyArray<X[number]>" }

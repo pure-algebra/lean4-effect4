@@ -76,10 +76,26 @@ def eraseRecordJoin (x : Expr) : Expr :=
     else x
   | x => x
 
+/-- Inferred two-slot product arguments occur only on these distinct target generic arities.
+The pair argument retains the readonly slot tuple; neither inverse admits another runtime arity. -/
+def eraseProductJoin (x : Expr) : Expr :=
+  match x with
+  | .call (.generic (.ident name) types) [first, second] =>
+    if name = "tuple" then
+      match types with
+      | [_, _] => .call (.ident name) [first, second]
+      | _ => x
+    else if name = "pair" then
+      match types with
+      | [.tuple [_, _] true] => .call (.ident name) [first, second]
+      | _ => x
+    else x
+  | _ => x
+
 /-- The local inverse runs only inside a term or cause occurrence.
 It preserves every stored type except the exact inferred arguments and callback encoding. -/
 def callInverse (n : Nat) (x : Expr) : Expr :=
-  eraseCauseTermJoin (eraseFoldJoin n (eraseRecordJoin x))
+  eraseCauseTermJoin (eraseFoldJoin n (eraseRecordJoin (eraseProductJoin x)))
 
 /-- Erase the selected term annotations through the target-syntax fold.
 All children are term occurrences; lambdas extend the actual lexical binder depth. -/

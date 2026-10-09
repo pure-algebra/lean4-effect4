@@ -60,6 +60,12 @@ def wide : List String :=
   , " * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */"
   , "type Wide<T> = T extends number ? number : T extends boolean ? boolean : T"
   , ""
+  , "/** The checked two-slot overload distributes union factors. Ordinary overloads retain"
+  , " * contextual inference. Explicit never slots remain slots, as Ty.factors specifies. */"
+  , "type WideProduct<A, B> = [A] extends [never] ? readonly [never, Wide<B>] :"
+  , "  [B] extends [never] ? readonly [Wide<A>, never] :"
+  , "  A extends unknown ? B extends unknown ? readonly [Wide<A>, Wide<B>] : never : never"
+  , ""
   ]
 
 /-- **The profile's bound on the target** (DI-56; decisions rows 108, 321 and 322). The four rows

@@ -75,6 +75,20 @@ def termAlg (sig : Signature Op) : TermAlgebra TermCarrier where
           withHeadTypes name [← target .unknown, ← target error] plain
         else return plain
       | _ => return plain
+    else if ["pair", "tuple"].contains name then
+      match args.1 with
+      | .cons first (.cons second .nil) => do
+        let firstTy ← need "product first slot" (argTy sig env (sig.constAtom name) first)
+        let secondTy ← need "product second slot" (argTy sig env (sig.constAtom name) second)
+        if proper firstTy || proper secondTy then
+          let firstTarget ← target firstTy
+          let secondTarget ← target secondTy
+          if name = "pair" then
+            withHeadTypes name [.tuple [firstTarget, secondTarget] true] plain
+          else
+            withHeadTypes name [firstTarget, secondTarget] plain
+        else return plain
+      | _ => return plain
     else return plain)
   term_record fields names values := (.record fields names values.1, fun env _ => do
     let children ← values.2 env true
@@ -394,6 +408,12 @@ def termJoinAlg (sig : Signature Op) : TermAlgebra JoinCarrier where
     if ["causeIsFail", "causeIsDie", "causeIsInterrupt", "causeError"].contains name then
       match args.1 with
       | .cons input .nil => children || properAt sig env false input
+      | _ => children
+    else if ["pair", "tuple"].contains name then
+      match args.1 with
+      | .cons first (.cons second .nil) =>
+        children || properAt sig env (sig.constAtom name) first ||
+          properAt sig env (sig.constAtom name) second
       | _ => children
     else children)
   term_record fields names values := (.record fields names values.1, fun env _ => values.2 env true)

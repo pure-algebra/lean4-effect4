@@ -25,12 +25,6 @@ const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<
  * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */
 type Wide<T> = T extends number ? number : T extends boolean ? boolean : T
 
-/** The checked two-slot overload distributes union factors. Ordinary overloads retain
- * contextual inference. Explicit never slots remain slots, as Ty.factors specifies. */
-type WideProduct<A, B> = [A] extends [never] ? readonly [never, Wide<B>] :
-  [B] extends [never] ? readonly [Wide<A>, never] :
-  A extends unknown ? B extends unknown ? readonly [Wide<A>, Wide<B>] : never : never
-
 /** The profile's bound on the target (DI-56; decisions rows 108, 321 and 322). The four rows
  * that grow call it after the sum: a double holds the exact sum of two safe integers up to
  * 2^53, and rounding is monotone, so the test is exact. Past the bound it throws
@@ -91,14 +85,7 @@ export const eq = (a: number | string, b: number | string): boolean => a === b
  * widens (`Wide`, decisions row 256): `pair(true, 0)` is `readonly [boolean, number]`, as `litArgTy`
  * types the two literals.
  */
-export const pair = (() => {
-  function build<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>]
-  function build<const P extends readonly [unknown, unknown]>(...items: P): WideProduct<P[0], P[1]>
-  function build<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] {
-    return [a, b] as readonly [Wide<A>, Wide<B>]
-  }
-  return build
-})()
+export const pair = <const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] => [a, b] as readonly [Wide<A>, Wide<B>]
 
 /**
  * `"fst", [exitCons a _] => a`
@@ -289,14 +276,7 @@ export const mapFromEntries = <A = never, E extends ReadonlyArray<readonly [stri
  * A string literal in a slot keeps its literal type, and a number or a Boolean widens (`Wide`,
  * decisions row 256): `tuple(7, "x", true)` is `readonly [number, "x", boolean]`.
  */
-export const tuple = (() => {
-  function build<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> }
-  function build<const A, const B>(a: A, b: B): WideProduct<A, B>
-  function build<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } {
-    return items as { readonly [I in keyof A]: Wide<A[I]> }
-  }
-  return build
-})()
+export const tuple = <const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }
 
 /**
  * `"take", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a natural count
