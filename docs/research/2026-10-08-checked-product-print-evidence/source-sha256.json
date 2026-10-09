@@ -65,6 +65,8 @@
   "docs/research/2026-10-08-checked-product-print-evidence/release/helper-observations.log": "4f74d7e427115685963b4425f5b200cc2973397f47a5f2788ac5f2fbbff86fa8",
   "docs/research/2026-10-08-checked-product-print-evidence/release/input-sha256.json": "9caa40ff609c57b036136b84215d020c668fb756551c62d93da0c5e0c241d40f",
   "docs/research/2026-10-08-checked-product-print-evidence/release/runtime-version.log": "b99b4c7cdf236f59bc9f65d963deaecae3b16a7dad87939cacb9057f7664daee",
-  "docs/research/2026-10-08-checked-product-print-evidence/reproduce.py": "22be7f22bbad183d909c5cf583fa5308e96f06ceaee4a2f210317ef4c88caacb",
-  "docs/research/2026-10-08-checked-product-print-evidence/tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+  "docs/research/2026-10-08-checked-product-print-evidence/reproduce.py": "ef7551c54b164d65211c7aa3c5a2e1854e55256a61347734f3b3f0ed95346fd0",
+  "docs/research/2026-10-08-checked-product-print-evidence/tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+  "docs/research/2026-10-08-checked-product-print-evidence/version-controls.py": "f2ea89e7464a9d61272fb08a7711bc031773da76b657b06505767fabe612cff7",
+  "docs/research/2026-10-08-checked-product-print-evidence/version-controls.log": "ac09849e015519186a3e1aed1ba7ec725a244c84ac1cec5f0aad3942bca78d7b"
 }

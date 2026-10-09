@@ -19,7 +19,17 @@ def run(command, folder, stem, expected=0):
         raise SystemExit(f"{stem}: exit {result.returncode}, expected {expected}")
     return result.stdout
 
-run([str(compiler), "--version"], a.out, "compiler-version")
+compiler_pin = "7.0.0-dev.20260629.1"
+compiler_package = json.loads((a.install / "node_modules/@typescript/native-preview/package.json").read_text())
+if compiler_package.get("version") != compiler_pin:
+    raise SystemExit(f"Unsupported @typescript/native-preview version: {compiler_package.get('version')}")
+effect_package = json.loads((a.install / "node_modules/effect/package.json").read_text())
+effect_versions = {"4.0.1", "4.0.0-rc.112"} if a.helpers_only else {"4.0.1"}
+if effect_package.get("version") not in effect_versions:
+    raise SystemExit(f"Unsupported Effect version for this mode: {effect_package.get('version')}")
+compiler_version = run([str(compiler), "--version"], a.out, "compiler-version")
+if compiler_version.strip() != f"Version {compiler_pin}":
+    raise SystemExit(f"Unsupported tsgo executable version: {compiler_version.strip()}")
 run(["bun", "--version"], a.out, "runtime-version")
 helpers = a.out / "helpers"
 helpers.mkdir()
