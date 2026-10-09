@@ -131,6 +131,7 @@ the same quantities.
 | Slice | Predicted | Landed |
 | --- | --- | --- |
 | S1b, the sketch's table and refusals | 1 goal owed, with its one step named; 4 local steps; 6 joints, all load-bearing; reuse 54% | the 2 owed lemmas, the same 4 steps and the same 6 joints; the 2 proofs reused no tree theorem |
+| the splice law (`edit-splices-table`) | 11 goals owed; 2 local steps; 7 joints, 6 load-bearing; reuse 35% | the 11, and 4 more: three general list facts and one step split out of the environments' casework; 12 joints, the 5 more being the typed-replacement and checker laws that the two hard goals used; reuse 54% by edges; one heartbeat raise |
 | S1a, the sketch's focus and fill (measured after) | not predicted | sketch laws 50% reuse, parts laws 60%; joints: the module check's soundness, `focusAt_typed`, `hasTy_replace_focusAt` |
 
 The prediction was exact because the decomposition went down to the new lemmas. Its cost is the
