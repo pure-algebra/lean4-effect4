@@ -37,15 +37,22 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
   `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85).
-- **The host meaning on a run** (slice H8, row 310). `denoteRows_eq_session` is a theorem
-  (`src/Effect4/Laws/Api/SessionMeaning.lean`). Its fragment is `StraightRows`, at every compile
-  budget. A recorded run that is funded, at rest and host-driven observes the program's meaning
-  under its reply tape. Between decisions the machine is in one of four
+- **The host meaning on a run** (slices H8 and H9, row 310). `denoteRows_eq_session` and
+  `denoteRows_eq_session_host` are theorems (`src/Effect4/Laws/Api/SessionMeaning.lean`). Their
+  fragment is `StraightRows`, at every compile budget. A recorded run that is funded, at rest and
+  host-driven observes the program's meaning under its reply tape (H8). A finished run observes
+  the meaning under any host whose answers are the run's (H9). A host is a comodel of the row
+  signature (`Effects.Comodel`), and the reply tape is one host. Between decisions the machine is in one of four
   forms: loaded, parked on a yield, parked on a host call, exited
   (`src/Effect4/Laws/Program/Agreement/Hosted.lean`). Each host decision moves it to another,
   and the local run with calls moves the same way. One drive law serves H8 and the packet's
   theorem: `drive_seg` (`src/Effect4/Laws/Program/Agreement/Segment.lean`). It relates a segment
   of commands to the local run with calls and counts its steps. `run_eq_meaning` follows from it.
+- **The coalgebra layer** (the [coalgebra note](research/2026-10-09-host-coalgebra.md)). The
+  `Effects` package, version 0.9.0, holds systems, bisimulations, protocols and runs. It holds
+  hosts as comodels, which compose by routing, renaming, admission, recording, and implementation
+  by programs over other operations. It is committed on branch `coalgebra` of `~/Dev/lean4-effects`
+  and pinned here, unpushed: push `lean4-effects` before this branch.
 - **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import
@@ -154,10 +161,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-0. **The host call in one form** (the
-   [host-call note](research/2026-10-09-host-calls-and-cleanup.md), section 6). Codex reviews and
-   probes it first ([the brief](research/2026-10-09-host-calls-codex-brief.md)). Then come
-   the slices HC-1 to HC-7. Cleanup C3's compile half is open (the note, section 4.1).
+0. **The host session as a coalgebra** (the
+   [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
+   landed. Next is CO-6: the drive with a host and its law at the run level, the host utilities,
+   and the typed protocol. Then CO-6b prints a verified handler as an Effect service, and CO-7
+   adds promises. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
+   [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
@@ -202,6 +211,8 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
+- **The coalgebra note's three questions** (its section 8): `Effects` as the home of the generic
+  layer; Codex as the breaker of its packet; filing the comodel and runner papers.
 
 ## Process
 
