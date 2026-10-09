@@ -1,6 +1,6 @@
 import Test.Dogfood.Stage
-import Effect4.Program.Authoring.Loops
-import Effect4.Laws.Program.DenoteB
+import Effect4.Author
+import Effect4.Laws.Author
 
 /-!
 # p4: dogfood 1's rate limiter

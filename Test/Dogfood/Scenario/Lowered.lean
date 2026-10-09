@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Tape
+import Test.Audit.ScenarioGate
 
 /-!
 # The lowered runs: the machine's part of each scenario, bound to the engine's fixtures

@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario
-import Effect4.Api.Author
+import Effect4.Author
+import Test.Audit.ScenarioGate
 
 /-!
 # Test.Dogfood.Scenario.Gate — controls of the scenario gate

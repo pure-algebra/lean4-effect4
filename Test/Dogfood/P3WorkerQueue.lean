@@ -1,8 +1,7 @@
 import Test.Dogfood.Stage
 import Effect4.Run
-import Effect4.Program.Authoring.Loops
-import Effect4.Program.Authoring.Ascribe
-import Effect4.Laws.Program.DenoteB
+import Effect4.Author
+import Effect4.Laws.Author
 
 /-!
 # p3: workers draining a queue, with cleanup on interruption

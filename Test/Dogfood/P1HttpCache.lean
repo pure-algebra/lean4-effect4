@@ -1,11 +1,7 @@
 import Test.Dogfood.Stage
 import Effect4.Run
-import Effect4.Program.Authoring.Loops
-import Effect4.Laws.Program.DenoteB
-import Effect4.Laws.Program.Author
-import Effect4.Laws.Program.Authoring.Loops
-import Effect4.Laws.Program.Authoring.Rows
-import Effect4.Laws.Program.Authoring.Sugar
+import Effect4.Author
+import Effect4.Laws.Author
 
 /-!
 # p1: an HTTP call with a timeout, a retry schedule, a typed error and a cache

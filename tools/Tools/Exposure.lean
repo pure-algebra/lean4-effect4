@@ -9,9 +9,10 @@ A user of the library imports only entry modules and the module library
 file under the user roots (`Tools.Architecture.userRoots`, the acceptance programs), with the
 compiler's own header parser, and classifies each import of the tree by its exposure
 (`Tools.Architecture.exposures`). `#exposure_report` prints the imports a user may not make, with
-their exposure, and a count by exposure. It refuses nothing yet: the acceptance programs move to
-the entry modules first. An import outside the tree (Lean, Std, the pinned packages) is not the
-gate's business.
+their exposure, and a count by exposure. `#exposure_gate`, at the foot of `Test/All.lean`, refuses
+the same imports (cutover slice C4): the acceptance programs import entry modules, a composed
+module's own files and the batteries' support only. An import outside the tree (Lean, Std, the
+pinned packages) is not the gate's business.
 -/
 
 namespace Tools.Exposure
@@ -41,11 +42,12 @@ def leanFiles (root : System.FilePath) : IO (Array System.FilePath) := do
   let all ← root.walkDir
   return (all.filter (·.extension == some "lean")).qsort (·.toString < ·.toString)
 
-/-- The findings over the user roots, and the count of tree imports by exposure. -/
-def scan : IO (Array Finding × Std.HashMap String Nat) := do
+/-- The findings over `roots` (the user roots by default), and the count of tree imports by
+exposure. -/
+def scan (roots : List String := userRoots) : IO (Array Finding × Std.HashMap String Nat) := do
   let mut findings := #[]
   let mut counts : Std.HashMap String Nat := {}
-  for root in userRoots do
+  for root in roots do
     for f in ← leanFiles root do
       let (imports, _, _) ← Lean.Elab.parseImports (← IO.FS.readFile f) (some f.toString)
       for i in imports do
@@ -69,5 +71,21 @@ syntax (name := exposureReport) "#exposure_report" : command
     let users := findings.filter (·.imported == m)
     out := out ++ s!"\n{m} ({users[0]!.exposure}), from {users.size} files"
   logInfo out
+
+/-- `#exposure_gate`: refuse every import of the user roots that row 332's gate does not admit,
+naming the file, the module and its exposure. `Test/All.lean` imports every acceptance program,
+so an import line that changes elaborates this command again. -/
+syntax (name := exposureGate) "#exposure_gate" (ppSpace str)? : command
+
+/-- The gate's check over `roots`. With a path, `#exposure_gate "p"` reads that folder instead of
+the user roots: the red control of `Test/Audit/Exposure.lean` reads a fixture. -/
+@[command_elab exposureGate] def elabExposureGate : CommandElab := fun stx => do
+  let roots := match stx[1].getOptional? with
+    | some s => [s.isStrLit?.getD ""]
+    | none => userRoots
+  let (findings, _) ← scan roots
+  unless findings.isEmpty do
+    throwError (String.intercalate "\n" (findings.toList.map fun f =>
+      s!"exposure gate: {f.file} imports {f.imported}, which is {f.exposure}; a user imports entry modules and a composed module's own files"))
 
 end Tools.Exposure

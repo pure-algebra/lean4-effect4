@@ -3,6 +3,7 @@ import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
+import Test.Audit.ScenarioGate
 
 /-!
 # The machine tapes of the scenarios, and the fixture text Lean writes for the engine

@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario
 import Test.Dogfood.P3WorkerQueue
 import Test.Program.QueueTraces
 import Effect4.Library.Queue.Ops
+import Test.Audit.ScenarioGate
 
 /-!
 # The queue-workers scenario: the two-worker crew over the public Queue

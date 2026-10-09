@@ -30,3 +30,9 @@ open Tools.Architecture Tools.Exposure
 #guard pathOf `Effect4.Program.Authoring.Loops == some "src/Effect4/Program/Authoring/Loops.lean"
 #guard pathOf `ProofGraph.Registry == some "tools/ProofGraph/Registry.lean"
 #guard pathOf `Lean.Elab == none
+-- The gate refuses an internal module in a user's file and admits the entry module beside it
+-- (red control, on the fixture `Test/fixtures/exposure/Internal.lean`).
+/--
+error: exposure gate: Test/fixtures/exposure/Internal.lean imports Effect4.Api.Author, which is internal; a user imports entry modules and a composed module's own files
+-/
+#guard_msgs in #exposure_gate "Test/fixtures/exposure"

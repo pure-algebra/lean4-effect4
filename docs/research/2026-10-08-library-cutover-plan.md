@@ -118,7 +118,7 @@ typing signature, and a definition block stops it.
 These are slice S1, after C2, because the sketch is authoring. Its laws are placed with the
 splice law of `docs/research/2026-10-08-live-authoring.md` §4.
 
-## 7. Landed: slices C1 to C3 (2026-10-08)
+## 7. Landed: slices C1 to C4 (2026-10-08)
 
 - **C1** made the five entry modules re-export files. `Effect4.Run` had a body, and
   `Run/Tape.lean` imports it, so the body moved to `src/Effect4/Run/Basic.lean`. The entry module
@@ -144,6 +144,13 @@ splice law of `docs/research/2026-10-08-live-authoring.md` §4.
   `src/Effect4/Laws/Codegen/Mask.lean`, `src/Effect4/Laws/Program/Typed/ListFold.lean` and
   `src/Effect4/Laws/Program/Typed/Mask.lean` name the registry's old path. `ListFold` alone has 77
   dependent modules.
+- **C4** moved every acceptance program under `Test/Dogfood/` onto entry modules, a composed
+  module's own files and the batteries' support. The scenario gate reads the registry and the
+  plan, so it moved to `Test/Audit/ScenarioGate.lean`, with its namespace. `#exposure_report`
+  finds no import a user may not make. `#exposure_gate`, at the foot of `Test/All.lean`, refuses
+  one, and its red control reads the fixture `Test/fixtures/exposure/Internal.lean`.
+- **Not done.** The user roots do not yet include the documents' examples. The gate runs where
+  `Test/All.lean` elaborates, so a sweep (`lake build Test`, `make check-roots`) runs it first.
 
 ## 8. What this plan does not establish
 

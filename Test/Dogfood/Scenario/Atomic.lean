@@ -1,9 +1,9 @@
 import Test.Dogfood.Scenario
-import Effect4.Program.Authoring.Ascribe
+import Effect4.Author
 import Test.Dogfood.P4RateLimiter
 import Test.Dogfood.P5LedgerService
-import Effect4.Laws.Program.MeaningEq
-import Effect4.Laws.Program.Typed.Denotation
+import Effect4.Laws.Author
+import Test.Audit.ScenarioGate
 
 /-!
 # The atomic scenario: one atomic update a request, a failure behind the commits, and a cleanup

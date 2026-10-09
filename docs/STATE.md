@@ -37,9 +37,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
   `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85).
-- **The library's layout** (row 332, cutover slices C1 to C3). A user imports five entry
+- **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
-  `Effect4.Laws.Author`. Each re-exports and declares nothing. The step language is
+  `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import
+  only these, and `#exposure_gate` refuses any other import. The step language is
   `src/Effect4/Step.lean`, and its shared laws are in `src/Effect4/Laws/Step/`.
 - **Composed modules.** Queue, Semaphore, Pool, Latch, Stream and Ref have their models, cells,
   steps and operations in `src/Effect4/Library/`, and their laws in `src/Effect4/Laws/Library/`. Each
@@ -94,18 +95,15 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The cutover's slice C4** (row 332, the
-   [cutover plan](research/2026-10-08-library-cutover-plan.md)). The acceptance programs import
-   entry modules, and the gate refuses.
-2. **Codex's module catalogue** on the new layout (the
+1. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-3. **Sketch and query over a whole program** (slice S1), with the splice law
+2. **Sketch and query over a whole program** (slice S1), with the splice law
    `edit-splices-table` (the [live authoring note](research/2026-10-08-live-authoring.md)).
-4. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
+3. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
-5. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
-6. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
+4. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
+5. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
    transaction attempt (G4).
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329), the session

@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P3WorkerQueue
+import Test.Audit.ScenarioGate
 
 /-!
 # The workers scenario: two stored replies, both orders, one cancellation

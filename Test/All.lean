@@ -273,6 +273,7 @@ import Test.Audit.ProofGraph
 import Test.Audit.ProofGraphPlan
 import Test.Audit.Explain
 import Test.Audit.Exposure
+import Test.Audit.ScenarioGate
 import Test.Audit.ProofStyle
 import Test.Machine.StoreKernelBank
 import Test.Machine.MaskDiscipline
@@ -331,3 +332,6 @@ passing gate. The batteries of the Flow route live on branch
 -/
 
 #effect4_axiom_gate
+-- The import gate of decisions row 332: the acceptance programs import entry modules, a composed
+-- module's own files and the batteries' support only (`tools/Tools/Exposure.lean`).
+#exposure_gate

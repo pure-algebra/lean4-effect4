@@ -1,5 +1,4 @@
-import Effect4.Api.Author
-import Effect4.Codegen.Forms
+import Effect4.Author
 
 /-!
 # Test.Dogfood.Stage — how far an rc.112 program gets

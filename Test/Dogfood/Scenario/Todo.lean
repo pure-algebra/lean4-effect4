@@ -1,8 +1,6 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
-import Effect4.Program.Authoring.Declare
-import Effect4.Program.Authoring.Atoms
-import Effect4.Program.Authoring.Sugar
+import Effect4.Author
 
 /-!
 # The to-do application, first slice: its programs build and run under a scripted host

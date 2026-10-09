@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
+import Test.Audit.ScenarioGate
 
 /-!
 # The routing scenario: exact handlers, and the call that must not happen

@@ -1,7 +1,7 @@
-import Effect4
-import Effect4.Library.Words
-import Effect4.Library.Stream.Ops
-import Effect4.Program.Stream
+import Effect4.Author
+import Effect4.Run
+import Effect4.Emit
+import Effect4.Library
 import Test.Dogfood.Stage
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.Todo
