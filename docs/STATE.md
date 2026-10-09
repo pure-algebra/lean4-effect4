@@ -65,7 +65,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   arguments, and so does an approved eliminator site. The reader reconstructs the typed print
   after its named erasure. The application's print is not yet the typed print.
 - **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
-  replacement law holds over the six typing judgments (row 294).
+  replacement law holds over the six typing judgments (row 294). A sketch reads a whole program,
+  definition block included: its check, focus, fill, table and refusals (cutover slice S1). An
+  edit that keeps its focus's type splices the address table (`edit-splices-table`).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
@@ -98,8 +100,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
 1. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-2. **Sketch and query over a whole program** (slice S1), with the splice law
-   `edit-splices-table` (the [live authoring note](research/2026-10-08-live-authoring.md)).
+2. **The edit session** (row 334) on the splice law, and the splice over a whole program's
+   parts (the [live authoring note](research/2026-10-08-live-authoring.md)).
 3. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
 4. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
