@@ -1,0 +1,7 @@
+{
+  "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-proofgraph-cycle-review/AxiomTypes.lean",
+  "exitCode": 0,
+  "elapsedSeconds": 1.72,
+  "probeSha256": "b2b8c6d7be0d126b9396a3ca88392b41428fc96b52d273a292c9e555375058ec",
+  "mutation": "Only axiomInfo branch reads v.type.getUsedConstants; namespace renamed."
+}

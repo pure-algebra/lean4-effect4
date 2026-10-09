@@ -114,6 +114,17 @@ The sweep ran on `bd65164b`, the merged tree with the fixed walk, on 2026-10-09.
 | `make check-semantics` | passes: 35 report refusals, 18 register controls, 4 traversal controls, 9 name controls |
 | `make status` | the documents resolve; no committed generated file differs |
 
+### 3.6 An axiom's type, after Codex's review
+
+Codex's review of the cycle repair found one more gap (its receipt
+`docs/research/2026-10-09-proofgraph-cycle-review/README.md`). The walk read no dependency of an
+axiom, while Lean's collector reads the axiom's type. So an axiom whose type names another axiom
+reached only itself. The gap predates the cycle repair, and it hid nothing under the policy: any
+axiom outside the policy is refused where it is reached. The walk now reads an axiom's type. A
+control in `Test/Audit/ProofGraph.lean` adds `A : Type` and `a : A` to a local copy of the
+environment. There it compares the walk with Lean's collector, and it fails on the old walk. The
+docstrings now state the memo's contract and call the step budget an engineering bound.
+
 ## 4. Cleanup, found by the tools
 
 | Id | Area | Evidence | Proposal | Size |
@@ -150,12 +161,20 @@ The owner asked for C1 to C3 while Codex reviews this note. They landed in one c
   ends, if it ends. Deleting the older family would have lost the fuel bound of
   `run_eq_meaning`. So `SegOwes` now counts the local steps of a segment. Its commands are at
   most twice the steps, plus two, and a yield comes only after the steps the op budget allowed.
-  `flushAll_Myield` and `replay_Mexit_of_localRun` are proved again from `drive_seg`. Their
-  statements and the fuel bound `2N + 4` are unchanged. The older family is deleted.
+  `flushAll_Myield` and `replay_Mexit_of_localRun` are proved again from `drive_seg`. The second
+  keeps its statement and the fuel bound `2N + 4`. The first narrows, as Codex's review found
+  (HCC-03): it reads a finished run with calls (`localRunC`), and it asks for no preloaded
+  answer. Its one consumer gives both. The older family is deleted.
 - **One drive module.** `src/Effect4/Laws/Program/Agreement/Segment.lean` holds the local run
   with calls, the host-call park, the segment law, the rounds of `flush` and the packet's
   theorem. `Agreement/Calls.lean` keeps the compile law with calls, and `Agreement/Hosted.lean`
   keeps the positions and a host's decisions.
+- **The predicate's name.** `LoopedRows` moved from `Effect4.Program.Agreement` to
+  `Effect4.Program.Denote`, beside its three siblings. No caller in the tree used the old name,
+  which existed for one day. Codex's review proposes an alias (HCC-02); none is kept, since an
+  alias in `Agreement` would make the name ambiguous where `Denote` is open.
+- **Placement.** The concept `translation-simulation` now lists `Agreement.Segment` among its
+  modules, so the semantics report reads its tags (HCC-01).
 - **C3, the machine half.** `localRunC_of_localRun` connects the two local runs: a finished
   local run is the local run with calls at every reply tape. The machine half reads only
   `localRunC` now.
@@ -172,7 +191,9 @@ The owner asked for C1 to C3 while Codex reviews this note. They landed in one c
 
 The checks: the law root and five batteries built (1270 jobs); the ratchet and `check-docs`
 passed. The exact walk read 1210 declarations of eight modules on the agreement route, all at
-`[propext, Quot.sound]`. The statements of `run_eq_meaning` and `loopAgreement` did not change.
+`[propext, Quot.sound]`. The statements of `run_eq_meaning` and `loopAgreement` did not change;
+Codex compared them, and every other moved statement, against the base (its receipt
+`docs/research/2026-10-09-host-cleanup-review/README.md`).
 The line count of the four agreement modules barely moved (3828 to 3782 lines with the new
 module). The gain is one drive induction where there were two.
 
@@ -230,114 +251,183 @@ What is missing is to make that operation the representation that every layer re
 
 ### 6.3 The design: the operation is the call
 
+Revised after Codex's review (`docs/research/2026-10-09-host-calls-review/README.md`, findings
+HC-R1 to HC-R8). Codex's capture `note-landed.md` there keeps the version it reviewed.
+
+The host's operation is the operation of `RowSig table`: a row position and a request, answered
+by an exit. `RowsSig table` adds the store operations to it. Both stand in
+`src/Effect4/Laws/Program/DenoteRows.lean`.
+
 ```mermaid
 flowchart TB
-  OP["the host signature: RowsSig table<br/>operation: row and request; answer: exit"]
-  OP -->|"meaningUnder h"| H["a handler: tape, table, state, route"]
-  OP -->|"row 328: a definition answers the row"| D["a definition block in the program"]
-  OP -->|"H8: the observation is the meaning under the reply tape"| S["the session: the await table and its replies"]
-  S -->|"generated from Lean"| B["a binding: Eio, Effect, a network peer"]
+  P["Eff: the stored program"] -->|"denoteRows"| T["the call tree over RowsSig"]
+  J["the journal"] -->|"checked replay"| S["HostSession: the machine and the ledger"]
+  S -->|"the residual relation (rows-next-call)"| T
+  S -->|"a projection"| V["the live call view"]
+  J -->|"a fold"| HI["the history: applications and retirements"]
+  E["a reply envelope"] -->|"reply admission at the call instance"| S
+  T -->|"meaningUnder h"| H["a handler: tape, table, state, route"]
+  S -->|"generated checked entry points"| B["a binding: Eio, Effect, a network peer"]
 ```
 
-Each arrow is a realization, and each needs a law to the signature's meaning. Three exist or
-are close:
+Each realization of the operation needs a law to the meaning:
 
 - **a handler**: `meaningUnder h` is the meaning, by definition;
-- **a definition block**: the program answers the row itself (row 328); its meaning is `denote`
-  of the body;
-- **the session**: H8 on one fiber; H9 below for a session driven by a handler.
+- **a definition block**: the program answers the row itself (row 328). Its law is open, since
+  `denote` does not yet read an invocation of a definition;
+- **the session**: H8 on one fiber, and H9 (section 6.4) for a session driven by a handler.
 
-**The await table** replaces `Await`, `BoundCall`, `ReplySlot` and `RetiredCall` as the one
-record type a caller reads. Each entry holds:
+The operation does not replace what the session alone holds (HC-R1, HC-R3). A call's identity,
+its reply admission at the call instance and its lifecycle stay in the session.
 
-| Field | Source today | Meaning |
+**The live call view.** A caller reads one view of the calls that wait now. It is a projection
+of the machine and the ledger, not a new stored record (HC-R3). Each entry has three groups:
+
+| Group | What it reads | Owner |
 | --- | --- | --- |
-| `key` | `Key`: fiber and guard token | the resume identity; Eio's resolver, Effect's `resume` |
-| `callId` | the session's counter | the order of calls; a network message's correlation id |
-| `row`, `request` | `Await` | the operation of the signature |
-| `origin`, `instance` | `callAt`, the checked call table | the address in the program, and the answer and error types there |
-| `state` | the ledger | waiting, received, applied, or retired |
+| the current request | the await key (fiber and guard token), the row and the request | the machine (`Await`) |
+| the checked source | the origin and the call instance, with a failed lookup shown as such | the call table and the origin reading |
+| the binding | an optional call id, and inside it an optional received completion | the session's ledger |
 
-Its laws are three. Each key resumes at most once (at-most-once reply application). A retired
-entry never applies. At a settled form the entries are the meaning's next operations (section 5).
+The labels "waiting" and "received" are read off these groups; no lifecycle value is stored.
+A call is bound, and gets its id, only when the session binds it, so a waiting call may have no
+id. The history is a separate reading: applications from the journal, retirements from
+`RetiredCall`, which keeps an accepted completion after a cancellation. One table that held all
+of a call's history would need its own reconstruction from the journal, as a separate law.
+
+Its laws, all over reached runs:
+
+- **The view projects the waits.** Its entries are the live external guards, with the binding
+  and call-table lookups. It claims no host progress, and no history of every call.
+- **At most one application per guard, along one session's lineage.** Applying again on the
+  advanced session refuses; applying on an earlier snapshot succeeds again. So the law is about
+  one advancing lineage, not durable uniqueness across restored snapshots, nor exactly-once
+  work by a physical host.
+- **Order.** Call ids follow the order of binding, not the machine's order of waits. A map
+  keyed by `key` agrees with the ledger by lookup, under a named order for printing.
+- **The next call** (`rows-next-call`, section 6.4) relates the waiting call to the call tree.
 
 **One protocol for every kind of host.** Every host call parks, and every answer is a reply
-decision. A synchronous host is a binding that answers before the next scheduling decision. A
-networked host answers later, in any order, by `callId`. The model needs no second route.
-Preloaded answers are a second route today, and C5 deletes them.
+decision applied at its call instance. A networked host answers later, in any order, by call id.
+Preloaded answers are a second route today. Deleting them first migrates the keyed fixtures
+(DI-23): `Truth.fixtureRun`, `runJson` and `runSyncJson` (`harness/truth/Truth.lean`) still pass
+them, and `RunEqRefTable` (`src/Effect4/Laws/Program/Table/Agreement.lean`) quantifies over
+preloaded lists. Narrowing it amends a planned statement and its registry entry;
+`run_eq_ref_table_noPreload` is the connector to the session's route (HC-R6).
 
-**A synchronous call as a lowering.** An in-process binding may answer at the registration,
-with no park. That is a lowering of park-then-apply, and it needs one law: the immediate answer
-and the park followed by its application give the same observation. It is a finite statement
-over `evaluatePrim`'s async arm and the answer decision, and H8's machine lemmas are its tools.
+**A synchronous call as a lowering, with its limits.** An in-process binding may answer at the
+registration. Codex's controls show what that changes (HC-R4). On one scalar call, both routes
+give the same exit, but the traces differ (three events against six). Codex then set the op
+budget to two. The immediate route injects a yield and has no exit at the compared point. The
+parked route resets the op count on re-entry and exits. So the law names its observation: the
+exit and the stores at a settled point, not the trace. It matches the budgets or the yield
+decisions.
+It keeps the logical call, receipt and application accounting even where nothing suspends.
+It starts on a scalar profile.
 
 ### 6.4 Answers that compose: utilities as handlers
 
-A host session's answers come from handlers, and handlers compose. `Effects.interpret` folds a
-program by a handler, so each combinator's law follows from the fold.
+Handlers compose, and `Effects.interpret` folds a program by a handler. Routing by row is
+`Handler.sum`, on the basis of `Effects.Algebra.Sum`. Retry, timeout, fallback and cache each
+need a statement of their behaviour; a fold equation does not give it.
 
-| Utility | Form | Law |
+| Utility | Form | Law owed |
 | --- | --- | --- |
 | a table of canned answers | a handler indexed by row and request | `meaningUnder` reads the table |
 | the reply tape | `tapeHandler` (exists) | H8 |
-| a stateful host | `reactorHandler` (in the battery) | the repository section of `Test/Api/SessionMeaning.lean`, finite today |
-| routing by row | the sum of two handlers over a split of the rows | the meaning splits by row |
-| retry, timeout, fallback, cache | a definition block that answers a row by a program over other rows | `denote` of the body; Cache's profile is ruled (rows 270 to 272) |
-| a recorder | a handler that also writes the tape it gave | its tape replays it |
+| a stateful host | a reactor handler | H9, below |
+| routing by row | the sum of two handlers over a covering split of the rows | the meaning splits by row, under explicit row embeddings and a common monad |
+| a recorder | a handler that also writes its transcript of row, request and exit | the transcript replays it (an exit list alone does not identify the requests) |
+| retry, timeout, fallback, cache | a definition block that answers a row by a program over other rows | its body's meaning, once `denote` reads invocations; timeout also needs clocks |
 
-**H9, the host as a handler.** For a session driven by a handler, the observation is the meaning
-under that handler. The proof is H8 with one more step. The handler's answers along the run form
-the reply tape, and the meaning under a handler equals the meaning under the tape it gives. This
-turns the battery's finite repository comparison into a theorem. Composed hosts then carry a law.
+**Two steps before H9** (HC-R1, HC-R2).
+
+1. **The next call** (`rows-next-call`). `RunEnd.waits` keeps no request, and H8 compares only
+   the final observation. A relation is owed between the session and the residual call tree.
+   It keeps the current stores, the next row and request, the continuation and the transcript
+   position. The
+   machine's guard and program address relate to that position. The relation projects to H8's
+   observation; it does not replace H8.
+2. **Reply admission at the call instance.** The battery's `reactorHandler` admits by the row's
+   template (`externalAdmits`), and the session admits at the checked call instance
+   (`HostSession.preflight`). On the `List<A>` to `Option<A>` program the session finishes and
+   the handler answers nothing. The adapter must use the session's reply admission.
+
+**H9, the host as a handler**, then holds on finished runs. Its premises are a fresh open, an
+explicit initial host state, accepted completions and a funded drive. Its conclusion: the
+session's exit, stores and final host state are the meaning under the handler. Progress is a
+separate statement. Codex's control shows why. With zero driver rounds, a scalar call satisfies
+all four premises of H8. The run has no exit, and the handler would still answer. A law for
+stopped runs needs a prefix observation that keeps the host state and the waiting operation.
 
 ### 6.5 Lowering
 
 The session is Lean, so its OCaml form is generated from LCNF, as the engine is
-(`ocaml/README.md`). The binding is the one part written by hand for each runtime. Its contract
-is one function type for each row: a request, and a resume to call once with an exit.
+(`ocaml/README.md`). `ocaml/gen/roots.json` names the raw machine today, not the checked session
+(`HostSession`, `Runner`, `Run`). The first step generates those roots, reads the dependency
+closure, and tests the artifact (HC-R7). Each machine stays owned by one domain
+(`ocaml/engine/e4_sched.mli`), also when a binding reports a reply from another domain.
+
+A binding's contract is a function for each row: a request, and a resume to call once with an
+exit. That is enough only for a named simple profile. Cancellation, compensation, resource
+ownership and recovery need a cleanup policy of their own; `KeyedRecorder` keeps receipt apart
+from application. Handle rows stay outside: a host's stable identity and the machine's
+allocation stay separate (`docs/core/host-boundary.md`).
 
 | Runtime | The resume | Order |
 | --- | --- | --- |
 | OCaml with Eio | `Eio.Promise.resolve` on the call's resolver, kept by `key` | any; the session applies by key |
 | Effect TypeScript | the `resume` of `Effect.callback` (exists in `KeyedRecorder`) | any |
-| a network peer | a reply message with `callId` and `key` | any; out of order is the normal case |
-| an in-process function | called at once | before the next decision |
-
-The await table is a list today. A keyed map keeps lookups fast for a large table. Lean's
-`Std.TreeMap` keyed by `key` gives a deterministic order for printing, with a law that its list
-of entries is the list form.
+| a network peer | a reply message with call id and `key` | any; out of order is the normal case |
+| an in-process function | called at once | before the next decision, under the lowering's limits |
 
 ### 6.6 The session drawn
 
-H8's forms are the frames of a picture: loaded, parked on a yield, parked on a host call, exited.
-A picture of a session draws one frame for each decision of the tape. It draws the await table
-beside it, and the call tree with the path that the replies take. The next-call law of section 5
-lets the picture mark the call tree's node that the waiting call is. This serves the owner's aim
-of 2026-10-09: write a program, then watch its session answer calls and schedule.
+A picture of a session draws one frame for each journal command. A frame for each machine
+decision misses the receipts: `Run.decisionOf` (`src/Effect4/Run/Tape.lean`) skips the bind and
+submit commands, which leave the machine unchanged. The machine-decision frames stay available as
+a projection. Beside each frame stand the live call view and the call tree. The tree shows the
+path the replies take, and `rows-next-call` marks the node that the waiting call is. An internal wait
+(a queue or a deferred) is not drawn as a call a host can answer (row 333). This serves the
+owner's aim of 2026-10-09: write a program, then watch its session answer calls and schedule.
 
 ### 6.7 Slices, in order
 
-1. **HC-1** (hours): the await table, one record type over the machine and the ledger, and a
-   field of the view. `Await` and the ledger's records stay as its sources.
-2. **HC-2** (a day): delete preloaded answers (C5); `run_eq_ref_table` loses its waiting premise.
-3. **HC-3** (a day): H9, the host as a handler; the battery's repository lines become readers.
-4. **HC-4** (hours): the handler combinators of section 6.4 with their laws.
-5. **HC-5** (a day): the next-call law at a settled form.
-6. **HC-6** (a day): the immediate-answer lowering law.
-7. **HC-7** (days): the OCaml session from LCNF, and an Eio binding over it.
+Revised after the review. C1, C2 and the machine half of C3 landed (section 4.1).
+
+1. **HC-1** (hours): the live call view as a projection, with its connector to `Await` and the
+   ledger by lookup. It lives in the run interface; its semantic connector lives in the law graph.
+2. **C3b** (a day): the compile half of C3. It extracts the shared local-run substrate and
+   projects its end: an exit to the old pair, a wait to `none`.
+3. **HC-5** (a day): `rows-next-call`, the residual relation that keeps the next request.
+4. **HC-3** (a day): H9 on finished drives, with reply admission at the call instance, the
+   transcript-recording helper and the generic-call controls.
+5. **HC-4** (hours): routing and recording from the handler algebra, with their laws.
+6. **HC-2** (a day): migrate the keyed fixtures (DI-23), delete preloaded answers, amend
+   `RunEqRefTable`'s planned statement.
+7. **C4** (a day): one control algebra for `denote` and `denoteRows`, keeping their different
+   cuts (`denote` refuses `catchIf`; `denoteRows` reads it).
+8. **HC-6** (a day): the immediate-answer lowering, with its observation and matched budgets.
+9. **HC-7** (days): the checked scalar session generated for OCaml, one native binding, then
+   wider profiles with their own laws.
+
+The build profile's import reader is repaired before C9 and C10 split modules (HC-R8). It
+dropped `public import` lines, and it stopped inside a comment before the imports.
 
 ## 7. What this note does not establish
 
 - No law of section 6 is proved here. H8 is the only theorem the design rests on today.
 - The cross-checks of section 3 are finite evaluations over the law graph at one commit.
-- The await table's fields are a proposal. Their names are not ruled.
+- The live call view's groups are a proposal. Their names are not ruled.
 - Nothing here covers several fibers, clocks or interruption. Section 5 lists them as gaps.
 
 ## 8. What the owner must decide
 
-1. **One form for a host call** (representation): the row signature's operation, with the
-   session, the definition block and the binding as its realizations. Recommended.
-2. **Delete preloaded answers** (representation, DI-23): one route for every answer. Recommended.
-3. **The await table's name and fields** (meaning): section 6.3. Recommended as written, with
-   `state` in four values.
-4. **The order of HC-1 to HC-7** (domain): recommended as listed, after cleanup C1 to C3.
+1. **One form for a host call** (representation): the operation of `RowSig table`, with the
+   handler, the definition block, the session and the binding as its realizations. The session
+   keeps a call's identity, its reply admission and its lifecycle. Recommended.
+2. **Delete preloaded answers** (representation, DI-23): one route for every answer. The keyed
+   fixtures migrate first, and `RunEqRefTable`'s planned statement is amended. Recommended.
+3. **The live call view** (meaning): a projection with three groups, no stored lifecycle value,
+   and the history as a separate reading (section 6.3). Recommended in place of the await table.
+4. **The order of the slices** (domain): section 6.7. Recommended.

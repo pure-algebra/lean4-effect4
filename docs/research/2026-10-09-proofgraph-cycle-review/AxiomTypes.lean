@@ -4,9 +4,9 @@ import Lean
 The axioms a declaration reaches, memoized across declarations. `Lean.collectAxioms` walks the
 dependency graph afresh on every call; the whole-library gate (`Test/Audit/AxiomGate.lean`) and
 the semantics report (`tools/Tools/Semantics.lean`) ask the question for thousands of
-declarations that share most of their dependencies, so the memo shares the walk between them:
-a constant's answer is computed once. The traversal is `Lean.CollectAxioms.collect`'s: a
-declaration's type and value, an inductive's type and its constructors, an axiom and its type. A constant that `stop`
+declarations that share most of their dependencies, so the memo is what makes them linear in the
+graph instead of quadratic. The traversal is `Lean.CollectAxioms.collect`'s: a declaration's type
+and value, an inductive's type and its constructors, an axiom itself. A constant that `stop`
 selects is a leaf: the walk reports it among the axioms and does not enter it. The planned goals
 are such leaves (`ProofGraph.Goal`, decisions row 203), so a theorem that rests on a goal reaches
 the goal's name and not its `sorry`. One memo serves one `stop`. The walk runs on an explicit
@@ -23,14 +23,8 @@ soon as its own frame closed. A member closed inside an open component read an e
 placeholder for the open part, and its short answer stayed in the memo: a constructor whose
 sibling's type reached `Classical.choice` was stored with no axiom. The control is in
 `Test/Audit/ProofGraph.lean`.
-
-**The memo's contract.** An entry is valid for one environment and one `stop`, and only entries
-this walk stored may be in it. A walk that runs out of budget stores no answer for the components
-it left open. The walk reads declaration bodies: an environment whose imports withhold a theorem's
-body (a restricted import of a `module`) is outside its contract, where a theorem would read as
-its own type only.
 -/
-namespace ProofGraph
+namespace AxiomTypeCandidate
 open Lean
 
 abbrev AxiomMemo := Std.HashMap Name (Array Name)
@@ -61,8 +55,7 @@ private def selfAxiom (env : Environment) (stop : Name → Bool) (c : Name) : Ar
   | some (.axiomInfo _) => #[c]
   | _ => #[]
 
-/-- Steps the traversal may take in one call: an engineering bound, far above the law graph's
-edges (measured 2026-10-09), not a proved one. Running out answers `none`. -/
+/-- Steps the traversal may take in one call: more than the edges of any environment. -/
 def axiomBudget : Nat := 1000000000
 
 /-- A frame of the explicit stack: the constant, its dependencies, the next one to visit, the
@@ -77,7 +70,7 @@ private structure Frame where
   low : Nat
 
 /-- The axioms `root` reaches, and the `stop` leaves, with the memo threaded through; `none` only
-if the step budget ran out. Each constant's answer enters
+if the step budget ran out, which no finite environment reaches. Each constant's answer enters
 the memo when its component closes, and not before. -/
 def reachedAxioms (env : Environment) (root : Name) (stop : Name → Bool := fun _ => false) :
     StateM AxiomMemo (Option (Array Name)) := do
@@ -142,4 +135,28 @@ def reachedAxiomsMany (env : Environment) (roots : Array Name) (memo : AxiomMemo
     let (reached, memo) := (reachedAxioms env root stop).run memo
     (out.push reached, memo)
 
-end ProofGraph
+end AxiomTypeCandidate
+
+open Lean Elab Command
+set_option maxHeartbeats 0
+run_cmd do
+  let base ← getEnv
+  let env ← match base.addDeclCore 0 1000 (.axiomDecl {
+      name := `LocalAudit.A, levelParams := [], type := mkSort (.succ .zero), isUnsafe := false }) none with
+    | .ok env => pure env
+    | .error _ => throwError "synthetic type creation failed"
+  let env ← match env.addDeclCore 0 1000 (.axiomDecl {
+      name := `LocalAudit.a, levelParams := [], type := mkConst `LocalAudit.A, isUnsafe := false }) none with
+    | .ok env => pure env
+    | .error _ => throwError "synthetic value creation failed"
+  let some got := AxiomTypeCandidate.exactAxioms env `LocalAudit.a | throwError "candidate budget"
+  let expected ← withEnv env <| Lean.collectAxioms `LocalAudit.a
+  unless got.qsort Name.lt == expected do throwError "type dependency mismatch: {got} versus {expected}"
+  let (stopped, _) := (AxiomTypeCandidate.reachedAxioms env `LocalAudit.a (· == `LocalAudit.a)).run {}
+  unless stopped == some #[`LocalAudit.a] do throwError "stopping leaf must hide its body and type dependencies"
+  for name in [``propext, ``Quot.sound, ``Classical.choice] do
+    let expected ← Lean.collectAxioms name
+    let some actual := AxiomTypeCandidate.exactAxioms base name | throwError "candidate budget"
+    unless actual.qsort Name.lt == expected do throwError "permitted-leaf mismatch: {name}: {actual} versus {expected}"
+  unless ((← getEnv).find? `LocalAudit.A).isNone do throwError "synthetic environment escaped"
+  logInfo "PASS: one-case extractor repair includes axiom-type dependencies, preserves stop leaves, and matches all three policy leaves."

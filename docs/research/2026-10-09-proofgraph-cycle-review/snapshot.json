@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-09T20:59:55.360501+00:00",
+  "base": "62a62a602818400b7222948a7b93891901c55259",
+  "candidateSource": "/Users/pooks/Dev/lean4-effect4/tools/ProofGraph/Axioms.lean",
+  "candidateSha256": "2b4040047c63c22fa2eed38b4e1fb50c2865e4567a38e6f7028e353cbfc4e43f",
+  "landedSha256": "c7350aff47aa5457ba354cfc7b783fdad63a9ef4bb18e9c7bf911947edab9e0d",
+  "probeSha256": "2702104cf9c98ae047ff58ab5afa4d655235a0be7ead6254868582f3f97786a6",
+  "changes": [
+    "namespace renamed for isolated comparison",
+    "budget changed to 4 only in explicit OldLimited/NewLimited controls"
+  ],
+  "reviewedLanding": "bd65164b9fbe0803bde474bb7e12b1849a9673d8",
+  "landingSourceMatchesSnapshot": true
+}

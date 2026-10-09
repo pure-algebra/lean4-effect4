@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 
 from lib.derived_plan import imports_of, stages
+from lib.lean_imports import imports_of as lean_imports_of
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -84,8 +85,7 @@ def fixture_lanes():
     base = ROOT / FIXTURE_LANES
     lanes = []
     for writer in sorted(base.glob('*/write.lean')):
-        modules = [line.split()[1] for line in writer.read_text().splitlines()
-                   if line.startswith('import ')]
+        modules = lean_imports_of(writer)
         if not modules:
             raise ValueError(f'{writer.relative_to(ROOT)}: the writer imports no module')
         lanes.append((writer.parent.relative_to(ROOT).as_posix(), modules))

@@ -54,6 +54,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+from lib.lean_imports import imports_of as lean_imports_of
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -218,9 +220,8 @@ def run(argv):
 
 
 def imports_of(path):
-    """The modules a fixture imports: the words after `import` on its import lines, in order."""
-    return [m for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines()
-            if line.startswith('import ') for m in line.split()[1:]]
+    """The modules a fixture imports, in order (`scripts/lib/lean_imports.py`)."""
+    return lean_imports_of(path)
 
 
 def inventory(fixtures):

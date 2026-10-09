@@ -65,4 +65,27 @@ run_cmd liftTermElabM do
   let (outs, _) := reachedAxiomsMany env #[``memoEntry, ``MemoCycle.quiet] {} (· == ``memoLeaf)
   unless outs[1]! == some #[``memoLeaf] do throwError "a component member was stored short"
 
+/-! ## An axiom's type
+
+Lean's collector reads an axiom's type, so an axiom whose type names another axiom reaches both.
+The control adds two axioms to a local copy of the environment, `A : Type` and `a : A`, and
+compares the walk with `Lean.collectAxioms` there; nothing enters this file's environment. Found
+by Codex's review of the cycle repair (2026-10-09): the walk read no dependency of an axiom. -/
+
+-- control: the walk reaches the axiom in an axiom's type, as Lean's collector does
+#guard_msgs in
+run_cmd do
+  let base ← getEnv
+  let addAxiom (env : Environment) (n : Name) (ty : Expr) : CommandElabM Environment :=
+    let decl : AxiomVal := { name := n, levelParams := [], type := ty, isUnsafe := false }
+    match env.addDeclCore 0 1000 (.axiomDecl decl) none with
+    | .ok env => pure env
+    | .error _ => throwError "the local axiom {n} was refused"
+  let env ← addAxiom base `AxiomTypeControl.A (mkSort (.succ .zero))
+  let env ← addAxiom env `AxiomTypeControl.a (mkConst `AxiomTypeControl.A)
+  let some got := exactAxioms env `AxiomTypeControl.a | throwError "the walk ran out of budget"
+  let expected ← withEnv env <| Lean.collectAxioms `AxiomTypeControl.a
+  unless got.qsort Name.lt == expected do throwError "an axiom's type: {got} versus {expected}"
+  unless ((← getEnv).find? `AxiomTypeControl.A).isNone do throwError "a local axiom escaped"
+
 end Test.ProofGraph

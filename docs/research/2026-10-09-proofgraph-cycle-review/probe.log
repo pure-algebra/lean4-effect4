@@ -1,0 +1,5 @@
+PASS: 17 selected-leaf roots and all retained candidate memo entries; landed cycle misses leafOne.
+PASS: 3 axiom-bearing roots and their memo; landed quiet constructor misses Classical.choice.
+PASS: reduced-budget interruption refuses an answer, preserves valid memo, and safely resumes. Old memo is incomplete.
+PASS: pre-existing axiom-type omission reproduced. Candidate [CycleSynthetic.a]; pinned Lean [CycleSynthetic.A,
+ CycleSynthetic.a]. Synthetic declarations did not escape.

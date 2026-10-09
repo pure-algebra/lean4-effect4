@@ -8,6 +8,8 @@ import re
 import sys
 from pathlib import Path
 
+from lean_imports import imports_of as lean_imports_of
+
 ROOT = Path(__file__).resolve().parents[2]
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 BUILT = re.compile(r"Built ([A-Za-z0-9_.'«»]+) \(([0-9.]+)(ms|s)\)")
@@ -24,14 +26,8 @@ def module_sources() -> dict[str, Path]:
 
 
 def imports_of(path: Path, known: dict[str, Path]) -> list[str]:
-    out: list[str] = []
-    for line in path.read_text(errors="replace").split("\n"):
-        stripped = line.strip()
-        if stripped.startswith("import "):
-            out += [name for name in stripped[len("import "):].split() if name in known]
-        elif stripped and not stripped.startswith(("--", "/-", "module", "prelude", "public", "meta")):
-            break
-    return out
+    """The modules of the tree that `path` imports (`lean_imports`)."""
+    return [name for name in lean_imports_of(path) if name in known]
 
 
 def parse(log: Path) -> dict[str, float]:

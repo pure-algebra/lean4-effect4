@@ -1,0 +1,14 @@
+{
+  "checkedAt": "2026-10-09T21:03:50.852495+00:00",
+  "reviewedCommit": "bd65164b9fbe0803bde474bb7e12b1849a9673d8",
+  "sourceSha256": "2b4040047c63c22fa2eed38b4e1fb50c2865e4567a38e6f7028e353cbfc4e43f",
+  "reviewWorktreeHead": "62a62a602818400b7222948a7b93891901c55259",
+  "receipt": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-proofgraph-cycle-review/README.md",
+  "findings": {
+    "cycle_memo": "resolved in finite Lean controls",
+    "budget_memo": "resolved in reduced-budget Lean controls",
+    "axiom_type_edges": "open; pre-existing; correction verified only in research",
+    "api_contract": "document full checked bodies, stable environment/stop/memo and finite engineering limit"
+  },
+  "next": "Compare changes after bd65164b; avoid repeating unchanged findings."
+}

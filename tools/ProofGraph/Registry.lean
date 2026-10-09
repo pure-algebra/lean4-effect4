@@ -257,6 +257,7 @@ def registry : Registry where
       title := "Translation & Simulation: Semantic preservation, replay relations, and capstone M7"
       defaultModules := [
         `Effect4.Laws.Program.Agreement.Machine,
+        `Effect4.Laws.Program.Agreement.Segment,
         `Effect4.Laws.Program.Agreement.Loop,
         `Effect4.Laws.Program.LoopAgreement,
         `Effect4.Laws.Program.RuntimeR,

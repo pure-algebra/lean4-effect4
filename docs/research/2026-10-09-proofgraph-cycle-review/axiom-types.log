@@ -1,0 +1,1 @@
+PASS: one-case extractor repair includes axiom-type dependencies, preserves stop leaves, and matches all three policy leaves.

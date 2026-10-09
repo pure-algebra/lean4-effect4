@@ -1,0 +1,5 @@
+{
+  "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-proofgraph-cycle-review/Probe.lean",
+  "exitCode": 1,
+  "elapsedSeconds": 3.55
+}
