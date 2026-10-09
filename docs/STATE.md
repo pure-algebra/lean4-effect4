@@ -101,6 +101,14 @@ A program has folds, a journaled run with replay, and a printed image that reads
   that commutes with each layer commutes with the fold (`cata_fusion`). Several readings of a
   program are one fold (`cata_prod`). A program's lines anywhere are its lines at the root, moved
   (`lines_at`).
+- **The program's own graph** (the [design note](research/2026-10-09-program-graph-design.md)):
+  a fold of the program, drawn in UML's notation, with every wait (`v -F`). Its layout's laws are
+  proved for every flow: each part is well formed (`lay_good`), every edge descends
+  (`place_descends`), boxes stand apart (`place_apart`). What a flow orders first stands above
+  (`place_keeps_order`), through the algebraic graph and Mokhov's axioms. Lines are organic
+  strokes by growth rules, their width bounded by proof (the
+  [organic strokes note](research/2026-10-09-organic-strokes.md)). MCP and code mode are designed
+  (the [MCP note](research/2026-10-09-mcp-code-mode-design.md)).
 - **The generated code** (`tools/Drivers/Emit.lean`): one module per program, with exact
   imports, a header and Effect's width; all eight corpus modules pass tsgo 7. TypeScript's syntax
   has a generated fold (`TsFold`). The pinned printer is one of its algebras (`render_eq_expr`)
@@ -147,7 +155,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - the algebra audit's slices B, C and G: the build as layers, the splice law, the run's forks;
    - flags by one table (row 337, point 8); a look's density; transpose in the order;
    - a module's cell drawn by its type; the span map as a source map (J8); interaction; termbox2.
-   MCP and code mode are a seat's design in progress (the owner's request of 2026-10-09).
+   MCP and code mode: the note's slices M0 to M12, after the owner's six rulings.
 2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
    measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
 3. **The graph operations of an agent** (row 336, points 1 and 7). Pieces are stored by content
@@ -177,8 +185,9 @@ API's slices (row 326), and H8.
   its own repository before a download.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
-- **The program's graph shown** (row 337, point 9): its presentation and an agent's place in it,
-  from the design note in progress.
+- **The program's graph** (the design note, section 7): its marks, built as recommended, to
+  confirm. What a line's width means: the organic strokes note, section 4.
+- **MCP and code mode** (the MCP note, section 10): six rulings.
 
 ## Process
 
