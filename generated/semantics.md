@@ -2478,6 +2478,8 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | latch-registration-agrees | simulation | proved | Effect4.Latch.Model.latch_registration_agrees | yes |  |
 | partitioned-semaphore-bookkeeping | simulation | proved | Effect4.PartitionedSemaphore.Model.bookkeeping_agrees | yes |  |
 | pubsub-single-steps-agree | simulation | proved | Effect4.PubSub.Model.single_steps_agree | yes |  |
+| pull-protocol-selection | compatibility | proved | Effect4.Pull.matchEffect_protocol | yes |  |
+| pull-completion-recovery | compatibility | proved | Effect4.Pull.catchDone_meaning | yes |  |
 | stream-array-step-agreement | simulation | proved | Effect4.Stream.arrayStep_agrees | yes |  |
 | ref-steps-agree | simulation | proved | Effect4.Ref.ref_steps_agree | yes |  |
 
@@ -2972,6 +2974,111 @@ And
                   (Effect4.PubSub.Model.slide s)))))))
 ```
 
+**pull-protocol-selection**
+
+```lean
+∀ {self : Effect4.Program.Authoring.Src Effect4.Program.NativeOp} {options : Effect4.Pull.Handlers}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {vals : List Effect4.Machine.Val}
+  {body success done failure : Effect4.Program.NativeEff},
+  Eq vals.length (List.length env.names) →
+    ∀
+      (outcome :
+        Effect4.Exit (Except Effect4.Machine.Val (List Effect4.Machine.Val)) Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+      (stores after : Effect4.Machine.Stores),
+      Eq (self env (instHAppendOfAppend.hAppend path (List.cons 0 List.nil))) (Except.ok body) →
+        Eq (Effect4.Program.Denote.meaning body vals stores)
+            (Effect4.Pull.matchEffect_protocol.match_1
+              (fun outcome => Prod Effect4.Machine.ExitV Effect4.Machine.Stores) outcome
+              (fun leftover =>
+                { fst := Effect4.Exit.success (Effect4.Program.Stream.endVal leftover),
+                  snd := after })
+              (fun items =>
+                { fst := Effect4.Exit.success (Effect4.Program.Stream.chunkVal items),
+                  snd := after })
+              fun cause => { fst := Effect4.Exit.failure cause, snd := after }) →
+          Eq
+              (options.onDone
+                (Effect4.Program.Authoring.minted
+                  ((env.push (List.cons (env.mint "value") List.nil)).mint "payload"))
+                ((env.push (List.cons (env.mint "value") List.nil)).push
+                  (List.cons ((env.push (List.cons (env.mint "value") List.nil)).mint "payload")
+                    List.nil))
+                (instHAppendOfAppend.hAppend
+                  (instHAppendOfAppend.hAppend path (List.cons 1 List.nil)) (List.cons 0 List.nil)))
+              (Except.ok done) →
+            Eq
+                (options.onSuccess
+                  (Effect4.Program.Authoring.app "snd"
+                    (List.cons
+                      (Effect4.Program.Authoring.minted
+                        ((env.push (List.cons (env.mint "value") List.nil)).mint "rest"))
+                      List.nil))
+                  ((env.push (List.cons (env.mint "value") List.nil)).push
+                    (List.cons ((env.push (List.cons (env.mint "value") List.nil)).mint "rest")
+                      List.nil))
+                  (instHAppendOfAppend.hAppend
+                    (instHAppendOfAppend.hAppend path (List.cons 1 List.nil))
+                    (List.cons 1 List.nil)))
+                (Except.ok success) →
+              Eq
+                  (options.onFailure (Effect4.Program.Authoring.minted (env.mint "cause"))
+                    (env.push (List.cons (env.mint "cause") List.nil))
+                    (instHAppendOfAppend.hAppend path (List.cons 2 List.nil)))
+                  (Except.ok failure) →
+                Exists fun tree =>
+                  And (Eq (Effect4.Pull.matchEffect self options env path) (Except.ok tree))
+                    (Eq (Effect4.Program.Denote.meaning tree vals stores)
+                      (Effect4.Pull.matchEffect_protocol.match_1
+                        (fun outcome => Prod Effect4.Machine.ExitV Effect4.Machine.Stores) outcome
+                        (fun leftover =>
+                          Effect4.Program.Denote.meaning done
+                            (instHAppendOfAppend.hAppend
+                              (instHAppendOfAppend.hAppend vals
+                                (List.cons (Effect4.Program.Stream.endVal leftover) List.nil))
+                              (List.cons leftover List.nil))
+                            after)
+                        (fun items =>
+                          Effect4.Program.Denote.meaning success
+                            (instHAppendOfAppend.hAppend
+                              (instHAppendOfAppend.hAppend vals
+                                (List.cons (Effect4.Program.Stream.chunkVal items) List.nil))
+                              (List.cons (Effect4.Program.Stream.chunkVal items) List.nil))
+                            after)
+                        fun cause =>
+                        Effect4.Program.Denote.meaning failure
+                          (instHAppendOfAppend.hAppend vals
+                            (List.cons (Effect4.Machine.Val.exitErr cause) List.nil))
+                          after))
+```
+
+**pull-completion-recovery**
+
+```lean
+∀ {self : Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+  {onDone :
+    Effect4.Program.Authoring.TermSrc → Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+  {env : Effect4.Program.Authoring.Env} {path : List Nat} {vals : List Effect4.Machine.Val}
+  {body rest : Effect4.Program.NativeEff} (stores : Effect4.Machine.Stores),
+  Eq (self env (instHAppendOfAppend.hAppend path (List.cons 0 List.nil))) (Except.ok body) →
+    Eq
+        (Effect4.Pull.matchAnswer (Effect4.Program.Authoring.minted (env.mint "answer"))
+          (fun chunk => Effect4.Program.Authoring.succeed chunk) onDone
+          (env.push (List.cons (env.mint "answer") List.nil))
+          (instHAppendOfAppend.hAppend path (List.cons 1 List.nil)))
+        (Except.ok rest) →
+      Exists fun tree =>
+        And (Eq (Effect4.Pull.catchDone self onDone env path) (Except.ok tree))
+          (Eq (Effect4.Program.Denote.meaning tree vals stores)
+            (Effect4.Pull.catchDone_meaning.match_1
+              (fun x => Prod Effect4.Machine.ExitV Effect4.Machine.Stores)
+              (Effect4.Program.Denote.meaning body vals stores)
+              (fun value after =>
+                Effect4.Program.Denote.meaning rest
+                  (instHAppendOfAppend.hAppend vals (List.cons value List.nil)) after)
+              fun cause after => { fst := Effect4.Exit.failure cause, snd := after }))
+```
+
 **stream-array-step-agreement**
 
 ```lean
@@ -3165,7 +3272,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `readModule_printModule_defs` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `awaitStep_agrees` (proved), `Latch.Model.closeStep_agrees` (proved), `flushStep_agrees` (proved), `initialStep_agrees` (proved), `isOpenStep_agrees` (proved), `latch_registration_agrees` (proved), `latch_steps_agree` (proved), `wakeStep_agrees` (proved), `Latch.Model.withdrawStep_agrees` (proved), `frame` (proved), `sound` (proved), `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `available_eval` (proved), `available_reads` (proved), `bookkeeping_agrees` (proved), `PartitionedSemaphore.Model.initial_eval` (proved), `PartitionedSemaphore.Model.initial_reads` (proved), `reserve_eval` (proved), `reserve_reads` (proved), `tryTake_eval` (proved), `tryTake_reads` (proved), `Pool.Model.closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `PubSub.Model.initial_eval` (proved), `PubSub.Model.initial_reads` (proved), `poll_eval` (proved), `poll_reads` (proved), `single_steps_agree` (proved), `slide_eval` (proved), `slide_reads` (proved), `subscribe_eval` (proved), `subscribe_reads` (proved), `tryPublish_eval` (proved), `tryPublish_reads` (proved), `unsubscribe_eval` (proved), `unsubscribe_reads` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `decode_modifySome` (proved), `decode_option` (proved), `encode_getD` (proved), `getAndSet_agrees` (proved), `getAndUpdateSome_agrees` (proved), `getAndUpdate_agrees` (proved), `get_agrees` (proved), `kernel_agrees` (proved), `make_agrees` (proved), `modifySome_agrees` (proved), `modify_agrees` (proved), `modify_callback_agrees` (proved), `ref_steps_agree` (proved), `setAndGet_agrees` (proved), `set_agrees` (proved), `updateAndGet_agrees` (proved), `updateSomeAndGet_agrees` (proved), `updateSome_agrees` (proved), `update_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `arrayStep_agrees` (proved), `held_within_fed` (goal), `queueWorkers` (modulo), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `held_within_fed`, `fed_accounted`, `queue_settled`, `releases_once`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `awaitStep_agrees` (proved), `Latch.Model.closeStep_agrees` (proved), `flushStep_agrees` (proved), `initialStep_agrees` (proved), `isOpenStep_agrees` (proved), `latch_registration_agrees` (proved), `latch_steps_agree` (proved), `wakeStep_agrees` (proved), `Latch.Model.withdrawStep_agrees` (proved), `frame` (proved), `sound` (proved), `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `available_eval` (proved), `available_reads` (proved), `bookkeeping_agrees` (proved), `PartitionedSemaphore.Model.initial_eval` (proved), `PartitionedSemaphore.Model.initial_reads` (proved), `reserve_eval` (proved), `reserve_reads` (proved), `tryTake_eval` (proved), `tryTake_reads` (proved), `Pool.Model.closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `PubSub.Model.initial_eval` (proved), `PubSub.Model.initial_reads` (proved), `poll_eval` (proved), `poll_reads` (proved), `single_steps_agree` (proved), `slide_eval` (proved), `slide_reads` (proved), `subscribe_eval` (proved), `subscribe_reads` (proved), `tryPublish_eval` (proved), `tryPublish_reads` (proved), `unsubscribe_eval` (proved), `unsubscribe_reads` (proved), `catchDone_meaning` (proved), `matchAnswer_meaning` (proved), `matchEffect_meaning` (proved), `matchEffect_protocol` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `decode_modifySome` (proved), `decode_option` (proved), `encode_getD` (proved), `getAndSet_agrees` (proved), `getAndUpdateSome_agrees` (proved), `getAndUpdate_agrees` (proved), `get_agrees` (proved), `kernel_agrees` (proved), `make_agrees` (proved), `modifySome_agrees` (proved), `modify_agrees` (proved), `modify_callback_agrees` (proved), `ref_steps_agree` (proved), `setAndGet_agrees` (proved), `set_agrees` (proved), `updateAndGet_agrees` (proved), `updateSomeAndGet_agrees` (proved), `updateSome_agrees` (proved), `update_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `arrayStep_agrees` (proved), `held_within_fed` (goal), `queueWorkers` (modulo), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `held_within_fed`, `fed_accounted`, `queue_settled`, `releases_once`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
@@ -6494,6 +6601,10 @@ flowchart LR
   nac703b6a["tryPublish_reads<br/>proved"]
   nf37c9e25["unsubscribe_eval<br/>proved"]
   n5a118d3b["unsubscribe_reads<br/>proved"]
+  n1f5b7d26["catchDone_meaning<br/>proved"]
+  n79a730f8["matchAnswer_meaning<br/>proved"]
+  n1460e678["matchEffect_meaning<br/>proved"]
+  nad4104b4["matchEffect_protocol<br/>proved"]
   naf6b0a61["acceptLoop_length_le<br/>proved"]
   n91ec4f0a["first_profile_closed<br/>proved"]
   n13ab6332["offerStep_agrees<br/>proved"]
@@ -6774,6 +6885,8 @@ flowchart LR
   nac703b6a --> n222f870
   n5a118d3b --> nf37c9e25
   n5a118d3b --> n222f870
+  nad4104b4 --> n1460e678
+  nad4104b4 --> n79a730f8
   n13ab6332 --> n222f870
   n5d1df839 --> n222f870
   nf5604f02 --> naf6b0a61
@@ -7125,6 +7238,10 @@ flowchart LR
 | `tryPublish_reads` | proved | — | `tryPublish_eval`, `sound` |
 | `unsubscribe_eval` | proved | — | — |
 | `unsubscribe_reads` | proved | — | `unsubscribe_eval`, `sound` |
+| `catchDone_meaning` | proved | — | — |
+| `matchAnswer_meaning` | proved | — | — |
+| `matchEffect_meaning` | proved | — | — |
+| `matchEffect_protocol` | proved | — | `matchEffect_meaning`, `matchAnswer_meaning` |
 | `acceptLoop_length_le` | proved | — | — |
 | `first_profile_closed` | proved | — | — |
 | `offerStep_agrees` | proved | — | `sound` |

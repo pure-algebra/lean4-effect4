@@ -1,0 +1,2 @@
+Produced 10 checked numeric Pull callers, including wrong-catch controls
+PASS: 8 numeric callers and 2 wrong-catch controls; Effect 4.0.1; tsgo 7.0.0-dev.20260629.1

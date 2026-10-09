@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Library.Stream.ArraySteps
+public import Effect4.Library.Pull.Ops
 public import Effect4.Library.Stream.Ops
 public import Effect4.Program.Authoring.Ascribe
 
@@ -20,8 +21,8 @@ set_option autoImplicit false
 namespace Effect4.Stream
 open Effect4.Program Effect4.Program.Authoring Effect4.Modules
 
-/-- The implemented source uses Effect orchestration and Ref state (decisions row 335). -/
-def arrayBuildingBlocks : List String := ["Effect", "Ref"]
+/-- The implemented source uses Effect orchestration, Ref state and Pull values (decisions row 335). -/
+def arrayBuildingBlocks : List String := ["Effect", "Ref", "Pull"]
 
 /-- Allocate the pending array at its declared element type. -/
 def arrayOpen (A : Ty) (items : TermSrc) : Src NativeOp :=
@@ -35,7 +36,7 @@ def arrayBatch (A : Ty) (receiver : TermSrc) : Src NativeOp :=
 def arrayPull (A : Ty) (receiver : TermSrc) : Src NativeOp :=
   bindWith (arrayBatch A receiver) fun batch =>
     succeed (app "ite" [isEmpty batch,
-      app "pair" [str "End", unit], app "pair" [str "Chunk", batch]])
+      Pull.endValue unit, Pull.chunkValue batch])
 
 /-- Close an array source; its Ref needs no external release. -/
 def arrayClose (_receiver : TermSrc) : Src NativeOp := succeed unit

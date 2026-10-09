@@ -331,6 +331,7 @@ import Test.Program.PartitionedSemaphorePrograms
 import Test.Program.PartitionedSemaphoreFaces
 import Test.Program.PartitionedSemaphoreBookkeeping
 import Test.Program.StreamArray
+import Test.Program.Pull
 import Test.Program.SynchronizedRef
 import Test.Program.PubSubSingle
 

@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ]
+  },
+  "files": [
+    "batchPayload.ts",
+    "endPayload.ts",
+    "inputFailure.ts",
+    "catchDoneEnd.ts",
+    "retainedRefState.ts",
+    "finalizerFailure.ts",
+    "successHandlerEscape.ts",
+    "endHandlerEscape.ts",
+    "wrongSuccessCatch.ts",
+    "wrongEndCatch.ts",
+    "observe.ts"
+  ],
+  "include": []
+}

@@ -1,4 +1,5 @@
 import Effect4.Library.Stream.Ops
+import Effect4.Laws.Library.Pull.Scope
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Loops
 import Effect4.Laws.Program.Authoring.Lifts
@@ -46,13 +47,12 @@ theorem drain_scoped {src : Source} (hs : src.Scoped) (accTy : Ty) {zero h : Ter
         (app_scoped "snd" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil)) TermSrc.Scoped_nil))
       TermSrc.Scoped_nil))
     (fun _ hc => bindWith_scoped (hs.pull _ hh) fun _ hanswer =>
-      selectTagWith_scoped "End" hanswer
-        (fun _ hl => succeed_scoped
-          (endStep_scoped (app_scoped "fst" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil)) hl))
+      Pull.matchAnswer_scoped hanswer
         (fun _ hchunk => bindWith_scoped
-          (hg _ _ (app_scoped "fst" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil))
-            (app_scoped "snd" (TermSrc.Scoped_cons hchunk TermSrc.Scoped_nil)))
-          fun _ hnext => succeed_scoped (chunkStep_scoped hnext)))
+          (hg _ _ (app_scoped "fst" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil)) hchunk)
+          fun _ hnext => succeed_scoped (chunkStep_scoped hnext))
+        (fun _ hl => succeed_scoped
+          (endStep_scoped (app_scoped "fst" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil)) hl)))
     (fun _ _ _ hnext => hnext)
     (fun _ hc => hc)
 
