@@ -32,7 +32,11 @@ tools/view/v -L             # every look side by side: tools/view/out/looks/inde
 ## Looks
 
 Every choice of style is data (`tools/Tools/View/Look.lean`). A look holds the colour of each role,
-the faces, the weight of each stroke, the form of an edge, and the timing of motion. A look is a file of
+the faces, the strokes and corners, the form of an edge, and the timing of motion. An organic
+stroke follows growth rules (`docs/research/2026-10-09-organic-strokes.md`). A line's width is its
+share of the work, by da Vinci's rule. It widens into a collar where it meets a box or a bar. Its
+edges vary by noise that its key seeds, inside a bounded band. The look `classic` draws plain
+curves and square corners. A look is a file of
 the W3C design-token format, 2025.10, that names only what it changes from the dark look, the
 base (`tools/view/looks/`). A token the look does not have, or a value out of its range, is
 refused with its path and the reason.
@@ -89,7 +93,10 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Grid.lean` | the grid and every constant a picture is placed by |
 | `tools/Tools/View/Page.lean` | a page of lines, its marks, and its terminal form |
 | `tools/Tools/View/Graph.lean` | a graph's layout: back edges by the order, ranks, order, places, routes; regions, bars, diamonds, arrowheads |
-| `tools/Tools/View/Flow.lean` | a program's own graph: its flow as a fold of the program, its waits resolved by the binder table, and its layout (across by a fold, down by the longest path) |
+| `tools/Tools/View/Organic.lean` | organic strokes: da Vinci's split, bounded noise, collars, round corners; the band laws |
+| `tools/Tools/View/AlgGraph.lean` | the algebraic graph and Mokhov's axioms, proved of its edge-set model |
+| `tools/Tools/View/Flow.lean` | a program's own graph: its flow as a fold of the program, its waits resolved by the binder table, and its layout (across by a fold, down along a checked order) |
+| `tools/Tools/View/FlowLaws.lean`, `FlowOrder.lean` | the layout's laws: well formed by fold induction, edges descend, boxes apart, and what a flow orders first stands above |
 | `tools/Tools/View/FlowSpecimen.lean` | the program graph's specimen, one case a page |
 | `tools/Tools/View/Motion.lean` | the data join and the moments of a step; `sample` and its end law |
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |

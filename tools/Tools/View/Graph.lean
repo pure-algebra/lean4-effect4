@@ -1,4 +1,5 @@
 import Tools.View.Place
+import Tools.View.Organic
 
 /-!
 # A graph: ranks, order, places, routes
@@ -157,9 +158,10 @@ deriving Repr
 
 /-- A route: a forward edge through its items, from its source to its target; a back edge, with
 its source, its target and its lane at the right; or an edge from a node to itself. Each is drawn
-from its source as far as its reveal, per mille; 1000 at rest. -/
+from its source as far as its reveal, per mille; 1000 at rest. A forward edge carries its share of
+the work, in millionths, which sets its width by da Vinci's rule (`Tools.View.Grow.split`). -/
 inductive Route where
-  | down (key : Key) (items : List Key) (reveal : Nat := 1000)
+  | down (key : Key) (items : List Key) (reveal : Nat := 1000) (share : Nat := 1000000)
   | back (key : Key) (src dst : Key) (lane : Nat) (reveal : Nat := 1000)
   | loop (key : Key) (node : Key) (reveal : Nat := 1000)
 deriving Repr
@@ -168,15 +170,15 @@ namespace Route
 
 /-- A route's key. -/
 def key : Route → Key
-  | .down k _ _ | .back k _ _ _ _ | .loop k _ _ => k
+  | .down k _ _ _ | .back k _ _ _ _ | .loop k _ _ => k
 
 /-- A route's reveal. -/
 def reveal : Route → Nat
-  | .down _ _ r | .back _ _ _ _ r | .loop _ _ r => r
+  | .down _ _ r _ | .back _ _ _ _ r | .loop _ _ r => r
 
 /-- A route with another reveal. -/
 def withReveal (r : Nat) : Route → Route
-  | .down k ks _ => .down k ks r
+  | .down k ks _ sh => .down k ks r sh
   | .back k s d lane _ => .back k s d lane r
   | .loop k n _ => .loop k n r
 
@@ -334,9 +336,18 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Cal
   let x := dx + p.x + (p.w - w') / 2
   let y := dy + p.y + (h - h') / 2
   let room : Int := p.w / CELL - 2
-  [⟨p.key, .fill .ground 1000 x y w' h'⟩] ++
-    (if n.lit then [⟨p.key, .fill .rule L.band x y w' h'⟩] else []) ++
-    [⟨p.key, .frame .ink x y w' h' L.strokes.frame⟩] ++
+  let r : Int := L.strokes.radius
+  let m (v : Int) : Int := 1000 * v
+  let surface : List (Keyed Call) :=
+    if r = 0 then
+      [⟨p.key, .fill .ground 1000 x y w' h'⟩] ++
+        (if n.lit then [⟨p.key, .fill .rule L.band x y w' h'⟩] else []) ++
+        [⟨p.key, .frame .ink x y w' h' L.strokes.frame⟩]
+    else
+      [⟨p.key, .shape .ground 1000 [Grow.roundRect (m x) (m y) (m w') (m h') r]⟩] ++
+        (if n.lit then [⟨p.key, .shape .rule L.band [Grow.roundRect (m x) (m y) (m w') (m h') r]⟩] else []) ++
+        [⟨p.key, .shape .ink 1000 (Grow.ring (m x) (m y) (m w') (m h') r (m L.strokes.frame))⟩]
+  surface ++
     (if 1000 ≤ p.grow then
       cellsAt p.key (dx + p.x + CELL) (dy + p.y + BASE) n.line1 room ++
         cellsAt p.key (dx + p.x + CELL) (dy + p.y + ROWH + BASE) n.line2 room ++
@@ -383,7 +394,7 @@ rank, then steps down to the middle of its target's top. A back route is one arc
 through its lane, into its target's right side, so a return reads as a return. A loop is a small
 drop off a box's right side. -/
 def segments (L : Look) (l : Laid) : Route → List Cubic
-  | .down _ ks _ =>
+  | .down _ ks _ _ =>
     let ps := ks.filterMap l.find
     if ps.length != ks.length then [] else
     match ps with
@@ -420,6 +431,15 @@ def segments (L : Look) (l : Laid) : Route → List Cubic
         (x + 2 * LOOP_REACH, y + 2 * LOOP_HALF), (x, y + LOOP_HALF)⟩]
     | none => []
 
+/-- **The segments revealed from their start for `budget` of size**: each whole segment within the
+budget, then the part of the next one that the budget reaches. -/
+def revealed : List Cubic → Int → List Cubic
+  | [], _ => []
+  | c :: rest, budget =>
+    if budget ≤ 0 then []
+    else if c.size ≤ budget then c :: revealed rest (budget - c.size)
+    else [c.upTo (budget * 1000 / c.size)]
+
 /-- **Segments drawn from their start for `budget` of size**: each whole segment within the budget,
 then the part of the next one that the budget reaches. -/
 def drawn (key : Key) (weight : Nat) (dx dy : Int) : List Cubic → Int → List (Keyed Call)
@@ -451,29 +471,67 @@ def arrowhead (key : Key) (weight : Nat) (dx dy : Int) (c : Cubic) : List (Keyed
   [⟨key, .curve .ink ((straight back.1 c.p3).move dx dy) weight⟩,
    ⟨key, .curve .ink ((straight back.2 c.p3).move dx dy) weight⟩]
 
-/-- A route's calls: its segments, drawn as far as its reveal, at the look's weight of an edge; an
-arc in a lane, drawn whole, ends in an arrowhead. -/
+/-- The half size of a diamond, and the thickness of a bar, in logical pixels. -/
+def DIAMOND : Int := 5
+def BAR : Int := 3
+
+/-- Whether an item is a point on a bar of the layout: a fork's or a join's port. -/
+def onBar (l : Laid) (p : Placed) : Bool :=
+  p.node.isNone && l.marks.toList.any fun
+    | .bar _ x0 x1 y => y == p.y && x0 ≤ middle p && middle p ≤ x1
+    | _ => false
+
+/-- **A forward edge as an organic stroke** (`Tools.View.Grow`): its width the trunk's times its
+share of the work, never finer than the look's finest line; its edges moved by the noise its key
+seeds, inside their band; a collar where it leaves a box or a bar, and, once it is whole, where it
+meets one. While it grows, its tip narrows. -/
+def organicCalls (l : Laid) (L : Look) (key : Key) (ks : List Key) (share : Nat)
+    (cs : List Cubic) (whole : Bool) : List (Keyed Call) :=
+  let o := L.organic
+  let w : Int := max (o.fine : Int) ((o.trunk : Int) * share / 1000000)
+  let R : Int := (o.flare : Int) * w / max 1 (o.trunk : Int)
+  -- the surface a line meets: a box's edge, at the line's end; a bar's edge, half its thickness away
+  let surface (k : Key) : Option Int := (l.find k).bind fun p =>
+    if p.node.isSome then some 0 else if l.onBar p then some (500 * BAR) else none
+  let body := Grow.stroke (Grow.seedOf key) o w cs (!whole)
+  let start := match cs.head?, ks.head?.bind surface with
+    | some c, some off => [Grow.collar (1000 * c.p0.1) (1000 * c.p0.2 + off) w R true]
+    | _, _ => []
+  let finish := match whole, cs.getLast?, ks.getLast?.bind surface with
+    | true, some c, some off => [Grow.collar (1000 * c.p3.1) (1000 * c.p3.2 - off) w R false]
+    | _, _, _ => []
+  if body.isEmpty then [] else
+    ([body] ++ start ++ finish).map fun path => ⟨key, .shape .ink 1000 [path]⟩
+
+/-- A route's calls: its segments, drawn as far as its reveal, at the look's weight of an edge, or,
+for a forward edge in a look with a trunk, as an organic stroke; an arc in a lane, drawn whole,
+ends in an arrowhead. -/
 def routeCalls (L : Look) (l : Laid) (dx dy : Int) (rt : Route) : List (Keyed Call) :=
   let cs := l.segments L rt
-  let body := drawn rt.key L.strokes.edge dx dy cs ((cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000)
+  let budget : Int := (cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000
+  let body := drawn rt.key L.strokes.edge dx dy cs budget
   match rt, cs.getLast? with
+  | .down key ks _ share, _ =>
+    if L.organic.trunk = 0 then body
+    else l.organicCalls L key ks share ((revealed cs budget).map (Cubic.move dx dy)) (1000 ≤ rt.reveal)
   | .back .., some last => if 1000 ≤ rt.reveal then body ++ arrowhead rt.key L.strokes.edge dx dy last else body
   | _, _ => body
 
 /-- A region's bracket: a frame in the rule's tone around its items, and its name in the label
 face above its top left corner. -/
 def regionCalls (L : Look) (dx dy : Int) (r : Region) : List (Keyed Call) :=
-  [⟨r.key, .frame .rule (dx + r.x) (dy + r.y) r.w r.h L.strokes.frame⟩] ++
+  (if L.strokes.radius = 0 then [⟨r.key, .frame .rule (dx + r.x) (dy + r.y) r.w r.h L.strokes.frame⟩]
+   else [⟨r.key, .shape .rule 1000 (Grow.ring (1000 * (dx + r.x)) (1000 * (dy + r.y)) (1000 * r.w) (1000 * r.h)
+     (2 * (L.strokes.radius : Int)) (1000 * (L.strokes.frame : Int)))⟩]) ++
     textAt r.key .label (dx + r.x + CELL) (dy + r.y + BASE) r.name (r.w - 2 * CELL)
-
-/-- The half size of a diamond, and the thickness of a bar, in logical pixels. -/
-def DIAMOND : Int := 5
-def BAR : Int := 3
 
 /-- A mark's calls: a bar is a fill of the ink, centred on its height; a diamond, four straight
 strokes. -/
 def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
-  | .bar k x0 x1 y => [⟨k, .fill .ink 1000 (dx + x0) (dy + y - BAR / 2) (x1 - x0) BAR⟩]
+  | .bar k x0 x1 y =>
+    if L.strokes.radius = 0 then [⟨k, .fill .ink 1000 (dx + x0) (dy + y - BAR / 2) (x1 - x0) BAR⟩]
+    else [⟨k, .shape .ink 1000 [Grow.roundRect (1000 * (dx + x0)) (1000 * (dy + y - BAR / 2)) (1000 * (x1 - x0))
+      (1000 * BAR) (500 * BAR)]⟩]
   | .diamond k x y =>
     let c := (dx + x, dy + y)
     let n := (c.1, c.2 - DIAMOND)
@@ -508,7 +566,7 @@ point has no height). A finite check of a layout; the program graph's law is pla
 def edgesDescend (l : Laid) : Bool :=
   let bottom (p : Placed) : Int := p.y + (if p.node.isSome then ROWH * BOXROWS else 0)
   l.routes.toList.all fun
-    | .down _ [u, v] _ =>
+    | .down _ [u, v] _ _ =>
       match l.find u, l.find v with
       | some a, some b => bottom a ≤ b.y
       | _, _ => false

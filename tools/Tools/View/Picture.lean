@@ -104,7 +104,10 @@ def Cubic.upTo (t : Int) (c : Cubic) : Cubic :=
 
 /-- One call of the painter, in logical pixels at zoom 1. A tone is a role at a value in
 thousandths. A rule is a fill whose height, or width, is its weight (`Call.hrule`). A curve is a
-stroke of a weight along a cubic segment: an edge of a graph. -/
+stroke of a weight along a cubic segment: an edge of a graph. A shape is a fill of closed paths,
+each a chain of cubic segments, by the even-odd rule, so a path inside another makes a hole (a
+frame with round corners is a ring); its points are in thousandths of a logical pixel, since an
+organic stroke's width varies by less than a pixel. -/
 inductive Call where
   | fill (role : Role) (value : Nat) (x y w h : Int)
   | frame (role : Role) (x y w h : Int) (weight : Nat)
@@ -114,6 +117,7 @@ inductive Call where
   | cut (x y w h : Int)
   | uncut
   | hit (x y w h : Int)
+  | shape (role : Role) (value : Nat) (paths : List (List Cubic))
 deriving Repr
 
 /-- One call that reaches the target. A curve's points and weight are in device pixels. -/
@@ -125,6 +129,7 @@ inductive Dev where
   | cut (x y w h : Int)
   | uncut
   | hit (r : Rect)
+  | shape (role : Role) (value : Nat) (paths : List (List Cubic))
 deriving Repr
 
 /-- A call with the key of the object it draws. -/
@@ -175,6 +180,7 @@ def lowerCall (r : Int) : Call → List Dev
   | .cut x y w h => [.cut x y w h]
   | .uncut => [.uncut]
   | .hit x y w h => [.hit (box r x y w h)]
+  | .shape role value ps => [.shape role value (ps.map (·.map (Cubic.scale r)))]
 
 /-- A keyed call's device calls, each with the call's key. -/
 def lower (r : Int) (c : Keyed Call) : List (Keyed Dev) :=
@@ -275,6 +281,7 @@ def Call.move (dx dy : Int) : Call → Call
   | .cut x y w h => .cut (x + dx) (y + dy) w h
   | .uncut => .uncut
   | .hit x y w h => .hit (x + dx) (y + dy) w h
+  | .shape role value ps => .shape role value (ps.map (·.map (Cubic.move (1000 * dx) (1000 * dy))))
 
 /-- A device call moved by whole logical pixels at the ratio `r`: a box by `r` times as many
 device pixels; a text and a cut, which stay in logical pixels, by the logical move. -/
@@ -286,6 +293,7 @@ def Dev.move (r dx dy : Int) : Dev → Dev
   | .cut x y w h => .cut (x + dx) (y + dy) w h
   | .uncut => .uncut
   | .hit b => .hit (b.move (r * dx) (r * dy))
+  | .shape role value ps => .shape role value (ps.map (·.map (Cubic.move (r * (1000 * dx)) (r * (1000 * dy)))))
 
 /-- A box at a moved origin is the box, moved. -/
 theorem box_move (r x y w h dx dy : Int) :
@@ -341,6 +349,9 @@ theorem lowerCall_move (r dx dy : Int) (c : Call) :
   | hit x y w h =>
     simp only [Call.move, lowerCall, List.map_cons, List.map_nil, Dev.move]
     rw [box_move]
+  | shape role value ps =>
+    simp only [Call.move, lowerCall, List.map_cons, List.map_nil, Dev.move, List.map_map,
+      Function.comp_def, Cubic.scale_move]
 
 /-- A keyed call moved by whole logical pixels. -/
 def Keyed.move (dx dy : Int) (c : Keyed Call) : Keyed Call := ⟨c.key, c.call.move dx dy⟩

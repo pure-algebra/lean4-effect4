@@ -14,7 +14,9 @@ standard `$type`. A look uses only the format's own types:
 | `color` | `ground`, `ink`, `rule`, `host`, `failure`, `resource` | `color`, sRGB, with its `hex` |
 | `tone` | `band` | `number`, from 0 to 1 |
 | `font` | `data`, `name`, `label`, `title` | `typography`: `fontFamily`, `fontSize`, `fontWeight` |
-| `stroke` | `edge`, `frame`, `rule` | `dimension`, in `px` |
+| `stroke` | `edge`, `frame`, `rule`, `radius` | `dimension`, in `px` |
+| `organic` | `trunk`, `fine`, `flare`, `wave` | `dimension`, in `px` |
+| `organic` | `noise` | `number`, from 0 to 1 |
 | `motion` | `step`, `stagger`, `enter` | `duration` |
 | `motion` | `move`, `leave`, `write`, `draw`, `expand` | `transition` |
 
@@ -123,7 +125,14 @@ def tokens (L : Look) : J :=
       ("edge", .obj [("$value", pxValue (L.strokes.edge * 1000)),
         ("$extensions", .obj [(extKey, .obj [("curve", .str L.curve.name), ("reach", .dec L.reach 3)])])]),
       ("frame", .obj [("$value", pxValue (L.strokes.frame * 1000))]),
-      ("rule", .obj [("$value", pxValue (L.strokes.rule * 1000))])]),
+      ("rule", .obj [("$value", pxValue (L.strokes.rule * 1000))]),
+      ("radius", .obj [("$value", pxValue L.strokes.radius)])]),
+    ("organic", .obj [
+      ("trunk", .obj [("$type", .str "dimension"), ("$value", pxValue L.organic.trunk)]),
+      ("fine", .obj [("$type", .str "dimension"), ("$value", pxValue L.organic.fine)]),
+      ("flare", .obj [("$type", .str "dimension"), ("$value", pxValue L.organic.flare)]),
+      ("noise", .obj [("$type", .str "number"), ("$value", .dec L.organic.noise 3)]),
+      ("wave", .obj [("$type", .str "dimension"), ("$value", pxValue L.organic.wave)])]),
     ("motion", .obj [
       ("step", .obj [("$type", .str "duration"), ("$value", msValue L.motion.step)]),
       ("move", transitionToken L.motion.move),
@@ -317,7 +326,7 @@ def group (path ty : String) (names : List String) (j : Json) : Read (List (Stri
 look takes the name `name`. -/
 def readLook (base : Look) (name : String) (j : Json) : Read Look := do
   let top ← fieldsOf "" j
-  onlyNames "" top ["$schema", "color", "tone", "font", "stroke", "motion"]
+  onlyNames "" top ["$schema", "color", "tone", "font", "stroke", "organic", "motion"]
   let mut L := { base with name }
   if let some d := top.lookup "$description" then L := { L with description := ← str "$description" d }
   let e ← extOf "" top
@@ -349,7 +358,7 @@ def readLook (base : Look) (name : String) (j : Json) : Read Look := do
       if let some t := fs.lookup face.tokenName then
         L := { L with faces := L.faces.set face (← readFont s!"font.{face.tokenName}" (L.faces.of face) t) }
   if let some c := top.lookup "stroke" then
-    let fs ← group "stroke" "dimension" ["edge", "frame", "rule"] c
+    let fs ← group "stroke" "dimension" ["edge", "frame", "rule", "radius"] c
     let weight (path : String) (t : Json) : Read Nat := do
       let tf ← token path "dimension" t
       let v ← readPx s!"{path}.$value" ((tf.lookup "$value").getD .null)
@@ -369,6 +378,23 @@ def readLook (base : Look) (name : String) (j : Json) : Read Look := do
       L := { L with strokes := { L.strokes with frame := ← weight "stroke.frame" t } }
     if let some t := fs.lookup "rule" then
       L := { L with strokes := { L.strokes with rule := ← weight "stroke.rule" t } }
+    if let some t := fs.lookup "radius" then
+      let tf ← token "stroke.radius" "dimension" t
+      L := { L with strokes := { L.strokes with radius := ← readPx "stroke.radius.$value" ((tf.lookup "$value").getD .null) } }
+  if let some c := top.lookup "organic" then
+    let fs ← group "organic" "" ["trunk", "fine", "flare", "noise", "wave"] c
+    let px (path : String) (t : Json) : Read Nat := do
+      let tf ← token path "dimension" t
+      readPx s!"{path}.$value" ((tf.lookup "$value").getD .null)
+    let mut o := L.organic
+    if let some t := fs.lookup "trunk" then o := { o with trunk := ← px "organic.trunk" t }
+    if let some t := fs.lookup "fine" then o := { o with fine := ← px "organic.fine" t }
+    if let some t := fs.lookup "flare" then o := { o with flare := ← px "organic.flare" t }
+    if let some t := fs.lookup "wave" then o := { o with wave := ← px "organic.wave" t }
+    if let some t := fs.lookup "noise" then
+      let tf ← token "organic.noise" "number" t
+      o := { o with noise := ← within "organic.noise.$value" 3 0 1000 ((tf.lookup "$value").getD .null) }
+    L := { L with organic := o }
   if let some c := top.lookup "motion" then
     let fs ← group "motion" "" ["step", "move", "leave", "write", "draw", "expand", "stagger", "enter"] c
     let mut m := L.motion
@@ -414,7 +440,10 @@ def css (L : Look) : String :=
     [s!"--e4-tone-band: {decimal L.band 3};"] ++
     Face.all.flatMap font ++
     [s!"--e4-stroke-edge: {L.strokes.edge}px;", s!"--e4-stroke-frame: {L.strokes.frame}px;",
-      s!"--e4-stroke-rule: {L.strokes.rule}px;", s!"--e4-motion-step: {m.step}ms;"] ++
+      s!"--e4-stroke-rule: {L.strokes.rule}px;", s!"--e4-stroke-radius: {decimal L.strokes.radius 3}px;",
+      s!"--e4-organic-trunk: {decimal L.organic.trunk 3}px;", s!"--e4-organic-fine: {decimal L.organic.fine 3}px;",
+      s!"--e4-organic-flare: {decimal L.organic.flare 3}px;", s!"--e4-organic-noise: {decimal L.organic.noise 3};",
+      s!"--e4-organic-wave: {decimal L.organic.wave 3}px;", s!"--e4-motion-step: {m.step}ms;"] ++
     tr "move" m.move ++ tr "leave" m.leave ++ tr "write" m.write ++ tr "draw" m.draw ++
     tr "expand" m.expand ++
     [s!"--e4-motion-stagger: {m.stagger}ms;", s!"--e4-motion-enter: {m.enterFrom}ms;"]

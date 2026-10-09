@@ -306,12 +306,14 @@ forward, from an earlier item to a later one, by construction; and the laws of t
 arithmetic (`Tools.View.FlowLaws`). -/
 
 /-- An edge of a part, by the positions of its two ends among the part's items: the room it needs
-beyond the gap, and whether it is drawn (an edge that is not only holds a place). -/
+beyond the gap, whether it is drawn (an edge that is not only holds a place), and its share of the
+work, in millionths, which sets its width (da Vinci's rule, `Grow.split`). -/
 structure Edge where
   fr : Nat
   to : Nat
   pad : Int := 0
   drawn : Bool := true
+  share : Nat := 1000000
 
 /-- An edge whose ends move `d` positions on. -/
 def Edge.reindex (d : Nat) (e : Edge) : Edge := { e with fr := e.fr + d, to := e.to + d }
@@ -346,6 +348,15 @@ structure Box where
   exits : List (Key × Nat) := []
   waits : List (Nat × Key) := []
   marks : List (Key × Bool × List Nat) := []
+
+/-- A part whose edges carry `f` millionths of their shares: a branch of parallel work. -/
+def Box.reshare (f : Nat) (b : Box) : Box :=
+  { b with edges := b.edges.map fun e => { e with share := e.share * f / 1000000 } }
+
+/-- The branches of a parallel part with their shares: each of `n` branches that all run carries
+`1/√n` of the work (da Vinci's rule); of branches of which one runs, each carries all of it. -/
+def shares (how : Branching) (bs : List Box) : List Box :=
+  if how = .choice then bs else bs.map (Box.reshare (Grow.split bs.length))
 
 /-- A part moved across by whole pixels: every item and frame moved alike. -/
 def Box.shift (dx : Int) (b : Box) : Box :=
@@ -441,7 +452,8 @@ from the fork's point (position 0) to each branch, and its mark. -/
 def parTop (how : Branching) (k : Key) (slots : List (Nat × Box)) : List Edge × List (Key × Bool × List Nat) :=
   if how != .choice then
     (slots.flatMap (fun (base, b) =>
-      [{ fr := 0, to := base - 1, pad := -VGAP, drawn := false }, { fr := base - 1, to := base + b.src, pad := b.topPad }]),
+      [{ fr := 0, to := base - 1, pad := -VGAP, drawn := false },
+       { fr := base - 1, to := base + b.src, pad := b.topPad, share := Grow.split slots.length }]),
      [(k ++ "/fork", true, 0 :: slots.map (·.1 - 1))])
   else (slots.map (fun (base, b) => { fr := 0, to := base + b.src, pad := b.topPad }), [(k ++ "/fork", false, [0])])
 
@@ -454,13 +466,16 @@ def parBottom (how : Branching) (k : Key) (mid : Int) (ends : Bool) (J : Nat) (s
   if how = .spawn then
     let x := (slots.head?.map fun (_, b) => b.middleAt b.snk - CELL).getD mid
     (J, [pointAt (k ++ "/end") x],
-     slots.zipIdx.map (fun ((base, b), i) => { fr := base + b.snk, to := J, pad := b.botPad, drawn := i == 0 && b.ends }) ++
+     slots.zipIdx.map (fun ((base, b), i) =>
+       { fr := base + b.snk, to := J, pad := b.botPad, drawn := i == 0 && b.ends, share := Grow.split n }) ++
        (if slots.isEmpty then [{ fr := 0, to := J, pad := 0, drawn := ends }] else []), [])
   else
     let ports := slots.zipIdx.map fun ((_, b), i) => pointAt (k ++ "/join/" ++ toString i) (b.middleAt b.snk - CELL)
     let aligned := (List.range n).flatMap fun i =>
       slots.map fun (base, b) => { fr := base + b.snk, to := J + i, pad := b.botPad, drawn := false }
-    let drops := slots.zipIdx.map fun ((base, b), i) => { fr := base + b.snk, to := J + i, pad := b.botPad, drawn := b.ends }
+    let drops := slots.zipIdx.map fun ((base, b), i) =>
+      { fr := base + b.snk, to := J + i, pad := b.botPad, drawn := b.ends,
+        share := if how = .choice then 1000000 else Grow.split n }
     let toJoin := slots.zipIdx.map fun ((_, b), i) =>
       if how = .choice then { fr := J + i, to := J + n, pad := 0, drawn := b.ends }
       else { fr := J + i, to := J + n, pad := -VGAP, drawn := false }
@@ -525,7 +540,7 @@ moved into place. -/
 def layWith (width : GNode → Int) : Flow → Box
   | .node k l1 l2 w => nodeBox width k l1 l2 w
   | .seq ps => stack ((layAllWith width ps).filter (!·.empty))
-  | .par how k bs => sideBySide how k (layAllWith width bs)
+  | .par how k bs => sideBySide how k (shares how (layAllWith width bs))
   | .region name k body => framed name k (layWith width body)
   | .loop _ body => looped (layWith width body)
 /-- Flows laid out across. -/
@@ -667,7 +682,7 @@ def layout (f : Flow) : Laid :=
   let routes := (b.edges.filter (·.drawn)).map (fun e =>
       let u := keyAt e.fr
       let v := keyAt e.to
-      Route.down (u ++ "→" ++ v) [u, v]) ++
+      Route.down (u ++ "→" ++ v) [u, v] 1000 e.share) ++
     pl.lanes.zipIdx.map fun ((i, j), lane) =>
       let u := keyAt i
       let v := keyAt j

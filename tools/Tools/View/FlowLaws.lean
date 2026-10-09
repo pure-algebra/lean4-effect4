@@ -1085,6 +1085,48 @@ theorem good_sideBySide (how : Branching) (k : Key) (bs : List Box) (h : ∀ b �
     (withBranches_spec _ k L 0 s0 (Int.le_refl 0) (fun bi hbi => (hL bi hbi).1)) hL hW.1
     (by rw [hLmap]; exact hW.2)
 
+/-! ## Shares -/
+
+/-- Reaching along edges survives a map of the edges that keeps their ends. -/
+theorem Reach.map {es : List Edge} {F : Edge → Edge} (hF : ∀ e, (F e).fr = e.fr ∧ (F e).to = e.to) {i j : Nat}
+    (r : Reach es i j) : Reach (es.map F) i j := by
+  induction r with
+  | refl i => exact .refl i
+  | step e he _ ih =>
+    have := Reach.step (F e) (List.mem_map_of_mem he) (by rw [(hF e).2]; exact ih)
+    rw [(hF e).1] at this
+    exact this
+
+/-- **A part's shares split is still well formed**: the split moves no edge's ends. A step of
+`lay_good`. -/
+theorem good_reshare {b : Box} (hb : Good b) (f : Nat) : Good (b.reshare f) := by
+  let F : Edge → Edge := fun e => { e with share := e.share * f / 1000000 }
+  have hF : ∀ e, (F e).fr = e.fr ∧ (F e).to = e.to := fun _ => ⟨rfl, rfl⟩
+  have hedges : (b.reshare f).edges = b.edges.map F := rfl
+  refine ⟨?_, ?_, hb.src, hb.snk, ?_, ?_, hb.inside, hb.width, hb.topPad, hb.botPad, ?_⟩
+  · intro e he
+    rw [hedges] at he
+    obtain ⟨e0, he0, rfl⟩ := List.mem_map.mp he
+    exact hb.fwd e0 he0
+  · intro e he
+    rw [hedges] at he
+    obtain ⟨e0, he0, rfl⟩ := List.mem_map.mp he
+    exact hb.pad e0 he0
+  · intro i hi; rw [hedges]; exact (hb.fromSrc i hi).map hF
+  · intro i hi; rw [hedges]; exact (hb.toSnk i hi).map hF
+  · intro i j p q hij hp hq hpn hqn
+    rw [hedges]
+    exact (hb.sep i j p q hij hp hq hpn hqn).imp id (fun r => r.map hF)
+
+theorem good_shares {how : Branching} {bs : List Box} (h : ∀ b ∈ bs, Good b) : ∀ b ∈ shares how bs, Good b := by
+  intro b hb
+  unfold shares at hb
+  by_cases hc : how = .choice
+  · rw [if_pos hc] at hb; exact h b hb
+  · rw [if_neg hc] at hb
+    obtain ⟨b0, hb0, rfl⟩ := List.mem_map.mp hb
+    exact good_reshare (h b0 hb0) _
+
 /-! ## The fold's law -/
 
 mutual
@@ -1101,7 +1143,7 @@ theorem lay_good {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) : ∀ f : F
     obtain ⟨hb, he⟩ := List.mem_filter.mp hb
     refine ⟨layAll_good hw ps b hb, fun hn => ?_⟩
     simp only [Box.empty, hn, List.isEmpty_nil, Bool.not_true, Bool.false_eq_true] at he
-  | .par how k bs => good_sideBySide how k (layAllWith width bs) (layAll_good hw bs)
+  | .par how k bs => good_sideBySide how k _ (good_shares (layAll_good hw bs))
   | .region name k body => good_framed name k (lay_good hw body)
   | .loop _ body => good_looped (lay_good hw body)
 /-- Every part of a list of flows laid out is well formed. -/

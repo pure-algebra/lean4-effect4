@@ -128,7 +128,7 @@ def sampleLaid (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
   let newBoxes := b.placed.toList.filter fun p => (a.find p.key).isNone
   let newRoutes := b.routes.toList.filter fun r => !(a.routes.toList.any (·.key == r.key))
   let targetY : Route → Int
-    | .down _ ks _ => ((ks.getLast?.bind b.find).map (·.y)).getD 0
+    | .down _ ks _ _ => ((ks.getLast?.bind b.find).map (·.y)).getD 0
     | .back _ _ d _ _ => ((b.find d).map (·.y)).getD 0
     | .loop _ k _ => ((b.find k).map (·.y)).getD 0
   let levels := ((newBoxes.map (·.y)) ++ (newRoutes.map targetY)).eraseDups.mergeSort (· ≤ ·)

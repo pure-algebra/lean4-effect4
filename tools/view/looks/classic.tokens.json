@@ -1,0 +1,5 @@
+{
+  "$description": "The view before its organic strokes: square corners, and every edge a plain curve of the edge's weight.",
+  "stroke": {"radius": {"$type": "dimension", "$value": {"value": 0, "unit": "px"}}},
+  "organic": {"trunk": {"$type": "dimension", "$value": {"value": 0, "unit": "px"}}}
+}

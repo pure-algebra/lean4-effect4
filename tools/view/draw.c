@@ -43,7 +43,7 @@ static int count(const char *path) {
     else if (!strchr("PRYFBCTH\n", k)) bad++;
   }
   free(row); fclose(fp);
-  printf("fills %ld  curves %ld  data texts %ld  other texts %ld  cuts %ld  pointer boxes %ld\n", kinds['F'], kinds['B'], kinds['C'], kinds['T'], kinds['K'], kinds['H']);
+  printf("fills %ld  curves %ld  shapes %ld  data texts %ld  other texts %ld  cuts %ld  pointer boxes %ld\n", kinds['F'], kinds['B'], kinds['S'], kinds['C'], kinds['T'], kinds['K'], kinds['H']);
   if (bad || cuts) { fprintf(stderr, "draw: %d rows are no call, %d cuts stay open\n", bad, cuts); return 1; }
   return 0;
 }

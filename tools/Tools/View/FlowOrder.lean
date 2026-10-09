@@ -310,16 +310,16 @@ theorem parAround_realizes {how : Branching} {k : Key} {W : Int} {ends : Bool} {
     exact this
 
 /-- **Branches side by side realize their overlay.** -/
-theorem sideBySide_realizes {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) (how : Branching) (k : Key)
-    (bs : List Flow) (hbs : ∀ f ∈ bs, Realizes f.order (layWith width f)) :
-    Realizes (orderPar bs) (sideBySide how k (bs.map (layWith width))) := by
-  let bs1 := (bs.map (layWith width)).zipIdx.map fun (b, i) => if b.empty then point (k ++ "/" ++ toString i) else b
-  have hgood : ∀ b ∈ bs.map (layWith width), Good b := fun b hb => by
-    obtain ⟨f, _, rfl⟩ := List.mem_map.mp hb; exact lay_good hw f
+theorem sideBySide_realizes (how : Branching) (k : Key) (bs : List Flow) (D : Flow → Box)
+    (hbs : ∀ f ∈ bs, Realizes f.order (D f) ∧ Good (D f)) :
+    Realizes (orderPar bs) (sideBySide how k (bs.map D)) := by
+  let bs1 := (bs.map D).zipIdx.map fun (b, i) => if b.empty then point (k ++ "/" ++ toString i) else b
+  have hgood : ∀ b ∈ bs.map D, Good b := fun b hb => by
+    obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hb; exact (hbs f hf).2
   have h1 : ∀ b ∈ bs1, Good b := by
     intro b hb
     obtain ⟨⟨b0, i⟩, hbi, rfl⟩ := List.mem_map.mp hb
-    have hb0 : b0 ∈ bs.map (layWith width) := List.mem_of_getElem? (List.mem_zipIdx_iff_getElem?.mp hbi)
+    have hb0 : b0 ∈ bs.map D := List.mem_of_getElem? (List.mem_zipIdx_iff_getElem?.mp hbi)
     by_cases he : b0.empty = true
     · simp only [he, if_true]; exact good_point _
     · simp only [he, if_false, Bool.false_eq_true]; exact hgood b0 hb0
@@ -329,31 +329,40 @@ theorem sideBySide_realizes {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) 
   have hspec := withBranches_spec (how != .choice) k L 0 s0 (Int.le_refl 0)
     (fun bi hbi => h1 bi.1 (List.mem_of_getElem? (List.mem_zipIdx_iff_getElem?.mp hbi)))
   -- a branch with a node is one of the inputs, as it is
-  have input : ∀ f ∈ bs, (layWith width f).items ≠ [] → (layWith width f, ∃ i, (layWith width f, i) ∈ L).2 := by
+  have input : ∀ f ∈ bs, (D f).items ≠ [] → ∃ i, (D f, i) ∈ L := by
     intro f hf hne
     obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hf
     refine ⟨i, List.mem_zipIdx_iff_getElem?.mpr ?_⟩
-    show bs1[i]? = some (layWith width f)
-    have hm : (bs.map (layWith width))[i]? = some (layWith width f) := by rw [List.getElem?_map, hi]; rfl
-    have hz : ((bs.map (layWith width)).zipIdx)[i]? = some (layWith width f, i) := by
+    show bs1[i]? = some (D f)
+    have hm : (bs.map D)[i]? = some (D f) := by rw [List.getElem?_map, hi]; rfl
+    have hz : ((bs.map D).zipIdx)[i]? = some (D f, i) := by
       rw [List.getElem?_zipIdx, hm, Option.map_some, Nat.zero_add]
-    have hne' : (layWith width f).empty = false := by
+    have hne' : (D f).empty = false := by
       simp only [Box.empty, List.isEmpty_eq_false_iff]; exact hne
-    show (((bs.map (layWith width)).zipIdx).map _)[i]? = _
+    show (((bs.map D).zipIdx).map _)[i]? = _
     rw [List.getElem?_map, hz]
     simp only [Option.map_some, hne', Bool.false_eq_true, if_false]
-  have nonempty : ∀ {f : Flow} {t : Nat} {p : Placed}, (layWith width f).items[t]? = some p → (layWith width f).items ≠ [] :=
+  have nonempty : ∀ {f : Flow} {t : Nat} {p : Placed}, (D f).items[t]? = some p → (D f).items ≠ [] :=
     fun hp h => by rw [h] at hp; simp only [List.getElem?_nil, reduceCtorEq] at hp
   show Realizes _ (parAround how k W _ _ _)
   refine parAround_realizes hspec (fun u hu => ?_) (fun u v he => ?_)
   · obtain ⟨f, hf, hu⟩ := orderPar_has bs u hu
-    obtain ⟨t, p, hp, h1, h2⟩ := (hbs f hf).shows u hu
+    obtain ⟨t, p, hp, h1, h2⟩ := (hbs f hf).1.shows u hu
     obtain ⟨i, hi⟩ := input f hf (nonempty hp)
     exact ⟨_, hi, t, p, hp, h1, h2⟩
   · obtain ⟨f, hf, he⟩ := orderPar_edge bs u v he
-    obtain ⟨i, j, p, q, hij, hp, h1, h2, hq, h3, h4, hr⟩ := (hbs f hf).keeps u v he
+    obtain ⟨i, j, p, q, hij, hp, h1, h2, hq, h3, h4, hr⟩ := (hbs f hf).1.keeps u v he
     obtain ⟨n, hn⟩ := input f hf (nonempty hp)
     exact ⟨_, hn, i, j, p, q, hij, hp, h1, h2, hq, h3, h4, hr⟩
+
+/-- A part with its shares split realizes what it realized: the split moves no item and no edge's
+ends. -/
+theorem Realizes.reshare {g : AGraph Key} {b : Box} (r : Realizes g b) (f : Nat) : Realizes g (b.reshare f) := by
+  have hF : ∀ e : Edge, ({ e with share := e.share * f / 1000000 } : Edge).fr = e.fr ∧
+      ({ e with share := e.share * f / 1000000 } : Edge).to = e.to := fun _ => ⟨rfl, rfl⟩
+  refine ⟨r.shows, fun u v he => ?_⟩
+  obtain ⟨i, j, p, q, hij, hp, h1, h2, hq, h3, h4, hr⟩ := r.keeps u v he
+  exact ⟨i, j, p, q, hij, hp, h1, h2, hq, h3, h4, hr.map hF⟩
 
 /-! ## The fold's law -/
 
@@ -370,9 +379,20 @@ theorem lay_realizes {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) : ∀ f
     rw [layAllWith_map]
     exact stack_realizes hw ps (layAll_realizes hw ps)
   | .par how k bs => by
-    show Realizes (orderPar bs) (sideBySide how k (layAllWith width bs))
+    show Realizes (orderPar bs) (sideBySide how k (shares how (layAllWith width bs)))
     rw [layAllWith_map]
-    exact sideBySide_realizes hw how k bs (layAll_realizes hw bs)
+    have e : shares how (bs.map (layWith width)) = bs.map (fun f =>
+        if how = .choice then layWith width f else (layWith width f).reshare (Grow.split bs.length)) := by
+      unfold shares
+      by_cases hc : how = .choice
+      · rw [if_pos hc]; exact (List.map_congr_left fun f _ => if_pos hc).symm
+      · rw [if_neg hc, List.map_map, List.length_map]
+        exact List.map_congr_left fun f _ => (if_neg hc).symm
+    rw [e]
+    refine sideBySide_realizes how k bs _ fun f hf => ?_
+    by_cases hc : how = .choice
+    · rw [if_pos hc]; exact ⟨layAll_realizes hw bs f hf, lay_good hw f⟩
+    · rw [if_neg hc]; exact ⟨(layAll_realizes hw bs f hf).reshare _, good_reshare (lay_good hw f) _⟩
   | .region name k body => (lay_realizes hw body).moved (d := MARGIN) rfl rfl
   | .loop _ body => ⟨(lay_realizes hw body).shows, (lay_realizes hw body).keeps⟩
 /-- Every flow of a list realizes its order. -/

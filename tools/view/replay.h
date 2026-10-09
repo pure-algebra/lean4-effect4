@@ -156,6 +156,7 @@ static inline cairo_surface_t *replay_stream(const char *path, Replay *rp, int *
       for (int i = 0; i < 8; i++) pt[i] = atol(f[3 + i]);
       paint_device_curve(&p, paint_tone((PaintRole)atoi(f[1]), 1.0), atol(f[2]), pt);
     }
+    else if (k == 'S' && n >= 5) paint_device_shape(&p, paint_tone((PaintRole)atoi(f[1]), replay_milli(f[2])), n - 4, &f[3]);
     else if (k == 'C' && n >= 6) paint_cells(&p, replay_milli(f[1]), replay_milli(f[2]), f[5], atoi(f[3]), replay_milli(f[4]));
     else if (k == 'T' && n >= 7) paint_text(&p, (PaintFace)atoi(f[1]), replay_milli(f[2]), replay_milli(f[3]), f[6], replay_milli(f[4]), replay_milli(f[5]));
     else if (k == 'K' && n >= 5) { paint_cut(&p, replay_milli(f[1]), replay_milli(f[2]), replay_milli(f[3]), replay_milli(f[4])); cuts++; }

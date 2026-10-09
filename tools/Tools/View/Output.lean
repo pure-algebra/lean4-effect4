@@ -23,7 +23,24 @@ namespace Tools.View
 /-- A text with no tab or line break, so one row holds it. -/
 def oneLine (s : String) : String := (s.replace "\t" " ").replace "\n" " "
 
-/-- One row of the stream. A key ends each row that draws, after the fields `draw.c` reads. -/
+/-- A closed path's points in a row: its start, then each segment's two controls and its end, in
+thousandths of a device pixel, separated by spaces. -/
+def pathRow (p : List Cubic) : String :=
+  match p with
+  | [] => ""
+  | c :: _ => " ".intercalate ([toString c.p0.1, toString c.p0.2] ++
+      p.flatMap fun c => [c.p1.1, c.p1.2, c.p2.1, c.p2.2, c.p3.1, c.p3.2].map toString)
+
+/-- A closed path as SVG's path data, in device pixels: `M`, a `C` for each segment, `Z`. -/
+def pathData (p : List Cubic) : String :=
+  let d (v : Int) : String := decimal v 3
+  match p with
+  | [] => ""
+  | c :: _ => s!"M {d c.p0.1} {d c.p0.2} " ++ " ".intercalate (p.map fun c =>
+      s!"C {d c.p1.1} {d c.p1.2}, {d c.p2.1} {d c.p2.2}, {d c.p3.1} {d c.p3.2}") ++ " Z"
+
+/-- One row of the stream. A key ends each row that draws, after the fields `draw.c` reads. A
+shape's row holds one field for each of its closed paths. -/
 def Dev.row (key : Key) : Dev → String
   | .fill role value r =>
     s!"F\t{role.code}\t{value}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}\t{oneLine key}"
@@ -35,6 +52,8 @@ def Dev.row (key : Key) : Dev → String
   | .cut x y w h => s!"K\t{x * 1000}\t{y * 1000}\t{w * 1000}\t{h * 1000}"
   | .uncut => "k"
   | .hit r => s!"H\t{oneLine key}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}"
+  | .shape role value ps =>
+    s!"S\t{role.code}\t{value}\t" ++ "\t".intercalate (ps.map pathRow) ++ s!"\t{oneLine key}"
 
 /-- The look's rows of a stream: each role's colour as `R role rrggbb`, and each face as
 `Y face size weight italic families`, its size in thousandths of a logical pixel. The painter
@@ -90,6 +109,8 @@ def Dev.svg (L : Look) (r : Nat) (key : Key) (id : Nat) : Dev → String
   | .uncut => "</g>"
   | .hit b =>
     s!"<rect x=\"{b.x0}\" y=\"{b.y0}\" width=\"{b.x1 - b.x0}\" height=\"{b.y1 - b.y0}\" fill=\"none\" pointer-events=\"all\"{keyAttr key}/>"
+  | .shape role value ps =>
+    s!"<path class=\"e4-fill-{role.tokenName}\" d=\"{" ".intercalate (ps.map pathData)}\" fill-rule=\"evenodd\" fill=\"{(L.color role).css}\" fill-opacity=\"{opacity value}\"{keyAttr key}/>"
 
 /-- A picture of `W` by `H` logical pixels at the ratio `r`, in a look, as one SVG document. -/
 def svg (L : Look) (W H r : Nat) (ds : List (Keyed Dev)) : String :=

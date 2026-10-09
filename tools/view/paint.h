@@ -336,6 +336,39 @@ static inline void paint_device_curve(const Paint *p, PaintTone tone, long weigh
   cairo_stroke(p->cr);
 }
 
+/* A fill of closed paths by the even-odd rule, so a path inside another makes a hole. Each path is
+ * a text of numbers in thousandths of a device pixel, separated by spaces: its start, then each
+ * cubic segment's two controls and its end. A path with a malformed count of numbers is skipped. */
+static inline void paint_device_shape(const Paint *p, PaintTone tone, int npaths, char *const *paths) {
+  if (paint_stream) {
+    fprintf(paint_stream, "S\t%d\t%ld", (int)tone.role, paint__milli(tone.value));
+    for (int i = 0; i < npaths; i++) fprintf(paint_stream, "\t%s", paths[i]);
+    fprintf(paint_stream, "\n");
+  }
+  paint__source(p, tone);
+  const double k = 1000.0 * p->ratio;
+  cairo_new_path(p->cr);
+  for (int i = 0; i < npaths; i++) {
+    double v[2 + 6 * 256];
+    int n = 0;
+    const char *c = paths[i];
+    char *end;
+    while (n < (int)(sizeof v / sizeof v[0])) {
+      const long x = strtol(c, &end, 10);
+      if (end == c) break;
+      v[n++] = (double)x / k;
+      c = end;
+    }
+    if (n < 8 || (n - 2) % 6 != 0) continue;
+    cairo_move_to(p->cr, v[0], v[1]);
+    for (int j = 2; j + 5 < n; j += 6) cairo_curve_to(p->cr, v[j], v[j + 1], v[j + 2], v[j + 3], v[j + 4], v[j + 5]);
+    cairo_close_path(p->cr);
+  }
+  cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_EVEN_ODD);
+  cairo_fill(p->cr);
+  cairo_set_fill_rule(p->cr, CAIRO_FILL_RULE_WINDING);
+}
+
 /* P2, P4: a frame one `weight` thick inside the device box: four sides that share no pixel.
  * A box too small for a hole is filled. */
 static inline void paint_device_frame(const Paint *p, PaintTone tone, long x0, long y0, long x1, long y1, long weight) {

@@ -275,6 +275,29 @@ structure Strokes where
   frame : Nat := 1
   /-- a rule of the page -/
   rule : Nat := 1
+  /-- the radius of a box's, a region's and a bar's corners, in thousandths of a logical pixel; 0
+  draws square corners -/
+  radius : Nat := 4000
+deriving Repr, DecidableEq
+
+/-- **An organic stroke**: an edge drawn as a filled shape whose width follows growth rules
+(`docs/research/2026-10-09-organic-strokes.md`). Its width splits by da Vinci's rule where work
+runs in parallel; its ends widen into a collar where they meet a box or a bar; and its edges vary
+by a smooth noise, seeded by the edge's key, inside a bounded band. Lengths are in thousandths of a
+logical pixel. A `trunk` of 0 draws an edge as a plain curve of the edge's weight. -/
+structure Organic where
+  /-- the width of a line that carries all the work: the program's main line -/
+  trunk : Nat := 2400
+  /-- the width of the thinnest line: da Vinci's rule never draws a line finer -/
+  fine : Nat := 800
+  /-- the radius of a collar where a line of the trunk's width meets a box or a bar; a thinner
+  line's collar is as much smaller as the line is -/
+  flare : Nat := 6000
+  /-- how far the noise moves each edge of a line, per mille of its half-width: the band it
+  stays inside -/
+  noise : Nat := 350
+  /-- the noise's wavelength along a line -/
+  wave : Nat := 40000
 deriving Repr, DecidableEq
 
 /-! ## The written forms of a look's values -/
@@ -352,6 +375,7 @@ structure Look where
   /-- how far each control of a `bumpY` edge reaches along its drop, per mille of the drop: 500 is
   d3's bump, each control at the middle; 0 is a straight segment -/
   reach : Nat := 500
+  organic : Organic := {}
   motion : Choreography := {}
 deriving Repr, DecidableEq
 
