@@ -1,0 +1,20 @@
+scalar: type=number; reads=Except.ok ()
+freeNames=[("Effect", false)]
+emptyMap: type=Readonly<Record<string, never>>; reads=Except.error "a name has no binding or no permitted import"
+freeNames=[("Effect", false), ("Readonly", true), ("Record", true), ("mapEmpty", false)]
+populatedMap: type=Readonly<Record<string, number>>; reads=Except.error "a name has no binding or no permitted import"
+freeNames=[("Effect", false), ("Readonly", true), ("Record", true), ("mapSet", false), ("mapEmpty", false)]
+mapLookup: type=Option.Option<number>; reads=Except.ok ()
+freeNames=[("Effect", false), ("Option", true), ("mapGet", false), ("mapSet", false), ("mapEmpty", false)]
+mapKeys: type=ReadonlyArray<string>; reads=Except.ok ()
+freeNames=[("Effect", false), ("mapKeys", false), ("mapSet", false), ("mapEmpty", false)]
+corpus p42: accepted; same-program=true
+corpus pBind: accepted; same-program=true
+corpus pFork: accepted; same-program=true
+corpus pAwait: accepted; same-program=true
+corpus pGen: accepted; same-program=true
+corpus pLoop: accepted; same-program=true
+corpus pCatch: accepted; same-program=true
+corpus pScope: reading-refused a name has no binding or no permitted import
+corpus counts: accepted=7; same-program=7
+custom-break flat="a + b"; layout="a -\nb"

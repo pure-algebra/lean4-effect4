@@ -1,0 +1,9 @@
+Effect4.Codegen.SourceBindings: 157 declarations; axiom ceiling checked
+Effect4.Codegen.ClassTable: 19 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.SourceBindings: 42 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.Classes: 139 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.Admit: 76 declarations; axiom ceiling checked
+Effect4.Laws.Api.Codegen: 14 declarations; axiom ceiling checked
+Test.Codegen.SourceBindingsContract: 10 declarations; axiom ceiling checked
+Test.Codegen.PayloadClasses: 37 declarations; axiom ceiling checked
+docs/research/2026-10-09-shared-bindings-audit.lean:14:0: error: module Test.Codegen.DataTypes has no declarations

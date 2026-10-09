@@ -1,0 +1,25 @@
+{
+  "exception": "Retain the existing final blank line of exact copied control.ts evidence only.",
+  "files": [
+    {
+      "path": "docs/research/2026-10-09-shared-bindings-evidence/target-check/false-imports/prelude/control.ts",
+      "sha256": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+      "copiedFrom": "harness/truth/control.ts"
+    },
+    {
+      "path": "docs/research/2026-10-09-shared-bindings-evidence/target-check/target/prelude/control.ts",
+      "sha256": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+      "copiedFrom": "harness/truth/control.ts"
+    },
+    {
+      "path": "docs/research/2026-10-09-shared-bindings-evidence/target-check-hardened/false-imports/prelude/control.ts",
+      "sha256": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+      "copiedFrom": "harness/truth/control.ts"
+    },
+    {
+      "path": "docs/research/2026-10-09-shared-bindings-evidence/target-check-hardened/target/prelude/control.ts",
+      "sha256": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+      "copiedFrom": "harness/truth/control.ts"
+    }
+  ]
+}

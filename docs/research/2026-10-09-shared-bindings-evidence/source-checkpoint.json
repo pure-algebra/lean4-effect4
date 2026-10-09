@@ -1,0 +1,15 @@
+{
+  "baseCommit": "ecba8f5dddf0183f0c14e0c4bc3d9619d0d330d1",
+  "reviewedPrimary": "89dd732ae21d358777783a75b003e4f9279f1322",
+  "sourceHashes": {
+    "src/Effect4/Codegen/SourceBindings.lean": "25a0aee51b5756456335e80cee9fe4e3bf700b7f5b9498ac693d2a2a27d63b9f",
+    "src/Effect4/Codegen/ClassTable.lean": "82cbd2132d2040dbab09ae06d76ee79a1dfed0e5f1da1d94cef183b06d3807f9",
+    "Test/Codegen/SourceBindingsContract.lean": "d197ff422fd0f75c6f75f1568a9853198e9f988d18a86f58708b3f41ec1f24bd",
+    "harness/codegen-bindings/Emit.lean": "4920b35ab6e1a7d1034459b3e325161e74bb61cfac6083919dc30c0d1fed0ce8",
+    "harness/codegen-bindings/run.py": "6d63cab7c0507080d22783b122177ab84e4657544b9f707bbe8660715cff5bf0",
+    "docs/research/2026-10-09-shared-bindings-audit.lean": "cc7e63829cd0cf0542e35f29d21aca6ce71cd0ae4d8ad242171fdaef63ff5940"
+  },
+  "productionOverlapWithClaude": [],
+  "activeClaudeFile": "tools/Tools/Code/TsAlgebra.lean",
+  "scope": "Shared ambient binding inventory, unchanged class collision sequence, lexical controls and finite emitted-file compilation."
+}

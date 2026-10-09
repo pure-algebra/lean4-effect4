@@ -1,0 +1,12 @@
+{
+  "exception": "Inherited final blank line in byte-identical retained helper inputs",
+  "paths": [
+    "docs/research/2026-10-09-code-plane-overwatch/target/prelude/control.ts",
+    "docs/research/2026-10-09-code-plane-overwatch/target-import-control/prelude/control.ts",
+    "docs/research/2026-10-09-code-plane-overwatch/replay/target/prelude/control.ts",
+    "docs/research/2026-10-09-code-plane-overwatch/replay/target-import-control/prelude/control.ts"
+  ],
+  "source": "harness/truth/control.ts",
+  "sha256": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+  "otherFindings": []
+}

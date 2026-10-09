@@ -247,12 +247,13 @@ mutual
 end
 
 /-- The selected standard globals. Origin/capability checks still distinguish them
-from a same-named import or local binding. This is not a host global-object model. -/
+from a same-named import or local binding. Type utilities have no value capability.
+The class-name check also consumes this inventory. This is not a host global-object model. -/
 def builtins : List Binding :=
   [⟨"undefined", .builtin, true, true⟩] ++
     ["Object", "DataView", "Uint8Array"].map (fun name => ⟨name, .builtin, true, true⟩) ++
     ["any", "unknown", "never", "void", "null", "number", "string", "boolean", "object",
-      "symbol", "bigint", "ReadonlyArray", "Array"].map (fun name => ⟨name, .builtin, false, true⟩)
+      "symbol", "bigint", "ReadonlyArray", "Array", "Readonly", "Record"].map (fun name => ⟨name, .builtin, false, true⟩)
 
 def declarationName : Decl → Option String
   | .const decl => some decl.name

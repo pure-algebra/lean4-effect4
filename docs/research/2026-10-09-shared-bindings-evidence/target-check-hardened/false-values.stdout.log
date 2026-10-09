@@ -1,0 +1,2 @@
+corpus/Readonly.ts(1,22): error TS2693: 'Readonly' only refers to a type, but is being used as a value here.
+corpus/Record.ts(1,22): error TS2693: 'Record' only refers to a type, but is being used as a value here.

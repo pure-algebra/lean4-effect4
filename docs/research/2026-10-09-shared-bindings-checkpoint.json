@@ -1,0 +1,28 @@
+{
+  "reviewedPrimary": "89dd732ae21d358777783a75b003e4f9279f1322",
+  "base": "ecba8f5dddf0183f0c14e0c4bc3d9619d0d330d1",
+  "implementation": "b5ea022d558822751d416035113d7215722c94d1",
+  "branch": "codex/shared-bindings",
+  "claudeOwned": [
+    "tools/Tools/Code/TsFold.lean",
+    "tools/Tools/Code/TsAlgebra.lean",
+    "tools/Tools/Code/TypeScript.lean"
+  ],
+  "findings": {
+    "CP-01": "resolved in isolated commit b5ea022d; not integrated",
+    "CP-02": "outstanding evidence-label scope; no new wrong-program counterexample",
+    "CP-03": "outstanding generic document-law scope; recheck active algebra migration before further work"
+  },
+  "checks": {
+    "narrowBuild": "passed",
+    "compiledAuditDeclarations": 494,
+    "compiledAuditModules": 8,
+    "emittedCases": 5,
+    "targetCompiler": "7.0.0-dev.20260629.1",
+    "targetEffect": "4.0.0-rc.112",
+    "falseImportDiagnostics": 4,
+    "typeAsValueDiagnostics": 2,
+    "independentReview": "no actionable findings"
+  },
+  "limit": "Structured admission and equality; finite target compilation only. No runtime or emitted-text read-back claim."
+}

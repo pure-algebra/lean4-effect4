@@ -1,0 +1,4 @@
+corpus/emptyMap.ts(1,15): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Readonly'.
+corpus/emptyMap.ts(1,25): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Record'.
+corpus/populatedMap.ts(1,15): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Readonly'.
+corpus/populatedMap.ts(1,25): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Record'.
