@@ -271,6 +271,7 @@ import Effect4.Laws.Program.Address
 import Effect4.Laws.Program.Typing.PartsTable
 import Effect4.Laws.Program.Typing.Restrict
 import Effect4.Laws.Program.SketchWire
+import Effect4.Laws.Store.ShapeRead
 import Effect4.Laws.Library.Ref.Operations
 import Effect4.Laws.Library.Ref.Callback
 

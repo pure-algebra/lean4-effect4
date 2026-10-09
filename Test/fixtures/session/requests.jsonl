@@ -5,5 +5,6 @@
 {"holeName":"h0","op":"fill","path":[0],"replacement":"0a00000000000000390200000000000000000a0000000000000027020000000000000001010a00000000000000140200000000000000010303000000000000000178"}
 {"holeName":"h0","op":"undo","path":[]}
 {"holeName":"h0","op":"omit","path":[1,1,1]}
+{"holeName":"h0","op":"fill","path":[0],"replacementJson":{"_tag":"succeed","value":{"_tag":"lit","value":{"_tag":"nat","value":7}}}}
 {"holeName":"h0","op":"journal","path":[]}
 {"holeName":"h0","op":"sketch","path":[]}

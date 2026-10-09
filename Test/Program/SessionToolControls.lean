@@ -30,8 +30,7 @@ open Tools.Session
 #guard !(answer {} { op := "open", program := some "00" }).2.ok
 -- red (tested): an undo with an empty journal, after the transcript's open
 #guard (match Tools.Query.fixtureLines (include_str "../fixtures/session/requests.jsonl") with
-  | openLine :: _ => !(answer (answerLine {} openLine).1 (Request.mk "undo" none none [] none
-      "h0" none)).2.ok
+  | openLine :: _ => !(answer (answerLine {} openLine).1 { op := "undo" }).2.ok
   | [] => false)
 
 end Test.Program.SessionToolControls

@@ -74,7 +74,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 - **The edit session** (row 334). `EditSession` (`src/Effect4/Program/Edit.lean`) keeps a sketch
   and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
   one into a hole. A fill that keeps its focus's type checks only the new subtree, and an
-  omission at the focus's type adds one entry (`omit-splices-table`). After any run of edits the view is the checker's answer on the
+  omission at the focus's type adds one entry (`omit-splices-table`). The session tool
+  (`tools/Tools/Session.lean`, driver `tools/Drivers/Session.lean`) holds a session and its
+  journal over JSON lines: open, fill, omit, view, undo, journal, sketch. Each answer names its
+  laws. A program travels as canonical bytes or as its JSON print, the schema form an agent writes
+  (`json-read-exact`). After any run of edits the view is the checker's answer on the
   sketch (`edit-session-coherent`). An edit can be undone exactly (`edit-session-undo`), and a
   spliced edit repaints only its subtree (`edit-repaint-set`).
 - **Addresses** (seat ORG's [theory map](research/2026-10-08-seat-ORG-theory-map.md)). The laws
@@ -113,10 +117,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 1. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-2. **The authoring line.** Edits of the hole table in the edit session (omit, declare), and the
-   query tool's premise checks as theorems (seat ORG's rank 3). Then the checker's base law
-   (`check_rebase`, rank 2), which places a table at any address and removes the splice's
-   casework.
+2. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)).
+   First the session tool as an MCP server. Then marking, after the design note's decision 3.
+   Then each table entry's rule as data, and one session for editing and running.
 3. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
 4. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.

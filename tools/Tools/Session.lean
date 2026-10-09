@@ -1,4 +1,6 @@
 import Tools.Query
+import Tools.JsonBridge
+import Effect4.Laws.Store.ShapeRead
 import Effect4.Program.Edit
 import Effect4.Laws.Program.Edit
 import Effect4.Laws.Program.SketchWire
@@ -11,12 +13,14 @@ keeps an edit session (`EditSession`, `src/Effect4/Program/Edit.lean`) between i
 the journal of its edits. A request is one JSON object; the answer is one JSON object, in the
 query tool's shape (`Tools.Query.Answer`). Programs, fillings and hole tables travel as their
 canonical bytes in lowercase hex, as in the query tool (`Wire.encodeProgram`,
-`Wire.encodeHoles`).
+`Wire.encodeHoles`), or as their JSON print, whose objects may come in any order
+(`Canonical.ofJsonAnyOrder`, `src/Effect4/Store/Domain/ShapeRead.lean`). Answers give a program
+as both.
 
 | Operation | Takes | Answers | The laws it names |
 | --- | --- | --- | --- |
-| `open` | `program`, and `holes` if any | the view | `EditSession.reached_view` |
-| `fill` | `path`, `replacement` | the delta and the view | the splice law the delta took, and `EditSession.reached_view` |
+| `open` | `program` (hex) or `programJson`, and `holes` if any | the view | `EditSession.reached_view`; `Canonical.ofJson_exact` for JSON |
+| `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view | the splice law the delta took, and `EditSession.reached_view`; `Canonical.ofJson_exact` for JSON |
 | `omit` | `path`, `holeName` | the delta and the view; the hole row declares the focus's type | the same |
 | `view` | `path`, or none | at an address, its entry; with none, the whole table | `EditSession.reached_view`; `Table.typedAt_table` at an address |
 | `undo` | nothing | the last fill taken back: the delta and the view | `EditSession.feed_undo` |
@@ -55,6 +59,10 @@ structure Request where
   replacement : Option String := none
   holeName : String := "h0"
   id : Option Json := none
+  /-- the program as its JSON print, in place of `program` -/
+  programJson : Option Json := none
+  /-- the filling as its JSON print, in place of `replacement` -/
+  replacementJson : Option Json := none
 
 /-- Read a request; a field of the wrong type is refused with its name. -/
 def Request.fromJson? (j : Json) : Except String Request := do
@@ -65,7 +73,10 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let replacement ← optField j "replacement" (Lean.fromJson? (α := String))
   let holeName ← optField j "holeName" (Lean.fromJson? (α := String))
   let id := (j.getObjVal? "id").toOption
+  let programJson := (j.getObjVal? "programJson").toOption
+  let replacementJson := (j.getObjVal? "replacementJson").toOption
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
+    programJson replacementJson
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -74,10 +85,28 @@ def Request.toJson (r : Request) : Json :=
     (r.program.map fun hex => ("program", Json.str hex)).toList ++
     (r.holes.map fun hex => ("holes", Json.str hex)).toList ++
     (r.replacement.map fun hex => ("replacement", Json.str hex)).toList ++
+    (r.programJson.map fun j => ("programJson", j)).toList ++
+    (r.replacementJson.map fun j => ("replacementJson", j)).toList ++
     (r.id.map fun id => ("id", id)).toList
 
 /-- A program from its hex bytes. -/
 def programOfHex (hex : String) : Option NativeEff := (bytesOfHex hex.toList).bind decodeProgram
+
+/-- A program from its JSON print, its objects in any order (`Canonical.ofJsonAnyOrder`). -/
+def programOfJson (j : Json) : Option NativeEff :=
+  (Tools.JsonBridge.ofLeanJson 4096 j).bind Canonical.ofJsonAnyOrder
+
+/-- A program from its hex bytes or, where there are none, its JSON print; with the laws its
+reading names. -/
+def programFrom? (hex : Option String) (json : Option Json) : Option NativeEff × List Lean.Name :=
+  match hex, json with
+  | some h, _ => (programOfHex h, [])
+  | none, some j => (programOfJson j, [``Canonical.ofJson_exact])
+  | none, none => (none, [])
+
+/-- A value's JSON print, as Lean's JSON. -/
+def printJson {α : Type} [Canonical α] (a : α) : Json :=
+  Tools.JsonBridge.toLeanJson (Canonical.print a)
 
 /-- A hole table from its hex bytes. -/
 def holesOfHex (hex : String) : Option RowTable := (bytesOfHex hex.toList).bind decodeHoles
@@ -112,10 +141,12 @@ def stepJson (s : Edit.Step) : Json :=
     ("path", toJson s.edit.path), ("delta", deltaJson s.delta)]
 
 /-- Feed one edit, record it, and answer its delta and the view. -/
-def feedAnswer (st : State) (l : EditSession) (req : Request) (e : Edit) : State × Answer :=
+def feedAnswer (st : State) (l : EditSession) (req : Request) (e : Edit)
+    (readLaws : List Lean.Name := []) : State × Answer :=
   let (l', step) := l.feedStep e
   ({ session := some l', journal := step :: st.journal },
-    { op := req.op, laws := deltaLaws e step.delta ++ [``EditSession.reached_view], ok := true,
+    { op := req.op, laws := readLaws ++ deltaLaws e step.delta ++ [``EditSession.reached_view],
+      ok := true,
       result := Json.mkObj [("delta", deltaJson step.delta), ("view", viewJson l')],
       id := req.id })
 
@@ -124,23 +155,24 @@ def answer (st : State) (req : Request) : State × Answer :=
   let none' (why : String) : State × Answer := (st, refused req.op why req.id)
   match req.op with
   | "open" =>
-    match req.program.bind programOfHex, (req.holes.map holesOfHex).getD (some []) with
-    | none, _ => none' "the program's bytes do not decode"
+    let (program?, readLaws) := programFrom? req.program req.programJson
+    match program?, (req.holes.map holesOfHex).getD (some []) with
+    | none, _ => none' "the program does not read"
     | _, none => none' "the hole table's bytes do not decode"
     | some program, some holes =>
       let l := EditSession.open {} { program, holes }
       ({ session := some l, journal := [] },
-        { op := req.op, laws := [``EditSession.reached_view], ok := true, result := viewJson l,
-          id := req.id })
+        Answer.mk req.op "empty" (readLaws ++ [``EditSession.reached_view]) true (viewJson l) none
+          req.id)
   | op =>
     match st.session with
     | none => none' "no session is open"
     | some l =>
       match op with
       | "fill" =>
-        match req.replacement.bind programOfHex with
-        | none => none' "the filling's bytes do not decode"
-        | some q => feedAnswer st l req (.fill req.path q)
+        match programFrom? req.replacement req.replacementJson with
+        | (none, _) => none' "the filling does not read"
+        | (some q, readLaws) => feedAnswer st l req (.fill req.path q) readLaws
       | "omit" =>
         match l.sketch.focusAt l.app req.path with
         | none => none' "no focus at the address"
@@ -154,8 +186,11 @@ def answer (st : State) (req : Request) : State × Answer :=
           let entry := match l.table.find? fun e => decide (e.path = req.path) with
             | some e => entryJson e
             | none => .null
-          let result := Json.mkObj [("entry", entry),
-            ("focus", focusJson (l.sketch.focusAt l.app req.path))]
+          let focus := l.sketch.focusAt l.app req.path
+          let result := Json.mkObj [("entry", entry), ("focus", focusJson focus),
+            ("programJson", match focus with
+              | some f => printJson f.program
+              | none => .null)]
           (st, Answer.mk op "empty" [``EditSession.reached_view, ``Table.typedAt_table] true
             result none req.id)
       | "undo" =>
@@ -175,7 +210,8 @@ def answer (st : State) (req : Request) : State × Answer :=
         (st, Answer.mk op "empty" [] true result none req.id)
       | "sketch" =>
         let result := Json.mkObj [("program", .str (hexString (encodeProgram l.sketch.program))),
-          ("holes", .str (hexString (encodeHoles l.sketch.holes)))]
+          ("holes", .str (hexString (encodeHoles l.sketch.holes))),
+          ("programJson", printJson l.sketch.program), ("holesJson", printJson l.sketch.holes)]
         (st, Answer.mk op "empty" [``Sketch.decode_exact] true result none req.id)
       | other => none' s!"unknown operation {other}"
 
