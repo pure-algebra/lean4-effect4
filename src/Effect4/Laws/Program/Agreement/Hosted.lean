@@ -17,11 +17,11 @@ and the local run with calls moves the same way, reading one reply for each answ
 
 **The laws.** One evaluation segment (`drive_seg`): from the running root, within a bound of
 commands, the loop reaches the exit path, a host call or a yield, and the local run with calls
-reaches the same place with no reply read. One decision (`decision_holds`) and a tape of them
-(`tape_holds`): the machine stays in a form whose position the local run with calls reaches,
-reading the tape's replies in order. They are steps of the planned goal
-`denoteRows_eq_session` (`Laws/Api/SessionMeaning.lean`); concept `translation-simulation`,
-requirement R6. They say nothing of a second fiber, a scope, an interruption, a clock step or
+reaches the same place with no reply read. One decision (`holds_evaluate`, `holds_flush`,
+`holds_answer`): the machine stays in a form whose position the local run with calls reaches,
+reading one reply for each answer. At rest, the form fixes the meaning (`meaning_settled`). They
+are steps of `denoteRows_eq_session` (`Laws/Api/SessionMeaning.lean`, with the tape's induction
+`tape_holds`); concept `translation-simulation`, requirement R6. They say nothing of a second fiber, a scope, an interruption, a clock step or
 a reply that is refused: the decisions are a host's (`hostDecision`), on one fiber.
 -/
 

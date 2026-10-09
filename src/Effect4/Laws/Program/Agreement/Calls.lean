@@ -282,8 +282,8 @@ theorem straight_of_performRows {table : RowTable} {op : NativeOp} {r : Term}
 meaning under the reply tape goes** (slice H8): from any outer stack `K` and mask `i`, to its
 exit's fiber over its stores with the replies left; or, when the meaning is the frontier, to a
 host call with no reply left. Where the compile budget does not reach, the run may instead
-diverge at the compile's frontier (`RunsToD`). A step of the planned goal
-`denoteRows_eq_session` (concept `translation-simulation`, R6); its consumer is that goal's
+diverge at the compile's frontier (`RunsToD`). A step of
+`denoteRows_eq_session` (concept `translation-simulation`, R6); its consumer is that theorem's
 assembly. Reach: `StraightRows`, every compile budget, every root, every reply tape. It does not
 establish a run of the machine, nor anything of a fiber, a scope or a loop. -/
 theorem localRunC_compile (table : RowTable) (root : NativeEff) :
