@@ -49,6 +49,9 @@ structure Page where
   foot : String := ""
   /-- the page's place in a sequence, as `3 / 12` -/
   place : String := ""
+  /-- the width of the gutter in cells, when a sequence of pages fixes it: so the lines of every
+  frame stand at one column, and only rows move between frames -/
+  gutter : Option Nat := none
 deriving Repr
 
 /-- The grid of `paint.h`, in logical pixels. -/
@@ -77,10 +80,14 @@ def textAt (key : Key) (face : Face) (x base : Int) (s : String) (room : Int) : 
 def shown (s : String) (room : Int) : Int :=
   if room ≤ 0 || s.isEmpty then 0 else min (s.length : Int) room
 
-/-- The width of the gutter in cells: its widest address, and two more. -/
-def gutterCols (g : Page) : Int :=
+/-- The width of the gutter in cells that a page's own lines need: its widest address, and two
+more. -/
+def ownGutter (g : Page) : Nat :=
   let n := g.lines.foldl (fun n l => max n l.gutter.length) g.heads.1.length
   if n + 2 < 8 then 8 else n + 2
+
+/-- The width of the gutter in cells: the sequence's, or the page's own. -/
+def gutterCols (g : Page) : Int := g.gutter.getD (ownGutter g)
 
 /-- The size of a page in logical pixels, at the width `W`. -/
 def pageSize (W : Int) (g : Page) : Int × Int := (W, TOP + ROWH * g.lines.size + 8 + FOOT)
@@ -110,24 +117,31 @@ def lineCalls (W B : Int) (row : Nat) (l : Line) : List (Keyed Call) :=
     [⟨k, .uncut⟩] ++
     (if k.isEmpty then [] else [⟨k, .hit 0 y W ROWH⟩])
 
-/-- A whole page as calls, at the width `W`: the ground, the lines, then the title block and
-the foot. The calls of the title block and the foot carry no key. -/
-def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
-  let (_, H) := pageSize W g
+/-- The ground of a picture of `W` by `H` logical pixels. -/
+def groundCalls (W H : Int) : List (Keyed Call) := [⟨"", .fill .ground 1000 0 0 W H⟩]
+
+/-- The title block and the foot of a page of height `H`. Their calls carry no key. -/
+def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
   let right := W - LEFT
   let cols := (W - 2 * LEFT) / CELL
   let B := gutterCols g
   let n : Int := g.place.length
   let none' : Key := ""
-  [⟨none', .fill .ground 1000 0 0 W H⟩] ++
-    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls W B i l) ++
-    cellsAt none' (col (cols - n)) 40 g.place n ++
+  cellsAt none' (col (cols - n)) 40 g.place n ++
     textAt none' .title LEFT 40 g.title (right - LEFT - CELL * (n + 3)) ++
     cellsAt none' LEFT 64 g.judgment cols ++
     textAt none' .label LEFT HEADS g.heads.1 (CELL * B) ++
     textAt none' .label (col B) HEADS g.heads.2 400 ++
-    [⟨none', .hrule .rule LEFT right HEAD_RULE 1⟩, ⟨none', .hrule .rule LEFT right (H - FOOT) 1⟩] ++
+    [⟨none', .hrule .rule LEFT HEAD_RULE (right - LEFT) 1⟩,
+      ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) 1⟩] ++
     cellsAt none' LEFT (H - 12) g.foot cols
+
+/-- A whole page as calls, at the width `W`: the ground, the lines, then the title block and
+the foot. -/
+def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
+  let (_, H) := pageSize W g
+  groundCalls W H ++ (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls W (gutterCols g) i l) ++
+    chromeCalls W H g
 
 /-! ## The terminal: the same page as characters -/
 

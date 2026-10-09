@@ -1,4 +1,5 @@
 import Tools.View.Program
+import Tools.View.Motion
 import Tools.Session
 
 /-!
@@ -86,32 +87,40 @@ def lawText (n : Lean.Name) : String := n.toString.replace "Effect4.Program." ""
 def requestText (r : Tools.Session.Request) : String :=
   if r.op == "open" then "open" else s!"{r.op} {Program.bracket r.path}"
 
+/-- One frame: its page, the address its edit names, and whether the edit spliced the table. -/
+structure Frame where
+  page : Page
+  edit : Option (List Nat) := none
+  spliced : Bool := false
+
 /-- **The frames of a run of requests**: one page after each request that answers with a
 session, titled by the request. The line under the title gives the delta and the session's type;
 the foot gives the laws that the answer names. A refused request draws the session before it,
-with the refusal. -/
-def frames (title : String) (reqs : List Tools.Session.Request) : List Page :=
-  let step (acc : Tools.Session.State × List Page) (r : Tools.Session.Request) :
-      Tools.Session.State × List Page :=
-    let (st, pages) := acc
+with the refusal. Every frame has the widest gutter of the sequence, so a line stands at one
+column in every frame. -/
+def frames (title : String) (reqs : List Tools.Session.Request) : List Frame :=
+  let step (acc : Tools.Session.State × List Frame) (r : Tools.Session.Request) :
+      Tools.Session.State × List Frame :=
+    let (st, out) := acc
     let (st', ans) := Tools.Session.answer st r
     match st'.session with
-    | none => (st', pages)
+    | none => (st', out)
     | some l =>
-      if r.op == "view" || r.op == "journal" || r.op == "sketch" then (st', pages)
+      if r.op == "view" || r.op == "journal" || r.op == "sketch" then (st', out)
       else
         let lit := if r.op == "open" then none else some r.path
-        let delta := match st'.journal, ans.ok, r.op with
-          | s :: _, true, "fill" => deltaText s.delta ++ "   "
-          | s :: _, true, "omit" => deltaText s.delta ++ "   "
-          | _, false, _ => "refused: " ++ (ans.error.getD "") ++ "   "
-          | _, _, _ => ""
+        let (delta, spliced) := match st'.journal, ans.ok, r.op with
+          | s :: _, true, "fill" => (deltaText s.delta ++ "   ", s.delta matches .spliced _)
+          | s :: _, true, "omit" => (deltaText s.delta ++ "   ", s.delta matches .spliced _)
+          | _, false, _ => ("refused: " ++ (ans.error.getD "") ++ "   ", false)
+          | _, _, _ => ("", false)
         let laws := "laws: " ++ ", ".intercalate (ans.laws.map lawText)
         let page := Program.sessionPage l lit (title ++ " · " ++ requestText r)
           (delta ++ sessionText l) "" laws
-        (st', pages ++ [page])
-  let pages := (reqs.foldl step ({}, [])).2
-  let n := pages.length
-  pages.zipIdx.map fun (g, i) => { g with place := s!"{i + 1} / {n}" }
+        (st', out ++ [{ page, edit := lit, spliced }])
+  let out := (reqs.foldl step ({}, [])).2
+  let n := out.length
+  let gutter := out.foldl (fun m f => max m (ownGutter f.page)) 0
+  out.zipIdx.map fun (f, i) => { f with page := { f.page with place := s!"{i + 1} / {n}", gutter } }
 
 end Tools.View.Build

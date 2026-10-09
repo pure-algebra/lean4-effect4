@@ -55,11 +55,9 @@ structure Rect where
 deriving DecidableEq, Repr
 
 /-- One call of the painter, in logical pixels at zoom 1. A tone is a role at a value in
-thousandths. -/
+thousandths. A rule is a fill whose height, or width, is its weight (`Call.hrule`). -/
 inductive Call where
   | fill (role : Role) (value : Nat) (x y w h : Int)
-  | hrule (role : Role) (x0 x1 y : Int) (weight : Nat)
-  | vrule (role : Role) (x y0 y1 : Int) (weight : Nat)
   | frame (role : Role) (x y w h : Int) (weight : Nat)
   | cells (x base : Int) (room : Nat) (text : String)
   | text (face : Face) (x base room : Int) (text : String)
@@ -84,6 +82,14 @@ structure Keyed (α : Type) where
   call : α
 deriving Repr
 
+/-- A horizontal rule of `w` logical pixels at `(x, y)`: a fill of the rule's weight. At a whole
+ratio the painter's weight (P2, `paint_weight`) and a fill's height snap alike, so a rule is no
+call of its own. -/
+def Call.hrule (role : Role) (x y w : Int) (weight : Nat) : Call := .fill role 1000 x y w weight
+
+/-- A vertical rule of `h` logical pixels at `(x, y)`. -/
+def Call.vrule (role : Role) (x y h : Int) (weight : Nat) : Call := .fill role 1000 x y weight h
+
 /-! ## From a call to device calls: the painter's snapping, at a whole ratio -/
 
 /-- A fill; an empty box paints nothing (`paint_device_fill`). -/
@@ -100,29 +106,18 @@ def devFrame (role : Role) (value : Nat) (b : Rect) (w : Int) : List Dev :=
   if b.x1 - b.x0 ≤ 2 * w ∨ b.y1 - b.y0 ≤ 2 * w then devFill role value b
   else (frameSides b w).flatMap (devFill role value)
 
-/-- The box of a fill: each edge is snapped by itself, and a fill keeps one pixel
-(`paint_fill`). At a whole ratio the snap is a product. -/
-def box (r : Int) (x y w h : Int) : Rect :=
-  let x0 := r * x
-  let y0 := r * y
-  ⟨x0, y0, if r * (x + w) ≤ x0 then x0 + 1 else r * (x + w),
-    if r * (y + h) ≤ y0 then y0 + 1 else r * (y + h)⟩
+/-- The device pixels of a length or a weight of `v` logical pixels at the ratio `r`: one at
+least, so a fill never vanishes (`paint_fill`, `paint_weight`). -/
+def span (r v : Int) : Int := if r * v ≤ 0 then 1 else r * v
 
-/-- The device pixels of a weight: one at least (`paint_weight`). -/
-def weight (r : Int) (w : Nat) : Int := if r * w < 1 then 1 else r * w
+/-- The box of a fill at a whole ratio: its origin is a product, and its extent is a `span`. -/
+def box (r : Int) (x y w h : Int) : Rect :=
+  ⟨r * x, r * y, r * x + span r w, r * y + span r h⟩
 
 /-- The device calls of one call of the painter, at the ratio `r`. -/
 def lowerCall (r : Int) : Call → List Dev
   | .fill role value x y w h => devFill role value (box r x y w h)
-  | .hrule role x0 x1 y w =>
-    let a := r * min x0 x1
-    let b := if r * max x0 x1 ≤ a then a + 1 else r * max x0 x1
-    devFill role 1000 ⟨a, r * y, b, r * y + weight r w⟩
-  | .vrule role x y0 y1 w =>
-    let a := r * min y0 y1
-    let b := if r * max y0 y1 ≤ a then a + 1 else r * max y0 y1
-    devFill role 1000 ⟨r * x, a, r * x + weight r w, b⟩
-  | .frame role x y w h wt => devFrame role 1000 (box r x y w h) (weight r wt)
+  | .frame role x y w h wt => devFrame role 1000 (box r x y w h) (span r wt)
   | .cells x base room text => [.cells x base room text]
   | .text face x base room text => [.text face x base room text]
   | .cut x y w h => [.cut x y w h]
@@ -171,11 +166,18 @@ theorem pick_append (a b : List (Keyed Dev)) (x y : Int) :
     pick (a ++ b) x y = (pick b x y).or (pick a x y) := by
   simp only [pick, List.reverse_append, List.findSome?_append]
 
-/-- A fill never vanishes: the box of a fill holds a pixel, at a ratio of one or more. -/
-theorem box_holds (r x y w h : Int) (_hr : 0 < r) :
+/-- A span is one device pixel at least. -/
+theorem span_pos (r v : Int) : 0 < span r v := by
+  simp only [span]
+  split <;> omega
+
+/-- A fill never vanishes: the box of a fill holds a pixel, at every ratio. -/
+theorem box_holds (r x y w h : Int) :
     (box r x y w h).x0 < (box r x y w h).x1 ∧ (box r x y w h).y0 < (box r x y w h).y1 := by
   simp only [box]
-  constructor <;> split <;> omega
+  have := span_pos r w
+  have := span_pos r h
+  constructor <;> omega
 
 /-- The four sides of a frame share no pixel (the painter's P4). -/
 theorem frameSides_pairwise (b : Rect) (w : Int)
@@ -200,6 +202,90 @@ theorem frameSides_pairwise (b : Rect) (w : Int)
     exact Or.inl (by show b.x0 + w ≤ b.x1 - w; omega)
   · intro r hr
     cases hr
+
+/-! ## Motion: a move by whole pixels commutes with the lowering
+
+A frame between two pages moves the calls of each object that both pages draw. The law below
+makes such a frame exact: moving a call and then lowering it gives the call's own device calls,
+moved. So no snap moves a pixel of an object while the object moves, and the device calls of a
+moving object are those of the still one, shifted. -/
+
+/-- A box moved by whole device pixels. -/
+def Rect.move (dx dy : Int) (b : Rect) : Rect := ⟨b.x0 + dx, b.y0 + dy, b.x1 + dx, b.y1 + dy⟩
+
+/-- A call moved by whole logical pixels. -/
+def Call.move (dx dy : Int) : Call → Call
+  | .fill role value x y w h => .fill role value (x + dx) (y + dy) w h
+  | .frame role x y w h wt => .frame role (x + dx) (y + dy) w h wt
+  | .cells x base room s => .cells (x + dx) (base + dy) room s
+  | .text face x base room s => .text face (x + dx) (base + dy) room s
+  | .cut x y w h => .cut (x + dx) (y + dy) w h
+  | .uncut => .uncut
+  | .hit x y w h => .hit (x + dx) (y + dy) w h
+
+/-- A device call moved by whole logical pixels at the ratio `r`: a box by `r` times as many
+device pixels; a text and a cut, which stay in logical pixels, by the logical move. -/
+def Dev.move (r dx dy : Int) : Dev → Dev
+  | .fill role value b => .fill role value (b.move (r * dx) (r * dy))
+  | .cells x base room s => .cells (x + dx) (base + dy) room s
+  | .text face x base room s => .text face (x + dx) (base + dy) room s
+  | .cut x y w h => .cut (x + dx) (y + dy) w h
+  | .uncut => .uncut
+  | .hit b => .hit (b.move (r * dx) (r * dy))
+
+/-- A box at a moved origin is the box, moved. -/
+theorem box_move (r x y w h dx dy : Int) :
+    box r (x + dx) (y + dy) w h = (box r x y w h).move (r * dx) (r * dy) := by
+  simp only [box, Rect.move, Int.mul_add, Int.add_right_comm (r * x) (span r w) (r * dx),
+    Int.add_right_comm (r * y) (span r h) (r * dy)]
+
+/-- A fill of a moved box is the fill, moved. -/
+theorem devFill_move (role : Role) (value : Nat) (b : Rect) (r dx dy : Int) :
+    devFill role value (b.move (r * dx) (r * dy)) = (devFill role value b).map (Dev.move r dx dy) := by
+  simp only [devFill, Rect.move, Int.add_le_add_iff_right]
+  by_cases h : b.x1 ≤ b.x0 ∨ b.y1 ≤ b.y0
+  · simp only [h, ↓reduceIte, List.map_nil]
+  · simp only [h, ↓reduceIte, List.map_cons, List.map_nil, Dev.move, Rect.move]
+
+/-- The sides of a moved frame are the sides, moved. -/
+theorem frameSides_move (b : Rect) (w dx dy : Int) :
+    frameSides (b.move dx dy) w = (frameSides b w).map (Rect.move dx dy) := by
+  simp only [frameSides, Rect.move, List.map_cons, List.map_nil, List.cons.injEq, Rect.mk.injEq,
+    and_true, true_and]
+  omega
+
+/-- A moved frame lowers to the frame's device calls, moved. -/
+theorem devFrame_move (role : Role) (value : Nat) (b : Rect) (w r dx dy : Int) :
+    devFrame role value (b.move (r * dx) (r * dy)) w =
+      (devFrame role value b w).map (Dev.move r dx dy) := by
+  simp only [devFrame]
+  have hx : (b.move (r * dx) (r * dy)).x1 - (b.move (r * dx) (r * dy)).x0 = b.x1 - b.x0 :=
+    Int.add_sub_add_right _ _ _
+  have hy : (b.move (r * dx) (r * dy)).y1 - (b.move (r * dx) (r * dy)).y0 = b.y1 - b.y0 :=
+    Int.add_sub_add_right _ _ _
+  rw [hx, hy]
+  by_cases h : b.x1 - b.x0 ≤ 2 * w ∨ b.y1 - b.y0 ≤ 2 * w
+  · simp only [h, ↓reduceIte]
+    exact devFill_move role value b r dx dy
+  · simp only [h, ↓reduceIte, frameSides_move, List.flatMap_map, List.map_flatMap, devFill_move]
+
+/-- **The move law.** A call moved by whole logical pixels lowers to its device calls, moved. -/
+theorem lowerCall_move (r dx dy : Int) (c : Call) :
+    lowerCall r (c.move dx dy) = (lowerCall r c).map (Dev.move r dx dy) := by
+  cases c with
+  | fill role value x y w h =>
+    simp only [Call.move, lowerCall]
+    rw [box_move, devFill_move]
+  | frame role x y w h wt =>
+    simp only [Call.move, lowerCall]
+    rw [box_move, devFrame_move]
+  | cells => rfl
+  | text => rfl
+  | cut => rfl
+  | uncut => rfl
+  | hit x y w h =>
+    simp only [Call.move, lowerCall, List.map_cons, List.map_nil, Dev.move]
+    rw [box_move]
 
 /-! ## The stream that `draw.c` replays -/
 
