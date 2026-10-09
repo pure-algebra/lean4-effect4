@@ -116,16 +116,22 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **Codex's module catalogue** on the new layout (the
+1. **The visual pipeline** (row 336, point 10; the
+   [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0, the picture as data in the
+   tree; V1, the frames of a program built by edits; V2, the frames of a run.
+2. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
+   address, search by type and by explanation, wrap, extract and inline, each shown as frames.
+   Seat ORG's L9 (`rebaseRefs`, point 6) and its rank 5 (a program in the store) come first.
+3. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-2. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)).
-   First the session tool as an MCP server. Then marking, after the design note's decision 3.
-   Then each table entry's rule as data, and one session for editing and running.
-3. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
+4. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)):
+   the session tool as an MCP server; marking at a gap (row 336, point 3); each table entry's
+   rule as data; one session for editing and running.
+5. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
-4. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
-5. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
+6. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
+7. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
    transaction attempt (G4).
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329), the session
@@ -133,21 +139,10 @@ API's slices (row 326), and H8.
 
 ## What the owner must decide
 
-- **The simulation's first question** (row 329): what every schedule covers. Its questions 2
-  and 3 take row 330's answer as their recommendation.
-- **The frozen contracts' statement pins** (row 301, point 8; the
-  [test census](research/2026-10-06-test-cleanup-census.md), proposal 4).
-- **The claims record** (the [application packet](research/2026-10-07-packet-application-claims.md),
-  section 5.3): five questions.
-- **The host-lowering plan**: whether the plan of the branch `codex/host-lowering-plan` was
-  ratified on 2026-10-04 (row 310).
-- **Where the language stops computing**, beyond the line of row 309 (row 307).
-- **The marks of an open part** in the proof graph view (row 308).
-- **Seat ORG's three questions** (the [theory map](research/2026-10-08-seat-ORG-theory-map.md),
-  section 7.1). Do a moved layer's references keep absolute targets? The recommendation is yes,
-  with a rebase law. What keys a stored subtree? The recommendation is one node per program,
-  until a table cache needs subtrees. Does a tool's named law count as load? The recommendation
-  is yes, by theorems.
+- **The vendoring list** (row 336, point 5): the C libraries of the
+  [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. Each is confirmed at
+  its own repository before a download.
+- **Motion** (slice V3 of that note): what moves between two frames, and how.
 
 ## Process
 

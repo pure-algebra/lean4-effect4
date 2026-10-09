@@ -1,0 +1,128 @@
+# The visual pipeline: frames of a program built and run, and vendored C
+
+Status: plan note (history, not authority). Base: `7334f119` (`refactor/phase1-phase3`).
+Decisions row 336 records the rulings it follows.
+
+## 1. The one thing to know first
+
+- **An agent edits the graph, not the text.** The reader reads back exactly what the printer
+  writes, and refuses most hand-written Effect. So the TypeScript print is an output and a view.
+  An agent edits by operations on the tree, through the session tool: open, fill, omit, undo.
+- **The views come before the interaction.** Every stage of a program shows as a frame: each edit
+  of its construction, and each step of its run. Interaction comes after the frames exist.
+- **The picture is data computed in Lean.** A page lowers to drawing calls and then to device
+  calls. C replays the device calls, draws text and reports input. SVG and the terminal are two
+  more outputs of the same calls.
+- **Most of the drawing exists** as the native view probe of 2026-10-06 and 2026-10-07
+  (`docs/research/2026-10-06-native-view-probe/`, outside the tree). This plan lands it in the
+  tree and adds steps.
+
+## 2. The owner's steer (2026-10-09, by voice; the coordinator's reading)
+
+- Agents author graphs, through the tool interface, by graph operations. They look up pieces by
+  content address and by meaning, at any depth, and build by reuse and modularization.
+- To build verified code is to write or rearrange the graph, which carries the proof structure.
+- Get the basic views first. See a program go through its steps, and see a graph built step by
+  step, before the agent's interaction is designed.
+- Native C, with a simple interface, perhaps a terminal one. Model the data of rendering,
+  animation and typography in Lean. Keep the ability to translate to web standards, SVG first.
+- Vendor good C libraries that fit our semantics, especially for interaction.
+
+## 3. What exists
+
+| Piece | Where | State |
+| --- | --- | --- |
+| a page as rows, its drawing calls, its device calls, `lowerAll`, `pick`, five laws | probe `Scene.lean` | probed; string roles, no key on a drawing call |
+| a program as lines: one generic layer, folded (`EffAlgebra.ofLayer`) | probe `Lines.lean`, section `ViewLines` | probed |
+| the replay of device calls through cairo and pango | probe `draw.c`, `paint.h` | probed |
+| a window with pan, zoom, pages and a console mode | probe `view.c`, `canvas.c`, SDL2 | probed |
+| the edit session and its journal; the session tool over JSON lines | `src/Effect4/Program/Edit.lean`, `tools/Tools/Session.lean` | landed (row 334) |
+| a run's journal and its replay | `src/Effect4/Run/Basic.lean`, `journal_replays` | landed |
+
+## 4. The pipeline
+
+```mermaid
+flowchart LR
+  R[Session requests: open, fill, omit] --> S[Session states, one after each request]
+  J[Run journal: commands] --> M[Run states, one after each command]
+  S --> P[Page: lines with keys]
+  M --> P
+  P --> O[Drawing calls, logical pixels, keyed]
+  O --> D[Device calls, whole pixels, keyed]
+  D --> C[C replay: PNG and window]
+  D --> V[SVG]
+  P --> T[Terminal characters]
+```
+
+Each form is first-order data, and each arrow is a function in Lean.
+
+| Form | Its constructors | Arrow out | Kind of the arrow |
+| --- | --- | --- | --- |
+| `Page` | a title block, lines, a foot | `pageCalls` | projection |
+| `Call` | fill, two rules, frame, two texts, cut, end of cut, pointer box; each with a key | `lower` | translation, call by call |
+| `Dev` | fill, two texts, cut, end of cut, pointer box; each with a key | `Dev.row`, `Dev.svg` | projection |
+
+The layout is a tool's, as row 334 rules: its laws are tests until a person uses the window. The
+lowering keeps its five proved laws as statements of the tool.
+
+## 5. Slices
+
+| Slice | What lands | It shows |
+| --- | --- | --- |
+| V0 | `tools/Tools/View/`: the three forms with keys, the lowering and its laws, the SVG and terminal outputs; `tools/view/draw.c` and `paint.h` from the probe | one page in three outputs |
+| V1 | the frames of a session: one page after each request. A generator writes the requests that build a program top-down: every hole is declared at `open`, and each fill puts one node with its children as holes. | a program built step by step, with the type at each address and the lit edit |
+| V2 | the frames of a run: one page after each command | fibers, calls and exits at each step |
+| V3 | motion: two pages joined by key, with the calls that stay, enter and leave | a step that moves |
+| V4 | the graph operations of the agent: content-addressed pieces, search, wrap, extract, inline | each operation as V1's frames |
+
+**V2's gap.** The machine records no program address for a fiber. A frame of a run can show the
+fibers, the calls and the exits, but cannot light the running node. V2 adds that address, or
+reads it from the journal.
+
+**V3's open meanings.** What moves between two frames, and how, is the owner's to walk with the
+coordinator before it is drawn (the design steer: a mark or a motion enters with a meaning only).
+
+## 6. Vendoring C libraries
+
+**The fit test.** A library fits when:
+
+- it takes data and answers data: a list of drawing calls in, input events out;
+- it makes no layout decision that a law of ours would have to cover;
+- it is C with a permissive licence, and it builds under strict warnings;
+- it makes no network call and keeps no hidden global state that a frame depends on.
+
+This is the shape of the pipeline: Lean computes the picture and the next state, and C draws and
+reports.
+
+**Candidates.** Versions and licences are as listed by package indexes and project pages read on
+2026-10-09. Each is confirmed against its own repository before a download.
+
+| Need | Candidate | Licence (as listed) | What it would give |
+| --- | --- | --- | --- |
+| window and input | SDL3 (3.4.6 listed) | zlib | the window, the pointer, keys, high-density displays; SDL2 is installed today |
+| window and input | sokol_app (single header) | zlib (to confirm) | a smaller window layer, Metal on macOS |
+| terminal | termbox2 (2.5.0 listed, single header) | MIT | a cell grid with keys and the pointer; our data face is already a cell grid |
+| text | HarfBuzz (14.4.0 listed) with FreeType (2.14.3 listed) | MIT; FreeType licence | shaping and glyphs without pango and glib |
+| vector drawing | PlutoVG (1.3.3 listed) | MIT | paths and fills in a small C library, in place of cairo |
+| vector drawing and motion | ThorVG (1.1.2 listed, C interface) | MIT | SVG and Lottie playback: a bridge to web standards for motion |
+| interaction | Clay (single header) | to confirm | a layout pass that answers a list of render commands, and pointer queries by element id |
+| interaction | microui | to confirm | a small immediate-mode interface that answers a command list |
+
+**Recommendation.**
+
+- Now: keep cairo, pango and SDL2, which are installed. V0 and V1 need no download.
+- First vendoring, after the owner's yes on the list: termbox2 for the terminal, and SDL3 for the
+  window. Both answer events as data, and neither lays anything out.
+- Then text: HarfBuzz and FreeType in place of pango, so the window has no glib.
+- Clay and microui are read for their interaction design: a frame as a list of commands, and the
+  pointer answered by element id. Our pages already have both, so neither is vendored unless the
+  window needs widgets that Lean does not draw.
+- ThorVG when motion is ruled, as the player of SVG and Lottie exports.
+
+## 7. What this note does not establish
+
+- No frame of a run is drawn yet, and no motion is designed.
+- No library is downloaded, and no version or licence is confirmed against its repository.
+- The layout's laws are tests. A view is no face with claims (row 334).
+- The construction order of V1 is one order, top-down and left to right. An agent may build in
+  any order, and the frames follow its requests.
