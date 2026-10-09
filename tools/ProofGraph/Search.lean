@@ -114,7 +114,9 @@ def axiomsOf (e : Expr) : CoreM (Array Name) := do
   for c in e.getUsedConstants do
     unless (checked.find? c).isSome do
       throwError "proof graph: axiom collection encountered unknown constant {c}"
-    for a in ← collectAxioms c do
+    let some reached := exactAxioms (← getEnv) c
+      | throwError "proof graph: the axiom walk exhausted its budget at {c}"
+    for a in reached do
       unless out.contains a do out := out.push a
   return out.qsort (·.toString < ·.toString)
 

@@ -1,5 +1,5 @@
 import Lean
-import Lean.Util.CollectAxioms
+import ProofGraph.Axioms
 
 /-!
 Checked theorem references for reports. The elaborator freezes the actual proposition,
@@ -28,7 +28,9 @@ def ProofRef.validate (p : ProofRef) : MetaM (Except String Unit) := do
   if t.levelParams != p.levels then return .error s!"{p.name}: universe parameters changed"
   unless ← isDefEq t.type p.proposition do
     return .error s!"{p.name}: proposition changed"
-  let extra := disallowedAxioms (← collectAxioms p.name)
+  let some reached := exactAxioms (← getEnv) p.name
+    | return .error s!"{p.name}: the axiom walk exhausted its budget"
+  let extra := disallowedAxioms reached
   unless extra.isEmpty do return .error s!"{p.name}: disallowed axioms {extra}"
   return .ok ()
 

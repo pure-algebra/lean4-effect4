@@ -1,7 +1,7 @@
 import Conform.Layout.Types
 import Init.Data.Function
 import Lean.Meta.Basic
-import Lean.Util.CollectAxioms
+import ProofGraph.Axioms
 
 /-!
 # Conform.Layout.Laws — one theorem per admissibility condition
@@ -257,7 +257,9 @@ run_meta do
       ``literal_inj, ``zip_right_inj, ``object_injective, ``tagged_inj, ``tagged_ne_of_tag_ne,
       ``tagged_injective, ``map_injective, ``seq_injective, ``tuple_inj, ``boundedNat_injective,
       ``wrappingNat_collides] do
-    for ax in ← Lean.collectAxioms law do
+    let some reached := ProofGraph.exactAxioms (← Lean.getEnv) law
+      | throwError "{law}: the axiom walk exhausted its budget"
+    for ax in reached do
       unless ax == ``propext || ax == ``Quot.sound do
         throwError "{law} reaches the axiom {ax}, beyond [propext, Quot.sound]"
 

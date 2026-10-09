@@ -42,4 +42,27 @@ run_cmd liftTermElabM do
   let reference ← addTheorem `Test.ProofGraph.allowedPropext [] proposition (mkConst ``propext)
   if let .error why ← reference.validate then throwError why
 
+/-! ## The memoized walk across a cycle
+
+An inductive type names its constructors and each constructor names its type, so the walk meets
+cycles. `quiet` closes inside the open component of `MemoCycle`, before `loud` reaches the leaf.
+The memo must still store what `quiet` reaches, as Lean's collector reads it: the leaf, through
+`MemoCycle` and `loud` (`tools/ProofGraph/Axioms.lean`, section Cycles). -/
+
+/-- A leaf of the walk, selected by `stop`, as a planned goal is. -/
+def memoLeaf : Nat := 0
+
+inductive MemoCycle where
+  | quiet : MemoCycle
+  | loud : Fin (memoLeaf + 1) → MemoCycle
+
+def memoEntry : Type := MemoCycle
+
+-- control: entered from `memoEntry`, the component stores `quiet`'s full answer
+#guard_msgs in
+run_cmd liftTermElabM do
+  let env ← getEnv
+  let (outs, _) := reachedAxiomsMany env #[``memoEntry, ``MemoCycle.quiet] {} (· == ``memoLeaf)
+  unless outs[1]! == some #[``memoLeaf] do throwError "a component member was stored short"
+
 end Test.ProofGraph

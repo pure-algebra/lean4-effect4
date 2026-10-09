@@ -13,6 +13,16 @@ the goal's name and not its `sorry`. One memo serves one `stop`. The walk runs o
 stack, since a proof's dependency chain is thousands deep and the interpreter's native stack is
 not; the step budget is a loop bound, and running out of it is an answered `none`, never an
 empty set.
+
+**Cycles.** The dependencies are not a DAG: an inductive type names its constructors, and each
+constructor's type names the inductive. The walk finds these cycles as strongly connected
+components (Tarjan's algorithm, on the explicit stack) and stores no answer for a constant until
+its whole component has closed. It then stores the component root's answer for every member,
+since every member of a component reaches the same constants. An earlier walk stored a member as
+soon as its own frame closed. A member closed inside an open component read an empty
+placeholder for the open part, and its short answer stayed in the memo: a constructor whose
+sibling's type reached `Classical.choice` was stored with no axiom. The control is in
+`Test/Audit/ProofGraph.lean`.
 -/
 namespace ProofGraph
 open Lean
@@ -48,37 +58,74 @@ private def selfAxiom (env : Environment) (stop : Name → Bool) (c : Name) : Ar
 /-- Steps the traversal may take in one call: more than the edges of any environment. -/
 def axiomBudget : Nat := 1000000000
 
-/-- A frame of the explicit stack: the constant, its dependencies, the next one to visit, and
-the axioms gathered so far. -/
-private abbrev Frame := Name × Array Name × Nat × Array Name
+/-- A frame of the explicit stack: the constant, its dependencies, the next one to visit, the
+axioms gathered so far, its discovery index, and the least discovery index of an unfinished
+component member its walk met (Tarjan's low link). -/
+private structure Frame where
+  name : Name
+  deps : Array Name
+  next : Nat
+  acc : Array Name
+  index : Nat
+  low : Nat
 
 /-- The axioms `root` reaches, and the `stop` leaves, with the memo threaded through; `none` only
-if the step budget ran out, which no finite environment reaches. -/
+if the step budget ran out, which no finite environment reaches. Each constant's answer enters
+the memo when its component closes, and not before. -/
 def reachedAxioms (env : Environment) (root : Name) (stop : Name → Bool := fun _ => false) :
     StateM AxiomMemo (Option (Array Name)) := do
   if let some known := (← get)[root]? then return some known
-  let mut stack : Array Frame := #[(root, deps env stop root, 0, selfAxiom env stop root)]
+  -- the members of the components still open, by discovery index, and the order they were found
+  let mut pending : Std.HashMap Name Nat := ({} : Std.HashMap Name Nat).insert root 0
+  let mut found : Array Name := #[root]
+  let mut counter := 1
+  let mut stack : Array Frame :=
+    #[{ name := root, deps := deps env stop root, next := 0, acc := selfAxiom env stop root,
+        index := 0, low := 0 }]
   let mut result : Option (Array Name) := none
   for _ in [0:axiomBudget] do
-    if stack.isEmpty then break
-    let (c, ds, i, acc) := stack.back!
-    if h : i < ds.size then
-      let d := ds[i]
-      stack := stack.set! (stack.size - 1) (c, ds, i + 1, acc)
-      match (← get)[d]? with
-      | some known => stack := stack.set! (stack.size - 1) (c, ds, i + 1, union acc known)
-      | none =>
-        -- the environment's constants form a DAG; a provisional entry only guards a cycle
-        modify (·.insert d #[])
-        stack := stack.push (d, deps env stop d, 0, selfAxiom env stop d)
-    else
-      modify (·.insert c acc)
-      stack := stack.pop
-      if stack.isEmpty then result := some acc
+    let some f := stack.back? | break
+    if h : f.next < f.deps.size then
+      let d := f.deps[f.next]
+      let f := { f with next := f.next + 1 }
+      if let some j := pending[d]? then
+        -- a member of an open component: its answer arrives when the component closes
+        stack := stack.set! (stack.size - 1) { f with low := min f.low j }
       else
-        let (p, pds, pi, pacc) := stack.back!
-        stack := stack.set! (stack.size - 1) (p, pds, pi, union pacc acc)
+        match (← get)[d]? with
+        | some known => stack := stack.set! (stack.size - 1) { f with acc := union f.acc known }
+        | none =>
+          stack := stack.set! (stack.size - 1) f
+          pending := pending.insert d counter
+          found := found.push d
+          stack := stack.push
+            { name := d, deps := deps env stop d, next := 0, acc := selfAxiom env stop d,
+              index := counter, low := counter }
+          counter := counter + 1
+    else
+      stack := stack.pop
+      if f.low == f.index then
+        -- `f` roots its component: every member found since it reaches what `f` reaches
+        for _ in [0:found.size] do
+          let some m := found.back? | break
+          found := found.pop
+          pending := pending.erase m
+          modify (·.insert m f.acc)
+          if m == f.name then break
+      match stack.back? with
+      | none => result := some f.acc
+      | some p =>
+        stack := stack.set! (stack.size - 1)
+          { p with acc := union p.acc f.acc, low := min p.low f.low }
   return result
+
+/-- **The axioms one declaration reaches, exactly**: this walk with a fresh memo. Use it where
+`Lean.collectAxioms` would serve. Lean 4.33's collector caches an answer for a constant closed
+inside an open cycle, as this walk once did, and exports those answers in each module's `.olean`;
+on 713 declarations of the law graph it omits `propext` that a plain search reaches (measured
+2026-10-09). `none` only if the step budget ran out. -/
+def exactAxioms (env : Environment) (name : Name) : Option (Array Name) :=
+  ((reachedAxioms env name).run {}).1
 
 /-- `reachedAxioms` for every root, in order, with the memo threaded through: one loop for a whole
 list of declarations, which runs natively when this module is precompiled. -/
