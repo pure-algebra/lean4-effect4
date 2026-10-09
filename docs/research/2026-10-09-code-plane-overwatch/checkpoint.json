@@ -1,0 +1,33 @@
+{
+  "reviewedMain": "82f199b7017e2b4c72880b4fc754b56d01508724",
+  "previousMain": "4a596d5bbcda7d38964735a250471a014484e1a1",
+  "newRelevantLanding": "2688f310",
+  "implementationBranchHead": "0e4f21d1",
+  "implementationMerged": false,
+  "claudeSession": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50",
+  "claudeCwd": "/Users/pooks/Dev/lean4-effect4",
+  "claudeTask": "Visual look data, easing and output; work in progress, not assessed as a landing",
+  "sourceHashes": {
+    "tools/Tools/Code/Doc.lean": "ba569b984f36b8436e742c367adae40426a2d2dc361e5f70a2898638510be687",
+    "tools/Tools/Code/TypeScript.lean": "5f38e4d3316a67c98cc9da85263b7cdb73b5d7679a61033cafc55140a9ef4ac1",
+    "tools/Tools/Code/Module.lean": "ac7923c83e13ef915f1b9b568d79ca7c0dcc050a743950454144cbd8bccbd6d9",
+    "tools/Drivers/Emit.lean": "6dee5c3a2d705ecdf96d0d9de60e8c849bef757944406c1f8361616bd660fbd9",
+    "src/Effect4/Codegen/SourceBindings.lean": "23a32d056579ae64983f152a4b1e562520c0847c078ce0f777a2dc1f5be25588",
+    "src/Effect4/Codegen/Types.lean": "10edeeec4968a9f3e0852f481d339593aa32e01e99a7abcdd36841f398706489"
+  },
+  "findings": {
+    "CP-01": "Confirmed: string map types import missing Readonly and Record exports; type-only builtins missing",
+    "CP-02": "Evidence scope: generate checks structured module admission, not emitted-text parsing or input equality; seven corpus successes equal input in this probe",
+    "CP-03": "Evidence scope: undo_layout recovers break metadata; arbitrary Doc.line can change non-whitespace text; no actual TypeScript builder defect found"
+  },
+  "unchangedFindings": [
+    "CK printed optionCase and caseTag reader gaps",
+    "Handle-header reconstruction boundary",
+    "Supplied source declarations are not tied to installed blocks"
+  ],
+  "limits": [
+    "No production edits",
+    "No full sweep, merge, push or Claude message",
+    "Finite map type checks, custom Doc counter-control and corpus equality checks, not host simulation"
+  ]
+}

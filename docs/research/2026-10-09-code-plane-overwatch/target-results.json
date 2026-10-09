@@ -1,0 +1,58 @@
+{
+  "reviewedCommit": "82f199b7017e2b4c72880b4fc754b56d01508724",
+  "compiler": "7.0.0-dev.20260629.1",
+  "effect": "4.0.0-rc.112",
+  "changedControlFiles": [
+    "populatedMap.ts",
+    "emptyMap.ts"
+  ],
+  "results": [
+    {
+      "name": "original",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--noEmit",
+        "-p",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-code-plane-overwatch/target/tsconfig.json"
+      ],
+      "exitCode": 1,
+      "diagnostics": "docs/research/2026-10-09-code-plane-overwatch/target/corpus/emptyMap.ts(11,15): error TS2305: Module '\"../prelude/prelude.ts\"' has no exported member 'Readonly'.\ndocs/research/2026-10-09-code-plane-overwatch/target/corpus/emptyMap.ts(11,30): error TS2305: Module '\"../prelude/prelude.ts\"' has no exported member 'Record'.\ndocs/research/2026-10-09-code-plane-overwatch/target/corpus/populatedMap.ts(11,15): error TS2305: Module '\"../prelude/prelude.ts\"' has no exported member 'Readonly'.\ndocs/research/2026-10-09-code-plane-overwatch/target/corpus/populatedMap.ts(11,30): error TS2305: Module '\"../prelude/prelude.ts\"' has no exported member 'Record'.\n"
+    },
+    {
+      "name": "import-control",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--noEmit",
+        "-p",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-code-plane-overwatch/target-import-control/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "diagnostics": ""
+    }
+  ],
+  "hashes": {
+    "target/corpus/populatedMap.ts": "d53d8f94f24e905acdda9ff6eaa8fdb13c9597ba6a15bb0440da4d6d979fcad9",
+    "target/corpus/emptyMap.ts": "d3a7656134a8257bb6c4d67149478475bbd2610e9ed97f9c0ab9e16c5ccf0d6c",
+    "target/corpus/scalar.ts": "f2accc334ff87dcf06e62a7a9d20fc131d50b8f55e7135de3c1fbb46f231ff89",
+    "target/corpus/mapKeys.ts": "7c68f418cbf048bc0b153b5b2efa10e2d10ba42b5949166208157e677b98d252",
+    "target/corpus/mapLookup.ts": "7baf5fbac16db44215ac413590fad18d5cdfbcdf514443480d0838daa97997c0",
+    "target/prelude/prelude.ts": "9afe38a9374dbfba70a6495ede3d2074029db8b5afee4beb76720dbc1aea4f55",
+    "target/prelude/prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "target/prelude/control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+    "target/prelude/records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "target/prelude/tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "target-import-control/corpus/populatedMap.ts": "c9cca63cd19aa52e8c81418f01e4c4682c1681b3271eda9907f1bb1c41b1f858",
+    "target-import-control/corpus/emptyMap.ts": "c436780dcee6130ab079bc58ba1dc49d9398ea28ef18fa9f0f99f9714bc160c6",
+    "target-import-control/corpus/scalar.ts": "f2accc334ff87dcf06e62a7a9d20fc131d50b8f55e7135de3c1fbb46f231ff89",
+    "target-import-control/corpus/mapKeys.ts": "7c68f418cbf048bc0b153b5b2efa10e2d10ba42b5949166208157e677b98d252",
+    "target-import-control/corpus/mapLookup.ts": "7baf5fbac16db44215ac413590fad18d5cdfbcdf514443480d0838daa97997c0",
+    "target-import-control/prelude/prelude.ts": "9afe38a9374dbfba70a6495ede3d2074029db8b5afee4beb76720dbc1aea4f55",
+    "target-import-control/prelude/prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "target-import-control/prelude/control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+    "target-import-control/prelude/records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "target-import-control/prelude/tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+  },
+  "limit": "Finite type-check of five emitted callers; the positive control removes only two bogus type imports in copied output, not production."
+}

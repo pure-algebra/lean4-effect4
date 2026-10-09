@@ -1,0 +1,4 @@
+docs/research/2026-10-09-code-plane-overwatch/target/corpus/emptyMap.ts(11,15): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Readonly'.
+docs/research/2026-10-09-code-plane-overwatch/target/corpus/emptyMap.ts(11,30): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Record'.
+docs/research/2026-10-09-code-plane-overwatch/target/corpus/populatedMap.ts(11,15): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Readonly'.
+docs/research/2026-10-09-code-plane-overwatch/target/corpus/populatedMap.ts(11,30): error TS2305: Module '"../prelude/prelude.ts"' has no exported member 'Record'.
