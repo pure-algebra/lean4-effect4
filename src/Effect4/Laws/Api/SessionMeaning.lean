@@ -230,6 +230,79 @@ def HostAnswered (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSig 
         (steppedBy program fuel table m (.answerAsync f t (.ofExit ex))) st' st''
   | d :: T, m, st, st'' => HostAnswered table host program fuel T (steppedBy program fuel table m d) st st''
 
+/-- Two exits are one, as a test. -/
+def exitEq (a b : ExitV) : Bool := decide (a = b)
+
+theorem eq_of_exitEq {a b : ExitV} (h : exitEq a b = true) : a = b := of_decide_eq_true h
+
+/-- **Check that a tape's answers are a host's**, by running the host along the tape: the host's
+final state, or `none` where an answer decision's exit is not what the host gives the machine's
+request. Sound for `HostAnswered` (`hostAnsweredCheck_sound`), so a finite evaluation that it
+returns the run's host state brings a run under H9. -/
+def hostAnsweredCheck (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSig table) σ)
+    (program : Api.Program) (fuel : Nat) : List Api.Decision → Api.Machine → σ → Option σ
+  | [], _, st => some st
+  | .answerAsync f t (.ofExit ex) :: T, m, st =>
+    match Program.requestOf m f t with
+    | some (.external i, v) =>
+      if hi : i < table.length then
+        match host.answer ⟨⟨i, hi⟩, v⟩ st with
+        | some (ex', st') =>
+          if exitEq ex' ex = true then
+            hostAnsweredCheck table host program fuel T
+              (steppedBy program fuel table m (.answerAsync f t (.ofExit ex))) st'
+          else none
+        | none => none
+      else none
+    | _ => none
+  | d :: T, m, st => hostAnsweredCheck table host program fuel T (steppedBy program fuel table m d) st
+
+/-- **The check is sound**: where it returns the host's final state, the tape's answers are the
+host's. -/
+theorem hostAnsweredCheck_sound (table : RowTable) {σ : Type}
+    (host : Effects.Comodel (RowSig table) σ) (program : Api.Program) (fuel : Nat) :
+    ∀ (T : List Api.Decision) (m : Api.Machine) (st st' : σ),
+      hostAnsweredCheck table host program fuel T m st = some st' →
+      HostAnswered table host program fuel T m st st'
+  | [], _, st, st', h => by
+    simp only [hostAnsweredCheck, Option.some.injEq] at h
+    exact h.symm
+  | .answerAsync f t (.ofExit ex) :: T, m, st, st'', h => by
+    simp only [hostAnsweredCheck] at h
+    split at h
+    · next i v hreq =>
+      split at h
+      · next hi =>
+        split at h
+        · next ex' st' hans =>
+          split at h
+          · next hb =>
+            have heq := eq_of_exitEq hb
+            subst heq
+            exact ⟨i, v, hi, st', hreq, hans,
+              hostAnsweredCheck_sound table host program fuel T _ st' st'' h⟩
+          · cases h
+        · cases h
+      · cases h
+    · cases h
+  | .answerAsync f t (.ofRefGet c) :: T, m, st, st', h =>
+    hostAnsweredCheck_sound table host program fuel T _ st st' h
+  | .fire _ :: T, m, st, st', h | .flush :: T, m, st, st', h | .evaluate _ :: T, m, st, st', h
+  | .yieldVerdict _ _ :: T, m, st, st', h | .interruptFrom _ _ _ :: T, m, st, st', h
+  | .installMiddleware :: T, m, st, st', h | .advance _ :: T, m, st, st', h =>
+    hostAnsweredCheck_sound table host program fuel T _ st st' h
+
+/-- **A driver's host as a comodel** of the row signature: the reactor answers a row's request
+from its state; an answer that is no exit is no answer here. -/
+def reactorHost (table : RowTable) {σ : Type} (r : Run.Reactor σ) : Effects.Comodel (RowSig table) σ where
+  answer op st :=
+    match externalRow table op.1.val with
+    | none => none
+    | some row =>
+      match r row op.2 st with
+      | some (.ofExit ex, next) => some (ex, next)
+      | _ => none
+
 /-- **A tape of a host's answered decisions keeps the machine's forms** (a step of
 `denoteRows_eq_session` and of `denoteRows_eq_session_host`): from a machine in a form of
 `Holds` at a position, the raw replay of the tape ends in such a form, and the local run with

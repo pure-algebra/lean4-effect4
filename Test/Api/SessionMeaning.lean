@@ -249,6 +249,33 @@ def driven (main : Src NativeOp) (state : Repo) : Option (Bool × Option ExitV �
     (driven list added.2.2).map fun listed => listed.2.1) =
   some (some (.success (.list [todo 1 "milk" false])))
 
+/-- The premises of `denoteRows_eq_session_host` (H9) on a driven run: H8's four, the root
+exited, and the repository's answers along the run's tape (`hostAnsweredCheck`, sound for
+`HostAnswered`), from the start state to the run's end state. -/
+def hostPremises (main : Src NativeOp) (state : Repo) : Option (Bool × Bool × Bool × Bool × Bool × Bool) :=
+  (built? (request main)).map fun b =>
+    let run : Run × Repo := Run.runWith b repository state "todo"
+    let base := premises run.1
+    (base.1, base.2.1, base.2.2.1, base.2.2.2, run.1.exit.isSome,
+      Run.hostAnsweredCheck b.table (Run.reactorHost b.table repository) b.program run.1.budget.fuel
+        (tapeOf run.1) (Api.load b.program run.1.budget.compileFuel) state == some run.2)
+
+-- finite evaluation: each driven run meets the premises of H9 under the repository host, so
+-- `denoteRows_eq_session_host` covers it: the host's run of the call tree is the run's exit
+#guard [hostPremises (add (str "milk")) (1, []), hostPremises (add (str "")) (1, []),
+    hostPremises list (1, []), hostPremises list (3, [(1, "milk", false), (2, "tea", true)]),
+    hostPremises (complete (nat 1)) (3, [(1, "milk", false), (2, "tea", true)]),
+    hostPremises (complete (nat 7)) (3, [(1, "milk", false)]),
+    hostPremises (remove (nat 2)) (3, [(1, "milk", false), (2, "tea", true)]),
+    hostPremises (remove (nat 7)) (3, [(1, "milk", false)])].all
+  (· = some (true, true, true, true, true, true))
+
+-- control: from another start state, the run's answers are not the host's answers there
+#guard ((built? (request (add (str "milk")))).map fun b =>
+    let run : Run × Repo := Run.runWith b repository (1, []) "todo"
+    Run.hostAnsweredCheck b.table (Run.reactorHost b.table repository) b.program run.1.budget.fuel
+      (tapeOf run.1) (Api.load b.program run.1.budget.compileFuel) (5, [])) = some none
+
 end repository
 
 end Test.Api.SessionMeaning
