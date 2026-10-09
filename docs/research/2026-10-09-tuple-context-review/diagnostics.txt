@@ -1,0 +1,52 @@
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(16,47): error TS2322: Type 'readonly [None<number>, number] | readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+  Type 'readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'Some<number>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Types of property '_tag' are incompatible.
+          Type '"Some"' is not assignable to type '"None"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(27,7): error TS2322: Type 'readonly [Pull, Pull]' is not assignable to type 'Target'.
+  Type 'readonly [Pull, Pull]' is not assignable to type 'readonly [End, End]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'Pull' is not assignable to type 'End'.
+        Type 'Chunk' is not assignable to type 'readonly ["End", void]'.
+          Type at position 0 in source is not compatible with type at position 0 in target.
+            Type '"Chunk"' is not assignable to type '"End"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(28,53): error TS2322: Type 'readonly [None<number>, number] | readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+  Type 'readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'Some<number>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Types of property '_tag' are incompatible.
+          Type '"Some"' is not assignable to type '"None"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(35,45): error TS2345: Argument of type '[Pull, Pull]' is not assignable to parameter of type 'readonly unknown[] & (readonly [Chunk, Chunk] | readonly [Chunk, End] | readonly [End, Chunk] | readonly [End, End])'.
+  Type '[Pull, Pull]' is not assignable to type 'readonly unknown[] & readonly [End, End]'.
+    Type '[Pull, Pull]' is not assignable to type 'readonly [End, End]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type 'Pull' is not assignable to type 'End'.
+          Type 'Chunk' is not assignable to type 'readonly ["End", void]'.
+            Type at position 0 in source is not compatible with type at position 0 in target.
+              Type '"Chunk"' is not assignable to type '"End"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(36,58): error TS2322: Type 'readonly [Option<number>, number] & (readonly [None<number>, number] | readonly [Some<number>, number])' is not assignable to type 'readonly [None<number>, number]'.
+  Type 'readonly [Option<number>, number] & readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+    The types returned by 'concat(...)' are incompatible between these types.
+      Type '(number | Option<number>)[]' is not assignable to type '(number | None<number>)[]'.
+        Type 'number | Option<number>' is not assignable to type 'number | None<number>'.
+          Type 'Some<number>' is not assignable to type 'number | None<number>'.
+            Type 'Some<number>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+              Types of property '_tag' are incompatible.
+                Type '"Some"' is not assignable to type '"None"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(38,50): error TS2322: Type 'readonly [None<number>, number] | readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+  Type 'readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'Some<number>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Types of property '_tag' are incompatible.
+          Type '"Some"' is not assignable to type '"None"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(40,58): error TS2322: Type 'readonly [None<number>, number] | readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+  Type 'readonly [Some<number>, number]' is not assignable to type 'readonly [None<number>, number]'.
+    Type at position 0 in source is not compatible with type at position 0 in target.
+      Type 'Some<number>' is not assignable to type 'None<number>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+        Types of property '_tag' are incompatible.
+          Type '"Some"' is not assignable to type '"None"'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(44,7): error TS2375: Type 'Effect<unknown, never, never>' is not assignable to type 'Effect<None<number>, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'unknown' is not assignable to type 'None<number>'.
+../../../../private/tmp/effect4-tuple-alternative-review/controls.ts(45,7): error TS2375: Type 'Effect<unknown, never, never>' is not assignable to type 'Effect<None<number>, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'unknown' is not assignable to type 'None<number>'.
