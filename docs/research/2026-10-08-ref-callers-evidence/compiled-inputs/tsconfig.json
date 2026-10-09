@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ]
+  },
+  "files": [
+    "make.ts",
+    "get.ts",
+    "set.ts",
+    "getAndSet.ts",
+    "setAndGet.ts",
+    "update.ts",
+    "getAndUpdate.ts",
+    "updateAndGet.ts",
+    "updateSome.ts",
+    "getAndUpdateSome.ts",
+    "updateSomeAndGet.ts",
+    "modify.ts",
+    "modifySome.ts",
+    "updateSomeNone.ts",
+    "getAndUpdateSomeNone.ts",
+    "updateSomeAndGetNone.ts",
+    "modifySomeNone.ts",
+    "captureAcc.ts",
+    "captureItem.ts",
+    "string.ts",
+    "allocatedHandle.ts",
+    "wrong-update.ts",
+    "controls.ts",
+    "observe.ts"
+  ],
+  "include": []
+}

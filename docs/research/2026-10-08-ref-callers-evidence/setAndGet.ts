@@ -1,0 +1,1 @@
+export const main: Effect.Effect<readonly [number, number], never, never> = Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Ref.make(5), (a1) => Effect.flatMap(Ref.setAndGet(a1, 7), (a2) => Effect.flatMap(Ref.get(a1), (a3) => Effect.succeed(tuple(a2, a3))))))

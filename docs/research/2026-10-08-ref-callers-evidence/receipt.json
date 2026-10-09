@@ -1,0 +1,289 @@
+{
+  "format": "effect4-ref-catalogue-receipt-v1",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "caseCount": 21,
+  "ids": [
+    "make",
+    "get",
+    "set",
+    "getAndSet",
+    "setAndGet",
+    "update",
+    "getAndUpdate",
+    "updateAndGet",
+    "updateSome",
+    "getAndUpdateSome",
+    "updateSomeAndGet",
+    "modify",
+    "modifySome",
+    "updateSomeNone",
+    "getAndUpdateSomeNone",
+    "updateSomeAndGetNone",
+    "modifySomeNone",
+    "captureAcc",
+    "captureItem",
+    "string",
+    "allocatedHandle"
+  ],
+  "inputHashes": {
+    "make.ts": "df4ddb842a3ea9efcd1d6e7cd74735666496b358d60afebd030724451b597ed8",
+    "get.ts": "147b4a7bb54dbad9e26341471ad37f957d2de1ec970e3f8d4cbfec2e9e25e893",
+    "set.ts": "b202caa2a123fd4b8c4fcef1d0584f0ebc4ee06b320c34f9ef706dc950644885",
+    "getAndSet.ts": "8b2b189a7ce94f168c2d6ee57ed49ad3ee3f735fef189db55296384c37bd6867",
+    "setAndGet.ts": "bf12b00a84cb55c789e935e1fcbb5ed24671da326c53cab0364162aae1d5d2da",
+    "update.ts": "5d5de24d4cae9d006e748d25c18d3f16ed00c678105289585400cfa22213df96",
+    "getAndUpdate.ts": "1807502f5b0512069a790a8d5a6d183ccea21d03555a0e8f8bbc47be40b9e079",
+    "updateAndGet.ts": "62aad03ade62cf42094189116096f7e3e417b4727983d5049f494416b805cb79",
+    "updateSome.ts": "97d6cbdce54df4f3fa6642de5c8df5975b78c4fa95f087927c653e75a8928e72",
+    "getAndUpdateSome.ts": "b0207beb29db9841bae13b6e1b0f569e1453582087b3e4c1e6771be4cee856df",
+    "updateSomeAndGet.ts": "491adf02209d69919528a21753e4a4e007ed496658a32b3a50cab8913ed56f74",
+    "modify.ts": "68d46263fbed39838d35f58138b93ce6808330596ff8ca550dce59114de77ac9",
+    "modifySome.ts": "2ef7c50ef9ab2c9b5c033f29b9266c30256b8fa1eb75e3e8c4f9e08842729aae",
+    "updateSomeNone.ts": "1584783d66917b9e524f7f53bd0444ee8e0abc4eba85c28dbb7837cac272bda3",
+    "getAndUpdateSomeNone.ts": "ef3a1e262ebc0d3d614d4ecd291e069b06f5eee7217806af4b212aff7c84e6f6",
+    "updateSomeAndGetNone.ts": "524d38ae8d02098a56203f52f91fb5478ed8e9504f1a1619d509874c45c7af4a",
+    "modifySomeNone.ts": "48764d2a352678899746aec7558b9fe13c6f273d327f366fb654d4315e7258d3",
+    "captureAcc.ts": "68d46263fbed39838d35f58138b93ce6808330596ff8ca550dce59114de77ac9",
+    "captureItem.ts": "68d46263fbed39838d35f58138b93ce6808330596ff8ca550dce59114de77ac9",
+    "string.ts": "42626c74aba0f9ccc4c98b05c986101fa3de9c3a8627e4243dfe321fa389c04d",
+    "allocatedHandle.ts": "a5d8eb13cfee9b51e92e49021a51926ee6eff5bcf4bfeba1461f57cceef88abd"
+  },
+  "sourceHashes": {
+    "Test/Program/RefPrograms.lean": "940dc9b8244fc6e8da4c71d243e15335d111be831b9b4ee301fdc332ae2bfded",
+    "Test/Program/RefFaces.lean": "8ffb86f0f503331bb95f5cc07a13ead6023f606595a5b2e4bff2788814136714",
+    "src/Effect4/Step/Callback.lean": "3c3f3035acdeb003a03c778d90dd536e8c9caae6513754dcf23c18dc594b9145",
+    "harness/ref-catalogue/Produce.lean": "63e1d8ad177cbcaceabc2b19185adfa118365f984655dd2d81b1ab4e055b88bc",
+    "harness/ref-catalogue/controls.ts": "074fc2fd4d25aa5071750ecdb508a226ebbf1c6d6b94b28f1972bb57a8ab9a38",
+    "harness/ref-catalogue/observe.ts": "69ad31ffb1e9d84babd3934cda0cd7e15c9491c64a40a870ed8a440cc5db95fc",
+    "harness/ref-catalogue/run.py": "544c8c05c95dc9591c9329193fac11b9aac024162c94bfcd983fa414f5d1c59e"
+  },
+  "preludeHashes": {
+    "prelude-atoms.gen.ts": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+  },
+  "compilerFiles": [
+    "make.ts",
+    "get.ts",
+    "set.ts",
+    "getAndSet.ts",
+    "setAndGet.ts",
+    "update.ts",
+    "getAndUpdate.ts",
+    "updateAndGet.ts",
+    "updateSome.ts",
+    "getAndUpdateSome.ts",
+    "updateSomeAndGet.ts",
+    "modify.ts",
+    "modifySome.ts",
+    "updateSomeNone.ts",
+    "getAndUpdateSomeNone.ts",
+    "updateSomeAndGetNone.ts",
+    "modifySomeNone.ts",
+    "captureAcc.ts",
+    "captureItem.ts",
+    "string.ts",
+    "allocatedHandle.ts",
+    "wrong-update.ts",
+    "controls.ts",
+    "observe.ts"
+  ],
+  "compilerDiagnostics": "",
+  "negativeControlLines": [
+    9,
+    11,
+    13,
+    15
+  ],
+  "negativeControlDiagnostics": "../../../../../../..<work>/controls.red.ts(9,42): error TS2339: Property 'toUpperCase' does not exist on type 'number'.\n../../../../../../..<work>/controls.red.ts(11,42): error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.\n../../../../../../..<work>/controls.red.ts(13,29): error TS2322: Type 'readonly [number, \"wrong next cell\"]' is not assignable to type 'readonly [number, number]'.\n  Type at position 1 in source is not compatible with type at position 1 in target.\n    Type 'string' is not assignable to type 'number'.\n../../../../../../..<work>/controls.red.ts(15,33): error TS2322: Type 'readonly [number, number]' is not assignable to type 'readonly [number, Option<number>]'.\n  Type at position 1 in source is not compatible with type at position 1 in target.\n    Type 'number' is not assignable to type 'Option<number>'.\n",
+  "compiledInputHashes": {
+    "make.ts": "82ebe42e8be5ac2fcc03fe842caab628ea1b8e44c070273a48fcc4fd7fdb091c",
+    "get.ts": "3f0dfb96a75f9f66f4f2215be50ad15a4f897517307788f64eb718c13a4a850f",
+    "set.ts": "c417c73ec02bdee5e8f8a4813db44f38a05274345a1a6e2e4406878ae5bf3775",
+    "getAndSet.ts": "fd74295a9ae452e8a6bf5004b1d5775e47b06a4b7ba2a4672485e487febcabef",
+    "setAndGet.ts": "7de37055be632468b7e4a0c2e465d0c639eb93ca6205661c06b614561977c7b1",
+    "update.ts": "aae769ec146a8e68e340887e9890dd4310fa87dd3508b0434dfa9e8ae10d94e8",
+    "getAndUpdate.ts": "ed392aa9717c3023041909fa9389e910d08f09546e66883f64a4b5d88c082df7",
+    "updateAndGet.ts": "ca0c8ac781d68126ca8ac095bd991b467bcd6bdecc942cedd85612651b834cd3",
+    "updateSome.ts": "455b6f43a071c50c251ccd7b1d62705b0a92227449b73f4e230238dd98f43c8a",
+    "getAndUpdateSome.ts": "e3d7be9188e165a7fb37d7b194ab3290ddc367cb2cbe13810707efa635525b40",
+    "updateSomeAndGet.ts": "28e656a947ee89aeaf0aa7423f0deb3721bed3f15e34bbf5c16a50d46a6ff076",
+    "modify.ts": "20482ed27175f3a70080b7153664cd031a53894bda583d126de9a2befda7d643",
+    "modifySome.ts": "33295b1514d4a0cba8b0be9c0628c627f69b75f2b036970d8fa3dd44b0715b01",
+    "updateSomeNone.ts": "9a8a95e32e063932bed758a97ceb5d76b4ec43d2e9788443d69ef39f5eba2976",
+    "getAndUpdateSomeNone.ts": "17fc685f99ca1c2a042d7878143a9ad1e810c4ddd8a1802482806f727944c54c",
+    "updateSomeAndGetNone.ts": "226598567ba2beacc3ab3dcb65ffe3135fc7e394f8212781e6a7308611a8d3f9",
+    "modifySomeNone.ts": "e2a063e471d1e667c02fc561cbea5b79efc35f64eff0315d65032e7581c6a774",
+    "captureAcc.ts": "20482ed27175f3a70080b7153664cd031a53894bda583d126de9a2befda7d643",
+    "captureItem.ts": "20482ed27175f3a70080b7153664cd031a53894bda583d126de9a2befda7d643",
+    "string.ts": "2baba6248a91a25fab41c24e2200bc82d72acaa1486f9e40f0d47408a5188c79",
+    "allocatedHandle.ts": "078861ed93d23f621a8a06c316a107cbd8a4b77739af393934183c7b08748342",
+    "wrong-update.ts": "13041fa614de88796d94b3a39e0699276b7e644ccb8a1e2c547bbab8bda3312d",
+    "controls.ts": "074fc2fd4d25aa5071750ecdb508a226ebbf1c6d6b94b28f1972bb57a8ab9a38",
+    "observe.ts": "69ad31ffb1e9d84babd3934cda0cd7e15c9491c64a40a870ed8a440cc5db95fc"
+  },
+  "host": {
+    "rows": [
+      {
+        "id": "make",
+        "observed": [
+          0,
+          5
+        ]
+      },
+      {
+        "id": "get",
+        "observed": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": "set",
+        "observed": [
+          null,
+          7
+        ]
+      },
+      {
+        "id": "getAndSet",
+        "observed": [
+          5,
+          7
+        ]
+      },
+      {
+        "id": "setAndGet",
+        "observed": [
+          7,
+          7
+        ]
+      },
+      {
+        "id": "update",
+        "observed": [
+          null,
+          7
+        ]
+      },
+      {
+        "id": "getAndUpdate",
+        "observed": [
+          5,
+          7
+        ]
+      },
+      {
+        "id": "updateAndGet",
+        "observed": [
+          7,
+          7
+        ]
+      },
+      {
+        "id": "updateSome",
+        "observed": [
+          null,
+          7
+        ]
+      },
+      {
+        "id": "getAndUpdateSome",
+        "observed": [
+          5,
+          7
+        ]
+      },
+      {
+        "id": "updateSomeAndGet",
+        "observed": [
+          7,
+          7
+        ]
+      },
+      {
+        "id": "modify",
+        "observed": [
+          41,
+          7
+        ]
+      },
+      {
+        "id": "modifySome",
+        "observed": [
+          41,
+          7
+        ]
+      },
+      {
+        "id": "updateSomeNone",
+        "observed": [
+          null,
+          5
+        ]
+      },
+      {
+        "id": "getAndUpdateSomeNone",
+        "observed": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": "updateSomeAndGetNone",
+        "observed": [
+          5,
+          5
+        ]
+      },
+      {
+        "id": "modifySomeNone",
+        "observed": [
+          41,
+          5
+        ]
+      },
+      {
+        "id": "captureAcc",
+        "observed": [
+          41,
+          7
+        ]
+      },
+      {
+        "id": "captureItem",
+        "observed": [
+          41,
+          7
+        ]
+      },
+      {
+        "id": "string",
+        "observed": [
+          "before",
+          "after"
+        ]
+      },
+      {
+        "id": "allocatedHandle",
+        "observed": [
+          false,
+          true
+        ]
+      }
+    ],
+    "mutant": [
+      41,
+      5
+    ],
+    "rawSet": {
+      "backing": true,
+      "outer": false,
+      "next": 7
+    }
+  },
+  "mutantCount": 1,
+  "conforms": true
+}
