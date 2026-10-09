@@ -1,0 +1,72 @@
+{
+  "command": [
+    "lake",
+    "env",
+    "lean",
+    "-M4096",
+    "--run",
+    "tools/Conform/Cli/Audit.lean",
+    "--config",
+    "tools/Conform/Effect4/cases.json",
+    "--out",
+    "{out}/cases.json"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "conform-cases: 242/242 subjects, 242 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0\n",
+  "report": {
+    "tool": "conform-cases",
+    "summary": {
+      "unresolved": 0,
+      "rows": 242,
+      "refused": 0,
+      "pass": 242,
+      "exit": 0,
+      "counterexample": 0,
+      "complete": true
+    },
+    "pins": [
+      {
+        "value": "4.33.1",
+        "name": "lean"
+      },
+      {
+        "value": "constants",
+        "name": "scan.source"
+      },
+      {
+        "value": "36500",
+        "name": "scan.constants"
+      },
+      {
+        "value": "7296",
+        "name": "scan.withMonoCode"
+      },
+      {
+        "value": "0",
+        "name": "scan.externs"
+      },
+      {
+        "value": "242",
+        "name": "scan.sites"
+      },
+      {
+        "value": "450",
+        "name": "scan.wallMs"
+      }
+    ],
+    "inputs": [
+      {
+        "sha256": "92c1cb81fb457367df4ffaba59617119a5acb44da1091ae4f086eca7f9d98617",
+        "name": "config"
+      },
+      {
+        "sha256": "c74159d31144be39c3ad71aa05324fc40473091d22ef3db795aa249c4083d556",
+        "name": "casesPolicy"
+      }
+    ],
+    "format": "conform-report-v2",
+    "expected": 242
+  },
+  "full_receipt_sha256": "8e6b6f8409824fa8245e3215534d0280d86213fa59f982d91c1191e0a20b7adc"
+}

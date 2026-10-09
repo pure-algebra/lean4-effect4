@@ -2,7 +2,9 @@
 
 The cleanup retains the public predicates and existing proof bodies.
 It changes no active host-call or session proof file.
-The integration base is `1f4ee194deef717a374e348c3bf42fbeebe44d80`.
+The integration base is `e193da3fbdc92c544e32b12df768b9e644a8c47f`.
+The implementation head is `b69356f5eb8cdc2cc21ac2ab712e9a5b7bcfd518`.
+Claude’s H8 landing is included in the integration base.
 The branch is `codex/fragment-classification`.
 
 ## Implementation
@@ -22,7 +24,8 @@ It checks each visited child position and the differing operation, loop, and con
 ## Proof placement and evidence
 
 `PLAN.md` places the obligations before implementation.
-`Baseline.lean` retains independent definitions from the integration base.
+`Baseline.lean` retains independent definitions from `1f4ee194deef717a374e348c3bf42fbeebe44d80`.
+The integration commits change no classifier definition.
 Its equality proofs compare the generated algebras through the existing fold uniqueness theorem.
 They quantify over every program and, for the row fragment, every row table.
 `baseline.log` records their axiom dependencies.
@@ -36,7 +39,8 @@ Their observation is the fragment predicate's Boolean answer.
 They establish no additional execution or host claim.
 
 `verification.json` records commands, results, and changed-file hashes.
-`verification-build-green.log` records the focused build.
+`verification-build-green.log` records the focused build before H8 lands.
+`integration-build.log` records the focused build after H8 lands.
 `cases.log` records the constructor-policy gate.
 The focused gate runs through `scripts/check-conform.py cases`, including its declared build prerequisites.
 The earlier `make check-cases` attempt stopped when its prerequisite started the default build.

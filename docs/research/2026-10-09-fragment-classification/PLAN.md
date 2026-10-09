@@ -1,6 +1,7 @@
 # Shared fragment classification
 
-Prepare a separate change over `1f4ee194deef717a374e348c3bf42fbeebe44d80`.
+Retain `1f4ee194deef717a374e348c3bf42fbeebe44d80` as the source baseline.
+Adapt the cleanup to the coordinator’s landed H8 commits.
 Keep Claude’s active agreement proofs unchanged.
 
 ## Design
