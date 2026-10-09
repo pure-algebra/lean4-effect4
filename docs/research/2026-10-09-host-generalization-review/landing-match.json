@@ -1,0 +1,63 @@
+{
+  "base": "0a108d2f91dce4a0f8a2fa7899228e2541ccf8ea",
+  "landing": "feb968d7fdbce63089cd40ff5f467d6e2bd3de58",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Program/HostRuns.lean",
+      "sha256": "8dc28d8098e7439fa525f79ef4b40c54666b591c810b2dc6dd1fb356dd133c85",
+      "identical_to_landing": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+      "sha256": "64393a8285368ec32e740579fd6f9fca8b768407946e60e82ca735df344ea692",
+      "identical_to_landing": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Calls.lean",
+      "sha256": "256d67af9e2abe04041f5398a5251688a6aa3f35aea951623f3c2551ebc75ba3",
+      "identical_to_landing": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Hosted.lean",
+      "sha256": "6543d880c58bf24adb40fa93d6ccc0c3e094e45878f8895586e601b5ddb32d88",
+      "identical_to_landing": true
+    },
+    {
+      "path": "src/Effect4/Laws/Api/SessionMeaning.lean",
+      "sha256": "f33eff76e15601b68b59b8a6da663c1ccbbeafa5f4da805fdb08a1845702e14b",
+      "identical_to_landing": true
+    }
+  ],
+  "public_statements": [
+    {
+      "declaration": "DenoteRowsEqSession",
+      "path": "src/Effect4/Laws/Api/SessionMeaning.lean",
+      "normalized_statement": "def DenoteRowsEqSession (frag : RowTable \u2192 NativeEff \u2192 Bool) : Prop := \u2200 (s : Run), Run.Reached s \u2192 funded s = true \u2192 atRest s = true \u2192 hostDriven s = true \u2192 frag s.built.table s.built.program = true \u2192 meaningRows s.built.table s.built.program [] Stores.empty (appliedExits s) = s.exit.map fun ex => ((ex, s.machine.state), [])",
+      "unchanged": true
+    },
+    {
+      "declaration": "denoteRows_eq_session",
+      "path": "src/Effect4/Laws/Api/SessionMeaning.lean",
+      "normalized_statement": "theorem denoteRows_eq_session : DenoteRowsEqSession StraightRows",
+      "unchanged": true
+    },
+    {
+      "declaration": "replay_Mexit_of_localRun",
+      "path": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+      "normalized_statement": "theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e = true) (ex : ExitV) (s' : Stores) (hrun : localRun e N (fiberOf (compile e fuel) []) Stores.empty = some (ex, s')) (hfuel : 2 * N + 4 \u2264 fuel) : \u2203 fr k' tr' nt', replayEval (evaluator",
+      "unchanged": true
+    },
+    {
+      "declaration": "replay_Mexit",
+      "path": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+      "normalized_statement": "theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Straight e = true) (hd : depth e \u2264 fuel) (hfuel : 2 * steps e + 6 \u2264 fuel) : \u2203 fr k' tr' nt', replayEval (evaluator",
+      "unchanged": true
+    },
+    {
+      "declaration": "run_eq_meaning",
+      "path": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+      "normalized_statement": "theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true) (hd : depth e \u2264 fuel) (hfuel : 2 * steps e + 6 \u2264 fuel) : (Api.run e fuel).outcome = Api.Outcome.finished \u2227 (Api.run e fuel).exit = some (meaning e [] Stores.empty).1 \u2227 (Api.run e fuel).stores = (meaning e [] Stores.empty).2",
+      "unchanged": true
+    }
+  ]
+}
