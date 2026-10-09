@@ -95,6 +95,7 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
   IO.println s!"view: {frames.length} frames in {out}, {motion - 1} between each two"
   IO.println s!"C\tkept-lines-unchanged\t{spliced} spliced edits\t{same} of {kept} lines"
   IO.println s!"C\tgraph-boxes-apart\t{graphs.length} graphs\t{(graphs.filter Laid.boxesApart).length} apart"
+  IO.println s!"C\tgraph-edges-descend\t{graphs.length} graphs\t{(graphs.filter Laid.edgesDescend).length} descend"
 
 /-- Read a request file: one JSON object a line; a blank line is skipped. -/
 def readRequests (file : System.FilePath) : IO (List Tools.Session.Request) := do

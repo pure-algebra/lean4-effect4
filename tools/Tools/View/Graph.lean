@@ -502,6 +502,18 @@ def boxesApart (l : Laid) : Bool :=
     | p :: rest => rest.all (apart p) && go rest
   go boxes
 
+/-- Every edge drawn down descends: its target's top stands at or below its source's bottom (a
+point has no height). A finite check of a layout; the program graph's law is planned
+(`docs/research/2026-10-09-program-graph-design.md`, D3). -/
+def edgesDescend (l : Laid) : Bool :=
+  let bottom (p : Placed) : Int := p.y + (if p.node.isSome then ROWH * BOXROWS else 0)
+  l.routes.toList.all fun
+    | .down _ [u, v] _ =>
+      match l.find u, l.find v with
+      | some a, some b => bottom a ≤ b.y
+      | _, _ => false
+    | _ => true
+
 end Laid
 
 end Tools.View
