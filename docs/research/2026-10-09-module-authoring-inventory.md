@@ -11,6 +11,7 @@ Its plan is `docs/research/2026-10-09-channel-transforms-plan.md`.
 This update records its named declarations, source adapter and transform controls.
 The following authoring slice repairs TypeScript boolean branch printing through the shared template.
 Its plan is `docs/research/2026-10-09-authoring-branches-plan.md`.
+Its checked receipt is `docs/research/2026-10-09-authoring-branches-receipt.md`.
 The existing module survey reads latest (Effect 4.0.1), under decisions rows 331 and 335.
 `tools/ModuleSurvey/README.md` states its commands and limits.
 A dependency edge identifies implementation candidates, not shared meaning or a proof obligation.
