@@ -1,0 +1,29 @@
+false
+some (Effect4.Program.Ty.union
+  (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "End") (Effect4.Program.Ty.unit))
+  (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "Chunk") (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))))
+some [("e4$arrays$openArray", Except.error (Effect4.Program.ReadRefusal.shape "definition")),
+ ("e4$arrays$pull", Except.error (Effect4.Program.ReadRefusal.shape "definition")),
+ ("e4$arrays$close", Except.error (Effect4.Program.ReadRefusal.shape "definition"))]
+some [("e4$arrays$openArray",
+  Except.ok { name := "e4$arrays$openArray",
+    request := Effect4.Program.Ty.list (Effect4.Program.Ty.nat),
+    answer := Effect4.Program.Ty.refOf (Effect4.Program.Ty.list (Effect4.Program.Ty.nat)),
+    error := Effect4.Program.Ty.never,
+    requires := [] }),
+ ("e4$arrays$pull",
+  Except.ok { name := "e4$arrays$pull",
+    request := Effect4.Program.Ty.refOf (Effect4.Program.Ty.list (Effect4.Program.Ty.nat)),
+    answer := Effect4.Program.Ty.union
+                (Effect4.Program.Ty.prod (Effect4.Program.Ty.lit "End") (Effect4.Program.Ty.unit))
+                (Effect4.Program.Ty.prod
+                  (Effect4.Program.Ty.lit "Chunk")
+                  (Effect4.Program.Ty.list (Effect4.Program.Ty.nat))),
+    error := Effect4.Program.Ty.never,
+    requires := [] }),
+ ("e4$arrays$close",
+  Except.ok { name := "e4$arrays$close",
+    request := Effect4.Program.Ty.refOf (Effect4.Program.Ty.list (Effect4.Program.Ty.nat)),
+    answer := Effect4.Program.Ty.unit,
+    error := Effect4.Program.Ty.never,
+    requires := [] })]
