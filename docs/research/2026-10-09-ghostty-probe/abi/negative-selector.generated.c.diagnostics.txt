@@ -1,0 +1,7 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-ghostty-probe/abi/negative-selector.generated.c:4:35: error: incompatible pointer types passing 'uint8_t *' (aka 'unsigned char *') to parameter of type 'uint16_t *' (aka 'unsigned short *') [-Werror,-Wincompatible-pointer-types]
+    4 |     return probe_terminal_cols(t, out);
+      |                                   ^~~
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-ghostty-probe/abi/typed-getters.generated.h:6:78: note: passing argument to parameter 'out' here
+    6 | static inline GhosttyResult probe_terminal_cols(GhosttyTerminal t, uint16_t *out) {
+      |                                                                              ^
+1 error generated.

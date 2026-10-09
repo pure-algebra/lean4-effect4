@@ -1,0 +1,4 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-ghostty-probe/abi/negative-signature.generated.c:5:23: error: incompatible function pointer types initializing 'GhosttyResult (*const)(GhosttyTerminal, const uint8_t *, size_t)' (aka 'GhosttyResult (*const)(struct GhosttyTerminalImpl *, const unsigned char *, unsigned long)') with an expression of type 'void (*)(GhosttyTerminal, const uint8_t *, size_t)' (aka 'void (*)(struct GhosttyTerminalImpl *, const unsigned char *, unsigned long)') [-Wincompatible-function-pointer-types]
+    5 | GhosttyResult (*const wrong_feed_result)(GhosttyTerminal, const uint8_t *, size_t) = &ghostty_terminal_vt_write;
+      |                       ^                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
