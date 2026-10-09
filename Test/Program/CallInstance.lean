@@ -16,7 +16,7 @@ open Test.Dogfood.Scenario.Todo
 /-- The calls of a built program: address, position, request type, answer and error. -/
 def callsOf (m : Module NativeOp) : Option (List (List Nat × Option Nat × Ty × Ty × Ty)) :=
   (built? m).map fun b =>
-    (calls (nativeSignature b.table) [] b.program).map fun entry =>
+    (programCalls (nativeSignature b.table) [] b.program).map fun entry =>
       (entry.1, (match entry.2.op with | .external i => some i | _ => none),
         entry.2.request, entry.2.answer, entry.2.error)
 
