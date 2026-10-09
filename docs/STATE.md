@@ -68,7 +68,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   replacement law holds over the six typing judgments (row 294). A sketch reads a whole program,
   definition block included: its check, focus, fill, table and refusals (cutover slice S1). An
   edit that keeps its focus's type splices the address table, inside any part of a whole
-  program (`edit-splices-table`, `module-table-splices`).
+  program (`edit-splices-table`, `module-table-splices`). A filled sketch is checked as its
+  module (`module-holes-conservative`). A sketch has canonical bytes, so the query tool takes a
+  hole table and gives back an omission's (`sketch-wire`).
 - **The edit session** (row 334). `EditSession` (`src/Effect4/Program/Edit.lean`) keeps a sketch
   and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
   one into a hole. A fill that keeps its focus's type checks only the new subtree; an omission

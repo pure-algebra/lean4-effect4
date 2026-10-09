@@ -187,6 +187,7 @@ import Effect4.Program.Typing.Table
 import Effect4.Program.Typing.Splice
 import Effect4.Program.Edit
 import Effect4.Program.Typing.PartsTable
+import Effect4.Program.SketchWire
 import Effect4.Program.Typing.Call
 import Effect4.Program.Typing.Annotate
 import Effect4.Api.Author

@@ -121,6 +121,19 @@ def text : NativeEff := .succeed (.lit (.str "x"))
   some (checkJson ((original : Sketch).check {}))
 #guard ((answer (ask "omit" original [1, 1, 1])).result.getObjVal? "needsHoleTable").toOption ==
   some (.bool true)
+-- tested (the sketch's wire): the omission's program and its hole table, sent back together as a
+-- `check` request, check at the original's type; the same program without its hole table is
+-- refused, since it performs a hole that no row declares
+#guard (let a := (answer (ask "omit" original [1, 1, 1])).result
+  match (a.getObjValAs? String "program").toOption, (a.getObjValAs? String "holeTable").toOption with
+  | some program, some holes =>
+    let sent : Request := { op := "check", program, holes := some holes }
+    ((answer sent).result == checkJson ((original : Sketch).check {}),
+      ((answer { sent with holes := none }).result.getObjVal? "status").toOption ==
+        some (.str "refused"))
+  | _, _ => (false, false)) == (true, true)
+-- red (tested): a hole table whose bytes do not decode
+#guard !(answer { ask "check" original with holes := some "00" }).ok
 -- red (tested): no omission at no address
 #guard !(answer (ask "omit" original [9])).ok
 

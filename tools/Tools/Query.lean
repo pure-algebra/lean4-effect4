@@ -1,4 +1,5 @@
 import Effect4.Program.Sketch
+import Effect4.Program.SketchWire
 import Effect4.Program.Typing.Table
 import Effect4.Store.Domain.ProgramWire
 import Effect4.Store.Carrier.Digest
@@ -34,10 +35,11 @@ compiled: each is a name literal that must resolve. The two deciders are sound
 (`fillPremises_sound`, `omitPremises_sound`): where one answers `true`, the edit applies and the
 sketch keeps its type, so a `fill` or `omit` answer that names its law is a theorem's instance.
 
-**The application is the empty one**, and each answer says so. A request carries no hole table.
-So the program that `omit` answers performs a hole row that its bytes do not carry: it cannot be
-sent back as a request, and the answer says so (`needsHoleTable`). A sketch has no canonical
-codec yet.
+**The application is the empty one**, and each answer says so. A request may carry the sketch's
+hole table (`holes`, the bytes of `Wire.encodeHoles`). The program that `omit` answers performs a
+hole row that its own bytes do not carry, so the answer says so (`needsHoleTable`) and carries the
+grown hole table (`holeTable`): the program and the hole table, sent back together, are the
+sketch (`Sketch.decode_exact`, `Program/SketchWire.lean`).
 
 **What it is not.** It is no server, it stores no session, and it adds no theorem. A term is
 answered as its canonical bytes, and a type in the JSON view of `Tools.ProfileJson`.
@@ -82,6 +84,9 @@ structure Request where
   holeName : String := "h0"
   /-- The canonical bytes of the filling, in lowercase hex, for `fill`. -/
   replacement : Option String := none
+  /-- The canonical bytes of the sketch's hole table, in lowercase hex (`Wire.encodeHoles`). With
+  none, the hole table is empty. -/
+  holes : Option String := none
   /-- A value that the answer returns unchanged. -/
   id : Option Json := none
   deriving Inhabited
@@ -111,8 +116,9 @@ def Request.fromJson? (j : Json) : Except String Request := do
     | none => throw s!"unknown slot {name}"
   let holeName ← optField j "holeName" (Lean.fromJson? (α := String))
   let replacement ← optField j "replacement" (Lean.fromJson? (α := String))
+  let holes ← optField j "holes" (Lean.fromJson? (α := String))
   let id := (j.getObjVal? "id").toOption
-  return { op, program, path := path.getD [], slot, holeName := holeName.getD "h0", replacement, id }
+  return Request.mk op program (path.getD []) slot (holeName.getD "h0") replacement holes id
 
 /-- The reader's reason, where it refuses the value. A battery asks this function, so that its
 guard holds no `match` on a type that holds JSON: such a matcher is a declaration of the battery,
@@ -129,6 +135,7 @@ def Request.toJson (r : Request) : Json :=
       ("holeName", .str r.holeName)] ++
     (r.slot.map fun slot => ("slot", Json.str (slotName slot))).toList ++
     (r.replacement.map fun hex => ("replacement", Json.str hex)).toList ++
+    (r.holes.map fun hex => ("holes", Json.str hex)).toList ++
     (r.id.map fun id => ("id", id)).toList
 
 /-- The request of an operation at a program and an address. -/
@@ -324,10 +331,12 @@ def slotsAt (program : NativeEff) (path : List Nat) (slots : List ExtSlot) : Lis
 
 /-- **Answer one request.** -/
 def answer (req : Request) : Answer :=
-  match (bytesOfHex req.program.toList).bind decodeProgram with
-  | none => refused req.op "the program's bytes do not decode" req.id
-  | some program =>
-    let sketch : Sketch := program
+  match (bytesOfHex req.program.toList).bind decodeProgram,
+    (req.holes.map fun hex => (bytesOfHex hex.toList).bind Wire.decodeHoles).getD (some []) with
+  | none, _ => refused req.op "the program's bytes do not decode" req.id
+  | _, none => refused req.op "the hole table's bytes do not decode" req.id
+  | some program, some holes =>
+    let sketch : Sketch := { program, holes }
     let done (laws : List Lean.Name) (result : Json) : Answer :=
       { op := req.op, laws, ok := true, result, id := req.id }
     match req.op with
@@ -357,6 +366,7 @@ def answer (req : Request) : Answer :=
             else [])
             (Json.mkObj [("program", .str (hexOf omitted.program)),
               ("holes", toJson omitted.holes.length), ("needsHoleTable", .bool true),
+              ("holeTable", .str (hexString (Wire.encodeHoles omitted.holes))),
               ("check", checkJson (omitted.check {}))])
     | "fill" =>
       match req.replacement.bind fun hex => (bytesOfHex hex.toList).bind decodeProgram with
