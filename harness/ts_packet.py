@@ -43,26 +43,26 @@ def compiled_packet(install, output, files, observer, prefix):
     """Compile the exact declarations with their helper imports in a temporary dependency environment."""
     with tempfile.TemporaryDirectory(prefix=prefix) as temp:
         work = Path(temp)
-        (work / 'node_modules').symlink_to(install, target_is_directory=True)
-        for name in PRELUDE_FILES:
-            shutil.copyfile(ROOT / 'harness/truth' / name, work / name)
-        (work / 'prelude.ts').write_text(''.join(f'export * from "./{name}"\n' for name in PRELUDE_FILES))
-        helpers = run(['bun', '--no-install', '-e',
-                       'import * as H from "./prelude.ts"; console.log(Object.keys(H).join(", "))'], cwd=work).strip()
-        header = 'import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from "effect"\n'
-        header += f'import {{ {helpers} }} from "./prelude.ts"\n'
-        for name in files:
-            (work / name).write_text(header + (output / name).read_text())
-        shutil.copyfile(observer, work / 'observe.ts')
-        shutil.copyfile(output / 'manifest.json', work / 'manifest.json')
-        config = {'compilerOptions': {'target': 'ES2022', 'module': 'ESNext', 'moduleResolution': 'bundler',
-                  'strict': True, 'exactOptionalPropertyTypes': True, 'noUncheckedIndexedAccess': True,
-                  'verbatimModuleSyntax': True, 'allowImportingTsExtensions': True, 'noEmit': True,
-                  'skipLibCheck': True, 'types': ['bun']},
-                  'files': files + ['observe.ts'], 'include': []}
-        (work / 'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
-        retained = config['files'] + PRELUDE_FILES + ['prelude.ts', 'tsconfig.json', 'manifest.json']
+        retained = files + ['observe.ts'] + PRELUDE_FILES + ['prelude.ts', 'tsconfig.json', 'manifest.json']
         try:
+            (work / 'node_modules').symlink_to(install, target_is_directory=True)
+            for name in PRELUDE_FILES:
+                shutil.copyfile(ROOT / 'harness/truth' / name, work / name)
+            (work / 'prelude.ts').write_text(''.join(f'export * from "./{name}"\n' for name in PRELUDE_FILES))
+            helpers = run(['bun', '--no-install', '-e',
+                           'import * as H from "./prelude.ts"; console.log(Object.keys(H).join(", "))'], cwd=work).strip()
+            header = 'import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from "effect"\n'
+            header += f'import {{ {helpers} }} from "./prelude.ts"\n'
+            for name in files:
+                (work / name).write_text(header + (output / name).read_text())
+            shutil.copyfile(observer, work / 'observe.ts')
+            shutil.copyfile(output / 'manifest.json', work / 'manifest.json')
+            config = {'compilerOptions': {'target': 'ES2022', 'module': 'ESNext', 'moduleResolution': 'bundler',
+                      'strict': True, 'exactOptionalPropertyTypes': True, 'noUncheckedIndexedAccess': True,
+                      'verbatimModuleSyntax': True, 'allowImportingTsExtensions': True, 'noEmit': True,
+                      'skipLibCheck': True, 'types': ['bun']},
+                      'files': files + ['observe.ts'], 'include': []}
+            (work / 'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
             compiler = ['node', str(install / '@typescript/native-preview/bin/tsgo')]
             if run(compiler + ['--version'], cwd=work).strip() != 'Version ' + COMPILER:
                 raise RuntimeError('Wrong compiler binary version')
@@ -73,14 +73,20 @@ def compiled_packet(install, output, files, observer, prefix):
             diagnostics = run(command, cwd=work)
             yield work, diagnostics, retained
         except Exception as error:
-            retain_inputs(work, output, retained)
             (output / 'failure.txt').write_text(str(error) + '\n')
+            retain_inputs(work, output, retained, available_only=True)
             raise
 
 
-def retain_inputs(work, output, names):
-    """Retain the exact sources seen by the compiler, on success or before a failed packet loses its temporary directory."""
+def retain_inputs(work, output, names, *, available_only=False):
+    """Retain exact packet inputs; early failures retain only inputs already prepared.
+
+    Successful callers keep the strict inventory check. A failure never manufactures missing inputs.
+    """
     for name in names:
+        source = work / name
+        if available_only and not source.is_file():
+            continue
         target = output / 'compiled-inputs' / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(work / name, target)
+        shutil.copyfile(source, target)
