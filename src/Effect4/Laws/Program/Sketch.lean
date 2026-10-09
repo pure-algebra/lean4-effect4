@@ -147,8 +147,7 @@ theorem holes_conservative (app : SigApp) (holes : RowTable) {e : NativeEff}
 
 /-- H1 on a sketch: a sketch whose program performs no hole and holds no block is checked as
 its program. So a sketch with every hole filled is an ordinary program, and the checker decides
-it. The case of a block stays open: it needs the reads of a block's parts at the block's
-signature, and no law states them yet. -/
+it. A program with a block is the whole-program form's (`Sketch.check_filled_module`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_filled (s : Sketch) (app : SigApp)
     (hp : SigProgram app.signature s.program)
@@ -157,6 +156,57 @@ theorem Sketch.check_filled (s : Sketch) (app : SigApp)
   show Checker.checkModule _ s.program = _
   rw [checkModule_eq_check _ hnb]
   exact holes_conservative app s.holes hp [] []
+
+/-! ## H1 on a whole program -/
+
+/-- **A whole program performs only the signature's operations**: at a definition block, each
+body and the main program at the block's signature, as the module check reads them; otherwise
+the program at the signature (`SigProgram`). -/
+def ModuleSigProgram {Op : Type} (s : Signature Op) : Eff Op → Prop
+  | .defs decls bodies main =>
+    (∀ b ∈ bodies.toList, SigProgram (s.withDefs decls) b) ∧ SigProgram (s.withDefs decls) main
+  | e => SigProgram s e
+
+/-- The bodies' check is unchanged under an extension of the signature, when each body performs
+only the smaller signature's operations. A step of `module-holes-conservative`. Its consumer is
+`checkModule_restrict`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem checkBodies_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s')
+    (p : List Nat) (decls : List DefDecl) (bodies : Effs Op)
+    (hb : ∀ b ∈ bodies.toList, SigProgram s b) :
+    Checker.checkBodies s' p decls bodies = Checker.checkBodies s p decls bodies := by
+  match decls, bodies with
+  | d :: ds, .cons body rest =>
+    have hbody : SigProgram s body := hb body (List.mem_cons.mpr (Or.inl rfl))
+    have hrest : ∀ b ∈ rest.toList, SigProgram s b := fun b hm => hb b (List.mem_cons.mpr (Or.inr hm))
+    simp only [Checker.checkBodies, check_restrict h hbody,
+      checkBodies_restrict h (p ++ [1]) ds rest hrest]
+  | [], _ => rfl
+  | _ :: _, .nil => rfl
+
+/-- **The module check is unchanged under an extension of the signature**, for a whole program
+that performs only the smaller signature's operations: C3's restriction half (`check_restrict`)
+at the module check, definition blocks included. A step of `module-holes-conservative`. Its
+consumer is `Sketch.check_filled_module`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem checkModule_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op}
+    (hp : ModuleSigProgram s e) : Checker.checkModule s' e = Checker.checkModule s e := by
+  cases e
+  case defs decls bodies main =>
+    obtain ⟨hb, hm⟩ := hp
+    simp only [Checker.checkModule]
+    rw [checkBodies_restrict (h.withDefs decls) [0] decls bodies hb,
+      check_restrict (h.withDefs decls) hm [] [1]]
+  all_goals exact check_restrict h hp [] []
+
+/-- **H1 on a whole program**: a sketch whose program performs no hole is checked as its program by
+the module check, definition block included. So a sketch with every hole filled is an ordinary
+module. The pointer of `module-holes-conservative`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_filled_module (s : Sketch) (app : SigApp)
+    (hp : ModuleSigProgram app.signature s.program) :
+    s.check app = Checker.checkModule app.signature s.program :=
+  checkModule_restrict (app.withHoles_extends s.holes) hp
 
 /-! ## H2 and H3: weakening -/
 
