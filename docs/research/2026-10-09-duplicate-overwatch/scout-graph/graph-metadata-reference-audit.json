@@ -1,0 +1,49 @@
+{
+  "base": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "head": "7334f1197cf5b535541ce1dfc7789a5082c07115",
+  "current_head": "7334f1197cf5b535541ce1dfc7789a5082c07115",
+  "current_status": "",
+  "registry_identical": true,
+  "preplan_identical_except_population": true,
+  "unique_status_and_rest_sets_identical": true,
+  "removed_graph_edges": [],
+  "added_graph_edges": [
+    [
+      "decision_preserves",
+      "seq_typed",
+      3
+    ],
+    [
+      "decision_preserves",
+      "subN_never",
+      3
+    ],
+    [
+      "deliver_preserves",
+      "subN_never",
+      3
+    ],
+    [
+      "loop_preserves",
+      "subN_never",
+      3
+    ],
+    [
+      "denotesTyped",
+      "subN_never",
+      4
+    ],
+    [
+      "provideLayerArm",
+      "subN_never",
+      4
+    ]
+  ],
+  "metadata_diff_lines": [],
+  "auto_bank_sources_unchanged": true,
+  "frozen_contract_counterexample_authority_registry_auto_pin_hits": [],
+  "removed_theorem_headers": 27,
+  "generated_semantics_sha256": "841f55d9b2d904f6ab4a71c9f15fc58cebb74dd9183bd134737b64e731429a3b",
+  "registry_sha256": "020c7c97a66403db22969110faa4b36a0dded8bc6b1cb5e406e307d4f3c0fe1b",
+  "limit": "Static exact-source review. No primary builds. Parent independently compiles four consumers."
+}

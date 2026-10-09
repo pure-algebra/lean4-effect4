@@ -1,0 +1,100 @@
+{
+  "evidence_kind": "source comparison; no Lean build or axiom audit",
+  "base": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "head": "7334f1197cf5b535541ce1dfc7789a5082c07115",
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "scope": "21 changed Laws/Program files; Test/Program/RegistrationYield separately inspected",
+  "files_reviewed": 21,
+  "surviving_theorem_headers_compared": 1392,
+  "matched_theorem_headers": 1392,
+  "changed_headers": [],
+  "attribute_or_import_changes": [],
+  "review_diff_sha256": "8b93b41331c127c25e3b5fa50136aeb59d3973b4719c54e0c6d1b9fae813b3a2",
+  "comparison_limit": "Header text normalized only for whitespace. Semantic review additionally read replacement statements and proof bodies. Shared short names remain valid originals, so reference scans distinguish qualified deleted names.",
+  "per_file_counts": [
+    {
+      "file": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+      "matched_count": 108
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Guard/AnswerDecision.lean",
+      "matched_count": 9
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Guard/ControlRemainder.lean",
+      "matched_count": 28
+    },
+    {
+      "file": "src/Effect4/Laws/Program/LayerSharing.lean",
+      "matched_count": 18
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+      "matched_count": 54
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Template.lean",
+      "matched_count": 58
+    },
+    {
+      "file": "src/Effect4/Laws/Program/TyView.lean",
+      "matched_count": 63
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+      "matched_count": 117
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "matched_count": 80
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Body.lean",
+      "matched_count": 5
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+      "matched_count": 161
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean",
+      "matched_count": 10
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean",
+      "matched_count": 13
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+      "matched_count": 51
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean",
+      "matched_count": 53
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean",
+      "matched_count": 86
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Finish.lean",
+      "matched_count": 24
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+      "matched_count": 18
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "matched_count": 166
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/LayerArm.lean",
+      "matched_count": 61
+    },
+    {
+      "file": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "matched_count": 209
+    }
+  ]
+}

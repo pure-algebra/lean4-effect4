@@ -1,0 +1,1073 @@
+diff --git a/Test/Program/RegistrationYield.lean b/Test/Program/RegistrationYield.lean
+index 6ff70ce4..a9dd597b 100644
+--- a/Test/Program/RegistrationYield.lean
++++ b/Test/Program/RegistrationYield.lean
+@@ -547,7 +547,7 @@ theorem arrow {tin final : EffTy} {m : RState} {s : List ScopeFrame} (found : m.
+ /-- The position skip from a `never`-error type to any type. -/
+ theorem neverSkip {tin : EffTy} (errors : tin.error = Ty.never) (ty : EffTy) :
+     ∀ w', world.leHost w' → ∀ c, ExitOk w' tin (.failure c) → ExitOk w' ty (.failure c) :=
+-  fun _ _ _ hc => exitOk_failure_of_errorN (by rw [errors]; exact subN_never _) hc
++  fun _ _ _ hc => exitOk_failure_of_errorN (by rw [errors]; exact Effect4.Program.Bounds.subN_never _) hc
+ 
+ /-- The witness's callback as an answer slot's neighbour: `interruptAll`'s unit answer slot. -/
+ def iaNext : ExitV → RProgram := seqR fun v => .pure (.success v)
+diff --git a/src/Effect4/Laws/Program/Agreement/Machine.lean b/src/Effect4/Laws/Program/Agreement/Machine.lean
+index 8fb2687b..8befd81d 100644
+--- a/src/Effect4/Laws/Program/Agreement/Machine.lean
++++ b/src/Effect4/Laws/Program/Agreement/Machine.lean
+@@ -129,75 +129,70 @@ theorem eq_sync_of_isSync {cur : NCode} (h : isSync cur = true) : ∃ t, cur = P
+ 
+ /-! ### The compile stays plain -/
+ 
+-theorem compileEff_zero {p : Point} (e : NativeEff) (hf : p.fuel = 0) :
+-    compileEff e p = frontier p := by
+-  unfold compileEff
+-  simp only [hf]
+-
+ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true →
+     PlainCode (compileEff e p) = true
+   | .succeed v, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_succeed v hf]; split <;> rfl
+   | .fail e, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_fail e hf]; split <;> rfl
+   | .failCause c, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_failCause c hf]; split <;> rfl
+   | .sync t, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_sync t hf]; rfl
+   | .suspend b, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_suspend b hf]; rfl
+   | .perform op r, p, hpl => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_perform_sync op r hf (Straight.perform_sync (show Straight (.perform op r) = true from hpl))]
+       split <;> (try split) <;> rfl
+   | .bind a b, p, hpl => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_bind a b hf]
+       simp only [PlainCode, PlainName, Bool.and_true]
+       exact plainCode_compileEff a (p.child 0) (Looped.bind hpl).1
+   | .select s d a b, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_select s d a b hf]; rfl
+   | .exit b, p, hpl => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
+       · rw [compileEff_exit_frame b hf hx]
+         exact plainCode_compileEff b (p.child 0) (Looped.exit hpl)
+       · rw [compileEff_exit_fold b hf hx]; rfl
+   | .catchCause b h, p, hpl => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_catchCause b h hf]
+       simp only [PlainCode, PlainName, Bool.and_true]
+       exact plainCode_compileEff b (p.child 0) (Looped.catchCause hpl).1
+   | .matchCause b v c, p, hpl => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_matchCause b v c hf]
+       simp only [PlainCode, PlainName, Bool.and_true]
+       exact plainCode_compileEff b (p.child 0) (Looped.matchCause hpl).1
+   | .onExit b f, p, hpl => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_onExit b f hf]
+       exact plainCode_compileEff b (p.child 0) (Looped.onExit hpl).1
+   | .iterate c i t st r b, p, _ => by
+     rcases hf : p.fuel with _ | k
+-    · rw [compileEff_zero _ hf]; rfl
++    · rw [compileEff_at_zero _ hf]; rfl
+     · rw [compileEff_iterate c i t st r b hf]; rfl
+   | .gen _, _, hpl
+   | .uninterruptible _, _, hpl
+diff --git a/src/Effect4/Laws/Program/Guard/AnswerDecision.lean b/src/Effect4/Laws/Program/Guard/AnswerDecision.lean
+index fcadb0f4..f1bb5d5d 100644
+--- a/src/Effect4/Laws/Program/Guard/AnswerDecision.lean
++++ b/src/Effect4/Laws/Program/Guard/AnswerDecision.lean
+@@ -7,13 +7,6 @@ namespace Effect4.Program.Guard.AnswerDecision
+ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Guard
+ open Effect4.Program.Guard.RegistrationQueue
+ 
+-theorem prepareExternalAnswer_sites (table : RowTable) (current : Option NCode)
+-    (answer : Completion Val Err Defect FiberId Ann) (stores : Stores) :
+-    raceSites (prepareExternalAnswer table current answer stores).2 = [] := by
+-  unfold prepareExternalAnswer
+-  dsimp only
+-  repeat' first | exact raceSites_completion answer | rfl | split
+-
+ theorem prepareAsyncAnswer_shape (p : NativeEff) (table : RowTable) (m : NativeMachine)
+     (target : FiberId) (offered : Nat) (answer : Completion Val Err Defect FiberId Ann) :
+     let result := prepareAsyncAnswer (interpOf p table) m target offered answer
+@@ -24,7 +17,7 @@ theorem prepareAsyncAnswer_shape (p : NativeEff) (table : RowTable) (m : NativeM
+   · exact ⟨rfl, rfl, raceSites_completion answer⟩
+   · exact ⟨(prepareExternalAnswer_internal_state table _ answer m.state).1,
+       (prepareExternalAnswer_internal_state table _ answer m.state).2,
+-      prepareExternalAnswer_sites table _ answer m.state⟩
++      FrameOwned.prepareExternalAnswer_sites table _ answer m.state⟩
+ 
+ theorem guardState_prepareAsyncAnswer (p : NativeEff) (table : RowTable) (m : NativeMachine)
+     (target : FiberId) (offered : Nat) (answer : Completion Val Err Defect FiberId Ann)
+diff --git a/src/Effect4/Laws/Program/Guard/ControlRemainder.lean b/src/Effect4/Laws/Program/Guard/ControlRemainder.lean
+index f94b9af0..74323480 100644
+--- a/src/Effect4/Laws/Program/Guard/ControlRemainder.lean
++++ b/src/Effect4/Laws/Program/Guard/ControlRemainder.lean
+@@ -109,20 +109,13 @@ theorem registrationQueue_driveStep_link (p : NativeEff) (table : RowTable)
+   simp only [driveStep, linkScope]
+   repeat' first | exact registration.2 | exact ⟨True.intro, registration.2⟩ | split
+ 
+-/-- A field update that keeps the old interruption witness. -/
++/-- A field update that keeps the old interruption witness: `Finish.interruptedAt_update`, with
++the fiber named. -/
+ theorem interruptedAt_update_mark {m : NativeMachine} {f : NFiber}
+     (lookup : m.fiber? f.id = some f) (g : NFiber) (id : g.id = f.id)
+     (mark : Interrupted f → Interrupted g) (fiber : FiberId) (h : InterruptedAt m fiber) :
+-    InterruptedAt (m.update g) fiber := by
+-  obtain ⟨old, hold, interrupted⟩ := h
+-  by_cases he : old.id = f.id
+-  · have hlookup : m.fiber? f.id = some old := by
+-      simpa only [← he, fiber_id_of_lookup hold] using hold
+-    have same : old = f := Option.some.inj (hlookup.symm.trans lookup)
+-    subst old
+-    exact ⟨g, fiber_lookup_update_self hold g (id.trans (fiber_id_of_lookup hold)), mark interrupted⟩
+-  · refine ⟨old, ?_, interrupted⟩
+-    simp only [fiber_lookup_update, hold, Option.map_some, id, he, ↓reduceIte]
++    InterruptedAt (m.update g) fiber :=
++  Finish.interruptedAt_update lookup g id mark h
+ 
+ theorem interruptedAt_driveStep_evaluate (p : NativeEff) (table : RowTable)
+     (m : NativeMachine) (target : FiberId) (rest : List NCmd) (fiber : FiberId)
+diff --git a/src/Effect4/Laws/Program/LayerSharing.lean b/src/Effect4/Laws/Program/LayerSharing.lean
+index 03d27f4e..5203ae84 100644
+--- a/src/Effect4/Laws/Program/LayerSharing.lean
++++ b/src/Effect4/Laws/Program/LayerSharing.lean
+@@ -60,11 +60,6 @@ theorem memoGet_memoize_hit (root : NativeEff) (s : Stores) (q : Point)
+   rw [syncOpStep_memoGet_some s q.path map h]
+   simp only [Option.map_some, memoize_hit]
+ 
+-theorem fresh_forks_without_parent (l : LayerTerm NativeOp) (q : Point) (map : MemoMapId) (scope : Nat) :
+-    compileLayer (.fresh l) q map scope =
+-      Prim.onSuccess (Prim.sync (EffThunk.op (.memoFork none))) (EffName.freshThen (q.child 0) scope) :=
+-  by aesop
+-
+ def Isolated (inside : List MemoMapId) (w : MemoWorld) : Prop :=
+   ∀ m ∈ w, m.id ∈ inside → ∀ parent, m.parent = some parent → parent ∈ inside
+ 
+diff --git a/src/Effect4/Laws/Program/Simulation/Evaluate.lean b/src/Effect4/Laws/Program/Simulation/Evaluate.lean
+index ace695f2..7b05d4ae 100644
+--- a/src/Effect4/Laws/Program/Simulation/Evaluate.lean
++++ b/src/Effect4/Laws/Program/Simulation/Evaluate.lean
+@@ -351,21 +351,13 @@ theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : L
+     unfold RunMachine.modify
+     split <;> rfl
+ 
+-theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false :=
+-  by aesop
+-
+-theorem point_refresh {p p' : Point}
+-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+-    (cv : List (FiberId × ExitV)) : ({ p' with completed := cv } : Point) = { p with completed := cv } :=
+-  by aesop
+-
+ theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
+     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
+     (interpAt root cv table).iterNext (.gen p' [] false) Val.unit =
+       (interpAt root cv table).iterNext (.gen p [] false) Val.unit := by
+   show runStmts root { p' with completed := cv } p'.fuel [] (if false then _ else p'.env) [] =
+     runStmts root { p with completed := cv } p.fuel [] (if false then _ else p.env) []
+-  rw [point_refresh hp cv, hp.2.1, hp.2.2.1]
++  rw [point_congr hp cv, hp.2.1, hp.2.2.1]
+ 
+ theorem listRel_of_zip {α β : Type} {R : α → β → Prop} :
+     ∀ {l₁ : List α} {l₂ : List β}, l₁.length = l₂.length → (∀ x ∈ l₁.zip l₂, R x.1 x.2) →
+@@ -951,7 +943,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
+         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, rfl, hf'.deferred, hbody.prepare _,
+           StackMeans.slot (SlotMeans.mask true) (StackMeans.answer k hk hf'.stack), hi ▸ hf'.maskInv⟩,
+           rfl, rfl, ListRel.nil⟩
+-      · have hi' := bool_eq_false_of_not hi
++      · have hi' := Effect4.Store.bool_eq_false_of_not hi
+         simp only [hi', Bool.false_eq_true, ↓reduceIte, Bool.false_and]
+         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi', hf'.interruptedCause,
+           hf'.deferred, hbody.prepare _, StackMeans.answer k hk hf'.stack, hi' ▸ hf'.maskInv⟩, rfl, rfl,
+@@ -965,7 +957,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
+         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi, hf'.interruptedCause,
+           hf'.deferred, hbody.prepare _, StackMeans.answer k hk hf'.stack, hi ▸ hf'.maskInv⟩, rfl, rfl,
+           ListRel.nil⟩
+-      · have hi' := bool_eq_false_of_not hi
++      · have hi' := Effect4.Store.bool_eq_false_of_not hi
+         simp only [hi', Bool.false_eq_true, ↓reduceIte, Bool.not_false, Bool.and_true, Bool.true_and]
+         by_cases hsome : g₂.frame.interruptedCause.isSome = true
+         · obtain ⟨cause, hcause⟩ := Option.isSome_iff_exists.mp hsome
+@@ -1004,7 +996,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
+       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, hf'.interruptedCause, hf'.deferred,
+         CodeMeans.success _, StackMeans.slot (SlotMeans.mask true)
+           (StackMeans.answer (seqR k) hk hf'.stack), hi ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
+-    · have hi' := bool_eq_false_of_not hi
++    · have hi' := Effect4.Store.bool_eq_false_of_not hi
+       simp only [hi', Bool.false_eq_true, ↓reduceIte]
+       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi',
+         hf'.interruptedCause, hf'.deferred, CodeMeans.success _,
+diff --git a/src/Effect4/Laws/Program/Template.lean b/src/Effect4/Laws/Program/Template.lean
+index 52adbbc5..5cae3adc 100644
+--- a/src/Effect4/Laws/Program/Template.lean
++++ b/src/Effect4/Laws/Program/Template.lean
+@@ -491,7 +491,7 @@ whose operation carries no term is well scoped. A term row's answer may also nam
+ its term's result template binds, `Ref.modify`'s `B`: the checker binds it from the term's type
+ (`bindTerm`), so the native profile reads the result template beside the request
+ (`NativeOp.row_wellScoped`). A host row carries no term, and the signature's admission keeps
+-`Row.wellScoped` for it. `sub_sound` and
++`Row.wellScoped` for it. `hasTy_sub` (`Laws/Program/Admits.lean`) and
+ `sub_not_complete` are the two halves of what the guard is worth: the order NEVER admits a
+ value the target would refuse, and it DOES refuse pairs whose value sets agree. A checker
+ built on it can lose a program, never mistype one.
+@@ -1050,14 +1050,6 @@ theorem templateAdmissible_args {t : Ty} (h : templateAdmissible t = true) :
+ 
+ end Ty
+ 
+-/-- **The order is sound for membership.** Whatever the guard admits, the value really does
+-inhabit the template's instance: this is `hasTy_sub`, named here as the half of the guard's
+-worth that a consumer may rely on. -/
+-theorem sub_sound (a b : Ty) (v : Effect4.Machine.Val) (allocated : List String := [])
+-    (hsub : Ty.sub a b = true) (hv : Val.hasTy v a allocated = true) :
+-    Val.hasTy v b allocated = true :=
+-  hasTy_sub a b v allocated hsub hv
+-
+ /-- **The order is NOT complete for membership**, and the witness is one line of TypeScript:
+ `Option<number | string>` and `Option<number> | Option<string>` have the same values, and
+ `sub` refuses the pair because it is structural — the left node is an `option` and the right
+diff --git a/src/Effect4/Laws/Program/TyView.lean b/src/Effect4/Laws/Program/TyView.lean
+index 8914ba06..45b9634c 100644
+--- a/src/Effect4/Laws/Program/TyView.lean
++++ b/src/Effect4/Laws/Program/TyView.lean
+@@ -275,15 +275,6 @@ theorem headCanon_of_args_nil {t : Ty} (h : t.args = []) : headCanon t = true :=
+     rfl
+   all_goals rfl
+ 
+-/-- A field's type is smaller than its `record`'s field list. -/
+-theorem sizeOf_field_lt_record {p : String × Bool × Ty} {fs : List (String × Bool × Ty)} (h : p ∈ fs) :
+-    sizeOf p.2.2 < sizeOf fs := by
+-  have hp : sizeOf p < sizeOf fs := List.sizeOf_lt_of_mem h
+-  obtain ⟨n, t, b⟩ := p
+-  simp only [Prod.mk.sizeOf_spec] at hp
+-  simp only
+-  omega
+-
+ /-- Two field lists with the same payloads and the same children are equal. -/
+ theorem eq_of_fields_record :
+     ∀ {l l' : List (String × Bool × Ty)}, l.map (fun p => (p.1, p.2.1)) = l'.map (fun p => (p.1, p.2.1)) →
+@@ -665,7 +656,7 @@ theorem sizeOf_args {t : Ty} {v : Variance} {x : Ty} (h : (v, x) ∈ t.args) :
+   case record fs =>
+     simp only [args, List.mem_map, Prod.mk.injEq] at h
+     obtain ⟨p, hp, _, hpx⟩ := h
+-    have hlt := sizeOf_field_lt_record (mem_canon hp)
++    have hlt := sizeOf_field_lt (mem_canon hp)
+     rw [hpx] at hlt
+     simp only [Ty.record.sizeOf_spec]
+     omega
+diff --git a/src/Effect4/Laws/Program/Typed/Adequacy.lean b/src/Effect4/Laws/Program/Typed/Adequacy.lean
+index b1d2d9c0..9295ad68 100644
+--- a/src/Effect4/Laws/Program/Typed/Adequacy.lean
++++ b/src/Effect4/Laws/Program/Typed/Adequacy.lean
+@@ -341,16 +341,6 @@ theorem complete_cellAt (d : DeferredStore) (cell : DeferredKey) (effect : Compl
+         · cases h
+       · exact Or.inl ⟨c', h, rfl⟩
+ 
+-theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)
+-    (effect : Completion Val Err Defect FiberId Ann) :
+-    (d.complete cell effect).1.cells.length = d.cells.length := by
+-  unfold DeferredStore.complete
+-  split
+-  · rfl
+-  · split
+-    · rfl
+-    · exact List.length_set
+-
+ /-! ## Moving the world along a completion -/
+ 
+ /-- **The cell columns move along a completion**: a store step that completes one Deferred cell
+@@ -364,7 +354,7 @@ theorem CellsTyped.complete {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
+     w.leHost { w with state := st' } ∧ CellsTyped { w with state := st' } :=
+   cells.restate step (by rw [refs])
+     (fun i v hv ty hty => cells.values i v (by rw [← refs]; exact hv) ty hty)
+-    (by rw [deferreds, complete_cells_length])
++    (by rw [deferreds, Effect4.Machine.DeferredStore.complete_cells_length])
+     (fun key c' hc completion hcomp => by
+       rw [deferreds] at hc
+       rcases complete_cellAt _ _ _ key c' hc with ⟨c, hc0, same⟩ | ⟨same, stored⟩
+@@ -393,7 +383,7 @@ theorem complete_world {root : ProgramSource} {w : World} {op : SyncOp} {st' : S
+     w.leHost { w with state := st' } ∧ StoreTyped root { w with state := st' } := by
+   obtain ⟨ord, cells⟩ := store.toCellsTyped.complete step deferreds refs externals typed
+   exact ⟨ord, store.step step rfl ord cells
+-    (layerCells_of_cells_length step (by rw [deferreds, complete_cells_length]))⟩
++    (layerCells_of_cells_length step (by rw [deferreds, Effect4.Machine.DeferredStore.complete_cells_length]))⟩
+ 
+ /-! ## The native store rows on the cell columns
+ 
+diff --git a/src/Effect4/Laws/Program/Typed/Assembly.lean b/src/Effect4/Laws/Program/Typed/Assembly.lean
+index c3492b36..9c3e632f 100644
+--- a/src/Effect4/Laws/Program/Typed/Assembly.lean
++++ b/src/Effect4/Laws/Program/Typed/Assembly.lean
+@@ -381,12 +381,6 @@ structure ConfigTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
+   code : ReadCode root w m commands
+   queue : QueueOk root w m commands
+ 
+-/-- `J` after a step is part of `I` after it: the re-establishment the lift's `Guarded` needs is
+-this projection. -/
+-theorem machineTyped_of_configTyped {root : ProgramSource} {rootTy : EffTy} {w : World}
+-    {m : RState} {commands : List RCmd} (typed : ConfigTyped root rootTy w m commands) :
+-    MachineTyped root rootTy w m := typed.machine
+-
+ /-- **Every fiber's ambient scope is present** (decisions rows 139 and 156), from `J`: the
+ fiber context's services fit their keys' carriers (`preds`' `ServiceOk`), the world's service
+ table is the source's (row 112), which types the reserved `Scope` key at `Ty.scope`, and a scope
+diff --git a/src/Effect4/Laws/Program/Typed/Body.lean b/src/Effect4/Laws/Program/Typed/Body.lean
+index a8ed0424..ec3c1869 100644
+--- a/src/Effect4/Laws/Program/Typed/Body.lean
++++ b/src/Effect4/Laws/Program/Typed/Body.lean
+@@ -70,7 +70,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
+     denoteAt_typed root hwf htie ⟨acquire, env, hat0, hacq, henv, hview⟩
+   unfold acquireInR
+   -- the `Scope` read
+-  refine seqGuard_typed root (ambientScope_typed root w) (subN_never _) (fun w1 o1 v hv => ?_)
++  refine seqGuard_typed root (ambientScope_typed root w) (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
+   obtain ⟨s, rfl, hlive⟩ := fits_scope_inv hv
+   simp only [seqR, Val.scope?_scopeHandle]
+   -- the acquire, at the node's own columns
+@@ -87,7 +87,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
+     (mid := ⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩)
+     (TypedProg.store (op := .scopeAdd s (.foreign (p.capture aval ctx))) (cert := ())
+       ⟨scopeLive_mono o2.1 hlive, hcap⟩ (fun w3 _ ans post => TypedProg.pure ⟨?_, trivial⟩))
+-    (subN_never _) (fun w3 o3 u hu => ?_)
++    (Bounds.subN_never _) (fun w3 o3 u hu => ?_)
+   · show Fits w3 ans .unit ∨ Fits w3 ans (.exitOf .unknown .unknown)
+     rcases post with rfl | ⟨ex, rfl, hex⟩
+     · exact Or.inl trivial
+@@ -104,7 +104,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
+         exact nomatch hex
+       rw [if_neg hne, hex]
+       -- the closed branch: the release now, then the acquired value
+-      refine seqGuard_typed root (mid := ⟨.unknown, .never, Env.Requirement.empty⟩) ?_ (subN_never _)
++      refine seqGuard_typed root (mid := ⟨.unknown, .never, Env.Requirement.empty⟩) ?_ (Bounds.subN_never _)
+         (fun w4 o4 _ _ => TypedProg.pure (strongExit_success w4 _ aval (fits_mono o4 hval)))
+       exact finalizerTyped_of_admitted root w3 _
+         (finalizerAdmitted_mono root o3 (.foreign (p.capture aval ctx)) hcap) w3 (leHost_refl w3) ex
+@@ -118,7 +118,7 @@ theorem release_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
+     TypedProg root w ty
+       (onExitR (denoteAt root.program q) fun _ => fiberValR (.setContext prev) rfl) :=
+   onExit_typed root (b := ty) (f := EffTy.pure .unit) (Ty.subN_refl _) (Ty.subN_refl _)
+-    (subN_never _) (denoteAt_typed root hwf htie h)
++    (Bounds.subN_never _) (denoteAt_typed root hwf htie h)
+     (fun _ o _ _ => setContext_typed root (servicesFit_mono o hsvc))
+ 
+ /-- **A layer's build body is typed** at the build's types, into a present scope through a present
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean b/src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean
+index 133a635c..d7ad18cf 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean
+@@ -2832,14 +2832,6 @@ theorem exitOk_subN {w : World} {ty ty' : EffTy} {ex : ExitV} (h : ExitOk w ty e
+     ExitOk w ty' ex :=
+   ⟨fitsExit_subN ha he h.1, h.2⟩
+ 
+-/-- The error-column half of a failed exit's membership: this seat's one reading of
+-`fitsExit_failure_iff`. Seat D1's decisions row 152 adds `∧ ShapeFree c` to that lemma's right
+-side; this proof then takes the first half (`((fitsExit_failure_iff w ty c).mp h).1`), and no
+-caller changes. -/
+-theorem failureFits_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsExit w ty (.failure c)) :
+-    FitsCause w ty.error c :=
+-  ((fitsExit_failure_iff w ty c).mp h).1
+-
+ /-- A failed exit's membership from its error-column half and part one's exclusion: this seat's
+ one construction through `fitsExit_failure_iff`. Under row 152 the proof passes the exclusion
+ too (`.mpr ⟨h, _shape⟩`, `NoShapeDefect`'s failure arm being `ShapeFree` by `Iff.rfl`), and no
+@@ -2852,8 +2844,8 @@ theorem failureFits_of_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsCaus
+ theorem exitOk_failure_append {w : World} {ty : EffTy} {a b : List (Reason Err Defect FiberId Ann)}
+     (ha : ExitOk w ty (.failure ⟨a⟩)) (hb : ExitOk w ty (.failure ⟨b⟩)) :
+     ExitOk w ty (.failure ⟨a ++ b⟩) := by
+-  have fa := failureFits_cause ha.1
+-  have fb := failureFits_cause hb.1
++  have fa := fitsExit_failure_cause ha.1
++  have fb := fitsExit_failure_cause hb.1
+   have shape : NoShapeDefect ty (.failure ⟨a ++ b⟩) := fun r hr => by
+     rcases List.mem_append.mp hr with hr | hr
+     · exact ha.2 r hr
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean
+index 7ac30baa..71a4d3a1 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean
+@@ -258,7 +258,7 @@ theorem Evaluating.forkAll {rootTy : EffTy} (interp : RInterp) (host : RFiber) :
+     rw [unfolded, hspawn, hid, hctx]
+     refine ⟨w2, leHost_trans _ _ _ ord ord2, ev2, fun id hmem => ?_⟩
+     rcases List.mem_cons.mp hmem with rfl | hmem
+-    · exact ⟨_, ord2.1.2.1 _ _ addFiber_Γ_self, subN_unknown _, subN_never _⟩
++    · exact ⟨_, ord2.1.2.1 _ _ addFiber_Γ_self, subN_unknown _, Bounds.subN_never _⟩
+     · exact cols id hmem
+ 
+ end Parallel
+@@ -353,7 +353,7 @@ theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order
+     · intro o ho
+       change some f.id = some o at ho
+       cases ho
+-      rw [commandOwner_rupdate]
++      rw [commandOwner_update]
+       exact owner_free ev'.typed.queue rfl
+   rw [List.append_assoc]
+   exact configTyped_evaluates after _ fun c hc => by
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean
+index 076a60eb..93e2b15f 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean
+@@ -84,7 +84,7 @@ theorem clause_interruptAll (root : ProgramSource) (rootTy : EffTy) (targets : L
+   have after : ConfigTyped root rootTy w (m.update g)
+       (.afterInterrupt f.id y (.awaitAll targets) :: rest) := by
+     refine configTyped_cons_afterAwaitAll edited y targets ⟨g, lookG, ev.running, notParked⟩
+-      (by rw [commandOwner_rupdate]; exact owner_free ev.typed.queue rfl) fun x hx => ?_
++      (by rw [commandOwner_update]; exact owner_free ev.typed.queue rfl) fun x hx => ?_
+     rw [lookG] at hx
+     cases hx
+     refine ⟨.unknown, .unknown, fun t ht => ?_, ty, declared,
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean
+index f8ce4444..293c3e57 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean
+@@ -528,13 +528,6 @@ theorem subN_join_both {a b E : Ty} (h : Ty.subN (a.join b) E = true) :
+     Ty.subN a E = true ∧ Ty.subN b E = true :=
+   ⟨Ty.subN_trans (Ty.subN_join_left a b) h, Ty.subN_trans (Ty.subN_join_right a b) h⟩
+ 
+-/-- A failure's typing reads only the error column. -/
+-theorem exitOk_failure_error {w : World} {mid ty : EffTy} {c : CauseV}
+-    (herr : Ty.subN mid.error ty.error = true) (h : ExitOk w mid (.failure c)) :
+-    ExitOk w ty (.failure c) :=
+-  exitOk_widen (mid := ⟨ty.answer, mid.error, mid.requires⟩) (Ty.subN_refl _) herr
+-    ⟨(fitsExit_failure_iff w _ c).mpr ((fitsExit_failure_iff w mid c).mp h.1), h.2⟩
+-
+ theorem unit_le_genAnswer (g : GenTy) (hc : g.completes = true) :
+     Ty.subN .unit g.genAnswer = true := by
+   unfold GenTy.genAnswer
+@@ -602,7 +595,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
+     intro ctx k env folded hpos
+     rw [walkR]
+     exact ⟨⟨.unit, .never, Env.Requirement.empty⟩, { p with env := env }, _, false, rfl, hpath,
+-      pending_typed root w _ _ _, subN_never _, fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
++      pending_typed root w _ _ _, Bounds.subN_never _, fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
+   | succ fuel ih =>
+     intro ctx k env folded hpos
+     obtain ⟨block, Γ, g, e0, locals, hblock, hsuffix, hcheck, henv, hsplit, hlocals, hanswer,
+@@ -704,7 +697,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
+             exact ih ctx (k + 1) (env ++ [value]) _
+               (next w (leHost_refl w) value ((fitsExit_success_iff w t value).mp hex.1))
+           | failure c =>
+-            exact exitOk_failure_error herr.1 hex
++            exact exitOk_failure_of_errorN herr.1 hex
+       | yieldDiscard e =>
+         rw [expandIn_yieldDiscard] at hcheck
+         obtain ⟨t, r, hct, hcr, rfl⟩ := Checker.inv_stmts_yieldDiscard _ _ _ _ _ _ g hcheck
+@@ -742,7 +735,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
+             rw [hpc]
+             exact ih ctx (k + 1) env _ (next w (leHost_refl w))
+           | failure c =>
+-            exact exitOk_failure_error herr.1 hex
++            exact exitOk_failure_of_errorN herr.1 hex
+       | ret v =>
+         cases rest with
+         | cons h t =>
+@@ -884,7 +877,7 @@ theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorSt
+   cases (walkR root.program { q with completed := C } q.fuel (ctx.block ++ List.replicate k 1)
+       (if bind then q.env ++ [v] else q.env) []).2 with
+   | done r => exact fun hr => strongExit_success w' tout r hr
+-  | halt c => exact fun hc => exitOk_failure_error (Ty.subN_refl _) hc
++  | halt c => exact fun hc => exitOk_failure_of_errorN (Ty.subN_refl _) hc
+   | resume code name' =>
+     rintro ⟨ty, q', pc', bind', rfl, hq', typed, herr', next⟩
+     refine ⟨⟨ty.answer, tout.error, tout.requires⟩, typedProg_widen root (T := ty) (Ty.subN_refl _) herr' typed,
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean
+index fc13245a..3a251c69 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean
+@@ -538,7 +538,7 @@ theorem clause_yieldNow (root : ProgramSource) (rootTy : EffTy) (priority : Nat)
+         · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim
+         · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim) fresh
+     have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (M1.update g)) := by
+-      rw [commandOwner_rupdate]
++      rw [commandOwner_update]
+       exact free1
+     have looped := configTyped_cons_loop edited lookG ev.running rfl freeG y (fun _ => codeG)
+     have final := configTyped_emit (configTyped_congr (m := M1.update g)
+@@ -1328,7 +1328,7 @@ theorem Evaluating.unpark_fresh {root : ProgramSource} {rootTy : EffTy} {w : Wor
+       · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim
+       · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim) fresh
+   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (M1.update g)) := by
+-    rw [commandOwner_rupdate]
++    rw [commandOwner_update]
+     exact free1
+   exact ⟨ord, configTyped_cons_loop_read edited lookG ev.running rfl freeG y' (fun _ ty' d' =>
+     Or.inr ⟨frdef, fun y'' hy => by
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean b/src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean
+index 1ca57ad1..d26c530e 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean
+@@ -290,10 +290,6 @@ theorem fiberTyped_frame {root : ProgramSource} {w : World} {m : RState} {f : RF
+       observersBelow := moved.observersBelow
+       children := moved.children }
+ 
+-/-- A command's owner does not read the fibers: editing one keeps every owner. -/
+-theorem commandOwner_rupdate (m : RState) (g : RFiber) :
+-    Guard.commandOwner (Code := RProgram) (m.update g) = Guard.commandOwner m := rfl
+-
+ /-- **The fiber edit of a frame step**: from a typed configuration headed by the `loop` or
+ `deliver` that owns the running fiber `f`, a new frame for `f` that keeps `f` typed gives the
+ configuration with the frame installed and the head dropped. No other command owns `f`
+@@ -369,7 +365,7 @@ theorem configTyped_frame_step {root : ProgramSource} {rootTy : EffTy} {w : Worl
+   have edited : ConfigTyped root rootTy w (m.update g) rest :=
+     configTyped_frame_edit typed owner hf running fr fresh
+   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
+-    rw [commandOwner_rupdate]
++    rw [commandOwner_update]
+     exact owner_free typed.queue owner
+   have codeG : raceRegistrationR g.frame.current = none → ∀ ty, w.Γ g.id = some ty →
+       CodeOk root w (m.update g) g.id ty g.frame :=
+@@ -1190,14 +1186,14 @@ theorem injected_frame_code {root : ProgramSource} {rootTy : EffTy} {w : World}
+     · intro later _ ex admitted arm
+       cases ex with
+       | success v => cases arm
+-      | failure c => exact exitOk_failure_of_errorN (subN_never mid.error) admitted
++      | failure c => exact exitOk_failure_of_errorN (Bounds.subN_never mid.error) admitted
+   | some raceId =>
+     obtain ⟨race, resultTy, found, hosted, token, final0, declared0, stack, _⟩ :=
+       old.registration raceId marker
+     have same : final0 = final := Option.some.inj (declared0.symm.trans declared)
+     subst same
+     exact .cons (.inr (.mk (fun _ => marker)
+-      (fun _ _ _ admitted => exitOk_failure_of_errorN (subN_never resultTy.error) admitted)
++      (fun _ _ _ admitted => exitOk_failure_of_errorN (Bounds.subN_never resultTy.error) admitted)
+       found hosted token)) stack
+ 
+ /-- The same owned, running fiber can be continued by deliver instead of loop. -/
+@@ -1387,7 +1383,7 @@ theorem configTyped_frame_marker {root : ProgramSource} {rootTy : EffTy} {w : Wo
+         exact ⟨race, resultTy, ty, found, host, token, declared, stack⟩)
+   have edited := configTyped_frame_edit typed owner hf running fr fresh
+   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
+-    rw [commandOwner_rupdate]
++    rw [commandOwner_update]
+     exact owner_free typed.queue owner
+   refine configTyped_cons_loop edited look running notParked freeG y (fun hnone => ?_)
+   change raceRegistrationR fr.current = none at hnone
+@@ -1428,7 +1424,7 @@ theorem configTyped_frame_finish {root : ProgramSource} {rootTy : EffTy} {w : Wo
+     exact empty
+   · intro o ho
+     cases ho
+-    rw [commandOwner_rupdate]
++    rw [commandOwner_update]
+     exact owner_free typed.queue owner
+ 
+ /-- **A running fiber's context moves** to one whose services fit (`setContext`'s pre, decisions row
+@@ -1689,7 +1685,7 @@ theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w :
+         simp only [prepareIterR, prepareScopedExitR, answerR, hcur, prepareR, hprog]
+         rfl
+       rw [glue]
+-      exact settles _ (finalizerBind_typed root hexOk (subN_never _) (installs c rfl) next)
++      exact settles _ (finalizerBind_typed root hexOk (Bounds.subN_never _) (installs c rfl) next)
+   intro code typedCode
+   have fresh : ∀ ty', ({ w with state := s } : World).Γ g.id = some ty' →
+       CodeOk root { w with state := s } (({ m with state := s } : RState).update g) g.id ty'
+@@ -1996,7 +1992,7 @@ theorem Evaluating.unitAnswerFrame {root : ProgramSource} {w : World} {tin : Eff
+     exact typedNext w' o v unit
+   | failure c =>
+     show TypedProg root w' tin (.pure (.failure c))
+-    exact TypedProg.pure (exitOk_failure_of_errorN (subN_never _) hex)
++    exact TypedProg.pure (exitOk_failure_of_errorN (Bounds.subN_never _) hex)
+ 
+ /-- **`interruptScoped`** (`:5368`, D6b): on the fiber itself, `unit` answered; on another fiber, the
+ public interrupt program installed over the saved answer frame, typed at `unit`
+@@ -2126,7 +2122,7 @@ theorem clause_interruptAs (root : ProgramSource) (rootTy : EffTy) (target who :
+           (racesKept_of_eq fun _ => rfl) stack), ⟨prov.recorded, prov.deferred⟩⟩
+     · intro o ho
+       cases ho
+-      rw [commandOwner_rupdate]
++      rw [commandOwner_update]
+       exact owner_free ev.typed.queue rfl
+   -- the target is a fiber of the machine
+   have targetMem : target ∈ (m.update f).fibers.map RunFiber.id := (wide.fibers target).mp pre
+@@ -2267,7 +2263,7 @@ theorem clause_cancelRace (root : ProgramSource) (rootTy : EffTy) (raceId : Nat)
+       exact payload.live id (by simpa only [List.nil_append] using hid)
+     · intro o ho
+       cases ho
+-      rw [commandOwner_rupdate]
++      rw [commandOwner_update]
+       exact owner_free ev.typed.queue rfl
+ 
+ end Effect4.Program.Typed
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Finish.lean b/src/Effect4/Laws/Program/Typed/Commands/Finish.lean
+index bc9945bb..7ebe3ca3 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Finish.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Finish.lean
+@@ -629,7 +629,7 @@ theorem middlewareCode_typed (root : ProgramSource) {w : World} {ty : EffTy}
+   seqGuard_typed root (mid := EffTy.pure .unit)
+     (TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+       (fun _ _ _ h => nomatch h) () declared (fun _ _ _ post => unitAnswer_typed root post))
+-    (subN_never _) (fun _ o _ _ => .pure (strongExit_mono _ _ _ _ o hex))
++    (Bounds.subN_never _) (fun _ o _ _ => .pure (strongExit_mono _ _ _ _ o hex))
+ 
+ /-- The head facts of a `drainDue`: it reads nothing, owns nothing, carries no key. -/
+ theorem headOk_drainDue (root : ProgramSource) (w : World) (m : RState) (q : List RCmd) :
+diff --git a/src/Effect4/Laws/Program/Typed/Commands/Race.lean b/src/Effect4/Laws/Program/Typed/Commands/Race.lean
+index dde5e361..99df5afe 100644
+--- a/src/Effect4/Laws/Program/Typed/Commands/Race.lean
++++ b/src/Effect4/Laws/Program/Typed/Commands/Race.lean
+@@ -338,36 +338,6 @@ theorem configTyped_cons_loop {root : ProgramSource} {rootTy : EffTy} {w : World
+     cases owner
+     exact free
+ 
+-/-- **Sequencing at one error column**: a program's failures pass to the outer type unchanged
+-when its error column is the outer one (the answer column is never read by a failure); the
+-continuation types the successes. -/
+-theorem seq_typed_sameError (root : ProgramSource) {w : World} {mid ty : EffTy} {a : RProgram}
+-    {k : Val → RProgram} (ha : TypedProg root w mid a)
+-    (hk : ∀ w', w.leHost w' → ∀ v, Fits w' v mid.answer → TypedProg root w' ty (k v))
+-    (errors : mid.error = ty.error) :
+-    TypedProg root w ty ((guardR .onSuccess a).bind (seqR k)) := by
+-  show TypedProg root w ty (.vis (.inr (.guard_ .onSuccess)) _)
+-  refine TypedProg.guard mid ?_ ?_ ?_
+-  · show TypedProg root w mid
+-      ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind (seqR k))
+-    rw [Effects.Program.bind_assoc]
+-    exact close_typed root ha (seqR k)
+-  · intro w' o ex hpost
+-    obtain ⟨harm, hfit⟩ := hpost
+-    cases ex with
+-    | success v =>
+-      have hf := hfit.1
+-      rw [fitsExit_success_iff] at hf
+-      exact hk w' o v hf
+-    | failure c => exact Bool.noConfusion harm
+-  · intro w' _ ex hfit hmiss
+-    cases ex with
+-    | success v => exact Bool.noConfusion hmiss
+-    | failure c =>
+-      have cause := failureFits_cause hfit.1
+-      rw [errors] at cause
+-      exact ⟨failureFits_of_cause cause hfit.2, hfit.2⟩
+-
+ /-! ## `afterInterrupt` (no halting arm) -/
+ 
+ /-- The await an interrupt returns (`asVoidCode (awaitCode kind)`, `Machine/Fibers.lean:1730-1742`)
+@@ -406,7 +376,7 @@ theorem afterInterruptCode_typed (root : ProgramSource) {rootTy : EffTy} {w : Wo
+     cases mode with
+     | joinEffect =>
+       obtain ⟨sourceTy, declared, rfl⟩ := reply
+-      refine seq_typed_sameError root (mid := sourceTy) ?_
++      refine seq_typed root (mid := sourceTy) ?_
+         (fun _ _ _ _ => TypedProg.pure ⟨trivial, trivial⟩) rfl
+       simp only [awaitCode]
+       split
+@@ -658,19 +628,6 @@ theorem subN_declaredUnion {w : World} {col : EffTy → Ty} {targets : List Fibe
+     have tail := ih fun t ht fty d => below t (List.mem_cons_of_mem _ ht) fty d
+     exact Ty.OrderProof.sub_normalize_union_le Ty.sub_trans _ _ _ head tail
+ 
+-/-- The checker's order on a list of exits, column by column. -/
+-theorem subN_list_exitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) :
+-    Ty.subN (.list (.exitOf a e)) (.list (.exitOf a' e')) = true := by
+-  unfold Ty.subN
+-  simp only [Ty.normalize]
+-  rw [Ty.sub_args_list]
+-  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+-    List.all_nil, Bool.and_true]
+-  rw [Ty.sub_args_exitOf]
+-  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
+-    List.all_nil, Bool.and_true, Bool.and_eq_true]
+-  exact ⟨ha, he⟩
+-
+ /-- The await-all park at the columns a close's delivery fact names (`FiberListColumns`, in the
+ checker's order) is typed at the list of exits at those columns: the row's certificate is the
+ raw union of the targets' declared columns (`declaredUnion`), which the row's pre reads in the
+@@ -703,7 +660,7 @@ theorem awaitAllPark_typed (root : ProgramSource) {w : World} {targets : List Fi
+     refine TypedProg.pure ⟨?_, trivial⟩
+     show Fits w' ans ty.answer
+     rw [hans]
+-    exact fits_subN w' (subN_list_exitOf hU hE) ans post
++    exact fits_subN w' (subN_listExitOf hU hE) ans post
+ 
+ /-- **`closeParAwait` keeps `I`** at the same world: the host's code becomes the await-all park
+ over the close's targets (`awaitAllPark_typed`) under the close generator's iterator frame, whose
+diff --git a/src/Effect4/Laws/Program/Typed/Denotation.lean b/src/Effect4/Laws/Program/Typed/Denotation.lean
+index 561f651c..441dfa77 100644
+--- a/src/Effect4/Laws/Program/Typed/Denotation.lean
++++ b/src/Effect4/Laws/Program/Typed/Denotation.lean
+@@ -1374,9 +1374,6 @@ theorem fits_exitErr_causeOf {w : World} {e : Ty} {c : CauseV} (h : FitsCause w
+   rw [Val.cause?_exitErr]
+   exact h
+ 
+-/-- `never` is below every type in the checker's order. -/
+-theorem subN_never (t : Ty) : Ty.subN .never t = true := Ty.OrderProof.sub_never _
+-
+ /-- The context read, typed at the context type. -/
+ theorem getContext_typed (root : ProgramSource) (w : World) :
+     TypedProg root w (EffTy.pure Ty.context) (fiberValR .getContext rfl) :=
+@@ -1559,7 +1556,7 @@ theorem acquireRelease_arm {a r : NativeEff} (hfuel : p.fuel = f + 1)
+     (hpt : PointTyped root w p ty) :
+     TypedProg root w ty (denoteR root.program (.acquireRelease a r) p) := by
+   rw [denoteR_acquireRelease _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
+-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o v hv => ?_)
++  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' o v hv => ?_)
+   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
+   show TypedProg root w' ty (match Val.context? v with
+     | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
+@@ -1849,7 +1846,7 @@ order. -/
+ theorem unionFold_subN {α : Type} (f : α → Ty) (c : Ty) :
+     ∀ (xs : List α), (∀ x ∈ xs, Ty.subN (f x) c = true) →
+       Ty.subN (xs.foldr (fun y acc => Ty.union (f y) acc) .never) c = true
+-  | [], _ => subN_never c
++  | [], _ => Bounds.subN_never c
+   | y :: ys, h => subN_union_le (h y List.mem_cons_self)
+       (unionFold_subN f c ys fun x hx => h x (List.mem_cons_of_mem y hx))
+ 
+@@ -1966,7 +1963,7 @@ private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : Lis
+     rw [effsRounds_nil] at hc
+     have hT := Checker.inv_effs_nil _ _ _ _ hc
+     subst hT
+-    exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, subN_never _, subN_never _⟩
++    exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, Bounds.subN_never _, Bounds.subN_never _⟩
+   | .cons h t, q, T, hat, hc, henv, hview => by
+     rw [effsRounds_cons] at hc
+     obtain ⟨H, R, hch, hct, rfl⟩ := Checker.inv_effs_cons _ _ _ _ _ _ hc
+@@ -2112,7 +2109,7 @@ theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
+   simp only [denoteFiberAction]
+   rw [hat]
+   simp only []
+-  refine seqGuard_typed root (ambientScope_typed root w) (subN_never _) (fun w' o v hv => ?_)
++  refine seqGuard_typed root (ambientScope_typed root w) (Bounds.subN_never _) (fun w' o v hv => ?_)
+   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hv
+   show TypedProg root w' _ (.vis (.inr (.forkIn ((p.child 0).child 0) options sc (p.child 0).path))
+     fun v => .pure (.success v))
+@@ -3385,7 +3382,7 @@ theorem service_arm {key : ServiceKey} (hfuel : p.fuel ≠ 0)
+   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+   obtain ⟨sty, hsty, rfl⟩ := Checker.inv_service root.signature env p.path key ty hcheck
+   rw [denoteR_service _ _ hfuel]
+-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' ord v hv => ?_)
++  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' ord v hv => ?_)
+   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
+   simp only [seqR]
+   unfold serviceLookupR
+@@ -3439,7 +3436,7 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
+         (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) (completed_mono o'' hview)))
+   rw [denoteR_provideService _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv]
+   unfold updateContextR
+-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o u hu => ?_)
++  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' o u hu => ?_)
+   obtain ⟨prev, hprev, hsvc⟩ := fits_context_inv hu
+   simp only [seqR]
+   rw [hprev]
+@@ -3462,10 +3459,10 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
+         exact fits_flatFits hflat (fits_mono o hfit)
+       · rw [Env.Context.getV_addV_other _ _ _ _ hk] at hget
+         exact hsvc.1 key' sv sty' hget hty'
+-    refine seqGuard_typed root (setContext_typed root hsvc') (subN_never _) (fun w'' o' x _ => ?_)
++    refine seqGuard_typed root (setContext_typed root hsvc') (Bounds.subN_never _) (fun w'' o' x _ => ?_)
+     simp only [seqR]
+     exact onExit_typed root (b := ⟨tb.answer, tb.error, _⟩) (f := EffTy.pure .unit)
+-      (Ty.subN_refl _) (Ty.subN_refl _) (subN_never _)
++      (Ty.subN_refl _) (Ty.subN_refl _) (Bounds.subN_never _)
+       (hchild w'' (leHost_trans _ _ _ o o'))
+       (fun w3 o3 _ _ => setContext_typed root (servicesFit_mono (leHost_trans _ _ _ o' o3) hsvc))
+ 
+diff --git a/src/Effect4/Laws/Program/Typed/LayerArm.lean b/src/Effect4/Laws/Program/Typed/LayerArm.lean
+index d6707b8e..66aceee9 100644
+--- a/src/Effect4/Laws/Program/Typed/LayerArm.lean
++++ b/src/Effect4/Laws/Program/Typed/LayerArm.lean
+@@ -167,7 +167,7 @@ theorem scopeAdd_typed {w : World} {scope : Nat} {fin : FinName} (hlive : ScopeL
+   unfold scopeAddR
+   refine seqGuard_typed root
+     (mid := ⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩) ?_
+-    (subN_never _) (fun w' o v hv => ?_)
++    (Bounds.subN_never _) (fun w' o v hv => ?_)
+   · refine TypedProg.store (op := .scopeAdd scope fin) (cert := ()) ⟨hlive, hadm⟩
+       (fun w'' _ ans post => .pure (strongExit_success w'' _ ans ?_))
+     rcases post with rfl | ⟨ex, rfl, hex⟩
+@@ -185,7 +185,7 @@ theorem scopeAdd_typed {w : World} {scope : Nat} {fin : FinName} (hlive : ScopeL
+       rw [if_neg hne, hexv]
+       exact seqGuard_typed root (mid := ⟨.unknown, .never, Env.Requirement.empty⟩)
+         (finalizerTyped_of_admitted root w fin hadm w' o ex (fitsExit_of_exitOfVal hexit hexv))
+-        (subN_never _) (fun w'' _ _ _ => .pure (strongExit_success w'' _ _ trivial))
++        (Bounds.subN_never _) (fun w'' _ _ _ => .pure (strongExit_success w'' _ _ trivial))
+ 
+ /-- `fromBuild`'s finalizer (`Layer.ts:343`): the layer scope closed on failure only. -/
+ theorem closeChildOnFailure_typed {w : World} {child : Nat} (hlive : ScopeLive w child)
+@@ -204,13 +204,13 @@ theorem fromBuild_typed {w : World} {T : EffTy} {scope : Nat} {inner : Nat → R
+     (hinner : ∀ w', w.leHost w' → ∀ child, ScopeLive w' child → TypedProg root w' T (inner child)) :
+     TypedProg root w T (fromBuildR scope inner) := by
+   unfold fromBuildR
+-  refine seqGuard_typed root (mid := EffTy.pure Ty.scope) ?_ (subN_never _) (fun w' o v hv => ?_)
++  refine seqGuard_typed root (mid := EffTy.pure Ty.scope) ?_ (Bounds.subN_never _) (fun w' o v hv => ?_)
+   · exact TypedProg.store (op := .scopeFork scope .sequential) (cert := ()) hlive
+       (fun w'' _ ans post => .pure (strongExit_success w'' _ ans post))
+   · obtain ⟨child, rfl, hchild⟩ := fits_scope_inv hv
+     simp only [seqR, Val.scope?_scopeHandle]
+     exact onExit_typed root (b := T) (f := EffTy.pure .unit) (Ty.subN_refl _) (Ty.subN_refl _)
+-      (subN_never _) (hinner w' o child hchild)
++      (Bounds.subN_never _) (hinner w' o child hchild)
+       (fun w'' o' ex hok => closeChildOnFailure_typed (scopeLive_mono o'.1 hchild) ex
+         (fitsExit_unknown hok.1))
+ 
+@@ -232,7 +232,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt
+   refine suspendR_typed root (fun w1 o1 => ?_)
+   refine seqGuard_typed root
+     (mid := ⟨.union .unit (.prod (.deferredOf (.handle Ty.contextTarget) lt.error) Ty.memoMap),
+-      .never, Env.Requirement.empty⟩) ?_ (subN_never _) (fun w2 o2 v hv => ?_)
++      .never, Env.Requirement.empty⟩) ?_ (Bounds.subN_never _) (fun w2 o2 v hv => ?_)
+   · refine TypedProg.store (op := .memoGet q.path m) (cert := lt.error) ⟨l, lt, hat, hcheck, rfl⟩
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans ?_))
+     rcases post with rfl | ⟨cell, owner, hhit, hdecl, hpresent⟩
+@@ -247,7 +247,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt
+       rw [fits_unit_inv hunit]
+       show TypedProg root w2 (buildTy lt) (if Val.unit = Val.unit then _ else _)
+       rw [if_pos rfl]
+-      refine seqGuard_typed root (mid := EffTy.pure Ty.scope) ?_ (subN_never _)
++      refine seqGuard_typed root (mid := EffTy.pure Ty.scope) ?_ (Bounds.subN_never _)
+         (fun w3 o3 u hu => ?_)
+       · exact TypedProg.store (op := .memoBuild q.path m) (cert := (.handle Ty.contextTarget, lt.error))
+           ⟨l, lt, hat, hcheck, rfl⟩ (fun w'' _ ans post => .pure (strongExit_success w'' _ ans post))
+@@ -255,11 +255,11 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt
+         simp only [seqR, Val.scope?_scopeHandle]
+         have o13 := leHost_trans _ _ _ o12 o3
+         refine seqGuard_typed root (mid := EffTy.pure .unit)
+-          (scopeAdd_typed (scopeLive_mono o13.1 hlive) trivial) (subN_never _)
++          (scopeAdd_typed (scopeLive_mono o13.1 hlive) trivial) (Bounds.subN_never _)
+           (fun w4 o4 _ _ => ?_)
+         simp only [seqR]
+         exact onExit_typed root (b := buildTy lt) (f := EffTy.pure .unit) (Ty.subN_refl _)
+-          (Ty.subN_refl _) (subN_never _)
++          (Ty.subN_refl _) (Bounds.subN_never _)
+           (hcons w4 (leHost_trans _ _ _ o13 o4) layerScope (scopeLive_mono o4.1 hls))
+           (fun w5 _ ex hex => TypedProg.store (op := .memoComplete q.path m ex) (cert := ())
+             ⟨l, lt, hat, hcheck, hex⟩ (fun w6 _ ans post => by
+@@ -272,7 +272,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt
+       rw [show Val.memoHit? (.list [Val.promise c, Val.memoMap o]) = some (c, o) from
+         Val.memoHit?_memoHit c o]
+       refine seqGuard_typed root (mid := EffTy.pure .unit)
+-        (scopeAdd_typed (scopeLive_mono o12.1 hlive) trivial) (subN_never _)
++        (scopeAdd_typed (scopeLive_mono o12.1 hlive) trivial) (Bounds.subN_never _)
+         (fun w3 o3 _ _ => ?_)
+       simp only [seqR]
+       obtain ⟨a', e', hpi, ha, he⟩ := promiseDeclared_mono o3 hdecl
+@@ -304,7 +304,7 @@ theorem updateContext_typed {w : World} {T : EffTy} {update : Env.ContextUpdate}
+     (hbody : ∀ w', w.leHost w' → TypedProg root w' T body) :
+     TypedProg root w T (updateContextR update body) := by
+   unfold updateContextR
+-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o u hu => ?_)
++  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' o u hu => ?_)
+   obtain ⟨prev, hprev, hsvc⟩ := fits_context_inv hu
+   simp only [seqR]
+   rw [hprev]
+@@ -312,10 +312,10 @@ theorem updateContext_typed {w : World} {T : EffTy} {update : Env.ContextUpdate}
+   split
+   · exact hbody w' o
+   · refine seqGuard_typed root (setContext_typed root (hupd w' o prev.services hsvc))
+-      (subN_never _) (fun w'' o' _ _ => ?_)
++      (Bounds.subN_never _) (fun w'' o' _ _ => ?_)
+     simp only [seqR]
+     exact onExit_typed root (b := T) (f := EffTy.pure .unit) (Ty.subN_refl _) (Ty.subN_refl _)
+-      (subN_never _) (hbody w'' (leHost_trans _ _ _ o o'))
++      (Bounds.subN_never _) (hbody w'' (leHost_trans _ _ _ o o'))
+       (fun w3 o3 _ _ => setContext_typed root (servicesFit_mono (leHost_trans _ _ _ o' o3) hsvc))
+ 
+ /-- `Context.make(key, value)` or `Context.empty()` over a leaf's answer (`bindServiceR`): a built
+@@ -631,11 +631,11 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
+   refine seqGuard_typed root (mid := EffTy.pure Ty.scope)
+     (TypedProg.store (op := .scopeFork parent .sequential) (cert := ()) hlive
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-    (subN_never _) (fun w1 o1 v hv => ?_)
++    (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
+   obtain ⟨c0, rfl, hc0⟩ := fits_scope_inv hv
+   simp only [seqR, Val.scope?_scopeHandle]
+   refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 ha) hc0 (memoLive_mono o1.1 hmemo))
+-    (subN_never _)
++    (Bounds.subN_never _)
+     (fun w2 o2 f0 hf0 => ?_)
+   obtain ⟨i0, rfl, hd0⟩ := fiber_of_fits hf0
+   simp only [seqR]
+@@ -646,12 +646,12 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
+     (TypedProg.store (op := .scopeFork parent .sequential) (cert := ())
+       (scopeLive_mono o12.1 hlive)
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-    (subN_never _) (fun w3 o3 u hu => ?_)
++    (Bounds.subN_never _) (fun w3 o3 u hu => ?_)
+   obtain ⟨c1, rfl, hc1⟩ := fits_scope_inv hu
+   simp only [seqR, Val.scope?_scopeHandle]
+   have o13 := leHost_trans _ _ _ o12 o3
+   refine seqGuard_typed root
+-    (forkLayer_typed (layerPointTyped_mono o13 hb) hc1 (memoLive_mono o13.1 hmemo)) (subN_never _)
++    (forkLayer_typed (layerPointTyped_mono o13 hb) hc1 (memoLive_mono o13.1 hmemo)) (Bounds.subN_never _)
+     (fun w4 o4 f1 hf1 => ?_)
+   obtain ⟨i1, rfl, hd1⟩ := fiber_of_fits hf1
+   simp only [seqR]
+@@ -676,7 +676,7 @@ theorem mergeFork_typed {w : World} {q : Point} {m : MemoMapId} {parent : Nat} {
+     (TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+       (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) ⟨A, E, rfl, hpre⟩
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-    (subN_never _) (fun w5 _ ex hex => ?_)
++    (Bounds.subN_never _) (fun w5 _ ex hex => ?_)
+   simp only [seqR]
+   exact mergeContexts_typed rfl (Ty.subN_refl _) (fits_subN w5 (subN_listExitOf hA hE) ex hex)
+ 
+@@ -690,7 +690,7 @@ theorem mergeTwo_typed {w : World} {q : Point} {m : MemoMapId} {child : Nat} {la
+   refine seqGuard_typed root (mid := EffTy.pure Ty.scope)
+     (TypedProg.store (op := .scopeFork child .parallel) (cert := ()) hlive
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-    (subN_never _) (fun w1 o1 v hv => ?_)
++    (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
+   obtain ⟨parent, rfl, hparent⟩ := fits_scope_inv hv
+   simp only [seqR, Val.scope?_scopeHandle]
+   exact mergeFork_typed hparent (memoLive_mono o1.1 hmemo) (layerPointTyped_mono o1 ha)
+@@ -869,7 +869,7 @@ theorem fresh_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped
+     (TypedProg.store (op := .memoFork none) (cert := ()) trivial (fun w' _ ans post => by
+       obtain ⟨id, rfl, hid⟩ := post
+       exact .pure (strongExit_success w' _ _ (fits_memoMap w' id hid))))
+-    (subN_never _) (fun w' o v hv => ?_)
++    (Bounds.subN_never _) (fun w' o v hv => ?_)
+   obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
+   simp only [seqR, Val.memoMap?_memoMap]
+   exact hi (q.child 0) w' lt id scope
+@@ -1117,7 +1117,7 @@ theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
+       (TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+         (fun _ _ _ h => nomatch h) (.list (.exitOf A E')) ⟨A, E', rfl, hpre⟩
+         (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-      (subN_never _) (fun w' _ ex hex => ?_)
++      (Bounds.subN_never _) (fun w' _ ex hex => ?_)
+     simp only [seqR]
+     exact mergeContexts_typed rfl (Ty.subN_refl _) (fits_subN w' (subN_listExitOf hA hE) ex hex)
+   | remaining + 1, i, forked, w, hlive, hmemo, hforked, hspine => by
+@@ -1126,11 +1126,11 @@ theorem mergeAllFork_typed {q : Point} {m : MemoMapId} {parent : Nat} {E : Ty} :
+     refine seqGuard_typed root (mid := EffTy.pure Ty.scope)
+       (TypedProg.store (op := .scopeFork parent .sequential) (cert := ()) hlive
+         (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-      (subN_never _) (fun w1 o1 v hv => ?_)
++      (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
+     obtain ⟨c, rfl, hc⟩ := fits_scope_inv hv
+     simp only [seqR, Val.scope?_scopeHandle]
+     refine seqGuard_typed root (forkLayer_typed (layerPointTyped_mono o1 hpti) hc (memoLive_mono o1.1 hmemo))
+-      (subN_never _)
++      (Bounds.subN_never _)
+       (fun w2 o2 f hf => ?_)
+     obtain ⟨index, rfl, hd⟩ := fiber_of_fits hf
+     simp only [seqR]
+@@ -1164,7 +1164,7 @@ theorem mergeAll_builds {layers : LayerTerms NativeOp} {f K : Nat} :
+   refine seqGuard_typed root (mid := EffTy.pure Ty.scope)
+     (TypedProg.store (op := .scopeFork child .parallel) (cert := ()) hchild
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-    (subN_never _) (fun w2 o2 v hv => ?_)
++    (Bounds.subN_never _) (fun w2 o2 v hv => ?_)
+   obtain ⟨parent, rfl, hparent⟩ := fits_scope_inv hv
+   simp only [seqR, Val.scope?_scopeHandle]
+   have o12 := leHost_trans _ _ _ o1 o2
+@@ -1244,7 +1244,7 @@ theorem forkBuild_typed {w : World} {parent : Option MemoMapId} {build : MemoMap
+         | none => .pure badShapeExit)) := by
+   refine seqGuard_typed root (mid := EffTy.pure Ty.memoMap)
+     (TypedProg.store (op := .memoFork parent) (cert := ()) trivial
+-      (fun w' _ ans post => ?_)) (subN_never _) (fun w' o v hv => ?_)
++      (fun w' _ ans post => ?_)) (Bounds.subN_never _) (fun w' o v hv => ?_)
+   · obtain ⟨id, rfl, hid⟩ := post
+     exact .pure (strongExit_success w' _ _ (fits_memoMap w' id hid))
+   · obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
+@@ -1278,12 +1278,12 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
+   refine seqGuard_typed root (mid := EffTy.pure Ty.scope)
+     (TypedProg.store (op := .scopeMake .sequential) (cert := ()) trivial
+       (fun w' _ ans post => .pure (strongExit_success w' _ ans post)))
+-    (subN_never _) (fun w3 o3 v hv => ?_)
++    (Bounds.subN_never _) (fun w3 o3 v hv => ?_)
+   obtain ⟨scope, rfl, hlive⟩ := fits_scope_inv hv
+   simp only [seqR, Val.scope?_scopeHandle]
+   have o13 := leHost_trans _ _ _ o12 o3
+   refine onExit_typed root (b := ⟨tb.answer, tb.error.join lt.error, _⟩) (f := EffTy.pure .unit)
+-    (Ty.subN_refl _) (Ty.subN_refl _) (subN_never _) ?_
++    (Ty.subN_refl _) (Ty.subN_refl _) (Bounds.subN_never _) ?_
+     (fun w4 o4 _ hok => TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) ()
+       ⟨scopeLive_mono o4.1 hlive, fitsExit_unknown hok.1⟩
+@@ -1301,7 +1301,7 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
+   · cases i with
+     | true => exact forkBuild_typed (serviceTy_leHost o13 htie) hbuild
+     | false =>
+-      refine seqGuard_typed root (getContext_typed root w3) (subN_never _) (fun w' o x hx => ?_)
++      refine seqGuard_typed root (getContext_typed root w3) (Bounds.subN_never _) (fun w' o x hx => ?_)
+       obtain ⟨ctx, hctx, -⟩ := fits_context_inv hx
+       simp only [seqR]
+       rw [hctx]
+diff --git a/src/Effect4/Laws/Program/Typed/Membership.lean b/src/Effect4/Laws/Program/Typed/Membership.lean
+index d3bca785..d1c0ecd6 100644
+--- a/src/Effect4/Laws/Program/Typed/Membership.lean
++++ b/src/Effect4/Laws/Program/Typed/Membership.lean
+@@ -635,16 +635,6 @@ theorem itemsFit_map {β : Type} (P Q : β → Val → Prop) :
+     ⟨hpt t List.mem_cons_self x h.1,
+       itemsFit_map P Q l xs (fun u hu => hpt u (List.mem_cons_of_mem _ hu)) h.2⟩
+ 
+-/-- A list zipped with itself pairs each element with itself. -/
+-theorem mem_zip_self {α : Type} : ∀ {l : List α} {a b : α}, (a, b) ∈ l.zip l → a = b
+-  | [], _, _, h => absurd h List.not_mem_nil
+-  | x :: xs, a, b, h => by
+-    rw [List.zip_cons_cons, List.mem_cons] at h
+-    rcases h with h | h
+-    · simp only [Prod.mk.injEq] at h
+-      rw [h.1, h.2]
+-    · exact mem_zip_self h
+-
+ /-- **Fits implies the shape check** at the world's own allocation table, at every type. -/
+ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
+     Val.hasTy v ty w.state.externals.allocated = true := by
+@@ -782,7 +772,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
+     · intro pc hpc x hx
+       rw [List.zip_map, List.mem_map] at hpc
+       obtain ⟨⟨q1, q2⟩, hq, rfl⟩ := hpc
+-      have heq : q1 = q2 := mem_zip_self hq
++      have heq : q1 = q2 := Ty.mem_zip_self hq
+       subst heq
+       exact ih q1 (Ty.mem_canon (List.of_mem_zip hq).1) x hx
+   | map k t ihk iht =>
+@@ -810,7 +800,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
+       intro pc hpc x hx
+       rw [List.zip_map, List.mem_map] at hpc
+       obtain ⟨⟨t1, t2⟩, ht, rfl⟩ := hpc
+-      have heq : t1 = t2 := mem_zip_self ht
++      have heq : t1 = t2 := Ty.mem_zip_self ht
+       subst heq
+       exact ih t1 (List.of_mem_zip ht).1 x hx
+     all_goals exact h.elim
+@@ -1461,7 +1451,7 @@ theorem fits_map {w1 w2 : World}
+     · intro pq hpq
+       rw [List.zip_map, List.mem_map] at hpq
+       obtain ⟨⟨q1, q2⟩, hq, rfl⟩ := hpq
+-      have heq : q1 = q2 := mem_zip_self hq
++      have heq : q1 = q2 := Ty.mem_zip_self hq
+       subst heq
+       exact ⟨id, fun x hx => ih q1 (Ty.mem_canon (List.of_mem_zip hq).1) x hx⟩
+   | map k t ihk iht =>
+@@ -1484,7 +1474,7 @@ theorem fits_map {w1 w2 : World}
+       intro pq hpq x hx
+       rw [List.zip_map, List.mem_map] at hpq
+       obtain ⟨⟨t1, t2⟩, ht, rfl⟩ := hpq
+-      have heq : t1 = t2 := mem_zip_self ht
++      have heq : t1 = t2 := Ty.mem_zip_self ht
+       subst heq
+       exact ih t1 (List.of_mem_zip ht).1 x hx
+     all_goals exact h.elim

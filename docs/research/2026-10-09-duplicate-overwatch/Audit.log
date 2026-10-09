@@ -1,0 +1,5 @@
+Effect4.Laws.Library.Semaphore.Data: 23 declarations within [propext, Quot.sound]
+Effect4.Laws.Library.Pool.Ops: 119 declarations within [propext, Quot.sound]
+Effect4.Laws.Codegen.PrintTyped: 1974 declarations within [propext, Quot.sound]
+Test.Program.RegistrationYield: 96 declarations within [propext, Quot.sound]
+PASS: 2212 declarations checked; Author imports no Laws module.
