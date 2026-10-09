@@ -1,0 +1,8 @@
+✔ [508/514] Built Conform.Effect4.LcnfMl (2.9s)
+✔ [509/514] Built Conform.Effect4.LcnfSemantics (4.6s)
+✔ [510/514] Built Conform.Cli.LcnfMl (2.2s)
+✔ [511/514] Built Conform.Cli.LcnfSemantics (2.3s)
+✔ [512/514] Built Conform.Effect4.CompilerControls (4.0s)
+✔ [513/514] Built Conform.Effect4.Normalization (1.7s)
+Build completed successfully (514 jobs).
+conform cases: PASS, exit 0; .lake/conform/cases.json

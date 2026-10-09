@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Iter
+import Effect4.Laws.Program.FragmentLooped
 
 /-!
 # Program.DenoteB: the loop-bearing fragment at a budget
@@ -117,43 +118,6 @@ def iterateStep (body : List Val → Effects.Program StoreSig (Option ExitV)) (e
       | some v => Exit.success v
       | none => badShapeExit)))
   | _ => pure (.inl (some badShapeExit))
-
-/-- The loop-bearing fragment: `Straight`'s clauses, with `iterate` over a body of the
-fragment. Every constructor is named (no fallback arm), so a constructor added to `Eff` is a
-missing case here until it is classified (row 35, the fragment by exclusion); the leaves and
-the exclusions are `Straight`'s, arm for arm (`Looped.of_straight`). -/
-def Looped : NativeEff → Bool
-  | .succeed _ => true
-  | .fail _ => true
-  | .failCause _ => true
-  | .sync _ => true
-  | .perform op _ =>
-    match op.kind with
-    | .sync => true
-    | _ => false
-  | .iterate _ _ _ _ _ body => Looped body
-  | .suspend b => Looped b
-  | .bind a b => Looped a && Looped b
-  | .select _ _ a b => Looped a && Looped b
-  | .exit b => Looped b
-  | .catchCause b h => Looped b && Looped h
-  | .matchCause b v c => Looped b && Looped v && Looped c
-  | .onExit b f => Looped b && Looped f
-  | .gen _ => false
-  | .uninterruptible _ => false
-  | .interruptible _ => false
-  | .yieldNow _ => false
-  | .awaitFiber _ _ => false
-  | .withFiber _ => false
-  | .scoped _ => false
-  | .acquireRelease _ _ => false
-  | .provideLayer _ _ _ => false
-  | .service _ => false
-  | .provideService _ _ _ => false
-  | .catchIf _ _ _ => false
-  | .restore _ _ => false
-  -- a definition block's invocations hop into a body (decisions row 328)
-  | .defs _ _ _ => false
 
 /-! ## The fragment's subprograms -/
 

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Denote
+import Effect4.Laws.Program.FragmentRows
 import Effects.Family
 import Effects.Algebra.Sum
 
@@ -63,53 +64,6 @@ example (table : RowTable) (op : (RowSig table).Op) :
 example (table : RowTable) (o : SyncOp) : (RowsSig table).Answer (.inl o) = Val := rfl
 
 /-! ## The fragment -/
-
-/-- A host row that this fragment calls: the position names a row that the runner registers
-(`externalRow`), and its answer column is no handle type, so a reply allocates nothing
-(`externalValue`, `Program/Compile.lean`). -/
-def dataRow (table : RowTable) (i : Nat) : Bool :=
-  match externalRow table i with
-  | some row => match row.answer with
-    | .handle _ => false
-    | _ => true
-  | none => false
-
-/-- **Straight-line plus host rows on one fiber** (DI-69): `Straight`, with one more admitted
-leaf, a `perform` of a host row of the table. Every constructor is named (decisions row 35). -/
-def StraightRows (table : RowTable) : NativeEff → Bool
-  | .succeed _ => true
-  | .fail _ => true
-  | .failCause _ => true
-  | .sync _ => true
-  | .suspend b => StraightRows table b
-  | .perform op _ =>
-    match op with
-    | .external i => dataRow table i
-    | _ => match op.kind with
-      | .sync => true
-      | _ => false
-  | .bind a b => StraightRows table a && StraightRows table b
-  | .select _ _ a b => StraightRows table a && StraightRows table b
-  | .exit b => StraightRows table b
-  | .catchCause b h => StraightRows table b && StraightRows table h
-  | .catchIf _ b h => StraightRows table b && StraightRows table h
-  | .matchCause b v c => StraightRows table b && StraightRows table v && StraightRows table c
-  | .onExit b f => StraightRows table b && StraightRows table f
-  | .gen _ => false
-  | .uninterruptible _ => false
-  | .interruptible _ => false
-  | .yieldNow _ => false
-  | .awaitFiber _ _ => false
-  | .withFiber _ => false
-  | .scoped _ => false
-  | .acquireRelease _ _ => false
-  | .provideLayer _ _ _ => false
-  | .service _ => false
-  | .provideService _ _ _ => false
-  | .iterate _ _ _ _ _ _ => false
-  | .restore _ _ => false
-  -- a definition block's invocations hop into a body (decisions row 328)
-  | .defs _ _ _ => false
 
 /-! ## The denotation -/
 

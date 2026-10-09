@@ -1,0 +1,20 @@
+[
+  {
+    "group": "Fragments",
+    "path": "src/Effect4/Program/Fragment.lean",
+    "sha256": "bf7b8bdea8e160bd31aac6a4c616be2eedf7dfae3c51ef8d18f077d5f2f3e437",
+    "byte_identical": true
+  },
+  {
+    "group": "FragmentLooped",
+    "path": "src/Effect4/Laws/Program/FragmentLooped.lean",
+    "sha256": "f7bda8bd1c9add43b6e5a8f5459543c37e1c7ee20c8ce7afae62aaad7fb4fe27",
+    "byte_identical": true
+  },
+  {
+    "group": "FragmentRows",
+    "path": "src/Effect4/Laws/Program/FragmentRows.lean",
+    "sha256": "617df1aa38f7018e8b3eb4d46ac8dc16d8adb91780bf2544c4b2631105ccab63",
+    "byte_identical": true
+  }
+]

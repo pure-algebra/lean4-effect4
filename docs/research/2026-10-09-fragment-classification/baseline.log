@@ -1,0 +1,6 @@
+'FragmentBaseline.straight_unchanged' depends on axioms: [propext]
+'FragmentBaseline.looped_unchanged' depends on axioms: [propext]
+'FragmentBaseline.rows_unchanged' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Denote.Straight.eq_cata' depends on axioms: [propext]
+'Effect4.Program.Denote.Looped.eq_cata' depends on axioms: [propext]
+'Effect4.Program.Denote.StraightRows.eq_cata' depends on axioms: [propext, Quot.sound]
