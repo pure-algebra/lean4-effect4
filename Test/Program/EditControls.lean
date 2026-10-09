@@ -1,33 +1,38 @@
 import Effect4.Laws.Program.Edit
 import Test.Program.SpliceControls
+import Test.Program.PartsControls
 
 /-!
-Readers and controls of the edit session (`src/Effect4/Program/Edit.lean`, its laws
+Readers and finite evaluations of the edit session (`src/Effect4/Program/Edit.lean`, its laws
 `src/Effect4/Laws/Program/Edit.lean`, the claims `edit-session-coherent`, `edit-session-undo` and
-`edit-repaint-set`), at the sketch battery's program: `x = 5; cell = Ref.make(x);
-Ref.set(cell, 7); Ref.get(cell)`.
+`edit-repaint-set`), and of the splice over a whole program's parts
+(`src/Effect4/Laws/Program/Typing/PartsTable.lean`, the claim `module-table-splices`).
 
-* **Finite evaluations.** Which path `feed` takes on three edits: one that keeps the type
-  (spliced, showing only the new subtree), one that changes it (rechecked, and the view shows the
-  refusal at the set), one at an address that holds no program (unchanged). No theorem says which
-  path an edit takes.
-* **Reader.** The undo law at the real session: the spliced edit, then the old sub-program put
-  back, gives the opened session again.
+* **Finite evaluations.** Which path `feed` takes. No theorem says which path an edit takes:
+  - at the sketch battery's program (`x = 5; cell = Ref.make(x); Ref.set(cell, 7);
+    Ref.get(cell)`), an edit that keeps the type, one that changes it, and one at an address that
+    holds no program;
+  - at seat HOST's client with the Queue's definitions installed (a block at the root), every
+    sub-program wrapped in `suspend`, which keeps its type: inside a body and inside the main
+    program alike, each edit below the root splices;
+  - at a sketch with one hole, the hole filled at its declared type.
+* **Reader.** The undo law at the real session.
 -/
 
 namespace Test.Program.EditControls
 
 open Effect4 Effect4.Program
-open Test.Program.SketchControls Test.Program.SpliceControls
+open Test.Program.SketchControls
+open Test.Program.PartsControls (sketchOf definedClient)
 
-/-- The session opened on the program. -/
-def opened : EditSession NativeOp := EditSession.open sig [] original
+/-- The session opened on the sketch battery's program, a sketch with no hole. -/
+def opened : EditSession := EditSession.open {} original
 
 /-- The edit that keeps the type: `succeed 6` for `succeed 5`. -/
-def keep : Edit NativeOp := .replace [0] (.succeed (.lit (.nat 6)))
+def keep : Edit := .fill [0] (.succeed (.lit (.nat 6)))
 
 /-- The edit that changes the type: `succeed "x"` for `succeed 5`. -/
-def change : Edit NativeOp := .replace [0] (.succeed (.lit (.str "x")))
+def change : Edit := .fill [0] (.succeed (.lit (.str "x")))
 
 /-- The addresses a spliced delta shows again; `none` for any other delta. -/
 def shownOf : Edit.Delta → Option (List (List Nat))
@@ -43,11 +48,36 @@ def shownOf : Edit.Delta → Option (List (List Nat))
   (opened.feed change).1.view.type.isSome, opened.view.refusals.length, opened.view.type.isSome) =
   (.rechecked, 1, false, 0, true)
 -- finite evaluation: an address that holds no program changes nothing
-#guard (opened.feed (.replace [7] (.succeed (.lit (.nat 6))))).2 = .unchanged
+#guard (opened.feed (.fill [7] (.succeed (.lit (.nat 6))))).2 = .unchanged
+
+/-- At every address of a program of a sketch, the edit that wraps the sub-program in `suspend`:
+the addresses where it splices, and those where it checks again. -/
+def wrapReport (s : Sketch) (app : SigApp) : List (List Nat) × List (List Nat) :=
+  let l := EditSession.open app s
+  let results : List (List Nat × Edit.Delta) := (Node.addresses (.eff s.program)).filterMap fun a =>
+    match (Node.eff s.program).at_ a with
+    | some (.eff q) => some (a, (l.feed (.fill a (.suspend q))).2)
+    | _ => none
+  ((results.filter fun r => (shownOf r.2).isSome).map (·.1),
+    (results.filter fun r => r.2 == .rechecked).map (·.1))
+
+-- finite evaluation: at the client with the Queue's definitions, 103 of the 104 program
+-- addresses splice, inside the bodies under `[0]` and inside the main program under `[1]`; only
+-- the root checks again
+#guard (sketchOf definedClient).map (fun (s, app) =>
+  let r := wrapReport s app
+  (r.1.length, r.1.any (·.head? == some 0), r.1.any (·.head? == some 1), r.2)) =
+  some (103, true, true, [[]])
+
+-- finite evaluation: at a sketch with one hole of type `number`, filling the hole with
+-- `succeed 5` splices one entry, and the sketch keeps a type and no refusal
+#guard (let l := EditSession.open {} (sketchAt .nat)
+  let l' := l.feed (.fill [0] (.succeed (.lit (.nat 5))))
+  (shownOf l'.2, l'.1.view.type.isSome, l'.1.view.refusals.length)) = (some [[0]], true, 0)
 
 -- reader: the undo law at the opened session; both premises are evaluations of the lens
-example : ((opened.feed keep).1.feed (.replace [0] (.succeed (.lit (.nat 5))))).1 = opened :=
-  EditSession.feed_undo (p' := context (.succeed (.lit (.nat 6)))) (EditSession.open_coherent _ _ _)
-    rfl rfl
+example : ((opened.feed keep).1.feed (.fill [0] (.succeed (.lit (.nat 5))))).1 = opened :=
+  EditSession.feed_undo (s' := { program := context (.succeed (.lit (.nat 6))) })
+    (EditSession.open_coherent _ _) rfl rfl
 
 end Test.Program.EditControls

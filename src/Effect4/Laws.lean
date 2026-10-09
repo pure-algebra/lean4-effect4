@@ -267,6 +267,8 @@ import Effect4.Laws.Slice.Lattice
 import Effect4.Laws.Author
 import Effect4.Laws.Program.Typing.Splice
 import Effect4.Laws.Program.Edit
+import Effect4.Laws.Program.Address
+import Effect4.Laws.Program.Typing.PartsTable
 import Effect4.Laws.Library.Ref.Operations
 import Effect4.Laws.Library.Ref.Callback
 

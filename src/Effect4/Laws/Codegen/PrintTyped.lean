@@ -6,6 +6,7 @@ import Effect4.Codegen.EraseTypes
 import Effect4.Laws.Codegen.ReadPrint
 import Effect4.Laws.Codegen.PrintReadable
 import Effect4.Laws.Program.Typing.Annotate
+import Effect4.Laws.Program.Address
 import Effect4.Program.Binders
 
 /-!
@@ -4116,47 +4117,6 @@ theorem source_child_of_view {fam : EffFam} {source : EffSelfCarrier Op fam}
   rw [child_of_view, viewed]
   exact sourceChild_at_count args i childFam child member
 
-theorem node_at_append (root : Node Op) (path rest : List Nat) :
-    root.at_ (path ++ rest) = (root.at_ path).bind fun source => source.at_ rest := by
-  induction path generalizing root with
-  | nil => rfl
-  | cons i path ih =>
-    simp only [List.cons_append, Node.at_]
-    cases root.child i with
-    | none => rfl
-    | some child => exact ih child
-
-theorem node_envAt_append (sig : Signature Op) (root : Node Op) (env : NodeEnv)
-    (path rest : List Nat) :
-    root.envAt sig env (path ++ rest) = (root.at_ path).bind fun source =>
-      (root.envAt sig env path).bind fun childEnv => source.envAt sig childEnv rest := by
-  induction path generalizing root env with
-  | nil => rfl
-  | cons i path ih =>
-    simp only [List.cons_append, Node.at_, Node.envAt]
-    cases child : root.child i with
-    | none => rfl
-    | some source =>
-      cases childEnv : root.childEnv sig env i with
-      | none =>
-        simp only [Option.bind_some, Option.bind_none]
-        cases source.at_ path <;> rfl
-      | some env' => exact ih source env'
-
-theorem node_at_child {root source child : Node Op} {path : List Nat} {i : Nat}
-    (found : root.at_ path = some source) (step : source.child i = some child) :
-    root.at_ (path ++ [i]) = some child := by
-  rw [node_at_append, found]
-  simp only [Option.bind_some, Node.at_, step]
-
-theorem node_envAt_child {sig : Signature Op} {root source child : Node Op}
-    {env rho childEnv : NodeEnv} {path : List Nat} {i : Nat}
-    (found : root.at_ path = some source) (environment : root.envAt sig env path = some rho)
-    (step : source.child i = some child) (childEnvironment : source.childEnv sig rho i = some childEnv) :
-    root.envAt sig env (path ++ [i]) = some childEnv := by
-  rw [node_envAt_append, found, environment]
-  simp only [Option.bind_some, Node.envAt, step, childEnvironment]
-
 end Effect4.Codegen
 
 
@@ -5234,12 +5194,12 @@ theorem siteFocused_child {sig : Signature Op} {root : Eff Op} {env0 : TyEnv}
       (argDepth fam (.child childFam) n (row.out.levelAt i)) := by
   obtain ⟨sourceAt, parent, parentAt, parentLength, _⟩ := focus
   have step := source_child_of_view viewed captured
-  have childAt := node_at_child sourceAt step
+  have childAt := Node.at_child sourceAt step
   obtain ⟨_, rho, rhoAt, _, _, _⟩ :=
     PrintEliminators.contextAtTable_annotate_facts found
   have envStep : (nodeOfFamily fam source).childEnv sig parent
       ((args.take i).countP isChildArg) = some rho := by
-    rw [node_envAt_append, sourceAt, parentAt] at rhoAt
+    rw [Node.envAt_append, sourceAt, parentAt] at rhoAt
     simp only [Option.bind_some, Node.envAt, step] at rhoAt
     cases environment : (nodeOfFamily fam source).childEnv sig parent
         ((args.take i).countP isChildArg) with
@@ -5580,8 +5540,8 @@ theorem siteFocused_stmts_head {path : List Nat} {n : Nat} {st : Program.Stmt Op
     (focus : SiteFocused root sig env0 path .stmts (.cons st tail) n) :
     SiteFocused root sig env0 (path ++ [0]) .stmt st n := by
   obtain ⟨sourceAt, rho, envAt, length, _⟩ := focus
-  refine ⟨node_at_child sourceAt rfl, .body rho.tyEnv rho.inLoop, ?_, length, True.intro⟩
-  exact node_envAt_child sourceAt envAt rfl rfl
+  refine ⟨Node.at_child sourceAt rfl, .body rho.tyEnv rho.inLoop, ?_, length, True.intro⟩
+  exact Node.envAt_child sourceAt envAt rfl rfl
 
 /-- The actual tail context extends by precisely the source head's printed declaration count. -/
 theorem siteFocused_stmts_tail {path : List Nat} {n d : Nat} {st : Program.Stmt Op} {tail : Stmts Op}
@@ -5595,7 +5555,7 @@ theorem siteFocused_stmts_tail {path : List Nat} {n d : Nat} {st : Program.Stmt 
   have step : (Node.stmts (.cons st tail)).child 1 = some (.stmts tail) := rfl
   have envStep : (Node.stmts (.cons st tail)).childEnv sig parent 1 = some rho := by
     have h := rhoAt
-    rw [node_envAt_append, sourceAt, parentAt] at h
+    rw [Node.envAt_append, sourceAt, parentAt] at h
     simpa only [nodeOfFamily, Option.bind_some, Node.envAt, step, Option.bind_fun_some] using h
   have binder := print_stmt_binder_count (tail := tail) printed
   have depth : rho.tyEnv.length = n+d := by
@@ -5614,7 +5574,7 @@ theorem siteFocused_stmts_tail {path : List Nat} {n d : Nat} {st : Program.Stmt 
       simp only [Node.childEnv, Option.some.injEq] at envStep
       subst rho
       exact parentLength.trans (Nat.add_zero n).symm
-  exact ⟨node_at_child sourceAt step, rho, rhoAt, depth, True.intro⟩
+  exact ⟨Node.at_child sourceAt step, rho, rhoAt, depth, True.intro⟩
 
 /-- The site context gates the generated spine; successful printing retains the ordinary tail depth. -/
 theorem typedSites_stmts_cons {contexts : List Nat → Option (PrintEliminators.Context Op)}
@@ -5985,15 +5945,15 @@ theorem siteFocused_effs_head {path : List Nat} {n : Nat} {head : Eff Op} {tail 
     (focus : SiteFocused root sig env0 path .effs (.cons head tail) n) :
     SiteFocused root sig env0 (path ++ [0]) .eff head n := by
   obtain ⟨sourceAt, parent, envAt, length, _⟩ := focus
-  exact ⟨node_at_child sourceAt rfl, .env parent.tyEnv,
-    node_envAt_child sourceAt envAt rfl rfl, length, True.intro⟩
+  exact ⟨Node.at_child sourceAt rfl, .env parent.tyEnv,
+    Node.envAt_child sourceAt envAt rfl rfl, length, True.intro⟩
 
 theorem siteFocused_effs_tail {path : List Nat} {n : Nat} {head : Eff Op} {tail : Effs Op}
     (focus : SiteFocused root sig env0 path .effs (.cons head tail) n) :
     SiteFocused root sig env0 (path ++ [1]) .effs tail n := by
   obtain ⟨sourceAt, parent, envAt, length, _⟩ := focus
-  exact ⟨node_at_child sourceAt rfl, .env parent.tyEnv,
-    node_envAt_child sourceAt envAt rfl rfl, length, True.intro⟩
+  exact ⟨Node.at_child sourceAt rfl, .env parent.tyEnv,
+    Node.envAt_child sourceAt envAt rfl rfl, length, True.intro⟩
 
 /-- The layer spine and both children use the empty environment.
 Placement: exact-codecs R8; consumer: typed-site layer spine reconstruction. -/
@@ -6004,8 +5964,8 @@ theorem siteFocused_layers_head {path : List Nat} {n : Nat}
   obtain ⟨sourceAt, parent, envAt, _, closed⟩ := focus
   change n = 0 at closed
   rw [closed]
-  exact ⟨node_at_child sourceAt rfl, .closed,
-    node_envAt_child sourceAt envAt rfl rfl, rfl, rfl⟩
+  exact ⟨Node.at_child sourceAt rfl, .closed,
+    Node.envAt_child sourceAt envAt rfl rfl, rfl, rfl⟩
 
 theorem siteFocused_layers_tail {path : List Nat} {n : Nat}
     {head : LayerTerm Op} {tail : LayerTerms Op}
@@ -6014,8 +5974,8 @@ theorem siteFocused_layers_tail {path : List Nat} {n : Nat}
   obtain ⟨sourceAt, parent, envAt, _, closed⟩ := focus
   change n = 0 at closed
   rw [closed]
-  exact ⟨node_at_child sourceAt rfl, .closed,
-    node_envAt_child sourceAt envAt rfl rfl, rfl, rfl⟩
+  exact ⟨Node.at_child sourceAt rfl, .closed,
+    Node.envAt_child sourceAt envAt rfl rfl, rfl, rfl⟩
 
 theorem typedSites_effs_cons {contexts : List Nat → Option (PrintEliminators.Context Op)}
     (head : Eff Op) (tail : Effs Op) (path : List Nat) (n : Nat)

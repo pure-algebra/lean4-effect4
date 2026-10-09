@@ -1,45 +1,43 @@
 import Effect4.Program.Edit
-import Effect4.Laws.Program.Typing.Splice
-import Effect4.Laws.Program.References
+import Effect4.Laws.Program.Typing.PartsTable
 import Effect4.Laws.Auto.Semantics
 
 /-!
 # Laws.Program.Edit — an edit session keeps its table, and an edit can be undone
 
-`Program/Edit.lean` defines the edit session: a program with its address table, fed one edit at a
+`Program/Edit.lean` defines the edit session: a sketch with its address table, fed one edit at a
 time. This module holds its laws.
 
 | Statement | In words | From |
 | --- | --- | --- |
-| `Table.typedAt_table` | where a program's table holds a type at an address, that is the focus there | the table's definition, `effTy_of_check` |
-| `Table.typedAt_table_nil` | where it holds one at the root, the program has that type | `Table.typedAt_table`, `focusAt_nil` |
-| `EditSession.open_coherent` | an open session is coherent | `annotate_eq_table` |
-| `EditSession.feed_coherent` | an edit keeps a session coherent | `table_splice` where the edit splices |
+| `Table.typedAt_table` | where a sketch's table holds a type below the root, that is the focus there | the table's definition, `effTy_of_check` |
+| `Table.typedAt_table_nil` | the type the table holds at the root is the sketch's check's | `Sketch.table_head` |
+| `EditSession.open_coherent` | an open session is coherent | `Sketch.annotate_eq_table` |
+| `EditSession.feed_coherent` | an edit keeps a session coherent | `Sketch.table_fill` where the edit splices |
 | `EditSession.run_coherent` | so does a run of edits | the fold |
-| `EditSession.view_refusals` | a coherent session shows its program's refusals | the definition |
-| `EditSession.view_type` | a coherent session shows its program's type | `table_head`, `effTy_of_check` |
-| `EditSession.feed_shown` | a spliced edit shows again exactly the new subtree's addresses | `Annotate.check_eq` |
+| `EditSession.reached_view` | after an open and any edits, the view shows the sketch's refusals and type | coherence, `run_keeps` |
+| `EditSession.feed_repaint` | a spliced edit shows again exactly the new subtree's addresses, and keeps every other entry | `Annotate.check_eq`, `Table.mem_splice` |
 | `EditSession.feed_undo` | an edit, then the edit that puts back the old sub-program, restores a coherent session | `replaceAt_spec`, coherence |
 
 ## Placement
 
 Concept `initial-algebras-folds`; property: the address table is a fold of the program, and an
-edit is a lens update, so a cache of the table stays the fold of its program under edits.
+edit is a lens update, so a cache of the table stays the fold of its sketch under edits.
 Requirement R14 (program as data: regions, the focus, holes), under decisions row 334.
 
-- **`edit-session-coherent`** (claim, role preservation; pointer `EditSession.run_coherent`).
-  Reach: one signature and one root environment; a program of the structural checker; every list
-  of edits `replace`. The splice is taken only where the table types the root and the address,
-  and the checker gives the new sub-program the old type; every other edit computes the table
-  again. Not established: a program with a definition block (the splice over a whole program's
-  parts is the next slice); holes; a run; the cost, which no theorem counts. Consumers: the view's
-  readings (`view_refusals`, `view_type`), the undo law, and the native view's repaint set.
+- **`edit-session-coherent`** (claim, role preservation; pointer `EditSession.reached_view`).
+  Reach: one application; every sketch, definition block and holes included; every list of edits
+  `fill`. The splice is taken only below the root, where the table types the root and the address
+  and the checker gives the new sub-program the old type at the part's signature; every other
+  edit computes the table again. Not established: an edit of the hole table; a run; the cost,
+  which no theorem counts. Consumers: a tool's view of a sketch under edits.
 - **`edit-session-undo`** (claim, role compatibility; pointer `EditSession.feed_undo`). Reach: a
   coherent session, and an edit that applied. Not established: that two edits at disjoint
   addresses commute; an undo of a run. Consumer: a tool's undo, as one more edit.
-- The helpers `Table.typedAt_table`, `Table.typedAt_table_nil` and `EditSession.feed_replace`
-  are steps of `edit-session-coherent` and `edit-session-undo`. `feed_shown` is a step of the
-  repaint set, which the view's slice consumes.
+- **`edit-repaint-set`** (claim, role preservation; pointer `EditSession.feed_repaint`). Reach:
+  an edit that spliced. Not established: a page drawn from the table. Consumer: the view's repaint
+  set.
+- Every other statement is a step of these three, and names its consumer.
 -/
 
 set_option autoImplicit false
@@ -48,19 +46,16 @@ namespace Effect4.Program
 
 open Conform.Effect4.Typing
 
-variable {Op : Type}
-
 /-! ## The table answers the focus -/
 
-/-- **The table answers the focus.** Where a program's table holds an environment of variables and
-a type at an address, the focus there is that environment and that type, at the sub-program the
-address holds. So a tool reads a focus off a table it keeps, with no check. A step of
-`edit-session-coherent`. Its consumers are `Table.typedAt_table_nil` and
-`EditSession.feed_coherent`. -/
+/-- **The table answers the focus.** Where a sketch's table holds an environment of variables and
+a type at an address below the root, the focus there is that environment and that type, at the
+sub-program the address holds. So a tool reads a focus off a table it keeps, with no check. A
+step of `edit-session-coherent`. Its consumer is `EditSession.feed_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Table.typedAt_table {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {a : List Nat}
-    {tys : TyEnv} {ty : EffTy} (h : Table.typedAt (table s env0 p) a = some (tys, ty)) :
-    ∃ q, focusAt s env0 p a = some ⟨q, tys, ty⟩ := by
+theorem Table.typedAt_table {s : Sketch} {app : SigApp} {a : List Nat} {tys : TyEnv} {ty : EffTy}
+    (h : Table.typedAt (s.table app) a = some (tys, ty)) (ha : a ≠ []) :
+    ∃ q, s.focusAt app a = some ⟨q, tys, ty⟩ := by
   unfold Table.typedAt at h
   split at h
   next path tys' ty' hfind =>
@@ -69,131 +64,245 @@ theorem Table.typedAt_table {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {a : 
     rw [decide_eq_true_eq] at hpath
     subst hpath
     obtain ⟨a', -, he⟩ := List.mem_map.mp (List.mem_of_find?_eq_some hfind)
-    simp only [Table.Entry.mk.injEq] at he
-    obtain ⟨rfl, henv, hres⟩ := he
-    rw [henv] at hres
-    split at hres
-    next q tys'' hat henv' =>
-      cases henv'
-      exact ⟨q, focusAt_eq_some.mpr ⟨hat, henv, by rw [effTy_of_check (Option.some.inj hres)]; rfl⟩⟩
-    next => cases hres
+    cases a' with
+    | nil => exact absurd (congrArg Table.Entry.path he).symm ha
+    | cons i r =>
+      simp only [Sketch.tableEntry] at he
+      cases hp : s.program.partAt (app.withHoles s.holes).signature [] (i :: r) with
+      | none =>
+        rw [hp] at he
+        cases he
+      | some pr =>
+        obtain ⟨part, rest⟩ := pr
+        rw [hp] at he
+        simp only [Table.Entry.mk.injEq] at he
+        obtain ⟨rfl, henv, hres⟩ := he
+        rw [henv] at hres
+        split at hres
+        next q tys'' hat henv' =>
+          cases henv'
+          refine ⟨q, ?_⟩
+          show (s.program.partAt (app.withHoles s.holes).signature [] (i :: r)).bind
+            (fun pr => focusAt pr.1.sig pr.1.env pr.1.program pr.2) = _
+          rw [hp, Option.bind_some]
+          exact focusAt_eq_some.mpr ⟨hat, henv,
+            by rw [effTy_of_check (Option.some.inj hres)]; rfl⟩
+        next => cases hres
   next => cases h
 
-/-- **The table's root types the program.** Where a program's table holds a type at the root,
-the program has that type in the root's environment. A step of `edit-session-coherent`. Its
-consumer is `EditSession.feed_coherent`. -/
+/-- **The table's root holds the sketch's check.** The type a sketch's table holds at the root is
+its check's answer. A step of `edit-session-coherent`. Its consumers are
+`EditSession.feed_coherent` and `EditSession.view_type`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Table.typedAt_table_nil {s : Signature Op} {env0 : TyEnv} {p : Eff Op}
-    {tys : TyEnv} {ty : EffTy} (h : Table.typedAt (table s env0 p) [] = some (tys, ty)) :
-    HasTy s env0 p ty := by
-  obtain ⟨q, hf⟩ := Table.typedAt_table h
-  rw [focusAt_nil] at hf
-  cases ht : effTy s env0 p with
-  | none =>
-    rw [ht] at hf
-    cases hf
-  | some t =>
-    rw [ht] at hf
-    cases hf
-    exact effTy_sound s p env0 _ ht
+theorem Table.typedAt_table_nil (s : Sketch) (app : SigApp) :
+    (Table.typedAt (s.table app) []).map (·.2) = (s.check app).toOption := by
+  obtain ⟨rest, ht⟩ := Sketch.table_head s app
+  rw [ht]
+  cases s.check app <;> rfl
+
+/-! ## An omission: planned -/
+
+/-- **A typed sketch's table stays under a grown hole table.** Every entry of a typed sketch is
+typed, and a typed sub-program keeps its environment and its answer at an extension of the
+signature (`check_ext`). A step of `omit-splices-table`. Its consumer is `Sketch.table_omit`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Sketch.table_more_holes {s : Sketch} {app : SigApp} {T : EffTy}
+    (hs : s.check app = .ok T) (more : RowTable) :
+    ({ s with holes := s.holes ++ more } : Sketch).table app = s.table app
+
+/-- **An omission at the focus's type splices the table**: the hole row declares the focus's
+three columns, and the table is the old one with the subtree's segment replaced by the hole's one
+entry. Its proof is `Sketch.table_more_holes`, then `Sketch.table_fill` at the grown sketch with
+the hole as the filling (`Sketch.hole_hasTy`). The pointer of `omit-splices-table`; the edit
+session's `omitAt` splices once it is proved. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Sketch.table_omit {s s' : Sketch} {app : SigApp} {T : EffTy} {path : List Nat}
+    {f : Focus NativeOp} (name : String) (hs : s.check app = .ok T) (hnil : path ≠ [])
+    (hf : s.focusAt app path = some f) (hans : f.ty.answer.closed = true)
+    (herr : f.ty.error.closed = true) (hansN : f.ty.answer.normalize = f.ty.answer)
+    (herrN : f.ty.error.normalize = f.ty.error)
+    (homit : s.omitAt app path (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems) = some s') :
+    s'.table app = Table.splice (s.table app) path
+      [⟨path, some (.env f.env), some (.ok f.ty)⟩]
 
 namespace EditSession
 
 /-! ## Coherence -/
 
-/-- **An open session is coherent**: `annotate` is the table. A step of
-`edit-session-coherent`. -/
+/-- **An open session is coherent**: the table part by part is the table. A step of
+`edit-session-coherent`. Its consumer is `reached_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem open_coherent (s : Signature Op) (env : TyEnv) (p : Eff Op) :
-    (EditSession.open s env p).Coherent :=
-  annotate_eq_table s env p
+theorem open_coherent (app : SigApp) (s : Sketch) : (EditSession.open app s).Coherent :=
+  Sketch.annotate_eq_table s app
 
 /-- **An edit keeps a session coherent.** Where the edit splices, the table read the focus and the
-root's type, and the checker gave the new sub-program the focus's type, so the splice law
-(`table_splice`) gives the edited program's table. Every other edit computes the table again, or
-changes nothing. A step of `edit-session-coherent`. Its consumers are `run_coherent` and
-`feed_undo`. -/
+root's type, and the checker gave the new sub-program the focus's type at the part's signature,
+so the splice over a whole program's parts (`Sketch.table_fill`) gives the edited sketch's table.
+Every other edit computes the table again, or changes nothing. A step of
+`edit-session-coherent`. Its consumers are `run_coherent` and `feed_undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_coherent {l : EditSession Op} (h : l.Coherent) (e : Edit Op) :
-    (l.feed e).1.Coherent := by
+theorem feed_coherent {l : EditSession} (h : l.Coherent) (e : Edit) : (l.feed e).1.Coherent := by
   cases e with
-  | replace a q =>
+  | fill a q =>
     simp only [feed]
     split
-    next p' hrep =>
+    next s' hfill =>
       split
-      next r tys ty hroot hat =>
+      next i r root tys ty hroot hat =>
         split
         next sub ty' hcheck =>
           split
           next hty =>
             subst hty
             rw [h] at hroot hat
-            obtain ⟨_, hf⟩ := Table.typedAt_table hat
-            obtain ⟨_, T⟩ := r
-            have hp := Table.typedAt_table_nil hroot
+            obtain ⟨_, T⟩ := root
+            have hs : l.sketch.check l.app = .ok T := by
+              have h0 := Table.typedAt_table_nil l.sketch l.app
+              rw [hroot] at h0
+              cases hc : l.sketch.check l.app with
+              | ok t =>
+                rw [hc] at h0
+                cases h0
+                rfl
+              | error e =>
+                rw [hc] at h0
+                cases h0
+            obtain ⟨_, hf⟩ := Table.typedAt_table hat (List.cons_ne_nil i r)
             rw [Annotate.check_eq] at hcheck
             obtain ⟨hsub, hq⟩ := Prod.mk.inj hcheck
-            have hq' : HasTy l.sig tys q ty' :=
-              effTy_sound l.sig q tys ty' (by rw [effTy_of_check hq]; rfl)
-            show Table.splice l.table a sub = Program.table l.sig l.env p'
+            have hq' : HasTy (l.sketch.sigAt l.app (i :: r)) tys q ty' :=
+              effTy_sound _ q tys ty' (by rw [effTy_of_check hq]; rfl)
+            show Table.splice l.table (i :: r) sub = s'.table l.app
             rw [h, ← hsub]
-            exact (table_splice hp hf hq' hrep).symm
-          next => exact annotate_eq_table l.sig l.env p'
-        next => exact annotate_eq_table l.sig l.env p'
-      next => exact annotate_eq_table l.sig l.env p'
+            exact (Sketch.table_fill hs (List.cons_ne_nil i r) hf hq' hfill).symm
+          next => exact Sketch.annotate_eq_table s' l.app
+        next => exact Sketch.annotate_eq_table s' l.app
+      next => exact Sketch.annotate_eq_table s' l.app
+    next => exact h
+  | omitAt a row =>
+    simp only [feed]
+    split
+    next s' _ => exact Sketch.annotate_eq_table s' l.app
     next => exact h
 
-/-- **A run of edits keeps a session coherent**: the fold of `feed_coherent`. With
-`open_coherent`, the table of every session reached by an open and edits is its program's table.
-The pointer of `edit-session-coherent`. -/
+/-- **A run of edits keeps a session coherent**: the fold of `feed_coherent`. A step of
+`edit-session-coherent`. Its consumer is `reached_coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem run_coherent {l : EditSession Op} (h : l.Coherent) (edits : List (Edit Op)) :
+theorem run_coherent {l : EditSession} (h : l.Coherent) (edits : List Edit) :
     (l.run edits).Coherent := by
   induction edits generalizing l with
   | nil => exact h
   | cons e edits ih => exact ih (feed_coherent h e)
 
+/-- **Every session reached by an open and edits is coherent.** A step of
+`edit-session-coherent`. Its consumer is `reached_view`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem reached_coherent (app : SigApp) (s : Sketch) (edits : List Edit) :
+    ((EditSession.open app s).run edits).Coherent :=
+  run_coherent (open_coherent app s) edits
+
+/-! ## What an edit keeps -/
+
+/-- **An edit keeps the application, and one that applies holds the filled sketch.** A step of
+`edit-session-coherent` and of `edit-session-undo`. Its consumers are `run_keeps` and
+`feed_undo`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_keeps (l : EditSession) (e : Edit) :
+    (l.feed e).1.app = l.app ∧
+      ∀ a q s', e = .fill a q → l.sketch.fillAt a q = some s' → (l.feed e).1.sketch = s' := by
+  cases e with
+  | fill a q =>
+    simp only [feed]
+    split
+    next s' hfill =>
+      refine ⟨?_, fun a' q' s'' he hf => ?_⟩
+      · split
+        next =>
+          split
+          next => split <;> rfl
+          next => rfl
+        next => rfl
+      · cases he
+        rw [hfill, Option.some.injEq] at hf
+        subst hf
+        split
+        next =>
+          split
+          next => split <;> rfl
+          next => rfl
+        next => rfl
+    next hnone =>
+      refine ⟨rfl, fun a' q' s'' he hf => ?_⟩
+      cases he
+      rw [hnone] at hf
+      cases hf
+  | omitAt a row =>
+    refine ⟨?_, fun a' q' s'' he _ => by cases he⟩
+    simp only [feed]
+    split <;> rfl
+
+/-- **A run of edits keeps the application.** A step of `edit-session-coherent`. Its consumer is
+`reached_view`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem run_keeps (l : EditSession) (edits : List Edit) : (l.run edits).app = l.app := by
+  induction edits generalizing l with
+  | nil => rfl
+  | cons e edits ih => exact (ih (l.feed e).1).trans (feed_keeps l e).1
+
 /-! ## The view -/
 
-/-- **A coherent session shows its program's refusals**: the head is `explain`'s located refusal
-(`refusals_head`), and the list is empty exactly when the checker admits the program
-(`refusals_nil_iff`). A step of `edit-session-coherent`'s consumers. -/
+/-- **A coherent session shows its sketch's refusals**: the head is the sketch's check's refusal,
+and the list is empty exactly when the sketch checks (`Sketch.refusals_nil_iff`). A step of
+`edit-session-coherent`. Its consumer is `reached_view`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem view_refusals {l : EditSession Op} (h : l.Coherent) :
-    l.view.refusals = refusals l.sig l.env l.program := by
+theorem view_refusals {l : EditSession} (h : l.Coherent) :
+    l.view.refusals = l.sketch.refusals l.app := by
   unfold view
   rw [h]
   rfl
 
-/-- **A coherent session shows its program's type**, the checker's answer at the root, with no
-check. A step of `edit-session-coherent`'s consumers. -/
+/-- **A coherent session shows its sketch's type**, its check's answer, with no check. A step of
+`edit-session-coherent`. Its consumer is `reached_view`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem view_type {l : EditSession Op} (h : l.Coherent) :
-    l.view.type = effTy l.sig l.env l.program := by
+theorem view_type {l : EditSession} (h : l.Coherent) :
+    l.view.type = (l.sketch.check l.app).toOption := by
   unfold view
   rw [h]
-  obtain ⟨rest, ht⟩ := table_head l.sig l.env l.program
-  rw [ht]
-  cases hc : Checker.check l.sig l.env [] l.program with
-  | ok t => rw [effTy_of_check hc]; rfl
-  | error e => rw [effTy_of_check hc]; rfl
+  exact Table.typedAt_table_nil l.sketch l.app
 
-/-- **The addresses a spliced edit shows again are the new subtree's**, at the edited address.
-A step of the repaint set (the live authoring note, §3). -/
+/-- **What a session shows is the checker's answer on its sketch**, after an open and any run of
+edits: the sketch's refusals, whose head is the check's and which are empty exactly when the
+sketch checks, and the sketch's type. The session checks only what its edits changed. The pointer
+of `edit-session-coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_shown {l : EditSession Op} {a : List Nat} {q : Eff Op}
-    {shown : List (List Nat)} (h : (l.feed (.replace a q)).2 = .spliced shown) :
+theorem reached_view (app : SigApp) (s : Sketch) (edits : List Edit) :
+    ((EditSession.open app s).run edits).view.refusals =
+        ((EditSession.open app s).run edits).sketch.refusals app ∧
+      ((EditSession.open app s).run edits).view.type =
+        (((EditSession.open app s).run edits).sketch.check app).toOption := by
+  have happ : ((EditSession.open app s).run edits).app = app := run_keeps _ edits
+  have h₁ := view_refusals (reached_coherent app s edits)
+  have h₂ := view_type (reached_coherent app s edits)
+  rw [happ] at h₁ h₂
+  exact ⟨h₁, h₂⟩
+
+/-! ## The repaint set -/
+
+/-- **The addresses a spliced edit shows again are the new subtree's**, at the edited address. A
+step of `edit-repaint-set`. Its consumer is `feed_repaint`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem feed_shown {l : EditSession} {a : List Nat} {q : NativeEff}
+    {shown : List (List Nat)} (h : (l.feed (.fill a q)).2 = .spliced shown) :
     shown = (Node.addresses (.eff q)).map (a ++ ·) := by
   simp only [feed] at h
   split at h
-  next p' hrep =>
+  next =>
     split at h
-    next r tys ty hroot hat =>
+    next =>
       split at h
       next sub ty' hcheck =>
         split at h
-        next hty =>
+        next =>
           cases h
           rw [Annotate.check_eq] at hcheck
           obtain ⟨hsub, -⟩ := Prod.mk.inj hcheck
@@ -204,44 +313,12 @@ theorem feed_shown {l : EditSession Op} {a : List Nat} {q : Eff Op}
     next => cases h
   next => cases h
 
-/-! ## What an edit keeps -/
-
-/-- **An edit keeps the signature and the root's environment.** A step of
-`edit-session-coherent`. Its consumer is `run_keeps`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_keeps (l : EditSession Op) (e : Edit Op) :
-    (l.feed e).1.sig = l.sig ∧ (l.feed e).1.env = l.env := by
-  cases e with
-  | replace a q =>
-    simp only [feed]
-    split
-    next =>
-      split
-      next =>
-        split
-        next => split <;> exact ⟨rfl, rfl⟩
-        next => exact ⟨rfl, rfl⟩
-      next => exact ⟨rfl, rfl⟩
-    next => exact ⟨rfl, rfl⟩
-
-/-- **A run of edits keeps the signature and the root's environment.** A step of
-`edit-session-coherent`. Its consumer is `reached_view`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem run_keeps (l : EditSession Op) (edits : List (Edit Op)) :
-    (l.run edits).sig = l.sig ∧ (l.run edits).env = l.env := by
-  induction edits generalizing l with
-  | nil => exact ⟨rfl, rfl⟩
-  | cons e edits ih =>
-    obtain ⟨hs, he⟩ := ih (l.feed e).1
-    obtain ⟨hs', he'⟩ := feed_keeps l e
-    exact ⟨hs.trans hs', he.trans he'⟩
-
 /-- **A spliced edit's table is a splice of the old one**, and the addresses it shows are the
 spliced segment's. A step of `edit-repaint-set`. Its consumer is `feed_repaint`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_spliced {l : EditSession Op} {a : List Nat} {q : Eff Op}
-    {shown : List (List Nat)} (h : (l.feed (.replace a q)).2 = .spliced shown) :
-    ∃ sub, (l.feed (.replace a q)).1.table = Table.splice l.table a sub ∧
+theorem feed_spliced {l : EditSession} {a : List Nat} {q : NativeEff}
+    {shown : List (List Nat)} (h : (l.feed (.fill a q)).2 = .spliced shown) :
+    ∃ sub, (l.feed (.fill a q)).1.table = Table.splice l.table a sub ∧
       shown = sub.map (·.path) := by
   revert h
   simp only [feed]
@@ -258,39 +335,14 @@ theorem feed_spliced {l : EditSession Op} {a : List Nat} {q : Eff Op}
     next => intro h; cases h
   next => intro h; cases h
 
-/-! ## A session reached by edits -/
-
-/-- **Every session reached by an open and edits is coherent.** A step of
-`edit-session-coherent`. Its consumer is `reached_view`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem reached_coherent (s : Signature Op) (env : TyEnv) (p : Eff Op) (edits : List (Edit Op)) :
-    ((EditSession.open s env p).run edits).Coherent :=
-  run_coherent (open_coherent s env p) edits
-
-/-- **What a session shows is the checker's answer on its program**, after an open and any run of
-edits: the program's refusals, whose head is `explain`'s and which are empty exactly when the
-checker admits it, and the program's type. The session checks only what its edits changed. The
-pointer of `edit-session-coherent`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem reached_view (s : Signature Op) (env : TyEnv) (p : Eff Op) (edits : List (Edit Op)) :
-    ((EditSession.open s env p).run edits).view.refusals =
-        refusals s env ((EditSession.open s env p).run edits).program ∧
-      ((EditSession.open s env p).run edits).view.type =
-        effTy s env ((EditSession.open s env p).run edits).program := by
-  obtain ⟨hs, he⟩ := run_keeps (EditSession.open s env p) edits
-  have h₁ := view_refusals (reached_coherent s env p edits)
-  have h₂ := view_type (reached_coherent s env p edits)
-  rw [hs, he] at h₁ h₂
-  exact ⟨h₁, h₂⟩
-
 /-- **A spliced edit repaints its subtree and nothing else**: the addresses it shows again are the
 new subtree's, and every entry of the new table at another address is an entry of the old table.
 The pointer of `edit-repaint-set`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_repaint {l : EditSession Op} {a : List Nat} {q : Eff Op}
-    {shown : List (List Nat)} (h : (l.feed (.replace a q)).2 = .spliced shown) :
+theorem feed_repaint {l : EditSession} {a : List Nat} {q : NativeEff}
+    {shown : List (List Nat)} (h : (l.feed (.fill a q)).2 = .spliced shown) :
     shown = (Node.addresses (.eff q)).map (a ++ ·) ∧
-      ∀ x ∈ (l.feed (.replace a q)).1.table, x.path ∉ shown → x ∈ l.table := by
+      ∀ x ∈ (l.feed (.fill a q)).1.table, x.path ∉ shown → x ∈ l.table := by
   refine ⟨feed_shown h, ?_⟩
   obtain ⟨sub, ht, hs⟩ := feed_spliced h
   intro x hx hout
@@ -301,48 +353,33 @@ theorem feed_repaint {l : EditSession Op} {a : List Nat} {q : Eff Op}
 
 /-! ## Undo -/
 
-/-- **An edit that applies replaces the program and keeps the signature and the root's
-environment.** A step of `edit-session-undo`. Its consumer is `feed_undo`. -/
+/-- **Two coherent sessions of one application and one sketch are one session**: the table is the
+sketch's. A step of `edit-session-undo`. Its consumer is `feed_undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_replace {l : EditSession Op} {a : List Nat} {q p' : Eff Op}
-    (hrep : (Node.eff l.program).replaceAt a (.eff q) = some (.eff p')) :
-    (l.feed (.replace a q)).1.sig = l.sig ∧ (l.feed (.replace a q)).1.env = l.env ∧
-      (l.feed (.replace a q)).1.program = p' := by
-  simp only [feed, hrep]
-  split
-  next =>
-    split
-    next => split <;> exact ⟨rfl, rfl, rfl⟩
-    next => exact ⟨rfl, rfl, rfl⟩
-  next => exact ⟨rfl, rfl, rfl⟩
-
-/-- **Two coherent sessions of one program are one session**: the table is the program's. A
-step of `edit-session-undo`. Its consumer is `feed_undo`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Coherent.ext {l₁ l₂ : EditSession Op} (h₁ : l₁.Coherent) (h₂ : l₂.Coherent)
-    (hs : l₁.sig = l₂.sig) (he : l₁.env = l₂.env) (hp : l₁.program = l₂.program) : l₁ = l₂ := by
-  obtain ⟨s₁, e₁, p₁, t₁⟩ := l₁
-  obtain ⟨s₂, e₂, p₂, t₂⟩ := l₂
+theorem Coherent.ext {l₁ l₂ : EditSession} (h₁ : l₁.Coherent) (h₂ : l₂.Coherent)
+    (ha : l₁.app = l₂.app) (hs : l₁.sketch = l₂.sketch) : l₁ = l₂ := by
+  obtain ⟨a₁, s₁, t₁⟩ := l₁
+  obtain ⟨a₂, s₂, t₂⟩ := l₂
   unfold Coherent at h₁ h₂
-  simp only at hs he hp h₁ h₂
-  subst hs he hp
+  simp only at ha hs h₁ h₂
+  subst ha hs
   rw [h₁, h₂]
 
 /-- **Undo**: an edit that applies, then the edit that puts back the old sub-program, restores a
 coherent session exactly, its table included. The path lens's get-put (`replaceAt_spec`) restores
-the program, and coherence restores the table. The pointer of `edit-session-undo`. -/
+the sketch, and coherence restores the table. The pointer of `edit-session-undo`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem feed_undo {l : EditSession Op} (h : l.Coherent) {a : List Nat} {q old p' : Eff Op}
-    (hat : (Node.eff l.program).at_ a = some (.eff old))
-    (hrep : (Node.eff l.program).replaceAt a (.eff q) = some (.eff p')) :
-    ((l.feed (.replace a q)).1.feed (.replace a old)).1 = l := by
-  obtain ⟨hs1, he1, hp1⟩ := feed_replace hrep
-  have hback : (Node.eff (l.feed (.replace a q)).1.program).replaceAt a (.eff old) =
-      some (.eff l.program) := by
-    rw [hp1]
-    exact (Node.replaceAt_spec hrep).2.2 _ hat
-  obtain ⟨hs2, he2, hp2⟩ := feed_replace hback
-  exact Coherent.ext (feed_coherent (feed_coherent h _) _) h (hs2.trans hs1) (he2.trans he1) hp2
+theorem feed_undo {l : EditSession} (h : l.Coherent) {a : List Nat} {q old : NativeEff}
+    {s' : Sketch} (hat : (Node.eff l.sketch.program).at_ a = some (.eff old))
+    (hfill : l.sketch.fillAt a q = some s') :
+    ((l.feed (.fill a q)).1.feed (.fill a old)).1 = l := by
+  obtain ⟨p', hrep, rfl⟩ := Sketch.fillAt_some hfill
+  have hs1 := (feed_keeps l (.fill a q)).2 a q _ rfl hfill
+  have hback : ((l.feed (.fill a q)).1.sketch).fillAt a old = some l.sketch := by
+    rw [hs1, Sketch.fillAt_of_replaceAt ((Node.replaceAt_spec hrep).2.2 _ hat)]
+  have hs2 := (feed_keeps _ (.fill a old)).2 a old _ rfl hback
+  exact Coherent.ext (feed_coherent (feed_coherent h _) _) h
+    (((feed_keeps _ _).1).trans (feed_keeps _ _).1) hs2
 
 end EditSession
 
