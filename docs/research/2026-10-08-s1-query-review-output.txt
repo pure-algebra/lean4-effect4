@@ -1,0 +1,1 @@
+PASS S1 query controls: plain focus, block law mismatch, invalid address, part signature, root-fill limit, and slot extension gap
