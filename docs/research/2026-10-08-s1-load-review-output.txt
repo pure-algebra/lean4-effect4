@@ -1,0 +1,69 @@
+CONTROL MODULE External
+CONTROL MODULE Peer
+CONTROL MODULE Local
+landing plan for [S1LoadReview.Local.topPair] in [Tools.S1LoadReview.Local]
+  to land (0 planned goals): []
+  local steps, proved (2): [S1LoadReview.Local.helperOne, S1LoadReview.Local.helperTwo]
+  joints reused (1, 0 of them load-bearing): [S1LoadReview.External.sharedJoint (off the roots' paths)]
+  predicted reuse: 33% (1 joints against 0 owed and 2 local steps)
+graph: 7 theorems of the tree, 0 roots, 0 load-bearing
+landing [Tools.S1LoadReview.Local]: 3 theorems, 0 of them roots
+  edges: 2 local, 2 tree, 0 core, 0 instance; reuse ratio 50%
+  load-bearing: 0 of 3
+  unconsumed (1): [S1LoadReview.Local.topPair]
+  reached by a consumer, but by no root (2): [S1LoadReview.Local.helperOne, S1LoadReview.Local.helperTwo]
+  joints: [S1LoadReview.External.sharedJoint ×2]
+landing plan for [S1LoadReview.Local.topPair, S1LoadReview.Peer.peerTop] in [Tools.S1LoadReview.Local, Tools.S1LoadReview.Peer]
+  to land (0 planned goals): []
+  local steps, proved (2): [S1LoadReview.Local.helperOne, S1LoadReview.Local.helperTwo]
+  joints reused (1, 0 of them load-bearing): [S1LoadReview.External.sharedJoint (off the roots' paths)]
+  predicted reuse: 33% (1 joints against 0 owed and 2 local steps)
+graph: 7 theorems of the tree, 0 roots, 0 load-bearing
+landing [Tools.S1LoadReview.Local, Tools.S1LoadReview.Peer]: 4 theorems, 0 of them roots
+  edges: 2 local, 3 tree, 0 core, 0 instance; reuse ratio 60%
+  load-bearing: 0 of 4
+  unconsumed (2): [S1LoadReview.Local.topPair, S1LoadReview.Peer.peerTop]
+  reached by a consumer, but by no root (2): [S1LoadReview.Local.helperOne, S1LoadReview.Local.helperTwo]
+  joints: [S1LoadReview.External.sharedJoint ×3]
+landing plan for [S1LoadReview.Local.helperOne, S1LoadReview.Local.helperTwo] in [Tools.S1LoadReview.Local]
+  to land (0 planned goals): []
+  local steps, proved (0): []
+  joints reused (1, 0 of them load-bearing): [S1LoadReview.External.sharedJoint (off the roots' paths)]
+  predicted reuse: 100% (1 joints against 0 owed and 0 local steps)
+PASS planning counts one shared joint, while the report counts two edges; ratios 33% and 50%
+landing plan for [S1LoadReview.Local.localPendingTop] in [Tools.S1LoadReview.Local]
+  to land (1 planned goals): [S1LoadReview.Local.localGoal]
+  local steps, proved (1): [S1LoadReview.Local.pendingHelper]
+  joints reused (0, 0 of them load-bearing): []
+  predicted reuse: 0% (0 joints against 1 owed and 1 local steps)
+PASS the planner labels a modulo-goal helper proved while also reporting its goal
+landing plan for [S1LoadReview.Local.externalPendingTop] in [Tools.S1LoadReview.Local]
+  to land (0 planned goals): []
+  local steps, proved (0): []
+  joints reused (1, 0 of them load-bearing): [S1LoadReview.External.pendingJoint (off the roots' paths)]
+  predicted reuse: 100% (1 joints against 0 owed and 0 local steps)
+landing plan for [S1LoadReview.External.pendingGoal] in [Tools.S1LoadReview.External]
+  to land (1 planned goals): [S1LoadReview.External.pendingGoal]
+  local steps, proved (0): []
+  joints reused (0, 0 of them load-bearing): []
+  predicted reuse: 0% (0 joints against 1 owed and 0 local steps)
+PASS a top with external unfinished proof reports zero owed goals and 100% reuse
+landing plan for [Nat] in [Init.Prelude]
+  to land (0 planned goals): []
+  local steps, proved (0): []
+  joints reused (0, 0 of them load-bearing): []
+  predicted reuse: 0% (0 joints against 0 owed and 0 local steps)
+landing plan for [Nat.zero] in [Init.Prelude]
+  to land (0 planned goals): []
+  local steps, proved (0): []
+  joints reused (0, 0 of them load-bearing): []
+  predicted reuse: 0% (0 joints against 0 owed and 0 local steps)
+landing plan for [S1LoadReview.Local.dataTop] in [Tools.S1LoadReview.Local]
+  to land (0 planned goals): []
+  local steps, proved (0): []
+  joints reused (1, 0 of them load-bearing): [S1LoadReview.External.sharedJoint (off the roots' paths)]
+  predicted reuse: 100% (1 joints against 0 owed and 0 local steps)
+PASS positive theorem controls have empty axiom sets
+PASS unfinished controls depend on sorryAx through their tagged planned goals
+PASS ordinary data and inductive inputs reach the public planning command
+PASS all public-command fixture modules compile
