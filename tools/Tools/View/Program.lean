@@ -95,7 +95,7 @@ def termAlgebra : TermAlgebra (fun | .term => String | .terms => List String) wh
 def termText (t : Term) : String := cata_term termAlgebra t
 
 /-- The text of one argument that is no child. -/
-def argText : ArgF NativeOp Lines → Option String
+def argText {R : EffFam → Type} : ArgF NativeOp R → Option String
   | .child _ _ => none
   | .term v => some (termText v)
   | .cause v => some (paren (plain (reprStr v)))
@@ -113,7 +113,7 @@ def argText : ArgF NativeOp Lines → Option String
   | .path v => some (bracket v)
 
 /-- The operation of an argument, when it is one. -/
-def argOp : ArgF NativeOp Lines → Option NativeOp
+def argOp {R : EffFam → Type} : ArgF NativeOp R → Option NativeOp
   | .op v => some v
   | _ => none
 
@@ -134,11 +134,11 @@ def layerWith (text : String → List (ArgF NativeOp Lines) → String) (fam : E
     else ⟨p, d, text ctor args, args.findSome? argOp⟩ :: children
 
 /-- A node's own text: its constructor's name, then its arguments that are no child. -/
-def ownText (ctor : String) (args : List (ArgF NativeOp Lines)) : String :=
+def ownText {R : EffFam → Type} (ctor : String) (args : List (ArgF NativeOp R)) : String :=
   " ".intercalate (ctor :: args.filterMap argText)
 
 /-- The layer of the view: each line's text is its node's own text. -/
-def layer : (fam : EffFam) → String → List (ArgF NativeOp Lines) → Lines fam := layerWith ownText
+def layer : (fam : EffFam) → String → List (ArgF NativeOp Lines) → Lines fam := layerWith (ownText (R := Lines))
 
 /-- A program's lines, in the order of its addresses. -/
 def lines (program : Eff NativeOp) : List Node :=

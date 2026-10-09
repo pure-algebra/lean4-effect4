@@ -5,6 +5,7 @@
 #   v NAME           build a corpus program top-down and play its frames in a window
 #   v -r NAME        run a corpus program step by step: the program and its graph of fibers
 #   v -g             the graph specimen: a graph built one edge at a time, cycles included
+#   v -F             the program graph's specimen: fork and join, cross edges, regions, loops
 #   v -f FILE        the frames of a session request file (tools/Drivers/Session.lean's input)
 #   v -t NAME        the frames in this console, as characters
 #   v -p NAME        write a PNG of every frame and every picture of motion
@@ -33,7 +34,8 @@ while [ $# -gt 0 ]; do
     -L) cmd=looks ;;
     -r) cmd=run ;;
     -g) cmd=specimen ;;
-    -h|--help) sed -n 2,18p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -F) cmd=flows ;;
+    -h|--help) sed -n 2,19p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) break ;;
   esac
   shift
@@ -54,9 +56,9 @@ esac
 case $look in
   */*) look=$(cd "$(dirname "$look")" && pwd)/$(basename "$look") ;;
 esac
-if [ "$cmd" = specimen ]; then
-  name=specimen; out="$here/out/specimen"
-  set -- specimen "$out"
+if [ "$cmd" = specimen ] || [ "$cmd" = flows ]; then
+  name=$cmd; out="$here/out/$cmd"
+  set -- "$cmd" "$out"
 elif [ -n "$file" ]; then
   name=$(basename "$file" .jsonl); out="$here/out/$name"
   file=$(cd "$(dirname "$file")" && pwd)/$(basename "$file")

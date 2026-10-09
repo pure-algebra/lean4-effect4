@@ -20,6 +20,7 @@ Run from the repository's root. `v` builds what is stale, writes the frames to
 tools/view/v pFork          # build a corpus program top-down, in a window
 tools/view/v -r pFork       # run it step by step: the program and its graph of fibers
 tools/view/v -g             # the graph specimen: a graph built one edge at a time
+tools/view/v -F             # the program graph's specimen: fork and join, waits, regions, loops
 tools/view/v -t pFork       # the frames in this terminal
 tools/view/v -p pFork       # a PNG of every frame and every picture of motion
 tools/view/v -f FILE        # the frames of a session request file
@@ -49,6 +50,12 @@ An edge's form is a curve of d3-shape (`bumpY`, `linear`, `stepY`). An easing is
 by least squares (`Ease.bezier`). Durations are milliseconds; the window paces a step by the
 look's step. `v -L` writes each look's whole token file and CSS, and reports whether each look
 comes back from its own written file (`look-round-trip`).
+
+A program built by edits also draws its own graph below its lines, in the notation of UML's
+activity diagrams. A fork is a bar, and so is a join; alternatives part and meet at diamonds; a
+region is a labelled bracket. An await of a fiber that its parent's series awaits stands after
+the join. Any other wait is an arrow in a lane at the right, from the fiber's exit to the await.
+The await stands below that exit.
 
 A page of a program shows its code beside its tree: the TypeScript the code generator prints for
 it, laid out at 80 columns. While a program is built, the code grows with the tree, and each hole
@@ -81,7 +88,9 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/view/looks/` | the looks besides the dark one, as token files |
 | `tools/Tools/View/Grid.lean` | the grid and every constant a picture is placed by |
 | `tools/Tools/View/Page.lean` | a page of lines, its marks, and its terminal form |
-| `tools/Tools/View/Graph.lean` | a graph's layout: back edges by the order, ranks, order, places, routes |
+| `tools/Tools/View/Graph.lean` | a graph's layout: back edges by the order, ranks, order, places, routes; regions, bars, diamonds, arrowheads |
+| `tools/Tools/View/Flow.lean` | a program's own graph: its flow as a fold of the program, its waits resolved by the binder table, and its layout (across by a fold, down by the longest path) |
+| `tools/Tools/View/FlowSpecimen.lean` | the program graph's specimen, one case a page |
 | `tools/Tools/View/Motion.lean` | the data join and the moments of a step; `sample` and its end law |
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |

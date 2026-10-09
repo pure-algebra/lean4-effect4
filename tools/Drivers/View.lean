@@ -1,6 +1,7 @@
 import Tools.View.Build
 import Tools.View.Run
 import Tools.View.Specimen
+import Tools.View.FlowSpecimen
 import Tools.View.Tokens
 import Tools.View.Output
 import Effect4.Store.Domain.ProgramWire
@@ -12,6 +13,7 @@ import Effect4.Store.Domain.ProgramWire
     lake env lean --run tools/Drivers/View.lean [FLAGS] run NAME OUT        a corpus program, run step by step
     lake env lean --run tools/Drivers/View.lean [FLAGS] session FILE OUT    the frames of a request file
     lake env lean --run tools/Drivers/View.lean [FLAGS] specimen OUT        a graph built one edge at a time
+    lake env lean --run tools/Drivers/View.lean [FLAGS] flows OUT           the program graph's cases, one program a page
     lake env lean --run tools/Drivers/View.lean looks DIR OUT               every look of DIR, side by side
 
 The flags: `--motion N`, the pictures of motion between two frames (default 20; 1 draws none);
@@ -234,9 +236,12 @@ def main (args : List String) : IO UInt32 := do
   | ["specimen", out] =>
     writeFrames L out (Tools.View.Specimen.frames.map fun page => ({ page } : Build.Frame)) st.motion
     return 0
+  | ["flows", out] =>
+    writeFrames L out (Tools.View.FlowSpecimen.frames.map fun page => ({ page } : Build.Frame)) st.motion
+    return 0
   | ["session", file, out] =>
     writeFrames L out (withMarks st (Build.frames file (← readRequests file))) st.motion
     return 0
   | _ =>
-    IO.eprintln "usage: view [--motion N] [--plain] [--look LOOK] (build NAME | run NAME | session FILE | specimen) OUT\n       view looks DIR OUT"
+    IO.eprintln "usage: view [--motion N] [--plain] [--look LOOK] (build NAME | run NAME | session FILE | specimen | flows) OUT\n       view looks DIR OUT"
     return 2

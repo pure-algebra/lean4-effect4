@@ -148,7 +148,8 @@ def sampleLaid (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
       r.withReveal (1000 - left).toNat
   { placed := (gone ++ placed).toArray, routes := (retracting ++ routes).toArray,
     width := if 1000 ≤ t then b.width else max a.width b.width,
-    height := if 1000 ≤ t then b.height else max a.height b.height }
+    height := if 1000 ≤ t then b.height else max a.height b.height, regions := b.regions,
+    marks := b.marks }
 
 /-- **The moment `t` of the step from `g1` to `g2`**, as a page: `g2`'s, with its lines and its
 graph sampled in the choreography's per mille of its step. A graph that appears enters from an

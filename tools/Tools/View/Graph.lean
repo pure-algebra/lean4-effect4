@@ -186,12 +186,34 @@ theorem withReveal_self (rt : Route) : rt.withReveal rt.reveal = rt := by
 
 end Route
 
-/-- A laid-out graph: its placed items and its routes, and its size in logical pixels. -/
+/-- A region of a laid-out graph: a bracket around the items of one region of the program (a
+scope, a fork's fiber, an uninterruptible span, a provided layer), with its name. -/
+structure Region where
+  key : Key
+  name : String
+  x : Int
+  y : Int
+  w : Int
+  h : Int
+deriving Repr
+
+/-- A mark of a program's flow, in the notation of UML's activity diagrams: a bar where branches
+that all run part or meet, across `[x0, x1)` at the height `y`; a diamond where alternatives part
+or meet, centred at `(x, y)`. -/
+inductive FlowMark where
+  | bar (key : Key) (x0 x1 y : Int)
+  | diamond (key : Key) (x y : Int)
+deriving Repr
+
+/-- A laid-out graph: its placed items, its routes, its regions and its marks, and its size in
+logical pixels. -/
 structure Laid where
   placed : Array Placed := #[]
   routes : Array Route := #[]
   width : Int := 0
   height : Int := 0
+  regions : Array Region := #[]
+  marks : Array FlowMark := #[]
 deriving Repr
 
 
@@ -327,10 +349,11 @@ abbrev Pt := Int × Int
 /-- The middle of an item across: a box's middle, or a point's pass. -/
 def middle (p : Placed) : Int := p.x + (if p.node.isSome then p.w / 2 else CELL)
 
-/-- Where an edge leaves an item downward: the middle of its bottom. Every edge of a box leaves
+/-- Where an edge leaves an item downward: the middle of its bottom; a point has no height, so an
+edge leaves it where it enters. Every edge of a box leaves
 from one point and enters at one point, so the edge aligned with the box (`Tools.View.Place`)
 runs straight and the others branch from it, as a tree's limbs do. -/
-def exitAt (p : Placed) : Pt := (middle p, p.y + ROWH * BOXROWS)
+def exitAt (p : Placed) : Pt := (middle p, p.y + (if p.node.isSome then ROWH * BOXROWS else 0))
 
 /-- Where an edge enters an item from above: the middle of its top. -/
 def entryAt (p : Placed) : Pt := (middle p, p.y)
@@ -379,8 +402,11 @@ def segments (L : Look) (l : Laid) : Route → List Cubic
     match l.find s, l.find d with
     | some a, some b =>
       let lx := l.width - CELL * (2 * lane + 1)
-      let p : Pt := (a.x + a.w, a.y + ROWH)
-      let q : Pt := (b.x + b.w, b.y + ROWH - BACK_RISE)
+      -- a box's side at its middle row; a point has no height, and is its own side
+      let side (p : Placed) (rise : Int) : Pt :=
+        if p.node.isSome then (p.x + p.w, p.y + ROWH - rise) else (p.x + 2 * CELL, p.y)
+      let p : Pt := side a 0
+      let q : Pt := side b BACK_RISE
       -- controls a third past the lane, so the arc's widest point reaches the lane
       let cx := lx + (lx - max p.1 q.1) / 3
       [⟨p, (cx, p.2), (cx, q.2), q⟩]
@@ -404,15 +430,64 @@ def drawn (key : Key) (weight : Nat) (dx dy : Int) : List Cubic → Int → List
       ⟨key, .curve .ink (c.move dx dy) weight⟩ :: drawn key weight dx dy rest (budget - c.size)
     else [⟨key, .curve .ink ((c.upTo (budget * 1000 / c.size)).move dx dy) weight⟩]
 
-/-- A route's calls: its segments, drawn as far as its reveal, at the look's weight of an edge. -/
+/-- The length of an arrowhead's two strokes, along and across, in logical pixels. -/
+def HEAD_ALONG : Int := 6
+def HEAD_ACROSS : Int := 4
+
+/-- **An arrowhead** where a segment ends: two short strokes back from its end, along the segment's
+last direction, its dominant axis. Drawn only where the layout does not show the direction: an
+arc in a lane (decisions row 337, point 1). -/
+def arrowhead (key : Key) (weight : Nat) (dx dy : Int) (c : Cubic) : List (Keyed Call) :=
+  let (ex, ey) := c.p3
+  let ddx := c.p3.1 - c.p2.1
+  let ddy := c.p3.2 - c.p2.2
+  let back : Pt × Pt :=
+    if ddx.natAbs ≥ ddy.natAbs then
+      let s := if ddx ≥ 0 then -HEAD_ALONG else HEAD_ALONG
+      ((ex + s, ey - HEAD_ACROSS), (ex + s, ey + HEAD_ACROSS))
+    else
+      let s := if ddy ≥ 0 then -HEAD_ALONG else HEAD_ALONG
+      ((ex - HEAD_ACROSS, ey + s), (ex + HEAD_ACROSS, ey + s))
+  [⟨key, .curve .ink ((straight back.1 c.p3).move dx dy) weight⟩,
+   ⟨key, .curve .ink ((straight back.2 c.p3).move dx dy) weight⟩]
+
+/-- A route's calls: its segments, drawn as far as its reveal, at the look's weight of an edge; an
+arc in a lane, drawn whole, ends in an arrowhead. -/
 def routeCalls (L : Look) (l : Laid) (dx dy : Int) (rt : Route) : List (Keyed Call) :=
   let cs := l.segments L rt
-  drawn rt.key L.strokes.edge dx dy cs ((cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000)
+  let body := drawn rt.key L.strokes.edge dx dy cs ((cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000)
+  match rt, cs.getLast? with
+  | .back .., some last => if 1000 ≤ rt.reveal then body ++ arrowhead rt.key L.strokes.edge dx dy last else body
+  | _, _ => body
 
-/-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the routes first, then the
-boxes over them. -/
+/-- A region's bracket: a frame in the rule's tone around its items, and its name in the label
+face above its top left corner. -/
+def regionCalls (L : Look) (dx dy : Int) (r : Region) : List (Keyed Call) :=
+  [⟨r.key, .frame .rule (dx + r.x) (dy + r.y) r.w r.h L.strokes.frame⟩] ++
+    textAt r.key .label (dx + r.x + CELL) (dy + r.y + BASE) r.name (r.w - 2 * CELL)
+
+/-- The half size of a diamond, and the thickness of a bar, in logical pixels. -/
+def DIAMOND : Int := 5
+def BAR : Int := 3
+
+/-- A mark's calls: a bar is a fill of the ink, centred on its height; a diamond, four straight
+strokes. -/
+def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
+  | .bar k x0 x1 y => [⟨k, .fill .ink 1000 (dx + x0) (dy + y - BAR / 2) (x1 - x0) BAR⟩]
+  | .diamond k x y =>
+    let c := (dx + x, dy + y)
+    let n := (c.1, c.2 - DIAMOND)
+    let e := (c.1 + DIAMOND, c.2)
+    let s := (c.1, c.2 + DIAMOND)
+    let w := (c.1 - DIAMOND, c.2)
+    [n, e, s, w].zip [e, s, w, n] |>.map fun (a, b) => ⟨k, .curve .ink (straight a b) L.strokes.edge⟩
+
+/-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the regions behind, then the
+routes, then the marks and the boxes over them. -/
 def calls (L : Look) (l : Laid) (dx dy : Int) : List (Keyed Call) :=
+  l.regions.toList.flatMap (regionCalls L dx dy) ++
   l.routes.toList.flatMap (l.routeCalls L dx dy) ++
+  l.marks.toList.flatMap (markCalls L dx dy) ++
     l.placed.toList.flatMap fun p => match p.node with
       | some n => boxCalls L dx dy p n
       | none => []

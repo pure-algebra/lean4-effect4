@@ -94,6 +94,13 @@ progress) takes the same structures as its surface.
 
 D1 to D3 come first; they need no new mark beyond the fork and join bars.
 
+**Landed (2026-10-09)**: D2 and D3, with every wait handled (`tools/Tools/View/Flow.lean`). Across,
+the layout is a fold. Down, it is the longest path over the flow's edges and its waits, so an
+await stands below the fiber it waits for. A wait the parent's series makes is a join; any other
+is a cross edge in a lane, with an arrowhead. Variables are de Bruijn levels, read through the
+binder table, with a closed child starting an empty environment. The specimen (`v -F`) draws
+each case. D1 (the algebraic graph with its laws) and D3's laws are next.
+
 ## 6. Rulings the owner must make
 
 The owner chose to go with the recommendations on open decisions (row 337). These are the new

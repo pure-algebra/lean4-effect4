@@ -1,4 +1,5 @@
 import Tools.View.Program
+import Tools.View.Flow
 import Tools.Code.Module
 import Tools.View.Motion
 import Tools.Session
@@ -121,6 +122,7 @@ def frames (title : String) (reqs : List Tools.Session.Request) : List Frame :=
         let holes := l.sketch.holes.map (·.name)
         let code := Program.codePanel l.sketch.program (l.app.withHoles l.sketch.holes).rows holes
         let page := { page with code }
+        let page := { page with graph := some { title := "program", laid := Flow.ofPage l.sketch.program page } }
         (st', out ++ [{ page, edit := lit, spliced }])
   let out := (reqs.foldl step ({}, [])).2
   let n := out.length
