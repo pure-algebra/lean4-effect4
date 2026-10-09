@@ -22,7 +22,7 @@ variable {env : Env} {path : List Nat} {vals : List Effect4.Store.Val}
 theorem initial_reads (capacity : Nat) {source : TermSrc}
     (h : Reads source env path vals (.nat capacity)) :
     Reads (initialStep source) env path vals ((Modeled.image Counts).toVal (Model.initial capacity)) := by
-  have reading := Step.sound (Γ := Data.InitialInputs.types) Leaves.refused (capacity, ()) (Input.reads_cons h Input.reads_nil) Data.initial rfl
+  have reading := Step.sound (Γ := Data.InitialInputs.types) Leaves.refused (input_values% (Data.InitialInputs) (Leaves.refused) {capacity := capacity}) (Input.reads_cons h Input.reads_nil) Data.initial rfl
   rw [initial_eval] at reading
   exact reading
 
@@ -31,7 +31,7 @@ theorem initial_reads (capacity : Nat) {source : TermSrc}
 theorem available_reads (s : Counts) {source : TermSrc}
     (h : Reads source env path vals ((Modeled.image Counts).toVal s)) :
     Reads (availableStep source) env path vals (.nat (Model.available s)) := by
-  have reading := Step.sound (Γ := Data.CellInputs.types) Leaves.refused (encoded s, ()) (Input.reads_cons h Input.reads_nil) Data.available rfl
+  have reading := Step.sound (Γ := Data.CellInputs.types) Leaves.refused (input_values% (Data.CellInputs) (Leaves.refused) {cell := encoded s}) (Input.reads_cons h Input.reads_nil) Data.available rfl
   rw [available_eval] at reading
   exact reading
 

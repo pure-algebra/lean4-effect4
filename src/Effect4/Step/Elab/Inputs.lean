@@ -10,6 +10,7 @@ public import Effect4.Step.Rename
 `step_context% Inputs (count : .nat, id : idTy)` declares one input-name/type list.
 `step_inputs% Inputs => body` binds typed step variables from that declaration.
 `input_sources% (Inputs) { id := request, count := amount }` orders caller sources from the same declaration.
+`input_values% (Inputs) (leaves) { id := request, count := amount }` orders and types carrier values.
 Names exist at elaboration only; the generated step holds ordinary positional input data.
 `fold_step% xs from acc := initial with item => body` names the two fold inputs.
 It lifts visible outer step locals structurally, including derived local steps.
@@ -24,6 +25,7 @@ syntax (name := stepContextStx) (Lean.Parser.Command.docComment)? "step_context%
 syntax (name := paramStepContextStx) (Lean.Parser.Command.docComment)? "step_context% " ident bracketedBinder* " where " "(" (ident " : " term),* ")" : command
 syntax (name := namedInputsStx) "step_inputs% " term " => " term : term
 syntax (name := inputSourcesStx) "input_sources% " "(" term ")" "{" (ident " := " term),* "}" : term
+syntax (name := inputValuesStx) "input_values% " "(" term ")" "(" term ")" "{" (ident " := " term),* "}" : term
 
 syntax (name := foldStepStx) "fold_step% " term " from " ident " := " term " with " ident " => " term : term
 
@@ -31,10 +33,10 @@ syntax (name := itemStepStx) "item_step% " term " with " ident " => " term : ter
 
 syntax (name := inputRefStx) "input_ref% " "(" term ")" ident : term
 
-private def duplicate (names : Array Ident) : TermElabM Unit := do
+private def duplicate (caller : String) (names : Array Ident) : TermElabM Unit := do
   for name in names do
     if (names.filter fun other => other.getId.eraseMacroScopes == name.getId.eraseMacroScopes).size > 1 then
-      throwErrorAt name "input_sources%: repeated name {name}"
+      throwErrorAt name "{caller}: repeated name {name}"
 
 @[command_elab stepContextStx]
 def elabStepContext : CommandElab := fun stx => do
@@ -135,22 +137,45 @@ def elabNamedInputs : TermElab := fun stx expected? => do
     withInputs (← contextEntries context) body expected?
   | _ => throwUnsupportedSyntax
 
+private def orderedInputs (caller : String) (stx : Syntax)
+    (entries : Array (String × Expr)) (names : Array Ident) (values : Array (TSyntax `term)) : TermElabM (Array (TSyntax `term)) := do
+  duplicate caller names
+  let supplied := names.zip values
+  for (name, _) in supplied do
+    unless entries.any (fun entry => entry.1 == name.getId.toString (escape := false)) do
+      throwErrorAt name "{caller}: unknown input {name}"
+  let mut ordered : Array (TSyntax `term) := #[]
+  for (name, _) in entries do
+    let Option.some (_, value) := supplied.find? (fun pair => pair.1.getId.toString (escape := false) == name)
+      | throwErrorAt stx "{caller}: missing input {name}"
+    ordered := ordered.push value
+  return ordered
+
 @[term_elab inputSourcesStx]
 def elabInputSources : TermElab := fun stx expected? => do
   match stx with
   | `(input_sources% ($context:term) { $[$names:ident := $values:term],* }) =>
-    duplicate names
-    let entries ← contextEntries context
-    let supplied := names.zip values
-    for (name, _) in supplied do
-      unless entries.any (fun entry => entry.1 == name.getId.toString (escape := false)) do
-        throwErrorAt name "input_sources%: unknown input {name}"
-    let mut ordered : Array (TSyntax `term) := #[]
-    for (name, _) in entries do
-      let Option.some (_, value) := supplied.find? (fun pair => pair.1.getId.toString (escape := false) == name)
-        | throwErrorAt stx "input_sources%: missing input {name}"
-      ordered := ordered.push value
+    let ordered ← orderedInputs "input_sources%" stx (← contextEntries context) names values
     elabTerm (← `(Effect4.Modules.Input.source [$ordered,*])) expected?
+  | _ => throwUnsupportedSyntax
+
+@[term_elab inputValuesStx]
+def elabInputValues : TermElab := fun stx expected? => do
+  match stx with
+  | `(input_values% ($context:term) ($leaves:term) { $[$names:ident := $values:term],* }) =>
+    let entries ← contextEntries context
+    let ordered ← orderedInputs "input_values%" stx entries names values
+    let leaves ← elabTermEnsuringType leaves (Lean.mkConst ``Effect4.Schema.Model.Leaves)
+    let mut packed := Lean.mkConst ``Unit.unit
+    for ((_, type), value) in (entries.zip ordered).reverse do
+      let carrier ← mkAppM ``Effect4.Schema.Model.CarrierAt #[leaves, type]
+      let carrier ← withTransparency .all (whnf carrier)
+      let value ← elabTermEnsuringType value carrier
+      packed ← mkAppM ``Prod.mk #[value, packed]
+    if let Option.some expected := expected? then
+      unless ← isDefEq (← inferType packed) expected do
+        throwErrorAt stx "input_values%: declared inputs differ from expected type"
+    return packed
   | _ => throwUnsupportedSyntax
 
 private def withLiftedSteps (context bodyContext rho : Expr)

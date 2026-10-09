@@ -1,4 +1,5 @@
 import Effect4.Library.PartitionedSemaphore.Data
+import Effect4.Step.Elab.Inputs
 import Effect4.Laws.Auto.Semantics
 
 /-! Value equations consumed by the four source reading laws in Steps.
@@ -14,19 +15,19 @@ open Model (Counts)
 /-- Use the deriving command's connector, rather than author a carrier tuple. -/
 abbrev encoded (s : Model.Counts) := Model.Counts.modeledToC s
 abbrev requests (s : Model.Counts) (n : Nat) : Inputs Leaves.refused Data.RequestInputs.types :=
-  (n, (encoded s, ()))
+  input_values% (Data.RequestInputs) (Leaves.refused) {cell := encoded s, requested := n}
 
 namespace Model
 
 /-- Helper of partitioned-semaphore-bookkeeping; initial_reads consumes this equation. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem initial_eval (capacity : Nat) :
-    Data.initial.eval (Γ := Data.InitialInputs.types) Leaves.refused (capacity, ()) = encoded (Model.initial capacity) := rfl
+    Data.initial.eval (Γ := Data.InitialInputs.types) Leaves.refused (input_values% (Data.InitialInputs) (Leaves.refused) {capacity := capacity}) = encoded (Model.initial capacity) := rfl
 
 /-- Helper of partitioned-semaphore-bookkeeping; available_reads consumes this equation. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem available_eval (s : Counts) :
-    Data.available.eval (Γ := Data.CellInputs.types) Leaves.refused (encoded s, ()) = Model.available s := rfl
+    Data.available.eval (Γ := Data.CellInputs.types) Leaves.refused (input_values% (Data.CellInputs) (Leaves.refused) {cell := encoded s}) = Model.available s := rfl
 
 /-- Helper of partitioned-semaphore-bookkeeping; tryTake_reads consumes this equation. -/
 @[semantics "translation-simulation" (requirement := R10)]

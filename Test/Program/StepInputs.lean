@@ -94,4 +94,67 @@ def repeatedMetadata : InputContext := [("id", .nat), ("id", .nat)]
 #guard_msgs in
 #check step_inputs% IdFirst => step_inputs% IdFirst => id
 
+open Effect4.Schema.Model
+
+-- Value callers use the same declaration and names as the source callers.
+def firstValue : Nat := first.eval (Γ := IdFirst.types) Leaves.refused
+  (input_values% (IdFirst) (Leaves.refused) {hint := 9, id := 3})
+def reorderedValue : Nat := reordered.eval (Γ := HintFirst.types) Leaves.refused
+  (input_values% (HintFirst) (Leaves.refused) {id := 3, hint := 9})
+#guard firstValue == 3
+#guard reorderedValue == 3
+
+def payloadValues (L : Leaves) (A : Ty) (a : CarrierAt L A) : Inputs L (Payload A).types :=
+  input_values% (Payload A) (L) {count := 2, value := a}
+def payloadValue : String := (generic .string).eval (Γ := (Payload .string).types) Leaves.refused
+  (payloadValues Leaves.refused .string "payload")
+#guard payloadValue == "payload"
+
+step_context% NoInputs ()
+#guard (input_values% (NoInputs) (Leaves.refused) {}) == ()
+
+step_context% IdentityInputs (waiter : .deferredOf .nat .never, amount : .nat)
+def identityInput := step_inputs% IdentityInputs => waiter
+def identityValues := input_values% (IdentityInputs) (Leaves.deferredKeys) {
+  amount := 4, waiter := (⟨7⟩ : Machine.DeferredKey)}
+#guard (identityInput.eval (Γ := IdentityInputs.types) Leaves.deferredKeys identityValues).index == 7
+
+/-- error: input_values%: repeated name id -/
+#guard_msgs in
+#check input_values% (IdFirst) (Leaves.refused) {id := 1, id := 2, hint := 3}
+
+/-- error: input_values%: missing input hint -/
+#guard_msgs in
+#check input_values% (IdFirst) (Leaves.refused) {id := 1}
+
+/-- error: input_values%: unknown input other -/
+#guard_msgs in
+#check input_values% (IdFirst) (Leaves.refused) {id := 1, hint := 2, other := 3}
+
+/-- error: step inputs: declaration repeats id -/
+#guard_msgs in
+#check input_values% (repeatedMetadata) (Leaves.refused) {id := 1}
+
+/-- error: Type mismatch
+  "wrong"
+has type
+  String
+but is expected to have type
+  Nat -/
+#guard_msgs (error, drop info) in
+#check input_values% (IdFirst) (Leaves.refused) {id := "wrong", hint := 2}
+
+/-- error: Type mismatch
+  7
+has type
+  Nat
+but is expected to have type
+  Machine.DeferredKey -/
+#guard_msgs (error, drop info) in
+#check input_values% (IdentityInputs) (Leaves.deferredKeys) {waiter := (7 : Nat), amount := 4}
+
+/-- error: input_values%: declared inputs differ from expected type -/
+#guard_msgs (error, drop info) in
+#check (input_values% (IdFirst) (Leaves.refused) {id := 1, hint := 2} : Inputs Leaves.refused [.bool])
+
 end Test.Program.StepInputs
