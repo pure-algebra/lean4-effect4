@@ -721,8 +721,11 @@ def registry : Registry where
       title := "An address is a composite of child lenses: the node and the environment at p ++ q are the ones at q inside the node at p (Node.at_append, Node.envAt_append), and an edit at p ++ q is the edit at q inside the node at p, put back at p (Node.replaceAt_append); below an edit the edited node reads the replacement; nothing of typing, of behaviour, or of a moved subtree's variable levels and layer-reference targets (seat ORG's theory map, section 3)"
       pointer := .witness `Effect4.Program.Node.replaceAt_append },
     { id := "path-fold-natural", concept := "initial-algebras-folds", role := .compatibility
-      title := "A path fold is natural in its base: the fold from q ++ r is the fold from r with each yield read below q (foldMapAt_eff_base and six siblings), and a map that keeps the operation commutes with the fold (foldMapAt_eff_hom); the address list's shift is their instance; nothing of a judgment, a table, or a refusal's location (seat ORG's L5 and L6; the checker's base law L7 is not stated)"
+      title := "A path fold is natural in its base: the fold from q ++ r is the fold from r with each yield read below q (foldMapAt_eff_base and six siblings), and a map that keeps the operation commutes with the fold (foldMapAt_eff_hom); the address list's shift is their instance; nothing of a judgment, a table, or a refusal's location, which the checker's base law owns (checker-base-natural; seat ORG's L5 and L6)"
       pointer := .witness `Effect4.Program.foldMapAt_eff_base },
+    { id := "checker-base-natural", concept := "initial-algebras-folds", role := .compatibility
+      title := "The checker is natural in its base path: checking at q ++ p is checking at p with each refusal moved below q (Checker.check_rebase and its six siblings), so a subtree's table at q ++ a is its table at a with each entry moved below q (tableAt_rebase); nothing of the verdict's correctness (check_sound), of a definition block's module check, or of cost (seat ORG's L7 and L8)"
+      pointer := .witness `Effect4.Program.Checker.check_rebase },
     { id := "operation-data-scoped", concept := "initial-algebras-folds", role := .decidability
       title := "The scope fold decides a perform node: scoped exactly when its operation's own data (the alphabet's ScopedOp) and its request are"
       pointer := .witness `Effect4.Program.Eff.perform_scoped_iff },

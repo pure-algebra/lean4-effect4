@@ -83,8 +83,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   spliced edit repaints only its subtree (`edit-repaint-set`).
 - **Addresses** (seat ORG's [theory map](research/2026-10-08-seat-ORG-theory-map.md)). The laws
   that compose addresses stand in `src/Effect4/Laws/Program/Address.lean`
-  (`address-composes`). A table is computed at an absolute base, so a splice shifts no address.
-  A moved subtree's bytes, levels and layer-reference targets still depend on where it stands.
+  (`address-composes`), with the path folds' naturality in their base (`path-fold-natural`).
+  The checker is natural in its base too, so a subtree's table computed once stands at any
+  address (`checker-base-natural`, `src/Effect4/Laws/Program/Typing/Rebase.lean`). A moved
+  subtree's bytes, levels and layer-reference targets still depend on where it stands.
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a

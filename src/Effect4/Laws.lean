@@ -268,6 +268,7 @@ import Effect4.Laws.Author
 import Effect4.Laws.Program.Typing.Splice
 import Effect4.Laws.Program.Edit
 import Effect4.Laws.Program.Address
+import Effect4.Laws.Program.Typing.Rebase
 import Effect4.Laws.Program.Typing.PartsTable
 import Effect4.Laws.Program.Typing.Restrict
 import Effect4.Laws.Program.SketchWire
