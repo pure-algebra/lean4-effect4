@@ -1,0 +1,298 @@
+"""The producers behind `make gen-*`: one family per call, run in place or into a directory.
+
+`python3 scripts/generate.py --only <family>` regenerates that family's files in the tree;
+`--output-dir DIR` writes them under DIR instead and refuses if a file differs from the
+committed one (the drift check's temporary route). Ordering and staleness are the
+Makefile's: each `gen-*` rule names its source inputs or compiled input traces.
+The derived group orders generated prerequisites before their consumers.
+`make check-gen-full` reruns the hermetic groups without trusting file times.
+"""
+import argparse
+from pathlib import Path
+import json
+import os
+import shlex
+import subprocess
+import tempfile
+
+from lib.derived_plan import imports_of, stages
+from lib.lean_imports import imports_of as lean_imports_of
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+# Every producer runs under one wall-clock budget, so a hung generator fails a lane instead
+# of hanging it. The budget is not a performance statement and it is not a target: it has to
+# cover the `lake build` each family runs first -- a cold build of the core is minutes -- and
+# the slowest cut on a machine that is busy. Measured on a quiet machine with the core
+# already built, `--only lcnf`'s four cuts are 37s end to end (the engine face 18s of it);
+# the same group was measured at 14m38s under four concurrent Lean compilers, past the old
+# 600s, which is why `--only lcnf` could not complete at all. One number for every command.
+TIMEOUT = os.environ.get('EFFECT4_GEN_TIMEOUT', '5400')
+
+
+def run(args, capture=False):
+    if args[:3] == ['lake', 'env', 'lean']:
+        args = [*args[:3], '-DwarningAsError=true', *args[3:]]
+    print('+ ' + shlex.join(args), flush=True)
+    return subprocess.run(['timeout', TIMEOUT, *args], check=True,
+                          stdout=subprocess.PIPE if capture else None, text=True).stdout
+
+
+def install(source, destination, checking):
+    data = source.read_bytes()
+    if checking:
+        if not destination.is_file() or data != destination.read_bytes():
+            raise ValueError(f'{destination.relative_to(ROOT)} is not what Lean emits')
+        return
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not destination.is_file() or data != destination.read_bytes():
+        destination.write_bytes(data)
+
+
+# The producers' dependency order (DI-33): `variances` reads declaration-site variance off the
+# vendored rc.112 sources and is an INPUT of `derived`, so it is first; `derived` writes the
+# Lean projections the rest import; `eff`, `wire` and `cas` cut the OCaml estate from them;
+# `ts` cuts the TypeScript estate; `readme` renders the ingest tables out of three files `ts`
+# just wrote. `lcnf` is the explicit Phase 1 route and is requested by name. `fixtures` reads
+# no other family's output and builds test modules, so it is requested by name too.
+ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
+
+# The variance table, its producer and its landing path (tooling plan 1.4a), and the core
+# module the same run writes: the declared variances `sub` reads at a nominal reference
+# (`Ty.argVariance`, decisions row 158).
+VARIANCES = 'tools/Effect4Gen/variances.json'
+MANIFEST = 'tools/Effect4Gen/manifest.json'
+TY_VARIANCE = 'src/Effect4/Program/TyVariance.lean'
+
+# The engine's fixtures (decisions rows 254 and 255). A lane is a folder under
+# `ocaml/engine/test/` that holds a writer, `write.lean`: a Lean script that writes the lane's
+# `*.txt` fixtures from the programs `Api.Author.build` admits. The engine's dune test reads the
+# files, and a Lean battery binds each one by `include_str`. Lake does not take such a file as
+# an input, so a fixture that changed alone left that battery's evidence stale. This family is
+# what holds a committed fixture to Lean's text: it runs each writer into a temporary folder and
+# installs or compares. The writer is the one hand input: its imports are the modules built
+# first, and the files it writes are the lane's fixtures.
+FIXTURE_LANES = 'ocaml/engine/test'
+
+
+def fixture_lanes():
+    """Each lane's folder and the modules its writer imports, read from the writer's header.
+
+    A folder that holds a text fixture and no writer is refused: no writer would hold its bytes,
+    and a lane whose writer left would keep its fixtures unchecked.
+    """
+    base = ROOT / FIXTURE_LANES
+    lanes = []
+    for writer in sorted(base.glob('*/write.lean')):
+        modules = lean_imports_of(writer)
+        if not modules:
+            raise ValueError(f'{writer.relative_to(ROOT)}: the writer imports no module')
+        lanes.append((writer.parent.relative_to(ROOT).as_posix(), modules))
+    if not lanes:
+        raise ValueError(f'{FIXTURE_LANES}: no lane holds a writer')
+    written = {folder for folder, _ in lanes}
+    orphans = sorted({path.parent.relative_to(ROOT).as_posix() for path in base.glob('*/*.txt')}
+                     - written)
+    if orphans:
+        raise ValueError('text fixtures in a folder with no writer (write.lean): ' + ', '.join(orphans))
+    return lanes
+
+
+def fixtures(out, checking):
+    """Write each lane's fixtures from Lean, then install them or refuse a difference.
+
+    A committed `*.txt` that the lane's writer does not write is refused in both modes.
+    The output never aliases a lane's own folder: such a run would delete and rewrite the
+    repository's fixtures and then compare each with itself. That is refused before any file is
+    touched or any command runs, on resolved paths, so a symbolic link is no way around it (the
+    derived family's rule).
+    """
+    lanes = fixture_lanes()
+    homes = {(ROOT / folder).resolve() for folder, _ in lanes}
+    for folder, _ in lanes:
+        # against every lane's folder, not this lane's alone: an output folder of one lane that
+        # is a link to another lane's folder would lose that lane's fixtures
+        if (out / folder).resolve() in homes:
+            raise ValueError(f'{folder}: output aliases repository destination')
+    for folder, modules in lanes:
+        temp = out / folder
+        temp.mkdir(parents=True, exist_ok=True)
+        for stale in temp.glob('*.txt'):
+            stale.unlink()
+        run(['lake', 'build', *modules])
+        run(['lake', 'env', 'lean', '-M4096', '--run', folder + '/write.lean', str(temp)])
+        written = sorted(path.name for path in temp.glob('*.txt'))
+        if not written:
+            raise ValueError(f'{folder}/write.lean wrote no fixture')
+        unwritten = sorted(path.name for path in (ROOT / folder).glob('*.txt')
+                           if path.name not in written)
+        if unwritten:
+            raise ValueError(f'{folder}: no writer writes ' + ', '.join(unwritten))
+        for name in written:
+            install(temp / name, ROOT / folder / name, checking)
+
+
+# The LCNF artefacts and their arguments. Until 2026-09-19 this list held the four paths and
+# the command came out of each file's own `Regenerate with:` header -- a generated file was its
+# own recipe, so a stale header regenerated a stale file and nothing could say so. The recipe
+# lives in `ocaml/gen/roots.json` now and the header is rendered FROM it (tooling plan 3.6).
+LCNF_ROOTS = 'ocaml/gen/roots.json'
+
+
+def lcnf_command(entry):
+    """One artefact's argv, in the fixed order `roots.json` documents. It is the text that
+    lands in the artefact's header, so the order is part of the format."""
+    argv = ['lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean', '--out', entry['out']]
+    for module in entry.get('import', []):
+        argv += ['--import', module]
+    argv += ['--cap', str(entry['cap'])]
+    if entry.get('types'):
+        argv += ['--types', ','.join(entry['types'])]
+    for flag in ('externs', 'prelude'):
+        if entry.get(flag):
+            argv += ['--' + flag, entry[flag]]
+    return argv + entry['roots']
+
+
+def lean_module(canonical):
+    """The module a generated Lean source under src/ is, or None for any other output."""
+    if canonical.startswith('src/') and canonical.endswith('.lean'):
+        return canonical.removeprefix('src/').removesuffix('.lean').replace('/', '.')
+    return None
+
+
+def derived(out, checking, scratch):
+    """Refresh generated prerequisites before building their consumers.
+
+    Lean parses source headers; the manifest supplies generated modules' imports.
+    A batch contains independent rows for one executable. A failed batch installs nothing.
+    Check mode refuses a difference before compiling any dependent stage.
+    """
+    plan = json.loads(run(['lake', 'env', 'lean', '-M4096', '--run',
+                          'tools/Effect4Gen/Driver.lean', '--plan'], True))
+    if checking:
+        for row in plan['commands']:
+            canonical = row['out'].replace('\\', '/')
+            if (out / canonical).resolve() == (ROOT / canonical).resolve():
+                raise ValueError(f'{canonical}: check output aliases repository destination')
+    emitted = scratch / 'derived-emitted'
+    for stage_index, rows in enumerate(stages(plan)):
+        executables = dict.fromkeys(row['args'][1] for row in rows)
+        needed = dict.fromkeys(['Tools.GeneratedStamp'] + [m for row in rows for m in imports_of(row)])
+        run(['lake', 'build', *executables, *needed])
+        prepared = []
+        for row in rows:
+            args = list(row['args'])
+            canonical = row['out'].replace('\\', '/')
+            temp = emitted / canonical
+            temp.parent.mkdir(parents=True, exist_ok=True)
+            temp.unlink(missing_ok=True)
+            args[args.index('--out') + 1] = str(temp)
+            if '--append' in args:
+                i = args.index('--append') + 1
+                args[i] = args[i].replace('\\', '/')
+            prepared.append((args[1], canonical, temp, args[2:] + ['--header-out', canonical]))
+        for executable in executables:
+            batch = scratch / f'derived-{stage_index}-{executable}.json'
+            batch.write_text(json.dumps([words for exe, _, _, words in prepared if exe == executable]))
+            run(['lake', 'exe', executable, '--batch', str(batch)])
+        # Validate every output exists before installing any output from the stage.
+        for _, canonical, temp, _ in prepared:
+            if not temp.is_file():
+                raise ValueError(f'{canonical}: generator left no output')
+        for _, canonical, temp, _ in prepared:
+            install(temp, ROOT / canonical, checking)
+            if checking:
+                target = out / canonical
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(temp.read_bytes())
+    modules = [m for row in plan['commands'] if (m := lean_module(row['out'].replace('\\', '/')))]
+    run(['lake', 'build', *modules])
+
+
+def generate(families, output):
+    checking = output is not None
+    with tempfile.TemporaryDirectory(prefix='effect4-generate-') as scratch:
+        out = Path(output).resolve() if checking else Path(scratch)
+        out.mkdir(parents=True, exist_ok=True)
+        if 'variances' in families:
+            run(['lake', 'build', 'Tools.Variances'])
+            temp = out / VARIANCES
+            temp.parent.mkdir(parents=True, exist_ok=True)
+            core = out / TY_VARIANCE
+            core.parent.mkdir(parents=True, exist_ok=True)
+            # The manifest's top-level `VariancesFlags` (absent: none) carries this producer's
+            # mode flags, as a group's `Flags` does: `--module` writes the core module with the
+            # header of Lean's module system (decisions row 200).
+            flags = json.loads((ROOT / MANIFEST).read_text()).get('VariancesFlags', [])
+            run(['lake', 'env', 'lean', '-M4096', '--run',
+                 'tools/Tools/Variances.lean', str(temp), '--lean-out', str(core), *flags])
+            install(temp, ROOT / VARIANCES, checking)
+            install(core, ROOT / TY_VARIANCE, checking)
+        if 'derived' in families:
+            derived(out, checking, Path(scratch))
+        routes = [('eff', 'EffGen', 'ocaml/eff'),
+                  ('wire', 'EffWire', 'ocaml/goldens/eff'),
+                  ('cas', 'CasGoldens', 'ocaml/engine/cas/goldens'),
+                  ('ts', 'TsGen', 'ts/eff')]
+        for family, tool, target in routes:
+            if family not in families:
+                continue
+            temp = out / target
+            temp.mkdir(parents=True, exist_ok=True)
+            # `Tools.TsGen` (a Tools module) writes the TypeScript estate; the three OCaml
+            # tools live under src/OCaml5/Tools. Every family reads the closed world off the
+            # environment, so nothing here is typed by hand.
+            source = 'tools/Drivers/TsGen.lean' if family == 'ts' else 'src/OCaml5/Tools/' + tool + '.lean'
+            run(['lake', 'build', ('Drivers.' if family == 'ts' else 'OCaml5.Tools.') + tool])
+            run(['lake', 'env', 'lean', '-M4096', '--run', source, str(temp)])
+            if not checking:
+                for source in sorted(temp.rglob('*')):
+                    if source.is_file():
+                        install(source, ROOT / target / source.relative_to(temp), False)
+            if family == 'eff':
+                engine_out = out / 'ocaml/engine'
+                run(['python3', 'scripts/generate-engine-structure.py',
+                     '--descriptor', str(temp / 'program-structure.json'), '--out', str(engine_out)])
+                if not checking:
+                    for source in sorted(engine_out.iterdir()):
+                        if source.is_file():
+                            install(source, ROOT / 'ocaml/engine' / source.name, False)
+        if 'fixtures' in families:
+            fixtures(out, checking)
+        if 'readme' in families:
+            # A host producer, not a Lean one: it reads profile/forms/taxonomy `.gen.ts` and
+            # writes `ts/eff/ingest/README.md` in place. Its own `--check` is the drift form,
+            # so the temporary-output route does not apply to it.
+            run(['bun', 'ts/eff/ingest/render-readme.ts', *(['--check'] if checking else [])])
+        if 'lcnf' in families:
+            if checking:
+                raise ValueError('LCNF regenerates in place only; the drift check is `git diff`')
+            run(['lake', 'build', 'Effect4'])
+            run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
+            roots = json.loads((ROOT / LCNF_ROOTS).read_text())
+            if roots.get('format') != 'effect4-lcnf-roots-v1':
+                raise ValueError('unsupported LCNF roots format')
+            for entry in roots['artefacts']:
+                run(['lake', 'env', *lcnf_command(entry)])
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--only', choices=ALL + ['lcnf', 'fixtures'])
+    parser.add_argument('--all', action='store_true',
+                        help='every family of the named order: ' + ', '.join(ALL))
+    parser.add_argument('--output-dir')
+    args = parser.parse_args()
+    if args.only and args.all:
+        raise ValueError('--only and --all are exclusive')
+    generate([args.only] if args.only else ALL, args.output_dir)
+    print('PASS generate: requested producers ran in dependency order')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (ValueError, subprocess.CalledProcessError) as error:
+        raise SystemExit('FAIL generate: ' + str(error))

@@ -1,0 +1,3 @@
+import Effect4.Program.Ty
+set_option autoImplicit false
+import Effect4.Program.Native
