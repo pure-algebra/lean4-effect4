@@ -1,0 +1,116 @@
+{
+  "positive": 11,
+  "negative": 5,
+  "observations": [
+    {
+      "name": "refund.before-successor",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "refund.successor-still-waits",
+      "actual": "Waiting",
+      "expected": "Waiting"
+    },
+    {
+      "name": "refund.canceled-exit",
+      "actual": "Failure",
+      "expected": "Failure"
+    },
+    {
+      "name": "refund.successor-success",
+      "actual": "Success",
+      "expected": "Success"
+    },
+    {
+      "name": "refund.client-before-canceled-exit",
+      "actual": [
+        "B acquired",
+        "A exit"
+      ],
+      "expected": [
+        "B acquired",
+        "A exit"
+      ]
+    },
+    {
+      "name": "refund.reject-no-refund",
+      "actual": "Success",
+      "rejected": "Waiting"
+    },
+    {
+      "name": "refund.reject-posted-delivery",
+      "actual": [
+        "B acquired",
+        "A exit"
+      ],
+      "rejected": [
+        "A exit",
+        "B acquired"
+      ]
+    },
+    {
+      "name": "refund.available-after-successor",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "refund.reject-credit-only-cleanup",
+      "actual": 0,
+      "rejected": 1
+    },
+    {
+      "name": "refund.successor-returns-reservation",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "refund.original-holder-returns",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "name": "queue.partial-offer-waits",
+      "actual": "Waiting",
+      "expected": "Waiting"
+    },
+    {
+      "name": "queue.partial-offer-interrupted",
+      "actual": "Failure",
+      "expected": "Failure"
+    },
+    {
+      "name": "queue.accepted-prefix-stays",
+      "actual": [
+        10,
+        20
+      ],
+      "expected": [
+        10,
+        20
+      ]
+    },
+    {
+      "name": "queue.reject-rollback-accepted-prefix",
+      "actual": [
+        10,
+        20
+      ],
+      "rejected": [
+        10
+      ]
+    },
+    {
+      "name": "queue.reject-commit-unaccepted-suffix",
+      "actual": [
+        10,
+        20
+      ],
+      "rejected": [
+        10,
+        20,
+        30
+      ]
+    }
+  ]
+}
