@@ -104,9 +104,10 @@ Proved in `tools/Tools/View/`, each resting on `[propext, Quot.sound]` or less:
 - `join_new`, `join_old`: every element of two frames is entered, updated or exited.
 - `Ease.at_start`, `Ease.at_end`, `Transition.within_at_end`: motion starts at 0 and ends at 1.
 - `sample_end`: a step's moment at its end is the next frame.
-- `cata_fusion`, `cata_prod`, `cata_keeps` (`tools/Tools/View/Algebra.lean`): a map that commutes
-  with each layer commutes with the fold; two layers side by side fold to the pair of their folds;
-  a property each layer keeps holds of every fold.
+- `cata_fusion` (`tools/Tools/View/Algebra.lean`): a map that commutes with each layer commutes
+  with the fold.
+- `cata_prod`: two layers side by side fold to the pair of their folds.
+- `cata_keeps`: a property that each layer keeps holds of every fold.
 - `lines_at`: a program's lines at any address and depth are its lines at the root, moved there.
   So a splice redraws its own subtree alone.
 - `undo_layout`: undo the breaks a layout took, and the flat print comes back, at every width.
