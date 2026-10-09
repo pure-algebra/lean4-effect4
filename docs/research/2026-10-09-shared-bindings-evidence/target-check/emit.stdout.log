@@ -1,0 +1,5 @@
+scalar: structured admission and original-program equality pass; no utility imports
+emptyMap: structured admission and original-program equality pass; no utility imports
+populatedMap: structured admission and original-program equality pass; no utility imports
+mapLookup: structured admission and original-program equality pass; no utility imports
+mapKeys: structured admission and original-program equality pass; no utility imports

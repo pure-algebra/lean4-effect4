@@ -117,6 +117,35 @@ def nestedType (leaf : String) : TypeRef :=
 #guard !check allowed (source [effectImport]
   (.call (.generic (.ident "Effect.succeed") [.name ["Box"] []]) [.int 1]))
 
+-- The map projection uses ambient utility types, not imports from the prelude.
+-- A resolved annotation alone makes no claim about the initializer's type.
+#guard match Effect4.Codegen.Types.ofTy (.map .string .nat) with
+  | some type => check allowed (source [] (.objectQuoted [("key", .int 1)]) (some type))
+  | none => false
+#guard match Effect4.Codegen.Types.ofTy (.list (.map .string (.option .nat))) with
+  | some type => check allowed (source [.named ["Option"] "effect" true] (.arr []) (some type))
+  | none => false
+
+-- These globals have no value capability; an unavailable use must not fall through.
+#guard ["Readonly", "Record"].all fun name => !check allowed (source [] (.ident name))
+#guard ["Readonly", "Record"].all fun name => !check allowed
+  (source [] (.lambda [name] (.arrow (some (.name [name] [])) (.int 1))))
+#guard ["Readonly", "Record"].all fun name => !check allowed
+  { header := [], imports := [], decls := [
+    .const { doc := [], name := "main", value := .int 1, type := some (.name [name] []) },
+    .const { doc := [], name, value := .int 2 }] }
+#guard ["Readonly", "Record"].all fun name => check allowed
+  (source [] (.generator [.letInit name (.int 1), .ret (.ident name)]))
+
+-- An import's origin and type-only flag still govern a same-named binding.
+#guard ["Readonly", "Record"].all fun name => check allowed
+  (source [.named [⟨"Box", name, true⟩] "./types"] (.int 1) (some (.name [name] [])))
+#guard ["Readonly", "Record"].all fun name => !check allowed
+  (source [.named [⟨"Box", name, true⟩] "./types"] (.ident name))
+#guard ["Readonly", "Record"].all fun name => !check allowed
+  (source [.named [⟨name, name, true⟩] "./unlisted"] (.int 1) (some (.name [name] [])))
+#guard !check allowed (source [] (.int 1) (some (.name ["MissingMapUtility"] [])))
+
 -- A class's own type is in scope in heritage arguments, but its value is not.
 def serviceClass (heritage : Expr) : TypeScript.Module :=
   { header := [], imports := [.named ["Context"] "effect"], decls := [

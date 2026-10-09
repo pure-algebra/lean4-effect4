@@ -1,0 +1,12 @@
+Test/Codegen/SourceBindingsContract.lean:122:0: error: Expression
+  match Effect4.Codegen.Types.ofTy (Effect4.Program.Ty.string.map Effect4.Program.Ty.nat) with
+  | some type => check allowed (source [] (Expr.objectQuoted [("key", Expr.int 1)]) (some type))
+  | none => false
+did not evaluate to `true`
+Test/Codegen/SourceBindingsContract.lean:125:0: error: Expression
+  match Effect4.Codegen.Types.ofTy (Effect4.Program.Ty.string.map Effect4.Program.Ty.nat.option).list with
+  | some type =>
+    check allowed
+      (source [Import.named [{ imported := "Option", localName := "Option" }] "effect" true] (Expr.arr []) (some type))
+  | none => false
+did not evaluate to `true`

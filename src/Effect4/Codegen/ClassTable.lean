@@ -84,11 +84,11 @@ def programRows {Op : Type} (sig : Signature Op) (program : Eff Op) : List Progr
     | _ => [])
 
 /-- The names a payload class may not take (`ClassRefusal.collides`): the `effect` namespaces,
-the prelude's atoms, the builtins and the type names the printer spells (`Readonly`, `Record`),
+the prelude's atoms, the standard globals from the shared binding inventory,
 the export name, and the qualified root and trailing names of every row the program performs. -/
 def takenNames (exportName : String) (rows : List Program.Row) : List String :=
   effectNamespaces ++ NativeAtom.names ++ SourceBindings.builtins.map (·.name) ++
-    ["Readonly", "Record", exportName] ++
+    [exportName] ++
     rows.flatMap fun row => (SourceBindings.qualifiedRoot row.spelling).getD row.spelling :: row.trailing
 
 /-- Why a class's name cannot be declared, if it cannot: the tag is no identifier, or it
