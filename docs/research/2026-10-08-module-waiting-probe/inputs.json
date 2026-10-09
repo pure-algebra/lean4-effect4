@@ -1,0 +1,83 @@
+{
+  "effect": "4.0.1",
+  "compiler": "Version 7.0.0-dev.20260629.1",
+  "bun": "1.4.2",
+  "selected_input_count": 17,
+  "equal_source_pairs": [
+    "Effect",
+    "Fiber",
+    "PartitionedSemaphore",
+    "Queue",
+    "internal/effect"
+  ],
+  "inputs": {
+    "vendor/Effect.ts": {
+      "sha256": "d39dc35b3dd3afe81c9b939147078822f26fcf8ba5b33735d9d903596bce9519",
+      "bytes": 822865
+    },
+    "installed/Effect.ts": {
+      "sha256": "d39dc35b3dd3afe81c9b939147078822f26fcf8ba5b33735d9d903596bce9519",
+      "bytes": 822865
+    },
+    "dist/Effect.js": {
+      "sha256": "80b36e00a9a105e1bf9257a3bb3927a822a1e2a72d7cce9cc0c56b2407956ca5",
+      "bytes": 259035
+    },
+    "vendor/Fiber.ts": {
+      "sha256": "0823a06049643e1b3efbfaabdccc03be1a08b5ae165841d3ef18916e297ee057",
+      "bytes": 24692
+    },
+    "installed/Fiber.ts": {
+      "sha256": "0823a06049643e1b3efbfaabdccc03be1a08b5ae165841d3ef18916e297ee057",
+      "bytes": 24692
+    },
+    "dist/Fiber.js": {
+      "sha256": "8e8433ea84b971792c3903e3cd62182c6c61a567ec73fee98f3e33cb520d4aee",
+      "bytes": 11080
+    },
+    "vendor/PartitionedSemaphore.ts": {
+      "sha256": "a279af38dd80b386c651ba5665ed0c2481e921dab8cd65addaad686df4595a80",
+      "bytes": 25286
+    },
+    "installed/PartitionedSemaphore.ts": {
+      "sha256": "a279af38dd80b386c651ba5665ed0c2481e921dab8cd65addaad686df4595a80",
+      "bytes": 25286
+    },
+    "dist/PartitionedSemaphore.js": {
+      "sha256": "02070de5a52c031cf6d4b5e720d0ed52207b8292572a0af7e4ff2016166e2f84",
+      "bytes": 12687
+    },
+    "vendor/Queue.ts": {
+      "sha256": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+      "bytes": 79272
+    },
+    "installed/Queue.ts": {
+      "sha256": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+      "bytes": 79272
+    },
+    "dist/Queue.js": {
+      "sha256": "cbde7467b98c206cb5b119959b4699d19bda39387fb7ffac26f7d2df5f91524f",
+      "bytes": 51832
+    },
+    "vendor/internal/effect.ts": {
+      "sha256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+      "bytes": 223328
+    },
+    "installed/internal/effect.ts": {
+      "sha256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+      "bytes": 223328
+    },
+    "dist/internal/effect.js": {
+      "sha256": "cd1d12a5d8336f65877efabc55301a97e526fc3397a1c21a798a4c268858746f",
+      "bytes": 124642
+    },
+    "runtime-package": {
+      "sha256": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+      "bytes": 2588
+    },
+    "compiler-package": {
+      "sha256": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478",
+      "bytes": 3561
+    }
+  }
+}
