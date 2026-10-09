@@ -1,0 +1,188 @@
+{
+  "recorded_at": "2026-10-09T20:51:35.135064+00:00",
+  "branch": "codex/fragment-classification",
+  "integration_base": "e193da3fbdc92c544e32b12df768b9e644a8c47f",
+  "implementation_head": "b69356f5eb8cdc2cc21ac2ab712e9a5b7bcfd518",
+  "semantic_baseline": "1f4ee194deef717a374e348c3bf42fbeebe44d80",
+  "checks": [
+    {
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Folds.Looped",
+        "Effect4.Laws.Program.Folds.DenoteRows",
+        "Test.Program.FragmentCensusContract",
+        "Effect4.Laws.Program.Agreement.Calls",
+        "Effect4.Laws.Program.Agreement.Machine",
+        "Effect4.Laws.Program.Agreement.Hosted",
+        "Effect4.Laws.Program.MeaningEq",
+        "Effect4.Laws.Program.MeaningSound",
+        "Effect4.Laws.Program.RuntimeR",
+        "Effect4.Laws.Program.LoopAgreement",
+        "Test.Program.AgreementContract",
+        "Test.Program.DenoteRowsContract",
+        "Test.Program.QueueWorkload",
+        "Test.Api.SessionMeaning"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:48:48.283174+00:00",
+      "finished_at": "2026-10-09T20:50:19.513584+00:00",
+      "log": "integration-build.log"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-09-fragment-classification/Baseline.lean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:19.514322+00:00",
+      "finished_at": "2026-10-09T20:50:21.609339+00:00",
+      "log": "baseline.log"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check-conform.py",
+        "cases"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:21.609698+00:00",
+      "finished_at": "2026-10-09T20:50:37.339749+00:00",
+      "log": "cases.log"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-09-fragment-classification/Boundary.lean"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:37.340245+00:00",
+      "finished_at": "2026-10-09T20:50:38.832904+00:00",
+      "log": "boundary.log"
+    },
+    {
+      "command": [
+        "python3",
+        "docs/research/2026-10-09-fragment-classification/verify_codegen.py"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:38.833204+00:00",
+      "finished_at": "2026-10-09T20:50:42.343036+00:00",
+      "log": "codegen.log"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check-docs.py"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:42.343271+00:00",
+      "finished_at": "2026-10-09T20:50:42.586495+00:00",
+      "log": "docs-check.log"
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/check-language.py",
+        "--strict",
+        "docs/research/2026-10-09-fragment-classification/README.md",
+        "docs/research/2026-10-09-fragment-classification/PLAN.md",
+        "docs/core/controlled-english.md",
+        "AGENTS.md"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:42.586744+00:00",
+      "finished_at": "2026-10-09T20:50:47.794535+00:00",
+      "log": "language.log"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "env": {
+        "LEAN_NUM_THREADS": "3"
+      },
+      "exit_code": 0,
+      "started_at": "2026-10-09T20:50:47.794833+00:00",
+      "finished_at": "2026-10-09T20:50:47.835889+00:00",
+      "log": "whitespace.log"
+    }
+  ],
+  "generation": {
+    "command": [
+      "python3",
+      "scripts/generate.py",
+      "--only",
+      "derived"
+    ],
+    "env": {
+      "LEAN_NUM_THREADS": "3"
+    },
+    "exit_code": 0,
+    "log": "generate-derived-final.log",
+    "scope": "The derived producer ran before the H8 rebase. All three fragment outputs pass fresh byte comparisons after rebase."
+  },
+  "source_sha256": {
+    "Test/Program/FragmentCensusContract.lean": "b7e74c5f9076f42b41d1b2b4270ca11fe30e655a6fd0383d27027378aa0d683e",
+    "src/Effect4/Laws/Program/DenoteB.lean": "36ae47ffb019846e61cb54aad7c9e5c2eeacb41e670d29d47e85f17f97078f2a",
+    "src/Effect4/Laws/Program/DenoteRows.lean": "f8e9c656f02ac6e4d0495cdae6c5f5ea078257da887a85015db789f9411c1212",
+    "src/Effect4/Laws/Program/FragmentLooped.lean": "f7bda8bd1c9add43b6e5a8f5459543c37e1c7ee20c8ce7afae62aaad7fb4fe27",
+    "src/Effect4/Laws/Program/FragmentRowAdmission.lean": "d6e423fb2250ab0f9593a156c6d01973ff9b26bf6992e4ae12fe9dfd55870559",
+    "src/Effect4/Laws/Program/FragmentRows.lean": "617df1aa38f7018e8b3eb4d46ac8dc16d8adb91780bf2544c4b2631105ccab63",
+    "src/Effect4/Program/Fragment.lean": "bf7b8bdea8e160bd31aac6a4c616be2eedf7dfae3c51ef8d18f077d5f2f3e437",
+    "tools/Effect4Gen/Exe.lean": "32a770c155d89aa9eebf3cdfff25b3f8aeda7a0b27b5bf3a8d08678e8ad3b99d",
+    "tools/Effect4Gen/Fragments.lean": "e44c4f6685612165c533e45b50bf636725cd0d04139b4c5eeaa472243feea824",
+    "tools/Effect4Gen/manifest.json": "0c52e3d26e4611704f4cd9065de040f1b5845b0150ae21450a26203c5387aecc"
+  },
+  "evidence_sha256": {
+    "integration-build.log": "fffa61c8e1de1e28799b5afb2b4703f59cb29ab7e9b51b884589b0053020617d",
+    "baseline.log": "3c583e59de99da805ea019185868ea88e14634845c69c03a7c7209d282a4c050",
+    "cases.log": "8b69fd299788ab8f51df579a351e1b9761882e10c673cb748aeb96d4fcf13ce6",
+    "boundary.log": "1ba8ef9174905c01f3627d64d639ae902049f80c04ffc2d5a17fcfcb8d1b6670",
+    "codegen.log": "9a08dcdc7d8915bddbe11ccb3d51af7d3b65b0d065912809a4747b44f5d59086",
+    "docs-check.log": "14be86078359874fca16269f9ecd08d71ca05dd38481e1960d8e0c6b55abaec0",
+    "language.log": "98847114fc2151f00024528b1fda5cbe5e103f66b94096a6b15e1edea12b852d",
+    "whitespace.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "generate-derived-final.log": "a4f86b182395d9e5b80128ceafb38a8ff749de9d814a128821dd3738b566f8e0",
+    "verification-build-green.log": "27d5777bfac76018b898ae544fff020879a994c79a1a24840d3599bc26abc202",
+    "unrelated-generator-drift.json": "488c3c459e51c4a052fc4d84b65adbced0272c4da410406243548adecaf9dd27",
+    "cases-summary.json": "17a2abd48f415706315d2478feca3e1d9636ae20b1655da16621373269f5aae7",
+    "codegen-check.json": "07aa4bce152c381031dcca261a605e5c4c8712fc973adcf43df01e1c9c30ba52"
+  },
+  "bounds": [
+    "The equality proofs compare Boolean fragment classification for every program and row table.",
+    "The equality proofs add no execution or host claim.",
+    "No full sweep completes. The broad prerequisite of make check-cases was interrupted with exit 130.",
+    "The unchanged TyView producer has separate drift, retained in unrelated-generator-drift.json and excluded from the cleanup.",
+    "No TypeScript files change and no TypeScript checks run."
+  ]
+}

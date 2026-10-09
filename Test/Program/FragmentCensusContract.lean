@@ -1,14 +1,17 @@
 import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.Folds.Straight
+import Effect4.Laws.Program.Folds.Looped
+import Effect4.Laws.Program.Folds.DenoteRows
+import Effect4.Program.LayerView
+import Effect4.Program.Authoring
 
 /-!
 # Fragment census — which constructors each proved fragment admits
 
-`Straight` (the fragment `run_eq_meaning` covers) and `Looped` (the fragment the loop agreement
-covers) are defined by matches with a default arm, so a new constructor falls outside both
-without anyone deciding so. This battery makes that decision loud. It holds one sample per
-constructor of `Eff`, guarded against the alphabet's own name list (`Effect4.Program.constructorNames`), and
-pins the names each fragment admits at the head. Adding a constructor turns the first guard red
-until it has a sample; the sample then lands in or out of each list, and the author says which.
+`Straight`, `Looped`, and `StraightRows` use one generator classification table.
+The generated predicates name every constructor. Unknown constructors refuse generation.
+This battery compares its samples with the generated family's constructor inventory.
+Each constructor therefore needs both an explicit classification and a sample.
 
 Children are the straight leaf `succeed unit`, so a composite form is admitted exactly when the
 fragment admits its head.
@@ -35,10 +38,11 @@ def samples : List (String × NativeEff) :=
   , ("provideLayer", .provideLayer (.effectDiscard u) false u)
   , ("service", .service ⟨⟨0⟩, ⟨0⟩⟩), ("provideService", .provideService ⟨⟨0⟩, ⟨0⟩⟩ t u)
   , ("catchIf", .catchIf t u u), ("select", .select t .bool u u)
-  , ("iterate", .iterate none t t t t u), ("restore", .restore t u) ]
+  , ("iterate", .iterate none t t t t u), ("restore", .restore t u)
+  , ("defs", .defs [] .nil u) ]
 
 -- every constructor has a sample, and nothing else does
-#guard samples.map Prod.fst = Effect4.Program.constructorNames
+#guard samples.map Prod.fst = Effect4.Program.ctorNames .eff
 
 /-- The names a fragment admits at the head. -/
 def admitted (fragment : NativeEff → Bool) : List String :=
@@ -54,11 +58,49 @@ def admitted (fragment : NativeEff → Bool) : List String :=
   ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "catchCause",
    "matchCause", "onExit", "exit", "select", "iterate"]
 
--- the thirteen constructors with no proved agreement between the machine and the meaning. A
+-- Forms outside the loop agreement fragment. A
 -- restore site is outside both fragments, as the two masks are: the straight meaning has no
 -- fiber flag (decisions rows 244 to 246; `Test/Program/MaskContract.lean` runs it)
 #guard (samples.filter fun s => !Looped s.2).map Prod.fst =
   ["gen", "uninterruptible", "interruptible", "yieldNow", "awaitFiber", "withFiber", "scoped",
-   "acquireRelease", "provideLayer", "service", "provideService", "catchIf", "restore"]
+   "acquireRelease", "provideLayer", "service", "provideService", "catchIf", "restore", "defs"]
+
+-- Row-aware classification adds conditional handlers, without adding loops.
+#guard admitted (StraightRows []) =
+  ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "catchCause",
+   "matchCause", "onExit", "exit", "catchIf", "select"]
+
+private def data : Row := (Authoring.Row.host "data" .unit .nat .never "fragment control").row
+private def handle : Row := (Authoring.Row.host "handle" .unit NativeOp.kvTy .never "fragment control").row
+
+#guard StraightRows [data] (.perform (.external 0) t)
+#guard !StraightRows [handle] (.perform (.external 0) t)
+#guard !StraightRows [data] (.perform (.external 1) t)
+#guard !Straight (.perform (.external 0) t)
+#guard !Looped (.perform (.external 0) t)
+#guard !StraightRows [data] (.perform .deferredAwait t)
+#guard !StraightRows [data] (.perform (.call 0) t)
+
+/-- Put a rejected child in every visited position, including handler and finalizer positions. -/
+private def rejectedChildren : List NativeEff :=
+  let no : NativeEff := .yieldNow 0
+  [.suspend no, .exit no,
+   .bind no u, .bind u no,
+   .select t .bool no u, .select t .bool u no,
+   .catchCause no u, .catchCause u no,
+   .matchCause no u u, .matchCause u no u, .matchCause u u no,
+   .onExit no u, .onExit u no]
+
+#guard rejectedChildren.all (fun e => !Straight e && !Looped e && !StraightRows [data] e)
+#guard !Looped (.iterate none t t t t (.yieldNow 0))
+#guard !StraightRows [data] (.catchIf t (.yieldNow 0) u)
+#guard !StraightRows [data] (.catchIf t u (.yieldNow 0))
+
+-- Readers: the generated predicate connects to the existing algebra at concrete programs.
+example : Straight (.onExit u u) = cata_eff Straight.alg (.onExit u u) := Straight.eq_cata _
+example : Looped (.iterate none t t t t u) = cata_eff Looped.alg (.iterate none t t t t u) :=
+  Looped.eq_cata _
+example : StraightRows [data] (.perform (.external 0) t) =
+    cata_eff (StraightRows.alg [data]) (.perform (.external 0) t) := StraightRows.eq_cata _ _
 
 end Test.Program.FragmentCensusContract

@@ -554,28 +554,37 @@ That count is the 2026-09-18 instrument's. At `dceae006` (2026-10-01), with the 
 blind spots closed (§7.11), the count is **84 hand traversals, 60 with a fold and a connector,
 24 without** (named in §7.4).
 
-### 7.10 The fragments by exclusion (2026-09-18, decisions row 35)
+### 7.10 Fragment classification (decisions row 35)
 
-Not a callers move: `Straight` (`Program/Fragment.lean`) and `Looped` (`Laws/Program/DenoteB.lean`)
-are one hand definition each with the fold beside them, and about twenty-five proof sites unfold
-them by name (`simp [Straight]`, `rw [Looped]`, `unfold Straight at h`). The fix for row 35 is at
-the definition. §7's earlier line "the algebra names every constructor, row 35 settled" was
-overstated: `fold_of` reads the algebra off the hand definition, so a constructor added to `Eff`
-fell into `Straight`'s wildcard arm and `Looped`'s fallback to `Straight`, and the generated field
-said `false` without anyone having classified it. Now both definitions name every constructor —
-twelve excluded arms written `false` in `Straight`, thirteen in `Looped` less `iterate`, the five
-leaves and the `perform` row-kind match repeated in `Looped` arm for arm — so a new constructor is
-a missing case at each definition until it is classified. `fold_of` converts both as before
-(`Straight.eq_cata`, `Looped.eq_cata`, `[propext]`).
+`rules` in `tools/Effect4Gen/Fragments.lean` owns constructor classification for the proved fragments.
+The generator reads constructor arguments through `LayerView.readBlock` in `tools/Effect4Gen/LayerView.lean`.
+Missing, duplicate, and obsolete classifications refuse generation.
+An accepted leaf cannot gain recursive children without a new classification.
+Recursive rules visit every direct program child in declaration order.
+They reject children from another family.
+These checks do not reject every change to constructor arguments whose sorts are already known.
 
-Consumers: `Looped.of_straight`'s leaf arms are the hypothesis itself (`Looped` and `Straight` are
-one term on a leaf by definition) and its excluded arms `absurd h Bool.false_ne_true`, where the
-fallback arm had needed `rw [Looped]` and the wildcard's side goals discharged by hand.
-`LoopSound.soundB`'s five leaf arms shared one body whose `have hs : Straight _ = true := hl`
-found its term through the fallback (the only way `Looped (.succeed v)` could unify with
-`Straight ?e`); they now go through one lemma, `soundB_leaf`, that takes the `Straight` witness
-explicitly, one call per leaf. Everything else compiled untouched. Both roots and `Test.All`
-build; the census is unchanged (the two rows were structural with folds before and after).
+The `Fragments` manifest group generates `Straight` in `src/Effect4/Program/Fragment.lean`.
+The `FragmentLooped` group generates `Looped` in `src/Effect4/Laws/Program/FragmentLooped.lean`.
+The `FragmentRows` group generates `StraightRows` in `src/Effect4/Laws/Program/FragmentRows.lean`.
+`dataRow` in `src/Effect4/Laws/Program/FragmentRowAdmission.lean` owns host-row admission.
+The manifest is `tools/Effect4Gen/manifest.json`.
+Decisions row 59 keeps the predicates with only proof consumers in the Laws graph.
+
+Each emitted predicate retains direct recursive equations and literal rejection arms.
+Rejected forms do not visit their children.
+Conjunctions retain their existing child order.
+There is no runtime policy parameter or additional program representation.
+
+The existing `fold_of` commands remain in `src/Effect4/Laws/Program/Folds/{Straight,Looped,DenoteRows}.lean`.
+Their generated algebras and fold connections remain the proof interface.
+A generated algebra alone cannot enforce row 35, because a source wildcard can silently classify a new constructor.
+The generator therefore refuses an unclassified constructor before emitting source.
+
+`Test/Program/FragmentCensusContract.lean` compares samples with `ctorNames` in `src/Effect4/Program/LayerView.lean`.
+It checks definition blocks, operation admission, and rejected children in each visited position.
+The independent baseline comparison and verification commands are in `docs/research/2026-10-09-fragment-classification/README.md`.
+These checks establish no new execution or host claim.
 
 ### 7.11 The instrument's three blind spots closed (2026-10-01)
 

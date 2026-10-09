@@ -138,6 +138,14 @@ run, *tested* for a finite checker or host run over named inputs. The former fou
 *stamped* (a verifying trace over the producer's inputs, with no claim about the committed
 bytes), has no carrier since the labels went; every committed group is *reproduced*.
 
+## Fragment predicates
+
+The derived group includes `Fragments`, `FragmentLooped`, and `FragmentRows` from `tools/Effect4Gen/Fragments.lean`.
+They generate the existing fragment predicates from one classification table and the program family metadata.
+The outputs are `src/Effect4/Program/Fragment.lean` and `src/Effect4/Laws/Program/Fragment{Looped,Rows}.lean`.
+The existing fold connectors remain in the Laws graph.
+`docs/core/traversal-census.md` owns the classification rules and their limits.
+
 ## Build artifacts that are not committed
 
 **Promoted projections.** Five committed tables are not cut by `make gen`; each has its own
