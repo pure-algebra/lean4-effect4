@@ -310,18 +310,23 @@ def stream (W H r : Nat) (ds : List (Keyed Dev)) : List String :=
 
 /-! ## SVG: the same device calls in a web standard -/
 
-/-- The dark tokens of `paint.h` (`PAINT_DARK`), as CSS colours. -/
-def Role.css : Role → String
+/-- The dark tokens of `paint.h` (`PAINT_DARK`), as CSS colours. With the hue off, the role of
+an agent (the host, a failure, a resource) is drawn in the ink, as `paint__source` draws it (P9):
+the base is black and white. -/
+def Role.css (hue : Bool := false) : Role → String
   | .ground => "#14110d" | .ink => "#f3f4f6" | .rule => "#45433f"
-  | .host => "#c0851f" | .failure => "#bd3931" | .resource => "#359b75"
+  | .host => if hue then "#c0851f" else "#f3f4f6"
+  | .failure => if hue then "#bd3931" else "#f3f4f6"
+  | .resource => if hue then "#359b75" else "#f3f4f6"
 
-/-- The families of `paint_faces_open`, and each face's size in logical pixels. The data face's
-size is the one whose advance is one cell of 8 pixels in Menlo. -/
-def Face.css : Face → String × String × Nat
-  | .data => ("Menlo, DejaVu Sans Mono, monospace", "normal", 13)
-  | .name => ("Georgia, Charter, serif", "normal", 15)
-  | .label => ("Georgia, Charter, serif", "italic", 13)
-  | .title => ("Georgia, Charter, serif", "normal", 20)
+/-- The families of `paint_faces_open`, and each face's size in logical pixels, as text. The data
+face's size is the one whose advance is one cell of 8 pixels in Menlo, 13.288 pixels (the forms
+note, section 5). -/
+def Face.css : Face → String × String × String
+  | .data => ("Menlo, DejaVu Sans Mono, monospace", "normal", "13.288")
+  | .name => ("Georgia, Charter, serif", "normal", "15")
+  | .label => ("Georgia, Charter, serif", "italic", "13.5")
+  | .title => ("Georgia, Charter, serif", "normal", "20")
 
 /-- XML's five escapes. -/
 def escape (s : String) : String :=
@@ -339,14 +344,14 @@ def keyAttr (key : Key) : String := if key.isEmpty then "" else s!" data-key=\"{
 its box, and its end closes the group. A pointer box is an invisible rectangle with its key. -/
 def Dev.svg (r : Nat) (key : Key) (id : Nat) : Dev → String
   | .fill role value b =>
-    s!"<rect x=\"{b.x0}\" y=\"{b.y0}\" width=\"{b.x1 - b.x0}\" height=\"{b.y1 - b.y0}\" fill=\"{role.css}\" fill-opacity=\"{opacity value}\"{keyAttr key}/>"
+    s!"<rect x=\"{b.x0}\" y=\"{b.y0}\" width=\"{b.x1 - b.x0}\" height=\"{b.y1 - b.y0}\" fill=\"{role.css false}\" fill-opacity=\"{opacity value}\"{keyAttr key}/>"
   | .cells x base room s =>
     let (family, style, size) := Face.css .data
     let shown := if s.length ≤ room then s else (s.take (room - 1)).toString ++ "…"
-    s!"<text x=\"{r * x}\" y=\"{r * base}\" font-family=\"{family}\" font-style=\"{style}\" font-size=\"{r * size}\" fill=\"{Role.css .ink}\" xml:space=\"preserve\"{keyAttr key}>{escape shown}</text>"
+    s!"<text x=\"{x}\" y=\"{base}\" font-family=\"{family}\" font-style=\"{style}\" font-size=\"{size}\" transform=\"scale({r})\" fill=\"{Role.css false .ink}\" xml:space=\"preserve\"{keyAttr key}>{escape shown}</text>"
   | .text face x base _ s =>
     let (family, style, size) := face.css
-    s!"<text x=\"{r * x}\" y=\"{r * base}\" font-family=\"{family}\" font-style=\"{style}\" font-size=\"{r * size}\" fill=\"{Role.css .ink}\" xml:space=\"preserve\"{keyAttr key}>{escape s}</text>"
+    s!"<text x=\"{x}\" y=\"{base}\" font-family=\"{family}\" font-style=\"{style}\" font-size=\"{size}\" transform=\"scale({r})\" fill=\"{Role.css false .ink}\" xml:space=\"preserve\"{keyAttr key}>{escape s}</text>"
   | .cut x y w h =>
     s!"<clipPath id=\"c{id}\"><rect x=\"{r * x}\" y=\"{r * y}\" width=\"{r * w}\" height=\"{r * h}\"/></clipPath><g clip-path=\"url(#c{id})\">"
   | .uncut => "</g>"

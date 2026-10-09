@@ -4,8 +4,8 @@ import Effect4.Store.Domain.ProgramWire
 /-!
 # The view driver: frames of a program built by edits
 
-    lake env lean --run tools/Drivers/View.lean [--motion N] build NAME OUT    a corpus program, built top-down
-    lake env lean --run tools/Drivers/View.lean [--motion N] session FILE OUT  the frames of a request file
+    lake env lean --run tools/Drivers/View.lean [--motion N] [--plain] build NAME OUT    a corpus program, built top-down
+    lake env lean --run tools/Drivers/View.lean [--motion N] [--plain] session FILE OUT  the frames of a request file
 
 `NAME` is a program of the wire corpus (`Effect4.Program.Wire.Corpus.all`). `FILE` holds one
 session request a line, as `tools/Drivers/Session.lean` reads them. For each frame the driver
@@ -82,13 +82,28 @@ def readRequests (file : System.FilePath) : IO (List Tools.Session.Request) := d
     | .error e => throw (IO.userError s!"view: a request does not read: {e}")
   return out.toList
 
-/-- The frames of motion between two frames, from `--motion N` (default 6; 1 draws none). -/
-def motionOf : List String → Nat × List String
-  | "--motion" :: n :: rest => (n.toNat?.getD 6, rest)
-  | rest => (6, rest)
+/-- The settings of a run: the pictures of motion between two frames (`--motion N`, default 6;
+1 draws none), and whether the marks are drawn (`--plain` draws none). -/
+structure Settings where
+  motion : Nat := 6
+  marks : Bool := true
+
+/-- Read the flags before the command. -/
+def settingsOf : List String → Settings × List String
+  | "--motion" :: n :: rest =>
+    let (st, rest) := settingsOf rest
+    ({ st with motion := n.toNat?.getD 6 }, rest)
+  | "--plain" :: rest =>
+    let (st, rest) := settingsOf rest
+    ({ st with marks := false }, rest)
+  | rest => ({}, rest)
+
+/-- The frames, with the settings' marks. -/
+def withMarks (st : Settings) (frames : List Build.Frame) : List Build.Frame :=
+  frames.map fun f => { f with page := { f.page with marks := st.marks } }
 
 def main (args : List String) : IO UInt32 := do
-  let (motion, args) := motionOf args
+  let (st, args) := settingsOf args
   match args with
   | ["build", name, out] =>
     match List.lookup name Effect4.Program.Wire.Corpus.all with
@@ -104,11 +119,11 @@ def main (args : List String) : IO UInt32 := do
         IO.FS.createDirAll out
         IO.FS.writeFile (System.FilePath.mk out / "requests.jsonl")
           ("\n".intercalate (reqs.map fun r => r.toJson.compress) ++ "\n")
-        writeFrames out (Build.frames name reqs) motion
+        writeFrames out (withMarks st (Build.frames name reqs)) st.motion
         return 0
   | ["session", file, out] =>
-    writeFrames out (Build.frames file (← readRequests file)) motion
+    writeFrames out (withMarks st (Build.frames file (← readRequests file))) st.motion
     return 0
   | _ =>
-    IO.eprintln "usage: view [--motion N] (build NAME | session FILE) OUT"
+    IO.eprintln "usage: view [--motion N] [--plain] (build NAME | session FILE) OUT"
     return 2

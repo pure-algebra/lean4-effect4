@@ -54,8 +54,8 @@ def tween (W : Int) (g1 g2 : Page) (t n : Nat) : List (Keyed Call) :=
     match rowOf g1 l.key with
     | some i1 =>
       let dy : Int := (ROWH * ((i1 : Int) - i) * ((n : Int) - t)) / (n : Int)
-      (lineCalls W B i l).map (Keyed.move 0 dy)
-    | none => if t < n then [] else lineCalls W B i l
+      (lineCalls W B i l g2.marks).map (Keyed.move 0 dy)
+    | none => if t < n then [] else lineCalls W B i l g2.marks
   groundCalls W H ++ (g2.lines.toList.zipIdx.flatMap fun (l, i) => lineAt l i) ++ chromeCalls W H g2
 
 /-- The size of the frames between `g1` and `g2`. -/

@@ -23,6 +23,74 @@ inductive LineState where
   | plain | lit | refused
 deriving DecidableEq, Repr
 
+/-! ## Marks
+
+A mark tells how an operation is answered, in the design language's parts: a hollow square is a
+promise, a filled square a promise kept, dots the wait between them, and a bar a decision of the
+host (`docs/research/2026-10-07-native-view-forms.md`, section 5). Each shape is a box of whole
+logical pixels on the grid, so a mark is plain fills and frames: it needs no call of its own, and
+it moves as the move law moves every call (`lowerCall_move`). Marks wait for the owner's ruling
+(the forms note's proposal A, 1), so a page draws them only when `marks` is set. -/
+
+/-- One shape of a part, in logical pixels from the part's left edge and the line's baseline: a
+filled square, a ring, a dotted rule, a bar of a role reaching above and below, a rule over the
+row's top, a rule under its baseline. -/
+inductive Shape where
+  | square (x0 : Int)
+  | ring (x0 : Int)
+  | dots (x0 x1 pitch : Int)
+  | post (x0 x1 reach : Int) (role : Role)
+  | over (x0 x1 : Int)
+  | under (x0 x1 : Int)
+deriving Repr
+
+/-- A part of a mark: the cells it takes, its shapes, and its glyph in a terminal. -/
+structure Part where
+  cells : Nat
+  shapes : List Shape
+  glyph : String
+deriving Repr
+
+/-- A promise: a hollow square. -/
+def Part.hollow : Part := ⟨1, [.ring 0], "□"⟩
+/-- The wait: a dotted rule over two cells. -/
+def Part.dotted : Part := ⟨2, [.dots 1 14 3], "┄┄"⟩
+/-- A decision of the host: a bar in the host's role. -/
+def Part.bar : Part := ⟨1, [.post 2 4 4 .host], "┃"⟩
+/-- A promise kept: a filled square. -/
+def Part.filled : Part := ⟨1, [.square 0], "■"⟩
+
+/-- A mark: its parts, side by side. -/
+abbrev Mark := List Part
+
+/-- The fills of a dotted rule from `a` to `b` at `top`: dots of one pixel at a pitch, centred
+(`paint_device_dots` at zoom 1). -/
+def dotCalls (key : Key) (a b top pitch : Int) : List (Keyed Call) :=
+  if b - a < 1 then [⟨key, .fill .ink 1000 a top (b - a) 1⟩]
+  else
+    let pitch := if pitch ≤ 1 then 2 else pitch
+    let n := (b - a - 1) / pitch + 1
+    let first := a + (b - a - (1 + (n - 1) * pitch)) / 2
+    (List.range n.toNat).map fun (i : Nat) => ⟨key, .fill .ink 1000 (first + (i : Int) * pitch) top 1 1⟩
+
+/-- One shape at a part's left edge `x` and the baseline `base`: a band of seven pixels above
+the baseline holds the squares. -/
+def shapeCalls (key : Key) (x base : Int) : Shape → List (Keyed Call)
+  | .square x0 => [⟨key, .fill .ink 1000 (x + x0) (base - 7) 7 7⟩]
+  | .ring x0 => [⟨key, .frame .ink (x + x0) (base - 7) 7 7 1⟩]
+  | .dots x0 x1 pitch => dotCalls key (x + x0) (x + x1) (base - 4) pitch
+  | .post x0 x1 reach role => [⟨key, .fill role 1000 (x + x0) (base - 7 - reach) (x1 - x0) (7 + 2 * reach)⟩]
+  | .over x0 x1 => [⟨key, .fill .ink 1000 (x + x0) (base - 7) (x1 - x0) 1⟩]
+  | .under x0 x1 => [⟨key, .fill .ink 1000 (x + x0) (base - 1) (x1 - x0) 1⟩]
+
+/-- A mark at `x`: each part at its cells, from left to right. -/
+def markCalls (key : Key) (x base : Int) (m : Mark) : List (Keyed Call) :=
+  (m.foldl (fun (acc : Nat × List (Keyed Call)) p =>
+    (acc.1 + p.cells, acc.2 ++ p.shapes.flatMap (shapeCalls key (x + 8 * acc.1) base))) (0, [])).2
+
+/-- A mark's glyphs, for a terminal. -/
+def Mark.glyphs (m : Mark) : String := String.join (m.map (·.glyph))
+
 /-- One line of a page. -/
 structure Line where
   /-- the gutter: the node's address, as `[1 0]` -/
@@ -33,6 +101,8 @@ structure Line where
   text : String
   /-- the node's type, in the data face; empty when it has none -/
   type : String := ""
+  /-- how the node's operation is answered, when it performs one -/
+  mark : Option Mark := none
   /-- a remark after the line, in the label face -/
   note : String := ""
   /-- the node's key -/
@@ -52,6 +122,8 @@ structure Page where
   /-- the width of the gutter in cells, when a sequence of pages fixes it: so the lines of every
   frame stand at one column, and only rows move between frames -/
   gutter : Option Nat := none
+  /-- whether the lines' marks are drawn -/
+  marks : Bool := true
 deriving Repr
 
 /-- The grid of `paint.h`, in logical pixels. -/
@@ -64,6 +136,7 @@ def HEADS : Int := 88
 def HEAD_RULE : Int := 96
 def FOOT : Int := 32
 def INDENT : Int := 3
+def MARKCOLS : Int := 6
 
 /-- The left edge of a column of cells. -/
 def col (c : Int) : Int := LEFT + CELL * c
@@ -94,7 +167,7 @@ def pageSize (W : Int) (g : Page) : Int × Int := (W, TOP + ROWH * g.lines.size 
 
 /-- One line at its row: the band of a lit line, the gutter, then inside a cut the text, the
 type and the note; a refused line is framed; last, the box that answers the pointer. -/
-def lineCalls (W B : Int) (row : Nat) (l : Line) : List (Keyed Call) :=
+def lineCalls (W B : Int) (row : Nat) (l : Line) (marks : Bool := true) : List (Keyed Call) :=
   let c0 : Int := B + INDENT * l.depth
   let y : Int := TOP + ROWH * row
   let base := y + BASE
@@ -104,6 +177,8 @@ def lineCalls (W B : Int) (row : Nat) (l : Line) : List (Keyed Call) :=
   let end0 := c0 + n + INDENT
   let typed := !l.type.isEmpty
   let end1 := if typed then end0 + 2 + shown l.type (cols - end0 - 2) + INDENT else end0
+  let mark := if marks then l.mark else none
+  let end2 := if mark.isSome then end1 + MARKCOLS + 1 else end1
   let k := l.key
   (if l.state = .lit then [⟨k, .fill .rule 500 0 y W ROWH⟩] else []) ++
     cellsAt k (col 0) base l.gutter (B - 1) ++
@@ -113,7 +188,10 @@ def lineCalls (W B : Int) (row : Nat) (l : Line) : List (Keyed Call) :=
     cellsAt k (col c0) base l.text (cols - c0) ++
     (if typed then cellsAt k (col end0) base ":" 1 ++ cellsAt k (col (end0 + 2)) base l.type (cols - end0 - 2)
       else []) ++
-    textAt k .label (col end1) base l.note (right - col end1) ++
+    (match mark with
+      | some m => markCalls k (col end1) base m
+      | none => []) ++
+    textAt k .label (col end2) base l.note (right - col end2) ++
     [⟨k, .uncut⟩] ++
     (if k.isEmpty then [] else [⟨k, .hit 0 y W ROWH⟩])
 
@@ -140,7 +218,8 @@ def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
 the foot. -/
 def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
   let (_, H) := pageSize W g
-  groundCalls W H ++ (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls W (gutterCols g) i l) ++
+  groundCalls W H ++
+    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls W (gutterCols g) i l g.marks) ++
     chromeCalls W H g
 
 /-! ## The terminal: the same page as characters -/
@@ -159,6 +238,9 @@ def pageText (g : Page) : List String :=
       | .refused => "✗"
     let body := "".pushn ' ' (3 * l.depth) ++ l.text ++
       (if l.type.isEmpty then "" else "  : " ++ l.type) ++
+      (match l.mark with
+        | some m => if g.marks then "   " ++ m.glyphs else ""
+        | none => "") ++
       (if l.note.isEmpty then "" else "   " ++ l.note)
     mark ++ padTo (B - 1) l.gutter ++ body
   [g.title ++ (if g.place.isEmpty then "" else "   " ++ g.place), g.judgment,

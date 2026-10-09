@@ -152,9 +152,19 @@ def holeName (l : EditSession) (n : Node) : Option String :=
     if l.app.rows.length ≤ k then (l.sketch.holes[k - l.app.rows.length]?).map (·.name) else none
   | _ => none
 
+/-- How a row is answered, as a mark (the forms note, section 5): a synchronous row keeps its
+promise within the step; a deferred one parks and resumes; an external one parks, and the host
+decides its answer. A program row has no mark here. -/
+def rowMark (row : Row) : Option Mark :=
+  match row.kind, row.registration with
+  | .sync, _ => some [.filled]
+  | .async, .deferred => some [.hollow, .dotted, .filled]
+  | .async, .external => some [.hollow, .dotted, .bar, .filled]
+  | .program, _ => none
+
 /-- The page of an edit session: one line for each node of its sketch, with the type of each
-typed address, the refusal at the address it locates, and each hole's name. The lines under
-`lit` are lit. -/
+typed address, the refusal at the address it locates, each hole's name, and the mark of each
+operation, by its row in the session's table (`nativeRowOf`). The lines under `lit` are lit. -/
 def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment place foot : String) :
     Page :=
   let line (n : Node) : Tools.View.Line :=
@@ -177,7 +187,8 @@ def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment plac
     let text := match holeName l n with
       | some h => "hole " ++ h
       | none => n.text
-    { gutter := bracket n.path, depth := n.depth, text, type, note, key := bracket n.path, state }
+    let mark := n.op.bind fun op => rowMark (nativeRowOf (l.app.withHoles l.sketch.holes).rows op)
+    { gutter := bracket n.path, depth := n.depth, text, type, mark, note, key := bracket n.path, state }
   { title, judgment, place, foot, lines := ((lines l.sketch.program).map line).toArray }
 
 end Tools.View.Program
