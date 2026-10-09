@@ -81,7 +81,7 @@ The value equations serve the corresponding source readings.
 The four source readings serve `bookkeeping_agrees`.
 
 - Concept: `store-typing`; property: stored steps produce their declared source types.
-- Question: `step-language-typed`, role soundness; consumers: the four `*_types` connectors.
+- Question: `step-language-typed`, role compatibility; consumers: the four `*_types` connectors.
 - Reach: `TypesEach` inputs at the declared types; the signature has native atom types.
 - Does not establish: membership, codec admission, handle validity, reading agreement, or host behavior.
 - Unlocks: R4 and later checked Ref callbacks.
