@@ -98,9 +98,9 @@ inductive Head
   | layerMerge | layerFresh | layerOrDie
   | layerMergeAll
   | catchError | catchIf
-  /-- The prelude's two `select` heads (the `select` packet §1.8): `optionCase(s, onNone,
-  onSome)` and `caseTag(s, "tag", hit, miss)`, each suspending internally. -/
-  | optionCase | caseTag | caseTagR
+  /-- The prelude's `select` heads suspend branch construction.
+  `ifCase` also defers the condition, retaining the previous boolean suspension (decisions row 218). -/
+  | ifCase | optionCase | caseTag | caseTagR
   /-- `Effect.map`, the head that maps an `iterate`'s printed `Effect.whileLoop` to its result
   (`reduce`'s shape, `internal/effect.ts:4450-4470`). -/
   | map
@@ -123,6 +123,7 @@ def Head.spelling : Head → String
   | .catchCause => "Effect.catchCause"
   | .catchError => "Effect.catch"
   | .catchIf => "Effect.catchIf"
+  | .ifCase => "ifCase"
   | .optionCase => "optionCase"
   | .caseTag => "caseTag"
   | .caseTagR => "caseTagR"
@@ -185,7 +186,7 @@ def heads : List Head :=
   , .contextService, .scopeService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
   , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
-  , .optionCase, .caseTag, .caseTagR, .map, .uninterruptibleMask, .pipe ]
+  , .ifCase, .optionCase, .caseTag, .caseTagR, .map, .uninterruptibleMask, .pipe ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/

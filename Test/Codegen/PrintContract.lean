@@ -219,7 +219,7 @@ def sig : Signature (Fin 3) :=
 
 #guard (print sig 0 (.select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1)))
       (.succeed (.lit .unit)))).map (expr house0 0)
-  = .ok "Effect.suspend(() => true ? Effect.succeed(1) : Effect.succeed(undefined))"
+  = .ok "ifCase(() => true, () => Effect.succeed(1), () => Effect.succeed(undefined))"
 
 -- no annotation: the cursor has its initial value's type and the declaration carries none (DI-91)
 #guard (print sig 0 (.iterate none (.lit (.nat 0)) (.var 0) (.app "succ" (.cons (.var 1) .nil))

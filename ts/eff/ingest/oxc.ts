@@ -582,8 +582,13 @@ class Normalize {
       if (fn.type !== "ArrowFunctionExpression" || list(fn, "params").length) return reject("E-ARG-CLOSURE", "suspend")
       const body = unwrap(node(fn, "body"))
       if (body.type === "BlockStatement") return this.loop(body, env)
-      const value: Expr = body.type === "ConditionalExpression" ? { _tag: "cond", test: this.term(node(body, "test"), env), thenBranch: this.program(node(body, "consequent"), env), elseBranch: this.program(node(body, "alternate"), env) } : this.program(body, env)
-      return call(h, [{ _tag: "arrow", body: value }])
+      // Preserve the admitted foreign conditional through the current boolean template.
+      if (body.type === "ConditionalExpression") return call("ifCase", [
+        { _tag: "arrow", body: this.term(node(body, "test"), env) },
+        { _tag: "arrow", body: this.program(node(body, "consequent"), env) },
+        { _tag: "arrow", body: this.program(node(body, "alternate"), env) },
+      ])
+      return call(h, [{ _tag: "arrow", body: this.program(body, env) }])
     }
     if (h === "Effect.failCause") { arity(1); return call(h, [this.cause(arg(0), env)]) }
     if (h === "Effect.raceAll") { arity(1); const a = unwrap(arg(0)); if (a.type !== "ArrayExpression") return reject("E-BIND-SHAPE", "entrants"); return call(h, [{ _tag: "arr", items: list(a, "elements").map(x => this.program(x, env)) }]) }

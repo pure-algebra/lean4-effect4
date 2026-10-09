@@ -564,10 +564,10 @@ operation and print each through the type printer, so each program prints as a m
       (Effect4.Api.printModule "main" b.program b.table).map fun m =>
         let text := TypeScript.Render.module house0 m
         (text.length, (Effect4.Store.sha256 text.toUTF8.data.toList).hex)) =
-  [ some (12813, "6ef5d1607fedcee6e42312168634c052b48ad2342a4cf77628b5d103a4aed9da")
-  , some (11855, "b420a593926466ba5b0e1693970a780a04e920d8f2a39dd90f8880c3e4f56d32")
-  , some (6858, "03b96e441e7c359bc7b91969d9fad79ca46c4110dc3ea5eb0362c728245ee5d6")
-  , some (33585, "a337704b7826539b3a7837475f97f030e000a929aa1e8ed57a97da3ea9cac5b7") ]
+  [ some (12817, "4419c69da955888e85f0c460525896c10c2f1223d89cec0ab8e01014e2374a38")
+  , some (11859, "5d99abe59433e04d522ffef05bf31567b8bee6303175a4574be6457dcc0dc081")
+  , some (6860, "1333468a7ed330cc291c00e66703d8223be7792792fcc135de0c11df5f05782f")
+  , some (33593, "11958fa1dc6ba33caf9a680edba447ce400bbc07ab8a15cdbf4432d151170c93") ]
 -- What `r4`'s text holds: six hints of nothing and two that carry the answer, each with its
 -- type arguments, the two take loops' stated cursor type, and no bare `Deferred.make()`.
 #guard ((Effect4.Api.Author.build (mk Steps.r4)).toOption.bind fun b =>

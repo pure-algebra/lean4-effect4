@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ]
+  },
+  "files": [
+    "plainTrue.ts",
+    "plainFalse.ts",
+    "batchTrue.ts",
+    "batchFalse.ts",
+    "errorLeft.ts",
+    "errorRight.ts",
+    "stateTrue.ts",
+    "stateFalse.ts",
+    "stateFailure.ts",
+    "serviceTrue.ts",
+    "serviceFalse.ts",
+    "observe.ts"
+  ],
+  "include": []
+}

@@ -1,0 +1,16 @@
+Effect4.Codegen.PrintLeaf: 460 declarations; axiom ceiling checked
+Effect4.Codegen.Templates: 309 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.Read: 533 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.ReadPrint: 881 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.PrintReadable: 535 declarations; axiom ceiling checked
+Effect4.Laws.Codegen.PrintTyped: 1958 declarations; axiom ceiling checked
+Test.Program.BranchAuthoring: 54 declarations; axiom ceiling checked
+Test.Program.Channel: 201 declarations; axiom ceiling checked
+Test.Codegen.PrintContract: 19 declarations; axiom ceiling checked
+Test.Codegen.DefinitionsPrint: 7 declarations; axiom ceiling checked
+Test.Codegen.PayloadClasses: 37 declarations; axiom ceiling checked
+Test.Codegen.TermRows: 154 declarations; axiom ceiling checked
+Test.Program.QueueFaces: 28 declarations; axiom ceiling checked
+Test.Program.SemaphoreFaces: 28 declarations; axiom ceiling checked
+core/law import separation checked
+new battery passes the parsed proof-style check

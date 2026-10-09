@@ -1,0 +1,16 @@
+{
+  "label": "compiler-positive",
+  "argv": [
+    "node",
+    "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+    "--pretty",
+    "false",
+    "--noEmit",
+    "-p",
+    "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-npp3fn3c/tsconfig.json"
+  ],
+  "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-npp3fn3c",
+  "exitCode": 1,
+  "stdout": "../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-npp3fn3c/prelude.ts(37,31): error TS2307: Cannot find module 'effect/unstable/persistence' or its corresponding type declarations.\n../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-npp3fn3c/prelude.ts(38,29): error TS2307: Cannot find module 'effect/unstable/reactivity/Reactivity' or its corresponding type declarations.\n",
+  "stderr": ""
+}

@@ -1,0 +1,2 @@
+Produced 10 checked numeric Channel modules
+PASS: 8 numeric callers and 2 wrong-transform controls; Effect 4.0.1; tsgo 7.0.0-dev.20260629.1

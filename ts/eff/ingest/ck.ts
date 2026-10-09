@@ -482,6 +482,22 @@ class CompilerReader {
     try { head = this.name(body.callee) } catch { return undefined }
     return head === "Effect.succeed" ? p.name : undefined
   }
+  /** The boolean row has three plain thunks and introduces no binder (decisions row 218).
+   * Foreign admission keeps its former language through the separate hooks below. */
+  boolSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "CallExpression" || x.callee.type !== "Identifier" || x.callee.name !== "ifCase") return undefined
+    if (x.optional || x.typeArguments || env.includes("ifCase")) return bad("boolean decision head")
+    this.arity(x.arguments, 3)
+    const body = (arg: Ex): Expression => {
+      const fn = this.unwrap(arg)
+      if (fn.type !== "ArrowFunctionExpression" || fn.async || fn.typeParameters || fn.returnType || fn.params.length !== 0)
+        return bad("boolean decision thunk")
+      return this.expression(fn.body)
+    }
+    return { _tag: "select", scrutinee: this.term(body(this.at(x.arguments, 0)), env), decision: { _tag: "bool" },
+      arm0: this.eff(body(this.at(x.arguments, 1)), env), arm1: this.eff(body(this.at(x.arguments, 2)), env) }
+  }
+  suspendedSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
   recordSelect(x: Ex, env: readonly string[]): Eff | undefined {
     if (x.type !== "CallExpression" || x.optional || x.typeArguments || x.callee.type !== "Identifier" || x.callee.name !== "caseTagR") return undefined
     this.arity(x.arguments, 4)
@@ -494,7 +510,7 @@ class CompilerReader {
   }
   eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
-    const selected = this.recordSelect(x, env)
+    const selected = this.boolSelect(x, env) ?? this.recordSelect(x, env)
     if (selected !== undefined) return selected
     // DI-72: the three positions `deferred` names; the walk reads them as it did.
     const variable = this.variable(x, env)
@@ -524,7 +540,9 @@ class CompilerReader {
         this.arity(a, 1); const fn = this.arrow(arg(0), env, 0)
         if (fn.body.type === "BlockStatement") return this.loop(fn.body, env)
         const b = this.unwrap(fn.body)
-        if (b.type === "ConditionalExpression") return { _tag: "select", scrutinee: this.term(b.test, env), decision: { _tag: "bool" }, arm0: this.eff(b.consequent, env), arm1: this.eff(b.alternate, env) }
+        const selected = this.suspendedSelect(b, env)
+        if (selected !== undefined) return selected
+        if (b.type === "ConditionalExpression") return bad("boolean decision suspension")
         return { _tag: "suspend", body: this.eff(b, env) }
       }
       case "Effect.flatMap": this.arity(a, 2); return { _tag: "bind", first: e(0), rest: k(1) }
@@ -857,6 +875,12 @@ class ForeignCompilerReader extends CompilerReader {
     try { return super.literal(y) } catch (e) { if (e instanceof Decline) return refuseForeign("E-ARG-DYNAMIC", "literal"); throw e }
   }
   override recordTerm(_x: Ex, _env: readonly string[]): Term | undefined { return undefined }
+  override boolSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
+  override suspendedSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "ConditionalExpression") return undefined
+    return { _tag: "select", scrutinee: this.term(x.test, env), decision: { _tag: "bool" },
+      arm0: this.eff(x.consequent, env), arm1: this.eff(x.alternate, env) }
+  }
   override recordSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
   override term(x: Ex, env: readonly string[]): Term {
     const y = this.unwrap(x)
@@ -1395,6 +1419,7 @@ class ForeignCompilerReader extends CompilerReader {
         return this.segment(this.name(callee.callee), callee.arguments, this.eff(this.at(x.arguments, 0), env), env)
       }
       const h = this.name(x.callee)
+      if (h === "ifCase") return refuseForeign("E-OP-UNKNOWN", h)
       if (h === "Effect.fn" || h === "Effect.fnUntraced") return refuseForeign("E-PARAM-SHAPE", "function")
       if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return refuseForeign("E-HANDLER", h)
       if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return refuseForeign("E-ARG-CLOSURE", h)

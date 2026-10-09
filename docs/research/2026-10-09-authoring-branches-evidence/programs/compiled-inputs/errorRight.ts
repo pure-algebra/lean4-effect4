@@ -1,0 +1,5 @@
+import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from "effect"
+import { ProfileRefusal, add, and, append, caseTag, caseTagR, causeError, causeIsDie, causeIsFail, causeIsInterrupt, concat, cons, div, drop, eq, fold, fst, get, getOrElse, ifCase, isSome, isZero, ite, length, lt, mapEmpty, mapEntries, mapFromEntries, mapGet, mapKeys, mapSet, minus, mod, mul, nil, none, not, optionCase, or, pair, plus, pred, recordOptional, recordRequired, recordSet, recordValue, sameHandle, snd, some, strings, sub, succ, tagIs, take, tuple, tupleAt } from "./prelude.ts"
+export class LeftFailure extends Data.TaggedError("LeftFailure")<{ readonly code: number }> {}
+export class RightFailure extends Data.TaggedError("RightFailure")<{ readonly code: number }> {}
+export const main: Effect.Effect<number, never, never> = Effect.matchCauseEffect(ifCase(() => false, () => Effect.fail(new LeftFailure({ code: 11 })), () => Effect.fail(new RightFailure({ code: 22 }))), { onFailure: (a0) => optionCase(causeError(a0), () => Effect.succeed(998), (a1) => Effect.succeed(recordRequired<"code">("code")(a1))), onSuccess: (a0) => Effect.succeed(999) })

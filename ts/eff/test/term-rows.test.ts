@@ -171,8 +171,8 @@ describe("a loop's stated cursor type, read by the checked type reader", () => {
 describe("the Queue program r4, read from its printed module", () => {
   const text = readFileSync(resolve(import.meta.dir, "fixtures/queue-r4.module.txt"), "utf8")
   test("the fixture is the module Lean prints", () => {
-    expect(text.length).toBe(33585)
-    expect(sha256(text)).toBe("a337704b7826539b3a7837475f97f030e000a929aa1e8ed57a97da3ea9cac5b7")
+    expect(text.length).toBe(33593)
+    expect(sha256(text)).toBe("11958fa1dc6ba33caf9a680edba447ce400bbc07ab8a15cdbf4432d151170c93")
     expect(text.split("Deferred.make<void, never>()").length).toBe(7)
     expect(text.split("Deferred.make<boolean, never>()").length).toBe(3)
     expect(text.split("Option.Option<number> = none()").length).toBe(3)

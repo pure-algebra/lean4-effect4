@@ -1,0 +1,1 @@
+export const main: Effect.Effect<number, never, never> = Effect.provideService(ifCase(() => true, () => Effect.service(Context.Service<"k4_4", number>("k4_4")), () => Effect.succeed(9)), Context.Service<"k4_4", number>("k4_4"), 17)

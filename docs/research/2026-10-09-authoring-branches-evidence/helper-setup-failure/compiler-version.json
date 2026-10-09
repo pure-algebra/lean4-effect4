@@ -1,0 +1,12 @@
+{
+  "label": "compiler-version",
+  "argv": [
+    "node",
+    "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+    "--version"
+  ],
+  "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-npp3fn3c",
+  "exitCode": 0,
+  "stdout": "Version 7.0.0-dev.20260629.1\n",
+  "stderr": ""
+}

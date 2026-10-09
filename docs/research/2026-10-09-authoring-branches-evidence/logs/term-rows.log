@@ -1,0 +1,24 @@
+bun test v1.4.2 (744846f84)
+
+ts/eff/test/term-rows.test.ts:
+(pass) an operation's binder term, read from its function > each of the eight rows reads its function at the node's level [8.21ms]
+(pass) an operation's binder term, read from its function > an outer capture and a composed term, which no name spelled [0.23ms]
+(pass) an operation's binder term, read from its function > a list fold inside the term binds the two levels above the current value [0.35ms]
+(pass) an operation's binder term, read from its function > a term row needs its function, and a term-free row takes none [0.17ms]
+(pass) an operation's binder term, read from its function > the parameter is the binder due at the node's level [0.17ms]
+(pass) an operation's binder term, read from its function > a term out of scope, and a stated accumulator type inside the term, are refused [0.19ms]
+(pass) an operation's type arguments, read from the call's head > Deferred.make reads its two types at every readable instance [1.55ms]
+(pass) an operation's type arguments, read from the call's head > a bare call and another count are refused by the spelling: no instance is read at a default [0.12ms]
+(pass) an operation's type arguments, read from the call's head > a spelling with no reading is refused by name [0.13ms]
+(pass) an operation's type arguments, read from the call's head > the checked type reader keeps only what the type printer prints back [0.34ms]
+(pass) a loop's stated cursor type, read by the checked type reader > the stated type is the loop's cursor type, and no stated type is none [0.58ms]
+(pass) a loop's stated cursor type, read by the checked type reader > a stated type with no reading is refused where the declaration stands [0.61ms]
+(pass) a loop's stated cursor type, read by the checked type reader > a yielded constant states no type [0.04ms]
+(pass) the Queue program r4, read from its printed module > the fixture is the module Lean prints [3.13ms]
+(pass) the Queue program r4, read from its printed module > it reads back to the program Lean printed it from [14.91ms]
+(pass) the Queue program r4, read from its printed module > red controls: a bare Deferred.make, and a cursor type with no reading [13.96ms]
+
+ 16 pass
+ 0 fail
+ 64 expect() calls
+Ran 16 tests across 1 file. [201.00ms]

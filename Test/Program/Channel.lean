@@ -16,16 +16,14 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring Effect4.M
 abbrev protocolTy : Ty := Program.Stream.pulledTy .nat .nat
 abbrev stateTy : Ty := .refOf .nat
 
--- The current bool printer needs these producer annotations (decisions row 218).
--- The retained packet records the unannotated target refusal.
 eff_module Base where
   opened (receiver : stateTy) : stateTy := succeed receiver;
   pull (receiver : stateTy) : protocolTy :=
     bindWith (Ref.get receiver) fun count =>
       andThen (Forms.asVoid (Ref.set receiver (app "add" [count, nat 1])))
         (ifElse (app "lt" [count, nat 2])
-          (succeed (ascribe protocolTy (Effect4.Pull.chunkValue (listOf [count, app "add" [count, nat 10]]))))
-          (succeed (ascribe protocolTy (Effect4.Pull.endValue (nat 42)))));
+          (succeed (Effect4.Pull.chunkValue (listOf [count, app "add" [count, nat 10]])))
+          (succeed (Effect4.Pull.endValue (nat 42))));
   close (receiver : stateTy) : .unit :=
     bindWith (Ref.get receiver) fun count =>
       Forms.asVoid (Ref.set receiver (app "add" [count, nat 100]));

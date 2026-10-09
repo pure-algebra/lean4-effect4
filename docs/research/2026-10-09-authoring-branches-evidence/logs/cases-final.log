@@ -1,0 +1,11 @@
+✔ [318/339] Built Conform.Effect4.NormalizationInputs (1.2s)
+✔ [329/341] Built Conform.Cli.LcnfMl (3.3s)
+✔ [333/341] Built Conform.Effect4.LayoutWorld (1.3s)
+✔ [334/341] Built Conform.Effect4.LcnfSemantics (5.0s)
+✔ [335/341] Built Conform.Effect4.CompilerControls (4.5s)
+✔ [336/341] Built Conform.Effect4.TargetLeanNative (1.2s)
+✔ [338/514] Built Conform.Cli.LcnfSemantics (1.2s)
+✔ [512/514] Built Conform.Effect4.NativeMain (1.2s)
+✔ [513/514] Built Conform.Effect4.Normalization (1.7s)
+Build completed successfully (514 jobs).
+conform cases: REFUSED, exit 1; .lake/conform/cases.json

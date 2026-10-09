@@ -33,10 +33,10 @@ open Effect4 Effect4.Program Test.Program.DefinitionsControls
 #guard (Api.printModule "main" (evenOdd 7)).map
     (fun m => String.join (m.decls.map (TypeScript.Render.decl TypeScript.house0))) =
   some ("export const isEven = (a0: number): Effect.Effect<boolean, never, never> => " ++
-    "Effect.suspend(() => Effect.suspend(() => isZero(a0) ? Effect.succeed(true) : " ++
+    "Effect.suspend(() => ifCase(() => isZero(a0), () => Effect.succeed(true), () => " ++
     "isOdd(pred(a0))))\n" ++
     "export const isOdd = (a0: number): Effect.Effect<boolean, never, never> => " ++
-    "Effect.suspend(() => Effect.suspend(() => isZero(a0) ? Effect.succeed(false) : " ++
+    "Effect.suspend(() => ifCase(() => isZero(a0), () => Effect.succeed(false), () => " ++
     "isEven(pred(a0))))\n" ++
     "export const main: Effect.Effect<boolean, never, never> = isEven(7)\n")
 

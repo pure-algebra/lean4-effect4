@@ -1,0 +1,40 @@
+{
+  "effect": "4.0.0-rc.112",
+  "commands": [
+    {
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--version"
+      ],
+      "exit": 0,
+      "stdout": "Version 7.0.0-dev.20260629.1\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--noEmit",
+        "--pretty",
+        "false",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-ifcase-pinned-nyawhkxj/tsconfig.json"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "bun",
+        "--no-install",
+        "test",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-ifcase-pinned-nyawhkxj/if-case.test.ts"
+      ],
+      "exit": 0,
+      "stdout": "bun test v1.4.2 (744846f84)\n",
+      "stderr": "\nif-case.test.ts:\n(pass) condition, selected construction and selected effect wait for execution [0.58ms]\n(pass) each run reevaluates the condition and constructs only that run's selected arm [0.08ms]\n(pass) an unselected poisoned constructor never runs [0.06ms]\n(pass) selected combined failures retain the selected writes and the entire cause [0.81ms]\n\n 4 pass\n 0 fail\n 16 expect() calls\nRan 4 tests across 1 file. [83.00ms]\n"
+    }
+  ]
+}

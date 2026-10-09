@@ -653,6 +653,10 @@
       "undefined",
       "number",
       "bytes"]},
+    {"name": "Effect4.PartitionedSemaphore.countsFields", "mode": "default", "cover": ["never", "unit", "nat", "int", "string", "bool", "handle", "option", "list", "prod", "except", "exitOf", "causeOf", "fiberOf", "union", "lit", "refOf", "deferredOf", "var", "unknown", "map", "tuple", "app", "null", "undefined", "number", "bytes"], "note": "The derived record supplies its fields. Every other type answers the empty field list; no type is admitted by this projection."},
+    {"name": "Effect4.PubSub.cellFields", "mode": "default", "cover": ["never", "unit", "nat", "int", "string", "bool", "handle", "option", "list", "prod", "except", "exitOf", "causeOf", "fiberOf", "union", "lit", "refOf", "deferredOf", "var", "unknown", "map", "tuple", "app", "null", "undefined", "number", "bytes"], "note": "The derived record supplies its fields. Every other type answers the empty field list; no type is admitted by this projection."},
+    {"name": "Effect4.PubSub.subscriberFields", "mode": "default", "cover": ["never", "unit", "nat", "int", "string", "bool", "handle", "option", "list", "prod", "except", "exitOf", "causeOf", "fiberOf", "union", "lit", "refOf", "deferredOf", "var", "unknown", "map", "tuple", "app", "null", "undefined", "number", "bytes"], "note": "The derived record supplies its fields. Every other type answers the empty field list; no type is admitted by this projection."},
+    {"name": "Effect4.Stream.Source.fromDefinitions", "mode": "default", "cover": ["never", "unit", "nat", "int", "string", "bool", "handle", "option", "prod", "except", "exitOf", "causeOf", "fiberOf", "union", "lit", "refOf", "deferredOf", "var", "unknown", "record", "map", "tuple", "app", "null", "undefined", "number", "bytes"], "note": "The Chunk payload must be a list. Every other payload type refuses the supplied pull declaration at the protocol column."},
     {"name": "Effect4.Codegen.Record.readFields",
      "mode": "default",
      "cover":
