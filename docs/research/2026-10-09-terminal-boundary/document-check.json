@@ -1,0 +1,39 @@
+{
+  "language": {
+    "argv": [
+      "python3",
+      "scripts/check-language.py",
+      "--strict",
+      "docs/research/2026-10-09-terminal-boundary/README.md",
+      "docs/research/2026-10-09-terminal-boundary/GHOSTTY.md",
+      "docs/research/2026-10-09-terminal-boundary/PLAN.md"
+    ],
+    "exitCode": 0,
+    "stdout": "PASS check-language: no finding in docs/research/2026-10-09-terminal-boundary/README.md, docs/research/2026-10-09-terminal-boundary/GHOSTTY.md, docs/research/2026-10-09-terminal-boundary/PLAN.md; the other documents carry 1774 finding(s) (report: python3 scripts/check-language.py)\n",
+    "stderr": ""
+  },
+  "unfilteredWhitespace": {
+    "argv": [
+      "git",
+      "diff",
+      "--cached",
+      "--check"
+    ],
+    "exitCode": 2,
+    "stdout": "docs/research/2026-10-09-terminal-boundary/generator/producer.patch:25: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:36: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:46: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:48: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:75: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:101: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:111: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:122: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:132: trailing whitespace.\n+ \ndocs/research/2026-10-09-terminal-boundary/generator/producer.patch:132: new blank line at EOF.\n"
+  },
+  "artifactException": "Exact unified-diff context lines in generator/producer.patch only. No generated Lean file excluded.",
+  "checkedWhitespace": {
+    "argv": [
+      "git",
+      "diff",
+      "--cached",
+      "--check",
+      "--",
+      ".",
+      ":(exclude)docs/research/2026-10-09-terminal-boundary/generator/producer.patch"
+    ],
+    "exitCode": 0,
+    "stdout": ""
+  }
+}
