@@ -246,10 +246,12 @@ def omitPremises (sketch : Sketch) (name : String) (focus : Focus NativeOp) : Bo
     (Formation.check (Formation.instantiatedSites (holeRow name focus).normalizeTypes [])).isNone
 
 /-- The premises of `Sketch.check_fill_focusAt` at an answered focus: the checker admits the
-sketch, and it admits the filling at the focus's type in the focus's environment. -/
-def fillPremises (sketch : Sketch) (focus : Focus NativeOp) (filling : NativeEff) : Bool :=
+sketch, and it admits the filling at the focus's type in the focus's environment, at the
+address's signature (`Sketch.sigAt`: inside a definition block, the block's). -/
+def fillPremises (sketch : Sketch) (path : List Nat) (focus : Focus NativeOp)
+    (filling : NativeEff) : Bool :=
   (sketch.check {}).toOption.isSome &&
-    effTy (({} : SigApp).withHoles sketch.holes).signature focus.env filling == some focus.ty
+    effTy (sketch.sigAt {} path) focus.env filling == some focus.ty
 
 /-! ## The operations -/
 
@@ -312,7 +314,7 @@ def answer (req : Request) : Answer :=
         | none => refused req.op "no filling at the address" req.id
         | some filled =>
           let matched := match sketch.focusAt {} req.path with
-            | some focus => fillPremises sketch focus filling
+            | some focus => fillPremises sketch req.path focus filling
             | none => false
           done (if matched then [``Sketch.check_fill_focusAt] else [])
             (Json.mkObj [("program", .str (hexOf filled.program)),

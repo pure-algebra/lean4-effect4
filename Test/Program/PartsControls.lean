@@ -2,6 +2,7 @@ import Effect4.Run.Tape
 import Effect4.Library.Queue.Defs
 import Effect4.Api.Author
 import Effect4.Laws.Api.HostSession
+import Effect4.Program.Sketch
 
 /-!
 # The call instance inside a definition block (decisions row 333, claim `block-call-instance`)
@@ -87,5 +88,18 @@ def some1 : Api.HostSession.Answer := .ofExit (.success (.some (.nat 1)))
     (b.program.expandRefs.partAt (SigApp.signature ⟨b.table, []⟩) [] [2]).isNone,
     (b.program.expandRefs.partAt (SigApp.signature ⟨b.table, []⟩) [] [0]).isNone)) =
   some (true, true, true)
+
+/-- A filling's built program as a sketch with no hole, with its application. -/
+def sketchOf (m : Module NativeOp) : Option (Sketch × SigApp) :=
+  (builtOf m).map fun b => ({ program := b.program.expandRefs }, ⟨b.table, []⟩)
+
+-- finite evaluation (cutover slice S1): the sketch of filling 2 is admitted at its module's
+-- type, where the checker alone refuses the block (`definitionBlock`)
+#guard (sketchOf definedClient).map (fun (s, app) => ((s.check app).toOption.isSome,
+  (Checker.check app.signature [] [] s.program).toOption.isSome)) = some (true, false)
+-- finite evaluation: the focus answers at the call behind the block and at the root, and a
+-- node of the bodies' spine has none
+#guard (sketchOf definedClient).map (fun (s, app) => ((s.focusAt app [1, 1, 0]).isSome,
+  (s.focusAt app []).isSome, (s.focusAt app [0]).isSome)) = some (true, true, false)
 
 end Test.Program.PartsControls

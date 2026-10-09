@@ -78,10 +78,10 @@ def refusedAt (r : Except TypeRefusal EffTy) : Option (List Nat × String) :=
 
 /-! ## The laws at the example -/
 
-/-- **A program is a sketch (proved).** The check of the original as a sketch is the checker's
-answer on it. -/
+/-- **A program is a sketch (proved).** The check of the original as a sketch is the module
+check's answer on it. -/
 theorem original_is_a_sketch :
-    Sketch.check (original : Sketch) = Checker.check ({} : SigApp).signature [] [] original :=
+    Sketch.check (original : Sketch) = Checker.checkModule ({} : SigApp).signature original :=
   Sketch.check_program {} original
 
 /-- The hole filled by `succeed 5`, with its row left in the table. -/
@@ -95,7 +95,7 @@ theorem original_sigProgram : SigProgram ({} : SigApp).signature original :=
 the program no longer performs changes nothing. -/
 theorem filled_is_the_program :
     filled.check = Checker.check ({} : SigApp).signature [] [] original :=
-  Sketch.check_filled filled {} original_sigProgram
+  Sketch.check_filled filled {} original_sigProgram (fun _ _ _ h => by cases h)
 
 /-- **H2 at the example (proved).** A second hole is declared, and the sketch keeps its type. -/
 theorem more_holes_keep_the_type :

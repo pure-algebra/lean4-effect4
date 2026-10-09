@@ -219,7 +219,7 @@ theorem omit_first_child :
     ∃ s', (original : Sketch).omitAt {} [0] (Row.hole "h0" .nat) = some s' ∧
       s'.check = .ok numberTy := by
   obtain ⟨env, t, hq, homit⟩ := Sketch.check_omit (original : Sketch) {} original_checked
-    (path := [0]) (q := .succeed (.lit (.nat 5))) rfl
+    (path := [0]) (q := .succeed (.lit (.nat 5))) rfl (fun h => by cases h)
   have hlit : Checker.check (({} : SigApp).withHoles []).signature env []
       (.succeed (.lit (.nat 5))) = .ok numberTy := rfl
   have ht : numberTy = t := Except.ok.inj (hlit.symm.trans (hq []))
@@ -239,7 +239,7 @@ theorem fill_the_hole :
     ∃ s', (sketchAt .nat).fillAt [0] (.succeed (.lit (.nat 5))) = some s' ∧
       s'.check = .ok numberTy := by
   obtain ⟨env, t, hq, hfill⟩ := Sketch.check_fill (sketchAt .nat) {} sketch_checked
-    (path := [0]) (q := Sketch.hole {} 0) rfl
+    (path := [0]) (q := Sketch.hole {} 0) rfl (fun h => by cases h)
   have hhole : Checker.check (({} : SigApp).withHoles (sketchAt .nat).holes).signature env []
       (Sketch.hole {} 0) = .ok numberTy :=
     check_complete _ _ env _ (Sketch.hole_hasTy {} [Row.hole "h0" .nat] 0 env rfl rfl rfl

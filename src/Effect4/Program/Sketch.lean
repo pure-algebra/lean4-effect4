@@ -1,6 +1,7 @@
 import Effect4.Program.SigApp
 import Effect4.Program.Typing.Focus
 import Effect4.Program.Typing.Table
+import Effect4.Program.Typing.Parts
 
 /-!
 # Program.Sketch — a program with its hole table
@@ -24,9 +25,21 @@ read it as they read any program.
 
 ## The checker admits a sketch modulo its holes
 
-`Sketch.check` runs the checker on the program, at the application's typing signature extended
-by the hole table. At a hole the checker reads the hole's row, as it reads any host row. A
-program is a sketch with no hole, and its check is then the checker's own answer.
+`Sketch.check` runs the module check on the program (`Checker.checkModule`,
+`Program/Definitions.lean`), at the application's typing signature extended by the hole table.
+At a hole the checker reads the hole's row, as it reads any host row. A program is a sketch with
+no hole, and its check is then the module check's own answer. On a program with no definition
+block the module check is the checker's.
+
+## A sketch with a definition block
+
+A program may hold a definition block at its root (decisions row 328). The module check checks
+each body and the main program on its own, each at the block's signature and its own
+environment: these are the program's parts (`Eff.partAt`, `Program/Typing/Parts.lean`). The
+focus at an address inside a part is the focus inside that part (`programFocusAt`). The focus
+at the root is the whole program, in the empty environment, at the module check's type. The
+spine of the bodies holds no program, so it has no focus. Slice S1 of the library cutover made
+the sketch read a block so (decisions row 333's defect class).
 
 The laws are in `Laws/Program/Sketch.lean`. A hole has its declared type in every environment
 (`Sketch.hole_hasTy`). A program that performs no hole is checked the same with any hole table
@@ -146,12 +159,13 @@ table, which stands after the application's rows, on a unit request. -/
 def hole (app : SigApp) (k : Nat) : NativeEff :=
   .perform (.external (app.rows.length + k)) (.lit .unit)
 
-/-- **The check of a sketch**: the checker's answer on the program at the root, at the
-application's typing signature extended by the hole table. It answers the program's type or the
-checker's located refusal. A sketch is **admitted modulo its holes** at the type `t` when
+/-- **The check of a sketch**: the module check's answer on the program, at the application's
+typing signature extended by the hole table (`Checker.checkModule`). It answers the program's
+type or the checker's located refusal. On a program with no block it is the checker's answer at
+the root. A sketch is **admitted modulo its holes** at the type `t` when
 `s.check app = .ok t`. The checker refuses a layer reference here as it does on any program. -/
 def check (s : Sketch) (app : SigApp := {}) : Except TypeRefusal EffTy :=
-  Checker.check (app.withHoles s.holes).signature [] [] s.program
+  Checker.checkModule (app.withHoles s.holes).signature s.program
 
 /-- **Fill** an address with a program: the sketch with `q` in the place of the sub-program at
 `path`. The hole table is unchanged. When the sub-program was a hole, its row stays, and the
@@ -176,15 +190,29 @@ def omitAt (s : Sketch) (app : SigApp) (path : List Nat) (row : Row) : Option Sk
 
 /-- **The focus at an address of a sketch**: the sub-program at `path`, the types of the
 variables that it can read, and its type there, at the application's typing signature extended
-by the hole table (`focusAt`, `Program/Typing/Focus.lean`). A hole has its declared type. The
-answer is `none` when `path` is no address of a program, or when the checker refuses the
-sub-program or a sibling that its environment reads.
+by the hole table. Inside a part it is the focus in that part (`programFocusAt`,
+`Program/Typing/Parts.lean`); at the root it is the whole program at the sketch's type. A hole
+has its declared type. The answer is `none` when `path` is no address of a program, names the
+spine of a block's bodies, or when the checker refuses the sub-program or a sibling that its
+environment reads.
 
 A filling of the answered type in the answered environment keeps the sketch's type
 (`Sketch.check_fill_focusAt`, `Laws/Program/Sketch.lean`). An omission keeps it when the hole
 row declares the answered type (`Sketch.check_omit_focusAt`). -/
 def focusAt (s : Sketch) (app : SigApp) (path : List Nat) : Option (Focus NativeOp) :=
-  Effect4.Program.focusAt (app.withHoles s.holes).signature [] s.program path
+  match path with
+  | [] => (s.check app).toOption.map fun t => ⟨s.program, [], t⟩
+  | _ :: _ => programFocusAt (app.withHoles s.holes).signature [] s.program path
+
+/-- **The signature a filling at an address is checked at**: the signature of the part that
+holds the address (`Eff.partAt`, `Program/Typing/Parts.lean`). Inside a definition block it is the
+block's signature, so a filling may invoke the block's definitions. At the root, and in a program
+with no block, it is the application's typing signature extended by the hole table. A `Focus`
+records no signature, so the sketch answers it here (`Sketch.check_fill_focusAt`,
+`Laws/Program/Sketch.lean`). -/
+def sigAt (s : Sketch) (app : SigApp) (path : List Nat) : Signature NativeOp :=
+  ((s.program.partAt (app.withHoles s.holes).signature [] path).map (·.1.sig)).getD
+    (app.withHoles s.holes).signature
 
 /-- The address table of a sketch under its hole-extended signature. -/
 def table (s : Sketch) (app : SigApp := {}) : List Table.Entry :=

@@ -2,6 +2,7 @@ import Effect4.Program.Sketch
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.Typing.Replace
 import Effect4.Laws.Program.Typing.Focus
+import Effect4.Laws.Program.Typing.Parts
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -122,12 +123,13 @@ theorem SigApp.withHoles_rowOf (app : SigApp) (holes : RowTable) (k : Nat) (row 
 
 /-! ## A program is a sketch with no hole -/
 
-/-- **A program is a sketch with no hole**: the check of a program as a sketch is the checker's
-answer on it, refusals included. -/
+/-- **A program is a sketch with no hole**: the check of a program as a sketch is the module
+check's answer on it, refusals included. On a program with no block the module check is the
+checker's (`checkModule_eq_check`). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_program (app : SigApp) (e : NativeEff) :
-    Sketch.check (e : Sketch) app = Checker.check app.signature [] [] e := by
-  show Checker.check (app.withHoles []).signature [] [] e = _
+    Sketch.check (e : Sketch) app = Checker.checkModule app.signature e := by
+  show Checker.checkModule (app.withHoles []).signature e = _
   rw [SigApp.withHoles_nil]
 
 /-! ## H1: conservative -/
@@ -143,13 +145,18 @@ theorem holes_conservative (app : SigApp) (holes : RowTable) {e : NativeEff}
     Checker.check (app.withHoles holes).signature env p e = Checker.check app.signature env p e :=
   check_restrict (app.withHoles_extends holes) hp env p
 
-/-- H1 on a sketch: a sketch whose program performs no hole is checked as its program. So a
-sketch with every hole filled is an ordinary program, and the checker decides it. -/
+/-- H1 on a sketch: a sketch whose program performs no hole and holds no block is checked as
+its program. So a sketch with every hole filled is an ordinary program, and the checker decides
+it. The case of a block stays open: it needs the reads of a block's parts at the block's
+signature, and no law states them yet. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_filled (s : Sketch) (app : SigApp)
-    (hp : SigProgram app.signature s.program) :
-    s.check app = Checker.check app.signature [] [] s.program :=
-  holes_conservative app s.holes hp [] []
+    (hp : SigProgram app.signature s.program)
+    (hnb : ∀ decls bodies main, s.program ≠ .defs decls bodies main) :
+    s.check app = Checker.check app.signature [] [] s.program := by
+  show Checker.checkModule _ s.program = _
+  rw [checkModule_eq_check _ hnb]
+  exact holes_conservative app s.holes hp [] []
 
 /-! ## H2 and H3: weakening -/
 
@@ -194,8 +201,10 @@ same type. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_more_holes (s : Sketch) (app : SigApp) (more : RowTable) {t : EffTy}
     (h : s.check app = .ok t) :
-    Sketch.check { s with holes := s.holes ++ more } app = .ok t :=
-  sketch_more_holes app s.holes more h
+    Sketch.check { s with holes := s.holes ++ more } app = .ok t := by
+  show Checker.checkModule (app.withHoles (s.holes ++ more)).signature s.program = .ok t
+  rw [← SigApp.withHoles_withHoles]
+  exact checkModule_ext ((app.withHoles s.holes).withHoles_extends more) h
 
 /-! ## The hole's rule -/
 
@@ -237,108 +246,155 @@ theorem Sketch.hole_hasTy (app : SigApp) (holes : RowTable) (k : Nat) {name : St
       Requirement.ofList requires⟩ : EffTy) = _
     rw [Ty.normalize_idem, Ty.normalize_idem]
 
-/-! ## Filling and omitting: the replacement law at a sketch -/
+/-! ## The signature at an address -/
+
+/-- **An application's signature extends its block's**: a block adds rows to invocations only,
+and an application's signature keeps every invocation outside its domain. A step of
+`Sketch.sigAt_extends`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Signature.extends_withDefs {Op : Type} (sig : Signature Op)
+    (h : ∀ op k, sig.callOf op = some k → sig.dom op = false) (decls : List DefDecl) :
+    SigExtends sig (sig.withDefs decls) := by
+  refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl⟩
+  cases hc : sig.callOf op with
+  | none =>
+    exact ⟨by rw [sig.withDefs_dom_of_none decls hc]; exact hd,
+      sig.withDefs_rowOf_of_none decls hc⟩
+  | some k =>
+    rw [h op k hc] at hd
+    cases hd
+
+/-- **The signature at an address extends the sketch's**: it is the sketch's, or its block's. A
+hole keeps its declared type there, so an omission inside a block keeps the sketch's type. A
+step of `Sketch.check_omit_focusAt`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.sigAt_extends (s : Sketch) (app : SigApp) (path : List Nat) :
+    SigExtends (app.withHoles s.holes).signature (s.sigAt app path) := by
+  unfold Sketch.sigAt
+  cases hpart : s.program.partAt (app.withHoles s.holes).signature [] path with
+  | none => exact SigExtends.refl _
+  | some pr =>
+    obtain ⟨part, rest⟩ := pr
+    show SigExtends _ part.sig
+    unfold Eff.partAt at hpart
+    split at hpart
+    · split at hpart
+      · rw [Part.bodyAt_sig hpart]
+        exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) _
+      · cases hpart
+        exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) _
+      · cases hpart
+    · cases hpart
+      exact SigExtends.refl _
+
+/-- **At the root the signature is the sketch's.** A step of `Sketch.check_fill_focusAt`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.sigAt_nil (s : Sketch) (app : SigApp) :
+    s.sigAt app [] = (app.withHoles s.holes).signature := by
+  unfold Sketch.sigAt Eff.partAt
+  split <;> rfl
+
+/-- **Inside a part the signature is the part's.** A step of `Sketch.check_fill_focusAt`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.sigAt_part {s : Sketch} {app : SigApp} {path : List Nat} {part : Part NativeOp}
+    {rest : List Nat}
+    (h : s.program.partAt (app.withHoles s.holes).signature [] path = some (part, rest)) :
+    s.sigAt app path = part.sig := by
+  unfold Sketch.sigAt
+  rw [h]
+  rfl
+
+/-- The focus at the root is the whole program at the sketch's type. A step of
+`Sketch.check_fill_focusAt`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.focusAt_nil {s : Sketch} {app : SigApp} {T : EffTy} (hs : s.check app = .ok T) :
+    s.focusAt app [] = some ⟨s.program, [], T⟩ := by
+  show (s.check app).toOption.map _ = _
+  rw [hs]
+  rfl
+
+/-! ## Filling and omitting at the focus: the replacement law at a sketch -/
 
 /-- The fill at an address where the program's replacement exists: the sketch with the
-replaced program. A step of `typed-replacement`: `Sketch.check_fill` reads it. -/
+replaced program. A step of `typed-replacement`: `Sketch.check_fill_focusAt` reads it. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.fillAt_of_replaceAt {s : Sketch} {path : List Nat} {q program : NativeEff}
     (h : (Node.eff s.program).replaceAt path (.eff q) = some (.eff program)) :
     s.fillAt path q = some { s with program := program } := by
   simp only [Sketch.fillAt, h, Option.bind_some, Node.eff?, Option.map_some]
 
-/-- **Filling keeps the type, and the filling alone is checked.** A sketch that the checker
-admits splits at an address of a program into an environment and a type of the focus. Every
-program that the checker admits at that type in that environment fills the address, and the
-checker admits the filled sketch at the same type. The filling may declare more holes: `more`
-is appended to the hole table. A consumer of `typed-replacement`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
-    {q : NativeEff} (hs : s.check app = .ok T)
-    (hat : (Node.eff s.program).at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy),
-      (∀ pq, Checker.check (app.withHoles s.holes).signature env pq q = .ok t) ∧
-      ∀ (more : RowTable) {q' : NativeEff} {pq : List Nat},
-        Checker.check (app.withHoles (s.holes ++ more)).signature env pq q' = .ok t →
-        ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
-          s'.check app = .ok T := by
-  obtain ⟨env, t, hq, hfill⟩ := check_replace hs hat
-  refine ⟨env, t, hq, fun more {q' pq} hq' => ?_⟩
-  have hext : SigExtends (app.withHoles s.holes).signature
-      (app.withHoles (s.holes ++ more)).signature := by
-    rw [← SigApp.withHoles_withHoles]
-    exact (app.withHoles s.holes).withHoles_extends more
-  obtain ⟨p', hrep, hp'⟩ := hfill hext hq'
-  exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, hp' []⟩
-
-/-- **Omitting keeps the type, where a hole row declares the focus's type exactly.** A sketch
-that the checker admits splits at an address of a program into an environment and a type `t` of
-the focus. When `t` has closed columns, an answer and an error in normal form, and formed
-columns, the omission with the hole row that declares `t` exists, and the checker admits it at
-the same type. The premises are the hole's rule's (`Sketch.hole_hasTy`), and the two on normal
-form: a hole row is read in normal form, and the checker gives a node the raw type of its term.
-A consumer of `typed-replacement`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
-    {q : NativeEff} (hs : s.check app = .ok T)
-    (hat : (Node.eff s.program).at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy),
-      (∀ pq, Checker.check (app.withHoles s.holes).signature env pq q = .ok t) ∧
-      ∀ (name : String), t.answer.closed = true → t.error.closed = true →
-        t.answer.normalize = t.answer → t.error.normalize = t.error →
-        Formation.Formed (Formation.instantiatedSites
-          (Row.hole name t.answer t.error t.requires.elems).normalizeTypes []) →
-        ∃ s', s.omitAt app path (Row.hole name t.answer t.error t.requires.elems) = some s' ∧
-          s'.check app = .ok T := by
-  obtain ⟨env, t, hq, hfill⟩ := Sketch.check_fill s app hs hat
-  refine ⟨env, t, hq, fun name hans herr hansN herrN formed => ?_⟩
-  have hhole := Sketch.hole_hasTy app
-    (s.holes ++ [Row.hole name t.answer t.error t.requires.elems]) s.holes.length env
-    List.getElem?_concat_length hans herr formed
-  have hreq : Requirement.ofList t.requires.elems = t.requires :=
-    Row.normalize_of_ascending t.requires.elems t.requires.ascending
-  rw [hansN, herrN, hreq] at hhole
-  exact hfill [Row.hole name t.answer t.error t.requires.elems] (pq := [])
-    (check_complete _ _ env t hhole [])
-
-/-! ## The two edits at the focus that the function answers -/
-
 /-- **The focus function answers at every address of a program** of a sketch that the checker
-admits: the sub-program there, with an environment and a type. A consumer of
-`focus-function`. -/
+admits: the sub-program there, with an environment and a type. At the root it is the whole
+program; inside a definition block it is the focus in the part that holds the address
+(`checkModule_programFocusAt`). A consumer of `focus-function`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {q : NativeEff} (hs : s.check app = .ok T)
     (hat : (Node.eff s.program).at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy), s.focusAt app path = some ⟨q, env, t⟩ :=
-  Effect4.Program.check_focusAt hs hat
+    ∃ (env : TyEnv) (t : EffTy), s.focusAt app path = some ⟨q, env, t⟩ := by
+  cases path with
+  | nil =>
+    cases hat
+    exact ⟨[], T, Sketch.focusAt_nil hs⟩
+  | cons i r =>
+    have hsm : Checker.checkModule (app.withHoles s.holes).signature s.program = .ok T := hs
+    exact checkModule_programFocusAt hsm hat
 
 /-- **Filling at the answered focus keeps the type.** In a sketch that the checker admits, take
 the focus that `Sketch.focusAt` answers at an address. Every program that the checker admits at
-the focus's type in the focus's environment fills the address, and the checker admits the filled
-sketch at the same type. The filling may declare more holes: `more` is appended to the hole
-table. Nothing is existential: a tool computes the focus and checks its filling against it. A
-consumer of `focus-function`. -/
+the focus's type, in the focus's environment and at the address's signature (`Sketch.sigAt`),
+fills the address, and the checker admits the filled sketch at the same type. Inside a
+definition block the address's signature is the block's, so the filling may invoke the block's
+definitions. The filling may declare more holes: `more` is appended to the hole table. Nothing is
+existential: a tool computes the focus and checks its filling against it. A consumer of
+`focus-function`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_fill_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
     (more : RowTable) {q' : NativeEff} {pq : List Nat}
-    (hq' : Checker.check (app.withHoles (s.holes ++ more)).signature f.env pq q' = .ok f.ty) :
+    (hq' : Checker.check (Sketch.sigAt { s with holes := s.holes ++ more } app path) f.env pq q' =
+      .ok f.ty) :
     ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
       s'.check app = .ok T := by
   have hext : SigExtends (app.withHoles s.holes).signature
       (app.withHoles (s.holes ++ more)).signature := by
     rw [← SigApp.withHoles_withHoles]
     exact (app.withHoles s.holes).withHoles_extends more
-  obtain ⟨p', hrep, hp'⟩ := check_replace_focusAt hs hf hext hq'
-  exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, hp' []⟩
+  cases path with
+  | nil =>
+    rw [Sketch.focusAt_nil hs] at hf
+    cases hf
+    rw [Sketch.sigAt_nil] at hq'
+    have hd := check_sound _ q' [] pq T hq'
+    have hnb : ∀ decls bodies main, q' ≠ .defs decls bodies main := fun _ _ _ heq => by
+      subst heq
+      cases hd
+    have hrep : (Node.eff s.program).replaceAt [] (.eff q') = some (.eff q') := by
+      rw [Node.replaceAt]
+      exact if_pos (rfl : (Node.eff q').ctorIdx = (Node.eff s.program).ctorIdx)
+    refine ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, ?_⟩
+    show Checker.checkModule _ q' = _
+    rw [checkModule_eq_check _ hnb]
+    exact check_complete _ q' [] T hd []
+  | cons i r =>
+    have hsm : Checker.checkModule (app.withHoles s.holes).signature s.program = .ok T := hs
+    have hfp : programFocusAt (app.withHoles s.holes).signature [] s.program (i :: r) = some f :=
+      hf
+    have hfb := hfp
+    unfold programFocusAt at hfb
+    obtain ⟨⟨part, rest⟩, hpart, -⟩ := Option.bind_eq_some_iff.mp hfb
+    obtain ⟨part', hpart'⟩ :=
+      Eff.partAt_resig (s' := (app.withHoles (s.holes ++ more)).signature) hpart
+    rw [Sketch.sigAt_part (s := { s with holes := s.holes ++ more }) hpart'] at hq'
+    obtain ⟨p', hrep, hp'⟩ := checkModule_replace_programFocusAt hsm hfp hext hpart' hq'
+    exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, hp'⟩
 
 /-- **Omitting at the answered focus keeps the type.** In a sketch that the checker admits, take
 the focus that `Sketch.focusAt` answers at an address. When its type has closed columns, an
 answer and an error in normal form, and formed columns, the omission with the hole row that
 declares that type exists, and the checker admits it at the same type. Each premise is on the
-answered type, so a tool can decide it. They are the premises of `Sketch.check_omit`. A consumer
-of `focus-function`. -/
+answered type, so a tool can decide it. The hole has its declared type at the address's
+signature too (`Sketch.sigAt_extends`). A consumer of `focus-function`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_omit_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
@@ -356,6 +412,82 @@ theorem Sketch.check_omit_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path 
   rw [hansN, herrN, hreq] at hhole
   exact Sketch.check_fill_focusAt s app hs hf
     [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems] (pq := [])
-    (check_complete _ _ f.env f.ty hhole [])
+    (check_complete _ _ f.env f.ty (hasTy_ext (Sketch.sigAt_extends
+      { s with holes := s.holes ++ [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems] }
+      app path) hhole) [])
+
+/-! ## Filling and omitting at an address -/
+
+/-- **Filling keeps the type, and the filling alone is checked.** A sketch that the checker
+admits splits at an address of a program into an environment and a type of the focus, at the
+address's signature (`Sketch.sigAt`). Every program that the checker admits at that type in that
+environment fills the address, and the checker admits the filled sketch at the same type. The
+filling may declare more holes: `more` is appended to the hole table. The root of a definition
+block is no such address: the checker refuses a block as a sub-program, so the premise `hroot`
+leaves it out. A consumer of `typed-replacement`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {q : NativeEff} (hs : s.check app = .ok T)
+    (hat : (Node.eff s.program).at_ path = some (.eff q))
+    (hroot : path = [] → ∀ decls bodies main, s.program ≠ .defs decls bodies main) :
+    ∃ (env : TyEnv) (t : EffTy),
+      (∀ pq, Checker.check (s.sigAt app path) env pq q = .ok t) ∧
+      ∀ (more : RowTable) {q' : NativeEff} {pq : List Nat},
+        Checker.check (Sketch.sigAt { s with holes := s.holes ++ more } app path) env pq q' =
+          .ok t →
+        ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
+          s'.check app = .ok T := by
+  obtain ⟨env, t, hf⟩ := Sketch.check_focusAt s app hs hat
+  refine ⟨env, t, fun pq => ?_, fun more {q' pq} hq' => Sketch.check_fill_focusAt s app hs hf more hq'⟩
+  cases path with
+  | nil =>
+    cases hat
+    rw [Sketch.focusAt_nil hs] at hf
+    cases hf
+    rw [Sketch.sigAt_nil]
+    have hsm : Checker.checkModule (app.withHoles s.holes).signature s.program = .ok T := hs
+    rw [checkModule_eq_check _ (hroot rfl)] at hsm
+    exact check_complete _ _ [] T (check_sound _ _ [] [] T hsm) pq
+  | cons i r =>
+    have hfp : programFocusAt (app.withHoles s.holes).signature [] s.program (i :: r) =
+        some ⟨q, env, t⟩ := hf
+    unfold programFocusAt at hfp
+    obtain ⟨⟨part, rest⟩, hpart, hfoc⟩ := Option.bind_eq_some_iff.mp hfp
+    rw [Sketch.sigAt_part hpart]
+    exact check_complete _ _ env t (focusAt_typed hfoc).2 pq
+
+/-- **Omitting keeps the type, where a hole row declares the focus's type exactly.** A sketch
+that the checker admits splits at an address of a program into an environment and a type `t` of
+the focus. When `t` has closed columns, an answer and an error in normal form, and formed
+columns, the omission with the hole row that declares `t` exists, and the checker admits it at
+the same type. The premises are the hole's rule's (`Sketch.hole_hasTy`), and the two on normal
+form: a hole row is read in normal form, and the checker gives a node the raw type of its term.
+The root of a definition block is left out, as in `Sketch.check_fill`. A consumer of
+`typed-replacement`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {q : NativeEff} (hs : s.check app = .ok T)
+    (hat : (Node.eff s.program).at_ path = some (.eff q))
+    (hroot : path = [] → ∀ decls bodies main, s.program ≠ .defs decls bodies main) :
+    ∃ (env : TyEnv) (t : EffTy),
+      (∀ pq, Checker.check (s.sigAt app path) env pq q = .ok t) ∧
+      ∀ (name : String), t.answer.closed = true → t.error.closed = true →
+        t.answer.normalize = t.answer → t.error.normalize = t.error →
+        Formation.Formed (Formation.instantiatedSites
+          (Row.hole name t.answer t.error t.requires.elems).normalizeTypes []) →
+        ∃ s', s.omitAt app path (Row.hole name t.answer t.error t.requires.elems) = some s' ∧
+          s'.check app = .ok T := by
+  obtain ⟨env, t, hq, hfill⟩ := Sketch.check_fill s app hs hat hroot
+  refine ⟨env, t, hq, fun name hans herr hansN herrN formed => ?_⟩
+  have hhole := Sketch.hole_hasTy app
+    (s.holes ++ [Row.hole name t.answer t.error t.requires.elems]) s.holes.length env
+    List.getElem?_concat_length hans herr formed
+  have hreq : Requirement.ofList t.requires.elems = t.requires :=
+    Row.normalize_of_ascending t.requires.elems t.requires.ascending
+  rw [hansN, herrN, hreq] at hhole
+  exact hfill [Row.hole name t.answer t.error t.requires.elems] (pq := [])
+    (check_complete _ _ env t (hasTy_ext (Sketch.sigAt_extends
+      { s with holes := s.holes ++ [Row.hole name t.answer t.error t.requires.elems] }
+      app path) hhole) [])
 
 end Effect4.Program
