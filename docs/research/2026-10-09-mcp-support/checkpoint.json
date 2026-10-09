@@ -1,0 +1,51 @@
+{
+  "checkedAtUtc": "2026-10-09T18:36:43.851573+00:00",
+  "designCommit": "c4b6b795638399fcbd6026630c05afb8bd75b268",
+  "reviewedCommit": "28ed6727e1979b544a4d9c619cc837509511c0b6",
+  "evidence": "finite Lean and JavaScript controls; no new theorem or production repair",
+  "counts": {
+    "session": 20,
+    "schema": 21,
+    "javascript": 4
+  },
+  "allExpectedObservationsMatched": true,
+  "nodeVersion": "v22.23.2",
+  "trackedProductionChangesSinceReviewedCommit": [],
+  "openDesignCorrections": {
+    "MCR-1": "Separate structural schema validity from carrier codec admission.",
+    "MCR-2": "Include application context in snapshot identity; retain history separately.",
+    "MCR-3": "Specify checked script refusal and root publication above the raw edit fold.",
+    "MCR-4": "Separate syntactic commutation from checked replay; specify hole permutations.",
+    "MCR-5": "Use the correct declaration law, dependency projection and runtime data provider."
+  },
+  "proposedObligations": [
+    "O1",
+    "O2",
+    "O3",
+    "O4",
+    "O5",
+    "O6",
+    "O7",
+    "O8",
+    "O9",
+    "author-transport-agrees",
+    "author-publish-base"
+  ],
+  "limitations": [
+    "The custom schema validator is not an independent external JSON Schema client.",
+    "No TypeScript compiler, MCP server, HTTP adapter or full axiom sweep runs.",
+    "Existing laws retain their premises; this receipt changes no registry status."
+  ],
+  "sha256": {
+    "SessionControls.lean": "479ae77decffa6a6fceaf5fd1931d96e62efe495295f1304106db2ac6f2a4944",
+    "session-output.json": "79a0102e321a9027ebaab6fdc0cee757fcad3ac1e3ca589f7489e4d8014fed22",
+    "SchemaControls.lean": "0cb2a5ae670c5cda4a0aa1d8fa640057b01f431e053c0f5eb89d37c971be665c",
+    "schema-controls-tail.lean": "0cb1a7a700919929d5bd1fd6fd85eb0f736f905ef48899928e6848ef1e858090",
+    "schema-output.json": "17908dbbc5561ed68706ba30b7e89f65a20aeade84892a54347bc9bb97b347b9",
+    "prepare-schema.py": "fc3859e33cb5fb154f0eb69304c4ca8b4101c026b958191e3c689668af8656fa",
+    "schema-source.json": "e3dcf9a573f569a090cdee0618e275841f9d59ee6fe15e4f2be938ff1918dfce",
+    "number-controls.mjs": "648d3af1c4a8da38d78af6235e6e28ccc4a5708c69b4cba95233aef07052bd09",
+    "number-output.json": "92de1c45033f2cae2cd32ce9b8ae68f3df7720571c7fdea14db73a1f467356eb",
+    "check.py": "9a6db5bafa493ccbbb69c06d5e645f347a567684bbfab783bc04f946af97f099"
+  }
+}
