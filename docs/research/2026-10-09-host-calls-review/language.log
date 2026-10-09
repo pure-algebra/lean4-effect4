@@ -1,0 +1,1 @@
+PASS check-language: no finding in docs/research/2026-10-09-host-calls-review/README.md, docs/research/2026-10-09-host-calls-review/PLAN.md; the other documents carry 1770 finding(s) (report: python3 scripts/check-language.py)

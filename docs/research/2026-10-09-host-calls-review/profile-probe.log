@@ -1,0 +1,18 @@
+{
+  "actualTyImports": [],
+  "expectedTyImports": [
+    "Effect4.Data.Row",
+    "Effect4.Data.FieldOrder",
+    "Effect4.Program.TyEq",
+    "Effect4.Program.TyVariance"
+  ],
+  "plainControl": [
+    "Effect4.Data.Row",
+    "Effect4.Data.FieldOrder",
+    "Effect4.Program.TyEq",
+    "Effect4.Program.TyVariance"
+  ],
+  "publicControl": [],
+  "headerControl": []
+}
+PASS: four bounded controls reproduce omitted public imports and block-header imports.

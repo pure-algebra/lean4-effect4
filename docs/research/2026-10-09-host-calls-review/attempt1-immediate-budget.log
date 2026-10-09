@@ -1,0 +1,7 @@
+(false, true, 4, [])
+(true, false, 6, [])
+docs/research/2026-10-09-host-calls-review/ImmediateBudget.lean:41:0: error: Expression
+  decide
+    ((RunMachine.fiber? (step immediate Api.flush) Api.root).bind RunFiber.exit =
+      (RunMachine.fiber? parked Api.root).bind RunFiber.exit)
+did not evaluate to `true`

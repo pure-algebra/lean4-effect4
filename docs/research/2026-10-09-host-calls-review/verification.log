@@ -1,0 +1,11 @@
+{
+  "sourceFilesMatchedAtCodeAndNoteCommits": 25,
+  "evidenceFilesMatched": 18,
+  "assertions": {
+    "Probe.lean": 9,
+    "ImmediateBudget.lean": 6,
+    "ProfileProbe.py": 4
+  },
+  "languageCheck": "passed",
+  "noteLanding": "673fd9dea4e8551a9c221c176c6d46169f4d18c2"
+}

@@ -1,0 +1,16 @@
+some (true, true, true, true, false, 0, true, some 1)
+some (true, true, true, true, true, 1, true, some 1)
+some (true, true, true, true, true, 1, false, none)
+some (true, 1, true, true)
+some { waitingBeforeBind := 1,
+  activeBeforeBind := 0,
+  nextBeforeBind := 0,
+  activeAfter := 0,
+  pendingAfter := 0,
+  consumedAfter := [0],
+  originAfterAbsent := true,
+  retiredPayloadKept := true,
+  secondApply := Effect4.Api.HostSession.Phase.refused (Effect4.Api.HostSession.Refusal.noCall),
+  replaySnapshotApply := Effect4.Api.HostSession.Phase.applied }
+(true, false, 3, 6)
+some ([0, 1], [1, 0], [0, 1])

@@ -1,0 +1,17 @@
+[
+  {
+    "command": "LEAN_NUM_THREADS=3 lake build Effect4.Api.Author Effect4.Laws.Api.SessionMeaning",
+    "exitCode": 0,
+    "elapsedSeconds": 0.71
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-host-calls-review/Probe.lean",
+    "exitCode": 1,
+    "elapsedSeconds": 6.35
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-host-calls-review/Probe.lean",
+    "exitCode": 0,
+    "elapsedSeconds": 6.03
+  }
+]
