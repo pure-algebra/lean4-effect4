@@ -1,0 +1,48 @@
+Tools.Explain: 223 declarations; 41 reach Classical.choice
+choice: Tools.Explain.authored
+choice: Tools.Explain.boolOf?
+choice: Tools.Explain.canonicalJson
+choice: Tools.Explain.elabExplain
+choice: Tools.Explain.elabExplainJson
+choice: Tools.Explain.elabExplainSchema
+choice: Tools.Explain.elabObligations
+choice: Tools.Explain.elabObligationsJson
+choice: Tools.Explain.explain
+choice: Tools.Explain.explainSyntax
+choice: Tools.Explain.inTree
+choice: Tools.Explain.kindOf
+choice: Tools.Explain.natOf?
+choice: Tools.Explain.natOf?._f
+choice: Tools.Explain.natOf?._sunfold
+choice: Tools.Explain.natOf?._unsafe_rec
+choice: Tools.Explain.neighbours
+choice: Tools.Explain.obligations
+choice: Tools.Explain.obligationsOf
+choice: Tools.Explain.optionNatOf?
+choice: Tools.Explain.render
+choice: Tools.Explain.schemaText
+choice: Tools.Explain.standingOf
+choice: Tools.Explain.statementOf
+choice: Tools.Explain.stepFacts?
+choice: Tools.Explain.stringsOf?
+choice: Tools.Explain.stringsOf?._f
+choice: Tools.Explain.stringsOf?._sunfold
+choice: Tools.Explain.stringsOf?._unsafe_rec
+choice: Tools.Explain.tyText
+choice: Tools.Explain.tyText._f
+choice: Tools.Explain.tyText._sunfold
+choice: Tools.Explain.tyText._unsafe_rec
+choice: Tools.Explain.tyText.fieldsText
+choice: Tools.Explain.tyText.fieldsText._f
+choice: Tools.Explain.tyText.fieldsText._sunfold
+choice: Tools.Explain.tyText.fieldsText._unsafe_rec
+choice: Tools.Explain.tyText.itemsText
+choice: Tools.Explain.tyText.itemsText._f
+choice: Tools.Explain.tyText.itemsText._sunfold
+choice: Tools.Explain.tyText.itemsText._unsafe_rec
+Tools.Explain.canonicalJson: some ([propext, Quot.sound, Classical.choice])
+Tools.Explain.schemaText: some ([propext, Quot.sound, Classical.choice])
+Tools.Explain.render: some ([propext, Quot.sound, Classical.choice])
+Tools.Explain.explain: some ([propext, Quot.sound, Classical.choice])
+Tools.Explain.Explanation.text: some ([propext])
+Tools.Explain.elabExplain: some ([propext, Quot.sound, Classical.choice])

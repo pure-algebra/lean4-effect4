@@ -1,0 +1,47 @@
+base 01c83fbc0f319999faf9a9ab306137a95f6dd303
+move groups {'shared-laws': 17, 'core-model': 5, 'library-laws': 31, 'core-library': 22, 'core-step': 6} total 81
+meta import lines missed by import/public-import-only rewrite: 12
+  src/Effect4/Modules/Latch/Registration.lean : meta import Effect4.Modules.Step.Elab
+  src/Effect4/Modules/Latch/Registration.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Latch/Steps.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Pool/Data.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Pool/Passes.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Pool/Steps.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Queue/Data.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Queue/Data.lean : public meta import Effect4.Modules.Step.Elab
+  src/Effect4/Modules/Queue/Steps.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Semaphore/Data.lean : meta import Effect4.Modules.Step.Elab.Inputs
+  src/Effect4/Modules/Semaphore/Data.lean : meta import Effect4.Modules.Step.Elab
+  src/Effect4/Modules/Semaphore/Steps.lean : meta import Effect4.Modules.Step.Elab.Inputs
+non-import module references in gate and registry: 28
+  Test/Audit/AxiomGate.lean : Effect4.Modules.Step.Elab => Effect4.Step.Elab
+  Test/Audit/AxiomGate.lean : Effect4.Modules.Step.Elab.Inputs => Effect4.Step.Elab.Inputs
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Typing => Effect4.Laws.Library.Queue.Typing
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Checking => Effect4.Laws.Step.Checking
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Ascribe => Effect4.Laws.Step.Ascribe
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Waiting => Effect4.Laws.Step.Waiting
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Pool.Typing => Effect4.Laws.Library.Pool.Typing
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Pool.Profile => Effect4.Laws.Library.Pool.Profile
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Semaphore.Typing => Effect4.Laws.Library.Semaphore.Typing
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Semaphore.Profile => Effect4.Laws.Library.Semaphore.Profile
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Invariant => Effect4.Laws.Library.Queue.Invariant
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Capacity => Effect4.Laws.Library.Queue.Capacity
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Profile => Effect4.Laws.Library.Queue.Profile
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Table => Effect4.Laws.Step.Table
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Reading => Effect4.Laws.Step.Reading
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Store => Effect4.Laws.Step.Store
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Relation => Effect4.Laws.Library.Queue.Relation
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Reading => Effect4.Laws.Library.Queue.Reading
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Steps => Effect4.Laws.Library.Queue.Steps
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Queue.Ops => Effect4.Laws.Library.Queue.Ops
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Pool.Relation => Effect4.Laws.Library.Pool.Relation
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Pool.Reading => Effect4.Laws.Library.Pool.Reading
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Pool.Steps => Effect4.Laws.Library.Pool.Steps
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Pool.Ops => Effect4.Laws.Library.Pool.Ops
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Semaphore.Relation => Effect4.Laws.Library.Semaphore.Relation
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Semaphore.Reading => Effect4.Laws.Library.Semaphore.Reading
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Semaphore.Steps => Effect4.Laws.Library.Semaphore.Steps
+  tools/Tools/SemanticsRegistry.lean : Effect4.Laws.Modules.Semaphore.Ops => Effect4.Laws.Library.Semaphore.Ops
+Stream model theorem declarations: ['Cursor.drain_ended', 'Cursor.drain_chunks', 'Cursor.collects']
+positive controls: four header forms rewrite once, then stay unchanged
+negative controls: legacy pattern misses meta headers; declaration references stay unchanged
