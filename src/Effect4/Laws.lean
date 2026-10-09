@@ -40,6 +40,7 @@ import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.Agreement.Calls
+import Effect4.Laws.Program.Agreement.Hosted
 import Effect4.Laws.Program.MeaningEq
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR

@@ -18,10 +18,12 @@ makes, and the packet's theorem `run_eq_meaning` follows over `Api.run`.
 
 Three invariants carry the simulation, all decidable:
 
-* `PlainCode`/`PlainFrame`: the primitives and frames a straight-line program compiles to
-  and the hooks of `interpAt root []` answer with — no park and no `withFiber`, so the loop's
-  fiber-level arms (`Fibers.lean:771-853`) never fire and `evaluatePrim` is the local step
-  (`evaluatePrim_localStep`), the `onExit` frame's finalizer program included;
+* `PlainCode`/`PlainFrame`: the primitives and frames a program of the fragment with host calls
+  (`LoopedRows`) compiles to and the hooks of `interpAt root []` answer with — no `withFiber`
+  and no park but a host call's (`IsCall`), so off a host call the loop's fiber-level arms
+  (`Fibers.lean:771-853`) never fire and `evaluatePrim` is the local step
+  (`evaluatePrim_localStep`), the `onExit` frame's finalizer program included. A host call
+  parks the root; `Agreement/Hosted.lean` takes it from there;
 * `Quiet`: the stores owe no resume, so `Cmd.drainDue` changes nothing — a straight-line
   program never registers a waiter, and a completion with no waiter owes nothing;
 * the op count is what the yield watches: under `defaultBudget` no yield is injected, and
@@ -44,15 +46,143 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 -- reads no row; a table changes only an external registration and its answer.
 variable {table : RowTable}
 
+/-! ## The fragment with host calls -/
+
+/-- **The loop-bearing fragment with host calls**: `Looped`'s clauses, with a call of a host
+row and `catchIf`, the two forms `StraightRows` adds to `Straight`. Every constructor is named,
+as in `Looped`. -/
+def LoopedRows : NativeEff → Bool
+  | .succeed _ => true
+  | .fail _ => true
+  | .failCause _ => true
+  | .sync _ => true
+  | .perform op _ =>
+    match op with
+    | .external _ => true
+    | _ => match op.kind with
+      | .sync => true
+      | _ => false
+  | .iterate _ _ _ _ _ body => LoopedRows body
+  | .suspend b => LoopedRows b
+  | .bind a b => LoopedRows a && LoopedRows b
+  | .select _ _ a b => LoopedRows a && LoopedRows b
+  | .exit b => LoopedRows b
+  | .catchCause b h => LoopedRows b && LoopedRows h
+  | .catchIf _ b h => LoopedRows b && LoopedRows h
+  | .matchCause b v c => LoopedRows b && LoopedRows v && LoopedRows c
+  | .onExit b f => LoopedRows b && LoopedRows f
+  | .gen _ => false
+  | .uninterruptible _ => false
+  | .interruptible _ => false
+  | .yieldNow _ => false
+  | .awaitFiber _ _ => false
+  | .withFiber _ => false
+  | .scoped _ => false
+  | .acquireRelease _ _ => false
+  | .provideLayer _ _ _ => false
+  | .service _ => false
+  | .provideService _ _ _ => false
+  | .restore _ _ => false
+  | .defs _ _ _ => false
+
+/-- The loop-bearing fragment lies inside it. -/
+theorem LoopedRows.of_looped : ∀ (e : NativeEff), Looped e = true → LoopedRows e = true
+  | .succeed _, _ | .fail _, _ | .failCause _, _ | .sync _, _ => rfl
+  | .perform op _, h => by
+    cases op with
+    | external _ => rfl
+    | _ => exact h
+  | .iterate _ _ _ _ _ b, h => LoopedRows.of_looped b (Looped.iterate h)
+  | .suspend b, h => LoopedRows.of_looped b (Looped.suspend h)
+  | .bind a b, h => by
+    simp only [LoopedRows, LoopedRows.of_looped a (Looped.bind h).1, LoopedRows.of_looped b (Looped.bind h).2,
+      Bool.and_self]
+  | .select _ _ a b, h => by
+    simp only [LoopedRows, LoopedRows.of_looped a (Looped.select h).1, LoopedRows.of_looped b (Looped.select h).2,
+      Bool.and_self]
+  | .exit b, h => LoopedRows.of_looped b (Looped.exit h)
+  | .catchCause b h', h => by
+    simp only [LoopedRows, LoopedRows.of_looped b (Looped.catchCause h).1,
+      LoopedRows.of_looped h' (Looped.catchCause h).2, Bool.and_self]
+  | .matchCause b v c, h => by
+    simp only [LoopedRows, LoopedRows.of_looped b (Looped.matchCause h).1,
+      LoopedRows.of_looped v (Looped.matchCause h).2.1, LoopedRows.of_looped c (Looped.matchCause h).2.2,
+      Bool.and_self]
+  | .onExit b f, h => by
+    simp only [LoopedRows, LoopedRows.of_looped b (Looped.onExit h).1, LoopedRows.of_looped f (Looped.onExit h).2,
+      Bool.and_self]
+  | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h | .awaitFiber _ _, h
+  | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h | .provideLayer _ _ _, h | .service _, h
+  | .provideService _ _ _, h | .catchIf _ _ _, h | .restore _ _, h | .defs _ _ _, h => by
+    simp only [Looped, Bool.false_eq_true] at h
+
+theorem LoopedRows.bind {a b : NativeEff} (h : LoopedRows (.bind a b) = true) :
+    LoopedRows a = true ∧ LoopedRows b = true := by
+  simpa only [LoopedRows, Bool.and_eq_true] using h
+
+theorem LoopedRows.select {t : Term} {d : Decision} {a b : NativeEff}
+    (h : LoopedRows (.select t d a b) = true) : LoopedRows a = true ∧ LoopedRows b = true := by
+  simpa only [LoopedRows, Bool.and_eq_true] using h
+
+theorem LoopedRows.catchCause {b h' : NativeEff} (h : LoopedRows (.catchCause b h') = true) :
+    LoopedRows b = true ∧ LoopedRows h' = true := by
+  simpa only [LoopedRows, Bool.and_eq_true] using h
+
+theorem LoopedRows.catchIf {t : Term} {b h' : NativeEff} (h : LoopedRows (.catchIf t b h') = true) :
+    LoopedRows b = true ∧ LoopedRows h' = true := by
+  simpa only [LoopedRows, Bool.and_eq_true] using h
+
+theorem LoopedRows.matchCause {b v c : NativeEff} (h : LoopedRows (.matchCause b v c) = true) :
+    LoopedRows b = true ∧ LoopedRows v = true ∧ LoopedRows c = true := by
+  simpa only [LoopedRows, Bool.and_eq_true, and_assoc] using h
+
+theorem LoopedRows.onExit {b f : NativeEff} (h : LoopedRows (.onExit b f) = true) :
+    LoopedRows b = true ∧ LoopedRows f = true := by
+  simpa only [LoopedRows, Bool.and_eq_true] using h
+
+theorem LoopedRows.exit {b : NativeEff} (h : LoopedRows (.exit b) = true) : LoopedRows b = true := h
+
+/-- A call of a row that is no host's is a call of `Straight`. -/
+theorem LoopedRows.straight_perform {op : NativeOp} {r : Term}
+    (hl : LoopedRows (.perform op r) = true) (hop : ∀ j, op ≠ .external j) :
+    Straight (.perform op r) = true := by
+  cases op with
+  | external j => exact absurd rfl (hop j)
+  | _ => exact hl
+
+/-- Where the fragment meets the heads whose suspension body the compile decides itself: a
+source suspension, a decision, and a loop; a host call and `catchIf` are none. -/
+theorem LoopedRows.suspendDecided_iff {e : NativeEff} (hl : LoopedRows e = true) :
+    e.suspendDecided = true ↔
+      (∃ b, e = .suspend b) ∨ (∃ s d a b, e = .select s d a b) ∨
+        (∃ c i t st r b, e = .iterate c i t st r b) := by
+  cases e with
+  | perform op r =>
+    cases op <;> simp only [LoopedRows, NativeOp.kind, Eff.suspendDecided, Bool.false_eq_true,
+      reduceCtorEq, exists_false, or_self] at hl ⊢
+  | suspend b => exact iff_of_true rfl (Or.inl ⟨b, rfl⟩)
+  | select t d a b => exact iff_of_true rfl (Or.inr (Or.inl ⟨t, d, a, b, rfl⟩))
+  | iterate c i t st r b => exact iff_of_true rfl (Or.inr (Or.inr ⟨c, i, t, st, r, b, rfl⟩))
+  | _ => simp only [Eff.suspendDecided, LoopedRows, Bool.false_eq_true, reduceCtorEq, exists_false,
+      or_self] at hl ⊢
+
 /-! ## Plain code: what a straight-line program compiles to -/
 
 /-- The continuation names a straight-line program's frames carry: the four compiled
-continuations, the finalizer name, and the two continuations a finalizer runs under. -/
+continuations, `catchIf`'s handler, the finalizer name, and the two continuations a finalizer
+runs under. -/
 def PlainName : EffName → Bool
-  | .cont _ | .caught _ | .onValue _ | .onCause _ | .fin _ | .restore _ | .merge _ => true
+  | .cont _ | .caught _ | .caughtError _ | .onValue _ | .onCause _ | .fin _ | .restore _ | .merge _ => true
   | _ => false
 
-/-- The primitives a straight-line program compiles to, and the hooks answer with. -/
+/-- **A host call** as the compile writes it: `asyncRoute`'s external arm, an external
+registration with no signal and no cancel. -/
+def IsCall : NCode → Bool
+  | Prim.async (EffName.external (.external _) _ _) false none => true
+  | _ => false
+
+/-- The primitives a program of the fragment compiles to, and the hooks answer with: a host
+call among them. -/
 def PlainCode : NCode → Bool
   | Prim.success _ => true
   | Prim.failure _ => true
@@ -66,6 +196,7 @@ def PlainCode : NCode → Bool
   | Prim.exitFrame b => PlainCode b
   | Prim.onExit b (EffName.fin _) false => PlainCode b
   | Prim.whileLoop (EffName.loop _) _ => true
+  | Prim.async n w c => IsCall (Prim.async n w c)
   | _ => false
 
 /-- The frames a straight-line program pushes, and the restoring frame a mask leaves. -/
@@ -133,7 +264,7 @@ theorem eq_sync_of_isSync {cur : NCode} (h : isSync cur = true) : ∃ t, cur = P
 
 /-! ### The compile stays plain -/
 
-theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true →
+theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), LoopedRows e = true →
     PlainCode (compileEff e p) = true
   | .succeed v, p, _ => by
     rcases hf : p.fuel with _ | k
@@ -158,14 +289,23 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true 
   | .perform op r, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
-    · rw [compileEff_perform_sync op r hf (Straight.perform_sync (show Straight (.perform op r) = true from hpl))]
-      split <;> (try split) <;> rfl
+    · cases op with
+      | external j =>
+        -- a host call: `asyncRoute`'s external arm, or the wrong shape
+        rw [compileEff_perform (.external j) r hf]
+        show PlainCode (asyncRoute (.external j) r p) = true
+        dsimp only [asyncRoute]
+        rcases evalTerm p.env r with _ | v <;> rfl
+      | _ =>
+        rw [compileEff_perform_sync _ r hf
+          (Straight.perform_sync (LoopedRows.straight_perform hpl (fun _ h => by cases h)))]
+        split <;> (try split) <;> rfl
   | .bind a b, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_bind a b hf]
       simp only [PlainCode, PlainName, Bool.and_true]
-      exact plainCode_compileEff a (p.child 0) (Looped.bind hpl).1
+      exact plainCode_compileEff a (p.child 0) (LoopedRows.bind hpl).1
   | .select s d a b, p, _ => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
@@ -175,25 +315,31 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true 
     · rw [compileEff_at_zero _ hf]; rfl
     · rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
       · rw [compileEff_exit_frame b hf hx]
-        exact plainCode_compileEff b (p.child 0) (Looped.exit hpl)
+        exact plainCode_compileEff b (p.child 0) (LoopedRows.exit hpl)
       · rw [compileEff_exit_fold b hf hx]; rfl
   | .catchCause b h, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_catchCause b h hf]
       simp only [PlainCode, PlainName, Bool.and_true]
-      exact plainCode_compileEff b (p.child 0) (Looped.catchCause hpl).1
+      exact plainCode_compileEff b (p.child 0) (LoopedRows.catchCause hpl).1
+  | .catchIf t b h, p, hpl => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; rfl
+    · rw [compileEff_catchIf t b h hf]
+      simp only [PlainCode, PlainName, Bool.and_true]
+      exact plainCode_compileEff b (p.child 0) (LoopedRows.catchIf hpl).1
   | .matchCause b v c, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_matchCause b v c hf]
       simp only [PlainCode, PlainName, Bool.and_true]
-      exact plainCode_compileEff b (p.child 0) (Looped.matchCause hpl).1
+      exact plainCode_compileEff b (p.child 0) (LoopedRows.matchCause hpl).1
   | .onExit b f, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_onExit b f hf]
-      exact plainCode_compileEff b (p.child 0) (Looped.onExit hpl).1
+      exact plainCode_compileEff b (p.child 0) (LoopedRows.onExit hpl).1
   | .iterate c i t st r b, p, _ => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
@@ -209,25 +355,25 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true 
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
   | .provideService _ _ _, _, hpl
-  | .catchIf _ _ _, _, hpl | .restore _ _, _, hpl => by simp [Looped] at hpl
+  | .restore _ _, _, hpl => by simp [LoopedRows] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 
-/-- A node that is a straight-line program. -/
+/-- A node that is a program of the fragment. -/
 def NodePlain : Node NativeOp → Prop
-  | Node.eff e => Looped e = true
+  | Node.eff e => LoopedRows e = true
   | _ => False
 
-theorem child_plain {r : NativeEff} (hr : Looped r = true) {i : Nat} {m : Node NativeOp}
+theorem child_plain {r : NativeEff} (hr : LoopedRows r = true) {i : Nat} {m : Node NativeOp}
     (h : (Node.eff r).child i = some m) : NodePlain m := by
   -- a constructor that is not plain is refuted by `hr` before its children are looked at
   cases r <;> first
-    | (simp [Looped] at hr; done)
+    | (simp [LoopedRows] at hr; done)
     | (rcases i with _ | _ | _ | i <;> simp [Node.child] at h <;> subst h <;>
-        simp_all [NodePlain, Looped])
+        simp_all [NodePlain, LoopedRows])
 
 theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), NodePlain n →
-    Node.at_ n path = some (Node.eff e) → Looped e = true
+    Node.at_ n path = some (Node.eff e) → LoopedRows e = true
   | [], n, e, hn, h => by
     simp only [Node.at_, Option.some.injEq] at h
     subst h
@@ -244,7 +390,7 @@ theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), No
         all_goals simp [NodePlain] at hn
       exact plain_at rest m e hm h
 
-theorem plainCode_resolve {root : NativeEff} (hroot : Looped root = true) (q : Point) :
+theorem plainCode_resolve {root : NativeEff} (hroot : LoopedRows root = true) (q : Point) :
     PlainCode (resolve root q) = true := by
   unfold resolve
   rcases h : Node.at_ (Node.eff root) q.path with _ | n
@@ -283,7 +429,7 @@ theorem suspendBodyAt_iterate_at {root : NativeEff} {q : Point} {k : Nat} {c : O
        | none => badShape) := by
   simp [suspendBodyAt, hf, h]; rfl
 
-theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Looped root = true) (q : Point) :
+theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point) :
     PlainCode (suspendBodyAt root (EffThunk.body q)) = true := by
   rcases hf : q.fuel with _ | k
   · rw [suspendBodyAt_zero hf]; rfl
@@ -291,13 +437,13 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Looped root = true) 
     · rw [suspendBodyAt_missing hf h]; rfl
     · cases n with
       | eff e =>
-        have he : Looped e = true := plain_at q.path (Node.eff root) e hroot h
+        have he : LoopedRows e = true := plain_at q.path (Node.eff root) e hroot h
         rcases hd : e.suspendDecided with _ | _
         · -- outside the decided heads: the body is the node compiled at its point
           rw [suspendBodyAt_of_at hf h hd]
           exact plainCode_compileEff _ q he
         · -- a decided head of the fragment is a source suspension, a select, or a loop
-          rcases (Looped.suspendDecided_iff he).mp hd with
+          rcases (LoopedRows.suspendDecided_iff he).mp hd with
             ⟨b, rfl⟩ | ⟨s, d, a, b, rfl⟩ | ⟨c, i, t, st, r, b, rfl⟩
           · rw [suspendBodyAt_suspend hf h]
             exact plainCode_resolve hroot _
@@ -318,7 +464,18 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : Looped root = true) 
 theorem plainCode_ofExit (ex : ExitV) : PlainCode (Prim.ofExit ex) = true := by
   cases ex <;> rfl
 
-theorem plainCode_contAOf {root : NativeEff} (hroot : Looped root = true) {n : EffName}
+/-- `catchIf`'s handler answers its compiled handler at a represented, selected failure, and
+the failure itself otherwise. -/
+theorem plainCode_contEOf_caughtError {root : NativeEff} (hroot : LoopedRows root = true)
+    (p : Point) (c : CauseV) : PlainCode (contEOf root (EffName.caughtError p) c) = true := by
+  simp only [contEOf]
+  split
+  · split
+    · exact plainCode_resolve hroot _
+    · rfl
+  · rfl
+
+theorem plainCode_contAOf {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
     (hn : PlainName n = true) (v : Val) : PlainCode (contAOf root n v) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
@@ -326,16 +483,17 @@ theorem plainCode_contAOf {root : NativeEff} (hroot : Looped root = true) {n : E
     | exact plainCode_resolve hroot _
     | exact plainCode_ofExit _
 
-theorem plainCode_contEOf {root : NativeEff} (hroot : Looped root = true) {n : EffName}
+theorem plainCode_contEOf {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
     (hn : PlainName n = true) (c : CauseV) : PlainCode (contEOf root n c) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
     | rfl
     | exact plainCode_resolve hroot _
     | exact plainCode_ofExit _
+    | exact plainCode_contEOf_caughtError hroot _ _
 
 /-- Fresh source callbacks still answer plain code at any captured point. -/
-theorem plainCode_contAAt {root : NativeEff} (hroot : Looped root = true) {n : EffName}
+theorem plainCode_contAAt {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
     (hn : PlainName n = true) (v : Val) : PlainCode ((interpAt root []).contA n v) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
@@ -343,13 +501,14 @@ theorem plainCode_contAAt {root : NativeEff} (hroot : Looped root = true) {n : E
     | exact plainCode_resolve hroot _
     | exact plainCode_ofExit _
 
-theorem plainCode_contEAt {root : NativeEff} (hroot : Looped root = true) {n : EffName}
+theorem plainCode_contEAt {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
     (hn : PlainName n = true) (c : CauseV) : PlainCode ((interpAt root []).contE n c) = true := by
   cases n <;> simp [PlainName] at hn
   all_goals first
     | rfl
     | exact plainCode_resolve hroot _
     | exact plainCode_ofExit _
+    | exact plainCode_contEOf_caughtError hroot _ _
 
 /-! ### The local step, by the shape of the current primitive -/
 
@@ -389,6 +548,48 @@ theorem localStep_other (root : NativeEff) (cur : NCode) (K : List NCode) (i : B
     | exact absurd rfl (hnc _)
     | rfl
 
+/-- A registration is a self-loop of the frame machine: the local step leaves the fiber where
+it is. -/
+theorem localStep_async (root : NativeEff) (n : EffName) (w : Bool) (c : Option EffName)
+    (K : List NCode) (i : Bool) (s : Stores) :
+    localStep root (fiberOf (Prim.async n w c) K i) s =
+      .running (fiberOf (Prim.async n w c) K i) s := rfl
+
+theorem eq_async_of_isCall {cur : NCode} (h : IsCall cur = true) :
+    ∃ n w c, cur = Prim.async n w c := by
+  cases cur with
+  | async n w c => exact ⟨n, w, c, rfl⟩
+  | _ => simp only [IsCall, Bool.false_eq_true] at h
+
+/-- So the local run never finishes through a host call. -/
+theorem localRun_async (root : NativeEff) (n' : EffName) (w : Bool) (c : Option EffName)
+    (K : List NCode) (i : Bool) (s : Stores) :
+    ∀ n, localRun root n (fiberOf (Prim.async n' w c) K i) s = none
+  | 0 => rfl
+  | n + 1 => by
+    rw [localRun_running (localStep_async root n' w c K i s)]
+    exact localRun_async root n' w c K i s n
+
+/-- A fiber whose local run finishes is at no host call. -/
+theorem isCall_false_of_localRun {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
+    {s : Stores} {n : Nat} {ex : ExitV} {s' : Stores}
+    (h : localRun root n (fiberOf cur K i) s = some (ex, s')) : IsCall cur = false := by
+  cases hc : IsCall cur
+  · rfl
+  · obtain ⟨n', w, c, rfl⟩ := eq_async_of_isCall hc
+    rw [localRun_async] at h
+    cases h
+
+/-- A fiber whose local step finishes is at no host call. -/
+theorem isCall_false_of_finished {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
+    {s : Stores} {ex : ExitV} {s' : Stores}
+    (h : localStep root (fiberOf cur K i) s = .finished ex s') : IsCall cur = false := by
+  cases hc : IsCall cur
+  · rfl
+  · obtain ⟨n', w, c, rfl⟩ := eq_async_of_isCall hc
+    rw [localStep_async] at h
+    cases h
+
 /-! ### A loop's decisions are plain -/
 
 theorem plainCode_loopFinishAt (root : NativeEff) (q : Point) (c : Val) :
@@ -400,7 +601,7 @@ theorem plainCode_loopFinishAt (root : NativeEff) (q : Point) (c : Val) :
 
 /-- What a loop does next is plain code either way: the body resolved at the loop's child, or
 a finishing exit. -/
-theorem plainCode_loopNextAt {root : NativeEff} (hroot : Looped root = true) (q : Point)
+theorem plainCode_loopNextAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point)
     (c : Val) : PlainCode (loopNextAt root q c).code = true := by
   unfold loopNextAt
   split
@@ -410,7 +611,7 @@ theorem plainCode_loopNextAt {root : NativeEff} (hroot : Looped root = true) (q 
     · rfl
   · rfl
 
-theorem plainCode_loopResumeAt {root : NativeEff} (hroot : Looped root = true) (q : Point)
+theorem plainCode_loopResumeAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point)
     (c v : Val) : PlainCode (loopResumeAt root q c v).code = true := by
   unfold loopResumeAt
   split
@@ -430,7 +631,7 @@ theorem enter_plain (q : Point) (K : List NCode) (i : Bool)
 /-! ### The local step keeps the fiber plain -/
 
 set_option linter.unusedSimpArgs false in
-theorem localStep_success_plain {root : NativeEff} (hroot : Looped root = true)
+theorem localStep_success_plain {root : NativeEff} (hroot : LoopedRows root = true)
     (v : Val) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
     (hK : PlainStack K)
     (h : localStep root (fiberOf (Prim.success v) K i) s = .running fr' s') :
@@ -477,7 +678,7 @@ theorem localStep_success_plain {root : NativeEff} (hroot : Looped root = true)
       exact enter_plain q K i _ (plainCode_loopResumeAt hroot _ cursor v) hK'
 
 set_option linter.unusedSimpArgs false in
-theorem localStep_failure_plain {root : NativeEff} (hroot : Looped root = true)
+theorem localStep_failure_plain {root : NativeEff} (hroot : LoopedRows root = true)
     (c : CauseV) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
     (hK : PlainStack K)
     (h : localStep root (fiberOf (Prim.failure c) K i) s = .running fr' s') :
@@ -525,7 +726,7 @@ theorem localStep_failure_plain {root : NativeEff} (hroot : Looped root = true)
 -- The `PlainFrame` argument is spent in some branches of the frame case split and not in
 -- others; the linter reports the latter.
 set_option linter.unusedSimpArgs false in
-theorem localStep_plain {root : NativeEff} (hroot : Looped root = true) :
+theorem localStep_plain {root : NativeEff} (hroot : LoopedRows root = true) :
     ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores),
       PlainCode cur = true → PlainStack K →
       localStep root (fiberOf cur K i) s = .running fr' s' →
@@ -586,8 +787,13 @@ theorem localStep_plain {root : NativeEff} (hroot : Looped root = true) :
     rw [step_whileLoop_enter_at root q cursor K i s] at h
     cases h
     exact enter_plain q K i _ (plainCode_loopNextAt hroot _ cursor) hK
+  | async n w c =>
+    -- a host call: the self-loop
+    rw [localStep_async] at h
+    cases h
+    exact ⟨_, _, _, rfl, hpl, hK⟩
   | withFiber _ | iterator _ _ | setInterruptible _
-  | yieldNowWith _ | async _ _ _ | asyncFinalizer _ | onSuccessConst _ _ =>
+  | yieldNowWith _ | asyncFinalizer _ | onSuccessConst _ _ =>
     simp [PlainCode] at hpl
 
 /-! ## Quiet stores: nothing owed to any waiter -/
@@ -1027,7 +1233,7 @@ step: the frame machine's step, or — for an exit meeting an `onExit` frame —
 program under the mask, exactly as `exitFrom` spells it. -/
 theorem evaluatePrim_localStep (root : NativeEff) (m : Api.Machine) (cur : NCode)
     (K : List NCode) (i : Bool) (k : Nat) (hpl : PlainCode cur = true)
-    (hns : ∀ t, cur ≠ Prim.sync t) :
+    (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false) :
     ∃ ev, evaluatePrim (interpAt root []) m (fiberAt (fiberOf cur K i) k) false =
       iterOf m (fiberAt (fiberOf cur K i) k) ev (localStep root (fiberOf cur K i) m.state) := by
   cases cur with
@@ -1087,6 +1293,7 @@ theorem evaluatePrim_localStep (root : NativeEff) (m : Api.Machine) (cur : NCode
       fiberAt_frame, localStep_other root _ K i m.state (fun _ h => by cases h)
         (fun _ h => by cases h) (fun _ h => by cases h)]
     rcases ((fiberOf _ K i).step (primOf root)).1 with _ | _ <;> exact ⟨_, rfl⟩
+  | async n w c => cases hpl.symm.trans hnc
   | _ => simp only [PlainCode, Bool.false_eq_true] at hpl
 
 /-! ### The native scope protocol does not intercept the plain run -/
@@ -1176,7 +1383,8 @@ theorem exitScoped_eq_evaluatePrim (root : NativeEff) (m : Api.Machine)
 /-- Plain code and a plain stack exclude both native scoped entry and exit.
 The construction view remains the machine's actual completed-exit view. -/
 theorem evaluateNative_plain (root : NativeEff) (m : Api.Machine) (cur : NCode)
-    (K : List NCode) (i : Bool) (k : Nat) (hpl : PlainCode cur = true) (hK : PlainStack K) :
+    (K : List NCode) (i : Bool) (k : Nat) (hpl : PlainCode cur = true) (hK : PlainStack K)
+    (hnc : IsCall cur = false) :
     evaluateNative root m (fiberAt (fiberOf cur K i) k) false table =
       evaluatePrim (interpAt root m.completedExits) m (fiberAt (fiberOf cur K i) k) false := by
   cases cur with
@@ -1188,6 +1396,7 @@ theorem evaluateNative_plain (root : NativeEff) (m : Api.Machine) (cur : NCode)
     change exitScoped root m _ false (Exit.failure c) = _
     apply exitScoped_eq_evaluatePrim
     exact popOf_plain_not_scoped _ K i hK _
+  | async n w c => cases hpl.symm.trans hnc
   | _ => first | rfl | simp [PlainCode] at hpl
 
 /-- The finished local-step hypothesis itself excludes an answering scoped
@@ -1211,6 +1420,9 @@ theorem evaluateNative_of_finished (root : NativeEff) (m : Api.Machine) (cur : N
     intro body previous scope flag
     exact exitFrom_finished_not_onExit root _ _ _ ex s' hstep body
       (EffName.scopedExit previous scope) flag
+  | async n w c =>
+    rw [localStep_async] at hstep
+    cases hstep
   | _ => first | rfl | simp [PlainCode] at hpl
 
 /-! ### One iteration under the budget: no yield, the primitive evaluated at count `k + 1` -/
@@ -1326,7 +1538,7 @@ theorem drive_loop_sync_pure (root : NativeEff) (p : Point) (K : List NCode) (i 
 theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (cur₁ : NCode)
     (K₁ : List NCode) (i₁ : Bool) (hpl : PlainCode cur = true) (hK : PlainStack K)
-    (hns : ∀ t, cur ≠ Prim.sync t)
+    (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false)
     (hk : k + 1 < defaultBudget)
     (hstep : localStep root (fiberOf cur K i) s = .running (fiberOf cur₁ K₁ i₁) s) :
     ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt)
@@ -1334,10 +1546,10 @@ theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i 
       driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s (k + 1) tr' nt)
         (Cmd.loop Api.root false :: rest) := by
   obtain ⟨ev, hev⟩ :=
-    evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i (k + 1) hpl hns
+    evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i (k + 1) hpl hns hnc
   rw [M_state, hstep] at hev
   have hraw := evaluateNative_plain (table := table) root (M (fiberOf cur K i) s k tr nt)
-    cur K i (k + 1) hpl hK
+    cur K i (k + 1) hpl hK hnc
   rw [M_completedExits] at hraw
   have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
@@ -1364,6 +1576,7 @@ theorem drive_loop_finish (root : NativeEff) (cur : NCode) (K : List NCode) (i :
         (Cmd.finish Api.root ex :: rest) := by
   obtain ⟨ev, hev⟩ :=
     evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i (k + 1) hpl hns
+      (isCall_false_of_finished hstep)
   rw [M_state, hstep] at hev
   have hraw := evaluateNative_of_finished (table := table) root (M (fiberOf cur K i) s k tr nt)
     cur K i (k + 1) hpl ex s hstep
@@ -1387,17 +1600,17 @@ top and no op count. -/
 theorem drive_deliver_running (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (cur₁ : NCode)
     (K₁ : List NCode) (i₁ : Bool) (hpl : PlainCode cur = true) (hK : PlainStack K)
-    (hns : ∀ t, cur ≠ Prim.sync t)
+    (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false)
     (hstep : localStep root (fiberOf cur K i) s = .running (fiberOf cur₁ K₁ i₁) s) :
     ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt)
         (Cmd.deliver Api.root false :: rest) =
       driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s k tr' nt)
         (Cmd.loop Api.root false :: rest) := by
   obtain ⟨ev, hev⟩ :=
-    evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i k hpl hns
+    evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i k hpl hns hnc
   rw [M_state, hstep] at hev
   have hraw := evaluateNative_plain (table := table) root (M (fiberOf cur K i) s k tr nt)
-    cur K i k hpl hK
+    cur K i k hpl hK hnc
   rw [M_completedExits] at hraw
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
@@ -1419,6 +1632,7 @@ theorem drive_deliver_finish (root : NativeEff) (cur : NCode) (K : List NCode) (
         (Cmd.finish Api.root ex :: rest) := by
   obtain ⟨ev, hev⟩ :=
     evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i k hpl hns
+      (isCall_false_of_finished hstep)
   rw [M_state, hstep] at hev
   have hraw := evaluateNative_of_finished (table := table) root (M (fiberOf cur K i) s k tr nt)
     cur K i k hpl ex s hstep
@@ -1654,7 +1868,7 @@ theorem Owes.yield (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {
 finishes within `n` steps with `ex` over `s'`, the loop, from any count and any token,
 either reaches the exit path of `ex` over `s'` within `2n` commands, or reaches the budget
 first and parks the root on a yield with the rest of the run to do (`Owes`). -/
-theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
+theorem drive_localRun (root : NativeEff) (hroot : LoopedRows root = true) :
     ∀ (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace)
       (nt : Nat) (rest : List NCmd) (d : Bool) (ex : ExitV) (s' : Stores),
       PlainCode cur = true → PlainStack K → Quiet s →
@@ -1664,6 +1878,8 @@ theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hrun => by
     simp [localRun] at hrun
   | n + 1, cur, K, i, s, k, tr, nt, rest, d, ex, s', hpl, hK, hq, hd, hrun => by
+    -- a finishing run is at no host call
+    have hnc : IsCall cur = false := isCall_false_of_localRun hrun
     cases d with
     | true =>
       -- the delivery: no `sync` here, the step is the frame machine's, and no count
@@ -1675,7 +1891,7 @@ theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
         obtain ⟨cur₁, K₁, i₁, rfl, hpl₁, hK₁⟩ :=
           localStep_plain hroot cur K i s fr₁ s hpl hK hstep
         obtain ⟨tr₁, hdrv⟩ :=
-          drive_deliver_running root cur K i s k tr nt rest cur₁ K₁ i₁ hpl hK hns hstep
+          drive_deliver_running root cur K i s k tr nt rest cur₁ K₁ i₁ hpl hK hns hnc hstep
         exact Owes.step root false 1 (by omega) (by omega) hdrv
           (drive_localRun root hroot n cur₁ K₁ i₁ s k tr₁ nt rest false ex s' hpl₁ hK₁ hq
             (fun h => by cases h) hrun)
@@ -1701,7 +1917,7 @@ theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
             obtain ⟨cur₁, K₁, i₁, rfl, hpl₁, hK₁⟩ :=
               localStep_plain hroot cur K i s fr₁ s hpl hK hstep
             obtain ⟨tr₁, hdrv⟩ :=
-              drive_loop_running root cur K i s k tr nt rest cur₁ K₁ i₁ hpl hK hns hk hstep
+              drive_loop_running root cur K i s k tr nt rest cur₁ K₁ i₁ hpl hK hns hnc hk hstep
             exact Owes.step root false 1 (by omega) (by omega) hdrv
               (drive_localRun root hroot n cur₁ K₁ i₁ s (k + 1) tr₁ nt rest false ex s' hpl₁ hK₁
                 hq (fun h => by cases h) hrun)
@@ -1770,7 +1986,7 @@ theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
 and the loop runs on to the exit path or to the next yield; a round that yields again has
 lost at least `defaultBudget - 2` steps of the run, so the rounds the fuel allows are
 enough. -/
-theorem flushAll_Myield (root : NativeEff) (hroot : Looped root = true) :
+theorem flushAll_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
     ∀ (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
       (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),
       PlainCode cur = true → PlainStack K → Quiet s →
@@ -1841,9 +2057,9 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
       ReplayResult.finished (Mexit e ex fr s' k' tr' nt') := by
   have hB : defaultBudget = 2048 := rfl
   obtain ⟨c, hc, h⟩ :=
-    drive_localRun e hl N (compile e fuel) [] true Stores.empty 0
+    drive_localRun e (LoopedRows.of_looped e hl) N (compile e fuel) [] true Stores.empty 0
       [RunEvent.started Api.root] 0 [Cmd.drainDue] false ex
-      s' (plainCode_compileEff e _ hl)
+      s' (plainCode_compileEff e _ (LoopedRows.of_looped e hl))
       PlainStack.nil Quiet.empty
       (fun h => by cases h) hrun
   simp only [cmdOf] at h
@@ -1883,7 +2099,7 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
       rw [drive_evaluate_load e fuel _ _, hsim, drive_drainDue e _ _ _ rfl hq₁]
       exact drive_nil e _ _
     obtain ⟨fr, k', tr'', nt', hfl⟩ :=
-      flushAll_Myield e hl fuel n₁ cur₁ K₁ i₁ s₁ k₁ tr' 0 ex
+      flushAll_Myield e (LoopedRows.of_looped e hl) fuel n₁ cur₁ K₁ i₁ s₁ k₁ tr' 0 ex
         s' fuel hpl₁ hK₁ hq₁ hrun₁ (by omega) (by omega)
     refine ⟨fr, k', tr'', nt', ?_⟩
     have heval : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel (Api.load e fuel) Api.evaluate =

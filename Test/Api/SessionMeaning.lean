@@ -5,11 +5,12 @@ import Test.Dogfood.Scenario.Routing
 set_option maxRecDepth 8192
 
 /-!
-# The meaning under a run's tape: the battery of slice H7
+# The meaning under a run's tape: the battery of slices H7 and H8
 
-Each line is a finite evaluation of an open statement, or a
-control. `denoteRows_eq_session` is a planned goal: these lines are its finite evidence, and
-they shrink in the slice that proves it.
+`denoteRows_eq_session` is a theorem (slice H8). A line here is one of two things:
+
+* a finite evaluation that real runs meet its premises, so that the theorem covers them;
+* a control: for each premise, a run where it fails and the two sides differ.
 -/
 
 namespace Test.Api.SessionMeaning
@@ -26,20 +27,24 @@ def sides (s : Run) : Bool × Bool × Bool × Bool × Bool :=
     decide (meaningRows s.built.table s.built.program [] Stores.empty (appliedExits s) =
       s.exit.map fun ex => ((ex, s.machine.state), [])))
 
-/-- Every premise holds, and the two sides are equal. -/
-def green : Bool × Bool × Bool × Bool × Bool := (true, true, true, true, true)
+/-- The fragment and the three premises of `denoteRows_eq_session` on one run. -/
+def premises (s : Run) : Bool × Bool × Bool × Bool :=
+  (StraightRows s.built.table s.built.program, funded s, atRest s, hostDriven s)
+
+/-- Every premise holds. -/
+def green : Bool × Bool × Bool × Bool := (true, true, true, true)
 
 /-! ## Real programs -/
 
 section todo
 open Test.Dogfood.Scenario.Todo
 
-def onTodo (main : Src NativeOp) (moves : List Move) : Option (Bool × Bool × Bool × Bool × Bool) :=
-  (built? (request main)).map fun b => sides (play (Run.open b "todo") moves)
+def onTodo (main : Src NativeOp) (moves : List Move) : Option (Bool × Bool × Bool × Bool) :=
+  (built? (request main)).map fun b => premises (play (Run.open b "todo") moves)
 
--- finite evaluation: the four to-do programs. The last three runs end at the frontier: no
--- reply, a reply that is not applied, and a reply outside the answer column, which the session
--- refuses
+-- finite evaluation: the runs of the four to-do programs meet the premises. The last three runs
+-- end at the frontier: no reply, a reply that is not applied, and a reply outside the answer
+-- column, which the session refuses
 #guard [ onTodo (add (str "milk"))
            (script [[.start], answer (.row "TodoRepo.insert") (ok (todo 1 "milk" false))])
        , onTodo (add (str ""))
@@ -60,9 +65,9 @@ def onTodo (main : Src NativeOp) (moves : List Move) : Option (Bool × Bool × B
 end todo
 
 -- finite evaluation: the routing program, in the fragment by its `catchIf` nodes (decisions row
--- 310), has its two sides equal on each of its eleven named runs
+-- 310), meets the premises on each of its eleven named runs
 #guard Routing.runsAndControls.1.length = 11
-#guard Routing.runsAndControls.1.all fun run => sides run.played = green
+#guard Routing.runsAndControls.1.all fun run => premises run.played = green
 
 /-! ## Raw programs: each constructor of the fragment with a call inside -/
 
@@ -83,6 +88,11 @@ def raw (program : NativeEff) (table : RowTable) (moves : List Move)
   ((Effect4.Api.Author.Internal.finishBuild program table []).toOption).map fun b =>
     sides (play (Run.open b "raw" budget) moves)
 
+def rawPremises (program : NativeEff) (table : RowTable) (moves : List Move)
+    (budget : Effect4.Api.Budget := {}) : Option (Bool × Bool × Bool × Bool) :=
+  ((Effect4.Api.Author.Internal.finishBuild program table []).toOption).map fun b =>
+    premises (play (Run.open b "raw" budget) moves)
+
 /-- Three calls in sequence: each request is the reply before it. -/
 def chain : NativeEff := .bind (call (num 1)) (.bind (call (.var 0)) (call (.var 1)))
 def fin : NativeEff := .onExit (call (num 1)) (call (num 2))
@@ -98,28 +108,30 @@ def celled : NativeEff :=
 /-- A call, then a clock read. -/
 def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit))
 
--- finite evaluation: a success and a typed failure through each constructor, and a frontier
-#guard [ raw chain [wait] (script [[.start], reply 5, reply 6, reply 7])
-       , raw chain [wait] (script [[.start], reply 5, refuse, reply 7])
-       , raw chain [wait] (script [[.start], reply 5, reply 6])
-       , raw fin [wait] (script [[.start], reply 5, refuse])
-       , raw fin [wait] (script [[.start], refuse, reply 6])
-       , raw caught [wait] (script [[.start], refuse, reply 6])
-       , raw matched [wait] (script [[.start], refuse, reply 6])
-       , raw exited [wait] (script [[.start], refuse])
-       , raw suspended [wait] (script [[.start], reply 5])
-       , raw celled [wait] (script [[.start], reply 5])
-       , raw clocked [wait] (script [[.start], reply 5]) ].all (· = some green)
--- finite evaluation: a reply that fails with no typed error: a defect, an interruption, an
--- empty cause and a mixed cause, through each constructor that reads a failure
+-- finite evaluation: runs of a success and a typed failure through each constructor, and a
+-- frontier, meet the premises
+#guard [ rawPremises chain [wait] (script [[.start], reply 5, reply 6, reply 7])
+       , rawPremises chain [wait] (script [[.start], reply 5, refuse, reply 7])
+       , rawPremises chain [wait] (script [[.start], reply 5, reply 6])
+       , rawPremises fin [wait] (script [[.start], reply 5, refuse])
+       , rawPremises fin [wait] (script [[.start], refuse, reply 6])
+       , rawPremises caught [wait] (script [[.start], refuse, reply 6])
+       , rawPremises matched [wait] (script [[.start], refuse, reply 6])
+       , rawPremises exited [wait] (script [[.start], refuse])
+       , rawPremises suspended [wait] (script [[.start], reply 5])
+       , rawPremises celled [wait] (script [[.start], reply 5])
+       , rawPremises clocked [wait] (script [[.start], reply 5]) ].all (· = some green)
+-- finite evaluation: runs of a reply that fails with no typed error (a defect, an interruption,
+-- an empty cause and a mixed cause), through each constructor that reads a failure, meet the
+-- premises
 #guard [ Cause.die (Defect.user 3), Cause.interrupt none, Cause.empty,
          Cause.combine (Cause.fail (.tagged "E" "m")) (Cause.interrupt (some ⟨0⟩)) ].all fun cause =>
-  [ raw chain [wait] (script [[.start], reply 5, failing cause, reply 7])
-  , raw fin [wait] (script [[.start], failing cause, reply 6])
-  , raw fin [wait] (script [[.start], reply 5, failing cause])
-  , raw caught [wait] (script [[.start], failing cause, reply 6])
-  , raw matched [wait] (script [[.start], failing cause, reply 6])
-  , raw exited [wait] (script [[.start], failing cause]) ].all (· = some green)
+  [ rawPremises chain [wait] (script [[.start], reply 5, failing cause, reply 7])
+  , rawPremises fin [wait] (script [[.start], failing cause, reply 6])
+  , rawPremises fin [wait] (script [[.start], reply 5, failing cause])
+  , rawPremises caught [wait] (script [[.start], failing cause, reply 6])
+  , rawPremises matched [wait] (script [[.start], failing cause, reply 6])
+  , rawPremises exited [wait] (script [[.start], failing cause]) ].all (· = some green)
 
 /-! ## Controls: for each premise, a run where it fails and the two sides differ -/
 
@@ -138,8 +150,8 @@ def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit)
 #guard raw chain [wait] (script [[.start], reply 5, reply 6, reply 7]) { fuel := 5, compileFuel := 1000 } =
   some (true, false, true, true, false)
 #guard ((List.range 41).find? fun fuel =>
-    raw chain [wait] (script [[.start], reply 5, reply 6, reply 7]) { fuel := fuel, compileFuel := 1000 }
-      = some green) = some 6
+    rawPremises chain [wait] (script [[.start], reply 5, reply 6, reply 7])
+      { fuel := fuel, compileFuel := 1000 } = some green) = some 6
 -- control (`atRest`): a run that has not started, on a program with no call
 #guard raw (.succeed (num 1)) [wait] [] = some (true, true, false, true, false)
 -- control (`dataRow`): a row that answers a handle. The reply allocates, and the tree does not
@@ -147,9 +159,18 @@ def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit)
     (script [[.start], answer (.row "K.make") (ok (.nat 0))]) =
   some (false, true, true, true, false)
 
+-- finite evaluation: a compile budget below the program's depth leaves the run spinning at the
+-- compile's frontier, which never settles. The run is neither funded nor at rest, so the theorem
+-- takes no premise on the compile budget
+#guard Effect4.Program.Sched.depthRows chain = 3
+#guard [1, 2].all fun cf => raw chain [wait] (script [[.start], reply 5, reply 6, reply 7])
+    { fuel := 1000, compileFuel := cf } = some (true, false, false, true, true)
+#guard raw chain [wait] (script [[.start], reply 5, reply 6, reply 7])
+    { fuel := 1000, compileFuel := 3 } = some (true, true, true, true, true)
+
 -- finite evaluation (the premise reads the tape): a delayed cell read that the session receives
--- and never applies hands the machine nothing. The run is host-driven, and both sides wait
-#guard raw (.bind (.perform .refMake (num 7)) (call (num 1))) [wait]
+-- and never applies hands the machine nothing. The run is host-driven
+#guard rawPremises (.bind (.perform .refMake (num 7)) (call (num 1))) [wait]
     [.start, .receive (.row "H.wait") (.ofRefGet ⟨0⟩)] = some green
 
 /-! ## A host as a handler: an in-memory repository -/
