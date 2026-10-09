@@ -28,6 +28,8 @@ import Effect4.Laws.Step.Tuples
 import Effect4.Laws.Step.Waiting
 import Effect4.Laws.Step.Callback
 import Effect4.Laws.Author.Explain
+import Effect4.Laws.Program.Edit
+import Effect4.Laws.Program.SketchWire
 
 /-!
 # Effect4.Laws.Author — the entry module of the laws an author reads (decisions row 332)

@@ -450,8 +450,8 @@ theorem view_type {l : EditSession} (h : l.Coherent) :
 
 /-- **What a session shows is the checker's answer on its sketch**, after an open and any run of
 edits: the sketch's refusals, whose head is the check's and which are empty exactly when the
-sketch checks, and the sketch's type. The session checks only what its edits changed. The pointer
-of `edit-session-coherent`. -/
+sketch checks, and the sketch's type. An edit that splices checks only its new subtree; an edit
+that checks again checks the whole sketch. The pointer of `edit-session-coherent`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem reached_view (app : SigApp) (s : Sketch) (edits : List Edit) :
     ((EditSession.open app s).run edits).view.refusals =

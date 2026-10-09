@@ -46,8 +46,9 @@ a grown hole table (`Sketch.table_more_holes`), so the grown signature changes n
 - **unchanged**: the address holds no program. Nothing changes.
 
 The session's invariant is that its table is its sketch's table (`EditSession.Coherent`). The open
-makes it, and each edit keeps it (`EditSession.run_coherent`, `Laws/Program/Edit.lean`, the claim
-`edit-session-coherent`). The splice over a whole program's parts gives the spliced case
+makes it, and each edit keeps it (`EditSession.run_coherent`, `Laws/Program/Edit.lean`). The claim
+`edit-session-coherent` points at what that gives: the view is the checker's answer
+(`EditSession.reached_view`). The splice over a whole program's parts gives the spliced case
 (`Sketch.table_fill`).
 
 ## What this module is not
@@ -71,7 +72,9 @@ inductive Edit where
 inductive Edit.Delta where
   /-- the address holds no program, and nothing changed -/
   | unchanged
-  /-- the edit kept its focus's type: the table is spliced, and these addresses are new -/
+  /-- the edit kept its focus's type: the table is spliced, and these addresses are new. An
+  address of the old subtree that the new one lacks is gone and is not listed: a view replaces
+  the whole subtree at the edited address. -/
   | spliced (shown : List (List Nat))
   /-- the table is computed again -/
   | rechecked
@@ -107,7 +110,9 @@ def feed (l : EditSession) : Edit → EditSession × Edit.Delta
   | .fill a q =>
     match l.sketch.fillAt a q with
     | some s' =>
-      let rechecked : EditSession × Edit.Delta :=
+      -- deferred: Lean evaluates a `let` before the match, and only a branch that checks again
+      -- may pay for the whole table (Codex's overwatch, EDIT-OW-01)
+      let rechecked : Unit → EditSession × Edit.Delta := fun _ =>
         ({ l with sketch := s', table := s'.annotate l.app }, .rechecked)
       match a, Table.typedAt l.table [], Table.typedAt l.table a with
       | _ :: _, some _, some (tys, ty) =>
@@ -116,14 +121,16 @@ def feed (l : EditSession) : Edit → EditSession × Edit.Delta
           if ty' = ty then
             ({ l with sketch := s', table := Table.splice l.table a sub },
               .spliced (sub.map (·.path)))
-          else rechecked
-        | (_, .error _) => rechecked
-      | _, _, _ => rechecked
+          else rechecked ()
+        | (_, .error _) => rechecked ()
+      | _, _, _ => rechecked ()
     | none => (l, .unchanged)
   | .omitAt a row =>
     match l.sketch.omitAt l.app a row with
     | some s' =>
-      let rechecked : EditSession × Edit.Delta :=
+      -- deferred: Lean evaluates a `let` before the match, and only a branch that checks again
+      -- may pay for the whole table (Codex's overwatch, EDIT-OW-01)
+      let rechecked : Unit → EditSession × Edit.Delta := fun _ =>
         ({ l with sketch := s', table := s'.annotate l.app }, .rechecked)
       match a, Table.typedAt l.table [], Table.typedAt l.table a with
       | _ :: _, some _, some (tys, ty) =>
@@ -133,8 +140,8 @@ def feed (l : EditSession) : Edit → EditSession × Edit.Delta
             (Formation.check (Formation.instantiatedSites row.normalizeTypes [])).isNone = true then
           let entry : Table.Entry := ⟨a, some (.env tys), some (.ok ty)⟩
           ({ l with sketch := s', table := Table.splice l.table a [entry] }, .spliced [a])
-        else rechecked
-      | _, _, _ => rechecked
+        else rechecked ()
+      | _, _, _ => rechecked ()
     | none => (l, .unchanged)
 
 /-- **The address an edit acts at.** -/
