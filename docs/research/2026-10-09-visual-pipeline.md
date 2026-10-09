@@ -82,6 +82,38 @@ reads it from the journal.
 **V3's open meanings.** What moves between two frames, and how, is the owner's to walk with the
 coordinator before it is drawn (the design steer: a mark or a motion enters with a meaning only).
 
+### What landed (2026-10-09)
+
+| Slice | Commit | What it holds |
+| --- | --- | --- |
+| V0, V1 | `586349d9` | `tools/Tools/View/`: `Picture`, `Page`, `Program`, `Build`; `tools/Drivers/View.lean`; `tools/view/draw.c`, `paint.h` |
+| V3 | `57107359` | `Motion`: the move law and `tween`; `tools/view/replay.h`, `play.c`, `v` |
+| marks | `0c460f4f` | the design language's marks as plain fills, by each operation's row; `--plain` |
+
+**The laws of the picture**, statements of the tool (`tools/Tools/View/Picture.lean`,
+`Motion.lean`):
+
+- `lower_key`: each device call keeps its call's key.
+- `lowerCall_move`, `lower_move`, `lowerAll_move`: a call moved by whole pixels lowers to its own
+  device calls, moved.
+- `pick_append`, `box_holds`, `span_pos`, `frameSides_pairwise`, `lowerAll_append`.
+
+**The minimal representation.** A rule is a fill whose height is its weight, and a mark is fills
+and frames on the grid. So a drawing call has seven constructors, and the move law covers every
+picture with no case for a rule or a mark.
+
+**Finite checks** (`v -p NAME` over the eight programs of the wire corpus):
+
+- the splice, read on frames: 21 spliced edits keep all 72 lines outside their subtree, with
+  their text, type and note;
+- 182 streams hold only known rows, and close every cut (`draw --count`);
+- the pointer answers a line's key on its row (`draw --pick`).
+
+**The one command.** `tools/view/v NAME` builds a corpus program top-down and plays its frames in
+a window: Right or Space plays to the next frame, Left steps back. `v -t` prints the frames in a
+console, `v -p` writes PNG files, `v -f FILE` reads any session request file, and `v -P` draws no
+mark.
+
 ## 6. Vendoring C libraries
 
 **The fit test.** A library fits when:
@@ -121,7 +153,10 @@ reports.
 
 ## 7. What this note does not establish
 
-- No frame of a run is drawn yet, and no motion is designed.
+- No frame of a run is drawn yet (V2).
+- The motion is the plainest the laws give: a line slides to its new row, and a new line enters at
+  the end. Its speed, its easing and any other motion are the owner's to walk.
+- The marks are drawn for a ruling (the forms note's proposal A, 1); `--plain` removes them.
 - No library is downloaded, and no version or licence is confirmed against its repository.
 - The layout's laws are tests. A view is no face with claims (row 334).
 - The construction order of V1 is one order, top-down and left to right. An agent may build in
