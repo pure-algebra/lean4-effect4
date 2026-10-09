@@ -1,0 +1,47 @@
++ lake build Test.Program.MaskContract
+✔ [563/563] Built Test.Program.MaskContract (1.8s)
+Build completed successfully (563 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/mask/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/mask
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/mask/mask.txt
++ lake build Test.Program.PoolPublic
+✔ [563/564] Built Test.Program.PoolScenarios (26s)
+✔ [564/564] Built Test.Program.PoolPublic (31s)
+Build completed successfully (564 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/pool/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/pool
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/pool/pool.txt
++ lake build Test.Program.QueueMask Test.Program.QueueDefs Effect4.Store.Domain.ProgramWire
+✔ [572/574] Built Test.Program.QueueScenarios (7.4s)
+✔ [573/574] Built Test.Program.QueueDefs (1.7s)
+✔ [574/574] Built Test.Program.QueueMask (2.2s)
+Build completed successfully (574 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/queue/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/queue
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/queue/queue.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/queue/queue-defs.txt
++ lake build Test.Dogfood.Scenario.Tape
+✔ [863/876] Built Test.Dogfood.Stage (675ms)
+✔ [865/877] Built Test.Dogfood.P5LedgerService (716ms)
+✔ [866/877] Built Test.Dogfood.P4RateLimiter (714ms)
+✔ [867/877] Built Test.Dogfood.P2HandlerLayers (750ms)
+✔ [868/881] Built Test.Dogfood.Scenario (2.0s)
+✔ [871/881] Built Test.Dogfood.P3WorkerQueue (782ms)
+✔ [874/881] Built Test.Dogfood.Scenario.Routing (1.9s)
+✔ [878/892] Built Test.Dogfood.Scenario.Workers (2.4s)
+✔ [887/892] Built Test.Program.QueueTraces (6.3s)
+✔ [888/892] Built Test.Dogfood.Scenario.Atomic (2.9s)
+✔ [889/892] Built Test.Dogfood.P1HttpCache (1.8s)
+✔ [890/892] Built Test.Dogfood.Scenario.Timeout (1.0s)
+✔ [891/892] Built Test.Dogfood.Scenario.QueueWorkers (32s)
+✔ [892/892] Built Test.Dogfood.Scenario.Tape (2.3s)
+Build completed successfully (892 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/scenarios/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/scenarios
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/scenarios/workers.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/scenarios/queue-workers.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/scenarios/routing.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/scenarios/atomic.txt
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/scenarios/timeout.txt
++ lake build Test.Program.SemaphoreScenarios
+✔ [563/563] Built Test.Program.SemaphoreScenarios (13s)
+Build completed successfully (563 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/semaphore/write.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/semaphore
+wrote /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-o4v9832u/ocaml/engine/test/semaphore/semaphore.txt
+PASS generate: requested producers ran in dependency order

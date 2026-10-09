@@ -1,0 +1,12 @@
+✔ [948/956] Built Test.Program.RefPrograms (1.3s)
+✔ [949/956] Built Tools.Exposure (1.2s)
+✔ [951/959] Built Test.Program.RefFaces (1.1s)
+✔ [952/959] Built Test.Audit.Exposure (1.1s)
+✔ [955/962] Built Effect4.Laws.Author (2.4s)
+✔ [956/965] Built Test.Program.QueueFaces (1.7s)
+✔ [959/965] Built Test.Program.SemaphoreFaces (1.6s)
+✔ [963/981] Built Test.Program.SemaphoreEngine (1.9s)
+✔ [979/981] Built Test.Program.QueueEngine (1.9s)
+✔ [980/981] Built Test.Dogfood.Scenario.Lowered (10s)
+✔ [981/981] Built Test.Program.PoolEngine (11s)
+Build completed successfully (981 jobs).

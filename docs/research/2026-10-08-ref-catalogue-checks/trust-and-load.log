@@ -1,0 +1,9 @@
+Ref catalogue trust: 172 declarations, all within [propext, Quot.sound]; reached [Quot.sound, propext]
+Compiled core reaches Ref and Step.Callback; no Laws or Aesop import
+graph: 9584 theorems of the tree, 116 roots, 4461 load-bearing
+landing [Effect4.Laws.Library.Ref, Effect4.Laws.Step.Callback]: 25 theorems, 0 of them roots
+  edges: 25 local, 12 tree, 63 core, 0 instance; reuse ratio 32%
+  load-bearing: 0 of 25
+  unconsumed (14): [Effect4.Ref.getAndSet_agrees, Effect4.Ref.getAndUpdateSome_agrees, Effect4.Ref.getAndUpdate_agrees, Effect4.Ref.get_agrees, Effect4.Ref.make_agrees, Effect4.Ref.modifySome_agrees, Effect4.Ref.modify_callback_agrees, Effect4.Ref.modify_callback_answers, Effect4.Ref.setAndGet_agrees, Effect4.Ref.set_agrees, Effect4.Ref.updateAndGet_agrees, Effect4.Ref.updateSomeAndGet_agrees, Effect4.Ref.updateSome_agrees, Effect4.Ref.update_agrees]
+  reached by a consumer, but by no root (11): [Effect4.Modules.Step.callback_capture_reads, Effect4.Modules.Step.callback_capture_types, Effect4.Modules.Step.callback_sources_reads, Effect4.Modules.Step.callback_sources_types, Effect4.Modules.Step.callback_term_reads, Effect4.Modules.Step.callback_term_types, Effect4.Ref.decode_modifySome, Effect4.Ref.decode_option, Effect4.Ref.encode_getD, Effect4.Ref.kernel_agrees, Effect4.Ref.modify_agrees]
+  joints: [Effect4.Modules.Step.scope_of_alignment ×2, Effect4.Program.Authoring.Env.push_length ×2, Effect4.Machine.syncOpStep_eq_refStepOf ×1, Effect4.Modules.Step.sound ×1, Effect4.Modules.Step.typed ×1, Effect4.Modules.TypedScope.depth ×1, Effect4.Modules.answers_refModifyWith ×1, Effect4.Modules.reads_minted_last ×1]
