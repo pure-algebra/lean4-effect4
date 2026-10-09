@@ -287,8 +287,8 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   (`Holds.tapeAnswer`).
 
 - **CO-5 landed: H9 is a theorem** (`denoteRows_eq_session_host`,
-  `src/Effect4/Laws/Api/SessionMeaning.lean`). For a recorded run that is funded, at rest,
-  host-driven and finished, under any host whose answers are the run's (`HostAnswered`), the
+  `src/Effect4/Laws/Api/SessionMeaning.lean`). Take a recorded run that is funded, at rest,
+  host-driven and finished, and any host whose answers are the run's (`HostAnswered`). Then the
   host's run of the call tree is the root's exit with the stores. The host ends where the
   answers left it. One induction (`tape_holds_host`) serves H8 and H9. Its axioms are
   `[propext, Quot.sound]`. Still owed: its registry claim, a battery reader, and the proof that
