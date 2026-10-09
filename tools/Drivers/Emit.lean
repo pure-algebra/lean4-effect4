@@ -1,4 +1,5 @@
 import Tools.Code.Module
+import Tools.View.Program
 import Effect4.Store.Domain.ProgramWire
 
 /-!
@@ -12,7 +13,7 @@ Writes what the code generator makes of each program, for a person or an agent t
     OUT/prelude/             what the modules import besides `effect`: the generated atoms and the
                              helpers, copied from `harness/truth`, and `prelude.ts` re-exporting them
     OUT/corpus/NAME.ts       the module (`Tools.Code.Module`): exact imports, a header, Effect's width
-    OUT/corpus/NAME.tree.txt the program's tree: address, node and type, one node a line
+    OUT/corpus/NAME.tree.txt the program's tree as the view writes it (`Tools.View.Program.treeText`)
 
 A group is a folder. The wire corpus (`Effect4.Program.Wire.Corpus.all`) is the first group; a
 library module's callers become a group named for the module (`src/Effect4/Library/`). Every
@@ -59,12 +60,12 @@ def main (args : List String) : IO UInt32 := do
     (String.join (preludeFiles.map fun f => s!"export * from \"./{f}\"\n"))
   let group := "corpus"
   IO.FS.createDirAll (out / group)
-  let gs := Effect4.Program.Wire.Corpus.all.map fun (name, p) => generate Ts.width group name p
-  for g in gs do
-    IO.FS.writeFile (out / group / (g.name ++ ".tree.txt")) g.tree
+  let gs := Effect4.Program.Wire.Corpus.all.map fun (name, p) => (generate Ts.width group name p, p)
+  for (g, p) in gs do
+    IO.FS.writeFile (out / group / (g.name ++ ".tree.txt")) (Tools.View.Program.treeText g.name p)
     match g.module with
     | .ok text => IO.FS.writeFile (out / group / (g.name ++ ".ts")) text
     | .error _ => pure ()
-  IO.FS.writeFile (out / "README.md") (index gs)
+  IO.FS.writeFile (out / "README.md") (index (gs.map (·.1)))
   IO.println s!"emit: {gs.length} programs to {out}"
   return 0

@@ -111,7 +111,7 @@ def frame (name : String) (program : NativeEff) (before : Option Run) (s : Run) 
     s!"journal: {s.journal.length} rows"
   { page with
     graph := some { title := "fibers", laid := (fiberGraph s.machine changed).layout }
-    code := Tools.Code.codePanel program [] }
+    code := Program.codePanel program [] }
 
 /-- **The frames of a run** of a program with no host row: its opening, then one frame after each
 control, until no control is planned or `most` controls have run. `none` when the program is not

@@ -1,5 +1,6 @@
 import Tools.View.Page
 import Tools.View.Algebra
+import Tools.Code.Module
 import Effect4.Program.LayerView
 import Effect4.Program.Edit
 import Effect4.Codegen.PrintLeaf
@@ -218,12 +219,6 @@ theorem lines_at (text : String → List (ArgF NativeOp Lines) → String) (fam 
 
 /-! ## The page of an edit session -/
 
-/-- A type's text: the answer, then `! error` when it can fail, then the keys it needs. -/
-def effTyText (t : EffTy) : String :=
-  t.answer.render ++ (if t.error = .never then "" else " ! " ++ t.error.render) ++
-    (if t.requires.elems.isEmpty then ""
-     else " needs " ++ " ".intercalate (t.requires.elems.map keyText))
-
 /-- A refusal's reason: the name of its kind (`TypeReason.head`). -/
 def reasonText (r : TypeRefusal) : String := r.reason.head
 
@@ -262,7 +257,7 @@ def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment plac
         | some a => if a.isPrefixOf n.path then .lit else .plain
         | none => .plain
     let type := match result with
-      | some (.ok t) => effTyText t
+      | some (.ok t) => Tools.Code.effTyText t
       | _ => ""
     let note := match result with
       | some (.error r) => if refusedHere then "refused: " ++ reasonText r else ""
@@ -273,5 +268,18 @@ def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment plac
     let mark := n.op.bind fun op => rowMark (nativeRowOf (l.app.withHoles l.sketch.holes).rows op)
     { gutter := bracket n.path, depth := n.depth, text, type, mark, note, key := bracket n.path, state }
   { title, judgment, place, foot, lines := ((lines l.sketch.program).map line).toArray }
+
+/-! ## The code plane and the tree's text -/
+
+/-- The code plane of a program in the view: its TypeScript at the plane's width (`Tools.Code`), or
+why it has none. -/
+def codePanel (program : NativeEff) (table : RowTable) (holes : List String := []) : Option CodePanel :=
+  match Tools.Code.codeLines CODE_WIDTH program table holes with
+  | .ok lines => some { head := "typescript", lines := lines.toArray }
+  | .error why => some { head := "typescript", lines := #["no module: " ++ why] }
+
+/-- A program's tree as the terminal page writes it: address, node and type, one node a line. -/
+def treeText (name : String) (program : NativeEff) : String :=
+  "\n".intercalate (pageText (sessionPage (EditSession.open {} { program }) none name "" "" "")) ++ "\n"
 
 end Tools.View.Program

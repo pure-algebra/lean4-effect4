@@ -1,5 +1,4 @@
 import Tools.Code.TypeScript
-import Tools.View.Program
 import Effect4.Codegen.Admit
 import Effect4.Program.Fragment
 import Effect4.Store.Carrier.Digest
@@ -111,49 +110,39 @@ def codeLines (w : Nat) (program : NativeEff) (table : RowTable := []) (holes : 
       String.intercalate "\n" (m.decls.map (Ts.decl w))
     .ok ((text.splitOn "\n").reverse.dropWhile (·.isEmpty)).reverse
 
-/-- The code plane of a program in the view: its TypeScript at the plane's width, or why it has
-none. -/
-def codePanel (program : NativeEff) (table : RowTable) (holes : List String := []) :
-    Option Tools.View.CodePanel :=
-  match codeLines Tools.View.CODE_WIDTH program table holes with
-  | .ok lines => some { head := "typescript", lines := lines.toArray }
-  | .error why => some { head := "typescript", lines := #["no module: " ++ why] }
+/-- A type's text: the answer, then `! error` when it can fail, then the keys it needs. -/
+def effTyText (t : EffTy) : String :=
+  t.answer.render ++ (if t.error = .never then "" else " ! " ++ t.error.render) ++
+    (if t.requires.elems.isEmpty then ""
+     else " needs " ++ " ".intercalate (t.requires.elems.map keyText))
 
 /-- One program, generated: its name and group, its type, its address, its files' texts, and what
 was checked. -/
 structure Generated where
   name : String
   group : String
-  /-- the program's type, as the view writes it; empty when it is ill-typed -/
+  /-- the program's type (`effTyText`); empty when it is ill-typed -/
   type : String
   /-- the SHA-256 of the program's canonical bytes, in hexadecimal -/
   address : String
   /-- the module, or why there is none -/
   module : Except String String
-  /-- the program's tree: address, node and type, one node a line -/
-  tree : String
   /-- the reading boundary's verdict on the structured module, and whether the program it reads
   back is this one -/
   reads : Except String Unit
   /-- whether `run_eq_meaning` covers the program -/
   straight : Bool
 
-/-- The program's tree, as the view's terminal page writes it. -/
-def treeText (name : String) (program : NativeEff) : String :=
-  let page := Tools.View.Program.sessionPage (EditSession.open {} { program }) none name "" "" ""
-  "\n".intercalate (Tools.View.pageText page) ++ "\n"
-
 /-- Generate one program of a group, at the width `w`. -/
 def generate (w : Nat) (group name : String) (program : NativeEff) (table : RowTable := []) : Generated :=
   let address := Store.Digest.hex (Store.sha256 (Api.bytesOf program))
   let type := match Api.checkTyping program table with
-    | some t => Tools.View.Program.effTyText t.ty
+    | some t => effTyText t.ty
     | none => ""
   let straight := Effect4.Program.Denote.Straight program
-  let tree := treeText name program
   match Api.emitModule "main" program table with
   | .error why =>
-    { name, group, type, address, tree, straight, module := .error (reprStr why), reads := .error "no module" }
+    { name, group, type, address, straight, module := .error (reprStr why), reads := .error "no module" }
   | .ok emission =>
     let body := emission.module
     let imports := importsOf body
@@ -173,6 +162,6 @@ def generate (w : Nat) (group name : String) (program : NativeEff) (table : RowT
         | .error _ => "the structured module, before its layout"),
       "covered   " ++ (if straight then "run_eq_meaning (the straight fragment)"
         else "outside the straight fragment")]
-    { name, group, type, address, tree, straight, reads, module := .ok (moduleText w { checked with header }) }
+    { name, group, type, address, straight, reads, module := .ok (moduleText w { checked with header }) }
 
 end Tools.Code

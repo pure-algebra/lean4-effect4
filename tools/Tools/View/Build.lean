@@ -78,7 +78,7 @@ def deltaText : Edit.Delta → String
 def sessionText (l : EditSession) : String :=
   let v := l.view
   match v.type with
-  | some t => "type " ++ Program.effTyText t
+  | some t => "type " ++ Tools.Code.effTyText t
   | none => s!"{v.refusals.length} refused"
 
 /-- A law's name without the namespace every law of the session shares. -/
@@ -119,7 +119,7 @@ def frames (title : String) (reqs : List Tools.Session.Request) : List Frame :=
         let page := Program.sessionPage l lit (title ++ " · " ++ requestText r)
           (delta ++ sessionText l) "" laws
         let holes := l.sketch.holes.map (·.name)
-        let code := Tools.Code.codePanel l.sketch.program (l.app.withHoles l.sketch.holes).rows holes
+        let code := Program.codePanel l.sketch.program (l.app.withHoles l.sketch.holes).rows holes
         let page := { page with code }
         (st', out ++ [{ page, edit := lit, spliced }])
   let out := (reqs.foldl step ({}, [])).2
