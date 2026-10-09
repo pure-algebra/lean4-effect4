@@ -1,0 +1,52 @@
+['node', '/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo', '--pretty', 'false', '--noEmit', '-p', '/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/tsconfig.json']: exit 1
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/batchMap.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/collectClose.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/completionMap.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/effectMap.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/forEachClose.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/mapperState.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/nestedCompletion.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/upstreamState.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/wrongBatchIdentity.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+../../../../../../../var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/channel-transforms-91u7isps/wrongNoIncrement.ts(4,337): error TS2375: Type 'Effect<readonly ["Chunk", readonly number[]], never, never> | Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Effect<readonly ["End", number], never, never>' is not assignable to type 'Effect<readonly ["Chunk", readonly number[]], never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Type 'readonly ["End", number]' is not assignable to type 'readonly ["Chunk", readonly number[]]'.
+      Type at position 0 in source is not compatible with type at position 0 in target.
+        Type '"End"' is not assignable to type '"Chunk"'.
+

@@ -241,6 +241,12 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
 (excluding defects `badName` and `notImplemented`, decisions row 152).
 
 #### 4. Required Properties and Obligations
+- **A declared source uses its declarations (`stream-source-declarations`)**: Adapter acceptance relates the source's protocol and state requests to the supplied operations.
+  Every invocation uses the corresponding declaration's name.
+  Application to an installed module requires matching declarations at those names.
+  The law is `Source.fromDefinitions_declarations` (`src/Effect4/Laws/Library/Stream/Definitions.lean`).
+  The module checker still owns argument typing, formation, errors, requirements and definition bodies.
+  The adapter establishes no batch nonemptiness, execution, finalization or host behavior.
 - **Monotonicity (`fits-mono`)**: `World.leHost` preserves value membership for a fixed value and type.
   (`fits_mono` (`src/Effect4/Laws/Program/Typed/Membership.lean`)).
 - **Subtyping preservation (`fits-subn`)**: Subtyping in normalized order preserves membership.
@@ -1351,6 +1357,12 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   It retains the scheduled flag when the batch becomes empty.
   The connector is `latch_registration_agrees` (`src/Effect4/Laws/Library/Latch/Registration.lean`).
   It establishes no interruption delivery, posted-flush execution, liveness or host behavior.
+- **Channel transforms its selected payload (`channel-batch-transform`, `channel-completion-transform`)**: An exact input observation selects the batch or completion transformation.
+  Input failures propagate with their full cause and resulting stores.
+  A selected handler's exit and resulting stores become the result.
+  The laws require aligned scopes and successful elaboration of the input and handlers.
+  They are `Internal.mapEffectOf_protocol` and `Internal.mapDoneEffectOf_protocol` (`src/Effect4/Laws/Library/Channel/Protocol.lean`).
+  These denotation laws do not execute stored definition calls or establish nonempty outputs, whole-stream behavior or host simulation.
 - **Pull selects its protocol handler (`pull-protocol-selection`)**: The input answers an exact batch or End value, or fails with its full cause.
   Authoring elaboration accepts all handlers, and source and value scopes have equal lengths.
   The selected handler receives the input's resulting stores.

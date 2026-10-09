@@ -1,0 +1,10 @@
+Effect4.Program.Authoring.Module: 38 declarations; axiom ceiling checked
+Effect4.Library.Channel.Ops: 7 declarations; axiom ceiling checked
+Effect4.Laws.Library.Channel.Scope: 7 declarations; axiom ceiling checked
+Effect4.Laws.Library.Channel.Protocol: 5 declarations; axiom ceiling checked
+Effect4.Library.Stream.Definitions: 61 declarations; axiom ceiling checked
+Effect4.Laws.Library.Stream.Definitions: 8 declarations; axiom ceiling checked
+Test.Program.Channel: 201 declarations; axiom ceiling checked
+Test.Program.ModuleDeclarations: 430 declarations; axiom ceiling checked
+core/law import separation checked
+new law files pass the parsed proof-style check

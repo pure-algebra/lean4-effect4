@@ -5,8 +5,10 @@ No finding here requires another program representation.
 This inventory records observations and proposals, not owner rulings or compatibility grades.
 
 Base: `7334f1197cf5b535541ce1dfc7789a5082c07115`.
-The accompanying implementation is the Pull protocol slice on `codex/pull-protocol`.
-Its receipt is `docs/research/2026-10-09-pull-protocol-receipt.md`.
+The Pull receipt is `docs/research/2026-10-09-pull-protocol-receipt.md`.
+The Channel slice starts from `9d489341525ea4a55bb9da512ae35809c0175093` on `codex/channel-transforms`.
+Its plan is `docs/research/2026-10-09-channel-transforms-plan.md`.
+This update records its named declarations, source adapter and transform controls.
 The existing module survey reads latest (Effect 4.0.1), under decisions rows 331 and 335.
 `tools/ModuleSurvey/README.md` states its commands and limits.
 A dependency edge identifies implementation candidates, not shared meaning or a proof obligation.
@@ -42,7 +44,7 @@ A comparison needs its own observation, assumptions and retained evidence.
 | Stage | Existing data and owner | Evidence and limit | Useful next change |
 | --- | --- | --- | --- |
 | Authoring | `TermSrc`, `Src`, `DefSrc`; `src/Effect4/Program/Authoring.lean` | Source functions elaborate to stored data; they are not stored closures | Keep author helpers here |
-| Declared operations | `Def.of`, `eff_module`; `src/Effect4/Program/Authoring/Defs.lean` and `Module.lean` | Each operation declares request, answer, error and requirement columns once | Derive invocation and adapter metadata from those declarations |
+| Declared operations | `Def.of`, `eff_module`; `src/Effect4/Program/Authoring/Defs.lean` and `Module.lean` | Named `definitions` fields and ordered `defs` derive from one declaration list | Reuse these fields for adapters and tooling |
 | Form expansion | `Forms.Form`, `Template.expand`; `src/Effect4/Codegen/Forms.lean` | Foreign spellings expand into the existing core | Add a Forms row only when admitting that spelling is required |
 | Stored program | `Eff`; `src/Effect4/Program/Eff.lean` | Binders and calls remain first-order data | Reuse bind, selection and cause matching for Pull and Channel |
 | Type checking | `TypedProgram`; `src/Effect4/Program/CheckedTyping.lean` | Its certificate names one program and signature | Keep expected columns available at source composition boundaries |
@@ -59,7 +61,10 @@ A comparison needs its own observation, assumptions and retained evidence.
 | A lone Chunk has no End type member | Helper gap; `Decision.arms` and `Ty.payloadTy` reject the End selection | For inline sources, use the existing `ascribe` at `Program.Stream.pulledTy` |
 | An always-failing inline source has no successful protocol column | Checker-context limit; the Pull battery retains the rejection | Invoke an operation with a declared answer column; investigate expected-type propagation only for a concrete inline consumer |
 | Declared operations avoid both workarounds | Existing capability; `ProtocolDefinitions` in `Test/Program/Pull.lean` | Prefer one `eff_module` declaration list over repeated annotations |
-| Source element metadata can disagree with declared operations | Duplicated metadata; `metadataMismatch` in `Test/Program/StreamArray.lean` runs through a consumer that ignores the conflicting field | Generate a definition-backed Source adapter and check its column relationships once |
+| Source metadata no longer needs hand repetition on the declared path | `Source.fromDefinitions` derives its types and invocations from supplied operation declarations | Use generated `definitions` fields; keep the raw Source as an explicit authoring boundary |
+| Supplied declarations can differ from an independently installed block | `copiedMetadata` in `Test/Program/Channel.lean` retains that acceptance with a conflicting copied column | A future module-relative adapter can resolve and compare the existing installed declarations; no second program representation is needed |
+| A boolean branch's answer variants fail target inference | Retained tsgo `TS2375` in `docs/research/2026-10-09-channel-transforms-branch-refusal/`; decisions rows 218 and 266 already record the branch gap | Land the ruled `ifCase` printer and its reconstruction laws; the current producer explicitly ascribes both branch values |
+| Printed handle request headers remain unreadable | The Channel packet retains `ReadRefusal.shape "definition"`; existing Queue and Semaphore controls expect the same refusal | Extend the existing type reader and its exact reconstruction contract in a separate slice |
 | A raw tag selector accepts another declared union | Protocol premise; `other` in `Test/Program/Pull.lean` types and runs outside the Pull protocol | Offer a protocol-checked entry only when raw callers need admission; generic typing is not protocol admission |
 | Empty batches inhabit the list type | Data-language limit; `pulled?` rejects the empty batch that generic typing admits | Keep the producer's nonempty premise explicit; do not introduce a refinement type without its consumers and lowering plan |
 | Generic handler proofs need errors and requirements | Proof-helper gap; `Answers` covers empty columns, while `Has` covers full effect types | Add consumed `Has` rules for cause and tag matching before generic Channel typing proofs |
@@ -68,7 +73,8 @@ A comparison needs its own observation, assumptions and retained evidence.
 | Printed syntax is not a target compatibility grade | Evidence boundary; `ModuleEmission` certifies production | Keep source reading, tsgo acceptance, runtime comparison and simulation separate |
 
 A protocol-typed literal helper remains a candidate for inline authoring.
-The declared-operation example already removes those annotations from module bodies.
+The declared-operation example removes those annotations from its single-outcome bodies.
+A boolean branch still needs both annotations for target inference until decisions row 218 lands.
 Do not add another public protocol record solely to carry the same two type columns.
 
 ## Concrete authoring example
@@ -87,11 +93,38 @@ The declarations own the answer column; the helpers own the tag layout and branc
 A handler's failure escapes without entering another handler.
 The battery also consumes stored array operations through the same interface.
 
+## Channel authoring surface
+
+The compiled example is `Test/Program/Channel.lean`.
+The upstream declaration owns its operation name and columns.
+A downstream declaration gives its new columns once:
+
+```lean
+eff_module Mapped where
+  pull (receiver : stateTy) : protocolTy :=
+    Channel.map base.definitions.pull receiver (fun _ => listOf [nat 10, nat 20]);
+  done (receiver : stateTy) : protocolTy :=
+    Channel.mapDone base.definitions.pull receiver (fun value => app "add" [value, nat 1])
+```
+
+`Channel.mapEffect` and `Channel.mapDoneEffect` accept effectful source builders at the same seam.
+`Source.fromDefinitions base.definitions.opened mapped.definitions.pull base.definitions.close [receiver]` assembles the source.
+It derives element and completion columns, checks state relationships, and returns a located authoring refusal on mismatch.
+The caller still installs every referenced module.
+Generated operation names cannot shadow the metadata type.
+Direct record construction uses `definitions`; `defs` is its ordered projection.
+The machine controls exercise composition, captured requests, full failures, retained writes and exactly one close.
+The semantic laws concern conditional dispatch and supplied declarations, with no stored-call or whole-stream simulation claim.
+
+The new helpers store no callback and introduce no machine operation.
+The repeated binder reasoning stays in the shared Pull and Channel laws.
+The next whole-run statement must consume those laws and the definition-aware machine behavior explicitly.
+
 ## Useful next module slices
 
 | Slice | Existing building blocks | Required behavior before a broader claim |
 | --- | --- | --- |
-| Channel transformations | Pull handlers, declared calls and existing Eff composition | Specify batch transformation, leftovers, failures, resource lifetime and captured caller values |
+| Stateful Channel transformations | The four new maps, Pull handlers, declared calls and existing loops | Define empty-result filtering, early stopping, repeated pulls, index state and ownership before adding filter or take |
 | SynchronizedRef effectful modification | Ref, Semaphore and the existing protected-acquisition helper | Connect successful client completion to the write; account for interruption, cleanup and failed clients |
 | PartitionedSemaphore waiting | Existing scalar bookkeeping, identity tables and waiter helpers | Model keyed waiter identity, partial reservation, ordered selection, cancellation and protected execution |
 | PubSub waiting and lifetime | Existing capacity-one, replay-zero steps and shared wait machinery | State subscription identity, delivery, backpressure, cancellation and scoped lifetime |

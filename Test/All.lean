@@ -198,6 +198,7 @@ import Test.Program.QueueDefs
 import Test.Program.AuthoringDefs
 import Test.Program.AuthoringModule
 import Test.Program.ModuleDefinitions
+import Test.Program.ModuleDeclarations
 import Test.Program.QueueOps
 import Test.Program.QueueTraces
 import Test.Program.QueueInvariant
@@ -332,6 +333,7 @@ import Test.Program.PartitionedSemaphoreFaces
 import Test.Program.PartitionedSemaphoreBookkeeping
 import Test.Program.StreamArray
 import Test.Program.Pull
+import Test.Program.Channel
 import Test.Program.SynchronizedRef
 import Test.Program.PubSubSingle
 

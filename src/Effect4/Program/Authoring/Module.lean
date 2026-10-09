@@ -10,6 +10,7 @@ public import Effect4.Program.Authoring.Declare
 `eff_module` writes an authoring record, its constructor, and its module helpers.
 Each operation declares its runtime parameters and columns once.
 The constructor uses `Def.of` on the written body and stores its invocation.
+Named `definitions` fields retain each existing `DefSrc`; `defs` projects them in declaration order.
 The record stores authoring functions, never stored program syntax.
 
 Separate entries with semicolons. Group parameters are explicit typed Lean binders.
@@ -71,7 +72,7 @@ def parseModuleOperations (entries : Array Syntax)
       | Macro.throwErrorAt entry "expected `operation (argument : Ty) : answer := body`"
     unless name.getId.isStr && name.getId.getPrefix == .anonymous && name.getId != `_ do
       Macro.throwErrorAt name "an operation needs one simple name"
-    if [`defs, `definition, `Calls, `calls, `make, `install, `module, `mk, `rec, `recOn, `casesOn,
+    if [`defs, `definition, `definitions, `Calls, `calls, `make, `install, `module, `mk, `rec, `recOn, `casesOn,
         `noConfusion, `noConfusionType, `ctorIdx, `brecOn, `below].contains name.getId then
       Macro.throwErrorAt name "operation name is reserved by the generated record"
     if out.any (fun operation => operation.name.getId == name.getId) then
@@ -98,8 +99,21 @@ macro_rules
     let fields ← operations.mapM fun op => do
       let ty ← termArrows op.params.size (← `(Effect4.Program.Authoring.Src Effect4.Program.NativeOp))
       `(Lean.Parser.Command.structSimpleBinder| $[$op.doc:docComment]? $op.name:ident : $ty)
+    let currentNamespace ← Macro.getCurrNamespace
+    let moduleName := if (`_root_).isPrefixOf name.getId then
+        name.getId.replacePrefix `_root_ .anonymous
+      else currentNamespace ++ name.getId
+    -- Exact references keep operation and parameter names from capturing generated types.
+    let definitionsTyName := moduleName.appendAfter "Declarations"
+    let definitionsTyId := mkIdentFrom name (name.getId.appendAfter "Declarations")
+    let definitionsTyRef := mkCIdentFrom name definitionsTyName
+    let declarationFields ← operations.mapM fun op =>
+      `(Lean.Parser.Command.structSimpleBinder| $[$op.doc:docComment]? $op.name:ident :
+        Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)
+    let declarationsRecord ← `(command| structure $definitionsTyId where
+      $[$declarationFields:structSimpleBinder]*)
     let record ← `(command| $[$doc:docComment]? structure $name:ident where
-      defs : List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp)
+      definitions : $definitionsTyRef
       $[$fields:structSimpleBinder]*)
     let instanceId ← withFreshMacroScope `(ident| instanceName)
     let callsTyId := mkIdentFrom name (name.getId ++ `Calls)
@@ -147,10 +161,14 @@ macro_rules
           $op.answer ($body : $ty) $op.error $op.requires)
       definitions := definitions.push definition.raw
       values := values.push (← `($definitionId $spelling $groupArgs* $selfArgs*))
-    let sources ← locals.mapM fun x => `(($x).src)
+    let declarationAssignments ← (operations.zip locals).mapM fun (op, x) =>
+      `(Lean.Parser.Term.structInstField| $op.name:ident := ($x).src)
     let assignments ← (operations.zip locals).mapM fun (op, x) =>
       `(Lean.Parser.Term.structInstField| $op.name:ident := ($x).call)
-    let mut result ← `({ defs := [$sources,*], $assignments:structInstField,* : $name })
+    let declarationValue ← `(({ $declarationAssignments:structInstField,* } : $definitionsTyRef))
+    let declarationField ← `(Lean.Parser.Term.structInstField| definitions := $declarationValue)
+    let allAssignments := #[declarationField] ++ assignments
+    let mut result ← `(({ $allAssignments:structInstField,* } : $name))
     for (localId, value) in (locals.zip values).reverse do
       result ← `(let $localId := $value; $result)
     if let some selfId := selfId then
@@ -163,6 +181,12 @@ macro_rules
     let selfArg ← withFreshMacroScope `(ident| self)
     let moduleArg ← withFreshMacroScope `(ident| m)
     let mainArg ← withFreshMacroScope `(ident| main)
+    let defsId := mkIdentFrom name (name.getId ++ `defs)
+    let sources ← operations.mapM fun op => do
+      let projection := mkCIdentFrom op.name (definitionsTyName ++ op.name.getId)
+      `($projection (($selfArg).definitions))
+    let defsDecl ← `(command| def $defsId ($selfArg : $name) :
+        List (Effect4.Program.Authoring.DefSrc Effect4.Program.NativeOp) := [$sources,*])
     let install ← `(command| def $installId ($selfArg : $name)
         ($moduleArg : Effect4.Program.Authoring.Module Effect4.Program.NativeOp) :
         Effect4.Program.Authoring.Module Effect4.Program.NativeOp :=
@@ -171,6 +195,7 @@ macro_rules
         ($mainArg : Effect4.Program.Authoring.Src Effect4.Program.NativeOp) :
         Effect4.Program.Authoring.Module Effect4.Program.NativeOp :=
       $installId $selfArg { main := $mainArg })
-    return mkNullNode (#[record.raw] ++ callsDecls ++ definitions ++ #[makeDecl.raw, install.raw, asModule.raw])
+    return mkNullNode (#[declarationsRecord.raw, record.raw] ++ callsDecls ++ definitions ++
+      #[makeDecl.raw, defsDecl.raw, install.raw, asModule.raw])
 
 end Effect4.Program.Authoring

@@ -1,0 +1,12 @@
+{
+  "format": "effect4-channel-branch-refusal-v1",
+  "base": "9d489341525ea4a55bb9da512ae35809c0175093",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "source": "Channel-without-ascriptions.lean",
+  "sourceSha256": "d06db2ff9900201f8559882c2a94e081240f1bb7b278e3ee8d8016983d53fc2b",
+  "stage": "Api.Author.build and Api.emitModule pass; tsgo refuses generated bool selection",
+  "existingDecision": 218,
+  "limit": "Success-branch union instance of the deferred ifCase printer work; no new core syntax is needed",
+  "failureSha256": "ef082fd4fa7ee48270772f31660284203dcfa30d118c5efe372b1040d403c5c2"
+}

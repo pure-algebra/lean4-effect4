@@ -1007,6 +1007,15 @@ def registry : Registry where
     { id := "pubsub-single-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Six pure PubSub bookkeeping sources read the independent capacity-one, replay-zero, natural-message model: initial, subscription with a fresh logical name, tryPublish, poll, unsubscribe and slide; input sources read their exact images, and folds require aligned value and source scope lengths; observations contain each reply and next model state; no host subscription-object identity relation, handle allocation, delivery, lifetime, backpressure execution, arbitrary capacity or whole module run (decisions rows 330, 331 and 335)"
       pointer := .witness `Effect4.PubSub.Model.single_steps_agree },
+    { id := "stream-source-declarations", concept := "store-typing", role := .compatibility
+      title := "An accepted definition-backed Stream source derives its normalized batch/completion protocol, open and close state requests, and unit close answer from the supplied operation declarations; each invocation uses the corresponding declaration name; no body admission, nonempty batch, execution, finalization or host behavior follows"
+      pointer := .witness `Effect4.Stream.Source.fromDefinitions_declarations },
+    { id := "channel-batch-transform", concept := "translation-simulation", role := .compatibility
+      title := "The authored Channel batch dispatcher selects the wrapped batch transformation only for an exact Chunk input, selects unchanged completion for End, and propagates input failure with its resulting stores; actual handler elaboration and aligned scopes are premises; the selected handler's complete meaning includes its failure and stores; no execution of stored definition calls, nonempty output, scheduling or host simulation"
+      pointer := .witness `Effect4.Channel.Internal.mapEffectOf_protocol },
+    { id := "channel-completion-transform", concept := "translation-simulation", role := .compatibility
+      title := "The authored Channel completion dispatcher selects the wrapped completion transformation only for an exact End input, selects unchanged batches for Chunk, and propagates input failure with its resulting stores; actual handler elaboration and aligned scopes are premises; no execution of stored definition calls, nonempty output, scheduling or host simulation"
+      pointer := .witness `Effect4.Channel.Internal.mapDoneEffectOf_protocol },
     { id := "pull-protocol-selection", concept := "translation-simulation", role := .compatibility
       title := "Pull's outcome handler selects exactly one batch, completion or failure branch under the existing denotation: an exact Chunk or End value, or the complete input cause, chooses its branch; aligned source and value scopes and successful elaboration of all handlers are premises; the selected handler receives the input's resulting stores, and its full exit and final stores are the result; no scheduler, whole-stream run, nonempty-batch admission, host Done adapter or mixed-Done correspondence (decisions rows 331 and 335)"
       pointer := .witness `Effect4.Pull.matchEffect_protocol },
