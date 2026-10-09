@@ -1,0 +1,17 @@
+[
+  {
+    "command": [
+      "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+      "-DwarningAsError=true",
+      "-o",
+      "/tmp/effect4-address-overwatch-0617/overlay/Effect4/Laws/Program/Address.olean",
+      "Effect4/Laws/Program/Address.lean"
+    ],
+    "cwd": "/tmp/effect4-address-overwatch-0617/source/src",
+    "exit_code": 1,
+    "elapsed_seconds": 0.15,
+    "log": "Address.compile.log",
+    "LEAN_NUM_THREADS": "3",
+    "LEAN_PATH": "/tmp/effect4-address-overwatch-0617/overlay:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean"
+  }
+]

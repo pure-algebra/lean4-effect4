@@ -1,0 +1,52 @@
+{
+  "reviewed_commit": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "previous_commit": "205f4feaaac2041efe4becbe9992ec8f14b077c6",
+  "sources": {
+    "src/Effect4/Laws/Program/Address.lean": {
+      "sha256": "fb7f38aa0b656044e8d41703ba7703f5294185407081cea8b7422545ebff0482",
+      "matches_working_tree": true
+    },
+    "src/Effect4/Laws/Auto/ExceptMap.lean": {
+      "sha256": "9157fa2054327be5365f95a8bcac8abffbe2fe29a0c8dbb5d27f619c27f47295",
+      "matches_working_tree": true
+    },
+    "src/Effect4/Laws/Program/Typing/Annotate.lean": {
+      "sha256": "ad9db77c6f4a6d9a525375d8fc72a229183a0c378416e8db8bac34859d181110",
+      "matches_working_tree": true
+    },
+    "src/Effect4/Laws/Program/Typing/Rebase.lean": {
+      "sha256": "b53f44257391012298cc02f8bc5980c63cb7bfdc90b7a0ed23983b5ad67d966b",
+      "matches_working_tree": true
+    },
+    "src/Effect4/Laws/Author.lean": {
+      "sha256": "73ae6aacdafdaed9c1d79b6511d631358ae3fc94dd55e7208bb2a4cd9e5225da",
+      "matches_working_tree": true
+    },
+    "src/Effect4/Program/Typing/Parts.lean": {
+      "sha256": "7f09e67cfd9545b19b090306edf21d6ab6e233273fb5f25e4358145db7fbc0fd",
+      "matches_working_tree": true
+    },
+    "Test/Dogfood/EditSession.lean": {
+      "sha256": "3ce8b5589d7be0654db2dd978be427dea15cd2ec4c63ce365460dee1c6f21865",
+      "matches_working_tree": true
+    },
+    "tools/ProofGraph/Registry.lean": {
+      "sha256": "020c7c97a66403db22969110faa4b36a0dded8bc6b1cb5e406e307d4f3c0fe1b",
+      "matches_working_tree": true
+    }
+  },
+  "compiler": {
+    "path": "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "sha256": "1b370cfcbf44e80d1b004ab1b1ab9a4c73951f9f7c242140bcff9bc577576554"
+  },
+  "source_paths": [
+    "src/Effect4/Laws/Program/Address.lean",
+    "src/Effect4/Laws/Auto/ExceptMap.lean",
+    "src/Effect4/Laws/Program/Typing/Annotate.lean",
+    "src/Effect4/Laws/Program/Typing/Rebase.lean",
+    "src/Effect4/Laws/Author.lean",
+    "src/Effect4/Program/Typing/Parts.lean",
+    "Test/Dogfood/EditSession.lean",
+    "tools/ProofGraph/Registry.lean"
+  ]
+}

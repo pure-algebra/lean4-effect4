@@ -1,0 +1,110 @@
+{
+  "commit": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "base": "92f51a62d393f9c39970c28e14d33988e7ef2552",
+  "sources": {
+    "src/Effect4/Laws/Auto/ExceptMap.lean": {
+      "sha256": "9157fa2054327be5365f95a8bcac8abffbe2fe29a0c8dbb5d27f619c27f47295",
+      "currentMatches": true
+    },
+    "src/Effect4/Laws/Program/Typing/Rebase.lean": {
+      "sha256": "b53f44257391012298cc02f8bc5980c63cb7bfdc90b7a0ed23983b5ad67d966b",
+      "currentMatches": true
+    }
+  },
+  "checks": [
+    {
+      "file": "Effect4/Laws/Auto/ExceptMap.lean",
+      "exit": 0,
+      "command": [
+        "/Users/pooks/.elan/bin/lean",
+        "-R",
+        "/private/tmp/effect4-rebase-overwatch",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-rebase-overwatch/Effect4/Laws/Auto/ExceptMap.olean",
+        "/private/tmp/effect4-rebase-overwatch/Effect4/Laws/Auto/ExceptMap.lean"
+      ]
+    },
+    {
+      "file": "Effect4/Laws/Program/Typing/Rebase.lean",
+      "exit": 1,
+      "command": [
+        "/Users/pooks/.elan/bin/lean",
+        "-R",
+        "/private/tmp/effect4-rebase-overwatch",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-rebase-overwatch/Effect4/Laws/Program/Typing/Rebase.olean",
+        "/private/tmp/effect4-rebase-overwatch/Effect4/Laws/Program/Typing/Rebase.lean"
+      ]
+    },
+    {
+      "file": "Effect4/Laws/Program/Typing/Rebase.lean",
+      "exit": 0,
+      "command": [
+        "/Users/pooks/.elan/bin/lean",
+        "-R",
+        "/private/tmp/effect4-rebase-overwatch",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-rebase-overwatch/Effect4/Laws/Program/Typing/Rebase.olean",
+        "/private/tmp/effect4-rebase-overwatch/Effect4/Laws/Program/Typing/Rebase.lean"
+      ],
+      "importOverlay": "read-only symlinks to existing Effect4 oleans; own output module files excluded"
+    },
+    {
+      "file": "Probe.lean",
+      "exit": 0,
+      "command": [
+        "/Users/pooks/.elan/bin/lean",
+        "-R",
+        "/private/tmp/effect4-rebase-overwatch",
+        "-DwarningAsError=true",
+        "/private/tmp/effect4-rebase-overwatch/Probe.lean"
+      ]
+    },
+    {
+      "file": "Audit.lean",
+      "exit": 1,
+      "command": [
+        "/Users/pooks/.elan/bin/lean",
+        "-R",
+        "/private/tmp/effect4-rebase-overwatch",
+        "-DwarningAsError=true",
+        "/private/tmp/effect4-rebase-overwatch/Audit.lean"
+      ]
+    },
+    {
+      "file": "Audit.lean",
+      "exit": 0,
+      "command": [
+        "/Users/pooks/.elan/bin/lean",
+        "-R",
+        "/private/tmp/effect4-rebase-overwatch",
+        "-DwarningAsError=true",
+        "/private/tmp/effect4-rebase-overwatch/Audit.lean"
+      ]
+    }
+  ],
+  "currentHead": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "headFinal": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "probeGuards": 19,
+  "probeLawReaders": 3,
+  "evidenceHashes": {
+    "Probe.lean": "88105eaa1ddc1a585e5e46d7b0e17444c439bddac7b83f4de59dc796db3d9246",
+    "Audit.lean": "2fa47cf94e99d980328fdef599d25cdd4eb72ee54d89dd4a04b793a70c4a006d",
+    "Probe.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "Audit.log": "49816f27dbc1c3a7e4f573051b57f21fd367994df62d243b1523a519e7fab55b"
+  },
+  "sourceDrift": {
+    "src/Effect4/Laws/Auto/ExceptMap.lean": false,
+    "src/Effect4/Laws/Program/Typing/Rebase.lean": false
+  },
+  "limits": [
+    "The named laws keep signature, context, and syntax fixed; only base-path labels move.",
+    "No module-check, moved-subtree variable/reference semantics, host behavior, or cache implementation is established.",
+    "No primary Lake or source edit runs; compiled outputs remain in /tmp.",
+    "The first temporary Rebase invocation lacked an import overlay; corrected overlay compilation succeeds."
+  ],
+  "leanVersion": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+}
