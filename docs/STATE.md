@@ -37,6 +37,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
   `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85).
+- **The host meaning on a run** (slice H8, row 310). `denoteRows_eq_session` is a theorem
+  (`src/Effect4/Laws/Api/SessionMeaning.lean`). Its fragment is `StraightRows`, at every compile
+  budget. A recorded run that is funded, at rest and host-driven observes the program's meaning
+  under its reply tape. Between decisions the machine is in one of four
+  forms: loaded, parked on a yield, parked on a host call, exited
+  (`src/Effect4/Laws/Program/Agreement/Hosted.lean`). Each host decision moves it to another,
+  and the local run with calls moves the same way.
 - **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import
@@ -175,8 +182,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 8. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
    transaction attempt (G4).
 
-Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329), the session
-API's slices (row 326), and H8.
+Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329) and the
+session API's slices (row 326). The host session is to be drawn by H8's machine forms. The
+owner's note of 2026-10-09: write a program, then watch its session answer calls and schedule.
 
 ## What the owner must decide
 

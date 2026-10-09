@@ -108,8 +108,10 @@ def localRunC (table : RowTable) (root : NativeEff) :
     | some (.finished ex s', r') => some (.exit ex s' r')
     | none => some .waits
 
-/-- After `c` steps the local run with calls from `fr` is the one from `fr'`, whatever budget is
-left. -/
+/-- **A relation on final observations**: at every budget, the local run with calls from `fr`
+given `c` more steps stops where the run from `fr'` stops (`RunEnd`), or neither stops. It is no
+path: two waiting calls over different stores relate (the H8 review, finding H8R-01). A run that
+waits and a run that diverges do not relate: the first stops with `RunEnd.waits`. -/
 def ReachesC (table : RowTable) (root : NativeEff) (c : Nat) (fr : NFiber) (s : Stores)
     (r : ReplyTape) (fr' : NFiber) (s' : Stores) (r' : ReplyTape) : Prop :=
   ∀ n, localRunC table root (n + c) fr s r = localRunC table root n fr' s' r'
