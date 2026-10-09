@@ -1,12 +1,17 @@
 module
-public import Effect4.Modules.Queue.Defs
-public import Effect4.Modules.Queue.Ops
-public import Effect4.Modules.Semaphore.Defs
-public import Effect4.Modules.Semaphore.Ops
-public import Effect4.Modules.Pool.Ops
-public import Effect4.Modules.Latch.Steps
-public import Effect4.Modules.Latch.Registration
-public import Effect4.Modules.Stream.Ops
+public import Effect4.Library.Queue.Model
+public import Effect4.Library.Semaphore.Model
+public import Effect4.Library.Pool.Model
+public import Effect4.Library.Latch.Model
+public import Effect4.Library.Stream.Model
+public import Effect4.Library.Queue.Defs
+public import Effect4.Library.Queue.Ops
+public import Effect4.Library.Semaphore.Defs
+public import Effect4.Library.Semaphore.Ops
+public import Effect4.Library.Pool.Ops
+public import Effect4.Library.Latch.Steps
+public import Effect4.Library.Latch.Registration
+public import Effect4.Library.Stream.Ops
 public import Effect4.Program.Stream
 
 /-!
@@ -15,5 +20,6 @@ public import Effect4.Program.Stream
 A program that uses a Queue, a Semaphore, a Pool, a Latch or a stream imports this module, or
 one composed module's own files. Each composed module keeps the name of latest's
 (Effect 4.0.1) module, and its place in latest's graph of building blocks (decisions row 335).
-It declares nothing.
+Each module's model, the abstract transitions that its laws relate the steps to, stands beside its
+steps. It declares nothing.
 -/

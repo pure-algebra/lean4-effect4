@@ -1,9 +1,9 @@
-import Effect4.Laws.Modules.Queue.Model
+import Effect4.Library.Queue.Model
 
 /-!
 # The Queue's abstract contract: the small named controls
 
-Finite controls of `src/Effect4/Laws/Modules/Queue/Model.lean`, one input each. They are the
+Finite controls of `src/Effect4/Library/Queue/Model.lean`, one input each. They are the
 research model's
 controls, byte for byte, without its two million-element controls and its bounded exploration.
 Those stay beside the research model, in `QueueLargeControls.lean`, outside every default import.

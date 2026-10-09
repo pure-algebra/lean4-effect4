@@ -1,5 +1,5 @@
-import Effect4.Laws.Modules.Pool.Steps
-import Effect4.Laws.Modules.Pool.Typing
+import Effect4.Laws.Library.Pool.Steps
+import Effect4.Laws.Library.Pool.Typing
 
 /-! Finite controls of Pool's Step data and its public source terms.
 Concept: Translation Simulation and Store Typing. Consumers: `pool-steps-agree` and

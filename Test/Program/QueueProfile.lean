@@ -1,10 +1,10 @@
-import Effect4.Laws.Modules.Queue.Profile
+import Effect4.Laws.Library.Queue.Profile
 
 /-!
 # The Queue's first profile: its finite controls
 
 The predicate, its closure and the two closed forms are in
-`src/Effect4/Laws/Modules/Queue/Profile.lean`. This battery holds the finite controls:
+`src/Effect4/Laws/Library/Queue/Profile.lean`. This battery holds the finite controls:
 one red state for each condition of the predicate,
 each first operation on one input, and the red controls of the premises.
 -/

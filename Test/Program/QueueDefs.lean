@@ -1,11 +1,11 @@
 import Test.Program.QueueScenarios
-import Effect4.Modules.Queue.Defs
+import Effect4.Library.Queue.Defs
 
 /-!
 # The Queue's operations as definitions (decisions row 328, slice PROC-4)
 
 The eight scenarios of `Test/Program/QueueScenarios.lean`, written over the Queue's definitions
-(`src/Effect4/Modules/Queue/Defs.lean`): each operation is declared once in the module's
+(`src/Effect4/Library/Queue/Defs.lean`): each operation is declared once in the module's
 block, by `Def.of`, and each site is one invocation. The scenarios do not change: they take the
 operations as a record (`Ops`), and the invocations have the operations' own types.
 

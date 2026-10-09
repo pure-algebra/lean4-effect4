@@ -9,22 +9,22 @@ whole run.
 
 | Part | Evidence on 2026-10-06 |
 | --- | --- |
-| `src/Effect4/Laws/Modules/Pool/Model.lean` | tested: it builds in the law graph |
-| `profile_closed` in `src/Effect4/Laws/Modules/Pool/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+| `src/Effect4/Library/Pool/Model.lean` | tested: it builds in the law graph |
+| `profile_closed` in `src/Effect4/Laws/Library/Pool/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 | `lease_enrols_iff`, `select_takes_first`, `giveBack_front`, `giveBack_once`, `close_refuses` and `drain_waits` in the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
 | `Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, over the battery's own test forms, one schedule each; two red controls of the mask of `use` |
-| `src/Effect4/Modules/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
-| the seven typing statements of `src/Effect4/Laws/Modules/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
+| `src/Effect4/Library/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
+| the seven typing statements of `src/Effect4/Laws/Library/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
-| the six step statements and `pool_steps_agree` in `src/Effect4/Laws/Modules/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
+| the six step statements and `pool_steps_agree` in `src/Effect4/Laws/Library/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolAgreement.lean` and `PoolRelation.lean` in the same folder | tested: finite controls on 130 states, and five faults red at their own property |
 | `ocaml/engine/test/pool/test_pool.ml`, with `Test/Program/PoolEngine.lean` | tested: twelve runs give Lean's exit on the generated engine, on both carriers, one schedule each. Two are PP4 and the control of PP5 over the first battery's forms, and ten are the public cases |
-| `src/Effect4/Modules/Pool/Ops.lean` | tested: the module builds in the runtime root, and the checker types each case over it |
-| the scope laws of `src/Effect4/Laws/Modules/Pool/Ops.lean`, one for each step term, each part and each operation | proved; the axiom gate holds each to `[propext, Quot.sound]` |
+| `src/Effect4/Library/Pool/Ops.lean` | tested: the module builds in the runtime root, and the checker types each case over it |
+| the scope laws of `src/Effect4/Laws/Library/Pool/Ops.lean`, one for each step term, each part and each operation | proved; the axiom gate holds each to `[propext, Quot.sound]` |
 | `use_types`, `close_answers` and `make_types` in the same file | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | the eleven attempt statements of the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
-| the shared rules that the slice added at the end of `src/Effect4/Laws/Modules/Waiting.lean` and of `Reading.lean` beside it | proved; the axiom gate holds each to `[propext, Quot.sound]` |
+| the shared rules that the slice added at the end of `src/Effect4/Laws/Step/Waiting.lean` and of `Reading.lean` beside it | proved; the axiom gate holds each to `[propext, Quot.sound]` |
 | `Test/Program/PoolPublic.lean` | tested: ten cases over the library's operations on the Lean machine, one schedule each. Four changed policies are red, each on its own case |
 | `Test/Program/PoolOps.lean` | tested: the refusal of a size of zero, each operation's own binders, the hygiene controls and the typing examples, each with a red control |
 | `Test/Program/PoolTraces.lean` | tested: nine traces on the Lean machine, each with its positive control and a fault that fails the promised property |
@@ -42,10 +42,10 @@ The pinned source is `vendor/effect-4.0.0-rc.112/src/Pool.ts`, and the release's
 `releaseItem`, `waitForItem`, `wakeWaiters`, `addAvailableFront` and `shutdown`. The two
 builds differ on the order of reuse, and the contract cites the release there (row 269).
 
-`Effect4.Pool.Model` in `src/Effect4/Laws/Modules/Pool/Model.lean` is the abstract transition
+`Effect4.Pool.Model` in `src/Effect4/Library/Pool/Model.lean` is the abstract transition
 model. It adds no program representation. The model is the ruled contract. It is not a claim
 that every native operation agrees. The public Pool is the three operations of
-`src/Effect4/Modules/Pool/Ops.lean`, each a program in `Eff`.
+`src/Effect4/Library/Pool/Ops.lean`, each a program in `Eff`.
 
 ## The first profile
 
@@ -69,7 +69,7 @@ Six things are excluded by name.
 ## The operations over the steps
 
 Each operation is one program over the step terms and the shared wrapper
-(`src/Effect4/Modules/Waiting.lean`). The programs are in `src/Effect4/Modules/Pool/Ops.lean`.
+(`src/Effect4/Library/Waiting.lean`). The programs are in `src/Effect4/Library/Pool/Ops.lean`.
 Every binder of an operation is minted, so an operation captures no name of its caller. A step
 term never stands inside a step term (decisions row 276, point 3). Each step is one
 `Ref.modify` of its own, and two steps meet through the store.
@@ -173,7 +173,7 @@ gains no field.
 
 ## The invariant
 
-`Profile` in `src/Effect4/Laws/Modules/Pool/Profile.lean` is the first profile's state
+`Profile` in `src/Effect4/Laws/Library/Pool/Profile.lean` is the first profile's state
 predicate. It has four parts.
 
 1. The stamps: no two items share one.

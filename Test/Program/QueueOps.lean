@@ -1,12 +1,12 @@
 import Test.Program.QueueScenarios
 import Test.Program.QueueSteps
-import Effect4.Laws.Modules.Queue.Ops
+import Effect4.Laws.Library.Queue.Ops
 
 /-!
 # The Queue's operations: the finite controls of the library module (rows 233, 242 and 255)
 
-The module is `src/Effect4/Modules/Queue/Ops.lean`, over the shared waiting wrapper
-(`src/Effect4/Modules/Waiting.lean`). The eight scenarios and the masked caller are
+The module is `src/Effect4/Library/Queue/Ops.lean`, over the shared waiting wrapper
+(`src/Effect4/Library/Waiting.lean`). The eight scenarios and the masked caller are
 `Test/Program/QueueScenarios.lean` and `Test/Program/QueueMask.lean`. This battery holds the
 controls of the operations that those do not run, and of the module's laws.
 
@@ -17,7 +17,7 @@ controls of the operations that those do not run, and of the module's laws.
    `authoring_scoped`: each operation's law is found by its name.
 4. **The attempt laws at the wrapper's own binders.** Each law's second form takes two premises
    for each minted name: the row's scope binds it, and no later binder shadows it
-   (`src/Effect4/Laws/Modules/Queue/Ops.lean`). The wrapper's own binders meet both, at every
+   (`src/Effect4/Laws/Library/Queue/Ops.lean`). The wrapper's own binders meet both, at every
    caller's scope: proved here, with each scope written out. And each statement's term is the
    term of the operation's own row: tested, on the trees that the operations elaborate to.
 5. **Hygiene.** The fixtures wrote the names `id`, `hint`, `r`, `e` and `s` around a caller's
@@ -665,7 +665,7 @@ end Hygiene
 /-! ## 6. Typing at every scope
 
 `take_types` and its four siblings type each operation at every typed scope, for every message
-type with `MessageTy` (`src/Effect4/Laws/Modules/Queue/Ops.lean`). The examples read each at a
+type with `MessageTy` (`src/Effect4/Laws/Library/Queue/Ops.lean`). The examples read each at a
 caller's variables: a variable that an author wrote is a kept term, at every scope that binds
 it. The guards run the checker on each operation's tree, so each statement has a finite control
 with the checker's own answer. -/

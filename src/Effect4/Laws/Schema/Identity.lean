@@ -1,5 +1,5 @@
 import Effect4.Schema.Identity
-import Effect4.Laws.Modules.Reading
+import Effect4.Laws.Step.Reading
 
 /-!
 # Laws.Schema.Identity — deferred comparison reads its key comparison

@@ -655,7 +655,7 @@ def pLateSeen : Api.Program :=
 
 /-! ### The Queue's first operations (decisions rows 219 to 222, 233, 238 and 240)
 
-Five programs over the library's operations (`src/Effect4/Modules/Queue/Ops.lean`): the first
+Five programs over the library's operations (`src/Effect4/Library/Queue/Ops.lean`): the first
 host runs of the Queue's expansion. Each is a scenario of the Queue's batteries
 (`Test/Program/QueueScenarios.lean`, `Test/Program/QueueMask.lean`), so the program that rc.112
 runs is the program that the batteries run on the Lean machine. A waiting operation prints as
@@ -717,7 +717,7 @@ def pQueueOrder : Api.Program :=
 
 /-! ### Semaphore's first operations (decisions rows 259 to 261 and 276)
 
-Ten programs over the library's operations (`src/Effect4/Modules/Semaphore/Ops.lean`): the
+Ten programs over the library's operations (`src/Effect4/Library/Semaphore/Ops.lean`): the
 first host runs of Semaphore's expansion. Each is a scenario of
 `Test/Program/SemaphoreScenarios.lean`, so the program that rc.112 runs is the program that the
 batteries run on the Lean machine. An operation prints as its expansion: the mask's getter, the
@@ -824,7 +824,7 @@ def pSemaphoreHandoff : Api.Program :=
 
 /-! ### Pool's first operations (decisions rows 267 to 269, 276 and 279)
 
-Ten programs over the library's operations (`src/Effect4/Modules/Pool/Ops.lean`): the first
+Ten programs over the library's operations (`src/Effect4/Library/Pool/Ops.lean`): the first
 host runs of Pool's expansion. Each is a case of `Test/Program/PoolPublic.lean`, so the program
 that rc.112 runs is the program that the batteries run on the Lean machine. `make` prints as
 its acquisitions, one `Ref.make` of the cell and one `Effect.acquireRelease` whose release is

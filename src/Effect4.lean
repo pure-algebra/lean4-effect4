@@ -98,18 +98,18 @@ import Effect4.Schema.Modeled.Derive
 -- (decisions row 330, slice L2).
 import Effect4.Program.TyNormal
 import Effect4.Schema.FieldRef
-import Effect4.Modules.Step
-import Effect4.Modules.Step.Elab
-import Effect4.Modules.Step.Elab.Inputs
-import Effect4.Modules.Step.Lists
+import Effect4.Step
+import Effect4.Step.Elab
+import Effect4.Step.Elab.Inputs
+import Effect4.Step.Lists
 -- Fields by name, and the modules' steps written as data (decisions row 330, slice L3).
 import Effect4.Schema.FieldRef.Elab
 import Effect4.Schema.Identity
-import Effect4.Modules.Semaphore.Data
-import Effect4.Modules.Pool.Data
-import Effect4.Modules.Queue.Data
-import Effect4.Modules.Latch.Steps
-import Effect4.Modules.Latch.Registration
+import Effect4.Library.Semaphore.Data
+import Effect4.Library.Pool.Data
+import Effect4.Library.Queue.Data
+import Effect4.Library.Latch.Steps
+import Effect4.Library.Latch.Registration
 import Effect4.Program.Typing
 import Effect4.Program.Definitions
 import Effect4.Program.Typing.Blame
@@ -200,32 +200,32 @@ import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
 import Effect4.Codegen.Styles
 -- The words of a step term that the composed modules share, in the namespace `Effect4.Modules`.
-import Effect4.Modules.Words
+import Effect4.Library.Words
 -- The composed modules, programs over the authoring surface (decisions row 255): the Queue's
 -- cell and its steps.
-import Effect4.Modules.Queue.Cell
-import Effect4.Modules.Queue.Steps
+import Effect4.Library.Queue.Cell
+import Effect4.Library.Queue.Steps
 -- The shared pieces of a module that waits (decisions rows 221, 238 and 240), and the Queue's
 -- first operations over them.
-import Effect4.Modules.Waiting
-import Effect4.Modules.Queue.Ops
-import Effect4.Modules.Queue.Defs
+import Effect4.Library.Waiting
+import Effect4.Library.Queue.Ops
+import Effect4.Library.Queue.Defs
 -- Semaphore's cell and its five steps (decisions row 265).
-import Effect4.Modules.Semaphore.Cell
-import Effect4.Modules.Semaphore.Steps
+import Effect4.Library.Semaphore.Cell
+import Effect4.Library.Semaphore.Steps
 -- Semaphore's first operations, with the protected permit (decisions rows 259 to 261 and 276).
-import Effect4.Modules.Semaphore.Ops
-import Effect4.Modules.Semaphore.Defs
+import Effect4.Library.Semaphore.Ops
+import Effect4.Library.Semaphore.Defs
 -- Pool's cell and its six steps (decisions rows 267 to 269 and 276).
-import Effect4.Modules.Pool.Cell
-import Effect4.Modules.Pool.Steps
+import Effect4.Library.Pool.Cell
+import Effect4.Library.Pool.Steps
 -- Pool's first operations: `Pool.make`, `Pool.use` and the close that `make` registers
 -- (decisions rows 267 to 269, 276 and 279).
-import Effect4.Modules.Pool.Ops
+import Effect4.Library.Pool.Ops
 -- Stream's source, steps and operations (decisions row 309).
-import Effect4.Modules.Stream.Source
-import Effect4.Modules.Stream.Steps
-import Effect4.Modules.Stream.Ops
+import Effect4.Library.Stream.Source
+import Effect4.Library.Stream.Steps
+import Effect4.Library.Stream.Ops
 
 /-!
 # Effect4

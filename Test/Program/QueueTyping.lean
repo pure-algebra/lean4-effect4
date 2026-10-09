@@ -1,16 +1,16 @@
-import Effect4.Modules.Queue.Steps
+import Effect4.Library.Queue.Steps
 import Effect4.Program.Authoring.Sugar
-import Effect4.Laws.Modules.Queue.Typing
-import Effect4.Laws.Modules.Queue.Steps
-import Effect4.Laws.Modules.Store
+import Effect4.Laws.Library.Queue.Typing
+import Effect4.Laws.Library.Queue.Steps
+import Effect4.Laws.Step.Store
 
 /-!
 # The Queue's steps typed at every message type: instances, red controls and pins (row 257)
 
 The five steps of a `Ref.modify` are typed at every message type that the checker types in a
-cell (`src/Effect4/Laws/Modules/Queue/Typing.lean`). The proofs read the checker's rules in
+cell (`src/Effect4/Laws/Library/Queue/Typing.lean`). The proofs read the checker's rules in
 their introduction form (`src/Effect4/Laws/Program/Typing/TermIntro.lean`) through the judgment
-`Types` (`src/Effect4/Laws/Modules/Checking.lean`). This battery holds what the theorems do not
+`Types` (`src/Effect4/Laws/Step/Checking.lean`). This battery holds what the theorems do not
 say by themselves:
 
 1. the statements at a record message type and at a message type that holds a handle;

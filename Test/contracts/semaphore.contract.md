@@ -8,20 +8,20 @@ change. The packet states no law of a whole run.
 
 | Part | Evidence on 2026-10-06 |
 | --- | --- |
-| `src/Effect4/Laws/Modules/Semaphore/Model.lean` | tested: it builds in the law graph |
-| `profile_closed` in `src/Effect4/Laws/Modules/Semaphore/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+| `src/Effect4/Library/Semaphore/Model.lean` | tested: it builds in the law graph |
+| `profile_closed` in `src/Effect4/Laws/Library/Semaphore/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 | `visit_selects_earliest` and `visit_stops_iff` in the same file | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/SemaphoreContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
 | `Test/Program/SemaphoreScenarios.lean` | tested: eleven scenarios over the library's operations on the Lean machine, one schedule each. The case P9 is P1's program under a second tape |
-| `src/Effect4/Modules/Semaphore/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
-| the six typing statements of `src/Effect4/Laws/Modules/Semaphore/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
-| the five step statements and `semaphore_steps_agree` in `src/Effect4/Laws/Modules/Semaphore/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
+| `src/Effect4/Library/Semaphore/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
+| the six typing statements of `src/Effect4/Laws/Library/Semaphore/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
+| the five step statements and `semaphore_steps_agree` in `src/Effect4/Laws/Library/Semaphore/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/SemaphoreSteps.lean`, `SemaphoreAgreement.lean` and `SemaphoreRelation.lean` in the same folder | tested: finite controls, and a falsified copy of each fails each changed check |
 | `ocaml/engine/test/semaphore/`, bound by `Test/Program/SemaphoreEngine.lean` | tested: the cases P1, P3 and P9 on the generated engine, on both carriers, one schedule each. P9's tape is one line of the fixture, and the test replays it |
-| `waitRetryAt` and `protectedBy` in `src/Effect4/Modules/Waiting.lean` | tested: the module builds in the runtime root. `waitRetry` and the Queue's `take` keep their trees: `waitRetry_unmoved` and `queue_take_unmoved` in `Test/Program/SemaphoreWrapper.lean`, each proved by `rfl` |
-| the laws of the two forms in `src/Effect4/Laws/Modules/Waiting.lean`: `waitRetryAt_scoped`, `protectedBy_scoped`, `waitRetryAt_answers`, `waitRetry_answers` and `protectedBy_has` | proved, at `[propext, Quot.sound]` |
-| `src/Effect4/Modules/Semaphore/Ops.lean` | tested: the module builds in the runtime root, and the checker types each scenario over it |
-| the scope laws of `src/Effect4/Laws/Modules/Semaphore/Ops.lean`, one for each step term and each operation | proved; the axiom gate holds each to `[propext, Quot.sound]` |
+| `waitRetryAt` and `protectedBy` in `src/Effect4/Library/Waiting.lean` | tested: the module builds in the runtime root. `waitRetry` and the Queue's `take` keep their trees: `waitRetry_unmoved` and `queue_take_unmoved` in `Test/Program/SemaphoreWrapper.lean`, each proved by `rfl` |
+| the laws of the two forms in `src/Effect4/Laws/Step/Waiting.lean`: `waitRetryAt_scoped`, `protectedBy_scoped`, `waitRetryAt_answers`, `waitRetry_answers` and `protectedBy_has` | proved, at `[propext, Quot.sound]` |
+| `src/Effect4/Library/Semaphore/Ops.lean` | tested: the module builds in the runtime root, and the checker types each scenario over it |
+| the scope laws of `src/Effect4/Laws/Library/Semaphore/Ops.lean`, one for each step term and each operation | proved; the axiom gate holds each to `[propext, Quot.sound]` |
 | the six typing statements of the same file, from `make_types` to `withPermitsIfAvailable_types` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | the nine attempt statements of the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/SemaphoreOps.lean` | tested: the forms that never wait, each operation's own binders, the hygiene controls and the typing examples, each with a red control |
@@ -37,11 +37,11 @@ is the detailed specification:
 `vendor/effect-4.0.0-rc.112/src/Semaphore.ts`: `SemaphoreImpl.take`, `takeIfAvailable`,
 `releaseUnsafe`, `withPermits` and `waitForPermits`.
 
-`Effect4.Semaphore.Model` in `src/Effect4/Laws/Modules/Semaphore/Model.lean` is the abstract
+`Effect4.Semaphore.Model` in `src/Effect4/Library/Semaphore/Model.lean` is the abstract
 transition model. It adds no program representation. The model is the ruled contract. It is
 not a claim that every native operation agrees.
 
-The public operations are the six library programs of `src/Effect4/Modules/Semaphore/Ops.lean`.
+The public operations are the six library programs of `src/Effect4/Library/Semaphore/Ops.lean`.
 A semaphore's handle is the `Ref` of its cell: the module adds no handle type and exports no
 row. A client is a program over the operations' expansion, and the pin's own `Semaphore` is
 never printed (decisions rows 230 and 235).
@@ -61,7 +61,7 @@ and no visit selects it.
 ## The operations over the steps
 
 Each operation is one program over the step terms and the shared wrapper
-(`src/Effect4/Modules/Waiting.lean`). Every binder of an operation is minted, so an operation
+(`src/Effect4/Library/Waiting.lean`). Every binder of an operation is minted, so an operation
 captures no name of its caller. A step term never stands inside a step term (decisions row
 276, point 3). Each step is one `Ref.modify` of its own, and two steps meet through the store.
 
@@ -113,7 +113,7 @@ that no transition has a premise on its request.
 
 ## The invariant
 
-`Profile` in `src/Effect4/Laws/Modules/Semaphore/Profile.lean` is the first profile's state
+`Profile` in `src/Effect4/Laws/Library/Semaphore/Profile.lean` is the first profile's state
 predicate. It has three parts.
 
 1. The accounting: `taken` is at most `permits`.
@@ -219,7 +219,7 @@ and the public law uses both.
 **A visit compares no record and no handle.** Its term reads two numbers of each entry: the
 stamp against the cursor, and the count against the free count. It removes the selected entry
 by its position, and the model removes it by `erase`. The two agree with no premise on the
-identities (`visit_fromFirst`, `src/Effect4/Laws/Modules/Semaphore/Steps.lean`).
+identities (`visit_fromFirst`, `src/Effect4/Laws/Library/Semaphore/Steps.lean`).
 
 ## Remaining connectors
 

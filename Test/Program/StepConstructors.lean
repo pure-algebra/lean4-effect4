@@ -1,6 +1,6 @@
-import Effect4.Modules.Step.Elab
+import Effect4.Step.Elab
 import Effect4.Program.Native
-import Effect4.Laws.Modules.Step
+import Effect4.Laws.Step
 
 /-! Finite checks of the new Step constructors and their field-name notation.
 The shared reading and typing laws own the general statements.

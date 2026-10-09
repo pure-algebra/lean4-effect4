@@ -1,12 +1,12 @@
-import Effect4.Modules.Queue.Steps
-import Effect4.Laws.Modules.Queue.Profile
+import Effect4.Library.Queue.Steps
+import Effect4.Laws.Library.Queue.Profile
 
 /-!
 # The Queue's steps against the abstract model: the comparison (decisions row 255)
 
-A comparison evaluates one step term of `src/Effect4/Modules/Queue/Steps.lean` on the encoding
+A comparison evaluates one step term of `src/Effect4/Library/Queue/Steps.lean` on the encoding
 of a model state, and compares the whole result with the encoding of the model's step
-(`src/Effect4/Laws/Modules/Queue/Model.lean`): the reply, the stored value and the ordered
+(`src/Effect4/Library/Queue/Model.lean`): the reply, the stored value and the ordered
 notifications. It is the probe's comparison
 (`docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean`, "The steps against the
 model"), over the library's steps at number messages.

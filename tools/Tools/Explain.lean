@@ -2,7 +2,7 @@ import Lean
 import Tools.SemanticsRegistry
 import ProofGraph.Goal
 import Effect4.Laws.Auto.Semantics
-import Effect4.Modules.Step
+import Effect4.Step
 import Effect4.Schema.Modeled.Derive
 import Effect4.Schema.Codec
 import Effect4.Schema.Bridge

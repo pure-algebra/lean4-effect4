@@ -7,7 +7,7 @@ import Effect4.Laws.Auto.Semantics
 # Laws.Schema.FieldRef — a field reference is a lens, on carriers and on the record frame
 
 Concept: Exact Codecs (the record frame's field laws). Claim: `record-field-laws`
-(`FieldRef.frame_laws`), requirement R3. Their consumers are the step language's laws (`src/Effect4/Laws/Modules/Step.lean`): a
+(`FieldRef.frame_laws`), requirement R3. Their consumers are the step language's laws (`src/Effect4/Laws/Step.lean`): a
 step's field read and overwrite read what the reference's `get` and `set` give.
 
 - **On carriers** (`get_set`, `set_get`, `set_set`): a reference is a lawful lens at every

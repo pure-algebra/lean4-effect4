@@ -118,9 +118,28 @@ typing signature, and a definition block stops it.
 These are slice S1, after C2, because the sketch is authoring. Its laws are placed with the
 splice law of `docs/research/2026-10-08-live-authoring.md` §4.
 
-## 7. What this plan does not establish
+## 7. Landed: slices C1 and C2 (2026-10-08)
 
-- No file moved. The counts are of one branch on one day.
+- **C1** made the five entry modules re-export files. `Effect4.Run` had a body, and
+  `Run/Tape.lean` imports it, so the body moved to `src/Effect4/Run/Basic.lean`. The entry module
+  re-exports both.
+- **C2** moved 81 files by one script, which computes the moves table from the tree. It rewrote
+  module names on import lines, in the registry's module lists and in two documents, and paths
+  everywhere outside `docs/research/` and `vendor/`. Six bare directory names were edited by hand.
+- **Two splits joined the Latch's table.** The table's data is `src/Effect4/Library/Table.lean`,
+  and its one fact stayed in `src/Effect4/Laws/Step/Table.lean`. The Stream model held three
+  theorems: its definitions are `src/Effect4/Library/Stream/Model.lean`, and its laws are
+  `src/Effect4/Laws/Library/Stream/Model.lean`. The old module name of the Stream model now
+  names the laws half, so its importers kept every fact.
+- **The five models are `module` files** in the core (decisions row 200), each in
+  `@[expose] public section`.
+- **One comment stays stale.** `src/Effect4/Data/Constructive.lean` names
+  `src/Effect4/Laws/Modules/`. The module sits low in the import graph, so the edit waits for a
+  slice that touches the file.
+
+## 8. What this plan does not establish
+
+- The counts of §3 are of one branch on one day. Section 7 gives what landed.
 - The exposure gate checks import lines. Lean's module system cannot hide an internal type that
   an entry module's signature names, so the class stays declared data.
 - Built artifacts for outside users wait, by row 332, point 3.

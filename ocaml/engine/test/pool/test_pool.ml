@@ -1,7 +1,7 @@
 (* test_pool.ml -- twelve of Pool's runs on the generated engine, through the wire.
 
    What it is: decisions rows 267 to 269, 276 and 279.  Pool's operations are library programs
-   of src/Effect4/Modules/Pool/Ops.lean, over the step terms of Steps.lean beside it.  This test
+   of src/Effect4/Library/Pool/Ops.lean, over the step terms of Steps.lean beside it.  This test
    runs twelve programs on the generated engine.
 
    The first two are cases of Test/Program/PoolScenarios.lean, over that battery's own test

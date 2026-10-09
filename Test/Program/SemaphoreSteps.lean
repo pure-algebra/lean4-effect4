@@ -1,13 +1,13 @@
-import Effect4.Modules.Semaphore.Steps
+import Effect4.Library.Semaphore.Steps
 import Effect4.Program.Authoring.Sugar
-import Effect4.Laws.Modules.Semaphore.Typing
-import Effect4.Laws.Modules.Store
+import Effect4.Laws.Library.Semaphore.Typing
+import Effect4.Laws.Step.Store
 import Test.Program.QueueSteps
 
 /-!
 # Semaphore's cell and its steps: finite controls of the library module (decisions row 265)
 
-The module is `src/Effect4/Modules/Semaphore/`: the cell's type and initial value (`Cell.lean`),
+The module is `src/Effect4/Library/Semaphore/`: the cell's type and initial value (`Cell.lean`),
 and the five step terms (`Steps.lean`). This battery holds the finite controls of the module
 alone, and what the typing theorems do not say by themselves.
 
@@ -23,7 +23,7 @@ The comparison with the abstract model is `Test/Program/SemaphoreAgreement.lean`
 the machine are `Test/Program/SemaphoreScenarios.lean`.
 
 Placement. Concept `store-typing`, requirement R4. Every guard is a finite check, and every
-example is an instance of a theorem of `src/Effect4/Laws/Modules/Semaphore/Typing.lean`. None
+example is an instance of a theorem of `src/Effect4/Laws/Library/Semaphore/Typing.lean`. None
 states agreement with the model, and none is a host run.
 -/
 
@@ -283,7 +283,7 @@ def visitingTree : Option (Eff NativeOp) := do
 
 /-! ## 6. The connector to the store
 
-`step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) reads a step's `termTy` equation:
+`step_keeps_cell` (`src/Effect4/Laws/Step/Store.lean`) reads a step's `termTy` equation:
 one `Ref.modify` of the step keeps the cell a member of the cell's type. The tree
 that a step's reading evaluates is the tree that the step's theorem types (`Types.tree`). The
 cell's value is the scope's last name. -/

@@ -1,5 +1,5 @@
 import Effect4.Run.Tape
-import Effect4.Modules.Queue.Defs
+import Effect4.Library.Queue.Defs
 import Effect4.Api.Author
 import Effect4.Laws.Api.HostSession
 

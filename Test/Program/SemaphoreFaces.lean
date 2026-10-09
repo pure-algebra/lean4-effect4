@@ -14,7 +14,7 @@ reader, on the readable types (`Classes.ReadableTy`, DI-91). So:
 
 - **Each scenario prints as a module and reads back.** The eleven scenarios of
   `Test/Program/SemaphoreScenarios.lean` run the library's six operations
-  (`src/Effect4/Modules/Semaphore/Ops.lean`). The module reader gives the built program back.
+  (`src/Effect4/Library/Semaphore/Ops.lean`). The module reader gives the built program back.
 - **One use of each operation prints and reads back**, alone at a caller's scope and in a
   program that makes its semaphore. The text of each is pinned. A step's row is long, and its
   text is pinned in full further down, so the operation's pin writes a mark in its place.

@@ -1,7 +1,7 @@
 (* test_semaphore.ml -- three of Semaphore's cases on the generated engine, through the wire.
 
    What it is: decisions rows 259, 265 and 276.  Semaphore's operations are library programs
-   of src/Effect4/Modules/Semaphore/Ops.lean, over the step terms of Steps.lean beside it.
+   of src/Effect4/Library/Semaphore/Ops.lean, over the step terms of Steps.lean beside it.
    Test/Program/SemaphoreScenarios.lean runs the host probe's cases over them on Lean's
    machine.  This test runs three of those programs on the generated engine: P1, the
    protected case; P3, the overtaking case; and P9, which is P1's program under another tape.

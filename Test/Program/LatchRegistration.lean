@@ -1,4 +1,4 @@
-import Effect4.Laws.Modules.Latch.Registration
+import Effect4.Laws.Library.Latch.Registration
 
 /-! Latch registration readers and finite controls.
 The general connector keeps independent model behavior and its table and scope premises.

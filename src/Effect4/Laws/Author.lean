@@ -9,23 +9,23 @@ import Effect4.Laws.Program.Typed.Denotation
 import Effect4.Laws.Run
 import Effect4.Laws.Run.Rows
 import Effect4.Laws.Run.Tape
-import Effect4.Laws.Modules.Step
-import Effect4.Laws.Modules.Step.Annotations
-import Effect4.Laws.Modules.Step.ErasedCompiler
-import Effect4.Laws.Modules.Step.Lists
-import Effect4.Laws.Modules.Step.Rename
-import Effect4.Laws.Modules.Step.Requirements
-import Effect4.Laws.Modules.Step.Scope
-import Effect4.Laws.Modules.Ascribe
-import Effect4.Laws.Modules.Checking
-import Effect4.Laws.Modules.Cons
-import Effect4.Laws.Modules.Construction
-import Effect4.Laws.Modules.Option
-import Effect4.Laws.Modules.Reading
-import Effect4.Laws.Modules.Store
-import Effect4.Laws.Modules.Table
-import Effect4.Laws.Modules.Tuples
-import Effect4.Laws.Modules.Waiting
+import Effect4.Laws.Step
+import Effect4.Laws.Step.Annotations
+import Effect4.Laws.Step.ErasedCompiler
+import Effect4.Laws.Step.Lists
+import Effect4.Laws.Step.Rename
+import Effect4.Laws.Step.Requirements
+import Effect4.Laws.Step.Scope
+import Effect4.Laws.Step.Ascribe
+import Effect4.Laws.Step.Checking
+import Effect4.Laws.Step.Cons
+import Effect4.Laws.Step.Construction
+import Effect4.Laws.Step.Option
+import Effect4.Laws.Step.Reading
+import Effect4.Laws.Step.Store
+import Effect4.Laws.Step.Table
+import Effect4.Laws.Step.Tuples
+import Effect4.Laws.Step.Waiting
 
 /-!
 # Effect4.Laws.Author — the entry module of the laws an author reads (decisions row 332)
@@ -40,5 +40,5 @@ re-exports:
 - the shared step laws: reading, typing, scope, the store's connectors, the encoding table, the
   lists, renaming and the wrappers' laws.
 
-It declares nothing. A composed module's own laws are in `src/Effect4/Laws/Modules/`.
+It declares nothing. A composed module's own laws are in `src/Effect4/Laws/Library/`.
 -/

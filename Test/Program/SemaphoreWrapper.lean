@@ -1,10 +1,10 @@
 import Test.Program.QueueScenarios
-import Effect4.Laws.Modules.Queue.Ops
+import Effect4.Laws.Library.Queue.Ops
 
 /-!
 # The wrapper's two new forms: the Queue's wrapper does not move (decisions row 276, point 1)
 
-`src/Effect4/Modules/Waiting.lean` gains `waitRetryAt`, the loop of `waitRetry` at a restore site
+`src/Effect4/Library/Waiting.lean` gains `waitRetryAt`, the loop of `waitRetry` at a restore site
 that its caller supplies, and `protectedBy`, one mask over an acquisition, the hook's
 installation and a body. `waitRetry` is restated as `waitRetryAt` under its own mask. This
 battery holds the controls of that restatement.
@@ -44,7 +44,7 @@ open Effect4.Modules
 /-! ## 1. `waitRetry` is its earlier text -/
 
 /-- The definition of `waitRetry` before the form at a caller's restore, verbatim
-(`git:59241284:src/Effect4/Modules/Waiting.lean`). -/
+(`git:59241284:src/Effect4/Library/Waiting.lean`). -/
 def waitRetryBefore (result : Ty) (ended : String) (w : Waiter) : Src NativeOp :=
   uninterruptibleMaskWith fun restore =>
     bindWith (Deferred.make .unit .never) fun id =>
@@ -68,7 +68,7 @@ theorem waitRetry_unmoved (result : Ty) (ended : String) (w : Waiter) :
     waitRetry result ended w = waitRetryBefore result ended w := rfl
 
 /-- `Queue.take` before the form: the Queue's part, verbatim, over the earlier wrapper
-(`git:59241284:src/Effect4/Modules/Queue/Ops.lean`). -/
+(`git:59241284:src/Effect4/Library/Queue/Ops.lean`). -/
 def takeBefore (A : Ty) (q : TermSrc) : Src NativeOp :=
   waitRetryBefore A "queue: the loop ended without a message"
     { hint := .unit

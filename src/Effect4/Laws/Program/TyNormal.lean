@@ -5,7 +5,7 @@ import Effect4.Laws.Program.Typing.TermIntro
 # Laws.Program.TyNormal — a certified type is its own normal form
 
 Concept: Subtyping Algebra & Normalization. `Ty.normalize_of_certNormal` is a helper of the claim
-`step-language-typed` (`src/Effect4/Laws/Modules/Step.lean`): the step language's typing check
+`step-language-typed` (`src/Effect4/Laws/Step.lean`): the step language's typing check
 certifies the normal forms that the checker's selection, list and record rules ask for, by
 evaluation, where `decide` on `t.normalize = t` does not reduce at a product.
 

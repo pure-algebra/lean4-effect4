@@ -11,7 +11,7 @@ reader, on the readable types (`Classes.ReadableTy`, DI-91). So:
 
 - **Each case prints as a module and reads back.** The ten cases of
   `Test/Program/PoolPublic.lean` run the library's operations
-  (`src/Effect4/Modules/Pool/Ops.lean`). The module reader gives the built program back.
+  (`src/Effect4/Library/Pool/Ops.lean`). The module reader gives the built program back.
 - **One use of each operation prints and reads back**, alone at a caller's scope and in a
   program that makes its pool. The text of each is pinned. A step's row is long, and its text is
   pinned in full further down, so the operation's pin writes a mark in its place.

@@ -1,14 +1,14 @@
-import Effect4.Laws.Modules.Queue.Steps
-import Effect4.Laws.Modules.Store
+import Effect4.Laws.Library.Queue.Steps
+import Effect4.Laws.Step.Store
 import Test.Program.QueueAgreement
 
 /-!
 # The Queue's relation and its step goals: finite controls (decisions row 255)
 
-The relation is `src/Effect4/Laws/Modules/Queue/Relation.lean`: the message map, the cell's
+The relation is `src/Effect4/Laws/Library/Queue/Relation.lean`: the message map, the cell's
 value and a step's notifications, over the shared encoding table
-(`src/Effect4/Laws/Modules/Table.lean`). The six step goals are in
-`src/Effect4/Laws/Modules/Queue/Steps.lean`. This battery evaluates each goal's conclusion, as
+(`src/Effect4/Laws/Step/Table.lean`). The six step goals are in
+`src/Effect4/Laws/Library/Queue/Steps.lean`. This battery evaluates each goal's conclusion, as
 the goal states it: at one table, one message map and the scope of the step's own arguments, on
 every state of the universe of `Test/Program/QueueAgreement.lean`, twelve moves on each.
 

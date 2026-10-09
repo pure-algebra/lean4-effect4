@@ -23,7 +23,7 @@ a factor (no union at its head). It certifies:
 
 It never certifies a union, a tuple or a reference with arguments: their normal forms reorder or
 rewrite their children. A type it refuses may still be normal. Its consumer is the step
-language's typing check (`src/Effect4/Modules/Step.lean`; decisions row 330, slice L2).
+language's typing check (`src/Effect4/Step.lean`; decisions row 330, slice L2).
 -/
 
 @[expose] public section

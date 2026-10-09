@@ -1,8 +1,8 @@
 (* test_queue.ml -- five of the Queue's programs on the generated engine, through the wire.
 
    What it is: decisions row 255.  The Queue's steps are terms of
-   src/Effect4/Modules/Queue/Steps.lean, and its operations are the library programs of
-   src/Effect4/Modules/Queue/Ops.lean.  Test/Program/QueueScenarios.lean and
+   src/Effect4/Library/Queue/Steps.lean, and its operations are the library programs of
+   src/Effect4/Library/Queue/Ops.lean.  Test/Program/QueueScenarios.lean and
    Test/Program/QueueMask.lean run nine programs over them on Lean's machine.  This test runs
    five of those programs on the generated engine:
      r1      a queue is filled and emptied;

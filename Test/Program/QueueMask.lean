@@ -4,7 +4,7 @@ import Effect4.Program.Authoring.Mask
 /-!
 # The Queue's `take` under a masked caller (decisions rows 222, 244 to 246 and 251)
 
-The library's operations hold the mask that restores (`src/Effect4/Modules/Waiting.lean`). Under
+The library's operations hold the mask that restores (`src/Effect4/Library/Waiting.lean`). Under
 an interruptible caller the wait is interruptible. Under a masked caller the restore is the
 identity: the request stays registered, it may consume, and the fiber is interrupted when its
 caller's mask ends. `Test/Program/QueueScenarios.lean` runs the eight scenarios, where no caller

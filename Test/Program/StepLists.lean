@@ -1,5 +1,5 @@
-import Effect4.Laws.Modules.Step.Lists
-import Effect4.Laws.Modules.Step
+import Effect4.Laws.Step.Lists
+import Effect4.Laws.Step
 
 /-! Readers and finite controls for common list operations.
 Duplicate inputs distinguish removing one match from removing every match.

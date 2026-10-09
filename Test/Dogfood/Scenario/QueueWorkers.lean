@@ -1,7 +1,7 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P3WorkerQueue
 import Test.Program.QueueTraces
-import Effect4.Modules.Queue.Ops
+import Effect4.Library.Queue.Ops
 
 /-!
 # The queue-workers scenario: the two-worker crew over the public Queue
@@ -15,7 +15,7 @@ control of the host protocol.
   capacity 1. Two workers take from the queue. Each notes its assignment and runs its job on the
   host row `Jobs.run`. The root reads the queue's size and polls once at its exit. So the five
   public operations stand in one program: `Queue.bounded`, `offer`, `take`, `size` and `poll`
-  (`src/Effect4/Modules/Queue/Ops.lean`). Each of the three crew members holds a connection that
+  (`src/Effect4/Library/Queue/Ops.lean`). Each of the three crew members holds a connection that
   its scope releases.
 * **Script.** The host feeds a job by a reply to the feeder's call, and it ends a job by a reply
   to a worker's call. A reply application does not drain a posted helper, so a flush follows
@@ -525,7 +525,7 @@ three things.
 1. In a funded run each step of the queue's cell starts at a cell that encodes a state of the
    first profile, for a request that keeps `Requested`. The attempt laws then give the model's
    reply and the model's next state (`take_attempt`, `offer_attempt`, `poll_attempt` and the
-   two withdrawals, `src/Effect4/Laws/Modules/Queue/Ops.lean`).
+   two withdrawals, `src/Effect4/Laws/Library/Queue/Ops.lean`).
 2. No other step writes the queue's cell, and only a worker's note writes `assigned`.
 3. A take that exits with a job enters its caller's continuation once with that job.
 
@@ -594,7 +594,7 @@ two more.
    posted signal is outstanding.
 7. The model's run invariant holds along the run's steps: the first profile, the buffer's
    bound, and `quiet` at the requests that were signalled (`first_run_inv`,
-   `src/Effect4/Laws/Modules/Queue/Invariant.lean`, proved for the model alone).
+   `src/Effect4/Laws/Library/Queue/Invariant.lean`, proved for the model alone).
 
 Reach: as `fed_accounted`. Its first part is the premise of the attempt laws, read at the run's
 end. It is an invariant at rest, and an invariant is not progress. It does not establish that a

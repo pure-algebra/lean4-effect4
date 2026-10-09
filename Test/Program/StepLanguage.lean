@@ -1,5 +1,5 @@
-import Effect4.Laws.Modules.Step
-import Effect4.Modules.Semaphore.Steps
+import Effect4.Laws.Step
+import Effect4.Library.Semaphore.Steps
 import Effect4.Schema.FieldRef.Elab
 
 /-! The battery of the step language (decisions row 330, slice L2): Latch's cell and its release

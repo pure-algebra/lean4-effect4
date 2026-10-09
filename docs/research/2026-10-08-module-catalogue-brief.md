@@ -1,6 +1,7 @@
 # Brief: author as many composed modules as the step language allows
 
-Status: brief for Codex (history, not authority). Base: the merge of `codex/module-folds`. Owner,
+Status: brief for Codex (history, not authority). Base: the commit of cutover slice C2 on
+`refactor/phase1-phase3`, which moved the composed modules to `src/Effect4/Library/`. Owner,
 2026-10-08: author as many modules as possible with the step language, to keep finding where the
 interfaces and the ergonomics should settle. Be honest about the gaps.
 
@@ -49,6 +50,25 @@ the blocked operations in the receipt with their gap's number.
 | G8 | subterm sharing in a step's term | `Term` has no local binding; Pool's lease is 167 nodes |
 | G9 | identity tables with injectivity (slice L6) | carried as a premise |
 | G10 | the module law: agreement across schedules (row 329) | open |
+
+## Where a module's files go (decisions row 332)
+
+| File | Holds | Exposure |
+| --- | --- | --- |
+| `src/Effect4/Library/<M>/Model.lean` | the model, transcribed from latest by line; a `module` file with no law | module library |
+| `src/Effect4/Library/<M>/{Cell,Data,Steps,Ops}.lean` | the cell, the records and passes, the step terms, the operations | module library |
+| `src/Effect4/Laws/Library/<M>/` | the value, reading, typing and agreement laws, and the model's own laws | proof |
+| `Test/Program/<M>*.lean` | the batteries, reached from `Test/All.lean` | test |
+
+- Import the step language from `Effect4.Step` and its parts, and the shared pieces from
+  `Effect4.Library.Words`, `Effect4.Library.Waiting` and `Effect4.Library.Table`.
+- Import the shared laws from `Effect4.Laws.Step` and `Effect4.Laws.Step.*`.
+- Add the module's model and operations to `src/Effect4/Library.lean`, and its laws to
+  `src/Effect4/Laws.lean`, at the end of each list.
+- Add the module's two areas and its `("src/Effect4/Library/<M>", .library)` exposure to
+  `tools/Tools/ArchitectureRoles.lean`.
+- Report the landing's reuse ratio and load-bearing count with `#load_report` on the module's
+  law prefix (`tools/Tools/LoadPaths.lean`).
 
 ## Rules for each module
 

@@ -144,7 +144,7 @@ Header parameters are explicit typed Lean binders, fixed when the instance is co
 
 ```lean
 import Effect4.Api.Author
-import Effect4.Modules.Queue.Defs
+import Effect4.Library.Queue.Defs
 
 open Effect4 Effect4.Program Effect4.Program.Authoring
 
@@ -158,8 +158,8 @@ def main : Src NativeOp := eff do
 def checked := Api.Author.build (numbers.module main)
 ```
 
-`Queue.Definitions` lives in [`Modules.Queue.Defs`](../../src/Effect4/Modules/Queue/Defs.lean).
-`Semaphore.Definitions` uses the same command in [`Modules.Semaphore.Defs`](../../src/Effect4/Modules/Semaphore/Defs.lean).
+`Queue.Definitions` lives in [`Modules.Queue.Defs`](../../src/Effect4/Library/Queue/Defs.lean).
+`Semaphore.Definitions` uses the same command in [`Modules.Semaphore.Defs`](../../src/Effect4/Library/Semaphore/Defs.lean).
 The operation bodies remain their existing library builders.
 
 ```lean

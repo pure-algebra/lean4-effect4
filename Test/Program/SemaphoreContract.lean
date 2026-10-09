@@ -1,10 +1,10 @@
-import Effect4.Laws.Modules.Semaphore.Profile
+import Effect4.Laws.Library.Semaphore.Profile
 
 /-!
 # Semaphore's abstract contract: the named controls and the falsifiers
 
-Finite controls of `src/Effect4/Laws/Modules/Semaphore/Model.lean` and
-`src/Effect4/Laws/Modules/Semaphore/Profile.lean`, one input each. They are the executable
+Finite controls of `src/Effect4/Library/Semaphore/Model.lean` and
+`src/Effect4/Laws/Library/Semaphore/Profile.lean`, one input each. They are the executable
 falsifiers of the packet `Test/contracts/semaphore.contract.md`.
 
 - The probe's cases P1 to P4, P7 and P9 as traces of the model. The model has no fiber, so a

@@ -35,7 +35,7 @@ def sumBumped := step_inputs% BumpInputs =>
     .add total (.add value amount)
 ```
 
-The implementation lives in `src/Effect4/Modules/Step/Elab/Inputs.lean`.
+The implementation lives in `src/Effect4/Step/Elab/Inputs.lean`.
 `Test/Program/StepInputs.lean` checks reordering, captures, nested folds, and refused names.
 The elaborator stores ordinary indexed data.
 It stores no Lean expression, function, or runtime object.
@@ -50,7 +50,7 @@ Its author supplies each required field once, in any order.
 It refuses unknown fields, missing fields, duplicate fields, optional fields, and unreadable schema expressions.
 The separate Step checks retain canonical name order, type formation, and normality.
 
-`Semaphore.Data.waiter` in `src/Effect4/Modules/Semaphore/Data.lean` is a concrete consumer:
+`Semaphore.Data.waiter` in `src/Effect4/Library/Semaphore/Data.lean` is a concrete consumer:
 
 ```lean
 def waiter {Γ : List Ty} (id : Step Γ idTy) (need : Step Γ .nat)
@@ -102,11 +102,11 @@ flowchart TD
 
 | Claim | Declaration and source | Actual premises and limit |
 | --- | --- | --- |
-| Term reads the step value | `Step.sound`, `src/Effect4/Laws/Modules/Step.lean` | Input readings and canonical records; folds need scope alignment; identity comparison needs `DeferredIdentity` |
+| Term reads the step value | `Step.sound`, `src/Effect4/Laws/Step.lean` | Input readings and canonical records; folds need scope alignment; identity comparison needs `DeferredIdentity` |
 | Term has the indexed type | `Step.typed`, same source | Native atom typing, typed inputs and `Step.Facts`; folds need type-scope alignment |
 | Untouched fields keep their value | `Step.frame`, same source | A field outside an update spine's writes |
-| Translation keeps input scope | `Step.scoped`, `src/Effect4/Laws/Modules/Step/Scope.lean` | Scoped caller sources |
-| Model transition reads correctly | Each module's `*_agrees` in `src/Effect4/Laws/Modules/` | Its independent value equation and unchanged module premises |
+| Translation keeps input scope | `Step.scoped`, `src/Effect4/Laws/Step/Scope.lean` | Scoped caller sources |
+| Model transition reads correctly | Each module's `*_agrees` in `src/Effect4/Laws/Library/` | Its independent value equation and unchanged module premises |
 
 Scope and identity requirements come from one structural requirements fold.
 Exact encoding, membership, codec admission, allocation, and behavior simulation remain separate claims.

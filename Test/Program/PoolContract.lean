@@ -1,10 +1,10 @@
-import Effect4.Laws.Modules.Pool.Profile
+import Effect4.Laws.Library.Pool.Profile
 
 /-!
 # Pool's abstract contract: the named controls and the falsifiers
 
-Finite controls of `src/Effect4/Laws/Modules/Pool/Model.lean` and
-`src/Effect4/Laws/Modules/Pool/Profile.lean`, one input each. They are the executable
+Finite controls of `src/Effect4/Library/Pool/Model.lean` and
+`src/Effect4/Laws/Library/Pool/Profile.lean`, one input each. They are the executable
 falsifiers of the packet `Test/contracts/pool.contract.md`.
 
 - The probe's cases PP1 to PP5, PP7 and PP8 as traces of the model. The model has no fiber, so

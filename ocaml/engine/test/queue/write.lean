@@ -11,10 +11,10 @@ Alone, run it from the repository's root, after a build of `Test.Program.QueueMa
 
 It writes `queue.txt` and `queue-defs.txt` beside this file, or into the folder that its one
 argument names. `queue.txt` holds five runs over the library's operations
-(`src/Effect4/Modules/Queue/Ops.lean`): the scenarios R1, R4, R2 and R5 of
+(`src/Effect4/Library/Queue/Ops.lean`): the scenarios R1, R4, R2 and R5 of
 `Test/Program/QueueScenarios.lean`, and the masked caller of `Test/Program/QueueMask.lean`.
 `queue-defs.txt` holds the four scenarios again over the Queue's definitions
-(`src/Effect4/Modules/Queue/Defs.lean`, `Test/Program/QueueDefs.lean`): each program has a
+(`src/Effect4/Library/Queue/Defs.lean`, `Test/Program/QueueDefs.lean`): each program has a
 definition block, and each operation is an invocation (decisions row 328, slice PROC-4). A run holds the fuel, the program's canonical bytes
 (`Effect4.Program.Wire.hexOf`) and the root's exit of Lean's machine, in the spelling of the
 engine's `show_exit` (`ocaml/engine/e4_engine.ml`). The battery `Test/Program/QueueEngine.lean`

@@ -26,7 +26,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `deriving Modeled` (row 330, slice L1). Each of its values inhabits the derived type and
   survives JSON under codec admission, with no proof of its own.
 - **Steps as data** (row 330). A module's step is data over typed inputs
-  (`src/Effect4/Modules/Step.lean`). Named inputs, source arguments and binders share their declarations.
+  (`src/Effect4/Step.lean`). Named inputs, source arguments and binders share their declarations.
   The language supports captured folds, required records, typed empty values and deferred identity comparison.
   Shared list operations carry their value equations once.
   Reading, typing, frame and scope laws connect translated steps to their carrier interpretation under explicit premises.
@@ -37,8 +37,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
   `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85).
-- **Composed modules.** Queue, Semaphore, Pool and Stream have their cells and steps in
-  `src/Effect4/Modules/`, and their laws in `src/Effect4/Laws/Modules/`. Cache's profile is ruled
+- **The library's layout** (row 332, cutover slices C1 and C2). A user imports five entry
+  modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
+  `Effect4.Laws.Author`. Each re-exports and declares nothing. The step language is
+  `src/Effect4/Step.lean`, and its shared laws are in `src/Effect4/Laws/Step/`.
+- **Composed modules.** Queue, Semaphore, Pool, Latch and Stream have their models, cells, steps
+  and operations in `src/Effect4/Library/`, and their laws in `src/Effect4/Laws/Library/`. Each
+  keeps the module name and building blocks of latest (Effect 4.0.1) (row 335). Cache's profile is ruled
   (rows 270 to 272) and not built. The procedure is the
   [module factory plan](research/2026-10-05-claude-lead/module-factory-plan.md).
   A [native-module comparison](research/2026-10-08-module-compatibility-design.md) records finite target evidence and the selected profiles' differences.
@@ -62,6 +67,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   replacement law holds over the six typing judgments (row 294).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
+  `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
+  registered claim, and a landing's reuse ratio (the [load paths note](research/2026-10-08-load-paths.md)).
+  An unconsumed theorem is triaged before any removal.
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
   build prints only findings and the axiom gate's summary: reports print when a script asks for
   them. A battery restates no theorem (row 301); the cleanup pause of 2026-10-07 is closed, with
@@ -86,16 +94,23 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The verified module toolkit** (row 330): continue L4 to L6 after the
-   [fold foundation](research/2026-10-08-seat-module-gaps-receipt.md).
-   Common wrapper laws, contextual handle allocation and whole-state deriving remain separate obligations.
-2. **Procedures** (row 328): slice PROC-5, the block's handler laws (the
-   [procedures note](research/2026-10-08-seat-PROC-design.md)).
-3. **The simulation across schedules** (row 329): slices S1 to S4 (the
-   [simulation note](research/2026-10-08-seat-SIM-design.md)).
-4. **The session API**, OCaml first: slices DM1 to DM4, DM6 and DM7 (row 326; the
-   [session API note](research/2026-10-07-session-api-design.md)).
-5. **H8** (the [H8 map](research/2026-10-07-h8-map.md)).
+1. **The cutover's slices C3 and C4** (row 332, the
+   [cutover plan](research/2026-10-08-library-cutover-plan.md)). The registry and `#explain` move
+   into the proof graph's tools. Then the acceptance programs import entry modules, and the gate
+   refuses.
+2. **Codex's module catalogue** on the new layout (the
+   [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
+   building blocks.
+3. **Sketch and query over a whole program** (slice S1), with the splice law
+   `edit-splices-table` (the [live authoring note](research/2026-10-08-live-authoring.md)).
+4. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
+   in the tree (G3), then the module form at the Latch (G2).
+5. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
+6. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
+   transaction attempt (G4).
+
+Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329), the session
+API's slices (row 326), and H8.
 
 ## What the owner must decide
 

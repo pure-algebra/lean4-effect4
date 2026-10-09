@@ -7,7 +7,7 @@ import Effect4.Program.Authoring.Mask
 Decisions row 221 names three acceptance traces of the waiting wrapper, and the wrapper's design
 adds four (`docs/research/2026-10-05-claude-lead/waiting-design.md`, F5, F7 and proposal 5). This
 battery runs the seven on the Lean machine, over the library's operations
-(`src/Effect4/Modules/Queue/Ops.lean`). Each has its positive control, and a fault that fails
+(`src/Effect4/Library/Queue/Ops.lean`). Each has its positive control, and a fault that fails
 the promised property.
 
 | # | The trace | The registry's open part that it is a finite control of |

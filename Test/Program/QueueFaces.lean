@@ -17,7 +17,7 @@ cursor type reads back through the checked type reader, on the readable types
   `Test/Program/QueueScenarios.lean` takes, and the take's loop states its cursor's type. The
   module reader gives the built program back. Both answers are pinned.
 - **One use of each operation prints and reads back.** The operations are the library's
-  (`src/Effect4/Modules/Queue/Ops.lean`): the construction, `size`, `poll`, `offer` and `take`.
+  (`src/Effect4/Library/Queue/Ops.lean`): the construction, `size`, `poll`, `offer` and `take`.
   Each is printed alone at a caller's scope, and in a program that makes its queue. The text
   of each is pinned. A step's row is long, and its text is pinned in full further down, so the
   operation's pin writes a mark in its place. An offer makes two `Deferred` handles and states

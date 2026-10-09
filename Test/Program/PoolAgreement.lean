@@ -1,13 +1,13 @@
-import Effect4.Modules.Pool.Steps
-import Effect4.Laws.Modules.Pool.Profile
-import Effect4.Laws.Modules.Pool.Typing
+import Effect4.Library.Pool.Steps
+import Effect4.Laws.Library.Pool.Profile
+import Effect4.Laws.Library.Pool.Typing
 
 /-!
 # Pool's steps against the abstract model: the comparison (rows 267 to 269 and 276)
 
-A comparison evaluates one step term of `src/Effect4/Modules/Pool/Steps.lean` on the encoding
+A comparison evaluates one step term of `src/Effect4/Library/Pool/Steps.lean` on the encoding
 of a model state, and compares the whole result with the encoding of the model's transition
-(`src/Effect4/Laws/Modules/Pool/Model.lean`): the reply and the stored value.
+(`src/Effect4/Library/Pool/Model.lean`): the reply and the stored value.
 
 The battery holds:
 

@@ -18,14 +18,14 @@ import Effect4.Program.Authoring.Tuples
 import Effect4.Codegen.Forms
 import Effect4.Schema.Modeled.Derive
 import Effect4.Schema.FieldRef.Elab
-import Effect4.Modules.Words
-import Effect4.Modules.Step
-import Effect4.Modules.Step.Elab
-import Effect4.Modules.Step.Elab.Inputs
-import Effect4.Modules.Step.Inputs
-import Effect4.Modules.Step.Lists
-import Effect4.Modules.Step.Rename
-import Effect4.Modules.Waiting
+import Effect4.Library.Words
+import Effect4.Step
+import Effect4.Step.Elab
+import Effect4.Step.Elab.Inputs
+import Effect4.Step.Inputs
+import Effect4.Step.Lists
+import Effect4.Step.Rename
+import Effect4.Library.Waiting
 
 /-!
 # Effect4.Author — the entry module for writing a program or a module (decisions row 332)

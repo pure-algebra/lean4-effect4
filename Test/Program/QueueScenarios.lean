@@ -1,20 +1,20 @@
 import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
-import Effect4.Modules.Queue.Ops
-import Effect4.Laws.Modules.Queue.Profile
+import Effect4.Library.Queue.Ops
+import Effect4.Laws.Library.Queue.Profile
 
 /-!
 # The Queue's operations on the machine: the probe's eight scenarios (rows 233 and 255)
 
 Each scenario is one program over the library's operations
-(`src/Effect4/Modules/Queue/Ops.lean`), run on the Lean machine on one schedule. The answers are
+(`src/Effect4/Library/Queue/Ops.lean`), run on the Lean machine on one schedule. The answers are
 the probe's (`docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean` and its
 output beside it).
 
 **The operations are the library's.** `Queue.bounded`, `Queue.offer`, `Queue.take` and
 `Queue.size` wrap the step terms with the shared waiting wrapper
-(`src/Effect4/Modules/Waiting.lean`): the mask that restores, a posted helper for each
+(`src/Effect4/Library/Waiting.lean`): the mask that restores, a posted helper for each
 notification, and a withdrawal on interruption. Every binder of an operation is minted.
 
 **The fixtures of the earlier slices stay here as written forms** (the namespace `Written`).

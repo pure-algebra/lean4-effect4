@@ -1,6 +1,6 @@
 import Effect4
-import Effect4.Modules.Words
-import Effect4.Modules.Stream.Ops
+import Effect4.Library.Words
+import Effect4.Library.Stream.Ops
 import Effect4.Program.Stream
 import Test.Dogfood.Stage
 import Test.Dogfood.Scenario

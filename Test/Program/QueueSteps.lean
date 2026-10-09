@@ -1,18 +1,18 @@
-import Effect4.Modules.Queue.Steps
-import Effect4.Laws.Modules.Queue.Typing
+import Effect4.Library.Queue.Steps
+import Effect4.Laws.Library.Queue.Typing
 import Effect4.Codegen.ListFold
 
 /-!
 # The Queue's cell and its steps: finite controls of the library module (decisions row 255)
 
-The module is `src/Effect4/Modules/Queue/`: the cell's type and initial value (`Cell.lean`), and
+The module is `src/Effect4/Library/Queue/`: the cell's type and initial value (`Cell.lean`), and
 the six step terms (`Steps.lean`). This battery holds the finite controls of the module alone:
 the cell's type and value, and each step's type, size and reading domain. The comparison with
 the abstract model is `Test/Program/QueueAgreement.lean`. The runs on the machine are
 `Test/Program/QueueScenarios.lean`.
 
 Placement. The typing controls are finite instances of the typing statements of
-`src/Effect4/Laws/Modules/Queue/Typing.lean` (concept `store-typing`, requirement R4). Every
+`src/Effect4/Laws/Library/Queue/Typing.lean` (concept `store-typing`, requirement R4). Every
 guard is a finite check at the listed message types. None proves a statement at every message
 type, and none states agreement with the model. The seven statements are proved at every
 message type in the law graph, and the guards stay as their finite controls and red controls.
@@ -96,7 +96,7 @@ def malformedTypes : List Ty :=
 /-! ## 2. The steps' types
 
 Each guard is the statement of one typing theorem of
-`src/Effect4/Laws/Modules/Queue/Typing.lean`, at each listed message type. -/
+`src/Effect4/Laws/Library/Queue/Typing.lean`, at each listed message type. -/
 
 def takeTyped (A : Ty) : Bool :=
   decide (typeAt ["id", "hint", "s"] [idTy, idTy, Queue.cellTy A]
@@ -296,7 +296,7 @@ def enrolledFixed (takers id : TermSrc) : TermSrc :=
 /-! ## 5. The two removals are the shared pass
 
 The Queue's `removeTaker` and `removeOffer` are each one application of the shared removal pass
-`removeById` (`src/Effect4/Modules/Words.lean`). Each is that pass as a function, by
+`removeById` (`src/Effect4/Library/Words.lean`). Each is that pass as a function, by
 definition: the kernel accepts the equality by `rfl`. Seat MOVE's comparison held the two names
 by their types only (Codex's review), so the values are held here. -/
 

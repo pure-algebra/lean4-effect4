@@ -1,6 +1,6 @@
-import Effect4.Modules.Queue.Steps
-import Effect4.Laws.Modules.Step.ErasedCompiler
-import Effect4.Laws.Modules.Queue.Data
+import Effect4.Library.Queue.Steps
+import Effect4.Laws.Step.ErasedCompiler
+import Effect4.Laws.Library.Queue.Data
 
 /-! Queue stored data controls. These finite evaluations cover generic messages,
 flat triples, key comparison, and annotation-independent reading.

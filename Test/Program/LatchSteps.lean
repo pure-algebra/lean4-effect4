@@ -1,4 +1,4 @@
-import Effect4.Laws.Modules.Latch.Steps
+import Effect4.Laws.Library.Latch.Steps
 
 /-! The battery of the Latch's steps (decisions row 330, slice L3): rc.112's batching on the
 model, a reader of the agreement at a state, and the controls of an open latch and an empty

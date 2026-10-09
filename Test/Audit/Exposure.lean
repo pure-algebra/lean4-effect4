@@ -14,10 +14,10 @@ open Tools.Architecture Tools.Exposure
 -- An entry module inside the proof graph wins over the graph's class.
 #guard exposureOf "src/Effect4/Laws/Author.lean" == some .entry
 -- A composed module's directory is the module library; the shared step language is internal.
-#guard exposureOf "src/Effect4/Modules/Queue/Ops.lean" == some .library
-#guard exposureOf "src/Effect4/Modules/Step.lean" == some .internal
+#guard exposureOf "src/Effect4/Library/Queue/Ops.lean" == some .library
+#guard exposureOf "src/Effect4/Step.lean" == some .internal
 -- The proof graph, the tools, the batteries.
-#guard exposureOf "src/Effect4/Laws/Modules/Step.lean" == some .proof
+#guard exposureOf "src/Effect4/Laws/Step.lean" == some .proof
 #guard exposureOf "tools/Tools/Explain.lean" == some .tool
 #guard exposureOf "Test/Dogfood/P1HttpCache.lean" == some .test
 -- A path outside every declared prefix has no class.

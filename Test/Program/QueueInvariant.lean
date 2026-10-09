@@ -1,10 +1,10 @@
-import Effect4.Laws.Modules.Queue.Invariant
+import Effect4.Laws.Library.Queue.Invariant
 
 /-!
 # The Queue model's run invariant: its finite controls
 
 The invariant `FirstRunInv`, the step law `first_step_inv` and the run law `first_run_inv` are in
-`src/Effect4/Laws/Modules/Queue/Invariant.lean`. This battery holds the finite
+`src/Effect4/Laws/Library/Queue/Invariant.lean`. This battery holds the finite
 controls. Each red control keeps every premise but
 one, and it has a positive control beside it:
 

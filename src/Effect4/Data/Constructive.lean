@@ -315,7 +315,7 @@ theorem lookup_of_mem_nodup {β : Type} :
 /-! ### Folds that build a list
 
 Each says what a fold of a composed module's pass computes
-(`src/Effect4/Laws/Modules/Queue/`, `src/Effect4/Laws/Modules/Semaphore/`). -/
+(`src/Effect4/Laws/Library/Queue/`, `src/Effect4/Laws/Library/Semaphore/`). -/
 
 /-- A fold that appends the elements it keeps is a filter. -/
 theorem foldl_keep {α : Type} (p : α → Prop) [DecidablePred p] :

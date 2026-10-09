@@ -305,10 +305,10 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   It establishes nothing for an identity type, an optional field or a refused constructor, and
   no codec admission (decisions row 330).
 - **A step types at its type (`step-language-typed`)**: A step is data over typed inputs
-  (`Step`, `src/Effect4/Modules/Step.lean`), and it has a source term at every scope.
+  (`Step`, `src/Effect4/Step.lean`), and it has a source term at every scope.
   Let the caller's terms type at the inputs' types, and let the step's typing facts hold.
   Then its term types at the step's type, under each literal flag (`Step.typed`,
-  `src/Effect4/Laws/Modules/Step.lean`).
+  `src/Effect4/Laws/Step.lean`).
   A caller proves the facts from premises where a type is a parameter, as Pool and the Queue do
   from `A.normalize = A`.
   Or the typing check proves them (`Step.typed_of_normal`): it certifies normal forms by a fold
@@ -327,7 +327,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   profile, a lease enrols its request exactly when the pool is open and a lease holds every
   item. Neither states
   fairness, liveness or anything of a program.
-  (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
+  (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Library/Pool/Profile.lean`)).
 - **The waiting forms are typed once (`waiting-wrapper-typed`, `protected-form-typed`)**:
   The waiting wrapper at a caller's restore answers its result type at every typed scope,
   when the module's part is typed (`waitRetryAt_answers`). The result type is in normal form.
@@ -338,7 +338,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   acquisition, a body at the restore site and a release under the exit's binder. The
   acquisition and the release answer a type, with no failure and no requirement. Both laws
   are typing only. They state no run, no law of the mask and no release at an exit. The
-  theorems are in `src/Effect4/Laws/Modules/Waiting.lean`.
+  theorems are in `src/Effect4/Laws/Step/Waiting.lean`.
 - **Pool's operations are typed at every scope (`pool-use-typed`, `pool-make-typed`,
   `pool-close-typed`)**: `use` keeps its body's effect type. The lease and the return add
   no failure and no requirement, and the refusal at a closed pool adds none: an interruption
@@ -350,7 +350,7 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   formed. An acquisition whose answer is another type is outside `make`'s statement. The
   three are typing only: no run, no law of the mask, no wait of the close and no finalizer's
   run. (`use_types`, `make_types`, `close_answers`
-  (`src/Effect4/Laws/Modules/Pool/Ops.lean`)).
+  (`src/Effect4/Laws/Library/Pool/Ops.lean`)).
 
 ### 2.2 Concept 2: Residual Program Typing (`residual-program-typing`)
 
@@ -574,7 +574,7 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   the close's first step every lease is refused (`close_refuses`). The closer's step answers
   true exactly where no lease is outstanding, and it enrols the closer otherwise
   (`drain_waits`). They state no finalizer's run and no wait of the close along a run. The
-  four theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
+  four theorems are in `src/Effect4/Laws/Library/Pool/Profile.lean`.
 
 ### 2.4 Concept 4: Reactive Scheduling & Machine Invariants (`reactive-scheduling`)
 
@@ -655,11 +655,11 @@ inductive RunDecision ...
   capacity. It is the model's half of `wait-registration-no-gap` and of
   `waiting-request-obligation-preserved`. It states nothing of a program, of a signal's
   delivery or of liveness.
-  (`first_step_inv`, `first_run_flags` (`src/Effect4/Laws/Modules/Queue/Invariant.lean`)).
+  (`first_step_inv`, `first_run_flags` (`src/Effect4/Laws/Library/Queue/Invariant.lean`)).
 - **Pool's wake selection on the model (`pool-select-takes-first`)**: One selection takes the
   first waiters of the state that it finds, at most its count, and it changes the waiters
   alone. It is one selection: it states no run and no liveness.
-  (`select_takes_first` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
+  (`select_takes_first` (`src/Effect4/Laws/Library/Pool/Profile.lean`)).
 
 #### 5. How the scheduler proofs use the theory
 
@@ -1326,22 +1326,22 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   It establishes no equality with the native spelling and no agreement with a release.
   (`mask_printed_form_profile` (`src/Effect4/Laws/Codegen/Mask.lean`)).
 - **A step reads its value (`step-language-sound`)**: A step is data over typed inputs
-  (`src/Effect4/Modules/Step.lean`).
+  (`src/Effect4/Step.lean`).
   The caller's terms read the input encodings, and the step passes its reading check.
   A fold requires aligned caller value and source scope lengths.
   Deferred comparison requires `DeferredIdentity` at the carrier interpretation.
   Captured caller sources resolve at their original scope.
-  Then the translated term reads the carrier value (`Step.sound`, `src/Effect4/Laws/Modules/Step.lean`).
+  Then the translated term reads the carrier value (`Step.sound`, `src/Effect4/Laws/Step.lean`).
   Each module separately proves its value equation against an independent behavior model.
   The shared law establishes no optional field, allocation, wrapper, run or host behavior (decisions row 330).
 - **The Latch's steps agree with its model (`latch-steps-agree`)**: The Latch is written in the
-  step language from the start (`src/Effect4/Modules/Latch/Steps.lean`).
+  step language from the start (`src/Effect4/Library/Latch/Steps.lean`).
   Its model is rc.112's `class Latch`: `isOpen`, `open` and `release` with `scheduleUnsafe`,
-  `flushScheduled` and `closeUnsafe` (`src/Effect4/Laws/Modules/Latch/Model.lean`).
+  `flushScheduled` and `closeUnsafe` (`src/Effect4/Library/Latch/Model.lean`).
   A wake posts one flush per batch, and a later wake joins the scheduled batch.
   The cell's value is the image of the model state's carrier, by definition.
   So each step's agreement is the reading law and one equation of Lean values
-  (`latch_steps_agree`, `src/Effect4/Laws/Modules/Latch/Steps.lean`).
+  (`latch_steps_agree`, `src/Effect4/Laws/Library/Latch/Steps.lean`).
   It establishes nothing of `await`, interruption, the posted flush's fiber or liveness
   (decisions row 330).
 - **Latch registration agrees with its model (`latch-registration-agrees`)**: Initial construction and registration read their independent model transitions.
@@ -1349,7 +1349,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   Withdrawal requires an injective table and aligned caller value and source scope lengths.
   It removes the first matching registration, including duplicates, and searches live waiters before the attached scheduled batch.
   It retains the scheduled flag when the batch becomes empty.
-  The connector is `latch_registration_agrees` (`src/Effect4/Laws/Modules/Latch/Registration.lean`).
+  The connector is `latch_registration_agrees` (`src/Effect4/Laws/Library/Latch/Registration.lean`).
   It establishes no interruption delivery, posted-flush execution, liveness or host behavior.
 - **A step keeps the fields it does not name (`step-frame`)**: Take an update spine of an
   input. A field that no overwrite of the step names keeps its value.
@@ -1376,7 +1376,7 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   value through the table, and the selected waiters' records. It is a part of the proposed claim
   `pool-expansion-agrees`. It states no order of the wake across helpers, no cancellation
   law, no wait of the close along a run and no wrapper.
-  (`pool_steps_agree` (`src/Effect4/Laws/Modules/Pool/Steps.lean`)).
+  (`pool_steps_agree` (`src/Effect4/Laws/Library/Pool/Steps.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)
 

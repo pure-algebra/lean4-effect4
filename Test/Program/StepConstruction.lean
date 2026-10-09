@@ -1,4 +1,4 @@
-import Effect4.Laws.Modules.Construction
+import Effect4.Laws.Step.Construction
 import Effect4.Program.Native
 
 /-! Readers and finite refusal controls for the shared construction rules.

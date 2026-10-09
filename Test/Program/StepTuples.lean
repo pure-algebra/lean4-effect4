@@ -1,7 +1,7 @@
-import Effect4.Laws.Modules.Step
-import Effect4.Laws.Modules.Step.Scope
-import Effect4.Laws.Modules.Step.Rename
-import Effect4.Laws.Modules.Step.ErasedCompiler
+import Effect4.Laws.Step
+import Effect4.Laws.Step.Scope
+import Effect4.Laws.Step.Rename
+import Effect4.Laws.Step.ErasedCompiler
 import Effect4.Program.Native
 
 /-! Readers and finite controls for arbitrary typed tuple item lists.

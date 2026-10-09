@@ -1,9 +1,9 @@
-import Effect4.Laws.Modules.Queue.Capacity
+import Effect4.Laws.Library.Queue.Capacity
 
 /-!
 # The Queue's capacity statements: their finite controls
 
-The statements and their proofs are in `src/Effect4/Laws/Modules/Queue/Capacity.lean`. This
+The statements and their proofs are in `src/Effect4/Laws/Library/Queue/Capacity.lean`. This
 battery holds the finite controls of the packet `Test/contracts/queue.contract.md`, one input
 each.
 -/

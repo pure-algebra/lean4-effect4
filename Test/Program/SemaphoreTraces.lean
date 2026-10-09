@@ -8,7 +8,7 @@ Decisions row 221 names three acceptance traces of the waiting wrapper, and the 
 adds more (`docs/research/2026-10-05-claude-lead/waiting-design.md`, F5, F7 and proposal 5). The
 Queue's battery runs them over the Queue (`Test/Program/QueueTraces.lean`). This battery runs
 those that Semaphore has, over the library's operations
-(`src/Effect4/Modules/Semaphore/Ops.lean`), and the controls of the protected permit. Each has
+(`src/Effect4/Library/Semaphore/Ops.lean`), and the controls of the protected permit. Each has
 its positive control, and a fault that fails the promised property.
 
 | # | The trace | The open part that it is a finite control of |
@@ -26,7 +26,7 @@ its positive control, and a fault that fails the promised property.
 `scope-lifetime-finalization`, requirement R11;
 `docs/research/2026-10-05-claude-lead/module-cards/semaphore.md`, section 8). The registry does
 not hold it yet. Traces 4 and 5 are the two red controls of `protectedBy`
-(`src/Effect4/Modules/Waiting.lean`; decisions row 276, point 1): a take in its own mask loses
+(`src/Effect4/Library/Waiting.lean`; decisions row 276, point 1): a take in its own mask loses
 its permit under an interruption, and a wait inside a mask of the form's making cannot be
 interrupted.
 

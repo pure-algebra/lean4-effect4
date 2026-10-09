@@ -5,7 +5,7 @@ import Test.Program.SemaphoreScenarios
 
 The engine's test `ocaml/engine/test/semaphore/test_semaphore.ml` runs the cases P1, P3 and P9
 of `Test/Program/SemaphoreScenarios.lean` on the generated engine, on both carriers. The
-programs are over the library's operations (`src/Effect4/Modules/Semaphore/Ops.lean`). Each
+programs are over the library's operations (`src/Effect4/Library/Semaphore/Ops.lean`). Each
 program crosses as its canonical bytes. The fixture `ocaml/engine/test/semaphore/semaphore.txt`
 holds them, with the fuel and the root's exit of Lean's machine. The writer is `write.lean`, in
 that folder.

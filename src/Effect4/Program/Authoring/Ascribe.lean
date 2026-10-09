@@ -30,7 +30,7 @@ record form unchanged. Its first callers are the scenarios' log cells
 
 The laws are in the law graph. The scope law is `ascribe_scoped`
 (`src/Effect4/Laws/Program/Authoring/Ascribe.lean`). The typing law `types_ascribe` and the
-reading law `reads_ascribe` are in `src/Effect4/Laws/Modules/Ascribe.lean`. The controls are in
+reading law `reads_ascribe` are in `src/Effect4/Laws/Step/Ascribe.lean`. The controls are in
 `Test/Program/Ascribe.lean`.
 -/
 

@@ -327,7 +327,7 @@ theorem Member.option_closed {m : Ty} {a : Ty} (closed : m.closed = true)
 /-- **The option rule at an option type whose element is its own normal form**: the element.
 The full lift at one normal union member is the member rule (`lift_member`). A step of the
 claim `union-rule-extend`, at a rule that reads the normal form. Its consumer is
-`answers_selectOptionWith_kept` (`src/Effect4/Laws/Modules/Waiting.lean`). At an element that is
+`answers_selectOptionWith_kept` (`src/Effect4/Laws/Step/Waiting.lean`). At an element that is
 not its own normal form the answer is the normal form, as it was before the conversion. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem optionTy_option {a : Ty} (canonical : a.normalize = a) : optionTy (.option a) = some a := by

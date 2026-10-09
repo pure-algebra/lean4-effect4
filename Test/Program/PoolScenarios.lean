@@ -2,8 +2,8 @@ import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Mask
-import Effect4.Modules.Waiting
-import Effect4.Modules.Pool.Steps
+import Effect4.Library.Waiting
+import Effect4.Library.Pool.Steps
 import Effect4.Store.Carrier.Fold
 import Effect4.Store.Domain.ProgramWire
 
@@ -41,17 +41,17 @@ labelled below.
 hook: the lease loop with a wait and a withdrawal, then the body under `onExit` at the mask's
 restore site. A return posts one helper with the count 1 where a wake is owed (decisions row
 238). The helper runs one selection step, and it then resolves each selected hint in order.
-The fixtures use `posted`, `onInterrupt` and `waitAt` of `src/Effect4/Modules/Waiting.lean`,
+The fixtures use `posted`, `onInterrupt` and `waitAt` of `src/Effect4/Library/Waiting.lean`,
 and the mask's builder. They do not use `waitRetry`: its own mask ends before the body's hook
 is installed. Two red controls of that mask stand before the engine's fixture: a lease in its
 own mask loses the lease, or it cannot be interrupted while it waits. The public `make` and
-`use` are the library's since (`src/Effect4/Modules/Pool/Ops.lean`), and
+`use` are the library's since (`src/Effect4/Library/Pool/Ops.lean`), and
 `Test/Program/PoolPublic.lean` runs the cases over them. This battery stays as the first check
 of the cases: its fixtures write their rows inside the lease's loop and inside the helper.
 
-**The steps are the library's** (`src/Effect4/Modules/Pool/Steps.lean`): the lease step, the
+**The steps are the library's** (`src/Effect4/Library/Pool/Steps.lean`): the lease step, the
 return step, the selection, the withdrawal and the close's first step. The cell is the
-library's too (`src/Effect4/Modules/Pool/Cell.lean`), at a resource type of numbers. Each red
+library's too (`src/Effect4/Library/Pool/Cell.lean`), at a resource type of numbers. Each red
 control changes one step or one fixture.
 
 **The settings of every run.**
@@ -794,7 +794,7 @@ def pp5controlHandedRows : List (List Nat) :=
 
 `use` holds the lease and the hook's installation in one masked region. Each control below
 joins a lease that holds its own mask to the hook, as `waitRetry` holds its own
-(`src/Effect4/Modules/Waiting.lean`). Each fails one schedule. They are the finite controls of
+(`src/Effect4/Library/Waiting.lean`). Each fails one schedule. They are the finite controls of
 the form that the public slice needs: the wrapper's loop at the caller's restore site.
 
 A yield can stand inside a masked region: the budget's yield is no interruption

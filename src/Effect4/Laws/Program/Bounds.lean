@@ -36,7 +36,7 @@ claim `template-match-complete` points at `matchB_complete`. `matchArgsB_monoton
 template's share of the proposed claim `checker-monotone`. Requirements R4 and R14. The consumers
 are `NativeAtom.sound_of_poly` (`src/Effect4/Laws/Program/Typed.lean`), the row lemmas of
 `src/Effect4/Laws/Program/Template.lean`, and the module laws of
-`src/Effect4/Laws/Modules/Waiting.lean`.
+`src/Effect4/Laws/Step/Waiting.lean`.
 
 **What it does not establish.**
 - A match under a union head or a nominal reference of a template.

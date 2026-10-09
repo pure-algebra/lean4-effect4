@@ -1,13 +1,13 @@
-import Effect4.Modules.Semaphore.Steps
-import Effect4.Laws.Modules.Semaphore.Profile
-import Effect4.Laws.Modules.Semaphore.Typing
+import Effect4.Library.Semaphore.Steps
+import Effect4.Laws.Library.Semaphore.Profile
+import Effect4.Laws.Library.Semaphore.Typing
 
 /-!
 # Semaphore's steps against the abstract model: the comparison (decisions row 265)
 
-A comparison evaluates one step term of `src/Effect4/Modules/Semaphore/Steps.lean` on the
+A comparison evaluates one step term of `src/Effect4/Library/Semaphore/Steps.lean` on the
 encoding of a model state, and compares the whole result with the encoding of the model's
-transition (`src/Effect4/Laws/Modules/Semaphore/Model.lean`): the reply and the stored value.
+transition (`src/Effect4/Library/Semaphore/Model.lean`): the reply and the stored value.
 
 The battery holds:
 

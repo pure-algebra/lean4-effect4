@@ -9,7 +9,7 @@ Decisions row 221 names three acceptance traces of the waiting wrapper, and the 
 adds more (`docs/research/2026-10-05-claude-lead/waiting-design.md`, F5, F7 and proposal 5). The
 Queue's battery and Semaphore's run them over their modules (`Test/Program/QueueTraces.lean`,
 `Test/Program/SemaphoreTraces.lean`). This battery runs them over Pool's `use`
-(`src/Effect4/Modules/Pool/Ops.lean`), with the controls of the protected lease and of the
+(`src/Effect4/Library/Pool/Ops.lean`), with the controls of the protected lease and of the
 close. Each has its positive control, and a fault that fails the promised property.
 
 | # | The trace | The open part that it is a finite control of |
@@ -710,7 +710,7 @@ def heldItem : Val :=
   [.list [heldItem], .list [heldItem], .list [], .list [], .nat 1, .nat 1, .bool true,
     .bool true]))
 -- The refusal is the lease step's own: at a closing pool it removes the request's entry, and
--- it changes nothing else (`lease_closed`, `src/Effect4/Laws/Modules/Pool/Profile.lean`).
+-- it changes nothing else (`lease_closed`, `src/Effect4/Laws/Library/Pool/Profile.lean`).
 
 -- **A borrow at a closed pool, under a masked caller.** L is fiber 1, and it runs under
 -- `uninterruptible`. Its exit is still the interruption of its own fiber: the answer is a

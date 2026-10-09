@@ -1,11 +1,11 @@
 import Test.Program.SemaphoreScenarios
-import Effect4.Laws.Modules.Semaphore.Ops
+import Effect4.Laws.Library.Semaphore.Ops
 
 /-!
 # Semaphore's operations: the finite controls of the library module (rows 259 to 261 and 276)
 
-The module is `src/Effect4/Modules/Semaphore/Ops.lean`, over the shared wrapper
-(`src/Effect4/Modules/Waiting.lean`). The host probe's cases are
+The module is `src/Effect4/Library/Semaphore/Ops.lean`, over the shared wrapper
+(`src/Effect4/Library/Waiting.lean`). The host probe's cases are
 `Test/Program/SemaphoreScenarios.lean`. This battery holds the controls of the operations that
 those do not run, and of the module's laws.
 
@@ -17,7 +17,7 @@ those do not run, and of the module's laws.
    `authoring_scoped`: each operation's law is found by its name.
 4. **The attempt laws at the operations' own binders.** The second form of a law takes two
    premises for each minted name: the row's scope binds it, and no later binder shadows it
-   (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`). The operations' own binders meet both, at
+   (`src/Effect4/Laws/Library/Semaphore/Ops.lean`). The operations' own binders meet both, at
    every caller's scope: proved here, with each scope written out. And each statement's term is
    the term of the operation's own row: tested, on the trees that the operations elaborate to.
 5. **Hygiene.** The fixtures wrote the names `id`, `hint`, `took`, `r`, `e` and `s` around a
@@ -643,7 +643,7 @@ end Hygiene
 /-! ## 6. Typing at every scope
 
 `take_types` and its five siblings type each operation at every typed scope
-(`src/Effect4/Laws/Modules/Semaphore/Ops.lean`). The examples read each at a caller's variables:
+(`src/Effect4/Laws/Library/Semaphore/Ops.lean`). The examples read each at a caller's variables:
 a variable that an author wrote is a kept term, at every scope that binds it. The guards run the
 checker on each operation's tree, so each statement has a finite control with the checker's own
 answer. -/

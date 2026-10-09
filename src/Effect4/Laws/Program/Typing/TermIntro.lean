@@ -30,11 +30,11 @@ types to the whole's type. Each rule is stated once, and it names no module.
 
 Placement. Concept `store-typing`, requirement R4. Every rule here is a helper of the typing
 statements of a composed module's steps: the Queue's
-(`src/Effect4/Laws/Modules/Queue/Typing.lean`), where each docstring names a step that uses
-it, and Semaphore's (`src/Effect4/Laws/Modules/Semaphore/Typing.lean`). The two rules of a
+(`src/Effect4/Laws/Library/Queue/Typing.lean`), where each docstring names a step that uses
+it, and Semaphore's (`src/Effect4/Laws/Library/Semaphore/Typing.lean`). The two rules of a
 positional read are the exception: their consumer is the wrapper's law, which reads a step's
 reply by position. The rules reach the statements through the judgment `Types` and its builder
-lemmas (`src/Effect4/Laws/Modules/Checking.lean`).
+lemmas (`src/Effect4/Laws/Step/Checking.lean`).
 
 Reach. Each rule is an equation of the checker. `Ty.sub` and `Ty.normalize` are well-founded,
 so a rule rewrites with their lemmas and never by evaluation at a symbolic type. The rules

@@ -7,11 +7,11 @@ It authorizes no additional runtime behaviour.
 
 | Part | Evidence on 2026-10-05 |
 | --- | --- |
-| `src/Effect4/Laws/Modules/Queue/Model.lean` | tested: it builds in the law graph |
+| `src/Effect4/Library/Queue/Model.lean` | tested: it builds in the law graph |
 | `Test/Program/QueueContract.lean` | tested: its guard checks hold |
-| `acceptLoop_length_le` in `src/Effect4/Laws/Modules/Queue/Capacity.lean` | proved, at `[propext, Quot.sound]` |
+| `acceptLoop_length_le` in `src/Effect4/Laws/Library/Queue/Capacity.lean` | proved, at `[propext, Quot.sound]` |
 | `positive_suspend_step_capacity` in the same file | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
-| `first_profile_closed` in `src/Effect4/Laws/Modules/Queue/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+| `first_profile_closed` in `src/Effect4/Laws/Library/Queue/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 
 The model and its proved statements moved into the law graph on 2026-10-05 (decisions row 255).
 Their declarations are in the namespace `Effect4.Queue.Model`. No definition changed.
@@ -24,7 +24,7 @@ Row 251 orders the public implementation after FOLD, T5 and the mask.
 The corrected research contract remains the detailed API specification:
 `docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md`.
 
-`Effect4.Queue.Model` in `src/Effect4/Laws/Modules/Queue/Model.lean` is the abstract transition model.
+`Effect4.Queue.Model` in `src/Effect4/Library/Queue/Model.lean` is the abstract transition model.
 The research model names it `QueueContract`.
 Its definition bodies come unchanged from the research model at this packet's base.
 The extraction retains their exact bytes and hashes.
@@ -75,7 +75,7 @@ General request-order and ownership proofs require fresh request identities and 
 The wrapper must establish those premises.
 The capacity helper itself requires neither identity freshness nor a scheduler.
 
-`FirstProfile` in `src/Effect4/Laws/Modules/Queue/Profile.lean` is the first profile's state predicate.
+`FirstProfile` in `src/Effect4/Laws/Library/Queue/Profile.lean` is the first profile's state predicate.
 It has eight conditions: the opened phase, the suspend strategy and a positive capacity.
 Each stored taker has the bounds one and one, and each pending offer is one message and no batch.
 No peeker and no awaiter waits, and no two waiting requests share an identity.
@@ -101,7 +101,7 @@ Two closed forms of the model on the profile are proved beside it, as steps of t
 | Prerequisite | Freeze the exact model and place the goal before proving the helper |
 | Exclusions | No signal delivery, liveness, FIFO progress, typed store preservation, target execution or native Queue agreement |
 
-`src/Effect4/Laws/Modules/Queue/Capacity.lean` holds the step proposition with its placement.
+`src/Effect4/Laws/Library/Queue/Capacity.lean` holds the step proposition with its placement.
 It was a placed `proof_goal`, and the coordinator proved it on 2026-10-05.
 Its steps are the helper and one lemma for each operation of the model.
 The helper is proved there. The coordinator rewrote its proof: Codex's draft did not compile.
@@ -145,7 +145,7 @@ Those results verify provenance only.
 
 The first public operations landed on 2026-10-06 (decisions rows 233, 255 and 257).
 They are `Queue.bounded`, `Queue.offer`, `Queue.take`, `Queue.poll` and `Queue.size`.
-Their file is `src/Effect4/Modules/Queue/Ops.lean`, over the shared wrapper of `src/Effect4/Modules/Waiting.lean`.
+Their file is `src/Effect4/Library/Queue/Ops.lean`, over the shared wrapper of `src/Effect4/Library/Waiting.lean`.
 That slice took three connectors, and it prepared four.
 
 | # | Connector | State | Evidence |
@@ -158,14 +158,14 @@ That slice took three connectors, and it prepared four.
 | 6 | Supply an embedded budget covering reached receiver continuations, or state the admitted-client restriction. | open, with a measure | tested: acceptance trace 7 |
 | 7 | Check and relate the actual emitted expansion after T5 and the mask land. | taken, as finite checks | tested and reproduced: three lanes |
 
-**Connectors 1 and 2.** The attempt laws are in `src/Effect4/Laws/Modules/Queue/Ops.lean`.
+**Connectors 1 and 2.** The attempt laws are in `src/Effect4/Laws/Library/Queue/Ops.lean`.
 They are `take_attempt`, `take_withdrawal`, `offer_attempt`, `offer_withdrawal`, `poll_attempt`, `size_read` and `bounded_makes`.
 Each is proved at `[propext, Quot.sound]`, and its plan status is `proved`.
 Each states one store step at the operation's own step term, under the binder of its own row.
 The cell holds the encoding of a state of `FirstProfile`, and the request has the premise `Requested`.
 The step then answers the model's reply, and it writes the encoding of the model's next state.
 It names the model's signals in order, and the reply and the stored value are members of their types.
-Each law composes `step_updates` and `step_keeps_cell` of `src/Effect4/Laws/Modules/Store.lean` with the step's agreement and its typing.
+Each law composes `step_updates` and `step_keeps_cell` of `src/Effect4/Laws/Step/Store.lean` with the step's agreement and its typing.
 `take_types` and its four siblings type each operation at every scope, for every message type with `MessageTy`.
 The laws state no run: no delivery, no order across steps, no cancellation law, no budget and no liveness.
 

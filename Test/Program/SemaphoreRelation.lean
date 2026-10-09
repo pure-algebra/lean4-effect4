@@ -1,14 +1,14 @@
-import Effect4.Laws.Modules.Semaphore.Steps
-import Effect4.Laws.Modules.Store
+import Effect4.Laws.Library.Semaphore.Steps
+import Effect4.Laws.Step.Store
 import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreSteps
 
 /-!
 # Semaphore's relation and its step goals: finite controls (decisions row 265)
 
-The relation is `src/Effect4/Laws/Modules/Semaphore/Relation.lean`: the shared encoding table,
+The relation is `src/Effect4/Laws/Library/Semaphore/Relation.lean`: the shared encoding table,
 the cell's value and the replies. The five step goals are in
-`src/Effect4/Laws/Modules/Semaphore/Steps.lean`. This battery evaluates each goal's conclusion,
+`src/Effect4/Laws/Library/Semaphore/Steps.lean`. This battery evaluates each goal's conclusion,
 as the goal states it: at one table and at the scope of the step's own arguments, on every
 state of the universe of `Test/Program/SemaphoreAgreement.lean`, 23 moves on each.
 
@@ -148,7 +148,7 @@ def both : State := { permits := 2, taken := 2, waiters := [⟨1, 1, 1⟩, ⟨2,
 
 A step statement holds at every scope, for every caller's term that reads the step's
 arguments. A variable that an author wrote is such a term (`captured_var`). With `step_updates`
-(`src/Effect4/Laws/Modules/Store.lean`) a statement is one atomic update of the cell: the
+(`src/Effect4/Laws/Step/Store.lean`) a statement is one atomic update of the cell: the
 store step reads the cell once, answers the model's reply and writes the model's next state.
 The row's binder for the cell's value is the scope's last name. -/
 

@@ -1,5 +1,5 @@
-import Effect4.Laws.Modules.Semaphore.Steps
-import Effect4.Laws.Modules.Semaphore.Typing
+import Effect4.Laws.Library.Semaphore.Steps
+import Effect4.Laws.Library.Semaphore.Typing
 
 /-! Readers and finite controls of Semaphore's Step-data migration.
 Placement: `semaphore-steps-agree` (R10), and the Step typing consumers (R4).

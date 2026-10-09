@@ -171,22 +171,22 @@ def registry : Registry where
         `Effect4.Laws.Program.Typed.Membership,
         `Effect4.Laws.Program.Typed.World,
         `Effect4.Laws.Program.Typed.Validity,
-        `Effect4.Laws.Modules.Queue.Typing,
+        `Effect4.Laws.Library.Queue.Typing,
         -- the typing judgment of a builder's term and the term checker's rules in their
         -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257).
         -- The judgment's file names no module since seat MOVE
-        `Effect4.Laws.Modules.Checking,
+        `Effect4.Laws.Step.Checking,
         -- a term at a declared type (`ascribe`): its typing laws' two steps (seat WORKQ)
-        `Effect4.Laws.Modules.Ascribe,
-        `Effect4.Laws.Modules.Waiting,
-        `Effect4.Laws.Modules.Pool.Typing,
-        `Effect4.Laws.Modules.Pool.Profile,
+        `Effect4.Laws.Step.Ascribe,
+        `Effect4.Laws.Step.Waiting,
+        `Effect4.Laws.Library.Pool.Typing,
+        `Effect4.Laws.Library.Pool.Profile,
         `Effect4.Laws.Program.Typing.TermIntro,
         -- Semaphore's typing statements, and its model's profile: the closure is this
         -- concept's node, and the two facts of a visit carry their own tag (seat SEM's
         -- receipt, item 10, row 3, option (b); decisions row 265)
-        `Effect4.Laws.Modules.Semaphore.Typing,
-        `Effect4.Laws.Modules.Semaphore.Profile
+        `Effect4.Laws.Library.Semaphore.Typing,
+        `Effect4.Laws.Library.Semaphore.Profile
       ] },
     { id := "residual-program-typing"
       title := "Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs"
@@ -214,12 +214,12 @@ def registry : Registry where
     { id := "reactive-scheduling"
       title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
       defaultModules := [
-        `Effect4.Laws.Modules.Queue.Invariant,
+        `Effect4.Laws.Library.Queue.Invariant,
         `Effect4.Laws.Machine.Scheduling,
         `Effect4.Laws.Machine.Lift,
         `Effect4.Laws.Program.Typed.Scheduler,
-        `Effect4.Laws.Modules.Queue.Capacity,
-        `Effect4.Laws.Modules.Queue.Profile
+        `Effect4.Laws.Library.Queue.Capacity,
+        `Effect4.Laws.Library.Queue.Profile
       ] },
     { id := "exact-codecs"
       title := "Exact Codecs: Invertible embeddings for JSON and Schema representations"
@@ -264,21 +264,21 @@ def registry : Registry where
         -- the shared homes of the composed modules (seat MOVE): the encoding table, the
         -- reading rules of a builder, and the connectors to the store. `step_keeps_cell`
         -- keeps its own tag, `store-typing`
-        `Effect4.Laws.Modules.Table,
-        `Effect4.Laws.Modules.Reading,
-        `Effect4.Laws.Modules.Store,
-        `Effect4.Laws.Modules.Queue.Relation,
-        `Effect4.Laws.Modules.Queue.Reading,
-        `Effect4.Laws.Modules.Queue.Steps,
-        `Effect4.Laws.Modules.Queue.Ops,
-        `Effect4.Laws.Modules.Pool.Relation,
-        `Effect4.Laws.Modules.Pool.Reading,
-        `Effect4.Laws.Modules.Pool.Steps,
-        `Effect4.Laws.Modules.Pool.Ops,
-        `Effect4.Laws.Modules.Semaphore.Relation,
-        `Effect4.Laws.Modules.Semaphore.Reading,
-        `Effect4.Laws.Modules.Semaphore.Steps,
-        `Effect4.Laws.Modules.Semaphore.Ops
+        `Effect4.Laws.Step.Table,
+        `Effect4.Laws.Step.Reading,
+        `Effect4.Laws.Step.Store,
+        `Effect4.Laws.Library.Queue.Relation,
+        `Effect4.Laws.Library.Queue.Reading,
+        `Effect4.Laws.Library.Queue.Steps,
+        `Effect4.Laws.Library.Queue.Ops,
+        `Effect4.Laws.Library.Pool.Relation,
+        `Effect4.Laws.Library.Pool.Reading,
+        `Effect4.Laws.Library.Pool.Steps,
+        `Effect4.Laws.Library.Pool.Ops,
+        `Effect4.Laws.Library.Semaphore.Relation,
+        `Effect4.Laws.Library.Semaphore.Reading,
+        `Effect4.Laws.Library.Semaphore.Steps,
+        `Effect4.Laws.Library.Semaphore.Ops
       ] }
   ]
   claims := [
@@ -1152,7 +1152,7 @@ def registry : Registry where
         `Effect4.Codegen.Forms.forkScopedDefault_typed,
         `Effect4.Codegen.Forms.releaseOne_typed,
         `Effect4.Program.mask_printed_form_profile]
-      openParts := [.proposed "pool-expansion-agrees (proposed claim; translation-simulation): Pool's expansion agrees with the first profile's public observation, under its premises on the callers, interruption, the close and the work budget; its parts on one atomic step are pool_steps_agree and the eleven attempt statements of the operations, each on every model state (lease_attempt, withdraw_attempt, return_attempt, select_attempt, close_attempt, drain_attempt, make_makes, and four at the names that the operation mints; the lease, the withdrawal and the closer's step take an injective table); the operations, the wake, the close and the refusal at a closed pool are library programs (src/Effect4/Modules/Pool/Ops.lean); the wrapper's run for the borrower and for the closer, the wake across helpers and the protected lease's run are not stated; finite controls: ten cases on the Lean machine, on the generated engine and on rc.112, one schedule each (Test/Program/PoolPublic.lean) (decisions rows 79, 226, 267 to 269, 276, 279)",
+      openParts := [.proposed "pool-expansion-agrees (proposed claim; translation-simulation): Pool's expansion agrees with the first profile's public observation, under its premises on the callers, interruption, the close and the work budget; its parts on one atomic step are pool_steps_agree and the eleven attempt statements of the operations, each on every model state (lease_attempt, withdraw_attempt, return_attempt, select_attempt, close_attempt, drain_attempt, make_makes, and four at the names that the operation mints; the lease, the withdrawal and the closer's step take an injective table); the operations, the wake, the close and the refusal at a closed pool are library programs (src/Effect4/Library/Pool/Ops.lean); the wrapper's run for the borrower and for the closer, the wake across helpers and the protected lease's run are not stated; finite controls: ten cases on the Lean machine, on the generated engine and on rc.112, one schedule each (Test/Program/PoolPublic.lean) (decisions rows 79, 226, 267 to 269, 276, 279)",
         "a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)",
         "no form has a behaviour law (DI-89)",
         "the agreement half of mask-printed-form-profile (translation-simulation, serving R10 and R11): the compiled derived form against the named release's printed form, equal observation on a named observation under compatible decisions; the three operations more than the native mask are measured on the machine and on the target, not proved, and the cuts at the two checkpoints on the pin rest on Codex's runs; the expansion, the typing, the readability and the two checkpoints on the machine are mask_printed_form_profile (decisions rows 245, 246); no goal states the agreement",
@@ -1161,7 +1161,7 @@ def registry : Registry where
         "DI-39's six rows not landed",
         "a composite's contract by a stuttering route (post-Phase C §11.4)",
         .proposed "queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230); its first application on one program is two planned goals, held_within_fed and fed_accounted (Test/Dogfood/Scenario/QueueWorkers.lean), with finite controls on the Lean machine, three engine runs and 25 host runs; no law of a whole run",
-        .proposed "semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree and the nine attempt statements of the operations, each on every model state; the operations, the walk and the protected form are library programs (src/Effect4/Modules/Semaphore/Ops.lean); the wrapper's run, the walk across visits and the protected form's run are not stated (decisions rows 79, 226, 259 to 261, 276)",
+        .proposed "semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree and the nine attempt statements of the operations, each on every model state; the operations, the walk and the protected form are library programs (src/Effect4/Library/Semaphore/Ops.lean); the wrapper's run, the walk across visits and the protected form's run are not stated (decisions rows 79, 226, 259 to 261, 276)",
         .proposed "posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)",
         .proposed "atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)",
         "fair composition of tickets that are enrolled apart is outside the first profile: the opposing-ticket cycle stays a refused case until an enrolment protocol resolves it (decisions row 223)"] },

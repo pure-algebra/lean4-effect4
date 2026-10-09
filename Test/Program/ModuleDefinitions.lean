@@ -1,5 +1,5 @@
 import Test.Program.QueueDefs
-import Effect4.Modules.Semaphore.Defs
+import Effect4.Library.Semaphore.Defs
 
 /-!
 # Declared modules at their public authoring interface

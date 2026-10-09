@@ -1,6 +1,6 @@
-import Effect4.Modules.Step.Elab.Inputs
-import Effect4.Laws.Modules.Step.Scope
-import Effect4.Modules.Step.Lists
+import Effect4.Step.Elab.Inputs
+import Effect4.Laws.Step.Scope
+import Effect4.Step.Lists
 
 /-! Named input and fold authoring readers and controls.
 The interface elaborates to existing Step data.

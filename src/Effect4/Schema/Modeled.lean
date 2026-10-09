@@ -17,7 +17,7 @@ The fold takes an **identity context** (`Model.Leaves`): the carrier of each ide
 handle, the reference, the `Deferred` and the fiber. `Model.alg` is the fold at the context that
 refuses every identity (`Leaves.refused`). The context that carries an identity as its own value
 (`Leaves.opaque`) lets a step read and write a record that holds identities, Semaphore's cell
-among them (`src/Effect4/Modules/Step.lean`).
+among them (`src/Effect4/Step.lean`).
 
 The **checked domain** is the set of types the refusal fold (`Model.refusalAlg`) answers `none`
 at. It refuses an identity type, since an identity needs its role's table; an optional field;

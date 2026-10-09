@@ -1,7 +1,7 @@
 import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
-import Effect4.Modules.Semaphore.Ops
+import Effect4.Library.Semaphore.Ops
 import Effect4.Store.Carrier.Fold
 import Effect4.Store.Domain.ProgramWire
 
@@ -24,9 +24,9 @@ compares each answer with the pinned Effect's, case by case. The pin's answers a
 | P7 | A total of 1, held. A raw waiter is interrupted, then a protected waiter | Each waiter's entry leaves, and `taken` does not change |
 | P9 | P1, with B told to yield once, at its resume | The walk goes on, and C takes 1. B then reads 1 free and waits again with a new entry |
 
-**The operations are the library's** (`src/Effect4/Modules/Semaphore/Ops.lean`).
+**The operations are the library's** (`src/Effect4/Library/Semaphore/Ops.lean`).
 `Semaphore.make`, `take`, `release`, `withPermits` and `takeIfAvailable` wrap the step terms with
-the shared wrapper (`src/Effect4/Modules/Waiting.lean`): the mask that restores, one posted
+the shared wrapper (`src/Effect4/Library/Waiting.lean`): the mask that restores, one posted
 helper for a release, and a withdrawal on interruption. Every binder of an operation is minted.
 One more run, T1, is the take that never waits.
 

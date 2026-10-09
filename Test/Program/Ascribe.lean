@@ -1,7 +1,7 @@
 import Effect4.Api
 import Effect4.Program.Authoring.Ascribe
 import Effect4.Laws.Program.Authoring.Ascribe
-import Effect4.Laws.Modules.Ascribe
+import Effect4.Laws.Step.Ascribe
 import Test.Dogfood.Stage
 
 /-!
@@ -10,7 +10,7 @@ import Test.Dogfood.Stage
 `Authoring.ascribe ty e` (`src/Effect4/Program/Authoring/Ascribe.lean`) is a record with one
 field declared at `ty` that holds `e`, and a read of that field. Its laws are `ascribe_scoped`
 (`src/Effect4/Laws/Program/Authoring/Ascribe.lean`), and `types_ascribe`, `ascribe_untyped` and
-`reads_ascribe` (`src/Effect4/Laws/Modules/Ascribe.lean`). This battery holds their finite
+`reads_ascribe` (`src/Effect4/Laws/Step/Ascribe.lean`). This battery holds their finite
 controls and their instances.
 
 | # | Control | What it shows |

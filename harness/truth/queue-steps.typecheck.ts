@@ -9,11 +9,11 @@
  * parameters are the node's bound values, in the node's order: the cell, then the message, the
  * request's identity and its hint, where the step takes them. `Cell`, `Taker` and `Offer` are
  * the printed types of `Queue.cellTy`, `Queue.takerTy` and `Queue.offerTy` at number messages
- * (`src/Effect4/Modules/Queue/Cell.lean`), which that battery pins too. Each answer type is
- * written from the step's own statement (`src/Effect4/Modules/Queue/Steps.lean`).
+ * (`src/Effect4/Library/Queue/Cell.lean`), which that battery pins too. Each answer type is
+ * written from the step's own statement (`src/Effect4/Library/Queue/Steps.lean`).
  *
  * What this control states: the compiler accepts each printed step at those types. It states
- * no run and no law of the Queue: the steps' laws are in `src/Effect4/Laws/Modules/Queue/`.
+ * no run and no law of the Queue: the steps' laws are in `src/Effect4/Laws/Library/Queue/`.
  * Five of the six texts hold a `pair` or a `tuple`. None of them needed the literal rule of
  * decisions row 256: the compiler accepted each before it too (seat T5's measure).
  */

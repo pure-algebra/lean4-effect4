@@ -1,14 +1,14 @@
-import Effect4.Laws.Modules.Pool.Steps
-import Effect4.Laws.Modules.Store
+import Effect4.Laws.Library.Pool.Steps
+import Effect4.Laws.Step.Store
 import Test.Program.PoolAgreement
 import Test.Program.PoolSteps
 
 /-!
 # Pool's relation and its step goals: finite controls (decisions rows 267 to 269 and 276)
 
-The relation is `src/Effect4/Laws/Modules/Pool/Relation.lean`: the shared encoding table, the
+The relation is `src/Effect4/Laws/Library/Pool/Relation.lean`: the shared encoding table, the
 resources' values, the cell's value and the replies. The six step goals are in
-`src/Effect4/Laws/Modules/Pool/Steps.lean`. This battery evaluates each goal's conclusion, as
+`src/Effect4/Laws/Library/Pool/Steps.lean`. This battery evaluates each goal's conclusion, as
 the goal states it: at one table and at the scope of the step's own arguments, on every state
 of the universe of `Test/Program/PoolAgreement.lean`, 19 moves on each.
 
@@ -183,7 +183,7 @@ def shared : Table := { tb0 with handle := fun n => if n = 2 then ⟨1⟩ else �
 
 A step statement holds at every scope, for every caller's term that reads the step's
 arguments. A variable that an author wrote is such a term (`captured_var`). With `step_updates`
-(`src/Effect4/Laws/Modules/Store.lean`) a statement is one atomic update of the cell: the
+(`src/Effect4/Laws/Step/Store.lean`) a statement is one atomic update of the cell: the
 store step reads the cell once, answers the model's reply and writes the model's next state.
 The row's binder for the cell's value is the scope's last name. -/
 

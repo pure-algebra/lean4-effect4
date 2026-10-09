@@ -1,4 +1,4 @@
-import Effect4.Laws.Modules.Step
+import Effect4.Laws.Step
 
 /-! Captured fold controls for step-language-sound and step-language-typed:
 nested captures, caller trees with binders, empty element carriers, unused sources and alignment. -/

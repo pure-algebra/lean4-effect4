@@ -1,12 +1,12 @@
 import Test.Program.PoolPublic
 import Test.Program.SemaphoreOps
-import Effect4.Laws.Modules.Pool.Ops
+import Effect4.Laws.Library.Pool.Ops
 
 /-!
 # Pool's operations: the finite controls of the library module's laws (rows 267 to 269, 276, 279)
 
-The module is `src/Effect4/Modules/Pool/Ops.lean`, over the shared wrapper
-(`src/Effect4/Modules/Waiting.lean`). Its laws are `src/Effect4/Laws/Modules/Pool/Ops.lean`. The
+The module is `src/Effect4/Library/Pool/Ops.lean`, over the shared wrapper
+(`src/Effect4/Library/Waiting.lean`). Its laws are `src/Effect4/Laws/Library/Pool/Ops.lean`. The
 cases on the machine are `Test/Program/PoolPublic.lean`. This battery holds the controls of the
 laws.
 
@@ -15,7 +15,7 @@ laws.
    `authoring_scoped`: each program's law is found by its name.
 3. **The attempt laws at the operations' own binders.** The second form of a law takes two
    premises for each minted name: the row's scope binds it, and no later binder shadows it
-   (`src/Effect4/Laws/Modules/Pool/Ops.lean`). The operations' own binders meet both, at every
+   (`src/Effect4/Laws/Library/Pool/Ops.lean`). The operations' own binders meet both, at every
    caller's scope: proved here, over the wrapper's scopes that Semaphore's battery writes out
    (`Test/Program/SemaphoreOps.lean`). And each statement's term is the term of the operation's
    own row: tested, on the trees that the operations elaborate to.
@@ -451,7 +451,7 @@ end Hygiene
 /-! ## 5. Typing at every scope
 
 `use_types`, `make_types` and `close_answers` type each program at every typed scope
-(`src/Effect4/Laws/Modules/Pool/Ops.lean`). The examples read each at a caller's variables: a
+(`src/Effect4/Laws/Library/Pool/Ops.lean`). The examples read each at a caller's variables: a
 variable that an author wrote is a kept term, at every scope that binds it. The guards run the
 checker on each program's tree, so each statement has a finite control with the checker's own
 answer. -/

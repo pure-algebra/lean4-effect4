@@ -1,14 +1,14 @@
-import Effect4.Modules.Pool.Steps
+import Effect4.Library.Pool.Steps
 import Effect4.Program.Authoring.Sugar
-import Effect4.Laws.Modules.Pool.Typing
-import Effect4.Laws.Modules.Store
-import Effect4.Laws.Modules.Waiting
+import Effect4.Laws.Library.Pool.Typing
+import Effect4.Laws.Step.Store
+import Effect4.Laws.Step.Waiting
 import Test.Program.QueueSteps
 
 /-!
 # Pool's cell and its steps: finite controls of the library module (rows 267 to 269 and 276)
 
-The module is `src/Effect4/Modules/Pool/`: the cell's type and initial value (`Cell.lean`), and
+The module is `src/Effect4/Library/Pool/`: the cell's type and initial value (`Cell.lean`), and
 the six step terms (`Steps.lean`). This battery holds the finite controls of the module alone,
 and what the typing theorems do not say by themselves.
 
@@ -24,7 +24,7 @@ The comparison with the abstract model is `Test/Program/PoolAgreement.lean`. The
 machine are `Test/Program/PoolScenarios.lean`.
 
 Placement. Concept `store-typing`, requirement R4. Every guard is a finite check, and every
-example is an instance of a theorem of `src/Effect4/Laws/Modules/Pool/Typing.lean`. None states
+example is an instance of a theorem of `src/Effect4/Laws/Library/Pool/Typing.lean`. None states
 agreement with the model, and none is a host run.
 -/
 
@@ -456,7 +456,7 @@ def rowTerm : Eff NativeOp → Option Term
 
 /-! ## 6. The connector to the store
 
-`step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) reads a step's `termTy` equation:
+`step_keeps_cell` (`src/Effect4/Laws/Step/Store.lean`) reads a step's `termTy` equation:
 one `Ref.modify` of the step keeps the cell a member of the cell's type. The tree that a step's
 reading evaluates is the tree that the step's theorem types (`Types.tree`). The cell's value is
 the scope's last name. -/

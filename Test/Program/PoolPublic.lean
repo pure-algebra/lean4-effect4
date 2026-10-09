@@ -1,10 +1,10 @@
 import Test.Program.PoolScenarios
-import Effect4.Modules.Pool.Ops
+import Effect4.Library.Pool.Ops
 
 /-!
 # Pool's public operations on the machine: the cases (rows 267 to 269, 276 and 279)
 
-The operations are the library's (`src/Effect4/Modules/Pool/Ops.lean`): `Pool.make` and
+The operations are the library's (`src/Effect4/Library/Pool/Ops.lean`): `Pool.make` and
 `Pool.use`, with the close that `make` registers. This battery runs the card's cases over them
 on the Lean machine (`docs/research/2026-10-05-claude-lead/module-cards/pool.md`, section 9),
 and it compares each answer with the profile's. The first check of the cases ran over test

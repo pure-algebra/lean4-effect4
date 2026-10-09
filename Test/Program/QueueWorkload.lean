@@ -7,7 +7,7 @@ import Test.Program.QueueRelation
 /-!
 # One workload of the Queue's steps in two spellings (decisions row 255)
 
-A client uses the six step terms of `src/Effect4/Modules/Queue/Steps.lean` as a program does:
+A client uses the six step terms of `src/Effect4/Library/Queue/Steps.lean` as a program does:
 one `Ref.modify` for each step, over one cell. The workload is Codex's
 (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/dogfood/review.md`):
 capacity one; the takers A and B enrol; the offers 10 and 20 follow; two takes consume.
@@ -28,12 +28,12 @@ accepts it, and after that take.
 
 **The observation** is every reply, the whole cell after each operation, and each notification
 in order. Its expected value is the model's trace
-(`src/Effect4/Laws/Modules/Queue/Model.lean`) through the relation
-(`src/Effect4/Laws/Modules/Queue/Relation.lean`), with the table that the allocation order
+(`src/Effect4/Library/Queue/Model.lean`) through the relation
+(`src/Effect4/Laws/Library/Queue/Relation.lean`), with the table that the allocation order
 gives. A notification is read as data: no helper is posted, and no fiber waits.
 
 Placement. A finite control of the six step statements along a run
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`; concept `translation-simulation`, requirement
+(`src/Effect4/Laws/Library/Queue/Steps.lean`; concept `translation-simulation`, requirement
 R10, parts of the proposed claim `queue-expansion-agrees`). The sequence is in the straight
 fragment, so `run_eq_meaning` gives its run. The loop is in the looped fragment and its
 budgeted meaning finishes, so `loopAgreement` gives its run. Their premises are checked here by
