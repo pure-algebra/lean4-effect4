@@ -182,3 +182,106 @@ export type {
   NestedConstructors, NoRecursiveRewrite, ListIdentity, NoRewriteInPair, HandleIdentity, PairHandleIdentity,
   NumericBrandErased, BooleanBrandErased, NestedBrandKept,
 }
+
+// ---- finite blocker: normalized binary products and downstream result inference ----
+// These proposed types do not change the generated helper. Boolean stays one widened arm.
+type ProbeTail<A, B> = (boolean extends B ? readonly [A, boolean] : never)
+  | (B extends boolean ? never : B extends unknown ? readonly [A, B] : never)
+type ProbeMembers<A, B> = (boolean extends A ? ProbeTail<boolean, B> : never)
+  | (A extends boolean ? never : A extends unknown ? ProbeTail<A, B> : never)
+type ProbeProduct<A, B> = ProbeMembers<PreviousWide<A>, PreviousWide<B>>
+type PreviousWide<T> = T extends number ? number : T extends boolean ? boolean : T
+type ProbePointwise<A extends readonly unknown[]> = { readonly [I in keyof A]: PreviousWide<A[I]> }
+type ProbeTuple<A extends readonly unknown[]> = A extends readonly [infer X, infer Y] ? ProbeProduct<X, Y> : ProbePointwise<A>
+declare const proposedTuple: <const A extends readonly unknown[]>(...items: A) => ProbeTuple<A>
+declare const proposedPair: <const A, const B>(a: A, b: B) => ProbeProduct<A, B>
+type PullEnd = readonly ["End", void]
+type PullChunk = readonly ["Chunk", ReadonlyArray<number>]
+type Pull = PullEnd | PullChunk
+type PullProduct = readonly [PullEnd, PullEnd] | readonly [PullEnd, PullChunk]
+  | readonly [PullChunk, PullEnd] | readonly [PullChunk, PullChunk]
+declare const firstPull: Pull
+declare const secondPull: Pull
+// @ts-expect-error The current tuple helper cannot serve the normalized result annotation.
+const currentTupleRefused: PullProduct = tuple(firstPull, secondPull)
+// @ts-expect-error The current pair helper has the same annotation limitation.
+const currentPairRefused: PullProduct = pair(firstPull, secondPull)
+const proposedPullTuple = proposedTuple(firstPull, secondPull)
+const proposedPullPair = proposedPair(firstPull, secondPull)
+type ProposedTupleProduct = Assert<Equal<typeof proposedPullTuple, PullProduct>>
+type ProposedPairProduct = Assert<Equal<typeof proposedPullPair, PullProduct>>
+const allPullCombinations: readonly PullProduct[] = [
+  proposedTuple(proposedTuple("End", undefined), proposedTuple("End", undefined)),
+  proposedTuple(proposedTuple("End", undefined), proposedTuple("Chunk", [1, 2])),
+  proposedTuple(proposedTuple("Chunk", [1, 2]), proposedTuple("End", undefined)),
+  proposedTuple(proposedTuple("Chunk", [1, 2]), proposedTuple("Chunk", [3])),
+]
+// @ts-expect-error Distribution cannot invent an End payload.
+const wrongEnd: PullProduct = proposedTuple(proposedTuple("End", [1]), proposedTuple("End", undefined))
+// @ts-expect-error Distribution cannot erase a Chunk payload.
+const wrongChunk: PullProduct = proposedPair(proposedTuple("Chunk", undefined), proposedTuple("End", undefined))
+// @ts-expect-error Distribution cannot invent a tag.
+const wrongTag: PullProduct = proposedTuple(proposedTuple("Missing", undefined), firstPull)
+// @ts-expect-error The normalized result remains readonly.
+proposedPullTuple[0] = proposedTuple("End", undefined)
+const proposedEmpty = proposedTuple()
+const proposedSingle = proposedTuple(firstPull)
+const proposedThree = proposedTuple(firstPull, secondPull, firstPull)
+type ProposedEmpty = Assert<Equal<typeof proposedEmpty, readonly []>>
+type ProposedSingle = Assert<Equal<typeof proposedSingle, readonly [Pull]>>
+type ProposedThree = Assert<Equal<typeof proposedThree, readonly [Pull, Pull, Pull]>>
+const proposedBooleans = proposedTuple(flag, flag)
+type ProposedBooleans = Assert<Equal<typeof proposedBooleans, readonly [boolean, boolean]>>
+declare const booleanOrTag: boolean | "Flag"
+const proposedMixed = proposedTuple(booleanOrTag, 1)
+type ProposedMixed = Assert<Equal<typeof proposedMixed, readonly [boolean, number] | readonly ["Flag", number]>>
+// @ts-expect-error Direct numeric literals still widen.
+const proposedLiteralRefused: readonly [boolean, 1] | readonly ["Flag", 1] = proposedMixed
+const proposedNested = <T>(a: ReadonlyArray<T> | readonly ["Box", T], b: Pull):
+  readonly [ReadonlyArray<T>, PullEnd] | readonly [ReadonlyArray<T>, PullChunk]
+  | readonly [readonly ["Box", T], PullEnd] | readonly [readonly ["Box", T], PullChunk] => proposedTuple(a, b)
+const proposedGenericBoolean = <T>(a: boolean, b: ReadonlyArray<T> | readonly ["Box", T]):
+  readonly [boolean, ReadonlyArray<T>] | readonly [boolean, readonly ["Box", T]] => proposedTuple(a, b)
+declare const nestedNumbers: ReadonlyArray<number> | readonly ["Box", number]
+// @ts-expect-error Supplied nested payloads retain their element type.
+const proposedNestedRefused: readonly [ReadonlyArray<string> | readonly ["Box", string], Pull] = proposedNested(nestedNumbers, firstPull)
+
+// The existing callback compiles. Every distributed proposal below regresses its result inference.
+import { Option } from "effect"
+declare const numericRef: Ref.Ref<number>
+declare const optionAnswer: Option.Option<number>
+const currentPairInference = Ref.modify(numericRef, state => pair(optionAnswer, state))
+const currentTupleInference = Ref.modify(numericRef, state => tuple(optionAnswer, state))
+// @ts-expect-error A distributed pair makes Ref.modify infer None and reject Some.
+const proposedPairInferenceRefused = Ref.modify(numericRef, state => proposedPair(optionAnswer, state))
+// @ts-expect-error A distributed tuple makes Ref.modify infer None and reject Some.
+const proposedTupleInferenceRefused = Ref.modify(numericRef, state => proposedTuple(optionAnswer, state))
+declare const forwardIntersection: <const A extends readonly unknown[]>(...items: A) => ProbeTuple<A> & ProbePointwise<A>
+declare const reverseIntersection: <const A extends readonly unknown[]>(...items: A) => ProbePointwise<A> & ProbeTuple<A>
+declare const noInferenceResult: <const A extends readonly unknown[]>(...items: A) => NoInfer<ProbeTuple<A>>
+const forwardAnnotation: PullProduct = forwardIntersection(firstPull, secondPull)
+const reverseAnnotation: PullProduct = reverseIntersection(firstPull, secondPull)
+// @ts-expect-error Adding the pointwise tuple after the product does not repair inference.
+const forwardInferenceRefused = Ref.modify(numericRef, state => forwardIntersection(optionAnswer, state))
+// @ts-expect-error Adding the pointwise tuple before the product does not repair inference.
+const reverseInferenceRefused = Ref.modify(numericRef, state => reverseIntersection(optionAnswer, state))
+// @ts-expect-error NoInfer on the result does not repair this downstream inference.
+const noInferenceRefused = Ref.modify(numericRef, state => noInferenceResult(optionAnswer, state))
+declare function pointwiseFirst<const A extends readonly unknown[]>(...items: A): ProbePointwise<A>
+declare function pointwiseFirst<const A, const B>(a: A, b: B): ProbeProduct<A, B>
+declare function distributedFirst<const A, const B>(a: A, b: B): ProbeProduct<A, B>
+declare function distributedFirst<const A extends readonly unknown[]>(...items: A): ProbePointwise<A>
+const pointwiseOverloadInference = Ref.modify(numericRef, state => pointwiseFirst(optionAnswer, state))
+const distributedOverloadAnnotation: PullProduct = distributedFirst(firstPull, secondPull)
+// @ts-expect-error Pointwise-first overloads retain the normalized annotation failure.
+const pointwiseOverloadAnnotationRefused: PullProduct = pointwiseFirst(firstPull, secondPull)
+// @ts-expect-error Distributed-first overloads retain the downstream inference failure.
+const distributedOverloadInferenceRefused = Ref.modify(numericRef, state => distributedFirst(optionAnswer, state))
+void [currentTupleRefused, currentPairRefused, allPullCombinations, wrongEnd, wrongChunk, wrongTag,
+  proposedLiteralRefused, proposedNestedRefused, proposedGenericBoolean, currentPairInference,
+  currentTupleInference, proposedPairInferenceRefused, proposedTupleInferenceRefused, forwardAnnotation,
+  reverseAnnotation, forwardInferenceRefused, reverseInferenceRefused, noInferenceRefused,
+  pointwiseOverloadInference, distributedOverloadAnnotation, pointwiseOverloadAnnotationRefused,
+  distributedOverloadInferenceRefused]
+export type { ProposedTupleProduct, ProposedPairProduct, ProposedEmpty, ProposedSingle, ProposedThree,
+  ProposedBooleans, ProposedMixed }
