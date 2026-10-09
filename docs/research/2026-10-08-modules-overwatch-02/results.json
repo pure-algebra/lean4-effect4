@@ -1,0 +1,221 @@
+{
+  "kind": "scoped-module-overwatch",
+  "reviewed_commit": "09da9715a5d6eb07b78b8c512ca565430379e0cf",
+  "started_utc": "2026-10-08T20:06:29.697754+00:00",
+  "commands": [
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "--version"
+      ],
+      "exit": 0,
+      "seconds": 0.222,
+      "stdout": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Modules.Step",
+        "Effect4.Laws.Schema.FieldRef",
+        "Effect4.Laws.Program.TyNormal",
+        "Test.Program.StepLanguage",
+        "Test.Schema.Modeled",
+        "Tools.SemanticsRegistry"
+      ],
+      "exit": 0,
+      "seconds": 0.498,
+      "stdout": "Build completed successfully (828 jobs).\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-02/safety-controls.lean"
+      ],
+      "exit": 0,
+      "seconds": 3.076,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-02/positions.lean"
+      ],
+      "exit": 0,
+      "seconds": 0.685,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-02/existing-seams.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.358,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-02/frame-sharing.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.348,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-02/audit.lean"
+      ],
+      "exit": 0,
+      "seconds": 2.49,
+      "stdout": "Effect4.Program.TyNormal: 4 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Laws.Program.TyNormal: 12 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Schema.FieldRef: 49 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Laws.Schema.FieldRef: 52 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Modules.Step: 266 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Laws.Modules.Step: 39 declarations; 0 named meta exceptions; ceiling checked\nTest.Program.StepLanguage: 16 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Schema.Modeled: 91 declarations; 0 named meta exceptions; ceiling checked\nEffect4.Schema.Modeled.Derive: 17 declarations; 5 named meta exceptions; ceiling checked\nEffect4.Laws.Schema.Modeled: 49 declarations; 0 named meta exceptions; ceiling checked\nTest.Schema.Modeled: 195 declarations; 0 named meta exceptions; ceiling checked\ncore/law import separation checked\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/opaque-composed.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.339,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/opaque.lean"
+      ],
+      "exit": 1,
+      "seconds": 1.324,
+      "stdout": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/opaque.lean:22:0: error: Tactic `decide` failed for proposition\n  Model.refusal Holder.modeledTy = none\nbecause its `Decidable` instance\n  (Model.refusal Holder.modeledTy).decidableEqNone\ndid not reduce to `isTrue` or `isFalse`.\n\nAfter unfolding the instances `List.decidableBAll`, `List.instDecidablePairwise`, `Option.decidableEqNone`, `instDecidableAscendingBytesKey`, and `instDecidableAscendingBytesKey._aux_1`, reduction got stuck at the `Decidable` instance\n  match Model.refusal Holder.modeledTy with\n  | none => isTrue \u22ef\n  | some val => isFalse \u22ef\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean"
+      ],
+      "exit": 1,
+      "seconds": 1.17,
+      "stdout": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: `DeriveCollisionReview.Token.modeledTy` has already been declared\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: Type mismatch\n  (Modeled.toC s.value, ())\nhas type\n  Model.Carrier (Modeled.ty Nat) \u00d7 Unit\nbut is expected to have type\n  Model.Carrier Token.modeledTy\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: Invalid projection: Projections extract constructor fields for one-constructor inductive types. The expression\n  c\nhas type `Nat` which is not a one-constructor inductive type.\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: Type mismatch\n  (x0, ())\nhas type\n  ?m.3 \u00d7 Unit\nbut is expected to have type\n  Model.Carrier Token.modeledTy\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: unsolved goals\ncase mk\nvalue\u271d : Nat\n\u22a2 { value := Modeled.ofC sorry } = { value := value\u271d }\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: declaration uses `sorry`\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-modules-overwatch-01/collision.lean:10:0: error: declaration uses `sorry`\nDeriveCollisionReview.Token.modeled_checked : Model.refusal Token.modeledTy = none\nDeriveCollisionReview.Token.modeledToC (s : Token) : Model.Carrier Token.modeledTy\n",
+      "stderr": ""
+    }
+  ],
+  "checks": {
+    "pinned:AGENTS.md": true,
+    "pinned:Test/All.lean": true,
+    "pinned:Test/Audit/AxiomGate.lean": true,
+    "pinned:Test/Program/StepLanguage.lean": true,
+    "pinned:Test/Schema/Modeled.lean": true,
+    "pinned:docs/STATE.md": true,
+    "pinned:docs/core/decisions.md": true,
+    "pinned:docs/core/semantics.md": true,
+    "pinned:docs/research/2026-10-08-seat-MODULES-L2-receipt.md": true,
+    "pinned:docs/research/2026-10-08-seat-MODULES-r3.md": true,
+    "pinned:generated/semantics.md": true,
+    "pinned:src/Effect4.lean": true,
+    "pinned:src/Effect4/Laws.lean": true,
+    "pinned:src/Effect4/Laws/Modules/Semaphore/Ops.lean": true,
+    "pinned:src/Effect4/Laws/Modules/Semaphore/Steps.lean": true,
+    "pinned:src/Effect4/Laws/Modules/Step.lean": true,
+    "pinned:src/Effect4/Laws/Program/TyNormal.lean": true,
+    "pinned:src/Effect4/Laws/Schema/FieldRef.lean": true,
+    "pinned:src/Effect4/Laws/Schema/Modeled.lean": true,
+    "pinned:src/Effect4/Modules/Semaphore/Cell.lean": true,
+    "pinned:src/Effect4/Modules/Semaphore/Steps.lean": true,
+    "pinned:src/Effect4/Modules/Step.lean": true,
+    "pinned:src/Effect4/Program/TyNormal.lean": true,
+    "pinned:src/Effect4/Schema/FieldRef.lean": true,
+    "pinned:src/Effect4/Schema/Modeled.lean": true,
+    "pinned:src/Effect4/Schema/Modeled/Derive.lean": true,
+    "pinned:tools/Effect4Gen/Fold.lean": true,
+    "pinned:tools/Effect4Gen/manifest.json": true,
+    "pinned:tools/Tools/SemanticsRegistry.lean": true,
+    "OW-01-still-reproduces": true,
+    "OW-02-still-reproduces": true,
+    "reviewed-source-unchanged": true
+  },
+  "source_digests": {
+    "AGENTS.md": "4d085ba422b19ee059a850ea4f58f42e195f771ce632dc7c6bca37013a2d371e",
+    "Test/All.lean": "aa23b024d341d2ad65c0a756ad452e5d4d0a59f07370160508d6975657f813ad",
+    "Test/Audit/AxiomGate.lean": "cf17697a5b7022bdec0bf187b4fca596933ce8cdc0815c0b550085723b5f20bb",
+    "Test/Program/StepLanguage.lean": "72b4bab9ac36c69a6af8785adee75bcf7478e8d89a1156e7266c70407d03fae3",
+    "Test/Schema/Modeled.lean": "d0b1ee20da2a6e897f72c56e49cb2b13f0e3e0ca47b95871fc2a8be938a2cb91",
+    "docs/STATE.md": "1600a854d5f39d0fbb9f2fb92ddd2508333f8b3b92285dab9aaf2acb6e134575",
+    "docs/core/decisions.md": "f6218063706b1d051545f252ba5cec99425311432db16b85e5cb61ef3bfe9636",
+    "docs/core/semantics.md": "e8240496b41d7110be6fb90800c5afd8de3afad2888253a3fac81cf3d2eb9614",
+    "docs/research/2026-10-08-seat-MODULES-L2-receipt.md": "19c80edd338d47b0614303432dcbb7cb65476c2a8e17cac280145f2518d42bfc",
+    "docs/research/2026-10-08-seat-MODULES-r3.md": "8d5a10cd62618514403723660afef2f05dbf542ff5c18aba8d6d3e29cf3f8d3f",
+    "generated/semantics.md": "22d5b6efe1ac79511fe823d548fa28816a89f242143be81e27f10daaa64e7edc",
+    "src/Effect4.lean": "77e74177742a9e859fe9694cda2dda0983adfa0d440a3e754893dc4b082bbc06",
+    "src/Effect4/Laws.lean": "aaadcf1b7a7e3998e40da9d155a616934e8778483f8adb1831ea524ea230c51a",
+    "src/Effect4/Laws/Modules/Semaphore/Ops.lean": "3fcce0b62aad3abea8fb338bcd7589a6d859dcec11b1a45e64a955a8470aab6e",
+    "src/Effect4/Laws/Modules/Semaphore/Steps.lean": "d51ff48885d296adbdc83a7748452fd3f99f5d9d69d0071746ef3236efbdf0db",
+    "src/Effect4/Laws/Modules/Step.lean": "b3f80b927a026f04b1b7f0338207d6df44c20e7315e50ac8734f2c92ce1fca0b",
+    "src/Effect4/Laws/Program/TyNormal.lean": "0baf193a7c1ca2e2a4eee0c0032bd6e61618863e75613bf06977bafbf86d2617",
+    "src/Effect4/Laws/Schema/FieldRef.lean": "8b6a86fcd3e772028871db1772291a4c57a3f19dd49177eb096bff27283ac966",
+    "src/Effect4/Laws/Schema/Modeled.lean": "7615f3950201c269abb0759a95787915bf94d4ff316d2120d208ce387456b49d",
+    "src/Effect4/Modules/Semaphore/Cell.lean": "f35cbaf1879850b5477e87835f3eb42d2af056e9f87e81c39819afcb0a5a0605",
+    "src/Effect4/Modules/Semaphore/Steps.lean": "c8ef5d4561a9c3164075ee3952a717c8d3c25897715b98fac2733419841c648a",
+    "src/Effect4/Modules/Step.lean": "d96e21401f32465d12f63ab1eac7d1dc7aae013d5a58ab30a199ff90c82f3ff0",
+    "src/Effect4/Program/TyNormal.lean": "80f7d1c1861ff8c3689e76934df1ab856b636f2da37f72c5726a5c691235d91c",
+    "src/Effect4/Schema/FieldRef.lean": "d28f5d8aa21087baf7920c3461ef04b1ab981767aaea99b487b037be1bfa3b9c",
+    "src/Effect4/Schema/Modeled.lean": "9e02d1fcce737e2afd2297a86382f70c27ad01e245841ade9f5a6909d51c04c3",
+    "src/Effect4/Schema/Modeled/Derive.lean": "b4ac39e8950202136d57284fbdefe0a0299fa6381bdfdf0ab734f32218e9dae5",
+    "tools/Effect4Gen/Fold.lean": "f5de79437f57f60852d29d4c63694d884aa138fb36fe5d1e54324ec8534e1d03",
+    "tools/Effect4Gen/manifest.json": "37f51557116b7bd389a09dc24874c3b01ed4f557b07bed538afdb553375f97bd",
+    "tools/Tools/SemanticsRegistry.lean": "2b47ffccc831375eb74844b95cd6535808689e16a99847f1527152b3a4cce368"
+  },
+  "tools": {
+    "lean": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)"
+  },
+  "probe_digests": {
+    "frame-sharing.lean": "7d45cc9d16b7864551599b08fd0ccde52efcd28397d4d11f1de96c2d2612b750",
+    "safety-controls.lean": "688e39fb073706be740fb28d78e717e764c6085f78e1a581be11602e0dd691cc",
+    "positions.lean": "74b8a74a687cd2fece63a244394fe51627c1a1b4739ed0b799d6f017f076003d",
+    "existing-seams.lean": "91a028e58996b596858db1c71fab102d710248b6a39ed2d54b85bff6012b107a",
+    "review.py": "0bec8821b9818ed9d1e27e1662191dc5cc062fa9091a9c1338060f862fb265a4",
+    "audit.lean": "18a31f4d6cec91a6ce8eb299bb3e218350f137d43ffa84a8dc6a525f3ecbfb51"
+  },
+  "reused_probe_digests": {
+    "opaque-composed.lean": "90c4241ecae6e81d4ee08293743746e477e483f02f20ff532bddf7fb55aa9b6f",
+    "opaque.lean": "4244eca2cf4ea54a9b47b19a3eeeed8de8c9ade21b938e1fed575d6751f6dd70",
+    "collision.lean": "5f1507afd5a340a4a4f18b67f9bbdde2b62d2880da84100a042d02dcda14e8dc"
+  },
+  "finished_utc": "2026-10-08T20:06:43.680620+00:00"
+}
