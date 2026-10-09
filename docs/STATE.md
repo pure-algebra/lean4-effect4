@@ -152,6 +152,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
+0. **The host call in one form** (the
+   [host-call note](research/2026-10-09-host-calls-and-cleanup.md), section 6). Codex reviews and
+   probes it first ([the brief](research/2026-10-09-host-calls-codex-brief.md)). Then come
+   cleanup C1 to C3 and the slices HC-1 to HC-7.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
@@ -199,6 +203,8 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 
 ## Process
 
+- Read a declaration's axioms with the gate's walk (`exactAxioms`, `tools/ProofGraph/Axioms.lean`).
+  Lean 4.33's `collectAxioms` can omit an axiom behind a cycle of the dependency graph.
 - Build what you touch (`lake build <Module>`). Run one `lake` at a time. The whole battery and
   `make check-full` run at a sweep, when the owner asks.
 - Commit by explicit paths, each after a narrow build. Nothing is pushed without the owner.
