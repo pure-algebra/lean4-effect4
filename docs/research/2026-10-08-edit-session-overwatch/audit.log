@@ -1,0 +1,8 @@
+audited Effect4.Program.Edit: 103 declarations
+audited Effect4.Laws.Program.Edit: 48 declarations
+audited Effect4.Laws.Program.Typing.Splice: 302 declarations
+audited Test.Program.EditControls: 6 declarations
+proved without open goals: edit-session-coherent -> Effect4.Program.EditSession.reached_view
+proved without open goals: edit-session-undo -> Effect4.Program.EditSession.feed_undo
+proved without open goals: edit-repaint-set -> Effect4.Program.EditSession.feed_repaint
+PASS: 459 compiled declarations within [propext, Quot.sound]; core/law import boundary; three exact goal-free claim pointers
