@@ -64,7 +64,7 @@ static inline cairo_surface_t *replay_stream(const char *path, const PaintFaces 
   while ((len = getline(&line, &cap, fp)) > 0) {
     while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) line[--len] = 0;
     if (!len) continue;
-    char *f[9]; int n = replay_fields(line, f, 9);
+    char *f[13]; int n = replay_fields(line, f, 13);
     char k = f[0][0];
     if (k == 'P' && n >= 6 && !cr) {
       double W = replay_milli(f[1]), H = replay_milli(f[2]), ratio = replay_milli(f[3]);
@@ -74,6 +74,11 @@ static inline cairo_surface_t *replay_stream(const char *path, const PaintFaces 
     } else if (!cr) (*bad)++;
     else if (k == 'H') { /* a pointer box: not drawn */ }
     else if (k == 'F' && n >= 7) paint_device_fill(&p, paint_tone((PaintRole)atoi(f[1]), replay_milli(f[2])), atol(f[3]), atol(f[4]), atol(f[5]), atol(f[6]));
+    else if (k == 'B' && n >= 11) {
+      long pt[8];
+      for (int i = 0; i < 8; i++) pt[i] = atol(f[3 + i]);
+      paint_device_curve(&p, paint_tone((PaintRole)atoi(f[1]), 1.0), atol(f[2]), pt);
+    }
     else if (k == 'C' && n >= 6) paint_cells(&p, replay_milli(f[1]), replay_milli(f[2]), f[5], atoi(f[3]), replay_milli(f[4]));
     else if (k == 'T' && n >= 7) paint_text(&p, (PaintFace)atoi(f[1]), replay_milli(f[2]), replay_milli(f[3]), f[6], replay_milli(f[4]), replay_milli(f[5]));
     else if (k == 'K' && n >= 5) { paint_cut(&p, replay_milli(f[1]), replay_milli(f[2]), replay_milli(f[3]), replay_milli(f[4])); cuts++; }

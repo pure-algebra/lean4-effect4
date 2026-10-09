@@ -54,11 +54,61 @@ structure Rect where
   y1 : Int
 deriving DecidableEq, Repr
 
+/-- A cubic Bézier segment: its start, its two controls, and its end. A straight segment has its
+controls on it. -/
+structure Cubic where
+  p0 : Int × Int
+  p1 : Int × Int
+  p2 : Int × Int
+  p3 : Int × Int
+deriving DecidableEq, Repr
+
+/-- A segment moved by whole pixels. -/
+def Cubic.move (dx dy : Int) (c : Cubic) : Cubic :=
+  ⟨(c.p0.1 + dx, c.p0.2 + dy), (c.p1.1 + dx, c.p1.2 + dy), (c.p2.1 + dx, c.p2.2 + dy),
+    (c.p3.1 + dx, c.p3.2 + dy)⟩
+
+/-- A segment at the ratio `r`: each point in device pixels. -/
+def Cubic.scale (r : Int) (c : Cubic) : Cubic :=
+  ⟨(r * c.p0.1, r * c.p0.2), (r * c.p1.1, r * c.p1.2), (r * c.p2.1, r * c.p2.2), (r * c.p3.1, r * c.p3.2)⟩
+
+/-- A moved segment, scaled, is the scaled segment moved by `r` times as many pixels. -/
+theorem Cubic.scale_move (r dx dy : Int) (c : Cubic) :
+    (c.move dx dy).scale r = (c.scale r).move (r * dx) (r * dy) := by
+  simp only [Cubic.move, Cubic.scale, Int.mul_add]
+
+/-- The distance between two points along the grid's axes. -/
+def gap (p q : Int × Int) : Int := (p.1 - q.1).natAbs + (p.2 - q.2).natAbs
+
+/-- A segment's size for a reveal: the length of its control polygon along the axes. -/
+def Cubic.size (c : Cubic) : Int := gap c.p0 c.p1 + gap c.p1 c.p2 + gap c.p2 c.p3
+
+/-- The value `e` per mille of the way from `u` to `v`. -/
+def lerp (u v e : Int) : Int := v + (u - v) * (1000 - e) / 1000
+
+/-- At the end, the value is the target. -/
+theorem lerp_end (u v : Int) : lerp u v 1000 = v := by
+  simp only [lerp, Int.sub_self, Int.mul_zero, Int.zero_ediv, Int.add_zero]
+
+/-- The point `t` per mille of the way from `p` to `q`. -/
+def lerpPt (p q : Int × Int) (t : Int) : Int × Int := (lerp p.1 q.1 t, lerp p.2 q.2 t)
+
+/-- The part of a segment from its start to `t` per mille along it (de Casteljau's split). -/
+def Cubic.upTo (t : Int) (c : Cubic) : Cubic :=
+  let a := lerpPt c.p0 c.p1 t
+  let b := lerpPt c.p1 c.p2 t
+  let e := lerpPt c.p2 c.p3 t
+  let ab := lerpPt a b t
+  let be := lerpPt b e t
+  ⟨c.p0, a, ab, lerpPt ab be t⟩
+
 /-- One call of the painter, in logical pixels at zoom 1. A tone is a role at a value in
-thousandths. A rule is a fill whose height, or width, is its weight (`Call.hrule`). -/
+thousandths. A rule is a fill whose height, or width, is its weight (`Call.hrule`). A curve is a
+stroke of a weight along a cubic segment: an edge of a graph. -/
 inductive Call where
   | fill (role : Role) (value : Nat) (x y w h : Int)
   | frame (role : Role) (x y w h : Int) (weight : Nat)
+  | curve (role : Role) (c : Cubic) (weight : Nat)
   | cells (x base : Int) (room : Nat) (text : String)
   | text (face : Face) (x base room : Int) (text : String)
   | cut (x y w h : Int)
@@ -66,9 +116,10 @@ inductive Call where
   | hit (x y w h : Int)
 deriving Repr
 
-/-- One call that reaches the target. -/
+/-- One call that reaches the target. A curve's points and weight are in device pixels. -/
 inductive Dev where
   | fill (role : Role) (value : Nat) (r : Rect)
+  | curve (role : Role) (c : Cubic) (weight : Int)
   | cells (x base : Int) (room : Nat) (text : String)
   | text (face : Face) (x base room : Int) (text : String)
   | cut (x y w h : Int)
@@ -118,6 +169,7 @@ def box (r : Int) (x y w h : Int) : Rect :=
 def lowerCall (r : Int) : Call → List Dev
   | .fill role value x y w h => devFill role value (box r x y w h)
   | .frame role x y w h wt => devFrame role 1000 (box r x y w h) (span r wt)
+  | .curve role c wt => [.curve role (c.scale r) (span r wt)]
   | .cells x base room text => [.cells x base room text]
   | .text face x base room text => [.text face x base room text]
   | .cut x y w h => [.cut x y w h]
@@ -217,6 +269,7 @@ def Rect.move (dx dy : Int) (b : Rect) : Rect := ⟨b.x0 + dx, b.y0 + dy, b.x1 +
 def Call.move (dx dy : Int) : Call → Call
   | .fill role value x y w h => .fill role value (x + dx) (y + dy) w h
   | .frame role x y w h wt => .frame role (x + dx) (y + dy) w h wt
+  | .curve role c wt => .curve role (c.move dx dy) wt
   | .cells x base room s => .cells (x + dx) (base + dy) room s
   | .text face x base room s => .text face (x + dx) (base + dy) room s
   | .cut x y w h => .cut (x + dx) (y + dy) w h
@@ -227,6 +280,7 @@ def Call.move (dx dy : Int) : Call → Call
 device pixels; a text and a cut, which stay in logical pixels, by the logical move. -/
 def Dev.move (r dx dy : Int) : Dev → Dev
   | .fill role value b => .fill role value (b.move (r * dx) (r * dy))
+  | .curve role c w => .curve role (c.move (r * dx) (r * dy)) w
   | .cells x base room s => .cells (x + dx) (base + dy) room s
   | .text face x base room s => .text face (x + dx) (base + dy) room s
   | .cut x y w h => .cut (x + dx) (y + dy) w h
@@ -278,6 +332,8 @@ theorem lowerCall_move (r dx dy : Int) (c : Call) :
   | frame role x y w h wt =>
     simp only [Call.move, lowerCall]
     rw [box_move, devFrame_move]
+  | curve role c wt =>
+    simp only [Call.move, lowerCall, List.map_cons, List.map_nil, Dev.move, Cubic.scale_move]
   | cells => rfl
   | text => rfl
   | cut => rfl
@@ -313,6 +369,8 @@ def oneLine (s : String) : String := (s.replace "\t" " ").replace "\n" " "
 def Dev.row (key : Key) : Dev → String
   | .fill role value r =>
     s!"F\t{role.code}\t{value}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}\t{oneLine key}"
+  | .curve role c w =>
+    s!"B\t{role.code}\t{w}\t{c.p0.1}\t{c.p0.2}\t{c.p1.1}\t{c.p1.2}\t{c.p2.1}\t{c.p2.2}\t{c.p3.1}\t{c.p3.2}\t{oneLine key}"
   | .cells x base room s => s!"C\t{x * 1000}\t{base * 1000}\t{room}\t1000\t{oneLine s}\t{oneLine key}"
   | .text face x base room s =>
     s!"T\t{face.code}\t{x * 1000}\t{base * 1000}\t{room * 1000}\t1000\t{oneLine s}\t{oneLine key}"
@@ -362,6 +420,8 @@ its box, and its end closes the group. A pointer box is an invisible rectangle w
 def Dev.svg (r : Nat) (key : Key) (id : Nat) : Dev → String
   | .fill role value b =>
     s!"<rect x=\"{b.x0}\" y=\"{b.y0}\" width=\"{b.x1 - b.x0}\" height=\"{b.y1 - b.y0}\" fill=\"{role.css false}\" fill-opacity=\"{opacity value}\"{keyAttr key}/>"
+  | .curve role c w =>
+    s!"<path d=\"M {c.p0.1} {c.p0.2} C {c.p1.1} {c.p1.2}, {c.p2.1} {c.p2.2}, {c.p3.1} {c.p3.2}\" fill=\"none\" stroke=\"{role.css false}\" stroke-width=\"{w}\"{keyAttr key}/>"
   | .cells x base room s =>
     let (family, style, size) := Face.css .data
     let shown := if s.length ≤ room then s else (s.take (room - 1)).toString ++ "…"

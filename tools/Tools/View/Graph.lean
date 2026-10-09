@@ -16,10 +16,12 @@ before, with no engine:
 3. **Order and places.** A forward edge that spans several ranks passes through one point in each
    rank between. Each rank is ordered by the barycentre of its neighbours in the rank above, then
    below, and packed left to right on the cell grid; the ranks are centred.
-4. **Routes.** A forward edge runs down through the channel between two ranks: a stem, a bar, a
-   stem. A back edge leaves its source's right side, climbs a lane of its own at the right, and
-   enters its target's right side. An edge from a node to itself is a small loop off its right
-   side, with no lane.
+4. **Routes.** Each edge is its own path of cubic segments. A forward edge leaves its source at a
+   port of the box's bottom, the ports in the order of the edges' next items, and steps down to
+   its target's port on the top, passing straight through each rank between. A step is vertical
+   at both ends, so it bends only where the edge moves across. A back edge is one arc out of its
+   source's right side, through a lane of its own at the right, into its target's right side. An
+   edge from a node to itself is a small drop off its right side.
 
 Every node, point and edge keeps its key, and a box's growth and an edge's reveal are fields of
 the layout: a still layout has both at rest. So a transition is a sampled layout
@@ -317,79 +319,108 @@ def boxCalls (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
 /-- A point of a route, in the graph's own logical pixels. -/
 abbrev Pt := Int × Int
 
-/-- Where an edge leaves an item downward, and where one enters it from above: the middle of a
-box's bottom or top; a point is a vertical pass through its rank. -/
-def bottom (p : Placed) : Pt := (p.x + (if p.node.isSome then p.w / 2 else CELL), p.y + ROWH * BOXROWS)
-def top (p : Placed) : Pt := (p.x + (if p.node.isSome then p.w / 2 else CELL), p.y)
+/-- The middle of an item across: a box's middle, or a point's pass. -/
+def middle (p : Placed) : Int := p.x + (if p.node.isSome then p.w / 2 else CELL)
 
-/-- **A route as a path**: its corners from its source to its target. A forward route takes, at
-each step, a stem down to the channel, a bar across it, and a stem down to the next item, and
-passes through each point's rank. A back route leaves its source's right side, climbs its lane,
-and enters its target's right side. A loop leaves a box's right side and comes back to it. -/
-def points (l : Laid) : Route → List Pt
-  | .down _ ks _ =>
+/-- The forward routes that leave the item `k`, left to right by the place of the item each goes
+to next. -/
+def leaving (l : Laid) (k : Key) : List Key :=
+  let next := l.routes.toList.filterMap fun
+    | .down rk (a :: b :: _) _ => if a == k then (l.find b).map fun p => (rk, middle p) else none
+    | _ => none
+  (next.mergeSort fun a b => decide (a.2 ≤ b.2)).map (·.1)
+
+/-- The forward routes that enter the item `k`, left to right by the place of the item each comes
+from. -/
+def entering (l : Laid) (k : Key) : List Key :=
+  let prev := l.routes.toList.filterMap fun
+    | .down rk ks _ =>
+      match ks.reverse with
+      | b :: a :: _ => if b == k then (l.find a).map fun p => (rk, middle p) else none
+      | _ => none
+    | _ => none
+  (prev.mergeSort fun a b => decide (a.2 ≤ b.2)).map (·.1)
+
+/-- The `i`th of `n` ports along a side of a box from `x`, `w` wide: the middles of `n` equal parts
+of the side less a cell at each end; one port is the side's middle. -/
+def port (x w : Int) (i n : Nat) : Int :=
+  if n ≤ 1 then x + w / 2 else x + CELL + (w - 2 * CELL) * (2 * i + 1) / (2 * n)
+
+/-- Where the route `rk` leaves the item `p` downward: its port on the box's bottom, among the
+routes that leave it, so that no two edges share a stem; a point's pass. -/
+def exitAt (l : Laid) (p : Placed) (rk : Key) : Pt :=
+  let rs := l.leaving p.key
+  (if p.node.isSome then port p.x p.w (Graph.posIn rs rk) rs.length else middle p, p.y + ROWH * BOXROWS)
+
+/-- Where the route `rk` enters the item `p` from above: its port on the box's top, among the
+routes that enter it. -/
+def entryAt (l : Laid) (p : Placed) (rk : Key) : Pt :=
+  let rs := l.entering p.key
+  (if p.node.isSome then port p.x p.w (Graph.posIn rs rk) rs.length else middle p, p.y)
+
+/-- **A step down** from `a` to `b`: one cubic segment, vertical at both ends, its controls half the
+drop from each end (the vertical link of d3, dot's splines between ranks). Two ends in one column
+make a straight step: a route bends only where it moves across. -/
+def stepDown (a b : Pt) : Cubic :=
+  let h := (b.2 - a.2) / 2
+  ⟨a, (a.1, a.2 + h), (b.1, b.2 - h), b⟩
+
+/-- A straight segment from `a` to `b`. -/
+def straight (a b : Pt) : Cubic := ⟨a, a, b, b⟩
+
+/-- **A route as cubic segments**, from its source to its target. A forward route leaves its
+source at its port, steps down to each point and passes straight through the point's rank, then
+steps down to its target's port. A back route is one arc: out of its source's right side, around
+through its lane, into its target's right side, so a return reads as a return. A loop is a small
+drop off a box's right side. -/
+def segments (l : Laid) : Route → List Cubic
+  | .down rk ks _ =>
     let ps := ks.filterMap l.find
     if ps.length != ks.length then [] else
     match ps with
     | [] => []
     | a :: rest =>
-      (rest.foldl (fun (acc : List Pt × Placed) b =>
-        let (ax, ay) := bottom acc.2
-        let (bx, by_) := top b
-        let bar := ay + (by_ - ay) / 2
-        let through : List Pt := if b.node.isNone then [(bx, by_ + ROWH * BOXROWS)] else []
-        (acc.1 ++ [(ax, bar), (bx, bar), (bx, by_)] ++ through, b)) ([bottom a], a)).1
+      let n := rest.length
+      (rest.zipIdx.foldl (fun (acc : List Cubic × Pt) (b, i) =>
+        if i + 1 == n then
+          let into := l.entryAt b rk
+          (acc.1 ++ [stepDown acc.2 into], into)
+        else
+          let into : Pt := (middle b, b.y)
+          let out : Pt := (middle b, b.y + ROWH * BOXROWS)
+          (acc.1 ++ [stepDown acc.2 into, straight into out], out)) ([], l.exitAt a rk)).1
   | .back _ s d lane _ =>
     match l.find s, l.find d with
     | some a, some b =>
       let lx := l.width - CELL * (2 * lane + 1)
-      [(a.x + a.w, a.y + ROWH), (lx, a.y + ROWH), (lx, b.y + ROWH - BACK_RISE), (b.x + b.w, b.y + ROWH - BACK_RISE)]
+      let p : Pt := (a.x + a.w, a.y + ROWH)
+      let q : Pt := (b.x + b.w, b.y + ROWH - BACK_RISE)
+      -- controls a third past the lane, so the arc's widest point reaches the lane
+      let cx := lx + (lx - max p.1 q.1) / 3
+      [⟨p, (cx, p.2), (cx, q.2), q⟩]
     | _, _ => []
   | .loop _ k _ =>
     match l.find k with
     | some a =>
       let x := a.x + a.w
       let y := a.y + ROWH
-      [(x, y - LOOP_HALF), (x + LOOP_REACH, y - LOOP_HALF), (x + LOOP_REACH, y + LOOP_HALF), (x, y + LOOP_HALF)]
+      [⟨(x, y - LOOP_HALF), (x + 2 * LOOP_REACH, y - 2 * LOOP_HALF),
+        (x + 2 * LOOP_REACH, y + 2 * LOOP_HALF), (x, y + LOOP_HALF)⟩]
     | none => []
 
-/-- The length of one straight piece of a path. -/
-def span (p q : Pt) : Int := (p.1 - q.1).natAbs + (p.2 - q.2).natAbs
-
-/-- One straight piece, as a rule of one pixel from `p` toward `q`. -/
-def piece (key : Key) (dx dy : Int) (p q : Pt) : Keyed Call :=
-  if p.2 = q.2 then ⟨key, .hrule .ink (dx + min p.1 q.1) (dy + p.2) ((p.1 - q.1).natAbs + 1) 1⟩
-  else ⟨key, .vrule .ink (dx + p.1) (dy + min p.2 q.2) ((p.2 - q.2).natAbs + 1) 1⟩
-
-/-- The point `d` pixels from `p` toward `q`, along a straight piece. -/
-def toward (p q : Pt) (d : Int) : Pt :=
-  if p.2 = q.2 then (if p.1 ≤ q.1 then p.1 + d else p.1 - d, p.2)
-  else (p.1, if p.2 ≤ q.2 then p.2 + d else p.2 - d)
-
-/-- **A path drawn from its start for `budget` pixels**: each whole piece within the budget, then
-the part of the next piece that the budget reaches. -/
-def drawn (key : Key) (dx dy : Int) : List Pt → Int → List (Keyed Call)
-  | p :: rest, budget =>
-    match rest with
-    | q :: _ =>
-      if budget ≤ 0 then []
-      else if span p q ≤ budget then piece key dx dy p q :: drawn key dx dy rest (budget - span p q)
-      else [piece key dx dy p (toward p q budget)]
-    | [] => []
+/-- **Segments drawn from their start for `budget` of size**: each whole segment within the budget,
+then the part of the next one that the budget reaches. -/
+def drawn (key : Key) (dx dy : Int) : List Cubic → Int → List (Keyed Call)
   | [], _ => []
+  | c :: rest, budget =>
+    if budget ≤ 0 then []
+    else if c.size ≤ budget then ⟨key, .curve .ink (c.move dx dy) 1⟩ :: drawn key dx dy rest (budget - c.size)
+    else [⟨key, .curve .ink ((c.upTo (budget * 1000 / c.size)).move dx dy) 1⟩]
 
-/-- A path's length: the sum of its pieces. -/
-def length : List Pt → Int
-  | p :: rest =>
-    match rest with
-    | q :: _ => span p q + length rest
-    | [] => 0
-  | [] => 0
-
-/-- A route's calls: its path, drawn as far as its reveal. -/
+/-- A route's calls: its segments, drawn as far as its reveal. -/
 def routeCalls (l : Laid) (dx dy : Int) (rt : Route) : List (Keyed Call) :=
-  let pts := l.points rt
-  drawn rt.key dx dy pts (length pts * rt.reveal / 1000)
+  let cs := l.segments rt
+  drawn rt.key dx dy cs ((cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000)
 
 /-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the routes first, then the
 boxes over them. -/

@@ -278,6 +278,7 @@ static inline void paint__source(const Paint *p, PaintTone tone) {
  *
  * With a file set here, the painter writes one row for each call that reaches the target:
  *   F role value x0 y0 x1 y1         a fill of whole device pixels; the value in thousandths
+ *   B role weight x0 y0 x1 y1 x2 y2 x3 y3   a stroke along a cubic segment; device pixels
  *   C x baseline max scale text      a text of the data face; logical pixels in thousandths
  *   T face x baseline max scale text a text of another face
  *   K x y w h                        a cut to a box, until the next `k`
@@ -309,6 +310,24 @@ static inline void paint_device_fill(const Paint *p, PaintTone tone, long x0, lo
   paint__source(p, tone);
   cairo_rectangle(p->cr, (double)x0 / p->ratio, (double)y0 / p->ratio, (double)(x1 - x0) / p->ratio, (double)(y1 - y0) / p->ratio);
   cairo_fill(p->cr);
+}
+
+/* A stroke of `weight` device pixels along the cubic segment with device points `pt`: start, two
+ * controls, end. An odd weight is centred on pixel centres, so a straight vertical or horizontal
+ * piece covers whole pixels, as a rule does. Segments that meet end to end with one tangent join
+ * without a seam: the caps are butt. */
+static inline void paint_device_curve(const Paint *p, PaintTone tone, long weight, const long pt[8]) {
+  if (weight < 1) return;
+  if (paint_stream) fprintf(paint_stream, "B\t%d\t%ld\t%ld\t%ld\t%ld\t%ld\t%ld\t%ld\t%ld\t%ld\n", (int)tone.role, weight,
+                            pt[0], pt[1], pt[2], pt[3], pt[4], pt[5], pt[6], pt[7]);
+  paint__source(p, tone);
+  const double r = p->ratio, h = (weight % 2) ? 0.5 : 0.0;
+  cairo_set_line_width(p->cr, (double)weight / r);
+  cairo_set_line_cap(p->cr, CAIRO_LINE_CAP_BUTT);
+  cairo_move_to(p->cr, ((double)pt[0] + h) / r, ((double)pt[1] + h) / r);
+  cairo_curve_to(p->cr, ((double)pt[2] + h) / r, ((double)pt[3] + h) / r, ((double)pt[4] + h) / r,
+                 ((double)pt[5] + h) / r, ((double)pt[6] + h) / r, ((double)pt[7] + h) / r);
+  cairo_stroke(p->cr);
 }
 
 /* P2, P4: a frame one `weight` thick inside the device box: four sides that share no pixel.

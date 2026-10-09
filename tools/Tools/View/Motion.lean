@@ -153,16 +153,9 @@ structure Choreography where
   expand : Transition := { duration := 300, ease := .outBack }
 deriving Repr
 
-/-- The value `e` per mille of the way from `u` to `v`. -/
-def lerp (u v e : Int) : Int := v + (u - v) * (1000 - e) / 1000
-
 /-- A transition started later is done at the step's end too. -/
 theorem Transition.after_at_end (tr : Transition) (d : Nat) : (tr.after d).at 1000 = 1000 :=
   Transition.within_at_end _
-
-/-- At the end, the value is the target. -/
-theorem lerp_end (u v : Int) : lerp u v 1000 = v := by
-  simp only [lerp, Int.sub_self, Int.mul_zero, Int.zero_ediv, Int.add_zero]
 
 /-- A line to be written: no old line has its key and its text. -/
 def fresh (old : List Line) (n : Line) : Bool := !(old.any fun o => o.key == n.key && o.text == n.text)
