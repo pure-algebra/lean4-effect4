@@ -1,0 +1,14 @@
+{
+  "exit": 0,
+  "observation": "distinct supplied integers admit as identical program bytes",
+  "answers_equal_agent_run": true,
+  "input": 9007199254740993,
+  "stored": 9007199254740992,
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "--run",
+    "/tmp/effect4-json-authoring-audit/SessionDriver.lean"
+  ],
+  "cwd": "/tmp",
+  "answer_sha256": "9ae6293c952568a890d6d9d29811cc888772b12d26360ed9a4739a524f54c3e7"
+}

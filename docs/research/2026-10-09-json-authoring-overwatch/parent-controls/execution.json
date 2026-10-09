@@ -1,0 +1,25 @@
+{
+  "pin": "ebc497c770a2c0d1be1c49bcd40d6055af1d488c",
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "--run",
+    "/tmp/effect4-json-authoring-controls-parent/SessionDriver.lean"
+  ],
+  "leanPath": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean",
+  "exit": 0,
+  "leanVersion": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "pythonVersion": "Python 3.13.14",
+  "hashes": {
+    "src/Effect4/Store/Domain/ShapeRead.lean": "bb94641060904bf66dda4812fb8515b0157a32438ce89c045300d5e4949e49f3",
+    "src/Effect4/Laws/Store/ShapeRead.lean": "2be3d40788825acd2ece069855b09bab8914131368c353c48a04ca898d0a0660",
+    "tools/Tools/JsonBridge.lean": "9fe561749b010e326b942289758b6ba96fbad293bd1b19f4409789a233c3ec57",
+    "tools/Tools/Session.lean": "6a41218966aa6b0f757785bc41a67dfbaa2dfae9be607bbf0ec53e3cf6c6b4bc",
+    "Test/Program/JsonFormControls.lean": "cff03352f7bde59f7b3f83426a5a870a9d4990d3d1b7a9314514675450b5055c",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/Session.olean": "8ad35e1f1df11b11c73d7fcadf80b5f9ead2613e9ed99240a340547decda8278",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/JsonBridge.olean": "28506e9d2b255625b14710cf2ff904557c4f8b6fa7b607992cfb33c9403b49d2",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/ShapeRead.olean": "01793338aad0c989477acf483e90051c4582a8d9cad397b357450662a8bddf52",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Store/ShapeRead.olean": "f8ec4fd49884d87cacc542302e9aac5485f576854458cba8cd8d0ba4ff22ce62",
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean": "1b370cfcbf44e80d1b004ab1b1ab9a4c73951f9f7c242140bcff9bc577576554",
+    "/private/tmp/effect4-json-authoring-audit/replay.py": "b563182b49e7ce4dbd77e9bbced0b2b701aaa4baea05d117983e8fabe9a37579"
+  }
+}

@@ -1,0 +1,4 @@
+{"op": "open", "id": "9007199254740993", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740993}}}}
+{"op": "sketch", "id": "9007199254740993"}
+{"op": "open", "id": "9007199254740992", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740992}}}}
+{"op": "sketch", "id": "9007199254740992"}
