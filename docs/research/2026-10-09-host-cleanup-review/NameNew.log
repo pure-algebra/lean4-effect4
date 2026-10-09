@@ -1,0 +1,1 @@
+Effect4.Program.Denote.LoopedRows : Effect4.Program.NativeEff → Bool

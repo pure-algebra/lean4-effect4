@@ -1,0 +1,3 @@
+placement: module=Effect4.Laws.Program.Agreement.Segment; available=36; selected=0; selected with local module entry=36
+predicate name: Denote.LoopedRows present; Agreement.LoopedRows absent
+exactAxioms: 147 Segment declarations fit [propext, Quot.sound]

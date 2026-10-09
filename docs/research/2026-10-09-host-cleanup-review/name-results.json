@@ -1,0 +1,14 @@
+[
+  {
+    "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-host-cleanup-review/NameOld.lean",
+    "exitCode": 1,
+    "expectedExitCode": 1,
+    "elapsedSeconds": 5.36
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-host-cleanup-review/NameNew.lean",
+    "exitCode": 0,
+    "expectedExitCode": 0,
+    "elapsedSeconds": 1.36
+  }
+]

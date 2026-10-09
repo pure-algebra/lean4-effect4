@@ -1,0 +1,66 @@
+[
+  {
+    "name": "run_eq_meaning",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)\n    (hd : depth e \u2264 fuel) (hfuel : 2 * steps e + 6 \u2264 fuel) :\n    (Api.run e fuel).outcome = Api.Outcome.finished \u2227\n      (Api.run e fuel).exit = some (meaning e [] Stores.empty).1 \u2227\n      (Api.run e fuel).stores = (meaning e [] Stores.empty).2",
+    "new": "theorem run_eq_meaning (e : NativeEff) (fuel : Nat) (hs : Straight e = true)\n    (hd : depth e \u2264 fuel) (hfuel : 2 * steps e + 6 \u2264 fuel) :\n    (Api.run e fuel).outcome = Api.Outcome.finished \u2227\n      (Api.run e fuel).exit = some (meaning e [] Stores.empty).1 \u2227\n      (Api.run e fuel).stores = (meaning e [] Stores.empty).2"
+  },
+  {
+    "name": "replay_Mexit",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)\n    (hd : depth e \u2264 fuel) (hfuel : 2 * steps e + 6 \u2264 fuel) :\n    \u2203 fr k' tr' nt', replayEval (evaluator",
+    "new": "theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)\n    (hd : depth e \u2264 fuel) (hfuel : 2 * steps e + 6 \u2264 fuel) :\n    \u2203 fr k' tr' nt', replayEval (evaluator"
+  },
+  {
+    "name": "replay_Mexit_of_localRun",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e = true)\n    (ex : ExitV) (s' : Stores)\n    (hrun : localRun e N (fiberOf (compile e fuel) []) Stores.empty = some (ex, s'))\n    (hfuel : 2 * N + 4 \u2264 fuel) :\n    \u2203 fr k' tr' nt', replayEval (evaluator",
+    "new": "theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e = true)\n    (ex : ExitV) (s' : Stores)\n    (hrun : localRun e N (fiberOf (compile e fuel) []) Stores.empty = some (ex, s'))\n    (hfuel : 2 * N + 4 \u2264 fuel) :\n    \u2203 fr k' tr' nt', replayEval (evaluator"
+  },
+  {
+    "name": "flushAll_Myield",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Segment.lean",
+    "equalIgnoringWhitespace": false,
+    "old": "theorem flushAll_Myield (root : NativeEff) (hroot : LoopedRows root = true) :\n    \u2200 (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)\n      (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),\n      PlainCode cur = true \u2192 PlainStack K \u2192 Quiet s \u2192\n      localRun root n (fiberOf cur K i) s = some (ex, s') \u2192\n      n + 1 \u2264 rounds \u2192 2 * n + 6 \u2264 fuel \u2192\n      \u2203 fr k' tr' nt', flushAllState (evaluator",
+    "new": "theorem flushAll_Myield (root : NativeEff) (hroot : LoopedRows root = true) :\n    \u2200 (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)\n      (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),\n      PlainCode cur = true \u2192 PlainStack K \u2192 Quiet s \u2192 s.externals.answers = [] \u2192\n      localRunC table root n (fiberOf cur K i) s [] = some (.exit ex s' []) \u2192\n      n + 1 \u2264 rounds \u2192 2 * n + 6 \u2264 fuel \u2192\n      \u2203 fr k' tr' nt', flushAllState (evaluator"
+  },
+  {
+    "name": "loopAgreement",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem loopAgreement (e : NativeEff) (hl : Looped e = true) : LoopAgreement e",
+    "new": "theorem loopAgreement (e : NativeEff) (hl : Looped e = true) : LoopAgreement e"
+  },
+  {
+    "name": "localRun_compile",
+    "oldPath": "src/Effect4/Laws/Program/Agreement.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem localRun_compile (root : NativeEff) :\n    \u2200 (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores),\n      Straight e = true \u2192 Node.at_ (Node.eff root) p.path = some (Node.eff e) \u2192\n      depth e \u2264 p.fuel \u2192\n      \u2203 c, c \u2264 steps e \u2227\n        Reaches root c (fiberOf (compileEff e p) K i) s\n          (fiberOf (Prim.ofExit (meaning e p.env s).1) K i) (meaning e p.env s).2\n  | .succeed v, p, K, i, s, _, _, hd => by\n    rcases hx : evalTerm p.env v with _ | x\n    \u00b7 rw [compileEff_succeed v (fuel_succ hd), meaning_succeed_none v p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n    \u00b7 rw [compileEff_succeed v (fuel_succ hd), meaning_succeed_some v p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n  | .fail e, p, K, i, s, _, _, hd => by\n    rcases hx : evalTerm p.env e with _ | x\n    \u00b7 rw [compileEff_fail e (fuel_succ hd), meaning_fail_none e p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n    \u00b7 rw [compileEff_fail e (fuel_succ hd), meaning_fail_some e p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n  | .failCause c, p, K, i, s, _, _, hd => by\n    rcases hc : causeOf p.env c with _ | cause\n    \u00b7 rw [compileEff_failCause c (fuel_succ hd), meaning_failCause_none c p.env s hc]\n      simp only [hc]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n    \u00b7 rw [compileEff_failCause c (fuel_succ hd), meaning_failCause_some c p.env s hc]\n      simp only [hc]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n  | .sync t, p, K, i, s, _, h, hd => by\n    rw [compileEff_sync t (fuel_succ hd), meaning_sync]\n    have hs",
+    "new": "theorem localRun_compile (root : NativeEff) :\n    \u2200 (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores),\n      Straight e = true \u2192 Node.at_ (Node.eff root) p.path = some (Node.eff e) \u2192\n      depth e \u2264 p.fuel \u2192\n      \u2203 c, c \u2264 steps e \u2227\n        Reaches root c (fiberOf (compileEff e p) K i) s\n          (fiberOf (Prim.ofExit (meaning e p.env s).1) K i) (meaning e p.env s).2\n  | .succeed v, p, K, i, s, _, _, hd => by\n    rcases hx : evalTerm p.env v with _ | x\n    \u00b7 rw [compileEff_succeed v (fuel_succ hd), meaning_succeed_none v p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n    \u00b7 rw [compileEff_succeed v (fuel_succ hd), meaning_succeed_some v p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n  | .fail e, p, K, i, s, _, _, hd => by\n    rcases hx : evalTerm p.env e with _ | x\n    \u00b7 rw [compileEff_fail e (fuel_succ hd), meaning_fail_none e p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n    \u00b7 rw [compileEff_fail e (fuel_succ hd), meaning_fail_some e p.env s hx]\n      simp only [hx]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n  | .failCause c, p, K, i, s, _, _, hd => by\n    rcases hc : causeOf p.env c with _ | cause\n    \u00b7 rw [compileEff_failCause c (fuel_succ hd), meaning_failCause_none c p.env s hc]\n      simp only [hc]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n    \u00b7 rw [compileEff_failCause c (fuel_succ hd), meaning_failCause_some c p.env s hc]\n      simp only [hc]\n      exact \u27e80, Nat.zero_le _, Reaches.refl root _ s\u27e9\n  | .sync t, p, K, i, s, _, h, hd => by\n    rw [compileEff_sync t (fuel_succ hd), meaning_sync]\n    have hs"
+  },
+  {
+    "name": "localRun_compileB",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem localRun_compileB (k : Nat) :\n    \u2200 (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (ex : ExitV)\n      (s' : Stores), Looped e = true \u2192\n      Node.at_ (Node.eff root) p.path = some (Node.eff e) \u2192 depthB e \u2264 p.fuel \u2192\n      meaningB k e p.env s = (some ex, s') \u2192\n      \u2203 c, c \u2264 boundB k e \u2227\n        Reaches root c (fiberOf (compileEff e p) K i) s (fiberOf (Prim.ofExit ex) K i) s'\n  | .iterate cty init test step result body, p, K, i, s, ex, s', hl, h, hd, hm => by\n    have hlb : Looped body = true",
+    "new": "theorem localRun_compileB (k : Nat) :\n    \u2200 (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (ex : ExitV)\n      (s' : Stores), Looped e = true \u2192\n      Node.at_ (Node.eff root) p.path = some (Node.eff e) \u2192 depthB e \u2264 p.fuel \u2192\n      meaningB k e p.env s = (some ex, s') \u2192\n      \u2203 c, c \u2264 boundB k e \u2227\n        Reaches root c (fiberOf (compileEff e p) K i) s (fiberOf (Prim.ofExit ex) K i) s'\n  | .iterate cty init test step result body, p, K, i, s, ex, s', hl, h, hd, hm => by\n    have hlb : Looped body = true"
+  },
+  {
+    "name": "localRunC_compile",
+    "oldPath": "src/Effect4/Laws/Program/Agreement/Calls.lean",
+    "newPath": "src/Effect4/Laws/Program/Agreement/Calls.lean",
+    "equalIgnoringWhitespace": true,
+    "old": "theorem localRunC_compile (table : RowTable) (root : NativeEff) :\n    \u2200 (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : ReplyTape),\n      StraightRows table e = true \u2192 Node.at_ (Node.eff root) p.path = some (Node.eff e) \u2192\n      RunsToD table root K i (fiberOf (compileEff e p) K i) s r (meaningRows table e p.env s r)\n  | .succeed v, p, K, i, s, r, _, _ => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_succeed v hfu, meaningRows_pure table _ _ s r rfl]\n    rcases hx : evalTerm p.env v with _ | x\n    \u00b7 dsimp only; rw [badShape_eq]; exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n    \u00b7 exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n  | .fail e, p, K, i, s, r, _, _ => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_fail e hfu, meaningRows_pure table _ _ s r rfl]\n    rcases hx : evalTerm p.env e with _ | x\n    \u00b7 dsimp only; rw [badShape_eq]; exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n    \u00b7 exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n  | .failCause c, p, K, i, s, r, _, _ => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_failCause c hfu, meaningRows_pure table _ _ s r rfl]\n    rcases hc : causeOf p.env c with _ | cause\n    \u00b7 dsimp only; rw [badShape_eq]; exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n    \u00b7 exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n  | .sync t, p, K, i, s, r, _, h => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_sync t hfu, meaningRows_pure table _ _ s r rfl]\n    have hs",
+    "new": "theorem localRunC_compile (table : RowTable) (root : NativeEff) :\n    \u2200 (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : ReplyTape),\n      StraightRows table e = true \u2192 Node.at_ (Node.eff root) p.path = some (Node.eff e) \u2192\n      RunsToD table root K i (fiberOf (compileEff e p) K i) s r (meaningRows table e p.env s r)\n  | .succeed v, p, K, i, s, r, _, _ => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_succeed v hfu, meaningRows_pure table _ _ s r rfl]\n    rcases hx : evalTerm p.env v with _ | x\n    \u00b7 dsimp only; rw [badShape_eq]; exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n    \u00b7 exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n  | .fail e, p, K, i, s, r, _, _ => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_fail e hfu, meaningRows_pure table _ _ s r rfl]\n    rcases hx : evalTerm p.env e with _ | x\n    \u00b7 dsimp only; rw [badShape_eq]; exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n    \u00b7 exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n  | .failCause c, p, K, i, s, r, _, _ => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_failCause c hfu, meaningRows_pure table _ _ s r rfl]\n    rcases hc : causeOf p.env c with _ | cause\n    \u00b7 dsimp only; rw [badShape_eq]; exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n    \u00b7 exact Or.inl \u27e80, ReachesC.refl table root _ s r\u27e9\n  | .sync t, p, K, i, s, r, _, h => by\n    rcases hfu : p.fuel with _ | k\n    \u00b7 exact RunsToD.of_zero hfu\n    rw [compileEff_sync t hfu, meaningRows_pure table _ _ s r rfl]\n    have hs"
+  }
+]

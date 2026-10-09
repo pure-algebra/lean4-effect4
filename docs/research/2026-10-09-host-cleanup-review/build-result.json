@@ -1,0 +1,5 @@
+{
+  "command": "LEAN_NUM_THREADS=3 lake build Test.Program.AgreementContract Test.Program.FragmentCensusContract Test.Program.QueueWorkload Test.Api.SessionMeaning Effect4.Laws.Program.LoopAgreement",
+  "exitCode": 0,
+  "elapsedSeconds": 13.3
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "command": "LEAN_NUM_THREADS=3 lake build Tools.Semantics effect4gen",
+    "exitCode": 0,
+    "elapsedSeconds": 3.99,
+    "log": "tools-build.log"
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-host-cleanup-review/Probe.lean",
+    "exitCode": 1,
+    "elapsedSeconds": 2.47,
+    "log": "attempt2-probe.log"
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-09-host-cleanup-review/Probe.lean",
+    "exitCode": 0,
+    "elapsedSeconds": 19.77,
+    "log": "probe.log"
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake exe effect4gen Fragments --group Fragments --module --imports Effect4.Program.Native --out src/Effect4/Program/Fragment.lean Effect4.Program.Eff",
+    "exitCode": 0,
+    "elapsedSeconds": 2.23,
+    "log": "Fragments.log"
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake exe effect4gen Fragments --group FragmentLooped --imports Effect4.Program.Native --out src/Effect4/Laws/Program/FragmentLooped.lean Effect4.Program.Eff",
+    "exitCode": 0,
+    "elapsedSeconds": 0.57,
+    "log": "FragmentLooped.log"
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake exe effect4gen Fragments --group FragmentRows --imports Effect4.Laws.Program.FragmentRowAdmission --out src/Effect4/Laws/Program/FragmentRows.lean Effect4.Program.Eff",
+    "exitCode": 0,
+    "elapsedSeconds": 0.59,
+    "log": "FragmentRows.log"
+  },
+  {
+    "command": "LEAN_NUM_THREADS=3 lake exe effect4gen Fragments --group FragmentLoopedRows --imports Effect4.Program.Native --out src/Effect4/Laws/Program/FragmentLoopedRows.lean Effect4.Program.Eff",
+    "exitCode": 0,
+    "elapsedSeconds": 0.58,
+    "log": "FragmentLoopedRows.log"
+  }
+]
