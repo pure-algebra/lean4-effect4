@@ -8,7 +8,7 @@ An empty source ends immediately.
 Every later pull ends with `unit`.
 Effect 4.0.1 owns this behavior in `Stream.ts`, `fromArray`, and `Channel.ts`, `succeed` and `fromEffect`.
 The source uses the existing `Program.Stream.pulledTy` protocol under decisions row 331.
-Its end remains a value, rather than latest's `Cause.Done` failure.
+Its end remains a value, rather than Effect 4.0.1's `Cause.Done` failure.
 
 ```mermaid
 flowchart LR
