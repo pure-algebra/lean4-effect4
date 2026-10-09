@@ -92,11 +92,14 @@ A program has folds, a journaled run with replay, and a printed image that reads
   of its object (`tools/Tools/View/`). A move by whole pixels commutes with the lowering
   (`lowerCall_move`), so the motion between two frames is exact. The frames of a program built
   by edits replay any session request file through the session tool. `tools/view/v NAME` plays
-  them in a window; SVG and the console are two more outputs of the same calls. A graph of any
-  shape lays out by ranks (`ranks_forward`), with cycles as back edges; a run draws its fibers as
-  one (`v -r NAME`). Motion is a join by key with transitions: a moment of a step is a page, and
-  every step ends at exactly the next frame (a finite check). The window is SDL3's, vendored by
-  pin and built static (`vendor/SDL3-3.4.16/build.sh`).
+  them in a window; SVG and the console are two more outputs of the same calls. Each page shows
+  the program's TypeScript beside its tree (`tools/Tools/Code/`). A graph of any shape lays out
+  by ranks (`ranks_forward`), with cycles as back edges and every edge a curve. A run draws its
+  fibers as one (`v -r NAME`). Motion is a join by key with transitions. A step ends at exactly
+  the next frame (`sample_end`). The window is SDL3's, vendored by pin and built static.
+- **The generated code** (`tools/Drivers/Emit.lean`): one module per program, with exact
+  imports, a header and Effect's width. Its layout undone is the house print (`undo_layout`,
+  `Ts.flat_expr`).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
@@ -126,25 +129,28 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The visual pipeline** (row 336, point 10; the
-   [visual pipeline note](research/2026-10-09-visual-pipeline.md) and the
-   [visual language note](research/2026-10-09-visual-language-theory.md)): V0 to V3, the graph,
-   the end law, the code plane beside the tree, curved edges and Brandes and Köpf's places are
-   landed. Next: transpose in the order; depth as a fold, once ruled; a module's cell drawn by its
-   type with its steps' motion; the printer's span map (the code plane's links, a `tag` in the
-   document); interaction (section 6a); the proof graph as a consumer; Effect schemas drawn; a
-   console player on termbox2.
+1. **The visual pipeline** (row 336, point 10). The
+   [visual pipeline note](research/2026-10-09-visual-pipeline.md) holds the plan, and the
+   [visual language note](research/2026-10-09-visual-language-theory.md) its theory. Landed: V0 to
+   V3, the graph, the end law, the code plane, curved edges, and Brandes and Köpf's places. Next:
+   - transpose in the order;
+   - depth as a fold, once ruled;
+   - a module's cell drawn by its type, with its steps' motion;
+   - the printer's span map, which links the code plane to the tree;
+   - interaction (section 6a), the proof graph as a consumer, Effect schemas drawn;
+   - a console player on termbox2.
 2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
    measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
-3. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
-   address, search by type and by explanation, wrap, extract and inline, each shown as frames.
+3. **The graph operations of an agent** (row 336, points 1 and 7). Pieces are stored by content
+   address. An agent searches by type and by explanation, and wraps, extracts and inlines, each
+   shown as frames.
    Seat ORG's L9 (`rebaseRefs`, point 6) and its rank 5 (a program in the store) come first.
 4. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-5. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)):
-   the session tool as an MCP server; marking at a gap (row 336, point 3); each table entry's
-   rule as data; one session for editing and running.
+5. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)).
+   Its parts: the session tool as an MCP server; marking at a gap (row 336, point 3); each table
+   entry's rule as data. One session edits and runs.
 6. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
 7. **The stream stack** (row 331): the Pull protocol's handlers are landed (Codex, merged at
@@ -165,8 +171,8 @@ API's slices (row 326), and H8.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
 - **The visual language's new marks** (the [visual language note](research/2026-10-09-visual-language-theory.md),
-  section 10): arrowheads on arcs; depth by weight, tone and haloed crossings; a lower tone for
-  secondary text; token classes in the code plane.
+  section 10). They are arrowheads on arcs, depth by weight and tone, a lower tone for secondary
+  text, and token classes in the code plane.
 
 ## Process
 
