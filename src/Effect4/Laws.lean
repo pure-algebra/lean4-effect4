@@ -42,6 +42,7 @@ import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.Agreement.Segment
 import Effect4.Laws.Program.Agreement.Calls
 import Effect4.Laws.Program.Agreement.Hosted
+import Effect4.Laws.Program.HostRuns
 import Effect4.Laws.Program.MeaningEq
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR

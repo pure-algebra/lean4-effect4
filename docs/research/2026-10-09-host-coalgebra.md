@@ -257,6 +257,26 @@ signature, and its implementation a handler.
 
 This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 and HC-7 stand.
 
+### 7.1 Progress on 2026-10-09
+
+- **CO-1 and CO-2 landed** in `lean4-effects`, branch `coalgebra`, commits `8ddb936` and `b0dd607`
+  (local; push them before this repository's branch). Version 0.9.0 adds `Effects.Lens` and
+  `Effects/Coalgebra`: `Step`, `System`, `Bisim`, `Comodel`, `Protocol` and `Run`. It adds a
+  contract packet, a battery, four counterexample rows and an axiom report. The package's gate
+  now reads axioms with the exact walk, backported with its two controls. Its default build, the
+  algebra parity receipt and the trust-gate probes pass. Effect4 pins `b0dd607`; the move
+  rebuilt no existing module.
+- **CO-3 landed** in Effect4: `src/Effect4/Laws/Program/HostRuns.lean`. The meaning under a host
+  is a run of the call tree against the stores routed beside the host (`meaningUnder_eq_run`).
+  The reply tape is the reply host (`meaningRows_eq_run`).
+- **CO-4 is revised.** A reply tape answers a call without reading its request. So no relation
+  built on H8's tape can show that the session asks the meaning's requests (HC-R2). The robust
+  route generalizes H8's local run with calls from a reply tape to a host. `localStepC` asks a
+  comodel of `RowSig table` at its state, and `ReachesC` and `Leads` carry the host's state.
+  The compile law compares with the host's run of the call tree. The compile law's `perform` case
+  then proves that the requests agree. H8 is the instance at `tapeHost`, and H9 is the theorem
+  at every host. The session's system for the picture is built on the same local run after it.
+
 ## 8. What the owner must decide
 
 1. **`Effects` as the home of the generic layer** (representation). The coalgebra layer lands
