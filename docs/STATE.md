@@ -127,22 +127,28 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 1. **The visual pipeline** (row 336, point 10; the
-   [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0 to V3 and the graph are
-   landed. Next: the end law as a theorem; the graph view's consumers (the proof graph, the
-   lowering); a fiber's program address; Effect schemas drawn; a console player on termbox2.
-2. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
+   [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0 to V3, the graph and the
+   end law (`sample_end`) are landed. Next: the layout's crossing reduction and coordinate
+   placement in Lean (no engine is vendored, section 5); interaction (an inspector of facets per
+   key, tooltips, overlays, statistics, sidebars; section 6a); the printer's span map, which the
+   side-by-side view of the Effect code needs; the proof graph as a consumer; Effect schemas
+   drawn; a console player on termbox2; a fiber's program address.
+2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
+   measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
+3. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
    address, search by type and by explanation, wrap, extract and inline, each shown as frames.
    Seat ORG's L9 (`rebaseRefs`, point 6) and its rank 5 (a program in the store) come first.
-3. **Codex's module catalogue** on the new layout (the
+4. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-4. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)):
+5. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)):
    the session tool as an MCP server; marking at a gap (row 336, point 3); each table entry's
    rule as data; one session for editing and running.
-5. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
+6. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
-6. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
-7. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
+7. **The stream stack** (row 331): the Pull protocol's handlers are landed (Codex, merged at
+   `b8630762`); next the channel as a pull transformer.
+8. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
    transaction attempt (G4).
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329), the session
