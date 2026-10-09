@@ -67,7 +67,18 @@ A program has folds, a journaled run with replay, and a printed image that reads
 - **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
   replacement law holds over the six typing judgments (row 294). A sketch reads a whole program,
   definition block included: its check, focus, fill, table and refusals (cutover slice S1). An
-  edit that keeps its focus's type splices the address table (`edit-splices-table`).
+  edit that keeps its focus's type splices the address table, inside any part of a whole
+  program (`edit-splices-table`, `module-table-splices`).
+- **The edit session** (row 334). `EditSession` (`src/Effect4/Program/Edit.lean`) keeps a sketch
+  and its table, with the face `open`, `feed` and `view`. Its edits fill an address and omit
+  one into a hole. A fill that keeps its focus's type checks only the new subtree; an omission
+  checks again until `omit-splices-table`, a planned goal, is proved. After any run of edits the view is the checker's answer on the
+  sketch (`edit-session-coherent`). An edit can be undone exactly (`edit-session-undo`), and a
+  spliced edit repaints only its subtree (`edit-repaint-set`).
+- **Addresses** (seat ORG's [theory map](research/2026-10-08-seat-ORG-theory-map.md)). The laws
+  that compose addresses stand in `src/Effect4/Laws/Program/Address.lean`
+  (`address-composes`). A table is computed at an absolute base, so a splice shifts no address.
+  A moved subtree's bytes, levels and layer-reference targets still depend on where it stands.
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
@@ -100,8 +111,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
 1. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
-2. **The edit session** (row 334) on the splice law, and the splice over a whole program's
-   parts (the [live authoring note](research/2026-10-08-live-authoring.md)).
+2. **The authoring line.** Edits of the hole table in the edit session (omit, declare), and the
+   query tool's premise checks as theorems (seat ORG's rank 3). Then the checker's base law
+   (`check_rebase`, rank 2), which places a table at any address and removes the splice's
+   casework.
 3. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
 4. **The stream stack** (row 331): the pull protocol, then the channel as a pull transformer.
@@ -123,6 +136,11 @@ API's slices (row 326), and H8.
   ratified on 2026-10-04 (row 310).
 - **Where the language stops computing**, beyond the line of row 309 (row 307).
 - **The marks of an open part** in the proof graph view (row 308).
+- **Seat ORG's three questions** (the [theory map](research/2026-10-08-seat-ORG-theory-map.md),
+  section 7.1). Do a moved layer's references keep absolute targets? The recommendation is yes,
+  with a rebase law. What keys a stored subtree? The recommendation is one node per program,
+  until a table cache needs subtrees. Does a tool's named law count as load? The recommendation
+  is yes, by theorems.
 
 ## Process
 

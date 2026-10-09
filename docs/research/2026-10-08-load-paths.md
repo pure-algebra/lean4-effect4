@@ -133,9 +133,23 @@ the same quantities.
 | S1b, the sketch's table and refusals | 1 goal owed, with its one step named; 4 local steps; 6 joints, all load-bearing; reuse 54% | the 2 owed lemmas, the same 4 steps and the same 6 joints; the 2 proofs reused no tree theorem |
 | the splice law (`edit-splices-table`) | 11 goals owed; 2 local steps; 7 joints, 6 load-bearing; reuse 35% | the 11, and 4 more: three general list facts and one step split out of the environments' casework; 12 joints, the 5 more being the typed-replacement and checker laws that the two hard goals used; reuse 54% by edges; one heartbeat raise |
 | S1a, the sketch's focus and fill (measured after) | not predicted | sketch laws 50% reuse, parts laws 60%; joints: the module check's soundness, `focusAt_typed`, `hasTy_replace_focusAt` |
+| the edit session over a program (`edit-session-coherent`, first form) | 5 goals owed; 2 local steps; 6 joints, all load-bearing; reuse 46% | the 5, and no other lemma; 9 joints, the 3 more (`focusAt_eq_some`, `focusAt_nil`, `table_head`) forecast in words; reuse 66% by edges |
+| the view and repaint tops, written as bare goals | 2 goals owed; 0 local steps; 0 joints | a bare goal names nothing, so the plan predicts nothing; each top was sketched, then proved from the landed steps |
+| the splice over a whole program's parts (`module-table-splices`, `module-annotate-table`) | 14 goals owed; 4 local steps; 15 joints, all load-bearing; reuse 45% | the 14, and 7 more: five entry and address facts and the two spine edits forecast in words; 24 joints, 7 of the 9 more forecast in words; reuse 57% by edges; no heartbeat raise |
 
 The prediction was exact because the decomposition went down to the new lemmas. Its cost is the
 statements and the skeleton of the proof; the leaves are the work it predicts.
+
+Four readings of the four predictions:
+
+- **The owed goals are exact** when the decomposition reaches the new lemmas. A bare goal predicts
+  nothing: write the top's proof modulo its steps first.
+- **The joints are undercounted** by the leaves' own proofs. A forecast in words, written before
+  the proofs, named 15 of the 17 joints that the plan missed.
+- **The unforecast lemmas are small facts**: list facts, address facts, one entry at a spine. Seat
+  ORG's address module and list homes (`docs/research/2026-10-08-seat-ORG-theory-map.md`, ranks 1
+  and 4) would turn them into joints.
+- **Reuse rises from the plan to the landing**, from 35 to 54, 46 to 66 and 45 to 57 percent.
 
 **The same reading on an area before work starts.** The session's laws are
 `Laws.Api.HostSession`, `Laws.Api.SessionMeaning` and `Laws.Run`. They hold 142 theorems, 59
