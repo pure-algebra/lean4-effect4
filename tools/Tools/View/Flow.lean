@@ -27,10 +27,11 @@ namespace Tools.View.Flow
 
 open Effect4 Effect4.Program Tools.View Tools.View.Program
 
-/-- How branches stand side by side: all of them run (`fork`); a fiber runs beside its parent's
-continuation (`spawn`); one of them runs (`choice`). -/
+/-- How branches stand side by side: all of them run, and the part ends when all have ended
+(`fork`); all of them start, and the part ends when one has (`race`); a fiber runs beside its
+parent's continuation (`spawn`); one of them runs (`choice`). -/
 inductive Branching where
-  | fork | spawn | choice
+  | fork | race | spawn | choice
 deriving DecidableEq
 
 /-- **A program's flow**: a node for each leaf operation, parts in series, branches side by side,
@@ -79,7 +80,9 @@ counted from its start (`Effect4.Program.Var`): `var n` names the `n`-th value b
 from the root, a de Bruijn level. The binders along an address come from the program's one binder
 table (`Node.binders`, generated from `tools/Effect4Gen/binders.json`), and a closed child starts
 an empty environment (`Node.closedChild`). When the binder is a `bind` or a statement's binding
-yield whose bound part forks a fiber, the await waits for that fork. -/
+yield whose bound part forks a fiber, the await waits for that fork. Which value an await's term
+selects is a fold of the term (`originAlg`), so the item of a tuple names its own fiber, and not
+every fiber the tuple holds. -/
 
 /-- The environment at an address, outermost first: for each value, the address of the node that
 binds it and the child it is bound for. A closed child starts it empty. -/
@@ -108,89 +111,167 @@ def forkOf (root : Node NativeOp) (a : List Nat) (n : Nat) : Option (List Nat) :
     | _ => none
   | _ => none
 
-/-- The variables a term reads from an environment of `level` values: a fold of the term algebra.
-A `fold`'s body binds two more, at the levels `level` and `level + 1`, which are its own. -/
-def termVarsAlg : TermAlgebra (fun _ => Nat → List Nat) where
-  term_var i := fun level => if i < level then [i] else []
-  term_lit _ := fun _ => []
-  term_app _ args := args
-  term_record _ _ args := args
-  term_field _ t _ := t
-  term_recordSet t _ v := fun level => t level ++ v level
-  term_tupleAt t _ := t
-  term_fold _ list init body := fun level => list level ++ init level ++ body level
-  terms_nil := fun _ => []
-  terms_cons t ts := fun level => t level ++ ts level
+/-- **What a term's value is**, as far as the program's binding structure says: the value bound
+at a variable (a de Bruijn level); a tuple or a list, item by item; or unknown. -/
+inductive Origin where
+  | bound (level : Nat)
+  | items (xs : List Origin)
+  | unknown
 
-/-- The variables a term reads from an environment of `level` values. -/
-def termVars (t : Term) (level : Nat) : List Nat := cata_term termVarsAlg t level
+/-- The `i`-th item of a value whose items are known; else unknown. -/
+def Origin.item : Origin → Nat → Origin
+  | .items xs, i => xs.getD i .unknown
+  | _, _ => .unknown
 
-/-- Each node that waits for fibers, by its key, with the keys of the forks it waits for: an
-`awaitFiber` waits for the fiber its term names, and `awaitAll` and `awaitAllFailFast` for every
-fiber their targets name. A variable that names no fork (a fiber passed in, or held in a cell)
-gives no wait: the static graph shows what the program's binding structure says, and the run's
-graph shows the rest. -/
-def waits (program : NativeEff) : List (Key × List Key) :=
+/-- The carrier of the origin fold: a term's origin, a term list's origins. -/
+abbrev OriginAt : TermFam → Type
+  | .term => Origin
+  | .terms => List Origin
+
+/-- **The origin fold** of the term algebra, by the machine's own evaluation (`evalTerm`,
+`src/Effect4/Machine/Term.lean`): a variable is the value bound at its level; `tuple`, `pair`,
+`nil`, `cons` and `append` build a list item by item, and `tupleAt`, `fst` and `snd` select an item
+(`NativeAtom.eval`). Any other term is unknown, as is a fold's value, since its body reads
+variables of its own. -/
+def originAlg : TermAlgebra OriginAt where
+  term_var i := .bound i
+  term_lit _ := .unknown
+  term_app atom args := match NativeAtom.ofName? atom, args with
+    | some .tuple, xs => .items xs
+    | some .pair, [a, b] => .items [a, b]
+    | some .listNil, [] => .items []
+    | some .listCons, [x, .items xs] => .items (x :: xs)
+    | some .listAppend, [.items xs, .items ys] => .items (xs ++ ys)
+    | some .fst, [o] => o.item 0
+    | some .snd, [o] => o.item 1
+    | _, _ => .unknown
+  term_record _ _ _ := .unknown
+  term_field _ _ _ := .unknown
+  term_recordSet _ _ _ := .unknown
+  term_tupleAt t i := t.item i
+  term_fold _ _ _ _ := .unknown
+  terms_nil := []
+  terms_cons t ts := t :: ts
+
+/-- A term's origin. -/
+def origin (t : Term) : Origin := cata_term originAlg t
+
+/-- **What an await waits for**: the forks it names, and whether some target is unresolved. A
+target is resolved when its origin is a value bound by a part that forks a fiber. Any other
+target (a fiber passed in, held in a cell, chosen by a test, or built by a term this reading does
+not follow) is unresolved: it adds no edge, and it establishes neither that the await waits for
+no fiber nor that no deadlock exists. -/
+structure Targets where
+  forks : List Key := []
+  unresolved : Bool := false
+
+/-- The targets of one fiber's origin at the address `a`. -/
+def fiberTarget (root : Node NativeOp) (a : List Nat) : Origin → Targets
+  | .bound n => match forkOf root a n with
+    | some f => { forks := [bracket f] }
+    | none => { unresolved := true }
+  | _ => { unresolved := true }
+
+/-- Each await by its key, with its targets: an `awaitFiber` waits for the fiber its term names,
+and `awaitAll` and `awaitAllFailFast` for each fiber of the list their term builds. -/
+def targets (program : NativeEff) : List (Key × Targets) :=
   let root : Node NativeOp := .eff program
-  let named (a : List Nat) (t : Term) : List Key :=
-    ((termVars t (bindersAlong root a).length).filterMap fun n => (forkOf root a n).map bracket).eraseDups
+  let many (a : List Nat) : Origin → Targets
+    | .items xs =>
+      let ts := xs.map (fiberTarget root a)
+      { forks := (ts.flatMap (·.forks)).eraseDups, unresolved := ts.any (·.unresolved) }
+    | _ => { unresolved := true }
   (Node.addresses root).filterMap fun a =>
-    let ws := match root.at_ a with
-      | some (.eff (.awaitFiber t _)) => named a t
-      | some (.action (.awaitAll t)) | some (.action (.awaitAllFailFast t)) => named a t
-      | _ => []
-    if ws.isEmpty then none else some (bracket a, ws)
+    match root.at_ a with
+    | some (.eff (.awaitFiber t _)) => some (bracket a, fiberTarget root a (origin t))
+    | some (.action (.awaitAll t)) | some (.action (.awaitAllFailFast t)) => some (bracket a, many a (origin t))
+    | _ => none
+
+/-- Each node that waits for fibers it names, by its key, with the keys of those forks. A static
+graph shows what the program's binding structure says; the run's graph shows the rest. -/
+def waits (program : NativeEff) : List (Key × List Key) :=
+  (targets program).filterMap fun (k, t) => if t.forks.isEmpty then none else some (k, t.forks)
+
+/-- The awaits whose target this reading does not resolve, by key. -/
+def unresolvedWaits (program : NativeEff) : List Key :=
+  (targets program).filterMap fun (k, t) => if t.unresolved then some k else none
 
 /-! ## The flow as a fold of the program -/
 
-/-- The carrier of the fold: a part's flow, given its address. -/
-abbrev FlowAt (_ : EffFam) : Type := List Nat → Flow
+/-- **A part's flow**, with the releases it registers that no scope inside it has run. A release
+runs when the scope that holds it closes: after the work it protects, the last registered first
+(`scopeCloseFinalizers`, `internal/effect.ts:3805-3826` at the pin). So a release stands at its
+scope's close, and not where its acquire is written. -/
+structure Part where
+  flow : Flow
+  releases : List Flow := []
 
-/-- The flow a child argument holds; a leaf holds none. -/
-def childFlow : ArgF NativeOp FlowAt → Option (List Nat → Flow)
+/-- A flow, then the releases its scope runs as it closes, the last registered first. -/
+def Flow.closing (f : Flow) : List Flow → Flow
+  | [] => f
+  | rs => f.andThen (.seq rs.reverse)
+
+/-- The carrier of the fold: a part, given its address. -/
+abbrev FlowAt (_ : EffFam) : Type := List Nat → Part
+
+/-- The part a child argument holds; a leaf holds none. -/
+def childFlow : ArgF NativeOp FlowAt → Option (List Nat → Part)
   | .child _ r => some r
   | _ => none
 
-/-- **One generic layer of the flow**, by row 337's reading. A child's address counts the child
-arguments alone, as `Node.child` does, so a node's key is its line's key. A constructor that this
+/-- **A part's flow from its children's flows**, by row 337's reading. A constructor that this
 reading does not name is a node, followed by its children in series. -/
+def flowOf (fam : EffFam) (ctor : String) (key : Key) (leaf : Flow) (kids : List Flow) : Flow :=
+  match fam, ctor, kids with
+  | .eff, "bind", [a, k] => a.andThen k
+  | .eff, "gen", [s] | .eff, "suspend", [s] | .eff, "exit", [s] | .eff, "withFiber", [s] => s
+  | .eff, "onExit", [a, b] => a.andThen b
+  | .eff, "catchCause", [a, h] | .eff, "catchIf", [a, h] => a.andThen (.par .choice key [h, .seq []])
+  | .eff, "matchCause", [a, f, s] => a.andThen (.par .choice key [f, s])
+  | .eff, "select", [a, b] | .stmt, "ifElse", [a, b] => .par .choice key [a, b]
+  | .eff, "uninterruptible", [e] => .region "uninterruptible" key e
+  | .eff, "interruptible", [e] => .region "interruptible" key e
+  | .eff, "restore", [e] => .region "restore" key e
+  | .eff, "provideService", [e] => .region "provide" key e
+  | .eff, "defs", [_, body] => .region "definitions" key body
+  | .eff, "iterate", [body] | .stmt, "whileTrue", [body] => .loop key (leaf.andThen body)
+  | .stmt, "bindYield", [e] | .stmt, "yieldDiscard", [e] => e
+  | .stmts, "cons", [h, t] => h.andThen t
+  | .effs, "cons", [h, t] | .layers, "cons", [h, t] => .seq (h :: t.parts)
+  | .action, "fork", [e] | .action, "forkIn", [e] | .action, "forkScoped", [e] => .par .spawn key [e]
+  | .action, "raceAll", [es] => .par .race key es.parts
+  | .layer, "provide", [a, b] | .layer, "provideMerge", [a, b] => b.andThen a
+  | .layer, "merge", [a, b] => .par .fork key [a, b]
+  | .layer, "mergeAll", [ls] => .par .fork key ls.parts
+  | .layer, "effect", [e] | .layer, "effectDiscard", [e] | .layer, "fresh", [e] | .layer, "orDie", [e] => e
+  | _, _, [] => if fam = .stmts || fam = .effs || fam = .layers then .seq [] else leaf
+  | _, _, ks => leaf.andThen (.seq ks)
+
+/-- **One generic layer of the flow.** A child's address counts the child arguments alone, as
+`Node.child` does, so a node's key is its line's key. An `acquireRelease` is its acquire, and
+registers its release. A scope runs the releases registered inside it as it closes. A provided
+layer's own scope closes after the body it serves, and runs the layer's releases; the body's
+releases belong to the scope around it (`Effect.provide`, `internal/layer.ts:8-22` at the pin).
+Every other part passes its children's releases up, in order. -/
 def flowLayer (waitsOf : Key → List Key) (fam : EffFam) (ctor : String) (args : List (ArgF NativeOp FlowAt)) :
     FlowAt fam :=
   fun p =>
-    let kids := (args.filterMap childFlow).zipIdx.map fun (r, i) => r (p ++ [i])
+    let parts := (args.filterMap childFlow).zipIdx.map fun (r, i) => r (p ++ [i])
     let key := bracket p
     let leaf := Flow.node key (ownText ctor args) "" (waitsOf key)
-    match fam, ctor, kids with
-    | .eff, "bind", [a, k] => a.andThen k
-    | .eff, "gen", [s] | .eff, "suspend", [s] | .eff, "exit", [s] | .eff, "withFiber", [s] => s
-    | .eff, "onExit", [a, b] | .eff, "acquireRelease", [a, b] => a.andThen b
-    | .eff, "catchCause", [a, h] | .eff, "catchIf", [a, h] => a.andThen (.par .choice key [h, .seq []])
-    | .eff, "matchCause", [a, f, s] => a.andThen (.par .choice key [f, s])
-    | .eff, "select", [a, b] | .stmt, "ifElse", [a, b] => .par .choice key [a, b]
-    | .eff, "uninterruptible", [e] => .region "uninterruptible" key e
-    | .eff, "interruptible", [e] => .region "interruptible" key e
-    | .eff, "scoped", [e] => .region "scoped" key e
-    | .eff, "restore", [e] => .region "restore" key e
-    | .eff, "provideLayer", [l, e] => .region "provide" key (l.andThen e)
-    | .eff, "provideService", [e] => .region "provide" key e
-    | .eff, "defs", [_, body] => .region "definitions" key body
-    | .eff, "iterate", [body] | .stmt, "whileTrue", [body] => .loop key (leaf.andThen body)
-    | .stmt, "bindYield", [e] | .stmt, "yieldDiscard", [e] => e
-    | .stmts, "cons", [h, t] => h.andThen t
-    | .effs, "cons", [h, t] | .layers, "cons", [h, t] => .seq (h :: t.parts)
-    | .action, "fork", [e] | .action, "forkIn", [e] | .action, "forkScoped", [e] => .par .spawn key [e]
-    | .action, "raceAll", [es] => .par .fork key es.parts
-    | .layer, "provide", [a, b] | .layer, "provideMerge", [a, b] => b.andThen a
-    | .layer, "merge", [a, b] => .par .fork key [a, b]
-    | .layer, "mergeAll", [ls] => .par .fork key ls.parts
-    | .layer, "effect", [e] | .layer, "effectDiscard", [e] | .layer, "fresh", [e] | .layer, "orDie", [e] => e
-    | _, _, [] => if fam = .stmts || fam = .effs || fam = .layers then .seq [] else leaf
-    | _, _, ks => leaf.andThen (.seq ks)
+    match fam, ctor, parts with
+    | .eff, "acquireRelease", [a, r] => { flow := a.flow, releases := a.releases ++ r.flow :: r.releases }
+    | .eff, "scoped", [e] => { flow := .region "scoped" key (e.flow.closing e.releases) }
+    | .eff, "provideLayer", [l, e] =>
+      { flow := .region "provide" key ((l.flow.andThen e.flow).closing l.releases), releases := e.releases }
+    | _, _, _ => { flow := flowOf fam ctor key leaf (parts.map (·.flow)), releases := parts.flatMap (·.releases) }
 
-/-- **A program's flow**, the fold of its generic layer. -/
+/-- **A program's flow**, the fold of its generic layer. The releases no scope of the program
+holds run as the scope around the whole program closes, after it. -/
 def ofProgram (program : NativeEff) : Flow :=
   let ws := waits program
-  cata_eff (EffAlgebra.ofLayer (flowLayer fun k => (ws.lookup k).getD [])) program []
+  let part := cata_eff (EffAlgebra.ofLayer (flowLayer fun k => (ws.lookup k).getD [])) program []
+  part.flow.closing part.releases
 
 mutual
 /-- A flow with each node's two lines replaced where `label` gives them, by its key. -/
@@ -232,11 +313,14 @@ structure Frame where
 entry and below its exit; its items placed across; its edges, each with the room it needs beyond
 the gap and whether it is drawn (an edge that is not only holds a place); its frames; its loops'
 back edges; the exit of each fiber it forks; its waits, each an await's key and the key of the fork
-it waits for; and its marks, each a bar (`true`) or a diamond, by the keys it spans. -/
+it waits for; its marks, each a bar (`true`) or a diamond, by the keys it spans; and whether it may
+end. A part that cannot end (an empty race) reaches nothing after it, so no edge is drawn from its
+exit. -/
 structure Box where
   w : Int
   src : Key
   snk : Key
+  ends : Bool := true
   topPad : Int := 0
   botPad : Int := 0
   placed : List Placed := []
@@ -284,7 +368,7 @@ def nodeBox (k l1 l2 : String) (waits : List Key) : Box :=
 def Box.empty (b : Box) : Bool := b.placed.isEmpty
 
 /-- **Series**: the parts centred, each part's exit joined to the next part's entry, with the room
-their frames need between them. -/
+their frames need between them. The join is drawn when the part before it may end. -/
 def stack : List Box → Box
   | [] => { w := 0, src := "", snk := "" }
   | first :: rest =>
@@ -293,22 +377,36 @@ def stack : List Box → Box
     rest.foldl (fun s b =>
       let m := centred b
       let joined := s.with m
-      { joined with snk := m.snk, botPad := m.botPad, edges := joined.edges ++ [(s.snk, m.src, s.botPad + m.topPad, true)] })
+      { joined with snk := m.snk, botPad := m.botPad, ends := s.ends && m.ends,
+                    edges := joined.edges ++ [(s.snk, m.src, s.botPad + m.topPad, s.ends)] })
       { centred first with w := W }
 
 /-- The middle across of an item of a part. -/
 def Box.middleOf (b : Box) (k : Key) : Int := ((b.placed.find? (·.key == k)).map Laid.middle).getD 0
 
-/-- **Parallel**, in the notation of UML's activity diagrams. Branches that all run (`fork`) drop
-from a bar, each from its own port straight down to its entry, and meet at a bar: each branch's
+/-- **Parallel**, in the notation of UML's activity diagrams. Branches that all run (`fork`, `race`)
+drop from a bar, each from its own port straight down to its entry, and meet at a bar: each branch's
 exit drops straight to its port on that bar, and the ports stand at one height below every branch,
 so no exit crosses another branch. Branches of which one runs (`choice`) part at a diamond and meet
 at a diamond, from ports at one height. A fiber forked beside its parent (`spawn`) that the parent
 does not await joins nothing: the parent's line runs on past it. An empty branch is a point of its
-own. The exit of a fork's last branch is recorded, so a wait elsewhere can find the fiber. -/
+own. The exit of a fork's last branch is recorded, so a wait elsewhere can find the fiber.
+
+**Whether it ends.** A fork ends when every branch has ended, or when one fails; a race when one
+branch has ended; a choice when its branch has; a spawn when the parent's line has. So each may end
+when some branch may, except that an empty fork ends at once, and an empty race never ends
+(`raceAll` of no entrant; its live frontier is the machine's, not a completed merge). A branch's
+drop to the join is drawn when that branch may end, and the join's mark when the join is reached.
+With no branch, the fork's point and the join's point stand one gap apart, a part as wide as a
+point. -/
 def sideBySide (how : Branching) (k : Key) (bs : List Box) : Box :=
   let bs := bs.zipIdx.map fun (b, i) => if b.empty then point (k ++ "/" ++ toString i) else b
-  let W : Int := bs.foldl (fun m b => m + b.w) 0 + CELL * GAP * ((bs.length : Int) - 1)
+  let W : Int := if bs.isEmpty then CELL * GAP else
+    bs.foldl (fun m b => m + b.w) 0 + CELL * GAP * ((bs.length : Int) - 1)
+  let ends : Bool := match how with
+    | .fork => bs.isEmpty || bs.any (·.ends)
+    | .race | .choice => bs.any (·.ends)
+    | .spawn => (bs.head?.map (·.ends)).getD true
   let fk := k ++ "/fork"
   let jk := k ++ "/join"
   let mid := W / 2 - CELL
@@ -333,15 +431,17 @@ def sideBySide (how : Branching) (k : Key) (bs : List Box) : Box :=
     if how = .spawn then
       let ek := k ++ "/end"
       (ek, [pt ek ((laid.headD inner).middleOf (laid.headD inner).snk - CELL)],
-       laid.zipIdx.map (fun (b, i) => (b.snk, ek, b.botPad, i == 0)), [])
+       laid.zipIdx.map (fun (b, i) => (b.snk, ek, b.botPad, i == 0 && b.ends)), [])
     else
       let ps := ports "/join/"
       let aligned := ps.flatMap fun (pk, _) => laid.map fun b => (b.snk, pk, b.botPad, false)
-      let drops := ps.map fun (pk, b) => (b.snk, pk, b.botPad, true)
-      let toJoin := ps.map fun (pk, _) => if how = .choice then (pk, jk, 0, true) else (pk, jk, -VGAP, false)
-      (jk, pt jk mid :: ps.map (fun (pk, b) => pt pk (b.middleOf b.snk - CELL)), aligned ++ drops ++ toJoin,
-       if how = .choice then [(jk, false, [jk])] else [(jk, true, jk :: ps.map (·.1))])
-  { inner with snk := bottom.1, exits := inner.exits ++ exits,
+      let drops := ps.map fun (pk, b) => (b.snk, pk, b.botPad, b.ends)
+      let toJoin := ps.map fun (pk, b) => if how = .choice then (pk, jk, 0, b.ends) else (pk, jk, -VGAP, false)
+      let across := if ps.isEmpty then [(fk, jk, 0, ends)] else []
+      let mark := if !ends then [] else if how = .choice then [(jk, false, [jk])] else [(jk, true, jk :: ps.map (·.1))]
+      (jk, pt jk mid :: ps.map (fun (pk, b) => pt pk (b.middleOf b.snk - CELL)), aligned ++ drops ++ toJoin ++ across,
+       mark)
+  { inner with snk := bottom.1, exits := inner.exits ++ exits, ends,
                placed := top.1 ++ inner.placed ++ bottom.2.1,
                edges := top.2.1 ++ inner.edges ++ bottom.2.2.1,
                marks := top.2.2 ++ inner.marks ++ bottom.2.2.2 }

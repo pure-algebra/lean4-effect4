@@ -20,7 +20,7 @@ Run from the repository's root. `v` builds what is stale, writes the frames to
 tools/view/v pFork          # build a corpus program top-down, in a window
 tools/view/v -r pFork       # run it step by step: the program and its graph of fibers
 tools/view/v -g             # the graph specimen: a graph built one edge at a time
-tools/view/v -F             # the program graph's specimen: fork and join, waits, regions, loops
+tools/view/v -F             # the program graph's specimen: fork and join, waits, releases, regions, loops
 tools/view/v -t pFork       # the frames in this terminal
 tools/view/v -p pFork       # a PNG of every frame and every picture of motion
 tools/view/v -f FILE        # the frames of a session request file

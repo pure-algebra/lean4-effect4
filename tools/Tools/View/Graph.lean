@@ -514,6 +514,14 @@ def edgesDescend (l : Laid) : Bool :=
       | _, _ => false
     | _ => true
 
+/-- Every dimension of a layout is a size, and every place is inside the picture: the picture's
+width and height, each item's width and each region's width and height are at least zero, and each
+item stands at or right of the left edge and at or below the top. A finite check of a layout. -/
+def dimsValid (l : Laid) : Bool :=
+  decide (0 ≤ l.width) && decide (0 ≤ l.height) &&
+    l.placed.toList.all (fun p => decide (0 ≤ p.w) && decide (0 ≤ p.x) && decide (0 ≤ p.y)) &&
+    l.regions.toList.all fun r => decide (0 ≤ r.w) && decide (0 ≤ r.h)
+
 end Laid
 
 end Tools.View

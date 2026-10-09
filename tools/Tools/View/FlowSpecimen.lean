@@ -14,6 +14,9 @@ its flow, so each case of the layout is seen at work:
   from the fiber's exit to the await, in a lane at the right, and the await stands below the exit;
 - a fiber that awaits another fiber: a cross edge between two branches;
 - `awaitAll` over two fibers: one node with two waits;
+- an item of a tuple: the await waits for the one fiber that item names;
+- a release: it stands at its scope's close, after the work it protects;
+- an empty race: it never ends, so no line leaves it;
 - a race: branches that all start, joined;
 - a handler around a scope: a choice below a region;
 - a loop: its head, its body, and the return.
@@ -41,7 +44,16 @@ def programs : List (String × String × NativeEff) :=
       .bind (forkOf (work 1)) (.bind (forkOf (.awaitFiber (.var 0) .awaitValue)) (.awaitFiber (.var 1) .awaitValue))),
     ("await all", "one node waits for two fibers",
       .bind (forkOf (work 1)) (.bind (forkOf (work 2))
-        (.withFiber (.awaitAll (.app "list" (.cons (.var 0) (.cons (.var 1) .nil))))))),
+        (.withFiber (.awaitAll (.app "cons" (.cons (.var 0)
+          (.cons (.app "cons" (.cons (.var 1) (.cons (.app "nil" .nil) .nil))) .nil))))))),
+    ("an item of a tuple", "the await waits for the fiber the tuple's first item names, and no other",
+      .bind (forkOf (work 1)) (.bind (forkOf (work 2))
+        (.awaitFiber (.tupleAt (.app "tuple" (.cons (.var 0) (.cons (.var 1) .nil))) 0) .awaitValue))),
+    ("a release at its scope's close", "the release runs after the work it protects, as the scope closes",
+      .scoped (.bind (.acquireRelease (.succeed (.lit (.nat 1))) (.yieldNow 0))
+        (.bind (.yieldNow 1) (.succeed (.var 0))))),
+    ("an empty race", "it never ends, so no line leaves it: what follows is never reached",
+      .bind (.withFiber (.raceAll .nil)) (.succeed (.lit (.nat 0)))),
     ("a race", "every branch starts; the race ends when one does",
       .withFiber (.raceAll (.cons (work 1) (.cons (work 2) (.cons (.yieldNow 0) .nil))))),
     ("a handler around a scope", "a region, then a choice: the handler, or nothing",
