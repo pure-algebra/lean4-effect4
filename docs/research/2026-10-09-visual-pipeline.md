@@ -114,6 +114,43 @@ a window: Right or Space plays to the next frame, Left steps back. `v -t` prints
 console, `v -p` writes PNG files, `v -f FILE` reads any session request file, and `v -P` draws no
 mark.
 
+### The graph, the run and the motion (2026-10-09, later)
+
+| Part | Commit | What it holds |
+| --- | --- | --- |
+| vendoring | `8a36f200` | `vendor/termbox2-2.5.0/` in full; `vendor/SDL3-3.4.16/` by pin: the tarball's SHA-256, two signing keys, `fetch.sh` |
+| the graph | `d60bbc04` | `Graph.lean`: back edges by the order, ranks (`ranks_forward`), barycentre order, points for long edges, routes as paths; `Specimen.lean` (`v -g`) |
+| V2 | `d60bbc04` | `Run.lean`: a run's frames, the program with the step's fork sites lit, and the graph of fibers (`v -r NAME`) |
+| motion | `d60bbc04` | `Motion.lean`: the join by key, transitions, easings and the choreography as data; `sample` |
+
+**The motion's semantics**, after D3's join and transitions (the owner's steer):
+
+```mermaid
+flowchart LR
+  A[Frame before] --> J[Join by key]
+  B[Frame after] --> J
+  J --> E[enter: draw the edge, then expand the box; write the line]
+  J --> U[update: move to the new place]
+  J --> X[exit: shrink, retract, unwrite]
+  E --> S[sample at t: a page with fields in motion]
+  U --> S
+  X --> S
+  S --> D[one drawing: calls, device calls, C, SVG]
+```
+
+- The laws: `join_new` and `join_old` (every element is in a selection), `Ease.at_start` and
+  `Ease.at_end`, `Transition.within_at_end`, `ranks_forward`, `lowerCall_move`.
+- The finite check of the end: on every step of the corpus builds, a run and the specimen, the
+  moment at the end draws the same rows as the next frame (27 of 27).
+- Not yet a theorem: `sample g1 g2 1000 = g2` for a still `g2`. Its parts are the laws above.
+
+**Tracked, at the owner's word, for after this core:**
+
+- the graph view's next consumers: the proof graph, the lowering, and how the building blocks and
+  the proof graph imply behaviour, all in the visual language;
+- Effect schemas drawn beautifully, where the interop with Effect in TypeScript shows;
+- D3 as a representation layer in HTML, from the same scene data.
+
 ## 6. Vendoring C libraries
 
 **The fit test.** A library fits when:
@@ -153,7 +190,8 @@ reports.
 
 ## 7. What this note does not establish
 
-- No frame of a run is drawn yet (V2).
+- A run's frame shows where fibers were forked, not where each runs: the machine records no
+  program address for a running fiber.
 - The motion is the plainest the laws give: a line slides to its new row, and a new line enters at
   the end. Its speed, its easing and any other motion are the owner's to walk.
 - The marks are drawn for a ruling (the forms note's proposal A, 1); `--plain` removes them.

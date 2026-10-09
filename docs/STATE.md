@@ -92,7 +92,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   of its object (`tools/Tools/View/`). A move by whole pixels commutes with the lowering
   (`lowerCall_move`), so the motion between two frames is exact. The frames of a program built
   by edits replay any session request file through the session tool. `tools/view/v NAME` plays
-  them in a window; SVG and the console are two more outputs of the same calls.
+  them in a window; SVG and the console are two more outputs of the same calls. A graph of any
+  shape lays out by ranks (`ranks_forward`), with cycles as back edges; a run draws its fibers as
+  one (`v -r NAME`). Motion is a join by key with transitions: a moment of a step is a page, and
+  every step ends at exactly the next frame (a finite check).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
@@ -123,8 +126,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 1. **The visual pipeline** (row 336, point 10; the
-   [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0, V1 and V3 are landed; next
-   V2, the frames of a run, with a fiber's program address.
+   [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0 to V3 and the graph are
+   landed. Next: the end law as a theorem; the graph view's consumers (the proof graph, the
+   lowering); a fiber's program address; Effect schemas drawn; SDL3 once it builds.
 2. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
    address, search by type and by explanation, wrap, extract and inline, each shown as frames.
    Seat ORG's L9 (`rebaseRefs`, point 6) and its rank 5 (a program in the store) come first.
@@ -148,8 +152,10 @@ API's slices (row 326), and H8.
 - **The vendoring list** (row 336, point 5): the C libraries of the
   [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. Each is confirmed at
   its own repository before a download.
-- **Motion** (slice V3 of that note): the plainest motion is drawn, a line sliding to its new
-  row; its speed and any other motion are yours to walk.
+- **A build tool for SDL3** (row 336, point 5): SDL3 builds with CMake or Xcode, and this machine
+  has neither. Homebrew's CMake is the smallest step.
+- **The choreography's values** (the visual pipeline note, the motion): the defaults are drawn;
+  their timing and the overshoot are yours to tune.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
 
