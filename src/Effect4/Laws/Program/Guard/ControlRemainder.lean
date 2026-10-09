@@ -109,20 +109,13 @@ theorem registrationQueue_driveStep_link (p : NativeEff) (table : RowTable)
   simp only [driveStep, linkScope]
   repeat' first | exact registration.2 | exact ⟨True.intro, registration.2⟩ | split
 
-/-- A field update that keeps the old interruption witness. -/
+/-- A field update that keeps the old interruption witness: `Finish.interruptedAt_update`, with
+the fiber named. -/
 theorem interruptedAt_update_mark {m : NativeMachine} {f : NFiber}
     (lookup : m.fiber? f.id = some f) (g : NFiber) (id : g.id = f.id)
     (mark : Interrupted f → Interrupted g) (fiber : FiberId) (h : InterruptedAt m fiber) :
-    InterruptedAt (m.update g) fiber := by
-  obtain ⟨old, hold, interrupted⟩ := h
-  by_cases he : old.id = f.id
-  · have hlookup : m.fiber? f.id = some old := by
-      simpa only [← he, fiber_id_of_lookup hold] using hold
-    have same : old = f := Option.some.inj (hlookup.symm.trans lookup)
-    subst old
-    exact ⟨g, fiber_lookup_update_self hold g (id.trans (fiber_id_of_lookup hold)), mark interrupted⟩
-  · refine ⟨old, ?_, interrupted⟩
-    simp only [fiber_lookup_update, hold, Option.map_some, id, he, ↓reduceIte]
+    InterruptedAt (m.update g) fiber :=
+  Finish.interruptedAt_update lookup g id mark h
 
 theorem interruptedAt_driveStep_evaluate (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (target : FiberId) (rest : List NCmd) (fiber : FiberId)

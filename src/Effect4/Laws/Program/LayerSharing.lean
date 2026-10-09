@@ -60,11 +60,6 @@ theorem memoGet_memoize_hit (root : NativeEff) (s : Stores) (q : Point)
   rw [syncOpStep_memoGet_some s q.path map h]
   simp only [Option.map_some, memoize_hit]
 
-theorem fresh_forks_without_parent (l : LayerTerm NativeOp) (q : Point) (map : MemoMapId) (scope : Nat) :
-    compileLayer (.fresh l) q map scope =
-      Prim.onSuccess (Prim.sync (EffThunk.op (.memoFork none))) (EffName.freshThen (q.child 0) scope) :=
-  by aesop
-
 def Isolated (inside : List MemoMapId) (w : MemoWorld) : Prop :=
   ∀ m ∈ w, m.id ∈ inside → ∀ parent, m.parent = some parent → parent ∈ inside
 

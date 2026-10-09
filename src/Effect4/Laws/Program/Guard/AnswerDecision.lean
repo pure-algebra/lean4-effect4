@@ -7,13 +7,6 @@ namespace Effect4.Program.Guard.AnswerDecision
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Guard
 open Effect4.Program.Guard.RegistrationQueue
 
-theorem prepareExternalAnswer_sites (table : RowTable) (current : Option NCode)
-    (answer : Completion Val Err Defect FiberId Ann) (stores : Stores) :
-    raceSites (prepareExternalAnswer table current answer stores).2 = [] := by
-  unfold prepareExternalAnswer
-  dsimp only
-  repeat' first | exact raceSites_completion answer | rfl | split
-
 theorem prepareAsyncAnswer_shape (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (target : FiberId) (offered : Nat) (answer : Completion Val Err Defect FiberId Ann) :
     let result := prepareAsyncAnswer (interpOf p table) m target offered answer
@@ -24,7 +17,7 @@ theorem prepareAsyncAnswer_shape (p : NativeEff) (table : RowTable) (m : NativeM
   · exact ⟨rfl, rfl, raceSites_completion answer⟩
   · exact ⟨(prepareExternalAnswer_internal_state table _ answer m.state).1,
       (prepareExternalAnswer_internal_state table _ answer m.state).2,
-      prepareExternalAnswer_sites table _ answer m.state⟩
+      FrameOwned.prepareExternalAnswer_sites table _ answer m.state⟩
 
 theorem guardState_prepareAsyncAnswer (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (target : FiberId) (offered : Nat) (answer : Completion Val Err Defect FiberId Ann)

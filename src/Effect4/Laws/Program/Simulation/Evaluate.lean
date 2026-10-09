@@ -351,21 +351,13 @@ theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : L
     unfold RunMachine.modify
     split <;> rfl
 
-theorem bool_eq_false_of_not {b : Bool} (h : ¬ b = true) : b = false :=
-  by aesop
-
-theorem point_refresh {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
-    (cv : List (FiberId × ExitV)) : ({ p' with completed := cv } : Point) = { p with completed := cv } :=
-  by aesop
-
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
     (interpAt root cv table).iterNext (.gen p' [] false) Val.unit =
       (interpAt root cv table).iterNext (.gen p [] false) Val.unit := by
   show runStmts root { p' with completed := cv } p'.fuel [] (if false then _ else p'.env) [] =
     runStmts root { p with completed := cv } p.fuel [] (if false then _ else p.env) []
-  rw [point_refresh hp cv, hp.2.1, hp.2.2.1]
+  rw [point_congr hp cv, hp.2.1, hp.2.2.1]
 
 theorem listRel_of_zip {α β : Type} {R : α → β → Prop} :
     ∀ {l₁ : List α} {l₂ : List β}, l₁.length = l₂.length → (∀ x ∈ l₁.zip l₂, R x.1 x.2) →
@@ -951,7 +943,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, rfl, hf'.deferred, hbody.prepare _,
           StackMeans.slot (SlotMeans.mask true) (StackMeans.answer k hk hf'.stack), hi ▸ hf'.maskInv⟩,
           rfl, rfl, ListRel.nil⟩
-      · have hi' := bool_eq_false_of_not hi
+      · have hi' := Effect4.Store.bool_eq_false_of_not hi
         simp only [hi', Bool.false_eq_true, ↓reduceIte, Bool.false_and]
         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi', hf'.interruptedCause,
           hf'.deferred, hbody.prepare _, StackMeans.answer k hk hf'.stack, hi' ▸ hf'.maskInv⟩, rfl, rfl,
@@ -965,7 +957,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi, hf'.interruptedCause,
           hf'.deferred, hbody.prepare _, StackMeans.answer k hk hf'.stack, hi ▸ hf'.maskInv⟩, rfl, rfl,
           ListRel.nil⟩
-      · have hi' := bool_eq_false_of_not hi
+      · have hi' := Effect4.Store.bool_eq_false_of_not hi
         simp only [hi', Bool.false_eq_true, ↓reduceIte, Bool.not_false, Bool.and_true, Bool.true_and]
         by_cases hsome : g₂.frame.interruptedCause.isSome = true
         · obtain ⟨cause, hcause⟩ := Option.isSome_iff_exists.mp hsome
@@ -1004,7 +996,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, hf'.interruptedCause, hf'.deferred,
         CodeMeans.success _, StackMeans.slot (SlotMeans.mask true)
           (StackMeans.answer (seqR k) hk hf'.stack), hi ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
-    · have hi' := bool_eq_false_of_not hi
+    · have hi' := Effect4.Store.bool_eq_false_of_not hi
       simp only [hi', Bool.false_eq_true, ↓reduceIte]
       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi',
         hf'.interruptedCause, hf'.deferred, CodeMeans.success _,

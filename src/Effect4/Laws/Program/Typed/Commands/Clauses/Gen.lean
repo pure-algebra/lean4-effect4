@@ -528,13 +528,6 @@ theorem subN_join_both {a b E : Ty} (h : Ty.subN (a.join b) E = true) :
     Ty.subN a E = true ∧ Ty.subN b E = true :=
   ⟨Ty.subN_trans (Ty.subN_join_left a b) h, Ty.subN_trans (Ty.subN_join_right a b) h⟩
 
-/-- A failure's typing reads only the error column. -/
-theorem exitOk_failure_error {w : World} {mid ty : EffTy} {c : CauseV}
-    (herr : Ty.subN mid.error ty.error = true) (h : ExitOk w mid (.failure c)) :
-    ExitOk w ty (.failure c) :=
-  exitOk_widen (mid := ⟨ty.answer, mid.error, mid.requires⟩) (Ty.subN_refl _) herr
-    ⟨(fitsExit_failure_iff w _ c).mpr ((fitsExit_failure_iff w mid c).mp h.1), h.2⟩
-
 theorem unit_le_genAnswer (g : GenTy) (hc : g.completes = true) :
     Ty.subN .unit g.genAnswer = true := by
   unfold GenTy.genAnswer
@@ -602,7 +595,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
     intro ctx k env folded hpos
     rw [walkR]
     exact ⟨⟨.unit, .never, Env.Requirement.empty⟩, { p with env := env }, _, false, rfl, hpath,
-      pending_typed root w _ _ _, subN_never _, fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
+      pending_typed root w _ _ _, Bounds.subN_never _, fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
   | succ fuel ih =>
     intro ctx k env folded hpos
     obtain ⟨block, Γ, g, e0, locals, hblock, hsuffix, hcheck, henv, hsplit, hlocals, hanswer,
@@ -704,7 +697,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             exact ih ctx (k + 1) (env ++ [value]) _
               (next w (leHost_refl w) value ((fitsExit_success_iff w t value).mp hex.1))
           | failure c =>
-            exact exitOk_failure_error herr.1 hex
+            exact exitOk_failure_of_errorN herr.1 hex
       | yieldDiscard e =>
         rw [expandIn_yieldDiscard] at hcheck
         obtain ⟨t, r, hct, hcr, rfl⟩ := Checker.inv_stmts_yieldDiscard _ _ _ _ _ _ g hcheck
@@ -742,7 +735,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             rw [hpc]
             exact ih ctx (k + 1) env _ (next w (leHost_refl w))
           | failure c =>
-            exact exitOk_failure_error herr.1 hex
+            exact exitOk_failure_of_errorN herr.1 hex
       | ret v =>
         cases rest with
         | cons h t =>
@@ -884,7 +877,7 @@ theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorSt
   cases (walkR root.program { q with completed := C } q.fuel (ctx.block ++ List.replicate k 1)
       (if bind then q.env ++ [v] else q.env) []).2 with
   | done r => exact fun hr => strongExit_success w' tout r hr
-  | halt c => exact fun hc => exitOk_failure_error (Ty.subN_refl _) hc
+  | halt c => exact fun hc => exitOk_failure_of_errorN (Ty.subN_refl _) hc
   | resume code name' =>
     rintro ⟨ty, q', pc', bind', rfl, hq', typed, herr', next⟩
     refine ⟨⟨ty.answer, tout.error, tout.requires⟩, typedProg_widen root (T := ty) (Ty.subN_refl _) herr' typed,

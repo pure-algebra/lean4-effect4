@@ -341,16 +341,6 @@ theorem complete_cellAt (d : DeferredStore) (cell : DeferredKey) (effect : Compl
         · cases h
       · exact Or.inl ⟨c', h, rfl⟩
 
-theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)
-    (effect : Completion Val Err Defect FiberId Ann) :
-    (d.complete cell effect).1.cells.length = d.cells.length := by
-  unfold DeferredStore.complete
-  split
-  · rfl
-  · split
-    · rfl
-    · exact List.length_set
-
 /-! ## Moving the world along a completion -/
 
 /-- **The cell columns move along a completion**: a store step that completes one Deferred cell
@@ -364,7 +354,7 @@ theorem CellsTyped.complete {w : World} {op : SyncOp} {st' : Stores} {ans : Val}
     w.leHost { w with state := st' } ∧ CellsTyped { w with state := st' } :=
   cells.restate step (by rw [refs])
     (fun i v hv ty hty => cells.values i v (by rw [← refs]; exact hv) ty hty)
-    (by rw [deferreds, complete_cells_length])
+    (by rw [deferreds, Effect4.Machine.DeferredStore.complete_cells_length])
     (fun key c' hc completion hcomp => by
       rw [deferreds] at hc
       rcases complete_cellAt _ _ _ key c' hc with ⟨c, hc0, same⟩ | ⟨same, stored⟩
@@ -393,7 +383,7 @@ theorem complete_world {root : ProgramSource} {w : World} {op : SyncOp} {st' : S
     w.leHost { w with state := st' } ∧ StoreTyped root { w with state := st' } := by
   obtain ⟨ord, cells⟩ := store.toCellsTyped.complete step deferreds refs externals typed
   exact ⟨ord, store.step step rfl ord cells
-    (layerCells_of_cells_length step (by rw [deferreds, complete_cells_length]))⟩
+    (layerCells_of_cells_length step (by rw [deferreds, Effect4.Machine.DeferredStore.complete_cells_length]))⟩
 
 /-! ## The native store rows on the cell columns
 

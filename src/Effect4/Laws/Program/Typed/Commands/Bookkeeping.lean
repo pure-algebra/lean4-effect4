@@ -2832,14 +2832,6 @@ theorem exitOk_subN {w : World} {ty ty' : EffTy} {ex : ExitV} (h : ExitOk w ty e
     ExitOk w ty' ex :=
   ⟨fitsExit_subN ha he h.1, h.2⟩
 
-/-- The error-column half of a failed exit's membership: this seat's one reading of
-`fitsExit_failure_iff`. Seat D1's decisions row 152 adds `∧ ShapeFree c` to that lemma's right
-side; this proof then takes the first half (`((fitsExit_failure_iff w ty c).mp h).1`), and no
-caller changes. -/
-theorem failureFits_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsExit w ty (.failure c)) :
-    FitsCause w ty.error c :=
-  ((fitsExit_failure_iff w ty c).mp h).1
-
 /-- A failed exit's membership from its error-column half and part one's exclusion: this seat's
 one construction through `fitsExit_failure_iff`. Under row 152 the proof passes the exclusion
 too (`.mpr ⟨h, _shape⟩`, `NoShapeDefect`'s failure arm being `ShapeFree` by `Iff.rfl`), and no
@@ -2852,8 +2844,8 @@ theorem failureFits_of_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsCaus
 theorem exitOk_failure_append {w : World} {ty : EffTy} {a b : List (Reason Err Defect FiberId Ann)}
     (ha : ExitOk w ty (.failure ⟨a⟩)) (hb : ExitOk w ty (.failure ⟨b⟩)) :
     ExitOk w ty (.failure ⟨a ++ b⟩) := by
-  have fa := failureFits_cause ha.1
-  have fb := failureFits_cause hb.1
+  have fa := fitsExit_failure_cause ha.1
+  have fb := fitsExit_failure_cause hb.1
   have shape : NoShapeDefect ty (.failure ⟨a ++ b⟩) := fun r hr => by
     rcases List.mem_append.mp hr with hr | hr
     · exact ha.2 r hr

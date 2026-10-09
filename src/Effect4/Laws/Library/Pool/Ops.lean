@@ -392,13 +392,6 @@ theorem bool_nodes : NodesFormed .bool := nodesFormed_of_check (by decide)
 
 theorem unit_nodes : NodesFormed .unit := nodesFormed_of_check (by decide)
 
-theorem leaseReply_normal {A : Ty} (canonical : A.normalize = A) :
-    (leaseReplyTy A).normalize = leaseReplyTy A :=
-  Ty.normalize_prod_canonical rfl (Ty.normalize_option_canonical (itemTy_normal canonical)) rfl
-    rfl
-
-theorem returnReply_normal : returnReplyTy.normalize = returnReplyTy := by decide +kernel
-
 theorem selectReply_normal : selectReplyTy.normalize = selectReplyTy := by decide +kernel
 
 theorem closeReply_normal : closeReplyTy.normalize = closeReplyTy := by decide +kernel
@@ -408,7 +401,7 @@ theorem leaseReply_at {A : Ty} (canonical : A.normalize = A) :
     Tuple.typeAt (leaseReplyTy A) 0 = some .bool ∧
       Tuple.typeAt (leaseReplyTy A) 1 = some (.option (Pool.itemTy A)) := by
   unfold Tuple.typeAt
-  rw [leaseReply_normal canonical]
+  rw [Model.leaseReplyTy_normal canonical]
   exact ⟨rfl, rfl⟩
 
 /-- A return's reply by position: whether the lease returned, and whether a wake is owed. -/
@@ -454,7 +447,7 @@ theorem borrower_typed {A : Ty} (resource : ResourceTy A) {pool : TermSrc} {s : 
         ifElse (orT (tupleAt reply 0) (app "isSome" [tupleAt reply 1]))
           (done (tupleAt reply 1)) wait)
       (answers_refModifyWith_captured (cellTy_normal resource.canonical) (cell_nodes resource)
-        (leaseReply_normal resource.canonical) (leaseReply_nodes resource)
+        (Model.leaseReplyTy_normal resource.canonical) (leaseReply_nodes resource)
         (hpool.reach reach).here fun _ hcurrent path =>
           leaseStep_types _ rfl resource.canonical (TypedScope.depth _) (hid.push.captured path)
             (hhint.push.here path) (hcurrent path))
@@ -549,7 +542,7 @@ theorem giveBack_answers {A : Ty} (resource : ResourceTy A) {pool item : TermSrc
   unfold giveBack
   refine answers_bindWith
     (answers_refModifyWith (cellTy_normal resource.canonical) (cell_nodes resource)
-      returnReply_normal returnReply_nodes hpool.here fun _ hcurrent path =>
+      Model.returnReplyTy_normal returnReply_nodes hpool.here fun _ hcurrent path =>
         returnStep_types _ rfl resource.canonical (TypedScope.depth _)
           ((hitem.push.field (item_stampTy resource.canonical)).captured path)
           ((hitem.push.field (item_leaseTy resource.canonical)).captured path) (hcurrent path))

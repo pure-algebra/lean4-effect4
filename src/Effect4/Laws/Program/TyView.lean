@@ -275,15 +275,6 @@ theorem headCanon_of_args_nil {t : Ty} (h : t.args = []) : headCanon t = true :=
     rfl
   all_goals rfl
 
-/-- A field's type is smaller than its `record`'s field list. -/
-theorem sizeOf_field_lt_record {p : String × Bool × Ty} {fs : List (String × Bool × Ty)} (h : p ∈ fs) :
-    sizeOf p.2.2 < sizeOf fs := by
-  have hp : sizeOf p < sizeOf fs := List.sizeOf_lt_of_mem h
-  obtain ⟨n, t, b⟩ := p
-  simp only [Prod.mk.sizeOf_spec] at hp
-  simp only
-  omega
-
 /-- Two field lists with the same payloads and the same children are equal. -/
 theorem eq_of_fields_record :
     ∀ {l l' : List (String × Bool × Ty)}, l.map (fun p => (p.1, p.2.1)) = l'.map (fun p => (p.1, p.2.1)) →
@@ -665,7 +656,7 @@ theorem sizeOf_args {t : Ty} {v : Variance} {x : Ty} (h : (v, x) ∈ t.args) :
   case record fs =>
     simp only [args, List.mem_map, Prod.mk.injEq] at h
     obtain ⟨p, hp, _, hpx⟩ := h
-    have hlt := sizeOf_field_lt_record (mem_canon hp)
+    have hlt := sizeOf_field_lt (mem_canon hp)
     rw [hpx] at hlt
     simp only [Ty.record.sizeOf_spec]
     omega

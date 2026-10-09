@@ -258,7 +258,7 @@ theorem Evaluating.forkAll {rootTy : EffTy} (interp : RInterp) (host : RFiber) :
     rw [unfolded, hspawn, hid, hctx]
     refine ⟨w2, leHost_trans _ _ _ ord ord2, ev2, fun id hmem => ?_⟩
     rcases List.mem_cons.mp hmem with rfl | hmem
-    · exact ⟨_, ord2.1.2.1 _ _ addFiber_Γ_self, subN_unknown _, subN_never _⟩
+    · exact ⟨_, ord2.1.2.1 _ _ addFiber_Γ_self, subN_unknown _, Bounds.subN_never _⟩
     · exact cols id hmem
 
 end Parallel
@@ -353,7 +353,7 @@ theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order
     · intro o ho
       change some f.id = some o at ho
       cases ho
-      rw [commandOwner_rupdate]
+      rw [commandOwner_update]
       exact owner_free ev'.typed.queue rfl
   rw [List.append_assoc]
   exact configTyped_evaluates after _ fun c hc => by

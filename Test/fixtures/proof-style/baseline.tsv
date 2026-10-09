@@ -562,7 +562,6 @@ src/Effect4/Laws/Program/DenoteR.lean	inlineYield_eq_headExit	first	1
 src/Effect4/Laws/Program/DenoteR.lean	inlineYield_perform_sync	simp_all	1
 src/Effect4/Laws/Program/ErrorQueries.lean	queryError_typed	simp-without-only	2
 src/Effect4/Laws/Program/Guard/AnswerDecision.lean	guardQueue_drainDue	simp-without-only	2
-src/Effect4/Laws/Program/Guard/AnswerDecision.lean	prepareExternalAnswer_sites	first	1
 src/Effect4/Laws/Program/Guard/AnswerDecision.lean	registrationQueue_resume_result	first	1
 src/Effect4/Laws/Program/Guard/Continuation.lean	raceSites_afterInterrupt	try	1
 src/Effect4/Laws/Program/Guard/Continuation.lean	requestOf_update_unparked_eq	simp-without-only	1

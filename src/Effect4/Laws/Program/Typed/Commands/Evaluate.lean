@@ -290,10 +290,6 @@ theorem fiberTyped_frame {root : ProgramSource} {w : World} {m : RState} {f : RF
       observersBelow := moved.observersBelow
       children := moved.children }
 
-/-- A command's owner does not read the fibers: editing one keeps every owner. -/
-theorem commandOwner_rupdate (m : RState) (g : RFiber) :
-    Guard.commandOwner (Code := RProgram) (m.update g) = Guard.commandOwner m := rfl
-
 /-- **The fiber edit of a frame step**: from a typed configuration headed by the `loop` or
 `deliver` that owns the running fiber `f`, a new frame for `f` that keeps `f` typed gives the
 configuration with the frame installed and the head dropped. No other command owns `f`
@@ -369,7 +365,7 @@ theorem configTyped_frame_step {root : ProgramSource} {rootTy : EffTy} {w : Worl
   have edited : ConfigTyped root rootTy w (m.update g) rest :=
     configTyped_frame_edit typed owner hf running fr fresh
   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
-    rw [commandOwner_rupdate]
+    rw [commandOwner_update]
     exact owner_free typed.queue owner
   have codeG : raceRegistrationR g.frame.current = none → ∀ ty, w.Γ g.id = some ty →
       CodeOk root w (m.update g) g.id ty g.frame :=
@@ -1190,14 +1186,14 @@ theorem injected_frame_code {root : ProgramSource} {rootTy : EffTy} {w : World} 
     · intro later _ ex admitted arm
       cases ex with
       | success v => cases arm
-      | failure c => exact exitOk_failure_of_errorN (subN_never mid.error) admitted
+      | failure c => exact exitOk_failure_of_errorN (Bounds.subN_never mid.error) admitted
   | some raceId =>
     obtain ⟨race, resultTy, found, hosted, token, final0, declared0, stack, _⟩ :=
       old.registration raceId marker
     have same : final0 = final := Option.some.inj (declared0.symm.trans declared)
     subst same
     exact .cons (.inr (.mk (fun _ => marker)
-      (fun _ _ _ admitted => exitOk_failure_of_errorN (subN_never resultTy.error) admitted)
+      (fun _ _ _ admitted => exitOk_failure_of_errorN (Bounds.subN_never resultTy.error) admitted)
       found hosted token)) stack
 
 /-- The same owned, running fiber can be continued by deliver instead of loop. -/
@@ -1387,7 +1383,7 @@ theorem configTyped_frame_marker {root : ProgramSource} {rootTy : EffTy} {w : Wo
         exact ⟨race, resultTy, ty, found, host, token, declared, stack⟩)
   have edited := configTyped_frame_edit typed owner hf running fr fresh
   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
-    rw [commandOwner_rupdate]
+    rw [commandOwner_update]
     exact owner_free typed.queue owner
   refine configTyped_cons_loop edited look running notParked freeG y (fun hnone => ?_)
   change raceRegistrationR fr.current = none at hnone
@@ -1428,7 +1424,7 @@ theorem configTyped_frame_finish {root : ProgramSource} {rootTy : EffTy} {w : Wo
     exact empty
   · intro o ho
     cases ho
-    rw [commandOwner_rupdate]
+    rw [commandOwner_update]
     exact owner_free typed.queue owner
 
 /-- **A running fiber's context moves** to one whose services fit (`setContext`'s pre, decisions row
@@ -1689,7 +1685,7 @@ theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : 
         simp only [prepareIterR, prepareScopedExitR, answerR, hcur, prepareR, hprog]
         rfl
       rw [glue]
-      exact settles _ (finalizerBind_typed root hexOk (subN_never _) (installs c rfl) next)
+      exact settles _ (finalizerBind_typed root hexOk (Bounds.subN_never _) (installs c rfl) next)
   intro code typedCode
   have fresh : ∀ ty', ({ w with state := s } : World).Γ g.id = some ty' →
       CodeOk root { w with state := s } (({ m with state := s } : RState).update g) g.id ty'
@@ -1996,7 +1992,7 @@ theorem Evaluating.unitAnswerFrame {root : ProgramSource} {w : World} {tin : Eff
     exact typedNext w' o v unit
   | failure c =>
     show TypedProg root w' tin (.pure (.failure c))
-    exact TypedProg.pure (exitOk_failure_of_errorN (subN_never _) hex)
+    exact TypedProg.pure (exitOk_failure_of_errorN (Bounds.subN_never _) hex)
 
 /-- **`interruptScoped`** (`:5368`, D6b): on the fiber itself, `unit` answered; on another fiber, the
 public interrupt program installed over the saved answer frame, typed at `unit`
@@ -2126,7 +2122,7 @@ theorem clause_interruptAs (root : ProgramSource) (rootTy : EffTy) (target who :
           (racesKept_of_eq fun _ => rfl) stack), ⟨prov.recorded, prov.deferred⟩⟩
     · intro o ho
       cases ho
-      rw [commandOwner_rupdate]
+      rw [commandOwner_update]
       exact owner_free ev.typed.queue rfl
   -- the target is a fiber of the machine
   have targetMem : target ∈ (m.update f).fibers.map RunFiber.id := (wide.fibers target).mp pre
@@ -2267,7 +2263,7 @@ theorem clause_cancelRace (root : ProgramSource) (rootTy : EffTy) (raceId : Nat)
       exact payload.live id (by simpa only [List.nil_append] using hid)
     · intro o ho
       cases ho
-      rw [commandOwner_rupdate]
+      rw [commandOwner_update]
       exact owner_free ev.typed.queue rfl
 
 end Effect4.Program.Typed

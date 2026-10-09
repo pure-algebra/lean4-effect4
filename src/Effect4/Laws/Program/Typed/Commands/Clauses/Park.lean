@@ -538,7 +538,7 @@ theorem clause_yieldNow (root : ProgramSource) (rootTy : EffTy) (priority : Nat)
         · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim
         · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim) fresh
     have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (M1.update g)) := by
-      rw [commandOwner_rupdate]
+      rw [commandOwner_update]
       exact free1
     have looped := configTyped_cons_loop edited lookG ev.running rfl freeG y (fun _ => codeG)
     have final := configTyped_emit (configTyped_congr (m := M1.update g)
@@ -1328,7 +1328,7 @@ theorem Evaluating.unpark_fresh {root : ProgramSource} {rootTy : EffTy} {w : Wor
       · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim
       · exact (free1 (List.mem_filterMap.mpr ⟨_, r, rfl⟩)).elim) fresh
   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (M1.update g)) := by
-    rw [commandOwner_rupdate]
+    rw [commandOwner_update]
     exact free1
   exact ⟨ord, configTyped_cons_loop_read edited lookG ev.running rfl freeG y' (fun _ ty' d' =>
     Or.inr ⟨frdef, fun y'' hy => by

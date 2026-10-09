@@ -635,16 +635,6 @@ theorem itemsFit_map {β : Type} (P Q : β → Val → Prop) :
     ⟨hpt t List.mem_cons_self x h.1,
       itemsFit_map P Q l xs (fun u hu => hpt u (List.mem_cons_of_mem _ hu)) h.2⟩
 
-/-- A list zipped with itself pairs each element with itself. -/
-theorem mem_zip_self {α : Type} : ∀ {l : List α} {a b : α}, (a, b) ∈ l.zip l → a = b
-  | [], _, _, h => absurd h List.not_mem_nil
-  | x :: xs, a, b, h => by
-    rw [List.zip_cons_cons, List.mem_cons] at h
-    rcases h with h | h
-    · simp only [Prod.mk.injEq] at h
-      rw [h.1, h.2]
-    · exact mem_zip_self h
-
 /-- **Fits implies the shape check** at the world's own allocation table, at every type. -/
 theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
     Val.hasTy v ty w.state.externals.allocated = true := by
@@ -782,7 +772,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
     · intro pc hpc x hx
       rw [List.zip_map, List.mem_map] at hpc
       obtain ⟨⟨q1, q2⟩, hq, rfl⟩ := hpc
-      have heq : q1 = q2 := mem_zip_self hq
+      have heq : q1 = q2 := Ty.mem_zip_self hq
       subst heq
       exact ih q1 (Ty.mem_canon (List.of_mem_zip hq).1) x hx
   | map k t ihk iht =>
@@ -810,7 +800,7 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
       intro pc hpc x hx
       rw [List.zip_map, List.mem_map] at hpc
       obtain ⟨⟨t1, t2⟩, ht, rfl⟩ := hpc
-      have heq : t1 = t2 := mem_zip_self ht
+      have heq : t1 = t2 := Ty.mem_zip_self ht
       subst heq
       exact ih t1 (List.of_mem_zip ht).1 x hx
     all_goals exact h.elim
@@ -1461,7 +1451,7 @@ theorem fits_map {w1 w2 : World}
     · intro pq hpq
       rw [List.zip_map, List.mem_map] at hpq
       obtain ⟨⟨q1, q2⟩, hq, rfl⟩ := hpq
-      have heq : q1 = q2 := mem_zip_self hq
+      have heq : q1 = q2 := Ty.mem_zip_self hq
       subst heq
       exact ⟨id, fun x hx => ih q1 (Ty.mem_canon (List.of_mem_zip hq).1) x hx⟩
   | map k t ihk iht =>
@@ -1484,7 +1474,7 @@ theorem fits_map {w1 w2 : World}
       intro pq hpq x hx
       rw [List.zip_map, List.mem_map] at hpq
       obtain ⟨⟨t1, t2⟩, ht, rfl⟩ := hpq
-      have heq : t1 = t2 := mem_zip_self ht
+      have heq : t1 = t2 := Ty.mem_zip_self ht
       subst heq
       exact ih t1 (List.of_mem_zip ht).1 x hx
     all_goals exact h.elim

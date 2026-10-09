@@ -581,7 +581,6 @@ theorem atAddress_getElem_child (path : List Nat) (args : List (ArgF Op TCarrier
 end Effect4.Codegen.Templates
 
 
-
 /-!
 Proposed helper of typed-print erasure: exact-codecs, R8.
 A matched capture must identify an actual source argument.
@@ -1013,7 +1012,6 @@ theorem eraseCause_printCause_identity (n : Nat) (c : CauseTerm) :
 end Effect4.Codegen.EraseTermTypes
 
 
-
 namespace Effect4.Codegen.Templates
 
 open Effect4.Program Effect4.Codegen.Template
@@ -1105,8 +1103,6 @@ theorem eraseCaptureValue_at (row : Templates.Row) (sorts : List ArgSort) (n : N
   simp only [List.contains_eq_mem, hole, decide_true, ↓reduceIte, capture]
 
 end Effect4.Codegen
-
-
 
 
 namespace Effect4.Codegen
@@ -1399,136 +1395,6 @@ theorem eraseRowChildren_printPerformAt (sig : Signature Op) (n : Nat) (op : Op)
 end Effect4.Codegen
 
 
-
- namespace Effect4.Codegen.Template
-
-open TypeScript
-
-theorem instAnn_congr (σ τ : Subst) : ∀ (ann : Option Nat),
-    (∀ i ∈ holesAnn ann, lookup σ i = lookup τ i) → instAnn σ ann = instAnn τ ann
-  | none, _ => rfl
-  | some i, agree => by
-    have hi := agree i (List.mem_singleton_self i)
-    simp only [instAnn, hi]
-
-mutual
-  theorem inst_congr (n : Nat) (σ τ : Subst) : ∀ (t : Tpl),
-      (∀ i ∈ holes t, lookup σ i = lookup τ i) → inst n σ t = inst n τ t
-    | .hole i, agree => by
-      have hi := agree i (List.mem_singleton_self i)
-      simp only [inst, hi]
-    | .strHole i, agree => by
-      have hi := agree i (List.mem_singleton_self i)
-      simp only [inst, hi]
-    | .intHole i, agree => by
-      have hi := agree i (List.mem_singleton_self i)
-      simp only [inst, hi]
-    | .arrHole i, agree => by
-      have hi := agree i (List.mem_singleton_self i)
-      simp only [inst, hi]
-    | .binderRef _, _ => rfl
-    | .ident _, _ => rfl
-    | .str _, _ => rfl
-    | .int _, _ => rfl
-    | .bool _, _ => rfl
-    | .call head args, agree => by
-      have hh := inst_congr n σ τ head (fun i hi => agree i (List.mem_append_left _ hi))
-      have ha := insts_congr n σ τ args (fun i hi => agree i (List.mem_append_right _ hi))
-      simp only [inst, hh, ha]
-    | .callSpread head i, agree => by
-      have hh := inst_congr n σ τ head (fun j hj => agree j (List.mem_append_left _ hj))
-      have hi := agree i (List.mem_append_right _ (List.mem_singleton_self i))
-      simp only [inst, hh, hi]
-    | .arr items, agree => by
-      have hi := insts_congr n σ τ items agree
-      simp only [inst, hi]
-    | .object fields, agree => by
-      have hf := instFields_congr n σ τ fields agree
-      simp only [inst, hf]
-    | .arrow body, agree => by
-      have hb := inst_congr n σ τ body agree
-      simp only [inst, hb]
-    | .lambda binders body, agree => by
-      have hb := inst_congr n σ τ body agree
-      simp only [inst, hb]
-    | .cond test yes no, agree => by
-      have ht := inst_congr n σ τ test (fun i hi => agree i (List.mem_append_left _ hi))
-      have hy := inst_congr n σ τ yes (fun i hi =>
-        agree i (List.mem_append_right _ (List.mem_append_left _ hi)))
-      have hn := inst_congr n σ τ no (fun i hi =>
-        agree i (List.mem_append_right _ (List.mem_append_right _ hi)))
-      simp only [inst, ht, hy, hn]
-    | .method target name args, agree => by
-      have ht := inst_congr n σ τ target (fun i hi => agree i (List.mem_append_left _ hi))
-      have ha := insts_congr n σ τ args (fun i hi => agree i (List.mem_append_right _ hi))
-      simp only [inst, ht, ha]
-    | .arrowBlock binders body, agree => by
-      have hb := instStmts_congr n σ τ body agree
-      simp only [inst, hb]
-    | .generator body, agree => by
-      have hb := instStmts_congr n σ τ body agree
-      simp only [inst, hb]
-  theorem insts_congr (n : Nat) (σ τ : Subst) : ∀ (ts : Tpls),
-      (∀ i ∈ holesTs ts, lookup σ i = lookup τ i) → insts n σ ts = insts n τ ts
-    | .nil, _ => rfl
-    | .cons head tail, agree => by
-      have hh := inst_congr n σ τ head (fun i hi => agree i (List.mem_append_left _ hi))
-      have ht := insts_congr n σ τ tail (fun i hi => agree i (List.mem_append_right _ hi))
-      simp only [insts, hh, ht]
-  theorem instFields_congr (n : Nat) (σ τ : Subst) : ∀ (fs : Fields),
-      (∀ i ∈ holesFields fs, lookup σ i = lookup τ i) →
-      instFields n σ fs = instFields n τ fs
-    | .nil, _ => rfl
-    | .cons key value tail, agree => by
-      have hv := inst_congr n σ τ value (fun i hi => agree i (List.mem_append_left _ hi))
-      have ht := instFields_congr n σ τ tail (fun i hi => agree i (List.mem_append_right _ hi))
-      simp only [instFields, hv, ht]
-  theorem instStmt_congr (n : Nat) (σ τ : Subst) : ∀ (t : StmtTpl),
-      (∀ i ∈ holesStmt t, lookup σ i = lookup τ i) → instStmt n σ t = instStmt n τ t
-    | .letInit k value ann, agree => by
-      have hv := inst_congr n σ τ value (fun i hi => agree i (List.mem_append_left _ hi))
-      have ha := instAnn_congr σ τ ann (fun i hi => agree i (List.mem_append_right _ hi))
-      simp only [instStmt, hv, ha]
-    | .assign k value, agree => by
-      have hv := inst_congr n σ τ value agree
-      simp only [instStmt, hv]
-    | .ret value, agree => by
-      have hv := inst_congr n σ τ value agree
-      simp only [instStmt, hv]
-    | .exprStmt value, agree => by
-      have hv := inst_congr n σ τ value agree
-      simp only [instStmt, hv]
-    | .constYield k value, agree => by
-      have hv := inst_congr n σ τ value agree
-      simp only [instStmt, hv]
-    | .yieldDiscard value, agree => by
-      have hv := inst_congr n σ τ value agree
-      simp only [instStmt, hv]
-    | .ifElse test yes no, agree => by
-      have ht := inst_congr n σ τ test (fun i hi => agree i (List.mem_append_left _ hi))
-      have hy := instStmts_congr n σ τ yes (fun i hi =>
-        agree i (List.mem_append_right _ (List.mem_append_left _ hi)))
-      have hn := instStmts_congr n σ τ no (fun i hi =>
-        agree i (List.mem_append_right _ (List.mem_append_right _ hi)))
-      simp only [instStmt, ht, hy, hn]
-    | .whileTrue body, agree => by
-      have hb := instStmts_congr n σ τ body agree
-      simp only [instStmt, hb]
-    | .breakTo, _ => rfl
-  theorem instStmts_congr (n : Nat) (σ τ : Subst) : ∀ (ts : StmtTpls),
-      (∀ i ∈ holesStmts ts, lookup σ i = lookup τ i) → instStmts n σ ts = instStmts n τ ts
-    | .nil, _ => rfl
-    | .cons head tail, agree => by
-      have hh := instStmt_congr n σ τ head (fun i hi => agree i (List.mem_append_left _ hi))
-      have ht := instStmts_congr n σ τ tail (fun i hi => agree i (List.mem_append_right _ hi))
-      simp only [instStmts, hh, ht]
-    | .hole i, agree => by
-      have hi := agree i (List.mem_singleton_self i)
-      simp only [instStmts, hi]
-end
-
-end Effect4.Codegen.Template
-
 namespace Effect4.Codegen.Template
 
 /-- Mapping an attached substitution keeps its first matching key.
@@ -1613,7 +1479,7 @@ theorem eraseExprRow_rigid_inst (classes : Classes.Classes) (sig : Signature Op)
       eraseExprRow classes sig spell fam n x row child children block same = some plain := by
   dsimp only
   intro agree
-  have hinst := Template.inst_congr n _ τ t agree
+  have hinst := Effect4.Program.inst_congr n _ τ t agree
   unfold eraseExprRow
   simp only [hfam, hout, ↓reduceIte, hsorts, hrigid, ↓reduceDIte]
   split
@@ -1644,7 +1510,7 @@ theorem eraseStmtRow_inst (n : Nat) (s : TypeScript.Stmt) (row : Templates.Row)
       eraseStmtRow n s row child children block = some (plain, t.declares) := by
   dsimp only
   intro agree
-  have hinst := Template.instStmt_congr n _ τ t agree
+  have hinst := Effect4.Program.instStmt_congr n _ τ t agree
   unfold eraseStmtRow
   simp only [hfam, hout, ↓reduceIte, hsorts]
   split
@@ -1713,11 +1579,6 @@ theorem splitHeadTypes_bare_none {x bare : Expr} {targets : List TypeRef}
   unfold splitHeadTypes at h
   split at h <;> cases h <;> rfl
 
-theorem splitHeadTypes_targets_nonempty {x bare : Expr} {targets : List TypeRef}
-    (h : splitHeadTypes x = some (bare, targets)) : targets ≠ [] := by
-  unfold splitHeadTypes at h
-  split at h <;> cases h <;> exact List.cons_ne_nil _ _
-
 /-- Reading a bare call as an operation that carries no arguments excludes a typed head.
 The row inverse consumes this refusal; the original reader remains unchanged. -/
 theorem readCall_zero_excludes_head {n : Nat} {x bare : Expr} {targets : List TypeRef}
@@ -1726,7 +1587,7 @@ theorem readCall_zero_excludes_head {n : Nat} {x bare : Expr} {targets : List Ty
     (hnil : sig.typeArgsOf op = []) :
     ∃ why, readCall classes sig spell n x = .error why := by
   have hnone := splitHeadTypes_bare_none hsplit
-  have hne := splitHeadTypes_targets_nonempty hsplit
+  have hne := Effect4.Program.splitHeadTypes_ne_nil hsplit
   simp only [readCall, hnone] at hbare
   obtain ⟨face, hface, hfree⟩ := bind_eq_ok.mp hbare
   unfold typeFree at hfree
@@ -1920,7 +1781,6 @@ theorem eraseT_of_row {row : Templates.Row}
 end Effect4.Codegen
 
 
-
 namespace Effect4.Codegen
 
 open TypeScript Effect4.Program Template Templates
@@ -1950,7 +1810,6 @@ theorem typedPrintsTo_of_printArg {sig : Signature Op} {ann : List Nat → Optio
     aesop (add norm simp [TypedPrintsTo, cataFam, printArg, bind, Except.bind, pure, Except.pure])
 
 end Effect4.Codegen
-
 
 
 namespace Effect4.Codegen.Templates
@@ -2013,7 +1872,6 @@ theorem atAddress_fold_leaf (sig : Signature Op) (ann : List Nat → Option (Lis
   | path value => rfl
 
 end Effect4.Codegen.Templates
-
 
 
 namespace Effect4.Codegen
@@ -2244,7 +2102,6 @@ theorem eraseT_action_none_of_printPerformAt (hl : LawfulSpelling sig spell) {n 
 end Effect4.Codegen.TypedRowShapeSupport
 
 
-
 namespace Effect4.Codegen
 
 open TypeScript Effect4.Program Template Templates
@@ -2340,7 +2197,6 @@ theorem source_printArgs_transport (classes : Classes.Classes) (sig : Signature 
 end Effect4.Codegen
 
 
-
 namespace Effect4.Codegen
 
 open TypeScript Effect4.Program Template Templates
@@ -2399,7 +2255,6 @@ theorem source_child_hole_stmt {row : Templates.Row} (inTable : row ∈ Template
     (supplied_child_isSome_false selected i childFam source member)
 
 end Effect4.Codegen
-
 
 
 namespace Effect4.Codegen
@@ -4879,7 +4734,6 @@ theorem site_child_at_hole (alg : EffAlgebra Op TCarrier) (ctx : PrintEliminator
 end Effect4.Codegen
 
 
-
 namespace Effect4.Codegen.PrintEliminators
 open Effect4.Program
 variable {Op : Type}
@@ -5243,7 +5097,6 @@ theorem childEnv_template_depth
 end Effect4.Codegen.PrintEliminators
 
 
-
 set_option autoImplicit false
 namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
@@ -5378,7 +5231,6 @@ theorem site_template_inv {sig : Signature Op} {ann : List Nat → Option (List 
   exact ⟨ctx, τ, y, found, arguments, instantiated', decorated⟩
 
 end Effect4.Codegen
-
 
 
 /-!
@@ -5583,7 +5435,6 @@ theorem eraseSiteStmt_print
       (fun i hi => erasedAgree i (by rwa [hout]))
 
 end Effect4.Codegen
-
 
 
 /-!

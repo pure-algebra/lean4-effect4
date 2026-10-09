@@ -84,7 +84,7 @@ theorem clause_interruptAll (root : ProgramSource) (rootTy : EffTy) (targets : L
   have after : ConfigTyped root rootTy w (m.update g)
       (.afterInterrupt f.id y (.awaitAll targets) :: rest) := by
     refine configTyped_cons_afterAwaitAll edited y targets ⟨g, lookG, ev.running, notParked⟩
-      (by rw [commandOwner_rupdate]; exact owner_free ev.typed.queue rfl) fun x hx => ?_
+      (by rw [commandOwner_update]; exact owner_free ev.typed.queue rfl) fun x hx => ?_
     rw [lookG] at hx
     cases hx
     refine ⟨.unknown, .unknown, fun t ht => ?_, ty, declared,

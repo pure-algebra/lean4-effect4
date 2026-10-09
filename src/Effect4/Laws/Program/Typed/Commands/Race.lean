@@ -338,36 +338,6 @@ theorem configTyped_cons_loop {root : ProgramSource} {rootTy : EffTy} {w : World
     cases owner
     exact free
 
-/-- **Sequencing at one error column**: a program's failures pass to the outer type unchanged
-when its error column is the outer one (the answer column is never read by a failure); the
-continuation types the successes. -/
-theorem seq_typed_sameError (root : ProgramSource) {w : World} {mid ty : EffTy} {a : RProgram}
-    {k : Val → RProgram} (ha : TypedProg root w mid a)
-    (hk : ∀ w', w.leHost w' → ∀ v, Fits w' v mid.answer → TypedProg root w' ty (k v))
-    (errors : mid.error = ty.error) :
-    TypedProg root w ty ((guardR .onSuccess a).bind (seqR k)) := by
-  show TypedProg root w ty (.vis (.inr (.guard_ .onSuccess)) _)
-  refine TypedProg.guard mid ?_ ?_ ?_
-  · show TypedProg root w mid
-      ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind (seqR k))
-    rw [Effects.Program.bind_assoc]
-    exact close_typed root ha (seqR k)
-  · intro w' o ex hpost
-    obtain ⟨harm, hfit⟩ := hpost
-    cases ex with
-    | success v =>
-      have hf := hfit.1
-      rw [fitsExit_success_iff] at hf
-      exact hk w' o v hf
-    | failure c => exact Bool.noConfusion harm
-  · intro w' _ ex hfit hmiss
-    cases ex with
-    | success v => exact Bool.noConfusion hmiss
-    | failure c =>
-      have cause := failureFits_cause hfit.1
-      rw [errors] at cause
-      exact ⟨failureFits_of_cause cause hfit.2, hfit.2⟩
-
 /-! ## `afterInterrupt` (no halting arm) -/
 
 /-- The await an interrupt returns (`asVoidCode (awaitCode kind)`, `Machine/Fibers.lean:1730-1742`)
@@ -406,7 +376,7 @@ theorem afterInterruptCode_typed (root : ProgramSource) {rootTy : EffTy} {w : Wo
     cases mode with
     | joinEffect =>
       obtain ⟨sourceTy, declared, rfl⟩ := reply
-      refine seq_typed_sameError root (mid := sourceTy) ?_
+      refine seq_typed root (mid := sourceTy) ?_
         (fun _ _ _ _ => TypedProg.pure ⟨trivial, trivial⟩) rfl
       simp only [awaitCode]
       split
@@ -658,19 +628,6 @@ theorem subN_declaredUnion {w : World} {col : EffTy → Ty} {targets : List Fibe
     have tail := ih fun t ht fty d => below t (List.mem_cons_of_mem _ ht) fty d
     exact Ty.OrderProof.sub_normalize_union_le Ty.sub_trans _ _ _ head tail
 
-/-- The checker's order on a list of exits, column by column. -/
-theorem subN_list_exitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) :
-    Ty.subN (.list (.exitOf a e)) (.list (.exitOf a' e')) = true := by
-  unfold Ty.subN
-  simp only [Ty.normalize]
-  rw [Ty.sub_args_list]
-  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
-    List.all_nil, Bool.and_true]
-  rw [Ty.sub_args_exitOf]
-  simp only [Ty.argsBelow, Ty.args, Ty.Variance.holds, List.zip, List.zipWith, List.all_cons,
-    List.all_nil, Bool.and_true, Bool.and_eq_true]
-  exact ⟨ha, he⟩
-
 /-- The await-all park at the columns a close's delivery fact names (`FiberListColumns`, in the
 checker's order) is typed at the list of exits at those columns: the row's certificate is the
 raw union of the targets' declared columns (`declaredUnion`), which the row's pre reads in the
@@ -703,7 +660,7 @@ theorem awaitAllPark_typed (root : ProgramSource) {w : World} {targets : List Fi
     refine TypedProg.pure ⟨?_, trivial⟩
     show Fits w' ans ty.answer
     rw [hans]
-    exact fits_subN w' (subN_list_exitOf hU hE) ans post
+    exact fits_subN w' (subN_listExitOf hU hE) ans post
 
 /-- **`closeParAwait` keeps `I`** at the same world: the host's code becomes the await-all park
 over the close's targets (`awaitAllPark_typed`) under the close generator's iterator frame, whose

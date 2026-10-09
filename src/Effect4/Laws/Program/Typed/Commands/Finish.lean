@@ -629,7 +629,7 @@ theorem middlewareCode_typed (root : ProgramSource) {w : World} {ty : EffTy}
   seqGuard_typed root (mid := EffTy.pure .unit)
     (TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) () declared (fun _ _ _ post => unitAnswer_typed root post))
-    (subN_never _) (fun _ o _ _ => .pure (strongExit_mono _ _ _ _ o hex))
+    (Bounds.subN_never _) (fun _ o _ _ => .pure (strongExit_mono _ _ _ _ o hex))
 
 /-- The head facts of a `drainDue`: it reads nothing, owns nothing, carries no key. -/
 theorem headOk_drainDue (root : ProgramSource) (w : World) (m : RState) (q : List RCmd) :

@@ -1374,9 +1374,6 @@ theorem fits_exitErr_causeOf {w : World} {e : Ty} {c : CauseV} (h : FitsCause w 
   rw [Val.cause?_exitErr]
   exact h
 
-/-- `never` is below every type in the checker's order. -/
-theorem subN_never (t : Ty) : Ty.subN .never t = true := Ty.OrderProof.sub_never _
-
 /-- The context read, typed at the context type. -/
 theorem getContext_typed (root : ProgramSource) (w : World) :
     TypedProg root w (EffTy.pure Ty.context) (fiberValR .getContext rfl) :=
@@ -1559,7 +1556,7 @@ theorem acquireRelease_arm {a r : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.acquireRelease a r) p) := by
   rw [denoteR_acquireRelease _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o v hv => ?_)
+  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' o v hv => ?_)
   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
   show TypedProg root w' ty (match Val.context? v with
     | some ctx => .vis (.inr (.mask false (.acquireIn p ctx))) Effects.Program.pure
@@ -1849,7 +1846,7 @@ order. -/
 theorem unionFold_subN {α : Type} (f : α → Ty) (c : Ty) :
     ∀ (xs : List α), (∀ x ∈ xs, Ty.subN (f x) c = true) →
       Ty.subN (xs.foldr (fun y acc => Ty.union (f y) acc) .never) c = true
-  | [], _ => subN_never c
+  | [], _ => Bounds.subN_never c
   | y :: ys, h => subN_union_le (h y List.mem_cons_self)
       (unionFold_subN f c ys fun x hx => h x (List.mem_cons_of_mem y hx))
 
@@ -1966,7 +1963,7 @@ private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : Lis
     rw [effsRounds_nil] at hc
     have hT := Checker.inv_effs_nil _ _ _ _ hc
     subst hT
-    exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, subN_never _, subN_never _⟩
+    exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, Bounds.subN_never _, Bounds.subN_never _⟩
   | .cons h t, q, T, hat, hc, henv, hview => by
     rw [effsRounds_cons] at hc
     obtain ⟨H, R, hch, hct, rfl⟩ := Checker.inv_effs_cons _ _ _ _ _ _ hc
@@ -2112,7 +2109,7 @@ theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
   simp only [denoteFiberAction]
   rw [hat]
   simp only []
-  refine seqGuard_typed root (ambientScope_typed root w) (subN_never _) (fun w' o v hv => ?_)
+  refine seqGuard_typed root (ambientScope_typed root w) (Bounds.subN_never _) (fun w' o v hv => ?_)
   obtain ⟨sc, rfl, hlive⟩ := fits_scope_inv hv
   show TypedProg root w' _ (.vis (.inr (.forkIn ((p.child 0).child 0) options sc (p.child 0).path))
     fun v => .pure (.success v))
@@ -3385,7 +3382,7 @@ theorem service_arm {key : ServiceKey} (hfuel : p.fuel ≠ 0)
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨sty, hsty, rfl⟩ := Checker.inv_service root.signature env p.path key ty hcheck
   rw [denoteR_service _ _ hfuel]
-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' ord v hv => ?_)
+  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' ord v hv => ?_)
   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
   simp only [seqR]
   unfold serviceLookupR
@@ -3439,7 +3436,7 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
         (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) (completed_mono o'' hview)))
   rw [denoteR_provideService _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv]
   unfold updateContextR
-  refine seqGuard_typed root (getContext_typed root w) (subN_never _) (fun w' o u hu => ?_)
+  refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' o u hu => ?_)
   obtain ⟨prev, hprev, hsvc⟩ := fits_context_inv hu
   simp only [seqR]
   rw [hprev]
@@ -3462,10 +3459,10 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
         exact fits_flatFits hflat (fits_mono o hfit)
       · rw [Env.Context.getV_addV_other _ _ _ _ hk] at hget
         exact hsvc.1 key' sv sty' hget hty'
-    refine seqGuard_typed root (setContext_typed root hsvc') (subN_never _) (fun w'' o' x _ => ?_)
+    refine seqGuard_typed root (setContext_typed root hsvc') (Bounds.subN_never _) (fun w'' o' x _ => ?_)
     simp only [seqR]
     exact onExit_typed root (b := ⟨tb.answer, tb.error, _⟩) (f := EffTy.pure .unit)
-      (Ty.subN_refl _) (Ty.subN_refl _) (subN_never _)
+      (Ty.subN_refl _) (Ty.subN_refl _) (Bounds.subN_never _)
       (hchild w'' (leHost_trans _ _ _ o o'))
       (fun w3 o3 _ _ => setContext_typed root (servicesFit_mono (leHost_trans _ _ _ o' o3) hsvc))
 

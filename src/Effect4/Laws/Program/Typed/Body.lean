@@ -70,7 +70,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     denoteAt_typed root hwf htie ⟨acquire, env, hat0, hacq, henv, hview⟩
   unfold acquireInR
   -- the `Scope` read
-  refine seqGuard_typed root (ambientScope_typed root w) (subN_never _) (fun w1 o1 v hv => ?_)
+  refine seqGuard_typed root (ambientScope_typed root w) (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
   obtain ⟨s, rfl, hlive⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
   -- the acquire, at the node's own columns
@@ -87,7 +87,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (mid := ⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩)
     (TypedProg.store (op := .scopeAdd s (.foreign (p.capture aval ctx))) (cert := ())
       ⟨scopeLive_mono o2.1 hlive, hcap⟩ (fun w3 _ ans post => TypedProg.pure ⟨?_, trivial⟩))
-    (subN_never _) (fun w3 o3 u hu => ?_)
+    (Bounds.subN_never _) (fun w3 o3 u hu => ?_)
   · show Fits w3 ans .unit ∨ Fits w3 ans (.exitOf .unknown .unknown)
     rcases post with rfl | ⟨ex, rfl, hex⟩
     · exact Or.inl trivial
@@ -104,7 +104,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
         exact nomatch hex
       rw [if_neg hne, hex]
       -- the closed branch: the release now, then the acquired value
-      refine seqGuard_typed root (mid := ⟨.unknown, .never, Env.Requirement.empty⟩) ?_ (subN_never _)
+      refine seqGuard_typed root (mid := ⟨.unknown, .never, Env.Requirement.empty⟩) ?_ (Bounds.subN_never _)
         (fun w4 o4 _ _ => TypedProg.pure (strongExit_success w4 _ aval (fits_mono o4 hval)))
       exact finalizerTyped_of_admitted root w3 _
         (finalizerAdmitted_mono root o3 (.foreign (p.capture aval ctx)) hcap) w3 (leHost_refl w3) ex
@@ -118,7 +118,7 @@ theorem release_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     TypedProg root w ty
       (onExitR (denoteAt root.program q) fun _ => fiberValR (.setContext prev) rfl) :=
   onExit_typed root (b := ty) (f := EffTy.pure .unit) (Ty.subN_refl _) (Ty.subN_refl _)
-    (subN_never _) (denoteAt_typed root hwf htie h)
+    (Bounds.subN_never _) (denoteAt_typed root hwf htie h)
     (fun _ o _ _ => setContext_typed root (servicesFit_mono o hsvc))
 
 /-- **A layer's build body is typed** at the build's types, into a present scope through a present

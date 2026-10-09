@@ -491,7 +491,7 @@ whose operation carries no term is well scoped. A term row's answer may also nam
 its term's result template binds, `Ref.modify`'s `B`: the checker binds it from the term's type
 (`bindTerm`), so the native profile reads the result template beside the request
 (`NativeOp.row_wellScoped`). A host row carries no term, and the signature's admission keeps
-`Row.wellScoped` for it. `sub_sound` and
+`Row.wellScoped` for it. `hasTy_sub` (`Laws/Program/Admits.lean`) and
 `sub_not_complete` are the two halves of what the guard is worth: the order NEVER admits a
 value the target would refuse, and it DOES refuse pairs whose value sets agree. A checker
 built on it can lose a program, never mistype one.
@@ -1049,14 +1049,6 @@ theorem templateAdmissible_args {t : Ty} (h : templateAdmissible t = true) :
   all_goals aesop (add norm simp [templateAdmissible])
 
 end Ty
-
-/-- **The order is sound for membership.** Whatever the guard admits, the value really does
-inhabit the template's instance: this is `hasTy_sub`, named here as the half of the guard's
-worth that a consumer may rely on. -/
-theorem sub_sound (a b : Ty) (v : Effect4.Machine.Val) (allocated : List String := [])
-    (hsub : Ty.sub a b = true) (hv : Val.hasTy v a allocated = true) :
-    Val.hasTy v b allocated = true :=
-  hasTy_sub a b v allocated hsub hv
 
 /-- **The order is NOT complete for membership**, and the witness is one line of TypeScript:
 `Option<number | string>` and `Option<number> | Option<string>` have the same values, and

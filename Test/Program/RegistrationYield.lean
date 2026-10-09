@@ -547,7 +547,7 @@ theorem arrow {tin final : EffTy} {m : RState} {s : List ScopeFrame} (found : m.
 /-- The position skip from a `never`-error type to any type. -/
 theorem neverSkip {tin : EffTy} (errors : tin.error = Ty.never) (ty : EffTy) :
     ∀ w', world.leHost w' → ∀ c, ExitOk w' tin (.failure c) → ExitOk w' ty (.failure c) :=
-  fun _ _ _ hc => exitOk_failure_of_errorN (by rw [errors]; exact subN_never _) hc
+  fun _ _ _ hc => exitOk_failure_of_errorN (by rw [errors]; exact Effect4.Program.Bounds.subN_never _) hc
 
 /-- The witness's callback as an answer slot's neighbour: `interruptAll`'s unit answer slot. -/
 def iaNext : ExitV → RProgram := seqR fun v => .pure (.success v)

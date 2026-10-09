@@ -381,12 +381,6 @@ structure ConfigTyped (root : ProgramSource) (rootTy : EffTy) (w : World) (m : R
   code : ReadCode root w m commands
   queue : QueueOk root w m commands
 
-/-- `J` after a step is part of `I` after it: the re-establishment the lift's `Guarded` needs is
-this projection. -/
-theorem machineTyped_of_configTyped {root : ProgramSource} {rootTy : EffTy} {w : World}
-    {m : RState} {commands : List RCmd} (typed : ConfigTyped root rootTy w m commands) :
-    MachineTyped root rootTy w m := typed.machine
-
 /-- **Every fiber's ambient scope is present** (decisions rows 139 and 156), from `J`: the
 fiber context's services fit their keys' carriers (`preds`' `ServiceOk`), the world's service
 table is the source's (row 112), which types the reserved `Scope` key at `Ty.scope`, and a scope

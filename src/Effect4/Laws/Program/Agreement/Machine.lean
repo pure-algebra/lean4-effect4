@@ -129,75 +129,70 @@ theorem eq_sync_of_isSync {cur : NCode} (h : isSync cur = true) : ∃ t, cur = P
 
 /-! ### The compile stays plain -/
 
-theorem compileEff_zero {p : Point} (e : NativeEff) (hf : p.fuel = 0) :
-    compileEff e p = frontier p := by
-  unfold compileEff
-  simp only [hf]
-
 theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true →
     PlainCode (compileEff e p) = true
   | .succeed v, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_succeed v hf]; split <;> rfl
   | .fail e, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_fail e hf]; split <;> rfl
   | .failCause c, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_failCause c hf]; split <;> rfl
   | .sync t, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_sync t hf]; rfl
   | .suspend b, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_suspend b hf]; rfl
   | .perform op r, p, hpl => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_perform_sync op r hf (Straight.perform_sync (show Straight (.perform op r) = true from hpl))]
       split <;> (try split) <;> rfl
   | .bind a b, p, hpl => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_bind a b hf]
       simp only [PlainCode, PlainName, Bool.and_true]
       exact plainCode_compileEff a (p.child 0) (Looped.bind hpl).1
   | .select s d a b, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_select s d a b hf]; rfl
   | .exit b, p, hpl => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
       · rw [compileEff_exit_frame b hf hx]
         exact plainCode_compileEff b (p.child 0) (Looped.exit hpl)
       · rw [compileEff_exit_fold b hf hx]; rfl
   | .catchCause b h, p, hpl => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_catchCause b h hf]
       simp only [PlainCode, PlainName, Bool.and_true]
       exact plainCode_compileEff b (p.child 0) (Looped.catchCause hpl).1
   | .matchCause b v c, p, hpl => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_matchCause b v c hf]
       simp only [PlainCode, PlainName, Bool.and_true]
       exact plainCode_compileEff b (p.child 0) (Looped.matchCause hpl).1
   | .onExit b f, p, hpl => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_onExit b f hf]
       exact plainCode_compileEff b (p.child 0) (Looped.onExit hpl).1
   | .iterate c i t st r b, p, _ => by
     rcases hf : p.fuel with _ | k
-    · rw [compileEff_zero _ hf]; rfl
+    · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_iterate c i t st r b hf]; rfl
   | .gen _, _, hpl
   | .uninterruptible _, _, hpl
