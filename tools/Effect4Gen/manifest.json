@@ -301,6 +301,18 @@
       ]
     },
     {
+      "Note": "The fold of the TypeScript syntax of the pinned lean4-typescript (`TypeScript.Expr`, `Stmt` and `ObjectEntry`, one mutual block nested through lists and pairs): its algebra, its fold, its homomorphism with uniqueness, the identity algebra and the monoid fold. The view's code plane states the pinned renderer and its readable layout as two algebras of it (docs/research/2026-10-09-view-algebra-audit.md, slice F). In tools until the algebra moves to lean4-typescript.",
+      "Name": "TsFold",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "TypeScript.Syntax",
+      "Out": "tools\\Tools\\Code\\TsFold.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "TypeScript.Expr"
+      ]
+    },
+    {
       "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
       "Name": "NodeLenses",
       "Flags": ["--module", "--meta-imports", "Effect4.Program.Node"],

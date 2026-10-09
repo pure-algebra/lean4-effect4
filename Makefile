@@ -130,7 +130,7 @@ DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Js
   src/Effect4/Program/Authoring/Rows.lean src/Effect4/Laws/Program/Authoring/Rows.lean \
   src/Effect4/Program/Authoring/Atoms.lean src/Effect4/Laws/Program/Authoring/Atoms.lean \
   src/Effect4/Codegen/Authoring/Forms.lean src/Effect4/Laws/Program/Authoring/Forms.lean \
-  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts
+  src/Effect4/Program/AtomInventory.lean harness/truth/prelude-atoms.gen.ts tools/Tools/Code/TsFold.lean
 
 # A missing output must run its producer instead of becoming a missing prerequisite.
 .PHONY: derived-output-missing
