@@ -474,13 +474,12 @@ theorem lt_of_externalRow {i : Nat} {row : Row} (h : externalRow table i = some 
     rw [hnone] at h
     cases h
 
-/-- **At a waiting call on a row of the table, the reply host answers with the tape's next
-exit.** H8's step from the session's admitted reply to the reply host. -/
-theorem Holds.tapeAnswer {root : NativeEff} {cf : Nat} {m : Api.Machine} {p : Pos}
-    (hH : Holds root cf m p) {f : FiberId} {t i : Nat} {v : Val} {row : Row}
-    (hreq : Program.requestOf m f t = some (.external i, v)) (hrow : externalRow table i = some row)
-    (ex : ExitV) (rest : ReplyTape) :
-    p.hostAnswer (tapeHost table) (ex :: rest) = some (ex, rest) := by
+/-- **At a waiting call on a row of the table, a host answers the position as it answers the
+call's row and request.** -/
+theorem Holds.hostAnswer_eq {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {cf : Nat} {m : Api.Machine} {p : Pos} (hH : Holds root cf m p) {f : FiberId} {t i : Nat}
+    {v : Val} (hreq : Program.requestOf m f t = some (.external i, v)) (hi : i < table.length)
+    (st : σ) : p.hostAnswer host st = host.answer ⟨⟨i, hi⟩, v⟩ st := by
   have hne : Program.requestOf m f t ≠ none := by
     rw [hreq]
     exact Option.some_ne_none _
@@ -494,11 +493,18 @@ theorem Holds.tapeAnswer {root : NativeEff} {cf : Nat} {m : Api.Machine} {p : Po
     simp only [callParkedAt, fiberAt_frame, fiberOf, Prim.async.injEq, EffName.external.injEq,
       NativeOp.external.injEq] at hcur
     obtain ⟨⟨rfl, rfl, -⟩, -, -⟩ := hcur
-    show hostAnswer (tapeHost table) (Prim.async (EffName.external (.external j) v' w') false none)
-      (ex :: rest) = _
-    rw [hostAnswer_call (tapeHost table) (lt_of_externalRow hrow)]
-    rfl
+    exact hostAnswer_call host hi v' w' st
   · exact (requestOf_Mexit hne).elim
+
+/-- **At a waiting call on a row of the table, the reply host answers with the tape's next
+exit.** H8's step from the session's admitted reply to the reply host. -/
+theorem Holds.tapeAnswer {root : NativeEff} {cf : Nat} {m : Api.Machine} {p : Pos}
+    (hH : Holds root cf m p) {f : FiberId} {t i : Nat} {v : Val} {row : Row}
+    (hreq : Program.requestOf m f t = some (.external i, v)) (hrow : externalRow table i = some row)
+    (ex : ExitV) (rest : ReplyTape) :
+    p.hostAnswer (tapeHost table) (ex :: rest) = some (ex, rest) := by
+  rw [hH.hostAnswer_eq hreq (lt_of_externalRow hrow)]
+  rfl
 
 /-! ## What a settled machine says of the meaning -/
 

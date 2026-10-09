@@ -16,8 +16,13 @@ admits `catchIf` (the owner, row 310). Its proof is the packet's slice H8, in th
 * each host decision keeps the machine in a settled form whose position the local run reaches,
   reading one reply for each answer (`holds_evaluate`, `holds_flush`, `holds_answer`,
   `Laws/Program/Agreement/Hosted.lean`);
-* the session applies a reply only at a guard the machine waits on (`tapeFrom_answered`, here),
-  so a recorded run's tape is a tape of such decisions.
+* the session applies a reply only at a guard the machine waits on, on a host row of the table
+  (`tapeFrom_answered`, here), so a recorded run's tape is a tape of such decisions.
+
+The local run with calls asks a host, a comodel of the row signature (`Effects.Comodel`); the
+reply tape is one host (`tapeHost`). So the same layers give **H9**, `denoteRows_eq_session_host`:
+for a finished run, under any host whose answers are the run's (`HostAnswered`), the run of the
+call tree under that host is the run's observation. H8 is the instance at the reply host.
 -/
 
 set_option autoImplicit false
@@ -212,54 +217,105 @@ theorem tapeFrom_answered (s : Run) (rows : List Command) (h : (tapeFrom s rows)
 
 /-! ## The tape of a host's decisions, through the machine -/
 
+/-- **The answers of a tape are a host's**: at each answer decision, the host, at its state,
+answers the machine's request with the decision's exit, and its state moves on; other decisions
+leave the host's state alone. The host's state goes from `st` to `st'` along the tape. -/
+def HostAnswered (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSig table) σ)
+    (program : Api.Program) (fuel : Nat) : List Api.Decision → Api.Machine → σ → σ → Prop
+  | [], _, st, st' => st' = st
+  | .answerAsync f t (.ofExit ex) :: T, m, st, st'' =>
+    ∃ i v, ∃ (hi : i < table.length), ∃ st',
+      Program.requestOf m f t = some (.external i, v) ∧ host.answer ⟨⟨i, hi⟩, v⟩ st = some (ex, st') ∧
+      HostAnswered table host program fuel T
+        (steppedBy program fuel table m (.answerAsync f t (.ofExit ex))) st' st''
+  | d :: T, m, st, st'' => HostAnswered table host program fuel T (steppedBy program fuel table m d) st st''
+
 /-- **A tape of a host's answered decisions keeps the machine's forms** (a step of
-`denoteRows_eq_session`): from a machine in a form of `Holds` at a position, the raw replay of
-the tape ends in such a form, and the local run with calls leads from the first position to the
-last, reading the tape's replies (`exitsOf`) in order. -/
-theorem tape_holds (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (hroot : LoopedRows program = true) (cf : Nat) :
-    ∀ (T : List Api.Decision) (m : Api.Machine) (p : Pos), Holds program cf m p →
+`denoteRows_eq_session` and of `denoteRows_eq_session_host`): from a machine in a form of
+`Holds` at a position, the raw replay of the tape ends in such a form, and the local run with
+calls under the host leads from the first position to the last, the host's state going from `st`
+to `st'`. -/
+theorem tape_holds_host (program : Api.Program) (table : RowTable) (fuel : Nat)
+    (hroot : LoopedRows program = true) (cf : Nat) {σ : Type}
+    (host : Effects.Comodel (RowSig table) σ) :
+    ∀ (T : List Api.Decision) (m : Api.Machine) (p : Pos) (st st' : σ), Holds program cf m p →
       Answered program table fuel T m → T.all hostDecision = true →
+      HostAnswered table host program fuel T m st st' →
       ∃ p', Holds program cf (Run.machineOf (Run.replayFrom program table fuel T m)) p' ∧
-        ∀ r, Leads (tapeHost table) program p (exitsOf T ++ r) p' r
-  | [], m, p, hH, _, _ => ⟨p, by rw [Run.machineOf_nil]; exact hH, fun r => Leads.refl p r⟩
-  | d :: T, m, p, hH, ⟨hs, hen, hreq, hrest⟩, hall => by
+        Leads host program p st p' st'
+  | [], m, p, st, st', hH, _, _, hA => by
+    refine ⟨p, by rw [Run.machineOf_nil]; exact hH, ?_⟩
+    rw [show st' = st from hA]
+    exact Leads.refl p st
+  | d :: T, m, p, st, st'', hH, ⟨hs, hen, _, hrest⟩, hall, hA => by
     rw [List.all_cons, Bool.and_eq_true] at hall
     rw [Run.replayFrom_cons program table fuel d T m hs hen]
-    obtain ⟨p₁, hH₁, hL₁⟩ : ∃ p₁, Holds program cf (steppedBy program fuel table m d) p₁ ∧
-        ∀ r, Leads (tapeHost table) program p (exitsOf [d] ++ r) p₁ r := by
-      have hd := hall.1
-      cases d with
-      | answerAsync f t a =>
-        cases a with
-        | ofExit ex =>
-          obtain ⟨i, v, row, hrq, hrow⟩ := hreq f t _ rfl
-          have hne : Program.requestOf m f t ≠ none := by
-            rw [hrq]
-            exact Option.some_ne_none _
-          obtain ⟨p₁, hH₁, hL₁⟩ := holds_answer program hroot cf hH hne hen
-          exact ⟨p₁, hH₁, fun r => hL₁ (tapeHost table) (ex :: r) r (hH.tapeAnswer hrq hrow ex r)⟩
-        | ofRefGet _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
-            reduceCtorEq, or_self] at hd
-      | evaluate id =>
-        simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
-          RunDecision.evaluate.injEq, reduceCtorEq, or_false] at hd
-        subst hd
-        obtain ⟨p₁, hH₁, hL₁⟩ := holds_evaluate program hroot cf hH hen
-        exact ⟨p₁, hH₁, fun r => hL₁ (tapeHost table) r⟩
-      | flush =>
-        obtain ⟨p₁, hH₁, hL₁⟩ := holds_flush program hroot cf hH hen
-        exact ⟨p₁, hH₁, fun r => hL₁ (tapeHost table) r⟩
-      | _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
+    have hd := hall.1
+    cases d with
+    | answerAsync f t a =>
+      cases a with
+      | ofExit ex =>
+        obtain ⟨i, v, hi, st', hrq, hans, hA'⟩ := hA
+        have hne : Program.requestOf m f t ≠ none := by
+          rw [hrq]
+          exact Option.some_ne_none _
+        obtain ⟨p₁, hH₁, hL₁⟩ := holds_answer program hroot cf hH hne hen
+        obtain ⟨p', hH', hL'⟩ :=
+          tape_holds_host program table fuel hroot cf host T _ p₁ st' st'' hH₁ hrest hall.2 hA'
+        exact ⟨p', hH', (hL₁ host st st' ((hH.hostAnswer_eq hrq hi st).trans hans)).trans hL'⟩
+      | ofRefGet _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
           reduceCtorEq, or_self] at hd
-    obtain ⟨p', hH', hL'⟩ := tape_holds program table fuel hroot cf T _ p₁ hH₁ hrest hall.2
-    refine ⟨p', hH', fun r => ?_⟩
-    have happ : exitsOf (d :: T) ++ r = exitsOf [d] ++ (exitsOf T ++ r) := by
-      cases d with
-      | answerAsync f t a => cases a <;> rfl
-      | _ => rfl
-    rw [happ]
-    exact (hL₁ _).trans (hL' r)
+    | evaluate id =>
+      simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
+        RunDecision.evaluate.injEq, reduceCtorEq, or_false] at hd
+      subst hd
+      obtain ⟨p₁, hH₁, hL₁⟩ := holds_evaluate program hroot cf hH hen
+      obtain ⟨p', hH', hL'⟩ :=
+        tape_holds_host program table fuel hroot cf host T _ p₁ st st'' hH₁ hrest hall.2 hA
+      exact ⟨p', hH', (hL₁ host st).trans hL'⟩
+    | flush =>
+      obtain ⟨p₁, hH₁, hL₁⟩ := holds_flush program hroot cf hH hen
+      obtain ⟨p', hH', hL'⟩ :=
+        tape_holds_host program table fuel hroot cf host T _ p₁ st st'' hH₁ hrest hall.2 hA
+      exact ⟨p', hH', (hL₁ host st).trans hL'⟩
+    | _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
+        reduceCtorEq, or_self] at hd
+
+/-- **The tape's own exits are the reply host's answers** along an answered tape. -/
+theorem answered_hostAnswered (program : Api.Program) (table : RowTable) (fuel : Nat) :
+    ∀ (T : List Api.Decision) (m : Api.Machine), Answered program table fuel T m →
+      T.all hostDecision = true → ∀ r,
+      HostAnswered table (tapeHost table) program fuel T m (exitsOf T ++ r) r
+  | [], _, _, _, _ => rfl
+  | d :: T, m, ⟨_, _, hreq, hrest⟩, hall, r => by
+    rw [List.all_cons, Bool.and_eq_true] at hall
+    have hd := hall.1
+    cases d with
+    | answerAsync f t a =>
+      cases a with
+      | ofExit ex =>
+        obtain ⟨i, v, row, hrq, hrow⟩ := hreq f t _ rfl
+        exact ⟨i, v, lt_of_externalRow hrow, exitsOf T ++ r, hrq, rfl,
+          answered_hostAnswered program table fuel T _ hrest hall.2 r⟩
+      | ofRefGet _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
+          reduceCtorEq, or_self] at hd
+    | evaluate id => exact answered_hostAnswered program table fuel T _ hrest hall.2 r
+    | flush => exact answered_hostAnswered program table fuel T _ hrest hall.2 r
+    | _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
+        reduceCtorEq, or_self] at hd
+
+/-- **A tape of a host's answered decisions keeps the machine's forms, reading the tape's own
+exits to the end** (a step of `denoteRows_eq_session`): `tape_holds_host` at the reply host. -/
+theorem tape_holds (program : Api.Program) (table : RowTable) (fuel : Nat)
+    (hroot : LoopedRows program = true) (cf : Nat) (T : List Api.Decision) (m : Api.Machine)
+    (p : Pos) (hH : Holds program cf m p) (hans : Answered program table fuel T m)
+    (hall : T.all hostDecision = true) :
+    ∃ p', Holds program cf (Run.machineOf (Run.replayFrom program table fuel T m)) p' ∧
+      Leads (tapeHost table) program p (exitsOf T) p' [] := by
+  have hA := answered_hostAnswered program table fuel T m hans hall []
+  rw [List.append_nil] at hA
+  exact tape_holds_host program table fuel hroot cf (tapeHost table) T m p (exitsOf T) [] hH hans
+    hall hA
 
 /-- A session's reading holds the session's machine. -/
 theorem inspect_keeps_machine {program : Api.Program} {table : RowTable}
@@ -307,8 +363,6 @@ theorem denoteRows_eq_session : DenoteRowsEqSession StraightRows := by
   obtain ⟨p, hH, hL⟩ := tape_holds s.built.program s.built.table s.budget.fuel hroot
     s.budget.compileFuel (tapeOf s) _ _ (Or.inl ⟨rfl, rfl⟩) hans hhost
   rw [← hmach] at hH
-  have hL₀ := hL []
-  rw [List.append_nil] at hL₀
   simp only [atRest, Bool.and_eq_true] at hrest
   have hexit : s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
     show ((Api.HostSession.inspect s.session).machine.fiber? Api.root).bind RunFiber.exit = _
@@ -321,6 +375,66 @@ theorem denoteRows_eq_session : DenoteRowsEqSession StraightRows := by
     rw [show s.work.runnable = Api.runnableFibers s.machine from rfl, hm] at hrun
     cases hrun
   · exact meaning_settled_tape s.built.program hfrag s.budget.compileFuel (appliedExits s) hS
-      (List.isEmpty_iff.mp hrest.2) hL₀
+      (List.isEmpty_iff.mp hrest.2) hL
+
+/-- The proposition of `denoteRows_eq_session_host` (H9), on the fragment `frag`: for a recorded
+run whose root exited, under any host that gave the run's answers, the run of the program's call
+tree under the host is the root's exit with the stores, the host ending where the answers left
+it. -/
+def DenoteRowsEqSessionHost (frag : RowTable → NativeEff → Bool) : Prop :=
+  ∀ (s : Run), Run.Reached s → funded s = true → atRest s = true → hostDriven s = true →
+    frag s.built.table s.built.program = true →
+    ∀ {σ : Type} (host : Effects.Comodel (RowSig s.built.table) σ) (st st' : σ),
+      HostAnswered s.built.table host s.built.program s.budget.fuel (tapeOf s)
+        (Api.load s.built.program s.budget.compileFuel) st st' →
+      ∀ ex, s.exit = some ex →
+        hostRun host s.built.program [] Stores.empty st = some (ex, (s.machine.state, st'))
+
+/-- **H9: the host as a handler.** For a recorded run of a program of the fragment that is
+funded, at rest, driven by a host, and whose root exited: under any host whose answers are the
+run's (`HostAnswered`), the run of the program's call tree under that host is the root's exit
+with the stores, and the host ends at the state the run's answers left it in. The reply host is
+one host: H8. Reach: `StraightRows`, one fiber, every compile budget, finished runs. It does not
+establish that a host's drive finishes (progress), nor anything of a run that stopped at a call,
+an interruption, a clock step or a handle row. Concept `translation-simulation`, role
+simulation; requirement R6. Consumer: host utilities composed with `Effects.Comodel`'s
+constructions (`docs/research/2026-10-09-host-coalgebra.md`, slice CO-5). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem denoteRows_eq_session_host : DenoteRowsEqSessionHost StraightRows := by
+  intro s hreach hfund hrest hhost hfrag σ host st st' hA ex hex
+  have hroot := LoopedRows.of_straightRows s.built.program hfrag
+  have hmach := funded_replays s hreach hfund
+  have hans : Answered s.built.program s.built.table s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel) := by
+    have read : (tapeFrom (openedOf s) s.journal).2 = [] := List.isEmpty_iff.mp hfund
+    have h := tapeFrom_answered (openedOf s) s.journal read
+    rw [show (openedOf s).machine = Api.load s.built.program s.budget.compileFuel from
+      Run.open_machine s.built s.id s.budget s.profile] at h
+    exact h
+  obtain ⟨p, hH, hL⟩ := tape_holds_host s.built.program s.built.table s.budget.fuel hroot
+    s.budget.compileFuel host (tapeOf s) _ _ st st' (Or.inl ⟨rfl, rfl⟩) hans hhost hA
+  rw [← hmach] at hH
+  simp only [atRest, Bool.and_eq_true] at hrest
+  have hexit : s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
+    show ((Api.HostSession.inspect s.session).machine.fiber? Api.root).bind RunFiber.exit = _
+    rw [inspect_keeps_machine]
+    rfl
+  rcases hH with ⟨hm, -⟩ | hS
+  · -- the loaded root is runnable: a run at rest has evaluated it
+    have hrun := hrest.1
+    rw [show s.work.runnable = Api.runnableFibers s.machine from rfl, hm] at hrun
+    cases hrun
+  · -- an exited root is the exit form, where the host is asked nothing
+    have hstop : p.hostAnswer host st' = none := by
+      rcases hS with ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ |
+        ⟨ex', fr, s', k, tr, nt, hm, rfl, -⟩
+      · rw [hexit, hm, Myield_fiber?] at hex
+        cases hex
+      · rw [hexit, hm, Mcall_fiber?] at hex
+        cases hex
+      · rfl
+    rw [meaning_settled host s.built.program hfrag s.budget.compileFuel st st' hS
+      (List.isEmpty_iff.mp hrest.2) hL hstop, ← hexit, hex]
+    rfl
 
 end Effect4.Run

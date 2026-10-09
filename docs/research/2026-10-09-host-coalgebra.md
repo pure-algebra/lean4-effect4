@@ -286,6 +286,14 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   session's admitted reply is on a table row (`preflight_row`), so the reply host answers it
   (`Holds.tapeAnswer`).
 
+- **CO-5 landed: H9 is a theorem** (`denoteRows_eq_session_host`,
+  `src/Effect4/Laws/Api/SessionMeaning.lean`). For a recorded run that is funded, at rest,
+  host-driven and finished, under any host whose answers are the run's (`HostAnswered`), the
+  host's run of the call tree is the root's exit with the stores. The host ends where the
+  answers left it. One induction (`tape_holds_host`) serves H8 and H9. Its axioms are
+  `[propext, Quot.sound]`. Still owed: its registry claim, a battery reader, and the proof that
+  `Run.drive` with a reactor makes its run `HostAnswered` (slice CO-6).
+
 ## 8. What the owner must decide
 
 1. **`Effects` as the home of the generic layer** (representation). The coalgebra layer lands
