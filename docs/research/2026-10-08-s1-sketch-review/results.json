@@ -1,0 +1,34 @@
+{
+  "reviewed_base": "8785c6f9",
+  "reviewed_head": "979be0ad8b86f356dc83aa7f6bdab46228684a32",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "finite_guards": 51,
+  "law_readers": 5,
+  "axiom_declarations": 29,
+  "unexpected_axiom_rows": [],
+  "build": {
+    "command": "LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Sketch Effect4.Laws.Program.Typing.Parts Test.Program.PartsControls Test.Program.SketchControls Test.Program.ReplaceControls",
+    "exit": 0,
+    "output": "Build completed successfully (857 jobs)."
+  },
+  "controls": {
+    "command": "LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-08-s1-sketch-review/Controls.lean",
+    "exit": 0,
+    "output_file": "controls-output.txt"
+  },
+  "axioms": {
+    "command": "LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-08-s1-sketch-review/Trust.lean",
+    "exit": 0,
+    "output_file": "axioms-output.txt"
+  },
+  "scoped_audit": {
+    "command": "LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-08-s1-sketch-review/ScopedAudit.lean",
+    "exit": 0,
+    "output_file": "scoped-audit-output.txt",
+    "modules": [
+      "Effect4.Laws.Program.Sketch",
+      "Effect4.Laws.Program.Typing.Parts"
+    ],
+    "whole_tree_gate": false
+  }
+}

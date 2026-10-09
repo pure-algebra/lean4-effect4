@@ -1,0 +1,3 @@
+S1 scoped trust: Effect4.Laws.Program.Sketch: 69 declarations audited
+S1 scoped trust: Effect4.Laws.Program.Typing.Parts: 296 declarations audited
+S1 scoped trust: 365 declarations; missing 0; transitive axioms [propext, Quot.sound]
