@@ -1,0 +1,680 @@
+/-!
+Round 4 of the native view probe (2026-10-07): the picture of a page as data, lowered in Lean.
+
+Three forms of one page, each a first-order datum, and two maps between them:
+
+- `Page`: the rows of the viewer's input (`G`, `L`, `S`, `B`, `E`). Places are cells.
+- `Op`: one call of the painter (`paint.h`), in logical pixels. `pageOps` writes a page as calls.
+- `Dev`: one call that reaches the target. A fill is a box of whole device pixels. A text is
+  left to the host, with its place and its room. `lower` writes a call as device calls.
+
+`draw.c` replays a list of `Dev` and decides nothing. The viewer writes the same form of its
+own picture (`view --streams`). So the two lists are compared row by row.
+
+The reach of the lowering: a whole page at zoom 1 and a whole ratio, with no cursor and no
+hidden line. The camera, the cursor and the level of detail stay in C.
+
+No import of the tree: run it as `lean --run Scene.lean OUT rows.tsv ...`, with the flags
+`--types`, `--guides`, `--plain`, `--select KEY` before the files.
+-/
+
+set_option linter.unusedVariables false
+
+namespace Scene
+
+/-! ## The three forms -/
+
+/-- A role of the tokens, in the order of `PaintRole` (`paint.h`). -/
+inductive Role where
+  | ground | ink | rule | host | failure | resource
+deriving DecidableEq, Repr
+
+def Role.code : Role → Nat
+  | .ground => 0 | .ink => 1 | .rule => 2 | .host => 3 | .failure => 4 | .resource => 5
+
+/-- A face, in the order of `PaintFace`. -/
+inductive Face where
+  | data | name | label | title
+deriving DecidableEq, Repr
+
+def Face.code : Face → Nat
+  | .data => 0 | .name => 1 | .label => 2 | .title => 3
+
+/-- A box of whole device pixels: `[x0, x1)` by `[y0, y1)`. -/
+structure Rect where
+  x0 : Int
+  y0 : Int
+  x1 : Int
+  y1 : Int
+deriving DecidableEq, Repr
+
+/-- A shape of a mark's part, in units of an eighth of a cell (`MarkShape`, `marks.h`). -/
+inductive Shape where
+  | square (x0 : Int)
+  | ring (x0 : Int)
+  | dots (x0 x1 pitch : Int)
+  | post (x0 x1 reach : Int) (role : Role)
+  | over (x0 x1 : Int)
+  | under (x0 x1 : Int)
+deriving Repr
+
+/-- A part of a mark: its cells and its shapes (`MARK_PARTS`). -/
+structure Part where
+  cells : Nat
+  shapes : List Shape
+deriving Repr
+
+def hollow : Part := ⟨1, [.ring 0]⟩
+def dotted : Part := ⟨2, [.dots 1 14 3]⟩
+def bar : Part := ⟨1, [.post 2 4 4 .host]⟩
+def filled : Part := ⟨1, [.square 0]⟩
+def indent : Part := ⟨3, [.over 0 16, .under 8 24]⟩
+
+/-- The mark that the suffix of a role names (`MARKS`). -/
+def markOf (role : String) : Option (List Part) :=
+  match (role.splitOn ".").drop 1 with
+  | [] => none
+  | suffix =>
+    match ".".intercalate suffix with
+    | "sync" => some [filled]
+    | "async.deferred" => some [hollow, dotted, filled]
+    | "async.external" => some [hollow, dotted, bar, filled]
+    | "program" => some [indent]
+    | "hollow" => some [hollow]
+    | "filled" => some [filled]
+    | _ => none
+
+/-- One call of the painter, in logical pixels at zoom 1. -/
+inductive Op where
+  | fill (role : Role) (value : Nat) (x y w h : Int)
+  | hrule (role : Role) (x0 x1 y : Int) (weight : Nat)
+  | vrule (role : Role) (x y0 y1 : Int) (weight : Nat)
+  | frame (role : Role) (x y w h : Int) (weight : Nat)
+  | treeEdge (role : Role) (x0 y0 ybar x1 y1 : Int) (weight : Nat)
+  | elbow (role : Role) (x0 y0 yturn x1 : Int) (weight : Nat)
+  | mark (parts : List Part) (x base : Int)
+  | cells (x base : Int) (room : Nat) (text : String)
+  | text (face : Face) (x base room : Int) (text : String)
+  | cut (x y w h : Int)
+  | uncut
+  | hit (key : String) (x y w h : Int)
+deriving Repr
+
+/-- One call that reaches the target. -/
+inductive Dev where
+  | fill (role : Role) (value : Nat) (r : Rect)
+  | cells (x base : Int) (room : Nat) (text : String)
+  | text (face : Face) (x base room : Int) (text : String)
+  | cut (x y w h : Int)
+  | uncut
+  | hit (key : String) (r : Rect)
+deriving Repr
+
+/-! ## From a call to device calls: the painter's snapping, at a whole ratio -/
+
+/-- A fill; an empty box paints nothing (`paint_device_fill`). -/
+def devFill (role : Role) (value : Nat) (r : Rect) : List Dev :=
+  if r.x1 ≤ r.x0 ∨ r.y1 ≤ r.y0 then [] else [.fill role value r]
+
+/-- The four sides of a frame, `w` thick inside the box: top, bottom, left, right. -/
+def frameSides (b : Rect) (w : Int) : List Rect :=
+  [ ⟨b.x0, b.y0, b.x1, b.y0 + w⟩, ⟨b.x0, b.y1 - w, b.x1, b.y1⟩
+  , ⟨b.x0, b.y0 + w, b.x0 + w, b.y1 - w⟩, ⟨b.x1 - w, b.y0 + w, b.x1, b.y1 - w⟩ ]
+
+/-- A frame; a box too small for a hole is filled (`paint_device_frame`). -/
+def devFrame (role : Role) (value : Nat) (b : Rect) (w : Int) : List Dev :=
+  if b.x1 - b.x0 ≤ 2 * w ∨ b.y1 - b.y0 ≤ 2 * w then devFill role value b
+  else (frameSides b w).flatMap (devFill role value)
+
+/-- A dotted rule in the span `[a, b)` (`paint_device_dots`). -/
+def devDots (role : Role) (value : Nat) (a b top dot pitch : Int) : List Dev :=
+  if b - a < dot then devFill role value ⟨a, top, b, top + dot⟩
+  else
+    let pitch := if pitch ≤ dot then dot + 1 else pitch
+    let n := (b - a - dot) / pitch + 1
+    let first := a + (b - a - (dot + (n - 1) * pitch)) / 2
+    (List.range n.toNat).flatMap fun (i : Nat) =>
+      devFill role value ⟨first + (i : Int) * pitch, top, first + (i : Int) * pitch + dot, top + dot⟩
+
+/-- The box of a fill: each edge is snapped by itself, and a fill keeps one pixel
+(`paint_fill`). At a whole ratio the snap is a product. -/
+def box (r : Int) (x y w h : Int) : Rect :=
+  let x0 := r * x
+  let y0 := r * y
+  ⟨x0, y0, if r * (x + w) ≤ x0 then x0 + 1 else r * (x + w), if r * (y + h) ≤ y0 then y0 + 1 else r * (y + h)⟩
+
+/-- The device pixels of a weight: one at least (`paint_weight`). -/
+def weight (r : Int) (w : Nat) : Int := if r * w < 1 then 1 else r * w
+
+/-- The three parts of a tree's edge: a stem, the bar, a stem (`paint_tree_edge`). -/
+def edgeParts (a top bar b foot w : Int) : List Rect :=
+  [ ⟨a, top, a + w, bar⟩, ⟨min a b, bar, max a b + w, bar + w⟩, ⟨b, bar + w, b + w, foot⟩ ]
+
+/-- One shape of a mark, with its part's left edge and the baseline in device pixels
+(`mark_draw`, at zoom 1: a unit is `r` device pixels, the stroke `r` and the band `7 r`). -/
+def devShape (r origin base : Int) : Shape → List Dev
+  | .square x0 => devFill .ink 1000 ⟨origin + r * x0, base - 7 * r, origin + r * x0 + 7 * r, base⟩
+  | .ring x0 => devFrame .ink 1000 ⟨origin + r * x0, base - 7 * r, origin + r * x0 + 7 * r, base⟩ r
+  | .dots x0 x1 pitch =>
+    devDots .ink 1000 (origin + r * x0) (origin + r * x1) (base - (7 * r + r) / 2) r
+      (if r * pitch > r then r * pitch else r + 1)
+  | .post x0 x1 reach role =>
+    let wide := r * (x1 - x0)
+    devFill role 1000 ⟨origin + r * x0, base - 7 * r - r * reach,
+      origin + r * x0 + (if wide < 1 then 1 else wide), base + r * reach⟩
+  | .over x0 x1 => devFill .ink 1000 ⟨origin + r * x0, base - 7 * r, origin + r * x1, base - 7 * r + r⟩
+  | .under x0 x1 => devFill .ink 1000 ⟨origin + r * x0, base - r, origin + r * x1, base⟩
+
+/-- A mark: its parts stand side by side, each at its cells. -/
+def devMark (r left base : Int) : Nat → List Part → List Dev
+  | _, [] => []
+  | cell, p :: rest =>
+    p.shapes.flatMap (devShape r (left + r * 8 * cell) base) ++ devMark r left base (cell + p.cells) rest
+
+/-- The device calls of one call of the painter, at the ratio `r`. -/
+def lower (r : Int) : Op → List Dev
+  | .fill role value x y w h => devFill role value (box r x y w h)
+  | .hrule role x0 x1 y w =>
+    let a := r * min x0 x1
+    let b := if r * max x0 x1 ≤ a then a + 1 else r * max x0 x1
+    devFill role 1000 ⟨a, r * y, b, r * y + weight r w⟩
+  | .vrule role x y0 y1 w =>
+    let a := r * min y0 y1
+    let b := if r * max y0 y1 ≤ a then a + 1 else r * max y0 y1
+    devFill role 1000 ⟨r * x, a, r * x + weight r w, b⟩
+  | .frame role x y w h wt => devFrame role 1000 (box r x y w h) (weight r wt)
+  | .treeEdge role x0 y0 ybar x1 y1 wt =>
+    (edgeParts (r * x0) (r * y0) (r * ybar) (r * x1) (r * y1) (weight r wt)).flatMap (devFill role 1000)
+  | .elbow role x0 y0 yturn x1 wt =>
+    let w := weight r wt
+    let a := r * x0
+    let b := r * x1
+    devFill role 1000 ⟨a, r * y0, a + w, r * yturn⟩ ++
+      devFill role 1000 ⟨min b a, r * yturn, if b > a + w then b else a + w, r * yturn + w⟩
+  | .mark parts x base => devMark r (r * x) (r * base) 0 parts
+  | .cells x base room text => [.cells x base room text]
+  | .text face x base room text => [.text face x base room text]
+  | .cut x y w h => [.cut x y w h]
+  | .uncut => [.uncut]
+  | .hit key x y w h => [.hit key (box r x y w h)]
+
+def lowerAll (r : Int) (ops : List Op) : List Dev := ops.flatMap (lower r)
+
+/-! ## The meaning of a list of device calls, and five laws -/
+
+/-- Two boxes share no pixel. -/
+def Rect.Disjoint (a b : Rect) : Prop := a.x1 ≤ b.x0 ∨ b.x1 ≤ a.x0 ∨ a.y1 ≤ b.y0 ∨ b.y1 ≤ a.y0
+
+instance (a b : Rect) : Decidable (a.Disjoint b) := by unfold Rect.Disjoint; infer_instance
+
+/-- A box lies inside another. -/
+def Rect.Inside (a b : Rect) : Prop := b.x0 ≤ a.x0 ∧ a.x1 ≤ b.x1 ∧ b.y0 ≤ a.y0 ∧ a.y1 ≤ b.y1
+
+instance (a b : Rect) : Decidable (a.Inside b) := by unfold Rect.Inside; infer_instance
+
+/-- A box holds a pixel. -/
+def Rect.holds (r : Rect) (x y : Int) : Bool := r.x0 ≤ x && x < r.x1 && r.y0 ≤ y && y < r.y1
+
+/-- The key that one call answers at a pixel. -/
+def Dev.keyAt (x y : Int) : Dev → Option String
+  | .hit key r => if r.holds x y then some key else none
+  | _ => none
+
+/-- The key under a pixel: the last box of a key that holds it answers. -/
+def pick (ds : List Dev) (x y : Int) : Option String := ds.reverse.findSome? (Dev.keyAt x y)
+
+/-- Law 1. The lowering is a map of lists: a page lowers call by call. -/
+theorem lowerAll_append (r : Int) (a b : List Op) : lowerAll r (a ++ b) = lowerAll r a ++ lowerAll r b := by
+  simp only [lowerAll, List.flatMap_append]
+
+/-- Law 2. A later call answers the pointer before an earlier one. -/
+theorem pick_append (a b : List Dev) (x y : Int) :
+    pick (a ++ b) x y = (pick b x y).or (pick a x y) := by
+  simp only [pick, List.reverse_append, List.findSome?_append]
+
+/-- Law 3. A fill never vanishes: the box of a fill holds a pixel, at a ratio of one or more. -/
+theorem box_holds (r x y w h : Int) (_hr : 0 < r) : (box r x y w h).x0 < (box r x y w h).x1 ∧ (box r x y w h).y0 < (box r x y w h).y1 := by
+  simp only [box]
+  constructor <;> split <;> omega
+
+/-- Law 4. The four sides of a frame share no pixel (the painter's P4). -/
+theorem frameSides_pairwise (b : Rect) (w : Int) (hw : 0 < w)
+    (hx : 2 * w < b.x1 - b.x0) (hy : 2 * w < b.y1 - b.y0) :
+    (frameSides b w).Pairwise Rect.Disjoint := by
+  unfold frameSides
+  refine .cons ?_ (.cons ?_ (.cons ?_ (.cons ?_ .nil)))
+  · intro r hr
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl | rfl
+    · exact Or.inr (Or.inr (Or.inl (by show b.y0 + w ≤ b.y1 - w; omega)))
+    · exact Or.inr (Or.inr (Or.inl (Int.le_refl _)))
+    · exact Or.inr (Or.inr (Or.inl (Int.le_refl _)))
+  · intro r hr
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · exact Or.inr (Or.inr (Or.inr (Int.le_refl _)))
+    · exact Or.inr (Or.inr (Or.inr (Int.le_refl _)))
+  · intro r hr
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+    subst hr
+    exact Or.inl (by show b.x0 + w ≤ b.x1 - w; omega)
+  · intro r hr; cases hr
+
+/-- Law 5. The three parts of a tree's edge share no pixel: the first stem ends where the bar
+starts, and the bar ends where the second stem starts. -/
+theorem edgeParts_pairwise (a top bar b foot w : Int) (hw : 0 < w) :
+    (edgeParts a top bar b foot w).Pairwise Rect.Disjoint := by
+  unfold edgeParts
+  refine .cons ?_ (.cons ?_ (.cons ?_ .nil))
+  · intro r hr
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · exact Or.inr (Or.inr (Or.inl (Int.le_refl _)))
+    · exact Or.inr (Or.inr (Or.inl (by show bar ≤ bar + w; omega)))
+  · intro r hr
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hr
+    subst hr
+    exact Or.inr (Or.inr (Or.inl (Int.le_refl _)))
+  · intro r hr; cases hr
+
+/-! ## The rows of the viewer's input -/
+
+structure Line where
+  depth : Nat
+  gutter : String
+  text : String
+  note : String
+  role : String
+  key : String
+  refs : List String
+  aux : String
+
+structure Span where
+  line : Nat
+  c0 : Nat
+  c1 : Nat
+  key : String
+
+structure Box where
+  col : Nat
+  row : Nat
+  w : Nat
+  l1 : String
+  l2 : String
+  key : String
+  refs : List String
+  role : String
+
+structure Page where
+  name : String
+  kind : String
+  judgment : String
+  ghead : String
+  bhead : String
+  lines : Array Line := #[]
+  spans : Array Span := #[]
+  boxes : Array Box := #[]
+  edges : Array (Nat × Nat) := #[]
+
+def words (s : String) : List String := (s.splitOn " ").filter (· ≠ "")
+
+/-- Read rows into pages. A row before the first page is dropped, as the viewer drops it. -/
+def readPages (rows : Array String) : Array Page := Id.run do
+  let mut pages : Array Page := #[]
+  for row in rows do
+    if row.isEmpty || row.startsWith "#" then continue
+    let f := (row.splitOn "\t").toArray
+    let fld (i : Nat) : String := f.getD i ""
+    if fld 0 == "G" then
+      pages := pages.push { name := fld 1, kind := fld 2, judgment := fld 3, ghead := fld 4, bhead := fld 5 }
+    else if h : pages.size > 0 then
+      let p := pages[pages.size - 1]
+      let num (i : Nat) : Nat := (fld i).toNat?.getD 0
+      let line : Line := ⟨num 1, fld 2, fld 3, fld 4, fld 5, fld 6, words (fld 7), fld 8⟩
+      let span : Span := ⟨num 1, num 2, num 3, fld 4⟩
+      let box : Box := ⟨num 2, num 3, num 4, fld 5, fld 6, fld 8, words (fld 9), fld 10⟩
+      let p := match fld 0 with
+        | "L" => { p with lines := p.lines.push line }
+        | "S" => { p with spans := p.spans.push span }
+        | "B" => { p with boxes := p.boxes.push box }
+        | "E" => { p with edges := p.edges.push (num 1, num 2) }
+        | _ => p
+      pages := pages.set (pages.size - 1) p
+  return pages
+
+/-! ## From a page to calls: the rules of the viewer's painter (`paint`, `view.c`) -/
+
+def CELL : Int := 8
+def ROWH : Int := 24
+def BASE : Int := 16
+def LEFT : Int := 24
+def TOP : Int := 104
+def HEADS : Int := 88
+def HEAD_RULE : Int := 96
+def FOOT : Int := 32
+def INDENT : Int := 3
+def LEVEL : Int := 3
+def MARKCOLS : Int := 6
+def NAMECOLS : Int := 30
+
+/-- What the reader set: the column of types, the indent rules, no marks, and the lit keys. -/
+structure View where
+  width : Int := 1280
+  aux : Bool := false
+  guides : Bool := false
+  plain : Bool := false
+  lit : List String := []
+
+def View.isLit (v : View) (key : String) : Bool := key ≠ "" && v.lit.contains key
+
+/-- The selection and the keys related to it: one pass over every mark of every page
+(`select_key`). -/
+def related (pages : Array Page) (sel : String) : List String :=
+  if sel == "" then [] else Id.run do
+    let mut out : List String := [sel]
+    let relate (out : List String) (k : String) : List String :=
+      if k ≠ "" && !out.contains k then out ++ [k] else out
+    for p in pages do
+      for l in p.lines do
+        if l.key == sel then for r in l.refs do out := relate out r
+        else if l.refs.contains sel then out := relate out l.key
+      for b in p.boxes do
+        if b.key == sel then for r in b.refs do out := relate out r
+        else if b.refs.contains sel then out := relate out b.key
+    return out
+
+def col (c : Int) : Int := LEFT + CELL * c
+
+/-- The cells that a text of data takes in a room (`paint_cells`'s answer). -/
+def shown (s : String) (room : Int) : Int :=
+  if room ≤ 0 || s.isEmpty then 0 else min (s.length : Int) room
+
+def cellsAt (x base : Int) (s : String) (room : Int) : List Op :=
+  if room > 0 && !s.isEmpty then [.cells x base room.toNat s] else []
+
+def cells (c base : Int) (s : String) (room : Int) : List Op := cellsAt (col c) base s room
+
+def textAt (face : Face) (x base : Int) (s : String) (room : Int) : List Op :=
+  if s.isEmpty then [] else [.text face x base room s]
+
+def markAt (v : View) (mark : Option (List Part)) (x base : Int) : List Op :=
+  match mark with
+  | some parts => if v.plain then [] else [.mark parts x base]
+  | none => []
+
+/-- The width of the gutter, and of the label column of a field (`page_finish`). -/
+def gutterCols (g : Page) : Int :=
+  let n := g.lines.foldl (fun n l => max n l.gutter.length) g.ghead.length
+  if n + 2 < 8 then 8 else n + 2
+
+def labelCols (g : Page) : Int :=
+  g.lines.foldl (fun n l => if l.role.startsWith "field" then max n (l.note.length + 2 : Int) else n) 0
+
+/-- A line's spans, in the viewer's order: by the first cell, then the wider first. -/
+def spansOf (g : Page) (i : Nat) : List Span :=
+  (g.spans.toList.filter (·.line == i)).mergeSort fun a b => a.c0 < b.c0 || (a.c0 == b.c0 && a.c1 ≥ b.c1)
+
+/-- One line of a page of lines, at its row (`paint_lines`). -/
+def lineOps (v : View) (g : Page) (B labels : Int) (r i : Nat) (l : Line) : List Op :=
+  let c0 : Int := B + INDENT * l.depth
+  let y : Int := TOP + ROWH * r
+  let base := y + BASE
+  let cols : Int := (v.width - 2 * LEFT) / CELL
+  let right : Int := v.width - LEFT
+  let spans := spansOf g i
+  let mark := markOf l.role
+  let body : List Op :=
+    if l.role.startsWith "head" then textAt .name (col c0) base l.text (right - col c0)
+    else if l.role.startsWith "field" then
+      textAt .label (col c0) base l.note (CELL * (labels - 1)) ++
+        cells (c0 + labels) base l.text (cols - c0 - labels)
+    else if l.role.startsWith "row" then
+      let end0 := c0 + MARKCOLS + 1 + NAMECOLS
+      let end1 := if v.aux && !l.aux.isEmpty then end0 + shown l.aux (cols - end0) + INDENT else end0
+      markAt v mark (col c0) base ++
+        textAt .name (col (c0 + MARKCOLS + 1)) base l.text (CELL * NAMECOLS) ++
+        (if v.aux && !l.aux.isEmpty then cells end0 base l.aux (cols - end0) else []) ++
+        textAt .label (col end1) base l.note (right - col end1)
+    else
+      let located := l.role.startsWith "located"
+      let room := cols - c0 - (if located then 30 else 0)
+      let n := shown l.text room
+      let end0 := c0 + n + INDENT
+      cells c0 base l.text room ++
+      (if located then
+        [.frame .failure (col c0 - 6) (y + 2) (CELL * n + 12) (ROWH - 4) 2] ++
+          textAt .label (col end0) base "refused" 64 ++ cells (end0 + 8) base l.note (cols - end0 - 8)
+      else
+        let typed := v.aux && !l.aux.isEmpty
+        let end1 := if typed then end0 + 2 + shown l.aux (cols - end0 - 2) + INDENT else end0
+        let end2 := if mark.isSome && !v.plain then end1 + MARKCOLS + 1 else end1
+        (if typed then cells end0 base ":" 1 ++ cells (end0 + 2) base l.aux (cols - end0 - 2) else []) ++
+          markAt v mark (col end1) base ++ textAt .label (col end2) base l.note (right - col end2))
+  -- the pointer: the line answers, and the narrowest span under the pointer answers before it;
+  -- of two equal spans, the later of the rows (a deeper node of a tree is written later)
+  let hits : List Op :=
+    (if l.key == "" then [] else [.hit l.key 0 y v.width ROWH]) ++
+      (((g.spans.toList.filter (·.line == i)).mergeSort fun a b => a.c1 - a.c0 ≥ b.c1 - b.c0).filterMap fun s =>
+        if s.key == "" || s.c1 ≤ s.c0 then none
+        else some (.hit s.key (col (c0 + s.c0)) y (CELL * (s.c1 - s.c0 : Nat)) ROWH))
+  (if v.isLit l.key then [.fill .rule 500 0 y v.width ROWH] else []) ++
+    cells 0 base l.gutter (B - 1) ++
+    [.cut (col B - 7) y v.width ROWH] ++
+    (spans.filterMap fun s =>
+      if v.isLit s.key then some (.fill .rule 750 (col (c0 + s.c0)) (y + 2) (CELL * ((s.c1 : Int) - s.c0)) (ROWH - 4)) else none) ++
+    (if v.guides then (List.range l.depth).map fun d =>
+      .vrule .rule (col (c0 - INDENT * ((l.depth : Int) - d)) + 3) y (y + ROWH) 1 else []) ++
+    body ++ [.uncut] ++ hits
+
+/-- The box of a graph's box in the whole page, in logical pixels (`paint_graph`). -/
+def boxAt (b : Box) : Int × Int × Int × Int :=
+  (LEFT + CELL * b.col, TOP + 8 + ROWH * LEVEL * b.row, CELL * b.w, 2 * ROWH)
+
+/-- The extent of a graph's world: its width and its height (`cv_index_extent`). -/
+def extent (g : Page) : Int × Int :=
+  let right := g.boxes.foldl (fun m b => max m (CELL * ((b.col : Int) + b.w))) 0
+  let rows : Nat := g.boxes.foldl (fun m b => max m (b.row + 1)) 0
+  (right, if rows == 0 then 0 else ROWH * LEVEL * ((rows : Int) - 1) + 2 * ROWH)
+
+def edgeOps (g : Page) (hv : Bool) (e : Nat × Nat) : List Op :=
+  match g.boxes[e.1]?, g.boxes[e.2]? with
+  | some a, some b =>
+    let (ax, ay, aw, ah) := boxAt a
+    let (bx, by_, _, bh) := boxAt b
+    let foot := ay + ah
+    if hv then
+      let stem := ax + 2 * CELL
+      if b.row == a.row then [.hrule .ink (ax + aw) bx (ay + ah / 2) 1]
+      else if b.col == a.col then [.vrule .ink stem foot by_ 1]
+      else [.elbow .ink stem foot (by_ + bh / 2) bx 1]
+    else
+      [.treeEdge .ink (ax + CELL * ((a.w : Int) / 2)) foot (foot + (by_ - foot) / 2) (bx + CELL * ((b.w : Int) / 2)) by_ 1]
+  | _, _ => []
+
+def boxOps (v : View) (b : Box) : List Op :=
+  let (x, y, w, h) := boxAt b
+  let mark := markOf b.role
+  let room : Int := (b.w : Int) - 2
+  [.fill .ground 1000 x y w h] ++ (if v.isLit b.key then [.fill .rule 500 x y w h] else []) ++
+    [.frame .ink x y w h 1] ++
+    cellsAt (x + CELL) (y + BASE) b.l1 (room - (if mark.isSome then MARKCOLS + 1 else 0)) ++
+    cellsAt (x + CELL) (y + ROWH + BASE) b.l2 room ++
+    markAt v mark (x + w - CELL * (MARKCOLS + 1)) (y + BASE) ++
+    (if b.key == "" then [] else [.hit b.key x y w h])
+
+/-- The boxes in the order of the canvas's index: by row, then by the left edge. -/
+def boxOrder (g : Page) : List Box :=
+  g.boxes.toList.mergeSort fun a b => a.row < b.row || (a.row == b.row && a.col ≤ b.col)
+
+/-- The logical size of a whole page (`export_page`). -/
+def pageSize (v : View) (g : Page) : Int × Int :=
+  if g.boxes.isEmpty then (v.width, TOP + ROWH * g.lines.size + 8 + FOOT)
+  else let (w, h) := extent g; (w + 2 * LEFT, TOP + 8 + h + 16 + FOOT)
+
+/-- A whole page as calls: the ground, the body, then the title block and the foot (`paint`). -/
+def pageOps (v : View) (g : Page) (number count : Nat) : List Op :=
+  let graph := !g.boxes.isEmpty
+  let (W, H) := pageSize v g
+  let v := { v with width := W }
+  let right := W - LEFT
+  let cols := (W - 2 * LEFT) / CELL
+  let B := gutterCols g
+  let labels := labelCols g
+  let body :=
+    if graph then g.edges.toList.flatMap (edgeOps g (g.kind == "graph-hv")) ++ (boxOrder g).flatMap (boxOps v)
+    else g.lines.toList.zipIdx.flatMap fun (l, i) => lineOps v g B labels i i l
+  let place := s!"{number} / {count}"
+  let n : Int := place.length
+  let foot :=
+    if graph then s!"{g.boxes.size} boxes, {g.edges.size} edges"
+    else s!"{g.lines.size} {if g.lines.size == 1 then "line" else "lines"}"
+  [.fill .ground 1000 0 0 W H] ++ body ++
+    cells (cols - n) 40 place n ++
+    textAt .title LEFT 40 g.name (right - LEFT - CELL * (n + 3)) ++
+    cells 0 64 g.judgment cols ++
+    (if graph then [] else
+      textAt .label LEFT HEADS g.ghead (CELL * B) ++ textAt .label (col B) HEADS g.bhead 400) ++
+    [.hrule .rule LEFT right HEAD_RULE 1, .hrule .rule LEFT right (H - FOOT) 1] ++
+    cells 0 (H - 12) foot 40
+
+/-! ## The stream: one row for each device call (`draw.c` reads it) -/
+
+def Dev.row : Dev → String
+  | .fill role value r => s!"F\t{role.code}\t{value}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}"
+  | .cells x base room s => s!"C\t{x * 1000}\t{base * 1000}\t{room}\t1000\t{s}"
+  | .text face x base room s => s!"T\t{face.code}\t{x * 1000}\t{base * 1000}\t{room * 1000}\t1000\t{s}"
+  | .cut x y w h => s!"K\t{x * 1000}\t{y * 1000}\t{w * 1000}\t{h * 1000}"
+  | .uncut => "k"
+  | .hit key r => s!"H\t{key}\t{r.x0}\t{r.y0}\t{r.x1}\t{r.y1}"
+
+def stream (v : View) (g : Page) (number count ratio : Nat) : List String :=
+  let (W, H) := pageSize v g
+  s!"P\t{W * 1000}\t{H * 1000}\t{ratio * 1000}\t0\t0" :: (lowerAll ratio (pageOps v g number count)).map Dev.row
+
+/-! ## Finite checks of a lowered page -/
+
+def Dev.rect? : Dev → Option Rect
+  | .fill _ _ r => some r
+  | _ => none
+
+/-- Every fill lies inside the page. -/
+def fillsInside (ds : List Dev) (W H r : Int) : Bool :=
+  ds.all fun d => match d.rect? with
+    | some b => decide (b.Inside ⟨0, 0, r * W, r * H⟩)
+    | none => true
+
+/-- The cuts are closed, and none opens inside another. -/
+def cutsClosed (ds : List Dev) : Bool :=
+  (ds.foldl (fun (depth, ok) d => match d with
+    | .cut .. => (depth + 1, ok && depth == 0)
+    | .uncut => (depth - 1, ok && depth == 1)
+    | _ => (depth, ok)) ((0 : Nat), true)) == (0, true)
+
+/-- No two boxes of a graph share a cell: the premise of the canvas's index (`canvas.h`). -/
+def boxesApart (g : Page) : Bool :=
+  let rects := g.boxes.toList.map fun b => let (x, y, w, h) := boxAt b; (⟨x, y, x + w, y + h⟩ : Rect)
+  let rec go : List Rect → Bool
+    | [] => true
+    | a :: rest => rest.all (fun b => decide (a.Disjoint b)) && go rest
+  go rects
+
+/-- A text of data fits its box: both lines of a box, with the mark's cells. -/
+def boxTextsFit (g : Page) : Nat :=
+  (g.boxes.toList.filter fun b =>
+    let room : Int := (b.w : Int) - 2
+    (b.l1.length : Int) ≤ room - (if (markOf b.role).isSome then MARKCOLS + 1 else 0) && (b.l2.length : Int) ≤ room).length
+
+/-- The move of a device call by whole device pixels. -/
+def Rect.move (b : Rect) (dx dy : Int) : Rect := ⟨b.x0 + dx, b.y0 + dy, b.x1 + dx, b.y1 + dy⟩
+
+def Op.move (dx dy : Int) : Op → Op
+  | .fill role value x y w h => .fill role value (x + dx) (y + dy) w h
+  | .hrule role x0 x1 y w => .hrule role (x0 + dx) (x1 + dx) (y + dy) w
+  | .vrule role x y0 y1 w => .vrule role (x + dx) (y0 + dy) (y1 + dy) w
+  | .frame role x y w h wt => .frame role (x + dx) (y + dy) w h wt
+  | .treeEdge role x0 y0 ybar x1 y1 wt => .treeEdge role (x0 + dx) (y0 + dy) (ybar + dy) (x1 + dx) (y1 + dy) wt
+  | .elbow role x0 y0 yturn x1 wt => .elbow role (x0 + dx) (y0 + dy) (yturn + dy) (x1 + dx) wt
+  | .mark parts x base => .mark parts (x + dx) (base + dy)
+  | .cells x base room s => .cells (x + dx) (base + dy) room s
+  | .text face x base room s => .text face (x + dx) (base + dy) room s
+  | .cut x y w h => .cut (x + dx) (y + dy) w h
+  | .uncut => .uncut
+  | .hit key x y w h => .hit key (x + dx) (y + dy) w h
+
+def Dev.move (r dx dy : Int) : Dev → Dev
+  | .fill role value b => .fill role value (b.move (r * dx) (r * dy))
+  | .cells x base room s => .cells (x + dx) (base + dy) room s
+  | .text face x base room s => .text face (x + dx) (base + dy) room s
+  | .cut x y w h => .cut (x + dx) (y + dy) w h
+  | .uncut => .uncut
+  | .hit key b => .hit key (b.move (r * dx) (r * dy))
+
+/-- A moved page lowers to the moved device calls: the snap commutes with a move by whole
+pixels, tested on the calls of one page at one move. -/
+def moveCommutes (ops : List Op) (r dx dy : Int) : Bool :=
+  (lowerAll r (ops.map (Op.move dx dy))).map Dev.row == ((lowerAll r ops).map (Dev.move r dx dy)).map Dev.row
+
+end Scene
+
+open Scene in
+def main (args : List String) : IO UInt32 := do
+  let flags := args.filter (·.startsWith "--")
+  let rec selOf : List String → String
+    | "--select" :: k :: _ => k
+    | _ :: rest => selOf rest
+    | [] => ""
+  let sel := selOf args
+  let rest := (args.filter fun a => !a.startsWith "--" && a != sel)
+  match rest with
+  | out :: files =>
+    let mut rows : Array String := #[]
+    for f in files do rows := rows ++ (← IO.FS.lines f)
+    let pages := readPages rows
+    let t0 ← IO.monoMsNow
+    let v : View := { aux := flags.contains "--types", guides := flags.contains "--guides",
+                      plain := flags.contains "--plain", lit := related pages sel }
+    let count := pages.size + 1          -- the viewer's first page lists the pages
+    let mut calls := 0
+    let mut fills := 0
+    let mut inside := 0
+    let mut closed := 0
+    let mut apart := 0
+    let mut graphs := 0
+    let mut fit := 0
+    let mut boxes := 0
+    let mut moved := 0
+    for h : i in [0:pages.size] do
+      let g := pages[i]
+      let ops := pageOps v g (i + 2) count
+      let ds := lowerAll 2 ops
+      let (W, H) := pageSize v g
+      calls := calls + ds.length
+      fills := fills + (ds.filter fun d => d.rect?.isSome).length
+      if fillsInside ds W H 2 then inside := inside + 1
+      if cutsClosed ds then closed := closed + 1
+      if !g.boxes.isEmpty then
+        graphs := graphs + 1
+        boxes := boxes + g.boxes.size
+        fit := fit + boxTextsFit g
+        if boxesApart g then apart := apart + 1
+      if moveCommutes ops 3 (-7) 11 then moved := moved + 1
+      let name := toString (i + 1)
+      let name := "".pushn '0' (3 - name.length) ++ name
+      IO.FS.writeFile s!"{out}/{name}.draw" ("\n".intercalate (stream v g (i + 2) count 2) ++ "\n")
+    let t1 ← IO.monoMsNow
+    IO.println s!"C\tlowered-pages\t{pages.size}\t{calls} device calls, {fills} fills, in {t1 - t0} ms"
+    IO.println s!"C\tlowered-fills-inside-the-page\t{pages.size}\t{inside}"
+    IO.println s!"C\tlowered-cuts-closed\t{pages.size}\t{closed}"
+    IO.println s!"C\tlowered-move-commutes\t{pages.size}\t{moved}"
+    IO.println s!"C\tgraph-boxes-apart\t{graphs}\t{apart}"
+    IO.println s!"C\tgraph-box-texts-fit\t{boxes}\t{fit}"
+    return 0
+  | _ =>
+    IO.eprintln "usage: lean --run Scene.lean [--types] [--guides] [--plain] [--select KEY] OUT rows.tsv ..."
+    return 2
+
+#print axioms Scene.lowerAll_append
+#print axioms Scene.pick_append
+#print axioms Scene.box_holds
+#print axioms Scene.frameSides_pairwise
+#print axioms Scene.edgeParts_pairwise

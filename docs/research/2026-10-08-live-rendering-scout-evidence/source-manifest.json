@@ -1,0 +1,132 @@
+{
+  "reviewed_head": "979be0ad8b86f356dc83aa7f6bdab46228684a32",
+  "primary_observed_head": "cb1478a4f5a8d3c7c17f31a1c424d0e67aef794c",
+  "artifacts": [
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-06-native-view.md",
+      "saved": "docs/research/2026-10-08-live-rendering-scout-evidence/2026-10-06-native-view.md.snapshot.txt",
+      "bytes": 18077,
+      "sha256": "12766fa26a4f8725750bd1fac831eec83b207efeffe68c045f35ae80715ff457"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-06-native-view-p1.md",
+      "saved": "docs/research/2026-10-08-live-rendering-scout-evidence/2026-10-06-native-view-p1.md.snapshot.txt",
+      "bytes": 14760,
+      "sha256": "3dd6c84885e61d1fb9a26663c94fc43fecfc91539c57776fd8854f30cbd11d7e"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-07-native-view-forms.md",
+      "saved": "docs/research/2026-10-08-live-rendering-scout-evidence/2026-10-07-native-view-forms.md.snapshot.txt",
+      "bytes": 38057,
+      "sha256": "a5ff9214b04ce70992ce05661cda0eee5937a13ae9fce03fc51912487a8cc507"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-07-native-view-schemas-and-lowering.md",
+      "saved": "docs/research/2026-10-08-live-rendering-scout-evidence/2026-10-07-native-view-schemas-and-lowering.md.snapshot.txt",
+      "bytes": 20057,
+      "sha256": "878e157882cc1eb51ee5a4fe31ee2f6680878eda5f7b4fe78b040e9a7bb6c716"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-06-native-view-probe/Scene.lean",
+      "saved": "docs/research/2026-10-08-live-rendering-scout-evidence/Scene.lean.snapshot.txt",
+      "bytes": 29652,
+      "sha256": "1396a9d6783ec9c7bd04dea695e34a365ab5fdc6d19b88ec4eca72d784042ba4"
+    },
+    {
+      "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-06-native-view-probe/lower-run.txt",
+      "saved": "docs/research/2026-10-08-live-rendering-scout-evidence/lower-run.txt.snapshot.txt",
+      "bytes": 2984,
+      "sha256": "2a122638dd78016055fe0dbd2f7a6fbfabff36da22cca43848385639cfcf566e"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/tools/Tools/Query.lean",
+      "bytes": 15821,
+      "sha256": "e938a29b06116af86250b4f498b07ae1ea752c14264f57a5364b189a031a740b"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/tools/Drivers/Query.lean",
+      "bytes": 621,
+      "sha256": "e5a3d04202fc21baa2f32dc3f4687169cf10d720127863b1e788c8ac2fa5e8df"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Program/Sketch.lean",
+      "bytes": 14690,
+      "sha256": "f0142f91628fe35191d292cd08f7c075492c2e4eb25846708ab36b9617cd4085"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Program/Typing/Parts.lean",
+      "bytes": 5550,
+      "sha256": "7f09e67cfd9545b19b090306edf21d6ab6e233273fb5f25e4358145db7fbc0fd"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Program/Typing/Focus.lean",
+      "bytes": 12739,
+      "sha256": "7f5a6adc15024245d79a6c441d7f219f5f3886a8747bc91788cf410a59878617"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Program/Typing/Table.lean",
+      "bytes": 8770,
+      "sha256": "6a8a856b8c0e5174544dfbca1fda93af616ddc82daf52e4bc7e73bd8ec8d3a04"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Program/Typing/Annotate.lean",
+      "bytes": 21566,
+      "sha256": "c7b6b44037246eae3621ac7539663f9507d8ee558b4ec624e600b6e19732346b"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Api/Author.lean",
+      "bytes": 6392,
+      "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Api/Built.lean",
+      "bytes": 1105,
+      "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Api/HostSession.lean",
+      "bytes": 13586,
+      "sha256": "9a6e9091fa44e246d657d6dc0b31729123c57ea4e6b4fbd9e7994cab186b3175"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Api/RunnerBytes.lean",
+      "bytes": 4326,
+      "sha256": "8a1086b5a3e598dab9351049353215e8ba485d6c0eb3e3fe420b0daa86778059"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Run/Basic.lean",
+      "bytes": 16743,
+      "sha256": "2357502f128a78c58c575373a9c52492a498bde10d481b62d5b4cf1ac538eb42"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Laws/Program/Sketch.lean",
+      "bytes": 33514,
+      "sha256": "891bc1f09708785f2f6a3c693de6db3d83f5aa73d0ce54cd341d2af965d70b6a"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Laws/Program/Typing/Parts.lean",
+      "bytes": 25011,
+      "sha256": "52a88647a8f60c9037393965960de96c4755cc218367f95f79c3d1090fde1262"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/src/Effect4/Laws/Api/ModuleReadable.lean",
+      "bytes": 15518,
+      "sha256": "5b4324831af75046c2fbf893058298800b156dc306312bde560c46ac55578d20"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-live-authoring.md",
+      "bytes": 14689,
+      "sha256": "61637f867d7acb3a0c03496cfecb40a4aa7a21a20c2eb266c824d37838ca52dc"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-08-host-authoring-boundary.md",
+      "bytes": 36809,
+      "sha256": "aa34c37ef7f05497b58580f2339e02f9b6fae27870098649731cd24b072ef32b"
+    },
+    {
+      "source": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-07-session-api-design.md",
+      "bytes": 36864,
+      "sha256": "8afc76c4cf696430630658e50916e0e2e663e76737729c8f4045056359e2a410"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+src/Effect4/Program/Admit.lean:16:def handleLive (m : NativeMachine) (handle : UInt8 × Nat) : Bool :=
+src/Effect4/Laws/Machine/LiveStack.lean:53:def popLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm) (skip : Bool) :
+src/Effect4/Laws/Machine/LiveStack.lean:75:def getContLive (self : FrameFiber ν σ β ε δ ι α) (demand : Arm)
+src/Effect4/Laws/Program/Typed/Membership.lean:58:def KindLive (w : World) (index : Nat) : Option HandleKind → Prop
+src/Effect4/Laws/Program/Typed/Membership.lean:74:def Live (w : World) (v : Val) : Prop :=
+src/Effect4/Laws/Program/Typed/World.lean:148:def _root_.Effect4.Machine.Stores.ScopeLive (s : Stores) (sc : Nat) : Prop :=
+src/Effect4/Laws/Program/Typed/World.lean:159:def ScopeLive (w : World) (sc : Nat) : Prop := w.state.ScopeLive sc
+src/Effect4/Laws/Program/Typed/World.lean:169:def MemoLive (w : World) (m : MemoMapId) : Prop := (w.state.memo.mapAt m).isSome = true
+src/Effect4/Laws/Program/Typed/Assembly.lean:254:def LiveCode (root : ProgramSource) (w : World) (m : RState) : Prop :=
+src/Effect4/Laws/Program/Typed/Assembly.lean:347:structure MachineLive (m : RState) : Prop where

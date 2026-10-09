@@ -1,0 +1,315 @@
+# 2026-10-06 A native view of programs and the plan: C libraries, and a probe in two rounds
+
+Status: research note (history, not authority). Base: `6d097d64`. The tree's uncommitted work
+is untouched. Nothing tracked is edited. The probe is filed in
+`docs/research/2026-10-06-native-view-probe/`. The note
+`docs/research/2026-10-06-native-view-p1.md` continues this one with a dogfood program.
+
+## Question
+
+The owner asked three things by voice on 2026-10-06. The text below is the coordinator's
+reading of the dictated messages.
+
+1. Survey the C graphics and graph libraries for a native view of the language's data. Probe
+   how such a view joins the language. Lean writes the data. A stage of Lean's own compiler
+   gives the code: the stage lowers a Lean function to C.
+2. Rebuild the probe on the design principles of the estate's own research on visual
+   semantics. Start simple. Add a meaning only after a discussion with the owner.
+3. Take a dark ground with one ink as the base, and add a hue only with a meaning. Keep to
+   plain C. Weigh what earlier work learned about views of such data, and what this
+   mechanization adds. Live typing, motion and the web come later.
+
+One phrase is not read with confidence: "we should vendor". The reading here is that the
+viewer's C libraries and its fonts are vendored. No file is fetched until the owner says so.
+
+## What was read or run
+
+| Item | Evidence |
+| --- | --- |
+| `docs/research/2026-09-08-design-language.md`, with its study `docs/research/design-language/b-program-point-stack.svg` | reading |
+| `docs/research/2026-09-16-algebra-sweep/VISUAL-SEMANTICS-AND-DESIGN.md` and `UNIFIED-DESIGN-SYSTEM-SPEC.md` there | reading |
+| `docs/research/2026-09-17-visual-plane-implementation-plan.md` | reading |
+| `docs/research/2026-09-07-visualization-design.md`, section 2 | reading |
+| Codex's graph research (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/graph-tree-research/recommendations.md`) | reading |
+| The project pages of raylib, sokol, Clay, Graphviz, igraph, ThorVG, SDL and cairo, fetched on 2026-10-06 | reading |
+| Round 1 of the probe (`round1/` in the probe folder) | tested |
+| Round 2 of the probe (the probe folder) | tested |
+| The contrast of the two documents' colour tokens, by the WCAG formula | tested |
+
+No paper is read in this pass. A work that this note names is named "by name".
+
+## Findings
+
+### 1. The estate already holds a design language
+
+The design language of 2026-09-08 states one premise: a run is a function of a program and
+a tape. So each mark is a function of the program, the tape or the trace. What the algebra
+cannot say is not drawn. Its rules, as this note uses them:
+
+- Position carries containment and order. A program node is an indented line with its path at
+  the left. A term is no node, so a term is written on its node's line.
+- A numeral carries identity. A hue never does.
+- A hue names an agent, and there are four: the machine, the host, a failure and a resource.
+- Value carries an ordered state. A hollow mark and a filled mark carry a promise and its
+  keeping.
+- A rule is one pixel. There is no shadow, no gradient and no rounded card.
+- Only a replay step moves. Nothing else is animated.
+- The layout is a closed form over a grid of 8 px. No layout engine runs.
+
+The visual-plane plan of 2026-09-17 gives the same view an owner in the algebra. Its phase 4
+is one generic layer over `ArgF` (`src/Effect4/Program/LayerView.lean`), folded by `cata_eff`
+(`src/Effect4/Program/Fold.lean`). An annotation there is a path and a role, with no text.
+
+### 2. Round 1 drew a graph, and broke that language
+
+Round 1 drew cards and arrows. Graphviz laid the graph out, cairo drew it, and SDL2 held the
+window. Its sources and its run are in `round1/`. It measured four things.
+
+**The frame cost on the processor.** Each row is a mean over 30 or 45 frames at 2560 by 1600
+(`round1/frames-run.txt`). The window's own run gave 15.0 ms a frame for the whole plan graph
+at the same size (`round1/window-run.txt`).
+
+| Graph | Nodes | Edges | Layout | Draw |
+| --- | --- | --- | --- | --- |
+| `pDiamond` | 6 | 6 | `dot`, 6.2 ms | 1.2 ms |
+| `pActions` | 59 | 58 | `dot`, 0.6 ms | 2.1 ms |
+| `pActions` | 59 | 58 | Lean function, 0.9 ms | 2.7 ms |
+| the plan graph, whole | 575 | 1146 | `dot`, 120 ms | 12.6 ms |
+| the plan graph, one neighbourhood | 575 | 1146 | — | 4.4 ms |
+
+**The shape of the plan graph under a layered layout.** The graph has 82 components, and 68
+are single nodes. The largest has 418 nodes (`round1/shape.sh`, `round1/shape-run.txt`).
+
+| Layout | Width by height, in points | Width to height |
+| --- | --- | --- |
+| `dot` | 33053 by 1370 | 24.1 |
+| `dot`, components packed | 23697 by 3879 | 6.1 |
+| `dot`, left to right | 3076 by 15876 | 0.2 |
+| `sfdp` | 5125 by 4018 | 1.3 |
+
+A layered drawing shows one neighbourhood well. It gives no overview of 575 theorems.
+
+**A program's stored tree as a node-link drawing.** A chain of `bind` nodes draws as a
+staircase. The 41 nodes of `pOps` leave the screen's width, and the text falls below a
+readable size at the fitted scale.
+
+**Where round 1 broke the design language.** It gave a hue to a node's sort and to a
+theorem's concept, so a hue carried identity. It drew rounded cards with a shadow. It eased
+the camera, faded nodes in and pulsed a refusal. It ran a layout engine on a tree.
+
+### 3. Round 2 is one line grammar
+
+Round 2 has one grammar. A page is a title block and a column of lines. One line is one
+object: a node of a stored tree, or a theorem of the plan.
+
+```mermaid
+flowchart LR
+  E["stored Eff tree"] -->|"cata_eff over the generated layer"| L["lines: depth, path, text, note, role"]
+  C["checker: Api.typeOf, Api.explain"] --> L
+  R["semantics report"] -->|"projection, a stand-in"| L
+  L --> D["one draw function, C and cairo"]
+  D --> W["SDL2 window"]
+  D --> P["PNG frame"]
+  D --> V["SVG page, PDF page"]
+  L --> T["plain text"]
+```
+
+The layout is two products over one module `M` of 24 px:
+
+```text
+x(depth) = LEFT + gutter + M * depth
+y(n)     = TOP + M * n
+```
+
+The design documents give 24 px for an indent and 20 px for a line. Round 2 takes 24 px for
+both, so one module serves both axes and stays on the 8 px grid.
+
+The marks of round 2, each with its source:
+
+| Mark | Carries | Source |
+| --- | --- | --- |
+| a line's rank in the column | the order of children, in preorder | the fold's order |
+| the indent | containment: the path's length | `Node.child` |
+| the path numeral at the left | the node's identity | the design language, section 3 |
+| the text, in a monospace face | the constructor and its arguments that are no children | `EffAlgebra.ofLayer` |
+| a box around a line's text | a thing located at that path: the checker's refusal | the study draws the point so |
+| the title block's second line | the program's type, or its refusal with path and reason | `Api.typeOf`, `Api.explain` |
+| a band behind a line | the reader's pointer, and the line it is paired with | the viewer's only state |
+| a name or a label in a serif face | a name, a column head, a remark | the design language, section 7 |
+
+The base is black and white: a dark ground `#14110d` and one ink `#f3f4f6`, the design
+documents' dark tokens. The option `--paper` inverts them for print. One hue is drawn only on
+request: `--madder` strokes the refusal's box in the failure hue. That hue is a proposal.
+
+What round 2 holds, as measured (`frames-run.txt`, `Lines.lean`, `view.c`):
+
+- The viewer was 308 lines of C at the end of round 2. It links cairo and SDL2 and nothing
+  else. The second note adds graph pages to it.
+- The export writes 79 programs and 373 nodes. Every exported path resolves under `Node.at_`
+  (`src/Effect4/Program/Refs.lean`). The checker refuses 23 programs, and each refusal's path
+  names a stored node.
+- The plan page holds 575 theorems in 614 lines, grouped by requirement and then by concept.
+- A frame at 2560 by 1600 takes 0.5 to 0.8 ms to draw. The window's own run gave 3.1 ms a
+  frame on the plan page (`window-run.txt`).
+- Every frame of the fixed script is equal byte for byte over two runs.
+- At rest the window waits for an event and draws nothing.
+- The same draw function writes an SVG page and a PDF page, and `--text` writes the lines as
+  plain text.
+
+Round 2 runs no layout engine and no Lean code. The lines are the layout.
+
+### 4. The C libraries
+
+The table gives each library's role and its fit under round 2's grammar. A release is the one
+that the named page showed on 2026-10-06.
+
+| Library | Language and licence | Release | Role | Evidence | Fit |
+| --- | --- | --- | --- | --- | --- |
+| cairo | C; LGPL 2.1 or MPL 1.1 | 1.18.6; 1.18.4 installed | drawing; PNG, SVG and PDF output | tested, both rounds | fits; its plain text call applies no kerning |
+| SDL | C; zlib | 3.4; 2.32.10 installed | window and input | tested, SDL2 | fits |
+| Graphviz, `libgvc` | C; EPL 2.0 | 16.1.0; 12.2.1 installed | graph layout | tested, round 1 | not needed by round 2 |
+| igraph | C; GPL 2 or later | 1.0.1 | layouts and graph algorithms | reading | a copyleft licence; not needed |
+| raylib | C99; zlib/libpng | 6.0 | window, drawing on the graphics processor, text, a web target | reading | a candidate when the processor's frame cost is the limit |
+| sokol | C99; zlib | single headers, no numbered release | window, graphics, text through `fontstash` | reading | the smallest route to the graphics processor |
+| Clay | C99; zlib; one header | not shown | layout of panels as draw commands; an HTML renderer | reading | a candidate when the panels grow |
+| ThorVG | C++ with a C interface; MIT | 1.0 | vector drawing on three engines | reading | not C |
+| FreeType, HarfBuzz | C interfaces; installed | 2.14.1, 11.5.1 | glyphs and shaping | not run | the repair for kerning |
+
+Three libraries are named and not read: Nuklear, NanoVG and Dear ImGui. Dear ImGui is C++.
+
+Round 2 changes what the view asks of a library. Its marks are text, a one-pixel rule and a
+rectangle. No curve is drawn until a view draws an arrow. So a text rasterizer and a
+rectangle fill are enough, and a library with a path model is not yet needed.
+
+### 5. Lean code lowers to C, and the viewer links it
+
+Round 1 lowered one Lean function, `E4View.tidy` (`round1/Tidy.lean`), with Lean's own
+compiler. The function is total, reads natural numbers alone and carries no attribute.
+
+- `lean -c` writes 931 lines of C from 43 lines of Lean in 0.2 s.
+- On the pinned toolchain the module initializer takes one argument, `initialize_Tidy(1)`.
+- The plain symbol `l_E4View_tidy` borrows its arguments, by the compiler's own inference. The
+  boxed symbol owns them. A change of the function's body can change the plain symbol's rule,
+  so a host calls the boxed symbol.
+- Linked to the shared runtime the viewer is 98 KB, and that library is 169 MB. Linked to the
+  static runtime the viewer is 2.15 MB.
+- The frames of the two builds are equal byte for byte.
+
+The trust rules of `AGENTS.md` name `extern` and `implemented_by`. This route uses neither.
+Whether a C host may call a lowered symbol is not ruled.
+
+Round 2 does not use the route: a closed form has nothing to lower. The route's natural user
+is a scrubber, which would call the machine itself for the state at a journal prefix.
+
+### 6. The pedigree of these views, and what this mechanization adds
+
+The design documents name the earlier work, and this note names it again by name only.
+
+| Kind of data | What earlier work learned | Named in |
+| --- | --- | --- |
+| a program tree | the plane carries containment; an outline needs no engine (Bertin, 1967) | the design language |
+| a location in a tree | a focus is a path with its context (Huet, 1997, *The Zipper*) | `vendor/papers/program-graphs/README.md` |
+| a type error | a located mark; a slice of the sites that matter (the vendored slicing paper) | `docs/research/2026-10-06-type-slicing-plan.md` |
+| a sketch | a hole checks and the editor keeps a cursor (Omar and others, 2017, *Hazelnut*) | the vendored index |
+| a run | order is not time; a chart's visual order can lie (Lamport, 1978; Alur, Holzmann and Peled, 1996) | the unified specification |
+| an effectful program | a string diagram needs a runtime wire (Jeffrey, 1997; Román, 2022) | the unified specification |
+| an effect as a tree | an interaction tree holds its continuation as a function (Xia and others, 2020) | the vendored index |
+
+What this mechanization adds, each with its anchor in the tree:
+
+1. **A drawn path is an address with a law.** `Node.at_` answers each path. Round 2 tests it
+   on 373 nodes.
+2. **A refusal is located, and the mark is exact against the judgment.** The docstring of
+   `Api.explain` (`src/Effect4/Api.lean`) names the law `Api.explain_none_iff`: `explain`
+   answers `none` exactly when the program is `wellTyped`. So the box stands on a page exactly
+   when the checker refuses the program.
+3. **The view is a fold of a generated layer.** A new constructor reaches the view with no
+   hand code, since `EffAlgebra.ofLayer` gives each constructor's name and arguments.
+4. **A continuation is data.** An interaction tree's continuation is a function, and a
+   function cannot be drawn. Here a frame names a point, so a view can write the stack (the
+   design language, section 1.1).
+5. **A run is a function of a program and a tape.** Codex's graph research names the laws
+   `Run.play_append` and `journal_replays`. So a scrubber would compute the state at a prefix,
+   where a trace viewer plays a recording.
+
+Points 4 and 5 are reading. No view of a run is built here.
+
+### 7. Defects found in the documents that were read
+
+- The unified specification claims a contrast of 7.1 or more for its three hues on its light
+  ground. The computed ratios are 4.2, 6.0 and 5.8. On its dark ground it claims more than 9
+  for each token, and the computed ratios are 5.9, 5.0 and 7.4. The ink passes on both.
+- So a hue cannot carry small text there. Round 2 writes text in the ink and gives a hue to a
+  rule or a box, which needs a ratio of 3.
+- The study draws a path in the mid tone, at a ratio of 3.0 on its paper. Round 2 draws a path
+  in the ink.
+- The visual semantics document says that Graphviz computes spring forces and is not
+  deterministic. That holds for `neato` and `sfdp`. The layered layout `dot` gave equal bytes
+  over three runs in round 1.
+- cairo's plain text call applies no kerning. The italic of the serif face opened a gap
+  inside "refused". Round 2 sets a label in roman.
+- The tree has no printer of a term in the design language's written form. Round 2 derives
+  `Repr` in the probe file and strips the namespaces, so a record prints in Lean's form.
+
+## Proposals (not rulings)
+
+**Meanings to discuss with the owner, one at a time.** Each is absent from round 2 or drawn
+in its plainest form.
+
+1. The refusal's hue. Does a checker's refusal take the failure hue, which the design
+   language keeps for a run's reasons?
+2. The reader's mark. Is the pointer's band enough, or does the reader's hand take the host's
+   hue?
+3. A node's sort. The family is in the algebra and is not written on the line.
+4. The spines and the `bind` chain. A sequence view would be a derived view of the stored
+   program, in the sense of row 281, point 3.
+5. The written form of a term and of an argument: the generated printer.
+6. The plan's status. A planned goal and its proof are a promise and its keeping, so a hollow
+   mark and a filled mark fit. Today the status is a word.
+7. The type at each node. It waits for the checked focus of row 281.
+8. Motion. The design language moves a replay step and nothing else. A run's score with a
+   scrubber is where a live view starts. Live typing comes after it.
+9. The dark tokens. The ground is the documents' warm black, and the rule tone is the
+   coordinator's choice.
+
+**Vendoring, with the owner's leave before any download.** Three things make a frame equal
+on every machine: a vendored font, a vendored text rasterizer and a vendored window layer.
+The coordinator names each file, its source and its size when it asks.
+
+**The mechanical build.** `Lines.lean` is a hand copy of the visual-plane plan's phase 4.
+The product is that phase's generic layer with a path and a role as the annotation. The
+native view is then one more projection of it, beside the terminal and the vector page.
+
+**The lowering.** Keep the measured route for the scrubber. Take the ruling on a C host's call
+when that view is planned.
+
+## What this does not establish
+
+- No theorem is stated or proved. Each number is a finite measurement on one machine.
+- The frames are equal over runs on this machine. Another machine's fonts would change them.
+- The export is a hand probe. It is not the generic layer of the plan, and no gate reads it.
+- The plan's lines come from a script that stands in for a Lean writer.
+- A refusal's path is a path of the expanded program. In this corpus each one names a stored
+  node. A program with a reference above a refusal is not tested.
+- The window's handlers ran under a fixed script and for 120 frames. No person used the
+  window in this pass.
+- No library was run but cairo, SDL2 and Graphviz. The other rows of the survey are reading.
+- No web build was made, and no run is drawn.
+- No paper was read. Each named work is named by name.
+
+## Commands
+
+Run each from the root of the tree.
+
+```sh
+LEAN_NUM_THREADS=3 lake env lean --run docs/research/2026-10-06-native-view-probe/Lines.lean \
+  docs/research/2026-10-06-native-view-probe/programs.lines.tsv \
+  docs/research/2026-10-06-native-view-probe/p1.lines.tsv
+python3 docs/research/2026-10-06-native-view-probe/plan_lines.py \
+  .lake/gen/semantics-report/semantics.json docs/research/2026-10-06-native-view-probe/plan.lines.tsv
+docs/research/2026-10-06-native-view-probe/build.sh
+cd docs/research/2026-10-06-native-view-probe
+./view programs.lines.tsv p1.lines.tsv plan.lines.tsv
+./view --shots frames programs.lines.tsv p1.lines.tsv plan.lines.tsv
+./view --page pIllRet --text programs.lines.tsv
+```

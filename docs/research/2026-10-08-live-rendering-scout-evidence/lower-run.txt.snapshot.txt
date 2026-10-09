@@ -1,0 +1,43 @@
+# 1. streams: Lean's rows (without the pointer's rows) against the viewer's rows
+settings [--types]: 125 pages equal, 0 differ; a selection's bands: 0
+settings [--guides --types]: 125 pages equal, 0 differ; a selection's bands: 0
+settings [--plain]: 125 pages equal, 0 differ; a selection's bands: 0
+settings [--select n:p1:1.1.0.0]: 125 pages equal, 0 differ; a selection's bands: 53
+settings [--types --select r:p1:5]: 125 pages equal, 0 differ; a selection's bands: 13
+settings [--select f:p1:3]: 125 pages equal, 0 differ; a selection's bands: 5
+settings [--types --select y:CompleteExit:1.1]: 125 pages equal, 0 differ; a selection's bands: 40
+settings []: 125 pages equal, 0 differ; a selection's bands: 0
+C	lowered-pages	125	20091 device calls, 3617 fills, in 168 ms
+C	lowered-fills-inside-the-page	125	125
+C	lowered-cuts-closed	125	125
+C	lowered-move-commutes	125	125
+C	graph-boxes-apart	17	17
+C	graph-box-texts-fit	359	359
+'Scene.lowerAll_append' depends on axioms: [propext]
+'Scene.pick_append' depends on axioms: [propext, Quot.sound]
+'Scene.box_holds' depends on axioms: [propext, Quot.sound]
+'Scene.frameSides_pairwise' depends on axioms: [propext, Quot.sound]
+'Scene.edgeParts_pairwise' depends on axioms: [propext, Quot.sound]
+# 2. pictures: the replay of Lean's stream against the viewer's picture
+p1 · operations: equal bytes; fills 103  data texts 64  other texts 83  cuts 69  pointer boxes 7
+p1 · program: equal bytes; fills 67  data texts 115  other texts 9  cuts 56  pointer boxes 56
+p1 · printed TypeScript: equal bytes; fills 3  data texts 30  other texts 3  cuts 15  pointer boxes 117
+p1 · program graph · last child below: equal bytes; fills 402  data texts 115  other texts 1  cuts 0  pointer boxes 56
+p1 · run graph: equal bytes; fills 161  data texts 41  other texts 1  cuts 0  pointer boxes 19
+todo · schemas: equal bytes; fills 47  data texts 67  other texts 83  cuts 76  pointer boxes 9
+todo · CompleteExit · schema graph: equal bytes; fills 136  data texts 29  other texts 1  cuts 0  pointer boxes 17
+# 3. the pointer: the viewer's click against the pick of Lean's stream
+p1 · printed TypeScript: 24156 points, 13176 with a key, 0 differ
+p1 · operations: 24156 points, 2562 with a key, 0 differ
+p1 · program: 24156 points, 24156 with a key, 0 differ
+p1 · origins: 24156 points, 23241 with a key, 0 differ
+p1 · run: 24156 points, 23241 with a key, 0 differ
+p1 · program graph: 24156 points, 1577 with a key, 0 differ
+p1 · program graph · last child below: 24156 points, 4855 with a key, 0 differ
+p1 · run graph: 24156 points, 1965 with a key, 0 differ
+pDiamond: 24156 points, 5307 with a key, 0 differ
+todo · schemas: 24156 points, 2562 with a key, 0 differ
+todo · CompleteExit · printed schema: 24156 points, 24156 with a key, 0 differ
+todo · CompleteExit · schema graph: 24156 points, 2160 with a key, 0 differ
+# 4. the replay program under two sanitizers
+6 commands on 2 pages: 0 findings; the pictures equal the plain build's
