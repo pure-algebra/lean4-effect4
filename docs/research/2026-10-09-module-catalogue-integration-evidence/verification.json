@@ -1,0 +1,110 @@
+{
+  "head": "d1533b0c830b9214ebde1faa7201002d775691cb",
+  "commands": [
+    {
+      "label": "scoped-audit",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "docs/research/2026-10-09-module-catalogue-audit.lean"
+      ],
+      "exit": 0,
+      "log": "/tmp/effect4-module-integration-final/scoped-audit.log"
+    },
+    {
+      "label": "semantics",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--run",
+        "tools/Drivers/Semantics.lean",
+        "/tmp/effect4-module-integration-final/semantics"
+      ],
+      "exit": 0,
+      "log": "/tmp/effect4-module-integration-final/semantics.log"
+    },
+    {
+      "label": "derived",
+      "command": [
+        "python3",
+        "scripts/generate.py",
+        "--only",
+        "derived",
+        "--output-dir",
+        "/tmp/effect4-module-integration-final/derived"
+      ],
+      "exit": 1,
+      "log": "/tmp/effect4-module-integration-final/derived.log"
+    },
+    {
+      "label": "derived-recheck",
+      "command": [
+        "python3",
+        "scripts/generate.py",
+        "--only",
+        "derived",
+        "--output-dir",
+        "/tmp/effect4-module-integration-final/derived-recheck"
+      ],
+      "exit": 0,
+      "log": "/tmp/effect4-module-integration-final/derived-recheck.log"
+    },
+    {
+      "label": "public-catalogue",
+      "command": [
+        "python3",
+        "harness/module-catalogue/run.py",
+        "--install",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules",
+        "--out",
+        "/tmp/effect4-module-integration-final/public-catalogue",
+        "--skip-build"
+      ],
+      "exit": 1,
+      "log": "/tmp/effect4-module-integration-final/public-catalogue.log"
+    }
+  ],
+  "publicCompiler": "7.0.0-dev.20260629.1",
+  "effect": "4.0.1",
+  "publicStatus": "expected compiler refusal; runtime not run",
+  "compiledInputs": {
+    "control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+    "manifest.json": "c30dc4234207c7d55956ba443ea4dcd2f2f709505c99f2f30cb8dd07bd8581ab",
+    "observe.ts": "8730ff2f8326b7df81bc45a3660b8ee1264443bfe899244996b87f0e36d8a1c6",
+    "prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "prelude.ts": "9afe38a9374dbfba70a6495ede3d2074029db8b5afee4beb76720dbc1aea4f55",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "streamCapture.ts": "62ba6348a812321d83398455a0a81f277b951e0fe5bfba6c09b59765865b24a9",
+    "streamDefinitions.ts": "f220e5719d7816bcc81241c5c1b2509061b7bb9ff9aa96a4a69f8ebc37a08d54",
+    "streamEmpty.ts": "bdc3c379d94db7256f43ba043d19b56e21eb82cfdbf395d851557ef1153e0ad4",
+    "streamIndependent.ts": "e8e458fc74d7e05818e1761e0285988470b2b2128c128f7ec885d7fb39ceef70",
+    "streamInline.ts": "e30978d1380019a66df881ab28716c02c92857705149165db388a1f5cdeeaf52",
+    "streamRepeated.ts": "47e5ce15eec9eb3f929c3bb064ffaf3bc3c5bfe241be6948acb30a6b9ba9a0b8",
+    "syncCollision.ts": "51097458ec161172205761a8421a0c5369f8e4f56a29d4ad59e8979f14cd63b5",
+    "syncDepth.ts": "51097458ec161172205761a8421a0c5369f8e4f56a29d4ad59e8979f14cd63b5",
+    "syncFold.ts": "c84b9e525960b8a0f3246c7e870e45202edc9a731e7685f3a85ed6b2c0a3b2bf",
+    "syncNumeric.ts": "51097458ec161172205761a8421a0c5369f8e4f56a29d4ad59e8979f14cd63b5",
+    "syncStrings.ts": "bd2437692ef2101f3fbea4aa6f1e3e70f54926e21605b6ce0e13e02089f15902",
+    "tsconfig.json": "99c43088a95b004956b0eebee719524291b8345516217392e3dce2389d64475e",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "wrongSticky.ts": "7aa88085ac06a2c79db9bb4925adf4aa47743a3c0933f7b73a56e67a3fa9c461"
+  },
+  "emittedFiles": {
+    "streamCapture.ts": "fd4dc62fb5f9129f11102f0ba706c94e50df6a4e11e75613aa4ce5bdd359b4cf",
+    "streamDefinitions.ts": "5b6be1f9e94ac2810ced40fed49084be6f31f543cc91a4be21e7f5b4cdf45f89",
+    "streamEmpty.ts": "4e67dce84d5b8bb7ed333f044d22480ed22f28dd4d37f9bc554a641695fe4000",
+    "streamIndependent.ts": "015b5995482e8ec541a780dc48d485b5ed1868dca05b0b126fbee584225bd72d",
+    "streamInline.ts": "a63f2064f2736ff8635b7d1020506c08adf7208da30151ea478a55deab25bcbc",
+    "streamRepeated.ts": "a7cf4f98d283e9468b17c30c8dbc468db912293b6162706911f6d3feeec2cf8b",
+    "syncCollision.ts": "89bafc3fb62bdd7d2a278ad0e89877aa6a5254b187d1d846058b45d4611ade6e",
+    "syncDepth.ts": "89bafc3fb62bdd7d2a278ad0e89877aa6a5254b187d1d846058b45d4611ade6e",
+    "syncFold.ts": "c507f64d585be5b7975b7a08c1617ae7f9b13136af98c13bd1a70df7f5ffcf98",
+    "syncNumeric.ts": "89bafc3fb62bdd7d2a278ad0e89877aa6a5254b187d1d846058b45d4611ade6e",
+    "syncStrings.ts": "93191da1dae471576ce62738ee8cec4cda9715902562c3b844b2ef8e2e792fb6",
+    "wrongSticky.ts": "8292d7c1dbc0742da366ecb4c382a6baffa424330e148ba2abc0235fca554a6c"
+  },
+  "manifestSha256": "c30dc4234207c7d55956ba443ea4dcd2f2f709505c99f2f30cb8dd07bd8581ab"
+}

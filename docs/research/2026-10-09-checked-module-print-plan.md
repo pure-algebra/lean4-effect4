@@ -93,15 +93,18 @@ It must not assume the existing expression entry covers that definition list aut
 
 Keep one `ModuleEmission` indexed by the original program, table, and name.
 Its public declarations must come from the connected checked entry equation.
-Retain ordinary declarations and their ordinary generation equation as erasure evidence.
-Retain the equation from named erasure of checked declarations to those ordinary declarations.
+Store one declaration list, produced by the checked entry.
+Derive ordinary declarations through the named erasure instead of storing a second list.
+Prove ordinary generation equality under the existing lawful spelling and readable-piece premises.
+Do not require readable pieces merely to construct a typed emission.
 Keep formation, the existing typing certificate, classes, class declarations, and exact main annotation.
 These are evidence fields beside existing target syntax, not a second stored program syntax.
 
 Migrate `recheck` to reproduce the exact connected checked entry.
 Migrate `unique` through that deterministic entry.
 Lift `annotation_complete` through shared assembly without changing its answer, error, or requirement columns.
-Keep an ordinary projection theorem through the named module erasure.
+Keep an ordinary projection theorem through the named module erasure and its explicit premises.
+Keep `ModuleEmission.annotation_complete` independent of readability, as its existing statement requires.
 Do not reinterpret `emitModule_erasure` as raw checked-byte equality with ordinary output.
 
 Build typed module reading by composing named assembly erasure with the existing module reader.

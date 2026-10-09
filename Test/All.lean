@@ -324,6 +324,9 @@ import Test.Program.RefFaces
 import Test.Program.PartitionedSemaphorePrograms
 import Test.Program.PartitionedSemaphoreFaces
 import Test.Program.PartitionedSemaphoreBookkeeping
+import Test.Program.StreamArray
+import Test.Program.SynchronizedRef
+import Test.Program.PubSubSingle
 
 /-!
 # Effect4 test battery

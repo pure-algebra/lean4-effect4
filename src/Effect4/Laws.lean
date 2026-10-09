@@ -268,6 +268,9 @@ import Effect4.Laws.Author
 import Effect4.Laws.Library.Ref.Operations
 import Effect4.Laws.Library.Ref.Callback
 import Effect4.Laws.Library.PartitionedSemaphore.Steps
+import Effect4.Laws.Library.Stream.Array
+import Effect4.Laws.Library.SynchronizedRef.Ops
+import Effect4.Laws.Library.PubSub.Steps
 
 /-!
 # Effect4 proof graph
