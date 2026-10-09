@@ -40,6 +40,10 @@ namespace Effect4.Program.Agreement
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
+-- The row table of the run: every lemma below holds at any table, since the local step
+-- reads no row; a table changes only an external registration and its answer.
+variable {table : RowTable}
+
 /-! ## Plain code: what a straight-line program compiles to -/
 
 /-- The continuation names a straight-line program's frames carry: the four compiled
@@ -755,7 +759,7 @@ theorem localStep_finished_stores {root : NativeEff} {cur : NCode} {K : List NCo
 
 /-- The drain of a quiet store owes nothing and changes nothing. -/
 theorem dueResumes_quiet (root : NativeEff) {s : Stores} (hq : Quiet s) :
-    (interpOf root).dueResumes s = ([], s) := by
+    (interpOf root table).dueResumes s = ([], s) := by
   rcases s with ⟨refs, ⟨cells, due⟩, scopes, nextName⟩
   obtain ⟨hdue, -⟩ := hq
   simp only at hdue
@@ -1173,7 +1177,7 @@ theorem exitScoped_eq_evaluatePrim (root : NativeEff) (m : Api.Machine)
 The construction view remains the machine's actual completed-exit view. -/
 theorem evaluateNative_plain (root : NativeEff) (m : Api.Machine) (cur : NCode)
     (K : List NCode) (i : Bool) (k : Nat) (hpl : PlainCode cur = true) (hK : PlainStack K) :
-    evaluateNative root m (fiberAt (fiberOf cur K i) k) false =
+    evaluateNative root m (fiberAt (fiberOf cur K i) k) false table =
       evaluatePrim (interpAt root m.completedExits) m (fiberAt (fiberOf cur K i) k) false := by
   cases cur with
   | success v =>
@@ -1192,7 +1196,7 @@ theorem evaluateNative_of_finished (root : NativeEff) (m : Api.Machine) (cur : N
     (K : List NCode) (i : Bool) (k : Nat) (hpl : PlainCode cur = true)
     (ex : ExitV) (s' : Stores)
     (hstep : localStep root (fiberOf cur K i) m.state = .finished ex s') :
-    evaluateNative root m (fiberAt (fiberOf cur K i) k) false =
+    evaluateNative root m (fiberAt (fiberOf cur K i) k) false table =
       evaluatePrim (interpAt root m.completedExits) m (fiberAt (fiberOf cur K i) k) false := by
   cases cur with
   | success v =>
@@ -1213,9 +1217,9 @@ theorem evaluateNative_of_finished (root : NativeEff) (m : Api.Machine) (cur : N
 
 theorem iteration_M (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores)
     (k : Nat) (tr : NTrace) (nt : Nat) (hk : k + 1 < defaultBudget) :
-    iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf cur K i) s k tr nt) (fiberAt (fiberOf cur K i) k) false =
+    iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt) (fiberAt (fiberOf cur K i) k) false =
       evaluateNative root (M (fiberOf cur K i) s k tr nt)
-        (fiberAt (fiberOf cur K i) (k + 1)) false := by
+        (fiberAt (fiberOf cur K i) (k + 1)) false table := by
   have hidle : runloopTop (fiberAt (fiberOf cur K i) k) = fiberAt (fiberOf cur K i) k :=
     runloopTop_idle _ rfl
   have hcount : countOp (fiberAt (fiberOf cur K i) k) = fiberAt (fiberOf cur K i) (k + 1) := rfl
@@ -1250,20 +1254,21 @@ delivery are owed (`Fibers.lean:836-838`). -/
 theorem drive_loop_sync_op (root : NativeEff) (o : SyncOp) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (s₁ : Stores) (v : Val)
     (hk : k + 1 < defaultBudget) (hs : syncOpStep o s = some (s₁, v)) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
         (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt) (Cmd.loop Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (M (fiberOf (Prim.success v) K i) s₁ (k + 1) tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf (Prim.success v) K i) s₁ (k + 1) tr' nt)
         (Cmd.drainDue :: Cmd.deliver Api.root false :: rest) := by
   refine ⟨tr, fun n => ?_⟩
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) k) false =
       ⟨M (fiberOf (Prim.sync (EffThunk.op o)) K i) s₁ k tr nt,
         fiberAt (fiberOf (Prim.success v) K i) (k + 1), false, Outcome.answered,
         [Cmd.drainDue]⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
-    exact evaluatePrim_sync_op root _ _ o s₁ v rfl hs
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+    exact evaluatePrim_sync_op root (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1)) o s₁ v rfl hs
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
   try dsimp only
   rw [M_update]
@@ -1273,19 +1278,20 @@ theorem drive_loop_sync_op (root : NativeEff) (o : SyncOp) (K : List NCode) (i :
 theorem drive_loop_sync_op_none (root : NativeEff) (o : SyncOp) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd)
     (hk : k + 1 < defaultBudget) (hs : syncOpStep o s = none) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
         (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt) (Cmd.loop Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (M (fiberOf (Prim.success Val.unit) K i) s (k + 1) tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf (Prim.success Val.unit) K i) s (k + 1) tr' nt)
         (Cmd.deliver Api.root false :: rest) := by
   refine ⟨tr, fun n => ?_⟩
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) k) false =
       ⟨M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt,
         fiberAt (fiberOf (Prim.success Val.unit) K i) (k + 1), false, Outcome.answered, []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
-    exact evaluatePrim_sync_op_none root _ _ o rfl hs
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+    exact evaluatePrim_sync_op_none root (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1)) o rfl hs
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
   try dsimp only
   rw [M_update]
@@ -1295,21 +1301,22 @@ theorem drive_loop_sync_op_none (root : NativeEff) (o : SyncOp) (K : List NCode)
 theorem drive_loop_sync_pure (root : NativeEff) (p : Point) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd)
     (hk : k + 1 < defaultBudget) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
         (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt) (Cmd.loop Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n
         (M (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) s (k + 1) tr' nt)
         (Cmd.deliver Api.root false :: rest) := by
   refine ⟨tr, fun n => ?_⟩
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt)
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) k) false =
       ⟨M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt,
         fiberAt (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) (k + 1), false,
         Outcome.answered, []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
-    exact evaluatePrim_sync_pure root _ _ p rfl
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+    exact evaluatePrim_sync_pure root (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) (k + 1)) p rfl
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
   try dsimp only
   rw [M_update]
@@ -1322,17 +1329,17 @@ theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i 
     (hns : ∀ t, cur ≠ Prim.sync t)
     (hk : k + 1 < defaultBudget)
     (hstep : localStep root (fiberOf cur K i) s = .running (fiberOf cur₁ K₁ i₁) s) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) (M (fiberOf cur K i) s k tr nt)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt)
         (Cmd.loop Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (M (fiberOf cur₁ K₁ i₁) s (k + 1) tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s (k + 1) tr' nt)
         (Cmd.loop Api.root false :: rest) := by
   obtain ⟨ev, hev⟩ :=
     evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i (k + 1) hpl hns
   rw [M_state, hstep] at hev
-  have hraw := evaluateNative_plain root (M (fiberOf cur K i) s k tr nt)
+  have hraw := evaluateNative_plain (table := table) root (M (fiberOf cur K i) s k tr nt)
     cur K i (k + 1) hpl hK
   rw [M_completedExits] at hraw
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf cur K i) s k tr nt)
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
       ⟨M (fiberOf cur K i) s k (tr ++ ev) nt, fiberAt (fiberOf cur₁ K₁ i₁) (k + 1), false,
         Outcome.continue_, []⟩ := by
@@ -1340,7 +1347,7 @@ theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i 
     simp only [iterOf, M_emit]
     rfl
   refine ⟨tr ++ ev, fun n => ?_⟩
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
   try dsimp only
   rw [M_update]
@@ -1351,17 +1358,17 @@ theorem drive_loop_finish (root : NativeEff) (cur : NCode) (K : List NCode) (i :
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (ex : ExitV)
     (hpl : PlainCode cur = true) (hns : ∀ t, cur ≠ Prim.sync t) (hk : k + 1 < defaultBudget)
     (hstep : localStep root (fiberOf cur K i) s = .finished ex s) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) (M (fiberOf cur K i) s k tr nt)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt)
         (Cmd.loop Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (M (frameExitState (fiberOf cur K i)) s (k + 1) tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (frameExitState (fiberOf cur K i)) s (k + 1) tr' nt)
         (Cmd.finish Api.root ex :: rest) := by
   obtain ⟨ev, hev⟩ :=
     evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i (k + 1) hpl hns
   rw [M_state, hstep] at hev
-  have hraw := evaluateNative_of_finished root (M (fiberOf cur K i) s k tr nt)
+  have hraw := evaluateNative_of_finished (table := table) root (M (fiberOf cur K i) s k tr nt)
     cur K i (k + 1) hpl ex s hstep
   rw [M_completedExits] at hraw
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf cur K i) s k tr nt)
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
       ⟨M (fiberOf cur K i) s k (tr ++ ev) nt, fiberAt (frameExitState (fiberOf cur K i)) (k + 1), false,
         Outcome.finished ex, []⟩ := by
@@ -1369,7 +1376,7 @@ theorem drive_loop_finish (root : NativeEff) (cur : NCode) (K : List NCode) (i :
     simp only [iterOf, M_emit]
     rfl
   refine ⟨tr ++ ev, fun n => ?_⟩
-  rw [drive_loop_finished (evaluator := evaluatorFor root) _ _ _ _ _ _ rest ex rfl
+  rw [drive_loop_finished (evaluator := evaluatorFor root table) _ _ _ _ _ _ rest ex rfl
     (M_fiber? _ _ _ _ _) (by rw [hit]), hit]
   try dsimp only
   rw [M_update]
@@ -1382,21 +1389,21 @@ theorem drive_deliver_running (root : NativeEff) (cur : NCode) (K : List NCode) 
     (K₁ : List NCode) (i₁ : Bool) (hpl : PlainCode cur = true) (hK : PlainStack K)
     (hns : ∀ t, cur ≠ Prim.sync t)
     (hstep : localStep root (fiberOf cur K i) s = .running (fiberOf cur₁ K₁ i₁) s) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) (M (fiberOf cur K i) s k tr nt)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt)
         (Cmd.deliver Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (M (fiberOf cur₁ K₁ i₁) s k tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s k tr' nt)
         (Cmd.loop Api.root false :: rest) := by
   obtain ⟨ev, hev⟩ :=
     evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i k hpl hns
   rw [M_state, hstep] at hev
-  have hraw := evaluateNative_plain root (M (fiberOf cur K i) s k tr nt)
+  have hraw := evaluateNative_plain (table := table) root (M (fiberOf cur K i) s k tr nt)
     cur K i k hpl hK
   rw [M_completedExits] at hraw
   refine ⟨tr ++ ev, fun n => ?_⟩
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?,
     FiberEvaluator.evaluate, hraw, hev, iterOf, M_emit]
-  show driveState (evaluator := evaluatorFor root) _ n
+  show driveState (evaluator := evaluatorFor root table) _ n
     ((M (fiberOf cur K i) s k (tr ++ ev) nt).update (fiberAt (fiberOf cur₁ K₁ i₁) k))
     ([] ++ [Cmd.loop Api.root false] ++ rest) = _
   rw [M_update]
@@ -1406,21 +1413,21 @@ theorem drive_deliver_finish (root : NativeEff) (cur : NCode) (K : List NCode) (
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (ex : ExitV)
     (hpl : PlainCode cur = true) (hns : ∀ t, cur ≠ Prim.sync t)
     (hstep : localStep root (fiberOf cur K i) s = .finished ex s) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) (M (fiberOf cur K i) s k tr nt)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt)
         (Cmd.deliver Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (M (frameExitState (fiberOf cur K i)) s k tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (frameExitState (fiberOf cur K i)) s k tr' nt)
         (Cmd.finish Api.root ex :: rest) := by
   obtain ⟨ev, hev⟩ :=
     evaluatePrim_localStep root (M (fiberOf cur K i) s k tr nt) cur K i k hpl hns
   rw [M_state, hstep] at hev
-  have hraw := evaluateNative_of_finished root (M (fiberOf cur K i) s k tr nt)
+  have hraw := evaluateNative_of_finished (table := table) root (M (fiberOf cur K i) s k tr nt)
     cur K i k hpl ex s hstep
   rw [M_completedExits] at hraw
   refine ⟨tr ++ ev, fun n => ?_⟩
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?,
     FiberEvaluator.evaluate, hraw, hev, iterOf, M_emit]
-  show driveState (evaluator := evaluatorFor root) _ n ((M (fiberOf cur K i) s k (tr ++ ev) nt).update (fiberAt (frameExitState (fiberOf cur K i)) k))
+  show driveState (evaluator := evaluatorFor root table) _ n ((M (fiberOf cur K i) s k (tr ++ ev) nt).update (fiberAt (frameExitState (fiberOf cur K i)) k))
     ([] ++ [Cmd.finish Api.root ex] ++ rest) = _
   rw [M_update]
   rfl
@@ -1428,8 +1435,8 @@ theorem drive_deliver_finish (root : NativeEff) (cur : NCode) (K : List NCode) (
 /-- The drain of a quiet store is a command that does nothing. -/
 theorem drive_drainDue (root : NativeEff) (n : Nat) (m : Api.Machine) (rest : List NCmd)
     (hs : m.stuck = none) (hq : Quiet m.state) :
-    driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) m (Cmd.drainDue :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n m rest := by
+    driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) m (Cmd.drainDue :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n m rest := by
   rcases m with ⟨fibers, races, nextId, nextToken, nextRace, mw, armed, state, trace, stuck⟩
   simp only at hs hq
   subst hs
@@ -1440,25 +1447,25 @@ theorem drive_drainDue (root : NativeEff) (n : Nat) (m : Api.Machine) (rest : Li
 the drain is owed. -/
 theorem drive_finish_M (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
     (tr : NTrace) (nt : Nat) (rest : List NCmd) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1) (M fr s k tr nt) (Cmd.finish Api.root ex :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n (Mexit root ex fr s k tr' nt) (Cmd.drainDue :: rest) :=
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M fr s k tr nt) (Cmd.finish Api.root ex :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (Mexit root ex fr s k tr' nt) (Cmd.drainDue :: rest) :=
   by aesop
 
 /-- `Cmd.evaluate` on the loaded root: the fiber starts running at count zero. -/
 theorem drive_evaluate_load (e : NativeEff) (fuel : Nat) (rest : List NCmd) :
-    ∀ n, driveState (evaluator := evaluatorFor e) (interpOf e) (n + 1) (Api.load e fuel) (Cmd.evaluate Api.root :: rest) =
-      driveState (evaluator := evaluatorFor e) (interpOf e) n (M (fiberOf (compile e fuel) []) Stores.empty 0
+    ∀ n, driveState (evaluator := evaluatorFor e table) (interpOf e table) (n + 1) (Api.load e fuel) (Cmd.evaluate Api.root :: rest) =
+      driveState (evaluator := evaluatorFor e table) (interpOf e table) n (M (fiberOf (compile e fuel) []) Stores.empty 0
         [RunEvent.started Api.root] 0) (Cmd.loop Api.root false :: rest) :=
   by aesop
 
 theorem drive_nil (root : NativeEff) (m : Api.Machine) :
-    ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) n m [] = (m, [])
+    ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) n m [] = (m, [])
   | 0 => rfl
   | _ + 1 => rfl
 
 theorem flushAll_Mexit (root : NativeEff) (fuel : Nat) (ex : ExitV) (fr : NFiber) (s : Stores)
     (k : Nat) (tr : NTrace) (nt : Nat) :
-    ∀ rounds, flushAllState (evaluator := evaluatorFor root) (interpOf root) fuel rounds (Mexit root ex fr s k tr nt) =
+    ∀ rounds, flushAllState (evaluator := evaluatorFor root table) (interpOf root table) fuel rounds (Mexit root ex fr s k tr nt) =
       (Mexit root ex fr s k tr nt, true)
   | 0 => rfl
   | _ + 1 => rfl
@@ -1471,9 +1478,9 @@ are charged before the root parks (`effect.ts:647-655,982-990`). -/
 theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd)
     (hk : defaultBudget ≤ k + 1) :
-    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root) (interpOf root) (n + 2) (M (fiberOf cur K i) s k tr nt)
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 2) (M (fiberOf cur K i) s k tr nt)
         (Cmd.loop Api.root false :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) n
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n
         (Myield (fiberOf cur K i) s (k + 2) tr' nt)
         rest := by
   let saved : NCode := Prim.onSuccessConst (Prim.yieldNowWith 0) cur
@@ -1487,7 +1494,7 @@ theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : 
   have hv : yieldVerdict (fiberAt (fiberOf cur K i) (k + 1)) = true := by
     rw [yieldVerdict_default _ rfl]
     exact decide_eq_true (by show k + 1 ≥ defaultBudget; omega)
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M (fiberOf cur K i) s k tr nt)
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
       ⟨M (fiberOf cur K i) s k tr₁ nt, fiberAt waiting (k + 1),
         true, Outcome.continue_, []⟩ := by
@@ -1498,16 +1505,16 @@ theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : 
     rw [if_pos (by simp only [hv, Bool.not_false, Bool.true_and]; rfl)]
     rfl
   rw [show n + 2 = (n + 1) + 1 by omega]
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
   try dsimp only
   rw [M_update]
   simp only [List.nil_append, List.cons_append]
-  have hpark : (iteration (evaluator := evaluatorFor root) (interpOf root) (M waiting s (k + 1) tr₁ nt)
+  have hpark : (iteration (evaluator := evaluatorFor root table) (interpOf root table) (M waiting s (k + 1) tr₁ nt)
       (fiberAt waiting (k + 1)) true).outcome = Outcome.parked := by
     simp only [iteration, injectYield_latched]
     rfl
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, settle, hpark]
   rfl
 
@@ -1515,8 +1522,8 @@ theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : 
 The saved constant continuation is still on the stack (`effect.ts:982-990`). -/
 theorem fire_Myield_answer (root : NativeEff) (fr : NFiber) (s : Stores) (k : Nat)
     (tr : NTrace) (t : Nat) :
-    ∃ tr', ∀ n, fireState (evaluator := evaluatorFor root) (interpOf root) (n + 1 + 1) (Myield fr s k tr t) Api.root =
-      stepDecisionState.loop (driveState (evaluator := evaluatorFor root) (interpOf root) n
+    ∃ tr', ∀ n, fireState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1 + 1) (Myield fr s k tr t) Api.root =
+      stepDecisionState.loop (driveState (evaluator := evaluatorFor root table) (interpOf root table) n
         (M { fr with
           current := Prim.success Val.unit
           stack := Prim.onSuccessConst (Prim.yieldNowWith 0) fr.current :: fr.stack } s 0 tr' (t + 1))
@@ -1536,10 +1543,10 @@ success answer through the injected frame at count one (`effect.ts:629-655`). -/
 theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     (s : Stores) (k : Nat) (tr : NTrace)
     (t : Nat) :
-    ∃ tr', ∀ n, fireState (evaluator := evaluatorFor root) (interpOf root) (n + 1 + 1 + 1)
+    ∃ tr', ∀ n, fireState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1 + 1 + 1)
         (Myield (fiberOf cur K i) s k tr t) Api.root =
       stepDecisionState.loop
-        (driveState (evaluator := evaluatorFor root) (interpOf root) n (M (fiberOf cur K i) s 1 tr' (t + 1))
+        (driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur K i) s 1 tr' (t + 1))
           [Cmd.loop Api.root false, Cmd.drainDue]) := by
   let saved : NCode := Prim.onSuccessConst (Prim.yieldNowWith 0) cur
   let answered := fiberOf (Prim.success Val.unit) (saved :: K) i
@@ -1547,9 +1554,9 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
   let popEvents : NTrace := [RunEvent.frame Api.root (FrameEvent.popped saved)]
   refine ⟨tr₀ ++ popEvents, fun n => ?_⟩
   rw [hstart]
-  change stepDecisionState.loop (driveState (evaluator := evaluatorFor root) (interpOf root) (n + 1)
+  change stepDecisionState.loop (driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
     (M answered s 0 tr₀ (t + 1)) [Cmd.loop Api.root false, Cmd.drainDue]) = _
-  have hit : iteration (evaluator := evaluatorFor root) (interpOf root) (M answered s 0 tr₀ (t + 1)) (fiberAt answered 0) false =
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M answered s 0 tr₀ (t + 1)) (fiberAt answered 0) false =
       ⟨M answered s 0 (tr₀ ++ popEvents) (t + 1), fiberAt (fiberOf cur K i) 1,
         false, Outcome.continue_, []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ (by decide)]
@@ -1572,7 +1579,7 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
       (answered.step (primOf root)).2 [] = _
     rw [hstep]
     rfl
-  rw [driveState_succ_cons (evaluator := evaluatorFor root)]
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
   try dsimp only
   rw [M_update]
@@ -1589,29 +1596,29 @@ def cmdOf : Bool → NCmd
 within `2n` commands it either reaches the exit path of the run's exit over its stores, or
 the count reaches `defaultBudget` first and the root parks on a yield with the rest of the
 run — `n₁` steps, at least `defaultBudget - k - 1` fewer than `n` — still to do. -/
-def Owes (root : NativeEff) (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores)
+def Owes (root : NativeEff) (table : RowTable) (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores)
     (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (d : Bool) (ex : ExitV)
     (s' : Stores) : Prop :=
   ∃ c, c ≤ 2 * n ∧
     ((∃ fr k' tr', Quiet s' ∧ ∀ fuel,
-        driveState (evaluator := evaluatorFor root) (interpOf root) (fuel + c) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
-          driveState (evaluator := evaluatorFor root) (interpOf root) fuel (M fr s' k' tr' nt) (Cmd.finish Api.root ex :: rest)) ∨
+        driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
+          driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (M fr s' k' tr' nt) (Cmd.finish Api.root ex :: rest)) ∨
       (∃ cur₁ K₁ i₁ s₁ n₁ k₁ tr', n₁ + defaultBudget ≤ n + k + 1 ∧
         PlainCode cur₁ = true ∧ PlainStack K₁ ∧ Quiet s₁ ∧
         localRun root n₁ (fiberOf cur₁ K₁ i₁) s₁ = some (ex, s') ∧ ∀ fuel,
-          driveState (evaluator := evaluatorFor root) (interpOf root) (fuel + c) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
-            driveState (evaluator := evaluatorFor root) (interpOf root) fuel (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt) rest))
+          driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
+            driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt) rest))
 
 /-- One or two commands in front of what is owed. -/
 theorem Owes.step (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
     {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {d : Bool} {ex : ExitV}
     {s' : Stores} {cur₁ : NCode} {K₁ : List NCode} {i₁ : Bool} {s₁ : Stores} {k₁ : Nat}
     {tr₁ : NTrace} (d₁ : Bool) (a : Nat) (ha : a ≤ 2) (hk : k₁ ≤ k + 1)
-    (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root) (interpOf root) (fuel + a) (M (fiberOf cur K i) s k tr nt)
+    (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + a) (M (fiberOf cur K i) s k tr nt)
       (cmdOf d :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) fuel (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt) (cmdOf d₁ :: rest))
-    (h : Owes root n cur₁ K₁ i₁ s₁ k₁ tr₁ nt rest d₁ ex s') :
-    Owes root (n + 1) cur K i s k tr nt rest d ex s' := by
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt) (cmdOf d₁ :: rest))
+    (h : Owes root table n cur₁ K₁ i₁ s₁ k₁ tr₁ nt rest d₁ ex s') :
+    Owes root table (n + 1) cur K i s k tr nt rest d ex s' := by
   obtain ⟨c, hc, h⟩ := h
   refine ⟨c + a, by omega, ?_⟩
   rcases h with ⟨fr, k', tr', hq', hrec⟩ |
@@ -1625,11 +1632,11 @@ theorem Owes.step (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i
 theorem Owes.finish (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
     {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {d : Bool} {ex : ExitV}
     {k' : Nat} {tr' : NTrace} {fr : NFiber} (hq : Quiet s)
-    (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root) (interpOf root) (fuel + 1) (M (fiberOf cur K i) s k tr nt)
+    (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + 1) (M (fiberOf cur K i) s k tr nt)
       (cmdOf d :: rest) =
-      driveState (evaluator := evaluatorFor root) (interpOf root) fuel (M fr s k' tr' nt)
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel (M fr s k' tr' nt)
         (Cmd.finish Api.root ex :: rest)) :
-    Owes root (n + 1) cur K i s k tr nt rest d ex s :=
+    Owes root table (n + 1) cur K i s k tr nt rest d ex s :=
   ⟨1, by omega, Or.inl ⟨fr, k', tr', hq, hdrv⟩⟩
 
 /-- The yield, two commands away: at the loop with the count about to reach the budget, the
@@ -1638,7 +1645,7 @@ theorem Owes.yield (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {
     {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {ex : ExitV}
     {s' : Stores} (hk : defaultBudget ≤ k + 1) (hpl : PlainCode cur = true) (hK : PlainStack K)
     (hq : Quiet s) (hrun : localRun root (n + 1) (fiberOf cur K i) s = some (ex, s')) :
-    Owes root (n + 1) cur K i s k tr nt rest false ex s' := by
+    Owes root table (n + 1) cur K i s k tr nt rest false ex s' := by
   obtain ⟨tr', h⟩ := drive_loop_yield root cur K i s k tr nt rest hk
   exact ⟨2, by omega, Or.inr ⟨cur, K, i, s, n + 1, k + 2, tr', by omega,
     hpl, hK, hq, hrun, h⟩⟩
@@ -1653,7 +1660,7 @@ theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
       PlainCode cur = true → PlainStack K → Quiet s →
       (d = true → ∀ t, cur ≠ Prim.sync t) →
       localRun root n (fiberOf cur K i) s = some (ex, s') →
-      Owes root n cur K i s k tr nt rest d ex s'
+      Owes root table n cur K i s k tr nt rest d ex s'
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hrun => by
     simp [localRun] at hrun
   | n + 1, cur, K, i, s, k, tr, nt, rest, d, ex, s', hpl, hK, hq, hd, hrun => by
@@ -1724,7 +1731,7 @@ theorem drive_localRun (root : NativeEff) (hroot : Looped root = true) :
                     (fun _ t h => by cases h) hrun)
               · have hq₂ : Quiet s₂ := syncOpStep_quiet hso hq
                 obtain ⟨tr₁, hdrv⟩ := drive_loop_sync_op root o K i s k tr nt rest s₂ v hk hso
-                have hdrain := drive_drainDue root
+                have hdrain := drive_drainDue (table := table) root
                   (m := M (fiberOf (Prim.success v) K i) s₂ (k + 1) tr₁ nt)
                   (rest := Cmd.deliver Api.root false :: rest) (hs := rfl) (hq := hq₂)
                 refine Owes.step root true 2 (by omega) (by omega) (fun fuel => ?_)
@@ -1769,16 +1776,16 @@ theorem flushAll_Myield (root : NativeEff) (hroot : Looped root = true) :
       PlainCode cur = true → PlainStack K → Quiet s →
       localRun root n (fiberOf cur K i) s = some (ex, s') →
       n + 1 ≤ rounds → 2 * n + 6 ≤ fuel →
-      ∃ fr k' tr' nt', flushAllState (evaluator := evaluatorFor root) (interpOf root) fuel rounds
+      ∃ fr k' tr' nt', flushAllState (evaluator := evaluatorFor root table) (interpOf root table) fuel rounds
         (Myield (fiberOf cur K i) s k tr nt) = (Mexit root ex fr s' k' tr' nt', true)
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, hr, _ => absurd hr (Nat.not_succ_le_zero _)
   | rounds + 1, n, cur, K, i, s, k, tr, nt, ex, s', fuel, hpl, hK, hq, hrun, hr, hf => by
     have hB : defaultBudget = 2048 := rfl
     obtain ⟨f₂, rfl⟩ : ∃ f₂, fuel = f₂ + 1 + 1 + 1 := ⟨fuel - 3, by omega⟩
     change ∃ fr k' tr' nt',
-      (let r := fireState (evaluator := evaluatorFor root) (interpOf root) (f₂ + 1 + 1 + 1)
+      (let r := fireState (evaluator := evaluatorFor root table) (interpOf root table) (f₂ + 1 + 1 + 1)
           (Myield (fiberOf cur K i) s k tr nt) Api.root
-       if r.2 then flushAllState (evaluator := evaluatorFor root) (interpOf root) (f₂ + 1 + 1 + 1) rounds r.1 else r) =
+       if r.2 then flushAllState (evaluator := evaluatorFor root table) (interpOf root table) (f₂ + 1 + 1 + 1) rounds r.1 else r) =
         (Mexit root ex fr s' k' tr' nt', true)
     obtain ⟨tr₁, hfire⟩ := fire_Myield root cur K i s k tr nt
     rw [hfire]
@@ -1830,7 +1837,7 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
     (ex : ExitV) (s' : Stores)
     (hrun : localRun e N (fiberOf (compile e fuel) []) Stores.empty = some (ex, s'))
     (hfuel : 2 * N + 4 ≤ fuel) :
-    ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e) (interpOf e) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
+    ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
       ReplayResult.finished (Mexit e ex fr s' k' tr' nt') := by
   have hB : defaultBudget = 2048 := rfl
   obtain ⟨c, hc, h⟩ :=
@@ -1846,7 +1853,7 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
     obtain ⟨tr'', hfin⟩ := drive_finish_M e ex fr
       s' k' tr' 0 [Cmd.drainDue]
     have hchain : ∀ F, c + 4 ≤ F →
-        driveState (evaluator := evaluatorFor e) (interpOf e) F (Api.load e fuel) [Cmd.evaluate Api.root, Cmd.drainDue] =
+        driveState (evaluator := evaluatorFor e table) (interpOf e table) F (Api.load e fuel) [Cmd.evaluate Api.root, Cmd.drainDue] =
           (Mexit e ex fr s' k' tr'' 0, []) := by
       intro F hF
       obtain ⟨f₄, rfl⟩ : ∃ f₄, F = f₄ + 1 + 1 + 1 + c + 1 := ⟨F - (c + 4), by omega⟩
@@ -1854,22 +1861,22 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
         drive_drainDue e _ _ _ rfl hq', drive_drainDue e _ _ _ rfl hq']
       exact drive_nil e _ _
     refine ⟨fr, k', tr'', 0, ?_⟩
-    have heval : stepDecisionState (evaluator := evaluatorFor e) (interpOf e) fuel (Api.load e fuel) Api.evaluate =
+    have heval : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel (Api.load e fuel) Api.evaluate =
         (Mexit e ex fr s' k' tr'' 0, true) := by
-      change stepDecisionState.loop (driveState (evaluator := evaluatorFor e) _ _ _ _) = _
+      change stepDecisionState.loop (driveState (evaluator := evaluatorFor e table) _ _ _ _) = _
       rw [hchain fuel (by omega)]
       rfl
-    rw [replayEval_cons (evaluator := evaluatorFor e) _ _ _ _ _ rfl (by rw [heval]), heval]
-    have hflush : stepDecisionState (evaluator := evaluatorFor e) (interpOf e) fuel
+    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [heval]), heval]
+    have hflush : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel
         (Mexit e ex fr s' k' tr'' 0)
         Api.flush =
         (Mexit e ex fr s' k' tr'' 0, true) :=
       flushAll_Mexit _ _ _ _ _ _ _ _ _
-    rw [replayEval_cons (evaluator := evaluatorFor e) _ _ _ _ _ rfl (by rw [hflush]), hflush]
-    exact replayEval_nil_finished (evaluator := evaluatorFor e) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
+    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [hflush]), hflush]
+    exact replayEval_nil_finished (evaluator := evaluatorFor e table) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
   · -- past the budget: `evaluate` parks the root on a yield, `flush` runs the rounds
     have hchain : ∀ F, c + 2 ≤ F →
-        driveState (evaluator := evaluatorFor e) (interpOf e) F (Api.load e fuel) [Cmd.evaluate Api.root, Cmd.drainDue] =
+        driveState (evaluator := evaluatorFor e table) (interpOf e table) F (Api.load e fuel) [Cmd.evaluate Api.root, Cmd.drainDue] =
           (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' 0, []) := by
       intro F hF
       obtain ⟨f₄, rfl⟩ : ∃ f₄, F = f₄ + 1 + c + 1 := ⟨F - (c + 2), by omega⟩
@@ -1879,24 +1886,24 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
       flushAll_Myield e hl fuel n₁ cur₁ K₁ i₁ s₁ k₁ tr' 0 ex
         s' fuel hpl₁ hK₁ hq₁ hrun₁ (by omega) (by omega)
     refine ⟨fr, k', tr'', nt', ?_⟩
-    have heval : stepDecisionState (evaluator := evaluatorFor e) (interpOf e) fuel (Api.load e fuel) Api.evaluate =
+    have heval : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel (Api.load e fuel) Api.evaluate =
         (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' 0, true) := by
-      change stepDecisionState.loop (driveState (evaluator := evaluatorFor e) _ _ _ _) = _
+      change stepDecisionState.loop (driveState (evaluator := evaluatorFor e table) _ _ _ _) = _
       rw [hchain fuel (by omega)]
       rfl
-    rw [replayEval_cons (evaluator := evaluatorFor e) _ _ _ _ _ rfl (by rw [heval]), heval]
-    have hflush : stepDecisionState (evaluator := evaluatorFor e) (interpOf e) fuel
+    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [heval]), heval]
+    have hflush : stepDecisionState (evaluator := evaluatorFor e table) (interpOf e table) fuel
         (Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' 0) Api.flush =
         (Mexit e ex fr s' k' tr'' nt', true) := hfl
-    rw [replayEval_cons (evaluator := evaluatorFor e) _ _ _ _ _ rfl (by rw [hflush]), hflush]
-    exact replayEval_nil_finished (evaluator := evaluatorFor e) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
+    rw [replayEval_cons (evaluator := evaluatorFor e table) _ _ _ _ _ rfl (by rw [hflush]), hflush]
+    exact replayEval_nil_finished (evaluator := evaluatorFor e table) _ _ _ rfl (Mexit_finished _ _ _ _ _ _ _)
 
 /-- The ordinary run ends in the exited machine of the meaning, whatever the road: under the
 op budget, `evaluate` runs the root to its exit and `flush` finds nothing armed; past it,
 the root yields, parks, and `flush` fires its dispatcher round after round until the exit. -/
 theorem replay_Mexit (e : NativeEff) (fuel : Nat) (hpl : Straight e = true)
     (hd : depth e ≤ fuel) (hfuel : 2 * steps e + 6 ≤ fuel) :
-    ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e) (interpOf e) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
+    ∃ fr k' tr' nt', replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel [Api.evaluate, Api.flush] (Api.load e fuel) =
       ReplayResult.finished
         (Mexit e (meaning e [] Stores.empty).1 fr (meaning e [] Stores.empty).2 k' tr' nt') :=
   replay_Mexit_of_localRun e fuel (steps e + 1) (Looped.of_straight e hpl) _ _
