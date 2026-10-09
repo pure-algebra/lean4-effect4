@@ -251,13 +251,15 @@ def registry : Registry where
       defaultModules := [
         `Effect4.Laws.Api.HostSession,
         `Effect4.Laws.Api.Frontier,
-        `Effect4.Laws.Api.Guard
+        `Effect4.Laws.Api.Guard,
+        `Effect4.Laws.Program.RowProtocol
       ] },
     { id := "translation-simulation"
       title := "Translation & Simulation: Semantic preservation, replay relations, and capstone M7"
       defaultModules := [
         `Effect4.Laws.Program.Agreement.Machine,
         `Effect4.Laws.Program.Agreement.Segment,
+        `Effect4.Laws.Program.HostRuns,
         `Effect4.Laws.Program.Agreement.Loop,
         `Effect4.Laws.Program.LoopAgreement,
         `Effect4.Laws.Program.RuntimeR,
@@ -926,6 +928,9 @@ def registry : Registry where
     { id := "rows-denotation-session", concept := "translation-simulation", role := .simulation
       title := "The meaning of a StraightRows program under a run's reply tape is the root's exit with the stores, or the frontier: for a recorded run that is funded, at rest and driven by a host (one fiber; nothing about an interruption, a clock step, a delayed cell read or a handle row; DI-69, decisions row 310)"
       pointer := .witness `Effect4.Run.denoteRows_eq_session },
+    { id := "rows-denotation-host", concept := "translation-simulation", role := .simulation
+      title := "H9, the host as a handler: for a recorded StraightRows run that is funded, at rest, driven by a host and finished, under any host (a comodel of the row signature) whose answers are the run's, the host's run of the call tree is the root's exit with the stores and the host ends where the answers left it (one fiber; no progress claim; nothing about a run stopped at a call, an interruption, a clock step or a handle row; decisions row 310; the coalgebra note, slice CO-5)"
+      pointer := .witness `Effect4.Run.denoteRows_eq_session_host },
     { id := "m7-route", concept := "translation-simulation", role := .fundamentalProperty
       title := "M7 conditional route: typed exits and stores from ledger hypotheses M5 and M6"
       pointer := .witness `Effect4.Program.Typed.m7_of_ledger
@@ -1177,7 +1182,8 @@ def registry : Registry where
         `Effect4.Program.instance_prepared_success,
         `Effect4.Run.origin_addresses_call,
         `Effect4.Run.reached_callInstance,
-        `Effect4.Run.session_eq_ref]
+        `Effect4.Run.session_eq_ref,
+        `Effect4.Run.denoteRows_eq_session_host]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
         .ruling "DI-23: the preloaded answers are deleted" "the raw agreement with preloaded answers, the rest of the planned goal run_eq_ref_table (slice H6b): no consumer on the spine; session_eq_ref reads run_eq_ref_table_noPreload (decisions row 314)",
         .definition "the host as a relation between the machine's calls and its answers (`HostSpec`), in place of a predicate on tapes" "H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation",

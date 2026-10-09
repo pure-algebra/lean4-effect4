@@ -294,6 +294,18 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   `[propext, Quot.sound]`. Still owed: its registry claim, a battery reader, and the proof that
   `Run.drive` with a reactor makes its run `HostAnswered` (slice CO-6).
 
+- **A checker brings a run under H9.** `hostAnsweredCheck` runs a host along a run's tape, and
+  `hostAnsweredCheck_sound` gives `HostAnswered`. The battery shows that eight
+  repository-driven to-do runs meet H9's premises under the repository host. `reactorHost` reads
+  a driver's `Reactor` as a comodel.
+- **CO-6, the typed protocol** (`src/Effect4/Laws/Program/RowProtocol.lean`). A row's answer
+  and error columns make a protocol of the row signature: the row's template admission
+  (`externalAdmits`). `guardRows` makes a host meet it. Take a run answered by a host, with each
+  answer admitted by its row. The guarded host also answers it (`hostAnswered_guardRows`), so H9
+  holds for the typed host. The session's reply admission also reads a call's checked instance,
+  which depends on the call's site. A protocol at sites needs a signature indexed by the call site: the program's
+  call tree labelled by addresses, and a lens that forgets them. That is part of CO-7.
+
 ## 8. What the owner must decide
 
 1. **`Effects` as the home of the generic layer** (representation). The coalgebra layer lands
