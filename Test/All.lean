@@ -271,6 +271,7 @@ import Test.Audit.TypedStateDecl
 import Test.Audit.FrameRules
 import Test.Audit.ProofGraph
 import Test.Audit.ProofGraphPlan
+import Test.Audit.LandingPlanControls
 import Test.Audit.Explain
 import Test.Audit.Exposure
 import Test.Audit.ScenarioGate

@@ -413,6 +413,8 @@ private def restingPin : Array Name := #[
   `Test.Dogfood.Scenario.Routing.routing,
   `Test.Dogfood.Scenario.Timeout.timeout,
   `Test.Dogfood.Scenario.Workers.workers,
+  `Test.LandingPlanControls.pendingHelper,
+  `Test.LandingPlanControls.pendingTop,
   `Test.Obligations.resting,
   `Test.ProofGraphPlan.m7Modulo,
   `Test.ProofGraphPlan.sketched,

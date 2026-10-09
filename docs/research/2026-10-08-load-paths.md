@@ -125,8 +125,14 @@ them may be missing from the registry.
 A slice's top theorems are written first, with each new lemma left as a planned goal. Their proofs
 then name what the slice reuses and what it still owes. `#landing_plan T` walks from the tops
 through their own modules. It sorts what it reaches into goals owed, local steps, and the tree's
-joints with their load-bearing standing. After the landing, `#landing_plan` and `#load_report` measure
-the same quantities.
+joints with their load-bearing standing.
+
+**Correction (2026-10-09, Codex's S1 overwatch).** The rows below compare two different counts.
+Until this date the plan's reuse was distinct joints over joints, owed goals and local steps; the
+report's is edges. A rise from "Predicted" to "Landed" is partly that difference. The plan now
+counts edges with the report's own function (`countEdges`), over the theorems it reaches in the
+tops' modules. It also lists a step that rests on a goal as not proved, and it refuses a top that
+is not a theorem (`Test/Audit/LandingPlanControls.lean`).
 
 | Slice | Predicted | Landed |
 | --- | --- | --- |

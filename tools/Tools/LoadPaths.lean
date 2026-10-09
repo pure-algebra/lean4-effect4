@@ -123,56 +123,69 @@ def loadBearing (g : Graph) (rs : Array Name) : Std.HashSet Name := Id.run do
     stack := stack ++ g.deps.getD c #[]
   return seen
 
+/-- **The edges of some theorems of a landing**, by where each ends (the table above). It is the
+one count: `#load_report` gives it over every theorem of the landing, and `#landing_plan` over the
+theorems that its walk reaches in the landing (Codex's S1-PLAN-02). -/
+structure Edges where
+  local_ : Nat := 0
+  tree : Nat := 0
+  core : Nat := 0
+  instances : Nat := 0
+  /-- each tree theorem that an edge ends at, with how many do -/
+  cited : Std.HashMap Name Nat := {}
+
+/-- The reuse ratio, in percent, rounded down: tree edges over tree and local edges. -/
+def Edges.ratio (e : Edges) : Nat :=
+  if e.tree + e.local_ = 0 then 0 else (100 * e.tree) / (e.tree + e.local_)
+
+/-- The tree theorems that the edges end at, the most cited first. -/
+def Edges.joints (e : Edges) : Array (Name × Nat) :=
+  e.cited.toArray.qsort fun a b => a.2 > b.2 || (a.2 == b.2 && a.1.toString < b.1.toString)
+
+/-- **Count the edges of `members`**, theorems of the landing `landing`. -/
+def countEdges (env : Environment) (g : Graph) (landing : List Name) (members : List Name) :
+    Edges := Id.run do
+  let mut e : Edges := {}
+  for c in members do
+    for d in g.deps.getD c #[] do
+      let m := moduleOf env d
+      if Meta.isInstanceCore env d then e := { e with instances := e.instances + 1 }
+      else if within landing m then e := { e with local_ := e.local_ + 1 }
+      else if within treeScopes m then
+        e := { e with tree := e.tree + 1, cited := e.cited.insert d (e.cited.getD d 0 + 1) }
+      else e := { e with core := e.core + 1 }
+  return e
+
 /-- **The report on a landing.** -/
 structure Report where
   members : Nat
-  local_ : Nat
-  tree : Nat
-  core : Nat
-  instances : Nat
+  edges : Edges
   loadBearing : Nat
   rootsIn : Nat
   unconsumed : Array Name
   offPath : Array Name
   joints : Array (Name × Nat)
 
-/-- The reuse ratio, in percent, rounded down. -/
-def Report.ratio (r : Report) : Nat :=
-  if r.tree + r.local_ = 0 then 0 else (100 * r.tree) / (r.tree + r.local_)
-
 /-- Measure the landing `landing` against the graph. -/
 def measure (env : Environment) (g : Graph) (rs : Array Name) (load : Std.HashSet Name)
-    (landing : List Name) : Report := Id.run do
+    (landing : List Name) : Report :=
   let members := (g.deps.toList.filter fun (c, _) => within landing (moduleOf env c)).map (·.1)
-  let mut local_ := 0
-  let mut tree := 0
-  let mut core := 0
-  let mut instances := 0
-  let mut cited : Std.HashMap Name Nat := {}
-  for c in members do
-    for d in g.deps.getD c #[] do
-      let m := moduleOf env d
-      if Meta.isInstanceCore env d then instances := instances + 1
-      else if within landing m then local_ := local_ + 1
-      else if within treeScopes m then
-        tree := tree + 1
-        cited := cited.insert d (cited.getD d 0 + 1)
-      else core := core + 1
+  let edges := countEdges env g landing members
   let isRoot (c : Name) : Bool := rs.contains c
   let unconsumed := members.filter fun c => (g.usedBy.getD c #[]).isEmpty && !isRoot c
   let offPath := members.filter fun c => !load.contains c && !unconsumed.contains c
-  let joints := (cited.toArray.qsort fun a b => a.2 > b.2 || (a.2 == b.2 && a.1.toString < b.1.toString))
-  return { members := members.length, local_, tree, core, instances,
-           loadBearing := (members.filter load.contains).length,
-           rootsIn := (members.filter isRoot).length,
-           unconsumed := unconsumed.toArray.qsort (·.toString < ·.toString),
-           offPath := offPath.toArray.qsort (·.toString < ·.toString),
-           joints := joints.extract 0 8 }
+  { members := members.length, edges,
+    loadBearing := (members.filter load.contains).length,
+    rootsIn := (members.filter isRoot).length,
+    unconsumed := unconsumed.toArray.qsort (·.toString < ·.toString),
+    offPath := offPath.toArray.qsort (·.toString < ·.toString),
+    joints := edges.joints.extract 0 8 }
 
 /-- The report as lines. -/
 def Report.lines (r : Report) (landing : List Name) : List String :=
   [s!"landing {landing}: {r.members} theorems, {r.rootsIn} of them roots",
-   s!"  edges: {r.local_} local, {r.tree} tree, {r.core} core, {r.instances} instance; reuse ratio {r.ratio}%",
+   s!"  edges: {r.edges.local_} local, {r.edges.tree} tree, {r.edges.core} core, " ++
+     s!"{r.edges.instances} instance; reuse ratio {r.edges.ratio}%",
    s!"  load-bearing: {r.loadBearing} of {r.members}",
    s!"  unconsumed ({r.unconsumed.size}): {r.unconsumed.toList}",
    s!"  reached by a consumer, but by no root ({r.offPath.size}): {r.offPath.toList}",
@@ -209,7 +222,7 @@ elab "#load_map " k:num : command => do
   let mut lines : Array String := #[s!"graph: {g.deps.size} theorems of the tree, {rs.size} roots, {load.size} load-bearing"]
   for a in sorted do
     let r := measure env g rs load [a]
-    lines := lines.push s!"{a}: {r.members} theorems, {r.loadBearing} load-bearing, {r.unconsumed.size} unconsumed, {r.offPath.size} off the roots' paths; reuse {r.ratio}% ({r.tree} tree, {r.local_} local)"
+    lines := lines.push s!"{a}: {r.members} theorems, {r.loadBearing} load-bearing, {r.unconsumed.size} unconsumed, {r.offPath.size} off the roots' paths; reuse {r.edges.ratio}% ({r.edges.tree} tree, {r.edges.local_} local)"
   logInfo (String.intercalate "\n" lines.toList)
 
 /-! ## The landing plan: a prediction before a slice
@@ -222,18 +235,21 @@ tops through the theorems of their own modules, and sorts what the walk reaches:
 | Reached | Means |
 | --- | --- |
 | a planned goal | a step the slice still owes: what has to land |
-| a theorem of the tops' modules | a local step, already proved |
+| a theorem of the tops' modules | a local step, proved or modulo goals (`ProofGraph.standing`) |
 | a theorem of the tree outside them | a joint the slice reuses, with its load-bearing standing |
 
-The predicted reuse ratio is the joints over the joints and the owed and local steps. After the
-landing, `#load_report` on the tops' modules measures the same quantities, so the prediction can be
-compared with what landed. -/
+The predicted reuse ratio is the one `#load_report` gives (`countEdges`), over the theorems of the
+tops' modules that the walk reaches. After the landing, `#load_report` on the same modules counts
+every theorem of them, so the two agree when those modules hold only what the tops reach. A top
+must be an authored theorem. -/
 
 /-- What a landing plan reaches from its tops. -/
 structure Prediction where
   owed : Array Name := #[]
   localSteps : Array Name := #[]
-  joints : Std.HashMap Name Nat := {}
+  /-- the theorems reached in the tops' modules, the tops and their goals included: what the
+  edges are counted over -/
+  members : Array Name := #[]
 
 /-- Walk from `tops` through the authored theorems of `modules`, stopping at planned goals and at
 theorems outside `modules`. -/
@@ -246,34 +262,57 @@ def predict (env : Environment) (modules : List Name) (tops : Array Name) : Pred
     stack := stack.pop
     if seen.contains c then continue
     seen := seen.insert c
+    let inside := within modules (moduleOf env c)
+    if inside then pr := { pr with members := pr.members.push c }
     if ProofGraph.isGoal env c then
       pr := { pr with owed := pr.owed.push c }
-    else if within modules (moduleOf env c) then
+    else if inside then
       unless tops.contains c do pr := { pr with localSteps := pr.localSteps.push c }
       stack := stack ++ ((directTheorems env c).getD #[])
-    else if within treeScopes (moduleOf env c) && !Meta.isInstanceCore env c then
-      pr := { pr with joints := pr.joints.insert c (pr.joints.getD c 0 + 1) }
   return pr
 
 /-- `#landing_plan T₁ …`: the prediction of a slice from its top theorems. -/
 elab "#landing_plan " ts:ident+ : command => do
   let env ← getEnv
-  let tops ← ts.mapM fun t => liftCoreM (realizeGlobalConstNoOverloadWithInfo t)
+  let tops ← ts.mapM fun t => do
+    let c ← liftCoreM (realizeGlobalConstNoOverloadWithInfo t)
+    -- a plan's top is a theorem: data has no proof to plan (Codex's S1-PLAN-03)
+    unless authoredTheorem env c do
+      throwErrorAt t "#landing_plan: {c} is not an authored theorem; a plan's top is a theorem"
+    return c
   let modules := (tops.map (moduleOf env)).toList.eraseDups
   let pr := predict env modules tops
   let g := buildGraph env
   let load := loadBearing g (roots env)
-  let joints := pr.joints.toArray.qsort fun a b => a.2 > b.2 || (a.2 == b.2 && a.1.toString < b.1.toString)
+  let edges := countEdges env g modules pr.members.toList
+  let joints := edges.joints.filter fun (n, _) => !ProofGraph.isGoal env n
   let carrying := joints.filter fun (n, _) => load.contains n
-  let denominator := joints.size + pr.owed.size + pr.localSteps.size
-  let ratio := if denominator = 0 then 0 else 100 * joints.size / denominator
+  -- a step's standing is the proof graph's, so a step that rests on a goal is not called proved
+  -- (Codex's S1-PLAN-01); a top and a joint carry theirs too, since a joint may rest on a goal
+  -- outside the walk
+  let named := tops ++ pr.localSteps ++ joints.map (·.1)
+  let (standings, _) := (named.mapM fun c => do return (c, ← ProofGraph.standing env c)).run {}
+  let standingOf (c : Name) : Option ProofGraph.Standing :=
+    (standings.find? (·.1 == c)).bind fun (_, st) => st.map (·.1)
+  let word (c : Name) : String :=
+    match standingOf c with
+    | some (.modulo goals) => s!"modulo {goals.toList}"
+    | some st => st.word
+    | none => "standing not reached in the walk's bound"
+  let proved := pr.localSteps.filter fun c => standingOf c == some .proved
+  let unproved := pr.localSteps.filter fun c => standingOf c != some .proved
+  let jointWord (n : Name) (k : Nat) : String :=
+    s!"{n}{if load.contains n then "" else " (off the roots' paths)"}" ++
+      s!"{if standingOf n == some .proved then "" else s!" ({word n})"}{if k > 1 then s!" ×{k}" else ""}"
   let lines := [
-    s!"landing plan for {tops.toList} in {modules}",
+    s!"landing plan for {tops.toList.map fun t => s!"{t} ({word t})"} in {modules}",
     s!"  to land ({pr.owed.size} planned goals): {pr.owed.toList}",
-    s!"  local steps, proved ({pr.localSteps.size}): {pr.localSteps.toList}",
+    s!"  local steps, proved ({proved.size}): {proved.toList}",
+    s!"  local steps, not proved ({unproved.size}): {unproved.toList.map fun c => s!"{c} ({word c})"}",
     s!"  joints reused ({joints.size}, {carrying.size} of them load-bearing): " ++
-      s!"{joints.toList.map fun (n, k) => s!"{n}{if load.contains n then "" else " (off the roots' paths)"}{if k > 1 then s!" ×{k}" else ""}"}",
-    s!"  predicted reuse: {ratio}% ({joints.size} joints against {pr.owed.size} owed and {pr.localSteps.size} local steps)"]
+      s!"{joints.toList.map fun (n, k) => jointWord n k}",
+    s!"  predicted reuse: {edges.ratio}% ({edges.tree} tree edges, {edges.local_} local), " ++
+      "as `#load_report` counts it"]
   logInfo (String.intercalate "\n" lines)
 
 end Tools.LoadPaths

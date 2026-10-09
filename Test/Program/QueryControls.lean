@@ -15,7 +15,8 @@ These are the finite evaluations, on the examples of `Test/Program/SketchControl
   at a request that has an answer.
 * **Tested: the laws that an answer names.** An answer names a law only where the function has
   decided the law's premises. A focus at no address, a slot of an open program and a filling of
-  another type name none.
+  another type name none. The root of a definition block names the module check's laws, and
+  its parts are read at the block's signature.
 * **Red (tested): a request with no answer.** Bytes that do not decode, an unknown operation,
   an omission and a filling at no address.
 * **Tested: the reader.** It reads what the writer writes. It refuses a field of the wrong type
@@ -111,6 +112,34 @@ def text : NativeEff := .succeed (.lit (.str "x"))
 #guard (answer { ask "slots" update with slot := some .opTerm }).result ==
   Json.arr #[slotJson .opTerm (some (.var 1)) none none]
 #guard (answer { ask "slots" update with slot := some .opTerm }).laws == []
+
+/-! ## A definition block: the root, and the parts (Codex's S1-QUERY-01) -/
+
+/-- The identity on naturals, declared. -/
+def idDecl : DefDecl := { name := "identity", request := .nat, answer := .nat }
+/-- An invocation of the identity. -/
+def callId : NativeEff := .perform (.call 0) (.lit (.nat 5))
+/-- A block that defines the identity, and whose main program invokes it. -/
+def idBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) callId
+/-- A loop that counts nothing, closed. -/
+def closedLoop : NativeEff :=
+  .iterate none (.lit (.nat 0)) (.lit (.bool true)) (.var 1) (.var 0) (.succeed (.var 0))
+/-- The block whose main program runs the loop after the invocation. -/
+def loopBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) (.bind callId closedLoop)
+
+-- control: the structural checker refuses the block, which the module check admits
+#guard (Checker.check sig [] [] idBlock).toOption.isNone && (Checker.checkModule sig idBlock).toOption.isSome
+-- tested: the root's focus is the module check's answer, and names its laws, not the focus law
+#guard ((answer (ask "focus" idBlock)).result.getObjValAs? Bool "found").toOption == some true
+#guard (answer (ask "focus" idBlock)).laws == [``Sketch.focusAt_nil, ``checkModule_sound]
+-- tested: inside the block, the focus law, at the part that holds the address
+#guard (answer (ask "focus" idBlock [1])).laws == [``focusAt_typed]
+-- tested: the slots of `iterate` after an invocation, read at the block's signature
+#guard ((answer (ask "slots" loopBlock [1, 1])).result.getArr?.toOption.map (·.size)) == some 3
+#guard (answer (ask "slots" loopBlock [1, 1])).laws == [``hasTy_extSlotEnv]
+-- red (tested): the root of a block has no slot, and names no law
+#guard (answer (ask "slots" idBlock)).result == Json.arr #[]
+#guard (answer (ask "slots" idBlock)).laws == []
 
 /-! ## `omit` and `fill` -/
 

@@ -21,10 +21,10 @@ prints one answer for each: it is `answerLine` and nothing more.
 | --- | --- | --- |
 | `check` | `Sketch.check` | `Sketch.check_program` |
 | `addresses` | `Node.addresses` | `mem_addresses_iff` |
-| `focus` | `Sketch.focusAt` | `focusAt_typed`, where the focus is answered |
+| `focus` | `Sketch.focusAt` | at the root, `Sketch.focusAt_nil` and `checkModule_sound`; elsewhere `focusAt_typed`, at the part that holds the address; where the focus is answered |
 | `table` | `Sketch.table` | `mem_addresses_iff`, `Sketch.table_head` |
 | `refusals` | `Sketch.refusals` | `Sketch.refusals_head`, `Sketch.refusals_nil_iff` |
-| `slots` | `Node.extSlotTerm`, `Node.extSlotEnv` | `hasTy_extSlotEnv`, where the node is typed and has a slot |
+| `slots` | `Node.extSlotTerm`, `Node.extSlotEnv`, in the part that holds the address | `hasTy_extSlotEnv`, where the part's focus is typed and the node has a slot |
 | `omit` | `Sketch.omitAt` | `Sketch.check_omit_focusAt`, where its premises hold |
 | `fill` | `Sketch.fillAt` | `Sketch.check_fill_focusAt`, where its premises hold |
 
@@ -314,20 +314,28 @@ theorem omitPremises_sound {sketch : Sketch} {path : List Nat} {name : String}
 
 /-! ## The operations -/
 
-/-- The slots of the node at an address of a program. The environment of the node is the
-table's (`Node.envAt`). A node that is no program, and a node in a generator body, has no
-slot. -/
-def slotsAt (program : NativeEff) (path : List Nat) (slots : List ExtSlot) : List Json :=
-  let sig : Signature NativeOp := ({} : SigApp).signature
-  match (Node.eff program).at_ path, (Node.eff program).envAt sig (.env []) path with
-  | some node, some (.env env) =>
-    slots.filterMap fun slot =>
-      let term := node.extSlotTerm sig slot
-      let slotEnv := node.extSlotEnv sig env slot
-      if term.isSome || slotEnv.isSome then
-        some (slotJson slot term slotEnv (term.bind fun t => slotEnv.bind fun e => termTy sig e t))
-      else none
-  | _, _ => []
+/-- The slots of the node at an address of a program, read in the part that holds the address
+(`Eff.partAt`), at the part's signature and environment, as the module check reads them. The
+environment of the node is the part's table's (`Node.envAt`). A node that is no program, a node in
+a generator body, and the root of a block have no slot. The second answer is whether the part's
+focus there is typed: then `focusAt_typed` gives `hasTy_extSlotEnv` its premise. -/
+def slotsAt (sig : Signature NativeOp) (program : NativeEff) (path : List Nat)
+    (slots : List ExtSlot) : List Json × Bool :=
+  match program.partAt sig [] path with
+  | none => ([], false)
+  | some (part, rest) =>
+    match (Node.eff part.program).at_ rest,
+      (Node.eff part.program).envAt part.sig (.env part.env) rest with
+    | some node, some (.env env) =>
+      (slots.filterMap fun slot =>
+        let term := node.extSlotTerm part.sig slot
+        let slotEnv := node.extSlotEnv part.sig env slot
+        if term.isSome || slotEnv.isSome then
+          some (slotJson slot term slotEnv
+            (term.bind fun t => slotEnv.bind fun e => termTy part.sig e t))
+        else none,
+        (focusAt part.sig part.env part.program rest).isSome)
+    | _, _ => ([], false)
 
 /-- **Answer one request.** -/
 def answer (req : Request) : Answer :=
@@ -343,8 +351,13 @@ def answer (req : Request) : Answer :=
     | "check" => done [``Sketch.check_program] (checkJson (sketch.check {}))
     | "addresses" => done [``mem_addresses_iff] (toJson (Node.addresses (.eff program)))
     | "focus" =>
+      -- the root's focus is the module check's answer, which may be a block's; any other is the
+      -- structural focus of the part that holds the address (Codex's S1-QUERY-01)
       let focus := sketch.focusAt {} req.path
-      done (if focus.isSome then [``focusAt_typed] else []) (focusJson focus)
+      let laws := match req.path with
+        | [] => [``Sketch.focusAt_nil, ``checkModule_sound]
+        | _ :: _ => [``focusAt_typed]
+      done (if focus.isSome then laws else []) (focusJson focus)
     | "table" =>
       done [``mem_addresses_iff, ``Sketch.table_head]
         (Json.arr ((sketch.table {}).map entryJson).toArray)
@@ -352,8 +365,8 @@ def answer (req : Request) : Answer :=
       done [``Sketch.refusals_head, ``Sketch.refusals_nil_iff]
         (Json.arr ((sketch.refusals {}).map refusalJson).toArray)
     | "slots" =>
-      let slots := slotsAt program req.path (req.slot.map ([·]) |>.getD allSlots)
-      let typed := (sketch.focusAt {} req.path).isSome
+      let (slots, typed) := slotsAt (({} : SigApp).withHoles holes).signature program req.path
+        (req.slot.map ([·]) |>.getD allSlots)
       done (if typed && !slots.isEmpty then [``hasTy_extSlotEnv] else []) (Json.arr slots.toArray)
     | "omit" =>
       match sketch.focusAt {} req.path with
