@@ -18,7 +18,7 @@ The implementation changes only these paths:
 The helper owns command execution, the capped environment, package pins, temporary dependencies, helper imports, strict compiler discovery, compiler checking, and retained inputs.
 The callers retain case inventories, expected observations, runtime checks, wrong-implementation controls, and receipt construction.
 Both receipts hash the shared helper as a source input.
-No production Lean, contract, registry, or root import changes.
+No production Lean, contract, semantics registry, or root import changes.
 
 The catalogue caller requires nine exact read-backs and three frozen-ref-definition refusals.
 The refused cases are streamDefinitions, streamRepeated, and streamIndependent.
@@ -36,7 +36,7 @@ The catalogue guard rejects missing status and swapped per-case statuses with un
 python3 harness/partitioned-bookkeeping/run.py --install /Users/pooks/Dev/lean4-effect4/ts/release/node_modules --out /private/tmp/partitioned-shared-packet-first
 ```
 
-The complete runner passes.
+The runner passes every stated check.
 Its narrow build completes 572 jobs with LEAN_NUM_THREADS=3.
 The producer emits fourteen checked callers.
 Strict discovery and checking run tsgo 7.0.0-dev.20260629.1.
