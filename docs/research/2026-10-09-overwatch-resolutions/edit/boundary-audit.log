@@ -1,0 +1,5 @@
+Effect4.Program.EditSession.reached_view: [propext, Quot.sound]
+Effect4.Program.EditSession.feed_undo: [propext, Quot.sound]
+Effect4.Program.EditSession.feed_repaint: [propext, Quot.sound]
+Effect4.Store.Canonical.ofJson_exact: []
+PASS: core and author entries import no Laws module; selected edit and canonical reader laws stay at the allowed ceiling

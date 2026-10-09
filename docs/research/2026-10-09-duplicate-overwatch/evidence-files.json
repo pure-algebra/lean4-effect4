@@ -1,0 +1,147 @@
+{
+  "base": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "reviewedHead": "7334f1197cf5b535541ce1dfc7789a5082c07115",
+  "files": [
+    {
+      "path": "Audit.draft.log",
+      "bytes": 662,
+      "sha256": "04980731b3fa6892063af3271087f356487d1a2f98b4b1a63fd922f4788fc321"
+    },
+    {
+      "path": "Audit.lean",
+      "bytes": 2024,
+      "sha256": "21b8ee4000f8937461a49dc8f1a6ebc377c825bd41a1ec190404ca1e3d209019"
+    },
+    {
+      "path": "Audit.log",
+      "bytes": 380,
+      "sha256": "c7129d05a3cc59dcae2aaea126d3977ad161fa6b11bbfb01adc3fece9bc2f4b7"
+    },
+    {
+      "path": "Effect4-Laws-Codegen-PrintTyped.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Effect4-Laws-Library-Pool-Ops.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Effect4-Laws-Library-Semaphore-Data.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "Test-Program-RegistrationYield.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "axioms.tsv",
+      "bytes": 170021,
+      "sha256": "3f999ae27772e102043b0bfa149fe778f1ea4a85603c70eab8436431d5d1ad81"
+    },
+    {
+      "path": "check.py",
+      "bytes": 2474,
+      "sha256": "e3cf8b07bfc6b2c037734c16d2f284c80659fb98e273f25e37a1c7dcb97abb46"
+    },
+    {
+      "path": "imported-project-modules.txt",
+      "bytes": 11355,
+      "sha256": "1a012084688b6d004ff0bb96d273f2525ee36b0aa479e9996384166617cfccad"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 4394,
+      "sha256": "c82d55958ed31ef1100a3d74ab94dd052dedfa2ed6e3efd69b1ef12edde6d85f"
+    },
+    {
+      "path": "prior-wip-comparison.json",
+      "bytes": 687,
+      "sha256": "c7427922f3162c8af0527ba30ebb776b184f1c10eb71e2fad038eeef3aa4f9c6"
+    },
+    {
+      "path": "run_audit.py",
+      "bytes": 856,
+      "sha256": "e409f015393309748318a638d248e631be9b0064e922c8c950fe30a7f7695287"
+    },
+    {
+      "path": "scout-graph/generated-semantics.diff",
+      "bytes": 34923,
+      "sha256": "2e631c992308f404717a5605f2941a4b057e00fd478428a07d5cc84baaf8151d"
+    },
+    {
+      "path": "scout-graph/graph-metadata-reference-audit.json",
+      "bytes": 1250,
+      "sha256": "15c8a8a378979914d3cee2a1a80ccf75517d45720b373b4c0ee10d10c097b68c"
+    },
+    {
+      "path": "scout-graph/header-status-audit.json",
+      "bytes": 2957,
+      "sha256": "a48b57a91d386d1b41c327da649b7b3336653cafbf18d7deb774236b705eaa2e"
+    },
+    {
+      "path": "scout-graph/laws.diff",
+      "bytes": 77135,
+      "sha256": "f8e30eb694ad446a10fa1adc031c511e69585d6d6aff32e9115d0dc7c3fc20cb"
+    },
+    {
+      "path": "scout-graph/removed-theorem-headers.json",
+      "bytes": 4758,
+      "sha256": "cd6e607204608ec2d5a8778233c8758213ad1467af3b657897f3c54581b1ea16"
+    },
+    {
+      "path": "scout-graph/replay.py",
+      "bytes": 3175,
+      "sha256": "ddf79c2df41c8ad384243c81856282bff85407f22ab2dd056f4e91e42ff32384"
+    },
+    {
+      "path": "scout-statements/README.txt",
+      "bytes": 2583,
+      "sha256": "cc019cd68f0362f09c8308badda056ed10020b0ea60d8ef376474ae1d91d1e07"
+    },
+    {
+      "path": "scout-statements/compare.py",
+      "bytes": 5129,
+      "sha256": "8ce570fec234e1ccb8a6da8b7d3978b332a1b08660a226d6cd6a28614e84ff21"
+    },
+    {
+      "path": "scout-statements/comparison.json",
+      "bytes": 691912,
+      "sha256": "30179d7a1fe6048fb6f68459131bd5dbb9de39b82bac7d425bdb85cfe0a1c145"
+    },
+    {
+      "path": "scout-statements/review.diff",
+      "bytes": 62235,
+      "sha256": "8b93b41331c127c25e3b5fa50136aeb59d3973b4719c54e0c6d1b9fae813b3a2"
+    },
+    {
+      "path": "scout-statements/summary.json",
+      "bytes": 3075,
+      "sha256": "5393de96947705078c759ecb812d6f88254bc3265e0169812903fe291087c9cd"
+    },
+    {
+      "path": "source/Test/Program/RegistrationYield.lean",
+      "bytes": 29856,
+      "sha256": "237922f5b12a7aa3a52d1fc506459aacb21c64fa80a818e5aa2affab6629e413"
+    },
+    {
+      "path": "source/src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "bytes": 403191,
+      "sha256": "e652b2959e43d2e7de1c6b3ef0229f4d2cc7c0521f5e3aeda19fd74a67283214"
+    },
+    {
+      "path": "source/src/Effect4/Laws/Library/Pool/Ops.lean",
+      "bytes": 70291,
+      "sha256": "d1ba8a422418868326e3b8058f8c72602c3ff6a56d1e39849ab50582cbb4b0cf"
+    },
+    {
+      "path": "source/src/Effect4/Laws/Library/Semaphore/Data.lean",
+      "bytes": 14300,
+      "sha256": "48da899142c8840404139014a70b63f16587137b76f98e60557708a4462963a5"
+    }
+  ],
+  "receiptSHA256": "e2da2c16bb862446149ac766be914204b9d51a1bf1ebd155c9c8d894acd83c88"
+}

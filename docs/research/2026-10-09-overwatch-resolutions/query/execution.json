@@ -1,0 +1,21 @@
+{
+  "pin": "205f4feaaac2041efe4becbe9992ec8f14b077c6",
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "-DwarningAsError=true",
+    "/tmp/effect4-query-resolution-0547/source/Test/Program/QueryControls.lean"
+  ],
+  "cwd": "/tmp/effect4-query-resolution-0547",
+  "leanPath": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean",
+  "leanThreads": 3,
+  "exit": 0,
+  "hashes": {
+    "tools/Tools/Query.lean": "0e3c514da6fbe3489ab87cc73304afef3fbb73d50440554c9efd968d64c2918a",
+    "Test/Program/QueryControls.lean": "a608a7ebdbed06cd0a85a80a26788eadd9d0cf0c970fb96520effebd38286f8d",
+    "Test/fixtures/query/requests.jsonl": "4a7d3c5b9c56813858567d9cd477984ca29b08828c2d6dd6ac0dead1964561af",
+    "Test/fixtures/query/answers.jsonl": "8b5d9a273944a20e6a948bcac67697e5f954141dd76353fddb1cab5c7f063441",
+    "Tools/Query.olean": "47e7897dc6803f9c570bfda83a8137c374079c63b4d680fb1cac6939b9623b4f"
+  },
+  "setupRepair": "retained the two relative transcript fixtures required by include_str; no source changed",
+  "scope": "existing public Query controls including definition-block focus, part signature slots, and refusal controls"
+}

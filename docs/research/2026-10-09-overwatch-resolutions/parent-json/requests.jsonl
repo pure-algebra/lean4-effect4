@@ -1,0 +1,18 @@
+{"op": "open", "id": "small", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 7}}}}
+{"op": "sketch", "id": "small"}
+{"op": "open", "id": "exact-boundary", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740992}}}}
+{"op": "sketch", "id": "exact-boundary"}
+{"op": "open", "id": "exact-large", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740994}}}}
+{"op": "sketch", "id": "exact-large"}
+{"op": "open", "id": "rounded-input", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740993}}}}
+{"op": "sketch", "id": "rounded-input"}
+{"op": "open", "id": "fractional", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 3.5}}}}
+{"op": "sketch", "id": "fractional"}
+{"op": "open", "id": "negative", "programJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": -1}}}}
+{"op": "sketch", "id": "negative"}
+{"op": "fill", "path": [], "id": "fill-small", "replacementJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 11}}}}
+{"op": "sketch", "id": "fill-small"}
+{"op": "fill", "path": [], "id": "fill-rounded", "replacementJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740993}}}}
+{"op": "sketch", "id": "fill-rounded"}
+{"op": "fill", "path": [], "id": "fill-exact-large", "replacementJson": {"_tag": "succeed", "value": {"_tag": "lit", "value": {"_tag": "nat", "value": 9007199254740994}}}}
+{"op": "sketch", "id": "fill-exact-large"}

@@ -1,0 +1,56 @@
+[
+  {
+    "control": "small",
+    "input": 7,
+    "accepted": true,
+    "returnedNat": 7
+  },
+  {
+    "control": "exact-boundary",
+    "input": 9007199254740992,
+    "accepted": true,
+    "returnedNat": 9007199254740992
+  },
+  {
+    "control": "exact-large",
+    "input": 9007199254740994,
+    "accepted": true,
+    "returnedNat": 9007199254740994
+  },
+  {
+    "control": "rounded-input",
+    "input": 9007199254740993,
+    "accepted": false,
+    "returnedNat": 9007199254740994
+  },
+  {
+    "control": "fractional",
+    "input": 3.5,
+    "accepted": false,
+    "returnedNat": 9007199254740994
+  },
+  {
+    "control": "negative",
+    "input": -1,
+    "accepted": false,
+    "returnedNat": 9007199254740994
+  },
+  {
+    "control": "fill-small",
+    "input": 11,
+    "accepted": true,
+    "returnedNat": 11
+  },
+  {
+    "control": "fill-rounded",
+    "input": 9007199254740993,
+    "accepted": false,
+    "returnedNat": 11
+  },
+  {
+    "control": "fill-exact-large",
+    "input": 9007199254740994,
+    "accepted": true,
+    "returnedNat": 9007199254740994
+  }
+]

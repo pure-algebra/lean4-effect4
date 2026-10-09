@@ -1,0 +1,2 @@
+audited 54 declarations across [Effect4.Laws.Auto.ExceptMap,
+ Effect4.Laws.Program.Typing.Rebase]; reached [propext, Quot.sound]

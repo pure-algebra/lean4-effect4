@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "-DwarningAsError=true",
+    "QueueRebaseProbe.lean"
+  ],
+  "cwd": "/tmp/effect4-address-overwatch-0617",
+  "exit_code": 0,
+  "elapsed_seconds": 2.623,
+  "LEAN_NUM_THREADS": "3",
+  "LEAN_PATH": "/tmp/effect4-address-overwatch-0617/overlay:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean",
+  "probe_sha256": "a57917caae522d2b1f7b7cf054a2e406e44ed235001221b56c74d406b8229089"
+}

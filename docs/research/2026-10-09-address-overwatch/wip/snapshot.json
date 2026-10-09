@@ -1,0 +1,55 @@
+{
+  "base": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "kind": "uncommitted source review only",
+  "files": {
+    "src/Effect4/Laws/Library/Pool/Ops.lean": {
+      "diff_sha256": "c8c999467dfbd1b5bb79daf6f4f00fee03a953186b60902e3903905ac82fabea",
+      "working_source_sha256": "d1ba8a422418868326e3b8058f8c72602c3ff6a56d1e39849ab50582cbb4b0cf",
+      "patch": "Library-Pool-Ops.lean.patch"
+    },
+    "src/Effect4/Laws/Library/Semaphore/Data.lean": {
+      "diff_sha256": "a5b555820242d96ed18a69f971ca66a26740b93327977f31115f6c9fc748229d",
+      "working_source_sha256": "48da899142c8840404139014a70b63f16587137b76f98e60557708a4462963a5",
+      "patch": "Library-Semaphore-Data.lean.patch"
+    },
+    "src/Effect4/Laws/Codegen/PrintTyped.lean": {
+      "diff_sha256": "0da8e3ac3f98887c9a9c97c76066e845432b8c911ed1971c76875ea528dbeb27",
+      "working_source_sha256": "e652b2959e43d2e7de1c6b3ef0229f4d2cc7c0521f5e3aeda19fd74a67283214",
+      "patch": "Codegen-PrintTyped.lean.patch"
+    },
+    "src/Effect4/Laws/Codegen/ReadLeaf.lean": {
+      "diff_sha256": "06007829dca2faa882851b57f61b33cfc2f41b3d1458ff33bd53d38b8d558ea9",
+      "working_source_sha256": "265904b76d5fbc8e51a92db38d6776eaacf217e5512827eb22d90051a2be2714",
+      "patch": "Codegen-ReadLeaf.lean.patch"
+    }
+  },
+  "head": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "working_status": [
+    " M Test/fixtures/proof-style/baseline.tsv",
+    " M src/Effect4/Laws/Codegen/PrintTyped.lean",
+    " M src/Effect4/Laws/Codegen/ReadLeaf.lean",
+    " M src/Effect4/Laws/Library/Pool/Ops.lean",
+    " M src/Effect4/Laws/Library/Semaphore/Data.lean",
+    " M src/Effect4/Laws/Program/Agreement/Machine.lean",
+    " M src/Effect4/Laws/Program/Guard/AnswerDecision.lean",
+    " M src/Effect4/Laws/Program/Guard/ControlRemainder.lean",
+    " M src/Effect4/Laws/Program/LayerSharing.lean",
+    " M src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+    " M src/Effect4/Laws/Program/Template.lean",
+    " M src/Effect4/Laws/Program/TyView.lean",
+    " M src/Effect4/Laws/Program/Typed/Adequacy.lean",
+    " M src/Effect4/Laws/Program/Typed/Assembly.lean",
+    " M src/Effect4/Laws/Program/Typed/Body.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Finish.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+    " M src/Effect4/Laws/Program/Typed/Denotation.lean",
+    " M src/Effect4/Laws/Program/Typed/LayerArm.lean",
+    " M src/Effect4/Laws/Program/Typed/Membership.lean"
+  ]
+}

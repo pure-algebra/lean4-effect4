@@ -1,0 +1,17 @@
+diff --git a/src/Effect4/Laws/Library/Semaphore/Data.lean b/src/Effect4/Laws/Library/Semaphore/Data.lean
+index 3a6bfcc9..f84db600 100644
+--- a/src/Effect4/Laws/Library/Semaphore/Data.lean
++++ b/src/Effect4/Laws/Library/Semaphore/Data.lean
+@@ -97,12 +97,6 @@ theorem release_eval (tb : Table) (s : State) (n : Nat) :
+   rw [List.length_map, Effect4.Constructive.List.decide_length_zero]
+   rfl
+ 
+-/-- The deferred comparison is model request equality only on an injective table. -/
+-theorem request_equal (tb : Table) (injective : tb.Injective) (a b : Nat) :
+-    Effect4.Schema.Model.deferredEqual Leaves.deferredKeys (tb.handle a) (tb.handle b) = decide (a = b) := by
+-  change decide (tb.handle a = tb.handle b) = decide (a = b)
+-  exact injective.decides a b
+-
+ def requestValue {Γ : List Ty} (request : Input Γ idTy) (vs : Inputs Leaves.deferredKeys Γ) : DeferredKey :=
+   request.get vs
+ 

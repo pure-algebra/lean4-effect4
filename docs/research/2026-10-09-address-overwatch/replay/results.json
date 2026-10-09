@@ -1,0 +1,70 @@
+{
+  "reviewed_commit": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "LEAN_NUM_THREADS": "3",
+  "LEAN_PATH": "/private/tmp/effect4-address-replay-0617/overlay:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean",
+  "checks": [
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-address-replay-0617/overlay/Effect4/Laws/Program/Address.olean",
+        "Effect4/Laws/Program/Address.lean"
+      ],
+      "cwd": "/private/tmp/effect4-address-replay-0617/source/src",
+      "exit": 0,
+      "log": "Address.compile.log",
+      "seconds": 3.871
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-address-replay-0617/overlay/Effect4/Laws/Auto/ExceptMap.olean",
+        "Effect4/Laws/Auto/ExceptMap.lean"
+      ],
+      "cwd": "/private/tmp/effect4-address-replay-0617/source/src",
+      "exit": 0,
+      "log": "ExceptMap.compile.log",
+      "seconds": 0.281
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-address-replay-0617/overlay/Effect4/Laws/Program/Typing/Annotate.olean",
+        "Effect4/Laws/Program/Typing/Annotate.lean"
+      ],
+      "cwd": "/private/tmp/effect4-address-replay-0617/source/src",
+      "exit": 0,
+      "log": "Annotate.compile.log",
+      "seconds": 19.13
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/private/tmp/effect4-address-replay-0617/overlay/Effect4/Laws/Program/Typing/Rebase.olean",
+        "Effect4/Laws/Program/Typing/Rebase.lean"
+      ],
+      "cwd": "/private/tmp/effect4-address-replay-0617/source/src",
+      "exit": 0,
+      "log": "Rebase.compile.log",
+      "seconds": 2.019
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "QueueRebaseProbe.lean"
+      ],
+      "cwd": "/private/tmp/effect4-address-replay-0617",
+      "exit": 0,
+      "log": "QueueRebaseProbe.log",
+      "seconds": 2.734
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+/tmp/effect4-query-resolution-0547/QueryControls.lean:216:16: error: no such file or directory (error code: 4294967294)
+  file: /tmp/effect4-query-resolution-0547/../fixtures/query/requests.jsonl
+/tmp/effect4-query-resolution-0547/QueryControls.lean:217:3: error: no such file or directory (error code: 4294967294)
+  file: /tmp/effect4-query-resolution-0547/../fixtures/query/answers.jsonl
+/tmp/effect4-query-resolution-0547/QueryControls.lean:216:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/tmp/effect4-query-resolution-0547/QueryControls.lean:218:22: error: no such file or directory (error code: 4294967294)
+  file: /tmp/effect4-query-resolution-0547/../fixtures/query/requests.jsonl
+/tmp/effect4-query-resolution-0547/QueryControls.lean:218:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors

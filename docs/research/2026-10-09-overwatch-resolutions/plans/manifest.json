@@ -1,0 +1,22 @@
+{
+  "tools/Tools/LoadPaths.lean": "251e1d008a81481ef1bc69756921b3387ba6d56e2ddf8098862e53eb3cc6ff88",
+  "Test/Audit/LandingPlanControls.lean": "65d2e46932d6846bc73c16fe4fc8b56920e488f2e11cc3735288100a1372d920",
+  "head": "205f4feaaac2041efe4becbe9992ec8f14b077c6",
+  "sourceUnchanged": true,
+  "reviewBase": "8811a61bab98a6d07e897c3361a703f5729c9c82",
+  "reviewFinalHead": "205f4feaaac2041efe4becbe9992ec8f14b077c6",
+  "leanVersion": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "checks": {
+    "exactSourceCompile": 0,
+    "exactBatteryCompile": 0,
+    "independentPlanReportAndDataRefusals": 0
+  },
+  "independentSources": {
+    "Test/Audit/LandingPlanCounts.lean": "98b0e6f285d70b982a621b4e5fad42cabfd05ecd36293c08fd7d2c7c2751104c"
+  },
+  "limits": [
+    "Direct Lean outputs are in /tmp only; imported oleans come from existing primary build artifacts.",
+    "No primary Lake, source edit, audit-root execution, or full sweep runs.",
+    "The source review concerns the three S1-PLAN findings only."
+  ]
+}

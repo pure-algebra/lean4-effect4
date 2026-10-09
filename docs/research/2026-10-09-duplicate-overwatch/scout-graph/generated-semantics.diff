@@ -1,0 +1,425 @@
+diff --git a/generated/semantics.md b/generated/semantics.md
+index 33aa61bd..1abd17e4 100644
+--- a/generated/semantics.md
++++ b/generated/semantics.md
+@@ -3146,7 +3146,7 @@ These are authored links to historical attacks. Read each full row: a leading st
+ 
+ theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
+ 
+-Tagged: 278; inherited (provisional): 2300; unplaced: 0.
++Tagged: 278; inherited (provisional): 2295; unplaced: 0.
+ 
+ ## Plan
+ 
+@@ -3251,8 +3251,10 @@ flowchart LR
+   n46a44215["wake_preserves<br/>proved"]
+   n218454b["mono<br/>proved"]
+   n78df438d["close_typed<br/>proved"]
++  n19f8d2c3["seq_typed<br/>proved"]
+   na18dddac["registrationDone_preserves<br/>proved"]
+   n711b772["launch_preserves<br/>proved"]
++  ndd979abd["subN_never<br/>proved"]
+   n8a1c93b9["guardBind_typed<br/>proved"]
+   ne0728e61["deliver_preserves<br/>proved"]
+   nfe3c01d["loop_preserves<br/>proved"]
+@@ -3265,7 +3267,6 @@ flowchart LR
+   nd5186648["catchGuard_typed<br/>proved"]
+   n75164370["closeOrder_eq<br/>proved"]
+   nd0b1e6c2["fits_scope_inv<br/>proved"]
+-  n19f8d2c3["seq_typed<br/>proved"]
+   n6bd84948["memoBuild_extension<br/>proved"]
+   nec2861e7["at_child<br/>proved"]
+   n21101f84["fiberTy_upper<br/>proved"]
+@@ -3426,8 +3427,10 @@ flowchart LR
+   n3c088e91 --> n780c81c2
+   n3c088e91 --> n218454b
+   n3c088e91 --> n78df438d
++  n3c088e91 --> n19f8d2c3
+   n3c088e91 --> na18dddac
+   n3c088e91 --> n711b772
++  n3c088e91 --> ndd979abd
+   n3c088e91 --> n8a1c93b9
+   n3c088e91 --> ne0728e61
+   n3c088e91 --> nfe3c01d
+@@ -3451,6 +3454,9 @@ flowchart LR
+   n46a44215 --> nf37f8a3a
+   n46a44215 --> n13d3cdb0
+   n218454b --> n780c81c2
++  n19f8d2c3 --> n30801347
++  n19f8d2c3 --> ne59d24c0
++  n19f8d2c3 --> n8a1c93b9
+   na18dddac --> n356196cb
+   na18dddac --> n78df438d
+   na18dddac --> ne59d24c0
+@@ -3463,6 +3469,7 @@ flowchart LR
+   n711b772 --> nd518fc14
+   n8a1c93b9 --> n78df438d
+   ne0728e61 --> nd518fc14
++  ne0728e61 --> ndd979abd
+   ne0728e61 --> ne59d24c0
+   ne0728e61 --> n356196cb
+   ne0728e61 --> nd5186648
+@@ -3502,6 +3509,7 @@ flowchart LR
+   ne0728e61 --> nab1a404e
+   ne0728e61 --> n1de99ffb
+   nfe3c01d --> nd518fc14
++  nfe3c01d --> ndd979abd
+   nfe3c01d --> ne59d24c0
+   nfe3c01d --> n356196cb
+   nfe3c01d --> nd5186648
+@@ -3557,6 +3565,7 @@ flowchart LR
+   n9f38eb40 --> n30801347
+   n9f38eb40 --> nd5186648
+   n9f38eb40 --> n13b13874
++  n9f38eb40 --> ndd979abd
+   n9f38eb40 --> n8a1c93b9
+   n9f38eb40 --> nab1a404e
+   n9f38eb40 --> nd0b1e6c2
+@@ -3574,9 +3583,6 @@ flowchart LR
+   nf37f8a3a --> na46bd7a0
+   nd5186648 --> ne59d24c0
+   nd5186648 --> n8a1c93b9
+-  n19f8d2c3 --> n30801347
+-  n19f8d2c3 --> ne59d24c0
+-  n19f8d2c3 --> n8a1c93b9
+   nec2861e7 --> n6354e20d
+   n21101f84 --> na4cdc076
+   n21101f84 --> n9d9c3800
+@@ -3603,6 +3609,7 @@ flowchart LR
+   n3b97d876 --> n780c81c2
+   n3b97d876 --> n30801347
+   n3b97d876 --> n13b13874
++  n3b97d876 --> ndd979abd
+   n3b97d876 --> n8a1c93b9
+   n3b97d876 --> n356196cb
+   n3b97d876 --> nd0b1e6c2
+@@ -3703,7 +3710,7 @@ flowchart LR
+ | `option_eliminator` | proved | — | `subN_option_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
+ | `Eliminator.lift_upper` | proved | — | `subN_refl`, `UnionRule.lift_upper` |
+ | `handles_of_payloadFieldTy` | proved | — | — |
+-| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
++| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
+ | `load_typed` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
+ | `lookup_solve_seed` | proved | — | — |
+ | `subN_list_iff` | proved | — | — |
+@@ -3718,13 +3725,15 @@ flowchart LR
+ | `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` |
+ | `mono` | proved | — | `order_trans` |
+ | `close_typed` | proved | — | — |
++| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` |
+ | `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` |
+ | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` |
++| `subN_never` | proved | — | — |
+ | `guardBind_typed` | proved | — | `close_typed` |
+-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
++| `deliver_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
++| `loop_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+ | `driveState_lift` | proved | — | — |
+-| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
++| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+ | `adjoint` | proved | — | `Eliminator.lift_least`, `subN_trans`, `mapM_total`, `Eliminator.lift_upper` |
+ | `foldl_keeps` | proved | — | — |
+ | `mapM_cons_eq_some` | proved | — | — |
+@@ -3732,12 +3741,11 @@ flowchart LR
+ | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
+ | `closeOrder_eq` | proved | — | — |
+ | `fits_scope_inv` | proved | — | — |
+-| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` |
+ | `memoBuild_extension` | proved | — | — |
+ | `at_child` | proved | — | `at_append` |
+ | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
+ | `allGuard_typed` | proved | — | `guardBind_typed` |
+-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
++| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
+ | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+ | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
+ | `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` |
+@@ -4556,6 +4564,7 @@ flowchart LR
+   n9f38eb40 --> n30801347
+   n9f38eb40 --> nd5186648
+   n9f38eb40 --> n13b13874
++  n9f38eb40 --> ndd979abd
+   n9f38eb40 --> n8a1c93b9
+   n9f38eb40 --> nab1a404e
+   n9f38eb40 --> nd0b1e6c2
+@@ -4622,6 +4631,7 @@ flowchart LR
+   n3b97d876 --> n780c81c2
+   n3b97d876 --> n30801347
+   n3b97d876 --> n13b13874
++  n3b97d876 --> ndd979abd
+   n3b97d876 --> n8a1c93b9
+   n3b97d876 --> n356196cb
+   n3b97d876 --> nd0b1e6c2
+@@ -4871,7 +4881,7 @@ flowchart LR
+ | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extendAll_eq_some_iff` |
+ | `hom_eq_cata_ty` | proved | — | — |
+ | `fits_mono` | proved | — | — |
+-| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
++| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+ | `at_child` | proved | — | `at_append` |
+ | `at_append` | proved | — | — |
+ | `subN_refl` | proved | — | — |
+@@ -4898,7 +4908,7 @@ flowchart LR
+ | `subN_causeOf_causeUpper` | proved | — | — |
+ | `subN_exitOf_causeUpper` | proved | — | `subN_trans`, `subN_refl`, `subN_exitOf_iff` |
+ | `extendAll_eq_some_iff` | proved | — | — |
+-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
++| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
+ | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
+ | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
+ | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+@@ -5036,8 +5046,10 @@ flowchart LR
+   n46a44215["wake_preserves<br/>proved"]
+   n218454b["mono<br/>proved"]
+   n78df438d["close_typed<br/>proved"]
++  n19f8d2c3["seq_typed<br/>proved"]
+   na18dddac["registrationDone_preserves<br/>proved"]
+   n711b772["launch_preserves<br/>proved"]
++  ndd979abd["subN_never<br/>proved"]
+   n8a1c93b9["guardBind_typed<br/>proved"]
+   ne0728e61["deliver_preserves<br/>proved"]
+   nfe3c01d["loop_preserves<br/>proved"]
+@@ -5058,7 +5070,6 @@ flowchart LR
+   nd5186648["catchGuard_typed<br/>proved"]
+   n75164370["closeOrder_eq<br/>proved"]
+   nd0b1e6c2["fits_scope_inv<br/>proved"]
+-  n19f8d2c3["seq_typed<br/>proved"]
+   n6bd84948["memoBuild_extension<br/>proved"]
+   n5354aa50["deferredMake_extension<br/>proved"]
+   n111be189["refMake_extension<br/>proved"]
+@@ -5166,8 +5177,10 @@ flowchart LR
+   n3c088e91 --> n780c81c2
+   n3c088e91 --> n218454b
+   n3c088e91 --> n78df438d
++  n3c088e91 --> n19f8d2c3
+   n3c088e91 --> na18dddac
+   n3c088e91 --> n711b772
++  n3c088e91 --> ndd979abd
+   n3c088e91 --> n8a1c93b9
+   n3c088e91 --> ne0728e61
+   n3c088e91 --> nfe3c01d
+@@ -5205,6 +5218,9 @@ flowchart LR
+   n46a44215 --> nf37f8a3a
+   n46a44215 --> n13d3cdb0
+   n218454b --> n780c81c2
++  n19f8d2c3 --> n30801347
++  n19f8d2c3 --> ne59d24c0
++  n19f8d2c3 --> n8a1c93b9
+   na18dddac --> n356196cb
+   na18dddac --> n78df438d
+   na18dddac --> ne59d24c0
+@@ -5217,6 +5233,7 @@ flowchart LR
+   n711b772 --> nd518fc14
+   n8a1c93b9 --> n78df438d
+   ne0728e61 --> nd518fc14
++  ne0728e61 --> ndd979abd
+   ne0728e61 --> ne59d24c0
+   ne0728e61 --> n356196cb
+   ne0728e61 --> nd5186648
+@@ -5256,6 +5273,7 @@ flowchart LR
+   ne0728e61 --> nab1a404e
+   ne0728e61 --> n1de99ffb
+   nfe3c01d --> nd518fc14
++  nfe3c01d --> ndd979abd
+   nfe3c01d --> ne59d24c0
+   nfe3c01d --> n356196cb
+   nfe3c01d --> nd5186648
+@@ -5311,6 +5329,7 @@ flowchart LR
+   n9f38eb40 --> n30801347
+   n9f38eb40 --> nd5186648
+   n9f38eb40 --> n13b13874
++  n9f38eb40 --> ndd979abd
+   n9f38eb40 --> n8a1c93b9
+   n9f38eb40 --> nab1a404e
+   n9f38eb40 --> nd0b1e6c2
+@@ -5328,9 +5347,6 @@ flowchart LR
+   nf37f8a3a --> na46bd7a0
+   nd5186648 --> ne59d24c0
+   nd5186648 --> n8a1c93b9
+-  n19f8d2c3 --> n30801347
+-  n19f8d2c3 --> ne59d24c0
+-  n19f8d2c3 --> n8a1c93b9
+   nec2861e7 --> n6354e20d
+   nb1d18964 --> nb7e36fe7
+   nb1d18964 --> n9d9c3800
+@@ -5384,6 +5400,7 @@ flowchart LR
+   n3b97d876 --> n780c81c2
+   n3b97d876 --> n30801347
+   n3b97d876 --> n13b13874
++  n3b97d876 --> ndd979abd
+   n3b97d876 --> n8a1c93b9
+   n3b97d876 --> n356196cb
+   n3b97d876 --> nd0b1e6c2
+@@ -5515,7 +5532,7 @@ flowchart LR
+ | `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` |
+ | `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` |
+ | `receipt_inert` | proved | — | — |
+-| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
++| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
+ | `load_typed` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
+ | `order_trans` | proved | — | — |
+ | `order_refl` | proved | — | — |
+@@ -5540,13 +5557,15 @@ flowchart LR
+ | `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` |
+ | `mono` | proved | — | `order_trans` |
+ | `close_typed` | proved | — | — |
++| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` |
+ | `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` |
+ | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` |
++| `subN_never` | proved | — | — |
+ | `guardBind_typed` | proved | — | `close_typed` |
+-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
++| `deliver_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
++| `loop_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+ | `driveState_lift` | proved | — | — |
+-| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
++| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+ | `checkModule_eq_check` | proved | — | — |
+ | `check_complete` | proved | — | — |
+ | `tape_replays` | proved | — | — |
+@@ -5562,7 +5581,6 @@ flowchart LR
+ | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
+ | `closeOrder_eq` | proved | — | — |
+ | `fits_scope_inv` | proved | — | — |
+-| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` |
+ | `memoBuild_extension` | proved | — | — |
+ | `deferredMake_extension` | proved | — | — |
+ | `refMake_extension` | proved | — | — |
+@@ -5578,7 +5596,7 @@ flowchart LR
+ | `errOf_payload` | proved | — | — |
+ | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
+ | `allGuard_typed` | proved | — | `guardBind_typed` |
+-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
++| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
+ | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
+ | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+ | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
+@@ -5888,8 +5906,10 @@ flowchart LR
+   n780c81c2["order_trans<br/>proved"]
+   n218454b["mono<br/>proved"]
+   n78df438d["close_typed<br/>proved"]
++  n19f8d2c3["seq_typed<br/>proved"]
+   na18dddac["registrationDone_preserves<br/>proved"]
+   n711b772["launch_preserves<br/>proved"]
++  ndd979abd["subN_never<br/>proved"]
+   n8a1c93b9["guardBind_typed<br/>proved"]
+   ne0728e61["deliver_preserves<br/>proved"]
+   nfe3c01d["loop_preserves<br/>proved"]
+@@ -5906,7 +5926,6 @@ flowchart LR
+   nd5186648["catchGuard_typed<br/>proved"]
+   n75164370["closeOrder_eq<br/>proved"]
+   nd0b1e6c2["fits_scope_inv<br/>proved"]
+-  n19f8d2c3["seq_typed<br/>proved"]
+   n6bd84948["memoBuild_extension<br/>proved"]
+   n5354aa50["deferredMake_extension<br/>proved"]
+   n111be189["refMake_extension<br/>proved"]
+@@ -5978,8 +5997,10 @@ flowchart LR
+   n3c088e91 --> n780c81c2
+   n3c088e91 --> n218454b
+   n3c088e91 --> n78df438d
++  n3c088e91 --> n19f8d2c3
+   n3c088e91 --> na18dddac
+   n3c088e91 --> n711b772
++  n3c088e91 --> ndd979abd
+   n3c088e91 --> n8a1c93b9
+   n3c088e91 --> ne0728e61
+   n3c088e91 --> nfe3c01d
+@@ -6004,6 +6025,9 @@ flowchart LR
+   n46a44215 --> nf37f8a3a
+   n46a44215 --> n13d3cdb0
+   n218454b --> n780c81c2
++  n19f8d2c3 --> n30801347
++  n19f8d2c3 --> ne59d24c0
++  n19f8d2c3 --> n8a1c93b9
+   na18dddac --> n356196cb
+   na18dddac --> n78df438d
+   na18dddac --> ne59d24c0
+@@ -6016,6 +6040,7 @@ flowchart LR
+   n711b772 --> nd518fc14
+   n8a1c93b9 --> n78df438d
+   ne0728e61 --> nd518fc14
++  ne0728e61 --> ndd979abd
+   ne0728e61 --> ne59d24c0
+   ne0728e61 --> n356196cb
+   ne0728e61 --> nd5186648
+@@ -6055,6 +6080,7 @@ flowchart LR
+   ne0728e61 --> nab1a404e
+   ne0728e61 --> n1de99ffb
+   nfe3c01d --> nd518fc14
++  nfe3c01d --> ndd979abd
+   nfe3c01d --> ne59d24c0
+   nfe3c01d --> n356196cb
+   nfe3c01d --> nd5186648
+@@ -6110,6 +6136,7 @@ flowchart LR
+   n9f38eb40 --> n30801347
+   n9f38eb40 --> nd5186648
+   n9f38eb40 --> n13b13874
++  n9f38eb40 --> ndd979abd
+   n9f38eb40 --> n8a1c93b9
+   n9f38eb40 --> nab1a404e
+   n9f38eb40 --> nd0b1e6c2
+@@ -6126,9 +6153,6 @@ flowchart LR
+   nf37f8a3a --> na46bd7a0
+   nd5186648 --> ne59d24c0
+   nd5186648 --> n8a1c93b9
+-  n19f8d2c3 --> n30801347
+-  n19f8d2c3 --> ne59d24c0
+-  n19f8d2c3 --> n8a1c93b9
+   nec2861e7 --> n6354e20d
+   nb1d18964 --> nb7e36fe7
+   nb1d18964 --> n9d9c3800
+@@ -6182,6 +6206,7 @@ flowchart LR
+   n3b97d876 --> n780c81c2
+   n3b97d876 --> n30801347
+   n3b97d876 --> n13b13874
++  n3b97d876 --> ndd979abd
+   n3b97d876 --> n8a1c93b9
+   n3b97d876 --> n356196cb
+   n3b97d876 --> nd0b1e6c2
+@@ -6281,7 +6306,7 @@ flowchart LR
+ | --- | --- | --- | --- |
+ | `m7_proved` | proved | — | `decision_preserves`, `loadsTyped`, `m7_of_ledger` |
+ | `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` |
+-| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
++| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
+ | `loadsTyped` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
+ | `m7_of_ledger` | proved | — | `at_append`, `order_trans`, `order_refl` |
+ | `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` |
+@@ -6295,13 +6320,15 @@ flowchart LR
+ | `order_trans` | proved | — | — |
+ | `mono` | proved | — | `order_trans` |
+ | `close_typed` | proved | — | — |
++| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` |
+ | `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` |
+ | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` |
++| `subN_never` | proved | — | — |
+ | `guardBind_typed` | proved | — | `close_typed` |
+-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
++| `deliver_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
++| `loop_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+ | `driveState_lift` | proved | — | — |
+-| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
++| `denotesTyped` | proved | — | `provideLayerArm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+ | `checkModule_eq_check` | proved | — | — |
+ | `check_complete` | proved | — | — |
+ | `checkModule_sound` | proved | — | `check_sound` |
+@@ -6313,7 +6340,6 @@ flowchart LR
+ | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
+ | `closeOrder_eq` | proved | — | — |
+ | `fits_scope_inv` | proved | — | — |
+-| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` |
+ | `memoBuild_extension` | proved | — | — |
+ | `deferredMake_extension` | proved | — | — |
+ | `refMake_extension` | proved | — | — |
+@@ -6329,7 +6355,7 @@ flowchart LR
+ | `errOf_payload` | proved | — | — |
+ | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
+ | `allGuard_typed` | proved | — | `guardBind_typed` |
+-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
++| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
+ | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
+ | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+ | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |

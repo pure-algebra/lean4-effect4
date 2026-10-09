@@ -1,0 +1,137 @@
+[
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "instAnn_congr",
+    "theorem instAnn_congr (\u03c3 \u03c4 : Subst) : \u2200 (ann : Option Nat),"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "inst_congr",
+    "  theorem inst_congr (n : Nat) (\u03c3 \u03c4 : Subst) : \u2200 (t : Tpl),"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "insts_congr",
+    "  theorem insts_congr (n : Nat) (\u03c3 \u03c4 : Subst) : \u2200 (ts : Tpls),"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "instFields_congr",
+    "  theorem instFields_congr (n : Nat) (\u03c3 \u03c4 : Subst) : \u2200 (fs : Fields),"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "instStmt_congr",
+    "  theorem instStmt_congr (n : Nat) (\u03c3 \u03c4 : Subst) : \u2200 (t : StmtTpl),"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "instStmts_congr",
+    "  theorem instStmts_congr (n : Nat) (\u03c3 \u03c4 : Subst) : \u2200 (ts : StmtTpls),"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/PrintTyped.lean",
+    "splitHeadTypes_targets_nonempty",
+    "theorem splitHeadTypes_targets_nonempty {x bare : Expr} {targets : List TypeRef}"
+  ],
+  [
+    "src/Effect4/Laws/Codegen/ReadLeaf.lean",
+    "toDigitsCore_append",
+    "theorem toDigitsCore_append (fuel : Nat) : \u2200 (n : Nat) (ds : List Char), n < fuel \u2192"
+  ],
+  [
+    "src/Effect4/Laws/Library/Pool/Ops.lean",
+    "leaseReply_normal",
+    "theorem leaseReply_normal {A : Ty} (canonical : A.normalize = A) :"
+  ],
+  [
+    "src/Effect4/Laws/Library/Pool/Ops.lean",
+    "returnReply_normal",
+    "theorem returnReply_normal : returnReplyTy.normalize = returnReplyTy := by decide +kernel"
+  ],
+  [
+    "src/Effect4/Laws/Library/Semaphore/Data.lean",
+    "request_equal",
+    "theorem request_equal (tb : Table) (injective : tb.Injective) (a b : Nat) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Agreement/Machine.lean",
+    "compileEff_zero",
+    "theorem compileEff_zero {p : Point} (e : NativeEff) (hf : p.fuel = 0) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Guard/AnswerDecision.lean",
+    "prepareExternalAnswer_sites",
+    "theorem prepareExternalAnswer_sites (table : RowTable) (current : Option NCode)"
+  ],
+  [
+    "src/Effect4/Laws/Program/LayerSharing.lean",
+    "fresh_forks_without_parent",
+    "theorem fresh_forks_without_parent (l : LayerTerm NativeOp) (q : Point) (map : MemoMapId) (scope : Nat) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+    "bool_eq_false_of_not",
+    "theorem bool_eq_false_of_not {b : Bool} (h : \u00ac b = true) : b = false :="
+  ],
+  [
+    "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+    "point_refresh",
+    "theorem point_refresh {p p' : Point}"
+  ],
+  [
+    "src/Effect4/Laws/Program/Template.lean",
+    "sub_sound",
+    "theorem sub_sound (a b : Ty) (v : Effect4.Machine.Val) (allocated : List String := [])"
+  ],
+  [
+    "src/Effect4/Laws/Program/TyView.lean",
+    "sizeOf_field_lt_record",
+    "theorem sizeOf_field_lt_record {p : String \u00d7 Bool \u00d7 Ty} {fs : List (String \u00d7 Bool \u00d7 Ty)} (h : p \u2208 fs) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+    "complete_cells_length",
+    "theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Assembly.lean",
+    "machineTyped_of_configTyped",
+    "theorem machineTyped_of_configTyped {root : ProgramSource} {rootTy : EffTy} {w : World}"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+    "failureFits_cause",
+    "theorem failureFits_cause {w : World} {ty : EffTy} {c : CauseV} (h : FitsExit w ty (.failure c)) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+    "exitOk_failure_error",
+    "theorem exitOk_failure_error {w : World} {mid ty : EffTy} {c : CauseV}"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean",
+    "commandOwner_rupdate",
+    "theorem commandOwner_rupdate (m : RState) (g : RFiber) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+    "seq_typed_sameError",
+    "theorem seq_typed_sameError (root : ProgramSource) {w : World} {mid ty : EffTy} {a : RProgram}"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+    "subN_list_exitOf",
+    "theorem subN_list_exitOf {a e a' e' : Ty} (ha : Ty.subN a a' = true) (he : Ty.subN e e' = true) :"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Denotation.lean",
+    "subN_never",
+    "theorem subN_never (t : Ty) : Ty.subN .never t = true := Ty.OrderProof.sub_never _"
+  ],
+  [
+    "src/Effect4/Laws/Program/Typed/Membership.lean",
+    "mem_zip_self",
+    "theorem mem_zip_self {\u03b1 : Type} : \u2200 {l : List \u03b1} {a b : \u03b1}, (a, b) \u2208 l.zip l \u2192 a = b"
+  ]
+]

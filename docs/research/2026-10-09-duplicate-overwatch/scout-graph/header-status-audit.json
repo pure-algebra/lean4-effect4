@@ -1,0 +1,122 @@
+{
+  "base": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "head": "7334f1197cf5b535541ce1dfc7789a5082c07115",
+  "retained_headers": 1923,
+  "changed_headers": [],
+  "removed_headers": [
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "instFields_congr"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "instStmt_congr"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "insts_congr"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "instStmts_congr"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "splitHeadTypes_targets_nonempty"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "instAnn_congr"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/PrintTyped.lean",
+      "inst_congr"
+    ],
+    [
+      "src/Effect4/Laws/Codegen/ReadLeaf.lean",
+      "toDigitsCore_append"
+    ],
+    [
+      "src/Effect4/Laws/Library/Pool/Ops.lean",
+      "returnReply_normal"
+    ],
+    [
+      "src/Effect4/Laws/Library/Pool/Ops.lean",
+      "leaseReply_normal"
+    ],
+    [
+      "src/Effect4/Laws/Library/Semaphore/Data.lean",
+      "request_equal"
+    ],
+    [
+      "src/Effect4/Laws/Program/Agreement/Machine.lean",
+      "compileEff_zero"
+    ],
+    [
+      "src/Effect4/Laws/Program/Guard/AnswerDecision.lean",
+      "prepareExternalAnswer_sites"
+    ],
+    [
+      "src/Effect4/Laws/Program/LayerSharing.lean",
+      "fresh_forks_without_parent"
+    ],
+    [
+      "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+      "point_refresh"
+    ],
+    [
+      "src/Effect4/Laws/Program/Simulation/Evaluate.lean",
+      "bool_eq_false_of_not"
+    ],
+    [
+      "src/Effect4/Laws/Program/Template.lean",
+      "sub_sound"
+    ],
+    [
+      "src/Effect4/Laws/Program/TyView.lean",
+      "sizeOf_field_lt_record"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+      "complete_cells_length"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "machineTyped_of_configTyped"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+      "failureFits_cause"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+      "exitOk_failure_error"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean",
+      "commandOwner_rupdate"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+      "subN_list_exitOf"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Commands/Race.lean",
+      "seq_typed_sameError"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "subN_never"
+    ],
+    [
+      "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "mem_zip_self"
+    ]
+  ],
+  "added_headers": [],
+  "registry_identical": true,
+  "preplan_identical_except_population": true,
+  "removed_statuses": [],
+  "added_statuses": [],
+  "generated_sha256": "841f55d9b2d904f6ab4a71c9f15fc58cebb74dd9183bd134737b64e731429a3b"
+}

@@ -1,0 +1,114 @@
+{
+  "base": "7b73d59cb2ae5b290c87c7f0ba9a6aa77a71fa04",
+  "head": "7334f1197cf5b535541ce1dfc7789a5082c07115",
+  "sources": {
+    "src/Effect4/Laws/Library/Semaphore/Data.lean": {
+      "sha256": "48da899142c8840404139014a70b63f16587137b76f98e60557708a4462963a5",
+      "matchesPrimary": true
+    },
+    "src/Effect4/Laws/Library/Pool/Ops.lean": {
+      "sha256": "d1ba8a422418868326e3b8058f8c72602c3ff6a56d1e39849ab50582cbb4b0cf",
+      "matchesPrimary": true
+    },
+    "src/Effect4/Laws/Codegen/PrintTyped.lean": {
+      "sha256": "e652b2959e43d2e7de1c6b3ef0229f4d2cc7c0521f5e3aeda19fd74a67283214",
+      "matchesPrimary": true
+    },
+    "Test/Program/RegistrationYield.lean": {
+      "sha256": "237922f5b12a7aa3a52d1fc506459aacb21c64fa80a818e5aa2affab6629e413",
+      "matchesPrimary": true
+    }
+  },
+  "checks": [
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/tmp/effect4-duplicate-overwatch-0647/overlay/Effect4/Laws/Library/Semaphore/Data.olean",
+        "Effect4/Laws/Library/Semaphore/Data.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647/source/src",
+      "exitCode": 0,
+      "seconds": 7.39,
+      "log": "Effect4-Laws-Library-Semaphore-Data.log"
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/tmp/effect4-duplicate-overwatch-0647/overlay/Effect4/Laws/Library/Pool/Ops.olean",
+        "Effect4/Laws/Library/Pool/Ops.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647/source/src",
+      "exitCode": 0,
+      "seconds": 2.303,
+      "log": "Effect4-Laws-Library-Pool-Ops.log"
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/tmp/effect4-duplicate-overwatch-0647/overlay/Effect4/Laws/Codegen/PrintTyped.olean",
+        "Effect4/Laws/Codegen/PrintTyped.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647/source/src",
+      "exitCode": 0,
+      "seconds": 64.383,
+      "log": "Effect4-Laws-Codegen-PrintTyped.log"
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/tmp/effect4-duplicate-overwatch-0647/overlay/Test/Program/RegistrationYield.olean",
+        "Test/Program/RegistrationYield.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647/source",
+      "exitCode": 0,
+      "seconds": 4.557,
+      "log": "Test-Program-RegistrationYield.log"
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "Audit.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647",
+      "exitCode": 1,
+      "seconds": 1.55,
+      "log": "Audit.draft.log",
+      "note": "Review tool draft needs an explicit Nat annotation for the counter; no production failure."
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "Audit.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647",
+      "exitCode": 0,
+      "seconds": 9.713,
+      "log": "Audit.log"
+    },
+    {
+      "command": [
+        "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+        "-DwarningAsError=true",
+        "Audit.lean"
+      ],
+      "cwd": "/tmp/effect4-duplicate-overwatch-0647",
+      "exitCode": 0,
+      "seconds": 9.002,
+      "log": "Audit.log"
+    }
+  ],
+  "compiler": "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+  "compilerSHA256": "1b370cfcbf44e80d1b004ab1b1ab9a4c73951f9f7c242140bcff9bc577576554",
+  "LEAN_NUM_THREADS": "3",
+  "LEAN_PATH": "/tmp/effect4-duplicate-overwatch-0647/overlay:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean"
+}

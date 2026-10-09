@@ -1,0 +1,906 @@
+{
+  "Effect4.Program.FoldOf": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FoldOf.olean",
+    "sha256": "3839463dfdeda37080e02ca044336610bd993802f71e03ee0096e462fc4fb7d5"
+  },
+  "Effect4.Machine.Key": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.olean",
+    "sha256": "dc4874cf0519117e31ee7d5cc9a311625b7659dca357366d95c684a4f1aeaa25"
+  },
+  "Effect4.Machine.Fiber": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.olean",
+    "sha256": "9f0bb4b99ff0415fae372ac33564cb50781cca878c91a248422e23031e34df70"
+  },
+  "Effect4.Machine.Cause": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.olean",
+    "sha256": "216225edd36b54f3040fe18d3529c3d899c66dc46fbf4c438d70f18f17535de0"
+  },
+  "Effect4.Machine.Exit": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.olean",
+    "sha256": "1703a76ff316309584db52a6e7330c3e79f8d4ead000fa46ca4b602473db9bc2"
+  },
+  "Effect4.Machine.Supervision": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.olean",
+    "sha256": "b233ae4d63f902a89c9250824a2c372732be2824577fdcee13f5197fdd1d1c6c"
+  },
+  "Effect4.Data.Constructive": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.olean",
+    "sha256": "167c990bfb61482dd93d44926e68fc144f5d2d85ddc32d38885d7f931e692c2f"
+  },
+  "Effect4.Data.Row": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.olean",
+    "sha256": "e276bd54254370c46520f52cc1c59a98da827c7b6779cb496fe6872e2c68c452"
+  },
+  "Effect4.Data.FieldOrder": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.olean",
+    "sha256": "48c3c588804908bba72765dde528934ee62258f354c653e109898bbb039a5793"
+  },
+  "Effect4.Program.TyCore": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.olean",
+    "sha256": "87b7e8daccf07761027cb8dd8b764ae23705869f91b72df070bca7a1dfd71c40"
+  },
+  "Effect4.Program.TyEq": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.olean",
+    "sha256": "939e891c19b115bf89568bd90459273c5531bc1fe8b59c92b689be58b3c20b70"
+  },
+  "Effect4.Program.TyVariance": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.olean",
+    "sha256": "e73b3666fc2269f82070123b2d73884d3e0486286b07e09b3b239b72489ae68c"
+  },
+  "Effect4.Program.Ty": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.olean",
+    "sha256": "b547aecab0b94931e8fb657dee15aa814508a6210a056ca3d6f0bce2f2a0761a"
+  },
+  "Effect4.Program.UnionRule": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.olean",
+    "sha256": "ce40450986ae578dc175256b151e22130374f17394cd3745ccd3f93d3efb5f9e"
+  },
+  "Effect4.Store.Carrier.Digits": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.olean",
+    "sha256": "555c249ea25ab9e82bfa699bf880c7da6756ae10619f3ae9b7f56e4f2d9baf50"
+  },
+  "Effect4.Store.Carrier.Utf8": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.olean",
+    "sha256": "d98b1832cb70320258e46cc080ca554a5aa917e6057efdc29804de6b7209041a"
+  },
+  "Effect4.Store.Carrier.Val": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.olean",
+    "sha256": "0a74a53f1df2eb7473a37850cc37e8bc1546aa0b1948fa1da02694e74bac7140"
+  },
+  "Effect4.Machine.Record": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.olean",
+    "sha256": "cba5880d59d3c5995c70328920ee5ebb0e5015a85fc50d1a4732b5ac7a1f12bf"
+  },
+  "Effect4.Program.Record": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.olean",
+    "sha256": "e863653e57d88322b5d5d29c3dbacd178a595cb791ab5eae72f3a5e4451c6dc9"
+  },
+  "Effect4.Program.Decision": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.olean",
+    "sha256": "739f4028007cf277a9e67c93812f4de60507270793c835fc0dbd60041aee0386"
+  },
+  "Effect4.Store.Carrier.Image": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.olean",
+    "sha256": "ae5f1537a8b2d98ee9feef5872af1b8c9cea6e99016a701231c7993c19e2f284"
+  },
+  "Effect4.Machine.Value": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.olean",
+    "sha256": "125ba0cc59261b9f470d5af08ce00cdf3b4f8cfbde6872278120b0aa272c7e2a"
+  },
+  "Effect4.Machine.Completion": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.olean",
+    "sha256": "3b04dd763d70fffd34225f695a1e8066269ad34885ceae49a3b119ab1926a57e"
+  },
+  "Effect4.Machine.Wake": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.olean",
+    "sha256": "789a063062f1833b9d704773d6991426bcd4e8bd386ca3cbfe7efcca9c944503"
+  },
+  "Effect4.Machine.Alphabets": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.olean",
+    "sha256": "728264b3d0e84b09cb0a8877ab71f1e870aafaae061ae33f10516fd3fae93025"
+  },
+  "Effect4.Machine.Integers": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.olean",
+    "sha256": "65e9e6c4e46e5b5be42cf516cbeb56d17bad009f2646dfd98317d17e512191e7"
+  },
+  "Effect4.Machine.Map": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.olean",
+    "sha256": "a217373db549c25110072526c671146e73b00e7af12196b503f86c2d6a578323"
+  },
+  "Effect4.Machine.Term": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.olean",
+    "sha256": "60a8244cf701b7e654d56c9c097aecc322e01347e82c309fb333655b195b70ee"
+  },
+  "Effect4.Program.Eff": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.olean",
+    "sha256": "d8019115d9331ab732cc36a8d5d10b1c2fa4b7e3f9f32ee7be2e32a24b4248c0"
+  },
+  "Effect4.Program.Node": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.olean",
+    "sha256": "0be8409449e58c25fb03b30e1298ccc4d3d89d38618bddde630710a1025af60d"
+  },
+  "Effect4.Program.NodeLenses": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.olean",
+    "sha256": "8910d01f5abe5b4eb1f6b695fe3d80d8b2fa3793e4e4608d47be66b0921744c5"
+  },
+  "Effect4.Program.ScopedOp": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.olean",
+    "sha256": "a91e8a7cd770bc092f60ea7f0a1f22aaf5e3a604aa23536a94d73b1a91202145"
+  },
+  "Effect4.Program.Fold": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.olean",
+    "sha256": "ef8d34bf9f21f9edce6d23852048cc078dab9b154a02c4e4a588154352427279"
+  },
+  "Effect4.Program.Refs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.olean",
+    "sha256": "bc3e270ff903902c57878899cb6344179c68c4f0eeb477dcdcde92f7ef0b92fd"
+  },
+  "Effect4.Program.LayerView": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.olean",
+    "sha256": "7dc55527d5c223afd4e08dba5fca22b8b3ec14004116db054d729d821b578349"
+  },
+  "Effect4.Program.Formation": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.olean",
+    "sha256": "339c86113e19e84ba3c7c2e334a1c011d42ff131dcdea27d739b898d0e321329"
+  },
+  "Effect4.Program.Tuple": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.olean",
+    "sha256": "be09359af5d33415f9705e57d9c947fedc8fe17c26aff89968c7eb0a7af56c71"
+  },
+  "Effect4.Program.Bounds": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.olean",
+    "sha256": "623e3b7b22a918e5b74c315b691d7fae2350ba2d42058cf55de8d773b670cf5f"
+  },
+  "Effect4.Machine.ContextMap": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.olean",
+    "sha256": "ad51582cb1dbbbcc3fa212192923810fbce48a528e4c58a2c8b0a3e2d840121f"
+  },
+  "Effect4.Data.Ascii": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.olean",
+    "sha256": "c1fdb4595967b90828413f484b7ab7e47ab508e1af796a55ebcec7c378638777"
+  },
+  "Effect4.Data.ClockMillis": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.olean",
+    "sha256": "a0d8fcd15092e9a9ca084267f64611f3f32d794bb9e07ffac4b0a891d103ab35"
+  },
+  "Effect4.Machine.Frames": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.olean",
+    "sha256": "93b52cf99dfad038e560693174792c0ef5f7c786a4565df3f0b69e2a3a167f29"
+  },
+  "Effect4.Machine.Fibers": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.olean",
+    "sha256": "fee06e82c1e30126cb23d12e19f8ec35448dc7e17881ff5a6966192b66dd678a"
+  },
+  "Effect4.Machine.Context": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.olean",
+    "sha256": "9071176c2cdc846311b8362ea5df9ab4e3d795905cda814934f354fffa17569c"
+  },
+  "Effect4.Program.Typing.Rules": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.olean",
+    "sha256": "fc76ae78628562c435907257784b2f2434732b0b0f8254067500a8f2c240998e"
+  },
+  "Effect4.Program.Typing.TermRefusal": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.olean",
+    "sha256": "24735f81bfd60bbb47f6b52acfe1e07e7b443306f7edfc9df38c35a4f3f709e1"
+  },
+  "Effect4.Program.Typing.Blame": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.olean",
+    "sha256": "97d251fc1a8affa7434d96cf86359cf57bb90a23156992cc6e52df7ca17881a9"
+  },
+  "Effect4.Program.Checker": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.olean",
+    "sha256": "c8283fb682181f32ec92b898f5a64a9995da59a715f9f173ec409e053a770181"
+  },
+  "Effect4.Program.Definitions": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.olean",
+    "sha256": "9986dabeb2428f797875f747cb69d073b453ecaaa7eac3144441fdc681a2eaa1"
+  },
+  "Effect4.Program.Typing": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.olean",
+    "sha256": "ebaabc4f5dab5209b581a11426f4e36b78adabe8b634f839bbe52d0aaa8c4a1f"
+  },
+  "Effect4.Program.Typing.Focus": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Focus.olean",
+    "sha256": "9f826e785c0b42093ffda47178a57049346d398435afbc334ebbf638ac6f71bb"
+  },
+  "Effect4.Program.Typing.Table": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Table.olean",
+    "sha256": "9cf215135c0e615b84d996dfca57052c3b824e8d62665d06e89804a793a602b7"
+  },
+  "Effect4.Program.Typing.Annotate": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Annotate.olean",
+    "sha256": "2215318cbcbc5510e7d4a19d53af3aab0c44bf1a143557296e693b5d0d7f59b4"
+  },
+  "Effect4.Laws.Program.Typing.HasTy": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typing/HasTy.olean",
+    "sha256": "0962fedeab899e1bf827e2f38bd86619912de2c90e77c71d23ddc83cd2e510d0"
+  },
+  "Effect4.Laws.Auto.Inversion": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Inversion.olean",
+    "sha256": "44538256d376c066fd25060d123c932d92b0fa9c2d58b7b24ad4dc9864e84032"
+  },
+  "Effect4.Laws.Auto.RuleSets": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/RuleSets.olean",
+    "sha256": "86a423b985f42b9606e532da7aa99ba03e1f744714ef1716872b5fa93dd7bcf6"
+  },
+  "Effect4.Laws.Program.Typing.CheckInversion": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typing/CheckInversion.olean",
+    "sha256": "d7c268c183f5eb4ed49d81739093d86fe256231d11058eb2310aca0ce41eb168"
+  },
+  "Effect4.Laws.Program.Typing.CheckSound": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typing/CheckSound.olean",
+    "sha256": "e22f92a190ba60241d9e320c461d3f0d78f8c4aa04d929e4f580ea4757c1b7a9"
+  },
+  "Effect4.Laws.Program.Typing.Sound": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/Typing/Sound.olean",
+    "sha256": "115fb8da528d650cd04d0869653cb981067660dc8d1b355cf28c2ca2c91b47e8"
+  },
+  "Effect4.Laws.Program.References": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/References.olean",
+    "sha256": "07b47e34e5d5d979f4684c91aa014d4f0d5b5c20819f5809769d301ac26bc5aa"
+  },
+  "ProofGraph.Population": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Population.olean",
+    "sha256": "4d0651bf35cf9c9c6c5ed215960741d0aedb07120fc1e4deeaec98e6190433a0"
+  },
+  "ProofGraph.Axioms": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Axioms.olean",
+    "sha256": "6ecb35fb31939859cba07cfa46923ef7e0e74577d6c5379aea8b73ff0fb6a51f"
+  },
+  "ProofGraph.Goal": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Goal.olean",
+    "sha256": "deb93e903cee8abdc58f04b7b32e2b46fc033585440bfb4bdad5f5a2b0422d43"
+  },
+  "Effect4.Laws.Auto.Semantics": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Semantics.olean",
+    "sha256": "bb589ad337bc4e14156adaadbe7c87328c00af6edc7c2e6484d63571a2a2172a"
+  },
+  "Effect4.Laws.Program.Address": {
+    "path": "/private/tmp/effect4-address-overwatch-0617/overlay/Effect4/Laws/Program/Address.olean",
+    "sha256": "d629683a531f711c9472460b2444e70683fb9886d3e4f3e26f5db703f58f6fd2"
+  },
+  "Effect4.Laws.Program.Typing.Annotate": {
+    "path": "/private/tmp/effect4-address-overwatch-0617/overlay/Effect4/Laws/Program/Typing/Annotate.olean",
+    "sha256": "80a2a9e5fc223590d333486b8e7298f57c43463194da5b5a1ef34f0f97baf2a6"
+  },
+  "Effect4.Laws.Auto.ExceptMap": {
+    "path": "/private/tmp/effect4-address-overwatch-0617/overlay/Effect4/Laws/Auto/ExceptMap.olean",
+    "sha256": "0ed69083d2b1ea1d57e26d7f43b76208682262e0b57937523ed159132b34e53b"
+  },
+  "Effect4.Laws.Program.Typing.Rebase": {
+    "path": "/private/tmp/effect4-address-overwatch-0617/overlay/Effect4/Laws/Program/Typing/Rebase.olean",
+    "sha256": "8d57f4f44897bb458a03526a28b0165e5a426bad1ad2c1902c5010f732d908e7"
+  },
+  "ProofGraph.Audit": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Audit.olean",
+    "sha256": "94469c6a019a5dfbafd73c5fce99cb6f457c07bda7855370f2f550dcd5e81ad8"
+  },
+  "Effect4.Program.AtomInventory": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.olean",
+    "sha256": "a70e4267dba53784c3a68c08d7b302f57993e79bbdf461a6ffb1a9ff10789362"
+  },
+  "Effect4.Program.NativeAtom": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.olean",
+    "sha256": "9a679962ffe977c5534f657bfbd3758034923fa246b50059025ec042eb1ef8d5"
+  },
+  "Effect4.Program.ErrorImage": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.olean",
+    "sha256": "394910bfb3fd0381fda6d1f3a904aa803d610c244060498086d3364f1f057f98"
+  },
+  "Effect4.Program.FnName": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.olean",
+    "sha256": "d8da3fd8137f8ee304309418aefa5df79ad1e66a46ea412da05ceec1d101bcdd"
+  },
+  "Effect4.Machine.Scope": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.olean",
+    "sha256": "fad6ad39001c311121989c287a1c03d9fa0d189a723a6861f8888084ec956f6e"
+  },
+  "Effect4.Machine.Timer": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.olean",
+    "sha256": "3433bb56f8e65b47819b11910c4f0ca7a5e4e4e695b90e2dac4edb0a815024bc"
+  },
+  "Effect4.Store.Carrier.Image.Record": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.olean",
+    "sha256": "35cd9abe5fa19ccdb3bebe9771622c94a3ef532264b0eedc264a335f130da9e7"
+  },
+  "Effect4.Store.Carrier.Image.Containers": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.olean",
+    "sha256": "c421f5aa8d68992ead31be058de1690dca7d6438f7759a3f06c1bae5b21ff0b9"
+  },
+  "Effect4.Machine.Stores": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.olean",
+    "sha256": "39c9375f961013707cd6671a1d06493926875aafff41250dcbd5c58435233312"
+  },
+  "Effect4.Program.Native": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.olean",
+    "sha256": "442f57139f342b08714e65d1241fe24c4c5cd281832bf9e506fb2cee60a20a23"
+  },
+  "Effect4.Program.Typed": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typed.olean",
+    "sha256": "9f1f1efce5aa1f3868fea2e47d85d45f560d2e3769f504915e3d292cf2d7c035"
+  },
+  "Effect4.Program.Compile": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Compile.olean",
+    "sha256": "ffabda175ffc07be027de2c3ce9db3e0d815952a02f4810abaf998fe8759e862"
+  },
+  "Effect4.Program.Typing.Call": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Call.olean",
+    "sha256": "c71526ccae7f273a750c20b5bf8ea055871d64e65a078c716ed1ae2034ffd50d"
+  },
+  "Effect4.Program.Admit": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Admit.olean",
+    "sha256": "3fe4218690923eb934e51db42357be0b13b7f173f3b114445ea9fdaa7ab91c70"
+  },
+  "Effect4.Program.Columns": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Columns.olean",
+    "sha256": "5ae37cf79121deb49fe16607e7e9778854c85efcf80d5b995e28fd73565970b0"
+  },
+  "Effect4.Program.Table": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Table.olean",
+    "sha256": "f87df4f3e9de415fd5fc887bf07df360fbedf61d5242a54eb89740566b2febbf"
+  },
+  "Effect4.Program.SigApp": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/SigApp.olean",
+    "sha256": "384e9d9ab21de229799f08e247be39d589452b107489d586502d077b234ab6ea"
+  },
+  "Effect4.Program.CheckedTyping": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/CheckedTyping.olean",
+    "sha256": "85fb59d90047d2ca73384103170622ff015a8cf76859db83b97adc56efde5597"
+  },
+  "Effect4.Program.Fragment": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fragment.olean",
+    "sha256": "2353fb19bfd15acb98e59895b573e26b672d53f7243396431b200fd854fde60b"
+  },
+  "Effect4.Program.Admission": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Admission.olean",
+    "sha256": "3978eccc32bd07e27db01732577122e3bf0c77c9ce550a299b43713b4a01cc7d"
+  },
+  "Effect4.Program.Typing.Agreement": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Agreement.olean",
+    "sha256": "271537201f09552820a607c6e84c1b4b4bcd8c1fe0dd59bf66fc2bf6049bd05c"
+  },
+  "Effect4.Program.Authoring": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.olean",
+    "sha256": "46bd4b487eb4959fec88e5f63650dd1729531564c59796afc72ac2e4424d1da6"
+  },
+  "Effect4.Program.Authoring.Lifts": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Lifts.olean",
+    "sha256": "3b3a0f80f278dbcedf175774e6d421a98bf7d543e9a2b76923fa5fb0feea35fe"
+  },
+  "Effect4.Program.Authoring.Records": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Records.olean",
+    "sha256": "6cb84aacbff3aed133286008a880c2844477780c8ba93160c3214707199b74e1"
+  },
+  "Effect4.Program.Authoring.Maps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Maps.olean",
+    "sha256": "a9fb9286cab69ae5ae63be4a8c16b0b8cbfa44b5dd459833f78fda45801de09d"
+  },
+  "Effect4.Program.Authoring.Tuples": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Tuples.olean",
+    "sha256": "295f8293d8448d05f204f4e15b92eb3395722f48a14ade52db671b7ab4138b6d"
+  },
+  "Effect4.Program.Authoring.Folds": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Folds.olean",
+    "sha256": "b461baf4c02aa85da8b714b2e232f7c02e798e65f210c89cc29a76b654f0e54c"
+  },
+  "Effect4.Api.Frontier": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Frontier.olean",
+    "sha256": "be1ceaff9ed5d290db6c1489e2115dfb59704e6e960f7f93e3b1fcddb5583eb9"
+  },
+  "Effect4.Data.Json": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Json.olean",
+    "sha256": "e4622a991f44162ecca4905864ebaf3ac69554512a39505e9f1bc05e6dac0230"
+  },
+  "Effect4.Data.JsonNumber": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/JsonNumber.olean",
+    "sha256": "b0f6ed32d3d34c258ca5b9b92d56a461b1a284ee0820b453eed227630f9546e2"
+  },
+  "Effect4.Store.Carrier.Kind": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Kind.olean",
+    "sha256": "8de3b201ab17822e7eb123ce3b1622bf38344a8dd9bdc1821e05b40bdf587c79"
+  },
+  "Effect4.Store.Carrier.Digest": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digest.olean",
+    "sha256": "2a8e2c2f7da238ee9c1004c846c6a71f62adc6d564e5b6cacf02e3a650074f25"
+  },
+  "Effect4.Store.Domain.Shape": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Shape.olean",
+    "sha256": "a7b3859b7f93338014bfa0ed5abfcd1f021a3e64e3c9bc719c3a6dd165cac104"
+  },
+  "Effect4.Data.Optic": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Optic.olean",
+    "sha256": "c70e244101560a6c855a9cbc26aa35991da353a0366c5237be9d696b26db0cf4"
+  },
+  "Effect4.Schema.Payload": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Payload.olean",
+    "sha256": "6623bface3495e695e8d86d5d586f2aa7e9d85b51da5fceaf549daf50d70c93b"
+  },
+  "Effect4.Schema.Representation": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Representation.olean",
+    "sha256": "fac1603da1e9eac01f9b225e1035218235c304b133671d80c59628884a7665af"
+  },
+  "Effect4.Schema.Annotations": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Annotations.olean",
+    "sha256": "11ea5a8970c0b598175d1da7a3b7f265597f4a36692c24a6b0c990f268b0a62f"
+  },
+  "Effect4.Schema.Document": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Document.olean",
+    "sha256": "815e13f36d98a28ecde999cb4212d707780df9a2d2eb5951e68fe5352af92ec5"
+  },
+  "Effect4.Schema.Authoring": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Authoring.olean",
+    "sha256": "b45c930f3082ad8ae5185f869a22b12742e2fc43a38d5a748f9c38d9cbd3358c"
+  },
+  "Effect4.Schema.OfShape": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/OfShape.olean",
+    "sha256": "0acaae7fa491a537cc6ed7c64a632a01d34e7bcfbb3d35f01f77cc1aa7d25a6a"
+  },
+  "Effect4.Store.Domain.Canonical": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Canonical.olean",
+    "sha256": "59a961694fb7a58034cd1dfbd0b3de7961a56e9aadf275d28c390ed0e00176fa"
+  },
+  "Effect4.Store.Domain.Clock": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Clock.olean",
+    "sha256": "17f116da777a2ca80991be3d9ebc1b0d319bd1fe51e1d3a7c8b1035ce3f488fa"
+  },
+  "Effect4.Api.Derived": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Derived.olean",
+    "sha256": "41eaedc72ae3f87ef948289aa44e5e35343e604c5011c49db5ad03650db81f6e"
+  },
+  "Effect4.Program.Packages.SqliteBun": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Packages/SqliteBun.olean",
+    "sha256": "ebf859022d576efaf498de1c9b0ae10bb2a56fff4decd1dc47b95882982ac128"
+  },
+  "Effect4.Program.Packages.KeyValueStoreMemory": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Packages/KeyValueStoreMemory.olean",
+    "sha256": "a6bd521822395165496bd040f3526af53092790321f54f1b657a6df11981d9e0"
+  },
+  "Effect4.Program.Packages": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Packages.olean",
+    "sha256": "b43702374323e23d4b6d9d6fc5c9c71953ffc96d04d1769ffa0eafac05dd8b28"
+  },
+  "Effect4.Store.Domain.RowCanonical": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/RowCanonical.olean",
+    "sha256": "7d59fbc1400120922c69699718c215928a060ff4954e5641d63eb78d40a34f51"
+  },
+  "Effect4.Store.Domain.Derived.Program": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Derived/Program.olean",
+    "sha256": "75c8fc578384aadbb5dfe11dc454c7d1809f5c2ea22316fd8d34fbcb8b741f77"
+  },
+  "Effect4.Store.Domain.ProgramWire": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/ProgramWire.olean",
+    "sha256": "4acfca2320b88102273ce389b744b96799d4b7d70f2782f19e2e07c313432e9d"
+  },
+  "Effect4.Codegen.Template": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Template.olean",
+    "sha256": "cc20df4fe15a53113262cf6221718d24ee3af7fe475a1126f180d69c30e1160e"
+  },
+  "Effect4.Codegen.Names": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Names.olean",
+    "sha256": "9a01116c3069a18d0f23fc3a9aad7bde0e7f54e5cb5b7896ed51f609cc8a30f7"
+  },
+  "Effect4.Codegen.Types": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Types.olean",
+    "sha256": "49d01db39c0eaec77adbfa650dc82d0982615b21042d8403a153fdfa7ea32948"
+  },
+  "Effect4.Store.Carrier.Fold": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Fold.olean",
+    "sha256": "e9cb9d533cfbc70e156850bda1001d7251aade8fdb1e760ca05164d5c4aed4e6"
+  },
+  "Effect4.Codegen.Metadata": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Metadata.olean",
+    "sha256": "345f8210377c57d4c30fce357f4892a79ae6a292a0a869188fd16d841ea253af"
+  },
+  "Effect4.Codegen.Record": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Record.olean",
+    "sha256": "4026763e430e9a5d084f0a9bc63463eac730001efb3d0a2001ca1d58a52dec42"
+  },
+  "Effect4.Codegen.Classes": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Classes.olean",
+    "sha256": "6e00798997d13f98b9f4f10886cdd3ebcb48b7f4dcc05dcab9087a60f8766f47"
+  },
+  "Effect4.Data.NatDecimal": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/NatDecimal.olean",
+    "sha256": "a2dd79c5c18694c625b6e201357152358696509361faf4f9844198624443f392"
+  },
+  "Effect4.Codegen.Tuple": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Tuple.olean",
+    "sha256": "cfac2aa09df7102e2fc16fc3bcdbe8ed2625a63d874ad8014d60cbcaaaa2a9ba"
+  },
+  "Effect4.Codegen.ListFold": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/ListFold.olean",
+    "sha256": "f2c4bf20097bbff546dcee1cae18fd81f1fa6d05add7abc43ec3c561c9720a7e"
+  },
+  "Effect4.Codegen.PrintLeaf": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/PrintLeaf.olean",
+    "sha256": "4c54344b2ccbb446888f6fd6951a33fb29e14b8055f8b9b687ec556c45404c68"
+  },
+  "Effect4.Codegen.Templates": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Templates.olean",
+    "sha256": "2e49c7415aa2d7539c03df687074988a3d0cc22aeecca9e0cdb0b19377b75b45"
+  },
+  "Effect4.Codegen.Bindings": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Bindings.olean",
+    "sha256": "d7ad8e46e5571c64ae02a511d652a63ee7ea65b2d54f43276116d389af9328f8"
+  },
+  "Effect4.Codegen.SourceBindings": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/SourceBindings.olean",
+    "sha256": "9cd09af02b8a3bd6f8acf192288c3aa1c2fec728b092cc3aa0f7ed622b0340aa"
+  },
+  "Effect4.Codegen.ClassTable": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/ClassTable.olean",
+    "sha256": "c0808f8604e2cc2dc58ed3433c0edfe205bdd7c7a633c1009f54e43714e265a1"
+  },
+  "Effect4.Codegen.Print": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Print.olean",
+    "sha256": "6a2075c668f4dc5c5c37990c127977773b8ff8ee65b5c810e00fffb98883e386"
+  },
+  "Effect4.Codegen.Checked": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Checked.olean",
+    "sha256": "30e5b730f337c8f6f3e16b1228daa281ad303a4ec92762b2a842fe1ae5e6096a"
+  },
+  "Effect4.Codegen.Read": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Read.olean",
+    "sha256": "dcc8f2411f503c13788ca7663e635abe938f9e7d97de6353d54bb7a826353107"
+  },
+  "Effect4.Codegen.Admit": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Admit.olean",
+    "sha256": "030ba89d4d437441b191bafa7b42a37e8788d9979788ded1ef6963aec235e89b"
+  },
+  "Effect4.Schema.Fold": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Fold.olean",
+    "sha256": "8d4383bc3b1288cd564a7eae5a03930afbbea332619cf742c10f1637776989dd"
+  },
+  "Effect4.Codegen.Schema": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Schema.olean",
+    "sha256": "0402e6c3a9a913dbbee2fad87e131e84181c52b98bb224b4741895d911afe49f"
+  },
+  "Effect4.Codegen.Target": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Target.olean",
+    "sha256": "2cd4ddde2401d463a5868d7e29406f017df8de206b16afd7fe0b6f9e52ed893f"
+  },
+  "Effect4.Store.Domain.Node": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Node.olean",
+    "sha256": "a006b7af9c1bb181fb692a7c538a1ca5f244918881aae9efef286261b19d4e5e"
+  },
+  "Effect4.Store.Domain.Store": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Store.olean",
+    "sha256": "788cc8239909ac6fecf3dc07f268eb46541c31f5a8d93b6dd645d3efc38ec3fa"
+  },
+  "Effect4.Store.Domain.Cascade": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/Cascade.olean",
+    "sha256": "050227a09befe83ba118a7409c72f6505f2b8082c4c27cf5dc8c87ca64eef826"
+  },
+  "Effect4.Schema.Bridge": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Bridge.olean",
+    "sha256": "ee6a0b1d87bfb458d5818ef0c85f81b3534356bb4574af08c8c755d907fb652f"
+  },
+  "Effect4.Program.Profile": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Profile.olean",
+    "sha256": "021f2dd05a158c84abbaac0f86b8f7ad608bf6f614ede8bc1fbeb4888516d5aa"
+  },
+  "Effect4.Schema.Codec": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Codec.olean",
+    "sha256": "83e3a77ce2eb166a9dddf03d5d5e382cb4b8192c6b9161dd29cb3eecfa0af7aa"
+  },
+  "Effect4.Api": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean",
+    "sha256": "75c5a3df13fa2f216057bc68a72e9b5f039516548fd57e9e861bbc3f03583b6e"
+  },
+  "Effect4.Api.Built": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Built.olean",
+    "sha256": "3bc9c9cea47f012bbe4e1e4d5ebded0864c3015d60680b7c6826ea954df33e23"
+  },
+  "Effect4.Program.Authoring.Rows": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Rows.olean",
+    "sha256": "c36feb672a373bdb8716630f8010616cf783147e17a1f7af1da856a9941629a1"
+  },
+  "Effect4.Program.Authoring.Sugar": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Sugar.olean",
+    "sha256": "e03809a16c5360df191be0e2cb491e0ec8f73a17f63d7555a22e1aa3b1cd2ed5"
+  },
+  "Effect4.Program.Authoring.Services": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Services.olean",
+    "sha256": "1b0d0faed107b388a021dfad25424451e5f0cdce37ef44861a7fb8aa8990b08a"
+  },
+  "Effect4.Api.Author": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Api/Author.olean",
+    "sha256": "95c78ff082240bfc60079c5a58027af67e739a297b02a24ee5bcf8f7e0404608"
+  },
+  "Effect4.Program.Authoring.Ascribe": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Ascribe.olean",
+    "sha256": "b2151744bc91fb96d2d5612d08e5f4981aca7acc6a079aa6df293da9b05d0f91"
+  },
+  "Effect4.Program.Authoring.Atoms": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Atoms.olean",
+    "sha256": "31fdd1df042819d7ed57503674757e74fa466bd966f9be2769bb30957ab3bf8c"
+  },
+  "Effect4.Program.Authoring.Declare": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Declare.olean",
+    "sha256": "31532dfd31a953c0a1d903a41e101375d015f101ba89a2312a7074e276fc49d9"
+  },
+  "Effect4.Program.Authoring.Defs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Defs.olean",
+    "sha256": "a8604e571b38f6f9d5aafd45dfa8a4d69e64975472e474911c46ebed38b02d0d"
+  },
+  "Effect4.Program.Authoring.Loops": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Loops.olean",
+    "sha256": "a350d7348a6e9974ae5ce07ea973fa9f2c70c0e3d42d0e9b62ec94431ea03475"
+  },
+  "Effect4.Program.Authoring.Mask": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Mask.olean",
+    "sha256": "cc1678d5c2ad9983c7cce9132d6c94632444d64317b542a8b871e1cdb283fb49"
+  },
+  "Effect4.Program.Authoring.Module": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring/Module.olean",
+    "sha256": "d3d466213aa7c9034c7d833a78c9dc89098305255068c7fb456357fce2b729e5"
+  },
+  "Effect4.Codegen.Forms": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Forms.olean",
+    "sha256": "0df6a8a04402b6dbf7691b115cde5f3b0646cd4dbd7b7768a716e3110ef1b2a5"
+  },
+  "Effect4.Program.TyNormal": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyNormal.olean",
+    "sha256": "f5849f749590817daee7b234888537fdc4e976832908ecca5ce35816bc0ee719"
+  },
+  "Effect4.Schema.Modeled": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Modeled.olean",
+    "sha256": "09798c99cda26f9c5e34dc4344d06eec621a7b843a2ce7ce5f18cb639b1d35d9"
+  },
+  "Effect4.Schema.Modeled.Derive": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Modeled/Derive.olean",
+    "sha256": "a109623a6572ff32e2335af309000fe401cda6fd190fcae3db48e41ba0a23dab"
+  },
+  "Effect4.Schema.FieldRef": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/FieldRef.olean",
+    "sha256": "8f79981a06fdbb0f4c9e6535464e051a6d00e89b499a8d8a8a3c72efd54dca67"
+  },
+  "Effect4.Schema.FieldRef.Elab": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/FieldRef/Elab.olean",
+    "sha256": "01cb076bb5cec09bcd03ee9c2f20a28a4280d3a0d2a172c0cdfe244c62c9fca6"
+  },
+  "Effect4.Library.Words": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Words.olean",
+    "sha256": "e378110248d9376b4cfd10162a2a4b7dfe6172445535ca4cc0b101695701c4b2"
+  },
+  "Effect4.Schema.Identity": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Schema/Identity.olean",
+    "sha256": "6a48f947c1b3e4c9bdf5fccbe9bb50efe242286554ddb96b8d8025bac2e5a65a"
+  },
+  "Effect4.Step": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean",
+    "sha256": "221d5270c3f0ba53945d4b326f804ed3778f01ad353854c491f585a7dd22a3ae"
+  },
+  "Effect4.Step.Elab": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step/Elab.olean",
+    "sha256": "d0d0aff96a6802a987cb71ac416abeccd46e714217322d300a137905b746444c"
+  },
+  "Effect4.Step.Inputs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step/Inputs.olean",
+    "sha256": "975800c7e7ed9873b5617783028112293e603820d1e47c8647dd41f66adeb979"
+  },
+  "Effect4.Step.Rename": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step/Rename.olean",
+    "sha256": "02f25bc9627468984b16dc6091bf11e08692e5aba46fb321dcc9db0ea540e589"
+  },
+  "Effect4.Step.Elab.Inputs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step/Elab/Inputs.olean",
+    "sha256": "c74a29e9e666e85f94099af76d660211478554cb91046091d3690d8951e63ed0"
+  },
+  "Effect4.Step.Lists": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step/Lists.olean",
+    "sha256": "eac27f779d37a71d05747994e4a39c1f5d383c8c283f821d2afa724e7736c7be"
+  },
+  "Effect4.Library.Waiting": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Waiting.olean",
+    "sha256": "4ae8148b5db7d1845a6b8bd24607586f76aa61d049fd62bea753863ddcace64d"
+  },
+  "Effect4.Step.Callback": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Step/Callback.olean",
+    "sha256": "bc03d0c480d9bbbf6716280d8b0d652dd8122889c8bb4918223a9ff117e0917c"
+  },
+  "Effect4.Codegen.Authoring.Forms": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen/Authoring/Forms.olean",
+    "sha256": "eb758acb07ab064857450e95e5793aa82130e55eeaaa96d0b8b2d9d9a2b13552"
+  },
+  "Effect4.Program.Typing.Parts": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Parts.olean",
+    "sha256": "fce24df0075f561e0ec6a0adea4af166848ce70ef0989e3b16e08e5bb93b6047"
+  },
+  "Effect4.Program.Sketch": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Sketch.olean",
+    "sha256": "be4ce0b4fe985c6361fcd3aaaf18704247e14b02383f5c521d345d3ca5949b7a"
+  },
+  "Effect4.Program.Typing.PartsTable": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/PartsTable.olean",
+    "sha256": "7fd48d182faef621748e6fb0868f2e6774369830c358a4bb0e4e3aca6204f72b"
+  },
+  "Effect4.Program.Typing.Splice": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Splice.olean",
+    "sha256": "87a955adc755c481f8f276f70631640fb233c75441e4c4546c80207ba653c19d"
+  },
+  "Effect4.Program.Edit": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Edit.olean",
+    "sha256": "c78e0bbfaa456095b8d480dac9bef92aafc0e85b8e6fda47a3f0e51400d7220b"
+  },
+  "Effect4.Program.SketchWire": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/SketchWire.olean",
+    "sha256": "38071ff24c2410d31d5e5c49387afa78b68fc66bfb61a03a4af944a4788d4d9a"
+  },
+  "Effect4.Author": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean",
+    "sha256": "ee27d06872fff6a45565644a8e4acc64b10ad168f270f05d27408b71ab2e0ef2"
+  },
+  "Effect4.Library.Queue.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Queue/Model.olean",
+    "sha256": "b7f4755c981c5e162a1dfa2844c8d35fdfd6b0c5f9371cf85694f577e7c708cc"
+  },
+  "Effect4.Library.Semaphore.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Semaphore/Model.olean",
+    "sha256": "b9023e8a5b0e6fba3103623cda11bbcb9f742ca3d449ccf95ce706a81909cecf"
+  },
+  "Effect4.Library.Pool.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Pool/Model.olean",
+    "sha256": "77fd4d7538f8cf19d55c103976cb7ac95e728c8cb1056dcedb7cddb44cb70cff"
+  },
+  "Effect4.Library.Table": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Table.olean",
+    "sha256": "e7b833185606a77782d3d433b698d1f4063a8a7d4881369f6862e2b106745c83"
+  },
+  "Effect4.Library.Latch.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Latch/Model.olean",
+    "sha256": "f615f655a0769bdb67e825eb50a7b1d25c346dd269a041127c4986d708c95a25"
+  },
+  "Effect4.Library.Stream.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/Model.olean",
+    "sha256": "a7007316fed3836f24f90ed1ed8fce1ccb9e941701ab7d718a317e0af777afae"
+  },
+  "Effect4.Library.Queue.Cell": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Queue/Cell.olean",
+    "sha256": "41a06708c98ba6a0c54a11557fb7bfdcaccb36248c211b66448b4487109b4e6c"
+  },
+  "Effect4.Library.Queue.Data": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Queue/Data.olean",
+    "sha256": "8320341e865e68615af85692241ec86f230cc99ae67628d960a167a31ba74ae4"
+  },
+  "Effect4.Library.Queue.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Queue/Steps.olean",
+    "sha256": "61dde8b39346593fa4390765f715b6c861c090236253132f1df7a6dbc068865a"
+  },
+  "Effect4.Library.Queue.Ops": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Queue/Ops.olean",
+    "sha256": "60f2997a3b66f51c12c9cda3b56f11a56efaf44dd1d7f20d27cd8df4377c5c8b"
+  },
+  "Effect4.Library.Queue.Defs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Queue/Defs.olean",
+    "sha256": "bbb4869afd19d9816355d5b5a74c47b65f862874e21c6fad7962698937c959f1"
+  },
+  "Effect4.Library.Semaphore.Cell": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Semaphore/Cell.olean",
+    "sha256": "15b234b89b94592b324c4833e40c207b6bde2621bebe7fe96ae7178e5a8a53e0"
+  },
+  "Effect4.Library.Semaphore.Data": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Semaphore/Data.olean",
+    "sha256": "9a43ec545883c2d4bfaa1a2c57882824961f313c57c7a8b9b2a83866b3dddc93"
+  },
+  "Effect4.Library.Semaphore.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Semaphore/Steps.olean",
+    "sha256": "517996b15a14bd93a72e2297d280319b7c0f358ceacf59cdf4bd4c4edd2c1803"
+  },
+  "Effect4.Library.Semaphore.Ops": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Semaphore/Ops.olean",
+    "sha256": "e62f362b328baa80e2037959038018340503d23f5569ee33fd42657a7f10b1be"
+  },
+  "Effect4.Library.Semaphore.Defs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Semaphore/Defs.olean",
+    "sha256": "fe1726f57b77c7c3f874e2336a36620cba83b73e539ce4cd433cfda9bcaeea0c"
+  },
+  "Effect4.Library.Pool.Cell": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Pool/Cell.olean",
+    "sha256": "b616f65691c19160041364c292e48546df2e401e3249962924690ed09ce17137"
+  },
+  "Effect4.Library.Pool.Passes": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Pool/Passes.olean",
+    "sha256": "f6f3517995c9de793383ee213aad28cb2f71f2a3892c26d5355a55812ad70fb1"
+  },
+  "Effect4.Library.Pool.Data": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Pool/Data.olean",
+    "sha256": "79594fd8d8fbb62fa92fd819094bd897441241896a8b8e3bd9bd2ea609a2b418"
+  },
+  "Effect4.Library.Pool.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Pool/Steps.olean",
+    "sha256": "8107404f24817841cc1d8afbcc255ba10db30f7dd553736ec915ec1f0adf2c37"
+  },
+  "Effect4.Library.Pool.Ops": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Pool/Ops.olean",
+    "sha256": "0a0846b30c1d519d52ae00839870d5df3df9e44e215eacf4cd0ac42c083804a4"
+  },
+  "Effect4.Library.Latch.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Latch/Steps.olean",
+    "sha256": "b8468e27da46360214f517fc55789febebf3286415d69ca9bbda182bba6c7f4d"
+  },
+  "Effect4.Library.Latch.Registration": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Latch/Registration.olean",
+    "sha256": "8332dde1b2a41bf1bf140903978c4959da97200f20aaf34493355f772a75ada5"
+  },
+  "Effect4.Program.Stream": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Stream.olean",
+    "sha256": "d6492c2c726f59298b3a8566bfc8878dc2194a42c141881ca9f3db0f8cadc8bd"
+  },
+  "Effect4.Library.Stream.Source": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/Source.olean",
+    "sha256": "7db7267f6563012fc6b3111b4ea884cd35886d5b475847075219f8231d36e891"
+  },
+  "Effect4.Library.Stream.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/Steps.olean",
+    "sha256": "7b049f7bdd52688903deb4d0a93bb7c9e5f45ec5bef7516bc02f76d2f77f09dd"
+  },
+  "Effect4.Library.Stream.Ops": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/Ops.olean",
+    "sha256": "2eb9eb161ad90eccca7533f380e705c91e524ec1fc25084f3f9e63eafaa51f1e"
+  },
+  "Effect4.Library.Ref.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Ref/Model.olean",
+    "sha256": "4ed2a2eb480d980dc636bcd31767ff07f643902a06fcf1ac0e75a453b53d2fa7"
+  },
+  "Effect4.Library.Ref": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Ref.olean",
+    "sha256": "646fe4c333096a623afd92c706ea40e3ca82f0a71932aaf0364cd018c4e455fd"
+  },
+  "Effect4.Library.PartitionedSemaphore.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PartitionedSemaphore/Model.olean",
+    "sha256": "a9af8fad85ab5c5a25b35313715f5bee22ec92e917f36d5677118fa16f3a198b"
+  },
+  "Effect4.Library.PartitionedSemaphore.Cell": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PartitionedSemaphore/Cell.olean",
+    "sha256": "3a7f2a4c3dc226750dbb2400fa5a3d5bbe9ddb742ed620357790435e2254d39d"
+  },
+  "Effect4.Library.PartitionedSemaphore.Data": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PartitionedSemaphore/Data.olean",
+    "sha256": "058f7ce542a563d047b7642bc2b6690146f02a4391d6d422e0ddcc01af3e8804"
+  },
+  "Effect4.Library.PartitionedSemaphore.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PartitionedSemaphore/Steps.olean",
+    "sha256": "e95e5db94131caaa273d6ed8b65528dad6150a90eae586f527815d8e6d63d73f"
+  },
+  "Effect4.Library.Stream.ArraySteps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/ArraySteps.olean",
+    "sha256": "b455906125b0588f5034f1d3ead5e3035a685a1fb06b748aca0ca90fd7102c0b"
+  },
+  "Effect4.Library.Stream.ArrayOps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/ArrayOps.olean",
+    "sha256": "03d67c359c2fdce432901d358b0c40956faf69323701672ef9c967f144a5ed24"
+  },
+  "Effect4.Library.Stream.ArrayDefs": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/Stream/ArrayDefs.olean",
+    "sha256": "5af44557af6bfbf7baee690c07cf1b6a19bb1d5d59d084e61ae5e011771a8a11"
+  },
+  "Effect4.Library.SynchronizedRef.Cell": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/SynchronizedRef/Cell.olean",
+    "sha256": "a5eb930a8328a8fe895d477ca41aef7b451b0db9b09bb5b09389cac323f079a3"
+  },
+  "Effect4.Library.SynchronizedRef.Ops": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/SynchronizedRef/Ops.olean",
+    "sha256": "f1ab93b195dcc1cb301d720d57f1a1ab5e06578e76f4237415a010e9882de92a"
+  },
+  "Effect4.Library.PubSub.Model": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PubSub/Model.olean",
+    "sha256": "f7bb220f8dcbfd0e108de16bac1873a712868ff4f21bc0ca5cc428b3387c7df7"
+  },
+  "Effect4.Library.PubSub.Cell": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PubSub/Cell.olean",
+    "sha256": "3ad3687d69d4b65c79def40edd63e131a3a8feea2504d11e9dce0f9946aa10bf"
+  },
+  "Effect4.Library.PubSub.Data": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PubSub/Data.olean",
+    "sha256": "73bacf60d95748d27d7c81a1d7e9aff3a1f7f6651bb2cbdc517babb641eabcb0"
+  },
+  "Effect4.Library.PubSub.Steps": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library/PubSub/Steps.olean",
+    "sha256": "aed66dd6ce798d2850a3187a36a294b7504d86e8f9c95a3e392473e27d6189a3"
+  },
+  "Effect4.Library": {
+    "path": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean",
+    "sha256": "4788945623144d35c31b95da09ed8f29d11f4b371b7053cb7f3d5683f9f4e35c"
+  }
+}

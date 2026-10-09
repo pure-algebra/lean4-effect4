@@ -1,0 +1,15 @@
+diff --git a/src/Effect4/Laws/Codegen/ReadLeaf.lean b/src/Effect4/Laws/Codegen/ReadLeaf.lean
+index 9bc01449..70d968b7 100644
+--- a/src/Effect4/Laws/Codegen/ReadLeaf.lean
++++ b/src/Effect4/Laws/Codegen/ReadLeaf.lean
+@@ -60,10 +60,6 @@ theorem utf8_digitChar : ∀ m, m < 10 →
+ theorem digitOfByte_digit : ∀ m, m < 10 → digitOfByte (UInt8.ofNat (48 + m)) = m :=
+   Data.NatDecimal.digitOfByte_digit
+ 
+-theorem toDigitsCore_append (fuel : Nat) : ∀ (n : Nat) (ds : List Char), n < fuel →
+-    Nat.toDigitsCore 10 fuel n ds = Nat.toDigitsCore 10 fuel n [] ++ ds :=
+-  Data.NatDecimal.toDigitsCore_append fuel
+-
+ theorem decodeBytes_toDigitsCore (fuel : Nat) : ∀ n, n < fuel →
+     decodeBytes ((Nat.toDigitsCore 10 fuel n []).flatMap String.utf8EncodeChar) = n :=
+   Data.NatDecimal.decodeBytes_toDigitsCore fuel

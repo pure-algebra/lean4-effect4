@@ -1,0 +1,18 @@
+{
+  "src/Effect4/Laws/Library/Pool/Ops.lean": {
+    "sha256": "c8c999467dfbd1b5bb79daf6f4f00fee03a953186b60902e3903905ac82fabea",
+    "matchesPriorReviewedWIP": true
+  },
+  "src/Effect4/Laws/Library/Semaphore/Data.lean": {
+    "sha256": "a5b555820242d96ed18a69f971ca66a26740b93327977f31115f6c9fc748229d",
+    "matchesPriorReviewedWIP": true
+  },
+  "src/Effect4/Laws/Codegen/PrintTyped.lean": {
+    "sha256": "0da8e3ac3f98887c9a9c97c76066e845432b8c911ed1971c76875ea528dbeb27",
+    "matchesPriorReviewedWIP": true
+  },
+  "src/Effect4/Laws/Codegen/ReadLeaf.lean": {
+    "sha256": "06007829dca2faa882851b57f61b33cfc2f41b3d1458ff33bd53d38b8d558ea9",
+    "matchesPriorReviewedWIP": true
+  }
+}
