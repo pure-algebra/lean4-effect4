@@ -149,6 +149,7 @@ def areas : List Area := [
   ⟨"tools/Tools", .tools, 2, "Tools", "shared descriptions, stamps, inventory and neutral tool utilities", false, true⟩,
   ⟨"tools/Drivers", .tools, 4, "Drivers", "Effect4 drivers that consume the OCaml5 projection", false, true⟩,
   ⟨"tools/TestSupport", .tools, 2, "TestSupport", "shared immutable fixtures consumed by tooling and batteries; no runtime imports", false, true⟩,
+  ⟨"tools/Tools/View", .tools, 2, "Tools/View", "the view: a picture as keyed data (pages, drawing and device calls), the frames of a program built and run, the graph layout, motion as a data join, and their laws", true, true⟩,
   ⟨"src/OCaml5", .tools, 3, "OCaml5", "the Lean half of the OCaml estate: the `Eff` closed world and emitters, the LCNF → OCaml backend, the OCaml language model, the drivers", false, true⟩,
   ⟨"src/OCaml5/Eff", .tools, 3, "OCaml5/Eff", "the closed world, the emitters, the goldens", true, true⟩,
   ⟨"src/OCaml5/Lcnf", .tools, 3, "OCaml5/Lcnf", "the LCNF → OCaml translator, its types, externs and naming", true, true⟩,
@@ -187,6 +188,7 @@ def areas : List Area := [
   -- host gates, scripts, promoted results
   ⟨"harness", .host, 0, "harness", "the host gates: the truth differential (Lean against rc.112), the Schema host, tsdiag, the generation fixtures", false, true⟩,
   ⟨"scripts", .host, 0, "scripts", "the check and generate scripts the Makefile runs", false, true⟩,
+  ⟨"tools/view", .host, 0, "tools/view", "the view's C host: the replay (`draw`), the window (`play`, on SDL3), the painter (`paint.h`), and the one command `v`", false, true⟩,
   ⟨"generated", .host, 0, "generated", "the promoted TSVs: the corpus index, assignability, row citations, tsdiag, the runtime census, the proof shape", false, true⟩,
   -- the authorities and the record
   ⟨"docs/core", .docs, 0, "docs/core", "the authorities: the system map, the host boundary, coherence, the census, decisions, the language cut, the API surface, the LCNF route, the machine's state", false, true⟩,
@@ -199,6 +201,8 @@ def areas : List Area := [
   ⟨"docs/design", .docs, 0, "docs/design", "the design language notes", false, true⟩,
   -- pinned references
   ⟨"vendor/effect-4.0.0-rc.112", .vendor, 0, "effect rc.112", "the behavioral reference every citation points into", false, false⟩,
+  ⟨"vendor/termbox2-2.5.0", .vendor, 0, "termbox2", "the terminal library of the view's console, vendored whole (decisions row 336)", false, false⟩,
+  ⟨"vendor/SDL3-3.4.16", .vendor, 0, "SDL3", "the view's window library, by pin: the SHA-256, the signing keys, and the fetch and build scripts", false, false⟩,
   ⟨"src/Effect4/Library/Ref", .runtime, 4, "Library/Ref", "the independent Ref model and native operations with typed step callbacks", true, true⟩,
   ⟨"src/Effect4/Laws/Library/Ref", .laws, 5, "Laws/Library/Ref", "the Ref model agreement and typed callback connectors", true, true⟩,
   ⟨"src/Effect4/Library/SynchronizedRef", .runtime, 4, "Library/SynchronizedRef", "construction, read and pure callback modification through Ref and Semaphore", true, true⟩,
