@@ -9,7 +9,7 @@ import Effect4.Program.Typing
 # The hand traversals of `Term` / `Terms` as folds
 
 Every one the census lists (`docs/core/traversal-census.md` §3.3): the leaf printer
-(`printTerm`/`printTerms`), the reader's `Terms.names?` and `noRow`, `Terms.toList`, `scoped`
+(`printTerm`/`printTerms`), the reader's `Terms.rowArgs?` and `noRow`, `Terms.toList`, `scoped`
 and `weaken` (the level in the carrier), the evaluator `evalTerm`/`evalTerms` (the environment
 in the carrier) and the term typer `argTy`/`argsTy` (the const flag in the carrier; `termTy` is
 its projection at `false`, `Typing/Rules.lean`), each as a `TermAlgebra` with its connectors.
@@ -18,7 +18,7 @@ its projection at `false`, `Typing/Rules.lean`), each as a `TermAlgebra` with it
 namespace Effect4.Program
 
 fold_of Effect4.Program.printTerm
-fold_of Effect4.Program.Terms.names?
+fold_of Effect4.Program.Terms.rowArgs?
 fold_of Effect4.Program.noRow
 fold_of Effect4.Program.Terms.toList
 fold_of Effect4.Program.Term.scoped

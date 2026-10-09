@@ -278,8 +278,15 @@ let rec json_registration (v : registration) : Eff_json_text.t =
 
 let print_registration (v : registration) : string = Eff_json_text.render (json_registration v)
 
+let rec json_row_arg (v : row_arg) : Eff_json_text.t =
+  match v with
+  | Row_arg_name a0 -> Eff_json_text.Array [Eff_json_text.String "name"; Eff_json_text.String a0]
+  | Row_arg_str a0 -> Eff_json_text.Array [Eff_json_text.String "str"; Eff_json_text.String a0]
+
+let print_row_arg (v : row_arg) : string = Eff_json_text.render (json_row_arg v)
+
 let rec json_row (r : row) : Eff_json_text.t =
-  Eff_json_text.Object [("name", Eff_json_text.String r.row_name); ("spelling", Eff_json_text.String r.row_spelling); ("shape", json_row_shape r.row_shape); ("trailing", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_trailing)); ("kind", json_row_kind r.row_kind); ("request", json_ty r.row_request); ("answer", json_ty r.row_answer); ("error", json_ty r.row_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.row_requires)); ("cite", Eff_json_text.String r.row_cite); ("typeArgs", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_typeArgs)); ("registration", json_registration r.row_registration)]
+  Eff_json_text.Object [("name", Eff_json_text.String r.row_name); ("spelling", Eff_json_text.String r.row_spelling); ("shape", json_row_shape r.row_shape); ("trailing", Eff_json_text.Array (List.map (fun y -> json_row_arg y) r.row_trailing)); ("kind", json_row_kind r.row_kind); ("request", json_ty r.row_request); ("answer", json_ty r.row_answer); ("error", json_ty r.row_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.row_requires)); ("cite", Eff_json_text.String r.row_cite); ("typeArgs", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_typeArgs)); ("registration", json_registration r.row_registration)]
 
 let print_row (v : row) : string = Eff_json_text.render (json_row v)
 

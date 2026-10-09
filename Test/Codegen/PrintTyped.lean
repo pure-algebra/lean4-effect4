@@ -99,7 +99,7 @@ def helperSig : Signature Unit :=
   { rowOf := fun _ => helperRow, atomOf := fun _ _ => none,
     scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
-def helperSpell (s : String) (names : List String) : Option Unit :=
+def helperSpell (s : String) (names : List RowArg) : Option Unit :=
   if s = "recordRequired" ∧ names = [] then some () else none
 
 -- Existing ordinary readable field syntax stays readable even at the unsafe synthetic row.
@@ -121,7 +121,7 @@ def causeSig : Signature Unit :=
   { rowOf := fun _ => causeRow, atomOf := fun _ _ => none,
     scopeKey := ⟨⟨0⟩, ⟨0⟩⟩, serviceTy := fun _ => none }
 
-def causeSpell (s : String) (names : List String) : Option Unit :=
+def causeSpell (s : String) (names : List RowArg) : Option Unit :=
   if s = "causeError" ∧ names = [] then some () else none
 
 #guard rowNamesSafe causeRow

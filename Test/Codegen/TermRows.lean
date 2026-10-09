@@ -931,8 +931,8 @@ def bothSig : Signature BothOp :=
     typeArgsOf := BothOp.typeArgs
     withTypeArgs := BothOp.withTypeArgs }
 
-/-- The inverse of the table on (spelling, trailing names): each operation at its face. -/
-def bothSpell (s : String) (names : List String) : Option BothOp :=
+/-- The inverse of the table on (spelling, trailing arguments): each operation at its face. -/
+def bothSpell (s : String) (names : List RowArg) : Option BothOp :=
   if s = "Cell.cast" ∧ names = [] then some (.cast .unit (.lit .unit))
   else if s = "Cell.peek" ∧ names = [] then some .peek
   else none
@@ -1034,6 +1034,10 @@ theorem bothLawful : LawfulSpelling bothSig bothSpell where
       typeArgsOf_withTerm := by
         intro op f
         cases op <;> rfl }
+  -- no key begins with a string literal
+  literal_alone := by
+    intro op v names _ _
+    simp [bothSpell]
 
 /-- A cast at `boolean` whose term negates the cell's value, on the cell `a0`. -/
 def castNot : Eff BothOp := .perform (.cast .bool (.app "not" (.cons (.var 1) .nil))) (.var 0)

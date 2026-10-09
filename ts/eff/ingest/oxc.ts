@@ -12,7 +12,7 @@ import { decodeEff, type Eff, type ForkOptions, type LayerTerm, type ServiceKey,
 import { atomNames, heads, rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
-import { withTable, readTypeText } from "../read.ts"
+import { withTable, readTypeText, rowArgOf, sameRowArg } from "../read.ts"
 import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, packageTable } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
 import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments, type FormSelection } from "./forms.ts"
@@ -617,7 +617,7 @@ class Normalize {
         const n = unwrap(arg(i))
         trailing.push(n.type === "Literal" ? this.literal(n) : id(this.rawHead(n)))
       }
-      if (!row.row.trailing.every((s, i) => { const x = trailing[i]!; return s === (x._tag === "ident" ? x.name : x._tag === "str" ? JSON.stringify(x.value) : "") })) continue
+      if (!row.row.trailing.every((s, i) => { const x = rowArgOf(trailing[i]!); return x !== undefined && sameRowArg(s, x) })) continue
       // An operation that carries type arguments takes its own count on the head
       // (`Deferred.make<A, E>()`), and the fragment reader reads each through the checked type
       // reader (`readCall` of read.ts, Lean `installTypeArgs`). A bare call of it is no

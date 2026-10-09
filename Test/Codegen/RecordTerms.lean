@@ -50,6 +50,6 @@ def controlRow : Effect4.Program.Row :=
 #guard Effect4.Codegen.Record.helperNames.all fun name =>
   !rowNamesSafe { controlRow with spelling := name }
 #guard Effect4.Codegen.Record.helperNames.all fun name =>
-  !rowNamesSafe { controlRow with trailing := [name] }
+  !rowNamesSafe { controlRow with trailing := [.name name] }
 
 end Effect4.Test.RecordTermsCodegen

@@ -1367,8 +1367,34 @@ let rec decode_registration (s : string) (pos : int) (limit : int) : (registrati
 
 let decode_registration_exact (s : string) : registration option = Eff_frame.exact decode_registration s
 
+let rec emit_row_arg (b : Buffer.t) (v : row_arg) : unit =
+  match v with
+  | Row_arg_name a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b a0)
+  | Row_arg_str a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
+
+let encode_row_arg (v : row_arg) : string = Eff_frame.to_string emit_row_arg v
+
+let rec decode_row_arg (s : string) (pos : int) (limit : int) : (row_arg * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Row_arg_name a0, next) else None)
+    | 1 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Row_arg_str a0, next) else None)
+    | _ -> None)
+
+let decode_row_arg_exact (s : string) : row_arg option = Eff_frame.exact decode_row_arg s
+
 let rec emit_row (b : Buffer.t) (r : row) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.row_name; Eff_frame.emit_string b r.row_spelling; emit_row_shape b r.row_shape; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_trailing; emit_row_kind b r.row_kind; emit_ty b r.row_request; emit_ty b r.row_answer; emit_ty b r.row_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.row_requires; Eff_frame.emit_string b r.row_cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_typeArgs; emit_registration b r.row_registration)
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.row_name; Eff_frame.emit_string b r.row_spelling; emit_row_shape b r.row_shape; Eff_frame.emit_list b (fun b y -> emit_row_arg b y) r.row_trailing; emit_row_kind b r.row_kind; emit_ty b r.row_request; emit_ty b r.row_answer; emit_ty b r.row_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.row_requires; Eff_frame.emit_string b r.row_cite; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) r.row_typeArgs; emit_registration b r.row_registration)
 
 let encode_row (v : row) : string = Eff_frame.to_string emit_row v
 
@@ -1387,7 +1413,7 @@ let rec decode_row (s : string) (pos : int) (limit : int) : (row * int) option =
           (match decode_row_shape s p e with
            | None -> None
            | Some (a2, p) ->
-            (match (Eff_frame.decode_list Eff_frame.decode_string) s p e with
+            (match (Eff_frame.decode_list decode_row_arg) s p e with
              | None -> None
              | Some (a3, p) ->
               (match decode_row_kind s p e with

@@ -20,7 +20,7 @@
 // walks over one tree, not two parsers.
 import type { ArrayExpression, Class, Directive, Expression, ExportDefaultDeclarationKind, Function as FunctionNode, FunctionBody, Node as TreeNode, NumericLiteral, ParamPattern, PrivateFieldExpression, Program, SpreadElement, Statement, StaticMemberExpression, StringLiteral, TemplateElement, TSInterfaceDeclaration, TSType, VariableDeclaration } from "oxc-parser"
 import { childNodes, parseTypeScript } from "./oxc.ts"
-import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
+import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions, type RowArg } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import { readTypeMetadata } from "../metadata.ts"
 import { readTupleIndex } from "../tuple-index.ts"
@@ -29,7 +29,7 @@ import type { Expr } from "../read.ts"
 // The checked type reader and the type-argument view of an operation are shared with read.ts
 // and, through its fragment reader, with the oxc engine: the three readers read a type
 // argument alike (the state plan's T5, part B). This engine keeps its own walk.
-import { readTypeText, typeArgsOf, withTypeArgs } from "../read.ts"
+import { readTypeText, sameRowArg, typeArgsOf, withTypeArgs } from "../read.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
@@ -603,13 +603,13 @@ class CompilerReader {
         return { _tag: "withFiber", action: { _tag: "runIn", target: this.term(this.at(c.arguments, 0), env), scope: this.term(this.at(c.arguments, 1), env) } }
       }
     }
-    const trailingName = (z: Ex): string | undefined => { z = this.unwrap(z); return isString(z) ? JSON.stringify(z.value) : z.type === "Identifier" ? z.name : undefined }
+    const trailingArg = (z: Ex): RowArg | undefined => { z = this.unwrap(z); return isString(z) ? { _tag: "str", value: z.value } : z.type === "Identifier" ? { _tag: "name", spelling: z.name } : undefined }
     for (const r of rows.filter(r => r.row.spelling === h && r.row.shape !== "value")) {
       const count = r.row.shape === "tupleCall" ? 2 : r.row.request._tag === "unit" ? 0 : 1
-      // A read-modify-write row's binder term follows the request and the trailing names, as a
+      // A read-modify-write row's binder term follows the request and the trailing arguments, as a
       // function of the cell's current value (the state plan's T5; Lean `printPerform`).
       const functions = isTermRow(r.op) ? 1 : 0
-      if (a.length !== count + r.row.trailing.length + functions || !r.row.trailing.every((v, i) => trailingName(arg(count + i)) === v)) continue
+      if (a.length !== count + r.row.trailing.length + functions || !r.row.trailing.every((v, i) => { const x = trailingArg(arg(count + i)); return x !== undefined && sameRowArg(v, x) })) continue
       const types = x.typeArguments?.params.map(n => this.text(n)) ?? []
       // An operation that carries type arguments takes its own count on the head
       // (`Deferred.make<A, E>()`, Lean `installTypeArgs`), and a bare call of it is no invocation:

@@ -38,7 +38,7 @@ theorem eraseNode_size (n : Nat) (x : Expr) :
 and that operation owns no type argument. `readPerform` also checks the complete call shape.
 `splitHeadTypes` restores method syntax, rather than leaving a member as a function head. -/
 def eraseRowJoin (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Expr :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) : Expr :=
   match splitHeadTypes x with
   | none => x
   | some (bare, _) =>
@@ -91,7 +91,7 @@ def eraseCaptures (row : Templates.Row) (sorts : List ArgSort) (n : Nat) (σ : S
 /-- One expression template, at the reader's existing matching and family recursion seam.
 This maps target syntax captures without constructing an `Eff` program. -/
 def eraseExprRow (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (fam : EffFam) (n : Nat) (x : Expr)
+    (spell : String → List RowArg → Option Op) (fam : EffFam) (n : Nat) (x : Expr)
     (row : Templates.Row)
     (child : EffFam → Nat → (y : Expr) → sizeOf y < sizeOf x → Expr)
     (children : EffFam → Nat → (ys : List Expr) → sizeOf ys < sizeOf x → List Expr)
@@ -158,7 +158,7 @@ def eraseStmtRow (n : Nat) (s : TypeScript.Stmt) (row : Templates.Row)
 mutual
   /-- The family inverse uses the existing template order and capture depth laws. -/
   def eraseT (classes : Classes.Classes) (sig : Signature Op)
-      (spell : String → List String → Option Op) (fam : EffFam) (n : Nat) (x : Expr) : Option Expr :=
+      (spell : String → List RowArg → Option Op) (fam : EffFam) (n : Nat) (x : Expr) : Option Expr :=
     let y := EraseTermTypes.eraseNode n x
     (Templates.table.findSome? fun row => eraseExprRow classes sig spell fam n y row
       (fun fam' d child _ => (eraseT classes sig spell fam' d child).getD child)
@@ -180,7 +180,7 @@ mutual
 
   /-- Program and layer lists recurse through their corresponding expression families. -/
   def eraseSpine (classes : Classes.Classes) (sig : Signature Op)
-      (spell : String → List String → Option Op) (fam : EffFam) (n : Nat) : List Expr → List Expr
+      (spell : String → List RowArg → Option Op) (fam : EffFam) (n : Nat) : List Expr → List Expr
     | [] => []
     | x :: xs =>
       (eraseT classes sig spell (if fam = .layers then .layer else .eff) n x).getD x ::
@@ -190,7 +190,7 @@ mutual
 
   /-- Statement templates identify their captured programs and declaration counts. -/
   def eraseStmts (classes : Classes.Classes) (sig : Signature Op)
-      (spell : String → List String → Option Op) (n : Nat) : List TypeScript.Stmt → List TypeScript.Stmt
+      (spell : String → List RowArg → Option Op) (n : Nat) : List TypeScript.Stmt → List TypeScript.Stmt
     | [] => []
     | s :: ss =>
       let head := Templates.table.findSome? fun row => eraseStmtRow n s row
@@ -207,13 +207,13 @@ end
 /-- The named erasure before the typed reader. It changes approved inferred call arguments
 only; the ordinary reader retains ownership of every other syntax check. -/
 def eraseJoinArgs (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Expr :=
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) : Expr :=
   (eraseT classes sig spell .eff n x).getD x
 
 /-- The existing reader after erasure. Exactness is stated modulo `eraseJoinArgs`, never as
 raw equality with every source spelling carrying explicit type arguments. -/
 def readTyped (classes : Classes.Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op) (n : Nat) (x : Expr) :
+    (spell : String → List RowArg → Option Op) (n : Nat) (x : Expr) :
     Except ReadRefusal (Eff Op) :=
   readEff classes sig spell n (eraseJoinArgs classes sig spell n x)
 

@@ -101,12 +101,12 @@ private def printCaptured (sig : Signature Op) (history : History Op) (target : 
   | none => .error (.layerRef target)
 
 private def readCaptured (classes : Classes) (sig : Signature Op)
-    (spell : String → List String → Option Op)
+    (spell : String → List RowArg → Option Op)
     (decl : TypeScript.Decl) : Except ReadRefusal (List Nat × LayerTerm Op) :=
   readLayerDecl classes sig spell decl
 
 private theorem readCaptured_printCaptured {sig : Signature Op}
-    {spell : String → List String → Option Op}
+    {spell : String → List RowArg → Option Op}
     {history : History Op}
     (layers : ∀ entry ∈ history, entry.2.ReadsBack classes sig spell)
     (names : ∀ entry ∈ history,
@@ -125,7 +125,7 @@ private theorem readCaptured_printCaptured {sig : Signature Op}
   simp [readCaptured, readLayerDecl, ← key, names entry mem, hr]
 
 private theorem readCaptured_mapM {sig : Signature Op}
-    {spell : String → List String → Option Op}
+    {spell : String → List RowArg → Option Op}
     {history : History Op}
     (layers : ∀ entry ∈ history, entry.2.ReadsBack classes sig spell)
     (names : ∀ entry ∈ history,
@@ -209,7 +209,7 @@ trip, the class section included.
 This is a structural AST equation: it does not validate the declaration's claimed
 type, imports, rendered TypeScript bytes, or target execution. -/
 theorem readModule_printModule {sig : Signature Op}
-    {spell : String → List String → Option Op} {call : Nat → Op}
+    {spell : String → List RowArg → Option Op} {call : Nat → Op}
     {root main : Eff Op} {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))
     (plain : main.block? = none)
@@ -499,7 +499,7 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
 read as the declarations, and their bodies read back where each body's printed suspension does.
 A step of `readModule_printModule_defs`. -/
 theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
-    {spell : String → List String → Option Op} {defs : List DefDecl} {bodies : Effs Op}
+    {spell : String → List RowArg → Option Op} {defs : List DefDecl} {bodies : Effs Op}
     {cs : List TypeScript.ConstDecl} (readable : ∀ d ∈ defs, d.readable = true)
     (bodiesRead : ∀ b ∈ bodies.toList, ReadsBack classes sig spell 1 (.suspend b))
     (printed : printDefs sig defs bodies = .ok cs) :
@@ -551,7 +551,7 @@ module round trip of the readable domain (`readModule_printModule_readable`) and
 module or how rc.112 runs it. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem readModule_printModule_defs {sig : Signature Op}
-    {spell : String → List String → Option Op} {call : Nat → Op}
+    {spell : String → List RowArg → Option Op} {call : Nat → Op}
     {root main body : Eff Op} {defs : List DefDecl} {bodies : Effs Op}
     {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))

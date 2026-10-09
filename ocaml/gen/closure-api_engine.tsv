@@ -111,7 +111,7 @@ Effect4.Program.contAOf	program_cont_aof	false	260	0	1	2	49	87	0	25	0	0	235	0	9	
 Effect4.Program.contEOf	program_cont_eof	false	36	0	1	2	8	12	0	4	0	0	30	2	4	0	0	0	0	0	0	59	50	0	16	4	1	0	910052846462410167
 Effect4.Program.syncValueAt	program_sync_value_at	false	8	0	0	0	6	6	0	0	0	0	8	0	0	0	0	0	0	0	0	1	5	0	7	4	1	0	1628709010727583264
 Effect4.Program.suspendBodyAt	program_suspend_body_at	false	60	0	2	4	18	20	0	2	0	0	58	0	2	0	0	0	0	0	0	69	85	0	31	8	1	0	2654757923540283458
-Effect4.Program.prepareExternalAnswer	program_prepare_external_answer	false	10	0	0	0	13	10	0	0	0	0	10	0	0	0	0	0	0	0	0	11	23	0	16	6	1	0	14654954540344348359
+Effect4.Program.prepareExternalAnswer	program_prepare_external_answer	false	10	0	0	0	13	10	0	0	0	0	10	0	0	0	0	0	0	0	0	11	23	0	16	6	1	0	11207010471721279130
 Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1	step_decision_state_at_program_replay_checked_from_spec_1	false	55	0	2	4	14	12	0	2	0	0	53	0	2	0	0	0	0	0	0	116	129	0	27	0	1	0	16346563766601003467
 Effect4.Api.compileReasons	api_compile_reasons	false	3	0	0	0	1	1	0	1	0	0	2	0	1	0	0	0	0	0	0	1	3	0	1	0	1	0	1301832100203903328
 Effect4.Api.hostReasons	api_host_reasons	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	11169497963011349830
@@ -202,8 +202,8 @@ Effect4.Program.forkScopedAt	program_fork_scoped_at	false	12	0	0	0	6	5	0	1	0	0	1
 Effect4.Program.embedAction	program_embed_action	false	32	0	0	0	1	24	0	0	0	0	32	0	0	0	0	0	0	0	0	218	40	0	24	0	1	0	18162835144880257238
 Effect4.Program.resolve	program_resolve	false	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	5	0	3	2	1	0	7261341979395606169
 Effect4.Program.resolveLayer	program_resolve_layer	false	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	8	0	3	2	1	0	11607604038877138060
-Effect4.Program.externalRow	program_external_row	false	9	0	0	0	4	4	0	0	0	0	9	0	0	0	0	0	0	0	0	3	8	0	7	0	1	0	15083291120018095328
-Effect4.Program.externalAdmits	program_external_admits	false	10	0	0	0	7	6	0	0	0	0	10	0	0	0	0	0	0	0	0	0	10	0	10	2	1	0	4482535823846616075
+Effect4.Program.externalRow	program_external_row	false	9	0	0	0	4	4	0	0	0	0	9	0	0	0	0	0	0	0	0	3	8	0	7	0	1	0	5217295061899856751
+Effect4.Program.externalAdmits	program_external_admits	false	10	0	0	0	7	6	0	0	0	0	10	0	0	0	0	0	0	0	0	0	10	0	10	2	1	0	9019011263445289555
 List.mapTR.loop._at_.Effect4.Program.interpOf.spec_0	list_map_tr_loop_at_program_interp_of_spec_0	true	5	0	0	0	1	2	0	0	0	0	5	0	0	0	0	0	0	0	0	1	7	0	2	0	1	0	5298371631574867264
 Effect4.Program.Point.childWith	program_point_child_with	false	8	0	0	0	1	1	0	1	0	0	7	0	1	0	0	0	0	0	0	3	16	0	1	0	1	0	4724537948514711340
 Effect4.Machine.Val.context?	val__context_opt	false	2	0	0	0	1	1	0	0	0	0	1	1	0	0	0	0	0	0	0	0	1	0	1	0	1	0	8662259493342062632
@@ -345,7 +345,7 @@ Effect4.Program.resolveLayer.resolveLayerTerm	program_resolve_layer_resolve_laye
 List.get?Internal._redArg	list_get_opt_internal	true	7	0	0	0	2	3	0	2	0	0	5	0	2	0	0	0	0	0	0	2	7	0	3	1	1	0	7917179579382169689
 Effect4.Program.instDecidableEqRegistration	program_inst_decidable_eq_registration	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	11997596113152781046
 Effect4.Program.instDecidableEqRowKind	program_inst_decidable_eq_row_kind	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	17139293446232041623
-Effect4.Program.Row.normalizeTypes	program_row_normalize_types	false	4	0	0	0	1	1	0	0	0	0	4	0	0	0	0	0	0	0	0	0	15	0	1	0	1	0	3330201657053211938
+Effect4.Program.Row.normalizeTypes	program_row_normalize_types	false	4	0	0	0	1	1	0	0	0	0	4	0	0	0	0	0	0	0	0	0	15	0	1	0	1	0	8234341060844080942
 Effect4.Store.Val.handles	store_val__handles	true	10	0	0	0	1	6	0	0	0	0	10	0	0	0	0	0	0	0	0	5	11	0	5	1	1	0	6870892908959676800
 List.any._at_.Effect4.Program.externalAdmits.spec_0	list_any_at_program_external_admits_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	4	0	1	0	12890383240318322693
 List.all._at_.Effect4.Program.externalAdmits.spec_1	list_all_at_program_external_admits_spec_1	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	8028614932927530580

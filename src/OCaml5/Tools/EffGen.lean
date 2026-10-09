@@ -184,7 +184,8 @@ def main (args : List String) : IO Unit := do
   let mut missing : Array String := #[]
   for f in families do
     if [`Effect4.Program.Ty, `Effect4.Program.RowKind, `Effect4.Program.RowShape, `Effect4.ServiceName,
-        `Effect4.ServiceTypeCode, `Effect4.ServiceKey, `Effect4.Program.Registration, `Effect4.Program.Row, `Effect4.Program.EffTy].contains f.spec.leanName then
+        `Effect4.ServiceTypeCode, `Effect4.ServiceKey, `Effect4.Program.Registration, `Effect4.Program.RowArg,
+        `Effect4.Program.Row, `Effect4.Program.EffTy].contains f.spec.leanName then
       continue
     for c in f.ctors do
       let k := (coverage.find? c.name).getD 0

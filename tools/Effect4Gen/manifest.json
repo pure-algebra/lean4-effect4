@@ -102,6 +102,7 @@
         "Effect4.Program.RowKind",
         "Effect4.Program.RowShape",
         "Effect4.Program.Registration",
+        "Effect4.Program.RowArg",
         "Effect4.Program.Row",
         "Effect4.Program.EffTy"
       ]

@@ -81,9 +81,14 @@ def keyJson (key : Effect4.ServiceKey) : Json :=
 def flatKeyJson (key : Effect4.ServiceKey) : Json :=
   Json.mkObj [("name", toJson key.name.value), ("service", toJson key.service.value)]
 
+/-- A row's trailing argument in the generated schema's tagged form. -/
+def rowArgJson : RowArg → Json
+  | .name s => Json.mkObj [("_tag", .str "name"), ("spelling", .str s)]
+  | .str v => Json.mkObj [("_tag", .str "str"), ("value", .str v)]
+
 def rowJson (row : Row) : Json :=
   Json.mkObj [("name", .str row.name), ("spelling", .str row.spelling),
-    ("shape", shapeJson row.shape), ("trailing", toJson row.trailing),
+    ("shape", shapeJson row.shape), ("trailing", .arr (row.trailing.map rowArgJson).toArray),
     ("kind", kindJson row.kind), ("request", tyJson row.request),
     ("answer", tyJson row.answer), ("error", tyJson row.error),
     ("requires", .arr (row.requires.map keyJson).toArray), ("cite", .str row.cite),

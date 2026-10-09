@@ -743,7 +743,7 @@ theorem printLayer_of_readable {l : LayerTerm Op} (hr : ReadableAt classes sig .
 
 /-- The round trip on the readable domain: a readable program prints, and what it prints
 reads back to it. -/
-theorem roundTrip_of_readable [ScopedOp Op] {spell : String → List String → Option Op}
+theorem roundTrip_of_readable [ScopedOp Op] {spell : String → List RowArg → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
     (hr : Readable (classesOf e) sig n e = true) :
     roundTrip sig spell n e = .ok e := by
@@ -752,7 +752,7 @@ theorem roundTrip_of_readable [ScopedOp Op] {spell : String → List String → 
 
 /-- The executed check of the round trip holds on the readable domain. -/
 theorem readable_of_Readable [DecidableEq Op] [ScopedOp Op]
-    {spell : String → List String → Option Op}
+    {spell : String → List RowArg → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
     (hr : Readable (classesOf e) sig n e = true) :
     readable sig spell n e = true := by

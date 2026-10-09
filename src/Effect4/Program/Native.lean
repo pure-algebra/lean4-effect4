@@ -462,7 +462,7 @@ def row (op : NativeOp) : Row :=
     ⟨"scopeMake", "Scope.make", .call, [], kind op, .unit, Ty.scope, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
   | scopeMake .parallel =>
-    ⟨"scopeMake", "Scope.make", .call, ["\"parallel\""], kind op, .unit, Ty.scope, .never, [],
+    ⟨"scopeMake", "Scope.make", .call, [.str "parallel"], kind op, .unit, Ty.scope, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
   | sleep =>
     ⟨"sleep", "Effect.sleep", .call, [], kind op, .nat, .unit, .never, [],

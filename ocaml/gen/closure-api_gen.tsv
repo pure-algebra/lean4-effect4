@@ -51,7 +51,7 @@ Effect4.Machine.Ctx.ambientScope	ctx_ambient_scope	false	1	0	0	0	1	1	0	0	0	0	1	0
 Effect4.Machine.emptyCtx	empty_ctx	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	1	3	0	0	0	1	0	13879202924284214584
 Effect4.Machine.exitsVal	exits_val	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	5526302654737344494
 Effect4.Machine.stackAnnotationsOf	stack_annotations_of	false	5	0	0	0	0	1	0	0	0	0	5	0	0	0	0	0	0	0	0	4	5	0	0	0	1	0	5648561862730385233
-Effect4.Program.prepareExternalAnswer	program_prepare_external_answer	false	10	0	0	0	13	10	0	0	0	0	10	0	0	0	0	0	0	0	0	11	23	0	16	6	1	0	14654954540344348359
+Effect4.Program.prepareExternalAnswer	program_prepare_external_answer	false	10	0	0	0	13	10	0	0	0	0	10	0	0	0	0	0	0	0	0	11	23	0	16	6	1	0	11207010471721279130
 Effect4.Machine.Stores.empty	stores_empty	false	6	0	0	0	0	1	0	1	0	0	5	0	1	0	0	0	0	0	0	2	9	0	0	0	1	0	1074523796613841588
 Effect4.Machine.stores	stores	false	55	0	0	0	0	1	0	0	0	0	55	0	0	0	0	0	0	0	0	18	55	0	0	0	1	0	8009230429121391728
 Effect4.Machine.ExternalStore.ofAnswers	external_store_of_answers	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	0	0	1	0	8825564026570652984
@@ -82,8 +82,8 @@ Effect4.Machine.syncOpStep	sync_op_step	false	159	0	1	2	45	30	0	13	0	0	146	0	7	0
 Effect4.Machine.DeferredStore.register._redArg	deferred_store_register	false	9	0	0	0	3	3	0	0	0	0	9	0	0	0	0	0	0	0	0	8	17	0	5	0	1	0	14365351895425541965
 Effect4.Machine.completionPrim	completion_prim	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	7	4	0	2	0	1	0	11941419879888509188
 Effect4.Machine.TimerStore.sleep	timer_store_sleep	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	9	0	1	0	1	0	14431578939558481171
-Effect4.Program.externalRow	program_external_row	false	9	0	0	0	4	4	0	0	0	0	9	0	0	0	0	0	0	0	0	3	8	0	7	0	1	0	15083291120018095328
-Effect4.Program.externalAdmits	program_external_admits	false	10	0	0	0	7	6	0	0	0	0	10	0	0	0	0	0	0	0	0	0	10	0	10	2	1	0	4482535823846616075
+Effect4.Program.externalRow	program_external_row	false	9	0	0	0	4	4	0	0	0	0	9	0	0	0	0	0	0	0	0	3	8	0	7	0	1	0	5217295061899856751
+Effect4.Program.externalAdmits	program_external_admits	false	10	0	0	0	7	6	0	0	0	0	10	0	0	0	0	0	0	0	0	0	10	0	10	2	1	0	9019011263445289555
 Effect4.Machine.DeferredStore.drainDue._redArg	deferred_store_drain_due	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	4	4	0	1	0	1	0	17914479044020365711
 List.mapTR.loop._at_.Effect4.Program.interpOf.spec_0	list_map_tr_loop_at_program_interp_of_spec_0	true	5	0	0	0	1	2	0	0	0	0	5	0	0	0	0	0	0	0	0	1	7	0	2	0	1	0	5298371631574867264
 Effect4.Machine.TimerStore.clockStep._redArg	timer_store_clock_step	false	8	0	1	2	6	2	0	0	0	0	8	0	0	0	0	0	0	0	0	6	18	0	8	0	1	0	10856470555043559087
@@ -251,7 +251,7 @@ Effect4.Machine.DeferredStore.setCell._redArg	deferred_store_set_cell	false	4	0	
 List.get?Internal._redArg	list_get_opt_internal	true	7	0	0	0	2	3	0	2	0	0	5	0	2	0	0	0	0	0	0	2	7	0	3	1	1	0	7917179579382169689
 Effect4.Program.instDecidableEqRegistration	program_inst_decidable_eq_registration	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	11997596113152781046
 Effect4.Program.instDecidableEqRowKind	program_inst_decidable_eq_row_kind	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	17139293446232041623
-Effect4.Program.Row.normalizeTypes	program_row_normalize_types	false	4	0	0	0	1	1	0	0	0	0	4	0	0	0	0	0	0	0	0	0	15	0	1	0	1	0	3330201657053211938
+Effect4.Program.Row.normalizeTypes	program_row_normalize_types	false	4	0	0	0	1	1	0	0	0	0	4	0	0	0	0	0	0	0	0	0	15	0	1	0	1	0	8234341060844080942
 Effect4.Store.Val.handles	store_val__handles	true	10	0	0	0	1	6	0	0	0	0	10	0	0	0	0	0	0	0	0	5	11	0	5	1	1	0	6870892908959676800
 List.any._at_.Effect4.Program.externalAdmits.spec_0	list_any_at_program_external_admits_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	4	0	1	0	12890383240318322693
 List.all._at_.Effect4.Program.externalAdmits.spec_1	list_all_at_program_external_admits_spec_1	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	8028614932927530580

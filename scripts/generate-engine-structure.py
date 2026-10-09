@@ -4,8 +4,10 @@
 Properties: no independent family or ordinal list; exact named payload checks. A family the
 engine declares at fewer members than the source REFUSES unless the allowance file names it
 (--allowance, `ocaml/engine/layout-allowance.json`, empty today); a family the engine does not
-declare at all is reported as an absent boundary, because the mirror is the intersection. This
-does not regenerate or certify the engine. Products are written only after validation.
+declare at all is reported as an absent boundary, because the mirror is the intersection, and a
+family it declares as one placeholder constructor is reported as an opaque boundary, declared in
+the signature with no constructor mirrored. This does not regenerate or certify the engine.
+Products are written only after validation.
 """
 import argparse
 import json
@@ -43,15 +45,16 @@ def emit(descriptor, engine, allowance=()):
     source_rows = []
     engine_rows = []
     for family, _, names in common:
-        if family['structure']: continue
+        if family['structure'] or names is None: continue
         label = family['label']
         source_rows.append(f'  ({json.dumps(label)}, Eff_types.ctor_names_{label})')
         engine_rows.append(f'  ({json.dumps(label)}, [' + '; '.join(map(json.dumps, names)) + '])')
     text = signature + '\nlet source_ctor_names = [\n' + ';\n'.join(source_rows) + '\n]\n'
     text += '\nlet engine_ctor_names = [\n' + ';\n'.join(engine_rows) + '\n]\n'
     report = {'format':'effect4-engine-structure-v1',
-              'claim':'selected source shape checked against the engine declarations; a family declared at fewer members than the source refuses unless ocaml/engine/layout-allowance.json names it; `unavailable` lists the families the engine does not declare at all, plus any allowed lag',
-              'families':[family['name'] for family,_,_ in common], 'unavailable':boundaries}
+              'claim':'selected source shape checked against the engine declarations; a family declared at fewer members than the source refuses unless ocaml/engine/layout-allowance.json names it; `unavailable` lists the families the engine does not declare at all or declares opaque, plus any allowed lag',
+              'families':[family['name'] for family,_,names in common if names is not None],
+              'unavailable':boundaries}
     return text, json.dumps(report, indent=2) + '\n'
 
 def main():

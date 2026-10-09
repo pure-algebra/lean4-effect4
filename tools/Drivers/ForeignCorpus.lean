@@ -118,7 +118,11 @@ def nativeProbes : List (String × Eff NativeOp) :=
       | .deferredOf _ _ | .prod (.deferredOf _ _) _ =>
         .bind (.perform (.deferredMakeOf .nat .nat) (.lit (.nat 1))) p
       | _ => p
-    ("native-" ++ toString index ++ "-" ++ row.name ++ "-" ++ "-".intercalate row.trailing, p)
+    let argText : RowArg → String
+      | .name s => s
+      | .str v => "\"" ++ v ++ "\""
+    ("native-" ++ toString index ++ "-" ++ row.name ++ "-" ++
+      "-".intercalate (row.trailing.map argText), p)
 
 /-- The mask that restores (decisions rows 244 to 246), where the form is well formed: a restore
 site under the mask that saves its interruptibility. The mask is the derived form

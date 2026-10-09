@@ -219,9 +219,12 @@ let rand_requirements () =
   let key k = k.service_key_name.service_name_value, k.service_key_service.service_type_code_value in
   List.sort_uniq (fun a b -> compare (key a) (key b)) (rand_list rand_key)
 
+let rand_row_arg () =
+  if rb () then Row_arg_name (rand_string ()) else Row_arg_str (rand_string ())
+
 let rand_row () =
   { row_name = rand_string (); row_spelling = rand_string ();
-    row_shape = pick [ Row_shape_call; Row_shape_value; Row_shape_tupleCall; Row_shape_method ]; row_trailing = rand_list rand_string;
+    row_shape = pick [ Row_shape_call; Row_shape_value; Row_shape_tupleCall; Row_shape_method ]; row_trailing = rand_list rand_row_arg;
     row_kind = pick [ Row_kind_sync; Row_kind_async; Row_kind_program ];
     row_request = rand_ty 2; row_answer = rand_ty 2; row_error = rand_ty 2;
     row_requires = rand_requirements (); row_cite = rand_string ();

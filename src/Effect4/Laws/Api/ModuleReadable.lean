@@ -66,7 +66,7 @@ theorem moduleReadable_pieces {sig : Signature Op} {root : Eff Op}
 prints of a program whose pieces are readable under the module's classes, after class
 declarations that read back to those classes, reads back to the program. -/
 theorem readModule_printModule_readable {sig : Signature Op}
-    {spell : String → List String → Option Op} {call : Nat → Op} (hl : LawfulSpelling sig spell)
+    {spell : String → List RowArg → Option Op} {call : Nat → Op} (hl : LawfulSpelling sig spell)
     {root : Eff Op}
     (hr : moduleReadable classes sig root = true) {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
@@ -190,7 +190,7 @@ are readable (`DefsNamed`). The reader's laws hold at the block's signature
 (`readModule_printModule_defs`). A step of the claim `module-defs-round-trip`; its consumer is
 `ModuleEmission.readModule`. -/
 theorem readModule_printModule_defs_readable {sig : Signature Op}
-    {spell : String → List String → Option Op} {call : Nat → Op} (hl : LawfulSpelling sig spell)
+    {spell : String → List RowArg → Option Op} {call : Nat → Op} (hl : LawfulSpelling sig spell)
     (calls : LawfulCalls sig spell call) {root : Eff Op}
     (hr : blockReadable classes sig root = true) (named : DefsNamed spell root.defsOf)
     {classDecls : List TypeScript.ClassDecl}

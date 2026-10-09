@@ -42,15 +42,22 @@ def rowOf : Fin 3 → Row
 
 /-- A read-modify-write row: its pure function prints after the request. -/
 def updateRow : Row :=
-  ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
+  ⟨"update", "Ref.update", .call, [.name "incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
     "Ref.ts:1273-1276", [], .deferred⟩
 
 #guard (printRow 1 updateRow (.var 0)).map (expr house0 0) = .ok "Ref.update(a0, incr)"
 
+-- A trailing string literal prints as a literal, not as a name: `Scope.make`'s strategy.
+#guard (printRow 0 (NativeOp.scopeMake .parallel).row (.lit .unit)).map (expr house0 0) =
+  .ok "Scope.make(\"parallel\")"
+#guard match printRow 0 (NativeOp.scopeMake .parallel).row (.lit .unit) with
+  | .ok expression => expression == .call (.ident "Scope.make") [.str "parallel"]
+  | .error _ => false
+
 /-- A tuple-call fixture with two ordered trailing names. Native tuple calls currently
 have no trailing names; this fixture checks the generic row convention. -/
 def tupleRow : Row :=
-  ⟨"tuple", "Fixture.tuple", .tupleCall, ["first", "second"], .sync,
+  ⟨"tuple", "Fixture.tuple", .tupleCall, [.name "first", .name "second"], .sync,
     .prod .nat .nat, .nat, .never, [], "§14 tuple-call fixture", [], .deferred⟩
 
 /-- A row that declares explicit type arguments: the export's own parameters have defaults,

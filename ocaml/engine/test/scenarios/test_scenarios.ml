@@ -297,11 +297,18 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
         (Eff_types.ctor_index_registration r.Eff_types.row_registration)
         (index_registration registration)
     in
+    (* The engine reads no trailing argument (its `row_arg` is a placeholder), so a row that
+       declares one has no engine image. *)
+    let* trailing =
+      match r.Eff_types.row_trailing with
+      | [] -> Ok []
+      | _ :: _ -> Error (r.Eff_types.row_spelling ^ ": trailing arguments")
+    in
     Ok
       { A.name = r.Eff_types.row_name;
         spelling = r.Eff_types.row_spelling;
         shape;
-        trailing = r.Eff_types.row_trailing;
+        trailing;
         kind;
         request;
         answer;

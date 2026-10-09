@@ -63,7 +63,7 @@ The following tables are generated from the profile, forms and taxonomy.
 ${table(["Head"], heads.map(h => [h]))}
 ## Native rows
 
-${table(["Operation", "Head", "Kind", "Trailing atoms"], rows.map(r => [JSON.stringify(r.op), r.row.spelling, r.row.kind, r.row.trailing.join(", ")]))}
+${table(["Operation", "Head", "Kind", "Trailing atoms"], rows.map(r => [JSON.stringify(r.op), r.row.spelling, r.row.kind, r.row.trailing.map(a => a._tag === "name" ? a.spelling : JSON.stringify(a.value)).join(", ")]))}
 ## Derived forms
 
 ${table(["Form", "Head", "Arity", "Pinned definition"], forms.rows.map(r => [r.id, r.head, JSON.stringify(r.arity), r.citation]))}
