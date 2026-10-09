@@ -1,0 +1,60 @@
+"root: (Shape.named \"Eff\"); named shapes (first bindings): 11"
+[("p42", true),
+ ("pBind", true),
+ ("pFork", true),
+ ("pAwait", true),
+ ("pGen", true),
+ ("pLoop", true),
+ ("pCatch", true),
+ ("pScope", true)]
+[("p42", true),
+ ("pBind", true),
+ ("pFork", true),
+ ("pAwait", true),
+ ("pGen", true),
+ ("pLoop", true),
+ ("pCatch", true),
+ ("pScope", true)]
+(false, false)
+(false, false)
+(false, true)
+(true, true)
+true
+(true, true)
+(false, true)
+[("p42", true, false, true),
+ ("pBind", true, false, true),
+ ("pFork", true, false, true),
+ ("pAwait", true, false, true),
+ ("pGen", true, false, true),
+ ("pLoop", true, false, true),
+ ("pCatch", true, false, true),
+ ("pScope", true, false, true)]
+"definitions: 11; rendered bytes: 26645"
+[("succeed", ["value"]),
+ ("fail", ["error"]),
+ ("failCause", ["cause"]),
+ ("sync", ["thunk"]),
+ ("suspend", ["body"]),
+ ("perform", ["op", "request"]),
+ ("bind", ["first", "rest"]),
+ ("gen", ["body"]),
+ ("catchCause", ["body", "handler"]),
+ ("matchCause", ["body", "onValue", "onCause"]),
+ ("onExit", ["body", "finalizer"]),
+ ("exit", ["body"]),
+ ("uninterruptible", ["body"]),
+ ("interruptible", ["body"]),
+ ("yieldNow", ["priority"]),
+ ("awaitFiber", ["fiber", "mode"]),
+ ("withFiber", ["action"]),
+ ("scoped", ["body"]),
+ ("acquireRelease", ["acquire", "release"]),
+ ("provideLayer", ["layer", "isLocal", "body"]),
+ ("service", ["key"]),
+ ("provideService", ["key", "value", "body"]),
+ ("catchIf", ["test", "body", "handler"]),
+ ("select", ["scrutinee", "decision", "arm0", "arm1"]),
+ ("iterate", ["cursorTy", "initial", "test", "step", "result", "body"]),
+ ("restore", ["saved", "body"]),
+ ("defs", ["decls", "bodies", "main"])]

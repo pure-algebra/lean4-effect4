@@ -1,0 +1,119 @@
+MCP 2026-07-28: the normative points the design note relies on
+==================================================================
+
+Seat MCP, fetched 2026-10-09. Each entry: the page (sources.json id), an exact anchor of at
+most twelve words to find the sentence, and the point in our words. The specification
+repository states the MIT License; the full text stays at its URL, and the wire shapes are
+transcribed locally in vendor/effect-4.0.1/src/ai/internal/mcpSchema/v2026_07_28.ts.
+
+[mcp-changelog] "Remove protocol-level sessions and the `Mcp-Session-Id` header"
+  The revision has no connection-scoped state. List results do not vary by connection.
+
+[mcp-changelog] "use explicit, server-minted handles passed as ordinary tool arguments"
+  Cross-call state is named by an identifier the server mints and the client passes back.
+
+[mcp-changelog] "Make MCP stateless: remove the `initialize`/`notifications/initialized` handshake."
+  No handshake. Version and client capabilities travel in each request's _meta.
+
+[mcp-changelog] "All results now carry a required `resultType` field"
+  "complete" or "input_required"; an extension may add values (tasks adds "task").
+
+[mcp-changelog] "Move experimental tasks out of the core protocol"
+  Tasks are the extension io.modelcontextprotocol/tasks: tasks/get polls, tasks/update answers.
+
+[mcp-changelog] "Loosen `inputSchema` and `outputSchema` to allow any JSON Schema 2020-12 keywords"
+  Tool schemas are JSON Schema 2020-12 by default; structuredContent may be any JSON value.
+
+[mcp-changelog] "Deprecate the Roots, Sampling, and Logging features"
+  New servers should not adopt them: pass paths as arguments, call models directly, log to stderr.
+
+[mcp-changelog] "return tools from `tools/list` in a deterministic order"
+  A fixed order lets clients and model prompt caches reuse the list.
+
+[mcp-basic] "is a **stateless protocol**"
+  All information needed for a request is in the request.
+
+[mcp-basic] "referenced by an explicit identifier the client passes on each request"
+  State that spans requests (tasks, application-level identifiers) is named, never implied.
+
+[mcp-basic] "automatically dereference `$ref` values that resolve to a network URI"
+  Implementations must not fetch a network $ref by default; local $defs are fine.
+
+[mcp-basic] "When a schema does not include a `$schema` field, it defaults to"
+  The default dialect is JSON Schema 2020-12.
+
+[mcp-tools] "vary per-connection or as a side effect of other requests"
+  tools/list must not vary by connection or by earlier requests; it may vary by authorization.
+
+[mcp-tools] "Servers **MUST** provide structured results that conform to this schema."
+  When a tool declares outputSchema, its structuredContent must validate against it.
+
+[mcp-tools] "SHOULD also return the serialized JSON in a TextContent block"
+  Structured content comes with a text block for older clients.
+
+[mcp-tools] "The protocol has no concept of a state handle"
+  Non-normative guidance: a creation tool returns an identifier; later calls take it as an argument.
+
+[mcp-tools] "a handle is a name, not a capability"
+  The server checks the caller's authorization against the identifier on every call.
+
+[mcp-tools] "The following **SHOULD** be the only allowed characters"
+  Tool names: 1 to 128 characters of A-Z, a-z, 0-9, underscore, hyphen and dot; case-sensitive.
+
+[mcp-tools] "consider tool annotations to be untrusted unless they come from trusted servers"
+  readOnlyHint, destructiveHint, idempotentHint and openWorldHint are hints only.
+
+[mcp-tools] "provide tool execution errors to language models to enable self-correction"
+  A tool execution error is a result with isError true; a protocol error is a JSON-RPC error.
+
+[mcp-mrtr] "inspect, parse, modify, or make any assumptions about its contents"
+  requestState is opaque to the client, which echoes it on the retry.
+
+[mcp-mrtr] "treat `requestState` as an attacker-controlled input"
+  Integrity protection is required where requestState affects authorization or logic.
+  InputRequiredResult is allowed only on tools/call, resources/read and prompts/get.
+
+[mcp-resources] "Custom URI schemes **MUST** be in accordance with"
+  A server may define its own URI scheme (RFC 3986).
+
+[mcp-resources] "return an empty `contents` array for a non-existent resource"
+  A missing resource is the error -32602, never an empty list.
+
+[mcp-completion] "autocompletion suggestions for the arguments of prompts and resource templates"
+  Argument completion covers prompt arguments and URI template variables, not tool arguments.
+
+[mcp-completion] "Maximum 100 items per response"
+  Values ranked by relevance, with an optional total and hasMore.
+
+[mcp-caching] "include caching hints on results with `resultType: \"complete\"`"
+  discover and the list and read results carry ttlMs and cacheScope.
+
+[mcp-caching] "serve a cached response for a request whose method or parameters differ"
+  The cache key is the method and the parameters; retries with inputResponses are never cached.
+
+[mcp-subscriptions] "send notification types the client has not explicitly requested"
+  subscriptions/listen opts in to list changes and to updates of named resource URIs.
+
+[mcp-elicitation] "limited to flat objects with primitive properties only"
+  A form's requestedSchema holds strings, numbers, integers, booleans and enums, no nesting.
+
+[mcp-elicitation] "use form mode elicitation to request sensitive information"
+  Secrets go through URL mode, never through a form.
+
+[mcp-stdio] "Messages are delimited by newlines, and **MUST NOT** contain embedded newlines."
+  One JSON-RPC message per line; stdout carries MCP messages only; logs go to stderr.
+
+[mcp-transports] "**SHOULD** reuse the"
+  A custom transport over a byte stream (a Unix socket, TCP) reuses the stdio framing.
+
+[mcp-http] "validate the `Origin` header on all incoming connections"
+  Streamable HTTP: one POST endpoint, Mcp-Method and Mcp-Name headers, local servers on localhost.
+
+[mcp-discover] "Servers **MUST** implement it."
+  server/discover answers supported versions, capabilities, server identity and instructions.
+
+[mcp-tasks] "let servers return a durable handle instead of blocking"
+  Statuses: working, input_required, completed, failed, cancelled; the last three are final.
+
+[mcp-skills] "allows MCP servers to expose workflow instructions and supporting files"
+  skills/list and skills/get; each file listed with its SHA-256 digest and size.
