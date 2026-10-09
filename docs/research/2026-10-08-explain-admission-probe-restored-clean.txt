@@ -1,0 +1,61 @@
+PASS every actual Explain declaration satisfies the extracted policy: 223 declarations
+MEASURE actual choice reachers: 41
+CHOICE Tools.Explain.authored
+CHOICE Tools.Explain.boolOf?
+CHOICE Tools.Explain.canonicalJson
+CHOICE Tools.Explain.elabExplain
+CHOICE Tools.Explain.elabExplainJson
+CHOICE Tools.Explain.elabExplainSchema
+CHOICE Tools.Explain.elabObligations
+CHOICE Tools.Explain.elabObligationsJson
+CHOICE Tools.Explain.explain
+CHOICE Tools.Explain.explainSyntax
+CHOICE Tools.Explain.inTree
+CHOICE Tools.Explain.kindOf
+CHOICE Tools.Explain.natOf?
+CHOICE Tools.Explain.natOf?._f
+CHOICE Tools.Explain.natOf?._sunfold
+CHOICE Tools.Explain.natOf?._unsafe_rec
+CHOICE Tools.Explain.neighbours
+CHOICE Tools.Explain.obligations
+CHOICE Tools.Explain.obligationsOf
+CHOICE Tools.Explain.optionNatOf?
+CHOICE Tools.Explain.render
+CHOICE Tools.Explain.schemaText
+CHOICE Tools.Explain.standingOf
+CHOICE Tools.Explain.statementOf
+CHOICE Tools.Explain.stepFacts?
+CHOICE Tools.Explain.stringsOf?
+CHOICE Tools.Explain.stringsOf?._f
+CHOICE Tools.Explain.stringsOf?._sunfold
+CHOICE Tools.Explain.stringsOf?._unsafe_rec
+CHOICE Tools.Explain.tyText
+CHOICE Tools.Explain.tyText._f
+CHOICE Tools.Explain.tyText._sunfold
+CHOICE Tools.Explain.tyText._unsafe_rec
+CHOICE Tools.Explain.tyText.fieldsText
+CHOICE Tools.Explain.tyText.fieldsText._f
+CHOICE Tools.Explain.tyText.fieldsText._sunfold
+CHOICE Tools.Explain.tyText.fieldsText._unsafe_rec
+CHOICE Tools.Explain.tyText.itemsText
+CHOICE Tools.Explain.tyText.itemsText._f
+CHOICE Tools.Explain.tyText.itemsText._sunfold
+CHOICE Tools.Explain.tyText.itemsText._unsafe_rec
+MEASURE exact Explain roots: 24
+PASS 17 non-root reporting declarations use existing ancestor admissions
+MEASURE derived certificates: 12
+CERTIFICATE Tools.Explain.Explanation.modeled_checked: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Explanation.modeled_of_to: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Explanation.modeled_to_of: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Obligations.modeled_checked: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Obligations.modeled_of_to: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Obligations.modeled_to_of: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Statement.modeled_checked: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.Statement.modeled_of_to: some ([propext])
+CERTIFICATE Tools.Explain.Statement.modeled_to_of: some ([propext])
+CERTIFICATE Tools.Explain.StepFacts.modeled_checked: some ([propext, Quot.sound])
+CERTIFICATE Tools.Explain.StepFacts.modeled_of_to: some ([propext])
+CERTIFICATE Tools.Explain.StepFacts.modeled_to_of: some ([propext])
+PASS positive reporting declaration remains admitted
+FIXTURE Tools.Explain.AdmissionControl.modeled_checked: [propext, Quot.sound]
+PASS fixture certificate accepted
