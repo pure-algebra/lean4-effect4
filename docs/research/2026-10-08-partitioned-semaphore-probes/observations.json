@@ -1,0 +1,281 @@
+{
+  "runtime": "Effect 4.0.1; Bun 1.4.2",
+  "positive": 22,
+  "negative": 10,
+  "observations": [
+    {
+      "name": "partial.before",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "partial.reservation",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "partial.reject-all-or-nothing",
+      "actual": 0,
+      "rejected": 1
+    },
+    {
+      "name": "partial.additional-allocation",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "partial.cancel-refunds-two",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "name": "partial.reject-no-refund",
+      "actual": 2,
+      "rejected": 0
+    },
+    {
+      "name": "partial.reject-whole-request-refund",
+      "actual": 2,
+      "rejected": 3
+    },
+    {
+      "name": "completed-take.later-client-fails",
+      "actual": "Failure",
+      "expected": "Failure"
+    },
+    {
+      "name": "completed-take.holds-permit",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "completed-take.reject-fiber-lifetime-refund",
+      "actual": 1,
+      "rejected": 2
+    },
+    {
+      "name": "reentrant.public-release-reply",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "reentrant.client-before-return",
+      "actual": [
+        "client resumed",
+        "client released",
+        "outer returned"
+      ],
+      "expected": [
+        "client resumed",
+        "client released",
+        "outer returned"
+      ]
+    },
+    {
+      "name": "reentrant.reject-wakes-after-return",
+      "actual": [
+        "client resumed",
+        "client released",
+        "outer returned"
+      ],
+      "rejected": [
+        "outer returned",
+        "client resumed",
+        "client released"
+      ]
+    },
+    {
+      "name": "reentrant.reject-pre-delivery-reply",
+      "actual": 1,
+      "rejected": 0
+    },
+    {
+      "name": "reentrant.waiter-success",
+      "actual": "Success",
+      "expected": "Success"
+    },
+    {
+      "name": "grouped.first-release-available",
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "grouped.first-completion",
+      "actual": [
+        "B1"
+      ],
+      "expected": [
+        "B1"
+      ]
+    },
+    {
+      "name": "grouped.reject-global-fifo",
+      "actual": [
+        "B1"
+      ],
+      "rejected": [
+        "A1"
+      ]
+    },
+    {
+      "name": "grouped.second-completion",
+      "actual": [
+        "B1",
+        "A1"
+      ],
+      "expected": [
+        "B1",
+        "A1"
+      ]
+    },
+    {
+      "name": "grouped.within-key-fifo",
+      "actual": [
+        "B1",
+        "A1",
+        "A2"
+      ],
+      "expected": [
+        "B1",
+        "A1",
+        "A2"
+      ]
+    },
+    {
+      "name": "iterator-host.partial-B-C",
+      "actual": [
+        "A-old"
+      ],
+      "expected": [
+        "A-old"
+      ]
+    },
+    {
+      "name": "iterator-host.reinserted-A-before-wrap",
+      "actual": [
+        "A-old",
+        "A-new"
+      ],
+      "expected": [
+        "A-old",
+        "A-new"
+      ]
+    },
+    {
+      "name": "iterator-host.reject-reset-each-release",
+      "actual": [
+        "A-old",
+        "A-new"
+      ],
+      "rejected": [
+        "A-old",
+        "B"
+      ]
+    },
+    {
+      "name": "iterator-host.wrapped-completions",
+      "actual": [
+        "A-old",
+        "A-new",
+        "B",
+        "C"
+      ],
+      "expected": [
+        "A-old",
+        "A-new",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "name": "native-map.first",
+      "actual": [
+        1,
+        "a"
+      ],
+      "expected": [
+        1,
+        "a"
+      ]
+    },
+    {
+      "name": "native-map.skip-deleted-observe-appended",
+      "actual": [
+        3,
+        "c"
+      ],
+      "expected": [
+        3,
+        "c"
+      ]
+    },
+    {
+      "name": "native-map.reject-frozen-snapshot",
+      "actual": [
+        3,
+        "c"
+      ],
+      "rejected": [
+        2,
+        "b"
+      ]
+    },
+    {
+      "name": "native-map.reinserted-entry",
+      "actual": [
+        1,
+        "a2"
+      ],
+      "expected": [
+        1,
+        "a2"
+      ]
+    },
+    {
+      "name": "native-map.exhausted",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "native-map.exhaustion-persists",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "native-map.reject-exhausted-iterator-revival",
+      "actual": true,
+      "rejected": false
+    },
+    {
+      "name": "native-map.replacement-observes-live-order",
+      "actual": [
+        [
+          3,
+          "c"
+        ],
+        [
+          1,
+          "a2"
+        ],
+        [
+          4,
+          "d"
+        ]
+      ],
+      "expected": [
+        [
+          3,
+          "c"
+        ],
+        [
+          1,
+          "a2"
+        ],
+        [
+          4,
+          "d"
+        ]
+      ]
+    }
+  ]
+}
