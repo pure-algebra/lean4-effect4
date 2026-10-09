@@ -133,9 +133,6 @@ private def auditImplementationModules : List Name :=
   -- Semantic concept tags and their census are environment instrumentation.
   -- No semantic theorem or runtime representation is declared here.
   , `Effect4.Laws.Auto.Semantics
-  -- `#explain` and `#obligations`: commands that read the environment, the placements and the
-  -- semantics registry; meta code, no theorem in the module (decisions row 332).
-  , `Effect4.Laws.Author.Explain
   -- The subset and membership decisions (`sub_tac`, `mem_tac`): a tactic elaborator and the
   -- `keys_norm` simp set's initializer; meta code, no theorem in the module (the theory it
   -- applies, `Effect4.Laws.Auto.ListSubset`, is held at the ceiling like any other).
@@ -216,6 +213,33 @@ private def choiceImplementationDeclarations : List Name :=
   , ``Effect4.Program.Config.configCase
   , ``Effect4.Program.Config.segCase
   , ``Effect4.Program.Config.Provider.constantCase
+  -- `#explain` and `#obligations` read the environment and render their answers (row 332).
+  -- Their exact implementation roots admit their same-module generated descendants.
+  -- The answer structures and their derived `modeled_*` certificates retain allowedAxioms.
+  , `Tools.Explain.authored
+  , `Tools.Explain.boolOf?
+  , `Tools.Explain.canonicalJson
+  , `Tools.Explain.elabExplain
+  , `Tools.Explain.elabExplainJson
+  , `Tools.Explain.elabExplainSchema
+  , `Tools.Explain.elabObligations
+  , `Tools.Explain.elabObligationsJson
+  , `Tools.Explain.explain
+  , `Tools.Explain.explainSyntax
+  , `Tools.Explain.inTree
+  , `Tools.Explain.kindOf
+  , `Tools.Explain.natOf?
+  , `Tools.Explain.neighbours
+  , `Tools.Explain.obligations
+  , `Tools.Explain.obligationsOf
+  , `Tools.Explain.optionNatOf?
+  , `Tools.Explain.render
+  , `Tools.Explain.schemaText
+  , `Tools.Explain.standingOf
+  , `Tools.Explain.statementOf
+  , `Tools.Explain.stepFacts?
+  , `Tools.Explain.stringsOf?
+  , `Tools.Explain.tyText
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,

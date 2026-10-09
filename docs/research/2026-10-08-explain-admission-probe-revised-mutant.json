@@ -1,0 +1,21 @@
+{
+  "source": "Test/Audit/AxiomGate.lean",
+  "source_sha256": "7071b74017f5b039b584587bb34db0e7667ddff881271d756ff23bc3fee43ba4",
+  "blocks_sha256": {
+    "ceilings_and_admissions": "44c88ac4acea64d4e39ff1bf1a669f14f4327aab49fc55283c2d4a93698e1ed4",
+    "ancestors": "bef165e28466274e669a02ab1f0f653bdce94f63c50a9435bd1b57c3e07062fa",
+    "admitted": "283b6360b48bfb6bc6eec4b34bb1205167300545fe83dbd81f2d139c7fd6367d",
+    "bound_and_check": "0454cd98a9e3eaef1cca5789c9f668e22f709f237ec39f5cbdb72d66e335ff6d"
+  },
+  "policy": "revised",
+  "certificate": "mutant",
+  "adaptations": [
+    "Copy top-level declarations and ancestor functions without changing their text.",
+    "Indent local admitted and bound/check blocks inside a scoped CoreM reader.",
+    "Use public exact admissions; private Config exemptions cannot admit an Explain name.",
+    "Load a separately compiled Explain module with unchanged production source and an appended derived-certificate fixture.",
+    "Change only the fixture Nat model value for the choice mutant."
+  ],
+  "fixture_production_sha256": "09d5eb11b793887209f4416b04fee2fa7c05f3d78df57615bd106b61e81e9bfd",
+  "fixture_source_sha256": "ee5760ab5646f7967ae7a30998532654fd0ab757d3138e58b965a4f4d2e1fb0b"
+}
