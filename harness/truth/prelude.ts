@@ -5,9 +5,8 @@
  * package. The pure atoms are no longer written here: they are generated from the atom table
  * into `prelude-atoms.gen.ts` (`tools/Effect4Gen/PreludeAtoms.lean`, group `PreludeAtoms`) and
  * re-exported below, each carrying the `cite` column of its `NativeAtom.spec` row as its doc.
- * What stays hand-written here is everything that is not an atom: `select`'s printed heads,
- * the list fold's head, the self-test table, the error projection and the canonical package
- * tables.
+ * The printed select and list-fold heads live in `control.ts` and are re-exported here.
+ * The self-test table, error projection and canonical package tables stay here.
  * Part of the truth claim (`Test/contracts/faces.contract.md` §4): the doc comment on each
  * export is the table mapping it to its Lean definition — there is no separate notes file.
  *
@@ -48,21 +47,9 @@ import { SqliteClient } from "@effect/sql-sqlite-bun"
 export * from "./prelude-atoms.gen.ts"
 export { recordValue, recordRequired, recordOptional, recordSet, caseTagR } from "./records.ts"
 export { tupleAt } from "./tuples.ts"
+export { fold, optionCase, caseTag } from "./control.ts"
+import { fold } from "./control.ts"
 import * as Atoms from "./prelude-atoms.gen.ts"
-
-// ---- the list fold's printed head (`Codegen/ListFold.lean`, decisions row 228) -------------
-
-/** `Term.fold accTy list init body`, printed `fold(list, init, (acc, x) => body)`: the body
- * runs once for each element, from the head, and the empty list answers `init` (`evalTerm`'s
- * clause, `src/Effect4/Machine/Term.lean`). `reduce` with an initial value has that order.
- *
- * Without a type argument both parameters are inferred: `B` from `init`, where a fresh literal
- * widens as Lean's literal rule does, and `A` from the list. The ordinary printer writes a
- * stated accumulator as `fold<B>(…)`. TypeScript then uses the default `any` for `A`.
- * At a joined input, the typed printer supplies both checked arguments, `fold<B, A>(…)`.
- * Lean's checker types the element in either case (`argTy`'s fold arm). */
-export const fold = <B, A = any>(xs: ReadonlyArray<A>, init: B, step: (acc: B, x: A) => B): B =>
-  xs.reduce(step, init)
 
 // ---- the mask's saved state (`Ty.maskRestore`, decisions rows 244 and 245) -----------------
 
@@ -73,36 +60,6 @@ export const fold = <B, A = any>(xs: ReadonlyArray<A>, init: B, step: (acc: B, x
  * type, and a restore site applies it: `pipe(body, a0)`. A Boolean use of the value has no
  * type here, as the checker refuses it (`TypeReason.maskRestoreExpected`). */
 export type MaskRestore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
-
-// ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----
-
-/** `Eff.select s .option a0 a1`: `none` runs the first arm, `some a` the second with `a`
- * bound (`Decision.decide .option`). The scrutinee is evaluated once, by the caller; the
- * chosen arm is built inside the suspension, as `branch`'s printed image does. */
-export const optionCase = <S, A0, E0, R0, A1, E1, R1>(
-  scrutinee: Option.Option<S>,
-  onNone: () => Effect.Effect<A0, E0, R0>,
-  onSome: (value: S) => Effect.Effect<A1, E1, R1>
-): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
-  Effect.suspend((): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
-    Option.match(scrutinee, { onNone, onSome }))
-
-/** `Eff.select s (.tag t) a0 a1`: a pair `[t, payload]` runs the first arm on the payload,
- * every other value the second arm on the whole value (`Decision.decide (.tag t)`,
- * `Val.tagPayload?`). The test only selects; the arm types come from the conditional types
- * on `T`: `Extract` is the selected members, its `[1]` is `Ty.payloadTy`, `Exclude` is
- * `Ty.diffTag`. They narrow exactly on a union of literal-tagged pairs and scalars
- * (`Ty.taggedColumn`). */
-export const caseTag = <T, K extends string, A0, E0, R0, A1, E1, R1>(
-  value: T,
-  tag: K,
-  hit: (payload: Extract<T, readonly [K, unknown]>[1]) => Effect.Effect<A0, E0, R0>,
-  miss: (rest: Exclude<T, readonly [K, unknown]>) => Effect.Effect<A1, E1, R1>
-): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
-  Effect.suspend((): Effect.Effect<A0 | A1, E0 | E1, R0 | R1> =>
-    Array.isArray(value) && value.length === 2 && value[0] === tag
-      ? hit((value as any)[1])
-      : miss(value as any))
 
 /** The table the runner's self-test walks. `atom` is the name in `nativeAtom`, or the list
  * fold's head, that the case exercises: `run-truth.ts` checks the atom names against the profile's own

@@ -11,7 +11,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 EFFECT = '4.0.1'
 COMPILER = '7.0.0-dev.20260629.1'
-PRELUDE_FILES = ['prelude-atoms.gen.ts', 'records.ts', 'tuples.ts']
+PRELUDE_FILES = ['prelude-atoms.gen.ts', 'records.ts', 'tuples.ts', 'control.ts']
 
 
 def run(command, cwd=ROOT, timeout=300):
@@ -61,20 +61,25 @@ def compiled_packet(install, output, files, observer, prefix):
                   'skipLibCheck': True, 'types': ['bun']},
                   'files': files + ['observe.ts'], 'include': []}
         (work / 'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
-        compiler = ['node', str(install / '@typescript/native-preview/bin/tsgo')]
-        if run(compiler + ['--version'], cwd=work).strip() != 'Version ' + COMPILER:
-            raise RuntimeError('Wrong compiler binary version')
-        command = compiler + ['--pretty', 'false', '--noEmit', '-p', str(work / 'tsconfig.json')]
-        discovered = run(command + ['--listFilesOnly'], cwd=work).splitlines()
-        if any(str(work / name) not in discovered for name in config['files']):
-            raise RuntimeError('Compiler discovery omitted a caller')
-        diagnostics = run(command, cwd=work)
         retained = config['files'] + PRELUDE_FILES + ['prelude.ts', 'tsconfig.json', 'manifest.json']
-        yield work, diagnostics, retained
+        try:
+            compiler = ['node', str(install / '@typescript/native-preview/bin/tsgo')]
+            if run(compiler + ['--version'], cwd=work).strip() != 'Version ' + COMPILER:
+                raise RuntimeError('Wrong compiler binary version')
+            command = compiler + ['--pretty', 'false', '--noEmit', '-p', str(work / 'tsconfig.json')]
+            discovered = run(command + ['--listFilesOnly'], cwd=work).splitlines()
+            if any(str(work / name) not in discovered for name in config['files']):
+                raise RuntimeError('Compiler discovery omitted a caller')
+            diagnostics = run(command, cwd=work)
+            yield work, diagnostics, retained
+        except Exception as error:
+            retain_inputs(work, output, retained)
+            (output / 'failure.txt').write_text(str(error) + '\n')
+            raise
 
 
 def retain_inputs(work, output, names):
-    """Retain the exact sources seen by the compiler, after the caller's runtime checks pass."""
+    """Retain the exact sources seen by the compiler, on success or before a failed packet loses its temporary directory."""
     for name in names:
         target = output / 'compiled-inputs' / name
         target.parent.mkdir(parents=True, exist_ok=True)
