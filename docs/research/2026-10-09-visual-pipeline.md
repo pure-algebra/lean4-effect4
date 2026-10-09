@@ -153,6 +153,27 @@ flowchart LR
 - Effect schemas drawn beautifully, where the interop with Effect in TypeScript shows;
 - D3 as a representation layer in HTML, from the same scene data.
 
+### The code plane, curves and coordinates (2026-10-09, evening)
+
+The theory behind these slices, and the rulings they wait on, are in the
+[visual language note](2026-10-09-visual-language-theory.md).
+
+| Part | Commit | What it holds |
+| --- | --- | --- |
+| the code plane | `2688f310` | `tools/Tools/Code/`: a document laid out at a width, printed TypeScript as a document, a generated module with exact imports and the core's checks; the code beside the tree on every frame; `tools/Drivers/Emit.lean` writes the generated folder |
+| curves | `6282d099` | `Call.curve`, through the lowering, the move law, the stream, SVG and the painter; every edge its own path of cubic segments |
+| places | `99576fa1` | `Place.lean`: Brandes and Köpf, then `spread`; edges from the middle of a box; the `settle` and `spring` easings |
+
+- **The layout laws:** `undo_layout` (undo a layout's breaks and the flat print comes back, at
+  `[propext, Quot.sound]`) and `Ts.flat_expr` (the flat print of every expression is the pinned
+  house print; it rests on `Classical.choice` through `TypeScript.Render.expr` itself).
+- **The generated folder:** the eight corpus modules type-check under tsgo
+  7.0.0-dev.20260629.1, strict, with no unused import. Seven read back through `admitModule`.
+  `pScope` is refused: the parallel scope's row writes a string literal where `Row.trailing`
+  holds names. That fix runs as its own task.
+- **Separation:** `spread_apart` says no two items of a rank share a cell, whatever the balance
+  gives.
+
 ## 6. Vendoring C libraries
 
 **The fit test.** A library fits when:

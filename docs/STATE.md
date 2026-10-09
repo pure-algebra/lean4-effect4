@@ -127,12 +127,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 1. **The visual pipeline** (row 336, point 10; the
-   [visual pipeline note](research/2026-10-09-visual-pipeline.md)): V0 to V3, the graph and the
-   end law (`sample_end`) are landed. Next: the layout's crossing reduction and coordinate
-   placement in Lean (no engine is vendored, section 5); interaction (an inspector of facets per
-   key, tooltips, overlays, statistics, sidebars; section 6a); the printer's span map, which the
-   side-by-side view of the Effect code needs; the proof graph as a consumer; Effect schemas
-   drawn; a console player on termbox2; a fiber's program address.
+   [visual pipeline note](research/2026-10-09-visual-pipeline.md) and the
+   [visual language note](research/2026-10-09-visual-language-theory.md)): V0 to V3, the graph,
+   the end law, the code plane beside the tree, curved edges and Brandes and Köpf's places are
+   landed. Next: transpose in the order; depth as a fold, once ruled; a module's cell drawn by its
+   type with its steps' motion; the printer's span map (the code plane's links, a `tag` in the
+   document); interaction (section 6a); the proof graph as a consumer; Effect schemas drawn; a
+   console player on termbox2.
 2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
    measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
 3. **The graph operations of an agent** (row 336, points 1 and 7): pieces stored by content
@@ -163,6 +164,9 @@ API's slices (row 326), and H8.
   their timing and the overshoot are yours to tune.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
+- **The visual language's new marks** (the [visual language note](research/2026-10-09-visual-language-theory.md),
+  section 10): arrowheads on arcs; depth by weight, tone and haloed crossings; a lower tone for
+  secondary text; token classes in the code plane.
 
 ## Process
 
