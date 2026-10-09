@@ -34,6 +34,9 @@ bun docs/research/2026-10-09-pubsub-single-source-review/probe.ts
 ```
 
 The command exits successfully.
+The explicit-path diff check reports one new blank line at EOF in single-extract.ts.
+That whitespace is an intentional exception because the extract preserves exact vendored bytes.
+The diff check passes when only that exact extract is excluded.
 Bun transpiles the extracted TypeScript classes and runs their actual method bodies.
 Replay is disabled.
 Only constructor, subscribe, publish, slide, poll, unsubscribe, and their isEmpty/isFull predicates run.
