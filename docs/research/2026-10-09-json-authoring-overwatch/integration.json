@@ -1,0 +1,112 @@
+{
+  "primary": "ebc497c770a2c0d1be1c49bcd40d6055af1d488c",
+  "incoming": "3b3d135c61af0d4f876accc99f1e60336e0e9a7b",
+  "observedHead": "ebc497c770a2c0d1be1c49bcd40d6055af1d488c",
+  "checks": {
+    "src/Effect4.lean": {
+      "missingParentImports": []
+    },
+    "src/Effect4/Laws.lean": {
+      "missingParentImports": []
+    },
+    "src/Effect4/Library.lean": {
+      "missingParentImports": []
+    },
+    "Test/All.lean": {
+      "missingParentImports": []
+    },
+    "tools/ProofGraph/Registry.lean": {
+      "missingParentClaims": []
+    }
+  },
+  "uniqueFiles": {
+    "incoming": {
+      "Test/Codegen/PrintTyped.lean": "f516866d22f2637b59a06b00f98676232b84e0715bd568d57d74d7a9c3c4c606",
+      "Test/Program/PartitionedSemaphoreBookkeeping.lean": "70649263ab8f548963e0542fa26b49ba9ccd7b777afe129cd41293c01da9436e",
+      "Test/Program/PartitionedSemaphoreFaces.lean": "f6fb83e2424eadf073a568e7a38c6b7b0bf5254bc8d9fc74e8ae5001d4605b1e",
+      "Test/Program/PartitionedSemaphorePrograms.lean": "4353ae9050d178d01a28a7015035d0f182accc98e0e3146c1f236302f410fcc3",
+      "Test/Program/PubSubSingle.lean": "4e8dce6863a373f0ecd244a73a3e572df51cf52926044e664641a4cc1c7442b9",
+      "Test/Program/StepInputs.lean": "bb0b68d74b5725019a45a9b4b6d6158eb804a8f506c935ca402b7c04bcaae635",
+      "Test/Program/StreamArray.lean": "0dc569b1afb80c65862a795d13899165288ef5f3e9b1f693530d9c3b16500b05",
+      "Test/Program/SynchronizedRef.lean": "93900281b5f9b164d1dcad5b5bad9ab9fba41b5977c96e76dc92767a700b8f8e",
+      "harness/module-catalogue/Produce.lean": "4711acec0ec1f59689bb8f6ee1b940bd2d2db2d8c7eb0e1bb6da0e4259fc4456",
+      "harness/module-catalogue/README.md": "7e8d478f636e9d8858086e7a774240237b8bce78dd60686f2915891bdf2c29a3",
+      "harness/module-catalogue/observe.ts": "8730ff2f8326b7df81bc45a3660b8ee1264443bfe899244996b87f0e36d8a1c6",
+      "harness/module-catalogue/run.py": "301fb7eec786c28a7e080ecdbde37612f1b7279cd10f629b06fc43c13495e132",
+      "harness/partitioned-bookkeeping/Produce.lean": "a4831fafd330174f0573e60bf58e82e4ba0b911a54786fefd677f989aa85b5cf",
+      "harness/partitioned-bookkeeping/README.md": "2b2bfdfcfe4a05b583a5ae494f99d026e94208eeeb532ba937902fad13032fdd",
+      "harness/partitioned-bookkeeping/observe.ts": "0bd1b15cbcaacb0a7f277dc03253385b8f328d94c821b760b1e0b0d882463ee5",
+      "harness/partitioned-bookkeeping/run.py": "075cf7bd56ef48479689dfc34d5e4a0cfc65fee310cf505571c35c801b9f3839",
+      "harness/test_ts_packet.py": "bbcd6abccfe9a67d6b63ca746c5a3daf02e75bcb60781774ebad5ffcd51c2ddc",
+      "harness/truth/control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+      "harness/truth/prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+      "harness/truth/prelude.ts": "ecd382c57ffd6d39a6ba3f9e976bd4b1b83074435a8bb52ca47c93dac5d264db",
+      "harness/ts_packet.py": "745672fbdbff1067ab046285a41948231e1d61c1d737f28bab31bf838bb1d109",
+      "src/Effect4/Api/RunnerDerived.lean": "f987e8cfed3533eb1fe60aff8935c603f71cab0321dd8b94878ac72efbbe118f",
+      "src/Effect4/Codegen/EraseTermTypes.lean": "3d41b026ab01841dc70cbdbbe31dba1e9b8d3139c4a772574ae2d0242a5e75da",
+      "src/Effect4/Codegen/PrintEliminators.lean": "e797cbe94dfedd82f390beab6dd24516c672afc578b0dcf9a5968c82df994867",
+      "src/Effect4/Laws/Library/PartitionedSemaphore/Data.lean": "1672e3f30ce0acf95d1195c803fcb7f593f691cf00d21f3effe35fe211d452c1",
+      "src/Effect4/Laws/Library/PartitionedSemaphore/Steps.lean": "dc7bc6f69f52129883cbcb22891cd7cd152948e2c7cb37dd1e27e86eedf4e26c",
+      "src/Effect4/Laws/Library/PubSub/Data.lean": "c97e719f9ca8a1eee84f3fb7d915368e0925c89de0d6683e22e992c2af7ed031",
+      "src/Effect4/Laws/Library/PubSub/Steps.lean": "f9b26ef6945e2888e93626ff73c53885e6c805c184cf20ab0aed2d28a09ce877",
+      "src/Effect4/Laws/Library/Stream/Array.lean": "12468c15389a8c128eba6878dfd356cd3933f52f941a31ac74916352efe688fb",
+      "src/Effect4/Laws/Library/SynchronizedRef/Ops.lean": "ec99a0dfa413a9ac1eb173f6824fbd3be9a3f0c084806a3fd71baec8f37c00d0",
+      "src/Effect4/Laws/Step/Callback.lean": "239196b614ed76c53b7b2f0f34a9768362b27570f8d6eb5b4e9f665b90d4fc75",
+      "src/Effect4/Library.lean": "e5aea6dd1c7f8801b3a43cad2e99f1a644139512fb8636e201d79b41d06f4353",
+      "src/Effect4/Library/PartitionedSemaphore/Cell.lean": "d17753e7654c0a12be0813a995ef6f7591bf27d00dccbcd71b548f6989093b2e",
+      "src/Effect4/Library/PartitionedSemaphore/Data.lean": "bc37a6e7e723461dedfd3b374ceb4a9ebb971d70beb02bdedad55e4052e580b7",
+      "src/Effect4/Library/PartitionedSemaphore/Model.lean": "15a92b48f53cda2845a7de9461011b635bc28f6dcaec963e69c4a71c3c40224b",
+      "src/Effect4/Library/PartitionedSemaphore/Steps.lean": "a5aa2c702db84cbe258874dd7985d7b9e22c59086d717de4a91ad7d2ca3d3826",
+      "src/Effect4/Library/PubSub/Cell.lean": "7023423917cedbaff381c62f5db22fe5969b390a68809addc7a9586b8ca6dda0",
+      "src/Effect4/Library/PubSub/Data.lean": "ca56d4df1df55836272dc8e4c6878b4344409615832b25b85641e72810a1bd4c",
+      "src/Effect4/Library/PubSub/Model.lean": "c6db0a532a6c86ab751154991ad4fc157595e57865f3fea7fc6f379e13ed4ef3",
+      "src/Effect4/Library/PubSub/Steps.lean": "1c26b2426b988f1e5b0b974075fdd5bf18c0b19433cdff4845d0cae085679866",
+      "src/Effect4/Library/Stream/ArrayDefs.lean": "b2aad51200279d1cd2a83c887f0e1e5914952880708709201a8a31c6d28d8c4c",
+      "src/Effect4/Library/Stream/ArrayModel.lean": "2905a67d79f9e6e1f9a391bb46106a633bd2b0d7f5ea9d8d316f839615c335fd",
+      "src/Effect4/Library/Stream/ArrayOps.lean": "9ec8cbbeb74d552ea305919f88447b1a5cb3d595acf8a3d5542d01d56a08ca43",
+      "src/Effect4/Library/Stream/ArraySteps.lean": "0fdb3e5ca4dc07f9a258461bff17c8bb75c947d03ee2f4aba1bf705d811dc55e",
+      "src/Effect4/Library/SynchronizedRef/Cell.lean": "47ace350e5962e685b181d9110ed351c73086212b7d4a3921bdcdab2adcee035",
+      "src/Effect4/Library/SynchronizedRef/Ops.lean": "7e876b89ce1278d5aaf55fba1bca5e2ffe5291d93e0332f8f40ae7ec160960f3",
+      "src/Effect4/Machine/Term.lean": "8c529ab29fbed7f4201e056b15ccf43c1e30a8bc406405ac6f94e98ead14999e",
+      "src/Effect4/Step/Callback.lean": "3a7b129a4b158fe0a1e828ebd74c8cee46e9bc72a5a365b63bd41f78fa70423f",
+      "src/Effect4/Step/Elab/Inputs.lean": "7d6c9f385489cbd22a697250cd2967639d6e883cc6de7e385ae894f030f121c0",
+      "tools/Effect4Gen/PreludeAtoms.lean": "139ac779ebd47173156128d47d79a9d42b96d96c05f39ee7364053f03d739195",
+      "tools/ModuleSurvey/README.md": "78c94a6d8138c81bf4c284bd02ed2fe7bf539e63a2a8524829538d903e4c371c",
+      "tools/ModuleSurvey/survey.mjs": "d05c190bf1e759a6be121c62eb1370f6036e4a6af100195f1c8d033b21d75102",
+      "tools/ModuleSurvey/survey.test.mjs": "134f3c7998854392967ad4e2e67e962396fd9512900b7f62349f258ec5de7b19",
+      "tools/Tools/ArchitectureRoles.lean": "607a26142c185c44c90a50b72f91528a0f5b148dd669dd099c717a02673d60bb"
+    },
+    "primary": {
+      "Test/Program/CallInstance.lean": "11c296660c9dbc13ad2623153f153436ddd48c3e859acc0710cbf13b545d8920",
+      "Test/Program/EditControls.lean": "850ec6f3093e8e30d3b2df4672fcb6aa24c2bd7af4737986fd054848c663f06d",
+      "Test/Program/JsonFormControls.lean": "cff03352f7bde59f7b3f83426a5a870a9d4990d3d1b7a9314514675450b5055c",
+      "Test/Program/PoolFaces.lean": "7f9a201198f068952ddb7297529642e30d86145f0390e1666b95e37d2a9f7664",
+      "Test/Program/QueryControls.lean": "e6447ef75a8e15d8a3f868318ef4a11ed699d8b21289c7560fda2f15c6ec3556",
+      "Test/Program/SessionToolControls.lean": "6cfe4859a7b45997f29860f5e5ecb8b20e6378f1ddc1facbf1b9f9fda7c043b9",
+      "Test/Program/SpliceControls.lean": "2a4df17b85a29dbba2c2831d3bd79f652bf6bf86c36121f22dc4566bd3ee6b97",
+      "Test/fixtures/query/answers.jsonl": "8b5d9a273944a20e6a948bcac67697e5f954141dd76353fddb1cab5c7f063441",
+      "Test/fixtures/session/answers.jsonl": "9c61a20eed0caa8c40bef69a53b7df35cf02eed08b134a80b6e5b1d0e18bada9",
+      "Test/fixtures/session/requests.jsonl": "ccacd12853290f871fc56e733905decd2a860ad5d763e7091cb20912ad9be201",
+      "src/Effect4.lean": "a33e37f5e348dc16937410484154eca220ac7e678019e5b6a319287c6e0c42d7",
+      "src/Effect4/Laws/Program/Address.lean": "3a31052966e8eb043bd5770519438cc267f8dd4352abdaef17a9b77f1993f2ee",
+      "src/Effect4/Laws/Program/Edit.lean": "77a4f481eeb213029be1f252397aa3d5803af6f9f3860c036360bbb38ac2211a",
+      "src/Effect4/Laws/Program/Sketch.lean": "00d0421d5b2776a094cf4c2ba85d3e1cb75b6074c60ab2ce87946e0a57662055",
+      "src/Effect4/Laws/Program/SketchWire.lean": "c15a784d2d95f435ccad955b4a117be5a22a3764f4551b9e200de8c9eb477371",
+      "src/Effect4/Laws/Program/Typing/PartsTable.lean": "d92e7c21f5f837dd08f41ce2cdcbcb37af07b0993568dbf55a48b540816112cd",
+      "src/Effect4/Laws/Program/Typing/Restrict.lean": "a2d42e79f6eb6fe2d20498b2bd25b7092b07f138c9e73789cc47c9c93d4afe8f",
+      "src/Effect4/Laws/Program/Typing/Splice.lean": "3a986d854e2be92011a929aef65854fb54c4d4c48894ca2c7cb7212ec091f38f",
+      "src/Effect4/Laws/Store/ShapeRead.lean": "2be3d40788825acd2ece069855b09bab8914131368c353c48a04ca898d0a0660",
+      "src/Effect4/Program/Edit.lean": "dc580d48937760a6be9f5dfb153259116b3093f3cd8f8b54e73089236af78f58",
+      "src/Effect4/Program/SketchWire.lean": "2c80d00970a6193b7439a926e743c13e159c7af5fbedab04aa86370b3d5923e2",
+      "src/Effect4/Program/Typing/PartsTable.lean": "bbc2c9ab21e7cfaf758a016026717e8e70c08450ee270cb16aa5b2dd711a7daa",
+      "src/Effect4/Program/Typing/Splice.lean": "e0ec0caa58fa629a860655f0f0e5c2087d494401369b45ebee9e0cbf63f132fe",
+      "src/Effect4/Store/Domain/ShapeRead.lean": "bb94641060904bf66dda4812fb8515b0157a32438ce89c045300d5e4949e49f3",
+      "tools/Drivers/Session.lean": "994f081f2cb63ac0ec71d94465d276959dc587e8a3fb768dfdd70cb3d3a0c651",
+      "tools/Tools/JsonBridge.lean": "9fe561749b010e326b942289758b6ba96fbad293bd1b19f4409789a233c3ec57",
+      "tools/Tools/Query.lean": "977a5e9f5f36d3d3b24f5c54b2aeaab07527c5e741ff56b93bc71f68e168cf81",
+      "tools/Tools/Session.lean": "6a41218966aa6b0f757785bc41a67dfbaa2dfae9be607bbf0ec53e3cf6c6b4bc"
+    }
+  },
+  "printerLawSha256": "ed2cd2dd6d06f85dc32dfc98481ed7906f9b61a9e52a75ae1b6047d2f7310b1e",
+  "mergedCompilationReproduced": false
+}
