@@ -7,7 +7,7 @@ import TypeScript.Render
 /-!
 # The mask's five claims: their statements, and the printed form
 
-The five registry claims of the mask (`tools/Tools/SemanticsRegistry.lean`) have their
+The five registry claims of the mask (`tools/ProofGraph/Registry.lean`) have their
 statements in `src/Effect4/Laws/Program/Typed/Mask.lean` and
 `src/Effect4/Laws/Codegen/Mask.lean`. This battery reads the claims' statements, and
 it holds the finite controls of the printed form: a mask around one wait prints

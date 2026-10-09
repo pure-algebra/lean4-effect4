@@ -163,7 +163,7 @@ its arrows. Anything else is a leak.
   five things:
   1. its concept, the one of the ten in `docs/core/semantics.md`, and the required property there
      that it is or serves;
-  2. its question: a registry claim with its role (`tools/Tools/SemanticsRegistry.lean`,
+  2. its question: a registry claim with its role (`tools/ProofGraph/Registry.lean`,
      `generated/semantics.md`), whose pointer is the theorem that states it. While the claim is
      open, the pointer is a planned goal: `proof_goal G : P`, a theorem whose body is `sorry`.
      Downstream proofs use `G` as a theorem. Its proof replaces the `proof_goal` in place, with no

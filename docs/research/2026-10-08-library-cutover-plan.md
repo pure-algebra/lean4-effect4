@@ -118,7 +118,7 @@ typing signature, and a definition block stops it.
 These are slice S1, after C2, because the sketch is authoring. Its laws are placed with the
 splice law of `docs/research/2026-10-08-live-authoring.md` §4.
 
-## 7. Landed: slices C1 and C2 (2026-10-08)
+## 7. Landed: slices C1 to C3 (2026-10-08)
 
 - **C1** made the five entry modules re-export files. `Effect4.Run` had a body, and
   `Run/Tape.lean` imports it, so the body moved to `src/Effect4/Run/Basic.lean`. The entry module
@@ -136,6 +136,14 @@ splice law of `docs/research/2026-10-08-live-authoring.md` §4.
 - **One comment stays stale.** `src/Effect4/Data/Constructive.lean` names
   `src/Effect4/Laws/Modules/`. The module sits low in the import graph, so the edit waits for a
   slice that touches the file.
+- **C3** moved the semantics registry to `tools/ProofGraph/Registry.lean` and `#explain` to
+  `src/Effect4/Laws/Author/Explain.lean`, which `Effect4.Laws.Author` re-exports. Their
+  namespaces stay. The axiom gate lists `#explain` as meta code: 41 of its 223 declarations reach
+  `Classical.choice`. The semantics report changes only in its line of inputs.
+- **Three more comments stay stale**, for the same reason as the one above. The headers of
+  `src/Effect4/Laws/Codegen/Mask.lean`, `src/Effect4/Laws/Program/Typed/ListFold.lean` and
+  `src/Effect4/Laws/Program/Typed/Mask.lean` name the registry's old path. `ListFold` alone has 77
+  dependent modules.
 
 ## 8. What this plan does not establish
 

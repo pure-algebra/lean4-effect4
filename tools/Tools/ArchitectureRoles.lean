@@ -133,6 +133,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Library/Pool", .laws, 5, "Laws/Library/Pool", "Pool's first profile with the profile's closure and the model's facts of an enrolment, a selection, a return, the close's first step and the closer's step; the typing of the cell and its steps, the relation to the model, and the six step statements (decisions rows 267 to 269 and 276); the laws of the operations (`Ops.lean`): scope, the typing at every scope and the attempt laws", true, true⟩,
   ⟨"src/Effect4/Laws/Library/Stream", .laws, 5, "Laws/Library/Stream", "the stream cursor model's whole-loop drain laws (`Model.lean`), the step agreement laws (`Steps.lean`), the step typing laws (`Typing.lean`), and the scope laws of the source and operations (`Ops.lean`)", true, true⟩,
   ⟨"src/Effect4/Laws/Author.lean", .laws, 6, "Laws/Author", "the entry module of the laws an author reads: re-exports the semantics attribute, the authoring laws, the run API's laws and the shared step laws (decisions row 332)", false, true⟩,
+  ⟨"src/Effect4/Laws/Author", .laws, 6, "Laws/Author/", "`#explain` and `#obligations`: a step's or a theorem's placement, standing and open goals, read from the environment and the semantics registry; meta code (decisions row 332)", true, true⟩,
   ⟨"src/Effect4/Laws.lean", .laws, 7, "Effect4.Laws", "the root of the proof graph", false, true⟩,
   -- the tool roots
   ⟨"tools/ProofGraph", .tools, 0, "ProofGraph", "checked theorem references, rolled-back search, published theorems, the obligation join; below Laws and Conform", false, true⟩,

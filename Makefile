@@ -248,7 +248,7 @@ ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 # again after `build`: a rule reruns exactly when a trace moved.
 $(CORE) $(LAWS) $(SEMANTICS_ROOTS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
   .lake/build/lib/lean/Test/Program/Gen.trace: build ;
-SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
+SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml

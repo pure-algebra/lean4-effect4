@@ -492,7 +492,7 @@ def Observation.releasedOnce (o : Observation) : Bool := decide o.cleanups.Nodup
 /-! ## 4. The claim
 
 Each of the four planned goals is an instance, on this one program, of a proposed claim of the
-semantics registry (`tools/Tools/SemanticsRegistry.lean`, the open parts of R10 to R12). The
+semantics registry (`tools/ProofGraph/Registry.lean`, the open parts of R10 to R12). The
 Queue's law of a whole run is not stated (decisions row 275, point 2), so each goal's docstring
 says what the goal would follow from. Those lists are what this scenario needs from that law.
 

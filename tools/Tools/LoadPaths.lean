@@ -1,6 +1,6 @@
 import Lean
 import ProofGraph.Population
-import Tools.SemanticsRegistry
+import ProofGraph.Registry
 
 /-!
 # Tools.LoadPaths — which theorems carry load, and how much a landing reuses
@@ -8,7 +8,7 @@ import Tools.SemanticsRegistry
 The proof graph's theorems are its members, and a member's direct dependencies are the authored
 theorems its proof names (walking through the auxiliaries that the elaborator generates,
 `ProofGraph.isAuxiliary`). The **roots** are the registry's claim pointers and the requirements'
-top nodes (`Tools.SemanticsRegistry`). A theorem is **load-bearing** when a root reaches it along
+top nodes (`ProofGraph.Registry`). A theorem is **load-bearing** when a root reaches it along
 direct dependencies. A theorem that no theorem of the loaded tree names, and that is no root, is
 **unconsumed**.
 

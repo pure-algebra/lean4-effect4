@@ -319,14 +319,14 @@ Each entry is one row of six columns:
 | --- | --- | --- | --- | --- | --- |
 | **theorem** | A declaration whose type is a proposition, accepted by the kernel within the trust ceiling. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **lemma** (helper) | A theorem used as a step of another. It names the claim it serves and its consumer. | — | — | — | — |
-| **witness** | A theorem that is the evidence for a registry claim, a census row or a refutation. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **registry** (semantics registry) | The authored claims, concepts and cuts that `generated/semantics.md` reports. The handle registry is a different term (§3.7). | `registry`, `Claim` (`tools/Tools/SemanticsRegistry.lean`) | — | — | Every use: "semantics", "handle", "claim", "claims", or in code. |
-| **claim** (registry claim) | An entry of the semantics registry: a question with a concept, a role, a title and a pointer. | `Claim` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **role** | The proof role of a claim, one of `Role`'s words. A role is never a status and never a scope. | `Role` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **pointer** | What a claim points at: a witness or planned goal, a refutation, an absence with its reason, or an assumption with its source. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **concept** | One of the ten semantic concepts of `docs/core/semantics.md`, by its id. | `Concept` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **cut** | An applicability decision: what a concept's claims exclude, by decisions row. | `Cut` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **literature relation** | How a claim uses a source: definition used, proof technique, adapted result, analogy, excluded feature. | `LiteratureRef` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
+| **witness** | A theorem that is the evidence for a registry claim, a census row or a refutation. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **registry** (semantics registry) | The authored claims, concepts and cuts that `generated/semantics.md` reports. The handle registry is a different term (§3.7). | `registry`, `Claim` (`tools/ProofGraph/Registry.lean`) | — | — | Every use: "semantics", "handle", "claim", "claims", or in code. |
+| **claim** (registry claim) | An entry of the semantics registry: a question with a concept, a role, a title and a pointer. | `Claim` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **role** | The proof role of a claim, one of `Role`'s words. A role is never a status and never a scope. | `Role` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **pointer** | What a claim points at: a witness or planned goal, a refutation, an absence with its reason, or an assumption with its source. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **concept** | One of the ten semantic concepts of `docs/core/semantics.md`, by its id. | `Concept` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **cut** | An applicability decision: what a concept's claims exclude, by decisions row. | `Cut` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **literature relation** | How a claim uses a source: definition used, proof technique, adapted result, analogy, excluded feature. | `LiteratureRef` (`tools/ProofGraph/Registry.lean`) | — | — | — |
 | **planned goal** (goal) | A theorem whose body is `sorry`, declared by `proof_goal` and tagged. Downstream proofs use it; its proof replaces it in place. No open planned goal does not mean the semantics is finished. | `isGoal` (`tools/ProofGraph/Goal.lean`) | a blueprint's stated lemma (leanblueprint, LeanArchitect, by name) | ledger goal | — |
 | **modulo** | Of a theorem: its proof reaches planned goals, so it is proved from them, not proved. | `Standing` (`tools/ProofGraph/Goal.lean`) | — | — | — |
 | **obligation** | A statement owed for a named purpose: a planned goal, a claim or a contract item. | `elabGoal` (`tools/ProofGraph/Goal.lean`) | proof obligation (standard) | — | — |
@@ -338,7 +338,7 @@ Each entry is one row of six columns:
 | **milestone** (M5, M6, M7) | M5: a checked program loads into the typed state. M6: every command keeps it. M7: at the empty row table, on answer-free tapes, with observation `obs`, every exit and store fits and the run never halts. | `loadsTyped`, `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`); `m7_proved` (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`) | — | "capstone" | — |
 | **requirement R<n>** | A theorem shape that a full program must satisfy, R1 to R13 (system map §8). A requirement row is a different term (§3.6). | `docs/core/system-map.md` | — | — | — |
 | **counterexample** | A checked witness that a stated proposition is false, registered with an ID `E4-<domain>-CE-<n>`. An attack is an attempt to refute; a successful one yields a counterexample. | `Test/Counterexamples/REGISTER.md` | — | — | — |
-| **refutation** | A counterexample that refutes a registry claim. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
+| **refutation** | A counterexample that refutes a registry claim. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
 | **control** (red control, green control) | A fixture that shows a check refuses what it must (red) or accepts what it must (green). Every check keeps its red control. | — | — | — | — |
 | **fixture** | Input data for a test, under `Test/fixtures/`. | — | — | — | — |
 | **scenario** | An acceptance program with one named observation, its claim, its clauses and its controls, declared as one record. A scenario gate checks the record. | `Scenario` (`Test/Dogfood/Scenario.lean`) | — | — | — |
@@ -503,11 +503,11 @@ the artifact that reports it, and one word means one thing in all of them.
 | **reproduced** | A byte comparison against a fresh producer run (`make check-gen`). | `Makefile` | constructive check (Mokhov, Mitchell, Peyton Jones, by name, DI-32) | — | — |
 | **tested** | A finite checker or host run over named inputs passed. | — | — | — | — |
 | **stamped** | A verifying trace over a producer's inputs, with no claim about the committed bytes. No group carries it since 2026-09-13. | — | verifying trace (DI-32) | — | — |
-| **assumed** | Stated and not checked: an external assumption, with its source and its bounds. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
+| **assumed** | Stated and not checked: an external assumption, with its source and its bounds. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
 | **reading** | Established by reading the named source or text, with no run and no proof. | — | — | — | — |
 | **declared** (wanted) | A planned goal that is declared and not yet proved. | `isGoal` (`tools/ProofGraph/Goal.lean`) | — | — | — |
-| **refuted** | A registry claim that a counterexample refutes. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **absent** | A registry claim with no witness, goal or refutation, and a stated reason. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
+| **refuted** | A registry claim that a counterexample refutes. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
+| **absent** | A registry claim with no witness, goal or refutation, and a stated reason. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
 | **exists** (status) | Code without the theorem that its claim needs (the system map's status word). | — | — | — | — |
 | **open** (status) | Planned, with its decisions row (the system map's status word). | — | — | — | — |
 | **literature mark** (read, by name, standard) | How a document knows a literature claim: read in the note named beside it; named without being read; or standard textbook material. | — | — | — | — |

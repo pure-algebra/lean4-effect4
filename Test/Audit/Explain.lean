@@ -1,7 +1,7 @@
-import Tools.Explain
+import Effect4.Laws.Author.Explain
 
 /-!
-Controls of `#explain` and `#obligations` (`tools/Tools/Explain.lean`), on steps and theorems
+Controls of `#explain` and `#obligations` (`src/Effect4/Laws/Author/Explain.lean`), on steps and theorems
 declared here, so no later theorem of the tree changes the expected answers. Each line is a finite
 evaluation of the tool:
 

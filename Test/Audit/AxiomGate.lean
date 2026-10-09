@@ -133,6 +133,9 @@ private def auditImplementationModules : List Name :=
   -- Semantic concept tags and their census are environment instrumentation.
   -- No semantic theorem or runtime representation is declared here.
   , `Effect4.Laws.Auto.Semantics
+  -- `#explain` and `#obligations`: commands that read the environment, the placements and the
+  -- semantics registry; meta code, no theorem in the module (decisions row 332).
+  , `Effect4.Laws.Author.Explain
   -- The subset and membership decisions (`sub_tac`, `mem_tac`): a tactic elaborator and the
   -- `keys_norm` simp set's initializer; meta code, no theorem in the module (the theory it
   -- applies, `Effect4.Laws.Auto.ListSubset`, is held at the ceiling like any other).

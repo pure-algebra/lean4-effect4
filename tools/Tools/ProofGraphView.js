@@ -184,7 +184,7 @@ const theorems = [...nodes.values()].filter((n) => n.kind !== 'requirement');
 const statusOf = (n) => (n.kind === 'requirement' ? (n.status === 'proved' ? 'proved' : 'req') : n.status);
 const statusWord = (s) => (s === 'goal' ? 'planned goal' : s === 'modulo' ? 'modulo its goals' : s);
 // An open part is a part of a requirement that no planned goal states yet. Its state says why,
-// as the registry records it (tools/Tools/SemanticsRegistry.lean, `PartState`). The order is the
+// as the registry records it (tools/ProofGraph/Registry.lean, `PartState`). The order is the
 // order of the work: a part is triaged, then it waits, then its statement is worded.
 const partStates = ['untriaged', 'ruling', 'definition', 'work', 'proposed'];
 const partWord = { untriaged: 'not triaged', ruling: 'waits on a ruling', definition: 'needs a definition',

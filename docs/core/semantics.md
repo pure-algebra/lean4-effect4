@@ -10,7 +10,7 @@ What this document does not own, and who does:
 - **Status.** Whether a property is proved, wanted, refuted, absent or assumed is measured, never
   written here: `generated/semantics.md` (`make gen-semantics`;
   `docs/GENERATED.md`, group `semantics`), produced from the registry
-  `tools/Tools/SemanticsRegistry.lean` and the loaded environment, every status derived through
+  `tools/ProofGraph/Registry.lean` and the loaded environment, every status derived through
   `ProofRef.validate` and `ProofGraph.check`.
 - **Decisions.** `docs/core/decisions.md`; the cuts below cite its rows by number.
 - **The goal, the sorts, the arrows and the requirements.** `docs/core/system-map.md`.

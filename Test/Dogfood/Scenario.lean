@@ -5,7 +5,7 @@ import Effect4.Laws.Run.Tape
 import Effect4.Api.Author
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Plan
-import Tools.SemanticsRegistry
+import ProofGraph.Registry
 
 /-!
 # Test.Dogfood.Scenario — the shared driver of the scenarios, and a scenario's record
@@ -460,7 +460,7 @@ def Scenario.declarations (s : Scenario) : List Lean.Name := [s.program, s.obser
 def Scenario.claims (s : Scenario) : List Lean.Name :=
   s.claim :: (s.clauses ++ s.laws).map (·.claim)
 
-/-- Whether the semantics registry (`tools/Tools/SemanticsRegistry.lean`) places a declaration of
+/-- Whether the semantics registry (`tools/ProofGraph/Registry.lean`) places a declaration of
 a module. A requirement lists it as a top node, or a registry claim points at it, or its module
 is a default module of a concept: an untagged theorem of that module inherits the concept. -/
 def registered (name module : Lean.Name) : Bool :=

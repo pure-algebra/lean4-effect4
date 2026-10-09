@@ -12,7 +12,7 @@ The fixtures name the driver's declarations and the law graph's. Twelve of the f
 a claim that is a planned goal: its node costs no walk of the proof graph. That goal is this
 battery's own, `Fixture.pending`. A scenario's goal cannot serve: it stops being a goal when it
 is proved, as the driver's `tape_replays` did. This module is no root of the semantics report
-(`tools/Tools/SemanticsRegistry.lean`), so the plan does not show the fixture goal.
+(`tools/ProofGraph/Registry.lean`), so the plan does not show the fixture goal.
 
 Five fixtures hold named runs. They play two scripts on the battery's own program, `tiny`, so
 that the gate's part of a run is controlled here: it plays each named run, and it hands a

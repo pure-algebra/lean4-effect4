@@ -37,7 +37,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
   `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85).
-- **The library's layout** (row 332, cutover slices C1 and C2). A user imports five entry
+- **The library's layout** (row 332, cutover slices C1 to C3). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The step language is
   `src/Effect4/Step.lean`, and its shared laws are in `src/Effect4/Laws/Step/`.
@@ -94,10 +94,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The cutover's slices C3 and C4** (row 332, the
-   [cutover plan](research/2026-10-08-library-cutover-plan.md)). The registry and `#explain` move
-   into the proof graph's tools. Then the acceptance programs import entry modules, and the gate
-   refuses.
+1. **The cutover's slice C4** (row 332, the
+   [cutover plan](research/2026-10-08-library-cutover-plan.md)). The acceptance programs import
+   entry modules, and the gate refuses.
 2. **Codex's module catalogue** on the new layout (the
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.

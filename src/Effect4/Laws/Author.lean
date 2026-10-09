@@ -27,6 +27,7 @@ import Effect4.Laws.Step.Table
 import Effect4.Laws.Step.Tuples
 import Effect4.Laws.Step.Waiting
 import Effect4.Laws.Step.Callback
+import Effect4.Laws.Author.Explain
 
 /-!
 # Effect4.Laws.Author — the entry module of the laws an author reads (decisions row 332)
@@ -40,6 +41,8 @@ re-exports:
 - the run API's laws: the journal, its rows and its tape;
 - the shared step laws: reading, typing, scope, the store's connectors, the encoding table, the
   lists, renaming and the wrappers' laws.
+- `#explain` and `#obligations`: a step's or a theorem's placement, standing and open goals,
+  as text or JSON (`src/Effect4/Laws/Author/Explain.lean`).
 
 It declares nothing. A composed module's own laws are in `src/Effect4/Laws/Library/`.
 -/

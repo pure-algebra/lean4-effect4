@@ -1,4 +1,4 @@
-import Tools.SemanticsRegistry
+import ProofGraph.Registry
 import Tools.SemanticsDisplay
 import Tools.GeneratedStamp
 import Effect4.Laws.Auto.Semantics
@@ -429,7 +429,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (6 : Nat)),
     ("producer", text (Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)")),
     ("command", text "make gen-semantics"),
-    ("inputs", toJson (["tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
+    ("inputs", toJson (["tools/ProofGraph/Registry.lean", "tools/Tools/Semantics.lean",
       "tools/Drivers/Semantics.lean", "tools/Tools/SemanticsDisplay.lean",
       "src/Effect4/Laws/Auto/Semantics.lean",
       "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain"] : List String)),

@@ -18,7 +18,8 @@ open Tools.Architecture Tools.Exposure
 #guard exposureOf "src/Effect4/Step.lean" == some .internal
 -- The proof graph, the tools, the batteries.
 #guard exposureOf "src/Effect4/Laws/Step.lean" == some .proof
-#guard exposureOf "tools/Tools/Explain.lean" == some .tool
+#guard exposureOf "src/Effect4/Laws/Author/Explain.lean" == some .proof
+#guard exposureOf "tools/ProofGraph/Registry.lean" == some .tool
 #guard exposureOf "Test/Dogfood/P1HttpCache.lean" == some .test
 -- A path outside every declared prefix has no class.
 #guard exposureOf "vendor/effect-4.0.1/src/Queue.ts" == none
@@ -27,5 +28,5 @@ open Tools.Architecture Tools.Exposure
 #guard !Exposure.internal.userImportable && !Exposure.proof.userImportable
 -- A module's source path, from its name.
 #guard pathOf `Effect4.Program.Authoring.Loops == some "src/Effect4/Program/Authoring/Loops.lean"
-#guard pathOf `Tools.Explain == some "tools/Tools/Explain.lean"
+#guard pathOf `ProofGraph.Registry == some "tools/ProofGraph/Registry.lean"
 #guard pathOf `Lean.Elab == none
