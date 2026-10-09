@@ -1,0 +1,11 @@
+{
+  "label": "node-version",
+  "argv": [
+    "node",
+    "--version"
+  ],
+  "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+  "exitCode": 0,
+  "stdout": "v22.23.2\n",
+  "stderr": ""
+}

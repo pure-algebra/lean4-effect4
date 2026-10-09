@@ -137,7 +137,7 @@ def iterateTpl (ann : Option Nat) : Tpl :=
 
 Order is read by the READER only (the printer chooses by constructor and classifier, which never
 overlap). First match wins, so where skeletons overlap the more specific comes first: within the
-`Effect.suspend` group the conditional and the two loop images come before the plain suspension
+`Effect.suspend` group the two loop images come before the plain suspension
 (whose body hole would take any of them), and the two transparent rows, a bare hole each
 (`withFiber` prints as its action, a layer reference as its name), close their family. The row
 call of `perform` is the last program row: a tree is a row call when it is nothing else. -/
@@ -161,7 +161,7 @@ def effRows : List Row :=
   , ⟨.eff, "uninterruptible", [], .tpl (call "Effect.uninterruptible" [h 0])⟩
   , ⟨.eff, "interruptible", [], .tpl (call "Effect.interruptible" [h 0])⟩
   , ⟨.eff, "select", [(1, .is (.decision .bool))],
-      .tpl (call "Effect.suspend" [.arrow (.cond (h 0) (h 2) (h 3))])⟩
+      .tpl (call "ifCase" [.arrow (h 0), .arrow (h 2), .arrow (h 3)])⟩
   , ⟨.eff, "select", [(1, .is (.decision .option))],
       .tpl (call "optionCase" [h 0, .arrow (h 2), lam (h 3)])⟩
   , ⟨.eff, "select", [(1, .decisionTag)],

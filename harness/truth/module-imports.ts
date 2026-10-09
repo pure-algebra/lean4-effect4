@@ -27,13 +27,13 @@ export const effectNames: ReadonlyArray<string> = [
 ]
 
 /** The prelude's printed heads that are no atom: the adapters of the package rows, the record
- * and tuple helpers, the list fold, and `select`'s three heads (`helperNames` of
- * `Codegen/Record.lean`, `Codegen/Tuple.lean` and `Codegen/ListFold.lean`; `Head.optionCase`,
+ * and tuple helpers, the list fold, and `select`'s four heads (`helperNames` of
+ * `Codegen/Record.lean`, `Codegen/Tuple.lean` and `Codegen/ListFold.lean`; `Head.ifCase`, `Head.optionCase`,
  * `Head.caseTag` and `Head.caseTagR`, `Codegen/PrintLeaf.lean`). A new printed head joins this
  * list. A new atom does not. */
 export const preludeHelpers: ReadonlyArray<string> = [
   "Host", "L", "Sql", "Kv", "recordValue", "recordRequired", "recordOptional", "recordSet", "tupleAt", "fold",
-  "optionCase", "caseTag", "caseTagR",
+  "ifCase", "optionCase", "caseTag", "caseTagR",
 ]
 
 /** The prelude's type aliases that a printed annotation names: the mask's saved state

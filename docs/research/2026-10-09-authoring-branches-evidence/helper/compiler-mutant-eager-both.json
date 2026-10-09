@@ -1,0 +1,16 @@
+{
+  "label": "compiler-mutant-eager-both",
+  "argv": [
+    "node",
+    "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+    "--pretty",
+    "false",
+    "--noEmit",
+    "-p",
+    "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json"
+  ],
+  "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": ""
+}

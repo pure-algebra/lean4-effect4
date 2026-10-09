@@ -1,0 +1,172 @@
+{
+  "format": "effect4-authoring-branches-receipt-v1",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "positive": 11,
+  "rows": [
+    {
+      "id": "plainTrue",
+      "observed": 7
+    },
+    {
+      "id": "plainFalse",
+      "observed": 9
+    },
+    {
+      "id": "batchTrue",
+      "observed": 3
+    },
+    {
+      "id": "batchFalse",
+      "observed": 42
+    },
+    {
+      "id": "errorLeft",
+      "observed": 11
+    },
+    {
+      "id": "errorRight",
+      "observed": 22
+    },
+    {
+      "id": "stateTrue",
+      "observed": 1
+    },
+    {
+      "id": "stateFalse",
+      "observed": 10
+    },
+    {
+      "id": "stateFailure",
+      "observed": 7
+    },
+    {
+      "id": "serviceTrue",
+      "observed": 17
+    },
+    {
+      "id": "serviceFalse",
+      "observed": 9
+    }
+  ],
+  "sourceReading": "Every emitted module reads back to its admitted program",
+  "compilerDiagnostics": "",
+  "commands": [
+    {
+      "argv": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "--run",
+        "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/harness/authoring-branches/Produce.lean",
+        "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/docs/research/2026-10-09-authoring-branches-evidence/programs"
+      ],
+      "cwd": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j/tsconfig.json",
+        "--listFilesOnly"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j"
+    },
+    {
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j"
+    },
+    {
+      "argv": [
+        "bun",
+        "--no-install",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j/observe.ts",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j"
+    },
+    {
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/authoring-branches-vkappk9j"
+    }
+  ],
+  "sourceHashes": {
+    "harness/ts_packet.py": "745672fbdbff1067ab046285a41948231e1d61c1d737f28bab31bf838bb1d109",
+    "harness/authoring-branches/Produce.lean": "34531899d10066a9547db6958a95bcf4e0c2fd2ceb99f8d132fec5aee05b4add",
+    "harness/authoring-branches/observe.ts": "85cb4f05897b6b04486bc7bb6799eafc8c2e351262f17bb30f8197ce106ef1be",
+    "harness/authoring-branches/run.py": "f26b45e0fc3544f4c1e0bba914730937735859af0bc057d96d437915c2189e7e",
+    "Test/Program/BranchAuthoring.lean": "8458008e81624f58ef0dad4ebcbb26d07e395532dd47ccb7995ca180c0293d1b",
+    "src/Effect4/Codegen/Templates.lean": "99e25f88eeb4f304c833a1db778eb98133a6c1a456f35079f56ade7756ceaaf4",
+    "src/Effect4/Codegen/PrintLeaf.lean": "b9d8b51bc83f48137137665ea57a2741d2dc6f011940ee2af4f4e9575ba31112",
+    "src/Effect4/Codegen/PrintEliminators.lean": "e797cbe94dfedd82f390beab6dd24516c672afc578b0dcf9a5968c82df994867",
+    "src/Effect4/Codegen/EraseTypes.lean": "466c17f9979f13bf78bb4c60cbbace03406315812aa7b7b463ed21efc9730c47",
+    "src/Effect4/Codegen/Read.lean": "e3a9d959480f4328a360608ab7cce16fd401b7eaee7cdc9f161368fb211bdff5",
+    "harness/truth/control.ts": "471f71a8eb0121ef49695d5cd9e8ea1435e4b354af3c0e29c3834d8aba77ac00",
+    "harness/truth/prelude.ts": "1bb7ba876c59a254895adb34543ed4d7d1b58a343764aa55de37e7129efa72d4"
+  },
+  "toolchainHashes": {
+    "effectPackage": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "compilerPackage": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478"
+  },
+  "manifestHash": "f3e8eb37ad3d2728544cd658c1f77dcd655b73912993da1a91ddfe2a550e85bc",
+  "emittedHashes": {
+    "plainTrue.ts": "350566c5e19066752aa16cd60158fd27331c00a650dcf481795e28a47a219708",
+    "plainFalse.ts": "38746375277c7b4c041f3a8503074ed20e71e05d4f65ec31ad351aaf4fffff88",
+    "batchTrue.ts": "876d13de297bd379d2f76a3dcdf32ef3c82d529706001021d83244bc9248a9b9",
+    "batchFalse.ts": "2a5cc62c27ff274ef23bd6f409fdfd6562d698860a935384fd0be8fe8462e9b1",
+    "errorLeft.ts": "de913f76d480cc8dd1cd6905d6f7895721ff2e2cc7928d1ab6dc2e0389539495",
+    "errorRight.ts": "04b2f8faaf01c3537c1bec74521cd5fb75ba6eaec4bfeb2675b47c66650ee634",
+    "stateTrue.ts": "d195dd4a8e3a7cf3d3a170d92e29c0c276a4673cabea5316d0c5f099749f607e",
+    "stateFalse.ts": "37a26a2d76fac6e1df1968b61db7f73dddd3dc19db1df6a4dddfd2347524898b",
+    "stateFailure.ts": "92af65431b41e383d2326f855aa83e9aa5f18c528c069142c988294a78ca549e",
+    "serviceTrue.ts": "395f7003a823250f3312107af70068e78a75e05882be580c27b900dcbbb4e9d7",
+    "serviceFalse.ts": "b6ab19453e59123be521ca98c1ce4400af2dc47c60ddd7782fb90a044fe22d95"
+  },
+  "compiledHashes": {
+    "plainTrue.ts": "5abc43d497fc0cb536896803c0bbbb448903ea74ce9f05ab12a38c1aee9a87a4",
+    "plainFalse.ts": "af5b9dc4bd4479e11f8afaec6b954af1ba8011490f449b9927657bf1e4a54872",
+    "batchTrue.ts": "d563d876f9e6802406789ad442bcded4ac749d4b0922b1abdc297141ecafb41f",
+    "batchFalse.ts": "aabb705d07ae2cbbef0e6327773dddf2b6174b0bf9203574bc4cbd231ce9271e",
+    "errorLeft.ts": "7edf0e7aedff5c7e6796dcf075f2a1892bc644fa8c011cb78ea9854b478ae1b5",
+    "errorRight.ts": "6c7e4adb19461c7156dc312f677094416a05702e506cf2c8fe178f3ff78549b4",
+    "stateTrue.ts": "33065c82c315cce775ef9b1463fbb8f031625d478b6d46ee7cebe3d718ca50e4",
+    "stateFalse.ts": "713501cdc9f38d2bfb480fe9e5a0ba0ea70c694ec9894d666f8801983eabbb41",
+    "stateFailure.ts": "e75ba75f679979d2fb39f9e8ed699fc27d3fe6c5beed32c009e2e640b1829158",
+    "serviceTrue.ts": "28a67e1fe6e2ae9a2a131776aae4ce7e3dc381a6830e7b5321cd086663c2d9f2",
+    "serviceFalse.ts": "2832612f7685028ebbaa102945ad24d6cf9fa9a4a239a3109e6e073bed74905b",
+    "observe.ts": "85cb4f05897b6b04486bc7bb6799eafc8c2e351262f17bb30f8197ce106ef1be",
+    "prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "control.ts": "471f71a8eb0121ef49695d5cd9e8ea1435e4b354af3c0e29c3834d8aba77ac00",
+    "prelude.ts": "9afe38a9374dbfba70a6495ede3d2074029db8b5afee4beb76720dbc1aea4f55",
+    "tsconfig.json": "68ffe250675eb2d27694cec31bfc54af8756925369824bf3b0948c2a845bbb26",
+    "manifest.json": "f3e8eb37ad3d2728544cd658c1f77dcd655b73912993da1a91ddfe2a550e85bc"
+  },
+  "scope": "Finite authored boolean branches with separate success, error and service columns; selected writes and failures; syntax read-back; no general host simulation or scheduler claim"
+}

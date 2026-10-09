@@ -1,0 +1,9 @@
+docs/research/2026-10-09-authoring-branches-evidence/channel/compiled-inputs/control.ts:57: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/helper-setup-failure/compiled-inputs/control.ts:57: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/helper/compiled-inputs/control.ts:57: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/helper/mutants/eager-both/control.ts:56: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/helper/mutants/eager-condition/control.ts:56: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/helper/mutants/swapped-selection/control.ts:56: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/pinned-helper/compiled-inputs/control.ts:57: new blank line at EOF.
+docs/research/2026-10-09-authoring-branches-evidence/programs/compiled-inputs/control.ts:57: new blank line at EOF.
+PASS: only eight retained control.ts EOF blank lines; evidence bytes remain exact.

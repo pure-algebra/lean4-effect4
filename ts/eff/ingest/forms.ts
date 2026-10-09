@@ -18,6 +18,13 @@ type WidenNumbers<T> = T extends number ? number : T extends object
 export type Template = WidenNumbers<Subtemplates<(typeof forms.rows)[number]["expansion"]>>
 type TermTemplate = Extract<Template, { _tag: "succeed" | "die" }>["value"]
 
+/** Source argument classes come from the Lean-owned generated rows, not a second enum. */
+type ArgumentKind = (typeof forms.rows)[number]["arguments"][number]
+export type FormSelection = {
+  readonly head: string
+  readonly arguments: readonly ArgumentKind[]
+}
+
 export type EffectSlot<E> = (cutOffset: number, insertions: number) => E
 export interface FormArguments<E, T, K = T> {
   readonly effects: readonly EffectSlot<E>[]
@@ -102,9 +109,14 @@ export function expandTemplate<E, T, K>(template: Template, base: number,
   }
 }
 
-export function expandForm<E, T, K>(name: string, base: number,
+/** The table connects a recognized head and ordered argument classes to one expansion.
+ * Readers keep syntax checks and their refusal order; storage slots belong to the expansion. */
+export function expandForm<E, T, K>(selection: FormSelection, base: number,
     args: FormArguments<E, T, K>, algebra: FormAlgebra<E, T, K>): Expansion<E> {
-  const form = forms.rows.find(row => row.id === name)
-  return form ? expandTemplate(form.expansion, base, args, algebra)
-    : { ok: false, error: `unknown form ${name}` }
+  const matches = forms.rows.filter(row => row.head === selection.head &&
+    row.arguments.length === selection.arguments.length &&
+    row.arguments.every((kind, index) => kind === selection.arguments[index]))
+  if (matches.length !== 1) return { ok: false,
+    error: `${matches.length === 0 ? "unknown" : "ambiguous"} form selection ${selection.head}(${selection.arguments.join(", ")})` }
+  return expandTemplate(matches[0]!.expansion, base, args, algebra)
 }

@@ -482,6 +482,22 @@ class CompilerReader {
     try { head = this.name(body.callee) } catch { return undefined }
     return head === "Effect.succeed" ? p.name : undefined
   }
+  /** The boolean row has three plain thunks and introduces no binder (decisions row 218).
+   * Foreign admission keeps its former language through the separate hooks below. */
+  boolSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "CallExpression" || x.callee.type !== "Identifier" || x.callee.name !== "ifCase") return undefined
+    if (x.optional || x.typeArguments || env.includes("ifCase")) return bad("boolean decision head")
+    this.arity(x.arguments, 3)
+    const body = (arg: Ex): Expression => {
+      const fn = this.unwrap(arg)
+      if (fn.type !== "ArrowFunctionExpression" || fn.async || fn.typeParameters || fn.returnType || fn.params.length !== 0)
+        return bad("boolean decision thunk")
+      return this.expression(fn.body)
+    }
+    return { _tag: "select", scrutinee: this.term(body(this.at(x.arguments, 0)), env), decision: { _tag: "bool" },
+      arm0: this.eff(body(this.at(x.arguments, 1)), env), arm1: this.eff(body(this.at(x.arguments, 2)), env) }
+  }
+  suspendedSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
   recordSelect(x: Ex, env: readonly string[]): Eff | undefined {
     if (x.type !== "CallExpression" || x.optional || x.typeArguments || x.callee.type !== "Identifier" || x.callee.name !== "caseTagR") return undefined
     this.arity(x.arguments, 4)
@@ -494,7 +510,7 @@ class CompilerReader {
   }
   eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
-    const selected = this.recordSelect(x, env)
+    const selected = this.boolSelect(x, env) ?? this.recordSelect(x, env)
     if (selected !== undefined) return selected
     // DI-72: the three positions `deferred` names; the walk reads them as it did.
     const variable = this.variable(x, env)
@@ -524,7 +540,9 @@ class CompilerReader {
         this.arity(a, 1); const fn = this.arrow(arg(0), env, 0)
         if (fn.body.type === "BlockStatement") return this.loop(fn.body, env)
         const b = this.unwrap(fn.body)
-        if (b.type === "ConditionalExpression") return { _tag: "select", scrutinee: this.term(b.test, env), decision: { _tag: "bool" }, arm0: this.eff(b.consequent, env), arm1: this.eff(b.alternate, env) }
+        const selected = this.suspendedSelect(b, env)
+        if (selected !== undefined) return selected
+        if (b.type === "ConditionalExpression") return bad("boolean decision suspension")
         return { _tag: "suspend", body: this.eff(b, env) }
       }
       case "Effect.flatMap": this.arity(a, 2); return { _tag: "bind", first: e(0), rest: k(1) }
@@ -703,7 +721,7 @@ import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
 import { bindText, internServiceKey, isStringList, methodArgs, methodRow, packageByHead, stringsTerm } from "./package-rows.ts"
 import { foldSql, isRefusal, type Bind, type SqlArg, type SqlPart } from "./sql-fold.ts"
-import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments } from "./forms.ts"
+import { expandForm, effectSlot, fixedEffect, type FormAlgebra, type FormArguments, type FormSelection } from "./forms.ts"
 
 class ForeignRefusal extends Error {
   constructor(readonly code: RefusalCode, readonly value: string) { super(code) }
@@ -730,8 +748,8 @@ const effForms: FormAlgebra<Eff, Term, ServiceKey> = {
   forkScoped: (program, options) => ({ _tag: "withFiber", action: { _tag: "forkScoped", program, options } }),
   acquireRelease: (acquire, release) => ({ _tag: "acquireRelease", acquire, release }),
 }
-const lowerForm = (name: string, depth: number, args: FormArguments<Eff, Term, ServiceKey>): Eff => {
-  const result = expandForm(name, depth, args, effForms)
+const lowerForm = (selection: FormSelection, depth: number, args: FormArguments<Eff, Term, ServiceKey>): Eff => {
+  const result = expandForm(selection, depth, args, effForms)
   return result.ok ? result.value : refuseForeign("E-NODE", `form lowering: ${result.error}`)
 }
 
@@ -857,6 +875,12 @@ class ForeignCompilerReader extends CompilerReader {
     try { return super.literal(y) } catch (e) { if (e instanceof Decline) return refuseForeign("E-ARG-DYNAMIC", "literal"); throw e }
   }
   override recordTerm(_x: Ex, _env: readonly string[]): Term | undefined { return undefined }
+  override boolSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
+  override suspendedSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "ConditionalExpression") return undefined
+    return { _tag: "select", scrutinee: this.term(x.test, env), decision: { _tag: "bool" },
+      arm0: this.eff(x.consequent, env), arm1: this.eff(x.alternate, env) }
+  }
   override recordSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
   override term(x: Ex, env: readonly string[]): Term {
     const y = this.unwrap(x)
@@ -1097,25 +1121,23 @@ class ForeignCompilerReader extends CompilerReader {
     if (head === "Effect.andThen" || head === "Effect.tap") {
       this.arity(args, 1)
       const x = this.unwrap(at(0))
-      const base = head === "Effect.tap" ? "tap" : "andThen"
       if (x.type === "ArrowFunctionExpression" && x.params.length) {
         const a = this.arrow(x, env, 1)
-        return lowerForm(`${base}Continuation`, env.length, { effects: [fixedEffect(first),
+        return lowerForm({ head, arguments: ["effect", "continuation"] }, env.length, { effects: [fixedEffect(first),
           effectSlot(a.env, env.length, inner => this.eff(this.expression(a.body), inner))] })
       }
-      const name = base === "andThen" && x.type === "ArrowFunctionExpression" ? "andThenThunk" : `${base}Effect`
       const body = x.type === "ArrowFunctionExpression" ? this.expression(x.body) : x
-      return lowerForm(name, env.length, { effects: [fixedEffect(first),
+      return lowerForm({ head, arguments: ["effect", head === "Effect.andThen" && x.type === "ArrowFunctionExpression" ? "thunk" : "effect"] }, env.length, { effects: [fixedEffect(first),
         effectSlot(env, env.length, inner => this.eff(body, inner))] })
     }
     if (head === "Effect.as" || head === "Effect.asVoid") {
       this.arity(args, head === "Effect.as" ? 1 : 0)
-      return lowerForm(head === "Effect.as" ? "as" : "asVoid", env.length,
+      return lowerForm({ head, arguments: head === "Effect.as" ? ["effect", "literal"] : ["effect"] }, env.length,
         { effects: [fixedEffect(first)], terms: head === "Effect.as" ? [{ _tag: "lit", value: this.literal(at(0)) }] : [] })
     }
     if (head === "Effect.ensuring") {
       this.arity(args, 1)
-      return lowerForm("ensuring", env.length, { effects: [fixedEffect(first),
+      return lowerForm({ head, arguments: ["effect", "effect"] }, env.length, { effects: [fixedEffect(first),
         effectSlot(env, env.length, inner => this.eff(at(0), inner))] })
     }
     if (["Effect.exit", "Effect.scoped", "Effect.interruptible", "Effect.uninterruptible"].includes(head)) {
@@ -1132,14 +1154,14 @@ class ForeignCompilerReader extends CompilerReader {
       }
       if (head === "Effect.matchCause") {
         const termArm = (name: string) => { const a = arm(name); return this.term(a.value, a.env) }
-        return lowerForm("matchCause", env.length, { effects: [fixedEffect(first)],
+        return lowerForm({ head, arguments: ["effect", "termArm", "termArm"] }, env.length, { effects: [fixedEffect(first)],
           terms: [termArm("onSuccess"), termArm("onFailure")] })
       }
       const effectArm = (name: string) => (offset: number, count: number) => {
         const a = arm(name)
         return effectSlot(a.env, env.length, inner => this.eff(a.value, inner))(offset, count)
       }
-      return lowerForm("matchCauseEffect", env.length, { effects: [fixedEffect(first),
+      return lowerForm({ head, arguments: ["effect", "handlers"] }, env.length, { effects: [fixedEffect(first),
         effectArm("onSuccess"), effectArm("onFailure")] })
     }
     if (head === "Effect.provideService") { this.arity(args, 2); const key = this.key(at(0), env); return { _tag: "provideService", body: first, key, value: { _tag: "lit", value: this.provided(key, at(1)) } } }
@@ -1156,7 +1178,7 @@ class ForeignCompilerReader extends CompilerReader {
       const inScope = head === "Effect.forkIn", index = inScope ? 1 : 0
       const daemon = head !== "Effect.forkChild"
       if (args.length !== index && args.length !== index + 1) return refuseForeign("E-BIND-SHAPE", "arity")
-      if (args.length === index) return lowerForm(`${head.slice("Effect.".length)}Default`, env.length,
+      if (args.length === index) return lowerForm({ head, arguments: inScope ? ["effect", "term"] : ["effect"] }, env.length,
         { effects: [fixedEffect(first)], terms: inScope ? [this.term(at(0), env)] : [] })
       const options = this.options(at(index), daemon)
       return { _tag: "withFiber", action: inScope ? { _tag: "forkIn", program: first, scope: this.term(at(0), env), options } : head === "Effect.forkScoped" ? { _tag: "forkScoped", program: first, options } : { _tag: "fork", program: first, options } }
@@ -1354,7 +1376,7 @@ class ForeignCompilerReader extends CompilerReader {
     // property of a binder (`sql.reserve`) is a head the table does not carry.
     if (x.type !== "CallExpression") {
       const pkg = this.packageOf(x)
-      if (pkg) return lowerForm("yieldKey", env.length, { effects: [], keys: [this.packageKey(pkg)] })
+      if (pkg) return lowerForm({ head: "yield* Key", arguments: ["key"] }, env.length, { effects: [], keys: [this.packageKey(pkg)] })
       if (x.type === "MemberExpression" && !x.computed && this.variable(x.object, env) !== undefined) return refuseForeign("E-OP-UNKNOWN", memberName(x))
     }
     // `sql\`…\`` on a client binder is the derived form; a tag bound to an import refuses with
@@ -1368,7 +1390,7 @@ class ForeignCompilerReader extends CompilerReader {
     }
     if (x.type === "Identifier" && this.variable(x, env) === undefined && x.name !== "undefined" && !this.bindings.has(x.name)) {
       const decl = this.unwrap(this.declaration(x))
-      if (decl.type === "CallExpression" && this.name(this.unwrap(decl.callee).type === "CallExpression" ? this.call(decl.callee).callee : decl.callee) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(x, env)] })
+      if (decl.type === "CallExpression" && this.name(this.unwrap(decl.callee).type === "CallExpression" ? this.call(decl.callee).callee : decl.callee) === "Context.Service") return lowerForm({ head: "yield* Key", arguments: ["key"] }, env.length, { effects: [], keys: [this.key(x, env)] })
       const previous = this.referenceCut
       this.referenceCut = this.declarations.get(x.name)!.at
       try { return this.eff(decl, env) }
@@ -1395,6 +1417,7 @@ class ForeignCompilerReader extends CompilerReader {
         return this.segment(this.name(callee.callee), callee.arguments, this.eff(this.at(x.arguments, 0), env), env)
       }
       const h = this.name(x.callee)
+      if (h === "ifCase") return refuseForeign("E-OP-UNKNOWN", h)
       if (h === "Effect.fn" || h === "Effect.fnUntraced") return refuseForeign("E-PARAM-SHAPE", "function")
       if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return refuseForeign("E-HANDLER", h)
       if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return refuseForeign("E-ARG-CLOSURE", h)
@@ -1431,7 +1454,7 @@ class ForeignCompilerReader extends CompilerReader {
         if (release.type !== "ArrowFunctionExpression" || release.params.length < 1 || release.params.length > 2) return refuseForeign("E-ARG-CLOSURE", "release")
         const fn = this.arrow(release, env, release.params.length)
         const acquire = this.eff(this.at(x.arguments, 0), env)
-        if (release.params.length === 1) return lowerForm("releaseOne", env.length,
+        if (release.params.length === 1) return lowerForm({ head: h, arguments: ["effect", "releaseOne"] }, env.length,
           { effects: [fixedEffect(acquire), effectSlot(fn.env, env.length,
             inner => this.eff(this.expression(fn.body), inner))] })
         return { _tag: "acquireRelease", acquire, release: this.eff(this.expression(fn.body), fn.env) }
@@ -1446,7 +1469,7 @@ class ForeignCompilerReader extends CompilerReader {
         let value: Lit
         try { value = this.literal(this.at(x.arguments, 0)) } catch { return refuseForeign("E-FAIL-NOT-DOCUMENTED", "literal required") }
         const t: Term = { _tag: "lit", value }
-        return h === "Effect.fail" ? { _tag: "fail", error: t } : lowerForm("die", env.length, { effects: [], terms: [t] })
+        return h === "Effect.fail" ? { _tag: "fail", error: t } : lowerForm({ head: h, arguments: ["literal"] }, env.length, { effects: [], terms: [t] })
       }
       if (h === "Effect.provideService") {
         this.arity(x.arguments, 3)
@@ -1474,7 +1497,7 @@ class ForeignCompilerReader extends CompilerReader {
     }
     if (x.type !== "CallExpression" && (x.type === "Identifier" || x.type === "MemberExpression" && !x.computed)) {
       const h = this.name(x)
-      if (h === "Effect.void" || h === "Effect.yieldNow") return lowerForm(h.slice("Effect.".length), env.length, { effects: [] })
+      if (h === "Effect.void" || h === "Effect.yieldNow") return lowerForm({ head: h, arguments: [] }, env.length, { effects: [] })
     }
     return super.eff(x, env)
   }

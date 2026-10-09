@@ -1,0 +1,2 @@
++ bun ts/eff/ingest/render-readme.ts
+PASS generate: requested producers ran in dependency order

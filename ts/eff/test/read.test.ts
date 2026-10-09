@@ -26,7 +26,8 @@ const refusal = (source: string): Refusal => {
 
 describe("the profile", () => {
   test("retains the declared head and native row inventory", () => {
-    expect(heads.length).toBe(60)
+    expect(heads.length).toBe(61)
+    expect(heads).toContain("ifCase")
     expect(heads).toContain("Scope.Scope")
     // one row per spelling key: a read-modify-write row is its face, and its function is no
     // trailing name (the state plan's T5)
@@ -636,6 +637,32 @@ describe("conditional handlers", () => {
 // images the retired hand reader refused; each expected JSON is Lean's own reader's
 // (`Api.roundTrip`, `OCaml5.Eff.effV`) for the same program.
 describe("the images only the table reader reads", () => {
+  test("the boolean decision: all three thunks capture without adding binders", () => {
+    expect(json("Effect.flatMap(Effect.succeed(true), (a0) => ifCase(() => a0, () => Effect.succeed(a0), () => Effect.fail(a0)))")).toBe(
+      '["bind",["succeed",["lit",["bool",true]]],["select",["var",0],["bool"],["succeed",["var",0]],["fail",["var",0]]]]')
+  })
+  test("the boolean decision refuses malformed calls, thunks, and escaped captures", () => {
+    const bodies = ["a0", "Effect.succeed(a0)", "Effect.fail(a0)"]
+    const thunks = bodies.map(body => `() => ${body}`)
+    const call = (args: readonly string[], head = "ifCase") =>
+      `Effect.flatMap(Effect.succeed(true), (a0) => ${head}(${args.join(", ")}))`
+    for (const source of [
+      call(thunks.slice(0, 2)), call([...thunks, "0"]), call(thunks, "ifCase<number>"), call(thunks, "ifCase?."),
+      "Effect.suspend(() => true ? Effect.succeed(1) : Effect.succeed(2))",
+      "Effect.flatMap(Effect.succeed(true), (ifCase) => ifCase(() => ifCase, () => Effect.succeed(ifCase), () => Effect.succeed(ifCase)))",
+    ]) expect(refusal(source)).toBeDefined()
+    for (let index = 0; index < thunks.length; index++) {
+      for (const malformed of [
+        `a1 => ${bodies[index]}`, `(): unknown => ${bodies[index]}`, `async () => ${bodies[index]}`,
+        `<T>() => ${bodies[index]}`, `() => { return ${bodies[index]} }`, "function* () { yield 1 }",
+      ]) {
+        const args = [...thunks]; args[index] = malformed
+        expect(refusal(call(args))).toBeDefined()
+      }
+      const args = [...thunks]; args[index] = thunks[index]!.replaceAll("a0", "a1")
+      expect(refusal(call(args))).toEqual({ _tag: "unknownIdent", name: "a1" })
+    }
+  })
   test("the option decision: its second arm is under one binder", () => {
     expect(json("Effect.flatMap(Effect.succeed(1), (a0) => optionCase(a0, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1)))")).toBe(
       '["bind",["succeed",["lit",["nat",1]]],["select",["var",0],["option"],["succeed",["lit",["unit"]]],["succeed",["var",1]]]]')

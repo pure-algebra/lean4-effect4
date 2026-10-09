@@ -1,12 +1,45 @@
 import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
-import { readPrintedSource as ck } from "../ck.ts"
-import { readPrintedSource as oxc } from "../oxc.ts"
+import { readPrintedSource as ck, recognizeSource as foreignCk } from "../ck.ts"
+import { readPrintedSource as oxc, recognizeSource as foreignOxc } from "../oxc.ts"
 import { effJson } from "../../json.gen.ts"
 
 for (const readPrintedSource of [ck, oxc]) {
 test("the compiler reader recovers the original printed program", () => {
   expect(readPrintedSource("Effect.succeed(12)")).toEqual({ _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 12 } } })
+})
+
+test("the printed boolean thunks capture the caller without adding a binder", () => {
+  const source = "Effect.flatMap(Effect.succeed(true), (a0) => ifCase(() => a0, () => Effect.succeed(a0), () => Effect.fail(a0)))"
+  expect(effJson(readPrintedSource(source))).toEqual([
+    "bind", ["succeed", ["lit", ["bool", true]]],
+    ["select", ["var", 0], ["bool"], ["succeed", ["var", 0]], ["fail", ["var", 0]]],
+  ])
+})
+
+test("the printed boolean row refuses noncanonical calls and thunks", () => {
+  const bodies = ["a0", "Effect.succeed(a0)", "Effect.fail(a0)"]
+  const thunks = bodies.map(body => `() => ${body}`)
+  const call = (args: readonly string[], head = "ifCase") =>
+    `Effect.flatMap(Effect.succeed(true), (a0) => ${head}(${args.join(", ")}))`
+  for (const source of [
+    call(thunks.slice(0, 2)), call([...thunks, "0"]), call(thunks, "ifCase<number>"), call(thunks, "ifCase?."),
+    "Effect.suspend(() => true ? Effect.succeed(1) : Effect.succeed(2))",
+    "Effect.flatMap(Effect.succeed(true), (ifCase) => ifCase(() => ifCase, () => Effect.succeed(ifCase), () => Effect.succeed(ifCase)))",
+  ]) expect(() => readPrintedSource(source)).toThrow()
+  for (let index = 0; index < thunks.length; index++) {
+    for (const malformed of [
+      `a1 => ${bodies[index]}`, `(): unknown => ${bodies[index]}`, `async () => ${bodies[index]}`,
+      `<T>() => ${bodies[index]}`, `() => { return ${bodies[index]} }`, "function* () { yield 1 }",
+    ]) {
+      const args = [...thunks]; args[index] = malformed
+      expect(() => readPrintedSource(call(args))).toThrow()
+    }
+  }
+  for (let index = 0; index < thunks.length; index++) {
+    const args = [...thunks]; args[index] = thunks[index]!.replaceAll("a0", "a1")
+    expect(() => readPrintedSource(call(args))).toThrow()
+  }
 })
 
 test("printed service identifiers are preserved by the separate printer entrypoint", () => {
@@ -112,3 +145,36 @@ test("a printed getter refuses an Effect head shadowed by a callback binder", ()
 test("the compiler reader refuses paths whose components exceed exact integers", () => {
   expect(() => ck("Effect.provide(Effect.succeed(7), L_9007199254740992)")).toThrow()
 })
+
+// The two source profiles stay separate: only the printed profile changes its boolean image.
+for (const recognizeSource of [foreignCk, foreignOxc]) {
+  test("foreign recognition retains its former suspended conditional", () => {
+    const source = 'import { Effect } from "effect"\nexport const main = Effect.flatMap(Effect.succeed(true), (flag) => Effect.suspend(() => flag ? Effect.succeed(1) : Effect.succeed(2)))'
+    const verdicts = recognizeSource(source, "legacy-boolean.ts")
+    expect(verdicts.length).toBe(1)
+    const verdict = verdicts[0]!
+    expect(verdict.kind).toBe("lifted")
+    if (verdict.kind !== "lifted") throw new Error("expected retained foreign conditional")
+    expect(effJson(verdict.eff)).toEqual([
+      "bind", ["succeed", ["lit", ["bool", true]]],
+      ["select", ["var", 0], ["bool"], ["succeed", ["lit", ["nat", 1]]], ["succeed", ["lit", ["nat", 2]]]],
+    ])
+  })
+  test("foreign recognition still refuses malformed suspended conditionals", () => {
+    for (const body of [
+      "Effect.suspend(flag => flag ? Effect.succeed(1) : Effect.succeed(2))",
+      "Effect.suspend(() => missing ? Effect.succeed(1) : Effect.succeed(2))",
+      "true ? Effect.succeed(1) : Effect.succeed(2)",
+    ]) {
+      const verdicts = recognizeSource(`import { Effect } from "effect"\nexport const main = ${body}`, "legacy-boolean-refusal.ts")
+      expect(verdicts.length).toBe(1)
+      expect(verdicts[0]!.kind).toBe("refusal")
+    }
+  })
+  test("foreign recognition does not acquire the printed helper", () => {
+    const source = 'import { Effect } from "effect"\nexport const main = ifCase(() => true, () => Effect.succeed(1), () => Effect.succeed(2))'
+    const verdicts = recognizeSource(source, "printed-boolean-foreign.ts")
+    expect(verdicts.length).toBe(1)
+    expect(verdicts[0]!.kind).toBe("refusal")
+  })
+}

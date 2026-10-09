@@ -1,0 +1,10 @@
++ lake build Drivers.TsGen
+✔ [126/129] Built Effect4.Codegen.Forms (1.4s)
+✔ [127/129] Built OCaml5.Eff.World (3.6s)
+✔ [128/129] Built OCaml5.Eff.Emit (1.4s)
+✔ [129/129] Built Drivers.TsGen (4.4s)
+Build completed successfully (129 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run tools/Drivers/TsGen.lean /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-k5zwonoj/ts/eff
+TsGen: 28 families (10 tagged, 7 literals, 7 struct, 4 array), 165 constructors; profile 61 heads, 45 atoms, 23 rows; packages 2 tables, 8 rows, address effect@4.0.0-rc.112 + lean4-typescript@f5878bf879bd5712db964c2cd12802748c707605
+wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts, test/type-projection.gen.json under /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-k5zwonoj/ts/eff
+PASS generate: requested producers ran in dependency order

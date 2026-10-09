@@ -1,0 +1,6 @@
++ lake build Drivers.TsGen
+Build completed successfully (129 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run tools/Drivers/TsGen.lean /private/tmp/effect4-authoring-branches-ts-check/ts/eff
+TsGen: 28 families (10 tagged, 7 literals, 7 struct, 4 array), 165 constructors; profile 61 heads, 45 atoms, 23 rows; packages 2 tables, 8 rows, address effect@4.0.0-rc.112 + lean4-typescript@f5878bf879bd5712db964c2cd12802748c707605
+wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts, test/type-projection.gen.json under /private/tmp/effect4-authoring-branches-ts-check/ts/eff
+PASS generate: requested producers ran in dependency order

@@ -11,5 +11,5 @@ export const structuralFail: Effect.Effect<never, NotFound, never> = Effect.fail
 export const structuralUnion: Effect.Effect<never, NotFound | Unauthorized, never> = Effect.fail({ _tag: "Unauthorized" as const, reason: "bad token" })
 export const taggedArgs = new NotFound({ _tag: "NotFound", id: 9 })
 export const wrongField = new NotFound({ id: "9" })
-// DI-55's finding F3, open before E2: the printed `select` infers one arm's error, not the union
+// DI-55's finding F3: the former raw suspension infers one arm's error, not the union
 export const selectUnion: Effect.Effect<never, NotFound | Unauthorized, never> = Effect.flatMap(Effect.succeed(true), (a0) => Effect.suspend(() => a0 ? Effect.fail(new NotFound({ id: 9 })) : Effect.fail(new Unauthorized({ reason: "bad token" }))))

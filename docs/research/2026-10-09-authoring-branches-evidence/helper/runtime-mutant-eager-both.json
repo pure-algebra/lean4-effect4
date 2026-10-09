@@ -1,0 +1,15 @@
+{
+  "label": "runtime-mutant-eager-both",
+  "argv": [
+    "bun",
+    "--no-install",
+    "test",
+    "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts",
+    "--test-name-pattern",
+    "an unselected poisoned constructor never runs"
+  ],
+  "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+  "exitCode": 1,
+  "stdout": "bun test v1.4.2 (744846f84)\n",
+  "stderr": "\nif-case.test.ts:\n2547 | /** @internal */\n2548 | export const runSyncWith = context => {\n2549 |   const runSyncExit = runSyncExitWith(context);\n2550 |   return effect => {\n2551 |     const exit = runSyncExit(effect);\n2552 |     if (exit._tag === \"Failure\") throw causeSquash(exit.cause);\n                                                                    ^\nerror: unselected constructor\n      at <anonymous> (/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/internal/effect.js:2552:62)\n      at <anonymous> (/private/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts:42:19)\n(fail) an unselected poisoned constructor never runs [0.63ms]\n\n 0 pass\n 3 filtered out\n 1 fail\nRan 1 test across 1 file. [48.00ms]\n"
+}

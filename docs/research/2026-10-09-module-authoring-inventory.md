@@ -9,6 +9,9 @@ The Pull receipt is `docs/research/2026-10-09-pull-protocol-receipt.md`.
 The Channel slice starts from `9d489341525ea4a55bb9da512ae35809c0175093` on `codex/channel-transforms`.
 Its plan is `docs/research/2026-10-09-channel-transforms-plan.md`.
 This update records its named declarations, source adapter and transform controls.
+The following authoring slice repairs TypeScript boolean branch printing through the shared template.
+Its plan is `docs/research/2026-10-09-authoring-branches-plan.md`.
+Its checked receipt is `docs/research/2026-10-09-authoring-branches-receipt.md`.
 The existing module survey reads latest (Effect 4.0.1), under decisions rows 331 and 335.
 `tools/ModuleSurvey/README.md` states its commands and limits.
 A dependency edge identifies implementation candidates, not shared meaning or a proof obligation.
@@ -54,6 +57,40 @@ A comparison needs its own observation, assumptions and retained evidence.
 | Target checking and execution | Existing tsgo 7 and host harnesses; `docs/GENERATED.md` | Printing, target acceptance and finite execution are different observations | Record each stage's command and result |
 | Evidence reporting | `Reach`, `PartReach`; `Test/Dogfood/Stage.lean` | Existing reports already distinguish admission, output, printing and reading | Extend projections and receipts when a consumer needs them |
 
+## TypeScript reader consolidation
+
+The shared selection plan is `docs/research/2026-10-09-ingest-form-selection-plan.md`.
+Its checked receipt is `docs/research/2026-10-09-ingest-form-selection-receipt.md`.
+The implementation deepens `expandForm` in `ts/eff/ingest/forms.ts`.
+Each reader supplies a recognized head, ordered argument classes and the existing argument readers.
+The generated `forms` table chooses the expansion and owns its inserted binders.
+The argument-class type projects that table instead of repeating an enumeration.
+The interface replaces the former string-identifier entrypoint.
+It introduces no program representation or foreign spelling.
+
+CK and OXC share the parser under decisions row 168.
+Their separate walks remain in `ts/eff/ingest/ck.ts` and `ts/eff/ingest/oxc.ts`.
+Their agreement compares walks, not independent parsers.
+The before-and-after comparison retains each reader's full verdict, including its source positions and refusal details.
+Existing independent expected trees check the shared expansion at several binder depths.
+
+| Responsibility | Current owner | Consolidation or next scoped change |
+| --- | --- | --- |
+| Recognize source and captures | Each reader's existing walk | Keep TypeScript syntax checks and refusal ordering local |
+| Select and expand a derived form | `expandForm` and `expandTemplate` in `ts/eff/ingest/forms.ts` | Select through generated heads and argument classes; remove reader-owned variant names |
+| Construct canonical expressions | `exprForms` in `ts/eff/ingest/oxc.ts` | A future writer can consume `ts/eff/templates.gen.ts` instead of repeating canonical spellings |
+| Construct output records | Each `recognizeSource` and `ts/eff/ingest/contract.ts` | Consider one result constructor for wire bytes and generated refusal details; leave refusal selection with each reader |
+| Read printed selection forms | `CompilerReader` and the generated canonical reader in `ts/eff/read.ts` | Repair CK's missing option and tag heads through a named printed-image contract |
+
+The retained `canonical-gaps.ts` probe uses printed-source entrypoints only.
+Its directory is `docs/research/2026-10-09-ingest-form-selection-evidence/`.
+CK refuses `optionCase` and `caseTag`; OXC and the canonical reader recover the same trees.
+The neighboring branch and payload controls pass through all three readers.
+This finite observation uses closed expressions and an empty row table.
+It establishes no typing or execution claim.
+Adding those heads widens CK's printed-image domain and requires a separate source reader slice.
+It leaves the foreign source domain unchanged.
+
 ## Observed authoring gaps
 
 | Observation | Kind and evidence | Smallest useful response |
@@ -63,7 +100,7 @@ A comparison needs its own observation, assumptions and retained evidence.
 | Declared operations avoid both workarounds | Existing capability; `ProtocolDefinitions` in `Test/Program/Pull.lean` | Prefer one `eff_module` declaration list over repeated annotations |
 | Source metadata no longer needs hand repetition on the declared path | `Source.fromDefinitions` derives its types and invocations from supplied operation declarations | Use generated `definitions` fields; keep the raw Source as an explicit authoring boundary |
 | Supplied declarations can differ from an independently installed block | `copiedMetadata` in `Test/Program/Channel.lean` retains that acceptance with a conflicting copied column | A future module-relative adapter can resolve and compare the existing installed declarations; no second program representation is needed |
-| A boolean branch's answer variants fail target inference | Retained tsgo `TS2375` in `docs/research/2026-10-09-channel-transforms-branch-refusal/`; decisions rows 218 and 266 already record the branch gap | Land the ruled `ifCase` printer and its reconstruction laws; the current producer explicitly ascribes both branch values |
+| Boolean branches previously lost target inference across distinct columns | Repaired by the shared `ifCase` template; the original `TS2375` packet remains retained | Keep authors on ordinary `ifElse`; infer separate branch columns and defer the condition and both branches |
 | Printed handle request headers remain unreadable | The Channel packet retains `ReadRefusal.shape "definition"`; existing Queue and Semaphore controls expect the same refusal | Extend the existing type reader and its exact reconstruction contract in a separate slice |
 | A raw tag selector accepts another declared union | Protocol premise; `other` in `Test/Program/Pull.lean` types and runs outside the Pull protocol | Offer a protocol-checked entry only when raw callers need admission; generic typing is not protocol admission |
 | Empty batches inhabit the list type | Data-language limit; `pulled?` rejects the empty batch that generic typing admits | Keep the producer's nonempty premise explicit; do not introduce a refinement type without its consumers and lowering plan |
@@ -74,7 +111,9 @@ A comparison needs its own observation, assumptions and retained evidence.
 
 A protocol-typed literal helper remains a candidate for inline authoring.
 The declared-operation example removes those annotations from its single-outcome bodies.
-A boolean branch still needs both annotations for target inference until decisions row 218 lands.
+Boolean branches now use the shared printer and need neither branch annotation.
+The same reader laws apply to the new canonical image.
+The scoped receipt records the compiler, reconstruction and finite host evidence.
 Do not add another public protocol record solely to carry the same two type columns.
 
 ## Concrete authoring example

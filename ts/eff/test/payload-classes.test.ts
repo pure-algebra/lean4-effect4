@@ -26,7 +26,7 @@ describe("payload classes under tsgo 7", () => {
       "11 TS2375", // nor under a union of classes
       "12 TS2353", // the constructor takes no `_tag`
       "13 TS2322", // the constructor keeps its fields' types
-      "15 TS2375", // DI-55's finding F3: the printed `select` infers one arm's error
+      "15 TS2375", // DI-55's finding F3: the former raw suspension infers one arm's error
     ])
   })
 })

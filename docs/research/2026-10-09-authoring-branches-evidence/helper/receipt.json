@@ -1,0 +1,245 @@
+{
+  "format": "effect4-if-case-helper-receipt-v1",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "compilerBinaryVersion": "Version 7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "node": "v22.23.2",
+  "wrongHelpersRejected": [
+    "eager-condition",
+    "eager-both",
+    "swapped-selection"
+  ],
+  "commands": [
+    {
+      "label": "compiler-version",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "Version 7.0.0-dev.20260629.1\n",
+      "stderr": ""
+    },
+    {
+      "label": "runtime-version",
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "1.4.2\n",
+      "stderr": ""
+    },
+    {
+      "label": "node-version",
+      "argv": [
+        "node",
+        "--version"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "v22.23.2\n",
+      "stderr": ""
+    },
+    {
+      "label": "compiler-discovery",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json",
+        "--listFilesOnly"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es5.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2016.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2018.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2019.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2021.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.dom.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.dom.iterable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.dom.asynciterable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.webworker.importscripts.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.scripthost.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.core.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.collection.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.generator.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.iterable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.promise.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.proxy.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.reflect.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.symbol.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2015.symbol.wellknown.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2016.array.include.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2016.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.arraybuffer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.date.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.object.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.sharedmemory.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.string.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2017.typedarrays.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2018.asyncgenerator.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2018.asynciterable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2018.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2018.promise.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2018.regexp.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2019.array.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2019.object.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2019.string.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2019.symbol.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2019.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.bigint.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.date.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.promise.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.sharedmemory.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.string.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.symbol.wellknown.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2020.number.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2021.promise.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2021.string.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2021.weakref.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2021.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.array.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.error.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.intl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.object.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.string.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.regexp.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2025.float16.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.esnext.disposable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.decorators.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.decorators.legacy.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview-darwin-arm64/lib/lib.es2022.full.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Types.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/HKT.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Function.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Ordering.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Order.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Combiner.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Reducer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Equivalence.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Predicate.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Inspectable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Pipeable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Unify.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Utils.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Result.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Filter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Option.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Record.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Array.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Hash.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Equal.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Context.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Exit.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/LogLevel.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Duration.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/NonEmptyIterable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Chunk.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Deferred.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Latch.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/MutableList.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/MutableRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Scope.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/PubSub.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Pull.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Scheduler.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Queue.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/DateTime.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Cron.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Schedule.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Take.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Tracer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Channel.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/BigDecimal.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Differ.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Formatter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Graph.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/HashMap.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/HashSet.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Data.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/http/Cookies.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Redactable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Redacted.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/http/Headers.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/http/UrlParams.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/internal/schemaError.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/JsonPatch.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/JsonSchema.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/net/NetAddress.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/net/IpInterface.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/net/IpNetwork.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/StandardSchema.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SchemaIssue.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SchemaGetter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SchemaTransformation.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SchemaAST.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Optic.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SchemaParser.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SchemaRepresentation.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Struct.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Schema.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Brand.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ByteSize.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ExecutionPlan.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Sink.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Stream.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Layer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Metric.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/PlatformError.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/FileSystem.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Logger.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/References.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Fiber.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Cause.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Clock.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Request.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/MutableHashMap.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Cache.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/PrimaryKey.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/reactivity/Reactivity.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Semaphore.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/sql/SqlError.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/sql/SqlConnection.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/sql/Statement.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/sql/SqlClient.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Path.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/persistence/KeyValueStore.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/persistence/Redis.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/persistence/Persistence.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/persistence/Persistable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/RequestResolver.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Effect.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/internal/arbitrary/runner.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Arbitrary.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/BigInt.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Boolean.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ChannelSchema.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ConfigProvider.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Config.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Console.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Crypto.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Effectable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ErrorReporter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/FiberHandle.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/FiberMap.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/FiberSet.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/HashRing.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Iterable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/JsonPointer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/RcMap.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/LayerMap.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/RcRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/LayerRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ManagedRuntime.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Match.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/MutableHashSet.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Newtype.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Number.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/PartitionedSemaphore.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Pool.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Random.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Ref.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/RegExp.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SynchronizedRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ScopedRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Resource.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Runtime.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/ScopedCache.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Stdio.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/String.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/SubscriptionRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Symbol.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Terminal.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Trie.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/Tuple.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxChunk.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxDeferred.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxHashMap.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxHashSet.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxPriorityQueue.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxQueue.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxPubSub.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxReentrantLock.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxSemaphore.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/TxSubscriptionRef.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/UndefinedOr.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/index.d.ts\n/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/control.ts\n/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/prelude-atoms.gen.ts\n/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/select-controls.ts\n/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/utility.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/header.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/readable.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/globals.typedarray.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/buffer.buffer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/globals.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/abortcontroller.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/blob.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/console.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/crypto.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/domexception.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/encoding.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/events.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/fetch.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/importmeta.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/messaging.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/navigator.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/performance.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/storage.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/streams.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/timers.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/web-globals/url.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/assert.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/assert/strict.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/async_hooks.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/buffer.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/child_process.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/cluster.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/console.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/constants.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/crypto.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/dgram.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/diagnostics_channel.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/dns.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/dns/promises.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/domain.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/events.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/ffi.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/fs.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/fs/promises.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/http.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/http2.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/https.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/inspector.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/inspector.generated.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/inspector/promises.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/module.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/net.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/os.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/path.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/path/posix.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/path/win32.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/perf_hooks.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/process.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/punycode.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/querystring.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/quic.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/readline.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/readline/promises.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/repl.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/sea.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/sqlite.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/stream.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/stream/consumers.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/stream/iter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/stream/promises.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/stream/web.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/string_decoder.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/test.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/test/reporters.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/timers.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/timers/promises.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/tls.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/trace_events.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/tty.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/url.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/util.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/util/types.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/v8.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/vfs.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/vm.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/wasi.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/worker_threads.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/zlib.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/zlib/iter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/node/index.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/fetch.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/formdata.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/connector.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/client-stats.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/client.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/errors.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/dispatcher.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/global-dispatcher.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/global-origin.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/pool-stats.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/pool.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/handlers.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/balanced-pool.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/round-robin-pool.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/h2c-client.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/dispatcher1-wrapper.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/mock-interceptor.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/mock-call-history.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/mock-agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/mock-client.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/mock-pool.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/snapshot-agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/mock-errors.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/proxy-agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/socks5-proxy-agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/env-http-proxy-agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/retry-handler.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/retry-agent.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/api.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/cache-interceptor.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/interceptors.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/util.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/cookies.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/patch.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/websocket.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/eventsource.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/diagnostics-channel.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/content-type.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/cache.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/undici-types/index.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/globals.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/s3.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/fetch.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/jsx.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/bun.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/extensions.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/devserver.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/ffi.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/html-rewriter.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/jsc.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/sqlite.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/vendor/expect-type/utils.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/vendor/expect-type/overloads.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/vendor/expect-type/branding.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/vendor/expect-type/messages.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/vendor/expect-type/index.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/test.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/wasm.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/overrides.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/deprecated.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/redis.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/shell.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/serve.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/sql.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/security.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/bundle.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/bun.ns.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/bun-types/index.d.ts\n/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@types/bun/index.d.ts\n",
+      "stderr": ""
+    },
+    {
+      "label": "compiler-positive",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "runtime-positive-before",
+      "argv": [
+        "bun",
+        "--no-install",
+        "test",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "bun test v1.4.2 (744846f84)\n",
+      "stderr": "\nif-case.test.ts:\n(pass) condition, selected construction and selected effect wait for execution [2.38ms]\n(pass) each run reevaluates the condition and constructs only that run's selected arm [0.07ms]\n(pass) an unselected poisoned constructor never runs [0.04ms]\n(pass) selected combined failures retain the selected writes and the entire cause [1.08ms]\n\n 4 pass\n 0 fail\n 16 expect() calls\nRan 4 tests across 1 file. [161.00ms]\n"
+    },
+    {
+      "label": "compiler-mutant-eager-condition",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "runtime-mutant-eager-condition",
+      "argv": [
+        "bun",
+        "--no-install",
+        "test",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts",
+        "--test-name-pattern",
+        "condition, selected construction and selected effect wait for execution"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 1,
+      "stdout": "bun test v1.4.2 (744846f84)\n",
+      "stderr": "\nif-case.test.ts:\n10 |     const program = ifCase(\n11 |       () => { calls.condition++; return selected },\n12 |       () => { calls.trueConstruct++; return Effect.sync(() => { calls.trueRun++; return 11 }) },\n13 |       () => { calls.falseConstruct++; return Effect.sync(() => { calls.falseRun++; return 22 }) },\n14 |     )\n15 |     expect(calls).toEqual({ condition: 0, trueConstruct: 0, falseConstruct: 0, trueRun: 0, falseRun: 0 })\n                       ^\nerror: expect(received).toEqual(expected)\n\n  {\n-   \"condition\": 0,\n+   \"condition\": 1,\n    \"falseConstruct\": 0,\n    \"falseRun\": 0,\n    \"trueConstruct\": 0,\n    \"trueRun\": 0,\n  }\n\n- Expected  - 1\n+ Received  + 1\n\n      at <anonymous> (/private/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts:15:19)\n(fail) condition, selected construction and selected effect wait for execution [8.07ms]\n\n 0 pass\n 3 filtered out\n 1 fail\n 1 expect() calls\nRan 1 test across 1 file. [57.00ms]\n"
+    },
+    {
+      "label": "compiler-mutant-eager-both",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "runtime-mutant-eager-both",
+      "argv": [
+        "bun",
+        "--no-install",
+        "test",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts",
+        "--test-name-pattern",
+        "an unselected poisoned constructor never runs"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 1,
+      "stdout": "bun test v1.4.2 (744846f84)\n",
+      "stderr": "\nif-case.test.ts:\n2547 | /** @internal */\n2548 | export const runSyncWith = context => {\n2549 |   const runSyncExit = runSyncExitWith(context);\n2550 |   return effect => {\n2551 |     const exit = runSyncExit(effect);\n2552 |     if (exit._tag === \"Failure\") throw causeSquash(exit.cause);\n                                                                    ^\nerror: unselected constructor\n      at <anonymous> (/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/dist/internal/effect.js:2552:62)\n      at <anonymous> (/private/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts:42:19)\n(fail) an unselected poisoned constructor never runs [0.63ms]\n\n 0 pass\n 3 filtered out\n 1 fail\nRan 1 test across 1 file. [48.00ms]\n"
+    },
+    {
+      "label": "compiler-mutant-swapped-selection",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "runtime-mutant-swapped-selection",
+      "argv": [
+        "bun",
+        "--no-install",
+        "test",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts",
+        "--test-name-pattern",
+        "condition, selected construction and selected effect wait for execution"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 1,
+      "stdout": "bun test v1.4.2 (744846f84)\n",
+      "stderr": "\nif-case.test.ts:\n11 |       () => { calls.condition++; return selected },\n12 |       () => { calls.trueConstruct++; return Effect.sync(() => { calls.trueRun++; return 11 }) },\n13 |       () => { calls.falseConstruct++; return Effect.sync(() => { calls.falseRun++; return 22 }) },\n14 |     )\n15 |     expect(calls).toEqual({ condition: 0, trueConstruct: 0, falseConstruct: 0, trueRun: 0, falseRun: 0 })\n16 |     expect(Effect.runSync(program)).toBe(selected ? 11 : 22)\n                                         ^\nerror: expect(received).toBe(expected)\n\nExpected: 11\nReceived: 22\n\n      at <anonymous> (/private/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts:16:37)\n(fail) condition, selected construction and selected effect wait for execution [0.52ms]\n\n 0 pass\n 3 filtered out\n 1 fail\n 2 expect() calls\nRan 1 test across 1 file. [48.00ms]\n"
+    },
+    {
+      "label": "runtime-positive-restored",
+      "argv": [
+        "bun",
+        "--no-install",
+        "test",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/if-case.test.ts"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "bun test v1.4.2 (744846f84)\n",
+      "stderr": "\nif-case.test.ts:\n(pass) condition, selected construction and selected effect wait for execution [0.39ms]\n(pass) each run reevaluates the condition and constructs only that run's selected arm [0.08ms]\n(pass) an unselected poisoned constructor never runs [0.06ms]\n(pass) selected combined failures retain the selected writes and the entire cause [0.54ms]\n\n 4 pass\n 0 fail\n 16 expect() calls\nRan 4 tests across 1 file. [48.00ms]\n"
+    },
+    {
+      "label": "compiler-positive-restored",
+      "argv": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l/tsconfig.json"
+      ],
+      "cwd": "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-if-case-5qtx4l_l",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "sourceHashes": {
+    "harness/authoring-branches/check-helper.py": "d865850e7e692eff0149fcc5f25d9d2eddf8b897a2be49c48d68c066df844f34",
+    "harness/ts_packet.py": "745672fbdbff1067ab046285a41948231e1d61c1d737f28bab31bf838bb1d109",
+    "harness/truth/control.ts": "471f71a8eb0121ef49695d5cd9e8ea1435e4b354af3c0e29c3834d8aba77ac00",
+    "harness/truth/prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "harness/truth/select-controls.ts": "239ae29d1713e18bd0ee70524399c23462e5b97f502c87b8238a57d6f9654f9a",
+    "harness/truth/if-case.test.ts": "dc59024263c853738b3892a74370f634c14c1798a88305918ba831363c8a2512"
+  },
+  "compiledHashes": {
+    "control.ts": "471f71a8eb0121ef49695d5cd9e8ea1435e4b354af3c0e29c3834d8aba77ac00",
+    "prelude-atoms.gen.ts": "4153aa0c37e5bf2eec1ebd63f283883e48b7baba65aea1fc63ad1ab958aca921",
+    "select-controls.ts": "239ae29d1713e18bd0ee70524399c23462e5b97f502c87b8238a57d6f9654f9a",
+    "if-case.test.ts": "dc59024263c853738b3892a74370f634c14c1798a88305918ba831363c8a2512",
+    "tsconfig.json": "bc4f8799b38a2e617f356f1ac8c2bf58c4e4e6a82b870913b8e71965ad01c027"
+  },
+  "toolchainHashes": {
+    "effectPackage": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "compilerPackage": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478",
+    "compilerEntry": "d81db91c981d5cddf17283dfb1d8f9ccf1b448c1c446ca6030c7a4d52c3e961a",
+    "bunExecutable": "35d20dd0263e5c950194434b925454fdfa9ba6e4467da960410fa05b08a7a5b5",
+    "nodeExecutable": "18e387c90ab8a8400183e8bdd396376e1e875b91b4c874b894dcade7b35bf572"
+  },
+  "mutantHashes": {
+    "eager-condition": "fee24e5bbab7a488bb17038802c113b2fe7f2e399690b9539fad969642a21617",
+    "eager-both": "8c24cf8c84d6b542d13d17c348f73f8210052e95d1a90052546504f43694864c",
+    "swapped-selection": "9cfca78f408ba9b2eb19683fcd20018237e3e2cc3faa2aaa582fd8f3687b1e44"
+  },
+  "scope": "Exact inferred A/E/R column checks and independent finite helper runtime controls; no general source-to-target simulation"
+}

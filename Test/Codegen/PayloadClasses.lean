@@ -82,16 +82,16 @@ def classUnion : NativeEff := .bind (.fail (notFound 9)) (.fail (unauthorized "b
   ("export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\n" ++
    "export class Unauthorized extends Data.TaggedError(\"Unauthorized\")<{ readonly reason: string }> {}\n" ++
    "export const main: Effect.Effect<never, NotFound | Unauthorized, never> = Effect.flatMap(Effect.fail(new NotFound({ id: 9 })), (a0) => Effect.fail(new Unauthorized({ reason: \"bad token\" })))\n")
--- the same union through `select`: tsgo refuses the printed `Effect.suspend(() => c ? a : b)`
--- (TS2375, DI-55's finding F3, open before E2: TypeScript infers one arm's error, not their union);
--- the red twin `ts/eff/test/red/payload-classes.red.ts` pins it
+-- the same union through `select` prints with independent error columns through `ifCase`
+-- the red twin `ts/eff/test/red/payload-classes.red.ts` retains the former suspension
+-- (TS2375, DI-55's finding F3): TypeScript infers one arm's error in that raw form
 def twoClasses : NativeEff :=
   .bind (.succeed (.lit (.bool true)))
     (.select (.var 0) .bool (.fail (notFound 9)) (.fail (unauthorized "bad token")))
 #guard (Api.printModule "main" twoClasses).map (fun m => String.join (m.decls.map (TypeScript.Render.decl TypeScript.house0))) = some
   ("export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\n" ++
    "export class Unauthorized extends Data.TaggedError(\"Unauthorized\")<{ readonly reason: string }> {}\n" ++
-   "export const main: Effect.Effect<never, NotFound | Unauthorized, never> = Effect.flatMap(Effect.succeed(true), (a0) => Effect.suspend(() => a0 ? Effect.fail(new NotFound({ id: 9 })) : Effect.fail(new Unauthorized({ reason: \"bad token\" }))))\n")
+   "export const main: Effect.Effect<never, NotFound | Unauthorized, never> = Effect.flatMap(Effect.succeed(true), (a0) => ifCase(() => a0, () => Effect.fail(new NotFound({ id: 9 })), () => Effect.fail(new Unauthorized({ reason: \"bad token\" }))))\n")
 -- every route prints as a module, its class declared
 #guard [failDirect, failBound, handledInside, reified, asData].all fun p =>
   match Api.printModule "main" p with
