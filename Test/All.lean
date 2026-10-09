@@ -294,6 +294,7 @@ import Test.Program.TableControls
 import Test.Program.PartsControls
 import Test.Program.SpliceControls
 import Test.Program.EditControls
+import Test.Program.SessionToolControls
 import Test.Program.CallInstance
 import Test.Program.QueryControls
 import Test.Program.BoundsControls

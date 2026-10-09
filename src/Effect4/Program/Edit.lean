@@ -24,6 +24,7 @@ edit as one kind of event. A run of edits is the fold of `feed` (`run`).
 | `EditSession.feed` | a session and an edit | the next session, and what the edit did to the table (`Edit.Delta`) |
 | `EditSession.run` | a session and a list of edits | the session after each edit in turn |
 | `EditSession.view` | a session | the table, its refusals, and the sketch's type |
+| `EditSession.feedStep` | a session and an edit | `feed`'s answer, and the journal's step: the edit, the sub-program it replaced, the delta |
 
 ## What `feed` does
 
@@ -135,6 +136,29 @@ def feed (l : EditSession) : Edit → EditSession × Edit.Delta
         else rechecked
       | _, _, _ => rechecked
     | none => (l, .unchanged)
+
+/-- **The address an edit acts at.** -/
+def _root_.Effect4.Program.Edit.path : Edit → List Nat
+  | .fill a _ => a
+  | .omitAt a _ => a
+
+/-- **One step of the journal**: the edit, the sub-program it replaced, and what it did to the
+table. The replaced sub-program is what an undo puts back (`EditSession.feed_undo`). -/
+structure _root_.Effect4.Program.Edit.Step where
+  /-- the edit -/
+  edit : Edit
+  /-- the sub-program at the edit's address before the edit, where the address held one -/
+  replaced : Option NativeEff
+  /-- what the edit did to the table -/
+  delta : Edit.Delta
+
+/-- **Feed one edit and record it**: the next session, and the journal's step. -/
+def feedStep (l : EditSession) (e : Edit) : EditSession × Edit.Step :=
+  let replaced := match (Node.eff l.sketch.program).at_ e.path with
+    | some (.eff q) => some q
+    | _ => none
+  let (l', delta) := l.feed e
+  (l', ⟨e, replaced, delta⟩)
 
 /-- **A run of edits**: the fold of `feed`. -/
 def run (l : EditSession) (edits : List Edit) : EditSession :=
