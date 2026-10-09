@@ -99,9 +99,50 @@ the layout is a fold. Down, it is the longest path over the flow's edges and its
 await stands below the fiber it waits for. A wait the parent's series makes is a join; any other
 is a cross edge in a lane, with an arrowhead. Variables are de Bruijn levels, read through the
 binder table, with a closed child starting an empty environment. The specimen (`v -F`) draws
-each case. D1 (the algebraic graph with its laws) and D3's laws are next.
+each case.
 
-## 6. Rulings the owner must make
+**Landed (2026-10-09, later)**: D3's laws (`tools/Tools/View/FlowLaws.lean`), at `propext` and
+`Quot.sound`: `lay_good` by fold induction, `assign_meets`, `place_descends` and `place_apart`, for
+every flow and every node width. To make them arithmetic, a part's edges name their ends by
+position, as a de Bruijn index names its binder. Codex's three findings of the same day are
+repaired. A release stands at its scope's close, and an empty race never ends. An await's target
+is read by a fold of the term. D1 is next.
+
+## 6. The laws of D1 and D3, placed before they are worked
+
+The owner asked on 2026-10-09 for D1's and D3's laws as proofs. So these layout laws are
+theorems, beyond the finite checks that row 334, point 3 asks of a tool. Each is a tool's named
+law, which counts as load by its theorem's name (row 336, point 8). None is a registry claim.
+
+**The concept.** Each law serves concept 7 of `docs/core/semantics.md`
+(`initial-algebras-folds`): a traversal is a fold, and an invariant of a fold is proved by fold
+induction. No law serves a requirement row (R1 to R14) directly. The view's reading of an
+agent's place (D5) and the selected address of R14 build on these laws.
+
+| Law | Its statement | Its consumer |
+| --- | --- | --- |
+| `lay_good` (D3) | every part the layout fold lays out is well formed: each edge runs forward among its items, each node stands inside its part's width, and of two nodes, either they stand in different columns or the first reaches the second along edges | `layout_descends`, `layout_apart` |
+| `assign_meets` (D3) | heights assigned along an order of the items meet every constraint whose source comes before its target in that order | `layout_descends` |
+| `layout_descends` (D3) | in every flow's layout, the target of each edge stands at or below its source's bottom | the drawing: a forward edge needs no arrowhead (row 337, point 1); the check `graph-edges-descend` |
+| `layout_apart` (D3) | in every flow's layout, any two boxes stand apart | the drawing; the check `graph-boxes-apart` |
+| the axioms of D1 | the algebraic graph's eight axioms (Mokhov) hold of its edge-set model, as equalities | the order of a flow as a fold into the algebraic graph, and the faithfulness law below |
+| faithfulness (D1, next) | when the program runs one node before another, the layout reaches the second from the first | the reading "above means before" |
+
+**The reach.** The layout laws hold for every flow, at the level of item positions. A route is
+drawn between two items' keys, so the key-level checks agree with these laws when keys are
+distinct. `ofProgram`'s keys are addresses, and no theorem states their distinctness yet.
+
+**What the laws do not establish.**
+
+- No law says when a fiber runs. The layout's order is a reading of the program's structure.
+  The hidden edge from a detached fiber's exit makes room in the drawing, and orders no run.
+- Drawn lines may cross. A lane at the right crosses what lies between its ends.
+- Cross edges are accepted by Kahn's algorithm and a validity check. If the check fails, the
+  layout keeps the flow's own edges and draws every wait in a lane. So the laws hold either way.
+  That Kahn's algorithm orders every graph with no cycle stays a finite fact.
+- Points (ports, joins, empty branches) are not boxes. The laws say nothing of their width.
+
+## 7. Rulings the owner must make
 
 The owner chose to go with the recommendations on open decisions (row 337). These are the new
 marks this note recommends, for confirmation:
@@ -115,7 +156,7 @@ marks this note recommends, for confirmation:
    takes a hue only when the hue is on.
 5. **Two graphs**: side by side, linked by address.
 
-## 7. What this note does not establish
+## 8. What this note does not establish
 
 - The literature rows marked "recalled" are from memory; the others cite the page read, as
   abstracts and excerpts, not whole papers.
