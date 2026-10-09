@@ -87,19 +87,27 @@ A program has folds, a journaled run with replay, and a printed image that reads
   The checker is natural in its base too, so a subtree's table computed once stands at any
   address (`checker-base-natural`, `src/Effect4/Laws/Program/Typing/Rebase.lean`). A moved
   subtree's bytes, levels and layer-reference targets still depend on where it stands.
-- **The view** (row 336; the [visual pipeline note](research/2026-10-09-visual-pipeline.md)).
+- **The view** (rows 336 and 337; the [visual pipeline note](research/2026-10-09-visual-pipeline.md)).
   A picture is data in Lean: a page, its drawing calls and their device calls, each with the key
   of its object (`tools/Tools/View/`). A move by whole pixels commutes with the lowering
   (`lowerCall_move`), so the motion between two frames is exact. The frames of a program built
   by edits replay any session request file through the session tool. `tools/view/v NAME` plays
   them in a window; SVG and the console are two more outputs of the same calls. Each page shows
-  the program's TypeScript beside its tree (`tools/Tools/Code/`). A graph of any shape lays out
-  by ranks (`ranks_forward`), with cycles as back edges and every edge a curve. A run draws its
-  fibers as one (`v -r NAME`). Motion is a join by key with transitions. A step ends at exactly
-  the next frame (`sample_end`). The window is SDL3's, vendored by pin and built static.
+  the program's TypeScript beside its tree. A graph of any shape lays out by ranks
+  (`ranks_forward`), with cycles as back edges and every edge a curve. A run draws its fibers as
+  one (`v -r NAME`). A step ends at exactly the next frame (`sample_end`). Every choice of style
+  is a look: a W3C design-token file, written as CSS for the web (`v -l LOOK`, `v -L`).
+- **The view's folds** (the [algebra audit](research/2026-10-09-view-algebra-audit.md)). A map
+  that commutes with each layer commutes with the fold (`cata_fusion`). Several readings of a
+  program are one fold (`cata_prod`). A program's lines anywhere are its lines at the root, moved
+  (`lines_at`).
 - **The generated code** (`tools/Drivers/Emit.lean`): one module per program, with exact
-  imports, a header and Effect's width. Its layout undone is the house print (`undo_layout`,
-  `Ts.flat_expr`).
+  imports, a header and Effect's width; all eight corpus modules pass tsgo 7. TypeScript's syntax
+  has a generated fold (`TsFold`). The pinned printer is one of its algebras (`render_eq_expr`)
+  and the readable layout another; laid flat, the layout is the house print (`flat_fold_expr`).
+  The printer's known hazards are latent, and their repairs are placed as laws (the
+  [JavaScript audit](research/2026-10-09-js-semantics-audit.md); ECMA-262 vendored at
+  `vendor/ecma262-es2026/`).
 - **The proof graph.** A planned goal is a `proof_goal`, placed at a concept and a requirement
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
@@ -129,16 +137,17 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-1. **The visual pipeline** (row 336, point 10). The
-   [visual pipeline note](research/2026-10-09-visual-pipeline.md) holds the plan, and the
-   [visual language note](research/2026-10-09-visual-language-theory.md) its theory. Landed: V0 to
-   V3, the graph, the end law, the code plane, curved edges, and Brandes and Köpf's places. Next:
-   - transpose in the order;
-   - depth as a fold, once ruled;
-   - a module's cell drawn by its type, with its steps' motion;
-   - the printer's span map, which links the code plane to the tree;
-   - interaction (section 6a), the proof graph as a consumer, Effect schemas drawn;
-   - a console player on termbox2.
+1. **The view and the printer**, one plan across four notes. The order:
+   - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
+     Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
+   - the printer's conformance (the JavaScript audit): J1, precedence from the vendored grammar;
+     then J2 to J7 in lean4-typescript; then J9's reader; and slice F2;
+   - the marks of row 337: arrowheads, depth as a fold (slice E), the secondary tone, the code's
+     token classes;
+   - the algebra audit's slices B, C and G: the build as layers, the splice law, the run's forks;
+   - flags by one table (row 337, point 8); a look's density; transpose in the order;
+   - a module's cell drawn by its type; the span map as a source map (J8); interaction; termbox2.
+   MCP and code mode are a seat's design in progress (the owner's request of 2026-10-09).
 2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
    measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
 3. **The graph operations of an agent** (row 336, points 1 and 7). Pieces are stored by content
@@ -166,13 +175,10 @@ API's slices (row 326), and H8.
 - **The vendoring list** (row 336, point 5): the C libraries of the
   [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. Each is confirmed at
   its own repository before a download.
-- **The choreography's values** (the visual pipeline note, the motion): the defaults are drawn;
-  their timing and the overshoot are yours to tune.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
-- **The visual language's new marks** (the [visual language note](research/2026-10-09-visual-language-theory.md),
-  section 10). They are arrowheads on arcs, depth by weight and tone, a lower tone for secondary
-  text, and token classes in the code plane.
+- **The program's graph shown** (row 337, point 9): its presentation and an agent's place in it,
+  from the design note in progress.
 
 ## Process
 
