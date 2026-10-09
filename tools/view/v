@@ -3,10 +3,12 @@
 # (docs/research/2026-10-09-visual-pipeline.md).
 #
 #   v NAME           build a corpus program top-down and play its frames in a window
+#   v -r NAME        run a corpus program step by step: the program and its graph of fibers
+#   v -g             the graph specimen: a graph built one edge at a time, cycles included
 #   v -f FILE        the frames of a session request file (tools/Drivers/Session.lean's input)
 #   v -t NAME        the frames in this console, as characters
 #   v -p NAME        write a PNG of every frame and every picture of motion
-#   v -m N ...       N pictures of motion between two frames (default 6; 1 draws none)
+#   v -m N ...       N pictures of motion between two frames (default 20; 1 draws none)
 #   v -P ...         no marks: the plain page (the marks wait for the owner's ruling)
 #
 # NAME is a program of the wire corpus: p42 pBind pFork pAwait pGen pLoop pCatch pScope.
@@ -15,7 +17,7 @@
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
-mode=window; motion=6; file=""; plain=""
+mode=window; motion=20; file=""; plain=""; cmd=build
 while [ $# -gt 0 ]; do
   case "$1" in
     -t) mode=text ;;
@@ -23,18 +25,23 @@ while [ $# -gt 0 ]; do
     -f) shift; file=$1 ;;
     -m) shift; motion=$1 ;;
     -P) plain=--plain ;;
-    -h|--help) sed -n 2,15p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -r) cmd=run ;;
+    -g) cmd=specimen ;;
+    -h|--help) sed -n 2,17p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) break ;;
   esac
   shift
 done
-if [ -n "$file" ]; then
+if [ "$cmd" = specimen ]; then
+  name=specimen; out="$here/out/specimen"
+  set -- specimen "$out"
+elif [ -n "$file" ]; then
   name=$(basename "$file" .jsonl); out="$here/out/$name"
   file=$(cd "$(dirname "$file")" && pwd)/$(basename "$file")
   set -- session "$file" "$out"
 else
-  name=${1:?usage: v [-t | -p] [-m N] (NAME | -f FILE)}; out="$here/out/$name"
-  set -- build "$name" "$out"
+  name=${1:?usage: v [-t | -p] [-r] [-m N] (NAME | -f FILE)}; out="$here/out/$name-$cmd"
+  set -- "$cmd" "$name" "$out"
 fi
 rm -rf "$out"
 (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean --motion "$motion" $plain "$@")

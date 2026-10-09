@@ -287,6 +287,24 @@ theorem lowerCall_move (r dx dy : Int) (c : Call) :
     simp only [Call.move, lowerCall, List.map_cons, List.map_nil, Dev.move]
     rw [box_move]
 
+/-- A keyed call moved by whole logical pixels. -/
+def Keyed.move (dx dy : Int) (c : Keyed Call) : Keyed Call := ⟨c.key, c.call.move dx dy⟩
+
+/-- A keyed device call moved by whole logical pixels at the ratio `r`. -/
+def Keyed.moveDev (r dx dy : Int) (d : Keyed Dev) : Keyed Dev := ⟨d.key, d.call.move r dx dy⟩
+
+/-- **The move law, keyed.** A keyed call moved by whole logical pixels lowers to its device
+calls, moved, each with the call's key. -/
+theorem lower_move (r dx dy : Int) (c : Keyed Call) :
+    lower r (c.move dx dy) = (lower r c).map (Keyed.moveDev r dx dy) := by
+  simp only [lower, Keyed.move, lowerCall_move, List.map_map]
+  rfl
+
+/-- A list of keyed calls moved alike lowers to its device calls, moved. -/
+theorem lowerAll_move (r dx dy : Int) (cs : List (Keyed Call)) :
+    lowerAll r (cs.map (Keyed.move dx dy)) = (lowerAll r cs).map (Keyed.moveDev r dx dy) := by
+  simp only [lowerAll, List.flatMap_map, List.map_flatMap, lower_move]
+
 /-! ## The stream that `draw.c` replays -/
 
 /-- A text with no tab or line break, so one row holds it. -/

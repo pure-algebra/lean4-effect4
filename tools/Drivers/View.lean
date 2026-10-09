@@ -1,11 +1,15 @@
 import Tools.View.Build
+import Tools.View.Run
+import Tools.View.Specimen
 import Effect4.Store.Domain.ProgramWire
 
 /-!
 # The view driver: frames of a program built by edits
 
     lake env lean --run tools/Drivers/View.lean [--motion N] [--plain] build NAME OUT    a corpus program, built top-down
+    lake env lean --run tools/Drivers/View.lean [--motion N] [--plain] run NAME OUT    a corpus program, run step by step
     lake env lean --run tools/Drivers/View.lean [--motion N] [--plain] session FILE OUT  the frames of a request file
+    lake env lean --run tools/Drivers/View.lean [--motion N] specimen OUT                a graph built one edge at a time
 
 `NAME` is a program of the wire corpus (`Effect4.Program.Wire.Corpus.all`). `FILE` holds one
 session request a line, as `tools/Drivers/Session.lean` reads them. For each frame the driver
@@ -15,7 +19,7 @@ writes three outputs of one list of calls (`docs/research/2026-10-09-visual-pipe
 - `NNN.svg`, the same calls at the ratio 1;
 - `frames.txt`, every frame as characters.
 
-Between two frames it writes `N - 1` frames of motion (`Tools.View.tween`), named after the frame
+Between two frames it writes `N - 1` pictures of motion (`Tools.View.sample`), named after the frame
 they lead to: `002-001.draw` comes before `002.draw` in a sorted listing. It reports the splice
 check of each spliced edit: the lines outside the edited subtree keep their text, type and note.
 
@@ -39,8 +43,9 @@ def writePicture (out : System.FilePath) (name : String) (W H : Int) (calls : Li
     ("\n".intercalate (stream W.toNat H.toNat 2 (lowerAll 2 calls)) ++ "\n")
   IO.FS.writeFile (out / s!"{name}.svg") (svg W.toNat H.toNat 1 (lowerAll 1 calls) ++ "\n")
 
-/-- Write each frame's outputs into `out`, with `motion - 1` frames before each frame after the
-first that move its lines from the frame before (`tween`). Report the splice check: the lines
+/-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
+first: the moments of the step from the frame before (`sample`). Check that each step's moment at
+its end draws exactly the next frame. Report the splice check: the lines
 outside each spliced edit's subtree keep their text, type and note (`keptUnchanged`). -/
 def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Nat) : IO Unit := do
   IO.FS.createDirAll out
@@ -49,13 +54,22 @@ def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Na
   let mut kept := 0
   let mut same := 0
   let mut spliced := 0
+  let mut steps := 0
+  let mut ends := 0
   for (f, i) in frames.zipIdx do
     let g := f.page
     let name := frameName (i + 1)
     if let some g0 := prev then
-      for t in List.range' 1 (motion - 1) do
-        let (W, H) := tweenSize width g0 g
-        writePicture out s!"{name}-{frameName t}" W H (tween width g0 g t motion)
+      for k in List.range' 1 (motion - 1) do
+        let moment := sample {} g0 g (k * 1000 / motion)
+        let (W, H) := pageSize width moment
+        writePicture out s!"{name}-{frameName k}" W H (pageCalls width moment)
+      let atEnd := sample {} g0 g 1000
+      let rows (page : Page) : List String :=
+        let (W, H) := pageSize width page
+        stream W.toNat H.toNat 2 (lowerAll 2 (pageCalls width page))
+      steps := steps + 1
+      if rows atEnd == rows g then ends := ends + 1
       if f.spliced then
         if let some a := f.edit then
           let (n, k) := keptUnchanged g0 g (Program.bracket a)
@@ -67,8 +81,11 @@ def writeFrames (out : System.FilePath) (frames : List Build.Frame) (motion : Na
     text := text ++ (pageText g).toArray ++ #[""]
     prev := some g
   IO.FS.writeFile (out / "frames.txt") ("\n".intercalate text.toList)
+  let graphs := frames.filterMap fun f => f.page.graph.map (·.2)
   IO.println s!"view: {frames.length} frames in {out}, {motion - 1} between each two"
   IO.println s!"C\tkept-lines-unchanged\t{spliced} spliced edits\t{same} of {kept} lines"
+  IO.println s!"C\tstep-ends-at-next-frame\t{steps} steps\t{ends} equal"
+  IO.println s!"C\tgraph-boxes-apart\t{graphs.length} graphs\t{(graphs.filter Laid.boxesApart).length} apart"
 
 /-- Read a request file: one JSON object a line; a blank line is skipped. -/
 def readRequests (file : System.FilePath) : IO (List Tools.Session.Request) := do
@@ -82,17 +99,17 @@ def readRequests (file : System.FilePath) : IO (List Tools.Session.Request) := d
     | .error e => throw (IO.userError s!"view: a request does not read: {e}")
   return out.toList
 
-/-- The settings of a run: the pictures of motion between two frames (`--motion N`, default 6;
+/-- The settings of a run: the pictures of motion between two frames (`--motion N`, default 20;
 1 draws none), and whether the marks are drawn (`--plain` draws none). -/
 structure Settings where
-  motion : Nat := 6
+  motion : Nat := 20
   marks : Bool := true
 
 /-- Read the flags before the command. -/
 def settingsOf : List String → Settings × List String
   | "--motion" :: n :: rest =>
     let (st, rest) := settingsOf rest
-    ({ st with motion := n.toNat?.getD 6 }, rest)
+    ({ st with motion := n.toNat?.getD 20 }, rest)
   | "--plain" :: rest =>
     let (st, rest) := settingsOf rest
     ({ st with marks := false }, rest)
@@ -121,9 +138,25 @@ def main (args : List String) : IO UInt32 := do
           ("\n".intercalate (reqs.map fun r => r.toJson.compress) ++ "\n")
         writeFrames out (withMarks st (Build.frames name reqs)) st.motion
         return 0
+  | ["run", name, out] =>
+    match List.lookup name Effect4.Program.Wire.Corpus.all with
+    | none =>
+      IO.eprintln s!"view: no corpus program {name}; the programs are {Effect4.Program.Wire.Corpus.all.map (·.1)}"
+      return 2
+    | some p =>
+      match Tools.View.Run.frames name p with
+      | none =>
+        IO.eprintln s!"view: {name} is not admitted, so it does not run"
+        return 1
+      | some pages =>
+        writeFrames out (withMarks st (pages.map fun page => ({ page } : Build.Frame))) st.motion
+        return 0
+  | ["specimen", out] =>
+    writeFrames out (Tools.View.Specimen.frames.map fun page => ({ page } : Build.Frame)) st.motion
+    return 0
   | ["session", file, out] =>
     writeFrames out (withMarks st (Build.frames file (← readRequests file))) st.motion
     return 0
   | _ =>
-    IO.eprintln "usage: view [--motion N] [--plain] (build NAME | session FILE) OUT"
+    IO.eprintln "usage: view [--motion N] [--plain] (build NAME | run NAME | session FILE | specimen) OUT"
     return 2

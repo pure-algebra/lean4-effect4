@@ -1,4 +1,4 @@
-import Tools.View.Picture
+import Tools.View.Graph
 
 /-!
 # A page of lines, and its calls
@@ -108,7 +108,15 @@ structure Line where
   /-- the node's key -/
   key : Key
   state : LineState := .plain
+  /-- the line's offset from its row in logical pixels, while it moves; 0 at rest -/
+  shift : Int := 0
+  /-- how much of the line is written, per mille: its text cell by cell, then the rest; 1000 at
+  rest -/
+  reveal : Nat := 1000
 deriving Repr
+
+/-- A line at rest: no offset, and written whole. A still frame's lines are at rest. -/
+def Line.AtRest (l : Line) : Prop := l.shift = 0 ∧ l.reveal = 1000
 
 /-- A page: its title, the line under it, the heads of the two columns, its lines and its foot. -/
 structure Page where
@@ -124,34 +132,9 @@ structure Page where
   gutter : Option Nat := none
   /-- whether the lines' marks are drawn -/
   marks : Bool := true
+  /-- a laid-out graph below the lines, and its title -/
+  graph : Option (String × Laid) := none
 deriving Repr
-
-/-- The grid of `paint.h`, in logical pixels. -/
-def CELL : Int := 8
-def ROWH : Int := 24
-def BASE : Int := 16
-def LEFT : Int := 24
-def TOP : Int := 104
-def HEADS : Int := 88
-def HEAD_RULE : Int := 96
-def FOOT : Int := 32
-def INDENT : Int := 3
-def MARKCOLS : Int := 6
-
-/-- The left edge of a column of cells. -/
-def col (c : Int) : Int := LEFT + CELL * c
-
-/-- A text of data in a room of cells; nothing when it is empty or has no room. -/
-def cellsAt (key : Key) (x base : Int) (s : String) (room : Int) : List (Keyed Call) :=
-  if room > 0 && !s.isEmpty then [⟨key, .cells x base room.toNat s⟩] else []
-
-/-- A text of another face in a room of pixels. -/
-def textAt (key : Key) (face : Face) (x base : Int) (s : String) (room : Int) : List (Keyed Call) :=
-  if s.isEmpty then [] else [⟨key, .text face x base room s⟩]
-
-/-- The cells that a text of data takes in a room. -/
-def shown (s : String) (room : Int) : Int :=
-  if room ≤ 0 || s.isEmpty then 0 else min (s.length : Int) room
 
 /-- The width of the gutter in cells that a page's own lines need: its widest address, and two
 more. -/
@@ -162,12 +145,33 @@ def ownGutter (g : Page) : Nat :=
 /-- The width of the gutter in cells: the sequence's, or the page's own. -/
 def gutterCols (g : Page) : Int := g.gutter.getD (ownGutter g)
 
-/-- The size of a page in logical pixels, at the width `W`. -/
-def pageSize (W : Int) (g : Page) : Int × Int := (W, TOP + ROWH * g.lines.size + 8 + FOOT)
+/-- The top of a page's graph: below its lines and a head for the graph's title. -/
+def graphTop (g : Page) : Int := TOP + ROWH * g.lines.size + 8 + ROWH * 2
+
+/-- The size of a page in logical pixels, at least `W` wide: its lines, then its graph. -/
+def pageSize (W : Int) (g : Page) : Int × Int :=
+  match g.graph with
+  | none => (W, TOP + ROWH * g.lines.size + 8 + FOOT)
+  | some (_, l) => (max W (l.width + 2 * LEFT), graphTop g + l.height + ROWH + FOOT)
+
+/-- A page's graph as calls: its title in the label face, then the graph below. -/
+def graphCalls (g : Page) : List (Keyed Call) :=
+  match g.graph with
+  | none => []
+  | some (title, l) => textAt "" .label LEFT (graphTop g - ROWH + BASE - 8) title 400 ++
+      l.calls LEFT (graphTop g)
 
 /-- One line at its row: the band of a lit line, the gutter, then inside a cut the text, the
 type and the note; a refused line is framed; last, the box that answers the pointer. -/
 def lineCalls (W B : Int) (row : Nat) (l : Line) (marks : Bool := true) : List (Keyed Call) :=
+  let calls := lineAt W B row l marks
+  if l.shift = 0 then calls else calls.map (Keyed.move 0 l.shift)
+where
+  /-- The line at its row, written as far as its reveal. -/
+  lineAt (W B : Int) (row : Nat) (l : Line) (marks : Bool) : List (Keyed Call) :=
+  let whole := 1000 ≤ l.reveal
+  let part := (l.text.take (l.text.length * l.reveal / 1000)).toString
+  let l : Line := if whole then l else { l with text := part, type := "", mark := none, note := "" }
   let c0 : Int := B + INDENT * l.depth
   let y : Int := TOP + ROWH * row
   let base := y + BASE
@@ -217,10 +221,10 @@ def chromeCalls (W H : Int) (g : Page) : List (Keyed Call) :=
 /-- A whole page as calls, at the width `W`: the ground, the lines, then the title block and
 the foot. -/
 def pageCalls (W : Int) (g : Page) : List (Keyed Call) :=
-  let (_, H) := pageSize W g
+  let (W, H) := pageSize W g
   groundCalls W H ++
     (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls W (gutterCols g) i l g.marks) ++
-    chromeCalls W H g
+    graphCalls g ++ chromeCalls W H g
 
 /-! ## The terminal: the same page as characters -/
 

@@ -8,7 +8,7 @@
  * with no motion; Home and End go to the first and the last frame; Q or Escape quits.
  *
  * It decides nothing: each picture is a stream that Lean wrote, replayed by replay.h. The motion
- * is Lean's too: each picture between two frames is a frame of its own (`Tools.View.tween`).
+ * is Lean's too: each picture between two frames is a moment of the step (`Tools.View.sample`).
  */
 #define _GNU_SOURCE
 #include <SDL.h>
@@ -17,7 +17,7 @@
 #include "replay.h"
 
 #define MOST 4096
-#define STEP_MS 40   /* the time each picture of a motion stays on the screen */
+#define STEP_MS 16   /* the time each picture of a motion stays on the screen: 60 a second */
 
 static char *names[MOST];
 static int count;
