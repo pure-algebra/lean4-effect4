@@ -1,0 +1,36 @@
+{
+  "format": "stream-target-join-finite-v1",
+  "base": "7beadadc863b382a32c33014174256d94276c197",
+  "effect": "4.0.1",
+  "compiler": "7.0.0-dev.20260629.1",
+  "runtime": "1.4.2",
+  "files": {
+    "lean-evaluations.log": "e4bd45ba8aa0595f86c0cfc1a8b7cabd9253d0088b2dcdeeff9ad103a7789be4",
+    "old-tsconfig.json": "d7db182af22be5bd610e5f4a7f914c9a52745851e363ac472bb16cc675b8ce9a",
+    "candidate-diagnostics.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "candidate.ts": "fb20b546ced4dafe9a6c12c8fb6dde207a16ab872faa5c8f9a03463f05800f34",
+    "prelude.ts": "00a9898dca96955da272e3b31de05f5367d6aeb3d3380f99daf5a3da1bbe5191",
+    "prelude-atoms.gen.ts": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1",
+    "candidate-tsconfig.json": "dd6c97c7987f8a36b9d051babd5f04566019a37ae75e3c94edb9f4d4bab27471",
+    "observations.json": "82c5ce8c5c7c6fdddb53a9a37a0aed2c24950ad76221ae2203520273e596c552",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "independent-original.ts": "0e3c4e959db177468537f65507a411d667ece3629774e5319d56a36b507d09ba",
+    "axioms.log": "8545fe50cd56996d2d0f3021a1d3ef655cf6ec2433ced0e23b8a0d3b65876153",
+    "old.ts": "4b855d12a203b276e13d5ed64534a8fc5488f61152bb63b8ee9cfecffd61f0b8",
+    "Produce.lean": "e8c4a46be5ad3bd95021380944aa5d0e443b425d491adbb231423d2993a50feb",
+    "emitted-candidate.ts": "2afe36fee8f7364614ab7fa5f1d95199369e363b2b82161ec6490ae8f74d2a00",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "emitted-old.ts": "ada12f4555a6c7c90ed1e3240fe4b0c9aa90d791dce3ff2bbd99dfdda432d2e5",
+    "old-diagnostics.log": "7cccff35f864a977ba440d3a3e1d9c91e7803c1c3b2155c1c5ac185f66c9aea0",
+    "observe.mjs": "205bb28e76018bc42e1dd52a4f7db4f2a5692cb4b245e7c114080387c9db3e22",
+    "check-target.py": "a96bcfa6f1e0e5b63459a2ea749fb9e64541aeeaaef6afcf8492d844075fbe5c"
+  },
+  "pins": {
+    "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/effect/package.json": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/package.json": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478",
+    "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules/@typescript/native-preview/bin/tsgo": "d81db91c981d5cddf17283dfb1d8f9ccf1b448c1c446ca6030c7a4d52c3e961a"
+  },
+  "production": {
+    "src/Effect4/Library/Stream/ArrayOps.lean": "9ec8cbbeb74d552ea305919f88447b1a5cb3d595acf8a3d5542d01d56a08ca43"
+  }
+}

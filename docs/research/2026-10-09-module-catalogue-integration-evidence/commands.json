@@ -1,0 +1,67 @@
+[
+  {
+    "label": "scoped-audit",
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "-DwarningAsError=true",
+      "docs/research/2026-10-09-module-catalogue-audit.lean"
+    ],
+    "exit": 0,
+    "log": "/tmp/effect4-module-integration-final/scoped-audit.log"
+  },
+  {
+    "label": "semantics",
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "--run",
+      "tools/Drivers/Semantics.lean",
+      "/tmp/effect4-module-integration-final/semantics"
+    ],
+    "exit": 0,
+    "log": "/tmp/effect4-module-integration-final/semantics.log"
+  },
+  {
+    "label": "derived",
+    "command": [
+      "python3",
+      "scripts/generate.py",
+      "--only",
+      "derived",
+      "--output-dir",
+      "/tmp/effect4-module-integration-final/derived"
+    ],
+    "exit": 1,
+    "log": "/tmp/effect4-module-integration-final/derived.log"
+  },
+  {
+    "label": "derived-recheck",
+    "command": [
+      "python3",
+      "scripts/generate.py",
+      "--only",
+      "derived",
+      "--output-dir",
+      "/tmp/effect4-module-integration-final/derived-recheck"
+    ],
+    "exit": 0,
+    "log": "/tmp/effect4-module-integration-final/derived-recheck.log"
+  },
+  {
+    "label": "public-catalogue",
+    "command": [
+      "python3",
+      "harness/module-catalogue/run.py",
+      "--install",
+      "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules",
+      "--out",
+      "/tmp/effect4-module-integration-final/public-catalogue",
+      "--skip-build"
+    ],
+    "exit": 1,
+    "log": "/tmp/effect4-module-integration-final/public-catalogue.log"
+  }
+]

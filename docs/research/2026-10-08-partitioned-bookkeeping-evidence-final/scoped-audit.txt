@@ -1,0 +1,17 @@
+audited Effect4.Library.PartitionedSemaphore.Model: 31 declarations
+audited Effect4.Library.PartitionedSemaphore.Cell: 17 declarations
+audited Effect4.Library.PartitionedSemaphore.Data: 7 declarations
+audited Effect4.Library.PartitionedSemaphore.Steps: 4 declarations
+audited Effect4.Laws.Library.PartitionedSemaphore.Data: 6 declarations
+audited Effect4.Laws.Library.PartitionedSemaphore.Steps: 9 declarations
+audited Test.Program.PartitionedSemaphoreBookkeeping: 1 declarations
+audited Test.Program.PartitionedSemaphorePrograms: 30 declarations
+audited Test.Program.PartitionedSemaphoreFaces: 3 declarations
+PASS bookkeeping: 108 compiled declarations, permitted axioms only, core/law boundary, exact registry pointer, no open claim goals
+graph: 13445 theorems of the tree, 258 roots, 7019 load-bearing
+landing [Effect4.Laws.Library.PartitionedSemaphore]: 13 theorems, 1 of them roots
+  edges: 8 local, 24 tree, 10 core, 0 instance; reuse ratio 75%
+  load-bearing: 9 of 13
+  unconsumed (4): [Effect4.PartitionedSemaphore.available_types, Effect4.PartitionedSemaphore.initial_types, Effect4.PartitionedSemaphore.reserve_types, Effect4.PartitionedSemaphore.tryTake_types]
+  reached by a consumer, but by no root (0): []
+  joints: [Effect4.Modules.Input.reads_cons ×4, Effect4.Modules.Input.reads_nil ×4, Effect4.Modules.Input.types_cons ×4, Effect4.Modules.Input.types_nil ×4, Effect4.Modules.Step.sound ×4, Effect4.Modules.Step.typed_of_normal ×4]

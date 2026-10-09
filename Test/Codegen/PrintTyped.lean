@@ -201,6 +201,45 @@ example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScri
     print nativeSignature 0 generatedSites = .ok (eraseJoinArgs [] nativeSignature (nativeSpell []) 0 x) :=
   eraseJoinArgs_printTyped lawful (by decide) printed
 
+/-- Two explicit union slots exercise the checked tuple and pair overloads. -/
+def productSlot : Ty := .union .nat .string
+
+def tupleProductSite : Eff NativeOp :=
+  .succeed (.app "tuple" (.cons (.var 0) (.cons (.var 1) .nil)))
+
+def pairProductSite : Eff NativeOp :=
+  .succeed (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))
+
+#guard (Effect4.Program.printTyped nativeSignature [productSlot, productSlot] tupleProductSite).map
+  (expr house0 0) = .ok "Effect.succeed(tuple<number | string, number | string>(a0, a1))"
+#guard (Effect4.Program.printTyped nativeSignature [productSlot, productSlot] pairProductSite).map
+  (expr house0 0) = .ok "Effect.succeed(pair<readonly [number | string, number | string]>(a0, a1))"
+#guard typedRoundTrip [productSlot, productSlot] tupleProductSite
+#guard typedRoundTrip [productSlot, productSlot] pairProductSite
+#guard PrintEliminators.termJoin nativeSignature [productSlot, productSlot] false
+  (.app "tuple" (.cons (.var 0) (.cons (.var 1) .nil)))
+
+/-- The Option-valued callback keeps the ordinary inference form. -/
+def optionReply : Eff NativeOp :=
+  .perform (.refModifyWith (.app "tuple" (.cons (.var 0) (.cons (.var 2) .nil)))) (.var 1)
+
+#guard (Effect4.Program.printTyped nativeSignature [.option .nat, .refOf .nat] optionReply).map
+  (expr house0 0) = .ok "Ref.modify(a1, (a2) => tuple(a0, a2))"
+#guard typedRoundTrip [.option .nat, .refOf .nat] optionReply
+#guard (Effect4.Program.printTyped nativeSignature [productSlot, .refOf .nat] optionReply).map
+  (expr house0 0) = .ok "Ref.modify<number, number | string>(a1, (a2) => tuple<number | string, number>(a0, a2))"
+#guard typedRoundTrip [productSlot, .refOf .nat] optionReply
+#guard Ty.factors .never == [.never]
+#guard typedRoundTrip [.never, productSlot] tupleProductSite
+#guard !PrintEliminators.termJoin nativeSignature [.option .nat, .nat] false
+  (.app "tuple" (.cons (.var 0) (.cons (.var 1) .nil)))
+
+-- Reader: the existing reconstruction law consumes a real checked product term.
+example (lawful : LawfulSpelling nativeSignature (nativeSpell [])) {x : TypeScript.Expr}
+    (printed : Effect4.Program.printTyped nativeSignature [productSlot, productSlot] tupleProductSite = .ok x) :
+    readTyped [] nativeSignature (nativeSpell []) 2 x = .ok tupleProductSite :=
+  readTyped_printTyped lawful (by decide) printed
+
 end Test.Codegen.PrintTyped
 
 namespace Test.Codegen.PrintTyped.P2bControls
@@ -270,3 +309,22 @@ open EraseTermTypes
       (.ident "a0") (some (.name ["number"] []))]
 
 end Test.Codegen.PrintTyped.P2bControls
+
+namespace Test.Codegen.PrintTyped.ProductControls
+open TypeScript Effect4.Codegen Effect4.Program
+open EraseTermTypes
+
+-- Exact term inverse: malformed generic and runtime arities retain their syntax.
+#guard eraseProductJoin (.call (.generic (.ident "tuple") [.name ["number"] []]) [.int 1, .int 2]) ==
+  .call (.generic (.ident "tuple") [.name ["number"] []]) [.int 1, .int 2]
+#guard eraseProductJoin (.call (.generic (.ident "tuple") [.name ["number"] [], .name ["string"] []]) [.int 1]) ==
+  .call (.generic (.ident "tuple") [.name ["number"] [], .name ["string"] []]) [.int 1]
+#guard eraseProductJoin (.call (.generic (.ident "pair") [.tuple [.name ["number"] [], .name ["string"] []] false]) [.int 1, .str "two"]) ==
+  .call (.generic (.ident "pair") [.tuple [.name ["number"] [], .name ["string"] []] false]) [.int 1, .str "two"]
+
+-- The ordinary reader still refuses the inserted term arguments before named erasure.
+#guard match Effect4.Program.printTyped nativeSignature [.union .nat .string, .union .nat .string]
+    Test.Codegen.PrintTyped.tupleProductSite with
+  | .error _ => false
+  | .ok typed => !(Effect4.Program.readEff [] nativeSignature (nativeSpell []) 2 typed).isOk
+end Test.Codegen.PrintTyped.ProductControls

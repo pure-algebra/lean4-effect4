@@ -1,0 +1,4 @@
+PASS compiler-package: Unsupported @typescript/native-preview version; no helper compilation or execution
+PASS compiler-executable: Unsupported tsgo executable version; no helper compilation or execution
+PASS catalogue-effect: Unsupported Effect version; no helper compilation or execution
+PASS helpers-effect: Unsupported Effect version; no helper compilation or execution

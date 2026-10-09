@@ -1,0 +1,16 @@
+{
+  "source": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/vendor/effect-4.0.1/src/PubSub.ts",
+  "source_sha256": "ab512549c7f76d9a7df8e953268e377eecdbad6ce985a29b03dcd91b596da758",
+  "extract_sha256": "0e1bd26a7e01d5d6fac187cca12de2eb5f436e9add50034b69b994a18b501341",
+  "start_line": 2539,
+  "end_line_exclusive": 2690,
+  "reviewed_worktree_head": "a12963285539be53706507a09e6b040474857302",
+  "reviewed_worktree_status": "New PubSub core files are untracked work in progress; law files are concurrently authored.",
+  "model_source_sha256": {
+    "src/Effect4/Library/PubSub/Model.lean": "5bc577d2539402da7159f08f128712c1c252a853ff8971503c9399802bf8755a",
+    "src/Effect4/Library/PubSub/Cell.lean": "7023423917cedbaff381c62f5db22fe5969b390a68809addc7a9586b8ca6dda0",
+    "src/Effect4/Library/PubSub/Data.lean": "ca56d4df1df55836272dc8e4c6878b4344409615832b25b85641e72810a1bd4c",
+    "src/Effect4/Library/PubSub/Steps.lean": "1c26b2426b988f1e5b0b974075fdd5bf18c0b19433cdff4845d0cae085679866"
+  },
+  "probe_sha256": "baaf3105f1a51b87050df007cc755fe9757d654e18ed2a3e2364a7ce50888d25"
+}

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ]
+  },
+  "files": [
+    "initialZero.ts",
+    "initialFive.ts",
+    "zeroOnZero.ts",
+    "positiveOnZero.ts",
+    "zeroAfterTake.ts",
+    "takeCapacity.ts",
+    "insufficient.ts",
+    "excessive.ts",
+    "secondTake.ts",
+    "reservePartial.ts",
+    "reserveEmpty.ts",
+    "reserveCapacity.ts",
+    "twoReservations.ts",
+    "forgotDeduction.ts",
+    "observe.ts"
+  ],
+  "include": []
+}

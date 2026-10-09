@@ -1,0 +1,26 @@
++ lake env lean -DwarningAsError=true -M4096 --run tools/Effect4Gen/Driver.lean --plan
++ lake build effect4gen Tools.GeneratedStamp Effect4.Program.TyCore Effect4.Store.Domain.Canonical Effect4.Store.Domain.Pin Effect4.Store.Domain.Node Effect4.Store.Carrier.Val Effect4.Schema.Representation
+Build completed successfully (60 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-0-effect4gen.json
++ lake build effect4gen Tools.GeneratedStamp Effect4.Store.Domain.Derived.Json Effect4.Program.Eff Effect4.Program.Ty Effect4.Program.ScopedOp Effect4.Program.Node Effect4.Machine.Term
+Build completed successfully (84 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-1-effect4gen.json
++ lake build effect4gen Tools.GeneratedStamp Effect4.Program.Fold Effect4.Program.Refs Effect4.Program.ScopedOp
+Build completed successfully (63 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-2-effect4gen.json
++ lake build effect4gen Tools.GeneratedStamp Effect4.Program.Native Effect4.Store.Domain.Canonical Effect4.Store.Domain.RowCanonical Effect4.Api.Frontier Effect4.Store.Domain.Clock Effect4.Laws.Program.Folds.Ty Effect4.Laws.Auto.RuleSets Effect4.Program.Authoring
+Build completed successfully (303 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-3-effect4gen.json
++ lake build effect4gen-catalogue effect4gen Tools.GeneratedStamp Effect4.Program.Authoring.Lifts Effect4.Program.NativeAtom Effect4.Laws.Program.Authoring Effect4.Program.Authoring
+Build completed successfully (444 jobs).
++ lake exe effect4gen-catalogue --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-4-effect4gen-catalogue.json
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-4-effect4gen.json
++ lake build effect4gen effect4gen-catalogue Tools.GeneratedStamp Effect4.Api Effect4.Api.HostSession Effect4.Store.Domain.Derived.Program Effect4.Api.Author Effect4.Program.Authoring.Lifts Effect4.Program.Authoring.Sugar Effect4.Codegen.Forms Effect4.Laws.Program.Authoring.Lifts Effect4.Program.Authoring.Rows Effect4.Laws.Program.Authoring Effect4.Program.Authoring.Atoms
+Build completed successfully (489 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-5-effect4gen.json
++ lake exe effect4gen-catalogue --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-5-effect4gen-catalogue.json
++ lake build effect4gen effect4gen-catalogue Tools.GeneratedStamp Effect4.Api.Runner Effect4.Store.Domain.Derived.Value Effect4.Store.Domain.AnnotationsCanonical Effect4.Store.Domain.PayloadCanonical Effect4.Store.Domain.Clock Effect4.Store.Domain.Derived.Program Effect4.Api.Derived Effect4.Api.RefusalsDerived Effect4.Run Effect4.Laws.Program.Authoring.Lifts Effect4.Laws.Program.Authoring.Sugar Effect4.Codegen.Authoring.Forms Effect4.Codegen.Forms
+Build completed successfully (501 jobs).
++ lake exe effect4gen --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-6-effect4gen.json
++ lake exe effect4gen-catalogue --batch /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-generate-hv3okb36/derived-6-effect4gen-catalogue.json
+FAIL generate: src/Effect4/Api/RunnerDerived.lean is not what Lean emits

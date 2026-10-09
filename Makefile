@@ -184,7 +184,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
 # runtime prints the modules, re-records the tapes and writes the result. Both are
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
-TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \
+TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/control.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
 $(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes

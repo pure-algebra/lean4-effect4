@@ -1,0 +1,2 @@
+Except.ok "Ref.modify<number, number | string>(a1, (a2) => tuple<number | string, number>(a0, a2))"
+Except.ok "Effect.succeed(tuple<number | string, number | string>(a0, a1))"

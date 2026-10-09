@@ -1,0 +1,33 @@
+Module catalogue audit: 920 compiled declarations across 21 selected modules; allowed axioms [propext,
+ Quot.sound]; root reachability, independent model imports and core/law separation pass
+'Effect4.Stream.arrayStep_agrees' depends on axioms: [propext, Quot.sound]
+'Effect4.PubSub.Model.single_steps_agree' depends on axioms: [propext, Quot.sound]
+'Effect4.SynchronizedRef.modify_answers' depends on axioms: [propext, Quot.sound]
+graph: 13493 theorems of the tree, 260 roots, 7043 load-bearing
+landing [Effect4.Laws.Library.Stream.Array]: 3 theorems, 1 of them roots
+  edges: 1 local, 2 tree, 2 core, 0 instance; reuse ratio 66%
+  load-bearing: 2 of 3
+  unconsumed (1): [Effect4.Stream.arrayBatch_answers]
+  reached by a consumer, but by no root (0): []
+  joints: [Effect4.Ref.modify_callback_agrees ×1, Effect4.Ref.modify_callback_answers ×1]
+graph: 13493 theorems of the tree, 260 roots, 7043 load-bearing
+landing [Effect4.Laws.Library.SynchronizedRef]: 7 theorems, 0 of them roots
+  edges: 7 local, 25 tree, 14 core, 0 instance; reuse ratio 78%
+  load-bearing: 0 of 7
+  unconsumed (3): [Effect4.SynchronizedRef.get_answers, Effect4.SynchronizedRef.make_answers, Effect4.SynchronizedRef.modify_answers]
+  reached by a consumer, but by no root (4): [Effect4.SynchronizedRef.backing_type, Effect4.SynchronizedRef.handle_nodes, Effect4.SynchronizedRef.handle_normal, Effect4.SynchronizedRef.semaphore_type]
+  joints: [Effect4.Program.Record.fieldType_normal ×2, Effect4.Modules.Answers.has ×1, Effect4.Modules.Has.answers ×1, Effect4.Modules.Kept.field ×1, Effect4.Modules.Kept.here ×1, Effect4.Modules.Kept.push ×1, Effect4.Modules.Step.freeze_kept ×1, Effect4.Modules.answers_bindWith ×1]
+graph: 13493 theorems of the tree, 260 roots, 7043 load-bearing
+landing [Effect4.Laws.Library.PubSub]: 23 theorems, 1 of them roots
+  edges: 17 local, 41 tree, 76 core, 10 instance; reuse ratio 70%
+  load-bearing: 17 of 23
+  unconsumed (3): [Effect4.PubSub.poll_types, Effect4.PubSub.slide_types, Effect4.PubSub.unsubscribe_types]
+  reached by a consumer, but by no root (3): [Effect4.PubSub.initial_types, Effect4.PubSub.subscribe_types, Effect4.PubSub.tryPublish_types]
+  joints: [Effect4.Modules.Input.types_nil ×6, Effect4.Modules.Step.sound ×6, Effect4.Modules.Step.typed_of_normal ×6, Effect4.Modules.Input.reads_cons ×5, Effect4.Modules.Input.reads_nil ×5, Effect4.Modules.Input.types_cons ×5, Effect4.Modules.Step.scope_of_alignment ×4, Effect4.Modules.Step.Lists.eval_any ×2]
+graph: 13493 theorems of the tree, 260 roots, 7043 load-bearing
+landing [Effect4.Laws.Step.Callback]: 9 theorems, 0 of them roots
+  edges: 7 local, 10 tree, 59 core, 0 instance; reuse ratio 58%
+  load-bearing: 3 of 9
+  unconsumed (0): []
+  reached by a consumer, but by no root (6): [Effect4.Modules.Step.callback_capture_types, Effect4.Modules.Step.callback_sources_types, Effect4.Modules.Step.callback_term_types, Effect4.Modules.Step.freeze_kept, Effect4.Modules.Step.reached_slots, Effect4.Modules.Step.relocate_types]
+  joints: [Effect4.Program.Authoring.Env.push_length ×3, Effect4.Modules.Step.scope_of_alignment ×2, Effect4.Modules.Step.sound ×1, Effect4.Modules.Step.typed ×1, Effect4.Modules.TypedScope.depth ×1, Effect4.Program.argTy_weaken ×1, Effect4.Program.evalTerm_weaken ×1]

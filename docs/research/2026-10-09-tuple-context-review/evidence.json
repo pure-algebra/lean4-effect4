@@ -1,0 +1,26 @@
+{
+  "base": "7eb45da5",
+  "sourceBase": "bcf8a2514b6eb5efc5742297c6fbcf2172fd4ba4",
+  "compiler": "7.0.0-dev.20260629.1",
+  "effect": "4.0.1",
+  "install": "/Users/pooks/Dev/lean4-effect4/ts/release/node_modules",
+  "negativeExit": 1,
+  "negativeDiagnostics": 9,
+  "positiveExit": 0,
+  "originalControlInputs": {
+    "prelude-atoms.gen.ts": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1",
+    "records.ts": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee",
+    "tuples.ts": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de",
+    "control.ts": "34173d607ff63e61c74c67a64eab06d0690a610d01e9bf18e3ccef828c8a7dae",
+    "folds.typecheck.ts": "40bb73257d448ae37c95f5478e412a3a0a642c8f634a6e00326f2a61a236e0e0",
+    "select-controls.ts": "44d68e09fdb206f3a75121432e9ee7170f2859a091ac2201a5622a53073afd9f",
+    "tuples.typecheck.ts": "761a1c494aa04570077de19c4fdeb82adb27c1ea1dc82c89442bd49e7b1fda75",
+    "literals.typecheck.ts": "27ff42b9928be40b87ebdfcc1b6f60412516ed3dbcf38a0ae22d80c4b4b5f38b"
+  },
+  "retainedInputs": {
+    "controls.ts": "0a5cbe4a39943b207e3a099b5e3fb259864dc457217f0651216be89c3ca1fec6",
+    "control-counterexamples.ts": "76005ce6d41525d5a9fe55bf987c89515ebe116915c084883baab780c1960c77",
+    "tsconfig.json": "fcaac0392afdba994623c8082205f50f0db8c0e8c4a6094a4286c537ebd525c3",
+    "positive.tsconfig.json": "f44f5ead6331482a0e98f425b047a1e938eac1d3837a8a85c72d412418df142b"
+  }
+}

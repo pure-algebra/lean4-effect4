@@ -1,0 +1,8 @@
+{"evidence":"finite extracted-class comparison against independent BigInt Model transcription","maxDepth":9,"ids":[0,1,2],"messages":[0,1],"states":2090,"transitions":12888,"mismatches":0}
+{"name":"slide","replies":[null,null,true,7,null,true,8,8],"final":{"publisherIndex":"2","remaining":"0","subscribers":[{"id":0,"cursor":"2"},{"id":1,"cursor":"2"}],"value":null}}
+{"name":"late","replies":[null,true,null,null,7,true,8,8],"final":{"publisherIndex":"2","remaining":"0","subscribers":[{"id":0,"cursor":"2"},{"id":1,"cursor":"2"}],"value":null}}
+{"name":"unsubscribeAfterPoll","replies":[null,null,true,7,null,7],"final":{"publisherIndex":"1","remaining":"0","subscribers":[{"id":1,"cursor":"1"}],"value":null}}
+{"name":"emptyPublish","replies":[true,null,null],"final":{"publisherIndex":"0","remaining":"0","subscribers":[{"id":0,"cursor":"0"}],"value":null}}
+{"name":"lastUnsubscribe","replies":[null,true,null,null,true],"final":{"publisherIndex":"1","remaining":"0","subscribers":[],"value":null}}
+{"control":"Live permits stale cursors after slide","live":true,"remaining":"0","unread":1,"state":{"publisherIndex":"1","remaining":"0","subscribers":[{"id":0,"cursor":"0"}],"value":null}}
+{"boundary":"Live alone excludes no JavaScript integer precision failure","seed":"manually seeded, not a bounded reachable trace","live":true,"publishReply":true,"actualReply":true,"expectedPublisherIndex":"9007199254740993","actualPublisherIndex":9007199254740992,"expectedPoll":7,"actualPoll":null,"expected":{"publisherIndex":"9007199254740993","remaining":"1","subscribers":[{"id":0,"cursor":"9007199254740992"}],"value":7},"actual":{"publisherIndex":"9007199254740992","remaining":"1","subscribers":[{"id":0,"cursor":"9007199254740992"}],"value":7}}

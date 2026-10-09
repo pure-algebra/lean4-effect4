@@ -1,0 +1,8 @@
+'Effect4.Program.printTyped_eq_print' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.eraseJoinArgs_printTyped' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.readTyped_printTyped' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.EraseTermTypes.eraseTerm_printTerm' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.EraseTermTypes.eraseTerm_typedTuple' depends on axioms: [propext]
+'Effect4.Codegen.EraseTermTypes.eraseTerm_typedPair' depends on axioms: [propext]
+'Effect4.Codegen.EraseTermTypes.eraseProductJoin_hasCall' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.EraseTermTypes.eraseProductJoin_call' depends on axioms: [propext, Quot.sound]

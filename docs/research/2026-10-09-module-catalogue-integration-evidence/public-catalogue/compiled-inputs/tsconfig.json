@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [
+      "bun"
+    ]
+  },
+  "files": [
+    "streamInline.ts",
+    "streamEmpty.ts",
+    "streamDefinitions.ts",
+    "streamRepeated.ts",
+    "streamIndependent.ts",
+    "streamCapture.ts",
+    "syncNumeric.ts",
+    "syncCollision.ts",
+    "syncDepth.ts",
+    "syncFold.ts",
+    "syncStrings.ts",
+    "wrongSticky.ts",
+    "observe.ts"
+  ],
+  "include": []
+}

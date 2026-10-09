@@ -410,11 +410,13 @@ theorem eraseTerm_record (n : Nat) (fields : Record.Fields) (names : List String
     simp only [Record.writeRecord, htarget, ht, eraseTerm_call, eraseTerm_generic,
       eraseTerm_ident, List.map_cons, List.map_nil, eraseTerm_writeTy, eraseTerm_arr,
       eraseTerm_strings]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
   | some annotation =>
+    have notTuple : ("recordValue" : String) ≠ "tuple" := by decide
+    have notPair : ("recordValue" : String) ≠ "pair" := by decide
     simp only [Record.writeRecord, htarget, ht, eraseTerm_call, eraseTerm_generic,
       eraseTerm_ident, List.map_cons, List.map_nil, eraseTerm_writeTy, eraseTerm_objectProperties]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, eraseCauseTermJoin, notTuple, notPair, ↓reduceIte, ite_self]
 
 theorem eraseTerm_field (n : Nat) (optional : Bool) (key : String) (value : Expr) :
     eraseTerm n (Record.writeField optional key value) =
@@ -423,24 +425,24 @@ theorem eraseTerm_field (n : Nat) (optional : Bool) (key : String) (value : Expr
   | false =>
     simp only [Record.writeField, Bool.false_eq_true, ↓reduceIte, eraseTerm_call,
       eraseTerm_generic, eraseTerm_ident, List.map_cons, List.map_nil, eraseTerm_str]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
   | true =>
     simp only [Record.writeField, ↓reduceIte, eraseTerm_call,
       eraseTerm_generic, eraseTerm_ident, List.map_cons, List.map_nil, eraseTerm_str]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
 
 theorem eraseTerm_set (n : Nat) (key : String) (receiver value : Expr) :
     eraseTerm n (Record.writeSet key receiver value) =
       Record.writeSet key (eraseTerm n receiver) (eraseTerm n value) := by
   simp only [Record.writeSet, eraseTerm_call, eraseTerm_generic,
     eraseTerm_ident, List.map_cons, List.map_nil, eraseTerm_str]
-  simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+  simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
 
 theorem eraseTerm_tupleAt (n index : Nat) (receiver : Expr) :
     eraseTerm n (Tuple.writeAt index receiver) = Tuple.writeAt index (eraseTerm n receiver) := by
   simp only [Tuple.writeAt, eraseTerm_call, eraseTerm_generic,
     eraseTerm_ident, List.map_cons, List.map_nil, eraseTerm_str]
-  simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+  simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
 
 /-- Raw stored-fold spellings keep their B, including the existing unsupported-type fallback.
 The inverse touches neither a one-argument generic head nor an unannotated callback. -/
@@ -452,12 +454,12 @@ theorem eraseTerm_rawFold (n : Nat) (stored : Option TypeRef) (list init body : 
     simp only [ListFold.write, Binders.write, eraseTerm_call, eraseTerm_ident,
       eraseTerm_lambda, Template.params, List.map_cons, List.map_nil,
       List.length_cons, List.length_nil, Nat.add_zero]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
   | some stored =>
     simp only [ListFold.write, Binders.write, eraseTerm_call, eraseTerm_generic,
       eraseTerm_ident, eraseTerm_lambda, Template.params, List.map_cons, List.map_nil,
       List.length_cons, List.length_nil, Nat.add_zero]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
 
 end Effect4.Codegen.EraseTermTypes
 
@@ -771,6 +773,16 @@ open TypeScript Effect4.Program
 -- Keep the already checked write transports through eraseTerm_rawFold before this section.
 -- Replace the final mutual identities by homomorphism agreement below.
 
+/-- A step of typed-print-erasure: product annotation removal keeps the call shape.
+Consumer: callInverse_call, then the shared term fold's erasure certificate. -/
+theorem eraseProductJoin_hasCall (x : Expr) (input : ∃ head args, x = .call head args) :
+    ∃ head args, eraseProductJoin x = .call head args := by
+  fun_cases eraseProductJoin x <;> aesop
+
+theorem eraseProductJoin_call (head : Expr) (args : List Expr) :
+    ∃ head' args', eraseProductJoin (.call head args) = .call head' args' :=
+  eraseProductJoin_hasCall (.call head args) ⟨head, args, rfl⟩
+
 theorem eraseRecordJoin_hasCall (x : Expr) (input : ∃ head args, x = .call head args) :
     ∃ head args, eraseRecordJoin x = .call head args := by
   fun_cases eraseRecordJoin x <;> aesop
@@ -797,10 +809,11 @@ theorem eraseCauseTermJoin_call (head : Expr) (args : List Expr) :
 
 theorem callInverse_call (n : Nat) (head : Expr) (args : List Expr) :
     ∃ head' args', callInverse n (.call head args) = .call head' args' := by
-  obtain ⟨firstHead, firstArgs, hfirst⟩ := eraseRecordJoin_call head args
+  obtain ⟨productHead, productArgs, hproduct⟩ := eraseProductJoin_call head args
+  obtain ⟨firstHead, firstArgs, hfirst⟩ := eraseRecordJoin_call productHead productArgs
   obtain ⟨secondHead, secondArgs, hsecond⟩ := eraseFoldJoin_call n firstHead firstArgs
   obtain ⟨lastHead, lastArgs, hlast⟩ := eraseCauseTermJoin_call secondHead secondArgs
-  exact ⟨lastHead, lastArgs, by rw [callInverse, hfirst, hsecond, hlast]⟩
+  exact ⟨lastHead, lastArgs, by rw [callInverse, hproduct, hfirst, hsecond, hlast]⟩
 
 /-- The local inverse always returns a call from a call, even on syntax outside the print image.
 This supports only the atom hom field, without assuming the raw identity it serves. -/
@@ -844,23 +857,23 @@ theorem callInverse_erasedApp (n : Nat) (name : String) (args : Terms) :
   by_cases hname : name = "fold"
   · subst name
     cases args with
-    | nil => simp only [printTerms, List.map_nil, callInverse, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
+    | nil => simp only [printTerms, List.map_nil, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
     | cons first rest =>
       cases rest with
-      | nil => simp only [printTerms, List.map_cons, List.map_nil, callInverse, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
+      | nil => simp only [printTerms, List.map_cons, List.map_nil, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
       | cons second rest =>
         cases rest with
-        | nil => simp only [printTerms, List.map_cons, List.map_nil, callInverse, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
+        | nil => simp only [printTerms, List.map_cons, List.map_nil, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
         | cons third rest =>
           cases rest with
-          | cons fourth tail => simp only [printTerms, List.map_cons, callInverse, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
+          | cons fourth tail => simp only [printTerms, List.map_cons, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
           | nil =>
             have hnl := eraseTerm_printTerm_not_lambda n third
             cases ht : eraseTerm n (printTerm n third) <;>
-              simp only [printTerms, List.map_cons, List.map_nil, ht, callInverse,
+              simp only [printTerms, List.map_cons, List.map_nil, ht, callInverse, eraseProductJoin,
                 eraseRecordJoin, eraseFoldJoin, ↓reduceIte, eraseCauseTermJoin]
             aesop
-  · simp only [callInverse, eraseRecordJoin, eraseFoldJoin, hname, ↓reduceIte, eraseCauseTermJoin]
+  · simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, hname, ↓reduceIte, eraseCauseTermJoin]
 
 def RawPrintCarrier : TermFam → Type
   | .term => Term × (Nat → Expr)
@@ -973,23 +986,23 @@ def erasedCauseHom : CauseTermHom rawCauseAlg where
     funext n
     simp only [eraseCause, printCause, rawCauseAlg, eraseTerm_call, eraseTerm_ident,
       List.map_cons, List.map_nil, eraseTerm_printTerm_identity]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
   h_cause_die t := by
     funext n
     simp only [eraseCause, printCause, rawCauseAlg, eraseTerm_call, eraseTerm_ident,
       List.map_cons, List.map_nil, eraseTerm_printTerm_identity]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
   h_cause_interrupt who := by
     funext n
     cases who <;>
       simp only [eraseCause, printCause, rawCauseAlg, Option.toList_none, Option.toList_some,
         List.map_cons, List.map_nil, eraseTerm_call, eraseTerm_ident, eraseTerm_printTerm_identity] <;>
-      simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+      simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
   h_cause_both left right := by
     funext n
     simp only [eraseCause, printCause, rawCauseAlg, eraseTerm_call, eraseTerm_ident,
       List.map_cons, List.map_nil]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin]
 
 /-- Raw cause printing and its erased form agree by the generated cause fold law. -/
 theorem eraseCause_printCause_identity (n : Nat) (c : CauseTerm) :
@@ -3623,7 +3636,7 @@ theorem eraseTerm_causeApp (n : Nat) (name : String) (error : TypeRef) (input : 
     subst name
     exact nomatch hn
   rw [eraseTerm_call, eraseTerm_generic, eraseTerm_ident, hv]
-  simp only [printTerms, callInverse, eraseRecordJoin, eraseFoldJoin, hfold,
+  simp only [printTerms, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, hfold,
     eraseCauseTermJoin, hn, ↓reduceIte, printTerm]
 
 /-- Field R is inserted on the second curried application; literal K stays in its original place. -/
@@ -3635,7 +3648,7 @@ theorem eraseTerm_typedField (n : Nat) (optional : Bool) (key : String) (receive
       Record.writeField optional key (eraseTerm n receiver) := by
   cases optional <;>
     simp only [eraseTerm_call, eraseTerm_generic, eraseTerm_ident, eraseTerm_str,
-      List.map_cons, List.map_nil, callInverse, eraseRecordJoin, eraseFoldJoin, ite_self,
+      List.map_cons, List.map_nil, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self,
       eraseCauseTermJoin, decide_true, ↓reduceIte, Record.writeField] <;> rfl
 
 /-- Each checked R/V disappears at its own curried application; K stays as stored data. -/
@@ -3647,7 +3660,7 @@ theorem eraseTerm_typedSet (n : Nat) (key : String) (receiverTy valueTy : TypeRe
       Record.writeSet key (eraseTerm n receiver) (eraseTerm n value) := by
   have hset : ["recordRequired", "recordOptional", "recordSet"].contains "recordSet" = true := rfl
   simp only [eraseTerm_call, eraseTerm_generic, eraseTerm_ident, eraseTerm_str,
-    List.map_cons, List.map_nil, callInverse, eraseRecordJoin, eraseFoldJoin, ite_self,
+    List.map_cons, List.map_nil, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self,
     eraseCauseTermJoin, decide_true, hset, Bool.true_and, ↓reduceIte, Record.writeSet]
 
 /-- Inferred B/A use the bare head and two checked callback annotations. -/
@@ -3658,7 +3671,7 @@ theorem eraseTerm_inferredFold (n : Nat) (acc item : TypeRef) (list init body : 
       ListFold.write n none (eraseTerm n list) (eraseTerm n init) (eraseTerm (n + 2) body) := by
   simp only [eraseTerm_call, eraseTerm_ident, eraseTerm_lambda,
     List.map_cons, List.map_nil, List.length_cons, List.length_nil,
-    callInverse, eraseRecordJoin, eraseFoldJoin, eraseCauseTermJoin,
+    callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, eraseCauseTermJoin,
     decide_true, Bool.true_and, ↓reduceIte, ListFold.write]
 
 /-- Stored B survives; only inferred A and the verified repetition of B disappear. -/
@@ -3668,8 +3681,23 @@ theorem eraseTerm_storedFold (n : Nat) (acc item : TypeRef) (list init body : Ex
       ListFold.write n (some acc) (eraseTerm n list) (eraseTerm n init) (eraseTerm (n + 2) body) := by
   simp only [PrintEliminators.storedFoldStep, eraseTerm_call, eraseTerm_generic,
     eraseTerm_ident, eraseTerm_lambda, List.map_cons, List.map_nil,
-    List.length_cons, List.length_nil, callInverse, eraseRecordJoin, eraseFoldJoin,
+    List.length_cons, List.length_nil, callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin,
     eraseCauseTermJoin, decide_true, TypeRef.beq_self, Bool.true_and, ↓reduceIte, ListFold.write]
+
+/-- A local inverse step of typed-print-erasure; term_app_certificate consumes it. -/
+theorem eraseTerm_typedTuple (n : Nat) (firstTarget secondTarget : TypeRef) (first second : Expr) :
+    eraseTerm n (.call (.generic (.ident "tuple") [firstTarget, secondTarget]) [first, second]) =
+      .call (.ident "tuple") [eraseTerm n first, eraseTerm n second] := by
+  simp only [eraseTerm_call, eraseTerm_generic, eraseTerm_ident, List.map_cons, List.map_nil,
+    callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, eraseCauseTermJoin, ↓reduceIte, ite_self]
+
+/-- A local inverse step of typed-print-erasure; the readonly slot tuple selects the checked overload. -/
+theorem eraseTerm_typedPair (n : Nat) (firstTarget secondTarget : TypeRef) (first second : Expr) :
+    eraseTerm n (.call (.generic (.ident "pair") [.tuple [firstTarget, secondTarget] true]) [first, second]) =
+      .call (.ident "pair") [eraseTerm n first, eraseTerm n second] := by
+  have notTuple : ("pair" : String) ≠ "tuple" := by decide
+  simp only [eraseTerm_call, eraseTerm_generic, eraseTerm_ident, List.map_cons, List.map_nil,
+    callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, eraseCauseTermJoin, notTuple, ↓reduceIte, ite_self]
 
 theorem pure_eq_ok {α : Type} (a b : α) :
     (pure a : Except PrintRefusal α) = .ok b ↔ a = b := by
@@ -3740,9 +3768,78 @@ theorem term_app_certificate (sig : Signature Op) (name : String)
         · simp only [pure_eq_ok] at hp
           subst x
           exact eraseTerm_plainApp env.length name args.1 values hchildren
-  · simp only [pure_eq_ok] at hp
-    subst x
-    exact eraseTerm_plainApp env.length name args.1 values hchildren
+  · split at hp
+    · rename_i productName
+      cases hs : args.1 with
+      | nil =>
+        simp only [hs, pure_eq_ok] at hp
+        subst x
+        exact eraseTerm_plainApp env.length name args.1 values hchildren
+      | cons first rest =>
+        rw [hs] at hp
+        cases rest with
+        | nil =>
+          simp only [pure_eq_ok] at hp
+          subst x
+          exact eraseTerm_plainApp env.length name args.1 values hchildren
+        | cons second tail =>
+          cases tail with
+          | cons third tail =>
+            simp only [pure_eq_ok] at hp
+            subst x
+            exact eraseTerm_plainApp env.length name args.1 values hchildren
+          | nil =>
+            obtain ⟨firstTy, hfirstTy, hp⟩ := Effect4.Laws.Auto.bind_eq_ok.mp hp
+            obtain ⟨secondTy, hsecondTy, hp⟩ := Effect4.Laws.Auto.bind_eq_ok.mp hp
+            split at hp
+            · obtain ⟨firstTarget, hfirstTarget, hp⟩ := Effect4.Laws.Auto.bind_eq_ok.mp hp
+              obtain ⟨secondTarget, hsecondTarget, hp⟩ := Effect4.Laws.Auto.bind_eq_ok.mp hp
+              have length : values.length = 2 := by
+                have h := congrArg List.length hchildren
+                simpa only [List.length_map, hs, printTerms, List.length_cons, List.length_nil] using h
+              have shape : ∃ a b, values = [a, b] := by
+                cases values with
+                | nil => cases length
+                | cons a rest =>
+                  cases rest with
+                  | nil => cases length
+                  | cons b tail =>
+                    have tailEmpty : tail = [] := by
+                      cases tail with
+                      | nil => rfl
+                      | cons third rest =>
+                        simp only [List.length_cons] at length
+                        omega
+                    subst tail
+                    exact ⟨a, b, rfl⟩
+              obtain ⟨a, b, rfl⟩ := shape
+              split at hp
+              · rename_i pairName
+                subst name
+                simp only [withHeadTypes, Except.ok.injEq] at hp
+                subst x
+                rw [eraseTerm_typedPair]
+                change Expr.call (.ident "pair") (List.map (eraseTerm env.length) [a, b]) =
+                  Expr.call (.ident "pair") (printTerms env.length args.1)
+                rw [hchildren]
+              · rename_i notPair
+                have names : name = "pair" ∨ name = "tuple" := by
+                  simpa only [List.contains_cons, List.contains_nil, Bool.or_false,
+                    Bool.or_eq_true, beq_iff_eq] using productName
+                have tupleName : name = "tuple" := names.resolve_left notPair
+                subst name
+                simp only [withHeadTypes, Except.ok.injEq] at hp
+                subst x
+                rw [eraseTerm_typedTuple]
+                change Expr.call (.ident "tuple") (List.map (eraseTerm env.length) [a, b]) =
+                  Expr.call (.ident "tuple") (printTerms env.length args.1)
+                rw [hchildren]
+            · simp only [pure_eq_ok] at hp
+              subst x
+              exact eraseTerm_plainApp env.length name args.1 values hchildren
+    · simp only [pure_eq_ok] at hp
+      subst x
+      exact eraseTerm_plainApp env.length name args.1 values hchildren
 
 theorem term_record_certificate (sig : Signature Op) (fields : Record.Fields) (names : List String)
     (values : PrintEliminators.TermCarrier .terms) (hv : TermsErase values) :
@@ -3964,7 +4061,7 @@ theorem cause_fail_certificate (sig : Signature Op) (t : Term) :
   subst x
   simp only [eraseCause, eraseTerm_call, eraseTerm_ident, List.map_cons, List.map_nil,
     eraseTerm_printTerm sig t env false hvalue]
-  simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
+  simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
 
 theorem cause_die_certificate (sig : Signature Op) (t : Term) :
     CauseErases (.die t, (PrintEliminators.causeAlg sig).cause_die t) := by
@@ -3975,7 +4072,7 @@ theorem cause_die_certificate (sig : Signature Op) (t : Term) :
   subst x
   simp only [eraseCause, eraseTerm_call, eraseTerm_ident, List.map_cons, List.map_nil,
     eraseTerm_printTerm sig t env false hvalue]
-  simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
+  simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
 
 theorem cause_interrupt_certificate (sig : Signature Op) (who : Option Term) :
     CauseErases (.interrupt who, (PrintEliminators.causeAlg sig).cause_interrupt who) := by
@@ -3985,7 +4082,7 @@ theorem cause_interrupt_certificate (sig : Signature Op) (who : Option Term) :
     change (.ok (.call (.ident "Cause.interrupt") []) : Except PrintRefusal Expr) = .ok x at hp
     cases hp
     simp only [eraseCause, eraseTerm_call, eraseTerm_ident, List.map_nil,
-      callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
+      callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
   | some t =>
     simp only [PrintEliminators.causeAlg, Option.toList_some,
       List.mapM_cons, List.mapM_nil] at hp
@@ -3997,7 +4094,7 @@ theorem cause_interrupt_certificate (sig : Signature Op) (who : Option Term) :
     subst x
     simp only [eraseCause, eraseTerm_call, eraseTerm_ident, List.map_cons, List.map_nil,
       eraseTerm_printTerm sig t env false hvalue]
-    simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
+    simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
 
 theorem cause_both_certificate (sig : Signature Op) (left right : TypedCauseCarrier .cause) :
     CauseErases (.both left.val.1 right.val.1,
@@ -4012,7 +4109,7 @@ theorem cause_both_certificate (sig : Signature Op) (left right : TypedCauseCarr
   have hr := right.property env rightExpr hright
   simp only [eraseCause] at hl hr ⊢
   simp only [eraseTerm_call, eraseTerm_ident, List.map_cons, List.map_nil, hl, hr]
-  simp only [callInverse, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
+  simp only [callInverse, eraseProductJoin, eraseRecordJoin, eraseFoldJoin, ite_self, eraseCauseTermJoin, printCause]
 
 def typedCauseCertificateAlg (sig : Signature Op) : CauseTermAlgebra TypedCauseCarrier where
   cause_fail t := ⟨(.fail t, (PrintEliminators.causeAlg sig).cause_fail t), cause_fail_certificate sig t⟩

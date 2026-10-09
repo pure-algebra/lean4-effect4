@@ -79,7 +79,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Library/Queue", .runtime, 4, "Library/Queue", "the Queue's cell at a message type, its initial value, and its six step terms: one pure term over the cell for each step; its first operations (`Ops.lean`): `bounded`, `offer`, `take`, `poll` and `size`, library programs over the steps and the shared wrapper", true, true⟩,
   ⟨"src/Effect4/Library/Semaphore", .runtime, 4, "Library/Semaphore", "Semaphore's cell, its initial value at a total, and its five step terms: one pure term over the cell for each step (decisions row 265); its first operations (`Ops.lean`): `make`, `take`, `release`, `takeIfAvailable`, `withPermits` and `withPermitsIfAvailable`, library programs over the steps and the shared wrapper (decisions rows 260 and 276)", true, true⟩,
   ⟨"src/Effect4/Library/Pool", .runtime, 4, "Library/Pool", "Pool's cell at a resource type, its initial value at a list of resources, and its six step terms: one pure term over the cell for each step (decisions rows 267 to 269 and 276); its operations (`Ops.lean`): `make`, `use` and the close that `make` registers, library programs over the steps and the shared wrapper (decisions rows 267, 268, 276 and 279)", true, true⟩,
-  ⟨"src/Effect4/Library/Stream", .runtime, 4, "Library/Stream", "the stream source record (`Source.lean`), its two step terms (`Steps.lean`), and its operations (`Ops.lean`): `drain`, `runWith`, `runCollect` and `runForEach`", true, true⟩,
+  ⟨"src/Effect4/Library/Stream", .runtime, 4, "Library/Stream", "the stream source record (`Source.lean`), its two step terms (`Steps.lean`), and its operations (`Ops.lean`): `drain`, `runWith`, `runCollect`, `runForEach` and stored array sources (`ArrayDefs.lean`)", true, true⟩,
   ⟨"src/Effect4/Schema", .runtime, 4, "Schema", "the persisted Schema data plane; `Codec` is the type-directed JSON boundary; `Bridge` and `OfShape` are the type and shape arrows", false, true⟩,
   ⟨"src/Effect4/Codegen", .runtime, 5, "Codegen", "the pinned Effect profile: print and read, the template table, forms, bindings, module admission", false, true⟩,
   ⟨"src/Effect4/Ingest", .runtime, 5, "Ingest", "the ingest taxonomy", false, true⟩,
@@ -131,7 +131,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Library/Queue", .laws, 5, "Laws/Library/Queue", "the Queue's capacity statement, its first profile and the profile's closure; the typing of the cell and its steps, the relation to the model, what the Queue's records and passes read, and the six step statements; the laws of the first operations (`Ops.lean`): scope, the attempt laws and the typing at every scope", true, true⟩,
   ⟨"src/Effect4/Laws/Library/Semaphore", .laws, 5, "Laws/Library/Semaphore", "Semaphore's first profile with the profile's closure and two facts of a visit; the typing of the cell and its steps, the relation to the model, and the five step statements (decisions row 265); the laws of the first operations (`Ops.lean`): scope, the typing at every scope and the attempt laws", true, true⟩,
   ⟨"src/Effect4/Laws/Library/Pool", .laws, 5, "Laws/Library/Pool", "Pool's first profile with the profile's closure and the model's facts of an enrolment, a selection, a return, the close's first step and the closer's step; the typing of the cell and its steps, the relation to the model, and the six step statements (decisions rows 267 to 269 and 276); the laws of the operations (`Ops.lean`): scope, the typing at every scope and the attempt laws", true, true⟩,
-  ⟨"src/Effect4/Laws/Library/Stream", .laws, 5, "Laws/Library/Stream", "the stream cursor model's whole-loop drain laws (`Model.lean`), the step agreement laws (`Steps.lean`), the step typing laws (`Typing.lean`), and the scope laws of the source and operations (`Ops.lean`)", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/Stream", .laws, 5, "Laws/Library/Stream", "the stream cursor model's whole-loop drain laws (`Model.lean`), the step agreement laws (`Steps.lean`), the step typing laws (`Typing.lean`), and the scope laws of the source and operations (`Ops.lean`), and atomic array extraction (`Array.lean`)", true, true⟩,
   ⟨"src/Effect4/Laws/Author.lean", .laws, 6, "Laws/Author", "the entry module of the laws an author reads: re-exports the semantics attribute, the authoring laws, the run API's laws and the shared step laws (decisions row 332)", false, true⟩,
   ⟨"src/Effect4/Laws/Author", .laws, 6, "Laws/Author/", "`#explain` and `#obligations`: a step's or a theorem's placement, standing and open goals, read from the environment and the semantics registry; meta code (decisions row 332)", true, true⟩,
   ⟨"src/Effect4/Laws.lean", .laws, 7, "Effect4.Laws", "the root of the proof graph", false, true⟩,
@@ -200,7 +200,13 @@ def areas : List Area := [
   -- pinned references
   ⟨"vendor/effect-4.0.0-rc.112", .vendor, 0, "effect rc.112", "the behavioral reference every citation points into", false, false⟩,
   ⟨"src/Effect4/Library/Ref", .runtime, 4, "Library/Ref", "the independent Ref model and native operations with typed step callbacks", true, true⟩,
-  ⟨"src/Effect4/Laws/Library/Ref", .laws, 5, "Laws/Library/Ref", "the Ref model agreement and typed callback connectors", true, true⟩
+  ⟨"src/Effect4/Laws/Library/Ref", .laws, 5, "Laws/Library/Ref", "the Ref model agreement and typed callback connectors", true, true⟩,
+  ⟨"src/Effect4/Library/SynchronizedRef", .runtime, 4, "Library/SynchronizedRef", "construction, read and pure callback modification through Ref and Semaphore", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/SynchronizedRef", .laws, 5, "Laws/Library/SynchronizedRef", "typing of the composed operations through shared callback and captured-source laws", true, true⟩,
+  ⟨"src/Effect4/Library/PubSub", .runtime, 4, "Library/PubSub", "capacity-one replay-zero natural-message broadcast bookkeeping and independent model", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/PubSub", .laws, 5, "Laws/Library/PubSub", "value, reading and typing connections for six bounded bookkeeping sources", true, true⟩,
+  ⟨"src/Effect4/Library/PartitionedSemaphore", .runtime, 4, "Library/PartitionedSemaphore", "PartitionedSemaphore scalar bookkeeping: independent natural-count model, derived record and four typed steps; waiting and delivery remain open", true, true⟩,
+  ⟨"src/Effect4/Laws/Library/PartitionedSemaphore", .laws, 5, "Laws/Library/PartitionedSemaphore", "the scalar value, reading and typing connections to the independent model", true, true⟩
 ]
 
 /-- Lean files that are not modules: fixtures a gate reads as text, and the fragments the
@@ -278,7 +284,10 @@ def exposures : List (String × Exposure) := [
   ("src/OCaml5", .tool),
   ("tools", .tool),
   ("Test", .test),
-  ("src/Effect4/Library/Ref", .library)
+  ("src/Effect4/Library/Ref", .library),
+  ("src/Effect4/Library/SynchronizedRef", .library),
+  ("src/Effect4/Library/PubSub", .library),
+  ("src/Effect4/Library/PartitionedSemaphore", .library)
 ]
 
 /-- The exposure of a path: its longest declared prefix's, if any. -/
