@@ -60,6 +60,7 @@ A comparison needs its own observation, assumptions and retained evidence.
 ## TypeScript reader consolidation
 
 The shared selection plan is `docs/research/2026-10-09-ingest-form-selection-plan.md`.
+Its checked receipt is `docs/research/2026-10-09-ingest-form-selection-receipt.md`.
 The implementation deepens `expandForm` in `ts/eff/ingest/forms.ts`.
 Each reader supplies a recognized head, ordered argument classes and the existing argument readers.
 The generated `forms` table chooses the expansion and owns its inserted binders.
