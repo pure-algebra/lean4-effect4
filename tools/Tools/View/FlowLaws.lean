@@ -525,12 +525,15 @@ structure WBSpec (ported : Bool) (x : Int) (s : Box) (L : List (Box × Nat)) (r 
     ∃ sl ∈ r.2, (ported = true ∧ i + 1 = sl.1) ∨ (sl.1 ≤ i ∧ i < sl.1 + sl.2.items.length)
   within : Within s.items 0 x → Within r.1.items 0 (x + span (L.map (·.1)))
   sep : Within s.items 0 x → Sep s.items s.edges → Sep r.1.items r.1.edges
+  inputs : ∀ bi ∈ L, ∃ sl ∈ r.2, ∃ x', sl.2 = bi.1.shift x'
+  at_ : ∀ sl ∈ r.2, ∀ t, t < sl.2.items.length → r.1.items[sl.1 + t]? = sl.2.items[t]?
 
 theorem withBranches_spec (ported : Bool) (k : Key) :
     ∀ (L : List (Box × Nat)) (x : Int) (s : Box), 0 ≤ x → (∀ bi ∈ L, Good bi.1) →
       WBSpec ported x s L (withBranches ported k x s L)
   | [], x, s, _, _ => by
-    refine ⟨⟨[], (List.append_nil _).symm⟩, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, fun h hs => hs⟩
+    refine ⟨⟨[], (List.append_nil _).symm⟩, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, fun h hs => hs,
+      fun bi h => absurd h List.not_mem_nil, fun sl h => absurd h List.not_mem_nil⟩
     · intro sl hsl; exact absurd hsl List.not_mem_nil
     · intro e; exact ⟨.inl, fun h => h.elim id (fun ⟨_, h, _⟩ => absurd h List.not_mem_nil)⟩
     · intro i h1 h2; exact absurd h2 (by show ¬ i < s.items.length; omega)
@@ -581,7 +584,8 @@ theorem withBranches_spec (ported : Bool) (k : Key) :
       · rw [map_moveX_shift] at hp
         have := (hb.inside.moveX x) p hp hn
         exact ⟨by omega, by omega⟩
-    refine ⟨⟨(if ported then port.items else []) ++ (b.shift x).items ++ rest, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨⟨(if ported then port.items else []) ++ (b.shift x).items ++ rest, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+      ?_, ?_⟩
     · rw [hrest, s2items, s1items]; simp only [List.append_assoc]
     · show _ = s.src; rw [ih.src]; show s1.src = _; exact s1src
     · show _ = s.w; rw [ih.w]; show s1.w = _; exact s1w
@@ -654,6 +658,17 @@ theorem withBranches_spec (ported : Bool) (k : Key) :
         have h3 := (hb.inside.moveX x) q hq hqn
         omega
       · exact (s1nn p hp hpn).elim
+    · intro bi hbi
+      rcases List.mem_cons.mp hbi with rfl | hbi
+      · exact ⟨_, List.mem_cons_self, x, rfl⟩
+      · obtain ⟨sl, hsl, x', hx'⟩ := ih.inputs bi hbi
+        exact ⟨sl, List.mem_cons_of_mem _ hsl, x', hx'⟩
+    · intro sl hsl t ht
+      rcases List.mem_cons.mp hsl with rfl | hsl
+      · show (withBranches ported k _ s2 L).1.items[s1.items.length + t]? = (b.shift x).items[t]?
+        rw [hrest, s2items, List.append_assoc, List.getElem?_append_right (Nat.le_add_right _ _),
+          Nat.add_sub_cancel_left, List.getElem?_append_left ht]
+      · exact ih.at_ sl hsl t ht
 
 /-! ## The top and the bottom of a parallel part -/
 

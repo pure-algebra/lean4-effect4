@@ -106,7 +106,14 @@ each case.
 every flow and every node width. To make them arithmetic, a part's edges name their ends by
 position, as a de Bruijn index names its binder. Codex's three findings of the same day are
 repaired. A release stands at its scope's close, and an empty race never ends. An await's target
-is read by a fold of the term. D1 is next.
+is read by a fold of the term.
+
+**Landed (2026-10-09, evening)**: D1 (`tools/Tools/View/AlgGraph.lean`,
+`tools/Tools/View/FlowOrder.lean`), at `propext` and `Quot.sound`. Mokhov's eight axioms hold of
+the edge-set model, with idempotence and absorption. A flow's order is a fold into the algebraic
+graph: series connect, branches overlay. `lay_realizes` proves that the layout realizes the order,
+and `place_keeps_order` that what a flow orders first stands above. The proof of a series uses
+two of the axioms, the associativity of connect and its unit. D4 is next.
 
 ## 6. The laws of D1 and D3, placed before they are worked
 
@@ -126,7 +133,7 @@ agent's place (D5) and the selected address of R14 build on these laws.
 | `layout_descends` (D3) | in every flow's layout, the target of each edge stands at or below its source's bottom | the drawing: a forward edge needs no arrowhead (row 337, point 1); the check `graph-edges-descend` |
 | `layout_apart` (D3) | in every flow's layout, any two boxes stand apart | the drawing; the check `graph-boxes-apart` |
 | the axioms of D1 | the algebraic graph's eight axioms (Mokhov) hold of its edge-set model, as equalities | the order of a flow as a fold into the algebraic graph, and the faithfulness law below |
-| faithfulness (D1, next) | when the program runs one node before another, the layout reaches the second from the first | the reading "above means before" |
+| `lay_realizes`, `place_keeps_order` (D1) | when a flow's order puts one node before another, the layout reaches the second from the first, and draws the first above | the reading "above means before" |
 
 **The reach.** The layout laws hold for every flow, at the level of item positions. A route is
 drawn between two items' keys, so the key-level checks agree with these laws when keys are
