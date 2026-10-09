@@ -1,0 +1,13 @@
+landing plan for [Test.LandingPlanCounts.topPair (proved)] in [Test.Audit.LandingPlanCounts]
+  to land (0 planned goals): []
+  local steps, proved (2): [Test.LandingPlanCounts.helperOne, Test.LandingPlanCounts.helperTwo]
+  local steps, not proved (0): []
+  joints reused (1, 1 of them load-bearing): [Effect4.Store.natOfBinary64_exact ×2]
+  predicted reuse: 50% (2 tree edges, 2 local), as `#load_report` counts it
+graph: 358 theorems of the tree, 1 roots, 33 load-bearing
+landing [Test.Audit.LandingPlanCounts]: 3 theorems, 0 of them roots
+  edges: 2 local, 2 tree, 1 core, 0 instance; reuse ratio 50%
+  load-bearing: 0 of 3
+  unconsumed (1): [Test.LandingPlanCounts.topPair]
+  reached by a consumer, but by no root (2): [Test.LandingPlanCounts.helperOne, Test.LandingPlanCounts.helperTwo]
+  joints: [Effect4.Store.natOfBinary64_exact ×2]

@@ -1,0 +1,26 @@
+{
+  "pin": "90940a5408c4fa789223b4301ef0094ed75725a3",
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "-DwarningAsError=true",
+    "/tmp/effect4-edit-resolution-0547/EntryProbe.lean"
+  ],
+  "cwd": "/tmp/effect4-edit-resolution-0547",
+  "leanPath": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean",
+  "leanThreads": 3,
+  "exit": 0,
+  "hashes": {
+    "src/Effect4/Program/Edit.lean": "dd4dacdece7cabe17d1162119c83a3c039aa6cfb3e5fd0cfee4096fb89eeff15",
+    "src/Effect4/Laws/Program/Edit.lean": "144edcff998ef25ee9f39b6f8aeed9e2e172c8e6d6d7c6de27009869d6ef79b0",
+    "src/Effect4/Author.lean": "76d1397a52377cfdfd65c43d42063fb2c57561d7cf8d7ea159c17d5a92b3bee1",
+    "src/Effect4/Laws/Author.lean": "73ae6aacdafdaed9c1d79b6511d631358ae3fc94dd55e7208bb2a4cd9e5225da",
+    "Test/Dogfood/EditSession.lean": "3ce8b5589d7be0654db2dd978be427dea15cd2ec4c63ce365460dee1c6f21865",
+    ".lake/build/ir/Effect4/Program/Edit.c": "389ed2d933fa4605043b9283dbe6a6f2c82cafaa5f3d5236cfd8d0444523525d",
+    "Effect4/Program/Edit.olean": "c78e0bbfaa456095b8d480dac9bef92aafc0e85b8e6fda47a3f0e51400d7220b",
+    "Effect4/Laws/Program/Edit.olean": "6b5643998fe21c81caed8b72a67743fb69b5a57a4059b0ec98bb6058e1edfabd",
+    "Effect4/Author.olean": "ee27d06872fff6a45565644a8e4acc64b10ad168f270f05d27408b71ab2e0ef2",
+    "Effect4/Laws/Author.olean": "e5d7e85ebcf2b5d3b1023955003e249c2f1eba8a51011e1243252d4320225c5a"
+  },
+  "compiler": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "scope": "existing public-entry Queue authoring fixture: three finite guards and reached_view reader"
+}

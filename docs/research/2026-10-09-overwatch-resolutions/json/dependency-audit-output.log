@@ -1,0 +1,7 @@
+'Tools.JsonBridge.ofLeanJson' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Tools.JsonBridge.toLeanJson' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Effect4.Store.natOfBinary64' does not depend on any axioms
+'Effect4.Arch.binary64OfNat' does not depend on any axioms
+'Lean.Json.num' does not depend on any axioms
+'Lean.Json' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Lean.JsonNumber' does not depend on any axioms

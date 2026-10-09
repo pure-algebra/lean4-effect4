@@ -1,0 +1,10 @@
+JSON-01 runtime resolution confirmed at8811a61bab98a6d07e897c3361a703f5729c9c82.
+Nine controls pass using cached primary artifacts, direct Lean4.33.1, LEAN_NUM_THREADS=3, unique /tmp cwd. No Lake or production writes.
+Open controls:7,2^53,2^53+2 accepted unchanged;2^53+1,3.5,-1 refuse and preserve the previous exact-large stored program.
+Fill controls:11 and2^53+2 accepted unchanged;2^53+1 refuses and preserves literal11 byte-for-byte.
+Runtime JsonBridge and Session sources match8811. Test controls changed at2bc084d9; both8811 pinned and current source copies/hashes are retained. Current HEAD during replay:205f4fea.
+Tools.JsonBridge.ofLeanJson_num is a numeric-leaf theorem. Its declared premise is successful conversion of one Lean.Json.num datum. It inherits [propext,Classical.choice,Quot.sound] from Lean.Json; both bridge functions also inherit those axioms. Pure natOfBinary64 and binary64OfNat carry no axioms.
+Tools is outside the Effect4/Test AxiomGate scope. This is the explicit tool-side Lean.Json boundary, not a core gate violation or a new runtime defect. Canonical.ofJson_exact remains the unchanged core claim. No whole recursive bridge theorem is asserted here.
+If module consumers need this numeric proposition inside the ordinary core trust boundary, extract only the exact numeric conversion proposition into an existing gated data/core law after placement. No such production change is requested or performed in this review.
+Replay: python3 /tmp/effect4-json-authoring-resolution/replay.py --repo /Users/pooks/Dev/lean4-effect4 --out /tmp/effect4-json-authoring-resolution/replayed
+The output directory must be new. Raw type/axioms:Audit.lean,audit-output.log,DependencyAudit.lean,dependency-audit-output.log. Raw runtime evidence:controls-pass/requests.jsonl,answers.jsonl,summary.json,execution.json. Source/compiler/olean/evidence hashes:verification.json.

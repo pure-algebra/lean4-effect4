@@ -1,0 +1,6 @@
+'Tools.JsonBridge.ofLeanJson_num' depends on axioms: [propext, Classical.choice, Quot.sound]
+Tools.JsonBridge.ofLeanJson_num {fuel : Nat} {n : Lean.JsonNumber} {j : Effect4.Json}
+  (h : Tools.JsonBridge.ofLeanJson (fuel + 1) (Lean.Json.num n) = some j) :
+  ∃ x,
+    j = Effect4.Json.number x ∧
+      n.exponent = 0 ∧ 0 ≤ n.mantissa ∧ Effect4.Store.natOfBinary64 x.bits = some n.mantissa.toNat

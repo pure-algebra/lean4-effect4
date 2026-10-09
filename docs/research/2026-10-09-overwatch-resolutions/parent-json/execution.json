@@ -1,0 +1,30 @@
+{
+  "pin": "8811a61bab98a6d07e897c3361a703f5729c9c82",
+  "command": [
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean",
+    "--run",
+    "/tmp/effect4-json-resolution-parent-0547/SessionDriver.lean"
+  ],
+  "leanPath": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean",
+  "leanNumThreads": "3",
+  "exit": 0,
+  "leanVersion": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "currentHead": "205f4feaaac2041efe4becbe9992ec8f14b077c6",
+  "pythonVersion": "Python 3.13.14",
+  "hashes": {
+    "src/Effect4/Store/Domain/ShapeRead.lean": "bb94641060904bf66dda4812fb8515b0157a32438ce89c045300d5e4949e49f3",
+    "src/Effect4/Laws/Store/ShapeRead.lean": "2be3d40788825acd2ece069855b09bab8914131368c353c48a04ca898d0a0660",
+    "tools/Tools/JsonBridge.lean": "c5ea68a6c20fa30f3ac78f142aafa397467e68312993cf23bacd4e4e836fb566",
+    "tools/Tools/Session.lean": "ccca864945273741a354eca221ed87a5fa88f02f4b7c8b1d6823e51bca7437a2",
+    "Test/Program/JsonFormControls.lean": "cff03352f7bde59f7b3f83426a5a870a9d4990d3d1b7a9314514675450b5055c",
+    "current:Test/Program/SessionToolControls.lean": "7f36f4f7f7c52deb264e259012f8af229d1041abd3308e424a06790083b628f8",
+    "Test/Program/SessionToolControls.lean": "5cfd2a0c0366638f975256d616c82f9e08bb3ae3f15c2fc09a271d8ae8dfab6e",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/Session.olean": "8edb5d6a5ba5cf31cdd4857e32a0df8932310e34e7834b6b7c471b22c1aa707e",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/JsonBridge.olean": "424f646207cf04b57b8993407b7f75dc15c593c3be3bd197f95180c3497762d0",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Domain/ShapeRead.olean": "01793338aad0c989477acf483e90051c4582a8d9cad397b357450662a8bddf52",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Store/ShapeRead.olean": "f8ec4fd49884d87cacc542302e9aac5485f576854458cba8cd8d0ba4ff22ce62",
+    "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Program/SessionToolControls.olean": "20d628f97af049e3faefeee4c41481c5e73d01c359c153633556ffc493d14686",
+    "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean": "1b370cfcbf44e80d1b004ab1b1ab9a4c73951f9f7c242140bcff9bc577576554",
+    "/private/tmp/effect4-json-authoring-resolution/replay.py": "f1f55f5d40b9694978db5dec51349ad60b3d675bb8a583abdcce9dc204a10529"
+  }
+}
