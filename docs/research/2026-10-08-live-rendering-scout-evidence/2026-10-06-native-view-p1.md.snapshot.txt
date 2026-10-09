@@ -1,0 +1,242 @@
+# 2026-10-06 A dogfood program as data: the pages of p1, the gaps they show, and a native form for a view
+
+Status: research note (history, not authority). Base: `6d097d64`. Nothing tracked is edited.
+This note continues `docs/research/2026-10-06-native-view.md`. The probe is the same folder,
+`docs/research/2026-10-06-native-view-probe/`. The note
+`docs/research/2026-10-07-native-view-forms.md` continues this one. Since 2026-10-07 the files
+of round 2 are under `round2/` of the probe folder, and the commands below name that round.
+
+## Question
+
+The owner asked two things by voice on 2026-10-06. The text is the coordinator's reading.
+
+1. View one dogfood program: the raw program as data, its operations table and how it runs.
+   Account for all of that data. Improvise the host, since the session's semantics is not
+   finished. Note each gap that the core should fill.
+2. Let the gaps show the abstractions. Name the native form of this data. The interface is
+   built on folds and higher-order functions. A consumer reads it as a stream and as a trie,
+   with incremental updates, for a live and styled viewer.
+
+## What was read or run
+
+| Item | Evidence |
+| --- | --- |
+| `Test/Dogfood/P1HttpCache.lean`: `program1`, `ok503thenBody`, `Driver`, `drive` | reading |
+| `src/Effect4/Run.lean`, `src/Effect4/Api/HostSession.lean`, `src/Effect4/Api/Runner.lean`, `src/Effect4/Api/Built.lean` | reading |
+| `Lines.lean` in the probe folder, over p1 and the 79 corpus programs | tested |
+| The viewer of round 2 on the three pages of p1 (`frames-run.txt`) | tested |
+
+## Findings
+
+### 1. Three pages account for p1
+
+The program is `program1`: a quote fetch with a timeout, a retry schedule and a cache. The
+host is that battery's own scripted host, at the script `ok503thenBody`. The viewer of round 2
+draws the pages with no change to its grammar.
+
+| Page | Lines | What each line is | The title block's second line |
+| --- | --- | --- | --- |
+| p1 · program | 56 | a node of the stored tree | the type, `Effect<string, readonly [string, string], —>` |
+| p1 · operations | 92 | a row of the table, or one field of a row | 6 rows in the table, 1 native operation performed |
+| p1 · run | 832 | a command of the journal, or one field of the run's end | 805 commands, the exit at command 62 |
+
+**The program page.** A `perform` node stores its operation as a position, `external 5`. The
+row's name is the line's remark, `Http.getQuote`. The remark is a join of two fields, and the
+line keeps the stored form.
+
+**The operations page.** Each row of the table shows its position, its name and every field.
+The fields are the declared name, `spelling`, `shape`, `trailing`, `kind`, `registration`,
+`request`, `answer`, `error`, `requires`, `typeArgs` and `cite`. Each row also shows the count
+of nodes that perform it. Two rows of the installed package are performed at no node. The page ends
+with the native operations that the program performs: `sleep`, at 2 nodes, with its row from
+`nativeSignature` (`src/Effect4/Program/Native.lean`).
+
+**The run page.** The journal is the run's own field, `Run.journal`, with the session's
+verdict of each command, `Run.phases`. The page ends with three records: the observation
+(`Run.observe`), the session's ledger and the driver's own counts.
+
+### 2. What the run page shows
+
+- The journal holds 805 commands: 394 of `flush`, 394 of `advance 100`, 1 of `evaluate`, 6
+  of `bind`, 5 of `submit` and 5 of `apply`.
+- Six calls are bound and five are answered. The call of `(key 1 2)` hangs, as the script
+  says, and the session retires it with no reply.
+- The root has its exit after command 62. The driver plays 400 steps and does not stop at the
+  exit, so 742 commands follow it.
+- 796 commands add no event to the machine's trace. The trace ends with 309 events.
+- **The page is computed by replay.** The export opens the run again and plays the journal one
+  command at a time (`Run.step`). The replayed run gives the same observation as the
+  driver's run. This is one finite check on one journal.
+
+### 3. Gaps that the core can fill
+
+Each gap was met while the pages were written. The third column is the coordinator's
+proposal.
+
+| Gap | Where it was met | What would fill it |
+| --- | --- | --- |
+| No written form of a term, an operation, an exit, a cause or a completion | The export derives `Repr` for 15 types and strips namespaces | One written form for each sort, generated from its signature |
+| A term's stored spine reads badly | `app "pair" (cons … (nil))` | The export writes a term by a fold of `TermAlgebra` (`src/Effect4/Program/Fold.lean`); the core has no such fold |
+| A decision cannot be written whole | `RunDecision` takes `EffName` and `EffThunk`, which hold a point, and a point holds the program | A written form that names a point by its path |
+| The trace has no written form in the library | `RunEvent` (`src/Effect4/Machine/Fibers.lean`); the truth lane's writer is in a driver file | The trace's events as rows, in the library |
+| A call does not name its site | A `bind` line shows the fiber and the token, and no path | The path of the `perform` node, in the call or in the trace |
+| A row has three names | `kvGet`, declared as `get`, with the spelling `get` | One ruling on which name is the identity |
+| A variable is a position | `(var 2)` on the page; the authored names are gone | A binder table as a derived view |
+| A service key has no name | `ServiceName` holds a number; the page would show the tree's spelling `k4_4` | A name table for keys |
+| No type at a node | Only the root's type is shown | The checked focus of row 281 |
+| The host is local to one battery | `Driver`, `step` and `drive` are in the p1 battery | A host policy in the library, with a stop at the exit |
+| The session's profile is empty | The ledger's `profile` field is the empty string | A profile's name, or no field |
+| A refusal's path is of the expanded program | `Api.explain` (`src/Effect4/Api.lean`) | The map from an expanded path to a stored path |
+| A stored node has no origin | No link from a node to the authored source (finding 6) | An origin table keyed by path, written at the build |
+| The TypeScript text of the printer has no spans and no layout | 15 long lines for p1; no link from a node to its text | The document algebra of the visual-plane plan, with a path at each span |
+
+### 4. A subtree is one run of lines
+
+The export tests one property at every path of p1 and of the 79 corpus programs. The lines
+of the subtree at a path are one unbroken run of the whole column. The run starts at the
+path's own line. It ends where the path stops being a prefix. The check holds at 429 of 429
+paths (`spliceHolds` in `Lines.lean`, the `S` rows of the two outputs). It is a finite check.
+
+So an edit of the stored tree at one path would replace one run of lines.
+
+### 5. Eight pages, with the forms of the code and two graphs
+
+The owner asked on 2026-10-06 for the program's actual code beside the stored tree, and for a
+graph. The export now writes eight pages for p1.
+
+| Page | Kind | What it shows |
+| --- | --- | --- |
+| p1 · authored (Lean) | text | the forms and `program1` as the battery writes them, with the file's line numbers |
+| p1 · original (rc.112 TypeScript) | text | `Test/Dogfood/rc112/p1-http-cache.ts`, the program that this one ports by hand |
+| p1 · program | lines | the stored tree |
+| p1 · program graph | graph | the stored tree as 56 boxes and 55 edges |
+| p1 · printed TypeScript | text | the text of `Api.printModule` at the house style |
+| p1 · operations | lines | the row table |
+| p1 · run | lines | the journal |
+| p1 · run graph | graph | 13 fibers and 6 calls: a fiber under the fiber that forked it, a call under its fiber |
+
+A graph page is boxes and edges. A box holds two lines of text in a rule of one pixel, and an
+edge is three straight rules. No hue is used. Lean places each box. The export computes a column, a row and a width in cells of the
+monospace face, by round 1's `tidy` over natural numbers. The viewer multiplies by the cell's width and decides no position.
+
+In the run graph a fiber's children stand in the journal's order, left to right. The three
+attempts of the fetch show as three groups of four fibers. The first attempt's call is retired
+with no reply, the second fails and the third succeeds.
+
+### 6. Which links between the forms exist today
+
+| Link | State | Evidence |
+| --- | --- | --- |
+| a fiber to the program node that forked it | exists: a fork record holds the site's path | tested: 12 of 12 sites name a stored node |
+| a call to the program node that performed it | absent: a call holds the fiber, the operation and the request | reading |
+| the stored program to its printed text, whole | exists: the reader reads the text back | tested: `Api.readable` answers `true` for p1 |
+| a stored node to its span of the printed text | absent: the printer writes text with no span | reading |
+| a stored node to its authored source | absent: the build records no source position | reading |
+| the authored program to the rc.112 original | by hand: no mechanical link | reading |
+
+The fork record is `ForkRecord` (`src/Effect4/Machine/Fibers.lean`). The viewer's foot shows
+the join: the fiber, its site and the stored node at that site.
+
+Two facts bear on the absent links. The authoring elaboration already passes each node's path
+(`src/Effect4/Program/Authoring/Lifts.lean`), so the key of an origin table exists at build
+time. The printed text has few line breaks, since the printer has no layout: the whole program
+of p1 prints in 15 lines.
+
+### 7. How the probe is implemented
+
+The probe has three parts, and each is one file.
+
+1. **The export**, `Lines.lean`, 542 lines of Lean. It imports the tree and the p1 battery. It
+   folds the stored tree with one generic layer, asks the checker, opens a run and replays the
+   battery's journal. It writes rows of text: a page, a line, a box, an edge and a pair.
+2. **The rows**, three text files. A row is tab-separated. No row holds a position in pixels
+   or a colour.
+3. **The viewer**, `view.c`, 387 lines of C over cairo and SDL2. It reads the rows into
+   arrays. One function draws a frame from the rows, the scroll offset and the pointer. The
+   same function writes a PNG, an SVG and a PDF.
+
+The viewer does not call Lean. A change of a program shows after the export runs again.
+
+## Proposals (not rulings)
+
+### The native form of a view
+
+The gaps and the check point at one form. Each part names what the tree already holds.
+
+```mermaid
+flowchart TD
+  T["stored tree: a trie of child indices"] -->|"one generic layer, folded"| V["view: a mark at each path"]
+  K["tables keyed by path: a type, a refusal, a row's name"] -->|"joined by path"| V
+  V -->|"preorder"| L["lines"]
+  E["an edit at a path"] -->|"one run of lines"| S["splice"]
+  J["journal: a list that only grows"] -->|"one command"| S
+  L --> W["viewer: a fold of splices"]
+  S --> W
+  R["role of a mark"] -->|"the viewer's tokens"| W
+```
+
+1. **The stored tree is a trie, and a path is its key.** `Node.at_` is the lookup and
+   `Node.replaceAt` is the update (`src/Effect4/Program/Refs.lean`). `foldMapAt_eff`
+   (`src/Effect4/Program/Fold.lean`) is a fold into a monoid that carries the path.
+2. **A view is one generic layer.** It takes a family, a constructor's name and the arguments,
+   and gives a mark. `EffAlgebra.ofLayer` turns it into an algebra, and `cata_eff` folds it.
+   The lines are that fold at the monoid of lists. The plan of 2026-09-17 names this layer in
+   its phase 4.
+3. **A column is a table keyed by path.** A type at a node, a refusal, a row's name and a
+   binder's name are each such a table. A page joins tables by path. A table is a fold, or the
+   answer of a checker.
+4. **An update is a splice.** An edit at a path replaces one run of lines. A journal's new
+   command appends one line. So one message serves both: a start, a count of lines to drop and
+   the new lines.
+5. **The viewer is a fold of splices.** Its state is the lines, the scroll offset and the
+   pointer. Round 2 already has that shape, with whole pages in place of splices.
+6. **A style is the viewer's.** A mark holds a path and a role, as the plan rules. The viewer
+   maps a role to its tokens. No style crosses the boundary.
+7. **A run's page at an index is a replay.** `Run.play` over a prefix of the journal gives the
+   run at that index. Finding 2 tests it at the whole journal.
+
+Three laws would make this form exact. Each is a candidate with no statement in the tree.
+
+| Candidate | In words | Evidence today |
+| --- | --- | --- |
+| the path law | each line's path resolves under `Node.at_` | tested at 429 paths |
+| the run law | the lines of the subtree at a path are one run of the whole column | tested at 429 paths |
+| the splice law | the lines after `replaceAt` are the old lines with that run replaced | not tested |
+
+Their concept would be `initial-algebras-folds`. Their consumers would be this viewer and the
+reader of an editing tool. None is placed, and none is a planned goal.
+
+### An order of work
+
+1. Rule the meanings of the first note's list, with the owner.
+2. Write the generic layer and the written forms in the tree. The export then copies and joins
+   fields, and writes no form of its own.
+3. Give the trace its rows. A run's score needs them.
+4. Add the splice message to the rows, and let the viewer take a stream.
+
+## What this does not establish
+
+- No theorem is stated or proved. The replay and the run of lines are finite checks.
+- The host is the battery's scripted host. It is not a session semantics.
+- The run page shows a journal. It shows no trace event, no fiber's lane and no scope.
+- The trie form and the three laws are proposals. No splice is implemented.
+- One dogfood program is drawn, under one script. The other four are not.
+- The graph pages draw two trees. No graph with a shared node or a cycle is drawn.
+- The source pages show text. No line of a source page is linked to a node.
+- The written forms are the probe's. A term's form follows the design language's study, and
+  the other forms are Lean's own text with the namespaces cut.
+
+## Commands
+
+Run each from the root of the tree.
+
+```sh
+LEAN_NUM_THREADS=3 lake env lean --run docs/research/2026-10-06-native-view-probe/Lines.lean \
+  docs/research/2026-10-06-native-view-probe/programs.lines.tsv \
+  docs/research/2026-10-06-native-view-probe/p1.lines.tsv
+docs/research/2026-10-06-native-view-probe/build.sh
+cd docs/research/2026-10-06-native-view-probe
+./view --page 'p1 · authored (Lean)' programs.lines.tsv p1.lines.tsv plan.lines.tsv
+./view --page 'p1 · run graph' --png frames/p1-run-graph.png p1.lines.tsv
+./view --page 'p1 · run' --text p1.lines.tsv
+```

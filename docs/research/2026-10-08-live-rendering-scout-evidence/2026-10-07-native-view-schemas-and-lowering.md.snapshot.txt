@@ -1,0 +1,342 @@
+# 2026-10-07 A schema as a view, and a stage of Lean that lowers the picture of a page
+
+Status: research note (history, not authority). Base: `7a7045f6`, with the uncommitted work of
+the working tree. Nothing tracked is edited. This note continues
+`docs/research/2026-10-07-native-view-forms.md`. The probe is the same folder,
+`docs/research/2026-10-06-native-view-probe/`.
+
+## Question
+
+The owner asked two things by voice on 2026-10-07. The text is the coordinator's reading.
+
+1. Probe the rendering of schemas. View a schema as first-class data, in each of its
+   representations.
+2. Probe a direct lowering pass for the rendering. Tie the picture to the code, down to Cairo
+   commands or a like form. Give it some semantics. The form must allow more advanced work.
+
+Three phrases are read by ear.
+
+- "Effect schemas". The reading: the schema data of the tree, which is `Representation` and the
+  bridge from the type language. A schema written in TypeScript is not read here.
+- "in our proof first, or in the authoring API". The reading: the pass is a function of Lean
+  with laws, and the interface may offer it as a face beside the printer. Proposal D holds a
+  second reading.
+- "In this session". The reading: no second instance works on it.
+
+## What was read or run
+
+| Item | Evidence |
+| --- | --- |
+| `src/Effect4/Schema/Representation.lean`, `Payload.lean`, `Fold.lean`, `Bridge.lean`, `Codec.lean` and `Authoring.lean` in `src/Effect4/Schema/`: `Representation`, `Check`, `RepresentationAlgebra`, `Schema.Bridge.schema`, `ofSchema`, `Schema.Codec.wire` | reading, then tested through the export |
+| `src/Effect4/Program/TyCore.lean`, `TyFoldExtras.lean` and `Columns.lean` in `src/Effect4/Program/`: `Ty`, `tyCtor`, `tyArgs`, `tyBuild`, `TyAlgebra.ofLayer`, `inhabited` | reading, then tested through the export |
+| `src/Effect4/Codegen/Schema.lean`: `representationSource`, `moduleSyntax` | reading, then tested through the export |
+| `Test/Dogfood/Scenario/Todo.lean`: the data, the four rows and the four programs of the to-do application | reading, then tested through the export |
+| `docs/core/controlled-english.md` §4: the seven judgments and the four boundary behaviours | reading |
+| `Schemas.lean` in the probe folder: the export of the schema pages | tested: `schemas-run.txt` |
+| `paint.h`, `marks.h` and `view.c` in the probe folder: every call of the painter | reading, then tested by the stream |
+| `Scene.lean` in the probe folder: the three forms of a picture, the lowering, five laws and four finite checks | tested: `lower-run.txt` |
+| `draw.c` in the probe folder: the replay of a stream of device calls | tested: `lower-run.txt`, its part 4 under two sanitizers |
+| `lower-check.sh`: Lean's stream against the viewer's stream, picture and click | tested: `lower-run.txt` |
+| `check.sh` of round 3, after the changes of this round | tested: `canvas-test-run.txt`, `frames-run.txt`, `asan-run.txt` |
+
+No download was made. No commit was made. The 5 laws of `Scene.lean` are proved in a probe
+file: the axiom gate does not audit it.
+
+## Findings
+
+### 1. A type has five forms, and one key joins them
+
+The subject is the data of the to-do application: `Todo`, `NotFound`, `SqlError`,
+`EmptyTitle`, and the exit of the program `complete`.
+
+| Form | Declaration | How the probe reads it | Key |
+| --- | --- | --- | --- |
+| The type | `Ty` (`src/Effect4/Program/TyCore.lean`) | its generic layer: `TyAlgebra.ofLayer` | `y:<type>:<path>` |
+| The schema | `Representation` and `Check` (`src/Effect4/Schema/Representation.lean`) | one layer by a hand `match`, walked with fuel | `z:<type>:<path>` |
+| The printed schema | `representationSource` (`src/Effect4/Codegen/Schema.lean`) | the text, with the span of each node of the type | a span carries `y:` |
+| A value | `Store.Val`, with `Val.hasTy` and `Schema.encode` | membership, the JSON text and the value read back | none yet |
+| A use | `Row` and the type of a built program | the columns of a row and of a program refer to the types they hold | `r:todo:<position>` |
+
+```mermaid
+flowchart LR
+  T["type (Ty)"] -- "Schema.Bridge.schema" --> S["schema (Representation)"]
+  S -- "ofSchema" --> T
+  S -- "representationSource" --> P["printed schema (JSON text)"]
+  T -- "Val.hasTy" --> V["value (Val)"]
+  V -- "Schema.encode / decode" --> J["JSON"]
+  R["row, program"] -- "a column holds" --> T
+```
+
+Two links are computed with no change to the tree, by one method.
+
+- **Type node to schema node.** The export replaces the node at a path with a handle of a
+  reserved name (`markAt`). The bridge writes a handle as one declaration. The path of that
+  declaration in the schema is the image of the type's node.
+- **Type node to printed span.** The export prints the schema of the marked type. It finds the
+  object of the mark. The unmarked print holds the node's text between the same head and tail.
+
+Tested, `schemas-run.txt`:
+
+| Check | Of | Holds |
+| --- | --- | --- |
+| A node of a type has its node of the schema | 25 | 25 |
+| A node of a type has its span in the printed schema | 25 | 25 |
+| The schema of a type reads back as the same type (`ofSchema`) | 5 | 5 |
+| The written type is the canonical type | 5 | 4 |
+
+The 5 types have 25 nodes. Their schemas have 34 lines: 26 nodes and 8 checks.
+
+### 2. The pages of a schema
+
+The export writes 25 pages in the viewer's one input format (`schemas.lines.tsv`, 983 rows).
+The viewer needed no change to show them.
+
+| Page | What it shows |
+| --- | --- |
+| `todo · schemas` | each type with its judgments as fields; the four rows and the four programs, each column with a reference to the types that it holds |
+| `todo · <type> · type` | the tree of the type: a constructor at each line, the TypeScript text in the column of types, and a failed judgment as a remark |
+| `todo · <type> · schema` | the tree of the schema; a check is a line under its node, with the remark "a refinement" |
+| `todo · <type> · printed schema` | the JSON text that the printer writes, with a span for each node of the type |
+| `todo · <type> · schema graph` | the schema as boxes, in the first layout of round 3 |
+| `todo · <type> · values` | sample values: the value as the machine holds it, membership, the JSON text, and the value read back |
+
+A selection moves across the forms. The frames `2-exit-type.png` to `5-exit-schema-graph.png`
+in `frames-schema/` show one node, `y:CompleteExit:1.1`, lit on four pages.
+
+The schema page shows one thing that the TypeScript type loses. The type `nat` prints as
+`number`. Its schema holds two checks, `isInt` and `isGreaterThanOrEqualTo { minimum: 0 }`.
+The dictionary's word for a check is a refinement, and the page uses it.
+
+### 3. The gaps that the schema view found
+
+| Gap | Observation | What it costs a view |
+| --- | --- | --- |
+| The schema's fold has no generic layer | `RepresentationAlgebra` has 24 fields. `Ty` has `tyCtor`, `tyArgs`, `tyBuild` and `TyAlgebra.ofLayer`; `Representation` has none of the four. | `layerOf` in `Schemas.lean` is a hand `match` of 24 arms. Each further view would be 24 fields more. |
+| No replacement at a path of a schema | The mark works through the type alone. | A span exists for the image of a type's node only. The 8 checks and the defect slot of `Exit` have no span. |
+| The name of a type is not data | `Todo` is a Lean identifier. A row's column prints the whole record. | The export finds a use by comparing structure (`mentions`). A page cannot print `Todo` where the record stands. |
+| The written order of fields is not stored | The canonical record sorts its fields by name. `Todo` is written `id, title, done` and stored `done, id, title`. | Every form shows the stored order. 4 of 5 types are written in canonical form. |
+| Membership answers no place | `Val.hasTy` answers a `Bool`. `Schema.encode` answers an `Option`. | The values page says "no" for a to-do whose id is a text. It cannot point at the field. |
+| The printer's number is exact and unreadable | `jsonSource` prints the number 1 as a `DataView` expression of eight bytes. | The export prints a number through `Float.ofBits`, as its own text. |
+| No node of a schema changes the wire's form | `Schema.Codec.layout` of each of the 5 types is the type. | A page of two columns, the type's side and the wire's side, has nothing to show yet. |
+| A document with references is a graph | `Row.document` and a recursive schema hold `reference` nodes. | Not drawn. The probe draws trees. |
+
+The seven judgments of the dictionary reach a schema page as follows.
+
+| Judgment | Function that a view can call at a node | On the page |
+| --- | --- | --- |
+| Formation | `Ty.closed`; `Formation.check` answers a located refusal for a table | field "formed"; a remark at a node |
+| Canonical form | `Ty.normalize` | fields "written" and "canonical" |
+| Inhabitance | `inhabited` (`src/Effect4/Program/Columns.lean`) | field "has a member" |
+| Profile support | `Schema.Codec.isSupported` for the JSON codec | field "crosses JSON" |
+| Membership | `Val.hasTy`: a `Bool` | values page, with no place |
+| Codec admission | `Schema.encode`: an `Option` | values page, with no place |
+| Reply admission | belongs to a waiting call of a run | not on a schema page |
+
+### 4. The picture of a page has three forms
+
+```mermaid
+flowchart LR
+  O["object: Eff, Ty, Representation, Run"] -- "export (Lines.lean, Schemas.lean)" --> G["Page: rows in cells, with keys"]
+  G -- "pageOps" --> C["Op: a call of the painter, logical pixels"]
+  C -- "lower" --> D["Dev: a call that reaches the target"]
+  D -- "draw.c" --> X["cairo and pango: pixels"]
+```
+
+| Form | Declared in `Scene.lean` | Unit | Constructors |
+| --- | --- | --- | --- |
+| `Page` | lines, spans, boxes and edges: the viewer's rows | cells | 4 kinds of row |
+| `Op` | one call of `paint.h` | logical pixels at zoom 1 | 12: fill, two rules, frame, two edges, mark, two texts, cut, end of cut, pointer box |
+| `Dev` | one call that reaches the target | whole device pixels for a fill | 6: fill, two texts, cut, end of cut, pointer box |
+
+One fact makes the lowest form small. **Every mark that is no text is a fill of a box of whole
+device pixels in the tone of a role.** A rule, a frame, a band, an edge of a tree and each
+shape of the row marks all end in `paint_device_fill` (`paint.h`). So Lean decides every such
+pixel in integers.
+
+A text is the host's. Lean states its face, its place, its room and its characters. Pango
+chooses the glyphs. For the data face, Lean also knows the cells that a text takes: one for
+each character.
+
+A device fill is three calls of cairo: `cairo_set_source_rgba`, `cairo_rectangle` and
+`cairo_fill`. So the stream of `Dev` is the form of Cairo commands, less the shaping of text.
+
+### 5. Lean's lowering writes the viewer's own stream
+
+The viewer now writes the stream of its own picture (`view --streams`). A hook in `paint.h`
+writes one row for each call that reaches the target. `Scene.lean` writes the same form from
+the rows alone. `lower-check.sh` compares the two.
+
+Tested, `lower-run.txt`, on the 125 pages of the four row files:
+
+| Comparison | Of | Equal |
+| --- | --- | --- |
+| The stream of a page: Lean's rows against the viewer's rows, under 8 settings | 1,000 | 1,000 |
+| The picture of a page: the replay of Lean's stream against the viewer's picture, in bytes | 7 | 7 |
+
+The settings are the column of types, the indent rules, no marks, and four selections. The
+last run lowers 125 pages to 20,091 device calls, 3,617 of them fills, in 168 ms. Lean's
+interpreter ran it.
+
+`draw.c` has 117 lines. It holds no layout, no rule of a page and no meaning of a role beyond
+the tokens. It replays a row through the function of `paint.h` that the row names.
+
+The reach of this result is a fragment: a whole page, at zoom 1, at the ratio 2, with no
+cursor and no hidden line.
+
+### 6. The pointer: one law, and two defects of the viewer
+
+A page lowers to pointer boxes too. A row `H key x0 y0 x1 y1` is a box of device pixels that
+answers a pointer with a key. `pick` is the meaning: the last box that holds the pixel answers.
+A line answers with its key. A span answers before its line, and the narrowest span is last.
+
+The viewer's click was compared with `pick` on a grid of 24,156 points a page.
+
+- Before the fixes, 3 of 5 pages differed, at 2,250, 153 and 45 points
+  (`lower-before-fix.txt`).
+- **Defect 1.** Two spans of one extent stood on one line. The viewer took the first after an
+  unstable sort. So the sort decided which node a click selects.
+- **Defect 2.** The canvas's pick held a box's right and bottom edge. A click answered one
+  pixel outside the fill.
+
+Both are fixed in C. A box holds `[x, x + w)` by `[top, top + height)`, as its fill does. Of
+two equal spans the later of the rows answers: a deeper node of a tree is written later. The
+canvas's contract C6 no longer excuses a point on a shared edge, and its test has 260,000
+cases (`canvas-test-run.txt`).
+
+Tested after the fixes, `lower-run.txt`: 12 pages, 289,872 points, 0 differ.
+
+### 7. The laws and the finite checks
+
+Five laws are proved in `Scene.lean`. `#print axioms` prints `[propext, Quot.sound]` for four
+of them and `[propext]` for the first.
+
+| Law | Statement |
+| --- | --- |
+| `lowerAll_append` | The lowering is a map of lists: a page lowers call by call. |
+| `pick_append` | A later call answers the pointer before an earlier one. |
+| `box_holds` | A fill never vanishes: at a ratio of one or more its box holds a pixel. |
+| `frameSides_pairwise` | The four sides of a frame share no pixel. |
+| `edgeParts_pairwise` | The three parts of a tree's edge share no pixel. |
+
+The last two are the painter's rule P4. The detail pass tested it on random cases. Here it is
+a theorem of the lowered form.
+
+Five finite checks run on the lowered pages (`lower-run.txt`).
+
+| Check | Of | Holds |
+| --- | --- | --- |
+| Every fill lies inside the page | 125 pages | 125 |
+| Every cut is closed, and none opens inside another | 125 pages | 125 |
+| A page moved by whole pixels lowers to the moved device calls | 125 pages | 125 |
+| No two boxes of a graph share a cell | 17 graphs | 17 |
+| Both texts of a box fit the box | 359 boxes | 359 |
+
+The fourth check is the premise of the canvas's index (`canvas.h`: two boxes of one row do not
+overlap). Until this round nothing checked it.
+
+The observation that joins Lean and C is the stream of device calls. The statement is a
+finite check on the fragment of finding 5, and not a theorem.
+
+### 8. What the lowering does not hold yet
+
+| Part | Where it stands | What landing it in Lean needs |
+| --- | --- | --- |
+| The camera at a zoom other than 1 | `canvas.c` | a zoom in the snap: `floor(v * zoom * ratio + 1/2)`. The steps are irrational, so the proof-side form needs a rational ladder or binary64. |
+| The cursor, the fold of lines, the scroll | `view.c` | fields of the reader's state in `View` |
+| The level of detail | `canvas.c` | a function of the zoom that chooses the calls |
+| The width of a text of a proportional face | pango | the advances of a face as a table, and the kerning. Not measured here. |
+| The key of a fill | nowhere | a key on each `Op`, carried to each `Dev` |
+
+The last row is the tie to the code that the owner asked for. A pointer box has a key today,
+and a fill has none. With a key on each call, one pixel names its node. The tables of the
+earlier note then give its authored line and its printed span.
+
+### 9. The tooling
+
+- `v` now exports and shows the schema pages with the others: `v todo schemas`,
+  `v -t todo Todo values`.
+- `v -l <words>` lowers every page in Lean, replays the named page with `draw`, and writes
+  `lowered.png` and `lowered.draw`.
+- `lower-check.sh` runs the three comparisons of findings 5 and 6.
+- `view --stream FILE` with `--png` writes the calls of one picture. `view --clicks FILE` and
+  `draw --picks FILE` answer the key at each point of a file.
+
+## Proposals (not rulings)
+
+**A. The schema view.**
+
+1. Generate for `Representation` what `Ty` has: the constructor tags, the arguments by sort,
+   `ofLayer`, and a replacement at a path. One generic layer then serves the lines, the graph,
+   the spans and each later view.
+2. Hold the names of types as data in a module, as it holds the rows. A page and the printer
+   can then write `Todo` where the record stands.
+3. Give membership a located answer: a path into the value and the type, and a reason.
+4. Draw a document's references as a graph with shared nodes. This is the open graph work of
+   the earlier note.
+
+**B. The lowering.**
+
+1. Land the three forms as data, with `pageOps` and `lower` as functions. C keeps the replay,
+   the window and the shaping of text.
+2. Put a key on each call.
+3. State the layout's laws as theorems of the two layouts: no two boxes share a cell, and a
+   text fits its box. Today they are finite checks.
+4. Decide the zoom ladder with the proofs in view: rational steps make the snap exact in
+   integers.
+
+**C. The place of the laws.** No concept of `docs/core/semantics.md` covers a view. Before a
+law of the picture is stated in the tree, the owner rules one of two things. Either a view is
+a tool, outside the gate, and its laws are tests. Or a view is a face of the language, with a
+concept, claims and the gate.
+
+**D. The two readings of "in the authoring API".**
+
+1. A face beside the printer: a built program answers its pages and its device calls, as it
+   answers its TypeScript module.
+2. The viewer as a program of the language: a row asks the host to present a frame, and a row
+   waits for an event. The window is the host, and a session of the viewer is a run with a
+   journal. Not tested here.
+
+**E. What the lowered form allows next.**
+
+- A second target from the same list: SVG, PDF, and the terminal's characters.
+- The difference of two lists: the boxes to repaint, and a regression test that names the call
+  that changed. This round used it: a stream localised each defect at once.
+- Motion between two lists, joined by key.
+
+**Questions for the owner.**
+
+1. Which reading of "in the authoring API" is meant: D.1, D.2 or both?
+2. Is a view a face of the language with claims, or a tool (proposal C)?
+3. Shall the name of a type be data (proposal A.2)?
+
+Two small rules were decided in the probe, and the owner may overrule them. A box holds its
+left and top edge and not its right and bottom edge. Of two equal spans the later of the rows
+answers a click.
+
+## What this does not establish
+
+- No theorem joins Lean's lowering and the C painter. The agreement is a finite check of 125
+  pages under 8 settings, on the fragment of finding 5.
+- The five laws stand in a probe file. No registry claim holds them, and the axiom gate does
+  not read the file.
+- The stream fixes no pixel of a text. Two machines with other faces draw other glyphs.
+- The lowering restates the page rules of `view.c` in Lean. It is a second statement of them,
+  and `view.c` still holds the first.
+- No person used the window in this round. The time of a lowering inside a frame loop is not
+  measured: 168 ms is one batch of 125 pages in the interpreter.
+- The schema pages show 5 types of one application. No schema with annotations, a filter
+  group, a reference or a recursion is shown. No schema written in TypeScript is read.
+- The span method reads the printer's text by its braces. It is tested on 25 nodes.
+- The checks of the detail pass were not rerun.
+
+## Commands
+
+| Purpose | Command, from the probe folder |
+| --- | --- |
+| Show a schema page | `./v todo schemas` or `./v -t todo CompleteExit schema` |
+| A page lowered in Lean and replayed | `./v -l p1 run graph` |
+| Export the schema rows | from the root: `LEAN_NUM_THREADS=3 lake env lean --run docs/research/2026-10-06-native-view-probe/Schemas.lean <out.tsv>` |
+| Lower every page | from the root: `lean --run docs/research/2026-10-06-native-view-probe/Scene.lean <out-folder> <rows.tsv> ...` |
+| The comparisons of findings 5 and 6 | `CHECK_TMP=<scratch> ./lower-check.sh` |
+| The checks of round 3 | `CHECK_TMP=<scratch> ./check.sh` |

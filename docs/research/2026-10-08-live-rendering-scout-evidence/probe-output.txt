@@ -1,0 +1,1 @@
+PASS live-rendering boundary: 13 finite guards; address reuse and retained hole table
