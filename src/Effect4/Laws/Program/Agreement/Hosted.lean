@@ -40,22 +40,24 @@ inductive Pos where
   | live (fr : NFiber) (s : Stores)
   | done (ex : ExitV) (s : Stores)
 
-/-- **The local run with calls leads from one position to another**, reading the replies
-between `r` and `r'`: a live fiber reaches a live fiber (`ReachesC`) or finishes with an exit;
-an exit leads only to itself, reading nothing. -/
-def Leads (table : RowTable) (root : NativeEff) : Pos → ReplyTape → Pos → ReplyTape → Prop
-  | .live fr s, r, .live fr' s', r' => ∃ c, ReachesC table root c fr s r fr' s' r'
-  | .live fr s, r, .done ex s', r' => ∃ c, localRunC table root c fr s r = some (.exit ex s' r')
+/-- **The local run with calls leads from one position to another** under a host, its state
+going from `r` to `r'`: a live fiber reaches a live fiber (`ReachesC`) or finishes with an exit;
+an exit leads only to itself, asking nothing. -/
+def Leads {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) :
+    Pos → σ → Pos → σ → Prop
+  | .live fr s, r, .live fr' s', r' => ∃ c, ReachesC host root c fr s r fr' s' r'
+  | .live fr s, r, .done ex s', r' => ∃ c, localRunC host root c fr s r = some (.exit ex s' r')
   | .done ex s, r, .done ex' s', r' => ex = ex' ∧ s = s' ∧ r = r'
   | .done _ _, _, .live _ _, _ => False
 
-theorem Leads.refl {root : NativeEff} : ∀ (p : Pos) (r : ReplyTape), Leads table root p r p r
-  | .live fr s, r => ⟨0, ReachesC.refl table root fr s r⟩
+theorem Leads.refl {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff} :
+    ∀ (p : Pos) (r : σ), Leads host root p r p r
+  | .live fr s, r => ⟨0, ReachesC.refl host root fr s r⟩
   | .done _ _, _ => ⟨rfl, rfl, rfl⟩
 
-theorem Leads.trans {root : NativeEff} :
-    ∀ {p q u : Pos} {r₁ r₂ r₃ : ReplyTape}, Leads table root p r₁ q r₂ →
-      Leads table root q r₂ u r₃ → Leads table root p r₁ u r₃
+theorem Leads.trans {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff} :
+    ∀ {p q u : Pos} {r₁ r₂ r₃ : σ}, Leads host root p r₁ q r₂ →
+      Leads host root q r₂ u r₃ → Leads host root p r₁ u r₃
   | .live _ _, .live _ _, .live _ _, _, _, _, ⟨c₁, h₁⟩, ⟨c₂, h₂⟩ => ⟨c₁ + c₂, h₁.trans h₂⟩
   | .live _ _, .live _ _, .done _ _, _, _, _, ⟨c₁, h₁⟩, ⟨c₂, h₂⟩ => ⟨c₂ + c₁, (h₁ c₂).trans h₂⟩
   | .live _ _, .done _ _, .done _ _, _, _, _, h₁, ⟨rfl, rfl, rfl⟩ => h₁
@@ -63,6 +65,23 @@ theorem Leads.trans {root : NativeEff} :
   | .live _ _, .done _ _, .live _ _, _, _, _, _, h₂ => h₂.elim
   | .done _ _, .done _ _, .live _ _, _, _, _, _, h₂ => h₂.elim
   | .done _ _, .live _ _, _, _, _, _, h₁, _ => h₁.elim
+
+/-- **Leading with no reply read**: under every host, at every state, the state untouched. What
+`evaluate` and `flush` keep. -/
+def LeadsQ (root : NativeEff) (p p' : Pos) : Prop :=
+  ∀ {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r : σ), Leads host root p r p' r
+
+theorem LeadsQ.refl (root : NativeEff) (p : Pos) : LeadsQ (table := table) root p p :=
+  fun _ r => Leads.refl p r
+
+theorem LeadsQ.trans {root : NativeEff} {p q u : Pos} (h₁ : LeadsQ (table := table) root p q)
+    (h₂ : LeadsQ (table := table) root q u) : LeadsQ (table := table) root p u :=
+  fun host r => (h₁ host r).trans (h₂ host r)
+
+/-- What a host answers at a position: the call of a live fiber's code, asked of the host. -/
+def Pos.hostAnswer {σ : Type} (host : Effects.Comodel (RowSig table) σ) : Pos → σ → Option (ExitV × σ)
+  | .live fr _, r => Agreement.hostAnswer host fr.current r
+  | .done _ _, _ => none
 
 /-- **The machine at rest between decisions, at a position**: the root parked on a yield or
 on a host call over a fiber of the fragment's code, or exited; the stores quiet with no
@@ -88,7 +107,7 @@ theorem seg_settles (root : NativeEff) (hroot : LoopedRows root = true) (cur : N
     (hpl : PlainCode cur = true) (hK : PlainStack K) (hq : Quiet s)
     (hans : s.externals.answers = []) :
     ∃ c m' p', c ≤ 4 * defaultBudget + 5 ∧ Settled root m' p' ∧
-      (∀ r, Leads table root (.live (fiberOf cur K i) s) r p' r) ∧
+      LeadsQ (table := table) root (.live (fiberOf cur K i) s) p' ∧
       ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c)
         (M (fiberOf cur K i) s k tr nt) [Cmd.loop Api.root false, Cmd.drainDue] = (m', []) := by
   obtain ⟨c, hc, h⟩ := drive_seg (table := table) root hroot (2 * defaultBudget) cur K i s k tr nt
@@ -99,18 +118,18 @@ theorem seg_settles (root : NativeEff) (hroot : LoopedRows root = true) (cur : N
     ⟨cur₁, K₁, i₁, s₁, k₁, tr', l, -, -, hpl₁, hK₁, hq₁, hans₁, hr, hX⟩ <;> simp only [cmdOf] at hX
   · obtain ⟨tr'', hfin⟩ := drive_finish_M (table := table) root ex fr s' k' tr' nt [Cmd.drainDue]
     refine ⟨c + 3, Mexit root ex fr s' k' tr'' nt, .done ex s', by omega,
-      Or.inr (Or.inr ⟨ex, fr, s', k', tr'', nt, rfl, rfl, hq'⟩), fun r => ⟨l + 1, (hrun r).2⟩,
+      Or.inr (Or.inr ⟨ex, fr, s', k', tr'', nt, rfl, rfl, hq'⟩), fun host r => ⟨l + 1, (hrun host r).2⟩,
       fun fuel => ?_⟩
     rw [show fuel + (c + 3) = fuel + 1 + 1 + 1 + c by omega, hX, hfin,
       drive_drainDue root _ _ _ rfl hq', drive_drainDue root _ _ _ rfl hq', drive_nil]
   · refine ⟨c + 1, Mcall (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt, .live (fiberOf cur₁ K₁ i₁) s₁,
       by omega, Or.inr (Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr', nt, rfl, rfl, hc₁, hK₁, hq₁, hans₁⟩),
-      fun r => ⟨l, hr r⟩, fun fuel => ?_⟩
+      fun host r => ⟨l, hr host r⟩, fun fuel => ?_⟩
     rw [show fuel + (c + 1) = fuel + 1 + c by omega, hX, drive_drainDue root _ _ _ rfl hq₁,
       drive_nil]
   · refine ⟨c + 1, Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt, .live (fiberOf cur₁ K₁ i₁) s₁,
       by omega, Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr', nt, rfl, rfl, hpl₁, hK₁, hq₁, hans₁⟩,
-      fun r => ⟨l, hr r⟩, fun fuel => ?_⟩
+      fun host r => ⟨l, hr host r⟩, fun fuel => ?_⟩
     rw [show fuel + (c + 1) = fuel + 1 + c by omega, hX, drive_drainDue root _ _ _ rfl hq₁,
       drive_nil]
 
@@ -129,7 +148,7 @@ theorem step_of_receipt {root : NativeEff} {m R : Api.Machine} {d : Api.Decision
 /-- `evaluate` on the loaded root runs its first segment. -/
 theorem load_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf : Nat) :
     ∃ c m' p', Settled root m' p' ∧
-      (∀ r, Leads table root (.live (fiberOf (compile root cf) []) Stores.empty) r p' r) ∧
+      LeadsQ (table := table) root (.live (fiberOf (compile root cf) []) Stores.empty) p' ∧
       ∀ fuel, stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table)
         (fuel + c) (Api.load root cf) Api.evaluate = (m', true) := by
   obtain ⟨c, m', p', -, hS, hL, hd⟩ := seg_settles (table := table) root hroot (compile root cf) []
@@ -185,7 +204,7 @@ theorem flush_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
         (Myield (fiberOf cur K i) s k tr t)).2 = true →
       ∃ p', Settled root (flushAllState (evaluator := evaluatorFor root table)
           (interpOf root table) fuel rounds (Myield (fiberOf cur K i) s k tr t)).1 p' ∧
-        ∀ r, Leads table root (.live (fiberOf cur K i) s) r p' r
+        LeadsQ (table := table) root (.live (fiberOf cur K i) s) p'
   | 0, cur, K, i, s, k, tr, t, fuel, _, _, _, _, _, h => by
     simp only [flushAllState, Myield_armed, List.isEmpty_cons, Myield_stuck, Option.isSome_none,
       Bool.or_self, Bool.false_eq_true] at h
@@ -213,7 +232,7 @@ theorem flush_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
     · -- a yield again: the next round
       obtain ⟨p'', hS'', hL''⟩ :=
         flush_Myield root hroot rounds cur₁ K₁ i₁ s₁ k₁ tr₂ t₁ _ hf hpl₁ hK₁ hq₁ hans₁ h
-      exact ⟨p'', hS'', fun r => (hL r).trans (hL'' r)⟩
+      exact ⟨p'', hS'', hL.trans hL''⟩
     · -- a host call: nothing armed
       rw [flushAllState_unarmed root _ _ (Mcall_armed _ _ _ _ _)]
       exact ⟨_, Or.inr (Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hc₁, hK₁, hq₁, hans₁⟩),
@@ -346,7 +365,7 @@ theorem holds_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf :
     (h : (stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table) F m
       Api.evaluate).2 = true) :
     ∃ p', Holds root cf (stepDecisionState (evaluator := evaluatorFor root table)
-        (interpOf root table) F m Api.evaluate).1 p' ∧ ∀ r, Leads table root p r p' r := by
+        (interpOf root table) F m Api.evaluate).1 p' ∧ LeadsQ (table := table) root p p' := by
   rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩ |
     ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩
   · obtain ⟨c, m', p', hS, hL, hR⟩ := load_evaluate (table := table) root hroot cf
@@ -354,12 +373,12 @@ theorem holds_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf :
     exact ⟨p', Or.inr hS, hL⟩
   · rw [step_of_receipt (evaluate_inert root _ _ rfl (Myield_fiber? _ _ _ _ _) rfl hq) h]
     exact ⟨_, Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩),
-      fun r => Leads.refl _ r⟩
+      LeadsQ.refl root _⟩
   · rw [step_of_receipt (evaluate_inert root _ _ rfl (Mcall_fiber? _ _ _ _ _) rfl hq) h]
     exact ⟨_, Or.inr (Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩)),
-      fun r => Leads.refl _ r⟩
+      LeadsQ.refl root _⟩
   · rw [step_of_receipt (evaluate_inert root _ (exitedAt root ex fr k) rfl rfl rfl hq) h]
-    exact ⟨_, Or.inr (Or.inr (Or.inr ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩)), fun r => Leads.refl _ r⟩
+    exact ⟨_, Or.inr (Or.inr (Or.inr ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩)), LeadsQ.refl root _⟩
 
 /-- **`flush`** keeps the forms: after a yield it runs the rounds; with nothing armed it does
 nothing. The local run with calls reads no reply. -/
@@ -368,11 +387,11 @@ theorem holds_flush (root : NativeEff) (hroot : LoopedRows root = true) (cf : Na
     (h : (stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table) F m
       Api.flush).2 = true) :
     ∃ p', Holds root cf (stepDecisionState (evaluator := evaluatorFor root table)
-        (interpOf root table) F m Api.flush).1 p' ∧ ∀ r, Leads table root p r p' r := by
+        (interpOf root table) F m Api.flush).1 p' ∧ LeadsQ (table := table) root p p' := by
   rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩ |
     ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩
   · rw [flush_unarmed root _ rfl F]
-    exact ⟨_, Or.inl ⟨rfl, rfl⟩, fun r => Leads.refl _ r⟩
+    exact ⟨_, Or.inl ⟨rfl, rfl⟩, LeadsQ.refl root _⟩
   · have hst := stepDecisionState_stable (evaluator := evaluatorFor root table) _ F _ Api.flush h
       (4 * defaultBudget + 8)
     rw [← hst] at h ⊢
@@ -381,9 +400,9 @@ theorem holds_flush (root : NativeEff) (hroot : LoopedRows root = true) (cf : Na
     exact ⟨p', Or.inr hS, hL⟩
   · rw [flush_unarmed root _ rfl F]
     exact ⟨_, Or.inr (Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩)),
-      fun r => Leads.refl _ r⟩
+      LeadsQ.refl root _⟩
   · rw [flush_unarmed root _ rfl F]
-    exact ⟨_, Or.inr (Or.inr (Or.inr ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩)), fun r => Leads.refl _ r⟩
+    exact ⟨_, Or.inr (Or.inr (Or.inr ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩)), LeadsQ.refl root _⟩
 
 /-- **An answer at a guard the machine is waiting on** keeps the forms: it is the root's host
 call, the machine resumes it with the answer it prepares and runs the next segment, and the
@@ -395,7 +414,8 @@ theorem holds_answer (root : NativeEff) (hroot : LoopedRows root = true) (cf : N
       (RunDecision.answerAsync f t₀ (.ofExit ex))).2 = true) :
     ∃ p', Holds root cf (stepDecisionState (evaluator := evaluatorFor root table)
         (interpOf root table) F m (RunDecision.answerAsync f t₀ (.ofExit ex))).1 p' ∧
-      ∀ r, Leads table root p (ex :: r) p' r := by
+      ∀ {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r r' : σ),
+        p.hostAnswer host r = some (ex, r') → Leads host root p r p' r' := by
   rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩ |
     ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩ | ⟨ex', fr, s, k, tr, nt, rfl, rfl, hq⟩
   · exact (requestOf_load hreq).elim
@@ -414,17 +434,78 @@ theorem holds_answer (root : NativeEff) (hroot : LoopedRows root = true) (cf : N
       rw [show fuel + (c + 2) = fuel + c + 2 by omega, hstep, hd]
       rfl
     rw [step_of_receipt hR h]
-    exact ⟨p', Or.inr hS, fun r => Leads.trans
-      (show Leads table root (.live (fiberOf cur K i) s) (ex :: r) (.live (fiberOf code K i) s') r
-        from ⟨1, ReachesC.answer s hc ex r hp⟩) (hL r)⟩
+    exact ⟨p', Or.inr hS, fun host r r' ha => Leads.trans
+      (show Leads host root (.live (fiberOf cur K i) s) r (.live (fiberOf code K i) s') r'
+        from ⟨1, ReachesC.answer s hc ha hp⟩) (hL host r')⟩
   · exact (requestOf_Mexit hreq).elim
+
+/-! ## A waiting call on a row of the table -/
+
+/-- A request the machine is waiting on is the current code of the waiting fiber. -/
+theorem requestOf_current {m : Api.Machine} {f : FiberId} {t : Nat} {op : NativeOp} {req : Val}
+    (h : Program.requestOf m f t = some (op, req)) :
+    ∃ g, m.fiber? f = some g ∧ ∃ w c d, g.frame.current = .async (.external op req w) c d := by
+  unfold Program.requestOf at h
+  cases hf : m.fiber? f with
+  | none =>
+    rw [hf] at h
+    cases h
+  | some g =>
+    rw [hf] at h
+    by_cases hp : g.parked = .withGuard t
+    · refine ⟨g, rfl, ?_⟩
+      simp only [guard, hp, ↓reduceIte, Option.bind_eq_bind, Option.bind_some, Option.pure_def] at h
+      split at h
+      next op' req' w c d heq =>
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨w, c, d, heq⟩
+      next => cases h
+    · simp only [guard, hp, ↓reduceIte, Option.bind_eq_bind, Option.bind_some] at h
+      cases h
+
+/-- A row the table registers lies inside the table. -/
+theorem lt_of_externalRow {i : Nat} {row : Row} (h : externalRow table i = some row) :
+    i < table.length := by
+  rcases Nat.lt_or_ge i table.length with hlt | hge
+  · exact hlt
+  · have hnone : externalRow table i = none := by
+      simp only [externalRow, List.getElem?_eq_none hge, Option.bind_eq_bind, Option.bind_none]
+    rw [hnone] at h
+    cases h
+
+/-- **At a waiting call on a row of the table, the reply host answers with the tape's next
+exit.** H8's step from the session's admitted reply to the reply host. -/
+theorem Holds.tapeAnswer {root : NativeEff} {cf : Nat} {m : Api.Machine} {p : Pos}
+    (hH : Holds root cf m p) {f : FiberId} {t i : Nat} {v : Val} {row : Row}
+    (hreq : Program.requestOf m f t = some (.external i, v)) (hrow : externalRow table i = some row)
+    (ex : ExitV) (rest : ReplyTape) :
+    p.hostAnswer (tapeHost table) (ex :: rest) = some (ex, rest) := by
+  have hne : Program.requestOf m f t ≠ none := by
+    rw [hreq]
+    exact Option.some_ne_none _
+  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i', s, k, tr, t', rfl, rfl, -⟩ |
+    ⟨cur, K, i', s, k, tr, t', rfl, rfl, hc, -⟩ | ⟨ex', fr, s, k, tr, nt, rfl, rfl, -⟩
+  · exact (requestOf_load hne).elim
+  · exact (requestOf_Myield hne).elim
+  · obtain ⟨g, hg, w, c, d, hcur⟩ := requestOf_current hreq
+    obtain ⟨rfl, -⟩ := fiber?_one rfl hg
+    obtain ⟨j, v', w', rfl⟩ := eq_call_of_isCall hc
+    simp only [callParkedAt, fiberAt_frame, fiberOf, Prim.async.injEq, EffName.external.injEq,
+      NativeOp.external.injEq] at hcur
+    obtain ⟨⟨rfl, rfl, -⟩, -, -⟩ := hcur
+    show hostAnswer (tapeHost table) (Prim.async (EffName.external (.external j) v' w') false none)
+      (ex :: rest) = _
+    rw [hostAnswer_call (tapeHost table) (lt_of_externalRow hrow)]
+    rfl
+  · exact (requestOf_Mexit hne).elim
 
 /-! ## What a settled machine says of the meaning -/
 
 /-- An exit's fiber over the empty stack finishes in one step. -/
-theorem localRunC_ofExit_nil {root : NativeEff} (ex : ExitV) (i : Bool) (s : Stores)
-    (r : ReplyTape) (n : Nat) :
-    localRunC table root (n + 1) (fiberOf (Prim.ofExit ex) [] i) s r = some (.exit ex s r) := by
+theorem localRunC_ofExit_nil {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    (ex : ExitV) (i : Bool) (s : Stores) (r : σ) (n : Nat) :
+    localRunC host root (n + 1) (fiberOf (Prim.ofExit ex) [] i) s r = some (.exit ex s r) := by
   have hc : IsCall (fiberOf (Prim.ofExit ex) [] i).current = false := isCall_ofExit ex
   simp only [localRunC, localStepC, hc, Bool.false_eq_true, if_false, step_exit_empty]
 
@@ -438,9 +519,9 @@ theorem localStep_frontier (root : NativeEff) {q : Point} (hq : q.fuel = 0) (K :
   rw [suspendBodyAt_zero (q := { q with completed := [] }) hq]
 
 /-- **At the compile's frontier the run never stops** (`localStep_frontier`). -/
-theorem localRunC_frontier {root : NativeEff} :
-    ∀ (n : Nat) {fr : NFiber} (s : Stores) (r : ReplyTape), AtFrontier fr →
-      localRunC table root n fr s r = none
+theorem localRunC_frontier {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff} :
+    ∀ (n : Nat) {fr : NFiber} (s : Stores) (r : σ), AtFrontier fr →
+      localRunC host root n fr s r = none
   | 0, _, _, _, _ => rfl
   | n + 1, _, s, r, ⟨q, K, i, hq, rfl⟩ => by
     have hnc : IsCall (fiberOf (frontier q) K i).current = false := rfl
@@ -494,29 +575,32 @@ theorem LoopedRows.of_straightRows : ∀ (e : NativeEff), StraightRows table e =
   | .provideService _ _ _, h | .iterate _ _ _ _ _ _, h | .restore _ _, h | .defs _ _ _, h => by
     simp only [StraightRows, Bool.false_eq_true] at h
 
-/-- **The meaning at a settled machine with nothing armed** (H8, the closing step). The local run
-with calls from the root's start leads, over the reply tape `R`, to the machine's position with
-no reply left. If the root has exited, the meaning is its exit over the stores, with the tape
-read to its end; if it waits on a host call, the meaning is the frontier. A compile budget out of
-reach makes the run diverge at the compile's frontier, which a settled machine excludes. -/
-theorem meaning_settled (root : NativeEff) (hfrag : StraightRows table root = true) (cf : Nat)
-    (R : ReplyTape) {m : Api.Machine} {p : Pos} (hS : Settled root m p) (harmed : m.armed = [])
-    (hL : Leads table root (.live (fiberOf (compile root cf) []) Stores.empty) R p []) :
-    meaningRows table root [] Stores.empty R =
-      ((m.fiber? Api.root).bind RunFiber.exit).map fun ex => ((ex, m.state), []) := by
-  have hR : RunsToD table root [] true (fiberOf (compile root cf) []) Stores.empty R
-      (meaningRows table root [] Stores.empty R) :=
-    localRunC_compile table root root (rootPoint cf) [] true Stores.empty R hfrag rfl
+/-- **The meaning at a settled machine with nothing armed** (H8, the closing step), under a host.
+The local run with calls from the root's start leads, with the host's state going from `R` to
+`st`, to the machine's position; at `st` the host answers the position's call with nothing. If
+the root has exited, the meaning is its exit over the stores, with the host at `st`; if it waits
+on a host call, the meaning is the frontier. A compile budget out of reach makes the run diverge
+at the compile's frontier, which a settled machine excludes. -/
+theorem meaning_settled {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
+    (hfrag : StraightRows table root = true) (cf : Nat) (R st : σ) {m : Api.Machine} {p : Pos}
+    (hS : Settled root m p) (harmed : m.armed = [])
+    (hL : Leads host root (.live (fiberOf (compile root cf) []) Stores.empty) R p st)
+    (hstop : p.hostAnswer host st = none) :
+    hostRun host root [] Stores.empty R =
+      ((m.fiber? Api.root).bind RunFiber.exit).map fun ex => (ex, (m.state, st)) := by
+  have hR : RunsToD host root [] true (fiberOf (compile root cf) []) Stores.empty R
+      (hostRun host root [] Stores.empty R) :=
+    localRunC_compile host root root (rootPoint cf) [] true Stores.empty R hfrag rfl
   rcases hS with ⟨cur, K, i, s, k, tr, t, rfl, rfl, -⟩ |
     ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, -⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, -⟩
   · cases harmed
-  · -- the root waits on a host call with no reply left: the meaning is the frontier
+  · -- the root waits on a host call the host does not answer: the meaning is the frontier
     obtain ⟨c, hreach⟩ := hL
-    have hw : ∀ n, localRunC table root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
-        some .waits := fun n => (hreach (n + 1)).trans (localRunC_waits hc s n)
+    have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
+        some .waits := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
     show _ = none
     rcases hR with hR | ⟨d, fr', s', r', hd, hfront⟩
-    · rcases hm : meaningRows table root [] Stores.empty R with _ | ⟨⟨ex₂, s₂⟩, r₂⟩
+    · rcases hm : hostRun host root [] Stores.empty R with _ | ⟨ex₂, s₂, r₂⟩
       · rfl
       · rw [hm] at hR
         obtain ⟨d, hd⟩ := hR
@@ -525,14 +609,14 @@ theorem meaning_settled (root : NativeEff) (hfrag : StraightRows table root = tr
     · have h₁ := localRunC_mono (0 + 1 + c) d _ _ _ (hw 0)
       rw [hd (0 + 1 + c), localRunC_frontier _ s' r' hfront] at h₁
       cases h₁
-  · -- the root has exited: the meaning is its exit over the stores, the tape read to its end
+  · -- the root has exited: the meaning is its exit over the stores, with the host at `st`
     obtain ⟨c, hrun⟩ := hL
-    show _ = some ((ex, s), [])
+    show _ = some (ex, (s, st))
     rcases hR with hR | ⟨d, fr', s', r', hd, hfront⟩
-    · rcases hm : meaningRows table root [] Stores.empty R with _ | ⟨⟨ex₂, s₂⟩, r₂⟩
+    · rcases hm : hostRun host root [] Stores.empty R with _ | ⟨ex₂, s₂, r₂⟩
       · rw [hm] at hR
-        obtain ⟨d, fr', s', hd, hc⟩ := hR
-        have hw := (hd 1).trans (localRunC_waits hc s' 0)
+        obtain ⟨d, fr', s', r', hd, hc, ha⟩ := hR
+        have hw := (hd 1).trans (localRunC_waits hc ha s' 0)
         cases localRunC_agree hrun hw
       · rw [hm] at hR
         obtain ⟨d, hd⟩ := hR
@@ -542,5 +626,26 @@ theorem meaning_settled (root : NativeEff) (hfrag : StraightRows table root = tr
     · have h₁ := localRunC_mono c d _ _ _ hrun
       rw [hd c, localRunC_frontier _ s' r' hfront] at h₁
       cases h₁
+
+/-- The reply host, its tape read to the end, answers no call. -/
+theorem hostAnswer_tape_nil (code : NCode) : hostAnswer (tapeHost table) code [] = none := by
+  unfold hostAnswer
+  split
+  · show (if _ : _ < table.length then (none : Option (ExitV × ReplyTape)) else none) = none
+    split <;> rfl
+  · rfl
+
+/-- **H8's closing step**: `meaning_settled` at the reply host, its tape read to the end. -/
+theorem meaning_settled_tape (root : NativeEff) (hfrag : StraightRows table root = true) (cf : Nat)
+    (R : ReplyTape) {m : Api.Machine} {p : Pos} (hS : Settled root m p) (harmed : m.armed = [])
+    (hL : Leads (tapeHost table) root (.live (fiberOf (compile root cf) []) Stores.empty) R p []) :
+    meaningRows table root [] Stores.empty R =
+      ((m.fiber? Api.root).bind RunFiber.exit).map fun ex => ((ex, m.state), []) := by
+  have hstop : p.hostAnswer (tapeHost table) [] = none := by
+    cases p with
+    | live fr _ => exact hostAnswer_tape_nil fr.current
+    | done _ _ => rfl
+  rw [meaningRows_eq_hostRun, meaning_settled (tapeHost table) root hfrag cf R [] hS harmed hL hstop]
+  cases (m.fiber? Api.root).bind RunFiber.exit <;> rfl
 
 end Effect4.Program.Agreement

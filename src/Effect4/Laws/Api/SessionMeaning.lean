@@ -57,12 +57,13 @@ def DenoteRowsEqSession (frag : RowTable → NativeEff → Bool) : Prop :=
 
 /-! ## A reply the session applies is at a guard the machine waits on -/
 
-/-- Step of `denoteRows_eq_session`: a reply that passes the session's preflight is at a guard
-the machine waits on. -/
-theorem preflight_requested {program : Api.Program} {table : RowTable} (s : Session program table)
+/-- Step of `denoteRows_eq_session`: a reply that passes the session's preflight is at a guard the
+machine waits on, on a host row the table registers (`admitted_row`, `acceptAtInstance_sound`). -/
+theorem preflight_row {program : Api.Program} {table : RowTable} (s : Session program table)
     (reply : Reply) (decision : NativeDecision)
     (h : Api.HostSession.preflight s reply = .ok decision) :
-    Program.requestOf s.machine reply.key.fiber reply.key.token ≠ none := by
+    ∃ i v row, Program.requestOf s.machine reply.key.fiber reply.key.token = some (.external i, v) ∧
+      externalRow table i = some row := by
   unfold Api.HostSession.preflight at h
   split at h
   · cases h
@@ -71,15 +72,27 @@ theorem preflight_requested {program : Api.Program} {table : RowTable} (s : Sess
     · split at h
       · cases h
       · rename_i bound hbound
+        have hb := List.find?_some hbound
+        have same : bound.key = reply.key := beq_iff_eq.mp hb
+        rw [← same]
         split at h
         · cases h
         · split at h
           · cases h
-          · rename_i hreq
-            have hb := List.find?_some hbound
-            have same : bound.key = reply.key := beq_iff_eq.mp hb
-            rw [← same]
-            exact hreq
+          · split at h
+            · next d hacc =>
+              have henv := acceptReply_envelope table s.machine (bound.record reply) d hacc
+              obtain ⟨i, v, row, hreq, hrow, -⟩ :=
+                admitted_row table s.machine _ _ _ henv.2.2
+              exact ⟨i, v, row, hreq, hrow⟩
+            · split at h
+              · next d hinst =>
+                obtain ⟨⟨-, hreq, i, row, -, -, hop, hrow, -⟩, -⟩ :=
+                  acceptAtInstance_sound table _ s.machine (bound.record reply) d hinst
+                refine ⟨i, (bound.record reply).request, row, ?_, hrow⟩
+                rw [← hop]
+                exact hreq
+              · cases h
 
 /-- Step of `denoteRows_eq_session`: an applied reply passed the preflight. -/
 theorem applyReply_applied_preflight {program : Api.Program} {table : RowTable}
@@ -107,12 +120,13 @@ theorem applyReply_applied_preflight {program : Api.Program} {table : RowTable}
         | ok decision => exact ⟨reply, decision, rfl, hpre⟩
 
 /-- Step of `denoteRows_eq_session`: the answer decision a row gives is at a guard the machine
-waits on. A reply application passed the preflight; a control never answers (`advance` refuses a
+waits on, on a host row the table registers. A reply application passed the preflight; a control never answers (`advance` refuses a
 direct answer); a receipt row gives no decision. -/
-theorem decisionOf_answer_requested (s : Run) (c : Command) {f : FiberId} {t : Nat}
+theorem decisionOf_answer_row (s : Run) (c : Command) {f : FiberId} {t : Nat}
     {a : Completion Val Err Defect FiberId Ann}
     (hdec : decisionOf s c (Api.Runner.result s.runner c).phase = some (.answerAsync f t a)) :
-    Program.requestOf s.machine f t ≠ none := by
+    ∃ i v row, Program.requestOf s.machine f t = some (.external i, v) ∧
+      externalRow s.built.table i = some row := by
   cases c with
   | bind call token =>
     generalize (Api.Runner.result s.runner (.bind call token)).phase = phase at hdec
@@ -131,7 +145,7 @@ theorem decisionOf_answer_requested (s : Run) (c : Command) {f : FiberId} {t : N
       simp only [decisionOf, hread, Option.map_some, Option.some.injEq, replyDecision,
         RunDecision.answerAsync.injEq] at hdec
       obtain ⟨rfl, rfl, -⟩ := hdec
-      exact preflight_requested s.session reply d hpre
+      exact preflight_row s.session reply d hpre
     | bound => cases hdec
     | preflight => cases hdec
     | progressed => cases hdec
@@ -154,12 +168,13 @@ theorem decisionOf_answer_requested (s : Run) (c : Command) {f : FiberId} {t : N
     | refused why => cases hdec
 
 /-- Each decision of a tape is taken at a live machine with a true receipt, and each answer is at
-a guard the machine waits on. -/
+a guard the machine waits on, on a host row the table registers. -/
 def Answered (program : Api.Program) (table : RowTable) (fuel : Nat) :
     List Api.Decision → Api.Machine → Prop
   | [], _ => True
   | d :: T, m => m.stuck = none ∧ Run.enoughFor program table fuel m d = true ∧
-      (∀ f t a, d = .answerAsync f t a → Program.requestOf m f t ≠ none) ∧
+      (∀ f t a, d = .answerAsync f t a → ∃ i v row,
+        Program.requestOf m f t = some (.external i, v) ∧ externalRow table i = some row) ∧
       Answered program table fuel T (steppedBy program fuel table m d)
 
 /-- **The tape of a journal is answered** (a step of `denoteRows_eq_session`). When the tape reads
@@ -193,7 +208,7 @@ theorem tapeFrom_answered (s : Run) (rows : List Command) (h : (tapeFrom s rows)
           rw [Run.step_built, Run.step_budget, step_takes_decision s c decision hdec] at hrest
           refine ⟨Option.isNone_iff_eq_none.mp live.1, live.2, ?_, hrest⟩
           rintro f t a rfl
-          exact decisionOf_answer_requested s c hdec
+          exact decisionOf_answer_row s c hdec
 
 /-! ## The tape of a host's decisions, through the machine -/
 
@@ -206,26 +221,35 @@ theorem tape_holds (program : Api.Program) (table : RowTable) (fuel : Nat)
     ∀ (T : List Api.Decision) (m : Api.Machine) (p : Pos), Holds program cf m p →
       Answered program table fuel T m → T.all hostDecision = true →
       ∃ p', Holds program cf (Run.machineOf (Run.replayFrom program table fuel T m)) p' ∧
-        ∀ r, Leads table program p (exitsOf T ++ r) p' r
+        ∀ r, Leads (tapeHost table) program p (exitsOf T ++ r) p' r
   | [], m, p, hH, _, _ => ⟨p, by rw [Run.machineOf_nil]; exact hH, fun r => Leads.refl p r⟩
   | d :: T, m, p, hH, ⟨hs, hen, hreq, hrest⟩, hall => by
     rw [List.all_cons, Bool.and_eq_true] at hall
     rw [Run.replayFrom_cons program table fuel d T m hs hen]
     obtain ⟨p₁, hH₁, hL₁⟩ : ∃ p₁, Holds program cf (steppedBy program fuel table m d) p₁ ∧
-        ∀ r, Leads table program p (exitsOf [d] ++ r) p₁ r := by
+        ∀ r, Leads (tapeHost table) program p (exitsOf [d] ++ r) p₁ r := by
       have hd := hall.1
       cases d with
       | answerAsync f t a =>
         cases a with
-        | ofExit ex => exact holds_answer program hroot cf hH (hreq f t _ rfl) hen
+        | ofExit ex =>
+          obtain ⟨i, v, row, hrq, hrow⟩ := hreq f t _ rfl
+          have hne : Program.requestOf m f t ≠ none := by
+            rw [hrq]
+            exact Option.some_ne_none _
+          obtain ⟨p₁, hH₁, hL₁⟩ := holds_answer program hroot cf hH hne hen
+          exact ⟨p₁, hH₁, fun r => hL₁ (tapeHost table) (ex :: r) r (hH.tapeAnswer hrq hrow ex r)⟩
         | ofRefGet _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
             reduceCtorEq, or_self] at hd
       | evaluate id =>
         simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
           RunDecision.evaluate.injEq, reduceCtorEq, or_false] at hd
         subst hd
-        exact holds_evaluate program hroot cf hH hen
-      | flush => exact holds_flush program hroot cf hH hen
+        obtain ⟨p₁, hH₁, hL₁⟩ := holds_evaluate program hroot cf hH hen
+        exact ⟨p₁, hH₁, fun r => hL₁ (tapeHost table) r⟩
+      | flush =>
+        obtain ⟨p₁, hH₁, hL₁⟩ := holds_flush program hroot cf hH hen
+        exact ⟨p₁, hH₁, fun r => hL₁ (tapeHost table) r⟩
       | _ => simp only [hostDecision, Api.evaluate, Api.flush, Bool.or_eq_true, beq_iff_eq,
           reduceCtorEq, or_self] at hd
     obtain ⟨p', hH', hL'⟩ := tape_holds program table fuel hroot cf T _ p₁ hH₁ hrest hall.2
@@ -296,7 +320,7 @@ theorem denoteRows_eq_session : DenoteRowsEqSession StraightRows := by
     have hrun := hrest.1
     rw [show s.work.runnable = Api.runnableFibers s.machine from rfl, hm] at hrun
     cases hrun
-  · exact meaning_settled s.built.program hfrag s.budget.compileFuel (appliedExits s) hS
+  · exact meaning_settled_tape s.built.program hfrag s.budget.compileFuel (appliedExits s) hS
       (List.isEmpty_iff.mp hrest.2) hL₀
 
 end Effect4.Run

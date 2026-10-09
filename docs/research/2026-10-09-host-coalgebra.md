@@ -277,6 +277,15 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   then proves that the requests agree. H8 is the instance at `tapeHost`, and H9 is the theorem
   at every host. The session's system for the picture is built on the same local run after it.
 
+- **CO-4 landed.** The local run with calls asks a host, a comodel of `RowSig table`, where it
+  read a reply tape (`localStepC`, `hostAnswer`, `Agreement/Segment.lean`). `ReachesQ` and
+  `LeadsQ` say "reads no reply, under every host". The compile law holds under every host
+  (`localRunC_compile`), and its `perform` case shows that the run asks the meaning's row and
+  request. `holds_answer` and `meaning_settled` hold under every host. H8 is now the instance
+  at the reply host (`meaning_settled_tape`, `tape_holds`), with its statement unchanged. The
+  session's admitted reply is on a table row (`preflight_row`), so the reply host answers it
+  (`Holds.tapeAnswer`).
+
 ## 8. What the owner must decide
 
 1. **`Effects` as the home of the generic layer** (representation). The coalgebra layer lands
