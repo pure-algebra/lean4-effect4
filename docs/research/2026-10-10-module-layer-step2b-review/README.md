@@ -1,10 +1,10 @@
 # Module-layer step 2b review
 
-The current draft has one remaining landing blocker.
-The round-trip proof exceeds the project's axiom boundary.
-The isolated proof repair passes the audit without changing a theorem statement or the program representation.
-Claude repairs the separate TypeScript printing fixture during this review.
-Apply only `proof-only.patch` to the current draft.
+The current draft includes the verified proof repair.
+Its proof sources match the isolated candidate exactly.
+The separate TypeScript printing fixture also has its source correction.
+Do not reapply `proof-only.patch`.
+The [follow-up](followup-1913/README.md) records the new target checks and source comparison.
 
 ## Reviewed state
 
@@ -21,7 +21,7 @@ The review changes only this packet in the isolated review worktree.
 ## ML2B-TRUST-01: the round-trip proof exceeds the axiom boundary
 
 Evidence kind: cycle-aware dependency audit of compiled draft laws.
-Status: confirmed in the reviewed draft.
+Status: confirmed in the initial draft; the current working tree contains the verified repair.
 Scope: the four selected code generation and hoisting law modules.
 
 `moduleLayersOf_split` in `src/Effect4/Laws/Codegen/Module.lean` uses `List.filter_eq_nil_iff` twice.
@@ -135,24 +135,25 @@ All other staged files pass the whitespace check.
 The overlay copies imported artifacts and their `.ir` and `.ir.sig` files without changing the implementation artifacts.
 The two law modules are rebuilt locally; their other imported dependencies are reused.
 The record checks stability, not a fresh rebuild of every dependency.
-No full sweep, TypeScript check, host comparison, merge, or push is performed.
-The review does not claim those results.
+The initial review performs no full sweep, TypeScript check, host comparison, merge, or push.
+The follow-up records a separate narrow target check and three runtime observations.
 
 ## Handoff
 
-Apply `proof-only.patch` after checking it against the implementation draft.
+Keep the applied proof repair; its source matches the independently verified candidate.
 Run the narrow builds and cycle-aware audit before committing the landing.
 Run the affected target and runtime comparison gates under the repository's build rules.
 Keep the readable-domain premises on the public round-trip claim.
 
-The semantics registry prose still says that every layer inside a definition is refused.
-Qualify that statement as a definition's own layer when reconciling this slice's documentation.
-The anchors are `module-defs-round-trip` in `tools/ProofGraph/Registry.lean` and its property in `docs/core/semantics.md`.
+The owner corrects the semantics registry prose during the follow-up.
+It now distinguishes a definition body's own layer from its reference to a module layer.
+The anchors remain `module-defs-round-trip` in `tools/ProofGraph/Registry.lean` and its property in `docs/core/semantics.md`.
 
 ## Checkpoint
 
 The primary HEAD remains `e9d6863eed613a40fe90444925daf5e3bec818c5` at the start of this review.
-ML2B-TRUST-01 remains open against uncommitted step 2b.
+ML2B-TRUST-01 is repaired in uncommitted step 2b, with an exact match to the verified candidate.
 ML2B-TEST-01 has its source correction in the owner's working tree.
-ML2-C2-01 and LV-OW-01 remain unchanged from their saved receipts.
+ML2-C2-01 has a verified working-tree repair, recorded in the follow-up.
+LV-OW-01 remains unchanged from its saved receipt.
 The candidate does not apply either earlier repair.

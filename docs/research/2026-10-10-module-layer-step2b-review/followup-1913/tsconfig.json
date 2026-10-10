@@ -1,0 +1,13 @@
+{
+  "extends": "/Users/pooks/Dev/lean4-effect4-wt/module-layers/harness/truth/tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": [
+      "/Users/pooks/Dev/lean4-effect4-wt/module-layers/harness/truth/node_modules/@types"
+    ]
+  },
+  "files": [
+    "/Users/pooks/Dev/lean4-effect4-wt/module-layers/harness/truth/generated/pDefsModuleLayer.ts"
+  ],
+  "include": [],
+  "exclude": []
+}
