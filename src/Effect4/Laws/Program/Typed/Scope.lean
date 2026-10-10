@@ -37,23 +37,29 @@ def spineParams : List DefDecl → List Nat → List ParamDecl
 /-- **The parameters in scope at a path** (decisions row 340): at a root block, the parameters of
 the definition whose body holds the path (the bodies are child `0`); `[]` in the main program,
 at the block itself, and in every program with no block. -/
-def scopeParams : Eff Op → List Nat → List ParamDecl
-  | .defs decls _ _, 0 :: rest => spineParams decls rest
-  | _, _ => []
+def scopeParams (root : Eff Op) : List Nat → List ParamDecl
+  | 0 :: rest =>
+    match root with
+    | .defs decls _ _ => spineParams decls rest
+    | _ => []
+  | _ => []
 
-/-- Below a program node of a spine, every path has the node's parameters: the node stands in
-one body, and the path stays in it. A step of `scopeParams_child` and `scopeParams_below`. -/
+/-- Below a node of a spine that is no spine itself, every path has the node's parameters: the
+node stands in one body, and the path stays in it. A step of `scopeParams_child`,
+`scopeParams_below` and `scopeParams_layer_below`. -/
 theorem spineParams_append : ∀ (decls : List DefDecl) (bodies : Effs Op) (rest : List Nat)
-    (e : Eff Op), Node.at_ (.effs bodies) rest = some (.eff e) →
+    (n : Node Op), Node.at_ (.effs bodies) rest = some n → (∀ es, n ≠ .effs es) →
     ∀ q, spineParams decls (rest ++ q) = spineParams decls rest
-  | _, _, [], _, h, _ => nomatch h
-  | [], _, 0 :: _, _, _, _ => rfl
-  | _ :: _, _, 0 :: _, _, _, _ => rfl
-  | [], _, 1 :: _, _, _, _ => rfl
-  | _ :: ds, .cons _ t, 1 :: r, e, h, q => spineParams_append ds t r e h q
-  | _ :: _, .nil, 1 :: _, _, h, _ => nomatch h
-  | _, .nil, (_ + 2) :: _, _, h, _ => nomatch h
-  | _, .cons _ _, (_ + 2) :: _, _, h, _ => nomatch h
+  | _, bodies, [], _, h, hn, _ => by
+    cases h
+    exact absurd rfl (hn bodies)
+  | [], _, 0 :: _, _, _, _, _ => rfl
+  | _ :: _, _, 0 :: _, _, _, _, _ => rfl
+  | [], _, 1 :: _, _, _, _, _ => rfl
+  | _ :: ds, .cons _ t, 1 :: r, n, h, hn, q => spineParams_append ds t r n h hn q
+  | _ :: _, .nil, 1 :: _, _, h, _, _ => nomatch h
+  | _, .nil, (_ + 2) :: _, _, h, _, _ => nomatch h
+  | _, .cons _ _, (_ + 2) :: _, _, h, _, _ => nomatch h
 
 /-- The body of the spine's entry `k` has declaration `k`'s parameters. A step of
 `scopeParams_body`. -/
@@ -84,17 +90,20 @@ theorem spineParams_decl : ∀ (decls : List DefDecl) (rest : List Nat),
 theorem scopeParams_child {root : Eff Op} {path : List Nat} {e : Eff Op}
     (hat : Node.at_ (.eff root) path = some (.eff e)) (i : Nat) :
     scopeParams root (path ++ [i]) = scopeParams root path := by
-  cases root with
-  | defs decls bodies main =>
-    match path, hat with
-    | [], _ =>
-      cases i with
-      | zero => cases decls <;> rfl
-      | succ _ => rfl
-    | 0 :: rest, hat => exact spineParams_append decls bodies rest e hat [i]
-    | 1 :: _, _ => rfl
-    | (_ + 2) :: _, _ => rfl
-  | _ => rfl
+  match path, hat with
+  | [], _ =>
+    cases i with
+    | zero =>
+      cases root with
+      | defs decls _ _ => cases decls <;> rfl
+      | _ => rfl
+    | succ _ => rfl
+  | 0 :: rest, hat =>
+    cases root with
+    | defs decls bodies main =>
+      exact spineParams_append decls bodies rest _ hat (fun _ h => nomatch h) [i]
+    | _ => rfl
+  | (_ + 1) :: _, _ => rfl
 
 /-- **Below a program node that is no block, every path has the node's scope.** A step of
 `denote-typed`; its consumer is `argSites_typed` (`Typed/Denotation.lean`): the sites of an
@@ -103,16 +112,53 @@ invocation's programs stand below it. -/
 theorem scopeParams_below {root : Eff Op} {path : List Nat} {e : Eff Op}
     (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m, e ≠ .defs d b m)
     (q : List Nat) : scopeParams root (path ++ q) = scopeParams root path := by
-  cases root with
-  | defs decls bodies main =>
-    match path, hat with
-    | [], hat =>
-      cases hat
-      exact absurd rfl (he decls bodies main)
-    | 0 :: rest, hat => exact spineParams_append decls bodies rest e hat q
-    | 1 :: _, _ => rfl
-    | (_ + 2) :: _, _ => rfl
-  | _ => rfl
+  match path, hat with
+  | [], hat =>
+    cases hat
+    cases root with
+    | defs decls bodies main => exact absurd rfl (he decls bodies main)
+    | _ => match q with
+      | [] => rfl
+      | 0 :: _ => rfl
+      | (_ + 1) :: _ => rfl
+  | 0 :: rest, hat =>
+    cases root with
+    | defs decls bodies main =>
+      exact spineParams_append decls bodies rest _ hat (fun _ h => nomatch h) q
+    | _ => rfl
+  | (_ + 1) :: _, _ => rfl
+
+/-- **Below a layer node every path has the node's scope**: a layer is no spine and stands below
+the root. A step of `denote-typed`; its consumers are the layer arms (`layerPointTyped_scope`,
+`Typed/LayerArm.lean`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+theorem scopeParams_layer_below {root : Eff Op} {path : List Nat} {l : LayerTerm Op}
+    (hat : Node.at_ (.eff root) path = some (.layer l)) (q : List Nat) :
+    scopeParams root (path ++ q) = scopeParams root path := by
+  match path, hat with
+  | [], hat => nomatch hat
+  | 0 :: rest, hat =>
+    cases root with
+    | defs decls bodies main =>
+      exact spineParams_append decls bodies rest _ hat (fun _ h => nomatch h) q
+    | _ => rfl
+  | (_ + 1) :: _, _ => rfl
+
+/-- `scopeParams_layer_below`, read along a prefix. -/
+theorem scopeParams_layer_prefix {root : Eff Op} {path q : List Nat} {l : LayerTerm Op}
+    (hat : Node.at_ (.eff root) path = some (.layer l)) (hq : path <+: q) :
+    scopeParams root q = scopeParams root path := by
+  obtain ⟨r, rfl⟩ := hq
+  exact scopeParams_layer_below hat r
+
+/-- **Every path that extends a program node's, that is no block, has the node's scope**
+(`scopeParams_below`, read along a prefix). A step of `denote-typed`; its consumers are the arms
+that type a grandchild (`fork_arm`, `raceAll_arm`, `Typed/Denotation.lean`). -/
+theorem scopeParams_prefix {root : Eff Op} {path q : List Nat} {e : Eff Op}
+    (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m, e ≠ .defs d b m)
+    (hq : path <+: q) : scopeParams root q = scopeParams root path := by
+  obtain ⟨r, rfl⟩ := hq
+  exact scopeParams_below hat he r
 
 /-- **The body of definition `k` has definition `k`'s parameters.** A step of `denote-typed`;
 its consumers are `call_arm` and `invoke_arm` (`Typed/Denotation.lean`). -/
@@ -137,18 +183,13 @@ declaration's (`BodiesTyped`). -/
 theorem scopeParams_decl (root : Eff Op) (path : List Nat) :
     scopeParams root path = [] ∨
       ∃ (k : Nat) (d : DefDecl), root.defsOf[k]? = some d ∧ scopeParams root path = d.params := by
-  cases root with
-  | defs decls bodies main =>
-    match path with
-    | 0 :: rest => exact spineParams_decl decls rest
-    | [] => exact .inl rfl
-    | (_ + 1) :: _ => exact .inl rfl
-  | _ => exact .inl rfl
-
-/-- **At the root no parameter is in scope.** A step of the load (`rootCode_typed`,
-`Typed/Assembly.lean`), whose point stands at the root. -/
-theorem scopeParams_nil (root : Eff Op) : scopeParams root [] = [] := by
-  cases root <;> rfl
+  match path with
+  | 0 :: rest =>
+    cases root with
+    | defs decls bodies main => exact spineParams_decl decls rest
+    | _ => exact .inl rfl
+  | [] => exact .inl rfl
+  | (_ + 1) :: _ => exact .inl rfl
 
 /-- **An operation that runs no parameter reads the outer signature** in a body's signature: its
 domain bit and its row. A step of `denote-typed`; its consumers are the row arms

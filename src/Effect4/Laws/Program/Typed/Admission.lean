@@ -5,6 +5,7 @@ import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Program.Definitions
 import Effect4.Laws.Program.Definitions
+import Effect4.Laws.Program.Typed.Scope
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
@@ -133,7 +134,87 @@ theorem ProgramSource.signature_of_defsOf_nil {src : ProgramSource} (h : src.pro
   rw [h]
   exact Signature.withDefs_nil _ (SigApp.signature_callsOutside _)
 
-/-- D13 source admission at an addressed program node, under the source's signature: its row
+/-- **The signature at a path** (decisions row 340, slice CX1): the source's signature extended by
+the parameters in scope there (`scopeParams`, `Typed/Scope.lean`), as the module check checks a
+body (`Checker.checkBodies`). Outside every body it is the source's signature
+(`Signature.withParams` at `[]`). -/
+def ProgramSource.scopeSig (src : ProgramSource) (path : List Nat) : Signature NativeOp :=
+  src.signature.withParams (scopeParams src.program path)
+
+/-- The source's signature keeps every run of a parameter outside its domain: only a body's
+signature admits one. -/
+theorem ProgramSource.signature_paramsOutside (src : ProgramSource) :
+    ∀ op i, src.signature.paramOf op = some i → src.signature.dom op = false := by
+  intro op i h
+  cases op with
+  | param j =>
+    show (src.sig.signature.withDefs src.program.defsOf).dom (.param j) = false
+    rw [Signature.withDefs_dom_of_none _ _ rfl]
+    rfl
+  | _ => cases h
+
+/-- **The signature at a path extends the source's** (`Signature.extends_withParams`): the same
+atoms, terms, services and declarations, and every row of the source's domain. The arms read a
+term's type and a host row through it. -/
+theorem ProgramSource.scopeSig_extends (src : ProgramSource) (path : List Nat) :
+    SigExtends src.signature (src.scopeSig path) :=
+  Signature.extends_withParams _ src.signature_paramsOutside _
+
+/-- An operation that runs no parameter reads the source's domain bit and row at every scope
+(`Signature.withParams_of_none`). A step of the row arms (`external_arm`, `builtinPerform_inv`). -/
+theorem ProgramSource.scopeSig_of_none (src : ProgramSource) (path : List Nat) {op : NativeOp}
+    (h : src.signature.paramOf op = none) :
+    (src.scopeSig path).dom op = src.signature.dom op ∧
+      (src.scopeSig path).rowOf op = src.signature.rowOf op :=
+  Signature.withParams_of_none _ _ h
+
+/-- Every scope reads the source's service table (`Signature.withParams_serviceTy`). A step of
+`service_arm` and `provideService_arm`. -/
+theorem ProgramSource.scopeSig_serviceTy (src : ProgramSource) (path : List Nat) :
+    (src.scopeSig path).serviceTy = src.signature.serviceTy :=
+  Signature.withParams_serviceTy _ _
+
+/-- Every scope reads the source's declarations (`Signature.withParams_defOf`). A step of
+`invoke_arm`. -/
+theorem ProgramSource.scopeSig_defOf (src : ProgramSource) (path : List Nat) :
+    (src.scopeSig path).defOf = src.signature.defOf :=
+  Signature.withParams_defOf _ _
+
+/-- **A child of a program node is checked at its node's signature** (`scopeParams_child`). A
+step of `pointTyped_child` and of every arm that checks a child. -/
+theorem ProgramSource.scopeSig_child (src : ProgramSource) {path : List Nat} {e : NativeEff}
+    (hat : Node.at_ (.eff src.program) path = some (.eff e)) (i : Nat) :
+    src.scopeSig (path ++ [i]) = src.scopeSig path := by
+  unfold ProgramSource.scopeSig
+  rw [scopeParams_child hat i]
+
+/-- **The stack of the passed programs, typed at a scope** (decisions row 340, slice CX1;
+`docs/research/2026-10-10-cx-lexical-scope.md` §4.3). For each parameter `j` in scope, the top
+frame holds a site whose path addresses a program the checker types at the site's own scope,
+over the caller's environment extended by the parameter's request, at a type the parameter
+admits; the site's values fit the caller's environment; and the rest of the stack is typed at
+the site's scope. With no parameter in scope it constrains nothing (`stackTyped_nil`). The
+recursion is on the stack, and it mentions no program judgment. -/
+def StackTyped (src : ProgramSource) (w : World) : List ParamDecl → List (List ArgSite) → Prop
+  | ps, [] => ps = []
+  | ps, sites :: rest => ∀ (j : Nat) (q : ParamDecl), ps[j]? = some q →
+      ∃ (site : ArgSite) (arg : NativeEff) (env : List Ty) (t : EffTy), sites[j]? = some site ∧
+        Node.at_ (.eff src.program) site.path = some (.eff arg) ∧
+        Checker.check (src.scopeSig site.path) (env ++ [q.request.normalize]) site.path
+          (Eff.expandIn src.program arg) = .ok t ∧
+        q.admits t = true ∧ EnvTyped w env site.env ∧
+        StackTyped src w (scopeParams src.program site.path) rest
+
+/-- **With no parameter in scope every stack is typed**: outside every body, and in the body of a
+definition that takes no program. -/
+theorem stackTyped_nil (src : ProgramSource) (w : World) :
+    ∀ stack : List (List ArgSite), StackTyped src w [] stack
+  | [] => rfl
+  | _ :: _ => fun j q h => by
+    rw [List.getElem?_nil] at h
+    cases h
+
+/-- D13 source admission at an addressed program node, under the signature of its scope: its row
 table (`E4-SCHED-CE-014`: the empty table refused bodies that perform a host row) and its service
 declarations (rows 111–114; `src.signature` is `nativeSignature src.table` for a source with no
 declarations, `SigApp.signature_nil`). The node is the program's as written, the one the run
@@ -148,13 +229,18 @@ row 175, `E4-TYPED-CE-021`): the values in scope fit the checker's environment (
 each completed exit the point carries fits its fiber's declared type, the `construction` post's
 clause (`Typed/Residual.lean`), which is where a point's view is built. The denotation answers a
 completed exit as an `await`'s result (`Point.awaitExit`), so an untyped view denotes an untyped
-program at a checked node. -/
+program at a checked node.
+
+The node is checked at the signature of its scope (`ProgramSource.scopeSig`), and the point's
+stack of passed programs is typed there (`StackTyped`, decisions row 340, slice CX1): a point
+inside a definition's body reads the body's parameters, and their sites are typed closures. -/
 def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : Prop :=
   ∃ (e : NativeEff) (env : List Ty),
     Node.at_ (.eff src.program) point.path = some (.eff e) ∧
-    Checker.check src.signature env point.path (Eff.expandIn src.program e) = .ok ty ∧
+    Checker.check (src.scopeSig point.path) env point.path (Eff.expandIn src.program e) = .ok ty ∧
     EnvTyped w env point.env ∧
-    ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
+    (∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
+    StackTyped src w (scopeParams src.program point.path) point.params
 
 /-- **The block's bodies are typed** (decisions row 328): each declaration of the program's block
 names a body at its path (`defBodyPath`), which the checker types at the source's signature
@@ -193,27 +279,34 @@ under an environment its values fit, extended by the acquired value, and its con
 services are typed. The checker reads the node through the expansion's rounds, as `PointTyped`
 does (decisions row 153 (b)). Here since decisions row 151 (a″): the scope registration's pre
 reads it (`FinalizerAdmitted`, `Typed/Admission.lean`), as the generated bundle's `CaptureOk` does
-(`preds`, `Typed/Assembly.lean`). -/
+(`preds`, `Typed/Assembly.lean`). The node is checked at the signature of its scope, and the
+capture's stack is typed there, as `PointTyped`'s (slice CX1): a release in a definition's body
+runs the body's parameters. -/
 def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
   ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
-    Checker.check root.signature env c.path
+    Checker.check (root.scopeSig c.path) env c.path
       (Eff.expandIn root.program (.acquireRelease acquire release)) = .ok t ∧
-    Checker.check root.signature env (c.path ++ [0]) (Eff.expandIn root.program acquire) = .ok a ∧
-    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services
+    Checker.check (root.scopeSig c.path) env (c.path ++ [0]) (Eff.expandIn root.program acquire) =
+      .ok a ∧
+    EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services ∧
+    StackTyped root w (scopeParams root.program c.path) c.params
 
 /-- A layer point is admitted (decisions row 186 (a)): its path addresses a layer the checker
 types, read through the expansion's rounds as `PointTyped` reads a program node and as the memo
 rows read the memo layer (`storePre`'s `memoGet` arm, `Typed/Residual.lean`); its lexical
 environment is the empty one a layer is checked and built in (`Point.layerBuild`, decisions rows
 104, 105), and its completed view is typed as `PointTyped`'s is. `PointTyped` admits only a
-program node, so a layer build's point needs its own admission. -/
+program node, so a layer build's point needs its own admission. Its scope and stack are read
+as `PointTyped`'s (slice CX1). -/
 def LayerPointTyped (src : ProgramSource) (w : World) (point : Point) (lt : LayerTy) : Prop :=
   ∃ l : LayerTerm NativeOp,
     Node.at_ (.eff src.program) point.path = some (.layer l) ∧
-    Checker.checkLayer src.signature point.path (LayerTerm.expandIn src.program l) = .ok lt ∧
+    Checker.checkLayer (src.scopeSig point.path) point.path (LayerTerm.expandIn src.program l) =
+      .ok lt ∧
     point.env = [] ∧
-    ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
+    (∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
+    StackTyped src w (scopeParams src.program point.path) point.params
 
 /-- **A finalizer the scope registration admits** (decisions row 151 (a″)): what makes its program
 typed at rc.112's finalizer type `⟨unknown, never⟩` (`internal/effect.ts:3849`) at every later

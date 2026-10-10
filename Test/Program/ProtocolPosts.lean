@@ -764,7 +764,7 @@ theorem foreign_untyped (w : W) (ex : ExitV) (ty : EffTy) (unit : ty.answer = .u
 environment, its acquire at `nat`, the acquired `1` fits it, and the empty context's services fit. -/
 theorem acq_capture_typed (w : W) : CaptureTyped (acqProg : ProgramSource) w acqCapture := by
   refine ⟨.succeed (.lit (.nat 1)), .succeed (.lit (.nat 5)), [],
-    ⟨.nat, .never, Env.Requirement.single nativeScopeKey⟩, EffTy.pure .nat, rfl, ?_, rfl, ?_, ?_⟩
+    ⟨.nat, .never, Env.Requirement.single nativeScopeKey⟩, EffTy.pure .nat, rfl, ?_, rfl, ?_, ?_, ?_⟩
   · decide +kernel
   · refine ⟨rfl, fun i ty v hi hv => ?_⟩
     cases i with
@@ -774,6 +774,7 @@ theorem acq_capture_typed (w : W) : CaptureTyped (acqProg : ProgramSource) w acq
       trivial
     | succ k => cases hi
   · exact servicesFit_empty _
+  · exact stackTyped_nil _ _ _
 
 /-- **Positive, the finalizer's own program** (decisions row 151 (a″)): the same capture's program
 is typed at rc.112's finalizer type `⟨unknown, never⟩`, at every world and every closing exit

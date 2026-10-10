@@ -999,18 +999,15 @@ theorem capture_release (root : ProgramSource) (w : World) (c : Capture)
     (hview : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) :
     ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty ∧
       rty.error.normalize = .never := by
-  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _⟩ := h
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _, hstack⟩ := h
   rw [Eff.expandIn_acquireRelease] at hcheck
   obtain ⟨a', r, hacq', hrel, hnever, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
   rw [hacq] at hacq'
   cases hacq'
-  refine ⟨r, ⟨release, env ++ [a.answer, .exitOf .unknown .unknown], ?_, hrel, ?_, hview⟩, hnever⟩
-  · show Node.at_ (.eff root.program) (c.path ++ [1]) = some (.eff release)
-    rw [Agreement.Node.at_append, hnode]
-    rfl
-  · show EnvTyped w (env ++ [a.answer, .exitOf .unknown .unknown]) (c.env ++ [exVal])
-    have := envTyped_append henv hex
-    simpa only [List.append_assoc, List.singleton_append] using this
+  refine ⟨r, pointTyped_child hnode rfl rfl hrel ?_ hview hstack, hnever⟩
+  show EnvTyped w (env ++ [a.answer, .exitOf .unknown .unknown]) (c.env ++ [exVal])
+  have := envTyped_append henv hex
+  simpa only [List.append_assoc, List.singleton_append] using this
 
 /-- A capture's release runs at the point its path's `acquireRelease` checks it at: the
 release child, over the checker's environment extended by the acquired value and the exit, with
@@ -1130,7 +1127,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
     · intro w2 o2 v hv
       obtain ⟨previous, hprev, hprevious⟩ := fits_context_inv hv
       have o12 : w'.leHost w2 := leHost_trans _ _ _ o1 o2
-      obtain ⟨_, _, _, _, _, _, _, _, _, hsvc⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
+      obtain ⟨_, _, _, _, _, _, _, _, _, hsvc, -⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
       show TypedProg root w2 _ (match Val.context? v with
         | some previous =>
           (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
@@ -1397,7 +1394,7 @@ theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Na
         rfl
       exact denotes hwf w htie _ main rootTy hat
         ⟨main, [], hat, mainChecked_of_typeOf hprog checked, envTyped_nil _,
-          fun _ h => nomatch h⟩
+          (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
   · -- no block: the root point, checked at the tables' signature
     have hsig : root.signature = root.sig.signature := ProgramSource.signature_of_defsOf_nil hnil
     rw [typeOfProgram_eq_if_refsWF, if_pos hwf.refs,
@@ -1408,7 +1405,7 @@ theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Na
       rw [hsig]
       exact Effect4.Laws.Auto.toOption_eq_some.mp checked
     exact denotes hwf w htie (rootPoint compileFuel) root.program rootTy rfl
-      ⟨root.program, [], rfl, hcheck, envTyped_nil _, fun _ h => nomatch h⟩
+      ⟨root.program, [], rfl, hcheck, envTyped_nil _, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
 
 /-- **M5 from row 148's fundamental property**, for a loaded head that is not a race marker
 (`InterpR.lean:320`: only a race park builds one). The root point is typed by the checker's

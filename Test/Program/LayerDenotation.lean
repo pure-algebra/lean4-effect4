@@ -71,7 +71,7 @@ theorem memo_check : Checker.check memoSrc.signature [] memoPoint.path
   decide +kernel
 
 theorem memo_point (w : W) : PointTyped memoSrc w memoPoint (EffTy.pure .unit) :=
-  ⟨memoRoot, [], rfl, memo_check, envTyped_nil w, fun _ h => nomatch h⟩
+  ⟨memoRoot, [], rfl, memo_check, envTyped_nil w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
 
 theorem memo_layer_node : Node.at_ (.eff memoSrc.program) [0] = some (.layer memoLayer) := by
   decide +kernel

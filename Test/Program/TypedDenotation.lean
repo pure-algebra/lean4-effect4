@@ -163,7 +163,7 @@ theorem chain_point_old (w : W) : OldPointTyped chainSrc w chainPoint (EffTy.pur
   ⟨C, [], chain_node, chain_check, envTyped_nil w⟩
 
 theorem chain_point (w : W) : PointTyped chainSrc w chainPoint (EffTy.pure .unit) :=
-  ⟨C, [], chain_node, chain_check, envTyped_nil w, fun _ h => nomatch h⟩
+  ⟨C, [], chain_node, chain_check, envTyped_nil w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
 
 /-- **Row 170 carried by `J`** (`MachineTyped.sourceWF`): the malformed chain is typed by no machine
 at any world, though its point is checked (`chain_point`), so no step obligation is asked of it. The
@@ -313,7 +313,7 @@ theorem old_view_refuted : ¬ Row170DenotesTyped awaitSrc := by
 /-- **The repair (row 175)**: the point typing reads the completed view, so the witness point is
 typed at no type. -/
 theorem view_point_refused (ty : EffTy) : ¬ PointTyped awaitSrc w1 viewPoint ty := by
-  rintro ⟨_, _, _, _, _, view⟩
+  rintro ⟨_, _, _, _, _, view, _⟩
   obtain ⟨fty, hfty, ok⟩ := view (⟨1⟩, .success (Val.str "x")) (List.mem_singleton_self _)
   have same : fty = EffTy.pure .nat := by
     change (if (⟨1⟩ : FiberId) = ⟨1⟩ then some (EffTy.pure .nat) else none) = some fty at hfty

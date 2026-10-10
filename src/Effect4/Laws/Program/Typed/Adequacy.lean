@@ -43,11 +43,12 @@ open Contracts
 
 /-- A memo entry's cell at its layer: declared at the built context and the layer's own checked
 error type, the certificate `memoBuild`'s row declares it at (`storePre`) and the columns
-`memoComplete`'s exit fits. A path that is no checked layer constrains nothing. -/
+`memoComplete`'s exit fits. The layer is checked at its scope's signature, as `storePre`'s memo
+rows read it (slice CX1). A path that is no checked layer constrains nothing. -/
 def LayerCellTyped (root : ProgramSource) (w : World) (layer : LayerId) (cell : DeferredKey) :
     Prop :=
   ∀ l lt, Node.at_ (.eff root.program) layer = some (.layer l) →
-    Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt →
+    Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt →
       w.«Π» cell = some (.handle Ty.contextTarget, lt.error)
 
 /-- **The memo table**: every entry's cell is typed at its layer, read through the memo world's

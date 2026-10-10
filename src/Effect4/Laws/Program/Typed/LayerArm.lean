@@ -223,7 +223,8 @@ with the construction's exit. -/
 theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt : LayerTy}
     {l : LayerTerm NativeOp} {construction : Nat → RProgram}
     (hat : Node.at_ (.eff root.program) q.path = some (.layer l))
-    (hcheck : Checker.checkLayer root.signature q.path (LayerTerm.expandIn root.program l) = .ok lt)
+    (hcheck : Checker.checkLayer (root.scopeSig q.path) q.path (LayerTerm.expandIn root.program l) =
+      .ok lt)
     (hlive : ScopeLive w scope)
     (hcons : ∀ w', w.leHost w' → ∀ layerScope, ScopeLive w' layerScope →
       TypedProg root w' (buildTy lt) (construction layerScope)) :
@@ -699,21 +700,42 @@ theorem mergeTwo_typed {w : World} {q : Point} {m : MemoMapId} {child : Nat} {la
 /-- A layer point's check, read at its node. -/
 theorem LayerPointTyped.at_layer {w : World} {q : Point} {lt : LayerTy} {l : LayerTerm NativeOp}
     (hpt : LayerPointTyped root w q lt) (hat : Node.at_ (.eff root.program) q.path = some (.layer l)) :
-    Checker.checkLayer root.signature q.path (LayerTerm.expandIn root.program l) = .ok lt ∧
-      q.env = [] ∧ ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2 := by
-  obtain ⟨l', hat', hcheck, henv, hview⟩ := hpt
+    Checker.checkLayer (root.scopeSig q.path) q.path (LayerTerm.expandIn root.program l) = .ok lt ∧
+      q.env = [] ∧ (∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2) ∧
+      StackTyped root w (scopeParams root.program q.path) q.params := by
+  obtain ⟨l', hat', hcheck, henv, hview, hstack⟩ := hpt
   rw [hat] at hat'
   cases hat'
-  exact ⟨hcheck, henv, hview⟩
+  exact ⟨hcheck, henv, hview, hstack⟩
+
+/-- A layer point typed at the scope of a path that has its parameters (as `pointTyped_scope`):
+its layer checked at that path's signature, and its stack typed at that path's scope. -/
+theorem layerPointTyped_scope {w : World} {q : Point} {path : List Nat} {l : LayerTerm NativeOp}
+    {lt : LayerTy} (hscope : scopeParams root.program q.path = scopeParams root.program path)
+    (hat : Node.at_ (.eff root.program) q.path = some (.layer l))
+    (hcheck : Checker.checkLayer (root.scopeSig path) q.path (LayerTerm.expandIn root.program l) =
+      .ok lt)
+    (henv : q.env = []) (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2)
+    (hstack : StackTyped root w (scopeParams root.program path) q.params) :
+    LayerPointTyped root w q lt := by
+  have hsig : root.scopeSig q.path = root.scopeSig path := by
+    unfold ProgramSource.scopeSig
+    rw [hscope]
+  rw [← hsig] at hcheck
+  rw [← hscope] at hstack
+  exact ⟨l, hat, hcheck, henv, hview, hstack⟩
 
 /-- A layer child's point, admitted by its own check. -/
 theorem layerPointTyped_child {w : World} {q : Point} {l c : LayerTerm NativeOp} {i : Nat}
     {lt : LayerTy} (hat : Node.at_ (.eff root.program) q.path = some (.layer l))
     (hc : (Node.layer l).child i = some (.layer c))
-    (hcheck : Checker.checkLayer root.signature (q.path ++ [i]) (LayerTerm.expandIn root.program c) = .ok lt)
-    (henv : q.env = []) (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2) :
+    (hcheck : Checker.checkLayer (root.scopeSig q.path) (q.path ++ [i])
+      (LayerTerm.expandIn root.program c) = .ok lt)
+    (henv : q.env = []) (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2)
+    (hstack : StackTyped root w (scopeParams root.program q.path) q.params) :
     LayerPointTyped root w (q.child i) lt :=
-  ⟨c, node_at_child hat hc, hcheck, henv, hview⟩
+  layerPointTyped_scope (scopeParams_layer_below hat [i]) (node_at_child hat hc) hcheck henv hview
+    hstack
 
 /-- One more round, applied first, is one more round applied last. -/
 private theorem foldl_shift {α β : Type} (g : α → α) : ∀ (L : List β) (x : α),
@@ -736,10 +758,12 @@ target's own rounds give the same term, which the checker types at the target's 
 site's (`checkLayer_path`). -/
 theorem layerPointTyped_redirect {w : World} {q : Point} {target : List Nat} {lt : LayerTy}
     {l : LayerTerm NativeOp} (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))
+    (hs : scopeParams root.program target = scopeParams root.program q.path)
     (hpt : LayerPointTyped root w q lt) (hlayer : (Node.eff root.program).layerAt target = some l) :
     LayerPointTyped root w (q.redirect target) lt := by
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
-  refine ⟨l, at_of_layerAt hlayer, ?_, henv, hview⟩
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
+  -- the target stands in the reference's scope, so the reference's stack reads its parameters
+  refine layerPointTyped_scope hs (at_of_layerAt hlayer) ?_ henv hview hstack
   have hsite : LayerTerm.expandIn root.program (.ref target) =
       (List.range (root.program.refSites []).length).foldl
         (fun acc _ => LayerTerm.expandRound (Node.eff root.program) acc) l := by
@@ -836,9 +860,10 @@ abbrev BuildsTyped (root : ProgramSource) (f K : Nat) (l : LayerTerm NativeOp) :
 theorem succeed_builds {key : ServiceKey} {value : Lit} {f K : Nat} :
     BuildsTyped root f K (.succeed key value) := by
   intro q w lt m scope _ _ htie hat hpt _ _
-  obtain ⟨hcheck, -, -⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, -, -, -⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_succeed] at hcheck
   obtain ⟨v, ty, hlv, hsty, hsub, rfl⟩ := Checker.inv_layer_succeed _ _ _ _ _ hcheck
+  rw [root.scopeSig_serviceTy] at hsty
   rw [denoteLayer_succeed]
   have hlit : ∃ x, Lit.toVal value = some x ∧ Fits w x (Lit.ty value) := by
     cases value with
@@ -861,7 +886,7 @@ theorem succeed_builds {key : ServiceKey} {value : Lit} {f K : Nat} :
 theorem fresh_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped root f K inner) :
     BuildsTyped root f K (.fresh inner) := by
   intro q w lt m scope hK hf htie hat hpt hlive hmemo
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_fresh] at hcheck
   have hc := Checker.inv_layer_fresh _ _ _ _ hcheck
   rw [denoteLayer_fresh]
@@ -875,21 +900,22 @@ theorem fresh_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped 
   exact hi (q.child 0) w' lt id scope
     (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf)
     (serviceTy_leHost o htie) (node_at_child hat rfl)
-    (layerPointTyped_child hat rfl hc henv (completed_mono o hview)) (scopeLive_mono o.1 hlive) hid
+    (layerPointTyped_child hat rfl hc henv (completed_mono o hview) (stackTyped_mono o hstack))
+    (scopeLive_mono o.1 hlive) hid
 
 /-- **`Layer.orDie`** (`Layer.ts:3327`): the inner build's failure turned into a defect, which fits
 every error column (`orDieCause_exitOk`); the inner layer is built as it resolves (decisions row 185). -/
 theorem orDie_builds {inner : LayerTerm NativeOp} {f K : Nat} (hi : BuildsTyped root f K inner) :
     BuildsTyped root f K (.orDie inner) := by
   intro q w lt m scope hK hf htie hat hpt hlive hmemo
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_orDie] at hcheck
   obtain ⟨li, hci, rfl⟩ := Checker.inv_layer_orDie _ _ _ _ hcheck
   rw [denoteLayer_orDie]
   exact catchGuard_typed root
     (hi (q.child 0) w li m scope
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf) htie
-      (node_at_child hat rfl) (layerPointTyped_child hat rfl hci henv hview) hlive hmemo)
+      (node_at_child hat rfl) (layerPointTyped_child hat rfl hci henv hview hstack) hlive hmemo)
     (Ty.subN_refl _) (fun w' _ c hc => .pure (orDieCause_exitOk hc))
 
 /-- **`Layer.effect`** (`Layer.ts:1482`): `fromBuild`, the memoized leaf, its construction on the
@@ -898,10 +924,11 @@ theorem effect_builds {key : ServiceKey} {body : NativeEff} {f K : Nat} (hIH : �
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) :
     BuildsTyped root f K (.effect key body) := by
   intro q w lt m scope _ hf htie hat hpt hlive _
-  obtain ⟨hcheck0, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck0, henv, hview, hstack⟩ := hpt.at_layer hat
   have hcheck := hcheck0
   rw [LayerTerm.expandIn_effect] at hcheck
   obtain ⟨t, ty, hcb, hsty, hsub, rfl⟩ := Checker.inv_layer_effect _ _ _ _ _ hcheck
+  rw [root.scopeSig_serviceTy] at hsty
   rw [denoteLayer_effect]
   refine fromBuild_typed hlive (fun w1 o1 child hchild => ?_)
   refine memoize_typed hat hcheck0 hchild (fun w2 o2 layerScope hls => ?_)
@@ -909,8 +936,9 @@ theorem effect_builds {key : ServiceKey} {body : NativeEff} {f K : Nat} (hIH : �
   refine construction_typed (serviceTy_leHost o12 htie) hls rfl (fun w3 o3 => ?_) ?_
   · have o13 := leHost_trans _ _ _ o12 o3
     refine hIH _ (Nat.le_trans (Nat.sub_le _ _) hf) body (q.path ++ [0]) (node_at_child hat rfl) w3
-      (serviceTy_leHost o13 htie) (q.child 0) t rfl rfl ⟨body, [], node_at_child hat rfl, hcb, ?_,
-        completed_mono o13 hview⟩
+      (serviceTy_leHost o13 htie) (q.child 0) t rfl rfl
+      (pointTyped_scope (scopeParams_layer_below hat [0]) (node_at_child hat rfl) hcb ?_
+        (completed_mono o13 hview) (stackTyped_mono o13 hstack))
     show EnvTyped w3 [] q.env
     rw [henv]
     exact envTyped_nil w3
@@ -928,7 +956,7 @@ theorem effectDiscard_builds {body : NativeEff} {f K : Nat} (hIH : ∀ f' ≤ f,
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) :
     BuildsTyped root f K (.effectDiscard body) := by
   intro q w lt m scope _ hf htie hat hpt hlive _
-  obtain ⟨hcheck0, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck0, henv, hview, hstack⟩ := hpt.at_layer hat
   have hcheck := hcheck0
   rw [LayerTerm.expandIn_effectDiscard] at hcheck
   obtain ⟨t, hcb, rfl⟩ := Checker.inv_layer_effectDiscard _ _ _ _ hcheck
@@ -940,8 +968,9 @@ theorem effectDiscard_builds {body : NativeEff} {f K : Nat} (hIH : ∀ f' ≤ f,
     (fun k hk => nomatch hk)
   have o13 := leHost_trans _ _ _ o12 o3
   refine hIH _ (Nat.le_trans (Nat.sub_le _ _) hf) body (q.path ++ [0]) (node_at_child hat rfl) w3
-    (serviceTy_leHost o13 htie) (q.child 0) t rfl rfl ⟨body, [], node_at_child hat rfl, hcb, ?_,
-      completed_mono o13 hview⟩
+    (serviceTy_leHost o13 htie) (q.child 0) t rfl rfl
+    (pointTyped_scope (scopeParams_layer_below hat [0]) (node_at_child hat rfl) hcb ?_
+      (completed_mono o13 hview) (stackTyped_mono o13 hstack))
   show EnvTyped w3 [] q.env
   rw [henv]
   exact envTyped_nil w3
@@ -951,7 +980,7 @@ context; the dependent's context answered. -/
 theorem provide_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : BuildsTyped root f K self) (ht : BuildsTyped root f K that) :
     BuildsTyped root f K (.provide self that) := by
   intro q w lt m scope hK hf htie hat hpt hlive hmemo
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_provide] at hcheck
   obtain ⟨ls, lt', hcs, hct, rfl⟩ := Checker.inv_layer_provide _ _ _ _ _ hcheck
   rw [denoteLayer_provide]
@@ -962,12 +991,14 @@ theorem provide_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : Builds
     rfl rfl rfl (Ty.subN_join_right ls.error lt'.error) (Ty.subN_join_left ls.error lt'.error)
     (ht (q.child 1) w1 lt' m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf) htie1
-      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1) hchild
+      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1 (stackTyped_mono o1 hstack))
+        hchild
       (memoLive_mono o1.1 hmemo))
     (fun w2 o2 => hs (q.child 0) w2 ls m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf)
       (serviceTy_leHost o2 htie1) (node_at_child hat rfl)
-      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)) (scopeLive_mono o2.1 hchild)
+      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)
+        (stackTyped_mono (leHost_trans _ _ _ o1 o2) hstack)) (scopeLive_mono o2.1 hchild)
       (memoLive_mono (leHost_trans _ _ _ o1 o2).1 hmemo))
 
 /-- **`Layer.provideMerge`** (`Layer.ts:1915-1923`): as `provide`, the dependency's map merged under
@@ -975,7 +1006,7 @@ the dependent's. -/
 theorem provideMerge_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : BuildsTyped root f K self) (ht : BuildsTyped root f K that) :
     BuildsTyped root f K (.provideMerge self that) := by
   intro q w lt m scope hK hf htie hat hpt hlive hmemo
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_provideMerge] at hcheck
   obtain ⟨ls, lt', hcs, hct, rfl⟩ := Checker.inv_layer_provideMerge _ _ _ _ _ hcheck
   rw [denoteLayer_provideMerge]
@@ -987,54 +1018,88 @@ theorem provideMerge_builds {self that : LayerTerm NativeOp} {f K : Nat} (hs : B
     (Ty.subN_join_left ls.error lt'.error)
     (ht (q.child 1) w1 lt' m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf) htie1
-      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1) hchild
+      (node_at_child hat rfl) (layerPointTyped_child hat rfl hct henv hview1 (stackTyped_mono o1 hstack))
+        hchild
       (memoLive_mono o1.1 hmemo))
     (fun w2 o2 => hs (q.child 0) w2 ls m child
       (Nat.le_trans (Nat.sub_le _ _) hK) (Nat.le_trans (Nat.sub_le _ _) hf)
       (serviceTy_leHost o2 htie1) (node_at_child hat rfl)
-      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)) (scopeLive_mono o2.1 hchild)
+      (layerPointTyped_child hat rfl hcs henv (completed_mono o2 hview1)
+        (stackTyped_mono (leHost_trans _ _ _ o1 o2) hstack)) (scopeLive_mono o2.1 hchild)
       (memoLive_mono (leHost_trans _ _ _ o1 o2).1 hmemo))
 
 /-- **`Layer.merge`** (`Layer.ts:1587-1602`): `fromBuild`, then the two siblings forked and merged. -/
 theorem merge_builds {left right : LayerTerm NativeOp} {f K : Nat} :
     BuildsTyped root f K (.merge left right) := by
   intro q w lt m scope _ _ _ hat hpt hlive hmemo
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_merge] at hcheck
   obtain ⟨a, b, ha, hb, rfl⟩ := Checker.inv_layer_merge _ _ _ _ _ hcheck
   rw [denoteLayer_merge]
   exact fromBuild_typed hlive (fun w1 o1 child hchild =>
-    mergeTwo_typed hchild (memoLive_mono o1.1 hmemo) (layerPointTyped_child hat rfl ha henv (completed_mono o1 hview))
-      (layerPointTyped_child hat rfl hb henv (completed_mono o1 hview)))
+    mergeTwo_typed hchild (memoLive_mono o1.1 hmemo)
+      (layerPointTyped_child hat rfl ha henv (completed_mono o1 hview) (stackTyped_mono o1 hstack))
+      (layerPointTyped_child hat rfl hb henv (completed_mono o1 hview) (stackTyped_mono o1 hstack)))
+
+/-- **A layer reference whose target stands in another scope** (slice CX1,
+`docs/research/2026-10-10-cx-lexical-scope.md` §10). The reference's hop runs the target's term at
+the target's path with the reference's stack (`denoteLayer_ref_redirect`), and the memo map keys
+the build on the target's path. The checker types the reference at its own scope (the expansion),
+and `layerRefsWF` reads no scope, so the checker admits a reference whose target's path reads
+other parameters than the stack holds; the hop's point is then no typed point (`LayerPointTyped`
+reads its path's scope). Open: whether such a build is typed at the reference's type, or the
+checker refuses such a reference (an owner's ruling). M5 and M7 rest on it in place of
+`invoke_arm`. Concept `residual-program-typing`, claim `denote-typed`, requirement R4; its
+consumer is `ref_builds`. -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal crossScopeRef_builds {root : ProgramSource} {f : Nat} {target : List Nat}
+    (hwf : root.program.layerRefsWF = true)
+    (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
+    (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat) (hf : q.fuel ≤ f)
+    (htie : w.serviceTy = root.sig.serviceTy)
+    (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))
+    (hcross : scopeParams root.program target ≠ scopeParams root.program q.path)
+    (hpt : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
+    TypedProg root w (buildTy lt) (denoteLayer root.program (.ref target) q m scope)
 
 /-- **A layer reference** (decisions rows 153, 170, 185): no fuel is the frontier; else the hop to the
 target's term at the redirected point, one fuel down, by the hop hypothesis — well-formedness
-(`layerRefsWF_at`) gives a target that is a layer and no reference. -/
+(`layerRefsWF_at`) gives a target that is a layer and no reference. The hop's point is typed when
+the target stands in the reference's scope (`layerPointTyped_redirect`); a target in another
+scope is the open goal `crossScopeRef_builds`. -/
 theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefsWF = true)
+    (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
       (scope : Nat), q.fuel < K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
       ScopeLive w scope → MemoLive w m → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
     BuildsTyped root f K (.ref target) := by
   intro q w lt m scope hK hf htie hat hpt hlive hmemo
-  cases hfq : q.fuel with
-  | zero =>
-    rw [denoteLayer_ref_zero _ _ _ _ _ hfq]
-    exact pending_typed root w _ _ q
-  | succ k =>
-    obtain ⟨lt_t, hlayer, hnotref⟩ := layerRefsWF_at hwf hat
-    rw [denoteLayer_ref_succ _ _ _ _ _ hfq, at_of_layerAt hlayer]
-    have hredir := layerPointTyped_redirect hat hpt hlayer
-    have hk : (q.redirect target).fuel = k := by
-      show q.fuel - 1 = k
-      rw [hfq]
-      rfl
-    have hKk : (q.redirect target).fuel < K := by rw [hk]; rw [hfq] at hK; omega
-    have hfk : (q.redirect target).fuel ≤ f := by rw [hk]; rw [hfq] at hf; omega
-    cases lt_t with
-    | ref t' => exact absurd rfl (hnotref t')
-    | _ =>
-      exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive hmemo
+  cases hs : decide (scopeParams root.program target = scopeParams root.program q.path) with
+  | false =>
+    exact crossScopeRef_builds hwf hIH q w lt m scope hf htie hat (of_decide_eq_false hs) hpt hlive
+      hmemo
+  | true =>
+    cases hfq : q.fuel with
+    | zero =>
+      rw [denoteLayer_ref_zero _ _ _ _ _ hfq]
+      exact pending_typed root w _ _ q
+    | succ k =>
+      obtain ⟨lt_t, hlayer, hnotref⟩ := layerRefsWF_at hwf hat
+      rw [denoteLayer_ref_succ _ _ _ _ _ hfq, at_of_layerAt hlayer]
+      have hredir := layerPointTyped_redirect hat (of_decide_eq_true hs) hpt hlayer
+      have hk : (q.redirect target).fuel = k := by
+        show q.fuel - 1 = k
+        rw [hfq]
+        rfl
+      have hKk : (q.redirect target).fuel < K := by rw [hk]; rw [hfq] at hK; omega
+      have hfk : (q.redirect target).fuel ≤ f := by rw [hk]; rw [hfq] at hf; omega
+      cases lt_t with
+      | ref t' => exact absurd rfl (hnotref t')
+      | _ =>
+        exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive hmemo
 
 /-- Each layer of a nonempty merge errs below the merge (`Layer.ts:1652`, the errors joined). -/
 theorem mergeNonempty_error : ∀ (ls : List LayerTy) (lt : LayerTy),
@@ -1054,8 +1119,9 @@ theorem mergeNonempty_error : ∀ (ls : List LayerTy) (lt : LayerTy),
     · exact Ty.subN_trans (mergeNonempty_error (m :: rest) t' ht' x hx') (Ty.subN_join_right _ _)
 
 /-- Checking a spine keeps its length. -/
-theorem checkLayers_length : ∀ (ts : LayerTerms NativeOp) (p : List Nat) (ls : List LayerTy),
-    Checker.checkLayers root.signature p ts = .ok ls → ls.length = ts.length
+theorem checkLayers_length {sig : Signature NativeOp} :
+    ∀ (ts : LayerTerms NativeOp) (p : List Nat) (ls : List LayerTy),
+    Checker.checkLayers sig p ts = .ok ls → ls.length = ts.length
   | .nil, p, ls, h => by
     rw [Checker.inv_layers_nil _ _ ls h]
     rfl
@@ -1075,23 +1141,29 @@ theorem expandIn_layers_length : ∀ (ts : LayerTerms NativeOp),
 
 /-- **A spine's layer points are admitted** by the spine's check: the `j`-th layer of a checked
 spine, at the spine walked `j` steps in, carries the `j`-th checked type. -/
-theorem spine_layerPointTyped {w : World} : ∀ (j : Nat) (p : Point) (ts : LayerTerms NativeOp)
-    (ls : List LayerTy), Node.at_ (.eff root.program) p.path = some (.layers ts) →
-    Checker.checkLayers root.signature p.path (LayerTerms.expandIn root.program ts) = .ok ls →
+theorem spine_layerPointTyped {w : World} {base : List Nat} :
+    ∀ (j : Nat) (p : Point) (ts : LayerTerms NativeOp)
+    (ls : List LayerTy),
+    (∀ x, p.path <+: x → scopeParams root.program x = scopeParams root.program base) →
+    Node.at_ (.eff root.program) p.path = some (.layers ts) →
+    Checker.checkLayers (root.scopeSig base) p.path (LayerTerms.expandIn root.program ts) = .ok ls →
     p.env = [] → (∀ r ∈ p.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2) →
+    StackTyped root w (scopeParams root.program base) p.params →
     ∀ (hj : j < ls.length), LayerPointTyped root w ((Point.spineWalk j p).child 0) (ls[j])
-  | _, _, .nil, ls, _, hcheck, _, _, hj => by
+  | _, _, .nil, ls, _, _, hcheck, _, _, _, hj => by
     rw [LayerTerms.expandIn_nil, Checker.inv_layers_nil _ _ ls hcheck] at *
     exact absurd hj (Nat.not_lt_zero _)
-  | 0, p, .cons hd tl, ls, hat, hcheck, henv, hview, hj => by
+  | 0, p, .cons hd tl, ls, hscope, hat, hcheck, henv, hview, hstack, hj => by
     rw [LayerTerms.expandIn_cons] at hcheck
     obtain ⟨hh, tt, hhd, -, rfl⟩ := Checker.inv_layers_cons _ _ _ _ _ hcheck
-    exact ⟨hd, node_at_child hat rfl, hhd, henv, hview⟩
-  | j + 1, p, .cons hd tl, ls, hat, hcheck, henv, hview, hj => by
+    exact layerPointTyped_scope (hscope _ (List.prefix_append _ _)) (node_at_child hat rfl) hhd
+      henv hview hstack
+  | j + 1, p, .cons hd tl, ls, hscope, hat, hcheck, henv, hview, hstack, hj => by
     rw [LayerTerms.expandIn_cons] at hcheck
     obtain ⟨hh, tt, -, htl, rfl⟩ := Checker.inv_layers_cons _ _ _ _ _ hcheck
-    exact spine_layerPointTyped j (p.child 1) tl tt (node_at_child hat rfl) htl henv hview
-      (Nat.lt_of_succ_lt_succ hj)
+    exact spine_layerPointTyped j (p.child 1) tl tt
+      (fun x hx => hscope x ((List.prefix_append _ _).trans hx)) (node_at_child hat rfl) htl henv
+      hview hstack (Nat.lt_of_succ_lt_succ hj)
 
 /-- A fiber's declaration persists at every later world. -/
 theorem fiberDeclared_mono {w w' : World} (ord : w.leHost w') {id : FiberId} {a e : Ty}
@@ -1153,7 +1225,7 @@ each layer errs below the merge (`mergeNonempty_error`). -/
 theorem mergeAll_builds {layers : LayerTerms NativeOp} {f K : Nat} :
     BuildsTyped root f K (.mergeAll layers) := by
   intro q w lt m scope _ _ _ hat hpt hlive hmemo
-  obtain ⟨hcheck, henv, hview⟩ := hpt.at_layer hat
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
   rw [LayerTerm.expandIn_mergeAll] at hcheck
   obtain ⟨ls, hcs, hmerge⟩ := Checker.inv_layer_mergeAll _ _ _ _ hcheck
   have hlen : ls.length = layers.length := by
@@ -1173,8 +1245,9 @@ theorem mergeAll_builds {layers : LayerTerms NativeOp} {f K : Nat} :
   have hj' : j < ls.length := by rw [hlen]; omega
   refine ⟨ls[j], ?_, mergeNonempty_error ls lt hmerge _ (List.getElem_mem hj')⟩
   rw [Point.spineChild_eq]
-  exact spine_layerPointTyped j (q.child 0) layers ls (node_at_child hat rfl) hcs henv
-    (completed_mono o12 hview) hj'
+  exact spine_layerPointTyped j (q.child 0) layers ls
+    (fun x hx => scopeParams_layer_prefix hat ((List.prefix_append _ _).trans hx))
+    (node_at_child hat rfl) hcs henv (completed_mono o12 hview) (stackTyped_mono o12 hstack) hj'
 
 /-- **The layer family's build, structurally** (decisions rows 176 (b), 185–187): at an admitted
 layer point, at a world whose service table is the source's, into a present scope, every
@@ -1202,7 +1275,7 @@ theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
       (layerTerm_typed hwf f hIH K hhop that)
   | .merge _ _ => merge_builds
   | .mergeAll _ => mergeAll_builds
-  | .ref _ => ref_builds hwf hhop
+  | .ref _ => ref_builds hwf hIH hhop
 
 /-- **The layer family's build** (by induction on the fuel a reference's hop spends). -/
 theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
@@ -1264,7 +1337,7 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideLayer l i b)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.provideLayer l i b) p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_provideLayer] at hcheck
   obtain ⟨lt, tb, hcl, hcb, rfl⟩ := Checker.inv_provideLayer _ _ _ _ _ _ _ hcheck
   have hatl : Node.at_ (.eff root.program) (p.path ++ [0]) = some (.layer l) :=
@@ -1294,7 +1367,9 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
     fun w' o m hm => layerBuild_typed hwf f hIH l _ w' lt m scope
       (by rw [Point.layerBuild_fuel]; show p.fuel - 1 ≤ f; omega)
       (serviceTy_leHost (leHost_trans _ _ _ o13 o) htie) hatl
-      ⟨l, hatl, hcl, rfl, completed_mono (leHost_trans _ _ _ o3 o) hview⟩
+      (layerPointTyped_scope (scopeParams_child hat 0) hatl hcl rfl
+        (completed_mono (leHost_trans _ _ _ o3 o) hview)
+        (stackTyped_mono (leHost_trans _ _ _ o13 o) hstack))
       (scopeLive_mono o.1 hlive) hm
   refine seqGuard_typed root (mid := buildTy lt) ?_ (Ty.subN_join_right _ _)
     (fun w5 o5 u hu => ?_)
@@ -1316,6 +1391,7 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
       PointTyped root w' (({ p with completed } : Point).child 1) tb := fun w' o =>
     pointTyped_child hat rfl rfl hcb (envTyped_mono (leHost_trans _ _ _ o15 o) henv)
       (completed_mono (leHost_trans _ _ _ (leHost_trans _ _ _ o3 o5) o) hview)
+      (stackTyped_mono (leHost_trans _ _ _ o15 o) hstack)
   have hfuel1 : (({ p with completed } : Point).child 1).fuel = f := child_fuel_eq hfuel 1
   dsimp only
   cases hsub : inlineYield b (({ p with completed } : Point).child 1) with

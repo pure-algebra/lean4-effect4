@@ -97,7 +97,7 @@ theorem old_root_untyped (w : W) (fuel : Nat) (ty : EffTy) :
 /-- **The flip** (proved): the root point is typed at the checker's type at every world and fuel,
 its node read through the expansion's rounds. -/
 theorem root_typed (w : W) (fuel : Nat) : PointTyped src w (rootPoint fuel) rootTy :=
-  ⟨layerRef, [], rfl, check_expansion, envTyped_nil w, fun _ h => nomatch h⟩
+  ⟨layerRef, [], rfl, check_expansion, envTyped_nil w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
 
 /-- The loaded head is not a race marker, at every compile budget. -/
 theorem noMarker (cf : Nat) :

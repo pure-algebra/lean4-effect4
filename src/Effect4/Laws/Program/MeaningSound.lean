@@ -352,8 +352,11 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
   | .failCause c, tys, env, w, t, _, hty, hat => by
     obtain ⟨ty, hc, rfl⟩ := inv_failCause nativeSignature tys c t hty
     obtain ⟨cause, hcause, hfits, hshape⟩ :=
-      Typed.causeOf_progress (src := ({ program := .failCause c } : Typed.ProgramSource)) hat.fits
-        c ty (by rw [Typed.ProgramSource.signature_of_defsOf_nil rfl]; exact hc)
+      Typed.causeOf_progress (src := ({ program := .failCause c } : Typed.ProgramSource))
+        (path := []) hat.fits c ty (by
+          show causeTy (Typed.ProgramSource.signature { program := .failCause c }) tys c = some ty
+          rw [Typed.ProgramSource.signature_of_defsOf_nil rfl]
+          exact hc)
     show SoundP _ _ w _ _
     rw [denoteWith, denote, hcause]
     exact SoundP.pure hat.store _ ⟨(Typed.fitsExit_failure_iff w _ _).mpr ⟨hfits, hshape⟩, hshape⟩

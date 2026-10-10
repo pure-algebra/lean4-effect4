@@ -105,18 +105,18 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   -- layer's own checked error type, as `deferredCompleteWith`'s exit fits its cell's; with
   -- `memoBuild`'s row, the memo-table clause `memoGet`'s post reads (decisions row 187)
   | .memoComplete layer _ ex => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt ∧
       ExitOk w ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ex
   -- the looked-up layer's own checked error type (decision row 90), read through the
   -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt ∧
       lt.error = cert
   -- the entry's Deferred is declared at the layer's columns, the built context and the layer's
   -- own checked error type, read as `memoGet` reads them: the promise table's `memoBuild` row
   -- (`Typed/Vocabulary.lean`), the memo-table clause `memoGet`'s post relies on (decisions row 187)
   | .memoBuild layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+      Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt ∧
       cert = (.handle Ty.contextTarget, lt.error)
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
@@ -219,17 +219,20 @@ cursor fits the loop's checked cursor type `cursorTy.getD c0`, `c0` the initial 
 (`Checker.check`'s `iterate` rule, `Program/Checker.lean:178-189`). `PointTyped` alone admitted a
 Boolean-cursor loop entered with `unit`, whose entry installs `badShapeExit`. The loop entry's
 producer is `iterate_arm` (`Typed/Denotation.lean`); its consumer, `clause_loop`
-(`Typed/Commands/Clauses/Loop.lean`). -/
+(`Typed/Commands/Clauses/Loop.lean`). The node is checked at the signature of its scope and the
+stack is typed there, as `PointTyped`'s (slice CX1); a term's type is the source signature's,
+which every scope shares (`ProgramSource.scopeSig_extends`). -/
 def LoopPointTyped (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (cursor : Val) :
     Prop :=
   ∃ (cursorTy : Option Ty) (initial test step result : Term) (body : NativeEff) (env : List Ty)
     (c0 : Ty),
     Node.at_ (.eff root.program) p.path =
       some (.eff (.iterate cursorTy initial test step result body)) ∧
-    Checker.check root.signature env p.path
+    Checker.check (root.scopeSig p.path) env p.path
       (Eff.expandIn root.program (.iterate cursorTy initial test step result body)) = .ok ty ∧
     EnvTyped w env p.env ∧ (∀ q ∈ p.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
-    termTy root.signature env initial = some c0 ∧ Fits w cursor (cursorTy.getD c0)
+    termTy root.signature env initial = some c0 ∧ Fits w cursor (cursorTy.getD c0) ∧
+    StackTyped root w (scopeParams root.program p.path) p.params
 
 def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
   match op with
@@ -754,10 +757,22 @@ theorem envTyped_mono (ord : w.leHost w') {env : List Ty} {vals : List Val}
     (h : EnvTyped w env vals) : EnvTyped w' env vals :=
   ⟨h.1, fun i ty v hi hv => fits_mono ord (h.2 i ty v hi hv)⟩
 
+/-- **A typed stack stays typed at every later world** (slice CX1): its sites are first-order
+data, and their values' membership persists. A step of `pointTyped_mono` and of every arm that
+builds a point at a later world. -/
+theorem stackTyped_mono (ord : w.leHost w') {src : ProgramSource} :
+    ∀ {ps : List ParamDecl} {stack : List (List ArgSite)},
+      StackTyped src w ps stack → StackTyped src w' ps stack
+  | _, [], h => h
+  | _, _ :: rest, h => fun j q hq => by
+    obtain ⟨site, arg, env, t, hs, hat, hc, ha, he, hr⟩ := h j q hq
+    exact ⟨site, arg, env, t, hs, hat, hc, ha, envTyped_mono ord he,
+      stackTyped_mono ord (stack := rest) hr⟩
+
 theorem pointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {ty : EffTy}
     (h : PointTyped src w p ty) : PointTyped src w' p ty := by
-  obtain ⟨e, env, hat, hchk, henv, hview⟩ := h
-  refine ⟨e, env, hat, hchk, envTyped_mono ord henv, fun q hq => ?_⟩
+  obtain ⟨e, env, hat, hchk, henv, hview, hstack⟩ := h
+  refine ⟨e, env, hat, hchk, envTyped_mono ord henv, fun q hq => ?_, stackTyped_mono ord hstack⟩
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
@@ -766,16 +781,16 @@ theorem pointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {t
 theorem loopPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {ty : EffTy}
     {cursor : Val} (h : LoopPointTyped src w p ty cursor) : LoopPointTyped src w' p ty cursor := by
   obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, hview, hc0,
-    hfit⟩ := h
+    hfit, hstack⟩ := h
   refine ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, envTyped_mono ord henv,
-    fun q hq => ?_, hc0, fits_mono ord hfit⟩
+    fun q hq => ?_, hc0, fits_mono ord hfit, stackTyped_mono ord hstack⟩
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
 theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Point} {lt : LayerTy}
     (h : LayerPointTyped src w p lt) : LayerPointTyped src w' p lt := by
-  obtain ⟨l, hat, hchk, henv, hview⟩ := h
-  refine ⟨l, hat, hchk, henv, fun q hq => ?_⟩
+  obtain ⟨l, hat, hchk, henv, hview, hstack⟩ := h
+  refine ⟨l, hat, hchk, henv, fun q hq => ?_, stackTyped_mono ord hstack⟩
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
@@ -787,10 +802,10 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
   have hRho : TableExtends w.Ρ w'.Ρ := ord.1.2.2.2.1
   cases fin with
   | foreign c =>
-    obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc⟩ := h
+    obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc, hstack⟩ := h
     exact ⟨acquire, release, env, t, a, hnode, hcheck, hacq, envTyped_mono ord henv,
       servicesFit_map ord.1.2.1 hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1)
-        hsvc⟩
+        hsvc, stackTyped_mono ord hstack⟩
   | release _ _ => exact h
   | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
   | interruptFiber _ _ => exact isSome_extends ord.1.2.1 h
@@ -1013,48 +1028,80 @@ theorem signature_rows_append : SigExtends src.signature src'.signature := by
   rw [hprog]
   exact htables.withDefs _
 
+/-- The signature at a path extends along an appended table (`SigExtends.withParams`): the same
+program, so the same scope. -/
+theorem scopeSig_rows_append (path : List Nat) :
+    SigExtends (src.scopeSig path) (src'.scopeSig path) := by
+  show SigExtends (src.signature.withParams (scopeParams src.program path))
+    (src'.signature.withParams (scopeParams src'.program path))
+  rw [hprog]
+  exact (signature_rows_append src src' t' hprog htab hsvc).withParams _
+
+/-- A typed stack stays typed along an appended table (slice CX1): each site's check extends. -/
+theorem stackTyped_rows_append {w : World} :
+    ∀ {ps : List ParamDecl} {stack : List (List ArgSite)},
+      StackTyped src w ps stack → StackTyped src' w ps stack
+  | _, [], h => h
+  | _, _ :: rest, h => fun j q hq => by
+    obtain ⟨site, arg, env, t, hs, hat, hc, ha, he, hr⟩ := h j q hq
+    refine ⟨site, arg, env, t, hs, ?_, ?_, ha, he, ?_⟩
+    · rw [hprog]
+      exact hat
+    · rw [hprog]
+      exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc site.path) hc
+    · rw [hprog]
+      exact stackTyped_rows_append (stack := rest) hr
+
 theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
-  obtain ⟨e, env, hat, hcheck, henv, hview⟩ := h
-  refine ⟨e, env, ?_, ?_, henv, hview⟩
+  obtain ⟨e, env, hat, hcheck, henv, hview, hstack⟩ := h
+  refine ⟨e, env, ?_, ?_, henv, hview, ?_⟩
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc point.path) hcheck
+  · rw [hprog]
+    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
 
 theorem loopPointTyped_rows_append {w : World} {point : Point} {ty : EffTy} {cursor : Val}
     (h : LoopPointTyped src w point ty cursor) : LoopPointTyped src' w point ty cursor := by
   obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, hview, hc0,
-    hfit⟩ := h
-  refine ⟨cursorTy, initial, test, step, result, body, env, c0, ?_, ?_, henv, hview, ?_, hfit⟩
+    hfit, hstack⟩ := h
+  refine ⟨cursorTy, initial, test, step, result, body, env, c0, ?_, ?_, henv, hview, ?_, hfit, ?_⟩
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc point.path) hcheck
   · rw [(signature_rows_append src src' t' hprog htab hsvc).termTy env initial]
     exact hc0
+  · rw [hprog]
+    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
 
 theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
     (h : LayerPointTyped src w point lt) : LayerPointTyped src' w point lt := by
-  obtain ⟨l, hat, hcheck, henv, hview⟩ := h
-  refine ⟨l, ?_, ?_, henv, hview⟩
+  obtain ⟨l, hat, hcheck, henv, hview, hstack⟩ := h
+  refine ⟨l, ?_, ?_, henv, hview, ?_⟩
   · rw [hprog]
     exact hat
   · rw [hprog]
-    exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+    exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc point.path) hcheck
+  · rw [hprog]
+    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
 
 /-- A capture typed under the shorter source is typed under the longer one: its node is the
 same program's, and the checker's verdicts extend along an appended row table. -/
 theorem captureTyped_rows_append {w : World} {c : Capture}
     (h : CaptureTyped src w c) : CaptureTyped src' w c := by
-  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, services⟩ := h
-  refine ⟨acquire, release, env, t, a, ?_, ?_, ?_, henv, services⟩
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, services, hstack⟩ := h
+  refine ⟨acquire, release, env, t, a, ?_, ?_, ?_, henv, services, ?_⟩
   · rw [hprog]
     exact hnode
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc c.path) hcheck
   · rw [hprog]
-    exact check_ext (signature_rows_append src src' t' hprog htab hsvc) hacq
+    exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc c.path) hacq
+  · rw [hprog]
+    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
 
 theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
     (h : FinalizerAdmitted src w fin) : FinalizerAdmitted src' w fin := by
@@ -1088,21 +1135,21 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer) hcheck
   | memoBuild layer m =>
     obtain ⟨l, lt, hat, hcheck, hcert⟩ := h
     refine ⟨l, lt, ?_, ?_, hcert⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer) hcheck
   | memoComplete layer m ex =>
     obtain ⟨l, lt, hat, hcheck, hex⟩ := h
     refine ⟨l, lt, ?_, ?_, hex⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (signature_rows_append src src' t' hprog htab hsvc) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer) hcheck
   | scopeAdd scope fin =>
     exact ⟨h.1, finalizerAdmitted_rows_append src src' t' hprog htab hsvc h.2⟩
   | _ => exact h

@@ -95,7 +95,7 @@ theorem forkAfterMake_checked :
 
 /-- The root point is admitted at the checked type, at every world. -/
 theorem point_admitted (w : W) : PointTyped (forkAfterMake : ProgramSource) w point fiberTy :=
-  ⟨forkAfterMake, [], rfl, forkAfterMake_checked, envTyped_nil w, fun _ h => nomatch h⟩
+  ⟨forkAfterMake, [], rfl, forkAfterMake_checked, envTyped_nil w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
 
 /-! ## History: the judgment with the posts before row 156
 
@@ -382,7 +382,8 @@ theorem forkAfterMake_typed (w : W) :
     refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) unitTy ⟨?_, present⟩ ?_
     · exact ⟨.succeed (.lit .unit), [Ty.scope], rfl, child_checked,
-        envTyped_append (envTyped_nil w'') (fits_scopeHandle w'' sc present), view⟩
+        envTyped_append (envTyped_nil w'') (fits_scopeHandle w'' sc present), view,
+        stackTyped_nil _ _ _⟩
     · intro w''' _ ans post
       obtain ⟨id, rfl, declared⟩ := post
       exact TypedProg.pure (strongExit_success w''' _ _ ⟨unitTy, declared, Ty.subN_refl _, Ty.subN_refl _⟩)

@@ -301,3 +301,57 @@ flowchart TD
    chain in import order, then `Effect4Laws`.
 3. **CX2**: K4, `hop_typed`, `invoke_arm`, `param_arm` in `Denotation.lean`. `#plan_status`
    then shows `childDenotes_upto` proved and `#goal_impact` no claim on either arm.
+
+### 9.4 Outcome
+
+CX1 and CX2 landed together, in one rebuild of the law graph. Every node of §9.2 is proved, with
+one change of plan and one addition:
+
+- `Signature.lexical` is not written (§9.1). `scopeParams` matches its path first, so the root
+  and the main program have no parameter in scope by `rfl`.
+- The layer points read their scope too, and a layer reference whose target stands in another
+  scope is the one case left open: the goal `crossScopeRef_builds` (§10). `#plan_status` gives
+  `invoke_arm`, `param_arm` and `childDenotes_upto` proved, `denotesTyped_of_layerFree` proved,
+  and `m7_proved` and `denotesTyped` modulo `crossScopeRef_builds` (16 claims, `#goal_impact`).
+- The generator and loop clauses check their bodies at the generator's or the loop's scope, and
+  their frames carry the stack (`GenSt`, `LoopFrameTyped`).
+
+## 10. Finding: a layer reference may leave its target's scope (during CX1)
+
+The typed points read their path's scope. A layer reference `LayerTerm.ref target` hops: the run
+builds the target's term at the target's path, with the reference's stack
+(`denoteLayer_ref_redirect`). The checker types the reference at its own position, as the target's
+term expanded there (`Eff.expandIn`). `Eff.layerRefsWF` (`src/Effect4/Program/Refs.lean`) checks a
+target's order and kind, not its scope. So the checker admits a reference whose target stands in
+another scope: one in the main program naming a layer in a definition's body, or one in a body
+naming a layer in another body. At such a hop the stack is typed for the reference's scope, not
+the target's, so the redirected point is no `LayerPointTyped` point.
+
+- **Proved**: a reference whose target stands in its own scope (`layerPointTyped_redirect` with
+  the scope equality, `ref_builds`).
+- **Placed**: the other case, `crossScopeRef_builds` (`Typed/LayerArm.lean`). M5, M7 and their
+  claims rest on it now, in place of `invoke_arm`.
+- **Not known**: whether such a build is typed. The memo map keys a build on the target's path,
+  and a forked map reads its parent's entries (`MemoWorld.lookup`; `forkMemoMapUnsafe`,
+  `Layer.ts`), so one build can answer references in two scopes. A built context is typed by the
+  service table, which no scope changes, and a failed build stops the provide whose body would read
+  the map, so a shared success is typed. Whether a failure built in one scope can reach another is
+  not established: it needs a construction that reads the map it is building.
+
+The decision is the owner's, because it is one of representation and meaning:
+
+| Option | What changes | Effect on the goal |
+| --- | --- | --- |
+| (a) the checker refuses a reference that leaves its target's scope | `layerRefsWF` reads `scopeParams`; the API's refusal gains a reason | vacuous: proved from `SourceWF` |
+| (b) a layer point carries its scope instead of reading its path's | `LayerPointTyped`, the memo rows and the memo table take the scope | proved with the memo argument above |
+| (c) the checker refuses a parameter's run inside a layer | the checker's layer rules | still needs the stack at the target |
+
+Option (a) is the TypeScript reading: a `const` in a function body is visible in no other
+function, and the printer already hoists every target to a module-level constant
+(`printModule`). Under (a) a reference from a body to a layer outside every body is refused too,
+unless a lemma types a target outside every body at the reference's scope. That lemma is not
+written.
+
+A related observation on meaning, not checked: the memo map keys a layer in a definition's body
+on its path, so an invocation nested inside a provide of that layer reuses the outer
+invocation's build. rc.112 builds a new layer object for each call that constructs one.

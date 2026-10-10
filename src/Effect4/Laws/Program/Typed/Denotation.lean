@@ -99,6 +99,13 @@ private theorem rounds_raceAll : ∀ (xs : List Nat) (es : Effs NativeOp),
   | [], _ => rfl
   | _ :: xs, es => rounds_raceAll xs (Effs.expandRound orig es)
 
+/-- The rounds on an invocation's spine (decisions row 340), as on a race's. A step of
+`Eff.expandIn_invoke`. -/
+private theorem rounds_invoke (k : Nat) (r : Term) : ∀ (xs : List Nat) (es : Effs NativeOp),
+    rounds orig xs (.invoke k r es) = .invoke k r (effsRounds orig xs es)
+  | [], _ => rfl
+  | _ :: xs, es => rounds_invoke k r xs (Effs.expandRound orig es)
+
 private theorem effsRounds_nil : ∀ (xs : List Nat), effsRounds orig xs .nil = .nil
   | [] => rfl
   | _ :: xs => effsRounds_nil xs
@@ -266,6 +273,13 @@ private theorem Eff.expandIn_raceAll (es : Effs NativeOp) :
         (effsRounds (Node.eff root) (List.range ((root.refSites []).length + 1)) es)) :=
   rounds_raceAll _ _ es
 
+/-- An invocation's expansion is the invocation of its spine's rounds (decisions row 340; private
+like `Eff.expandIn_raceAll`). A step of `invoke_arm`. -/
+private theorem Eff.expandIn_invoke (k : Nat) (r : Term) (args : Effs NativeOp) :
+    Eff.expandIn root (.invoke k r args) =
+      .invoke k r (effsRounds (Node.eff root) (List.range ((root.refSites []).length + 1)) args) :=
+  rounds_invoke _ k r _ args
+
 end Effect4.Program
 
 namespace Effect4.Program.Typed
@@ -326,16 +340,41 @@ theorem completed_mono {w w' : World} (ord : w.leHost w') {completed : List (Fib
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
 /-- A checked child: the node's child at index `i`, checked at the child's path in the child's
-environment, at a point whose path is the child's and whose view is typed. -/
+environment and at the node's signature, at a point whose path is the child's, whose view is
+typed, and whose stack is typed at the node's scope. A child has its node's scope
+(`ProgramSource.scopeSig_child`, `scopeParams_child`). -/
 theorem pointTyped_child {src : ProgramSource} {w : World} {path : List Nat} {e c : NativeEff}
     {i : Nat} {env : List Ty} {q : Point} {ty : EffTy}
     (hat : Node.at_ (.eff src.program) path = some (.eff e))
     (hc : (Node.eff e).child i = some (.eff c)) (hpath : q.path = path ++ [i])
-    (hcheck : Checker.check src.signature env (path ++ [i]) (Eff.expandIn src.program c) = .ok ty)
+    (hcheck : Checker.check (src.scopeSig path) env (path ++ [i]) (Eff.expandIn src.program c) =
+      .ok ty)
     (henv : EnvTyped w env q.env)
-    (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2) :
-    PointTyped src w q ty :=
-  ⟨c, env, hpath ▸ node_at_child hat hc, hpath ▸ hcheck, henv, hview⟩
+    (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2)
+    (hstack : StackTyped src w (scopeParams src.program path) q.params) :
+    PointTyped src w q ty := by
+  rw [← src.scopeSig_child hat i] at hcheck
+  rw [← scopeParams_child hat i] at hstack
+  exact ⟨c, env, hpath ▸ node_at_child hat hc, hpath ▸ hcheck, henv, hview, hpath ▸ hstack⟩
+
+/-- A point typed at the scope of a path that has its parameters: its node checked at that path's
+signature, and its stack typed at that path's scope. A grandchild of a program node is one
+(`scopeParams_prefix`). -/
+theorem pointTyped_scope {src : ProgramSource} {w : World} {path : List Nat} {c : NativeEff}
+    {env : List Ty} {q : Point} {ty : EffTy}
+    (hscope : scopeParams src.program q.path = scopeParams src.program path)
+    (hat : Node.at_ (.eff src.program) q.path = some (.eff c))
+    (hcheck : Checker.check (src.scopeSig path) env q.path (Eff.expandIn src.program c) = .ok ty)
+    (henv : EnvTyped w env q.env)
+    (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2)
+    (hstack : StackTyped src w (scopeParams src.program path) q.params) :
+    PointTyped src w q ty := by
+  have hsig : src.scopeSig q.path = src.scopeSig path := by
+    unfold ProgramSource.scopeSig
+    rw [hscope]
+  rw [← hsig] at hcheck
+  rw [← hscope] at hstack
+  exact ⟨c, env, hat, hcheck, henv, hview, hstack⟩
 
 /-! ## Terms evaluate at a world (progress beside `evalTerm_fits`)
 
@@ -783,12 +822,15 @@ end
 
 end TermProgress
 
-/-- Term progress in the environment judgment `PointTyped` reads, under a source's signature. -/
-theorem evalTerm_progress_env {src : ProgramSource} {w : World} {env : List Ty}
+/-- Term progress in the environment judgment `PointTyped` reads, under the signature of a
+scope (`ProgramSource.scopeSig`; the source's own at `path := []`). A term types alike in every
+scope (`ProgramSource.scopeSig_extends`). -/
+theorem evalTerm_progress_env {src : ProgramSource} {path : List Nat} {w : World} {env : List Ty}
     {vals : List Val} (henv : EnvTyped w env vals) {t : Term} {ty : Ty}
-    (hty : termTy src.signature env t = some ty) :
+    (hty : termTy (src.scopeSig path) env t = some ty) :
     ∃ v, evalTerm vals t = some v ∧ Fits w v ty :=
-  evalTerm_progress rfl (fitsAll_of_pointwise henv.1 henv.2) t ty hty
+  evalTerm_progress rfl (fitsAll_of_pointwise henv.1 henv.2) t ty
+    (((src.scopeSig_extends path).termTy env t).symm.trans hty)
 
 /-- **A typed binder term maps its parameter into its type**, at every later world (the claim
 `term-typed-maps`): a term the checker types at `tys ++ [A]` with type `R`, over an environment
@@ -825,9 +867,9 @@ theorem shapeFree_die_of_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy
 /-- **Cause progress at a world** (proved): a cause term the checker types at an error column
 evaluates, in a typed environment, to a cause whose typed failures fit the column and which no
 shape defect enters. -/
-theorem causeOf_progress {src : ProgramSource} {w : World} {env : List Ty} {vals : List Val}
-    (henv : EnvTyped w env vals) :
-    ∀ (c : CauseTerm) (e : Ty), causeTy src.signature env c = some e →
+theorem causeOf_progress {src : ProgramSource} {path : List Nat} {w : World} {env : List Ty}
+    {vals : List Val} (henv : EnvTyped w env vals) :
+    ∀ (c : CauseTerm) (e : Ty), causeTy (src.scopeSig path) env c = some e →
       ∃ cause, causeOf vals c = some cause ∧ FitsCause w e cause ∧ ShapeFree cause
   | .fail error, e, h => by
     rw [causeTy_fail] at h
@@ -873,7 +915,7 @@ theorem causeOf_progress {src : ProgramSource} {w : World} {env : List Ty} {vals
       subst hr
       trivial
   | .interrupt (some who), e, h => by
-    have h' : ((termTy src.signature env who).bind fun t =>
+    have h' : ((termTy (src.scopeSig path) env who).bind fun t =>
         if Ty.sub t.normalize .nat then some Ty.never else none) = some e := h
     obtain ⟨t, ht, hnat⟩ := Option.bind_eq_some_iff.mp h'
     split at hnat
@@ -892,8 +934,8 @@ theorem causeOf_progress {src : ProgramSource} {w : World} {env : List Ty} {vals
         trivial
     · exact nomatch hnat
   | .both left right, e, h => by
-    have h' : ((causeTy src.signature env left).bind fun l =>
-        (causeTy src.signature env right).bind fun r => some (l.join r)) = some e := h
+    have h' : ((causeTy (src.scopeSig path) env left).bind fun l =>
+        (causeTy (src.scopeSig path) env right).bind fun r => some (l.join r)) = some e := h
     obtain ⟨l, hl, h''⟩ := Option.bind_eq_some_iff.mp h'
     obtain ⟨r, hr, hjoin⟩ := Option.bind_eq_some_iff.mp h''
     cases hjoin
@@ -917,17 +959,18 @@ The counted suspend answers nothing the program reads, the construction answers 
 view (which the point typing then carries, row 175), and a frontier is never answered: each is a
 fiber row whose continuation the post fixes. -/
 
-/-- A checked point's node: the checker's verdict on its expansion in a typed environment, and the
-typed completed view. -/
+/-- A checked point's node: the checker's verdict on its expansion at its scope's signature in a
+typed environment, the typed completed view, and the typed stack. -/
 theorem PointTyped.at_node {src : ProgramSource} {w : World} {p : Point} {ty : EffTy}
     {e : NativeEff} (hpt : PointTyped src w p ty)
     (hat : Node.at_ (.eff src.program) p.path = some (.eff e)) :
-    ∃ env, Checker.check src.signature env p.path (Eff.expandIn src.program e) = .ok ty ∧
-      EnvTyped w env p.env ∧ (∀ q ∈ p.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) := by
-  obtain ⟨e', env, hat', hcheck, henv, hview⟩ := hpt
+    ∃ env, Checker.check (src.scopeSig p.path) env p.path (Eff.expandIn src.program e) = .ok ty ∧
+      EnvTyped w env p.env ∧ (∀ q ∈ p.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
+      StackTyped src w (scopeParams src.program p.path) p.params := by
+  obtain ⟨e', env, hat', hcheck, henv, hview, hstack⟩ := hpt
   rw [hat] at hat'
   cases hat'
-  exact ⟨env, hcheck, henv, hview⟩
+  exact ⟨env, hcheck, henv, hview, hstack⟩
 
 /-- A live frontier is typed at every type: its post admits no answer (fuel exhaustion is not an
 exit, DB-04). -/
@@ -969,7 +1012,7 @@ theorem denoteR_zero_typed (e : NativeEff) (hzero : p.fuel = 0) :
 theorem succeed_arm {t : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.succeed t)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteR root.program (.succeed t) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨t', hty, rfl⟩ := Checker.inv_succeed _ _ _ _ _ hcheck
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
@@ -981,7 +1024,7 @@ theorem succeed_arm {t : Term} (hfuel : p.fuel ≠ 0)
 theorem fail_arm {t : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.fail t)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteR root.program (.fail t) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨e, hty, hadm, rfl⟩ := Checker.inv_fail _ _ _ _ _ hcheck
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
@@ -999,7 +1042,7 @@ enters (`causeOf_progress`). -/
 theorem failCause_arm {c : CauseTerm} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.failCause c)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteR root.program (.failCause c) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨e, hty, rfl⟩ := Checker.inv_failCause _ _ _ _ _ hcheck
   obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv c e hty
@@ -1010,7 +1053,7 @@ theorem failCause_arm {c : CauseTerm} (hfuel : p.fuel ≠ 0)
 theorem sync_arm {t : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.sync t)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteR root.program (.sync t) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨t', hty, rfl⟩ := Checker.inv_sync _ _ _ _ _ hcheck
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
@@ -1025,7 +1068,7 @@ theorem yieldNow_arm {priority : Nat} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.yieldNow priority)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.yieldNow priority) p) := by
-  obtain ⟨env, hcheck, _, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, _, _, _⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   have hty := Checker.inv_yieldNow _ _ _ _ _ hcheck
   subst hty
@@ -1163,20 +1206,20 @@ theorem bind_arm {a b : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (ha : ChildDenotes root f a (p.path ++ [0])) (hb : ChildDenotes root f b (p.path ++ [1])) :
     TypedProg root w ty (denoteR root.program (.bind a b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_bind] at hcheck
   obtain ⟨tf, tr, hcf, hcr, rfl⟩ := Checker.inv_bind _ _ _ _ _ _ hcheck
   rw [denoteR_bind _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine seqGuard_typed root (mid := tf)
     (ha w htie (p.child 0) tf (child_fuel_eq hfuel 0) rfl
-      (pointTyped_child hat rfl rfl hcf henv hview))
+      (pointTyped_child hat rfl rfl hcf henv hview hstack))
     (Ty.subN_join_left _ _) (fun w' o v hv => ?_)
   refine constructR_typed root (fun w'' o' completed hc => ?_)
   have o'' := leHost_trans _ _ _ o o'
   refine typedProg_widen root (T := tr) (Ty.subN_refl _) (Ty.subN_join_right _ _) ?_
   exact hb w'' (serviceTy_leHost o'' htie) _ tr (childWith_fuel_eq hfuel 1 v) rfl
     (pointTyped_child hat rfl rfl hcr
-      (envTyped_append (envTyped_mono o'' henv) (fits_mono o' hv)) hc)
+      (envTyped_append (envTyped_mono o'' henv) (fits_mono o' hv)) hc (stackTyped_mono o'' hstack))
 
 end ScopedArms
 
@@ -1283,6 +1326,10 @@ theorem childBind_completed (q : Point) (i : Nat) (b : Option Val) :
     (q.childBind i b).completed = q.completed := by
   cases b <;> rfl
 
+theorem childBind_params (q : Point) (i : Nat) (b : Option Val) :
+    (q.childBind i b).params = q.params := by
+  cases b <;> rfl
+
 /-- The environment a decision's chosen arm runs in is typed at the arm's extension. -/
 theorem envTyped_bound {w : World} {env : List Ty} {vals : List Val} {extra : List Ty}
     {b : Option Val} (h : EnvTyped w env vals) (hb : BoundFits w b extra) :
@@ -1312,14 +1359,14 @@ theorem suspend_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) :
     TypedProg root w ty (denoteR root.program (.suspend b) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_suspend] at hcheck
   have hcb := Checker.inv_suspend _ _ _ _ _ hcheck
   rw [denoteR_suspend _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine suspendR_typed root (fun w' o => constructR_typed root (fun w'' o' completed hc => ?_))
   have o'' := leHost_trans _ _ _ o o'
   exact hb w'' (serviceTy_leHost o'' htie) _ ty (child_fuel_eq hfuel 0) rfl
-    (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) hc)
+    (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) hc (stackTyped_mono o'' hstack))
 
 /-- **`select`**: the counted step, the scrutinee decides (`decide_fits`), and the chosen arm runs
 at its point with the value it binds, widened to the join of the arms. -/
@@ -1328,7 +1375,7 @@ theorem select_arm {s : Term} {d : Decision} {a0 a1 : NativeEff} (hfuel : p.fuel
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (h0 : ChildDenotes root f a0 (p.path ++ [0])) (h1 : ChildDenotes root f a1 (p.path ++ [1])) :
     TypedProg root w ty (denoteR root.program (.select s d a0 a1) p) := by
-  obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_select] at hcheck
   obtain ⟨sty, ⟨e0, e1⟩, t0, t1, hsty, harms, hc0, hc1, rfl⟩ :=
     Checker.inv_select _ _ _ _ _ _ _ _ hcheck
@@ -1350,6 +1397,7 @@ theorem select_arm {s : Term} {d : Decision} {a0 a1 : NativeEff} (hfuel : p.fuel
       (childBind_path _ _ _) ?_
     refine pointTyped_child hat rfl (childBind_path _ _ _) hc0 ?_
       (by rw [childBind_completed]; exact hc)
+      (by rw [childBind_params]; exact stackTyped_mono o'' hstack)
     rw [childBind_env]
     exact envTyped_bound (envTyped_mono o'' henv) hbound
   | false =>
@@ -1358,6 +1406,7 @@ theorem select_arm {s : Term} {d : Decision} {a0 a1 : NativeEff} (hfuel : p.fuel
       (childBind_path _ _ _) ?_
     refine pointTyped_child hat rfl (childBind_path _ _ _) hc1 ?_
       (by rw [childBind_completed]; exact hc)
+      (by rw [childBind_params]; exact stackTyped_mono o'' hstack)
     rw [childBind_env]
     exact envTyped_bound (envTyped_mono o'' henv) hbound
 
@@ -1398,20 +1447,20 @@ theorem catchCause_arm {b h : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hh : ChildDenotes root f h (p.path ++ [1])) :
     TypedProg root w ty (denoteR root.program (.catchCause b h) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_catchCause] at hcheck
   obtain ⟨tb, th, hcb, hch, rfl⟩ := Checker.inv_catchCause _ _ _ _ _ _ hcheck
   rw [denoteR_catchCause _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine catchGuard_typed root (mid := tb)
     (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl
-      (pointTyped_child hat rfl rfl hcb henv hview))
+      (pointTyped_child hat rfl rfl hcb henv hview hstack))
     (Ty.subN_join_left _ _) (fun w' o c hc => ?_)
   refine constructR_typed root (fun w'' o' completed hcomp => ?_)
   have o'' := leHost_trans _ _ _ o o'
   refine typedProg_widen root (T := th) (Ty.subN_join_right _ _) (Ty.subN_refl _) ?_
   exact hh w'' (serviceTy_leHost o'' htie) _ th (childWith_fuel_eq hfuel 1 (Val.exitErr c)) rfl
     (pointTyped_child hat rfl rfl hch (envTyped_append (envTyped_mono o'' henv)
-      (fits_exitErr_causeOf (fitsExit_failure_cause (strongExit_mono _ _ _ _ o' hc).1))) hcomp)
+      (fits_exitErr_causeOf (fitsExit_failure_cause (strongExit_mono _ _ _ _ o' hc).1))) hcomp (stackTyped_mono o'' hstack))
 
 /-- **`matchCause`**: the `all` shape (`allGuard_typed`): the value arm on a success, the cause
 arm on a failure, each widened to the join. -/
@@ -1421,13 +1470,13 @@ theorem matchCause_arm {b v c : NativeEff} (hfuel : p.fuel = f + 1)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hv : ChildDenotes root f v (p.path ++ [1]))
     (hc : ChildDenotes root f c (p.path ++ [2])) :
     TypedProg root w ty (denoteR root.program (.matchCause b v c) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_matchCause] at hcheck
   obtain ⟨tb, tv, tc, hcb, hcv, hcc, rfl⟩ := Checker.inv_matchCause _ _ _ _ _ _ _ hcheck
   rw [denoteR_matchCause _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine allGuard_typed root (mid := tb) (fun ex => by cases ex <;> rfl)
     (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl
-      (pointTyped_child hat rfl rfl hcb henv hview)) (fun w' o ex hex => ?_)
+      (pointTyped_child hat rfl rfl hcb henv hview hstack)) (fun w' o ex hex => ?_)
   cases ex with
   | success x =>
     refine constructR_typed root (fun w'' o' completed hcomp => ?_)
@@ -1435,7 +1484,7 @@ theorem matchCause_arm {b v c : NativeEff} (hfuel : p.fuel = f + 1)
     refine typedProg_widen root (T := tv) (Ty.subN_join_left _ _) (Ty.subN_join_left _ _) ?_
     exact hv w'' (serviceTy_leHost o'' htie) _ tv (childWith_fuel_eq hfuel 1 x) rfl
       (pointTyped_child hat rfl rfl hcv (envTyped_append (envTyped_mono o'' henv)
-        (fits_mono o' hex.1)) hcomp)
+        (fits_mono o' hex.1)) hcomp (stackTyped_mono o'' hstack))
   | failure cause =>
     refine constructR_typed root (fun w'' o' completed hcomp => ?_)
     have o'' := leHost_trans _ _ _ o o'
@@ -1443,7 +1492,7 @@ theorem matchCause_arm {b v c : NativeEff} (hfuel : p.fuel = f + 1)
     exact hc w'' (serviceTy_leHost o'' htie) _ tc (childWith_fuel_eq hfuel 2 (Val.exitErr cause)) rfl
       (pointTyped_child hat rfl rfl hcc (envTyped_append (envTyped_mono o'' henv)
         (fits_exitErr_causeOf (fitsExit_failure_cause (strongExit_mono _ _ _ _ o' hex).1)))
-        hcomp)
+        hcomp (stackTyped_mono o'' hstack))
 
 /-- **`onExit`**: the region (`onExit_typed`): the body at its type, the finalizer on every exit
 the body admits, the exit bound as `Exit<A, E>`. -/
@@ -1452,19 +1501,19 @@ theorem onExit_arm {b fin : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hf : ChildDenotes root f fin (p.path ++ [1])) :
     TypedProg root w ty (denoteR root.program (.onExit b fin) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_onExit] at hcheck
   obtain ⟨tb, tf, hcb, hcf, rfl⟩ := Checker.inv_onExit _ _ _ _ _ _ hcheck
   rw [denoteR_onExit _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine onExit_typed root (b := tb) (f := tf) (Ty.subN_refl _) (Ty.subN_join_left _ _)
     (Ty.subN_join_right _ _)
     (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl
-      (pointTyped_child hat rfl rfl hcb henv hview)) (fun w' o ex hex => ?_)
+      (pointTyped_child hat rfl rfl hcb henv hview hstack)) (fun w' o ex hex => ?_)
   refine constructR_typed root (fun w'' o' completed hcomp => ?_)
   have o'' := leHost_trans _ _ _ o o'
   exact hf w'' (serviceTy_leHost o'' htie) _ tf (childWith_fuel_eq hfuel 1 (reifyExitVal ex)) rfl
     (pointTyped_child hat rfl rfl hcf (envTyped_append (envTyped_mono o'' henv)
-      (fitsExit_mono o' hex.1)) hcomp)
+      (fitsExit_mono o' hex.1)) hcomp (stackTyped_mono o'' hstack))
 
 /-- **`scoped`**: the scoped region's row, its body the child at the body's type; the exit it
 answers is typed at the body's columns, which the region's type keeps. -/
@@ -1472,12 +1521,12 @@ theorem scoped_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.scoped b)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.scoped b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_scoped] at hcheck
   obtain ⟨tb, hcb, rfl⟩ := Checker.inv_scoped _ _ _ _ _ hcheck
   rw [denoteR_scoped _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) tb (pointTyped_child hat rfl rfl hcb henv hview)
+    (fun _ _ _ h => nomatch h) tb (pointTyped_child hat rfl rfl hcb henv hview hstack)
     (fun _ _ _ post => .pure post)
 
 /-- **`gen`**: the counted step, then the generator entry at the point itself, whose row the
@@ -1500,13 +1549,14 @@ theorem iterate_arm {cursorTy : Option Ty} {initial test step result : Term} {bo
       some (.eff (.iterate cursorTy initial test step result body)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.iterate cursorTy initial test step result body) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   have checked := hcheck
   rw [Eff.expandIn_iterate] at hcheck
   obtain ⟨c0, _, _, _, _, hc0, _, _, _, _, _, hsub0, _, _⟩ := Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
   obtain ⟨cursor, hcursor, hfit⟩ := evalTerm_progress_env henv hc0
   have pre : LoopPointTyped root w p ty cursor := ⟨cursorTy, initial, test, step, result, body, env,
-    c0, hat, checked, henv, hview, hc0, fits_subN w (a := c0) (b := cursorTy.getD c0) hsub0 cursor hfit⟩
+    c0, hat, checked, henv, hview, ((root.scopeSig_extends p.path).termTy env initial).symm.trans hc0,
+    fits_subN w (a := c0) (b := cursorTy.getD c0) hsub0 cursor hfit, hstack⟩
   rw [denoteR_iterate _ _ _ _ _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hcursor]
   exact suspendR_typed root (fun w' o => TypedProg.fiber (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) ty
@@ -1517,7 +1567,7 @@ theorem uninterruptible_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.uninterruptible b)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.uninterruptible b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_uninterruptible] at hcheck
   have hcb := Checker.inv_uninterruptible _ _ _ _ _ hcheck
   have hact : actionAt root.program p =
@@ -1527,7 +1577,7 @@ theorem uninterruptible_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
   rw [denoteR_uninterruptible _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f),
     denoteAction_of _ _ hact]
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) ty (BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview))
+    (fun _ _ _ h => nomatch h) ty (BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview hstack))
     (fun _ _ _ post => .pure post)
 
 /-- **`interruptible`**: as `uninterruptible`, with the flag set. -/
@@ -1535,7 +1585,7 @@ theorem interruptible_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.interruptible b)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.interruptible b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_interruptible] at hcheck
   have hcb := Checker.inv_interruptible _ _ _ _ _ hcheck
   have hact : actionAt root.program p =
@@ -1545,7 +1595,7 @@ theorem interruptible_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
   rw [denoteR_interruptible _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f),
     denoteAction_of _ _ hact]
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) ty (BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview))
+    (fun _ _ _ h => nomatch h) ty (BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview hstack))
     (fun _ _ _ post => .pure post)
 
 /-- **`acquireRelease`**: the context read (`seqGuard_typed`), then the masked acquire at the
@@ -1694,13 +1744,13 @@ theorem catchIf_arm {test : Term} {b h : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) (hh : ChildDenotes root f h (p.path ++ [1])) :
     TypedProg root w ty (denoteR root.program (.catchIf test b h) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_catchIf] at hcheck
   obtain ⟨tb, th, testTy, hcb, _, _, hch, _, rfl⟩ := Checker.inv_catchIf _ _ _ _ _ _ _ hcheck
   rw [denoteR_catchIf _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine catchGuard_typed root (mid := tb)
     (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl
-      (pointTyped_child hat rfl rfl hcb henv hview))
+      (pointTyped_child hat rfl rfl hcb henv hview hstack))
     (Ty.subN_join_left _ _) (fun w' o cause hc => ?_)
   refine constructR_typed root (fun w'' o' completed hcomp => ?_)
   have o'' := leHost_trans _ _ _ o o'
@@ -1715,7 +1765,7 @@ theorem catchIf_arm {test : Term} {b h : NativeEff} (hfuel : p.fuel = f + 1)
     refine typedProg_widen root (T := th) (Ty.subN_join_right _ _)
       (subN_catchIfError test env.length tb.error th.error) ?_
     exact hh w'' (serviceTy_leHost o'' htie) _ th (childWith_fuel_eq hfuel 1 value) rfl
-      (pointTyped_child hat rfl rfl hch (envTyped_append (envTyped_mono o'' henv) hvfit) hcomp)
+      (pointTyped_child hat rfl rfl hch (envTyped_append (envTyped_mono o'' henv) hvfit) hcomp (stackTyped_mono o'' hstack))
   | none =>
     have hlen : env.length = p.env.length := henv.1
     have hmiss := catchIf_miss_fits (he := th.error) hcf hcaught
@@ -1948,34 +1998,38 @@ theorem exitOfVal_of_fits {w : World} {v : Val} {a e : Ty} (h : Fits w v (.exitO
 /-- The checked entrants of a race: each entrant's point is typed at its own checked type, raw
 below the raw unions of the entrants' columns, which lie below the race's checked columns in
 the checker's order. Private: the spine's rounds (`effsRounds`) are no definition of the tree. -/
-private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : List Ty} :
+private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : List Ty}
+    {base : List Nat} :
     ∀ (es : Effs NativeOp) (q : Point) (T : EffTy),
+      (∀ x, q.path <+: x → scopeParams root.program x = scopeParams root.program base) →
       Node.at_ (.eff root.program) q.path = some (.effs es) →
-      Checker.checkEffs root.signature env q.path []
+      Checker.checkEffs (root.scopeSig base) env q.path []
           (effsRounds (Node.eff root.program)
             (List.range ((root.program.refSites []).length + 1)) es) = .ok T →
       EnvTyped w env q.env →
       (∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2) →
+      StackTyped root w (scopeParams root.program base) q.params →
       ∃ A E, (∀ r ∈ entrantPoints es q, ∃ ty, PointTyped root w r ty ∧
           ty.answer.sub A = true ∧ ty.error.sub E = true) ∧
         Ty.subN A T.answer = true ∧ Ty.subN E T.error = true
-  | .nil, _, T, _, hc, _, _ => by
+  | .nil, _, T, _, _, hc, _, _, _ => by
     rw [effsRounds_nil] at hc
     have hT := Checker.inv_effs_nil _ _ _ _ _ hc
     subst hT
     exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, Bounds.subN_never _, Bounds.subN_never _⟩
-  | .cons h t, q, T, hat, hc, henv, hview => by
+  | .cons h t, q, T, hscope, hat, hc, henv, hview, hstack => by
     rw [effsRounds_cons] at hc
     obtain ⟨H, R, hch, hct, rfl⟩ := Checker.inv_effs_cons _ _ _ _ _ _ hc
     obtain ⟨A, E, hrest, hA, hE⟩ :=
-      raceEntrants_typed t (q.child 1) R (node_at_child hat rfl) hct henv hview
+      raceEntrants_typed t (q.child 1) R (fun x hx => hscope x ((List.prefix_append _ _).trans hx))
+        (node_at_child hat rfl) hct henv hview hstack
     refine ⟨.union H.answer A, .union H.error E, fun r hr => ?_,
       subN_union_le (Ty.subN_join_left _ _) (Ty.subN_trans hA (Ty.subN_join_right _ _)),
       subN_union_le (Ty.subN_join_left _ _) (Ty.subN_trans hE (Ty.subN_join_right _ _))⟩
     simp only [entrantPoints, List.mem_cons] at hr
     rcases hr with rfl | hr
-    · exact ⟨H, ⟨h, env, node_at_child hat rfl, hch, henv, hview⟩, sub_union_self_left _ _,
-        sub_union_self_left _ _⟩
+    · exact ⟨H, pointTyped_scope (hscope _ (List.prefix_append _ _)) (node_at_child hat rfl) hch
+        henv hview hstack, sub_union_self_left _ _, sub_union_self_left _ _⟩
     · obtain ⟨ty, hpt, ha, he⟩ := hrest r hr
       exact ⟨ty, hpt, Ty.sub_trans _ _ _ ha (sub_union_self_right _ _),
         Ty.sub_trans _ _ _ he (sub_union_self_right _ _)⟩
@@ -1992,7 +2046,7 @@ theorem awaitFiber_arm {t : Term} {mode : Supervision.ObserverMode} (hfuel : p.f
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.awaitFiber t mode)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.awaitFiber t mode) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   rw [denoteR_awaitFiber _ _ _ hfuel]
   cases mode with
@@ -2048,7 +2102,7 @@ typing); the post's fiber is declared at that type, so its handle fits the fiber
 theorem fork_arm {b : NativeEff} {options : Supervision.ForkOptions}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.fork b options))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_fork] at hcheck
   obtain ⟨q, hcq, rfl⟩ :=
     Checker.inv_action_fork _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2058,7 +2112,9 @@ theorem fork_arm {b : NativeEff} {options : Supervision.ForkOptions}
     rw [hat]
   rw [denoteAction_of _ _ hact]
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    ⟨b, env, node_at_child (node_at_child hat rfl) rfl, hcq, henv, hview⟩
+    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+      ((List.prefix_append _ _).trans (List.prefix_append _ _)))
+      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) q (BodyTyped.at_ _ _ hbody) (fun w' _ ans post => ?_)
   obtain ⟨id, rfl, hΓ⟩ := post
@@ -2069,7 +2125,7 @@ theorem forkIn_arm {b : NativeEff} {options : Supervision.ForkOptions} {scope : 
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.forkIn b options scope))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_forkIn] at hcheck
   obtain ⟨q, scopeTy, hcq, hscope, hsub_scope, rfl⟩ :=
     Checker.inv_action_forkIn _ _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2084,7 +2140,9 @@ theorem forkIn_arm {b : NativeEff} {options : Supervision.ForkOptions} {scope : 
     rfl
   rw [denoteAction_of _ _ hact]
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    ⟨b, env, node_at_child (node_at_child hat rfl) rfl, hcq, henv, hview⟩
+    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+      ((List.prefix_append _ _).trans (List.prefix_append _ _)))
+      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) q ⟨hbody, hlive⟩ (fun w' _ ans post => ?_)
   obtain ⟨id, rfl, hΓ⟩ := post
@@ -2096,7 +2154,7 @@ theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.forkScoped b options))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_forkScoped] at hcheck
   obtain ⟨q, hcq, rfl⟩ :=
     Checker.inv_action_forkScoped _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2105,7 +2163,9 @@ theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
     rw [hat]
   rw [denoteAction_of _ _ hact]
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    ⟨b, env, node_at_child (node_at_child hat rfl) rfl, hcq, henv, hview⟩
+    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+      ((List.prefix_append _ _).trans (List.prefix_append _ _)))
+      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   simp only [denoteFiberAction]
   rw [hat]
   simp only []
@@ -2122,7 +2182,7 @@ theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
 theorem runIn_arm {target scope : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.runIn target scope))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, scopeTy, hty, hfib, hscope, hsub_scope, rfl⟩ :=
     Checker.inv_action_runIn _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2148,7 +2208,7 @@ theorem runIn_arm {target scope : Term}
 theorem interrupt_arm {target : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.interrupt target))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
     Checker.inv_action_interrupt _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2171,7 +2231,7 @@ theorem interruptScoped_arm {target : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.interruptScoped target))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨handle, pair, hty, hfib, rfl⟩ :=
     Checker.inv_action_interruptScoped _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2205,7 +2265,7 @@ theorem interruptAll_arm {targets : Term} {who : Option Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.interruptAll targets who))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   have hc := Checker.inv_withFiber _ _ _ _ _ hcheck
   cases who with
@@ -2274,7 +2334,7 @@ exits. -/
 theorem awaitAll_arm {targets : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.awaitAll targets))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ :=
     Checker.inv_action_awaitAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2312,7 +2372,7 @@ theorem awaitAllFailFast_arm {targets : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.awaitAllFailFast targets))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨ts, inner, pair, hts, hlist, hfib, rfl⟩ :=
     Checker.inv_action_awaitAllFailFast _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2349,7 +2409,7 @@ theorem awaitAllFailFast_arm {targets : Term}
 theorem snapshotChildren_arm
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .snapshotChildren)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   have hty := Checker.inv_action_snapshotChildren _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   subst hty
@@ -2367,7 +2427,7 @@ theorem awaitNewChildren_arm {snapshot : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.awaitNewChildren snapshot))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨s, hs, hsub, rfl⟩ :=
     Checker.inv_action_awaitNewChildren _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2398,11 +2458,13 @@ unions of the entrants' columns; the race's exit fits them, so the checked join.
 theorem raceAll_arm {es : Effs NativeOp}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.raceAll es))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_raceAll] at hcheck
   have hc := Checker.inv_action_raceAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨A, E, hpre, hA, hE⟩ := raceEntrants_typed es ((p.child 0).child 0) ty
-    (node_at_child (node_at_child hat rfl) rfl) hc henv hview
+    (fun x hx => scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+      (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans hx))
+    (node_at_child (node_at_child hat rfl) rfl) hc henv hview hstack
   obtain ⟨ents, hact⟩ : ∃ ents, actionAt root.program p =
       some (WithFiberAction.raceAll ents (some ((p.child 0).child 0).path)) := by
     unfold actionAt
@@ -2424,7 +2486,7 @@ row's pre; it answers `unit`. -/
 theorem setContext_arm {context : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.setContext context))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨contextTy, hc, hsub_ctx, rfl⟩ :=
     Checker.inv_action_setContext _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2443,7 +2505,7 @@ theorem setContext_arm {context : Term}
 theorem getContext_arm
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .getContext)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   have hty := Checker.inv_action_getContext _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   subst hty
@@ -2457,7 +2519,7 @@ theorem getContext_arm
 theorem getId_arm
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .getId)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   have hty := Checker.inv_action_getId _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   subst hty
@@ -2476,7 +2538,7 @@ the two saved images (`fiberPost`'s row), a member of the saved state's type in 
 theorem getInterruptible_arm
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .getInterruptible)))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   have hty :=
     Checker.inv_action_getInterruptible _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -2495,7 +2557,7 @@ theorem getInterruptible_arm
 theorem closeScope_arm {scope exit : Term}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.closeScope scope exit))))
     (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨scopeTy, exitTy, pair, hs, hsub_scope, hex, hexit, rfl⟩ :=
     Checker.inv_action_closeScope _ _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
@@ -3116,7 +3178,7 @@ theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
     (hpt : PointTyped root w q t) :
     ∃ tys v reqTy, EnvTyped w tys q.env ∧ evalTerm q.env r = some v ∧ Fits w v reqTy ∧
       rowTy (NativeOp.row op).normalizeTypes reqTy (root.signature.termUse tys op) = some t := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨reqTy, -, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hreq
@@ -3130,7 +3192,13 @@ theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
     rw [root.sig.signature.withDefs_rowOf_of_none _ hnone]
     show (nativeRowOf root.table op).normalizeTypes = _
     rw [nativeRowOf_builtin root.table hk]
-  rw [hrowOf] at hrow
+  -- nor a parameter's run, so every scope reads the source's row there
+  have hpnone : root.signature.paramOf op = none := by
+    cases op with
+    | param _ => exact (hk rfl).elim
+    | _ => rfl
+  rw [(root.scopeSig_of_none q.path hpnone).2, (root.scopeSig_extends q.path).termUse,
+    hrowOf] at hrow
   exact ⟨env, v, reqTy, henv, hv, hvfit, hrow⟩
 
 /-- **A `perform` at a `sync` built-in row**: the store operation at the node's checked instance
@@ -3200,10 +3268,13 @@ theorem external_arm {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.external i) request)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.perform (.external i) request) p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨requestTy, hdom, hreq, hrow⟩ :=
-    Checker.inv_perform root.signature env p.path (.external i) request ty hcheck
+    Checker.inv_perform _ env p.path (NativeOp.external i) request ty hcheck
+  rw [(root.scopeSig_of_none p.path (op := .external i) rfl).1] at hdom
+  rw [(root.scopeSig_of_none p.path (op := .external i) rfl).2,
+    (root.scopeSig_extends p.path).termUse] at hrow
   obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
   rw [denoteR_perform _ _ _ hfuel]
   show TypedProg root w ty (denoteForeign (.external i) request p)
@@ -3222,7 +3293,7 @@ theorem defs_not_typed {decls : List DefDecl} {bodies : Effs NativeOp} {main : N
     {q : Point} {t : EffTy}
     (hat : Node.at_ (.eff root.program) q.path = some (.eff (.defs decls bodies main)))
     (hpt : PointTyped root w q t) : False := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
   obtain ⟨bodies', main', heq⟩ := Eff.expandIn_defs_head (root := root.program) decls bodies main
   rw [heq] at hcheck
   exact nomatch hcheck
@@ -3241,17 +3312,27 @@ theorem call_arm {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path) :
     TypedProg root w ty (denoteR root.program (.perform (.call k) r) p) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨reqTy, hdom, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+  -- an invocation runs no parameter, so every scope reads the source's row there
+  rw [(root.scopeSig_of_none p.path (op := .call k) rfl).1] at hdom
+  rw [(root.scopeSig_of_none p.path (op := .call k) rfl).2,
+    (root.scopeSig_extends p.path).termUse] at hrow
   -- the block declares definition `k`, which takes no program, and the invocation reads its row
   obtain ⟨d, hd, hparams⟩ := root.sig.signature.withDefs_dom_call_some _ rfl hdom
   have hrowOf : root.signature.rowOf (.call k) = d.row.normalizeTypes :=
     root.sig.signature.withDefs_rowOf_call _ rfl hd
   rw [hrowOf] at hrow
   obtain ⟨path, body, tb, hpath, hbody, hbcheck, hformed, hadmits⟩ := hbodies k d hd
-  -- a body with no parameter is checked at the source's own signature
-  rw [hparams] at hbcheck
+  -- a body with no parameter has no parameter in scope: it is checked at the source's own
+  -- signature, and any stack is typed there
+  have hscope : scopeParams root.program path = [] := (scopeParams_body hpath hd).trans hparams
+  have hbcheck' : Checker.check (root.scopeSig path) [d.request.normalize] path
+      (Eff.expandIn root.program body) = .ok tb := by
+    unfold ProgramSource.scopeSig
+    rw [hscope, ← hparams]
+    exact hbcheck
   simp only [DefDecl.formed, Bool.and_eq_true] at hformed
   obtain ⟨⟨⟨⟨hreqc, hansc⟩, herrc⟩, -⟩, -⟩ := hformed
   obtain ⟨hsub, rfl⟩ := rowTy_closed_some (row := d.row.normalizeTypes)
@@ -3266,7 +3347,7 @@ theorem call_arm {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
   -- the body at its point, typed at its own type, widened to the declared columns
   refine typedProg_widen root (T := tb) ?_ ?_ (hden body path hbody w''
     (serviceTy_leHost o'' htie) _ tb (by simp only [Point.redirect, hfuel]; rfl) rfl
-    ⟨body, [d.request.normalize], hbody, hbcheck, ?_, hc⟩)
+    ⟨body, [d.request.normalize], hbody, hbcheck', ?_, hc, ?_⟩)
   · show Ty.sub tb.answer.normalize d.answer.normalize.normalize.normalize = true
     rw [Ty.normalize_idem, Ty.normalize_idem]
     exact hans
@@ -3277,25 +3358,114 @@ theorem call_arm {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
       fits_subN w'' (show Ty.sub reqTy.normalize d.request.normalize.normalize = true from hsub)
         v (fits_mono o'' hfit)
     exact envTyped_append (envTyped_nil w'') hreqFit
+  · show StackTyped root w'' (scopeParams root.program path) p.params
+    rw [hscope]
+    exact stackTyped_nil root w'' _
 
-/-- **A parameter's run at a typed point** (decisions row 340): the source's signature keeps every
-run of a parameter outside its domain, so no point that `PointTyped` types stands at one. The
-arm of `denote-typed` until the typed points carry the parameters of the body they stand in
-(slice CX1, `docs/research/2026-10-09-program-parameters.md` §10). Its consumer is
+/-- **A hop to a checked node** (slice CX2, `docs/research/2026-10-10-cx-lexical-scope.md` §5):
+a point whose node the checker types at its scope's signature, with typed values, view and stack,
+denotes a typed program at that type, widened to any bound above it. The shared tail of the arms
+that move the run to another node of the root: `invoke_arm` to a body, `param_arm` to a site. -/
+theorem hop_typed {root : ProgramSource} {f : Nat}
+    (hden : ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path)
+    {w : World} (htie : w.serviceTy = root.sig.serviceTy) {q : Point} {node : NativeEff}
+    {env : List Ty} {t T : EffTy} (hfuel : q.fuel = f)
+    (hat : Node.at_ (.eff root.program) q.path = some (.eff node))
+    (hcheck : Checker.check (root.scopeSig q.path) env q.path (Eff.expandIn root.program node) =
+      .ok t)
+    (henv : EnvTyped w env q.env)
+    (hview : ∀ r ∈ q.completed, ∃ fty, w.Γ r.1 = some fty ∧ ExitOk w fty r.2)
+    (hstack : StackTyped root w (scopeParams root.program q.path) q.params)
+    (hans : Ty.subN t.answer T.answer = true) (herr : Ty.subN t.error T.error = true) :
+    TypedProg root w T (denoteR root.program node q) :=
+  typedProg_widen root hans herr
+    (hden node q.path hat w htie q t hfuel rfl ⟨node, env, hat, hcheck, henv, hview, hstack⟩)
+
+/-- **A parameter's run in a scope's domain reads its parameter's row** (`Signature.withParams_param`
+at the source's signature, which keeps every run outside its domain). A step of `param_arm`. -/
+theorem ProgramSource.scopeSig_param (src : ProgramSource) (path : List Nat) {i : Nat}
+    (hd : (src.scopeSig path).dom (.param i) = true) :
+    ∃ q, (scopeParams src.program path)[i]? = some q ∧
+      (src.scopeSig path).rowOf (.param i) = q.row.normalizeTypes :=
+  Signature.withParams_param src.signature (scopeParams src.program path) (op := NativeOp.param i)
+    (i := i) rfl (src.signature_paramsOutside _ i rfl) hd
+
+/-- **A parameter in scope is formed**: the scope is some declaration's parameters
+(`scopeParams_decl`), and a typed block's declarations are formed (`BodiesTyped`), each
+parameter with them (`DefDecl.formed`). A step of `param_arm`. -/
+theorem paramFormed_of_scope {root : ProgramSource} (hbodies : BodiesTyped root) {path : List Nat}
+    {i : Nat} {q : ParamDecl} (hq : (scopeParams root.program path)[i]? = some q) :
+    q.formed = true := by
+  rcases scopeParams_decl root.program path with h0 | ⟨k, d, hd, hps⟩
+  · rw [h0, List.getElem?_nil] at hq
+    cases hq
+  · obtain ⟨-, -, -, -, -, -, hformed, -⟩ := hbodies k d hd
+    rw [hps] at hq
+    simp only [DefDecl.formed, Bool.and_eq_true] at hformed
+    exact List.all_eq_true.mp hformed.2 q (List.mem_of_getElem? hq)
+
+/-- **A parameter's run** (decisions row 340; the arm of `denote-typed`): the counted step, then
+the site that the innermost invocation passed for parameter `i`, its values extended by the
+request's value, at the stack below that invocation (`denoteR`'s `param` arm). The point's
+scope holds parameter `i` (`ProgramSource.scopeSig_param`), formed with its declaration
+(`paramFormed_of_scope`), so the request fits the parameter's request and the node's type is the
+parameter's columns (`rowTy_closed_some`). The stack's top frame holds a site typed at the
+parameter (`StackTyped`), so the site's program is typed at its own point, with the caller's
+values and the stack below, and widens to the parameter's columns (`hop_typed`). Placed in
+slice CX1 (`docs/research/2026-10-10-cx-lexical-scope.md` §9), proved in CX2. Its consumer is
 `perform_arm`. -/
-theorem param_arm {i : Nat} {r : Term}
+@[semantics "residual-program-typing" (requirement := R4)]
+theorem param_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {i : Nat}
+    {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.param i) r)))
-    (hpt : PointTyped root w p ty) :
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hbodies : BodiesTyped root)
+    (hden : ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path) :
     TypedProg root w ty (denoteR root.program (.perform (.param i) r) p) := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨_, hdom, -, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
-  have hout : root.signature.dom (.param i) = false := by
-    show (root.sig.signature.withDefs root.program.defsOf).dom (.param i) = false
-    rw [Signature.withDefs_dom_of_none _ _ rfl]
-    rfl
-  rw [hout] at hdom
-  cases hdom
+  obtain ⟨reqTy, hdom, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+  -- the scope holds parameter `i`, whose declaration's row the run reads
+  obtain ⟨q, hq, hrowOf⟩ := root.scopeSig_param p.path hdom
+  rw [hrowOf, (root.scopeSig_extends p.path).termUse] at hrow
+  have hformed := paramFormed_of_scope hbodies hq
+  simp only [ParamDecl.formed, Bool.and_eq_true] at hformed
+  obtain ⟨⟨⟨hreqc, hansc⟩, herrc⟩, -⟩ := hformed
+  obtain ⟨hsub, rfl⟩ := rowTy_closed_some (row := q.row.normalizeTypes)
+    (Ty.closed_normalize _ hreqc) (Ty.closed_normalize _ hansc) (Ty.closed_normalize _ herrc) hrow
+  -- the stack's top frame holds the site of parameter `i`
+  obtain ⟨top, rest, hparams⟩ : ∃ top rest, p.params = top :: rest := by
+    cases hp : p.params with
+    | nil =>
+      rw [hp] at hstack
+      have hnil : scopeParams root.program p.path = [] := hstack
+      rw [hnil, List.getElem?_nil] at hq
+      cases hq
+    | cons top rest => exact ⟨top, rest, rfl⟩
+  rw [hparams] at hstack
+  obtain ⟨site, arg, envs, t, hsite, hnode, hacheck, hadm, henvs, hrest⟩ := hstack i q hq
+  simp only [ParamDecl.admits, Bool.and_eq_true] at hadm
+  obtain ⟨hans, herr⟩ := hadm
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hreq
+  rw [denoteR_perform _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
+  refine suspendR_typed root (fun w' o => constructR_typed root (fun w'' o' completed hc => ?_))
+  have o'' := leHost_trans _ _ _ o o'
+  simp only [hv, hparams, hsite, hnode]
+  -- the site's program at its own point, at the caller's values and the stack below the call
+  refine hop_typed hden (serviceTy_leHost o'' htie) (t := t)
+    (by simp only [Point.redirect, hfuel]; rfl) hnode hacheck ?_ hc (stackTyped_mono o'' hrest) ?_ ?_
+  · have hreqFit : Fits w'' v q.request.normalize :=
+      fits_subN w'' (show Ty.sub reqTy.normalize q.request.normalize.normalize = true from hsub)
+        v (fits_mono o'' hfit)
+    exact envTyped_append (envTyped_mono o'' henvs) hreqFit
+  · show Ty.sub t.answer.normalize q.answer.normalize.normalize.normalize = true
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+    exact hans
+  · show Ty.sub t.error.normalize q.error.normalize.normalize.normalize = true
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+    exact herr
 
 /-- **`perform`**: a host row, the two asynchronous built-in rows, a store row, an invocation
 (`call_arm`), which reads the block's typing and the induction at the body's point, or a
@@ -3311,29 +3481,140 @@ theorem perform_arm {op : NativeOp} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1
   cases op with
   | external i => exact external_arm hpos hat hpt
   | call k => exact call_arm hfuel hat hpt htie hbodies hden
-  | param i => exact param_arm hat hpt
+  | param i => exact param_arm hfuel hat hpt htie hbodies hden
   | deferredAwait => exact deferredAwait_arm hpos hat hpt
   | sleep => exact sleep_arm hpos hat hpt
   | _ => exact syncPerform_arm rfl hpos hat hpt
 
+/-- **The frame an invocation pushes is typed at its definition's parameters** (K4, slice CX2;
+`docs/research/2026-10-10-cx-lexical-scope.md` §9): each program the invocation passes stands at
+its site below the invocation, so at the invocation's scope; the checker types it there over the
+caller's environment extended by its parameter's request, at a type the parameter admits
+(`Checker.inv_effs_slot`); the caller's values fit the caller's environment; and the stack below
+is typed at the caller's scope. The conclusion is `StackTyped`'s clause for the pushed frame.
+Private: the spine's rounds (`effsRounds`) are no definition of the tree. A step of
+`invoke_arm`. -/
+private theorem argSites_typed {root : ProgramSource} {w : World} {env : List Ty}
+    {vals : List Val} {base : List Nat} {stack : List (List ArgSite)}
+    (henv : EnvTyped w env vals) (hstack : StackTyped root w (scopeParams root.program base) stack) :
+    ∀ (qs : List ParamDecl) (args : Effs NativeOp) (spine : List Nat) (T : EffTy),
+      (∀ x, spine <+: x → scopeParams root.program x = scopeParams root.program base) →
+      Node.at_ (.eff root.program) spine = some (.effs args) →
+      qs.length = (effsRounds (Node.eff root.program)
+        (List.range ((root.program.refSites []).length + 1)) args).toList.length →
+      Checker.checkEffs (root.scopeSig base) env spine qs
+          (effsRounds (Node.eff root.program)
+            (List.range ((root.program.refSites []).length + 1)) args) = .ok T →
+      ∀ (j : Nat) (q : ParamDecl), qs[j]? = some q →
+        ∃ (site : ArgSite) (arg : NativeEff) (env' : List Ty) (t : EffTy),
+          (argSitesAt spine vals args)[j]? = some site ∧
+          Node.at_ (.eff root.program) site.path = some (.eff arg) ∧
+          Checker.check (root.scopeSig site.path) (env' ++ [q.request.normalize]) site.path
+            (Eff.expandIn root.program arg) = .ok t ∧
+          q.admits t = true ∧ EnvTyped w env' site.env ∧
+          StackTyped root w (scopeParams root.program site.path) stack
+  | [], _, _, _, _, _, _, _, _, _, hq => by
+    rw [List.getElem?_nil] at hq
+    cases hq
+  | _ :: _, .nil, _, _, _, _, hlen, _, _, _, _ => by
+    rw [effsRounds_nil] at hlen
+    exact absurd hlen (Nat.succ_ne_zero _)
+  | q :: qs, .cons h t, spine, T, hscope, hat, hlen, hc, j, q', hq => by
+    rw [effsRounds_cons] at hc hlen
+    obtain ⟨H, R, hch, hadm, hct, rfl⟩ := Checker.inv_effs_slot _ _ _ _ _ _ _ _ hc
+    cases j with
+    | zero =>
+      simp only [List.getElem?_cons_zero, Option.some.injEq] at hq
+      subst hq
+      have hsite : scopeParams root.program (spine ++ [0]) = scopeParams root.program base :=
+        hscope _ (List.prefix_append _ _)
+      refine ⟨{ path := spine ++ [0], env := vals }, h, env, H, rfl, node_at_child hat rfl, ?_,
+        hadm, henv, ?_⟩
+      · show Checker.check (root.scopeSig (spine ++ [0])) _ _ _ = _
+        unfold ProgramSource.scopeSig
+        rw [hsite]
+        exact hch
+      · show StackTyped root w (scopeParams root.program (spine ++ [0])) stack
+        rw [hsite]
+        exact hstack
+    | succ j =>
+      simp only [List.getElem?_cons_succ] at hq
+      exact argSites_typed henv hstack qs t (spine ++ [1]) R
+        (fun x hx => hscope x ((List.prefix_append _ _).trans hx)) (node_at_child hat rfl)
+        (Nat.succ.inj hlen) hct j q' hq
+
 /-- **An invocation with programs** (decisions row 340; the arm of `denote-typed`): the counted
 step, then the definition's body at its path, its one variable the request's value, and the
-sites of the call's programs pushed on the point's stack (`denoteR_invoke`). Planned: the body
-is typed at its definition's parameters (`BodiesTyped`), so its point is typed only once typed
-points carry the lexical parameters of their path and the stack's frames fit them (slices CX1
-and CX2, `docs/research/2026-10-09-program-parameters.md` §10, and the review
-`git:b459daec:docs/research/2026-10-09-context-layer-scope/README.md`). It is a goal, not a
-premise, so the milestones that consume `denote-typed` rest on it by name. Its consumer is
-`denote-typed`'s dispatch. -/
+sites of the call's programs pushed on the point's stack (`denoteR_invoke`). The checker types
+the invocation by the definition's declared row (`Checker.inv_invoke`), which the declaration's
+formation keeps closed, so the request fits the declared request and the node's type is the
+declared columns (`rowTy_closed_some`). The body has the definition's parameters in scope
+(`scopeParams_body`), so the block's typing types it at its point (`BodiesTyped`); the frame
+pushed is typed at those parameters (`argSites_typed`); and the body widens to the declared
+columns (`hop_typed`, `DefDecl.admits`). Placed as goal G3's successor in slice HO-1, proved in
+CX2 (`docs/research/2026-10-10-cx-lexical-scope.md` §9). Its consumer is `denote-typed`'s
+dispatch (`childDenotes_upto`). -/
 @[semantics "residual-program-typing" (requirement := R4)]
-proof_goal invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {k : Nat}
+theorem invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {k : Nat}
     {r : Term} {args : Effs NativeOp} {f : Nat} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.invoke k r args)))
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hbodies : BodiesTyped root)
     (hden : ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path) :
-    TypedProg root w ty (denoteR root.program (.invoke k r args) p)
+    TypedProg root w ty (denoteR root.program (.invoke k r args) p) := by
+  obtain ⟨env, hcheck, henv, -, hstack⟩ := hpt.at_node hat
+  rw [Eff.expandIn_invoke] at hcheck
+  obtain ⟨d, reqTy, t0, ts, hdef, -, hlen, hreq, hrow, hargs, rfl⟩ :=
+    Checker.inv_invoke _ _ _ _ _ _ _ hcheck
+  -- the invoked definition is the block's (`Signature.withDefs`)
+  rw [root.scopeSig_defOf] at hdef
+  have hd : root.program.defsOf[k]? = some d := by
+    have h' : (root.program.defsOf[k]?).or (root.sig.signature.defOf k) = some d := hdef
+    rw [show root.sig.signature.defOf k = none from rfl, Option.or_none] at h'
+    exact h'
+  obtain ⟨path, body, tb, hpath, hbody, hbcheck, hformed, hadmits⟩ := hbodies k d hd
+  -- the body has the definition's parameters in scope
+  have hscope : scopeParams root.program path = d.params := scopeParams_body hpath hd
+  have hbcheck' : Checker.check (root.scopeSig path) [d.request.normalize] path
+      (Eff.expandIn root.program body) = .ok tb := by
+    unfold ProgramSource.scopeSig
+    rw [hscope]
+    exact hbcheck
+  simp only [DefDecl.formed, Bool.and_eq_true] at hformed
+  obtain ⟨⟨⟨⟨hreqc, hansc⟩, herrc⟩, -⟩, -⟩ := hformed
+  obtain ⟨hsub, rfl⟩ := rowTy_closed_some (row := d.row.normalizeTypes)
+    (Ty.closed_normalize _ hreqc) (Ty.closed_normalize _ hansc) (Ty.closed_normalize _ herrc) hrow
+  simp only [DefDecl.admits, Bool.and_eq_true] at hadmits
+  obtain ⟨⟨hans, herr⟩, -⟩ := hadmits
+  obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hreq
+  -- the frame the invocation pushes, typed at the definition's parameters
+  have hframe : StackTyped root w d.params (argSitesAt (p.path ++ [0]) p.env args :: p.params) :=
+    argSites_typed henv hstack d.params args (p.path ++ [0]) ts
+      (fun x hx => scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+        ((List.prefix_append _ _).trans hx))
+      (node_at_child hat rfl) hlen hargs
+  rw [denoteR_invoke _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
+  refine suspendR_typed root (fun w' o => constructR_typed root (fun w'' o' completed hc => ?_))
+  have o'' := leHost_trans _ _ _ o o'
+  simp only [hv, hpath, hbody]
+  -- the body at its point, typed at its own type, widened to the declared columns
+  refine hop_typed hden (serviceTy_leHost o'' htie) (t := tb)
+    (by simp only [Point.redirect, hfuel]; rfl) hbody hbcheck' ?_ hc ?_ ?_ ?_
+  · have hreqFit : Fits w'' v d.request.normalize :=
+      fits_subN w'' (show Ty.sub reqTy.normalize d.request.normalize.normalize = true from hsub)
+        v (fits_mono o'' hfit)
+    exact envTyped_append (envTyped_nil w'') hreqFit
+  · show StackTyped root w'' (scopeParams root.program path)
+      (argSitesAt (p.path ++ [0]) p.env args :: p.params)
+    rw [hscope]
+    exact stackTyped_mono o'' hframe
+  · show Ty.sub tb.answer.normalize d.answer.normalize.normalize.normalize = true
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+    exact hans
+  · show Ty.sub tb.error.normalize d.error.normalize.normalize.normalize = true
+    rw [Ty.normalize_idem, Ty.normalize_idem]
+    exact herr
 
 end PerformArms
 
@@ -3417,9 +3698,10 @@ theorem service_arm {key : ServiceKey} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.service key)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.service key) p) := by
-  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
-  obtain ⟨sty, hsty, rfl⟩ := Checker.inv_service root.signature env p.path key ty hcheck
+  obtain ⟨sty, hsty, rfl⟩ := Checker.inv_service _ env p.path key ty hcheck
+  rw [root.scopeSig_serviceTy] at hsty
   rw [denoteR_service _ _ hfuel]
   refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' ord v hv => ?_)
   obtain ⟨ctx, hctx, hsvc⟩ := fits_context_inv hv
@@ -3460,10 +3742,11 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) :
     TypedProg root w ty (denoteR root.program (.provideService key value b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_provideService] at hcheck
   obtain ⟨sty, vty, tb, hsty, hvty, hsub, hcb, rfl⟩ :=
     Checker.inv_provideService _ _ _ _ _ _ _ hcheck
+  rw [root.scopeSig_serviceTy] at hsty
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hvty
   have hflat : flatCarrier sty = true := serviceTy_flat root key sty hsty
   have hfit : Fits w v sty := fits_subN w hsub v hvfit
@@ -3472,7 +3755,7 @@ theorem provideService_arm {key : ServiceKey} {value : Term} {b : NativeEff}
         (denoteR root.program b (p.child 0)) := fun w'' o'' =>
     typedProg_widen root (T := tb) (Ty.subN_refl _) (Ty.subN_refl _)
       (hb w'' (serviceTy_leHost o'' htie) (p.child 0) tb (child_fuel_eq hfuel 0) rfl
-        (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) (completed_mono o'' hview)))
+        (pointTyped_child hat rfl rfl hcb (envTyped_mono o'' henv) (completed_mono o'' hview) (stackTyped_mono o'' hstack)))
   rw [denoteR_provideService _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv]
   unfold updateContextR
   refine seqGuard_typed root (getContext_typed root w) (Bounds.subN_never _) (fun w' o u hu => ?_)
@@ -3531,7 +3814,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
     rw [if_neg hpos] at hinline
     cases e with
     | succeed t =>
-      obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       obtain ⟨t', hty, rfl⟩ := Checker.inv_succeed _ _ _ _ _ hcheck
       obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
@@ -3539,7 +3822,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       subst hinline
       exact strongExit_success w _ v hfit
     | fail t =>
-      obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       obtain ⟨e, hty, hadm, rfl⟩ := Checker.inv_fail _ _ _ _ _ hcheck
       obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
@@ -3553,7 +3836,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       · trivial
       · trivial
     | failCause c =>
-      obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       obtain ⟨e, hty, rfl⟩ := Checker.inv_failCause _ _ _ _ _ hcheck
       obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv c e hty
@@ -3563,7 +3846,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
     | perform op r =>
       cases op with
       | external i =>
-        obtain ⟨env, hcheck, henv, _⟩ := hpt.at_node hat
+        obtain ⟨env, hcheck, henv, _, hstack⟩ := hpt.at_node hat
         rw [Eff.expandIn_of_round _ _ rfl] at hcheck
         obtain ⟨reqTy, -, hreq, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
         obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hreq
@@ -3594,7 +3877,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         simp only [NativeOp.row_kind, NativeOp.kind, hv, Option.bind_some, ho] at hinline
         exact nomatch hinline
     | awaitFiber target mode =>
-      obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_of_round _ _ rfl] at hcheck
       cases mode with
       | joinEffect =>
@@ -3614,7 +3897,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_value hinline
         exact strongExit_success w _ _ (view_exitOk hview hmem hid hdecl .empty).1
     | exit b =>
-      obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_exit] at hcheck
       obtain ⟨tb, hcb, rfl⟩ := Checker.inv_exit _ _ _ _ _ hcheck
       dsimp only at hinline
@@ -3626,10 +3909,10 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         rw [hsub, Option.map_some, Option.some.injEq] at hinline
         subst hinline
         have hex' := ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
-          (pointTyped_child hat rfl rfl hcb henv hview) hsub
+          (pointTyped_child hat rfl rfl hcb henv hview hstack) hsub
         exact strongExit_success w _ (reifyExitVal ex') hex'.1
     | provideService key value b =>
-      obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, -, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_provideService] at hcheck
       obtain ⟨sty, vty, tb, -, hvty, -, -, -⟩ := Checker.inv_provideService _ _ _ _ _ _ _ hcheck
       obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hvty
@@ -3638,7 +3921,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
     -- a restore site: its saved term's value is a saved image; at a false bit the body's own
     -- immediate exit at child 0, at the node's type; at a true bit a `WithFiber`, no exit
     | restore saved b =>
-      obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+      obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
       rw [Eff.expandIn_restore] at hcheck
       obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
       obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
@@ -3648,7 +3931,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       | true => exact nomatch hinline
       | false =>
         exact ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
-          (pointTyped_child hat rfl rfl hcb henv hview) hinline
+          (pointTyped_child hat rfl rfl hcb henv hview hstack) hinline
     | defs decls bodies main => exact (defs_not_typed hat hpt).elim
     | _ => exact nomatch hinline
 
@@ -3664,10 +3947,10 @@ theorem exit_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) :
     TypedProg root w ty (denoteR root.program (.exit b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_exit] at hcheck
   obtain ⟨tb, hcb, rfl⟩ := Checker.inv_exit _ _ _ _ _ hcheck
-  have hchild : PointTyped root w (p.child 0) tb := pointTyped_child hat rfl rfl hcb henv hview
+  have hchild : PointTyped root w (p.child 0) tb := pointTyped_child hat rfl rfl hcb henv hview hstack
   rw [denoteR_exit _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   cases hsub : inlineYield b (p.child 0) with
   | some ex' =>
@@ -3689,12 +3972,12 @@ theorem restore_arm {saved : Term} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
     (hb : ChildDenotes root f b (p.path ++ [0])) :
     TypedProg root w ty (denoteR root.program (.restore saved b) p) := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
   obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
   obtain ⟨flag, rfl⟩ := fits_maskRestore_inv (fits_subN w (b := .maskRestore) hsub_saved v hvfit)
-  have hchild : PointTyped root w (p.child 0) ty := pointTyped_child hat rfl rfl hcb henv hview
+  have hchild : PointTyped root w (p.child 0) ty := pointTyped_child hat rfl rfl hcb henv hview hstack
   rw [denoteR_restore _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv, Option.bind_some,
     Val.savedMask?_savedMask]
   cases flag with

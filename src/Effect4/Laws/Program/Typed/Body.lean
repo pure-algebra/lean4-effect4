@@ -56,18 +56,15 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.acquireRelease acquire release)))
     (hsvc : ServicesFit w ctx.services) :
     TypedProg root w ty (acquireInR (denoteAt root.program (p.child 0)) p ctx) := by
-  obtain ⟨e, env, hat', hcheck, henv, hview⟩ := h
+  obtain ⟨e, env, hat', hcheck, henv, hview, hstack⟩ := h
   rw [hat] at hat'
   cases hat'
   have hcheck' := hcheck
   rw [Eff.expandIn_acquireRelease] at hcheck'
   obtain ⟨a, r, hacq, _, _, rfl⟩ := Checker.inv_acquireRelease _ _ _ _ _ _ hcheck'
   -- the acquire's point: child 0, the same environment and view
-  have hat0 : Node.at_ (.eff root.program) (p.path ++ [0]) = some (.eff acquire) := by
-    rw [Agreement.Node.at_append, hat]
-    rfl
   have hacquire : TypedProg root w a (denoteAt root.program (p.child 0)) :=
-    denoteAt_typed root hwf htie ⟨acquire, env, hat0, hacq, henv, hview⟩
+    denoteAt_typed root hwf htie (pointTyped_child hat rfl rfl hacq henv hview hstack)
   unfold acquireInR
   -- the `Scope` read
   refine seqGuard_typed root (ambientScope_typed root w) (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
@@ -81,7 +78,7 @@ theorem acquireIn_typed (root : ProgramSource) {w : World} (hwf : SourceWF root)
   -- the capture the registration admits
   have hcap : CaptureTyped root w2 (p.capture aval ctx) :=
     ⟨acquire, release, env, _, a, hat, hcheck, hacq, envTyped_append (envTyped_mono o12 henv) hfit,
-      servicesFit_mono o12 hsvc⟩
+      servicesFit_mono o12 hsvc, stackTyped_mono o12 hstack⟩
   -- the registration: `unit` when the scope is open, its closing exit when it is closed
   refine seqGuard_typed root
     (mid := ⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩)
@@ -127,13 +124,13 @@ theorem layerBuildR_typed (root : ProgramSource) {w : World} (hwf : SourceWF roo
     (htie : w.serviceTy = root.sig.serviceTy) {q : Point} {lt : LayerTy} (m : MemoMapId)
     {scope : Nat} (h : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
     TypedProg root w (buildTy lt) (layerBuildR root.program q m scope) := by
-  obtain ⟨l, hat, hcheck, henv, hview⟩ := h
+  obtain ⟨l, hat, hrest⟩ := h
   have unfolded : layerBuildR root.program q m scope = denoteLayer root.program l q m scope := by
     simp only [layerBuildR, hat]
   rw [unfolded]
   exact layerBuild_typed hwf.refs q.fuel
     (childDenotes_upto root (provideLayerArm root) hwf.refs hwf.bodies q.fuel) l q w
-    lt m scope (Nat.le_refl _) htie hat ⟨l, hat, hcheck, henv, hview⟩ hlive hmemo
+    lt m scope (Nat.le_refl _) htie hat ⟨l, hat, hrest⟩ hlive hmemo
 
 /-- **The body bridge**: an admitted body's program, at any completed view, is typed at the
 admitted type. -/

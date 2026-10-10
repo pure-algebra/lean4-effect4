@@ -330,7 +330,7 @@ inductive PosOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
       (hblock : Node.at_ (.eff root.program) (P0 ++ [0] ++ ctx.block) = some (.stmts block))
       (hsuffix : Node.at_ (.eff root.program) (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1)) =
         some (.stmts (stmtsDrop block k)))
-      (hcheck : Checker.checkStmts root.signature Γ ctx.inLoop none
+      (hcheck : Checker.checkStmts (root.scopeSig P0) Γ ctx.inLoop none
         (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1))
         (Stmts.expandIn root.program (stmtsDrop block k)) = .ok g)
       (henv : EnvTyped w Γ env) (hsplit : env = e0 ++ locals)
@@ -353,7 +353,7 @@ inductive Fall (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
   | body {c : GenCtx} {k : Nat} {e : List Val} (b rest : Stmts NativeOp) (Γ : List Ty) (gb : GenTy)
       (hnode : Node.at_ (.eff root.program) (P0 ++ [0] ++ (c.block ++ List.replicate k 1)) =
         some (.stmts (.cons (.whileTrue b) rest)))
-      (hcheck : Checker.checkStmts root.signature Γ true none
+      (hcheck : Checker.checkStmts (root.scopeSig P0) Γ true none
         (P0 ++ [0] ++ (c.block ++ List.replicate k 1) ++ [0, 0]) (Stmts.expandIn root.program b) =
           .ok gb)
       (henv : EnvTyped w Γ e)
@@ -577,7 +577,9 @@ def WalkOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
   | .done v => Fits w v T
   | .halt c => ExitOk w ⟨T, E, Env.Requirement.empty⟩ (.failure c)
   | .resume code name => ∃ (ty : EffTy) (q : Point) (pc : List Nat) (bind : Bool),
-      name = .gen q pc bind ∧ q.path = P0 ∧ TypedProg root w ty code ∧ Ty.subN ty.error E = true ∧
+      name = .gen q pc bind ∧ q.path = P0 ∧
+      StackTyped root w (scopeParams root.program P0) q.params ∧
+      TypedProg root w ty code ∧ Ty.subN ty.error E = true ∧
       ∀ w', w.leHost w' → ∀ v, Fits w' v ty.answer →
         ∃ ctx k, pc = ctx.block ++ List.replicate k 1 ∧
           PosOk root P0 w' T E ctx k (if bind then q.env ++ [v] else q.env)
@@ -585,7 +587,9 @@ def WalkOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
 /-- **One walk from a typed position is typed** (`walkR`, by induction on its fuel). -/
 theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
     (htie : w.serviceTy = root.sig.serviceTy) {P0 : List Nat} {T E : Ty} {p : Point}
-    (hpath : p.path = P0) (view : ViewTyped w p.completed) :
+    (hpath : p.path = P0) (view : ViewTyped w p.completed)
+    (hscope : ∀ x, P0 <+: x → scopeParams root.program x = scopeParams root.program P0)
+    (hstack : StackTyped root w (scopeParams root.program P0) p.params) :
     ∀ (fuel : Nat) (ctx : GenCtx) (k : Nat) (env folded : List Val),
       PosOk root P0 w T E ctx k env →
         WalkOk root P0 w T E (walkR root.program p fuel (ctx.block ++ List.replicate k 1) env folded).2 := by
@@ -595,7 +599,8 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
     intro ctx k env folded hpos
     rw [walkR]
     exact ⟨⟨.unit, .never, Env.Requirement.empty⟩, { p with env := env }, _, false, rfl, hpath,
-      pending_typed root w _ _ _, Bounds.subN_never _, fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
+      hstack, pending_typed root w _ _ _, Bounds.subN_never _,
+      fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
   | succ fuel ih =>
     intro ctx k env folded hpos
     obtain ⟨block, Γ, g, e0, locals, hblock, hsuffix, hcheck, henv, hsplit, hlocals, hanswer,
@@ -614,7 +619,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
     have after : ∀ (s : Stmt NativeOp) (rest : Stmts NativeOp) (r : GenTy) (Γ' : List Ty)
         (new : List Val) (w' : World), w.leHost w' →
         stmtsDrop block k = .cons s rest → new.length = bindCount s →
-        Checker.checkStmts root.signature Γ' ctx.inLoop none
+        Checker.checkStmts (root.scopeSig P0) Γ' ctx.inLoop none
           (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [1])
           (Stmts.expandIn root.program rest) = .ok r →
         EnvTyped w' Γ' (env ++ new) →
@@ -668,10 +673,14 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]) = some (.eff e) := by
           rw [hpath]
           exact at_frame hsuffix rfl
+        have hq : P0 <+: p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0] := by
+          rw [← hpath]
+          exact (List.prefix_append _ _).trans ((List.prefix_append _ _).trans
+            (List.prefix_append _ _))
         have hpt : PointTyped root w
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } t :=
-          ⟨e, Γ, hnode, by rw [hpath]; exact hct, henv, view⟩
+          pointTyped_scope (hscope _ hq) hnode (by rw [hpath]; exact hct) henv view hstack
         have next : ∀ w', w.leHost w' → ∀ v, Fits w' v t.answer →
             PosOk root P0 w' T E ctx (k + 1) (env ++ [v]) :=
           fun w' o v hv => after _ rest r _ [v] w' o hs rfl hcr
@@ -683,7 +692,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } with
         | none =>
-          exact ⟨t, { p with env := env }, _, true, rfl, hpath,
+          exact ⟨t, { p with env := env }, _, true, rfl, hpath, hstack,
             denotesTyped root hwf w htie _ e t hnode hpt, herr.1,
             fun w' o v hv => ⟨ctx, k + 1, hpc, next w' o v hv⟩⟩
         | some ex =>
@@ -706,10 +715,14 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]) = some (.eff e) := by
           rw [hpath]
           exact at_frame hsuffix rfl
+        have hq : P0 <+: p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0] := by
+          rw [← hpath]
+          exact (List.prefix_append _ _).trans ((List.prefix_append _ _).trans
+            (List.prefix_append _ _))
         have hpt : PointTyped root w
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } t :=
-          ⟨e, Γ, hnode, by rw [hpath]; exact hct, henv, view⟩
+          pointTyped_scope (hscope _ hq) hnode (by rw [hpath]; exact hct) henv view hstack
         have next : ∀ w', w.leHost w' → PosOk root P0 w' T E ctx (k + 1) env := by
           intro w' o
           have := after _ rest r Γ [] w' o hs rfl hcr (by rw [List.append_nil]; exact envTyped_mono o henv)
@@ -722,7 +735,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } with
         | none =>
-          exact ⟨t, { p with env := env }, _, false, rfl, hpath,
+          exact ⟨t, { p with env := env }, _, false, rfl, hpath, hstack,
             denotesTyped root hwf w htie _ e t hnode hpt, herr.1,
             fun w' o _ _ => ⟨ctx, k + 1, hpc, next w' o⟩⟩
         | some ex =>
@@ -770,7 +783,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
           exact this
         have branchStart : ∀ (sel : Nat) (blk : Stmts NativeOp) (gx : GenTy),
             (Node.stmt (.ifElse test a b)).child sel = some (.stmts blk) →
-            Checker.checkStmts root.signature Γ ctx.inLoop none
+            Checker.checkStmts (root.scopeSig P0) Γ ctx.inLoop none
               (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, sel])
               (Stmts.expandIn root.program blk) = .ok gx →
             AnsBelow gx.answer T → Ty.subN gx.error E = true →
@@ -857,13 +870,15 @@ def GenSt (root : ProgramSource) : IterState → Prop
     SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧ tin.error = tout.error ∧
       (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
       ∃ (q : Point) (pc : List Nat) (bind : Bool), name = .gen q pc bind ∧
+        (∀ x, q.path <+: x → scopeParams root.program x = scopeParams root.program q.path) ∧
+        StackTyped root w (scopeParams root.program q.path) q.params ∧
         ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →
           ∃ ctx k, pc = ctx.block ++ List.replicate k 1 ∧
             PosOk root q.path w' tout.answer tout.error ctx k (if bind then q.env ++ [v] else q.env)
 
 /-- **The invariant is closed under one generator step** (`walk_typed` at the machine's view). -/
 theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorStep root (GenSt root) s := by
-  rintro ⟨w, tin, tout, name⟩ ⟨hwf, htie, herr, hreq, q, pc, bind, rfl, pos⟩
+  rintro ⟨w, tin, tout, name⟩ ⟨hwf, htie, herr, hreq, q, pc, bind, rfl, hscope, hstack, pos⟩
   refine ⟨herr, hreq, fun w' o C view v hv => ?_⟩
   obtain ⟨ctx, k, rfl, hpos⟩ := pos w' o v hv
   have htie' : w'.serviceTy = root.sig.serviceTy := (le_serviceTy o.1).trans htie
@@ -871,17 +886,22 @@ theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorSt
       v).2 = (walkR root.program { q with completed := C } q.fuel (ctx.block ++ List.replicate k 1)
         (if bind then q.env ++ [v] else q.env) []).2 := rfl
   rw [hstep]
-  have walk := walk_typed hwf htie' (P0 := q.path) (p := { q with completed := C }) rfl view q.fuel
-    ctx k _ [] hpos
+  have walk := walk_typed hwf htie' (P0 := q.path) (p := { q with completed := C }) rfl view hscope
+    (stackTyped_mono o hstack) q.fuel ctx k _ [] hpos
   revert walk
   cases (walkR root.program { q with completed := C } q.fuel (ctx.block ++ List.replicate k 1)
       (if bind then q.env ++ [v] else q.env) []).2 with
   | done r => exact fun hr => strongExit_success w' tout r hr
   | halt c => exact fun hc => exitOk_failure_of_errorN (Ty.subN_refl _) hc
   | resume code name' =>
-    rintro ⟨ty, q', pc', bind', rfl, hq', typed, herr', next⟩
+    rintro ⟨ty, q', pc', bind', rfl, hq', hstack', typed, herr', next⟩
     refine ⟨⟨ty.answer, tout.error, tout.requires⟩, typedProg_widen root (T := ty) (Ty.subN_refl _) herr' typed,
-      hwf, htie', rfl, fun h => h, q', pc', bind', rfl, fun w'' o' v' hv' => ?_⟩
+      hwf, htie', rfl, fun h => h, q', pc', bind', rfl, ?_, ?_, fun w'' o' v' hv' => ?_⟩
+    · rw [hq']
+      exact hscope
+    · rw [hq']
+      exact hstack'
+
     obtain ⟨ctx', k', hpc, hpos'⟩ := next w'' o' v' hv'
     rw [hq']
     exact ⟨ctx', k', hpc, hpos'⟩
@@ -891,12 +911,13 @@ point, the entry's name is in the protocol, by coinduction from the body's start
 at the top of the body (`Checker.inv_gen` on the expansion, `expandIn_gen`). -/
 theorem genProtocol (root : ProgramSource) : GenProtocol root := by
   intro hwf w htie p body cert hat pre
-  obtain ⟨e, Γ0, hat', hcheck, henv, _⟩ := pre
+  obtain ⟨e, Γ0, hat', hcheck, henv, _, hstack⟩ := pre
   rw [hat] at hat'
   cases hat'
   rw [expandIn_gen] at hcheck
   obtain ⟨gB, hgB, rfl⟩ := Checker.inv_gen _ _ _ _ _ hcheck
   refine Greatest.coind genSt_closed ⟨hwf, htie, rfl, fun h => h, p, [], false, rfl,
+    fun x hx => scopeParams_prefix hat (fun _ _ _ h => nomatch h) hx, hstack,
     fun w' o _ _ => ⟨.top, 0, rfl, ?_⟩⟩
   have hbody : Node.at_ (.eff root.program) (p.path ++ [0] ++ GenCtx.top.block) =
       some (.stmts body) := by

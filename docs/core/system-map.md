@@ -316,9 +316,11 @@ criteria as conditions a reader can check, each with its status. The evidence wo
    normaliser: the JSON codec modulo `normJ`, the Schema bridge modulo `normS`, row 128). **Instance:**
    `Assembly.lean`, `RuntimeR.lean`, `ExitConnector.lean`; the route proved, and with M5 and M6
    proved, M7 (`m7_proved`, `exitHandles_valid`, 2026-10-03) and the meaning-layer exit judgment
-   on every fragment (`exits_hasTy`, `Typed/Results.lean`). Since decisions row 340, M7 rests on
-   one planned goal, `invoke_arm` (`Typed/Denotation.lean`): the typed run of an invocation with
-   programs. Slice CX2 proves it in place.
+   on every fragment (`exits_hasTy`, `Typed/Results.lean`). A typed point reads its lexical
+   scope's parameters (decisions row 340, slice CX1). The typed run of an invocation and of a
+   parameter's run is proved (`invoke_arm`, `param_arm`, slice CX2). M7 rests on one planned goal,
+   `crossScopeRef_builds` (`Typed/LayerArm.lean`): a layer reference whose target stands in
+   another scope, which the checker admits.
 
 ### 10.2 Where the expansion came from, and why it is bounded
 

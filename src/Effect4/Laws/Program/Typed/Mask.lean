@@ -381,7 +381,7 @@ theorem restore_saved_evaluates
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)))
     (hpt : PointTyped root w p ty) :
     ∃ flag, evalTerm p.env saved = some (Val.savedMask flag) := by
-  obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, -, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
   obtain ⟨savedTy, hsaved, hsub_saved, -⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
   obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
@@ -394,10 +394,10 @@ restore site binds nothing, and a mask changes no column of the type. -/
 theorem restore_body_typed
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)))
     (hpt : PointTyped root w p ty) : PointTyped root w (p.child 0) ty := by
-  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_restore] at hcheck
   obtain ⟨savedTy, hsaved, hsub_saved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
-  exact pointTyped_child hat rfl rfl hcb henv hview
+  exact pointTyped_child hat rfl rfl hcb henv hview hstack
 
 end TypedRestore
 

@@ -38,12 +38,13 @@ structure LoopChecked (root : ProgramSource) (p : Point) (env : List Ty) (ct : T
     Prop where
   hnode : Node.at_ (.eff root.program) p.path =
     some (.eff (.iterate cursorTy initial test step result body))
-  htest : ∃ testTy, termTy root.signature (env ++ [ct]) test = some testTy ∧ Ty.subN testTy .bool = true
-  hbody : Checker.check root.signature (env ++ [ct]) (p.path ++ [0])
+  htest : ∃ testTy, termTy (root.scopeSig p.path) (env ++ [ct]) test = some testTy ∧
+    Ty.subN testTy .bool = true
+  hbody : Checker.check (root.scopeSig p.path) (env ++ [ct]) (p.path ++ [0])
     (Eff.expandIn root.program body) = .ok tin
-  hstep : ∃ c1, termTy root.signature (env ++ [ct, tin.answer]) step = some c1 ∧
+  hstep : ∃ c1, termTy (root.scopeSig p.path) (env ++ [ct, tin.answer]) step = some c1 ∧
     Ty.subN c1 ct = true
-  hresult : ∃ d, termTy root.signature (env ++ [ct]) result = some d ∧
+  hresult : ∃ d, termTy (root.scopeSig p.path) (env ++ [ct]) result = some d ∧
     tout = ⟨d, tin.error, tin.requires⟩
 
 /-- **The loop frame's source-derived invariant**: a typed loop point with a typed cursor. The
@@ -56,7 +57,8 @@ def LoopFrameTyped (root : ProgramSource) : LoopState → Prop
     ∃ (p : Point) (env : List Ty) (ct : Ty) (cursorTy : Option Ty) (initial test step result : Term)
       (body : NativeEff),
       name = .loop p ∧ LoopChecked root p env ct tin tout cursorTy initial test step result body ∧
-      EnvTyped w env p.env ∧ Fits w cursor ct
+      EnvTyped w env p.env ∧ Fits w cursor ct ∧
+      StackTyped root w (scopeParams root.program p.path) p.params
 
 section Invariant
 variable {root : ProgramSource}
@@ -89,7 +91,7 @@ theorem loopEnter_typed {w : World} {tin tout : EffTy} {name : EffName} {cursor 
       ∃ tin', TypedProg root w tin' code ∧ LoopFrameTyped root (w, tin', tout, name, cursor')
     | .finish code => TypedProg root w tout code := by
   obtain ⟨hwf, htie, p, env, ct, cursorTy, initial, test, step, result, body, rfl, checked, henv,
-    hfit⟩ := h
+    hfit, hstack⟩ := h
   have entered : (interpRAt root.program C).loopEnter (.loop p) cursor =
       loopNextRAt root.program { p with completed := C } cursor := rfl
   rw [entered]
@@ -105,8 +107,9 @@ theorem loopEnter_typed {w : World} {tin tout : EffTy} {name : EffName} {cursor 
       simp only [loopNextRAt, hloop, htv]
     rw [unfolded]
     exact ⟨tin, denoteAt_typed root hwf htie
-      (pointTyped_child checked.hnode rfl rfl checked.hbody hcur view),
-      hwf, htie, p, env, ct, cursorTy, initial, test, step, result, body, rfl, checked, henv, hfit⟩
+      (pointTyped_child checked.hnode rfl rfl checked.hbody hcur view hstack),
+      hwf, htie, p, env, ct, cursorTy, initial, test, step, result, body, rfl, checked, henv, hfit,
+      hstack⟩
   | false =>
     obtain ⟨d, hd, htout⟩ := checked.hresult
     obtain ⟨answer, hanswer, hfita⟩ := evalTerm_progress_env (src := root) hcur hd
@@ -123,9 +126,9 @@ theorem loopFrameTyped_mono {w w' : World} (ord : w.leHost w') {tin tout : EffTy
     {cursor : Val} (h : LoopFrameTyped root (w, tin, tout, name, cursor)) :
     LoopFrameTyped root (w', tin, tout, name, cursor) := by
   obtain ⟨hwf, htie, p, env, ct, cursorTy, initial, test, step, result, body, hname, checked, henv,
-    hfit⟩ := h
+    hfit, hstack⟩ := h
   exact ⟨hwf, serviceTy_leHost ord htie, p, env, ct, cursorTy, initial, test, step, result, body,
-    hname, checked, envTyped_mono ord henv, fits_mono ord hfit⟩
+    hname, checked, envTyped_mono ord henv, fits_mono ord hfit, stackTyped_mono ord hstack⟩
 
 /-- **The invariant is closed under one loop step** (decisions row 190 (a)): the error columns are
 the body's, the requirement row is the body's, and every resumed answer the body's type admits,
@@ -135,7 +138,7 @@ theorem loopFrameTyped_closed :
     ∀ s, LoopFrameTyped root s → LoopStep root (LoopFrameTyped root) s := by
   rintro ⟨w, tin, tout, name, cursor⟩ h
   obtain ⟨hwf, htie, p, env, ct, cursorTy, initial, test, step, result, body, rfl, checked, henv,
-    hfit⟩ := h
+    hfit, hstack⟩ := h
   obtain ⟨c1, hc1, hsub1⟩ := checked.hstep
   obtain ⟨d, _, htout⟩ := checked.hresult
   subst htout
@@ -152,7 +155,7 @@ theorem loopFrameTyped_closed :
     simp only [loopResumeRAt, loopAt_of_node C checked.hnode, hnext]
   have later : LoopFrameTyped root (w', tin, ⟨d, tin.error, tin.requires⟩, .loop p, next) :=
     ⟨hwf, serviceTy_leHost o htie, p, env, ct, cursorTy, initial, test, step, result, body, rfl,
-      checked, envTyped_mono o henv, fits_subN w' hsub1 next hfitn⟩
+      checked, envTyped_mono o henv, fits_subN w' hsub1 next hfitn, stackTyped_mono o hstack⟩
   have entered := loopEnter_typed later view
   rw [resumed]
   split
@@ -176,14 +179,16 @@ theorem loopFrameTyped_of_point {w : World} {p : Point} {ty : EffTy} {cursor : V
     (hwf : SourceWF root) (htie : w.serviceTy = root.sig.serviceTy)
     (h : LoopPointTyped root w p ty cursor) :
     ∃ tin, LoopFrameTyped root (w, tin, ty, .loop p, cursor) := by
-  obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, _, hc0, hfit⟩ := h
+  obtain ⟨cursorTy, initial, test, step, result, body, env, c0, hat, hcheck, henv, _, hc0, hfit,
+    hstack⟩ := h
   rw [Eff.expandIn_iterate] at hcheck
   obtain ⟨c0', c1, d, b, testTy, hinit, htest, hsub_bool, hbody, hstep, hresult, _, hsub1, rfl⟩ :=
     Checker.inv_iterate _ _ _ _ _ _ _ _ _ _ hcheck
-  rw [hc0] at hinit
+  rw [(root.scopeSig_extends p.path).termTy, hc0] at hinit
   cases hinit
   exact ⟨b, hwf, htie, p, env, _, cursorTy, initial, test, step, result, body, rfl,
-    ⟨hat, ⟨testTy, htest, hsub_bool⟩, hbody, ⟨c1, hstep, hsub1⟩, ⟨d, hresult, rfl⟩⟩, henv, hfit⟩
+    ⟨hat, ⟨testTy, htest, hsub_bool⟩, hbody, ⟨c1, hstep, hsub1⟩, ⟨d, hresult, rfl⟩⟩, henv, hfit,
+    hstack⟩
 
 end Invariant
 
