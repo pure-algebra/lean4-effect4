@@ -25,7 +25,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
   and the reference's reading are its images (VAR-1, the
   [polarity note](research/2026-10-10-openai-math-type-systems/README.md)). Every built-in row and
   atom scheme reads its parameters at co or bi in the answer, except `Ref.make` and `Ref.set`
-  (VAR-3, `E4-POL-CE-001`, row 342). That instantiation respects polarity is a planned goal (VAR-2).
+  (VAR-3, `E4-POL-CE-001`, row 342). Instantiation respects polarity (VAR-2, `Ty.sub_instantiate_polarity`), proved.
 - **Definitions whose parameter is a program** (row 340, slices HO-1 and HO-2, the
   [note](research/2026-10-09-program-parameters.md)). A definition declares its parameters, and
   `Eff.invoke` passes one program per parameter. The checker types each program at its

@@ -296,3 +296,17 @@ cd docs/research/2026-10-10-openai-math-type-systems/probes/ts && ln -s ../../..
 Bounded or host-only evidence: the census is a finite evaluation over the built-in tables. The
 checker verdicts are finite evaluations of `Checker.check` at `nativeSignature`. The tsgo result
 covers one program and its red control.
+
+## 10. Outcome (2026-10-10)
+
+- **VAR-1 landed** (`044aa8f48`): `Var4` and `Ty.polarity` in `src/Effect4/Program/Polarity.lean`;
+  the semiring laws and the two connectors in `src/Effect4/Laws/Program/Polarity.lean`.
+- **VAR-3 landed** (`044aa8f48`): `Test/Program/RowPolarity.lean`, register line
+  `E4-POL-CE-001`, decisions row 342 for the §4.5 repair (recommended: keep the refusal, and a
+  type argument with HO-4).
+- **VAR-2 proved**: `Ty.sub_instantiate_polarity`, over the generated view of `Ty.sub`
+  (`Ty.sub_eq_args`): each head's polarity bounds each argument's share (`polarity_args`), and an
+  odd path swaps the pair of substitutions (`PolarityRelated.swap`). Not written: the corollary
+  in the normalized order with `Bounds.matchArgsB_monotone`, which needs a bridge through
+  normalization; its consumer, `checker-monotone`, stays proposed.
+- VAR-4 waits for HO-4, and VAR-5 for row 124.
