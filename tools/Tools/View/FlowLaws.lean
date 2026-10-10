@@ -79,11 +79,33 @@ theorem assignHeights_agrees (h : Nat → Int) (es : List Edge) (start : Int)
     rw [assignHeights, ih, assign]
     rfl
 
+/-- Incoming-bucket relaxation answers the independent full-edge fold.
+This helper serves `assignHeightsIndexed_agrees`. -/
+theorem relaxIndexed_agrees (h : Nat → Int) (es : List Edge)
+    (y : Nat → Int) (start : Int) (v : Nat) :
+    relaxIndexed h (Tools.Graph.Index.ofList (·.to) es) y start v =
+      relax h es y start v := by
+  simp only [relaxIndexed, Tools.Graph.Index.bucket_ofList, List.foldl_filter,
+    decide_eq_true_eq, relax]
+
+/-- Indexed assignment retains the exact reference table, including duplicate order positions.
+This helper serves `preparePlacement_height` at every natural position. -/
+theorem assignHeightsIndexed_agrees (h : Nat → Int) (es : List Edge) (start : Int)
+    (ord : List Nat) (initial : List (Nat × Int)) :
+    assignHeightsIndexed h (Tools.Graph.Index.ofList (·.to) es) start ord initial =
+      assignHeights h es start ord initial := by
+  induction ord generalizing initial with
+  | nil => rfl
+  | cons v vs ih =>
+    rw [assignHeightsIndexed, relaxIndexed_agrees, ih, assignHeights]
+
 /-- Prepared placement reads the independent `heightsOf` recurrence at every position.
 This serves `place_placed`, including raw boxes whose selected order uses outside positions. -/
 theorem preparePlacement_height (b : Box) (i : Nat) :
     (preparePlacement b).height i = heightsOf b i := by
   unfold preparePlacement PreparedPlacement.height heightsOf
+  dsimp only
+  rw [assignHeightsIndexed_agrees]
   exact assignHeights_agrees _ _ _ _ [] i
 
 /-- Prepared lane agreement: `placeWith` retains the original backs and wait-lane order. -/
