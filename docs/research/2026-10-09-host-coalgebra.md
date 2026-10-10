@@ -319,6 +319,14 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   ends as before and meets the premises. Its control answers a listing outside the row's
   column, and the guard leaves that call waiting. A row whose answer column allocates a handle
   answers nothing through the guard.
+- **Any host drives the run** (`src/Effect4/Laws/Api/HostDrive.lean`). A table's rows have
+  distinct keys, so a reactor can find its row by key and ask a host of the row signature there
+  (`Reactor.ofHost`). Read back behind the rows' types, it is the host behind them
+  (`reactorHost_ofHost`). So every construction of `Effects.Comodel` drives a real run under H9
+  (`runWith_host_denotes`), with no change to the run interface. The battery records a session
+  through `Comodel.record` and replays its transcript through the reply-tape host. Both drive
+  the to-do runs to the same exits, and the replay spends the tape. Its control drops the last
+  exit, and the replay's last call waits.
 - **Typed handlers in `Effects` v0.9.1** (`lean4-effects` commit `e6028a4`, local). A program is
   typed under a protocol into a postcondition (`Program.Sat`), by structure on the tree. A host
   that meets the protocol runs it only to values in the postcondition (`Program.Sat.sound`). A handler is typed from an upper

@@ -304,6 +304,44 @@ def mislisting : Run.Reactor Repo := fun row sent state =>
 -- the call waiting and the root has no exit, where the theorem says nothing
 #guard (guardedPremises mislisting list (1, [])).map (fun p => p.2.2.2.1) = some false
 
+/-- A session recorded and replayed through `Effects`' hosts. The repository, read as a host
+and recording each exit it gives (`Comodel.record`), drives the run (`Run.Reactor.ofHost`). The
+reply tape of that recording (`tapeHost`) then drives it again. The premises of
+`runWith_host_denotes` on the recorded run (distinct keys and the fragment, funded and at rest,
+the root exited); whether the recorded run ends as the plain drive; and whether the replay ends
+at the same exit with the tape spent. -/
+def recordReplay (main : Src NativeOp) (state : Repo) :
+    Option (Bool × Bool × Bool × Bool × Bool × Bool) :=
+  (built? (request main)).map fun b =>
+    let plain : Run × Repo := Run.runWith b repository state "todo"
+    let recorder := (Run.reactorHost b.table repository).record fun _ ex => ex
+    let recorded := Run.runWith b (Run.Reactor.ofHost b.table recorder).guardRows (state, []) "todo"
+    let replayed :=
+      Run.runWith b (Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows recorded.2.2 "todo"
+    (decide ((b.table.map rowKey).Nodup) && StraightRows b.table b.program,
+      funded recorded.1 && atRest recorded.1,
+      decide (recorded.1.exit = plain.1.exit) && decide (recorded.2.1 = plain.2),
+      recorded.1.exit.isSome,
+      decide (replayed.1.exit = recorded.1.exit),
+      replayed.2.isEmpty)
+
+-- finite evaluation: a recorded session drives each run as the repository does and meets the
+-- premises of `runWith_host_denotes`; its transcript, replayed as a tape, drives the run again
+-- to the same exit and is spent
+#guard [recordReplay (add (str "milk")) (1, []),
+    recordReplay list (3, [(1, "milk", false), (2, "tea", true)]),
+    recordReplay (complete (nat 1)) (3, [(1, "milk", false), (2, "tea", true)]),
+    recordReplay (remove (nat 7)) (3, [(1, "milk", false)])].all
+  (· = some (true, true, true, true, true, true))
+
+-- control: a transcript short of its last exit leaves the replay's last call waiting
+#guard ((built? (request list)).map fun b =>
+    let recorder := (Run.reactorHost b.table repository).record fun _ ex => ex
+    let recorded :=
+      Run.runWith b (Run.Reactor.ofHost b.table recorder).guardRows ((3, [(1, "milk", false)]), []) "todo"
+    (Run.runWith b (Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows
+      recorded.2.2.dropLast "todo").1.exit) = some none
+
 end repository
 
 end Test.Api.SessionMeaning

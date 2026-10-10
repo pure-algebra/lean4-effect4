@@ -17,6 +17,11 @@ meets it at every table (`guardRows_envelops`): it answers only exits that a row
 admit at every machine. So H9 holds at the driver for any reactor so guarded
 (`runWith_guarded_denotes`).
 
+Any host of the row signature drives a run too. A reactor finds its row by key and asks the host
+at that row's position (`Reactor.ofHost`), since a table's keys are distinct. Read back behind
+the rows' types, it is the host behind them (`reactorHost_ofHost`). So every construction of
+`Effects.Comodel` drives a run under H9 (`runWith_host_denotes`).
+
 Placement: concept `translation-simulation`, role simulation; claim `rows-denotation-driver`;
 requirement R6, the part "the host as a relation between the machine's calls and its answers".
 Reach: H9's reach (`StraightRows`, one fiber, finished runs), a reactor inside the envelope that
@@ -631,5 +636,161 @@ theorem runWith_guarded_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st
         (Run.runWith b r.guardRows st id budget rounds).2)) :=
   runWith_denotes b r.guardRows st id budget rounds (guardRows_envelops r b.table)
     (guardRows_exitsOnly r) hfrag hfund hrest ex hex
+
+/-! ## Any host drives the run
+
+A table's rows have distinct keys (`rowKey`: the spelling and the trailing arguments;
+`Table.lawful`). So a reactor that finds its row by key can ask a host of the row signature at
+that row's position (`Reactor.ofHost`), and reading that reactor back as a host gives the host
+again at every external row (`reactorHost_ofHost`). Every construction of `Effects.Comodel`
+(routing, renaming, implementation by programs over other operations, admission, recording)
+then drives a run. Behind the rows' types, H9 holds at the driver for every host so driven
+(`runWith_host_denotes`), and a host whose answers the rows admit needs no guard
+(`hostGuard_of_meets`). -/
+
+/-- The position of a row in a table, by its key. -/
+def rowPosition (table : RowTable) (row : Program.Row) : Option (Fin table.length) :=
+  (table.findIdx? fun r => decide (rowKey r = rowKey row)).bind fun i =>
+    if hi : i < table.length then some ⟨i, hi⟩ else none
+
+/-- **A host of the row signature as a reactor**: it finds the row by its key, asks the host at
+that position, and answers the host's exit. -/
+def Reactor.ofHost (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSig table) σ) :
+    Reactor σ :=
+  fun row request st =>
+    match rowPosition table row with
+    | none => none
+    | some i => (host.answer ⟨i, request⟩ st).map fun result => (.ofExit result.1, result.2)
+
+/-- Whether a row admits an exit at every machine: `answerAdmits` at an external row, and no
+exit elsewhere. -/
+def externalAdmitsAt (table : RowTable) (op : (RowSig table).Op) (ex : ExitV) : Bool :=
+  match externalRow table op.1.val with
+  | some row => answerAdmits row (.ofExit ex)
+  | none => false
+
+/-- A host behind its rows' types: its answers that an external row admits at every machine. -/
+def hostGuard (table : RowTable) {σ : Type} (host : Effects.Comodel (RowSig table) σ) :
+    Effects.Comodel (RowSig table) σ :=
+  host.guard (externalAdmitsAt table)
+
+/-- A host whose answers the rows admit is its own guard. -/
+theorem hostGuard_of_meets (table : RowTable) {σ : Type} {host : Effects.Comodel (RowSig table) σ}
+    (h : host.Meets fun op ex => externalAdmitsAt table op ex = true) : hostGuard table host = host :=
+  Effects.Comodel.guard_of_meets h
+
+/-- Step of `reactorHost_ofHost`: an external row of a table with distinct keys is found at its
+own position. -/
+theorem rowPosition_external {table : RowTable} (hkeys : (table.map rowKey).Nodup) {i : Nat}
+    {row : Program.Row} (hrow : externalRow table i = some row) :
+    rowPosition table row = some ⟨i, lt_of_externalRow hrow⟩ := by
+  have hi := lt_of_externalRow hrow
+  have hkey : rowKey row = rowKey table[i] := by
+    unfold externalRow at hrow
+    obtain ⟨w, hw, hsome⟩ := Option.bind_eq_some_iff.mp hrow
+    obtain ⟨_, -, hsome⟩ := Option.bind_eq_some_iff.mp hsome
+    cases hsome
+    rw [List.getElem?_eq_getElem hi, Option.some.injEq] at hw
+    subst hw
+    rfl
+  unfold rowPosition
+  rw [hkey, rowIndex_roundTrip table hkeys i hi]
+  exact dif_pos hi
+
+/-- Two hosts that answer alike are one. -/
+theorem comodel_ext {S : Effects.Signature.{0, 0}} {σ : Type} {a b : Effects.Comodel S σ}
+    (h : ∀ op st, a.answer op st = b.answer op st) : a = b := by
+  cases a
+  cases b
+  congr 1
+  funext op st
+  exact h op st
+
+/-- **Reading a host as a reactor and back, behind the rows' types, is the host behind them**,
+at a table with distinct keys. -/
+theorem reactorHost_ofHost (table : RowTable) (hkeys : (table.map rowKey).Nodup) {σ : Type}
+    (host : Effects.Comodel (RowSig table) σ) :
+    reactorHost table (Reactor.ofHost table host).guardRows = hostGuard table host := by
+  apply comodel_ext
+  intro op st
+  obtain ⟨⟨i, hi⟩, v⟩ := op
+  show (match externalRow table i with
+      | none => none
+      | some row =>
+        match (Reactor.ofHost table host).guardRows row v st with
+        | some (.ofExit ex, next) => some (ex, next)
+        | _ => none) =
+    (host.answer ⟨⟨i, hi⟩, v⟩ st).filter fun result =>
+      externalAdmitsAt table ⟨⟨i, hi⟩, v⟩ result.1
+  cases hrow : externalRow table i with
+  | none =>
+    have hadmit : ∀ ex, externalAdmitsAt table ⟨⟨i, hi⟩, v⟩ ex = false := by
+      intro ex
+      show (match externalRow table i with
+        | some row => answerAdmits row (.ofExit ex)
+        | none => false) = false
+      rw [hrow]
+    dsimp only
+    cases hans : host.answer ⟨⟨i, hi⟩, v⟩ st with
+    | none => rfl
+    | some result =>
+      rw [Option.filter_some, hadmit result.1]
+      rfl
+  | some row =>
+    have hadmit : ∀ ex, externalAdmitsAt table ⟨⟨i, hi⟩, v⟩ ex = answerAdmits row (.ofExit ex) := by
+      intro ex
+      show (match externalRow table i with
+        | some row => answerAdmits row (.ofExit ex)
+        | none => false) = _
+      rw [hrow]
+    have hpos := rowPosition_external hkeys hrow
+    dsimp only
+    show (match ((Reactor.ofHost table host) row v st).filter
+        (fun result => answerAdmits row result.1) with
+      | some (.ofExit ex, next) => some (ex, next)
+      | _ => none) = _
+    show (match ((match rowPosition table row with
+        | none => none
+        | some j => (host.answer ⟨j, v⟩ st).map fun result => (Completion.ofExit result.1, result.2))
+          : Option (Answer × σ)).filter (fun result => answerAdmits row result.1) with
+      | some (.ofExit ex, next) => some (ex, next)
+      | _ => none) = _
+    rw [hpos]
+    dsimp only
+    cases hans : host.answer ⟨⟨i, hi⟩, v⟩ st with
+    | none => rfl
+    | some result =>
+      obtain ⟨ex, next⟩ := result
+      rw [Option.map_some, Option.filter_some, Option.filter_some, hadmit ex]
+      by_cases hok : answerAdmits row (.ofExit ex) = true
+      · rw [if_pos hok, if_pos hok]
+        rfl
+      · rw [if_neg hok, if_neg hok]
+        rfl
+
+/-- **H9 at the driver, for any host.** Read a host of the row signature as a reactor, behind
+its rows' types, and drive a `StraightRows` program with it, at a table with distinct keys. When
+the run is funded, at rest and its root exited, the host behind its rows' types runs the
+program's call tree to the root's exit with the run's stores, and ends at the drive's state. A
+host whose answers the rows admit is its own guard (`hostGuard_of_meets`). Reach and limits as
+`runWith_denotes`. Concept `translation-simulation`, role simulation; requirement R6. Consumer:
+the battery's recorded and replayed sessions (`Test/Api/SessionMeaning.lean`). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem runWith_host_denotes {σ : Type} (b : Api.Built) (host : Effects.Comodel (RowSig b.table) σ)
+    (st : σ) (id : String) (budget : Api.Budget) (rounds : Nat)
+    (hkeys : (b.table.map rowKey).Nodup) (hfrag : StraightRows b.table b.program = true)
+    (hfund : funded (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1
+      = true)
+    (hrest : atRest (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1
+      = true)
+    (ex : ExitV)
+    (hex : (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1.exit =
+      some ex) :
+    hostRun (hostGuard b.table host) b.program [] Stores.empty st =
+      some (ex, ((Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).1.machine.state,
+        (Run.runWith b (Reactor.ofHost b.table host).guardRows st id budget rounds).2)) := by
+  rw [← reactorHost_ofHost b.table hkeys host]
+  exact runWith_guarded_denotes b (Reactor.ofHost b.table host) st id budget rounds hfrag hfund
+    hrest ex hex
 
 end Effect4.Run
