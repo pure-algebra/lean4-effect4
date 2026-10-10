@@ -1,0 +1,37 @@
+{
+  "captured_at_utc": "2026-10-10T02:12:08.116732+00:00",
+  "reviewed_commit": "356cc11d35be8e36f297903f760ed50b7bbb10af",
+  "previous_review_commit": "c698ac965067696980764910183b6b5cceddb01d",
+  "snapshot": "pins.json",
+  "verified_against_commit": "followup.json",
+  "new_evidence": [
+    {
+      "finding": "CO6B-READ",
+      "status": "confirmed through public emit/read/admit and finite exported-method comparison",
+      "observation": {
+        "original_getter": 1,
+        "changed_getter": 99,
+        "original_root": 1,
+        "changed_root": 1
+      },
+      "both_reconstruct_to_same_program": true,
+      "both_tsgo_pass": true
+    },
+    {
+      "finding": "CO6B-NAMES",
+      "status": "public emitter accepts duplicate outputs; public checked reader refuses; tsgo rejects"
+    }
+  ],
+  "unchanged_open_findings": [
+    "CO6B-KEYS"
+  ],
+  "verification": {
+    "compile": "checks/build-results.json",
+    "controls": "checks/results.json",
+    "dependency_scope": "Pinned builder artifacts; five critical source modules independently recompiled.",
+    "no_axiom_gate": true,
+    "no_full_sweep": true
+  },
+  "next_trigger": "Service image or emitted binding inventory changes; substantive service client slice.",
+  "production_unchanged_by_review": true
+}

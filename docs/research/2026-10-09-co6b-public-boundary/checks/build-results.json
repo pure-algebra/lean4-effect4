@@ -1,0 +1,107 @@
+[
+  {
+    "module": "Effect4.Codegen.Print",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review/Effect4/Codegen/Print.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src/Effect4/Codegen/Print.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 3.454573958180845,
+    "source_sha256": "70fc107df95d8eb6267ca78889fbf10132808526e7aa7d45baa8949688a789c4",
+    "olean_sha256": "af7212ea321013359f5e4e503c0dd62d373b05e3912aa44440b3d387985f4f18"
+  },
+  {
+    "module": "Effect4.Codegen.Read",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review/Effect4/Codegen/Read.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src/Effect4/Codegen/Read.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 3.806376416934654,
+    "source_sha256": "963fd7116d798d8abc25f1418ce55253a26cf726986c44d704cc0f1831fa9f89",
+    "olean_sha256": "a7d9d51077ed1332f144933ff0ac9dc970c35d03a759967e3aa7a3657c573009"
+  },
+  {
+    "module": "Effect4.Codegen.Checked",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review/Effect4/Codegen/Checked.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src/Effect4/Codegen/Checked.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 0.7026000421028584,
+    "source_sha256": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+    "olean_sha256": "20dc495369d2cd6bcd917826513bf3e35473009f396478e180fa004c68a97b73"
+  },
+  {
+    "module": "Effect4.Codegen.Admit",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review/Effect4/Codegen/Admit.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src/Effect4/Codegen/Admit.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 0.7146064168773592,
+    "source_sha256": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+    "olean_sha256": "cb5ad4f4c58d6248d3049522fd183dd4654f5a00dfa12bcb47f3e6277463faf1"
+  },
+  {
+    "module": "Effect4.Api",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review/Effect4/Api.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src/Effect4/Api.lean"
+    ],
+    "exit_code": 0,
+    "seconds": 0.8097771659959108,
+    "source_sha256": "df2989d44899e99d79711bba4e83afa54af148f2ec22e4362ef6e1a7261445fc",
+    "olean_sha256": "8e97c7e9d68a37c51d73e6a7a2de6fe415e04b9be34901c47a8aa4ff5b7fa980"
+  }
+]

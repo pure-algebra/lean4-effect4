@@ -1,0 +1,86 @@
+{
+  "captured_at_utc": "2026-10-10T02:10:44.887939+00:00",
+  "reviewed_commit": "356cc11d35be8e36f297903f760ed50b7bbb10af",
+  "working_status": [
+    " M src/Effect4/Laws/Program/TyView.lean",
+    " M tools/Drivers/Semantics.lean"
+  ],
+  "sources": [
+    {
+      "path": "src/Effect4/Program/Eff.lean",
+      "snapshot_sha256": "a8fb2f687147e18155e91feb055e5a223329ca01c4f000dd62e9748d74b06f89",
+      "working_sha256": "a8fb2f687147e18155e91feb055e5a223329ca01c4f000dd62e9748d74b06f89",
+      "committed_sha256": "a8fb2f687147e18155e91feb055e5a223329ca01c4f000dd62e9748d74b06f89",
+      "same_as_working": true,
+      "same_as_commit": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "snapshot_sha256": "70fc107df95d8eb6267ca78889fbf10132808526e7aa7d45baa8949688a789c4",
+      "working_sha256": "70fc107df95d8eb6267ca78889fbf10132808526e7aa7d45baa8949688a789c4",
+      "committed_sha256": "70fc107df95d8eb6267ca78889fbf10132808526e7aa7d45baa8949688a789c4",
+      "same_as_working": true,
+      "same_as_commit": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Read.lean",
+      "snapshot_sha256": "963fd7116d798d8abc25f1418ce55253a26cf726986c44d704cc0f1831fa9f89",
+      "working_sha256": "963fd7116d798d8abc25f1418ce55253a26cf726986c44d704cc0f1831fa9f89",
+      "committed_sha256": "963fd7116d798d8abc25f1418ce55253a26cf726986c44d704cc0f1831fa9f89",
+      "same_as_working": true,
+      "same_as_commit": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Admit.lean",
+      "snapshot_sha256": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+      "working_sha256": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+      "committed_sha256": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+      "same_as_working": true,
+      "same_as_commit": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Checked.lean",
+      "snapshot_sha256": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+      "working_sha256": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+      "committed_sha256": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+      "same_as_working": true,
+      "same_as_commit": true
+    },
+    {
+      "path": "src/Effect4/Api.lean",
+      "snapshot_sha256": "df2989d44899e99d79711bba4e83afa54af148f2ec22e4362ef6e1a7261445fc",
+      "working_sha256": "df2989d44899e99d79711bba4e83afa54af148f2ec22e4362ef6e1a7261445fc",
+      "committed_sha256": "df2989d44899e99d79711bba4e83afa54af148f2ec22e4362ef6e1a7261445fc",
+      "same_as_working": true,
+      "same_as_commit": true
+    },
+    {
+      "path": "Test/Codegen/ServicesPrint.lean",
+      "snapshot_sha256": "40a49a82d440168ff4904d30b64c43f6dbad44959678c3f01a4d9ef7809770b8",
+      "working_sha256": "40a49a82d440168ff4904d30b64c43f6dbad44959678c3f01a4d9ef7809770b8",
+      "committed_sha256": "40a49a82d440168ff4904d30b64c43f6dbad44959678c3f01a4d9ef7809770b8",
+      "same_as_working": true,
+      "same_as_commit": true
+    }
+  ],
+  "packages": {
+    "effects": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+    "typescript": "f5878bf879bd5712db964c2cd12802748c707605"
+  },
+  "host_versions": {
+    "effect": "4.0.0-rc.112",
+    "@typescript/native-preview": "7.0.0-dev.20260629.1"
+  },
+  "session": {
+    "path": "/Users/pooks/.claude/projects/-Users-pooks-Dev-lean4-effect4/9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50.jsonl",
+    "tail_byte_bound": 196608,
+    "cwd": "/Users/pooks/Dev/lean4-effect4",
+    "latest_observed_entry": "2026-10-10T02:09:08.124Z",
+    "task": "Service S1/S2 committed. Profiling the semantics report renderer.",
+    "observed_owned_files": [
+      "tools/Drivers/Semantics.lean",
+      "tools/Tools/Semantics.lean"
+    ],
+    "builder_reports_are_not_reproduced_results": true
+  }
+}
