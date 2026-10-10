@@ -1,0 +1,16 @@
+{
+  "initial_exit_code": 2,
+  "initial_log": "diff-check-initial.log",
+  "command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check",
+    "--",
+    ".",
+    ":(exclude)docs/research/2026-10-10-module-layer-parts-review/draft-diff.patch",
+    ":(exclude)docs/research/2026-10-10-module-layer-parts-review/diff-check-initial.log"
+  ],
+  "exit_code": 0,
+  "reason": "Preserve exact Git patch evidence and the diagnostic log quoting its source whitespace."
+}

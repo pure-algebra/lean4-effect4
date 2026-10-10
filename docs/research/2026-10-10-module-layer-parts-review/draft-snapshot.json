@@ -1,0 +1,13 @@
+{
+  "time_utc": "2026-10-10T16:36:45.391511+00:00",
+  "dependency_base": "0e4b15a427fc2ec7e9853e0856edb468e7efd9cb",
+  "draft_base": "cd61d93378275c276a2c0206a8391b881b1f9864",
+  "draft_cwd": "/Users/pooks/Dev/lean4-effect4-wt/module-layers",
+  "files": {
+    "src/Effect4/Program/Typing/Parts.lean": "1bd6083074d3559355a5b30772730c3a7c980653d438e508f724528f2ae0e435",
+    "src/Effect4/Program/Typing/PartsTable.lean": "6fd185b3215fa0931df3b9ad0694b90ac2c78bb50c3a22033d0d2c55472e3c25",
+    "src/Effect4/Laws/Program/Typing/Parts.lean": "c28bc815336715d8a615c3e6f11294d03f7cfdc64680256a381357ac4bcddb95",
+    "src/Effect4/Laws/Program/Definitions.lean": "6d27ddeb64c7be9979868ef79c77cf9a2b86f5dbb7a03fd5839c9edc8d18fe00"
+  },
+  "status": "uncommitted implementation, not a landing"
+}
