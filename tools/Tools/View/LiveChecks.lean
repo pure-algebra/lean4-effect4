@@ -1,6 +1,7 @@
 import Tools.View.Build
 import Tools.View.Inc
 import Tools.View.Retained
+import Tools.View.Live
 
 /-!
 # The live view's checks
@@ -212,5 +213,47 @@ def oneObject (o : Int × Int) (n : Nat) : Retained.Scene :=
   (oneObject (5, 0) 1).flatten
 #guard ((oneObject (0, 0) 1).apply (Retained.diff (oneObject (0, 0) 1) (oneObject (5, 0) 2))).flatten !=
   (oneObject (5, 0) 2).flatten
+
+/-! ## LV-6: the live step -/
+
+/-- The pages a live session draws over a build's requests, at the columns it holds, each with its
+retained scene and its retained scene's groups' origin for the graph. -/
+def livePages (reqs : List Tools.Session.Request) : List (Page × Retained.Scene) :=
+  (reqs.foldl (fun (acc : Live.State × List (Page × Retained.Scene)) r =>
+    let (st, out) := acc
+    let (st', ans, rows) := Live.step {} "t" st r
+    if rows.isEmpty then (st', out) else
+    match st'.tool.session with
+    | none => (st', out)
+    | some l =>
+      let g := (Live.page "t" r st'.tool ans l st.memo).1
+      (st', out ++ [({ g with gutter := st'.gutter, codeAt := st'.codeAt }, st'.scene)])) ({}, [])).2
+
+-- After every step of every build, the retained scene flattened is the tree's picture of the page
+-- the step drew (`pageCalls`), and that page, at the batch's columns and place, draws the batch's
+-- frame. A finite evaluation: the page's groups and the graph at its panel's origin are checked,
+-- not proved, to draw as `pageCalls` does.
+#guard programs.all fun p =>
+  match requests p with
+  | none => false
+  | some reqs =>
+    let batch := frames "t" reqs
+    let pages := livePages reqs
+    pages.length == batch.length &&
+      (pages.zip batch).all fun ((g, sc), f) =>
+        sc.flatten == pageCalls {} 1280 g &&
+          pageCalls {} 1280 { g with gutter := f.page.gutter, codeAt := f.page.codeAt, place := f.page.place } ==
+            pageCalls {} 1280 f.page
+
+-- The control of the graph's panel: drawn at the origin of the page, its group unmoved, the graph
+-- does not stand where `pageCalls` draws it.
+#guard match requests Effect4.Program.Wire.Corpus.pFork with
+  | none => false
+  | some reqs => match (livePages reqs).getLast? with
+    | none => false
+    | some (g, _) =>
+      let (groups, _) := Live.pageGroups {} 1280 g {}
+      let unmoved := groups.map fun gr => { gr with origin := (0, 0) }
+      (Retained.Scene.ofGroups unmoved).flatten != pageCalls {} 1280 g
 
 end Tools.View.LiveChecks
