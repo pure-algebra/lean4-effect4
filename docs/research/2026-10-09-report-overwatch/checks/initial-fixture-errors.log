@@ -1,0 +1,16 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/ClosureControls.lean:23:11: error: invalid `▸` notation, expected result type of cast is 
+  Nat
+however, the equality 
+  h
+of type 
+  n = n
+does not contain the expected result type on either the left or the right hand side
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/ClosureControls.lean:30:0: error: cannot evaluate code because 'ReviewClosure.proofOnly' uses 'sorry' and/or contains errors
+fixture ReviewClosure.rebuilt: lets=[table], excluded=false
+fixture ReviewClosure.instSizeOfRebuilt: lets=[table], excluded=true
+fixture _private.ClosureControls.0.ReviewClosure.privateRebuilt: lets=[table], excluded=true
+fixture ReviewClosure.proofOnly: lets=[h], excluded=false
+fixture ReviewClosure.asData: lets=[], excluded=false
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/ClosureControls.lean:50:0: error: #closure_audit: 2 definitions bind a table before the closure they return; pass the table as data:
+  ReviewClosure.proofOnly binds [h] before the closure it returns
+  ReviewClosure.rebuilt binds [table] before the closure it returns

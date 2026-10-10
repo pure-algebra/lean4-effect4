@@ -1,0 +1,59 @@
+[
+  {
+    "module": "ProofGraph.Plan",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch/ProofGraph/Plan.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools/ProofGraph/Plan.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "8d30191b890b5beec37831faa70f58e84ca28e89864309878da22c528dd8916d"
+  },
+  {
+    "module": "ProofGraph.ClosureAudit",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch/ProofGraph/ClosureAudit.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools/ProofGraph/ClosureAudit.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "9b445f7629f0e8f11988eb2f2e2dbaadf16d31912803a4e8462f2b105ec2d114"
+  },
+  {
+    "module": "Tools.Semantics",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch/Tools/Semantics.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools/Tools/Semantics.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "eae71c09f06392d149427d2df52e6363e32b02dcb9c47aaefdee7851e36a867c"
+  }
+]

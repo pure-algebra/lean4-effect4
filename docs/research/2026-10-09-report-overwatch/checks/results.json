@@ -1,0 +1,55 @@
+[
+  {
+    "name": "existing-controls",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch",
+      "-DwarningAsError=true",
+      "--run",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/snapshot/tools/Drivers/SemanticsControls.lean"
+    ],
+    "exit_code": 0,
+    "matched": true
+  },
+  {
+    "name": "cache-controls",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/GraphControls.lean"
+    ],
+    "exit_code": 0,
+    "matched": true
+  },
+  {
+    "name": "closure-controls",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/report-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch",
+      "-c",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/checks/ClosureControls.c",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-report-overwatch/ClosureControls.lean"
+    ],
+    "exit_code": 0,
+    "matched": true
+  }
+]

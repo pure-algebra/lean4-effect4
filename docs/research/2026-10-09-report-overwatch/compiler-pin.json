@@ -1,0 +1,7 @@
+{
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "path": "/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean/Lean/Compiler/LCNF/ToLCNF.lean",
+  "sha256": "83bffaa6fddff8f743be0f3d0bc1112a1f09403003ac511c115e68a0d578210d",
+  "declaration": "Lean.Compiler.LCNF.ToLCNF.visitLet",
+  "excerpt": "compiler-erasure.lean.txt"
+}

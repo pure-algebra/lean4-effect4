@@ -1,0 +1,32 @@
+{
+  "at_utc": "2026-10-10T02:40:54.136319+00:00",
+  "reviewed_commit": "4867cf2b2c41502460949c60143cc9ed0d97b4ab",
+  "previous_review_commit": "c3dc7e2913e077191c39cc60d03f5f21e6f3dd3b",
+  "new_confirmed": [
+    "CLOSURE-POP",
+    "CLOSURE-ERASURE"
+  ],
+  "unchanged_open": [
+    "CO6B-READ",
+    "CO6B-NAMES",
+    "CO6B-KEYS"
+  ],
+  "verified": [
+    "narrow tool compiles",
+    "existing semantics controls",
+    "warm/cold dependency cache controls",
+    "closure command controls",
+    "generated C body controls"
+  ],
+  "builder_only": [
+    "87 s to 11 s report timing",
+    "byte-identical full project report"
+  ],
+  "deferred_wip": [
+    "goal-tag and law/tool dependency refactor",
+    "expanded incremental build recipes",
+    "module-array-indexing closure audit extension",
+    "Laws.Program.TyView"
+  ],
+  "production_unchanged": true
+}
