@@ -81,7 +81,9 @@
     "pDefsEven",
     "pDefsOdd",
     "pDefsFork",
-    "pQueueDefs"
+    "pQueueDefs",
+    "pQueueService",
+    "pSemaphoreService"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
