@@ -50,7 +50,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `denoteRows_eq_session_host` are theorems (`src/Effect4/Laws/Api/SessionMeaning.lean`). Their
   fragment is `StraightRows`, at every compile budget. A recorded run that is funded, at rest and
   host-driven observes the program's meaning under its reply tape (H8). A finished run observes
-  the meaning under any host whose answers are the run's (H9). A host is a comodel of the row
+  the meaning under any host whose answers are the run's (H9). On loops both hold past a budget
+  bound: `h8_loopedRows` and `denoteRowsB_eq_session_host`
+  (`src/Effect4/Laws/Api/SessionMeaningLoop.lean`). Their meaning is `denoteRowsB`, the row
+  meaning with loops cut at a budget, on the fragment `LoopedDataRows`
+  ([the widening packet](research/2026-10-10-host-meaning-widening/README.md), slice L1). A host is a comodel of the row
   signature (`Effects.Comodel`), and the reply tape is one host. The driver `Run.runWith` meets
   H9's premises when its reactor stays inside the envelope and answers with exits
   (`runWith_denotes`, `src/Effect4/Laws/Api/HostDrive.lean`). A reactor behind its rows' types
