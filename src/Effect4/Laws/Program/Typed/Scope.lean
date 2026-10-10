@@ -191,6 +191,47 @@ theorem scopeParams_decl (root : Eff Op) (path : List Nat) :
   | [] => exact .inl rfl
   | (_ + 1) :: _ => exact .inl rfl
 
+/-- The parameters of a scope, named by its position in the root block (`Eff.scopeOf`): the
+declaration's at that position; none outside every body. -/
+def scopeParamsOf (root : Eff Op) (scope : Option Nat) : List ParamDecl :=
+  match root with
+  | .defs decls _ _ => ((scope.bind (decls[·]?)).map (·.params)).getD []
+  | _ => []
+
+/-- A spine path's parameters are those of the declaration at its body's position
+(`Path.spineIndex`). A step of `scopeParams_eq`. -/
+theorem spineParams_index : ∀ (decls : List DefDecl) (rest : List Nat),
+    spineParams decls rest = (((Path.spineIndex rest).bind (decls[·]?)).map (·.params)).getD []
+  | [], [] => rfl
+  | [], 0 :: _ => rfl
+  | [], 1 :: r => by
+    rw [show Path.spineIndex (1 :: r) = (Path.spineIndex r).map (· + 1) from rfl]
+    cases Path.spineIndex r with
+    | none => rfl
+    | some _ => rfl
+  | [], (_ + 2) :: _ => rfl
+  | _ :: _, [] => rfl
+  | _ :: _, 0 :: _ => rfl
+  | _ :: ds, 1 :: r => by
+    rw [show spineParams (_ :: ds) (1 :: r) = spineParams ds r from rfl, spineParams_index ds r,
+      show Path.spineIndex (1 :: r) = (Path.spineIndex r).map (· + 1) from rfl]
+    cases Path.spineIndex r with
+    | none => rfl
+    | some _ => rfl
+  | _ :: _, (_ + 2) :: _ => rfl
+
+/-- **A path's parameters are its scope's** (`Eff.scopeOf`): two paths in one scope have the same
+parameters. A step of `scopeParams_ref` (`Typed/LayerArm.lean`). -/
+theorem scopeParams_eq (root : Eff Op) (path : List Nat) :
+    scopeParams root path = scopeParamsOf root (root.scopeOf path) := by
+  match path with
+  | 0 :: rest =>
+    cases root with
+    | defs decls bodies main => exact spineParams_index decls rest
+    | _ => rfl
+  | [] => cases root <;> rfl
+  | (_ + 1) :: _ => cases root <;> rfl
+
 /-- **An operation that runs no parameter reads the outer signature** in a body's signature: its
 domain bit and its row. A step of `denote-typed`; its consumers are the row arms
 (`builtinPerform_inv`, `Typed/Denotation.lean`). -/

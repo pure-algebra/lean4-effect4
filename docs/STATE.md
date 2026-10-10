@@ -30,9 +30,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   the passed programs. A typed point reads the parameters of its lexical scope, and its stack of
   sites is typed there (slices CX1 and CX2, the [note](research/2026-10-10-cx-lexical-scope.md)).
   The typed run of an invocation and of a parameter's run is proved (`invoke_arm`, `param_arm`).
-  M7 rests on one planned goal, `crossScopeRef_builds`: a layer reference whose target stands in
-  another scope, which the checker admits (the note's §10). M5 on the layer-free fragment rests on
-  no goal. The printer refuses `invoke` until HO-3.
+  A layer reference stands in its target's scope: the same body, or both outside every body
+  (decisions row 341, the note's §11). So M5 and M7 rest on no goal. The printer refuses
+  `invoke` until HO-3.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
@@ -198,9 +198,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
    Codex's three service findings repaired. Pool's service waits for a method whose parameter is
    a program: [the plan](research/2026-10-09-program-parameters.md), row 340. HO-1 and HO-2
    landed, and so did CX1 and CX2 (points typed at their lexical scope; `invoke_arm` and
-   `param_arm` proved). Next: the ruling on a layer reference across scopes, then CX3, which adds
-   substitution and the builder's certificate. CX4 adds
-   bounded unfolding. Then HO-3 (authoring and print), HO-4 (generics), HO-5 (Pool's service). Then
+   `param_arm` proved). Row 341 keeps a layer reference in its target's scope. Next, its two
+   further steps: a body names a module-level layer, then a body's layers built once per call
+   (the note's §11, a design note first). Then CX3, which adds substitution and the builder's
+   certificate. CX4 adds bounded unfolding. Then HO-3 (authoring and print), HO-4 (generics), HO-5 (Pool's service). Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:
@@ -248,11 +249,6 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
-- **A layer reference whose target stands in another scope** (the
-  [CX note](research/2026-10-10-cx-lexical-scope.md), §10). Codex's admitted program delivers a
-  shared layer's failure to a fork typed `never`, so admission must change. The options: refuse
-  such references, or refuse those whose target reads a parameter typed differently (Codex's
-  rule). M7 rests on the goal `crossScopeRef_builds` until then.
 
 ## Process
 

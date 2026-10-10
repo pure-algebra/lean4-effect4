@@ -157,16 +157,42 @@ def LayerTerm.expandRound {Op : Type} (orig : Node Op) (l : LayerTerm Op) : Laye
 def LayerTerms.expandRound {Op : Type} (orig : Node Op) (ls : LayerTerms Op) : LayerTerms Op :=
   cata_layers (expandAlgebra orig) ls
 
+/-! ## The scope of a path
+
+A definition block stands only at the root (decisions row 340). Its bodies are child `0`, a spine
+whose head is child `0` and whose rest is child `1`; its main program is child `1`. -/
+
+/-- The position of the body that holds a path of a block's bodies' spine; `none` on the spine
+itself. -/
+def Path.spineIndex : List Nat → Option Nat
+  | 0 :: _ => some 0
+  | 1 :: rest => (Path.spineIndex rest).map (· + 1)
+  | _ => none
+
+/-- **The scope of a path** (decisions row 340): the position of the definition whose body holds
+it in the root block, and `none` outside every body. -/
+def Eff.scopeOf {Op : Type} (root : Eff Op) : List Nat → Option Nat
+  | 0 :: rest =>
+    match root with
+    | .defs _ _ _ => Path.spineIndex rest
+    | _ => none
+  | _ => none
+
 /-- The layer references of a program are well formed: every target names a layer of this
-program that is not itself a reference, precedes the reference in program order, and does
-not enclose it (a reference inside its own target would be a `const` that names itself). -/
+program that is not itself a reference, precedes the reference in program order, does not
+enclose it (a reference inside its own target would be a `const` that names itself), and stands
+in the reference's scope: the same definition's body, or both outside every body (decisions row
+340, ruling of 2026-10-10). A layer in a body is that body's own, as a `const` in a function body
+is visible in no other function; a hop to it from another scope would run it with the other
+scope's parameters. -/
 def Eff.layerRefsWF {Op : Type} (root : Eff Op) : Bool :=
   (root.refSites []).all fun (site, target) =>
     Path.lt target site && !Path.properPrefix target site &&
       (match (Node.eff root).layerAt target with
        | some (.ref _) => false
        | some _ => true
-       | none => false)
+       | none => false) &&
+      root.scopeOf target == root.scopeOf site
 
 /-- The path of every layer under a program, in program order (a layer before the layers
 inside it), the root at `p`: the path fold yielding every layer's path. -/

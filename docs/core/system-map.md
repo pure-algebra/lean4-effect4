@@ -318,9 +318,8 @@ criteria as conditions a reader can check, each with its status. The evidence wo
    proved, M7 (`m7_proved`, `exitHandles_valid`, 2026-10-03) and the meaning-layer exit judgment
    on every fragment (`exits_hasTy`, `Typed/Results.lean`). A typed point reads its lexical
    scope's parameters (decisions row 340, slice CX1). The typed run of an invocation and of a
-   parameter's run is proved (`invoke_arm`, `param_arm`, slice CX2). M7 rests on one planned goal,
-   `crossScopeRef_builds` (`Typed/LayerArm.lean`): a layer reference whose target stands in
-   another scope, which the checker admits.
+   parameter's run is proved (`invoke_arm`, `param_arm`, slice CX2). A layer reference stands in
+   its target's scope (decisions row 341, `scopeParams_ref`), so M7 rests on no goal.
 
 ### 10.2 Where the expansion came from, and why it is bounded
 

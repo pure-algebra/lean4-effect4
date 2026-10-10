@@ -235,7 +235,7 @@ theorem layerRefsWF_mem {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = tr
       ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' := by
   have hall := List.all_eq_true.mp hwf (site, target) h
   simp only [Bool.and_eq_true, Bool.not_eq_true'] at hall
-  obtain ⟨⟨hlt, hpre⟩, hlayer⟩ := hall
+  obtain ⟨⟨⟨hlt, hpre⟩, hlayer⟩, -⟩ := hall
   refine ⟨hlt, hpre, ?_⟩
   cases hl : (Node.eff root).layerAt target with
   | none =>
@@ -246,6 +246,16 @@ theorem layerRefsWF_mem {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = tr
     refine ⟨l, rfl, fun t' heq => ?_⟩
     subst heq
     exact Bool.noConfusion hlayer
+
+/-- Well-formed references, read at a reference site: the target stands in the site's scope
+(decisions row 340, ruling of 2026-10-10). Its consumer is `scopeParams_ref`
+(`Typed/LayerArm.lean`). -/
+theorem layerRefsWF_scopeOf {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = true)
+    {site target : List Nat} (h : (site, target) ∈ root.refSites []) :
+    root.scopeOf target = root.scopeOf site := by
+  have hall := List.all_eq_true.mp hwf (site, target) h
+  simp only [Bool.and_eq_true] at hall
+  exact eq_of_beq hall.2
 
 /-- Well-formed references, read at an address: the target names a layer that is no reference. -/
 theorem layerRefsWF_at {Op : Type} {root : Eff Op} {path target : List Nat}

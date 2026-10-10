@@ -336,20 +336,20 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
 | sound-at-app-signature | compatibility | proved | Effect4.Program.Denote.run_typed_app | yes |  |
 | straight-meaning-typed | fundamentalProperty | proved | Effect4.Program.Denote.meaning_typed | yes |  |
-| denote-typed | fundamentalProperty | modulo | Effect4.Program.Typed.denotesTyped, modulo invoke_arm | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022, E4-TYPED-CE-023, E4-TYPED-CE-031 |
+| denote-typed | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022, E4-TYPED-CE-023, E4-TYPED-CE-031 |
 | invocation-arm | fundamentalProperty | proved | Effect4.Program.Typed.call_arm | yes |  |
 | rebuild-admission | compatibility | proved | Effect4.Program.Authoring.rebuild_spec | yes |  |
-| denote-typed-layer-free | fundamentalProperty | modulo | Effect4.Program.Typed.denotesTyped_of_layerFree, modulo invoke_arm | yes |  |
-| load-typed-layer-free | preservation | modulo | Effect4.Program.Typed.loadsTyped_of_layerFree, modulo invoke_arm | yes |  |
+| denote-typed-layer-free | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped_of_layerFree | yes |  |
+| load-typed-layer-free | preservation | proved | Effect4.Program.Typed.loadsTyped_of_layerFree | yes |  |
 | provide-layer-arm | compatibility | proved | Effect4.Program.Typed.provideLayerArm | yes | E4-TYPED-CE-023, E4-TYPED-CE-031 |
-| load-typed | preservation | modulo | Effect4.Program.Typed.loadsTyped, modulo invoke_arm | yes |  |
-| load-typed-checked | preservation | modulo | Effect4.Program.Typed.load_typed, modulo invoke_arm | yes |  |
+| load-typed | preservation | proved | Effect4.Program.Typed.loadsTyped | yes |  |
+| load-typed-checked | preservation | proved | Effect4.Program.Typed.load_typed | yes |  |
 | bind-closed | compatibility | refuted | Test.Program.TypedProgBindRed.typedProg_not_bind_closed | yes |  |
 | guard-bind-typed | compatibility | proved | Effect4.Program.Typed.guardBind_typed | yes |  |
 | on-failure-typed | compatibility | proved | Effect4.Program.Typed.catchGuard_typed | yes |  |
 | all-guard-typed | compatibility | proved | Effect4.Program.Typed.allGuard_typed | yes |  |
 | on-exit-typed | compatibility | proved | Effect4.Program.Typed.onExit_typed | yes |  |
-| scoped-body-substitution-boundary | compatibility | modulo | Effect4.Program.Typed.scoped_body_substitution_boundary, modulo invoke_arm | yes |  |
+| scoped-body-substitution-boundary | compatibility | proved | Effect4.Program.Typed.scoped_body_substitution_boundary | yes |  |
 | admitted-source-lawful | compatibility | proved | Effect4.Program.Typed.lawfulSig_of_admitted | yes | E4-TYPED-CE-041 |
 
 ### Printed statements
@@ -913,20 +913,20 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | --- | --- | --- | --- | --- | --- |
 | machine-typed-not-halted | inversion | proved | Effect4.Program.Typed.machineTyped_not_halted | yes |  |
 | flush-fair | fundamentalProperty | proved | Effect4.Machine.Scheduling.flush_fair | yes |  |
-| step-loop-preserves | preservation | modulo | Effect4.Program.Typed.loop_preserves, modulo invoke_arm | yes | E4-TYPED-CE-012, E4-TYPED-CE-025 |
-| step-deliver-preserves | preservation | modulo | Effect4.Program.Typed.deliver_preserves, modulo invoke_arm | yes | E4-TYPED-CE-025 |
+| step-loop-preserves | preservation | proved | Effect4.Program.Typed.loop_preserves | yes | E4-TYPED-CE-012, E4-TYPED-CE-025 |
+| step-deliver-preserves | preservation | proved | Effect4.Program.Typed.deliver_preserves | yes | E4-TYPED-CE-025 |
 | store-frame-typing | preservation | proved | Effect4.Program.Typed.configTyped_frame | yes |  |
 | waiter-completion-typing | preservation | proved | Effect4.Program.Typed.completionStrong_await | yes |  |
 | step-wake-preserves | preservation | proved | Effect4.Program.Typed.wake_preserves | yes | E4-TYPED-CE-026 |
 | step-launch-preserves | preservation | proved | Effect4.Program.Typed.launch_preserves | yes | E4-TYPED-CE-029 |
 | step-registration-done-preserves | preservation | proved | Effect4.Program.Typed.registrationDone_preserves | yes | E4-TYPED-CE-028 |
 | drivestate-lift | simulation | proved | Effect4.Machine.Lift.driveState_lift | yes |  |
-| typed-state-admitted | preservation | modulo | Effect4.Program.Typed.reachable_typed, modulo invoke_arm | yes |  |
+| typed-state-admitted | preservation | proved | Effect4.Program.Typed.reachable_typed | yes |  |
 | run-work-selection | compatibility | proved | Effect4.Run.nextControl_spec | yes |  |
 | scheduler-progress | progress | absent | Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence | — |  |
 | fair-tape-drains-armed | adequacy | proved | Effect4.Machine.Scheduling.fairTape_unarmed | yes |  |
 | frontier-names-work | inversion | proved | Effect4.Api.frontier_empty_iff_deadlocked | yes |  |
-| decision-keeps-typed | preservation | modulo | Effect4.Program.Typed.decision_preserves, modulo invoke_arm | yes |  |
+| decision-keeps-typed | preservation | proved | Effect4.Program.Typed.decision_preserves | yes |  |
 | fair-scheduling | adequacy | absent | Weak fairness progress is open (R12; decisions row 86) | — |  |
 | queue-step-capacity | preservation | proved | Effect4.Queue.Model.positive_suspend_step_capacity | yes |  |
 | queue-first-profile-closed | preservation | proved | Effect4.Queue.Model.first_profile_closed | yes |  |
@@ -2322,6 +2322,8 @@ Host Session Protocol: Session automaton, external reply ingestion, and boundary
 | session-failure-shape-free | preservation | proved | Effect4.Api.HostSession.preflight_failure_noShapeDefect | yes | E4-HOST-CE-008 |
 | frontier-awaithost | inversion | proved | Effect4.Api.observe_awaitingAsync_iff | yes |  |
 | host-progress | progress | assumed | Host session progress is subject to external driver execution; outside closed runtime | — |  |
+| rows-loop-frontier | simulation | proved | Effect4.Run.rows_loop_frontier | yes |  |
+| rows-loop-frontier-host | simulation | proved | Effect4.Run.rows_loop_frontier_host | yes |  |
 
 ### Printed statements
 
@@ -2462,6 +2464,18 @@ Literature: LynchVaandrager1995, audit C4 — analogy
         (Effect4.Api.FrontierReason.awaitHost key))
 ```
 
+**rows-loop-frontier**
+
+```lean
+Effect4.Run.H8FrontierLoopedRows
+```
+
+**rows-loop-frontier-host**
+
+```lean
+Effect4.Run.H9FrontierLoopedRows
+```
+
 ## translation-simulation
 
 Translation & Simulation: Semantic preservation, replay relations, and capstone M7
@@ -2480,15 +2494,20 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | session-eq-ref | simulation | proved | Effect4.Run.session_eq_ref | yes |  |
 | rows-denotation-session | simulation | proved | Effect4.Run.denoteRows_eq_session | yes |  |
 | rows-denotation-host | simulation | proved | Effect4.Run.denoteRows_eq_session_host | yes |  |
+| rows-loop-session | simulation | proved | Effect4.Run.h8_loopedRows | yes |  |
+| rows-loop-host | simulation | proved | Effect4.Run.denoteRowsB_eq_session_host | yes |  |
+| rows-loop-driver | simulation | proved | Effect4.Run.runWith_denotesB | yes |  |
+| rows-loop-straight | compatibility | proved | Effect4.Program.Denote.denoteRowsB_straight | yes |  |
+| rows-loop-looped | compatibility | proved | Effect4.Program.Denote.denoteRowsB_looped | yes |  |
 | rows-denotation-driver | simulation | proved | Effect4.Run.runWith_denotes | yes |  |
 | m7-route | fundamentalProperty | proved | Effect4.Program.Typed.m7_of_ledger | yes |  |
-| m7-exits-typed | adequacy | modulo | Effect4.Program.Typed.m7_proved, modulo invoke_arm | yes |  |
-| m7-stores-typed | adequacy | modulo | Effect4.Program.Typed.m7_proved, modulo invoke_arm | yes |  |
-| m7-never-halts | progress | modulo | Effect4.Program.Typed.m7_proved, modulo invoke_arm | yes |  |
-| m7-admitted | fundamentalProperty | modulo | Effect4.Program.Typed.m7_admitted, modulo invoke_arm | yes |  |
-| m7-exit-handles-valid | preservation | modulo | Effect4.Program.Typed.exitHandles_valid, modulo invoke_arm | yes |  |
-| obs-typed-admitted | adequacy | modulo | Effect4.Program.Typed.obs_typed, modulo invoke_arm | yes |  |
-| m7-results-exit-hasty | adequacy | modulo | Effect4.Program.Typed.exits_hasTy, modulo invoke_arm | yes |  |
+| m7-exits-typed | adequacy | proved | Effect4.Program.Typed.m7_proved | yes |  |
+| m7-stores-typed | adequacy | proved | Effect4.Program.Typed.m7_proved | yes |  |
+| m7-never-halts | progress | proved | Effect4.Program.Typed.m7_proved | yes |  |
+| m7-admitted | fundamentalProperty | proved | Effect4.Program.Typed.m7_admitted | yes |  |
+| m7-exit-handles-valid | preservation | proved | Effect4.Program.Typed.exitHandles_valid | yes |  |
+| obs-typed-admitted | adequacy | proved | Effect4.Program.Typed.obs_typed | yes |  |
+| m7-results-exit-hasty | adequacy | proved | Effect4.Program.Typed.exits_hasTy | yes |  |
 | replay-externals | preservation | proved | Effect4.Program.Sched.replay_externals | yes |  |
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
 | run-tape-replay | simulation | proved | Effect4.Run.tape_replays | yes |  |
@@ -2637,6 +2656,77 @@ Effect4.Run.DenoteRowsEqSession Effect4.Program.Denote.StraightRows
 
 ```lean
 Effect4.Run.DenoteRowsEqSessionHost Effect4.Program.Denote.StraightRows
+```
+
+**rows-loop-session**
+
+```lean
+Effect4.Run.H8LoopedRows
+```
+
+**rows-loop-host**
+
+```lean
+Effect4.Run.H9LoopedRows
+```
+
+**rows-loop-driver**
+
+```lean
+∀ {σ : Type} (b : Effect4.Api.Built) (r : Effect4.Run.Reactor σ) (st : σ) (id : String)
+  (budget : Effect4.Api.Budget) (rounds : Nat),
+  r.Envelops b.table →
+    r.ExitsOnly →
+      Eq (Effect4.Program.Denote.LoopedRows b.program) Bool.true →
+        Eq (Effect4.Program.Denote.LoopedDataRows b.table b.program) Bool.true →
+          Eq (Effect4.Run.runWith b r st id budget rounds).fst.funded Bool.true →
+            Eq (Effect4.Run.runWith b r st id budget rounds).fst.atRest Bool.true →
+              ∀ (ex : Effect4.Machine.ExitV),
+                Eq (Effect4.Run.runWith b r st id budget rounds).fst.exit (Option.some ex) →
+                  Exists fun lower =>
+                    ∀ (k : Nat),
+                      instLENat.le lower k →
+                        Eq
+                          (Effect4.Program.Denote.hostRunB (Effect4.Run.reactorHost b.table r) k
+                            b.program List.nil Effect4.Machine.Stores.empty st)
+                          (Option.some
+                            { fst := Option.some ex,
+                              snd :=
+                                {
+                                  fst :=
+                                    (Effect4.Run.runWith b r st id budget rounds).fst.machine.state
+                                      (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                                        Effect4.Machine.Val Effect4.Machine.Err
+                                        Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                                      (Effect4.FrameFiber Effect4.Program.EffName
+                                        Effect4.Program.EffThunk Effect4.Machine.Val
+                                        Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                        Effect4.Machine.Ann)
+                                      (Effect4.FrameEvent Effect4.Program.EffName
+                                        Effect4.Program.EffThunk Effect4.Machine.Val
+                                        Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                        Effect4.Machine.Ann),
+                                  snd := (Effect4.Run.runWith b r st id budget rounds).snd } })
+```
+
+**rows-loop-straight**
+
+```lean
+∀ (table : Effect4.Program.RowTable) (k : Nat) (e : Effect4.Program.NativeEff)
+  (env : List Effect4.Machine.Val),
+  Eq (Effect4.Program.Denote.StraightRows table e) Bool.true →
+    Eq (Effect4.Program.Denote.denoteRowsB table k e env)
+      (Effects.Program.instMonad.map Option.some (Effect4.Program.Denote.denoteRows table e env))
+```
+
+**rows-loop-looped**
+
+```lean
+∀ (table : Effect4.Program.RowTable) (k : Nat) (e : Effect4.Program.NativeEff)
+  (env : List Effect4.Machine.Val),
+  Eq (Effect4.Program.Denote.Looped e) Bool.true →
+    Eq (Effect4.Program.Denote.denoteRowsB table k e env)
+      (Effect4.Program.Denote.denoteB k e env).inl
 ```
 
 **rows-denotation-driver**
@@ -3473,7 +3563,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 284; inherited (provisional): 2375; unplaced: 0.
+Tagged: 284; inherited (provisional): 2385; unplaced: 0.
 
 ## Plan
 
@@ -3483,22 +3573,22 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 
 | Requirement | Status | Top nodes | Placed nodes | Next goals |
 | --- | --- | --- | --- | --- |
-| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (modulo) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | `invoke_arm` |
-| R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved), `moduleHasTy_ext` (proved), `typeOfProgram_ext` (proved) | — |
+| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | `checkModule_complete` (proved), `checkModule_sound` (proved), `invoke_hasTy` (proved) | — |
+| R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved), `meaningUnder_append` (proved) | `denoteRowsB_looped` (proved), `denoteRowsB_straight` (proved), `checkModule_conservative` (proved), `checkModule_eq_check` (proved), `defs_conservative` (proved), `moduleHasTy_ext` (proved), `typeOfProgram_ext` (proved) | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved), `frame_laws` (proved), `member` (proved), `codec_roundtrip` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (modulo) | `awaitStep_types` (proved), `Latch.Model.closeStep_types` (proved), `flushStep_types` (proved), `initialStep_types` (proved), `isOpenStep_types` (proved), `wakeStep_types` (proved), `Latch.Model.withdrawStep_types` (proved), `image_agrees` (proved), `typed` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `available_types` (proved), `PartitionedSemaphore.initial_types` (proved), `reserve_types` (proved), `tryTake_types` (proved), `Pool.Model.closeStep_types` (proved), `drainStep_types` (proved), `Model.initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lookup_solve_seed` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `perform_scoped_iff` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `invoke_arm` (goal), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (modulo), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `PubSub.initial_types` (proved), `PubSub.poll_types` (proved), `slide_types` (proved), `subscribe_types` (proved), `tryPublish_types` (proved), `unsubscribe_types` (proved), `ascribe_formed_for_steps` (proved), `empty_typed` (proved), `message_nodes_for_steps` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `offer_nodes_for_steps` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `Queue.poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `modify_callback_answers` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `fromDefinitions_declarations` (proved), `arrayBatch_answers` (proved), `get_answers` (proved), `make_answers` (proved), `modify_answers` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `invoke_arm`, `bounded`, `cleans_once`, `committed`, `counted` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `awaitStep_types` (proved), `Latch.Model.closeStep_types` (proved), `flushStep_types` (proved), `initialStep_types` (proved), `isOpenStep_types` (proved), `wakeStep_types` (proved), `Latch.Model.withdrawStep_types` (proved), `image_agrees` (proved), `typed` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `available_types` (proved), `PartitionedSemaphore.initial_types` (proved), `reserve_types` (proved), `tryTake_types` (proved), `Pool.Model.closeStep_types` (proved), `drainStep_types` (proved), `Model.initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `args` (proved), `head` (proved), `above_args` (proved), `above_prod` (proved), `admits_normalize` (proved), `below_args` (proved), `candsFields_eq` (proved), `candsItems_eq` (proved), `candsList_below` (proved), `candsList_cons` (proved), `candsList_nil` (proved), `cands_args` (proved), `cands_below` (proved), `cands_mem_members` (proved), `cands_union_right` (proved), `cands_var` (proved), `comp_co` (proved), `comp_inv` (proved), `comp_ne_contra` (proved), `covers` (proved), `instance_shape` (proved), `instantiate_solve` (proved), `joinCands_least` (proved), `joinCands_upper` (proved), `join_eq_left_of_subN` (proved), `join_eq_right_of_subN` (proved), `lookup_added` (proved), `lookup_solve_seed` (proved), `lowers_cons` (proved), `matchArgsB_append` (proved), `matchArgsB_complete` (proved), `matchArgsB_cons_nil` (proved), `matchArgsB_ite` (proved), `matchArgsB_least` (proved), `matchArgsB_list_var_nat` (proved), `matchArgsB_one_var` (proved), `matchArgsB_sound` (proved), `matchArgsB_two_vars` (proved), `matchArgsN_complete` (proved), `matchArgsN_least` (proved), `matchB_cell_fixed` (proved), `matchB_complete` (proved), `matchB_least` (proved), `matchB_modify_use` (proved), `matchB_one_var` (proved), `matchB_refOf_var` (proved), `matchB_sound` (proved), `matchN_congr` (proved), `mem_lowers` (proved), `mem_varsOf_args` (proved), `mem_zip_map_right` (proved), `mem_zip_self_map` (proved), `noAppFields_eq_all` (proved), `noAppItems_eq_all` (proved), `noApp_args` (proved), `prod_left_cands` (proved), `prod_member_left` (proved), `prod_member_right` (proved), `prod_or_not` (proved), `prod_right_cands` (proved), `recovers` (proved), `solve_between` (proved), `subN_join_least` (proved), `subN_never` (proved), `templateOK_of` (proved), `perform_scoped_iff` (proved), `withParams_defOf` (proved), `withParams_of_none` (proved), `withParams_param` (proved), `withParams_serviceTy` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `invoke_arm` (proved), `param_arm` (proved), `saved_mask_image_membership` (proved), `scopeParams_ref` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `scopeParams_below` (proved), `scopeParams_body` (proved), `scopeParams_child` (proved), `scopeParams_decl` (proved), `scopeParams_layer_below` (proved), `PubSub.initial_types` (proved), `PubSub.poll_types` (proved), `slide_types` (proved), `subscribe_types` (proved), `tryPublish_types` (proved), `unsubscribe_types` (proved), `ascribe_formed_for_steps` (proved), `empty_typed` (proved), `message_nodes_for_steps` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `offer_nodes_for_steps` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `Queue.poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `modify_callback_answers` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `fromDefinitions_declarations` (proved), `arrayBatch_answers` (proved), `get_answers` (proved), `make_answers` (proved), `modify_answers` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
-| R6 | open | `reachable_typed` (modulo), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved) | `bodyAt` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (goal), `run_eq_ref_table_noPreload` (proved), `checkModule_programCallAt` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `applied_selects` (proved), `control_retires` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `runWith_guarded_denotes` (proved), `runWith_host_denotes` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `session_eq_ref` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `invoke_arm`, `run_eq_ref_table`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
+| R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved), `instance_prepared_success` (proved), `origin_addresses_call` (proved), `reached_callInstance` (proved), `session_eq_ref` (proved), `denoteRows_eq_session_host` (proved), `runWith_denotes` (proved), `h8_loopedRows` (proved), `denoteRowsB_eq_session_host` (proved), `runWith_denotesB` (proved) | `compilesBO_bind` (proved), `compilesBO_catchCause` (proved), `compilesBO_catchIf` (proved), `compilesBO_exit` (proved), `compilesBO_iterate` (proved), `compilesBO_matchCause` (proved), `compilesBO_onExit` (proved), `compilesBO_select` (proved), `compilesBO_suspend` (proved), `localRunC_compileB` (proved), `localRunC_compileBO` (proved), `localRunC_to_rowsB` (proved), `localWaitC_to_rowsB` (proved), `bodyAt` (proved), `hostRunB_stable` (proved), `observeRows_project` (proved), `partAt_at` (proved), `partAt_of_hasTy` (proved), `bodyAt_at` (proved), `run_eq_ref_table` (goal), `run_eq_ref_table_noPreload` (proved), `checkModule_programCallAt` (proved), `handles_of_payloadFieldTy` (proved), `hasTy_callAt` (proved), `lookup_programCalls` (proved), `moduleHasTy_programCallAt` (proved), `programCallAt_rowTy` (proved), `applied_selects` (proved), `control_retires` (proved), `denoteRowsB_eq_session_host` (proved), `denoteRows_eq_session` (proved), `denoteRows_eq_session_host` (proved), `h8_loopedRows` (proved), `runWith_denotes` (proved), `runWith_denotesB` (proved), `runWith_guarded_denotes` (proved), `runWith_guarded_denotesB` (proved), `runWith_host_denotes` (proved), `runWith_host_denotesB` (proved), `runWith_layer_denotes` (proved), `sessionSystem_finished` (proved), `sessionSystem_finishes` (proved), `session_eq_ref` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `run_eq_ref_table`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved) | `printTypedAt_none` (proved), `eraseJoinArgs_printTyped` (proved), `eraseJoinArgs_printTypedAt` (proved), `eraseJoinArgs_printTypedSitesAt` (proved), `readTyped_exact` (proved), `readTyped_printTyped` (proved), `readTyped_printTypedAt` (proved), `mask_rows_table_premises` (proved), `printTyped_eq_print` (proved), `readModule_printModule_defs` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
-| R9 | open | `m7_proved` (modulo), `m7_admitted` (modulo) | — | `invoke_arm` |
+| R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `mapDoneEffectOf_protocol` (proved), `mapEffectOf_protocol` (proved), `awaitStep_agrees` (proved), `Latch.Model.closeStep_agrees` (proved), `flushStep_agrees` (proved), `initialStep_agrees` (proved), `isOpenStep_agrees` (proved), `latch_registration_agrees` (proved), `latch_steps_agree` (proved), `wakeStep_agrees` (proved), `Latch.Model.withdrawStep_agrees` (proved), `frame` (proved), `sound` (proved), `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `available_eval` (proved), `available_reads` (proved), `bookkeeping_agrees` (proved), `PartitionedSemaphore.Model.initial_eval` (proved), `PartitionedSemaphore.Model.initial_reads` (proved), `reserve_eval` (proved), `reserve_reads` (proved), `tryTake_eval` (proved), `tryTake_reads` (proved), `Pool.Model.closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `PubSub.Model.initial_eval` (proved), `PubSub.Model.initial_reads` (proved), `poll_eval` (proved), `poll_reads` (proved), `single_steps_agree` (proved), `slide_eval` (proved), `slide_reads` (proved), `subscribe_eval` (proved), `subscribe_reads` (proved), `tryPublish_eval` (proved), `tryPublish_reads` (proved), `unsubscribe_eval` (proved), `unsubscribe_reads` (proved), `catchDone_meaning` (proved), `matchAnswer_meaning` (proved), `matchEffect_meaning` (proved), `matchEffect_protocol` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `decode_modifySome` (proved), `decode_option` (proved), `encode_getD` (proved), `getAndSet_agrees` (proved), `getAndUpdateSome_agrees` (proved), `getAndUpdate_agrees` (proved), `get_agrees` (proved), `kernel_agrees` (proved), `make_agrees` (proved), `modifySome_agrees` (proved), `modify_agrees` (proved), `modify_callback_agrees` (proved), `ref_steps_agree` (proved), `setAndGet_agrees` (proved), `set_agrees` (proved), `updateAndGet_agrees` (proved), `updateSomeAndGet_agrees` (proved), `updateSome_agrees` (proved), `update_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `arrayStep_agrees` (proved), `held_within_fed` (goal), `queueWorkers` (modulo), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `held_within_fed`, `fed_accounted`, `queue_settled`, `releases_once`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
-| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
+| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `rows_loop_frontier` (proved), `rows_loop_frontier_host` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
 | R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `check_closed` (proved), `Program.refusals_nil_iff` (proved), `hasTy_extSlotEnv` (proved), `callAt_rowTy` (proved), `Program.annotate_eq_table` (proved), `Sketch.annotate_eq_table` (proved), `table_fill` (proved), `reached_view` (proved), `check_filled_module` (proved) | `max_assoc` (proved), `max_comm` (proved), `max_idem` (proved), `max_le` (proved), `max_mono` (proved), `closed` (proved), `checkAction_eq` (proved), `checkEffs_eq` (proved), `checkLayer_eq` (proved), `checkLayers_eq` (proved), `checkStmt_eq` (proved), `checkStmts_eq` (proved), `check_alg_agreeOn` (proved), `check_eq` (proved), `Annotate.check_restrict` (proved), `bodyAt_typed` (proved), `BodiesHasTy.replace` (proved), `matchArgsB_monotone` (proved), `checkAction_rebase` (proved), `checkEffs_rebase` (proved), `checkLayer_rebase` (proved), `checkLayers_rebase` (proved), `checkStmt_rebase` (proved), `checkStmt_step_binds` (proved), `checkStmts_rebase` (proved), `check_rebase` (proved), `append` (proved), `nil` (proved), `push` (proved), `closed_arms` (proved), `ext` (proved), `feed_coherent` (proved), `feed_keeps` (proved), `feed_repaint` (proved), `feed_shown` (proved), `feed_spliced` (proved), `feed_undo` (proved), `open_coherent` (proved), `reached_coherent` (proved), `reached_view` (proved), `run_coherent` (proved), `run_keeps` (proved), `view_refusals` (proved), `view_type` (proved), `eq_defs_of_isBlock` (proved), `ne_defs_of_isBlock` (proved), `partAt_plain` (proved), `partAt_resig` (proved), `actionAll_onRef` (proved), `allTypes_append` (proved), `allTypes_nil` (proved), `allTypes_singleton` (proved), `allTypes_zipIdx_map` (proved), `annotationsAll_expandRefs` (proved), `annotationsClosed_of_formed` (proved), `annotations_closed` (proved), `argsAnnotations_all` (proved), `argumentAnnotations_all` (proved), `causeAnnotations_all` (proved), `closed_of_formed` (proved), `closed_of_nodes` (proved), `declAnnotations_all` (proved), `effAll_onRef` (proved), `effsAll_onRef` (proved), `forall_mem_none` (proved), `forall_mem_some` (proved), `formed_sites_iff` (proved), `inputFormed_program` (proved), `inputFormed_services` (proved), `layerAll_of_layerAt` (proved), `layerAll_onRef` (proved), `layersAll_onRef` (proved), `mem_nodes_field` (proved), `mem_nodes_item` (proved), `nodeAnnotations_all` (proved), `optionTerm_all` (proved), `programAnnotations_all` (proved), `services_closed` (proved), `stmtAll_onRef` (proved), `stmtsAll_onRef` (proved), `termAnnotations_all` (proved), `closed_genAnswer` (proved), `closed_joinAnswerT` (proved), `closed_merge` (proved), `closed_seq` (proved), `isBlock` (proved), `all_of_dropWhile_nil` (proved), `all_of_takeWhile_length` (proved), `dropWhile_eq_nil_of_all` (proved), `cause_cases_of_below` (proved), `cause_closed` (proved), `cause_least` (proved), `cause_monotone` (proved), `cause_reads` (proved), `cause_upper` (proved), `exit_closed` (proved), `exit_eliminator` (proved), `exit_one` (proved), `fiber_closed` (proved), `fiber_eliminator` (proved), `fiber_one` (proved), `list_closed` (proved), `list_eliminator` (proved), `list_one` (proved), `option_closed` (proved), `option_eliminator` (proved), `CustomScheme.closed_apply` (proved), `Scheme.closed_apply` (proved), `closed_monoApply` (proved), `closed_projectProduct` (proved), `closed_typeOf` (proved), `spec_answersClosed` (proved), `addresses_eq_cons` (proved), `at_append` (proved), `at_child` (proved), `at_layers_nil` (proved), `at_replaceAt_below` (proved), `at_stmts_nil` (proved), `childEnv_replace_kept` (proved), `child_add_three` (proved), `envAt_append` (proved), `envAt_child` (proved), `exists_at_of_mem_foldList` (proved), `foldList_cases` (proved), `mem_foldList_iff` (proved), `replaceAt_append` (proved), `replaceAt_cons_isBlock` (proved), `replaceAt_defs_body` (proved), `replaceAt_defs_main` (proved), `replaceAt_eff` (proved), `replaceAt_effs_head` (proved), `replaceAt_effs_tail` (proved), `setChild_isBlock` (proved), `sizeOf_child_lt` (proved), `stmtsHead_replace_kept` (proved), `child_step` (proved), `NodeHasTy.replace` (proved), `replace_envAt` (proved), `bodyAt_resig` (proved), `bodyAt_sig` (proved), `closed_check` (proved), `closed_fieldOf` (proved), `closed_fieldType` (proved), `closed_setOf` (proved), `closed_setType` (proved), `closed_tagArms` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `extends_withDefs` (proved), `Sketch.annotate_eq_table` (proved), `check_fill` (proved), `check_fill_focusAt` (proved), `check_fill_kept` (proved), `check_filled` (proved), `check_filled_module` (proved), `Sketch.check_focusAt` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_omit_focusAt` (proved), `check_program` (proved), `decode_encode` (proved), `decode_exact` (proved), `fillAt_of_replaceAt` (proved), `fillAt_some` (proved), `focusAt_at` (proved), `focusAt_more_holes` (proved), `Sketch.focusAt_nil` (proved), `hole_hasTy` (proved), `hole_hasTy_focus` (proved), `Sketch.refusals_head` (proved), `Sketch.refusals_nil_iff` (proved), `refusals_of_check` (proved), `sigAt_extends` (proved), `sigAt_nil` (proved), `sigAt_part` (proved), `tableEntry_path` (proved), `table_fill` (proved), `Sketch.table_head` (proved), `table_more_holes` (proved), `table_omit` (proved), `table_result_refusal_none` (proved), `bodies_eq` (proved), `bodies_mem_under` (proved), `bodies_restrict` (proved), `bodies_splice` (proved), `bodies_under` (proved), `bodyEntry_head` (proved), `bodyEntry_nil` (proved), `bodyEntry_nodecl` (proved), `bodyEntry_tail` (proved), `mem_splice` (proved), `splice_all_under` (proved), `splice_append_out_left` (proved), `splice_append_out_right` (proved), `splice_three` (proved), `typedAt_table` (proved), `typedAt_table_nil` (proved), `typedAt_table_of_focusAt` (proved), `under_append` (proved), `under_prefix_false` (proved), `under_self` (proved), `under_sibling_false` (proved), `closed_project` (proved), `closed_typeAt` (proved), `closedSubst_matchArgsB` (proved), `closed_cands` (proved), `closed_diffTag` (proved), `closed_instantiate` (proved), `closed_joinCands` (proved), `closed_payloadOf` (proved), `closed_payloadTy` (proved), `mem_of_lookup` (proved), `subN_causeOf_iff` (proved), `subN_exitOf_iff` (proved), `subN_fiberOf_iff` (proved), `subN_list_iff` (proved), `subN_option_iff` (proved), `adjoint` (proved), `adjoint_le` (proved), `extendAll_adjoint` (proved), `extendAll_bot` (proved), `extendAll_isSome_iff` (proved), `extendAll_laws` (proved), `extendAll_least` (proved), `extendAll_lift` (proved), `extendAll_mono` (proved), `extendAll_upper` (proved), `extend_adjoint` (proved), `extend_bot` (proved), `extend_isSome_iff` (proved), `extend_laws` (proved), `extend_least` (proved), `extend_liftOne` (proved), `extend_mono` (proved), `extend_upper` (proved), `liftOne_answers` (proved), `liftOne_isSome_iff` (proved), `liftOne_mono` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `extendAll_agrees` (proved), `extendAll_closed` (proved), `extendAll_closed_pair` (proved), `extendAll_eq_some_iff` (proved), `extendAll_never` (proved), `extendAll_of_extend` (proved), `extendAll_refused` (proved), `extend_agrees` (proved), `extend_closed` (proved), `extend_closed_pair` (proved), `extend_eq_some_iff` (proved), `extend_never` (proved), `extend_refused` (proved), `extend_two` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_pair` (proved), `foldl_join_pair_start` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `liftOne_congr` (proved), `liftOne_eq` (proved), `liftOne_eq_some_iff` (proved), `liftOne_member` (proved), `liftOne_never` (proved), `liftOne_some` (proved), `liftOne_two` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_union_eq_of` (proved), `lift_union_eq_of_antisymm` (proved), `lift_union_eq_pair` (proved), `lift_unique` (proved), `lift_unique_pair` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `prod_antisymm` (proved), `subN_iff_le` (proved), `actionHasTy_closed` (proved), `actionHasTy_replace` (proved), `actionHasTy_sigProgram` (proved), `addresses_eff_head` (proved), `addresses_eq_foldList` (proved), `annotateModule_fill` (proved), `annotateModule_fill_body` (proved), `annotateModule_fill_main` (proved), `annotateModule_fill_plain` (proved), `annotateModule_plain` (proved), `annotateModule_restrict` (proved), `Program.annotate_eq_table` (proved), `argTy_closed` (proved), `argsTy_closed` (proved), `bodiesHasTy_sigProgram` (proved), `callAt_rowTy` (proved), `causeInputError_causeOf` (proved), `causeInputError_exitOf` (proved), `causeInputError_upper` (proved), `causeTy_closed` (proved), `cause_mono` (proved), `checkBodies_restrict` (proved), `checkModule_ext` (proved), `checkModule_programFocusAt` (proved), `checkModule_replace_programFocusAt` (proved), `checkModule_restrict` (proved), `checkRow_rowBindings` (proved), `check_closed` (proved), `Program.check_focusAt` (proved), `check_replace` (proved), `check_replace_focusAt` (proved), `childAddresses_map_tableEntryAt` (proved), `closedSig_app` (proved), `closedSig_native` (proved), `closed_catchIfError` (proved), `closed_causeInputError` (proved), `closed_exitOf` (proved), `closed_fiberTy` (proved), `closed_getD` (proved), `closed_joinAnswer` (proved), `closed_listOf` (proved), `closed_litArgTy` (proved), `closed_nativeAtomTy` (proved), `closed_nativeServiceTy` (proved), `closed_optionTy` (proved), `closed_rowTy` (proved), `closed_serviceTy` (proved), `effTy_map_of_hasTy` (proved), `effTy_of_check` (proved), `effsHasTy_closed` (proved), `effsHasTy_replace` (proved), `effsHasTy_sigProgram` (proved), `exitOf_exitOf` (proved), `exitOf_upper` (proved), `fiberTy_fiberOf` (proved), `fiberTy_upper` (proved), `focusAt_eq_some` (proved), `Program.focusAt_nil` (proved), `focusAt_typed` (proved), `foldMapAt_action_base` (proved), `foldMapAt_action_fuse` (proved), `foldMapAt_action_hom` (proved), `foldMapAt_action_paths_cons` (proved), `foldMapAt_action_paths_shift` (proved), `foldMapAt_eff_base` (proved), `foldMapAt_eff_fuse` (proved), `foldMapAt_eff_hom` (proved), `foldMapAt_eff_paths_cons` (proved), `foldMapAt_eff_paths_shift` (proved), `foldMapAt_effs_base` (proved), `foldMapAt_effs_fuse` (proved), `foldMapAt_effs_hom` (proved), `foldMapAt_effs_paths_cons` (proved), `foldMapAt_effs_paths_shift` (proved), `foldMapAt_layer_base` (proved), `foldMapAt_layer_fuse` (proved), `foldMapAt_layer_hom` (proved), `foldMapAt_layer_paths_cons` (proved), `foldMapAt_layer_paths_shift` (proved), `foldMapAt_layers_base` (proved), `foldMapAt_layers_fuse` (proved), `foldMapAt_layers_hom` (proved), `foldMapAt_layers_paths_cons` (proved), `foldMapAt_layers_paths_shift` (proved), `foldMapAt_stmt_base` (proved), `foldMapAt_stmt_fuse` (proved), `foldMapAt_stmt_hom` (proved), `foldMapAt_stmt_paths_cons` (proved), `foldMapAt_stmt_paths_shift` (proved), `foldMapAt_stmts_base` (proved), `foldMapAt_stmts_fuse` (proved), `foldMapAt_stmts_hom` (proved), `foldMapAt_stmts_paths_cons` (proved), `foldMapAt_stmts_paths_shift` (proved), `foldMapAt_term_fuse` (proved), `foldMapAt_terms_fuse` (proved), `hasTy_closed` (proved), `hasTy_extSlotEnv` (proved), `hasTy_focusAt` (proved), `hasTy_replace` (proved), `hasTy_replace_focusAt` (proved), `hasTy_sigProgram` (proved), `holes_conservative` (proved), `layerHasTy_closed` (proved), `layerHasTy_replace` (proved), `layerHasTy_sigProgram` (proved), `layersHasTy_closed` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `layersHasTy_sigProgram` (proved), `listOf_list` (proved), `listOf_upper` (proved), `mem_addresses_iff` (proved), `moduleHasTy_partAt_typed` (proved), `moduleHasTy_programFocusAt` (proved), `moduleHasTy_replace_programFocusAt` (proved), `moduleHasTy_sigProgram` (proved), `nodeAnswer_replace_kept` (proved), `optionTy_eq_normal` (proved), `optionTy_option` (proved), `optionTy_upper` (proved), `Program.refusals_head` (proved), `Program.refusals_nil_iff` (proved), `refusals_of_hasTy` (proved), `sigOkKey_of_serviceTy` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_closed` (proved), `stmtsHasTy_replace` (proved), `stmtsHasTy_sigProgram` (proved), `subN_causeOf_causeUpper` (proved), `subN_exitOf_causeUpper` (proved), `tableAt_eq_cons` (proved), `tableAt_mem_path` (proved), `tableAt_none` (proved), `tableAt_path` (proved), `tableAt_perform` (proved), `tableAt_rebase` (proved), `tableAt_splice` (proved), `tableEntryAt_nil` (proved), `table_eq_tableAt` (proved), `Program.table_head` (proved), `table_result_refusal_none_of_hasTy` (proved), `table_splice` (proved), `termTy_closed` (proved), `termTy_of_term?` (proved), `typeOfProgram_closed` (proved), `typeOfProgram_closed_app` (proved), `yieldAt_addressYield` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved), `ofJson_exact` (proved), `read_exact` (proved), `canonicalHex?_exact` (proved), `natOfBinary64_exact` (proved), `natOfBinary64_finite` (proved), `readFields_exact` (proved), `readIn_exact` (proved), `readList_exact` (proved), `tagOfName_exact` (proved), `except_error_bind` (proved), `except_ok_bind` (proved), `except_pure` (proved) | — |
 
-**Next goals** (16): `invoke_arm`, `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `run_eq_ref_table`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
+**Next goals** (15): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `run_eq_ref_table`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
 **Open parts, with no planned goal** (88): not triaged 36; worded as a proposed claim 27; waits on a ruling 14; needs a definition 6; after other work 5
 
@@ -3517,7 +3607,7 @@ flowchart LR
   n955afc45["meaning_typed_app<br/>proved"]
   nbc478f90["run_typed_app<br/>proved"]
   n52c5717b["meaningB_typed_app<br/>proved"]
-  n264c79d8["reachable_typed_admitted<br/>modulo"]
+  n264c79d8["reachable_typed_admitted<br/>proved"]
   nb45e257a["checkModule_complete<br/>proved"]
   nf68b98e1["checkModule_sound<br/>proved"]
   n8b7e46d5["invoke_hasTy<br/>proved"]
@@ -3543,7 +3633,7 @@ flowchart LR
   n1d9fd8ec["errOf_payload<br/>proved"]
   ncc4bbe09["isPayload_of_hasTy_record<br/>proved"]
   n780c81c2["order_trans<br/>proved"]
-  ndb1eccf7["reachable_typed<br/>modulo"]
+  ndb1eccf7["reachable_typed<br/>proved"]
   ne2ea226b["lawfulSig_of_admitted<br/>proved"]
   n39739397["checkModule_eq_check<br/>proved"]
   nbe6db31e["cata_eff_congr_on<br/>proved"]
@@ -3563,8 +3653,8 @@ flowchart LR
   nea656e8a["option_eliminator<br/>proved"]
   n3116cb45["Eliminator.lift_upper<br/>proved"]
   n4dc056f1["handles_of_payloadFieldTy<br/>proved"]
-  n3c088e91["decision_preserves<br/>modulo"]
-  n409a8630["load_typed<br/>modulo"]
+  n3c088e91["decision_preserves<br/>proved"]
+  n409a8630["load_typed<br/>proved"]
   nb34c18f4["lookup_solve_seed<br/>proved"]
   n7d8b7e08["subN_list_iff<br/>proved"]
   n2880dc63["extendAll_adjoint<br/>proved"]
@@ -3583,10 +3673,10 @@ flowchart LR
   n711b772["launch_preserves<br/>proved"]
   ndd979abd["subN_never<br/>proved"]
   n8a1c93b9["guardBind_typed<br/>proved"]
-  ne0728e61["deliver_preserves<br/>modulo"]
-  nfe3c01d["loop_preserves<br/>modulo"]
+  ne0728e61["deliver_preserves<br/>proved"]
+  nfe3c01d["loop_preserves<br/>proved"]
   n98a6b109["driveState_lift<br/>proved"]
-  n9f38eb40["denotesTyped<br/>modulo"]
+  n9f38eb40["denotesTyped<br/>proved"]
   n6ba51779["adjoint<br/>proved"]
   n7eee858b["foldl_keeps<br/>proved"]
   nc079dfb9["mapM_cons_eq_some<br/>proved"]
@@ -3594,19 +3684,30 @@ flowchart LR
   nd5186648["catchGuard_typed<br/>proved"]
   n75164370["closeOrder_eq<br/>proved"]
   nd0b1e6c2["fits_scope_inv<br/>proved"]
-  n6bd84948["memoBuild_extension<br/>proved"]
+  nc3199dff["scopeParams_child<br/>proved"]
   nec2861e7["at_child<br/>proved"]
+  n6bd84948["memoBuild_extension<br/>proved"]
+  n5a414cb8["scopeParams_below<br/>proved"]
   n21101f84["fiberTy_upper<br/>proved"]
+  n7f4273a4["withParams_of_none<br/>proved"]
   n7ed81d5a["allGuard_typed<br/>proved"]
   n3b97d876["provideLayerArm<br/>proved"]
-  ndb99837e["invoke_arm<br/>goal"]
+  ndb99837e["invoke_arm<br/>proved"]
   n13b13874["onExit_typed<br/>proved"]
+  n1520ce5c["withParams_serviceTy<br/>proved"]
   nab1a404e["exitOf_upper<br/>proved"]
+  nf9c39706["param_arm<br/>proved"]
   n1de99ffb["call_arm<br/>proved"]
+  n73c31373["scopeParams_ref<br/>proved"]
+  n633e4bf["scopeParams_layer_below<br/>proved"]
   nc2028fa["Eliminator.lift_least<br/>proved"]
   nb022323["mapM_total<br/>proved"]
   na4cdc076["fiber_eliminator<br/>proved"]
+  n7395476f["scopeParams_body<br/>proved"]
+  nb978165e["withParams_defOf<br/>proved"]
   nd5c70e5c["exit_eliminator<br/>proved"]
+  n7f4ad274["scopeParams_decl<br/>proved"]
+  n1939e2da["withParams_param<br/>proved"]
   n67d2d3e7["UnionRule.lift_least<br/>proved"]
   n9d427e32["subN_fiberOf_iff<br/>proved"]
   n43297f29["mapM_source<br/>proved"]
@@ -3805,7 +3906,8 @@ flowchart LR
   ne0728e61 --> n8a1c93b9
   ne0728e61 --> n75164370
   ne0728e61 --> nd0b1e6c2
-  ne0728e61 --> n6354e20d
+  ne0728e61 --> nc3199dff
+  ne0728e61 --> nec2861e7
   ne0728e61 --> n780c81c2
   ne0728e61 --> n19f8d2c3
   ne0728e61 --> n218454b
@@ -3815,7 +3917,6 @@ flowchart LR
   ne0728e61 --> n6bd84948
   ne0728e61 --> n5354aa50
   ne0728e61 --> n111be189
-  ne0728e61 --> nec2861e7
   ne0728e61 --> n9f38eb40
   ne0728e61 --> nb1d18964
   ne0728e61 --> n8f1a9253
@@ -3824,9 +3925,12 @@ flowchart LR
   ne0728e61 --> na46bd7a0
   ne0728e61 --> na9a83faf
   ne0728e61 --> n117b8479
+  ne0728e61 --> n6354e20d
+  ne0728e61 --> n5a414cb8
   ne0728e61 --> n21101f84
   ne0728e61 --> n61142815
   ne0728e61 --> n84b920d
+  ne0728e61 --> n7f4273a4
   ne0728e61 --> n1d9fd8ec
   ne0728e61 --> ncc4bbe09
   ne0728e61 --> n7ed81d5a
@@ -3835,8 +3939,12 @@ flowchart LR
   ne0728e61 --> ndb99837e
   ne0728e61 --> n6e2bceb9
   ne0728e61 --> n13b13874
+  ne0728e61 --> n1520ce5c
   ne0728e61 --> nab1a404e
+  ne0728e61 --> nf9c39706
   ne0728e61 --> n1de99ffb
+  ne0728e61 --> n73c31373
+  ne0728e61 --> n633e4bf
   nfe3c01d --> nd518fc14
   nfe3c01d --> ndd979abd
   nfe3c01d --> ne59d24c0
@@ -3846,7 +3954,8 @@ flowchart LR
   nfe3c01d --> n8a1c93b9
   nfe3c01d --> n75164370
   nfe3c01d --> nd0b1e6c2
-  nfe3c01d --> n6354e20d
+  nfe3c01d --> nc3199dff
+  nfe3c01d --> nec2861e7
   nfe3c01d --> n780c81c2
   nfe3c01d --> n19f8d2c3
   nfe3c01d --> n218454b
@@ -3856,7 +3965,6 @@ flowchart LR
   nfe3c01d --> n6bd84948
   nfe3c01d --> n5354aa50
   nfe3c01d --> n111be189
-  nfe3c01d --> nec2861e7
   nfe3c01d --> n9f38eb40
   nfe3c01d --> nb1d18964
   nfe3c01d --> n8f1a9253
@@ -3865,9 +3973,12 @@ flowchart LR
   nfe3c01d --> na46bd7a0
   nfe3c01d --> na9a83faf
   nfe3c01d --> n117b8479
+  nfe3c01d --> n6354e20d
+  nfe3c01d --> n5a414cb8
   nfe3c01d --> n21101f84
   nfe3c01d --> n61142815
   nfe3c01d --> n84b920d
+  nfe3c01d --> n7f4273a4
   nfe3c01d --> n1d9fd8ec
   nfe3c01d --> ncc4bbe09
   nfe3c01d --> n7ed81d5a
@@ -3876,10 +3987,15 @@ flowchart LR
   nfe3c01d --> ndb99837e
   nfe3c01d --> n6e2bceb9
   nfe3c01d --> n13b13874
+  nfe3c01d --> n1520ce5c
   nfe3c01d --> nab1a404e
+  nfe3c01d --> nf9c39706
   nfe3c01d --> n1de99ffb
+  nfe3c01d --> n73c31373
+  nfe3c01d --> n633e4bf
   n9f38eb40 --> n3b97d876
   n9f38eb40 --> ndb99837e
+  n9f38eb40 --> nc3199dff
   n9f38eb40 --> nec2861e7
   n9f38eb40 --> ne59d24c0
   n9f38eb40 --> nb1d18964
@@ -3898,14 +4014,18 @@ flowchart LR
   n9f38eb40 --> n13b13874
   n9f38eb40 --> ndd979abd
   n9f38eb40 --> n8a1c93b9
+  n9f38eb40 --> n1520ce5c
   n9f38eb40 --> nab1a404e
   n9f38eb40 --> nd0b1e6c2
+  n9f38eb40 --> n5a414cb8
   n9f38eb40 --> n21101f84
   n9f38eb40 --> n61142815
   n9f38eb40 --> n84b920d
+  n9f38eb40 --> n7f4273a4
   n9f38eb40 --> n1d9fd8ec
   n9f38eb40 --> ncc4bbe09
   n9f38eb40 --> n7ed81d5a
+  n9f38eb40 --> nf9c39706
   n9f38eb40 --> n1de99ffb
   n6ba51779 --> nc2028fa
   n6ba51779 --> na46bd7a0
@@ -3924,12 +4044,14 @@ flowchart LR
   n3b97d876 --> ne59d24c0
   n3b97d876 --> nd518fc14
   n3b97d876 --> n21101f84
+  n3b97d876 --> nc3199dff
   n3b97d876 --> nec2861e7
   n3b97d876 --> n13d3cdb0
   n3b97d876 --> na46bd7a0
   n3b97d876 --> n8f1a9253
   n3b97d876 --> n61142815
   n3b97d876 --> n84b920d
+  n3b97d876 --> n7f4273a4
   n3b97d876 --> nb1d18964
   n3b97d876 --> n9d9c3800
   n3b97d876 --> nd7502c71
@@ -3943,10 +4065,27 @@ flowchart LR
   n3b97d876 --> ndd979abd
   n3b97d876 --> n8a1c93b9
   n3b97d876 --> n356196cb
+  n3b97d876 --> n73c31373
+  n3b97d876 --> n633e4bf
   n3b97d876 --> nd0b1e6c2
-  n3b97d876 --> n6354e20d
   n3b97d876 --> n19f8d2c3
+  n3b97d876 --> n1520ce5c
   n3b97d876 --> nd5186648
+  ndb99837e --> n9d9c3800
+  ndb99837e --> n356196cb
+  ndb99837e --> ne59d24c0
+  ndb99837e --> n780c81c2
+  ndb99837e --> nec2861e7
+  ndb99837e --> n5a414cb8
+  ndb99837e --> nb1d18964
+  ndb99837e --> n8f1a9253
+  ndb99837e --> nd7502c71
+  ndb99837e --> na46bd7a0
+  ndb99837e --> na9a83faf
+  ndb99837e --> n117b8479
+  ndb99837e --> n13d3cdb0
+  ndb99837e --> n7395476f
+  ndb99837e --> nb978165e
   n13b13874 --> ne59d24c0
   n13b13874 --> n356196cb
   n13b13874 --> nd5186648
@@ -3958,6 +4097,19 @@ flowchart LR
   nab1a404e --> na46bd7a0
   nab1a404e --> n30801347
   nab1a404e --> n4d8d98f9
+  nf9c39706 --> n9d9c3800
+  nf9c39706 --> n356196cb
+  nf9c39706 --> ne59d24c0
+  nf9c39706 --> n780c81c2
+  nf9c39706 --> nb1d18964
+  nf9c39706 --> n8f1a9253
+  nf9c39706 --> nd7502c71
+  nf9c39706 --> na46bd7a0
+  nf9c39706 --> na9a83faf
+  nf9c39706 --> n117b8479
+  nf9c39706 --> n13d3cdb0
+  nf9c39706 --> n7f4ad274
+  nf9c39706 --> n1939e2da
   n1de99ffb --> n356196cb
   n1de99ffb --> ne59d24c0
   n1de99ffb --> n9d9c3800
@@ -3969,6 +4121,8 @@ flowchart LR
   n1de99ffb --> na9a83faf
   n1de99ffb --> n117b8479
   n1de99ffb --> n13d3cdb0
+  n1de99ffb --> n7395476f
+  n1de99ffb --> n7f4273a4
   nc2028fa --> n67d2d3e7
   nb022323 --> nc079dfb9
   na4cdc076 --> n9d427e32
@@ -3995,7 +4149,7 @@ flowchart LR
 | `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` |
 | `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` |
 | `meaningB_typed_app` | proved | — | `check_restrict`, `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `check_sound`, `check_complete`, `subN_refl`, `optionTy_upper`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` |
-| `reachable_typed_admitted` | modulo | `invoke_arm` | `reachable_typed`, `lawfulSig_of_admitted` |
+| `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` |
 | `checkModule_complete` | proved | — | `checkModule_eq_check`, `check_complete` |
 | `checkModule_sound` | proved | — | `check_sound` |
 | `invoke_hasTy` | proved | — | — |
@@ -4021,7 +4175,7 @@ flowchart LR
 | `errOf_payload` | proved | — | — |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
 | `order_trans` | proved | — | — |
-| `reachable_typed` | modulo | `invoke_arm` | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` |
+| `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` |
 | `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` |
 | `checkModule_eq_check` | proved | — | — |
 | `cata_eff_congr_on` | proved | — | — |
@@ -4041,8 +4195,8 @@ flowchart LR
 | `option_eliminator` | proved | — | `subN_option_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
 | `Eliminator.lift_upper` | proved | — | `subN_refl`, `UnionRule.lift_upper` |
 | `handles_of_payloadFieldTy` | proved | — | — |
-| `decision_preserves` | modulo | `invoke_arm` | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
-| `load_typed` | modulo | `invoke_arm` | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
+| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
+| `load_typed` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
 | `lookup_solve_seed` | proved | — | — |
 | `subN_list_iff` | proved | — | — |
 | `extendAll_adjoint` | proved | — | `adjoint`, `extendAll_eq_some_iff` |
@@ -4061,10 +4215,10 @@ flowchart LR
 | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` |
 | `subN_never` | proved | — | — |
 | `guardBind_typed` | proved | — | `close_typed` |
-| `deliver_preserves` | modulo | `invoke_arm` | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
-| `loop_preserves` | modulo | `invoke_arm` | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+| `deliver_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `scopeParams_child`, `at_child`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `at_append`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `withParams_serviceTy`, `exitOf_upper`, `param_arm`, `call_arm`, `scopeParams_ref`, `scopeParams_layer_below` |
+| `loop_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `scopeParams_child`, `at_child`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `at_append`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `withParams_serviceTy`, `exitOf_upper`, `param_arm`, `call_arm`, `scopeParams_ref`, `scopeParams_layer_below` |
 | `driveState_lift` | proved | — | — |
-| `denotesTyped` | modulo | `invoke_arm` | `provideLayerArm`, `invoke_arm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+| `denotesTyped` | proved | — | `provideLayerArm`, `invoke_arm`, `scopeParams_child`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `withParams_serviceTy`, `exitOf_upper`, `fits_scope_inv`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `param_arm`, `call_arm` |
 | `adjoint` | proved | — | `Eliminator.lift_least`, `subN_trans`, `mapM_total`, `Eliminator.lift_upper` |
 | `foldl_keeps` | proved | — | — |
 | `mapM_cons_eq_some` | proved | — | — |
@@ -4072,19 +4226,30 @@ flowchart LR
 | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
 | `closeOrder_eq` | proved | — | — |
 | `fits_scope_inv` | proved | — | — |
-| `memoBuild_extension` | proved | — | — |
+| `scopeParams_child` | proved | — | — |
 | `at_child` | proved | — | `at_append` |
+| `memoBuild_extension` | proved | — | — |
+| `scopeParams_below` | proved | — | — |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
+| `withParams_of_none` | proved | — | — |
 | `allGuard_typed` | proved | — | `guardBind_typed` |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
-| `invoke_arm` | goal | `invoke_arm` | — |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `scopeParams_child`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `scopeParams_ref`, `scopeParams_layer_below`, `fits_scope_inv`, `seq_typed`, `withParams_serviceTy`, `catchGuard_typed` |
+| `invoke_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `at_child`, `scopeParams_below`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_defOf` |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+| `withParams_serviceTy` | proved | — | — |
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
-| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` |
+| `param_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_decl`, `withParams_param` |
+| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_of_none` |
+| `scopeParams_ref` | proved | — | — |
+| `scopeParams_layer_below` | proved | — | — |
 | `Eliminator.lift_least` | proved | — | `UnionRule.lift_least` |
 | `mapM_total` | proved | — | `mapM_cons_eq_some` |
 | `fiber_eliminator` | proved | — | `subN_fiberOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
+| `scopeParams_body` | proved | — | — |
+| `withParams_defOf` | proved | — | — |
 | `exit_eliminator` | proved | — | `subN_exitOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
+| `scopeParams_decl` | proved | — | — |
+| `withParams_param` | proved | — | — |
 | `UnionRule.lift_least` | proved | — | `subN_trans`, `mapM_source`, `joinAll_le` |
 | `subN_fiberOf_iff` | proved | — | — |
 | `mapM_source` | proved | — | `mapM_cons_eq_some` |
@@ -4106,6 +4271,8 @@ flowchart LR
   n2443b382["check_restrict<br/>proved"]
   n9c0698f6["lawful_append<br/>proved"]
   na8f28a67["meaningUnder_append<br/>proved"]
+  n7522d4f3["denoteRowsB_looped<br/>proved"]
+  nab6f0c7["denoteRowsB_straight<br/>proved"]
   n233e8beb["checkModule_conservative<br/>proved"]
   n39739397["checkModule_eq_check<br/>proved"]
   nb6f402f2["defs_conservative<br/>proved"]
@@ -4115,12 +4282,14 @@ flowchart LR
   n5a230c5["check_complete<br/>proved"]
   nbe6db31e["cata_eff_congr_on<br/>proved"]
   n8ec132e6["hom_eq_cata_eff<br/>proved"]
+  nda3a4d32["denoteRows_straight<br/>proved"]
   nf68b98e1["checkModule_sound<br/>proved"]
   nb45e257a["checkModule_complete<br/>proved"]
   n8e60bcb6 --> n4c593752
   n8e60bcb6 --> n5a230c5
   n2443b382 --> nbe6db31e
   n2443b382 --> n8ec132e6
+  n7522d4f3 --> nda3a4d32
   n233e8beb --> nb6f402f2
   nb6f402f2 --> nbe6db31e
   nb6f402f2 --> n8ec132e6
@@ -4138,6 +4307,8 @@ flowchart LR
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` |
 | `lawful_append` | proved | — | — |
 | `meaningUnder_append` | proved | — | — |
+| `denoteRowsB_looped` | proved | — | `denoteRows_straight` |
+| `denoteRowsB_straight` | proved | — | — |
 | `checkModule_conservative` | proved | — | `defs_conservative` |
 | `checkModule_eq_check` | proved | — | — |
 | `defs_conservative` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` |
@@ -4147,6 +4318,7 @@ flowchart LR
 | `check_complete` | proved | — | — |
 | `cata_eff_congr_on` | proved | — | — |
 | `hom_eq_cata_eff` | proved | — | — |
+| `denoteRows_straight` | proved | — | — |
 | `checkModule_sound` | proved | — | `check_sound` |
 | `checkModule_complete` | proved | — | `checkModule_eq_check`, `check_complete` |
 
@@ -4244,7 +4416,7 @@ flowchart LR
   n3dcef4e1["fold_typed_atomic_update<br/>proved"]
   n2e9060b1["handle_identity_laws<br/>proved"]
   n307d7dff["saved_mask_image_membership<br/>proved"]
-  ne1e97db2["scoped_body_substitution_boundary<br/>modulo"]
+  ne1e97db2["scoped_body_substitution_boundary<br/>proved"]
   n101c7022["awaitStep_types<br/>proved"]
   n7202553f["Latch.Model.closeStep_types<br/>proved"]
   nd6d60385["flushStep_types<br/>proved"]
@@ -4340,10 +4512,21 @@ flowchart LR
   ndd979abd["subN_never<br/>proved"]
   n8a260c45["templateOK_of<br/>proved"]
   n54de7a8b["perform_scoped_iff<br/>proved"]
+  nb978165e["withParams_defOf<br/>proved"]
+  n7f4273a4["withParams_of_none<br/>proved"]
+  n1939e2da["withParams_param<br/>proved"]
+  n1520ce5c["withParams_serviceTy<br/>proved"]
   n218454b["mono<br/>proved"]
-  ndb99837e["invoke_arm<br/>goal"]
+  ndb99837e["invoke_arm<br/>proved"]
+  nf9c39706["param_arm<br/>proved"]
+  n73c31373["scopeParams_ref<br/>proved"]
   n84b920d["syncRow_typed<br/>proved"]
   n47c566cf["termMaps_of_typed<br/>proved"]
+  n5a414cb8["scopeParams_below<br/>proved"]
+  n7395476f["scopeParams_body<br/>proved"]
+  nc3199dff["scopeParams_child<br/>proved"]
+  n7f4ad274["scopeParams_decl<br/>proved"]
+  n633e4bf["scopeParams_layer_below<br/>proved"]
   n72e71f57["PubSub.initial_types<br/>proved"]
   n293f1fcc["PubSub.poll_types<br/>proved"]
   n82112d7d["slide_types<br/>proved"]
@@ -4403,7 +4586,7 @@ flowchart LR
   na9a83faf["causeInputError_upper<br/>proved"]
   n13d3cdb0["hom_eq_cata_ty<br/>proved"]
   n356196cb["fits_mono<br/>proved"]
-  n9f38eb40["denotesTyped<br/>modulo"]
+  n9f38eb40["denotesTyped<br/>proved"]
   nec2861e7["at_child<br/>proved"]
   n6354e20d["at_append<br/>proved"]
   n30801347["subN_refl<br/>proved"]
@@ -4484,6 +4667,7 @@ flowchart LR
   n3dcef4e1 --> n13d3cdb0
   n2e9060b1 --> n356196cb
   ne1e97db2 --> n9f38eb40
+  ne1e97db2 --> nc3199dff
   ne1e97db2 --> nec2861e7
   ne1e97db2 --> ne59d24c0
   ne1e97db2 --> nb1d18964
@@ -4678,6 +4862,34 @@ flowchart LR
   ncbd97dc --> n28752554
   ndd2870dc --> n9d9c3800
   n218454b --> n780c81c2
+  ndb99837e --> n9d9c3800
+  ndb99837e --> n356196cb
+  ndb99837e --> ne59d24c0
+  ndb99837e --> n780c81c2
+  ndb99837e --> nec2861e7
+  ndb99837e --> n5a414cb8
+  ndb99837e --> nb1d18964
+  ndb99837e --> n8f1a9253
+  ndb99837e --> nd7502c71
+  ndb99837e --> na46bd7a0
+  ndb99837e --> na9a83faf
+  ndb99837e --> n117b8479
+  ndb99837e --> n13d3cdb0
+  ndb99837e --> n7395476f
+  ndb99837e --> nb978165e
+  nf9c39706 --> n9d9c3800
+  nf9c39706 --> n356196cb
+  nf9c39706 --> ne59d24c0
+  nf9c39706 --> n780c81c2
+  nf9c39706 --> nb1d18964
+  nf9c39706 --> n8f1a9253
+  nf9c39706 --> nd7502c71
+  nf9c39706 --> na46bd7a0
+  nf9c39706 --> na9a83faf
+  nf9c39706 --> n117b8479
+  nf9c39706 --> n13d3cdb0
+  nf9c39706 --> n7f4ad274
+  nf9c39706 --> n1939e2da
   n84b920d --> n8f1a9253
   n84b920d --> na46bd7a0
   n84b920d --> ne59d24c0
@@ -4883,6 +5095,7 @@ flowchart LR
   na9a83faf --> n34dc851c
   n9f38eb40 --> n3b97d876
   n9f38eb40 --> ndb99837e
+  n9f38eb40 --> nc3199dff
   n9f38eb40 --> nec2861e7
   n9f38eb40 --> ne59d24c0
   n9f38eb40 --> nb1d18964
@@ -4901,14 +5114,18 @@ flowchart LR
   n9f38eb40 --> n13b13874
   n9f38eb40 --> ndd979abd
   n9f38eb40 --> n8a1c93b9
+  n9f38eb40 --> n1520ce5c
   n9f38eb40 --> nab1a404e
   n9f38eb40 --> nd0b1e6c2
+  n9f38eb40 --> n5a414cb8
   n9f38eb40 --> n21101f84
   n9f38eb40 --> n61142815
   n9f38eb40 --> n84b920d
+  n9f38eb40 --> n7f4273a4
   n9f38eb40 --> n1d9fd8ec
   n9f38eb40 --> ncc4bbe09
   n9f38eb40 --> n7ed81d5a
+  n9f38eb40 --> nf9c39706
   n9f38eb40 --> n1de99ffb
   nec2861e7 --> n6354e20d
   n93643f1d --> n5a230c5
@@ -4950,12 +5167,14 @@ flowchart LR
   n3b97d876 --> ne59d24c0
   n3b97d876 --> nd518fc14
   n3b97d876 --> n21101f84
+  n3b97d876 --> nc3199dff
   n3b97d876 --> nec2861e7
   n3b97d876 --> n13d3cdb0
   n3b97d876 --> na46bd7a0
   n3b97d876 --> n8f1a9253
   n3b97d876 --> n61142815
   n3b97d876 --> n84b920d
+  n3b97d876 --> n7f4273a4
   n3b97d876 --> nb1d18964
   n3b97d876 --> n9d9c3800
   n3b97d876 --> nd7502c71
@@ -4969,9 +5188,11 @@ flowchart LR
   n3b97d876 --> ndd979abd
   n3b97d876 --> n8a1c93b9
   n3b97d876 --> n356196cb
+  n3b97d876 --> n73c31373
+  n3b97d876 --> n633e4bf
   n3b97d876 --> nd0b1e6c2
-  n3b97d876 --> n6354e20d
   n3b97d876 --> n19f8d2c3
+  n3b97d876 --> n1520ce5c
   n3b97d876 --> nd5186648
   n6e2bceb9 --> nea656e8a
   n6e2bceb9 --> n9d9c3800
@@ -5009,6 +5230,8 @@ flowchart LR
   n1de99ffb --> na9a83faf
   n1de99ffb --> n117b8479
   n1de99ffb --> n13d3cdb0
+  n1de99ffb --> n7395476f
+  n1de99ffb --> n7f4273a4
   n647a6c6f --> n6354e20d
   n410cd578 --> n88fa115a
   n948511f1 --> ndb047873
@@ -5059,7 +5282,7 @@ flowchart LR
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` |
 | `handle_identity_laws` | proved | — | `fits_mono` |
 | `saved_mask_image_membership` | proved | — | — |
-| `scoped_body_substitution_boundary` | modulo | `invoke_arm` | `denotesTyped`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `at_append` |
+| `scoped_body_substitution_boundary` | proved | — | `denotesTyped`, `scopeParams_child`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `at_append` |
 | `awaitStep_types` | proved | — | `typed` |
 | `Latch.Model.closeStep_types` | proved | — | `typed` |
 | `flushStep_types` | proved | — | `typed` |
@@ -5155,10 +5378,21 @@ flowchart LR
 | `subN_never` | proved | — | — |
 | `templateOK_of` | proved | — | — |
 | `perform_scoped_iff` | proved | — | — |
+| `withParams_defOf` | proved | — | — |
+| `withParams_of_none` | proved | — | — |
+| `withParams_param` | proved | — | — |
+| `withParams_serviceTy` | proved | — | — |
 | `mono` | proved | — | `order_trans` |
-| `invoke_arm` | goal | `invoke_arm` | — |
+| `invoke_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `at_child`, `scopeParams_below`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_defOf` |
+| `param_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_decl`, `withParams_param` |
+| `scopeParams_ref` | proved | — | — |
 | `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` |
+| `scopeParams_below` | proved | — | — |
+| `scopeParams_body` | proved | — | — |
+| `scopeParams_child` | proved | — | — |
+| `scopeParams_decl` | proved | — | — |
+| `scopeParams_layer_below` | proved | — | — |
 | `PubSub.initial_types` | proved | — | `typed` |
 | `PubSub.poll_types` | proved | — | `typed` |
 | `slide_types` | proved | — | `typed` |
@@ -5218,7 +5452,7 @@ flowchart LR
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extendAll_eq_some_iff` |
 | `hom_eq_cata_ty` | proved | — | — |
 | `fits_mono` | proved | — | — |
-| `denotesTyped` | modulo | `invoke_arm` | `provideLayerArm`, `invoke_arm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+| `denotesTyped` | proved | — | `provideLayerArm`, `invoke_arm`, `scopeParams_child`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `withParams_serviceTy`, `exitOf_upper`, `fits_scope_inv`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `param_arm`, `call_arm` |
 | `at_child` | proved | — | `at_append` |
 | `at_append` | proved | — | — |
 | `subN_refl` | proved | — | — |
@@ -5245,7 +5479,7 @@ flowchart LR
 | `subN_causeOf_causeUpper` | proved | — | — |
 | `subN_exitOf_causeUpper` | proved | — | `subN_trans`, `subN_refl`, `subN_exitOf_iff` |
 | `extendAll_eq_some_iff` | proved | — | — |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `scopeParams_child`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `scopeParams_ref`, `scopeParams_layer_below`, `fits_scope_inv`, `seq_typed`, `withParams_serviceTy`, `catchGuard_typed` |
 | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
 | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
@@ -5254,7 +5488,7 @@ flowchart LR
 | `fits_scope_inv` | proved | — | — |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `allGuard_typed` | proved | — | `guardBind_typed` |
-| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` |
+| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_of_none` |
 | `saved_mask_restoration` | proved | — | `at_append` |
 | `read_print` | proved | — | `readTerm_printTerm` |
 | `handles_of_payloadFieldTy` | proved | — | — |
@@ -5332,7 +5566,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  ndb1eccf7["reachable_typed<br/>modulo"]
+  ndb1eccf7["reachable_typed<br/>proved"]
   ne902449e["preflight_success_prepared_fits<br/>proved"]
   nf74076ea["preflight_failure_noShapeDefect<br/>proved"]
   n18e8f48d["instance_prepared_success<br/>proved"]
@@ -5341,7 +5575,25 @@ flowchart LR
   nc03c8cac["session_eq_ref<br/>proved"]
   n96d17391["denoteRows_eq_session_host<br/>proved"]
   nb72421ed["runWith_denotes<br/>proved"]
+  ncaa65b["h8_loopedRows<br/>proved"]
+  nb2d7c107["denoteRowsB_eq_session_host<br/>proved"]
+  n9a3b3f8d["runWith_denotesB<br/>proved"]
+  ncd4ba713["compilesBO_bind<br/>proved"]
+  n54d7fd7a["compilesBO_catchCause<br/>proved"]
+  ne598463["compilesBO_catchIf<br/>proved"]
+  nd1e14921["compilesBO_exit<br/>proved"]
+  nd4c37246["compilesBO_iterate<br/>proved"]
+  n610bea28["compilesBO_matchCause<br/>proved"]
+  n9edb9fa3["compilesBO_onExit<br/>proved"]
+  n69a1b014["compilesBO_select<br/>proved"]
+  nac106427["compilesBO_suspend<br/>proved"]
+  n8e3192a8["localRunC_compileB<br/>proved"]
+  n1e53da28["localRunC_compileBO<br/>proved"]
+  n79164e62["localRunC_to_rowsB<br/>proved"]
+  n5d89494d["localWaitC_to_rowsB<br/>proved"]
   n37a040a7["bodyAt<br/>proved"]
+  nf4f0b38e["hostRunB_stable<br/>proved"]
+  n557bb765["observeRows_project<br/>proved"]
   n42ab45ca["partAt_at<br/>proved"]
   n6de917e3["partAt_of_hasTy<br/>proved"]
   n14be035f["bodyAt_at<br/>proved"]
@@ -5357,7 +5609,9 @@ flowchart LR
   n6b7dccf6["control_retires<br/>proved"]
   ne9e063db["denoteRows_eq_session<br/>proved"]
   naef44113["runWith_guarded_denotes<br/>proved"]
+  n13c671ad["runWith_guarded_denotesB<br/>proved"]
   n1355cbe5["runWith_host_denotes<br/>proved"]
+  nf1937e31["runWith_host_denotesB<br/>proved"]
   n277a51fa["runWith_layer_denotes<br/>proved"]
   nea122884["sessionSystem_finished<br/>proved"]
   n16b3bde8["sessionSystem_finishes<br/>proved"]
@@ -5365,8 +5619,8 @@ flowchart LR
   n3c14c17c["timeout<br/>modulo"]
   nab1d86f1["workers<br/>modulo"]
   nff400a67["receipt_inert<br/>proved"]
-  n3c088e91["decision_preserves<br/>modulo"]
-  n409a8630["load_typed<br/>modulo"]
+  n3c088e91["decision_preserves<br/>proved"]
+  n409a8630["load_typed<br/>proved"]
   n780c81c2["order_trans<br/>proved"]
   nd518fc14["order_refl<br/>proved"]
   n6354e20d["at_append<br/>proved"]
@@ -5376,6 +5630,7 @@ flowchart LR
   ne99a7734["allows_answer<br/>proved"]
   n3d4b1714["observe_awaitingAsync_iff<br/>proved"]
   n5d660191["tapeFrom_append<br/>proved"]
+  nab6f0c7["denoteRowsB_straight<br/>proved"]
   nf68b98e1["checkModule_sound<br/>proved"]
   n7bb00e3b["checkRow_rowBindings<br/>proved"]
   nb1d1993["focusAt_typed<br/>proved"]
@@ -5399,10 +5654,10 @@ flowchart LR
   n711b772["launch_preserves<br/>proved"]
   ndd979abd["subN_never<br/>proved"]
   n8a1c93b9["guardBind_typed<br/>proved"]
-  ne0728e61["deliver_preserves<br/>modulo"]
-  nfe3c01d["loop_preserves<br/>modulo"]
+  ne0728e61["deliver_preserves<br/>proved"]
+  nfe3c01d["loop_preserves<br/>proved"]
   n98a6b109["driveState_lift<br/>proved"]
-  n9f38eb40["denotesTyped<br/>modulo"]
+  n9f38eb40["denotesTyped<br/>proved"]
   n39739397["checkModule_eq_check<br/>proved"]
   n5a230c5["check_complete<br/>proved"]
   n12fd91bf["tape_replays<br/>proved"]
@@ -5418,27 +5673,34 @@ flowchart LR
   nd5186648["catchGuard_typed<br/>proved"]
   n75164370["closeOrder_eq<br/>proved"]
   nd0b1e6c2["fits_scope_inv<br/>proved"]
+  nc3199dff["scopeParams_child<br/>proved"]
+  nec2861e7["at_child<br/>proved"]
   n6bd84948["memoBuild_extension<br/>proved"]
   n5354aa50["deferredMake_extension<br/>proved"]
   n111be189["refMake_extension<br/>proved"]
-  nec2861e7["at_child<br/>proved"]
   nb1d18964["listOf_upper<br/>proved"]
   n9d9c3800["normalize_idem<br/>proved"]
   nd7502c71["lift_sound<br/>proved"]
   na9a83faf["causeInputError_upper<br/>proved"]
   n117b8479["matchArgsB_sound<br/>proved"]
+  n5a414cb8["scopeParams_below<br/>proved"]
   n21101f84["fiberTy_upper<br/>proved"]
   n61142815["matchB_sound<br/>proved"]
   n84b920d["syncRow_typed<br/>proved"]
+  n7f4273a4["withParams_of_none<br/>proved"]
   n1d9fd8ec["errOf_payload<br/>proved"]
   ncc4bbe09["isPayload_of_hasTy_record<br/>proved"]
   n7ed81d5a["allGuard_typed<br/>proved"]
   n3b97d876["provideLayerArm<br/>proved"]
-  ndb99837e["invoke_arm<br/>goal"]
+  ndb99837e["invoke_arm<br/>proved"]
   n6e2bceb9["optionTy_upper<br/>proved"]
   n13b13874["onExit_typed<br/>proved"]
+  n1520ce5c["withParams_serviceTy<br/>proved"]
   nab1a404e["exitOf_upper<br/>proved"]
+  nf9c39706["param_arm<br/>proved"]
   n1de99ffb["call_arm<br/>proved"]
+  n73c31373["scopeParams_ref<br/>proved"]
+  n633e4bf["scopeParams_layer_below<br/>proved"]
   n1b38f984["child_step<br/>proved"]
   na411c04e["exists_at_of_mem_foldList<br/>proved"]
   nb7e36fe7["list_eliminator<br/>proved"]
@@ -5453,9 +5715,13 @@ flowchart LR
   na4cdc076["fiber_eliminator<br/>proved"]
   nb34c18f4["lookup_solve_seed<br/>proved"]
   n47c566cf["termMaps_of_typed<br/>proved"]
+  n7395476f["scopeParams_body<br/>proved"]
+  nb978165e["withParams_defOf<br/>proved"]
   nea656e8a["option_eliminator<br/>proved"]
   n3116cb45["Eliminator.lift_upper<br/>proved"]
   nd5c70e5c["exit_eliminator<br/>proved"]
+  n7f4ad274["scopeParams_decl<br/>proved"]
+  n1939e2da["withParams_param<br/>proved"]
   n840bc0c5["layersHasTy_cons<br/>proved"]
   ndc60f971["at_layers_nil<br/>proved"]
   n4ec31205["at_stmts_nil<br/>proved"]
@@ -5499,6 +5765,42 @@ flowchart LR
   nb72421ed --> ne99a7734
   nb72421ed --> n3d4b1714
   nb72421ed --> n5d660191
+  ncaa65b --> nf4f0b38e
+  ncaa65b --> n79164e62
+  ncaa65b --> n8e3192a8
+  ncaa65b --> nc0798bf4
+  nb2d7c107 --> nf4f0b38e
+  nb2d7c107 --> n79164e62
+  nb2d7c107 --> nc0798bf4
+  n9a3b3f8d --> nb2d7c107
+  n9a3b3f8d --> ne99a7734
+  n9a3b3f8d --> n3d4b1714
+  n9a3b3f8d --> n5d660191
+  ncd4ba713 --> n6354e20d
+  n54d7fd7a --> n6354e20d
+  ne598463 --> n6354e20d
+  nd1e14921 --> nab6f0c7
+  nd1e14921 --> n6354e20d
+  nd4c37246 --> n6354e20d
+  n610bea28 --> n6354e20d
+  n9edb9fa3 --> n6354e20d
+  n69a1b014 --> n6354e20d
+  nac106427 --> n6354e20d
+  n8e3192a8 --> n1e53da28
+  n1e53da28 --> n9edb9fa3
+  n1e53da28 --> n610bea28
+  n1e53da28 --> ne598463
+  n1e53da28 --> n54d7fd7a
+  n1e53da28 --> n69a1b014
+  n1e53da28 --> ncd4ba713
+  n1e53da28 --> nd4c37246
+  n1e53da28 --> nd1e14921
+  n1e53da28 --> nac106427
+  n1e53da28 --> nab6f0c7
+  n1e53da28 --> n6354e20d
+  n1e53da28 --> nda3a4d32
+  n79164e62 --> n8e3192a8
+  n5d89494d --> n1e53da28
   n42ab45ca --> n14be035f
   nb3167bb3 --> n6354e20d
   nd3841c0e --> nf68b98e1
@@ -5518,7 +5820,10 @@ flowchart LR
   ne9e063db --> nc0798bf4
   naef44113 --> n13d3cdb0
   naef44113 --> nb72421ed
+  n13c671ad --> n13d3cdb0
+  n13c671ad --> n9a3b3f8d
   n1355cbe5 --> naef44113
+  nf1937e31 --> n13c671ad
   n277a51fa --> n1355cbe5
   nea122884 --> n96d17391
   n16b3bde8 --> n96d17391
@@ -5606,7 +5911,8 @@ flowchart LR
   ne0728e61 --> n8a1c93b9
   ne0728e61 --> n75164370
   ne0728e61 --> nd0b1e6c2
-  ne0728e61 --> n6354e20d
+  ne0728e61 --> nc3199dff
+  ne0728e61 --> nec2861e7
   ne0728e61 --> n780c81c2
   ne0728e61 --> n19f8d2c3
   ne0728e61 --> n218454b
@@ -5616,7 +5922,6 @@ flowchart LR
   ne0728e61 --> n6bd84948
   ne0728e61 --> n5354aa50
   ne0728e61 --> n111be189
-  ne0728e61 --> nec2861e7
   ne0728e61 --> n9f38eb40
   ne0728e61 --> nb1d18964
   ne0728e61 --> n8f1a9253
@@ -5625,9 +5930,12 @@ flowchart LR
   ne0728e61 --> na46bd7a0
   ne0728e61 --> na9a83faf
   ne0728e61 --> n117b8479
+  ne0728e61 --> n6354e20d
+  ne0728e61 --> n5a414cb8
   ne0728e61 --> n21101f84
   ne0728e61 --> n61142815
   ne0728e61 --> n84b920d
+  ne0728e61 --> n7f4273a4
   ne0728e61 --> n1d9fd8ec
   ne0728e61 --> ncc4bbe09
   ne0728e61 --> n7ed81d5a
@@ -5636,8 +5944,12 @@ flowchart LR
   ne0728e61 --> ndb99837e
   ne0728e61 --> n6e2bceb9
   ne0728e61 --> n13b13874
+  ne0728e61 --> n1520ce5c
   ne0728e61 --> nab1a404e
+  ne0728e61 --> nf9c39706
   ne0728e61 --> n1de99ffb
+  ne0728e61 --> n73c31373
+  ne0728e61 --> n633e4bf
   nfe3c01d --> nd518fc14
   nfe3c01d --> ndd979abd
   nfe3c01d --> ne59d24c0
@@ -5647,7 +5959,8 @@ flowchart LR
   nfe3c01d --> n8a1c93b9
   nfe3c01d --> n75164370
   nfe3c01d --> nd0b1e6c2
-  nfe3c01d --> n6354e20d
+  nfe3c01d --> nc3199dff
+  nfe3c01d --> nec2861e7
   nfe3c01d --> n780c81c2
   nfe3c01d --> n19f8d2c3
   nfe3c01d --> n218454b
@@ -5657,7 +5970,6 @@ flowchart LR
   nfe3c01d --> n6bd84948
   nfe3c01d --> n5354aa50
   nfe3c01d --> n111be189
-  nfe3c01d --> nec2861e7
   nfe3c01d --> n9f38eb40
   nfe3c01d --> nb1d18964
   nfe3c01d --> n8f1a9253
@@ -5666,9 +5978,12 @@ flowchart LR
   nfe3c01d --> na46bd7a0
   nfe3c01d --> na9a83faf
   nfe3c01d --> n117b8479
+  nfe3c01d --> n6354e20d
+  nfe3c01d --> n5a414cb8
   nfe3c01d --> n21101f84
   nfe3c01d --> n61142815
   nfe3c01d --> n84b920d
+  nfe3c01d --> n7f4273a4
   nfe3c01d --> n1d9fd8ec
   nfe3c01d --> ncc4bbe09
   nfe3c01d --> n7ed81d5a
@@ -5677,10 +5992,15 @@ flowchart LR
   nfe3c01d --> ndb99837e
   nfe3c01d --> n6e2bceb9
   nfe3c01d --> n13b13874
+  nfe3c01d --> n1520ce5c
   nfe3c01d --> nab1a404e
+  nfe3c01d --> nf9c39706
   nfe3c01d --> n1de99ffb
+  nfe3c01d --> n73c31373
+  nfe3c01d --> n633e4bf
   n9f38eb40 --> n3b97d876
   n9f38eb40 --> ndb99837e
+  n9f38eb40 --> nc3199dff
   n9f38eb40 --> nec2861e7
   n9f38eb40 --> ne59d24c0
   n9f38eb40 --> nb1d18964
@@ -5699,14 +6019,18 @@ flowchart LR
   n9f38eb40 --> n13b13874
   n9f38eb40 --> ndd979abd
   n9f38eb40 --> n8a1c93b9
+  n9f38eb40 --> n1520ce5c
   n9f38eb40 --> nab1a404e
   n9f38eb40 --> nd0b1e6c2
+  n9f38eb40 --> n5a414cb8
   n9f38eb40 --> n21101f84
   n9f38eb40 --> n61142815
   n9f38eb40 --> n84b920d
+  n9f38eb40 --> n7f4273a4
   n9f38eb40 --> n1d9fd8ec
   n9f38eb40 --> ncc4bbe09
   n9f38eb40 --> n7ed81d5a
+  n9f38eb40 --> nf9c39706
   n9f38eb40 --> n1de99ffb
   na67188f4 --> n1b38f984
   ndd05ddcb --> na411c04e
@@ -5752,12 +6076,14 @@ flowchart LR
   n3b97d876 --> ne59d24c0
   n3b97d876 --> nd518fc14
   n3b97d876 --> n21101f84
+  n3b97d876 --> nc3199dff
   n3b97d876 --> nec2861e7
   n3b97d876 --> n13d3cdb0
   n3b97d876 --> na46bd7a0
   n3b97d876 --> n8f1a9253
   n3b97d876 --> n61142815
   n3b97d876 --> n84b920d
+  n3b97d876 --> n7f4273a4
   n3b97d876 --> nb1d18964
   n3b97d876 --> n9d9c3800
   n3b97d876 --> nd7502c71
@@ -5771,10 +6097,27 @@ flowchart LR
   n3b97d876 --> ndd979abd
   n3b97d876 --> n8a1c93b9
   n3b97d876 --> n356196cb
+  n3b97d876 --> n73c31373
+  n3b97d876 --> n633e4bf
   n3b97d876 --> nd0b1e6c2
-  n3b97d876 --> n6354e20d
   n3b97d876 --> n19f8d2c3
+  n3b97d876 --> n1520ce5c
   n3b97d876 --> nd5186648
+  ndb99837e --> n9d9c3800
+  ndb99837e --> n356196cb
+  ndb99837e --> ne59d24c0
+  ndb99837e --> n780c81c2
+  ndb99837e --> nec2861e7
+  ndb99837e --> n5a414cb8
+  ndb99837e --> nb1d18964
+  ndb99837e --> n8f1a9253
+  ndb99837e --> nd7502c71
+  ndb99837e --> na46bd7a0
+  ndb99837e --> na9a83faf
+  ndb99837e --> n117b8479
+  ndb99837e --> n13d3cdb0
+  ndb99837e --> n7395476f
+  ndb99837e --> nb978165e
   n6e2bceb9 --> nea656e8a
   n6e2bceb9 --> n9d9c3800
   n6e2bceb9 --> na46bd7a0
@@ -5791,6 +6134,19 @@ flowchart LR
   nab1a404e --> na46bd7a0
   nab1a404e --> n30801347
   nab1a404e --> n4d8d98f9
+  nf9c39706 --> n9d9c3800
+  nf9c39706 --> n356196cb
+  nf9c39706 --> ne59d24c0
+  nf9c39706 --> n780c81c2
+  nf9c39706 --> nb1d18964
+  nf9c39706 --> n8f1a9253
+  nf9c39706 --> nd7502c71
+  nf9c39706 --> na46bd7a0
+  nf9c39706 --> na9a83faf
+  nf9c39706 --> n117b8479
+  nf9c39706 --> n13d3cdb0
+  nf9c39706 --> n7f4ad274
+  nf9c39706 --> n1939e2da
   n1de99ffb --> n356196cb
   n1de99ffb --> ne59d24c0
   n1de99ffb --> n9d9c3800
@@ -5802,6 +6158,8 @@ flowchart LR
   n1de99ffb --> na9a83faf
   n1de99ffb --> n117b8479
   n1de99ffb --> n13d3cdb0
+  n1de99ffb --> n7395476f
+  n1de99ffb --> n7f4273a4
   n1b38f984 --> n840bc0c5
   n1b38f984 --> ndc60f971
   n1b38f984 --> n4ec31205
@@ -5874,7 +6232,7 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes |
 | --- | --- | --- | --- |
-| `reachable_typed` | modulo | `invoke_arm` | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` |
+| `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` |
 | `preflight_success_prepared_fits` | proved | — | `instance_prepared_success` |
 | `preflight_failure_noShapeDefect` | proved | — | — |
 | `instance_prepared_success` | proved | — | — |
@@ -5883,7 +6241,25 @@ flowchart LR
 | `session_eq_ref` | proved | — | `run_eq_ref_table_noPreload`, `journal_replays`, `funded_replays` |
 | `denoteRows_eq_session_host` | proved | — | `at_append`, `denoteRows_straight`, `funded_replays` |
 | `runWith_denotes` | proved | — | `denoteRows_eq_session_host`, `allows_answer`, `observe_awaitingAsync_iff`, `tapeFrom_append` |
+| `h8_loopedRows` | proved | — | `hostRunB_stable`, `localRunC_to_rowsB`, `localRunC_compileB`, `funded_replays` |
+| `denoteRowsB_eq_session_host` | proved | — | `hostRunB_stable`, `localRunC_to_rowsB`, `funded_replays` |
+| `runWith_denotesB` | proved | — | `denoteRowsB_eq_session_host`, `allows_answer`, `observe_awaitingAsync_iff`, `tapeFrom_append` |
+| `compilesBO_bind` | proved | — | `at_append` |
+| `compilesBO_catchCause` | proved | — | `at_append` |
+| `compilesBO_catchIf` | proved | — | `at_append` |
+| `compilesBO_exit` | proved | — | `denoteRowsB_straight`, `at_append` |
+| `compilesBO_iterate` | proved | — | `at_append` |
+| `compilesBO_matchCause` | proved | — | `at_append` |
+| `compilesBO_onExit` | proved | — | `at_append` |
+| `compilesBO_select` | proved | — | `at_append` |
+| `compilesBO_suspend` | proved | — | `at_append` |
+| `localRunC_compileB` | proved | — | `localRunC_compileBO` |
+| `localRunC_compileBO` | proved | — | `compilesBO_onExit`, `compilesBO_matchCause`, `compilesBO_catchIf`, `compilesBO_catchCause`, `compilesBO_select`, `compilesBO_bind`, `compilesBO_iterate`, `compilesBO_exit`, `compilesBO_suspend`, `denoteRowsB_straight`, `at_append`, `denoteRows_straight` |
+| `localRunC_to_rowsB` | proved | — | `localRunC_compileB` |
+| `localWaitC_to_rowsB` | proved | — | `localRunC_compileBO` |
 | `bodyAt` | proved | — | — |
+| `hostRunB_stable` | proved | — | — |
+| `observeRows_project` | proved | — | — |
 | `partAt_at` | proved | — | `bodyAt_at` |
 | `partAt_of_hasTy` | proved | — | — |
 | `bodyAt_at` | proved | — | — |
@@ -5899,7 +6275,9 @@ flowchart LR
 | `control_retires` | proved | — | — |
 | `denoteRows_eq_session` | proved | — | `at_append`, `denoteRows_straight`, `funded_replays` |
 | `runWith_guarded_denotes` | proved | — | `hom_eq_cata_ty`, `runWith_denotes` |
+| `runWith_guarded_denotesB` | proved | — | `hom_eq_cata_ty`, `runWith_denotesB` |
 | `runWith_host_denotes` | proved | — | `runWith_guarded_denotes` |
+| `runWith_host_denotesB` | proved | — | `runWith_guarded_denotesB` |
 | `runWith_layer_denotes` | proved | — | `runWith_host_denotes` |
 | `sessionSystem_finished` | proved | — | `denoteRows_eq_session_host` |
 | `sessionSystem_finishes` | proved | — | `denoteRows_eq_session_host` |
@@ -5907,8 +6285,8 @@ flowchart LR
 | `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` |
 | `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` |
 | `receipt_inert` | proved | — | — |
-| `decision_preserves` | modulo | `invoke_arm` | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
-| `load_typed` | modulo | `invoke_arm` | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
+| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
+| `load_typed` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
 | `order_trans` | proved | — | — |
 | `order_refl` | proved | — | — |
 | `at_append` | proved | — | — |
@@ -5918,6 +6296,7 @@ flowchart LR
 | `allows_answer` | proved | — | — |
 | `observe_awaitingAsync_iff` | proved | — | — |
 | `tapeFrom_append` | proved | — | — |
+| `denoteRowsB_straight` | proved | — | — |
 | `checkModule_sound` | proved | — | `check_sound` |
 | `checkRow_rowBindings` | proved | — | — |
 | `focusAt_typed` | proved | — | `check_sound`, `focusAt_eq_some` |
@@ -5941,10 +6320,10 @@ flowchart LR
 | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` |
 | `subN_never` | proved | — | — |
 | `guardBind_typed` | proved | — | `close_typed` |
-| `deliver_preserves` | modulo | `invoke_arm` | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
-| `loop_preserves` | modulo | `invoke_arm` | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+| `deliver_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `scopeParams_child`, `at_child`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `at_append`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `withParams_serviceTy`, `exitOf_upper`, `param_arm`, `call_arm`, `scopeParams_ref`, `scopeParams_layer_below` |
+| `loop_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `scopeParams_child`, `at_child`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `at_append`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `withParams_serviceTy`, `exitOf_upper`, `param_arm`, `call_arm`, `scopeParams_ref`, `scopeParams_layer_below` |
 | `driveState_lift` | proved | — | — |
-| `denotesTyped` | modulo | `invoke_arm` | `provideLayerArm`, `invoke_arm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+| `denotesTyped` | proved | — | `provideLayerArm`, `invoke_arm`, `scopeParams_child`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `withParams_serviceTy`, `exitOf_upper`, `fits_scope_inv`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `param_arm`, `call_arm` |
 | `checkModule_eq_check` | proved | — | — |
 | `check_complete` | proved | — | — |
 | `tape_replays` | proved | — | — |
@@ -5960,27 +6339,34 @@ flowchart LR
 | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
 | `closeOrder_eq` | proved | — | — |
 | `fits_scope_inv` | proved | — | — |
+| `scopeParams_child` | proved | — | — |
+| `at_child` | proved | — | `at_append` |
 | `memoBuild_extension` | proved | — | — |
 | `deferredMake_extension` | proved | — | — |
 | `refMake_extension` | proved | — | — |
-| `at_child` | proved | — | `at_append` |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `normalize_idem` | proved | — | — |
 | `lift_sound` | proved | — | `lift_transfer` |
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extendAll_eq_some_iff` |
 | `matchArgsB_sound` | proved | — | — |
+| `scopeParams_below` | proved | — | — |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `matchB_sound` | proved | — | `lookup_solve_seed` |
 | `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` |
+| `withParams_of_none` | proved | — | — |
 | `errOf_payload` | proved | — | — |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
 | `allGuard_typed` | proved | — | `guardBind_typed` |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
-| `invoke_arm` | goal | `invoke_arm` | — |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `scopeParams_child`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `scopeParams_ref`, `scopeParams_layer_below`, `fits_scope_inv`, `seq_typed`, `withParams_serviceTy`, `catchGuard_typed` |
+| `invoke_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `at_child`, `scopeParams_below`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_defOf` |
 | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+| `withParams_serviceTy` | proved | — | — |
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
-| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` |
+| `param_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_decl`, `withParams_param` |
+| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_of_none` |
+| `scopeParams_ref` | proved | — | — |
+| `scopeParams_layer_below` | proved | — | — |
 | `child_step` | proved | — | `layersHasTy_cons`, `at_layers_nil`, `at_stmts_nil`, `effTy_map_of_hasTy` |
 | `exists_at_of_mem_foldList` | proved | — | `sizeOf_child_lt`, `foldList_cases` |
 | `list_eliminator` | proved | — | `subN_list_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
@@ -5995,9 +6381,13 @@ flowchart LR
 | `fiber_eliminator` | proved | — | `subN_fiberOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
 | `lookup_solve_seed` | proved | — | — |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` |
+| `scopeParams_body` | proved | — | — |
+| `withParams_defOf` | proved | — | — |
 | `option_eliminator` | proved | — | `subN_option_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
 | `Eliminator.lift_upper` | proved | — | `subN_refl`, `UnionRule.lift_upper` |
 | `exit_eliminator` | proved | — | `subN_exitOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
+| `scopeParams_decl` | proved | — | — |
+| `withParams_param` | proved | — | — |
 | `layersHasTy_cons` | proved | — | — |
 | `at_layers_nil` | proved | — | — |
 | `at_stmts_nil` | proved | — | — |
@@ -6270,10 +6660,10 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  nc7989e59["m7_proved<br/>modulo"]
-  n1d7eded2["m7_admitted<br/>modulo"]
-  n3c088e91["decision_preserves<br/>modulo"]
-  nc27f8391["loadsTyped<br/>modulo"]
+  nc7989e59["m7_proved<br/>proved"]
+  n1d7eded2["m7_admitted<br/>proved"]
+  n3c088e91["decision_preserves<br/>proved"]
+  nc27f8391["loadsTyped<br/>proved"]
   n31790fbc["m7_of_ledger<br/>proved"]
   ne2ea226b["lawfulSig_of_admitted<br/>proved"]
   ne59d24c0["fits_subN<br/>proved"]
@@ -6291,10 +6681,10 @@ flowchart LR
   n711b772["launch_preserves<br/>proved"]
   ndd979abd["subN_never<br/>proved"]
   n8a1c93b9["guardBind_typed<br/>proved"]
-  ne0728e61["deliver_preserves<br/>modulo"]
-  nfe3c01d["loop_preserves<br/>modulo"]
+  ne0728e61["deliver_preserves<br/>proved"]
+  nfe3c01d["loop_preserves<br/>proved"]
   n98a6b109["driveState_lift<br/>proved"]
-  n9f38eb40["denotesTyped<br/>modulo"]
+  n9f38eb40["denotesTyped<br/>proved"]
   n39739397["checkModule_eq_check<br/>proved"]
   n5a230c5["check_complete<br/>proved"]
   nf68b98e1["checkModule_sound<br/>proved"]
@@ -6306,27 +6696,34 @@ flowchart LR
   nd5186648["catchGuard_typed<br/>proved"]
   n75164370["closeOrder_eq<br/>proved"]
   nd0b1e6c2["fits_scope_inv<br/>proved"]
+  nc3199dff["scopeParams_child<br/>proved"]
+  nec2861e7["at_child<br/>proved"]
   n6bd84948["memoBuild_extension<br/>proved"]
   n5354aa50["deferredMake_extension<br/>proved"]
   n111be189["refMake_extension<br/>proved"]
-  nec2861e7["at_child<br/>proved"]
   nb1d18964["listOf_upper<br/>proved"]
   n9d9c3800["normalize_idem<br/>proved"]
   nd7502c71["lift_sound<br/>proved"]
   na9a83faf["causeInputError_upper<br/>proved"]
   n117b8479["matchArgsB_sound<br/>proved"]
+  n5a414cb8["scopeParams_below<br/>proved"]
   n21101f84["fiberTy_upper<br/>proved"]
   n61142815["matchB_sound<br/>proved"]
   n84b920d["syncRow_typed<br/>proved"]
+  n7f4273a4["withParams_of_none<br/>proved"]
   n1d9fd8ec["errOf_payload<br/>proved"]
   ncc4bbe09["isPayload_of_hasTy_record<br/>proved"]
   n7ed81d5a["allGuard_typed<br/>proved"]
   n3b97d876["provideLayerArm<br/>proved"]
-  ndb99837e["invoke_arm<br/>goal"]
+  ndb99837e["invoke_arm<br/>proved"]
   n6e2bceb9["optionTy_upper<br/>proved"]
   n13b13874["onExit_typed<br/>proved"]
+  n1520ce5c["withParams_serviceTy<br/>proved"]
   nab1a404e["exitOf_upper<br/>proved"]
+  nf9c39706["param_arm<br/>proved"]
   n1de99ffb["call_arm<br/>proved"]
+  n73c31373["scopeParams_ref<br/>proved"]
+  n633e4bf["scopeParams_layer_below<br/>proved"]
   n4c593752["check_sound<br/>proved"]
   nb7e36fe7["list_eliminator<br/>proved"]
   n4d8d98f9["extendAll_upper<br/>proved"]
@@ -6341,9 +6738,13 @@ flowchart LR
   nb34c18f4["lookup_solve_seed<br/>proved"]
   n47c566cf["termMaps_of_typed<br/>proved"]
   n4dc056f1["handles_of_payloadFieldTy<br/>proved"]
+  n7395476f["scopeParams_body<br/>proved"]
+  nb978165e["withParams_defOf<br/>proved"]
   nea656e8a["option_eliminator<br/>proved"]
   n3116cb45["Eliminator.lift_upper<br/>proved"]
   nd5c70e5c["exit_eliminator<br/>proved"]
+  n7f4ad274["scopeParams_decl<br/>proved"]
+  n1939e2da["withParams_param<br/>proved"]
   n7d8b7e08["subN_list_iff<br/>proved"]
   n2880dc63["extendAll_adjoint<br/>proved"]
   n2845d645["joinAll_keeps<br/>proved"]
@@ -6429,7 +6830,8 @@ flowchart LR
   ne0728e61 --> n8a1c93b9
   ne0728e61 --> n75164370
   ne0728e61 --> nd0b1e6c2
-  ne0728e61 --> n6354e20d
+  ne0728e61 --> nc3199dff
+  ne0728e61 --> nec2861e7
   ne0728e61 --> n780c81c2
   ne0728e61 --> n19f8d2c3
   ne0728e61 --> n218454b
@@ -6439,7 +6841,6 @@ flowchart LR
   ne0728e61 --> n6bd84948
   ne0728e61 --> n5354aa50
   ne0728e61 --> n111be189
-  ne0728e61 --> nec2861e7
   ne0728e61 --> n9f38eb40
   ne0728e61 --> nb1d18964
   ne0728e61 --> n8f1a9253
@@ -6448,9 +6849,12 @@ flowchart LR
   ne0728e61 --> na46bd7a0
   ne0728e61 --> na9a83faf
   ne0728e61 --> n117b8479
+  ne0728e61 --> n6354e20d
+  ne0728e61 --> n5a414cb8
   ne0728e61 --> n21101f84
   ne0728e61 --> n61142815
   ne0728e61 --> n84b920d
+  ne0728e61 --> n7f4273a4
   ne0728e61 --> n1d9fd8ec
   ne0728e61 --> ncc4bbe09
   ne0728e61 --> n7ed81d5a
@@ -6459,8 +6863,12 @@ flowchart LR
   ne0728e61 --> ndb99837e
   ne0728e61 --> n6e2bceb9
   ne0728e61 --> n13b13874
+  ne0728e61 --> n1520ce5c
   ne0728e61 --> nab1a404e
+  ne0728e61 --> nf9c39706
   ne0728e61 --> n1de99ffb
+  ne0728e61 --> n73c31373
+  ne0728e61 --> n633e4bf
   nfe3c01d --> nd518fc14
   nfe3c01d --> ndd979abd
   nfe3c01d --> ne59d24c0
@@ -6470,7 +6878,8 @@ flowchart LR
   nfe3c01d --> n8a1c93b9
   nfe3c01d --> n75164370
   nfe3c01d --> nd0b1e6c2
-  nfe3c01d --> n6354e20d
+  nfe3c01d --> nc3199dff
+  nfe3c01d --> nec2861e7
   nfe3c01d --> n780c81c2
   nfe3c01d --> n19f8d2c3
   nfe3c01d --> n218454b
@@ -6480,7 +6889,6 @@ flowchart LR
   nfe3c01d --> n6bd84948
   nfe3c01d --> n5354aa50
   nfe3c01d --> n111be189
-  nfe3c01d --> nec2861e7
   nfe3c01d --> n9f38eb40
   nfe3c01d --> nb1d18964
   nfe3c01d --> n8f1a9253
@@ -6489,9 +6897,12 @@ flowchart LR
   nfe3c01d --> na46bd7a0
   nfe3c01d --> na9a83faf
   nfe3c01d --> n117b8479
+  nfe3c01d --> n6354e20d
+  nfe3c01d --> n5a414cb8
   nfe3c01d --> n21101f84
   nfe3c01d --> n61142815
   nfe3c01d --> n84b920d
+  nfe3c01d --> n7f4273a4
   nfe3c01d --> n1d9fd8ec
   nfe3c01d --> ncc4bbe09
   nfe3c01d --> n7ed81d5a
@@ -6500,10 +6911,15 @@ flowchart LR
   nfe3c01d --> ndb99837e
   nfe3c01d --> n6e2bceb9
   nfe3c01d --> n13b13874
+  nfe3c01d --> n1520ce5c
   nfe3c01d --> nab1a404e
+  nfe3c01d --> nf9c39706
   nfe3c01d --> n1de99ffb
+  nfe3c01d --> n73c31373
+  nfe3c01d --> n633e4bf
   n9f38eb40 --> n3b97d876
   n9f38eb40 --> ndb99837e
+  n9f38eb40 --> nc3199dff
   n9f38eb40 --> nec2861e7
   n9f38eb40 --> ne59d24c0
   n9f38eb40 --> nb1d18964
@@ -6522,14 +6938,18 @@ flowchart LR
   n9f38eb40 --> n13b13874
   n9f38eb40 --> ndd979abd
   n9f38eb40 --> n8a1c93b9
+  n9f38eb40 --> n1520ce5c
   n9f38eb40 --> nab1a404e
   n9f38eb40 --> nd0b1e6c2
+  n9f38eb40 --> n5a414cb8
   n9f38eb40 --> n21101f84
   n9f38eb40 --> n61142815
   n9f38eb40 --> n84b920d
+  n9f38eb40 --> n7f4273a4
   n9f38eb40 --> n1d9fd8ec
   n9f38eb40 --> ncc4bbe09
   n9f38eb40 --> n7ed81d5a
+  n9f38eb40 --> nf9c39706
   n9f38eb40 --> n1de99ffb
   nf68b98e1 --> n4c593752
   n8f1a9253 --> na46bd7a0
@@ -6574,12 +6994,14 @@ flowchart LR
   n3b97d876 --> ne59d24c0
   n3b97d876 --> nd518fc14
   n3b97d876 --> n21101f84
+  n3b97d876 --> nc3199dff
   n3b97d876 --> nec2861e7
   n3b97d876 --> n13d3cdb0
   n3b97d876 --> na46bd7a0
   n3b97d876 --> n8f1a9253
   n3b97d876 --> n61142815
   n3b97d876 --> n84b920d
+  n3b97d876 --> n7f4273a4
   n3b97d876 --> nb1d18964
   n3b97d876 --> n9d9c3800
   n3b97d876 --> nd7502c71
@@ -6593,10 +7015,27 @@ flowchart LR
   n3b97d876 --> ndd979abd
   n3b97d876 --> n8a1c93b9
   n3b97d876 --> n356196cb
+  n3b97d876 --> n73c31373
+  n3b97d876 --> n633e4bf
   n3b97d876 --> nd0b1e6c2
-  n3b97d876 --> n6354e20d
   n3b97d876 --> n19f8d2c3
+  n3b97d876 --> n1520ce5c
   n3b97d876 --> nd5186648
+  ndb99837e --> n9d9c3800
+  ndb99837e --> n356196cb
+  ndb99837e --> ne59d24c0
+  ndb99837e --> n780c81c2
+  ndb99837e --> nec2861e7
+  ndb99837e --> n5a414cb8
+  ndb99837e --> nb1d18964
+  ndb99837e --> n8f1a9253
+  ndb99837e --> nd7502c71
+  ndb99837e --> na46bd7a0
+  ndb99837e --> na9a83faf
+  ndb99837e --> n117b8479
+  ndb99837e --> n13d3cdb0
+  ndb99837e --> n7395476f
+  ndb99837e --> nb978165e
   n6e2bceb9 --> nea656e8a
   n6e2bceb9 --> n9d9c3800
   n6e2bceb9 --> na46bd7a0
@@ -6613,6 +7052,19 @@ flowchart LR
   nab1a404e --> na46bd7a0
   nab1a404e --> n30801347
   nab1a404e --> n4d8d98f9
+  nf9c39706 --> n9d9c3800
+  nf9c39706 --> n356196cb
+  nf9c39706 --> ne59d24c0
+  nf9c39706 --> n780c81c2
+  nf9c39706 --> nb1d18964
+  nf9c39706 --> n8f1a9253
+  nf9c39706 --> nd7502c71
+  nf9c39706 --> na46bd7a0
+  nf9c39706 --> na9a83faf
+  nf9c39706 --> n117b8479
+  nf9c39706 --> n13d3cdb0
+  nf9c39706 --> n7f4ad274
+  nf9c39706 --> n1939e2da
   n1de99ffb --> n356196cb
   n1de99ffb --> ne59d24c0
   n1de99ffb --> n9d9c3800
@@ -6624,6 +7076,8 @@ flowchart LR
   n1de99ffb --> na9a83faf
   n1de99ffb --> n117b8479
   n1de99ffb --> n13d3cdb0
+  n1de99ffb --> n7395476f
+  n1de99ffb --> n7f4273a4
   nb7e36fe7 --> n7d8b7e08
   nb7e36fe7 --> n9d9c3800
   nb7e36fe7 --> na46bd7a0
@@ -6688,10 +7142,10 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes |
 | --- | --- | --- | --- |
-| `m7_proved` | modulo | `invoke_arm` | `decision_preserves`, `loadsTyped`, `m7_of_ledger` |
-| `m7_admitted` | modulo | `invoke_arm` | `m7_proved`, `lawfulSig_of_admitted` |
-| `decision_preserves` | modulo | `invoke_arm` | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
-| `loadsTyped` | modulo | `invoke_arm` | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
+| `m7_proved` | proved | — | `decision_preserves`, `loadsTyped`, `m7_of_ledger` |
+| `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` |
+| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `seq_typed`, `registrationDone_preserves`, `launch_preserves`, `subN_never`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` |
+| `loadsTyped` | proved | — | `denotesTyped`, `checkModule_eq_check`, `check_complete`, `checkModule_sound` |
 | `m7_of_ledger` | proved | — | `at_append`, `order_trans`, `order_refl` |
 | `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` |
@@ -6709,10 +7163,10 @@ flowchart LR
 | `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` |
 | `subN_never` | proved | — | — |
 | `guardBind_typed` | proved | — | `close_typed` |
-| `deliver_preserves` | modulo | `invoke_arm` | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
-| `loop_preserves` | modulo | `invoke_arm` | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `at_append`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `at_child`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `exitOf_upper`, `call_arm` |
+| `deliver_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `scopeParams_child`, `at_child`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `at_append`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `withParams_serviceTy`, `exitOf_upper`, `param_arm`, `call_arm`, `scopeParams_ref`, `scopeParams_layer_below` |
+| `loop_preserves` | proved | — | `order_refl`, `subN_never`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `scopeParams_child`, `at_child`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `at_append`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `invoke_arm`, `optionTy_upper`, `onExit_typed`, `withParams_serviceTy`, `exitOf_upper`, `param_arm`, `call_arm`, `scopeParams_ref`, `scopeParams_layer_below` |
 | `driveState_lift` | proved | — | — |
-| `denotesTyped` | modulo | `invoke_arm` | `provideLayerArm`, `invoke_arm`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `exitOf_upper`, `fits_scope_inv`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `call_arm` |
+| `denotesTyped` | proved | — | `provideLayerArm`, `invoke_arm`, `scopeParams_child`, `at_child`, `fits_subN`, `listOf_upper`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono`, `optionTy_upper`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `subN_never`, `guardBind_typed`, `withParams_serviceTy`, `exitOf_upper`, `fits_scope_inv`, `scopeParams_below`, `fiberTy_upper`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `param_arm`, `call_arm` |
 | `checkModule_eq_check` | proved | — | — |
 | `check_complete` | proved | — | — |
 | `checkModule_sound` | proved | — | `check_sound` |
@@ -6724,27 +7178,34 @@ flowchart LR
 | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` |
 | `closeOrder_eq` | proved | — | — |
 | `fits_scope_inv` | proved | — | — |
+| `scopeParams_child` | proved | — | — |
+| `at_child` | proved | — | `at_append` |
 | `memoBuild_extension` | proved | — | — |
 | `deferredMake_extension` | proved | — | — |
 | `refMake_extension` | proved | — | — |
-| `at_child` | proved | — | `at_append` |
 | `listOf_upper` | proved | — | `list_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `normalize_idem` | proved | — | — |
 | `lift_sound` | proved | — | `lift_transfer` |
 | `causeInputError_upper` | proved | — | `cause_upper`, `cause_mono`, `normalize_idem`, `subN_trans`, `subN_refl`, `UnionRule.lift_upper`, `subN_causeOf_causeUpper`, `subN_exitOf_causeUpper`, `extendAll_eq_some_iff` |
 | `matchArgsB_sound` | proved | — | — |
+| `scopeParams_below` | proved | — | — |
 | `fiberTy_upper` | proved | — | `fiber_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
 | `matchB_sound` | proved | — | `lookup_solve_seed` |
 | `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `matchB_sound`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` |
+| `withParams_of_none` | proved | — | — |
 | `errOf_payload` | proved | — | — |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` |
 | `allGuard_typed` | proved | — | `guardBind_typed` |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `at_append`, `seq_typed`, `catchGuard_typed` |
-| `invoke_arm` | goal | `invoke_arm` | — |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `fiberTy_upper`, `scopeParams_child`, `at_child`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `matchB_sound`, `syncRow_typed`, `withParams_of_none`, `listOf_upper`, `normalize_idem`, `lift_sound`, `causeInputError_upper`, `matchArgsB_sound`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `subN_never`, `guardBind_typed`, `fits_mono`, `scopeParams_ref`, `scopeParams_layer_below`, `fits_scope_inv`, `seq_typed`, `withParams_serviceTy`, `catchGuard_typed` |
+| `invoke_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `at_child`, `scopeParams_below`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_defOf` |
 | `optionTy_upper` | proved | — | `option_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `Eliminator.lift_upper` |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` |
+| `withParams_serviceTy` | proved | — | — |
 | `exitOf_upper` | proved | — | `exit_eliminator`, `normalize_idem`, `subN_trans`, `subN_refl`, `extendAll_upper` |
-| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty` |
+| `param_arm` | proved | — | `normalize_idem`, `fits_mono`, `fits_subN`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_decl`, `withParams_param` |
+| `call_arm` | proved | — | `fits_mono`, `fits_subN`, `normalize_idem`, `order_trans`, `listOf_upper`, `fits_normalize`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `scopeParams_body`, `withParams_of_none` |
+| `scopeParams_ref` | proved | — | — |
+| `scopeParams_layer_below` | proved | — | — |
 | `check_sound` | proved | — | — |
 | `list_eliminator` | proved | — | `subN_list_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
 | `extendAll_upper` | proved | — | `extendAll_adjoint` |
@@ -6759,9 +7220,13 @@ flowchart LR
 | `lookup_solve_seed` | proved | — | — |
 | `termMaps_of_typed` | proved | — | `listOf_upper`, `fits_subN`, `fits_normalize`, `normalize_idem`, `lift_sound`, `subN_trans`, `causeInputError_upper`, `matchArgsB_sound`, `hom_eq_cata_ty`, `fits_mono` |
 | `handles_of_payloadFieldTy` | proved | — | — |
+| `scopeParams_body` | proved | — | — |
+| `withParams_defOf` | proved | — | — |
 | `option_eliminator` | proved | — | `subN_option_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
 | `Eliminator.lift_upper` | proved | — | `subN_refl`, `UnionRule.lift_upper` |
 | `exit_eliminator` | proved | — | `subN_exitOf_iff`, `normalize_idem`, `subN_trans`, `subN_refl` |
+| `scopeParams_decl` | proved | — | — |
+| `withParams_param` | proved | — | — |
 | `subN_list_iff` | proved | — | — |
 | `extendAll_adjoint` | proved | — | `adjoint`, `extendAll_eq_some_iff` |
 | `joinAll_keeps` | proved | — | `foldl_keeps` |
@@ -7773,6 +8238,8 @@ flowchart LR
 flowchart LR
   n43d88257["fairTape_unarmed<br/>proved"]
   naf9bcd77["frontier_empty_iff_deadlocked<br/>proved"]
+  n2d904ec8["rows_loop_frontier<br/>proved"]
+  n3074a4b0["rows_loop_frontier_host<br/>proved"]
   n5a96f5a5["select_takes_first<br/>proved"]
   nf5df662f["first_run_flags<br/>proved"]
   na85938d1["first_run_inv<br/>proved"]
@@ -7781,23 +8248,71 @@ flowchart LR
   nc7429115["visit_stops_iff<br/>proved"]
   n45d35c57["fed_accounted<br/>goal"]
   n865f0198["queue_settled<br/>goal"]
+  n5d89494d["localWaitC_to_rowsB<br/>proved"]
+  nc0798bf4["funded_replays<br/>proved"]
   nf5604f02["positive_suspend_step_capacity<br/>proved"]
   n91ec4f0a["first_profile_closed<br/>proved"]
   n35e40e98["checkInput_eq_none_iff<br/>proved"]
+  n1e53da28["localRunC_compileBO<br/>proved"]
+  nc91d9978["journal_replays<br/>proved"]
+  n12fd91bf["tape_replays<br/>proved"]
   naf6b0a61["acceptLoop_length_le<br/>proved"]
+  n9edb9fa3["compilesBO_onExit<br/>proved"]
+  n610bea28["compilesBO_matchCause<br/>proved"]
+  ne598463["compilesBO_catchIf<br/>proved"]
+  n54d7fd7a["compilesBO_catchCause<br/>proved"]
+  n69a1b014["compilesBO_select<br/>proved"]
+  ncd4ba713["compilesBO_bind<br/>proved"]
+  nd4c37246["compilesBO_iterate<br/>proved"]
+  nd1e14921["compilesBO_exit<br/>proved"]
+  nac106427["compilesBO_suspend<br/>proved"]
+  nab6f0c7["denoteRowsB_straight<br/>proved"]
+  n6354e20d["at_append<br/>proved"]
+  nda3a4d32["denoteRows_straight<br/>proved"]
+  n2d904ec8 --> n5d89494d
+  n2d904ec8 --> nc0798bf4
+  n3074a4b0 --> n5d89494d
+  n3074a4b0 --> nc0798bf4
   nf5df662f --> na85938d1
   na85938d1 --> ne4836679
   ne4836679 --> nf5604f02
   ne4836679 --> n91ec4f0a
   n45d35c57 --> n35e40e98
   n865f0198 --> n35e40e98
+  n5d89494d --> n1e53da28
+  nc0798bf4 --> nc91d9978
+  nc0798bf4 --> n12fd91bf
   nf5604f02 --> naf6b0a61
+  n1e53da28 --> n9edb9fa3
+  n1e53da28 --> n610bea28
+  n1e53da28 --> ne598463
+  n1e53da28 --> n54d7fd7a
+  n1e53da28 --> n69a1b014
+  n1e53da28 --> ncd4ba713
+  n1e53da28 --> nd4c37246
+  n1e53da28 --> nd1e14921
+  n1e53da28 --> nac106427
+  n1e53da28 --> nab6f0c7
+  n1e53da28 --> n6354e20d
+  n1e53da28 --> nda3a4d32
+  n9edb9fa3 --> n6354e20d
+  n610bea28 --> n6354e20d
+  ne598463 --> n6354e20d
+  n54d7fd7a --> n6354e20d
+  n69a1b014 --> n6354e20d
+  ncd4ba713 --> n6354e20d
+  nd4c37246 --> n6354e20d
+  nd1e14921 --> nab6f0c7
+  nd1e14921 --> n6354e20d
+  nac106427 --> n6354e20d
 ```
 
 | Node | Status | Rests on | Nearest nodes |
 | --- | --- | --- | --- |
 | `fairTape_unarmed` | proved | — | — |
 | `frontier_empty_iff_deadlocked` | proved | — | — |
+| `rows_loop_frontier` | proved | — | `localWaitC_to_rowsB`, `funded_replays` |
+| `rows_loop_frontier_host` | proved | — | `localWaitC_to_rowsB`, `funded_replays` |
 | `select_takes_first` | proved | — | — |
 | `first_run_flags` | proved | — | `first_run_inv` |
 | `first_run_inv` | proved | — | `first_step_inv` |
@@ -7806,10 +8321,27 @@ flowchart LR
 | `visit_stops_iff` | proved | — | — |
 | `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` |
 | `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` |
+| `localWaitC_to_rowsB` | proved | — | `localRunC_compileBO` |
+| `funded_replays` | proved | — | `journal_replays`, `tape_replays` |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` |
 | `first_profile_closed` | proved | — | — |
 | `checkInput_eq_none_iff` | proved | — | — |
+| `localRunC_compileBO` | proved | — | `compilesBO_onExit`, `compilesBO_matchCause`, `compilesBO_catchIf`, `compilesBO_catchCause`, `compilesBO_select`, `compilesBO_bind`, `compilesBO_iterate`, `compilesBO_exit`, `compilesBO_suspend`, `denoteRowsB_straight`, `at_append`, `denoteRows_straight` |
+| `journal_replays` | proved | — | — |
+| `tape_replays` | proved | — | — |
 | `acceptLoop_length_le` | proved | — | — |
+| `compilesBO_onExit` | proved | — | `at_append` |
+| `compilesBO_matchCause` | proved | — | `at_append` |
+| `compilesBO_catchIf` | proved | — | `at_append` |
+| `compilesBO_catchCause` | proved | — | `at_append` |
+| `compilesBO_select` | proved | — | `at_append` |
+| `compilesBO_bind` | proved | — | `at_append` |
+| `compilesBO_iterate` | proved | — | `at_append` |
+| `compilesBO_exit` | proved | — | `denoteRowsB_straight`, `at_append` |
+| `compilesBO_suspend` | proved | — | `at_append` |
+| `denoteRowsB_straight` | proved | — | — |
+| `at_append` | proved | — | — |
+| `denoteRows_straight` | proved | — | — |
 
 ### R13: A run's inputs are data: equal recorded inputs give equal replay observations
 

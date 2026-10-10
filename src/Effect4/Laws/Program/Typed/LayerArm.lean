@@ -1041,69 +1041,46 @@ theorem merge_builds {left right : LayerTerm NativeOp} {f K : Nat} :
       (layerPointTyped_child hat rfl ha henv (completed_mono o1 hview) (stackTyped_mono o1 hstack))
       (layerPointTyped_child hat rfl hb henv (completed_mono o1 hview) (stackTyped_mono o1 hstack)))
 
-/-- **A layer reference whose target stands in another scope** (slice CX1,
-`docs/research/2026-10-10-cx-lexical-scope.md` §10). The reference's hop runs the target's term at
-the target's path with the reference's stack (`denoteLayer_ref_redirect`), and the memo map keys
-the build on the target's path. The checker types the reference at its own scope (the expansion),
-and `layerRefsWF` reads no scope, so the checker admits a reference whose target's path reads
-other parameters than the stack holds; the hop's point is then no typed point (`LayerPointTyped`
-reads its path's scope). Not true of every admitted program: Codex's review
-(`git:514a6d9f:docs/research/2026-10-10-cx-layer-context-review/README.md`) runs an admitted
-program in which a fork inside one definition's layer construction awaits that shared entry and
-receives a failure its own checked type does not admit. So the goal waits on a source rule
-(`docs/research/2026-10-10-cx-lexical-scope.md` §10, an owner's ruling): either the checker
-refuses such a reference, or a narrower rule with a typing that carries the scope. M5 and M7
-rest on it in place of `invoke_arm`. Concept `residual-program-typing`, claim `denote-typed`,
-requirement R4; its consumer is `ref_builds`. -/
+/-- **A reference and its target have the same parameters in scope** (decisions row 340, ruling
+of 2026-10-10, `docs/research/2026-10-10-cx-lexical-scope.md` §11): the formation check keeps a
+reference in its target's scope (`layerRefsWF_scopeOf`), and a path's parameters are its scope's
+(`scopeParams_eq`). So the stack a reference's hop keeps reads the target's parameters. A step of
+`denote-typed`; its consumer is `ref_builds`. -/
 @[semantics "residual-program-typing" (requirement := R4)]
-proof_goal crossScopeRef_builds {root : ProgramSource} {f : Nat} {target : List Nat}
-    (hwf : root.program.layerRefsWF = true)
-    (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
-      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
-    (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat) (hf : q.fuel ≤ f)
-    (htie : w.serviceTy = root.sig.serviceTy)
-    (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))
-    (hcross : scopeParams root.program target ≠ scopeParams root.program q.path)
-    (hpt : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :
-    TypedProg root w (buildTy lt) (denoteLayer root.program (.ref target) q m scope)
+theorem scopeParams_ref {program : NativeEff} (hwf : program.layerRefsWF = true)
+    {site target : List Nat} (h : Node.at_ (.eff program) site = some (.layer (.ref target))) :
+    scopeParams program target = scopeParams program site := by
+  rw [scopeParams_eq, scopeParams_eq, layerRefsWF_scopeOf hwf (mem_refSites_of_at h)]
 
 /-- **A layer reference** (decisions rows 153, 170, 185): no fuel is the frontier; else the hop to the
 target's term at the redirected point, one fuel down, by the hop hypothesis — well-formedness
-(`layerRefsWF_at`) gives a target that is a layer and no reference. The hop's point is typed when
-the target stands in the reference's scope (`layerPointTyped_redirect`); a target in another
-scope is the open goal `crossScopeRef_builds`. -/
+(`layerRefsWF_at`) gives a target that is a layer and no reference, in the reference's scope
+(`scopeParams_ref`), so the hop's point is typed (`layerPointTyped_redirect`). -/
 theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefsWF = true)
-    (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
-      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
       (scope : Nat), q.fuel < K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
       ScopeLive w scope → MemoLive w m → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
     BuildsTyped root f K (.ref target) := by
   intro q w lt m scope hK hf htie hat hpt hlive hmemo
-  cases hs : decide (scopeParams root.program target = scopeParams root.program q.path) with
-  | false =>
-    exact crossScopeRef_builds hwf hIH q w lt m scope hf htie hat (of_decide_eq_false hs) hpt hlive
-      hmemo
-  | true =>
-    cases hfq : q.fuel with
-    | zero =>
-      rw [denoteLayer_ref_zero _ _ _ _ _ hfq]
-      exact pending_typed root w _ _ q
-    | succ k =>
-      obtain ⟨lt_t, hlayer, hnotref⟩ := layerRefsWF_at hwf hat
-      rw [denoteLayer_ref_succ _ _ _ _ _ hfq, at_of_layerAt hlayer]
-      have hredir := layerPointTyped_redirect hat (of_decide_eq_true hs) hpt hlayer
-      have hk : (q.redirect target).fuel = k := by
-        show q.fuel - 1 = k
-        rw [hfq]
-        rfl
-      have hKk : (q.redirect target).fuel < K := by rw [hk]; rw [hfq] at hK; omega
-      have hfk : (q.redirect target).fuel ≤ f := by rw [hk]; rw [hfq] at hf; omega
-      cases lt_t with
-      | ref t' => exact absurd rfl (hnotref t')
-      | _ =>
-        exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive hmemo
+  cases hfq : q.fuel with
+  | zero =>
+    rw [denoteLayer_ref_zero _ _ _ _ _ hfq]
+    exact pending_typed root w _ _ q
+  | succ k =>
+    obtain ⟨lt_t, hlayer, hnotref⟩ := layerRefsWF_at hwf hat
+    rw [denoteLayer_ref_succ _ _ _ _ _ hfq, at_of_layerAt hlayer]
+    have hredir := layerPointTyped_redirect hat (scopeParams_ref hwf hat) hpt hlayer
+    have hk : (q.redirect target).fuel = k := by
+      show q.fuel - 1 = k
+      rw [hfq]
+      rfl
+    have hKk : (q.redirect target).fuel < K := by rw [hk]; rw [hfq] at hK; omega
+    have hfk : (q.redirect target).fuel ≤ f := by rw [hk]; rw [hfq] at hf; omega
+    cases lt_t with
+    | ref t' => exact absurd rfl (hnotref t')
+    | _ =>
+      exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive hmemo
 
 /-- Each layer of a nonempty merge errs below the merge (`Layer.ts:1652`, the errors joined). -/
 theorem mergeNonempty_error : ∀ (ls : List LayerTy) (lt : LayerTy),
@@ -1279,7 +1256,7 @@ theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
       (layerTerm_typed hwf f hIH K hhop that)
   | .merge _ _ => merge_builds
   | .mergeAll _ => mergeAll_builds
-  | .ref _ => ref_builds hwf hIH hhop
+  | .ref _ => ref_builds hwf hhop
 
 /-- **The layer family's build** (by induction on the fuel a reference's hop spends). -/
 theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (f : Nat)

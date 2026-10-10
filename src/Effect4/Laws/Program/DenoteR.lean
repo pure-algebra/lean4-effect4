@@ -1319,8 +1319,8 @@ theorem denoteLayer_ref_redirect (hwf : root.layerRefsWF = true) {site target : 
       denoteLayer root (LayerTerm.expandRound (Node.eff root) (.ref target)) (q.redirect target)
         m scope := by
   have hall := List.all_eq_true.mp hwf (site, target) hsite
-  rw [Bool.and_eq_true] at hall
-  have hlayer := hall.2
+  rw [Bool.and_eq_true, Bool.and_eq_true] at hall
+  have hlayer := hall.1.2
   rw [denoteLayer_ref_succ root target q m scope hf]
   cases hl : (Node.eff root).layerAt target with
   | none =>

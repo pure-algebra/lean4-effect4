@@ -379,3 +379,38 @@ written.
 A related observation on meaning, not checked: the memo map keys a layer in a definition's body
 on its path, so an invocation nested inside a provide of that layer reuses the outer
 invocation's build. rc.112 builds a new layer object for each call that constructs one.
+
+## 11. Ruling (2026-10-10): lexical visibility, in three steps
+
+The owner ruled option (e): a reference leaves its target's scope only when the expanded target
+reads no parameter, and then the per-call addition. The owner asked for coherent, safe and
+sound semantics. Two facts fix how (e) lands.
+
+- **Program order already refuses the useful case.** A block's bodies are child `0` and its main
+  program child `1`, and `layerRefsWF` requires `Path.lt target site`. So a body never names a
+  layer of the main program. That is Effect's one cross-scope pattern: a module-level layer
+  provided inside a function (`const withDb = (p) => Effect.provide(p, DbLive)`).
+- **Every admitted cross-scope reference names a layer inside another body.** The main program
+  names a body's layer, or a later body names an earlier body's. TypeScript has no such program:
+  a `const` in a function body is visible in no other function. The machine would run it with
+  the caller's parameters, and a shared entry would answer readers of different columns
+  (Codex's `failureProgram`). Equal parameter lists do not repair this: the values still come
+  from the wrong call.
+
+So scope means the same definition's body, by identity, and the steps are these.
+
+| Step | Rule | Effect on the proofs |
+| --- | --- | --- |
+| 1 (this slice) | a reference and its target stand in one scope: the same body, or both outside every body (`Eff.scopeOf`, `Eff.layerRefsWF`) | `crossScopeRef_builds` has no case left: `scopeParams_ref` gives the scope equality, and `ref_builds` uses `layerPointTyped_redirect` alone |
+| 2 | a body names a layer of the main program: the order rule admits that one case | the target's stack is free (`stackTyped_nil`); its expansion must run no parameter, so it checks the same at both scopes (`check_restrict`) |
+| 3 | a layer in a body is built once per call, as rc.112's per-call layer object; nested definitions close over their parent's parameters | DB-12 and DI-71 amended; a design note first |
+
+Placement of step 1:
+
+| Obligation | Concept, property | Claim, role, consumer | Reach | Not established |
+| --- | --- | --- | --- | --- |
+| `layerRefsWF_scopeOf` (`Laws/Program/PathFold.lean`) | `residual-program-typing`; formation | helper of `denote-typed`; `scopeParams_ref` | a site of a well-formed program | nothing of a run |
+| `scopeParams_eq` (`Typed/Scope.lean`) | `residual-program-typing`; scope | helper of `denote-typed`; `scopeParams_ref` | every path | nothing of a run |
+| `scopeParams_ref` (`Typed/LayerArm.lean`) | `residual-program-typing`; preservation | helper of `denote-typed`; `ref_builds` | a reference of a well-formed program | the memo sharing across calls of one body (step 3) |
+
+It unlocks M7 on the spine: `ref_builds` rests on no goal, so M5 and M7 rest on none.

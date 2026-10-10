@@ -9,9 +9,9 @@ proved, and the red controls pin each refusal:
 
 1. a theorem that uses a goal is proved modulo it, never proved. The real case is `m7_of_ledger`
    with `LoadsTyped` proved by `loadsTyped` and `DecisionKeeps` a goal; with `decision_preserves`
-   in its place, the same statement rests on one goal, `crossScopeRef_builds`: the build of a
-   layer reference whose target stands in another scope, open since slice CX1
-   (`docs/research/2026-10-10-cx-lexical-scope.md` §10);
+   in its place, the same statement is proved: since decisions row 341 a layer reference stands
+   in its target's scope, so no goal is left under it
+   (`docs/research/2026-10-10-cx-lexical-scope.md` §11);
 2. a node whose axioms leave the semantic ceiling is refused;
 3. a hand-written `sorry` is not a goal: the plan refuses it as an axiom outside the ceiling, and
    `tagGoal` refuses to tag a theorem whose body is not `sorry`, or a definition;
@@ -81,14 +81,13 @@ run_cmd liftTermElabM do
     | .modulo goals => s!"modulo {goals}"
     | standing => standing.word
   let some node := plan.find? ``m7Modulo | throwError "m7Modulo is not a node"
-  unless node.standing == .modulo #[``Effect4.Program.Typed.crossScopeRef_builds, ``keeps] do
-    throwError "m7Modulo is {said node.standing}, not modulo [crossScopeRef_builds, keeps]"
+  unless node.standing == .modulo #[``keeps] do
+    throwError "m7Modulo is {said node.standing}, not modulo [keeps]"
   let some proved := plan.find? ``Effect4.Program.Typed.m7_proved | throwError "m7_proved is not a node"
-  unless proved.standing == .modulo #[``Effect4.Program.Typed.crossScopeRef_builds] do
-    throwError "m7_proved is {said proved.standing}, not modulo [crossScopeRef_builds]"
-  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] ==
-      #[``Effect4.Program.Typed.crossScopeRef_builds, ``keeps] do
-    throwError "the next goals are not keeps and crossScopeRef_builds"
+  unless proved.standing == .proved do
+    throwError "m7_proved is {said proved.standing}, not proved"
+  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] do
+    throwError "the next goal is not keeps"
 
 -- 2. A node outside the semantic ceiling is refused.
 /-- error: plan: Classical.em: disallowed axioms [Classical.choice] -/
