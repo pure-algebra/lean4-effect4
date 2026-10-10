@@ -20,6 +20,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
   type (rows 296, 302 and 324). A template binds its parameters by the match by bounds (rows 303,
   306 and 315). It binds a row's request and a binder term alike: UNGUARD removed the guards.
   The approved eliminators read every union member of their input (P2b, row 325).
+  Variances are one semiring with a bivariant point (`Var4`, `src/Effect4/Program/Polarity.lean`),
+  and a parameter's polarity in a template is one fold (`Ty.polarity`); the match's composition
+  and the reference's reading are its images (VAR-1, the
+  [polarity note](research/2026-10-10-openai-math-type-systems/README.md)). Every built-in row and
+  atom scheme reads its parameters at co or bi in the answer, except `Ref.make` and `Ref.set`
+  (VAR-3, `E4-POL-CE-001`, row 342). That instantiation respects polarity is a planned goal (VAR-2).
 - **Definitions whose parameter is a program** (row 340, slices HO-1 and HO-2, the
   [note](research/2026-10-09-program-parameters.md)). A definition declares its parameters, and
   `Eff.invoke` passes one program per parameter. The checker types each program at its

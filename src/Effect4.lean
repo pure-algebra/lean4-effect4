@@ -88,6 +88,7 @@ import Effect4.Program.LayerView
 import Effect4.Program.TyFoldExtras
 import Effect4.Program.TyClasses
 import Effect4.Program.Bounds
+import Effect4.Program.Polarity
 import Effect4.Schema.Template
 import Effect4.Schema.TyFaces
 -- Lean types tied to `Ty` by the carrier fold, and their deriving step (decisions row 330).

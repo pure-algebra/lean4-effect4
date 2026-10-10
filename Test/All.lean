@@ -305,6 +305,7 @@ import Test.Dogfood.EditSession
 import Test.Program.CallInstance
 import Test.Program.QueryControls
 import Test.Program.BoundsControls
+import Test.Program.RowPolarity
 import Test.Program.DecisionContract
 import Test.Machine.Runtime.ArenaContract
 import Test.Dogfood.P1HttpCache
