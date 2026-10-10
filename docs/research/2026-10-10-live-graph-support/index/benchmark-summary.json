@@ -1,0 +1,64 @@
+{
+  "samples_per_pair": 3,
+  "includes": "Actual Lean assignment, index construction, checksum, one IO.Ref write",
+  "excludes": "Layout, waits, Kahn, JSON, MCP, rendering, native executable timing",
+  "remaining_costs": "hAt and heightAt retain list lookup; sparse trie follows key bits",
+  "results": [
+    {
+      "mode": "constant-item-height",
+      "items": 200,
+      "reference_median_ms": 4.423,
+      "indexed_median_ms": 0.869,
+      "ratio": 5.09
+    },
+    {
+      "mode": "constant-item-height",
+      "items": 500,
+      "reference_median_ms": 25.268,
+      "indexed_median_ms": 2.538,
+      "ratio": 9.96
+    },
+    {
+      "mode": "constant-item-height",
+      "items": 1000,
+      "reference_median_ms": 100.869,
+      "indexed_median_ms": 5.593,
+      "ratio": 18.04
+    },
+    {
+      "mode": "constant-item-height",
+      "items": 2000,
+      "reference_median_ms": 409.86,
+      "indexed_median_ms": 12.322,
+      "ratio": 33.26
+    },
+    {
+      "mode": "list-item-height",
+      "items": 200,
+      "reference_median_ms": 4.234,
+      "indexed_median_ms": 0.906,
+      "ratio": 4.67
+    },
+    {
+      "mode": "list-item-height",
+      "items": 500,
+      "reference_median_ms": 25.583,
+      "indexed_median_ms": 2.717,
+      "ratio": 9.42
+    },
+    {
+      "mode": "list-item-height",
+      "items": 1000,
+      "reference_median_ms": 103.471,
+      "indexed_median_ms": 6.535,
+      "ratio": 15.83
+    },
+    {
+      "mode": "list-item-height",
+      "items": 2000,
+      "reference_median_ms": 417.711,
+      "indexed_median_ms": 14.702,
+      "ratio": 28.41
+    }
+  ]
+}

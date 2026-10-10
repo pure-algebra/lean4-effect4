@@ -1,0 +1,7 @@
+#axiom_audit: 399 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+Tools.View.Flow.relaxIndexed: [propext, Quot.sound]
+Tools.View.Flow.assignHeightsIndexed: [propext, Quot.sound]
+Tools.View.Flow.preparePlacement: [propext, Quot.sound]
+Tools.View.Flow.relaxIndexed_agrees: [propext, Quot.sound]
+Tools.View.Flow.assignHeightsIndexed_agrees: [propext, Quot.sound]
+Tools.View.Flow.preparePlacement_height: [propext, Quot.sound]
