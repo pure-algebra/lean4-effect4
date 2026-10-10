@@ -319,6 +319,19 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   ends as before and meets the premises. Its control answers a listing outside the row's
   column, and the guard leaves that call waiting. A row whose answer column allocates a handle
   answers nothing through the guard.
+- **Typed handlers in `Effects` v0.9.1** (`lean4-effects` commit `e6028a4`, local). A program is
+  typed under a protocol into a postcondition (`Program.Sat`), by structure on the tree. The
+  typing is sound for every host that meets the protocol. A handler is typed from an upper
+  protocol to a lower one (`Handler.Typed`). Typed handlers take typed programs to typed
+  programs, compose, and make a host that meets the lower protocol meet the upper one
+  (`Comodel.Meets.through`). So a stack of layers, each checked against its two protocols,
+  needs only a host at its foot that meets the last one. The package's gate, parity receipt and
+  trust probes pass. Effect4 still pins `b0dd607`: moving the pin rebuilds the H8 chain, so it
+  moves with the next change at the law graph's base. Its consumer is a typed layer under the
+  row protocol: then `guardRows` changes nothing (`guardRows_of_meets`).
+- **CO-6b waits on a ruling** (section 8, item 4). The Queue's definitions take the queue's
+  state cell as their first argument. A service in Effect's own style builds that cell in its
+  layer. Its methods close over the cell. So the shape of a service is a representation choice.
 
 ## 8. What the owner must decide
 
@@ -332,6 +345,22 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
    Uustalu on runners, and Ahman and Bauer's runners. Also Hancock and Setzer on interaction
    structures, and Niu and Spivak on polynomial functors. Filed texts allow cited statements.
    Recommended.
+4. **The carrier of a printed service** (representation; slice CO-6b, decisions rows 118 and
+   328). A definition block prints as a `Context.Service` class and a `Layer`. There are three
+   shapes:
+   - (a) the definitions as they are, behind `Layer.succeed`: each method still takes its state
+     cell, so the caller holds the queue's internals;
+   - (b) a carrier built by the layer. A block declares a service with its state's initial
+     program. The layer is `Layer.effect` over that program, and the methods close over the
+     cell. One layer object builds one cell, as the machine keeps one memo entry per path
+     (DB-12);
+   - (c) shape (b), with the lower rows as the layer's requirements. The service's own rows are
+     its signature. The rows its definitions call are services that the layer requires. It
+     prints a typed handler (`Handler.Typed`) as `Layer<S, never, T>`.
+
+   Recommended: (b) now, for Queue, Semaphore and Pool, and (c) when a host row is a service.
+   Shape (b) adds a service declaration to the definition block: a program change, so it starts
+   as a plan.
 
 ## 9. What this note does not establish
 
