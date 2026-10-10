@@ -176,7 +176,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
    an Effect service's key and layer, and the roles read back. S3 checks a client that uses the
    Queue's service through its key, on tsgo 7 and rc.112. The Semaphore's service landed too, with
    Codex's three service findings repaired. Pool's service waits for a method whose parameter is
-   a program. Then
+   a program: [the plan](research/2026-10-09-program-parameters.md), row 340, slices HO-1 to HO-5. Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:

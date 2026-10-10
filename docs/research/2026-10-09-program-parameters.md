@@ -1,6 +1,6 @@
 # 2026-10-09 Note: definitions whose parameter is a program
 
-Status: a proposal; the owner rules the three representation questions of §8. Base:
+Status: ruled 2026-10-09 (decisions row 340): §8's three questions, each as recommended. Base:
 `refactor/phase1-phase3` at `ec08fe86`. The owner asked for it on 2026-10-09: "we need that
 program composition … figure out the proper abstractions and math to allow that".
 
