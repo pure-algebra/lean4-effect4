@@ -1,0 +1,12 @@
+Tools.View.Flow.heightAt: exact axioms []
+Tools.View.Flow.assignHeights: exact axioms []
+Tools.View.Flow.preparePlacement: exact axioms [propext, Quot.sound]
+Tools.View.Flow.PreparedPlacement.height: exact axioms []
+Tools.View.Flow.assignHeights_agrees: exact axioms []
+Tools.View.Flow.preparePlacement_height: exact axioms [propext, Quot.sound]
+Tools.View.Flow.preparePlacement_lanes: exact axioms [propext, Quot.sound]
+Tools.View.Flow.place_placed: exact axioms [propext, Quot.sound]
+Tools.View.Flow.place_descends: exact axioms [propext, Quot.sound]
+Tools.View.Flow.place_apart: exact axioms [propext, Quot.sound]
+GraphToolsProbe.Placement.placement_old: exact axioms [propext, Quot.sound]
+PASS: prepared placement policies, controls, and exact dependencies

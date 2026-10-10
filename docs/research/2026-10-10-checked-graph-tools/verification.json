@@ -1,0 +1,186 @@
+{
+  "checks": {
+    "narrow-build": {
+      "command": [
+        "lake",
+        "build",
+        "Tools.View.FlowPath",
+        "Tools.View.FlowOrder",
+        "Tools.View.FlowSpecimen",
+        "Tools.View.Build"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.264,
+      "finished_utc": "2026-10-10T06:07:39.817088+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/narrow-build.log",
+      "log_sha256": "58c29d4b82933cb75a156490c992ae5c1b853a8216e1545a68a307ce824074e5"
+    },
+    "Baseline": {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "graph-tools-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/Baseline.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/Baseline.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.081,
+      "finished_utc": "2026-10-10T06:07:40.898904+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/Baseline.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "probe_sha256": "ab3ad38aba421faf02e848f47cb14a537ed009fe487057a5097e5408941ede4b"
+    },
+    "PathControls": {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "graph-tools-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/PathControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/PathControls.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.144,
+      "finished_utc": "2026-10-10T06:07:43.043849+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/PathControls.log",
+      "log_sha256": "c7cc59e43c8e818275aa05e15cb720ba117c8b4fc286dcc19a0850dc4b3c5c68",
+      "probe_sha256": "4d699c93b67f90142ec9c58e62f6ea07f7f94bad4bb1cdbaf45c7b9a610cbb0b"
+    },
+    "PlacementControls": {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "graph-tools-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/PlacementControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/PlacementControls.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.53,
+      "finished_utc": "2026-10-10T06:07:44.573927+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/PlacementControls.log",
+      "log_sha256": "836b32087c089baacd4a7dd2ad3710880a55c9e96ee1324f134f086908691905",
+      "probe_sha256": "71f020ce7acaf7a83ec816edb88ad41fc5b3486b946f7c3fbfba70831c28a971"
+    },
+    "FlowPathControls": {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "graph-tools-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.817,
+      "finished_utc": "2026-10-10T06:07:46.390942+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/FlowPathControls.log",
+      "log_sha256": "69ecb95b70df085c49521d236a540c7b46ab213990c8cdddd3ff7555d42a355b",
+      "probe_sha256": "357855b168113c595b86c6dac96ed701529b9a0ec771d490e943073d46fcc403"
+    },
+    "ProofPathControls": {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "graph-tools-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/ProofPathControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/ProofPathControls.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.608,
+      "finished_utc": "2026-10-10T06:07:48.000189+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/ProofPathControls.log",
+      "log_sha256": "6bcf6d249e30ac9ba5c1957bd6f25e17f17b0947606927c5ecca73e739618e28",
+      "probe_sha256": "d145ed1f0e6a55cd9ca380734f0bffd5ecc79bdcf044842c579ff3a07ce2f4ab"
+    },
+    "Reuse": {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "graph-tools-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/Reuse.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/Reuse.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.737,
+      "finished_utc": "2026-10-10T06:07:51.737748+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Path.lean": "e743f370120e0899d6a56ab656a7a3b5737cad7688820531ff791c93ab4ce967",
+        "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+        "tools/Tools/View/FlowLaws.lean": "fdbb6c9c76d09299101874d96a5c6d6c25b4e2e83d5f9c4e6391c86bf5115d44",
+        "tools/Tools/View/FlowPath.lean": "8397bfdd8d297224f53f87227dca7ee49bc40f43cbf8abd538cc846a181db6b0"
+      },
+      "production_stable": true,
+      "log": "docs/research/2026-10-10-checked-graph-tools/Reuse.log",
+      "log_sha256": "4f5c30d875e2cdf31275493bda8079fba64ef94c44a391d2512e1e5ffc87e821",
+      "probe_sha256": "f1419dcc7e7253dee164bf21681da235455cefbaa1220f2acd521966e537428b"
+    }
+  },
+  "base": "969ed613b582bbdd4013ac21d949eb6f159369d8",
+  "lean_num_threads": 3,
+  "scope": "Narrow local proofs, finite controls, and compiled call structure. No full sweep or host equivalence.",
+  "all_passed": true
+}

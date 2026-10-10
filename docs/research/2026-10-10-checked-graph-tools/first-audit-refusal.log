@@ -1,0 +1,82 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:23:58: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence cycleEdges) 0
+numerals are polymorphic in Lean, but the numeral `0` cannot be used in a context where the expected type is
+  EdgeOccurrence cycleEdges
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:23:61: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence cycleEdges) 1
+numerals are polymorphic in Lean, but the numeral `1` cannot be used in a context where the expected type is
+  EdgeOccurrence cycleEdges
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:23:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:25:58: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence cycleEdges) 3
+numerals are polymorphic in Lean, but the numeral `3` cannot be used in a context where the expected type is
+  EdgeOccurrence cycleEdges
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:25:61: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence cycleEdges) 1
+numerals are polymorphic in Lean, but the numeral `1` cannot be used in a context where the expected type is
+  EdgeOccurrence cycleEdges
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:25:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:27:57: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence cycleEdges) 0
+numerals are polymorphic in Lean, but the numeral `0` cannot be used in a context where the expected type is
+  EdgeOccurrence cycleEdges
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:27:60: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence cycleEdges) 2
+numerals are polymorphic in Lean, but the numeral `2` cannot be used in a context where the expected type is
+  EdgeOccurrence cycleEdges
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:27:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:38:54: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence changed) 0
+numerals are polymorphic in Lean, but the numeral `0` cannot be used in a context where the expected type is
+  EdgeOccurrence changed
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:38:57: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (EdgeOccurrence changed) 1
+numerals are polymorphic in Lean, but the numeral `1` cannot be used in a context where the expected type is
+  EdgeOccurrence changed
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:38:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:50:38: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (Fin joined.length) 0
+numerals are polymorphic in Lean, but the numeral `0` cannot be used in a context where the expected type is
+  Fin joined.length
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:50:46: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  OfNat (Fin joined.length) 1
+numerals are polymorphic in Lean, but the numeral `1` cannot be used in a context where the expected type is
+  Fin joined.length
+due to the absence of the instance above
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:50:0: error: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:59:4: error: Type mismatch
+  Walk.cons 0 ?m.30
+has type
+  Walk ?m.14 (Prod.fst (?m.14 0)) ?m.17
+but is expected to have type
+  Walk (occurrenceEndpoints cycleEdges) 0 2
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-checked-graph-tools/FlowPathControls.lean:65:0: error: _private.Tools.View.FlowPath.0.Tools.View.Flow.explainFrontier.eq_2 reaches forbidden axiom Classical.choice

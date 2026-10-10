@@ -1,0 +1,45 @@
+def Tools.View.Flow.placeWith width f : Placement :=
+  let b := layWith width f;
+  cases b : Placement
+  | Tools.View.Flow.Box.mk w src snk ends topPad botPad items edges frames backs exits waits marks =>
+    let prepared := preparePlacement b;
+    cases prepared : Placement
+    | Tools.View.Flow.PreparedPlacement.mk fallback heights lanes =>
+      let _x.1 := PreparedPlacement.height prepared;
+      let _x.2 := 0;
+      let _x.3 := atHeights _x.1 _x.2 items;
+      let _x.4 := Placement.mk b _x.3 lanes;
+      return _x.4
+def Tools.View.Flow.PreparedPlacement.height prepared i : Int :=
+  cases prepared : Int
+  | Tools.View.Flow.PreparedPlacement.mk fallback heights lanes =>
+    let _x.1 := heightAt fallback heights i;
+    return _x.1
+def Tools.View.Flow.preparePlacement b : PreparedPlacement :=
+  cases b : PreparedPlacement
+  | Tools.View.Flow.Box.mk w src snk ends topPad botPad items edges frames backs exits waits marks =>
+    let _x.1 := List.lengthTR._redArg items;
+    let _x.2 := Box.waitEdges b;
+    let waits := acceptWaits _x.1 edges _x.2;
+    cases waits : PreparedPlacement
+    | Prod.mk fst snd =>
+      let order := orderFor _x.1 edges fst;
+      cases order : PreparedPlacement
+      | Prod.mk fst snd =>
+        let _x.3 := hAt items;
+        let _x.4 := [] ◾;
+        let _x.5 := assignHeights _x.3 fst topPad snd _x.4;
+        let _x.6 := List.appendTR._redArg backs snd;
+        let _x.7 := PreparedPlacement.mk topPad _x.5 _x.6;
+        return _x.7
+def Tools.View.Flow.assignHeights h es start x.1 x.2 : List (Prod Nat Int) :=
+  cases x.1 : List (Prod Nat Int)
+  | List.nil =>
+    return x.2
+  | List.cons head.3 tail.4 =>
+    let r := List.foldl._at_.Tools.View.Flow.relax.spec_0._at_.Tools.View.Flow.assignHeights.spec_0 start x.2 h head.3 start es;
+    let _x.5 := Prod.mk ◾ ◾ head.3 r;
+    let _x.6 := List.cons ◾ _x.5 x.2;
+    let _x.7 := assignHeights h es start tail.4 _x.6;
+    return _x.7
+PASS: placement prepares once; preparation analyzes waits once; lookup reads retained data
