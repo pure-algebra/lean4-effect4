@@ -149,11 +149,17 @@ def causeAnnotations (path : List String) (cause : CauseTerm) : List (List Strin
   } cause path
 
 /-- A definition block's declarations (decisions row 328): each declared column is a type the
-program states, at its declaration's position. -/
+program states, at its declaration's position, and so is each column of each parameter, under
+`params` and the parameter's index (decisions row 340; Codex's HO3-ANN-01: the printer writes a
+parameter's columns, so their classes and their formation are the program's). -/
 def declAnnotations (path : List String) (decls : List DefDecl) : List (List String × Ty) :=
   decls.zipIdx.flatMap fun x =>
     [(path ++ [toString x.2, "request"], x.1.request), (path ++ [toString x.2, "answer"], x.1.answer),
-      (path ++ [toString x.2, "error"], x.1.error)]
+      (path ++ [toString x.2, "error"], x.1.error)] ++
+    x.1.params.zipIdx.flatMap fun q =>
+      [(path ++ [toString x.2, "params", toString q.2, "request"], q.1.request),
+        (path ++ [toString x.2, "params", toString q.2, "answer"], q.1.answer),
+        (path ++ [toString x.2, "params", toString q.2, "error"], q.1.error)]
 
 /-- Read type-bearing leaves from a generated program-family view. An operation argument is
 read through the alphabet's own views, at the path segment `op`. Its binder term

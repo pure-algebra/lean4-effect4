@@ -295,7 +295,8 @@ def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
   match defs[sv.init]? with
   | none => some sv.name
   | some init =>
-    if init.request ≠ .unit then some sv.name
+    -- a service with parameters forwards its callbacks only from slice HO-5 (Codex's HO3-SVC-01)
+    if init.request ≠ .unit || !init.params.isEmpty then some sv.name
     else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty ||
         sv.methods.any (fun x => !plainMethodName x.1) then some sv.name
     else if defs.any (·.name == sv.name) || defs.any (·.name == sv.name ++ "Layer") ||
@@ -304,7 +305,9 @@ def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
       some sv.name
     else sv.methods.findSome? fun (m, j, n) =>
       match defs[j]? with
-      | some d => if (methodArgs init.answer d n).isSome then none else some (sv.name ++ "." ++ m)
+      | some d =>
+        if d.params.isEmpty && (methodArgs init.answer d n).isSome then none
+        else some (sv.name ++ "." ++ m)
       | none => some (sv.name ++ "." ++ m)
 
 /-- Whether a definition is a method of a service that the block does not declare. -/
@@ -449,6 +452,18 @@ def annotationRefusal (program : Eff Op) : Option PrintRefusal :=
     | some _ => none
     | none => some (.typeSpelling type.render)
 
+/-- **The names a row table uses in printed code** (Codex's HO3-NAME-01): each row's spelling,
+the root of a qualified one (`Widget` of `Widget.run`, `SourceBindings.qualifiedRoot`), and each
+trailing name. A definition or a parameter named so would capture what the row's call names. -/
+def rowNameUses (table : List Row) : List String :=
+  table.flatMap fun row =>
+    row.spelling :: ((Effect4.Codegen.SourceBindings.qualifiedRoot row.spelling).toList ++ RowArg.names row.trailing)
+
+/-- A row's spelling is a name its table uses. A step of `defsNamed_of_fault`. -/
+theorem spelling_mem_rowNameUses {table : List Row} {row : Row} (h : row ∈ table) :
+    row.spelling ∈ rowNameUses table :=
+  List.mem_flatMap.mpr ⟨row, h, List.mem_cons_self⟩
+
 /-- The first definition name that is no safe module constant, or `none`. A definition's name
 is an export name (`exportNameSafe`: a binding, no binder, no reserved head, no layer name, no
 helper and no imported name), not the main declaration's, not a row's spelling, and declared
@@ -456,7 +471,7 @@ once. A built-in row's spelling holds a dot, so it is no binding. -/
 def defsNameFault (table : List Row) (name : String) : List DefDecl → Option String
   | [] => none
   | d :: ds =>
-    if !exportNameSafe d.name || d.name == name || table.any (·.spelling == d.name) ||
+    if !exportNameSafe d.name || d.name == name || (rowNameUses table).contains d.name ||
         ds.any (·.name == d.name) then some d.name
     else defsNameFault table name ds
 
@@ -468,13 +483,21 @@ def paramsNameFault (table : List Row) (name : String) (defs : List DefDecl) :
     List ParamDecl → Option String
   | [] => none
   | q :: qs =>
-    if !exportNameSafe q.name || q.name == name || table.any (·.spelling == q.name) ||
+    if !exportNameSafe q.name || q.name == name || (rowNameUses table).contains q.name ||
         defs.any (·.name == q.name) || qs.any (·.name == q.name) then some q.name
     else paramsNameFault table name defs qs
 
 /-- The first parameter name of a block that is no safe binding (`paramsNameFault`). -/
 def blockParamsFault (table : List Row) (name : String) (defs : List DefDecl) : Option String :=
   defs.findSome? fun d => paramsNameFault table name defs d.params
+
+/-- The first definition or parameter name that is a payload class the module declares, or
+`none` (Codex's HO3-NAME-01): a definition so named would declare the name twice, and a
+parameter so named would capture the class's constructor in its body. -/
+def classNameFault (classes : Effect4.Codegen.Classes.Classes) (defs : List DefDecl) :
+    Option String :=
+  defs.findSome? fun d =>
+    ((d.name :: d.params.map (·.name)).find? fun s => classes.any (·.1 == s))
 
 /-- A service's name and its layer's name, when one is not free: not an export name, the main
 declaration's name, or a row's spelling. `serviceFault` checks them against the definitions. -/
@@ -514,7 +537,10 @@ def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : Eff
       | none =>
       match Effect4.Codegen.ClassTable.moduleClasses sig name ty e with
       | .error why => .error why
-      | .ok _ =>
+      | .ok (classes, _) =>
+      match classNameFault classes e.defsOf with
+      | some fault => .error (.unsafeName fault)
+      | none =>
       match annotationRefusal e with
       | some why => .error why
       | none => printModule sig name ty e
@@ -551,11 +577,18 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
       simp only [hn] at h
       cases hc : Effect4.Codegen.ClassTable.moduleClasses sig name ty e with
       | error why => simp only [hc] at h; cases h
-      | ok classes =>
+      | ok pair =>
+        obtain ⟨classes, classDecls⟩ := pair
         simp only [hc] at h
+        cases hcf : classNameFault classes e.defsOf with
+        | some fault => simp only [hcf] at h; cases h
+        | none =>
+        simp only [hcf] at h
         cases ha : annotationRefusal e with
         | some why => simp only [ha] at h; cases h
-        | none => exact ⟨rfl, rfl, rfl, rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
+        | none =>
+          exact ⟨rfl, rfl, rfl, rfl, rfl, ⟨(classes, classDecls), rfl⟩, rfl,
+            by simpa only [ha] using h⟩
 
 /-- Every successful entry retains safe names and the actual module-printer equation. -/
 theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}

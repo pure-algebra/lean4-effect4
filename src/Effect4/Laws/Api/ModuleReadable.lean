@@ -249,7 +249,8 @@ theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name
       blockReadable emission.classes (nativeSignature table) program = true) :
     Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
       emission.module.decls = .ok program := by
-  obtain ⟨_, _, names, paramNames, _, _, _, printed⟩ := Program.printEntry_checks emission.generated
+  obtain ⟨_, _, names, paramNames, _, _, _, printed⟩ :=
+    Program.printEntry_checks emission.generated
   have classesRead := Classes.readClassDecls_checked (moduleClasses_checked emission.classified)
   rcases readable with plain | block
   · exact readModule_printModule_readable (nativeLawful table lawful) plain classesRead printed
@@ -284,8 +285,8 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
     (Eff.hoistAll_defsOf hoisted).symm.trans (Eff.defsOf_of_block?_none plain)
   have generated : printEntry table (nativeSignature table) name typing.ty program = .ok decls := by
     simp only [printEntry, safe, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
-      lawful_rowNamesSafe lawful, noDefs, defsNameFault, blockParamsFault, List.findSome?_nil,
-      serviceNamesFault_nil, classified,
+      lawful_rowNamesSafe lawful, noDefs, defsNameFault, blockParamsFault, classNameFault,
+      List.findSome?_nil, serviceNamesFault_nil, classified,
       annotations, printed]
   exact ⟨⟨formed, typing, classes, classDecls, classified, decls, generated⟩,
     ModuleEmission.recheck _⟩

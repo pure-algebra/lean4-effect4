@@ -340,6 +340,21 @@ parameters (§4.3's last form) waits for HO-5, which first needs one.
   (`make check-truth`); its print under tsgo 7 (`make check-target`); the TypeScript reader
   (`make check-ts-reader`).
 
+### 11.2a The review's repairs (Codex, 2026-10-10)
+
+- **HO3-ANN-01**: a parameter's three columns are in the type inventory
+  (`Formation.declAnnotations`), so the module declares their payload classes and formation
+  refuses an unformed one; the closedness law covers them (`declAnnotations_all`).
+- **HO3-NAME-01**: a definition's or a parameter's name is checked against every name a row's
+  call uses (`rowNameUses`: the spelling, its qualified root, the trailing names) and against the
+  module's payload classes (`classNameFault`).
+- **HO3-SVC-01**: a service's initial program or method with a parameter is refused by name
+  (`serviceFaultOf`) until HO-5 forwards its programs.
+- **HO3-REQ-01**: an invocation whose checked requirement row is more than its definition's is
+  refused at its path by the application face (`invokeRequirementFault`,
+  `Codegen/CallbackRequirements.lean`), until the header binds a requirement variable, which
+  needs a type-parameter binder in the target syntax.
+
 ### 11.3 HO-3b's law of names
 
 The invocation's arm of `read_print` (Law 11) and of `read_exact` needs three facts of the

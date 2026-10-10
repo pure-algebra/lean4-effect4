@@ -807,7 +807,8 @@ def ArgAll (P : Ty → Prop) : ArgF Op (EffSelfCarrier Op) → Prop
   | .optTerm t => ∀ x ∈ t, TermAll P x
   | .optTy ty => ∀ t ∈ ty, P t
   | .op op => (∀ t ∈ ScopedOp.term? op, TermAll P t) ∧ ∀ t ∈ ScopedOp.typeArgs op, P t
-  | .decls ds => ∀ d ∈ ds, P d.request ∧ P d.answer ∧ P d.error
+  | .decls ds => ∀ d ∈ ds, P d.request ∧ P d.answer ∧ P d.error ∧
+      ∀ q ∈ d.params, P q.request ∧ P q.answer ∧ P q.error
   | _ => True
 
 /-- The declared columns of a definition block, as `ArgAll`. A step of
@@ -815,25 +816,52 @@ def ArgAll (P : Ty → Prop) : ArgF Op (EffSelfCarrier Op) → Prop
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem declAnnotations_all (P : Ty → Prop) (path : List String) (ds : List DefDecl) :
     allTypes P (Formation.declAnnotations path ds) =
-      ∀ d ∈ ds, P d.request ∧ P d.answer ∧ P d.error := by
+      ∀ d ∈ ds, P d.request ∧ P d.answer ∧ P d.error ∧
+        ∀ q ∈ d.params, P q.request ∧ P q.answer ∧ P q.error := by
   refine propext ⟨fun h d hd => ?_, fun h x hx => ?_⟩
   · obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hd
     have hmem : (d, i) ∈ ds.zipIdx := List.mem_zipIdx_iff_getElem?.mpr hi
     have hsub : ∀ y ∈ [(path ++ [toString i, "request"], d.request),
-        (path ++ [toString i, "answer"], d.answer), (path ++ [toString i, "error"], d.error)],
+          (path ++ [toString i, "answer"], d.answer), (path ++ [toString i, "error"], d.error)] ++
+        d.params.zipIdx.flatMap (fun q =>
+          [(path ++ [toString i, "params", toString q.2, "request"], q.1.request),
+            (path ++ [toString i, "params", toString q.2, "answer"], q.1.answer),
+            (path ++ [toString i, "params", toString q.2, "error"], q.1.error)]),
         P y.2 := fun y hy => h y (List.mem_flatMap.mpr ⟨(d, i), hmem, hy⟩)
-    exact ⟨hsub _ List.mem_cons_self, hsub _ (List.mem_cons_of_mem _ List.mem_cons_self),
-      hsub _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
+    refine ⟨hsub _ (List.mem_append_left _ List.mem_cons_self),
+      hsub _ (List.mem_append_left _ (List.mem_cons_of_mem _ List.mem_cons_self)),
+      hsub _ (List.mem_append_left _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+        List.mem_cons_self))), fun q hq => ?_⟩
+    obtain ⟨j, hj⟩ := List.mem_iff_getElem?.mp hq
+    have hqmem : (q, j) ∈ d.params.zipIdx := List.mem_zipIdx_iff_getElem?.mpr hj
+    have hq' : ∀ y ∈ [(path ++ [toString i, "params", toString j, "request"], q.request),
+        (path ++ [toString i, "params", toString j, "answer"], q.answer),
+        (path ++ [toString i, "params", toString j, "error"], q.error)], P y.2 :=
+      fun y hy => hsub y (List.mem_append_right _ (List.mem_flatMap.mpr ⟨(q, j), hqmem, hy⟩))
+    exact ⟨hq' _ List.mem_cons_self, hq' _ (List.mem_cons_of_mem _ List.mem_cons_self),
+      hq' _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))⟩
   · obtain ⟨⟨d, i⟩, hmem, hx⟩ := List.mem_flatMap.mp hx
     have hd : d ∈ ds := List.mem_iff_getElem?.mpr ⟨i, List.mem_zipIdx_iff_getElem?.mp hmem⟩
-    obtain ⟨hr, ha, he⟩ := h d hd
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact hr
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact ha
-    rcases List.mem_cons.mp hx with rfl | hx
-    · exact he
-    exact nomatch hx
+    obtain ⟨hr, ha, he, hps⟩ := h d hd
+    rcases List.mem_append.mp hx with hx | hx
+    · rcases List.mem_cons.mp hx with rfl | hx
+      · exact hr
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact ha
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact he
+      exact nomatch hx
+    · obtain ⟨⟨q, j⟩, hqmem, hx⟩ := List.mem_flatMap.mp hx
+      have hq : q ∈ d.params :=
+        List.mem_iff_getElem?.mpr ⟨j, List.mem_zipIdx_iff_getElem?.mp hqmem⟩
+      obtain ⟨qr, qa, qe⟩ := hps q hq
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact qr
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact qa
+      rcases List.mem_cons.mp hx with rfl | hx
+      · exact qe
+      exact nomatch hx
 
 /-- The annotations of one argument, as `ArgAll`. A step of `nodeAnnotations_all`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]

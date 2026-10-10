@@ -17,6 +17,7 @@ import Effect4.Codegen.Checked
 import Effect4.Codegen.SourceBindings
 import Effect4.Codegen.Read
 import Effect4.Codegen.Admit
+import Effect4.Codegen.CallbackRequirements
 import Effect4.Codegen.Schema
 import Effect4.Codegen.Target
 import Effect4.Store.Domain.Cascade
@@ -218,6 +219,18 @@ def printDecl (name : String) (program : Program) (table : RowTable := []) : Opt
     | _, _ => none
   | _, _ => none
 
+
+/-- The module together with its core typing and exact production receipt. Consumers
+that need the proof connection retain this result; `printModule` projects its syntax.
+This does not validate source imports or establish target typing/execution. -/
+def emitModule (name : String) (program : Program) (table : RowTable := []) :
+    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission program table name) :=
+  -- a callback that needs a service is refused at its invocation until the header can carry its
+  -- row (`Codegen/CallbackRequirements.lean`, Codex's HO3-REQ-01)
+  match Effect4.Codegen.invokeRequirementFault (nativeSignature table) program with
+  | some path => .error (.print (.callbackRequirement path))
+  | none => Effect4.Codegen.emitModule name program table
+
 /-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
 (the host rows slice, `Program.printModule`), then the exported main constant; `none` when it
 is ill-typed or the printer refuses it. `Api.emitModule` answers the refusal's reason; an
@@ -225,14 +238,7 @@ export name with an `exportNameFault` is one. The block is what a host must run 
 with a layer reference: rc.112 keys its memo map on the layer object (`Layer.ts:411`), and the
 one `const` is the one object. -/
 def printModule (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.Module :=
-  ((Effect4.Codegen.emitModule name program table).toOption).map (·.module)
-
-/-- The module together with its core typing and exact production receipt. Consumers
-that need the proof connection retain this result; `printModule` projects its syntax.
-This does not validate source imports or establish target typing/execution. -/
-def emitModule (name : String) (program : Program) (table : RowTable := []) :
-    Except Effect4.Codegen.EmissionRefusal (Effect4.Codegen.ModuleEmission program table name) :=
-  Effect4.Codegen.emitModule name program table
+  ((emitModule name program table).toOption).map (·.module)
 
 /-- Raw reconstruction from a declaration block. This recovers programs in the
 printer's readable image, but ignores imports, outer annotations and export names.

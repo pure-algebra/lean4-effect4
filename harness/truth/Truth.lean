@@ -1568,6 +1568,7 @@ def refusalText : PrintRefusal → String
   | .typeSpelling text => s!"type spelling {text}"
   | .payloadClass tag why => s!"payload class {tag}: {classRefusalText why}"
   | .binderTerm spelling => s!"binder term of {spelling}"
+  | .callbackRequirement path => s!"callback requirement at {path}"
 
 /-- One fiber of the machine's own record, under the machine's ids: its exit is recorded and
 never compared. -/

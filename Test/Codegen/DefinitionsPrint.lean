@@ -182,6 +182,102 @@ def paramRenamed (name : String) : NativeEff :=
   blockReadable [] (nativeSignature []) p &&
     (Api.printModule "main" p).any fun m => decide (Api.readModule m [] = .ok p)
 
+/-! ## The printer's boundary for parameters (Codex's HO-3 review) -/
+
+/-- A parameter from a number to a number. -/
+def numParam (name : String) : ParamDecl := { name, request := .nat, answer := .nat }
+
+/-- The printer's refusal of a program at a row table, when its emission is refused there. -/
+def printRefusalAt (p : NativeEff) (table : RowTable) : Option PrintRefusal :=
+  match Api.emitModule "main" p table with
+  | .error (.print why) => some why
+  | _ => none
+
+/-- A host row, spelled qualified (`Widget.run`) or plain with a trailing name (`Token`). -/
+def hostRow (qualified : Bool) : Row :=
+  { name := "widgetRead", spelling := if qualified then "Widget.run" else "readWidget",
+    trailing := if qualified then [] else [.name "Token"],
+    kind := .async, registration := .external, request := .nat, answer := .nat, cite := "battery" }
+
+/-- A definition whose parameter is named `param` and whose body calls the host row. -/
+def hostCaller (param : String) : NativeEff :=
+  .defs [{ name := "readExternal", request := .nat, answer := .nat, params := [numParam param] }]
+    (.cons (.perform (.external 0) (.var 0)) .nil) (.succeed (.lit (.nat 1))) .nil
+
+-- control (HO3-NAME-01): a parameter named as a row's qualified root, or as its trailing name,
+-- would capture what the row's call names: refused by name; another name prints
+#guard printRefusalAt (hostCaller "Widget") [hostRow true] = some (.unsafeName "Widget")
+#guard printRefusalAt (hostCaller "Token") [hostRow false] = some (.unsafeName "Token")
+#guard (Api.printModule "main" (hostCaller "use") [hostRow true]).isSome
+#guard (Api.printModule "main" (hostCaller "use") [hostRow false]).isSome
+
+/-- The fields of the payload `Payload`. -/
+def payloadFields : List (String × Bool × Ty) := [("_tag", false, .lit "Payload"), ("id", false, .nat)]
+
+/-- A definition that builds a `Payload`, with a parameter named `param`. -/
+def payloadBuilder (param : String) : NativeEff :=
+  .defs [{ name := "buildPayload", request := .nat, answer := .record payloadFields,
+           params := [numParam param] }]
+    (.cons (.succeed (.record payloadFields ["_tag", "id"]
+      (.cons (.lit (.str "Payload")) (.cons (.lit (.nat 7)) .nil)))) .nil)
+    (.succeed (.lit (.nat 1))) .nil
+
+-- control (HO3-NAME-01): a parameter named as a payload class the module declares would capture
+-- its constructor: refused by name
+#guard printRefusalAt (payloadBuilder "Payload") [] = some (.unsafeName "Payload")
+#guard (Api.printModule "main" (payloadBuilder "use")).isSome
+
+/-- A service whose method, or whose initial program, takes a program. -/
+def counterService (methodParam initParam : Bool) : NativeEff :=
+  .defs [
+    { name := "makeCounter", request := .unit, answer := .nat, role := .serviceInit "Counter",
+      params := if initParam then [numParam "use"] else [] },
+    { name := "readCounter", request := .nat, answer := .nat,
+      role := .serviceMethod "Counter" "read" 0,
+      params := if methodParam then [numParam "use"] else [] }]
+    (.cons (if initParam then .perform (.param 0) (.lit (.nat 7)) else .succeed (.lit (.nat 7)))
+      (.cons (if methodParam then .perform (.param 0) (.var 0) else .succeed (.var 0)) .nil))
+    (.succeed (.lit (.nat 1))) .nil
+
+-- control (HO3-SVC-01): a service's method or initial program with a parameter is refused by
+-- name until slice HO-5 forwards its programs; the service without one prints
+#guard printRefusalAt (counterService true false) [] = some (.internalAction "Counter.read")
+#guard printRefusalAt (counterService false true) [] = some (.internalAction "Counter")
+#guard (Api.printModule "main" (counterService false false)).isSome
+
+/-- A payload named `OnlyParam`, which only a parameter's request names. -/
+def onlyParamTy : Ty := .record [("_tag", false, .lit "OnlyParam"), ("id", false, .nat)]
+
+/-- A definition whose parameter's request is `OnlyParam`. -/
+def onlyParamHelper (request : Ty) : NativeEff :=
+  .defs [{ name := "onlyHelper", request := .nat, answer := .nat,
+           params := [{ name := "use", request, answer := .nat }] }]
+    (.cons (.succeed (.lit (.nat 1))) .nil) (.succeed (.lit (.nat 1))) .nil
+
+-- (HO3-ANN-01) a parameter's columns are types the program states: the module declares the
+-- payload class that only a parameter names, and a repeated field there is unformed
+#guard (Api.printModule "main" (onlyParamHelper onlyParamTy)).any fun m =>
+  m.decls.any fun
+    | .classDecl c => c.name == "OnlyParam"
+    | _ => false
+#guard (Formation.checkInput
+  (onlyParamHelper (.record [("item", false, .nat), ("item", false, .nat)])) []).isSome
+#guard (Formation.checkInput (onlyParamHelper (.record [("item", false, .nat)])) []).isNone
+
+/-- `twice` invoked under the module's layer with a callback that reads the layer's service. -/
+def serviceCallback : NativeEff :=
+  .defs [Test.Program.InvokeControls.twiceDecl] (.cons Test.Program.InvokeControls.twiceBody .nil)
+    (.provideLayer (.ref [2, 0]) false
+      (.invoke 0 (.lit (.nat 5)) (.cons (.service layerKey) .nil)))
+    (.cons (.succeed layerKey (.nat 7)) .nil)
+
+-- control (HO3-REQ-01): the program types, but the printed header closes the callback's row as
+-- `never`, so the invocation is refused at its path until the header can carry the row
+#guard Api.wellTyped serviceCallback
+#guard printRefusalAt serviceCallback [] = some (.callbackRequirement [1, 1])
+-- a callback that needs nothing prints (`invokeProg`)
+#guard (Api.printModule "main" Test.Program.InvokeControls.invokeProg).isSome
+
 /-! ## Controls: what the reader refuses -/
 
 /-- `twice` declaring a service it does not need. -/

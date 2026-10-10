@@ -216,10 +216,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    `param_arm` proved). Row 341 keeps a layer reference in its target's scope, and its step 2
    landed: a block's module layers, which every scope names, printed, read and authored. HO-3a
    and HO-3b landed: definitions with parameters and invocations with programs print and read
-   back ([the plan](research/2026-10-09-program-parameters.md) §11). Next, the repairs of Codex's
-   HO-3 review (callback columns in the type inventory, parameter names against row roots,
-   trailing names and payload classes, service roles with parameters, a callback's
-   requirements), then step 3, a body's layers built once per call
+   back ([the plan](research/2026-10-09-program-parameters.md) §11), with the repairs of Codex's
+   HO-3 review: a parameter's columns are in the type inventory, names are checked against row
+   roots, trailing names and payload classes, a service role with parameters waits for HO-5,
+   and a callback that needs a service is refused at its invocation until the header carries a
+   requirement variable. Next, step 3, a body's layers built once per call
    ([the note](research/2026-10-10-layer-scopes.md) §5). Then CX3, which adds substitution and the builder's
    certificate. CX4 adds bounded unfolding. Then HO-4 (generics), HO-5 (Pool's service). Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the

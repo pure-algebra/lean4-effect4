@@ -80,6 +80,11 @@ inductive PrintRefusal
   (`withFunction`). No native row is such a row: the eight term rows are call rows, and each
   prints its term (the state plan's T5). -/
   | binderTerm (spelling : String)
+  /-- An invocation whose programs need a service that the printed parameter's type cannot carry,
+  at the invocation's path (decisions row 340; Codex's HO3-REQ-01): the header closes a
+  parameter's requirement row as `never`, so tsgo refuses the call. Kept until the target can
+  bind a requirement variable on the header. -/
+  | callbackRequirement (path : List Nat)
 deriving DecidableEq, Repr
 
 /-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/

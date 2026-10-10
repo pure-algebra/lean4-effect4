@@ -69,9 +69,12 @@ theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
     rw [hwf]
     rfl
 
-/-- On raw formed input, evidence retention keeps the existing module output. -/
+/-- On raw formed input, evidence retention keeps the existing module output, when no
+invocation's programs need a service the printed header cannot carry (Codex's HO3-REQ-01,
+`Codegen/CallbackRequirements.lean`). -/
 theorem printModule_erasure (name : String) (program : Program) (table : RowTable)
-    (formed : Formation.InputFormed program table) :
+    (formed : Formation.InputFormed program table)
+    (callbacks : Effect4.Codegen.invokeRequirementFault (nativeSignature table) program = none) :
     printModule name program table =
       match typeOf program table with
       | some ty =>
@@ -81,8 +84,9 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
           some { header := [], imports := []
                  decls := classDecls.map .classDecl ++ decls.map .const }
         | _, _ => none
-      | none => none :=
-  Effect4.Codegen.emitModule_erasure name program table formed
+      | none => none := by
+  simp only [printModule, emitModule, callbacks]
+  exact Effect4.Codegen.emitModule_erasure name program table formed
 
 /-- On formed input with supported stored annotations, evidence retention retains the declaration result. -/
 theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)

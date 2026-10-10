@@ -859,6 +859,8 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`).
   The printer refuses an empty block and a definition body's own layer, by name (row 341,
   step 3).
+  The application face refuses an invocation whose programs need a service, at its path
+  (`PrintRefusal.callbackRequirement`): the printed header closes a parameter's row as `never`.
   A requirement row other than `never` is printed and not read.
   It establishes nothing that tsgo accepts and nothing of a run of the printed module.
   The truth lane runs the block programs on the pin, a finite check (`make check-truth`).

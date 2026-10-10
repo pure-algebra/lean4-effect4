@@ -857,6 +857,16 @@ theorem nativeSpell_binding {table : RowTable} {s : String}
       exact htable (List.any_eq_true.mpr ⟨row, mem, beq_iff_eq.mpr spelling⟩)
     simp only [absent, Option.map_none]
 
+/-- A name no row's use names is spelled by no row of the table (`rowNameUses`, Codex's
+HO3-NAME-01). A step of `defsNamed_of_fault` and `paramsNamed_of_fault`. -/
+theorem not_spelled_of_uses {table : RowTable} {s : String}
+    (h : ¬ ((rowNameUses table).contains s = true)) : ¬ (table.any (·.spelling == s) = true) := by
+  intro hany
+  obtain ⟨row, hrow, hs⟩ := List.any_eq_true.mp hany
+  apply h
+  rw [← beq_iff_eq.mp hs]
+  exact List.contains_iff_mem.mpr (spelling_mem_rowNameUses hrow)
+
 /-- **The printer's name check gives the names that a block's spelling map reads back**, at the
 native signature: distinct, spelled by no built-in row and no row of the table, no binder and
 no reserved head. A step of the claim `module-defs-round-trip`; its consumer is
@@ -874,7 +884,7 @@ theorem defsNamed_of_fault {table : RowTable} {name : String} {defs : List DefDe
       obtain ⟨⟨⟨hsafe, _⟩, htable⟩, hrest⟩ := hfault
       obtain ⟨hbinding, hbinder, hreserved⟩ := exportNameSafe_facts hsafe
       have rest := ih h
-      have unspelled := nativeSpell_binding hbinding htable
+      have unspelled := nativeSpell_binding hbinding (not_spelled_of_uses htable)
       refine ⟨?_, ?_, ?_, ?_⟩
       · refine List.nodup_cons.mpr ⟨?_, rest.distinct⟩
         intro mem
@@ -925,10 +935,10 @@ theorem paramsNamed_of_fault {table : RowTable} {name : String} {defs : List Def
         cases names with
         | nil =>
           simp only [defsSpell, namedSpell, absent]
-          exact nativeSpell_binding hbinding htable []
+          exact nativeSpell_binding hbinding (not_spelled_of_uses htable) []
         | cons a as =>
           simp only [defsSpell, namedSpell]
-          exact nativeSpell_binding hbinding htable _
+          exact nativeSpell_binding hbinding (not_spelled_of_uses htable) _
       refine ⟨?_, ?_, ?_, ?_⟩
       · refine List.nodup_cons.mpr ⟨?_, rest.distinct⟩
         intro mem

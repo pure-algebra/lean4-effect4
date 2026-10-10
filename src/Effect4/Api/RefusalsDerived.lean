@@ -2745,7 +2745,8 @@ def shapeDoc : ShapeDoc :=
       ("typeSpelling", 3, [("text", (shape _root_.String).root)]),
       ("payloadClass", 4, [("tag", (shape _root_.String).root),
         ("why", (shape _root_.Effect4.Program.ClassRefusal).root)]),
-      ("binderTerm", 5, [("spelling", (shape _root_.String).root)])],
+      ("binderTerm", 5, [("spelling", (shape _root_.String).root)]),
+      ("callbackRequirement", 6, [("path", (shape (@_root_.List (_root_.Nat))).root)])],
    (shape _root_.String).defs ++ (shape (@_root_.List (_root_.Nat))).defs ++
      (shape _root_.Effect4.Program.ClassRefusal).defs⟩
 
@@ -2756,6 +2757,7 @@ def toVal : _root_.Effect4.Program.PrintRefusal → Val
   | .typeSpelling a0 => .ctor 3 [Canonical.toVal a0]
   | .payloadClass a0 a1 => .ctor 4 [Canonical.toVal a0, Canonical.toVal a1]
   | .binderTerm a0 => .ctor 5 [Canonical.toVal a0]
+  | .callbackRequirement a0 => .ctor 6 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.PrintRefusal)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .internalAction
@@ -2768,6 +2770,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.PrintRefusal)
     | some a0, some a1 => some (.payloadClass a0 a1)
     | _, _ => none
   | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .binderTerm
+  | .ctor 6 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0).map .callbackRequirement
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.PrintRefusal) : ofVal (toVal a) = some a := by
@@ -2778,6 +2781,7 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.PrintRefusal) : ofVal (toVal a) 
   | «typeSpelling» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «payloadClass» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «binderTerm» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «callbackRequirement» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.PrintRefusal} (h : ofVal v = some a) :
     v = toVal a := by
@@ -2806,6 +2810,10 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.PrintRefusal} (h : ofV
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
     all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
   · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
     subst hj
     simp only [toVal]
@@ -2847,6 +2855,9 @@ theorem fits (a : _root_.Effect4.Program.PrintRefusal) : shapeDoc.accepts (toVal
   | «binderTerm» a0 =>
     exact accepts_sum _ _ _ 5 "binderTerm" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «callbackRequirement» a0 =>
+    exact accepts_sum _ _ _ 6 "callbackRequirement" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ListNat a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.PrintRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -3179,7 +3190,7 @@ def prints : List PrintRefusal :=
   [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date",
    .payloadClass "not-a-tag" .notIdentifier, .payloadClass "Effect" .collides,
    .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
-   .payloadClass "Rate" .unreadable, .binderTerm "Ref.modify"]
+   .payloadClass "Rate" .unreadable, .binderTerm "Ref.modify", .callbackRequirement [1, 1]]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",
