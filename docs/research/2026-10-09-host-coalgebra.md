@@ -342,6 +342,12 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   typed at every protocol (`retry_typed`). The battery's flaky repository fails every other
   call as locked. Behind the retry, it drives the to-do runs to the plain exits; without it, the
   first call fails. The pin move rebuilt the law graph in under three minutes.
+- **The session as a system** (`src/Effect4/Laws/Api/HostDrive.lean`). The call tree with its
+  stores hidden is a system of the row signature (`sessionSystem`, `Effects.System.peel`). Its
+  unfolding at a depth is the call tree that the session walks, cut below that depth: the picture
+  of a session, top to bottom. Under H9's premises, every finished run of the system at every
+  depth is the session's observation (`sessionSystem_finished`). The battery unfolds four to-do
+  runs deep enough, and each finishes at its drive's exit and state; at depth zero it is cut.
 - **CO-7's generic half: `Effects` v0.10.0** (`lean4-effects` commit `24a91a1`, local). An
   indexed signature has worlds, the operations each world offers, their answers, and the world
   after each answer (`ISignature`). Its programs end with a value whose type depends on the final

@@ -382,6 +382,28 @@ def plainExit (main : Src NativeOp) (state : Repo) : Option (Option ExitV) :=
 #guard ((hostDrive flaky (add (str "milk")) (1, [])).map fun result =>
     decide (some result.2.2 = plainExit (add (str "milk")) (1, []))) = some false
 
+/-- The session's system (`Run.sessionSystem`) run against the repository at a depth: whether it
+finished at the drive's exit and the repository's state, or was cut, or neither. -/
+def systemRun (main : Src NativeOp) (state : Repo) (depth : Nat) : Option String :=
+  (built? (request main)).map fun b =>
+    let run : Run × Repo := Run.runWith b repository state "todo"
+    match (Run.sessionSystem b.table).run (Run.reactorHost b.table repository) depth
+        (denoteRows b.table b.program [], Stores.empty) state with
+    | some (some result, finish) =>
+      if decide (some result.1 = run.1.exit) && decide (finish = run.2) then "finished" else "other"
+    | some (none, _) => "cut"
+    | none => "no answer"
+
+-- finite evaluation: unfolded deep enough, the session's system finishes at each drive's exit and
+-- repository state, as `sessionSystem_finished` says of a finished unfolding
+#guard [systemRun (add (str "milk")) (1, []) 8,
+    systemRun list (3, [(1, "milk", false), (2, "tea", true)]) 8,
+    systemRun (complete (nat 1)) (3, [(1, "milk", false), (2, "tea", true)]) 8,
+    systemRun (remove (nat 7)) (3, [(1, "milk", false)]) 8].all (· = some "finished")
+
+-- control: at depth zero the system is cut, a live frontier and never an error
+#guard systemRun (add (str "milk")) (1, []) 0 = some "cut"
+
 end repository
 
 end Test.Api.SessionMeaning

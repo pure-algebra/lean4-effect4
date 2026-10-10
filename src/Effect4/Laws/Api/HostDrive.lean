@@ -858,4 +858,46 @@ theorem retry_typed (table : RowTable) (P : Effects.Protocol (RowSig table)) :
     | .failure _, _ => fun _ hex' => hex'
     | .success _, hex => hex
 
+/-! ## The session as a system
+
+The coalgebra's reading of the host session. A program's call tree, with its store operations
+answered by the stores and hidden, is a system of the row signature (`sessionSystem`,
+`Effects.System.peel`). A state is a residual call tree with its stores. A step ends with the
+exit and the stores, or calls a host row and continues from the answer. Its unfolding at a depth
+is the call tree the session walks, as far as that depth, with a cut below it: the picture of a
+session, top to bottom. Where the system finishes against a host, the host's run of the call
+tree finishes the same way (`Effects.System.run_peel`). So under H9's premises, every finished
+run of the system, at every depth, is the session's observation (`sessionSystem_finished`). -/
+
+/-- **The session's system**: the call tree with the stores hidden. -/
+def sessionSystem (table : RowTable) :
+    Effects.System (RowSig table) (ExitV × Stores) (Effects.Program (RowsSig table) ExitV × Stores) :=
+  Effects.System.peel storeStep
+
+/-- **A finished unfolding is the session's observation.** For a recorded `StraightRows` run that
+is funded, at rest, driven by a host and finished, and a host whose answers are the run's
+(`HostAnswered`): wherever the session's system finishes against that host, at any depth, it
+ends with the root's exit and the run's stores, and the host ends where the answers left it. A
+depth too small is a cut, never an error. Reach and limits as H9 (`denoteRows_eq_session_host`).
+Concept `translation-simulation`, role simulation; requirement R6. Consumer: the picture of a
+session as its system's unfolding (the coalgebra note, sections 5.2 and 5.3). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem sessionSystem_finished (s : Run) (hreach : Run.Reached s) (hfund : funded s = true)
+    (hrest : atRest s = true) (hhost : hostDriven s = true)
+    (hfrag : StraightRows s.built.table s.built.program = true) {σ : Type}
+    (host : Effects.Comodel (RowSig s.built.table) σ) (st st' : σ)
+    (hA : HostAnswered s.built.table host s.built.program s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel) st st')
+    (ex : ExitV) (hex : s.exit = some ex) (depth : Nat) (result : ExitV × Stores) (finish : σ)
+    (hrun : (sessionSystem s.built.table).run host depth
+      (denoteRows s.built.table s.built.program [], Stores.empty) st = some (some result, finish)) :
+    result = (ex, s.machine.state) ∧ finish = st' := by
+  have hpeel := Effects.System.run_peel storeStep host depth
+    (denoteRows s.built.table s.built.program []) Stores.empty st hrun
+  have h9 := denoteRows_eq_session_host s hreach hfund hrest hhost hfrag host st st' hA ex hex
+  have heq : some (result.1, (result.2, finish)) = some (ex, (s.machine.state, st')) :=
+    hpeel.symm.trans h9
+  rw [Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at heq
+  exact ⟨Prod.ext heq.1 heq.2.1, heq.2.2⟩
+
 end Effect4.Run
