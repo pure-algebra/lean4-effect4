@@ -30,6 +30,7 @@ import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.Denote
 import Effect4.Laws.Program.DenoteRows
 import Effect4.Laws.Program.Folds.DenoteRows
+import Effect4.Laws.Program.DenoteRowsB
 import Effect4.Laws.Program.DenoteRowsAppend
 import Effect4.Laws.Machine.Folds.Val
 import Effect4.Laws.Program.LoopAgreement
@@ -42,6 +43,7 @@ import Effect4.Laws.Program.Agreement.Machine
 import Effect4.Laws.Program.Agreement.Segment
 import Effect4.Laws.Program.Agreement.Calls
 import Effect4.Laws.Program.Agreement.Hosted
+import Effect4.Laws.Program.Agreement.HostedLoop
 import Effect4.Laws.Program.HostRuns
 import Effect4.Laws.Program.RowProtocol
 import Effect4.Laws.Api.HostDrive
@@ -97,6 +99,7 @@ import Effect4.Laws.Program.Table.Hooks
 import Effect4.Laws.Program.Table.Agreement
 import Effect4.Laws.Api.SessionRef
 import Effect4.Laws.Api.SessionMeaning
+import Effect4.Laws.Api.SessionMeaningLoop
 import Effect4.Laws.Program.ReasonsR
 import Effect4.Laws.Program.Guard
 import Effect4.Laws.Program.LayerSharing

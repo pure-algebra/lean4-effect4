@@ -407,6 +407,57 @@ theorem inspect_keeps_machine {program : Api.Program} {table : RowTable}
     rw [hr] at h
     exact h
 
+/-- **A recorded run's tape is answered** (a step of H8 and H9): the session applies a reply only
+at a guard the machine waits on (`tapeFrom_answered`), from the loaded root. -/
+theorem session_answered (s : Run) (hfund : funded s = true) :
+    Answered s.built.program s.built.table s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel) := by
+  have read : (tapeFrom (openedOf s) s.journal).2 = [] := List.isEmpty_iff.mp hfund
+  have h := tapeFrom_answered (openedOf s) s.journal read
+  rw [show (openedOf s).machine = Api.load s.built.program s.budget.compileFuel from
+    Run.open_machine s.built s.id s.budget s.profile] at h
+  exact h
+
+/-- **A recorded run at rest is settled where the local run with calls leads** (the session prefix
+of H8 and H9, straight and on loops): for a funded run at rest, driven by a host, of a program of
+`LoopedRows`, under a host that gave the run's answers, the machine is settled with nothing armed
+at a position the local run with calls reaches from the root's start, and the run's exit is the
+root fiber's. -/
+theorem session_settled (s : Run) (hreach : Run.Reached s) (hfund : funded s = true)
+    (hrest : atRest s = true) (hhost : hostDriven s = true) (hroot : LoopedRows s.built.program = true)
+    {σ : Type} (host : Effects.Comodel (RowSig s.built.table) σ) (st st' : σ)
+    (hA : HostAnswered s.built.table host s.built.program s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel) st st') :
+    ∃ p, Settled s.built.program s.machine p ∧ s.machine.armed = [] ∧
+      Leads host s.built.program
+        (.live (fiberOf (compile s.built.program s.budget.compileFuel) []) Stores.empty) st p st' ∧
+      s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
+  have hmach := funded_replays s hreach hfund
+  obtain ⟨p, hH, hL⟩ := tape_holds_host s.built.program s.built.table s.budget.fuel hroot
+    s.budget.compileFuel host (tapeOf s) _ _ st st' (Or.inl ⟨rfl, rfl⟩)
+    (session_answered s hfund) hhost hA
+  rw [← hmach] at hH
+  simp only [atRest, Bool.and_eq_true] at hrest
+  have hexit : s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
+    show ((Api.HostSession.inspect s.session).machine.fiber? Api.root).bind RunFiber.exit = _
+    rw [inspect_keeps_machine]
+    rfl
+  rcases hH with ⟨hm, -⟩ | hS
+  · -- the loaded root is runnable: a run at rest has evaluated it
+    have hrun := hrest.1
+    rw [show s.work.runnable = Api.runnableFibers s.machine from rfl, hm] at hrun
+    cases hrun
+  · exact ⟨p, hS, List.isEmpty_iff.mp hrest.2, hL, hexit⟩
+
+/-- The reply host gave a recorded run's answers, its tape read to the end. -/
+theorem session_tapeAnswered (s : Run) (hfund : funded s = true) (hhost : hostDriven s = true) :
+    HostAnswered s.built.table (tapeHost s.built.table) s.built.program s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel) (appliedExits s) [] := by
+  have hA := answered_hostAnswered s.built.program s.built.table s.budget.fuel (tapeOf s) _
+    (session_answered s hfund) hhost []
+  rw [List.append_nil] at hA
+  exact hA
+
 /-- **The meaning under a run's reply tape is the run's observation** (DI-69). For a recorded
 run of a program of the fragment, the meaning of the program under the run's reply tape is the
 root's exit with the stores, and the reply tape is read to its end. Where the root has no exit,
@@ -424,31 +475,11 @@ machine at rest is exited or waits on a call; and there the meaning is what the 
 @[semantics "translation-simulation" (requirement := R6)]
 theorem denoteRows_eq_session : DenoteRowsEqSession StraightRows := by
   intro s hreach hfund hrest hhost hfrag
-  have hroot := LoopedRows.of_straightRows s.built.program hfrag
-  have hmach := funded_replays s hreach hfund
-  have hans : Answered s.built.program s.built.table s.budget.fuel (tapeOf s)
-      (Api.load s.built.program s.budget.compileFuel) := by
-    have read : (tapeFrom (openedOf s) s.journal).2 = [] := List.isEmpty_iff.mp hfund
-    have h := tapeFrom_answered (openedOf s) s.journal read
-    rw [show (openedOf s).machine = Api.load s.built.program s.budget.compileFuel from
-      Run.open_machine s.built s.id s.budget s.profile] at h
-    exact h
-  obtain ⟨p, hH, hL⟩ := tape_holds s.built.program s.built.table s.budget.fuel hroot
-    s.budget.compileFuel (tapeOf s) _ _ (Or.inl ⟨rfl, rfl⟩) hans hhost
-  rw [← hmach] at hH
-  simp only [atRest, Bool.and_eq_true] at hrest
-  have hexit : s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
-    show ((Api.HostSession.inspect s.session).machine.fiber? Api.root).bind RunFiber.exit = _
-    rw [inspect_keeps_machine]
-    rfl
+  obtain ⟨p, hS, harmed, hL, hexit⟩ := session_settled s hreach hfund hrest hhost
+    (LoopedRows.of_straightRows s.built.program hfrag) (tapeHost s.built.table) _ _
+    (session_tapeAnswered s hfund hhost)
   rw [hexit]
-  rcases hH with ⟨hm, -⟩ | hS
-  · -- the loaded root is runnable: a run at rest has evaluated it
-    have hrun := hrest.1
-    rw [show s.work.runnable = Api.runnableFibers s.machine from rfl, hm] at hrun
-    cases hrun
-  · exact meaning_settled_tape s.built.program hfrag s.budget.compileFuel (appliedExits s) hS
-      (List.isEmpty_iff.mp hrest.2) hL
+  exact meaning_settled_tape s.built.program hfrag s.budget.compileFuel (appliedExits s) hS harmed hL
 
 /-- The proposition of `denoteRows_eq_session_host` (H9), on the fragment `frag`: for a recorded
 run whose root exited, under any host that gave the run's answers, the run of the program's call
@@ -475,39 +506,19 @@ constructions (`docs/research/2026-10-09-host-coalgebra.md`, slice CO-5). -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem denoteRows_eq_session_host : DenoteRowsEqSessionHost StraightRows := by
   intro s hreach hfund hrest hhost hfrag σ host st st' hA ex hex
-  have hroot := LoopedRows.of_straightRows s.built.program hfrag
-  have hmach := funded_replays s hreach hfund
-  have hans : Answered s.built.program s.built.table s.budget.fuel (tapeOf s)
-      (Api.load s.built.program s.budget.compileFuel) := by
-    have read : (tapeFrom (openedOf s) s.journal).2 = [] := List.isEmpty_iff.mp hfund
-    have h := tapeFrom_answered (openedOf s) s.journal read
-    rw [show (openedOf s).machine = Api.load s.built.program s.budget.compileFuel from
-      Run.open_machine s.built s.id s.budget s.profile] at h
-    exact h
-  obtain ⟨p, hH, hL⟩ := tape_holds_host s.built.program s.built.table s.budget.fuel hroot
-    s.budget.compileFuel host (tapeOf s) _ _ st st' (Or.inl ⟨rfl, rfl⟩) hans hhost hA
-  rw [← hmach] at hH
-  simp only [atRest, Bool.and_eq_true] at hrest
-  have hexit : s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
-    show ((Api.HostSession.inspect s.session).machine.fiber? Api.root).bind RunFiber.exit = _
-    rw [inspect_keeps_machine]
-    rfl
-  rcases hH with ⟨hm, -⟩ | hS
-  · -- the loaded root is runnable: a run at rest has evaluated it
-    have hrun := hrest.1
-    rw [show s.work.runnable = Api.runnableFibers s.machine from rfl, hm] at hrun
-    cases hrun
-  · -- an exited root is the exit form, where the host is asked nothing
-    have hstop : p.hostAnswer host st' = none := by
-      rcases hS with ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ |
-        ⟨ex', fr, s', k, tr, nt, hm, rfl, -⟩
-      · rw [hexit, hm, Myield_fiber?] at hex
-        cases hex
-      · rw [hexit, hm, Mcall_fiber?] at hex
-        cases hex
-      · rfl
-    rw [meaning_settled host s.built.program hfrag s.budget.compileFuel st st' hS
-      (List.isEmpty_iff.mp hrest.2) hL hstop, ← hexit, hex]
-    rfl
+  obtain ⟨p, hS, harmed, hL, hexit⟩ := session_settled s hreach hfund hrest hhost
+    (LoopedRows.of_straightRows s.built.program hfrag) host st st' hA
+  -- an exited root is the exit form, where the host is asked nothing
+  have hstop : p.hostAnswer host st' = none := by
+    rcases hS with ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ |
+      ⟨ex', fr, s', k, tr, nt, hm, rfl, -⟩
+    · rw [hexit, hm, Myield_fiber?] at hex
+      cases hex
+    · rw [hexit, hm, Mcall_fiber?] at hex
+      cases hex
+    · rfl
+  rw [meaning_settled host s.built.program hfrag s.budget.compileFuel st st' hS harmed hL hstop,
+    ← hexit, hex]
+  rfl
 
 end Effect4.Run

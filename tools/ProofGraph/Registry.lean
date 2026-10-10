@@ -932,6 +932,18 @@ def registry : Registry where
     { id := "rows-denotation-host", concept := "translation-simulation", role := .simulation
       title := "H9, the host as a handler: for a recorded StraightRows run that is funded, at rest, driven by a host and finished, under any host (a comodel of the row signature) whose answers are the run's, the host's run of the call tree is the root's exit with the stores and the host ends where the answers left it (one fiber; no progress claim; nothing about a run stopped at a call, an interruption, a clock step or a handle row; decisions row 310; the coalgebra note, slice CO-5)"
       pointer := .witness `Effect4.Run.denoteRows_eq_session_host },
+    { id := "rows-loop-session", concept := "translation-simulation", role := .simulation
+      title := "H8 on loops: for a recorded run of a LoopedRows program the row fragment with loops admits (LoopedDataRows), funded, at rest and driven by a host, past a budget bound the coarse observation of the budgeted meaning under the run's reply tape is the root's exit with the stores, or none (one fiber; no global compile-depth premise; a budget cut is no failure and no divergence; nothing of a waiting position's stores or request, a scope, a handle allocation, a fork or an interruption; the host-meaning widening, slice L1)"
+      pointer := .witness `Effect4.Run.h8_loopedRows },
+    { id := "rows-loop-host", concept := "translation-simulation", role := .simulation
+      title := "H9 on loops: for a finished recorded run of the same fragment, under any host whose answers are the run's, past a budget bound the budgeted meaning under the host is the root's exit with the stores and the host ends where the answers left it (no progress claim; nothing of a run stopped at a call; the host-meaning widening, slice L1)"
+      pointer := .witness `Effect4.Run.denoteRowsB_eq_session_host },
+    { id := "rows-loop-straight", concept := "translation-simulation", role := .compatibility
+      title := "The budgeted row meaning extends the row meaning: on StraightRows it is denoteRows finished, at every budget (the host-meaning widening, Q1)"
+      pointer := .witness `Effect4.Program.Denote.denoteRowsB_straight },
+    { id := "rows-loop-looped", concept := "translation-simulation", role := .compatibility
+      title := "The budgeted row meaning extends the loop meaning: on Looped it is denoteB injected on the left of the coproduct, at the same budget (the host-meaning widening, Q1)"
+      pointer := .witness `Effect4.Program.Denote.denoteRowsB_looped },
     { id := "rows-denotation-driver", concept := "translation-simulation", role := .simulation
       title := "H9 at the driver: open a StraightRows program, evaluate its root and drive it with a reactor inside the envelope that answers with exits (Run.runWith); when the run is funded, at rest and its root exited, the reactor read as a host runs the call tree to the root's exit with the stores and ends at the drive's state (one fiber; no progress claim: nothing shows that the drive finishes, that its rounds suffice or that the run is funded; the coalgebra note, slice CO-6)"
       pointer := .witness `Effect4.Run.runWith_denotes },
@@ -1188,7 +1200,9 @@ def registry : Registry where
         `Effect4.Run.reached_callInstance,
         `Effect4.Run.session_eq_ref,
         `Effect4.Run.denoteRows_eq_session_host,
-        `Effect4.Run.runWith_denotes]
+        `Effect4.Run.runWith_denotes,
+        `Effect4.Run.h8_loopedRows,
+        `Effect4.Run.denoteRowsB_eq_session_host]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
         .ruling "DI-23: the preloaded answers are deleted" "the raw agreement with preloaded answers, the rest of the planned goal run_eq_ref_table (slice H6b): no consumer on the spine; session_eq_ref reads run_eq_ref_table_noPreload (decisions row 314)",
         .definition "the host as a relation between the machine's calls and its answers (`HostSpec`), in place of a predicate on tapes" "H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation",
