@@ -2,7 +2,7 @@ import Effect4.Laws.Api.HostDrive
 import Effect4.Laws.Program.Agreement.HostedLoop
 
 /-!
-# Api.SessionMeaningLoop — H8 and H9 on loops
+# Api.SessionMeaningLoop — H8 and H9 on loops, and their detailed frontier
 
 Slice L1 of `docs/research/2026-10-10-host-meaning-widening/README.md` (§1.3, §1.4, §5.1 Q7 and
 Q8). `denoteRows_eq_session` and `denoteRows_eq_session_host` (`Laws/Api/SessionMeaning.lean`)
@@ -80,6 +80,129 @@ theorem denoteRowsB_eq_session_host : H9LoopedRows := by
     refine ⟨lower, fun k hk => ?_⟩
     rw [meaningUnderB_eq_hostRunB, hlow k hk, hm]
     rfl
+
+/-! ## The detailed frontier (slice L4, Q4)
+
+`h8_loopedRows` observes a waiting run coarsely: `none`. The detailed observation (`observeRows`)
+names the wait. When the root waits on a host call, past a budget bound the meaning waits at that
+call's row and request, with the machine's stores, and the reply tape read to its end; under any
+host whose answers are the run's and which leaves the call unanswered, with the host's state.
+The plan is `docs/research/2026-10-10-l4-frontiers.md`. -/
+
+/-- The machine with its root parked on a host call holds that call's row and request. A step of
+`awaits_Mcall_call`. -/
+theorem requestOf_Mcall_call (j : Nat) (v : Val) (w : List Nat) (K : List NCode) (i : Bool)
+    (s : Stores) (n : Nat) (tr : NTrace) (t : Nat) :
+    Program.requestOf (Mcall (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
+      s n tr t) Api.root t = some (.external j, v) := by
+  unfold Program.requestOf
+  rw [Mcall_fiber?]
+  simp only [Option.bind_eq_bind, Option.bind_some]
+  have hp : (callParkedAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
+      n t).parked = Parked.withGuard t := rfl
+  unfold guard
+  rw [if_pos hp]
+  rfl
+
+/-- **The machine with its root parked on a host call awaits that call alone**: the run's one
+outstanding call (`Program.awaits`). A step of `rows_loop_frontier`. -/
+theorem awaits_Mcall_call (j : Nat) (v : Val) (w : List Nat) (K : List NCode) (i : Bool)
+    (s : Stores) (n : Nat) (tr : NTrace) (t : Nat) :
+    Program.awaits (Mcall (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
+      s n tr t) = [⟨Api.root, t, .external j, v⟩] := by
+  unfold Program.awaits
+  show List.filterMap _ [callParkedAt _ n t] = _
+  simp only [List.filterMap_cons, List.filterMap_nil, callParkedAt]
+  have h : Program.requestOf (Mcall (fiberOf (Prim.async (EffName.external (.external j) v w) false none)
+      K i) s n tr t) (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
+      n).id t = some (.external j, v) := requestOf_Mcall_call j v w K i s n tr t
+  rw [h]
+  rfl
+
+/-- The proposition of `rows_loop_frontier`: H8's detailed frontier on loops. -/
+def H8FrontierLoopedRows : Prop :=
+  ∀ (s : Run), Run.Reached s → funded s = true → atRest s = true → hostDriven s = true →
+    LoopedRows s.built.program = true → LoopedDataRows s.built.table s.built.program = true →
+    ∀ a ∈ Program.awaits s.machine, ∃ row, a.op = .external row ∧ ∃ lower, ∀ k, lower ≤ k →
+      observeRows (tapeHost s.built.table) (denoteRowsB s.built.table k s.built.program [])
+        Stores.empty (appliedExits s) = ⟨.waiting row a.request, s.machine.state, []⟩
+
+/-- **H8's detailed frontier on loops** (Q4): for a recorded run of a program of the row fragment
+with loops that is funded, at rest and driven by a host, every call the machine waits on is a
+host row, and past a budget bound the detailed observation of the budgeted meaning under the
+run's reply tape waits at that row and request, with the machine's stores and the tape read to
+its end. The session prefix (`session_settled`) leaves a root parked on that call, and the local
+wait is the meaning's (`localWaitC_to_rowsB`). Concept `host-session-protocol`, claim
+`rows-loop-frontier`, role simulation; requirement R12 (and R6). Consumers: the waiting driver and
+the resource prefix (slices S1 and S2). It establishes no progress: a wait is a frontier, never a
+failure, and nothing says the host answers; nothing of a fork, a scope or an interruption. -/
+@[semantics "host-session-protocol" (requirement := R12)]
+theorem rows_loop_frontier : H8FrontierLoopedRows := by
+  intro s hreach hfund hrest hhost hroot hfrag a ha
+  obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost hroot
+    (tapeHost s.built.table) _ _ (session_tapeAnswered s hfund hhost)
+  rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, hp, hc, -⟩ |
+    ⟨ex, fr, s', n, tr, nt, hm, -, -⟩
+  · rw [hm] at harmed
+    cases harmed
+  · obtain ⟨j, v, w, rfl⟩ := eq_call_of_isCall hc
+    rw [hm, awaits_Mcall_call, List.mem_singleton] at ha
+    subst ha
+    refine ⟨j, rfl, ?_⟩
+    rw [hp] at hL
+    obtain ⟨lower, hlow⟩ := localWaitC_to_rowsB (tapeHost s.built.table) s.built.program hfrag
+      s.budget.compileFuel (appliedExits s) [] hL hc (hostAnswer_tape_nil _) rfl
+    refine ⟨lower, fun k hk => ?_⟩
+    rw [observeRows_eq_runRowsO, hlow k hk, hm]
+    rfl
+  · rw [hm] at ha
+    cases ha
+
+/-- The proposition of `rows_loop_frontier_host`: H9's detailed frontier on loops. -/
+def H9FrontierLoopedRows : Prop :=
+  ∀ (s : Run), Run.Reached s → funded s = true → atRest s = true → hostDriven s = true →
+    LoopedRows s.built.program = true → LoopedDataRows s.built.table s.built.program = true →
+    ∀ {σ : Type} (host : Effects.Comodel (RowSig s.built.table) σ) (st st' : σ),
+      HostAnswered s.built.table host s.built.program s.budget.fuel (tapeOf s)
+        (Api.load s.built.program s.budget.compileFuel) st st' →
+      ∀ a ∈ Program.awaits s.machine, ∃ row, a.op = .external row ∧
+        ((∀ (hrow : row < s.built.table.length), host.answer ⟨⟨row, hrow⟩, a.request⟩ st' = none) →
+          ∃ lower, ∀ k, lower ≤ k →
+            observeRows host (denoteRowsB s.built.table k s.built.program []) Stores.empty st =
+              ⟨.waiting row a.request, s.machine.state, st'⟩)
+
+/-- **H9's detailed frontier on loops** (Q4 under a host): as `rows_loop_frontier`, under any host
+whose answers are the run's (`HostAnswered`) and which does not answer the call the machine waits
+on: past a budget bound the meaning under the host waits at that call, with the machine's stores
+and the host where the answers left it. Concept `host-session-protocol`, claim
+`rows-loop-frontier-host`, role simulation; requirement R12 (and R6). It does not establish that the
+host leaves the call unanswered: that is the premise. -/
+@[semantics "host-session-protocol" (requirement := R12)]
+theorem rows_loop_frontier_host : H9FrontierLoopedRows := by
+  intro s hreach hfund hrest hhost hroot hfrag σ host st st' hA a ha
+  obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost hroot host st st' hA
+  rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, hp, hc, -⟩ |
+    ⟨ex, fr, s', n, tr, nt, hm, -, -⟩
+  · rw [hm] at harmed
+    cases harmed
+  · obtain ⟨j, v, w, rfl⟩ := eq_call_of_isCall hc
+    rw [hm, awaits_Mcall_call, List.mem_singleton] at ha
+    subst ha
+    refine ⟨j, rfl, fun hno => ?_⟩
+    rw [hp] at hL
+    have hstop : hostAnswer host (Prim.async (EffName.external (.external j) v w) false none) st' =
+        none := by
+      rcases Nat.lt_or_ge j s.built.table.length with hj | hj
+      · rw [hostAnswer_call host hj v w st']
+        exact hno hj
+      · exact dif_neg (Nat.not_lt.mpr hj)
+    obtain ⟨lower, hlow⟩ := localWaitC_to_rowsB host s.built.program hfrag s.budget.compileFuel st st'
+      hL hc hstop rfl
+    refine ⟨lower, fun k hk => ?_⟩
+    rw [observeRows_eq_runRowsO, hlow k hk, hm]
+    rfl
+  · rw [hm] at ha
+    cases ha
 
 /-- A host meaning regrouped as the host's run, read back. -/
 theorem hostRunB_of_meaningUnderB {σ : Type} {table : RowTable}

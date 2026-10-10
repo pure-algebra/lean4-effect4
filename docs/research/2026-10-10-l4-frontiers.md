@@ -79,7 +79,26 @@ flowchart TD
    projection.
 4. **L4d**: Q6b and Q4 in `HostedLoop.lean`, placed as goals first.
 
-## 6. What this does not establish
+## 6. Outcome (2026-10-10)
+
+Every node of §4 is proved; `#plan_status` gives `rows_loop_frontier`, `rows_loop_frontier_host`,
+`localWaitC_to_rowsB` and `localRunC_compileBO` proved, and `#axiom_audit` over the six touched
+modules gives 659 declarations within `[propext, Quot.sound]`. Three changes of plan:
+
+- The semantic side is one detailed run, `runRowsO` (`Laws/Program/DenoteRowsB.lean`), generic
+  in the answer type, with one bind law, instead of equations for `observeRows` alone. `runRowsH`
+  and `observeRows` are its views. The loop arm's intermediate types need no second form.
+- The detailed agreement replaces the coarse arms in place (`Agreement/LoopCalls.lean`); the
+  coarse `localRunC_compileB` keeps its statement as the projection, so `HostedLoop.lean`'s
+  closing steps did not change.
+- Q6b needs no stability lemma: past the wait's step count, the detailed agreement leaves only a
+  wait, and the local run's determinism fixes its data. `observeRows_stable` of §4 is not
+  written; it has no consumer.
+
+Q4 is stated at the run's public observable: every call in `Program.awaits` is a host row, and
+the meaning waits at that row and request (`awaits_Mcall_call`).
+
+## 7. What this does not establish
 
 - No progress: a wait is a frontier, never a typed failure (DB-04), and nothing says a host
   answers.

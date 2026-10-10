@@ -560,4 +560,115 @@ theorem observeRows_project {σ : Type} {table : RowTable}
       dsimp only
       rw [h]
 
+/-! ## The detailed run (slice L4)
+
+`runRowsH` (`Laws/Program/HostRuns.lean`) answers `none` where the host gives no answer, so a
+waiting run forgets where it waits. `runRowsO` keeps it: the row and the request it waits on,
+with the stores and the host's state there. `runRowsH` and `observeRows` are its views
+(`runRowsH_eq_project`, `observeRows_eq_runRowsO`), and it composes by one bind law
+(`runRowsO_bind`). -/
+
+/-- **Where a program's run under a host stops**, in full: finished with its answer, the stores
+and the host's state, or waiting on a host call the host does not answer, named by its row and
+its request, with the stores and the host's state there. `runRowsH` forgets a wait's data
+(`RowsEnd.project`). Slice L4, `docs/research/2026-10-10-l4-frontiers.md`. -/
+inductive RowsEnd (A σ : Type) where
+  | done (a : A) (s : Stores) (st : σ)
+  | waiting (row : Nat) (request : Val) (s : Stores) (st : σ)
+
+namespace RowsEnd
+variable {A B σ : Type}
+
+/-- Continue a finished run; a waiting run waits. -/
+def andThen : RowsEnd A σ → (A → Stores → σ → RowsEnd B σ) → RowsEnd B σ
+  | .done a s st, k => k a s st
+  | .waiting row request s st, _ => .waiting row request s st
+
+/-- The host run's view (`runRowsH`): a wait forgets where it waits. -/
+def project : RowsEnd A σ → Option (A × (Stores × σ))
+  | .done a s st => some (a, (s, st))
+  | .waiting _ _ _ _ => none
+
+end RowsEnd
+
+/-- **The detailed run of a program under a host**: the store operations by the store handler,
+the host rows by the host, and at a row the host does not answer, the wait with its data. -/
+def runRowsO {σ : Type} {table : RowTable} (host : Effects.Comodel (RowSig table) σ) {A : Type} :
+    Effects.Program (RowsSig table) A → Stores → σ → RowsEnd A σ
+  | .pure a, s, st => .done a s st
+  | .vis (.inl op) next, s, st =>
+    runRowsO host (next (storeHandler.handle op s).1) (storeHandler.handle op s).2 st
+  | .vis (.inr op) next, s, st =>
+    match host.answer op st with
+    | none => .waiting op.1.val op.2 s st
+    | some (answer, after) => runRowsO host (next answer) s after
+
+/-- **A sequence runs its first part, then the rest from where it ended**; a wait of the first
+part is the whole's. A step of every arm of the detailed agreement
+(`Agreement/LoopCalls.lean`). -/
+theorem runRowsO_bind {σ : Type} {table : RowTable} (host : Effects.Comodel (RowSig table) σ)
+    {A B : Type} (k : A → Effects.Program (RowsSig table) B) :
+    ∀ (p : Effects.Program (RowsSig table) A) (s : Stores) (st : σ),
+      runRowsO host (p >>= k) s st =
+        (runRowsO host p s st).andThen fun a s st => runRowsO host (k a) s st
+  | .pure _, _, _ => rfl
+  | .vis (.inl op) next, s, st =>
+    runRowsO_bind host k (next (storeHandler.handle op s).1) (storeHandler.handle op s).2 st
+  | .vis (.inr op) next, s, st => by
+    change runRowsO host (.vis (.inr op) fun a => next a >>= k) s st = _
+    conv => lhs; rw [runRowsO.eq_def]
+    conv => rhs; rw [runRowsO.eq_def]
+    dsimp only
+    cases host.answer op st with
+    | none => rfl
+    | some x => exact runRowsO_bind host k (next x.1) s x.2
+
+/-- **The host run is the detailed run, a wait forgotten.** A step of the coarse agreement read
+from the detailed one (`localRunC_compileB`). -/
+theorem runRowsH_eq_project {σ : Type} {table : RowTable} (host : Effects.Comodel (RowSig table) σ)
+    {A : Type} :
+    ∀ (p : Effects.Program (RowsSig table) A) (s : Stores) (st : σ),
+      runRowsH host p s st = (runRowsO host p s st).project
+  | .pure _, _, _ => rfl
+  | .vis (.inl op) next, s, st =>
+    (Effects.Comodel.run_vis_some (rowsHost host) next (state' := ((storeHandler.handle op s).2, st))
+      (answer := (storeHandler.handle op s).1) rfl).trans
+      (runRowsH_eq_project host (next (storeHandler.handle op s).1) (storeHandler.handle op s).2 st)
+  | .vis (.inr op) next, s, st => by
+    conv => rhs; rw [runRowsO.eq_def]
+    dsimp only
+    rcases h : host.answer op st with _ | ⟨a, st'⟩
+    · exact Effects.Comodel.run_vis_none (rowsHost host) next
+        (show Option.map _ (host.answer op st) = none by rw [h]; rfl)
+    · have ha : (rowsHost host).answer (.inr op) (s, st) = some (a, (s, st')) := by
+        show Option.map _ (host.answer op st) = _
+        rw [h]
+        rfl
+      exact (Effects.Comodel.run_vis_some (rowsHost host) next ha).trans
+        (runRowsH_eq_project host (next a) s st')
+
+/-- The detailed observation's view of a budgeted run's end: a cut, a finish or a wait. -/
+def RowsEnd.observe {σ : Type} : RowsEnd (Option ExitV) σ → RowsObservation σ
+  | .done none s st => ⟨.budget, s, st⟩
+  | .done (some ex) s st => ⟨.finished ex, s, st⟩
+  | .waiting row request s st => ⟨.waiting row request, s, st⟩
+
+/-- **The detailed observation (Q3) is the detailed run, read at a budget.** A step of Q4
+(`rows_loop_frontier`, `Agreement/HostedLoop.lean`). -/
+theorem observeRows_eq_runRowsO {σ : Type} {table : RowTable}
+    (host : Effects.Comodel (RowSig table) σ) :
+    ∀ (p : Effects.Program (RowsSig table) (Option ExitV)) (s : Stores) (st : σ),
+      observeRows host p s st = (runRowsO host p s st).observe
+  | .pure none, _, _ => rfl
+  | .pure (some _), _, _ => rfl
+  | .vis (.inl op) next, s, st =>
+    observeRows_eq_runRowsO host (next (storeHandler.handle op s).1) (storeHandler.handle op s).2 st
+  | .vis (.inr op) next, s, st => by
+    conv => lhs; rw [observeRows.eq_def]
+    conv => rhs; rw [runRowsO.eq_def]
+    dsimp only
+    cases host.answer op st with
+    | none => rfl
+    | some x => exact observeRows_eq_runRowsO host (next x.1) s x.2
+
 end Effect4.Program.Denote

@@ -107,6 +107,70 @@ theorem hostRunB_exits {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
   obtain ⟨k₀, hk₀⟩ := localRunC_to_rowsB host root hfrag cf R hrun
   exact ⟨k₀, fun _ hk => hostRunB_stable host hk root [] Stores.empty R hk₀⟩
 
+/-- A local run that waits at a call does not diverge: from the wait on it stops, and a frontier
+never does. A step of `localWaitC_to_rowsB`. -/
+theorem waits_not_diverges {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {fr₀ : NFiber} {s₀ : Stores} {R : σ} {c : Nat} {e : RunEnd σ}
+    (hw : localRunC host root (0 + 1 + c) fr₀ s₀ R = some e) :
+    ¬ Diverges host root fr₀ s₀ R := by
+  rintro ⟨d, fr', s₁, r₁, hd, hfront⟩
+  have h₁ := localRunC_mono (0 + 1 + c) d _ _ _ hw
+  rw [hd (0 + 1 + c), localRunC_frontier _ s₁ r₁ hfront] at h₁
+  cases h₁
+
+/-- **The detailed meaning waits where the local run waits** (Q6b): a local run with calls that
+reaches, from the root's start, a host call the host does not answer, at stores `s` and host
+state `st`, has past a budget bound the detailed budgeted run waiting at that call's row and
+request, with those stores and that host state. Past the wait's step count the detailed forward
+agreement (`localRunC_compileBO`) leaves only a wait, and the local run's determinism fixes its
+data (`RunEnd.waits`, `localRunC_agree`). Concept `translation-simulation`, claim
+`rows-loop-frontier`, role adequacy; requirements R6 and R12. Consumer: `rows_loop_frontier`
+(`Laws/Api/SessionMeaningLoop.lean`). It says nothing of a host's answer after the wait, nor of
+any budget below the bound. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem localWaitC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
+    (root : NativeEff) (hfrag : LoopedDataRows table root = true) (cf : Nat) (R st : σ)
+    {fr : NFiber} {s : Stores}
+    (hL : Leads host root (.live (fiberOf (compile root cf) []) Stores.empty) R (.live fr s) st)
+    (hc : IsCall fr.current = true) (hstop : hostAnswer host fr.current st = none)
+    {row : Nat} {request : Val} (hcall : callOf fr.current = some (row, request)) :
+    ∃ lower, ∀ k, lower ≤ k →
+      runRowsO host (denoteRowsB table k root []) Stores.empty R = .waiting row request s st := by
+  obtain ⟨c, hreach⟩ := hL
+  have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
+      some (.waits fr.current s st) := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
+  have hnodiv := waits_not_diverges (hw 0)
+  refine ⟨c + 1, fun k hk => ?_⟩
+  have hR : RunsToDO host root [] true k (fiberOf (compile root cf) []) Stores.empty R
+      (runRowsO host (denoteRowsB table k root []) Stores.empty R) :=
+    localRunC_compileBO host root k root (rootPoint cf) [] true Stores.empty R hfrag rfl
+  rcases hm : runRowsO host (denoteRowsB table k root []) Stores.empty R with
+    ⟨_ | ex, s', r'⟩ | ⟨row', request', s', r'⟩
+  · -- a cut: the local run would still be going after `k` steps, past its wait
+    rw [hm] at hR
+    rcases hR with ⟨d, fr', s₁, r₁, hkd, hd⟩ | hdiv
+    · have h₁ := localRunC_mono (0 + 1 + c) (d - (0 + 1 + c)) _ _ _ (hw 0)
+      rw [Nat.add_sub_cancel' (by omega), hd.none] at h₁
+      cases h₁
+    · exact absurd hdiv hnodiv
+  · -- a finish: the local run would exit
+    rw [hm] at hR
+    rcases hR with ⟨d, hd⟩ | hdiv
+    · have he := (hd 1).trans (localRunC_ofExit_nil ex true s' r' 0)
+      cases localRunC_agree (hw 0) he
+    · exact absurd hdiv hnodiv
+  · -- a wait: the local run's, by determinism
+    rw [hm] at hR
+    rcases hR with ⟨d, fr', hd, hc', hcall', ha'⟩ | hdiv
+    · have hw' := (hd 1).trans (localRunC_waits hc' ha' s' 0)
+      have hagree := localRunC_agree (hw 0) hw'
+      injection hagree with hcur hs hst
+      subst hs hst
+      rw [← hcur, hcall] at hcall'
+      cases hcall'
+      rfl
+    · exact absurd hdiv hnodiv
+
 /-- **H8's closing step on loops**: at the reply host read to its end, past a budget bound, the
 coarse observation of the budgeted meaning is the settled machine's exit over its stores, and the
 frontier when the root waits. `meaning_settled_tape` is its straight instance. -/

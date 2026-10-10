@@ -58,7 +58,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   bound: `h8_loopedRows` and `denoteRowsB_eq_session_host`
   (`src/Effect4/Laws/Api/SessionMeaningLoop.lean`). Their meaning is `denoteRowsB`, the row
   meaning with loops cut at a budget, on the fragment `LoopedDataRows`
-  ([the widening packet](research/2026-10-10-host-meaning-widening/README.md), slice L1). A host is a comodel of the row
+  ([the widening packet](research/2026-10-10-host-meaning-widening/README.md), slice L1). A
+  waiting run names its wait too (`rows_loop_frontier`, slice L4,
+  [the plan](research/2026-10-10-l4-frontiers.md)). Past a budget bound, the meaning waits at the
+  machine's call, with the machine's stores. A host is a comodel of the row
   signature (`Effects.Comodel`), and the reply tape is one host. The driver `Run.runWith` meets
   H9's premises when its reactor stays inside the envelope and answers with exits
   (`runWith_denotes`, `src/Effect4/Laws/Api/HostDrive.lean`). A reactor behind its rows' types
