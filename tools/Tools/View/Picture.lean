@@ -68,6 +68,15 @@ def Cubic.move (dx dy : Int) (c : Cubic) : Cubic :=
   ⟨(c.p0.1 + dx, c.p0.2 + dy), (c.p1.1 + dx, c.p1.2 + dy), (c.p2.1 + dx, c.p2.2 + dy),
     (c.p3.1 + dx, c.p3.2 + dy)⟩
 
+/-- A segment moved twice is the segment moved by the sum. A step of the stroke cache's law
+(`Laid.cachedStroke_eq`). -/
+theorem Cubic.move_move (a b x y : Int) (c : Cubic) : (c.move a b).move x y = c.move (a + x) (b + y) := by
+  simp only [Cubic.move, Int.add_assoc]
+
+/-- A segment moved by nothing is the segment. A step of the stroke cache's law. -/
+theorem Cubic.move_zero (c : Cubic) : c.move 0 0 = c := by
+  simp only [Cubic.move, Int.add_zero]
+
 /-- A segment at the ratio `r`: each point in device pixels. -/
 def Cubic.scale (r : Int) (c : Cubic) : Cubic :=
   ⟨(r * c.p0.1, r * c.p0.2), (r * c.p1.1, r * c.p1.2), (r * c.p2.1, r * c.p2.2), (r * c.p3.1, r * c.p3.2)⟩

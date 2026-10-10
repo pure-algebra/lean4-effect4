@@ -216,12 +216,17 @@ def codeCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
     [⟨"", .vrule .rule (col (codeCol g - CODE_RULE)) HEAD_RULE (TOP + ROWH * bodyRows g - HEAD_RULE) L.strokes.rule⟩] ++
       c.lines.toList.zipIdx.flatMap fun (s, i) => cellsAt "" x (TOP + ROWH * i + BASE) s room
 
-/-- A page's graph as calls: its title in the label face, then the graph below. -/
-def graphCalls (L : Look) (g : Page) : List (Keyed Call) :=
+/-- A page's graph as calls, on a stroke cache: its title in the label face, then the graph below. -/
+def graphCallsCached (L : Look) (g : Page) (cache : Laid.StrokeCache) :
+    List (Keyed Call) × Laid.StrokeCache :=
   match g.graph with
-  | none => []
-  | some p => textAt "" .label LEFT (graphTop g - ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM ++
-      p.laid.calls L LEFT (graphTop g)
+  | none => ([], cache)
+  | some p =>
+    let (cs, cache) := p.laid.callsCached L LEFT (graphTop g) cache
+    (textAt "" .label LEFT (graphTop g - ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM ++ cs, cache)
+
+/-- A page's graph as calls: its title in the label face, then the graph below. -/
+def graphCalls (L : Look) (g : Page) : List (Keyed Call) := (graphCallsCached L g {}).1
 
 /-- One line at its row: the band of a lit line, the gutter, then inside a cut the text, the
 type and the note; a refused line is framed; last, the box that answers the pointer. -/
@@ -283,13 +288,19 @@ def chromeCalls (L : Look) (W H : Int) (g : Page) : List (Keyed Call) :=
       ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) L.strokes.rule⟩] ++
     cellsAt none' LEFT (H - FOOT_BASE) g.foot cols
 
+/-- A whole page as calls in a look, at the width `W`, on a stroke cache: the ground, the lines,
+the code, the graph, then the title block and the foot. A sequence of pages threads one cache. -/
+def pageCallsCached (L : Look) (W : Int) (g : Page) (cache : Laid.StrokeCache) :
+    List (Keyed Call) × Laid.StrokeCache :=
+  let (W, H) := pageSize W g
+  let (graph, cache) := graphCallsCached L g cache
+  (groundCalls W H ++
+    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls L (linesWidth W g) (gutterCols g) i l g.marks) ++
+    codeCalls L W g ++ graph ++ chromeCalls L W H g, cache)
+
 /-- A whole page as calls in a look, at the width `W`: the ground, the lines, then the title block
 and the foot. -/
-def pageCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
-  let (W, H) := pageSize W g
-  groundCalls W H ++
-    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls L (linesWidth W g) (gutterCols g) i l g.marks) ++
-    codeCalls L W g ++ graphCalls L g ++ chromeCalls L W H g
+def pageCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) := (pageCallsCached L W g {}).1
 
 /-! ## The terminal: the same page as characters -/
 
