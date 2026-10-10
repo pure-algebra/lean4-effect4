@@ -603,7 +603,7 @@ theorem meaning_settled {σ : Type} (host : Effects.Comodel (RowSig table) σ) (
   · -- the root waits on a host call the host does not answer: the meaning is the frontier
     obtain ⟨c, hreach⟩ := hL
     have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
-        some .waits := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
+        some (.waits _ _ _) := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
     show _ = none
     rcases hR with hR | ⟨d, fr', s', r', hd, hfront⟩
     · rcases hm : hostRun host root [] Stores.empty R with _ | ⟨ex₂, s₂, r₂⟩

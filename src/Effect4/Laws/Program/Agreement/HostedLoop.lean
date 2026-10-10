@@ -84,7 +84,7 @@ theorem hostRunB_waits {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
   intro hm
   obtain ⟨c, hreach⟩ := hL
   have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
-      some .waits := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
+      some (.waits _ _ _) := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
   have hR : RunsToDB host root [] true k (fiberOf (compile root cf) []) Stores.empty R
       (hostRunB host k root [] Stores.empty R) :=
     localRunC_compileB host root k root (rootPoint cf) [] true Stores.empty R hfrag rfl

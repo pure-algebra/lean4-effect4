@@ -46,6 +46,13 @@ def hostAnswer {σ : Type} (host : Effects.Comodel (RowSig table) σ) : NCode �
     if h : j < table.length then host.answer ⟨⟨j, h⟩, v⟩ st else none
   | _, _ => none
 
+/-- **The row and the request of a host call's code**, as `hostAnswer` asks them of the host:
+what a waiting meaning names (`RowsStop.waiting`, `Laws/Program/DenoteRowsB.lean`). A step of the
+detailed frontier (slice L4, `docs/research/2026-10-10-l4-frontiers.md`). -/
+def callOf : NCode → Option (Nat × Val)
+  | Prim.async (EffName.external (.external j) v _) false none => some (j, v)
+  | _ => none
+
 /-- The host that never answers. Under it, a host call waits. -/
 def silentHost (table : RowTable) : Effects.Comodel (RowSig table) Unit := ⟨fun _ _ => none⟩
 
@@ -66,10 +73,11 @@ def localStepC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : Na
   else some (localStep root fr s, st)
 
 /-- Where the local run with calls stops within its budget: the fiber's exit with its stores and
-the host's state, or a host call the host does not answer, where it waits. -/
+the host's state, or a host call the host does not answer, where it waits with that call's code,
+its stores and the host's state (slice L4, `docs/research/2026-10-10-l4-frontiers.md`). -/
 inductive RunEnd (σ : Type) where
   | exit (ex : ExitV) (s : Stores) (st : σ)
-  | waits
+  | waits (call : NCode) (s : Stores) (st : σ)
 
 /-- The local run with calls: `n` steps at most; where it stops, or `none` when the steps run
 out first. -/
@@ -80,12 +88,13 @@ def localRunC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : Nat
     match localStepC host root fr s st with
     | some (.running fr' s', st') => localRunC host root n fr' s' st'
     | some (.finished ex s', st') => some (.exit ex s' st')
-    | none => some .waits
+    | none => some (.waits fr.current s st)
 
 /-- **A relation on final observations**: at every budget, the local run with calls from `fr`
 given `c` more steps stops where the run from `fr'` stops (`RunEnd`), or neither stops. It is no
-path: two waiting calls over different stores relate (the H8 review, finding H8R-01). A run that
-waits and a run that diverges do not relate: the first stops with `RunEnd.waits`. -/
+path, but a wait names its call, its stores and the host's state, so two waits relate only when
+these agree (slice L4 closes the H8 review's finding H8R-01). A run that waits and a run that
+diverges do not relate: the first stops with `RunEnd.waits`. -/
 def ReachesC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) (c : Nat)
     (fr : NFiber) (s : Stores) (st : σ) (fr' : NFiber) (s' : Stores) (st' : σ) : Prop :=
   ∀ n, localRunC host root (n + c) fr s st = localRunC host root n fr' s' st'
@@ -138,7 +147,9 @@ theorem ReachesC.same {σ : Type} {host : Effects.Comodel (RowSig table) σ} {ro
   intro n
   cases n with
   | zero => rfl
-  | succ n => simp only [localRunC, localStepC, hc, hc', Bool.false_eq_true, if_false, h]
+  | succ n =>
+    simp only [localRunC, localStepC, hc, hc', Bool.false_eq_true, if_false, h]
+    cases localStep root fr' s <;> rfl
 
 /-- **A host call takes the host's answer**, as the answer its preparation gives. -/
 theorem ReachesC.answer {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
@@ -180,7 +191,7 @@ theorem localRunC_agree {σ : Type} {host : Effects.Comodel (RowSig table) σ} {
 /-- A host call the host does not answer waits. -/
 theorem localRunC_waits {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {fr : NFiber} (hc : IsCall fr.current = true) {st : σ} (ha : hostAnswer host fr.current st = none)
-    (s : Stores) (n : Nat) : localRunC host root (n + 1) fr s st = some .waits := by
+    (s : Stores) (n : Nat) : localRunC host root (n + 1) fr s st = some (.waits fr.current s st) := by
   simp only [localRunC, localStepC, hc, if_true, ha]
 
 /-- The silent host answers no host call. -/
