@@ -1,0 +1,17 @@
+{
+  "observed_at": "2026-10-10T19:06:49.481784+00:00",
+  "primary_head": "e9d6863eed613a40fe90444925daf5e3bec818c5",
+  "implementation_base": "1c98dd94831c060e591cd7e5bef19d6528c5d22a",
+  "implementation_status": " M Test/Codegen/DefinitionsPrint.lean\n M Test/Program/AuthoringContract.lean\n M docs/STATE.md\n M docs/core/decisions.md\n M docs/research/2026-10-10-layer-scopes.md\n M src/Effect4/Codegen/Print.lean\n M src/Effect4/Codegen/Read.lean\n M src/Effect4/Laws/Api/ModuleReadable.lean\n M src/Effect4/Laws/Codegen/Module.lean\n M src/Effect4/Laws/Program/Hoisting.lean\n M src/Effect4/Laws/Program/HoistingTotal.lean\n M src/Effect4/Program/Authoring.lean\n M src/Effect4/Program/Refs.lean\n",
+  "implementation_diff_sha256": "c0f7ae51806f263a36e7e4d3f2db1605a9b6e15bae04081b85e8f24fc5ce9f2d",
+  "new_findings": [
+    "ML2B-TRUST-01",
+    "ML2B-TEST-01"
+  ],
+  "earlier_open_unchanged": [
+    "ML2-C2-01",
+    "LV-OW-01"
+  ],
+  "candidate_applied_to_implementation": false,
+  "candidate_patch_sha256": "c9b3b610d259fbcb341e174029f1b2e02292b6692ba3d05f3cb91d3800e82e2f"
+}

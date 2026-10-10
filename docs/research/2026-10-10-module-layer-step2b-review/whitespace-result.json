@@ -1,0 +1,19 @@
+{
+  "full_exit": 2,
+  "excluded_exact_evidence": [
+    "docs/research/2026-10-10-module-layer-step2b-review/draft.patch",
+    "docs/research/2026-10-10-module-layer-step2b-review/initial/draft.patch"
+  ],
+  "command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check",
+    "--",
+    ".",
+    ":(exclude)docs/research/2026-10-10-module-layer-step2b-review/draft.patch",
+    ":(exclude)docs/research/2026-10-10-module-layer-step2b-review/initial/draft.patch"
+  ],
+  "remaining_exit": 0,
+  "remaining_output": ""
+}
