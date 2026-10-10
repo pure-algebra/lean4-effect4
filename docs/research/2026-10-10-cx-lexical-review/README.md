@@ -130,7 +130,7 @@ Change the planned goal's statement before beginning its proof.
 
 During review, Claude starts `src/Effect4/Laws/Program/Typed/Scope.lean`.
 `Scope-draft.txt` retains the read-only snapshot.
-Its `Signature.withParams_param` goal quantifies over every signature and every parameter list.
+Its original `Signature.withParams_param` goal quantifies over every signature and every parameter list.
 That statement needs an outer-domain premise or a nonempty-list premise.
 
 At an empty list, `withParams []` returns the outer signature unchanged.
@@ -142,6 +142,12 @@ A checked proposition refutes the unqualified generic statement by that finite i
 Use the source signature's existing outside-domain fact as a premise.
 Alternatively, restrict the generic helper to a nonempty list and handle empty source contexts separately.
 Do not assume this premise for an arbitrary signature.
+**Live resolution:** Claude adds `hout : sig.dom op = false` and proves the helper in the working file.
+`Scope-revised.txt` retains that later source.
+The revision supplies the missing premise identified by the counterexample.
+This review checks the revised statement by source inspection; it does not compile Claude's working file.
+The path-only context issue remains open.
+
 This helper serves `denote-typed` under `residual-program-typing`, with `param_arm` as consumer and R4 as its requirement.
 It establishes only the parameter row lookup under its corrected hypotheses.
 
@@ -230,7 +236,7 @@ Use the 2010 paper for explicit simultaneous meta-substitution notation.
 
 1. Choose the active-context invariant before editing `PointTyped` preservation proofs.
 2. Retain normalized requests, expanded arguments, and formed parameters in its site condition.
-3. Add the missing outer-domain premise to `Signature.withParams_param`.
+3. Keep the added outer-domain premise of `Signature.withParams_param` when integrating its proof.
 4. Strengthen the parameter arm's statement and reuse the smaller-fuel induction premise.
 5. Migrate saved loop and generator states alongside the four point predicates.
 6. Keep the admitted cross-scope layer program control during the migration.

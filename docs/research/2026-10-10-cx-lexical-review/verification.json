@@ -101,6 +101,16 @@
         "--check"
       ],
       "exit": 0
+    },
+    {
+      "label": "language-after-live-resolution",
+      "command": [
+        "python3",
+        "scripts/check-language.py",
+        "--strict",
+        "docs/research/2026-10-10-cx-lexical-review/README.md"
+      ],
+      "exit": 0
     }
   ],
   "finite_guard_count": 30,
@@ -115,13 +125,19 @@
     "Graph.log": "89cb1b7c08e3c4830907b2888ebe326739f766d23b012e708d02129ad98be587",
     "Lexical.lean": "c6d007a51ba47569ac5ae55bb6c104b126ebad74dfd4a0a791d67aa207fd5a46",
     "Lexical.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
-    "README.md": "53ef523c7d7efaacf75c14efa1cc7221ada77765b9905b22009727bc2f54ee28",
+    "README.md": "a0a363d4238631d7efe50e55042c733851279ac6f078daed7ab34896a528cb77",
     "Scope-draft.txt": "ae91ca33668a2f226315a523e23c23f4a961ff3555f3dfadbb1a62b987947451",
+    "Scope-revised.txt": "93f6ef9ecd2ba4d751f65b2d3d9223bdcb082f8b0c163a95fea44f85524c02ee",
     "build.log": "4fbb80dc97f71f49854f475afd967a811f663ccb25a173d0619b0dc06147fb67",
     "diff-check.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
     "language.log": "e251b09a84ddf09ce188d1dc560f06977963e940108166eb122bd1c4ae37e263",
     "source-diff.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
     "verify.py": "61d51df6c6c0fb1248fd3baeca0ca546641f1fdded7600e57cfa18edbd3b21e8",
     "working-note.diff": "87d424bc55187e45020d69e2cfc622aac5807d8a864050a754c47b79d1626f1f"
+  },
+  "live_resolution": {
+    "helper": "Signature.withParams_param",
+    "status": "missing premise added in uncommitted source; source inspected, not compiled here",
+    "remaining": "path-only context cannot transport the admitted layer reference"
   }
 }
