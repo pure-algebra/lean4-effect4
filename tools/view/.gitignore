@@ -1,4 +1,6 @@
 draw
 play
+scene_test
+scene_test.dSYM/
 out/
 sdl3/

@@ -19,7 +19,8 @@
  *   H key x0 y0 x1 y1                the device box that answers a pointer with a key; not drawn
  *
  * This header holds no layout, no rule of a page, no colour and no face: the look is the
- * stream's. Its users: draw.c (a picture to PNG, the key under a pixel) and play.c (a window).
+ * stream's. Its users: draw.c (a picture to PNG, the key under a pixel) and play.c (a window, and
+ * its live mode, which paints a retained store's stream from memory).
  */
 #ifndef EFFECT4_REPLAY_H
 #define EFFECT4_REPLAY_H
@@ -106,14 +107,12 @@ static inline int replay_look_row(Replay *rp, PaintFaceSpec *spec, char **f, int
   return 0;
 }
 
-/* Paint the stream at `path` on a new image surface of its target's device size, in the look its
- * rows name. Answers the surface, or NULL when the file does not open, has no target row, or its
- * faces do not open. `*bad` counts the rows that are no call and the cuts that stay open. The
- * caller destroys the surface, and closes the replay when it is done with every picture. */
-static inline cairo_surface_t *replay_stream(const char *path, Replay *rp, int *bad) {
+/* Paint the stream read from `fp` on a new image surface of its target's device size, in the look
+ * its rows name. Answers the surface, or NULL when the stream has no target row or its faces do not
+ * open. `*bad` counts the rows that are no call and the cuts that stay open. The caller closes
+ * `fp`, destroys the surface, and closes the replay when it is done with every picture. */
+static inline cairo_surface_t *replay_file(FILE *fp, Replay *rp, int *bad) {
   *bad = 0;
-  FILE *fp = fopen(path, "r");
-  if (!fp) return NULL;
   cairo_surface_t *surface = NULL; cairo_t *cr = NULL; Paint p; memset(&p, 0, sizeof p);
   PaintFaceSpec spec[PAINT_FACE_COUNT];
   memcpy(spec, rp->spec, sizeof spec);
@@ -163,11 +162,32 @@ static inline cairo_surface_t *replay_stream(const char *path, Replay *rp, int *
     else if (k == 'k' && cuts > 0) { paint_uncut(&p); cuts--; }
     else (*bad)++;
   }
-  free(line); fclose(fp);
+  free(line);
   if (painting) paint_close(&p);
   if (cr) cairo_destroy(cr);
   if (failed && surface) { cairo_surface_destroy(surface); surface = NULL; }
   *bad += cuts;
+  return surface;
+}
+
+/* Paint the stream at `path` (replay_file); NULL also when the file does not open. */
+static inline cairo_surface_t *replay_stream(const char *path, Replay *rp, int *bad) {
+  *bad = 0;
+  FILE *fp = fopen(path, "r");
+  if (!fp) return NULL;
+  cairo_surface_t *surface = replay_file(fp, rp, bad);
+  fclose(fp);
+  return surface;
+}
+
+/* Paint the stream held in memory, `len` bytes at `buf` (replay_file through fmemopen): the live
+ * mode's picture, which a retained store flattens (scene.h). */
+static inline cairo_surface_t *replay_memory(char *buf, size_t len, Replay *rp, int *bad) {
+  *bad = 0;
+  FILE *fp = fmemopen(buf, len, "r");
+  if (!fp) return NULL;
+  cairo_surface_t *surface = replay_file(fp, rp, bad);
+  fclose(fp);
   return surface;
 }
 
