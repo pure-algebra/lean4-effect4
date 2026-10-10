@@ -97,4 +97,45 @@ def failPayload : List Err := ((Payload.image.ofVal failFrame).map Err.payload).
 #guard (Schema.encode (.causeOf (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)]))
     (Val.exitErr (Cause.fail (errOf failFrame)))).isSome
 
+/-! Prepared boundary operations reuse one source-bound wire interpretation.
+These readers serve `decode-encode`, `decode-iff` and `record-codec-layout`. -/
+
+def preparedPerson : Schema.Codec.Prepared personTy := Schema.Codec.prepare personTy
+
+example : preparedPerson.encode absent = Schema.encode personTy absent :=
+  Schema.Codec.Prepared.encode_agrees preparedPerson absent
+
+example : preparedPerson.decode presentJson = Schema.decode personTy presentJson :=
+  Schema.Codec.Prepared.decode_agrees preparedPerson presentJson
+
+example : preparedPerson.isValue present = Ty.isCodecValue personTy present :=
+  Schema.Codec.Prepared.isValue_agrees preparedPerson present
+
+-- Absent optional fields and present None retain distinct exact images.
+#guard preparedPerson.encode absent = some (.obj [("name", .str "Ada")])
+#guard preparedPerson.decode presentJson = some present
+#guard preparedPerson.decode (.obj [("name", .str "Ada"), ("extra", .bool true)]) = none
+#guard preparedPerson.decode (.obj [("name", .str "Ada"), ("name", .str "Grace")]) = none
+
+-- The wire layout alone accepts strings; the source literal still refuses a different string.
+#guard (Schema.Codec.prepare (.lit "Ada")).decode (.str "Ada") = some (.str "Ada")
+#guard (Schema.Codec.prepare (.lit "Ada")).decode (.str "Grace") = none
+#guard (Schema.Codec.prepare (.lit "Ada")).encode (.str "Grace") = none
+
+-- Overlapping object images cannot erase the original record/map distinction.
+#guard (Schema.Codec.prepare objectUnion).encode (Record.frame [("x", .nat 7)]) =
+  some (.obj [("x", Arch.Json.ofNat 7)])
+#guard (Schema.Codec.prepare objectUnion).encode (Map.write [("x", .nat 7)]) = none
+#guard (Schema.Codec.prepare objectUnion).encode (Map.write [("y", .nat 7)]) =
+  some (.obj [("y", Arch.Json.ofNat 7)])
+
+-- A structural-support refusal does not forbid an absent optional unsupported field.
+#guard (Schema.Codec.prepare (.record [("opaque", true, .handle "Remote")])).encode
+  (Record.frame []) = some (.obj [])
+#guard (Schema.Codec.prepare (.handle "Remote")).decode .null = none
+#guard (Schema.Codec.prepare .int).encode (.nat (2 ^ 53)) = none
+#guard (Schema.Codec.prepare .number).encode (.nat (2 ^ 53 + 1)) = none
+#guard (Schema.Codec.prepare .number).isValue (.nat (2 ^ 53 + 1)) = false
+#guard (Schema.Codec.prepare .int).decode (.number Float64.nan) = none
+
 end Effect4.Test.DataCodec

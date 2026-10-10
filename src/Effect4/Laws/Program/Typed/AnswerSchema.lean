@@ -29,8 +29,7 @@ theorem hasTy_of_decode {t : Ty} {j : Json} {v : Val} (h : Schema.decode t j = s
     Val.hasTy v t = true := by
   have normal : Schema.decode (CTy.ofRaw t).toRaw j = some v := by
     show Schema.decode t.normalize j = some v
-    unfold Schema.decode
-    rw [Ty.normalize_idem]
+    rw [Schema.decode_policy, Ty.normalize_idem]
     exact h
   rw [← hasTy_normalize]
   exact Schema.hasTy_decode normal
