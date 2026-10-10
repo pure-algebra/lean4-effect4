@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Agreement.Hosted
+import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.DenoteRowsB
 
 /-!
@@ -221,6 +222,206 @@ theorem hostRunB_of_asExit {σ : Type} (host : Effects.Comodel (RowSig table) σ
   have hst := straightRows_of_asExit b q hl h
   rw [hostRunB_of_straightRows host k b q.env s r hst, hostRun_of_asExit host b q s r hst h]
   rfl
+
+/-! ## The loop's rounds under a host -/
+
+/-- A cut's bound weakens. -/
+theorem RunsToDB.mono {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {K : List NCode} {i : Bool} {j j' : Nat} {fr : NFiber} {s : Stores} {r : σ} (hj : j ≤ j') :
+    ∀ {o : Option (Option ExitV × (Stores × σ))},
+      RunsToDB host root K i j' fr s r o → RunsToDB host root K i j fr s r o
+  | some (some _, _), h => h
+  | some (none, _), .inl ⟨c, fr', s', r', hk, h⟩ => .inl ⟨c, fr', s', r', Nat.le_trans hj hk, h⟩
+  | some (none, _), .inr hd => .inr hd
+  | none, h => h
+
+/-- Steps before an outcome raise a cut's bound by their count. -/
+theorem RunsToDB.pre_add {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {K : List NCode} {i : Bool} {j c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ}
+    (h : ReachesC host root c fr s r fr₁ s₁ r₁) :
+    ∀ {o : Option (Option ExitV × (Stores × σ))},
+      RunsToDB host root K i j fr₁ s₁ r₁ o → RunsToDB host root K i (j + c) fr s r o
+  | some (some _, _), h' => RunsToD.pre h h'
+  | some (none, _), .inl ⟨c', fr', s', r', hk, h'⟩ =>
+    .inl ⟨c + c', fr', s', r', by omega, h.trans h'⟩
+  | some (none, _), .inr hd => .inr (hd.pre h)
+  | none, h' => RunsToD.pre h h'
+
+/-- `runRowsH_bind` at the `>>=` form. -/
+theorem runRowsH_bind' {σ : Type} (host : Effects.Comodel (RowSig table) σ) {A B : Type}
+    (p : Effects.Program (RowsSig table) A) (k : A → Effects.Program (RowsSig table) B)
+    (s : Stores) (st : σ) :
+    runRowsH host (p >>= k) s st =
+      (runRowsH host p s st).bind fun x => runRowsH host (k x.1) x.2.1 x.2.2 :=
+  runRowsH_bind host p k s st
+
+/-- One round of a budgeted loop under a host: a finished round ends the loop with its answer, a
+continuing one hands the rest of the budget the next cursor. -/
+theorem runRowsH_iter_succ {σ : Type} (host : Effects.Comodel (RowSig table) σ)
+    (f : Val → Effects.Program (RowsSig table) (Option ExitV ⊕ Val)) (j : Nat) (c : Val)
+    (s : Stores) (r : σ) :
+    runRowsH host (Option.join <$> iter f (j + 1) c) s r =
+      (runRowsH host (f c) s r).bind fun x => match x.1 with
+        | .inl y => some (y, x.2)
+        | .inr c' => runRowsH host (Option.join <$> iter f j c') x.2.1 x.2.2 := by
+  rw [iter_succ, map_bind, runRowsH_bind']
+  congr 1
+  funext x
+  rcases x with ⟨y | c', s', r'⟩ <;> rfl
+
+/-- **Rounds of the budgeted loop are rounds of the loop frame, under a host** (`loop_reaches`
+with calls): from the loop's next decision at cursor `c`, with `j` rounds of the budget left, the
+run goes where the loop's meaning goes; a cut after `j` rounds is at least `j` steps in. A step
+of `compilesB_iterate`. -/
+theorem loop_reachesC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
+    (k : Nat) (q : Point) (hq : loopPoint q = q) {cty : Option Ty} {init test step result : Term}
+    {body : NativeEff}
+    (h : Node.at_ (Node.eff root) q.path =
+      some (Node.eff (.iterate cty init test step result body)))
+    (K : List NCode) (i : Bool) (hbody : CompilesB host root k body) :
+    ∀ (j : Nat), j ≤ k → ∀ (c : Val) (s : Stores) (r : σ),
+      RunsToDB host root K i j (enter q K i (loopNextAt root q c)) s r
+        (runRowsH host (Option.join <$>
+          iter (loopStep (denoteRowsB table k body) q.env test step result) j c) s r)
+  | 0, _, _, s, r => .inl ⟨0, _, s, r, Nat.le_refl 0, ReachesC.refl host root _ s r⟩
+  | j + 1, hj, c, s, r => by
+    have hNext : ∀ {x : Option Val} {ln : LoopNext Val NCode}, evalTerm (q.env ++ [c]) test = x →
+        (match x with
+         | some (Val.bool true) => LoopNext.continue c (resolve root (q.childWith 0 c))
+         | some (Val.bool false) => .finish (loopFinishAt root q c)
+         | _ => .finish badShape) = ln → loopNextAt root q c = ln := by
+      intro x ln hx hln
+      unfold loopNextAt
+      rw [loopAt_iterate root h]
+      dsimp only
+      rw [hx]
+      exact hln
+    have hFinish : ∀ {x : Option Val} {code : NCode}, evalTerm (q.env ++ [c]) result = x →
+        (match x with
+         | some answer => Prim.success answer
+         | none => badShape) = code → loopFinishAt root q c = code := by
+      intro x code hx hcode
+      unfold loopFinishAt
+      rw [loopResultAt_iterate root h]
+      dsimp only
+      rw [hx]
+      exact hcode
+    rw [runRowsH_iter_succ]
+    -- a round that ends the loop at once with the exit `y`, the stores and state untouched
+    have hdone : ∀ (y : ExitV) (code : NCode),
+        runRowsH host (loopStep (denoteRowsB table k body) q.env test step result c) s r =
+          some (.inl (some y), (s, r)) →
+        loopNextAt root q c = .finish code → code = Prim.ofExit y →
+        RunsToDB host root K i (j + 1) (enter q K i (loopNextAt root q c)) s r
+          (some (some y, (s, r))) := by
+      intro y code hf hln hcode
+      rw [hln]
+      show RunsToD host root K i (fiberOf code K i) s r (some (y, (s, r)))
+      rw [hcode]
+      exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+    cases ht : evalTerm (q.env ++ [c]) test with
+    | none =>
+      have hf : runRowsH host (loopStep (denoteRowsB table k body) q.env test step result c) s r =
+          some (.inl (some badShapeExit), (s, r)) := by
+        unfold loopStep
+        rw [ht]
+        rfl
+      rw [hf]
+      exact hdone badShapeExit badShape hf (hNext ht rfl) badShape_eq
+    | some tv =>
+      cases tv with
+      | bool flag =>
+        cases flag with
+        | false =>
+          cases hr : evalTerm (q.env ++ [c]) result with
+          | none =>
+            have hf : runRowsH host (loopStep (denoteRowsB table k body) q.env test step result c)
+                s r = some (.inl (some badShapeExit), (s, r)) := by
+              unfold loopStep
+              rw [ht, hr]
+              rfl
+            rw [hf]
+            exact hdone badShapeExit badShape hf (by rw [hNext ht rfl, hFinish hr rfl]) badShape_eq
+          | some v =>
+            have hf : runRowsH host (loopStep (denoteRowsB table k body) q.env test step result c)
+                s r = some (.inl (some (Exit.success v)), (s, r)) := by
+              unfold loopStep
+              rw [ht, hr]
+              rfl
+            rw [hf]
+            exact hdone (Exit.success v) (Prim.success v) hf (by rw [hNext ht rfl, hFinish hr rfl]) rfl
+        | true =>
+          rw [hNext ht rfl]
+          have hat : Node.at_ (Node.eff root) (q.childWith 0 c).path = some (Node.eff body) :=
+            at_childWith h 0 c
+          have hent : enter q K i (LoopNext.continue c (resolve root (q.childWith 0 c))) =
+              fiberOf (compileEff body (q.childWith 0 c)) (Prim.whileLoop (EffName.loop q) c :: K) i := by
+            rw [resolve_of_at hat]
+            rfl
+          rw [hent]
+          have ihb := hbody (q.childWith 0 c) (Prim.whileLoop (EffName.loop q) c :: K) i s r hat
+          rw [Point.childWith_env] at ihb
+          -- the round's run, from the body's run
+          have hround : runRowsH host (loopStep (denoteRowsB table k body) q.env test step result c)
+              s r = (hostRunB host k body (q.env ++ [c]) s r).bind fun x => runRowsH host
+                (match x.1 with
+                 | none => pure (.inl none)
+                 | some (Exit.failure cause) => pure (.inl (some (Exit.failure cause)))
+                 | some (Exit.success a) =>
+                   match evalTerm (q.env ++ [c, a]) step with
+                   | some c' => pure (.inr c')
+                   | none => pure (.inl (some badShapeExit))) x.2.1 x.2.2 := by
+            unfold loopStep
+            rw [ht]
+            exact runRowsH_bind' host _ _ s r
+          rw [hround]
+          rcases hmb : hostRunB host k body (q.env ++ [c]) s r with _ | ⟨_ | exb, s', r'⟩
+          · rw [hmb] at ihb
+            exact RunsToD.frontier ihb
+          · rw [hmb] at ihb
+            exact RunsToDB.mono hj ihb
+          · rw [hmb] at ihb
+            rcases ihb with ihb | hdiv
+            swap
+            · exact RunsToDB.of_diverges hdiv
+            obtain ⟨cb, hrb⟩ := ihb
+            cases exb with
+            | failure cause =>
+              have hpass := ReachesC.same (host := host) s' r' (fun s₀ =>
+                step_failure_pass_whileLoop root q c cause K i s₀) rfl rfl
+              exact Or.inl ⟨cb + 0, hrb.trans hpass⟩
+            | success a =>
+              have hstepA := ReachesC.step (host := host) (step_success_enter root q hq c a K i s')
+                rfl r'
+              have hResume : ∀ {x : Option Val} {ln : LoopNext Val NCode},
+                  evalTerm (q.env ++ [c, a]) step = x →
+                  (match x with
+                   | some next => loopNextAt root q next
+                   | none => LoopNext.finish badShape) = ln → loopResumeAt root q c a = ln := by
+                intro x ln hx hln
+                unfold loopResumeAt
+                rw [loopAt_iterate root h]
+                dsimp only
+                rw [hx]
+                exact hln
+              simp only [Option.bind_some]
+              cases hs : evalTerm (q.env ++ [c, a]) step with
+              | none =>
+                rw [hResume hs rfl] at hstepA
+                rw [badShape_eq] at hstepA
+                exact Or.inl ⟨cb + 1, hrb.trans hstepA⟩
+              | some c' =>
+                rw [hResume hs rfl] at hstepA
+                have ih := loop_reachesC host root k q hq h K i hbody j (by omega) c' s' r'
+                exact RunsToDB.mono (by omega) (RunsToDB.pre_add (hrb.trans hstepA) ih)
+      | _ =>
+        have hf : runRowsH host (loopStep (denoteRowsB table k body) q.env test step result c) s r =
+            some (.inl (some badShapeExit), (s, r)) := by
+          unfold loopStep
+          rw [ht]
+          rfl
+        rw [hf]
+        exact hdone badShapeExit badShape hf (hNext ht rfl) badShape_eq
 
 /-! ## The composite arms, placed
 
@@ -684,10 +885,31 @@ theorem compilesB_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
 under a host. A body's wait or cut ends the loop with it; the budget's last test is at least `k`
 steps in. -/
 @[semantics "translation-simulation" (requirement := R6)]
-proof_goal compilesB_iterate {σ : Type} (host : Effects.Comodel (RowSig table) σ)
+theorem compilesB_iterate {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {cty : Option Ty} {init test step result : Term}
     {body : NativeEff} (hb : CompilesB host root k body) :
-    CompilesB host root k (.iterate cty init test step result body)
+    CompilesB host root k (.iterate cty init test step result body) := by
+  intro p K i s r h
+  rcases hfu : p.fuel with _ | n
+  · exact RunsToDB.of_zero hfu
+  have hq : Node.at_ (Node.eff root) (loopPoint p).path =
+      some (Node.eff (.iterate cty init test step result body)) := h
+  rw [compileEff_iterate cty init test step result body hfu]
+  have hs := step_suspend root (EffThunk.body p) K i s
+  simp only [interpAt] at hs
+  rw [Effect4.Program.Sched.suspendBodyAt_iterate (q := loopPoint p) hfu hq] at hs
+  unfold hostRunB
+  rw [denoteRowsB]
+  cases hi : evalTerm p.env init with
+  | none =>
+    rw [show evalTerm (loopPoint p).env init = none from hi, badShape_eq] at hs
+    exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl r⟩
+  | some c₀ =>
+    rw [show evalTerm (loopPoint p).env init = some c₀ from hi] at hs
+    have henter := ReachesC.step (host := host)
+      (step_whileLoop_enter root (loopPoint p) rfl c₀ K i s) rfl r
+    exact RunsToDB.pre ((ReachesC.step (host := host) hs rfl r).trans henter)
+      (loop_reachesC host root k (loopPoint p) rfl hq K i hb k (Nat.le_refl k) c₀ s r)
 
 /-! ## The induction -/
 
