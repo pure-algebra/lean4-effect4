@@ -1,0 +1,21 @@
+{
+  "created": "2026-10-10T17:57:41.099481+00:00",
+  "files": {
+    "Effect4/Review/ModuleLayerAudit.lean": "7fb840c5fc51dda2c4eec15fce8c9424d040bf5b99b1e852f63d4c0795be9e99",
+    "PLAN.md": "5b8620e1000ece3015337e771667c69461fc6374e95202eeeacd145bd1af2036",
+    "README.md": "d8d88003f6c8bd75ec87bb58bd61f72872693cf796495d774d9d3c60a13b02f0",
+    "audit.out": "472a51404b86d83963e46478c6ad11b523e061e146112f656c307f59298458dd",
+    "checkpoint.json": "e8b64c12aef54d827454b11c592e105d72865af4f36395b55337535883cd33be",
+    "inputs-after.json": "a6a525ad56239566d2cc346eb9bcc4351117f379430f5e4b59ed92656491ccb7",
+    "inputs-before.json": "a6a525ad56239566d2cc346eb9bcc4351117f379430f5e4b59ed92656491ccb7",
+    "language-result.json": "f9915cd76fe8b4b8615f8fbd61f221d5496907c15bacca457dba3dab90cd4380",
+    "language.out": "db33312cd947ed23541578f0b308b341492af2631ab2474af86550a6f59cb68b",
+    "owner-editor-controls.diff": "36194a0c5865d818c8398ea0907dc00460202d99c3b2e9be57c7b6952f4d6abe",
+    "owner-law-build-tail.out": "411abb02d0c767f9f8c754f0867db56c01078bfe5d889c5097aec2a4c6792db9",
+    "result.json": "b8b9aaea55fa7f91474af3ad53da6fe964de4e77d48faaeae84f8c25fdccfae5",
+    "reviewed-laws.diff": "7db1cf2e11579826e726b1ba174bf8abffdef905f4c63f1310fc769c68dc21e3",
+    "run_audit.py": "e454575bb3f658193d45b853fa7a92bb02f28c9dfff5c0e019bbf226b31c29dc",
+    "whitespace-result.json": "dfb91d065930ad3e11611fcefa3d80f1ccb879abc12016e3a42c237c290a84a8"
+  },
+  "limits": "Compiled draft audit; owner build observed; no independent implementation rebuild or behavior gates"
+}

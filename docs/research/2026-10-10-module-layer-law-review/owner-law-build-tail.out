@@ -1,0 +1,12 @@
+✔ [887/896] Built Effect4.Laws.Library.Queue.OfferData (19s)
+✔ [888/896] Built Effect4.Laws.Library.Semaphore.Ops (4.3s)
+✔ [889/896] Built Effect4.Laws.Program.Typed.Commands.Clauses.Close (3.9s)
+✔ [890/896] Built Effect4.Laws.Library.Queue.Steps (4.4s)
+✔ [891/896] Built Effect4.Laws.Library.SynchronizedRef.Ops (3.8s)
+✔ [892/896] Built Effect4.Laws.Program.Typed.Commands.Clauses.All (3.5s)
+✔ [893/896] Built Effect4.Laws.Library.Queue.Ops (5.3s)
+✔ [894/896] Built Effect4.Laws.Program.Typed.Results (3.5s)
+✔ [895/896] Built Effect4.Laws.Program.Typed.AdmittedSource (3.4s)
+✔ [896/896] Built Effect4.Laws (2.6s)
+Build completed successfully (896 jobs).
+EXIT 0
