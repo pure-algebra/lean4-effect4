@@ -214,17 +214,16 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # loaded roots and rendered once. Pure Lean, no host; the JSON form is a build artifact under
 # .lake/gen/semantics-report. It reads no other generation group, so it is a hermetic group of
 # its own and `check-gen` holds its drift like any other committed generated file.
-# The registry's Test roots are loaded beside Effect4.Laws (`registry.roots`), so their traces are
-# inputs too: two program batteries, the five acceptance programs (decisions row 206) and the
-# five scenario modules that hold a placed claim (decisions row 254). One list of names gives
-# both the modules and their traces. The plan reads the ProofGraph modules.
+# The registry's Test roots are loaded beside Effect4.Laws (`registry.roots`): two program
+# batteries, the five acceptance programs (decisions row 206) and the scenario modules that hold
+# a placed claim (decisions row 254). The recipe builds exactly these roots and the report, and
+# the group depends on the Lean sources, never on `build`: until 2026-10-09 it depended on the
+# roots' traces, whose rule is `build`, so every run first built the whole battery and the axiom
+# gate. The plan reads the ProofGraph modules.
 SEMANTICS_DOGFOOD_NAMES := P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService \
   Scenario Scenario/Workers Scenario/Routing Scenario/Atomic Scenario/Timeout Scenario/Tape \
   Scenario/QueueWorkers
 SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst /,.,$(m)))
-SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
-  .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
-  $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),.lake/build/lib/lean/Test/Dogfood/$(m).trace)
 
 # The engine's fixtures (decisions rows 254 and 255; the group `fixtures` of docs/GENERATED.md).
 # A lane is a folder under ocaml/engine/test/ with a writer, write.lean: a Lean script that
@@ -246,14 +245,14 @@ ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 # before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
 # a second run (seat T1, 2026-10-04). As targets of `build` with an empty recipe, they are read
 # again after `build`: a rule reruns exactly when a trace moved.
-$(CORE) $(LAWS) $(SEMANTICS_ROOTS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
+$(CORE) $(LAWS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
   .lake/build/lib/lean/Test/Program/Gen.trace: build ;
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
-$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) $(SEMANTICS_ROOTS) | build
-	$(LAKE) build semantics-report Test.Program.TypedProgBindRed Test.Program.ProtocolPosts $(SEMANTICS_DOGFOOD)
+$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_SOURCES)
+	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts $(SEMANTICS_DOGFOOD)
 	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
 	$(LAKE) exe semantics-report $(GEN)/semantics-report
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md
@@ -669,7 +668,7 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 
 # The semantics report's refusal controls: a registry naming an unloaded root, a stale witness or
 # a malformed register row is refused with its reason. The report's own drift is `check-gen`'s.
-$(CHK)/semantics: $(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean Test/Audit/SemanticsCensus.lean $(LAWS) | build
+$(CHK)/semantics: $(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean $(LEAN_SOURCES)
 	$(LAKE) build semantics-controls Test.Audit.SemanticsCensus
 	$(LAKE) exe semantics-controls
 	@mkdir -p $(CHK) && touch $@

@@ -364,26 +364,28 @@ private def checkReach : MetaM Nat := do
 /-- The names of a requirement's section (`displayName`). One last component is the common
 case. Two names that share it print with the components that tell them apart: two components
 where the second differs, three for the two modules' steps of one name. A name that is a
-suffix of another prints in full. A red control beside each: the short name alone, which the
-report printed before, does not tell the two apart. -/
+suffix of another prints in full. Each case holds for `displayNames` too, the one pass that the
+report prints with. A red control beside each: the short name alone, which the report printed
+before, does not tell the two apart. -/
 private def checkNames : MetaM Nat := do
   let steps := ["Effect4.Queue.Model.takeStep_types", "Effect4.Semaphore.Model.takeStep_types",
     "Effect4.Queue.Model.offerStep_types"]
-  let cases : List (String × String × String) := [
-    ("a name alone has its last component", displayName steps "Effect4.Queue.Model.offerStep_types",
+  let cases : List (String × List String × String × String) := [
+    ("a name alone has its last component", steps, "Effect4.Queue.Model.offerStep_types",
       "offerStep_types"),
-    ("two modules' steps of one name, the Queue's", displayName steps "Effect4.Queue.Model.takeStep_types",
+    ("two modules' steps of one name, the Queue's", steps, "Effect4.Queue.Model.takeStep_types",
       "Queue.Model.takeStep_types"),
-    ("two modules' steps of one name, Semaphore's",
-      displayName steps "Effect4.Semaphore.Model.takeStep_types", "Semaphore.Model.takeStep_types"),
-    ("two components where the second differs", displayName ["A.B.x", "A.C.x"] "A.B.x", "B.x"),
-    ("a name twice in the list is one name", displayName ["A.x", "A.x"] "A.x", "x"),
-    ("a suffix of another name prints in full", displayName ["x", "A.x"] "x", "x"),
-    ("the longer of the two has the component that tells", displayName ["x", "A.x"] "A.x", "A.x"),
-    ("a name outside the list is told from the list", displayName ["A.x"] "B.x", "B.x")]
-  for (label, got, expected) in cases do
-    unless got == expected do
-      throwError "semantics controls: {label}: expected {expected}, got {got}"
+    ("two modules' steps of one name, Semaphore's", steps,
+      "Effect4.Semaphore.Model.takeStep_types", "Semaphore.Model.takeStep_types"),
+    ("two components where the second differs", ["A.B.x", "A.C.x"], "A.B.x", "B.x"),
+    ("a name twice in the list is one name", ["A.x", "A.x"], "A.x", "x"),
+    ("a suffix of another name prints in full", ["x", "A.x"], "x", "x"),
+    ("the longer of the two has the component that tells", ["x", "A.x"], "A.x", "A.x"),
+    ("a name outside the list is told from the list", ["A.x"], "B.x", "B.x")]
+  for (label, among, name, expected) in cases do
+    for got in [displayName among name, shownIn (displayNames among) among name] do
+      unless got == expected do
+        throwError "semantics controls: {label}: expected {expected}, got {got}"
   -- the red control: the two steps' printed names differ, and their last components do not
   let queue := displayName steps "Effect4.Queue.Model.takeStep_types"
   let semaphore := displayName steps "Effect4.Semaphore.Model.takeStep_types"
