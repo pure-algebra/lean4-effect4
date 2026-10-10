@@ -1,0 +1,12 @@
+[
+  {
+    "file": "/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean/ProofGraph/AxiomAudit.trace",
+    "before": "c92deb60e96d477c89f8625589d77cb99817014f9ef02590001a3de79f28d2e1",
+    "after": "1c0c772040593c6fe56d0693f68fa629cc1b9698aae368a3d0dc8764fb223c25"
+  },
+  {
+    "file": "/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean/ProofGraph/Why.trace",
+    "before": "cfea47e997e08f85b992acd00d8cfb263885b43f0f72a4c86ed473d33c67cb0a",
+    "after": "ae0b0184a75c683e2582af3c9b53f739843fe1d46699d4e560b093eec2f064c1"
+  }
+]

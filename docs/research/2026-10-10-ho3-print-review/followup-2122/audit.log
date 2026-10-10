@@ -1,0 +1,54 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/Audit.lean:8:0: error: #axiom_audit: 43 of 5535 declarations reach axioms outside [propext, Quot.sound]:
+  Effect4.Program.action_image_head reaches [Classical.choice]
+  Effect4.Program.readLayer_print reaches [Classical.choice]
+  Effect4.Program.printsBackUpTo reaches [Classical.choice]
+  Effect4.Program.readT_print reaches [Classical.choice]
+  Effect4.Program.rowPrint_inv reaches [Classical.choice]
+  Effect4.Program.ReadsBack.of_Readable reaches [Classical.choice]
+  Effect4.Program.read_print reaches [Classical.choice]
+  Effect4.Program.rowDom_inv reaches [Classical.choice]
+  Effect4.Program.readT_print_step reaches [Classical.choice]
+  Effect4.Program.prints_upTo reaches [Classical.choice]
+  Effect4.Program.readable_of_Readable reaches [Classical.choice]
+  Effect4.Program.printLayer_of_readable reaches [Classical.choice]
+  Effect4.Program.roundTrip_of_readable reaches [Classical.choice]
+  Effect4.Program.print_of_readable reaches [Classical.choice]
+  Effect4.Program.print_node reaches [Classical.choice]
+  Effect4.Codegen.eraseStmt_print reaches [Classical.choice]
+  Effect4.Codegen.site_action_normalized_head reaches [Classical.choice]
+  Effect4.Codegen.eraseJoinArgs_printTypedSitesAt reaches [Classical.choice]
+  Effect4.Codegen.readTyped_of_print_erasure reaches [Classical.choice]
+  Effect4.Codegen.eraseStmts_print_step reaches [Classical.choice]
+  Effect4.Codegen.readable_expr_prints reaches [Classical.choice]
+  Effect4.Codegen.typedErasesUpTo reaches [Classical.choice]
+  Effect4.Codegen.eraseT_print_step reaches [Classical.choice]
+  Effect4.Codegen.typed_action_image_normal reaches [Classical.choice]
+  Effect4.Codegen.eraseT_site_print reaches [Classical.choice]
+  Effect4.Codegen.typed_action_image_head reaches [Classical.choice]
+  Effect4.Codegen.readTyped_printTypedAt reaches [Classical.choice]
+  Effect4.Codegen.eraseSiteStmts_print_step reaches [Classical.choice]
+  Effect4.Codegen.readTyped_printTyped reaches [Classical.choice]
+  Effect4.Codegen.eraseJoinArgs_printTyped reaches [Classical.choice]
+  Effect4.Codegen.eraseSiteStmt_print reaches [Classical.choice]
+  Effect4.Codegen.sitesErasesUpTo reaches [Classical.choice]
+  Effect4.Codegen.eraseT_site_print_step reaches [Classical.choice]
+  Effect4.Codegen.eraseJoinArgs_printTypedAt reaches [Classical.choice]
+  Effect4.Codegen.eraseT_print reaches [Classical.choice]
+  Effect4.Api.printModule_roundTrip reaches [Classical.choice]
+  Effect4.Program.readModule_printModule_readable reaches [Classical.choice]
+  Effect4.Program.readModule_printModule_defs_readable reaches [Classical.choice]
+  Effect4.Codegen.emitModule_complete reaches [Classical.choice]
+  Effect4.Program.captured_mapM_ok reaches [Classical.choice]
+  Effect4.Program.captured_mapM_ok._f reaches [Classical.choice]
+  Effect4.Codegen.ModuleEmission.readModule reaches [Classical.choice]
+  Effect4.Program.printModule_readable reaches [Classical.choice]
+2 of them stand under no other; each one's path to its axiom:
+  Effect4.Program.rowPrint_inv  (Effect4.Laws.Codegen.ReadPrint)
+  → Pi.instNonempty  (Init.Prelude)
+  → Classical.ofNonempty  (Init.Prelude)
+  → Classical.choice  (Init.Prelude)
+  Effect4.Program.rowDom_inv  (Effect4.Laws.Codegen.ReadPrint)
+  → Pi.instNonempty  (Init.Prelude)
+  → Classical.ofNonempty  (Init.Prelude)
+  → Classical.choice  (Init.Prelude)
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/Audit.lean:9:0: error: plan: Effect4.Codegen.eraseJoinArgs_printTyped: disallowed axioms [Classical.choice]

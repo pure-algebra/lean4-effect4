@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-10-10T21:44:16.344447+00:00",
+  "commands": [
+    {
+      "name": "compile",
+      "argv": [
+        "lean",
+        "-M4096",
+        "-DwarningAsError=true",
+        "-R",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/.repair-lib/Repair.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/Repair.lean"
+      ],
+      "exit": 0,
+      "seconds": 14.033,
+      "output": ""
+    },
+    {
+      "name": "audit",
+      "argv": [
+        "lean",
+        "-M4096",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/RepairAudit.lean"
+      ],
+      "exit": 1,
+      "seconds": 9.088,
+      "output": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/RepairAudit.lean:4:0: error: #axiom_audit: 2 of 58 declarations reach axioms outside [propext, Quot.sound]:\n  Effect4.Program.Ho3TrustReview.review_rowPrint_inv reaches [Classical.choice]\n  Effect4.Program.Ho3TrustReview.review_rowDom_inv reaches [Classical.choice]\n2 of them stand under no other; each one's path to its axiom:\n  Effect4.Program.Ho3TrustReview.review_rowPrint_inv  (Repair)\n  \u2192 Pi.instNonempty  (Init.Prelude)\n  \u2192 Classical.ofNonempty  (Init.Prelude)\n  \u2192 Classical.choice  (Init.Prelude)\n  Effect4.Program.Ho3TrustReview.review_rowDom_inv  (Repair)\n  \u2192 Pi.instNonempty  (Init.Prelude)\n  \u2192 Classical.ofNonempty  (Init.Prelude)\n  \u2192 Classical.choice  (Init.Prelude)\n"
+    }
+  ],
+  "before": {
+    "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/Repair.lean": "755c88f0f48ad824ac8b20bd646f93da00534071732557ed878b477a12843685",
+    "/Users/pooks/Dev/lean4-effect4-wt/module-layers/src/Effect4/Laws/Codegen/ReadPrint.lean": "af5ed4e30173fb9f6c8a82a3cccb562c8d15aa98b434c879ceb0005b0a10e20d",
+    "/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean/Effect4/Laws/Codegen/ReadPrint.olean": "f19dd09ff1f393f76af6f1a16831a1e926e85116bede7b3b26fc3c38d01b6a99"
+  },
+  "after": {
+    "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/Repair.lean": "755c88f0f48ad824ac8b20bd646f93da00534071732557ed878b477a12843685",
+    "/Users/pooks/Dev/lean4-effect4-wt/module-layers/src/Effect4/Laws/Codegen/ReadPrint.lean": "af5ed4e30173fb9f6c8a82a3cccb562c8d15aa98b434c879ceb0005b0a10e20d",
+    "/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean/Effect4/Laws/Codegen/ReadPrint.olean": "f19dd09ff1f393f76af6f1a16831a1e926e85116bede7b3b26fc3c38d01b6a99"
+  },
+  "lean_path": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2122/.repair-lib:/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean"
+}
