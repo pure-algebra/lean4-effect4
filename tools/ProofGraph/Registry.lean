@@ -938,6 +938,9 @@ def registry : Registry where
     { id := "rows-loop-host", concept := "translation-simulation", role := .simulation
       title := "H9 on loops: for a finished recorded run of the same fragment, under any host whose answers are the run's, past a budget bound the budgeted meaning under the host is the root's exit with the stores and the host ends where the answers left it (no progress claim; nothing of a run stopped at a call; the host-meaning widening, slice L1)"
       pointer := .witness `Effect4.Run.denoteRowsB_eq_session_host },
+    { id := "rows-loop-driver", concept := "translation-simulation", role := .simulation
+      title := "H9 at the driver on loops: open a LoopedRows program the row fragment with loops admits, evaluate its root and drive it with a reactor inside the envelope that answers with exits (Run.runWith); when the run is funded, at rest and its root exited, past a budget bound the reactor read as a host runs the budgeted call tree to the root's exit with the stores and ends at the drive's state (no progress claim; the host-meaning widening, Q9)"
+      pointer := .witness `Effect4.Run.runWith_denotesB },
     { id := "rows-loop-straight", concept := "translation-simulation", role := .compatibility
       title := "The budgeted row meaning extends the row meaning: on StraightRows it is denoteRows finished, at every budget (the host-meaning widening, Q1)"
       pointer := .witness `Effect4.Program.Denote.denoteRowsB_straight },
@@ -1202,7 +1205,8 @@ def registry : Registry where
         `Effect4.Run.denoteRows_eq_session_host,
         `Effect4.Run.runWith_denotes,
         `Effect4.Run.h8_loopedRows,
-        `Effect4.Run.denoteRowsB_eq_session_host]
+        `Effect4.Run.denoteRowsB_eq_session_host,
+        `Effect4.Run.runWith_denotesB]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
         .ruling "DI-23: the preloaded answers are deleted" "the raw agreement with preloaded answers, the rest of the planned goal run_eq_ref_table (slice H6b): no consumer on the spine; session_eq_ref reads run_eq_ref_table_noPreload (decisions row 314)",
         .definition "the host as a relation between the machine's calls and its answers (`HostSpec`), in place of a predicate on tapes" "H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation",

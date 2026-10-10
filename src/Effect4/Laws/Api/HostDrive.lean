@@ -488,6 +488,31 @@ theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : 
     rw [hstart d hd]
     rfl
 
+/-- **The driver's run, read as a session** (the shared prefix of H9 at the driver, straight and
+on loops): it is reached, at its program and budget, answered by its reactor read as a host and
+driven by it. -/
+theorem runWith_session {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (hfund : funded (Run.runWith b r st id budget rounds).1 = true) :
+    Run.Reached (Run.runWith b r st id budget rounds).1 ∧
+      (Run.runWith b r st id budget rounds).1.built = b ∧
+      (Run.runWith b r st id budget rounds).1.budget = budget ∧
+      HostAnswered b.table (reactorHost b.table r) b.program budget.fuel
+        (tapeOf (Run.runWith b r st id budget rounds).1)
+        (Api.load b.program budget.compileFuel) st (Run.runWith b r st id budget rounds).2 ∧
+      hostDriven (Run.runWith b r st id budget rounds).1 = true := by
+  obtain ⟨hA, hhost⟩ := runWith_hostAnswered b r st id budget rounds henv hexits hfund
+  refine ⟨?_, ?_, ?_, hA, hhost⟩
+  · show Run.Reached (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1
+    rw [drive_eq_play]
+    exact Run.Reached.play _ _ (Run.Reached.play _ _ (Run.Reached.open b id budget))
+  · show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1.built = b
+    rw [drive_eq_play, play_built, play_built]
+    rfl
+  · show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1.budget = budget
+    rw [drive_eq_play, play_budget, play_budget]
+    rfl
+
 /-- **H9 at the driver**: the reactor's run of the call tree is the driver's. Open a program of
 the fragment, evaluate its root and drive it with a reactor inside the envelope that answers
 with exits. When the run is funded, at rest and its root exited, the reactor read as a host runs
@@ -506,19 +531,8 @@ theorem runWith_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (
     hostRun (reactorHost b.table r) b.program [] Stores.empty st =
       some (ex, ((Run.runWith b r st id budget rounds).1.machine.state,
         (Run.runWith b r st id budget rounds).2)) := by
-  obtain ⟨hA, hhost⟩ := runWith_hostAnswered b r st id budget rounds henv hexits hfund
-  have hreach : Run.Reached (Run.runWith b r st id budget rounds).1 := by
-    show Run.Reached (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1
-    rw [drive_eq_play]
-    exact Run.Reached.play _ _ (Run.Reached.play _ _ (Run.Reached.open b id budget))
-  have hbuilt : (Run.runWith b r st id budget rounds).1.built = b := by
-    show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1.built = b
-    rw [drive_eq_play, play_built, play_built]
-    rfl
-  have hbudget : (Run.runWith b r st id budget rounds).1.budget = budget := by
-    show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1.budget = budget
-    rw [drive_eq_play, play_budget, play_budget]
-    rfl
+  obtain ⟨hreach, hbuilt, hbudget, hA, hhost⟩ :=
+    runWith_session b r st id budget rounds henv hexits hfund
   have h := denoteRows_eq_session_host (Run.runWith b r st id budget rounds).1 hreach hfund hrest
     hhost
   rw [hbuilt, hbudget] at h
