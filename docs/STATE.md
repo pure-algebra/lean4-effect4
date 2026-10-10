@@ -218,13 +218,14 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
-- **The coalgebra note's three questions** (its section 8). Is `Effects` the home of the generic
-  layer? Is Codex the breaker of its packet? Should the comodel and runner papers be filed?
+- **The coalgebra note's four questions** (its section 8). Is `Effects` the home of the generic
+  layer? Is Codex the breaker of its packet? Should the comodel and runner papers be filed? Which
+  carrier does a printed service take (slice CO-6b)? Push `lean4-effects` before this branch.
 
 ## Process
 
-- Read a declaration's axioms with the gate's walk (`exactAxioms`, `tools/ProofGraph/Axioms.lean`).
-  Lean 4.33's `collectAxioms` can omit an axiom behind a cycle of the dependency graph.
+- Audit a landing's modules with `#axiom_audit M …` (`tools/ProofGraph/AxiomAudit.lean`), the
+  gate's walk. Lean 4.33's `collectAxioms` can omit an axiom behind a cycle of the dependency graph.
 - Build what you touch (`lake build <Module>`). Run one `lake` at a time. The whole battery and
   `make check-full` run at a sweep, when the owner asks.
 - Commit by explicit paths, each after a narrow build. Nothing is pushed without the owner.
