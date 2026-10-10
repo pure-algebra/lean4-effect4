@@ -1,0 +1,6 @@
+{
+  "svg_sha256": "18a84f7c0cc15a838322c3097c829ad75d34e4a755ccd17da7ee1862b9ee813c",
+  "png_sha256": "f022cfbebe2950ed31d5938cda0459325effb8e235f9a3afc46fc847c642bc9c",
+  "matches_inspected_image": true,
+  "method": "rsvg-convert; local static pixel inspection; no browser script or external references"
+}

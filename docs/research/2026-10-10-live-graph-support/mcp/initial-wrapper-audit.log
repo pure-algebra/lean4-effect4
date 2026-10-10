@@ -1,0 +1,13 @@
+docs/research/2026-10-10-live-graph-support/mcp/Controls.lean:20:59: error: unexpected identifier; expected '}'
+"040000000000000000"
+docs/research/2026-10-10-live-graph-support/mcp/Controls.lean:35:0: error: #axiom_audit: 2 of 31 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.Session.Snapshot.preview_agrees reaches [Classical.choice]
+  Tools.Session.Snapshot.preview reaches [Classical.choice]
+1 of them stands under no other; each one's path to its axiom:
+  Tools.Session.Snapshot.preview  (Tools.Session.Snapshot)
+  → Tools.Session.answer  (Tools.Session)
+  → Tools.Session.holesOfHex  (Tools.Session)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

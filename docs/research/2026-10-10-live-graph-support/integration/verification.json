@@ -1,0 +1,208 @@
+{
+  "base": "9389e543ad1325a603732b7802344d79b3b98c61",
+  "head_before_commit": "24c33dd3824a463348174e28323e38aa708f942c",
+  "threads": 3,
+  "checks": [
+    {
+      "name": "build",
+      "command": [
+        "lake",
+        "build",
+        "Tools.Session.Snapshot",
+        "Tools.View.FlowLaws",
+        "Tools.View.FlowPath",
+        "Tools.View.FlowOrder",
+        "Tools.View.Run",
+        "Tools.View.Build",
+        "Tools.View.Specimen",
+        "Tools.View.FlowSpecimen",
+        "Tools.View.Output",
+        "ProofGraph.AxiomAudit"
+      ],
+      "exit_code": 0,
+      "seconds": 20.128309542080387,
+      "finished_utc": "2026-10-10T15:13:31.913120+00:00",
+      "log_sha256": "b10facca15a4dde6dffe06272eceea86a200b112b12f689cd6e03e79a70ecd64"
+    },
+    {
+      "name": "snapshot",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/mcp/Controls.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 7.703578666085377,
+      "finished_utc": "2026-10-10T15:13:39.619566+00:00",
+      "log_sha256": "a2d2c5f0467457975e7448ab5a496480a30a1039630508bf629b60c0342569e3"
+    },
+    {
+      "name": "index-controls",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/Controls.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 7.889094708953053,
+      "finished_utc": "2026-10-10T15:13:47.511760+00:00",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "index-audit",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/Audit.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 6.841080791084096,
+      "finished_utc": "2026-10-10T15:13:54.356929+00:00",
+      "log_sha256": "e6fe7619ecd31e738a447306d247ef78dbf1da4cead7464c1cc1d6d813e615d6"
+    },
+    {
+      "name": "route-controls",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/routes/Controls.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 1.7139341249130666,
+      "finished_utc": "2026-10-10T15:13:56.071706+00:00",
+      "log_sha256": "1e5e51410a843a2bf4f2092555c537ac5eec62cff18fe2e494d796fe2eb0ba22"
+    },
+    {
+      "name": "route-audit",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/routes/ChangedAudit.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 3.5900916669052094,
+      "finished_utc": "2026-10-10T15:13:59.662503+00:00",
+      "log_sha256": "ca6994793ab13262383fcdce4898bd3f78f1eaf16ac08375ff896b21dc995cdf"
+    },
+    {
+      "name": "route-specimens",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/routes/Specimens.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 2.9010583329945803,
+      "finished_utc": "2026-10-10T15:14:02.564714+00:00",
+      "log_sha256": "b000266cc4c8e9dade7b1f9f0662e1a0085d3b379ca28987b26e3ce8378bd060"
+    },
+    {
+      "name": "run-baseline",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view",
+        "Baseline"
+      ],
+      "exit_code": 0,
+      "seconds": 1.6394542919006199,
+      "finished_utc": "2026-10-10T15:14:04.204981+00:00",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-compare",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view",
+        "Compare"
+      ],
+      "exit_code": 0,
+      "seconds": 2.436190041946247,
+      "finished_utc": "2026-10-10T15:14:06.642213+00:00",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-audit",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view/AuditRender.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 4.849114458076656,
+      "finished_utc": "2026-10-10T15:14:11.492787+00:00",
+      "log_sha256": "25a6a9439acb087494c921d28dd56ff062904fc506d212dc10f72a822b4105ea"
+    },
+    {
+      "name": "view-driver",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/tools/Drivers/View.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 6.368693666066974,
+      "finished_utc": "2026-10-10T15:14:17.864016+00:00",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preview-build",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/mcp/Preview.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 5.3779532089829445,
+      "finished_utc": "2026-10-10T15:14:23.243135+00:00",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "preview-protocol",
+      "command": [
+        "python3",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/mcp/probe.py"
+      ],
+      "exit_code": 0,
+      "seconds": 10.797785459086299,
+      "finished_utc": "2026-10-10T15:14:34.041954+00:00",
+      "log_sha256": "46c64d3cc1c1b297e9e6f2e0478604e3b91260e81a4986ba7dbae2cc929f4f22"
+    }
+  ],
+  "source_sha256": {
+    "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+    "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+    "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11",
+    "tools/Tools/View/Graph.lean": "f34d336fa346e0f47df0865e9a8e83419d95aedff4ed51095d27d4ee35bfdf53",
+    "tools/Tools/View/Run.lean": "6e9926cd03e8cb897f5e1a95dd1da6f046ffdfdafb70e46ce176606dafc672d8",
+    "tools/Tools/Session/Snapshot.lean": "2d7970a544525b8b0147efc94eed4e585b2b255ce574503a121520b946e42182"
+  },
+  "all_passed": true
+}

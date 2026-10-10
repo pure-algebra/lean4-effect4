@@ -1,0 +1,37 @@
+{
+  "observed_utc": "2026-10-10T15:20:00.238723+00:00",
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "head": "3ef7aeb0f41bbb3796f44edc873e4185e760c6ca",
+  "recent_commits": [
+    "3ef7aeb0 layer references stay in their scope (row 341, step 1): M7 rests on no goal",
+    "a2b589de docs: crossScopeRef_builds waits on a source rule; no program in the tree uses a cross-scope reference",
+    "8ce5e1c4 host frontiers (L4): a waiting run's meaning names its wait (Q4, Q6b)"
+  ],
+  "working_paths": [
+    " M Test/Program/AuthorContract.lean",
+    " M Test/Program/BlameContract.lean",
+    " M Test/Program/ReferenceExpansion.lean",
+    " M Test/fixtures/proof-style/baseline.tsv",
+    " M docs/research/2026-10-10-layer-scopes.md",
+    " M src/Effect4/Api.lean",
+    " M src/Effect4/Api/RefusalsDerived.lean",
+    " M src/Effect4/Codegen/Diagnostics.lean",
+    " M src/Effect4/Laws/Api/Codegen.lean",
+    " M src/Effect4/Laws/Program/DenoteR.lean",
+    " M src/Effect4/Laws/Program/HoistingTotal.lean",
+    " M src/Effect4/Laws/Program/PathFold.lean",
+    " M src/Effect4/Laws/Program/TyView.lean",
+    " M src/Effect4/Program/Refs.lean",
+    " M src/Effect4/Program/Typing/Blame.lean",
+    " M tools/Effect4Gen/guards/refusals.lean",
+    " M tools/Effect4Gen/manifest.json"
+  ],
+  "session_evidence": {
+    "session": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50.jsonl",
+    "verified_cwd": "/Users/pooks/Dev/lean4-effect4",
+    "read_bound_bytes": 180000,
+    "last_reported_activity": "Located-refusal build, then audit and behavior gates for steps 1 and 1b; step 2 layer representation next.",
+    "evidence_kind": "Bounded external-session reading, not reproduced build results."
+  },
+  "ownership": "Primary scope, refusal, typing, generator and TyView files remain untouched. This branch owns Tools paths and this research packet."
+}
