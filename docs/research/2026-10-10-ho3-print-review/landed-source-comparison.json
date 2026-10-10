@@ -1,0 +1,902 @@
+{
+  "landed_commit": "54ed060e6f12ebad49c05acd791a75e4425bd2f9",
+  "current_head": "41151468ffd97d0df25ed7d13080eee783ab199e",
+  "checks": [
+    {
+      "source": "src/Effect4/Laws/Program/HoistingTotal.lean",
+      "expected": "3c56d2e9ace1ec25ae77b80783587e87cf3541f35dca6b1632c5db6f1a05b02c",
+      "actual": "3c56d2e9ace1ec25ae77b80783587e87cf3541f35dca6b1632c5db6f1a05b02c"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Hoisting.lean",
+      "expected": "291d8e0887375975466a3b98984efbd15c9fd6e928284fe00ce8692e1b8f42aa",
+      "actual": "291d8e0887375975466a3b98984efbd15c9fd6e928284fe00ce8692e1b8f42aa"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/PathOrder.lean",
+      "expected": "dd18f5f169b32e042fd9ecd84aa3ddf7bcb960a21f00358260bcb9fe10f291e6",
+      "actual": "dd18f5f169b32e042fd9ecd84aa3ddf7bcb960a21f00358260bcb9fe10f291e6"
+    },
+    {
+      "source": "src/Effect4/Program/Refs.lean",
+      "expected": "045aba2652587c23a4f43ffde5d56060b9482299fa884e9ed8ff4cbaf94f4287",
+      "actual": "045aba2652587c23a4f43ffde5d56060b9482299fa884e9ed8ff4cbaf94f4287"
+    },
+    {
+      "source": "src/Effect4/Program/Fold.lean",
+      "expected": "adc0d9a0242a8b0b0a5cf0679e526eb0afa7abcc8a3ebbf71c90eacbadc21707",
+      "actual": "adc0d9a0242a8b0b0a5cf0679e526eb0afa7abcc8a3ebbf71c90eacbadc21707"
+    },
+    {
+      "source": "src/Effect4/Program/ScopedOp.lean",
+      "expected": "169f85c073bc9ffbf8898a49a1b23f0d64e5e11559b3a135e2b36457728ddfaa",
+      "actual": "169f85c073bc9ffbf8898a49a1b23f0d64e5e11559b3a135e2b36457728ddfaa"
+    },
+    {
+      "source": "src/Effect4/Machine/Term.lean",
+      "expected": "8c529ab29fbed7f4201e056b15ccf43c1e30a8bc406405ac6f94e98ead14999e",
+      "actual": "8c529ab29fbed7f4201e056b15ccf43c1e30a8bc406405ac6f94e98ead14999e"
+    },
+    {
+      "source": "src/Effect4/Program/TyEq.lean",
+      "expected": "6376c9573438ecf96697717f1e6c556597de33c3a81c1f68a978ae9517a072af",
+      "actual": "6376c9573438ecf96697717f1e6c556597de33c3a81c1f68a978ae9517a072af"
+    },
+    {
+      "source": "src/Effect4/Program/TyCore.lean",
+      "expected": "d107fd8c6086c5ca7d6f6e01d9dcc151c2e8a3dc272defa169ed8817033c5420",
+      "actual": "d107fd8c6086c5ca7d6f6e01d9dcc151c2e8a3dc272defa169ed8817033c5420"
+    },
+    {
+      "source": "src/Effect4/Machine/Map.lean",
+      "expected": "0cf546e34ed0f9ea26751901a8ee42c4b942d315b68d88913448c0a360568edd",
+      "actual": "0cf546e34ed0f9ea26751901a8ee42c4b942d315b68d88913448c0a360568edd"
+    },
+    {
+      "source": "src/Effect4/Data/FieldOrder.lean",
+      "expected": "15d558e6861f961f1cd9e38baf17859e7852023199a70610f400533439a4ca98",
+      "actual": "15d558e6861f961f1cd9e38baf17859e7852023199a70610f400533439a4ca98"
+    },
+    {
+      "source": "src/Effect4/Machine/Alphabets.lean",
+      "expected": "e5e53cbdf9294bdbddfd234e65647cd3ab0faa28093d7e7eb2eb2874f8a554b0",
+      "actual": "e5e53cbdf9294bdbddfd234e65647cd3ab0faa28093d7e7eb2eb2874f8a554b0"
+    },
+    {
+      "source": "src/Effect4/Machine/Record.lean",
+      "expected": "cf759a6a076fb422e0e46442c118deec1c16631657fcdb7ed0b8a9c5b01ced2d",
+      "actual": "cf759a6a076fb422e0e46442c118deec1c16631657fcdb7ed0b8a9c5b01ced2d"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Val.lean",
+      "expected": "945eccfeb9dc5ac73a566e521d745b50c9c40ff8c8355d123140f6d792599a17",
+      "actual": "945eccfeb9dc5ac73a566e521d745b50c9c40ff8c8355d123140f6d792599a17"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Utf8.lean",
+      "expected": "586892fb12cde6a54383db7554b8943f41b5ecc564b00220b1de2b5a935298bb",
+      "actual": "586892fb12cde6a54383db7554b8943f41b5ecc564b00220b1de2b5a935298bb"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Digits.lean",
+      "expected": "f050193add5d81e6abeb36184bc9333aa051edcd23c4c15713ef9e33f29439f3",
+      "actual": "f050193add5d81e6abeb36184bc9333aa051edcd23c4c15713ef9e33f29439f3"
+    },
+    {
+      "source": "src/Effect4/Machine/Wake.lean",
+      "expected": "86731b89db0d8d4a37767730dc50f6b95da4ba6676c8ae5dd8f9eebd3b14485b",
+      "actual": "86731b89db0d8d4a37767730dc50f6b95da4ba6676c8ae5dd8f9eebd3b14485b"
+    },
+    {
+      "source": "src/Effect4/Machine/Value.lean",
+      "expected": "f2e8f8dd8ada701671f38313e1adc501a8064dd363e3bfc3e646d6e0290716a0",
+      "actual": "f2e8f8dd8ada701671f38313e1adc501a8064dd363e3bfc3e646d6e0290716a0"
+    },
+    {
+      "source": "src/Effect4/Machine/Fiber.lean",
+      "expected": "ffd706d2178c761d82eca18e6e0624d32ae47333041d743908706abf7e46a4a2",
+      "actual": "ffd706d2178c761d82eca18e6e0624d32ae47333041d743908706abf7e46a4a2"
+    },
+    {
+      "source": "src/Effect4/Machine/Exit.lean",
+      "expected": "8a9a78b035deb4d850d535ece9580c89c66940e504690ec029d4eb82effde7d4",
+      "actual": "8a9a78b035deb4d850d535ece9580c89c66940e504690ec029d4eb82effde7d4"
+    },
+    {
+      "source": "src/Effect4/Machine/Cause.lean",
+      "expected": "529edf4778df4a4d7f10dee10fcea65434301aa3ffee77d9340ae91566c1a853",
+      "actual": "529edf4778df4a4d7f10dee10fcea65434301aa3ffee77d9340ae91566c1a853"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Image.lean",
+      "expected": "2ad5a7811d90412772b9608ff5dbb104359eabc41ef34697af214b7e9b02675a",
+      "actual": "2ad5a7811d90412772b9608ff5dbb104359eabc41ef34697af214b7e9b02675a"
+    },
+    {
+      "source": "src/Effect4/Machine/Completion.lean",
+      "expected": "b4e9684df4c22601410d06e6434ccbbf130e2cb1a0c1e33f6c245d009e05eec7",
+      "actual": "b4e9684df4c22601410d06e6434ccbbf130e2cb1a0c1e33f6c245d009e05eec7"
+    },
+    {
+      "source": "src/Effect4/Machine/Supervision.lean",
+      "expected": "aa8f965cb5d30f7e7a1384a1ca4f9b2f2b95cc6678982904cb5cf6587bc2024b",
+      "actual": "aa8f965cb5d30f7e7a1384a1ca4f9b2f2b95cc6678982904cb5cf6587bc2024b"
+    },
+    {
+      "source": "src/Effect4/Machine/Integers.lean",
+      "expected": "f5d845a4f619a47bc0540068d72c8eadfb93b492733524036c0693305a3b39af",
+      "actual": "f5d845a4f619a47bc0540068d72c8eadfb93b492733524036c0693305a3b39af"
+    },
+    {
+      "source": "src/Effect4/Program/Ty.lean",
+      "expected": "2cef110fba1e4673e399699970e3ff1424579e2d2587415676e4b059e4cb9c23",
+      "actual": "2cef110fba1e4673e399699970e3ff1424579e2d2587415676e4b059e4cb9c23"
+    },
+    {
+      "source": "src/Effect4/Program/TyVariance.lean",
+      "expected": "2e4c66dc9b2b3479422b0c418403c402014af22b59658251bdb4b83ca9523eba",
+      "actual": "2e4c66dc9b2b3479422b0c418403c402014af22b59658251bdb4b83ca9523eba"
+    },
+    {
+      "source": "src/Effect4/Data/Row.lean",
+      "expected": "841c5ac64a4e02d4d21ce8efdd6260f806d6fb48e3e3de90be22a3b9b12dd8b2",
+      "actual": "841c5ac64a4e02d4d21ce8efdd6260f806d6fb48e3e3de90be22a3b9b12dd8b2"
+    },
+    {
+      "source": "src/Effect4/Data/Constructive.lean",
+      "expected": "3bfc821320c4a4a26849c45f2bd841f01d85ec1de974007a3628774f01f660f2",
+      "actual": "3bfc821320c4a4a26849c45f2bd841f01d85ec1de974007a3628774f01f660f2"
+    },
+    {
+      "source": "src/Effect4/Program/Eff.lean",
+      "expected": "caf8ea166cad93befc706128aa6862ab455ad3db52e4c42231de446e325fa70a",
+      "actual": "caf8ea166cad93befc706128aa6862ab455ad3db52e4c42231de446e325fa70a"
+    },
+    {
+      "source": "src/Effect4/Program/Decision.lean",
+      "expected": "1d4fb56c8d9b2b55920f08765abd142f36bd0885b4903071315923c0f5037ff7",
+      "actual": "1d4fb56c8d9b2b55920f08765abd142f36bd0885b4903071315923c0f5037ff7"
+    },
+    {
+      "source": "src/Effect4/Program/Record.lean",
+      "expected": "4a4ee953c4cd5b29be81309917ec4459bf0953755bc76fc0a19828f848e90029",
+      "actual": "4a4ee953c4cd5b29be81309917ec4459bf0953755bc76fc0a19828f848e90029"
+    },
+    {
+      "source": "src/Effect4/Program/UnionRule.lean",
+      "expected": "679946aa97bade28239cda6e3ffeb3f8d71a3253727d43b30468d72e41ae6fe8",
+      "actual": "679946aa97bade28239cda6e3ffeb3f8d71a3253727d43b30468d72e41ae6fe8"
+    },
+    {
+      "source": "src/Effect4/Machine/Key.lean",
+      "expected": "deab854d8699cffcffccecc334f9ac9ce671a705d121c27d004de56b582e728f",
+      "actual": "deab854d8699cffcffccecc334f9ac9ce671a705d121c27d004de56b582e728f"
+    },
+    {
+      "source": "src/Effect4/Program/NodeLenses.lean",
+      "expected": "2e51e3da6f98893018e3c805d38f5d47311b9a22f36269f2e7ee73f4540bb5be",
+      "actual": "2e51e3da6f98893018e3c805d38f5d47311b9a22f36269f2e7ee73f4540bb5be"
+    },
+    {
+      "source": "src/Effect4/Program/Node.lean",
+      "expected": "2e3721dfa23eff4f772c39efc728fb82b1eeccaba8fd8d1cd301cbc6514c8eb1",
+      "actual": "2e3721dfa23eff4f772c39efc728fb82b1eeccaba8fd8d1cd301cbc6514c8eb1"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/References.lean",
+      "expected": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708",
+      "actual": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708"
+    },
+    {
+      "source": "src/Effect4/Laws/Auto/RuleSets.lean",
+      "expected": "5a493d21f0884f3043c6e9c9162bd1acdeb7539fe9528a6d952719e4a6c75b30",
+      "actual": "5a493d21f0884f3043c6e9c9162bd1acdeb7539fe9528a6d952719e4a6c75b30"
+    },
+    {
+      "source": "src/Effect4/Laws/Api/ModuleReadable.lean",
+      "expected": "35e4c81945f9196fa424ac951081ece75770d7ff18447b32ed31e291b1ac21ce",
+      "actual": "35e4c81945f9196fa424ac951081ece75770d7ff18447b32ed31e291b1ac21ce"
+    },
+    {
+      "source": "src/Effect4/Laws/Api/Codegen.lean",
+      "expected": "570b5408d88537960e9564cefd44af9e0ecc56371f93673c57c171bda546754a",
+      "actual": "570b5408d88537960e9564cefd44af9e0ecc56371f93673c57c171bda546754a"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Admit.lean",
+      "expected": "9505354b003182c9b4f3b684e16d9ef6b08e9e21389229e717471e4c8e7e686b",
+      "actual": "9505354b003182c9b4f3b684e16d9ef6b08e9e21389229e717471e4c8e7e686b"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/SourceBindings.lean",
+      "expected": "33a938e819d607b02bf045e0fa81df0f2c92da9e1bc45d3f6801bfe762abf024",
+      "actual": "33a938e819d607b02bf045e0fa81df0f2c92da9e1bc45d3f6801bfe762abf024"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Bindings.lean",
+      "expected": "01a5d1a1750b141aea630b2efdfde86bafb725b40454109be7711c59d8f409c4",
+      "actual": "01a5d1a1750b141aea630b2efdfde86bafb725b40454109be7711c59d8f409c4"
+    },
+    {
+      "source": "src/Effect4/Codegen/Bindings.lean",
+      "expected": "7f66edfeebec699c417509d2bff5982cf5cefc349da0ced8946a919c15614138",
+      "actual": "7f66edfeebec699c417509d2bff5982cf5cefc349da0ced8946a919c15614138"
+    },
+    {
+      "source": "src/Effect4/Codegen/SourceBindings.lean",
+      "expected": "25a0aee51b5756456335e80cee9fe4e3bf700b7f5b9498ac693d2a2a27d63b9f",
+      "actual": "25a0aee51b5756456335e80cee9fe4e3bf700b7f5b9498ac693d2a2a27d63b9f"
+    },
+    {
+      "source": "src/Effect4/Codegen/Names.lean",
+      "expected": "843b35fc4adec1378b5af7a3304626a0bd95c5cd97bae1eb9bb17bae1a036f84",
+      "actual": "843b35fc4adec1378b5af7a3304626a0bd95c5cd97bae1eb9bb17bae1a036f84"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Checked.lean",
+      "expected": "5901be9bbba822d4104fb6858631e3b843533640f28071e4bb2d22ba984de9f9",
+      "actual": "5901be9bbba822d4104fb6858631e3b843533640f28071e4bb2d22ba984de9f9"
+    },
+    {
+      "source": "src/Effect4/Laws/Auto/Semantics.lean",
+      "expected": "7fc7719327725bf3a940528b1b371da150f10df49ce8e15d0c9fe4d803021382",
+      "actual": "7fc7719327725bf3a940528b1b371da150f10df49ce8e15d0c9fe4d803021382"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Services.lean",
+      "expected": "a985c3f5b38a66431afc75dc60e95d7a68297dd1864d5579a99ac94994dae37f",
+      "actual": "a985c3f5b38a66431afc75dc60e95d7a68297dd1864d5579a99ac94994dae37f"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/ReadLeaf.lean",
+      "expected": "8ba50660ab02dc88101a3c721355b99edb012f968c40a475dc85e856c585f682",
+      "actual": "8ba50660ab02dc88101a3c721355b99edb012f968c40a475dc85e856c585f682"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/ListFold.lean",
+      "expected": "0ca0e0c07f3719f964d759b17be523b70926af1c127642be62e622ce3d0011f4",
+      "actual": "0ca0e0c07f3719f964d759b17be523b70926af1c127642be62e622ce3d0011f4"
+    },
+    {
+      "source": "src/Effect4/Codegen/Classes.lean",
+      "expected": "c1f2e9476010899841e62736e48bc0ea7c07c0443bfd9191f758bc1ee67d9826",
+      "actual": "c1f2e9476010899841e62736e48bc0ea7c07c0443bfd9191f758bc1ee67d9826"
+    },
+    {
+      "source": "src/Effect4/Program/Formation.lean",
+      "expected": "8fdd3cd41ea88aac1851e6ad2f0ba05c941d91efc871da57b0d4a23ef9d47c19",
+      "actual": "8fdd3cd41ea88aac1851e6ad2f0ba05c941d91efc871da57b0d4a23ef9d47c19"
+    },
+    {
+      "source": "src/Effect4/Program/LayerView.lean",
+      "expected": "4214ad4e4ea2b0cbd9f60f42ec7c542ed42e33e00f5c9915f383febc937254d7",
+      "actual": "4214ad4e4ea2b0cbd9f60f42ec7c542ed42e33e00f5c9915f383febc937254d7"
+    },
+    {
+      "source": "src/Effect4/Codegen/Record.lean",
+      "expected": "8b594cbb23e894d5799bfd6aa853bf757a402e227b7dda6fc131df33b2fc2261",
+      "actual": "8b594cbb23e894d5799bfd6aa853bf757a402e227b7dda6fc131df33b2fc2261"
+    },
+    {
+      "source": "src/Effect4/Codegen/Types.lean",
+      "expected": "10edeeec4968a9f3e0852f481d339593aa32e01e99a7abcdd36841f398706489",
+      "actual": "10edeeec4968a9f3e0852f481d339593aa32e01e99a7abcdd36841f398706489"
+    },
+    {
+      "source": "src/Effect4/Codegen/Metadata.lean",
+      "expected": "bb4852b8936c7641df0bbd36ef2ad491875ae0e0817986f9dc6782bf400a6dc9",
+      "actual": "bb4852b8936c7641df0bbd36ef2ad491875ae0e0817986f9dc6782bf400a6dc9"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "expected": "9e322a84f10f7a18a16229c60c8d102fdf20c7ed252eef5d0b962815fd5952c5",
+      "actual": "9e322a84f10f7a18a16229c60c8d102fdf20c7ed252eef5d0b962815fd5952c5"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/RowCanonical.lean",
+      "expected": "4502c1d52187b809409019aba9058f79617d2ee49122bda5e7bdf816636568c0",
+      "actual": "4502c1d52187b809409019aba9058f79617d2ee49122bda5e7bdf816636568c0"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Canonical.lean",
+      "expected": "599a9631fc8bde3792613f055037a1b03709cf95c8c1d3048d3abd2e7f0802e7",
+      "actual": "599a9631fc8bde3792613f055037a1b03709cf95c8c1d3048d3abd2e7f0802e7"
+    },
+    {
+      "source": "src/Effect4/Schema/OfShape.lean",
+      "expected": "6b77227f45f373cc9f17ac30738a293b349f1c193df485810cf611209ec5e18b",
+      "actual": "6b77227f45f373cc9f17ac30738a293b349f1c193df485810cf611209ec5e18b"
+    },
+    {
+      "source": "src/Effect4/Schema/Authoring.lean",
+      "expected": "6bf759876b66a0c484b5a07ad85c803cace2e7f88abbd5f90c3100d112ffd904",
+      "actual": "6bf759876b66a0c484b5a07ad85c803cace2e7f88abbd5f90c3100d112ffd904"
+    },
+    {
+      "source": "src/Effect4/Schema/Document.lean",
+      "expected": "bc28ec0203e9577c4ba32493f24023ab61638e9bec6ff96979b0c5ea47c5a400",
+      "actual": "bc28ec0203e9577c4ba32493f24023ab61638e9bec6ff96979b0c5ea47c5a400"
+    },
+    {
+      "source": "src/Effect4/Schema/Annotations.lean",
+      "expected": "1e04c85bedcb8c94e7fcce49ea95c47ea26603c3f538763a1b4f3568d73fb43c",
+      "actual": "1e04c85bedcb8c94e7fcce49ea95c47ea26603c3f538763a1b4f3568d73fb43c"
+    },
+    {
+      "source": "src/Effect4/Schema/Representation.lean",
+      "expected": "9302c5e8eb5198b3fa8f0566dfaebf1b16061fb90e02e14366736498870121e9",
+      "actual": "9302c5e8eb5198b3fa8f0566dfaebf1b16061fb90e02e14366736498870121e9"
+    },
+    {
+      "source": "src/Effect4/Schema/Payload.lean",
+      "expected": "3ace09da54444d1a414c53ec2cb82c56e4e4ba7755089d926a112785667e790a",
+      "actual": "3ace09da54444d1a414c53ec2cb82c56e4e4ba7755089d926a112785667e790a"
+    },
+    {
+      "source": "src/Effect4/Data/Json.lean",
+      "expected": "60bc811e7ceec2f0bfed7bcd024595f3c8279a8218050bbf2d2f27866e205d1b",
+      "actual": "60bc811e7ceec2f0bfed7bcd024595f3c8279a8218050bbf2d2f27866e205d1b"
+    },
+    {
+      "source": "src/Effect4/Data/Optic.lean",
+      "expected": "1d5f33c3503b241459a606ac3a17ea62e90fb0e3a4cc4e26e2a5253024d303b7",
+      "actual": "1d5f33c3503b241459a606ac3a17ea62e90fb0e3a4cc4e26e2a5253024d303b7"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Shape.lean",
+      "expected": "221cdee4957361f03456d975b0479080586f42d5c7365559c0102f7d65e9e6e3",
+      "actual": "221cdee4957361f03456d975b0479080586f42d5c7365559c0102f7d65e9e6e3"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Digest.lean",
+      "expected": "b5fbfe076e6ef0d9c7f7a7977c6b4b29a4d987994b199508e3b0679a106fb645",
+      "actual": "b5fbfe076e6ef0d9c7f7a7977c6b4b29a4d987994b199508e3b0679a106fb645"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Kind.lean",
+      "expected": "616e49802c678488e6391ba7b3661059f9772fe2df9a648082d222c0c2c1a72d",
+      "actual": "616e49802c678488e6391ba7b3661059f9772fe2df9a648082d222c0c2c1a72d"
+    },
+    {
+      "source": "src/Effect4/Data/JsonNumber.lean",
+      "expected": "8929ea19fc2d49baa069f5058d83c722a81640cad649ab7cc99122e42e0c9425",
+      "actual": "8929ea19fc2d49baa069f5058d83c722a81640cad649ab7cc99122e42e0c9425"
+    },
+    {
+      "source": "src/Effect4/Program/Native.lean",
+      "expected": "55ade7bde4176e22f845228b583653396826cb1deb801b1ef1007e557e26fb4a",
+      "actual": "55ade7bde4176e22f845228b583653396826cb1deb801b1ef1007e557e26fb4a"
+    },
+    {
+      "source": "src/Effect4/Machine/Stores.lean",
+      "expected": "3c45a5f53c8c53bda4e1837c932741143c4afe90dd8cdb8422a184e22e053677",
+      "actual": "3c45a5f53c8c53bda4e1837c932741143c4afe90dd8cdb8422a184e22e053677"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Image/Containers.lean",
+      "expected": "667920bc87b566ae94c396baab6ef9581810c130921ad527e8f079d68bd4c947",
+      "actual": "667920bc87b566ae94c396baab6ef9581810c130921ad527e8f079d68bd4c947"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Image/Record.lean",
+      "expected": "08343666e85ee849151b25c87e179e84b9fdc54bc23e99c4a2427a7c40575305",
+      "actual": "08343666e85ee849151b25c87e179e84b9fdc54bc23e99c4a2427a7c40575305"
+    },
+    {
+      "source": "src/Effect4/Machine/Timer.lean",
+      "expected": "a2a91cda5746f0b20498b9c22b6ac04732a52010b41e649b5b7c61b528c1b578",
+      "actual": "a2a91cda5746f0b20498b9c22b6ac04732a52010b41e649b5b7c61b528c1b578"
+    },
+    {
+      "source": "src/Effect4/Data/ClockMillis.lean",
+      "expected": "5d193515287b06b02ff5d1ebb93ca7a57b673c453b39e10200e04c009b6ff1c9",
+      "actual": "5d193515287b06b02ff5d1ebb93ca7a57b673c453b39e10200e04c009b6ff1c9"
+    },
+    {
+      "source": "src/Effect4/Data/Ascii.lean",
+      "expected": "777f9f0fbde266d6349177c8ba478130d799747dca8cb6eb6ae210cfe4a7b7b2",
+      "actual": "777f9f0fbde266d6349177c8ba478130d799747dca8cb6eb6ae210cfe4a7b7b2"
+    },
+    {
+      "source": "src/Effect4/Machine/ContextMap.lean",
+      "expected": "abc3af7887ba5c96dba804f58e2597cebe6328ae0d6b06c6ee272359edf5ac0f",
+      "actual": "abc3af7887ba5c96dba804f58e2597cebe6328ae0d6b06c6ee272359edf5ac0f"
+    },
+    {
+      "source": "src/Effect4/Machine/Scope.lean",
+      "expected": "74037fd3857d5266300a2a3677d71f7bc871f823da712b1e2d5b0c90adefac5c",
+      "actual": "74037fd3857d5266300a2a3677d71f7bc871f823da712b1e2d5b0c90adefac5c"
+    },
+    {
+      "source": "src/Effect4/Machine/Fibers.lean",
+      "expected": "038f424e682f830d61b716748ef3d05cfe7cc940e02c8d4ae2e6b8d92e9b8327",
+      "actual": "038f424e682f830d61b716748ef3d05cfe7cc940e02c8d4ae2e6b8d92e9b8327"
+    },
+    {
+      "source": "src/Effect4/Machine/Frames.lean",
+      "expected": "d63071625c8018e33547cb79915a2fec2da9147c8a8afc017f6ba315fa74f117",
+      "actual": "d63071625c8018e33547cb79915a2fec2da9147c8a8afc017f6ba315fa74f117"
+    },
+    {
+      "source": "src/Effect4/Program/FnName.lean",
+      "expected": "5ba1943d824ad6a7fb8a2e4bbbb4d40350fe2f80582037239460f99cb271aef4",
+      "actual": "5ba1943d824ad6a7fb8a2e4bbbb4d40350fe2f80582037239460f99cb271aef4"
+    },
+    {
+      "source": "src/Effect4/Program/Typing.lean",
+      "expected": "5166da3ef9d94180e06a1c8838d6da6f1e67f3637607ed7faf72484327f01f31",
+      "actual": "5166da3ef9d94180e06a1c8838d6da6f1e67f3637607ed7faf72484327f01f31"
+    },
+    {
+      "source": "src/Effect4/Program/Definitions.lean",
+      "expected": "a4b212f7856aa0bd331612e2959e9b3f6e15f56f1155e2b688dc6db610d3b402",
+      "actual": "a4b212f7856aa0bd331612e2959e9b3f6e15f56f1155e2b688dc6db610d3b402"
+    },
+    {
+      "source": "src/Effect4/Program/Checker.lean",
+      "expected": "6ea19d1714ea8efd0cdaa490955137c3e7f6edcecedd255d46c453acb8a9a1c2",
+      "actual": "6ea19d1714ea8efd0cdaa490955137c3e7f6edcecedd255d46c453acb8a9a1c2"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/Blame.lean",
+      "expected": "13fee07fb06fdd5fd67b6bc5dcf9c96198d6265654c50555b487cff6e2553dfa",
+      "actual": "13fee07fb06fdd5fd67b6bc5dcf9c96198d6265654c50555b487cff6e2553dfa"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/TermRefusal.lean",
+      "expected": "de36cd16aea81d86bd2a4d943bce05dc1e517efb9f24f25ce09ad1c97829d82e",
+      "actual": "de36cd16aea81d86bd2a4d943bce05dc1e517efb9f24f25ce09ad1c97829d82e"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/Rules.lean",
+      "expected": "3d0ba883366d95889118626efc87e936b6dbe3841f8a861707654faa7bf27d55",
+      "actual": "3d0ba883366d95889118626efc87e936b6dbe3841f8a861707654faa7bf27d55"
+    },
+    {
+      "source": "src/Effect4/Machine/Context.lean",
+      "expected": "11c48c3c7154077904838b2adfb4dd32a31d13908a0e1f38c9970dd7ccbe66fc",
+      "actual": "11c48c3c7154077904838b2adfb4dd32a31d13908a0e1f38c9970dd7ccbe66fc"
+    },
+    {
+      "source": "src/Effect4/Program/Bounds.lean",
+      "expected": "e8cc96f2b52060a609aef96fdda23f3543aa4d38a8ac2a65edaacadf4da0dc6a",
+      "actual": "e8cc96f2b52060a609aef96fdda23f3543aa4d38a8ac2a65edaacadf4da0dc6a"
+    },
+    {
+      "source": "src/Effect4/Program/Tuple.lean",
+      "expected": "7511edf34a2b071bc540fe1cc03ee5713de7124148b62e15cf034900f9155735",
+      "actual": "7511edf34a2b071bc540fe1cc03ee5713de7124148b62e15cf034900f9155735"
+    },
+    {
+      "source": "src/Effect4/Program/ErrorImage.lean",
+      "expected": "cd52f7d8d778b6f6e3fc5d1b65ecd6adaf059ac5ba6fd90bcd4d50f9f83e3206",
+      "actual": "cd52f7d8d778b6f6e3fc5d1b65ecd6adaf059ac5ba6fd90bcd4d50f9f83e3206"
+    },
+    {
+      "source": "src/Effect4/Program/NativeAtom.lean",
+      "expected": "89bc304b7635ced4f8c818edaf46dfbf7d78e64b5b820497cf62b45098272e4d",
+      "actual": "89bc304b7635ced4f8c818edaf46dfbf7d78e64b5b820497cf62b45098272e4d"
+    },
+    {
+      "source": "src/Effect4/Program/AtomInventory.lean",
+      "expected": "73614e957b1e21fc561176f5862a579bc4f6c8860ad9707b0ca5256b71a6b2ab",
+      "actual": "73614e957b1e21fc561176f5862a579bc4f6c8860ad9707b0ca5256b71a6b2ab"
+    },
+    {
+      "source": "src/Effect4/Store/Carrier/Fold.lean",
+      "expected": "1d13a625fa8e91da1084a9e4fdc7180d6e6da690cea038f837cbea3225f23055",
+      "actual": "1d13a625fa8e91da1084a9e4fdc7180d6e6da690cea038f837cbea3225f23055"
+    },
+    {
+      "source": "src/Effect4/Codegen/Tuple.lean",
+      "expected": "58c81b54fa828e0edc27c0a5c59dc79da72d548efe8025ca7a7a02425c4dd601",
+      "actual": "58c81b54fa828e0edc27c0a5c59dc79da72d548efe8025ca7a7a02425c4dd601"
+    },
+    {
+      "source": "src/Effect4/Data/NatDecimal.lean",
+      "expected": "d3883a2da61a1a3b0c5575d08f76b900c9b279732f5b3c1e96559ad5ebc5c1e2",
+      "actual": "d3883a2da61a1a3b0c5575d08f76b900c9b279732f5b3c1e96559ad5ebc5c1e2"
+    },
+    {
+      "source": "src/Effect4/Codegen/ListFold.lean",
+      "expected": "43cc68d7eeb5a6d73158efcb332241a0f6eeeea0f57e2ebafec780783d0a4aa1",
+      "actual": "43cc68d7eeb5a6d73158efcb332241a0f6eeeea0f57e2ebafec780783d0a4aa1"
+    },
+    {
+      "source": "src/Effect4/Codegen/Template.lean",
+      "expected": "ff3431263198e2e01030a966ba152931b898113cd0ffbd9034377888ff6c6f47",
+      "actual": "ff3431263198e2e01030a966ba152931b898113cd0ffbd9034377888ff6c6f47"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Classes.lean",
+      "expected": "07df50ec5311734a146e9a04f6ee41c556e66ad1a4df05cb335d0f4441251738",
+      "actual": "07df50ec5311734a146e9a04f6ee41c556e66ad1a4df05cb335d0f4441251738"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Record.lean",
+      "expected": "468e36a87e6f4a8731728609daa553e977e9207ab2f7b87fba1075e9a3e3c1e8",
+      "actual": "468e36a87e6f4a8731728609daa553e977e9207ab2f7b87fba1075e9a3e3c1e8"
+    },
+    {
+      "source": "src/Effect4/Laws/Auto/Inversion.lean",
+      "expected": "ef041007ba7a29cc8e5f3807d9613b2cf0ae32f09d347536603a7dfc021a821b",
+      "actual": "ef041007ba7a29cc8e5f3807d9613b2cf0ae32f09d347536603a7dfc021a821b"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Metadata.lean",
+      "expected": "5d16b62626a921f1f9cc523e7451de478e09d127c57c63f259894b7f1a24d42f",
+      "actual": "5d16b62626a921f1f9cc523e7451de478e09d127c57c63f259894b7f1a24d42f"
+    },
+    {
+      "source": "src/Effect4/Codegen/ClassTable.lean",
+      "expected": "76092d8904d9e866080fef972af5ed6125f8b0eca0fe5b1200aa59591cc64e9a",
+      "actual": "76092d8904d9e866080fef972af5ed6125f8b0eca0fe5b1200aa59591cc64e9a"
+    },
+    {
+      "source": "src/Effect4/Codegen/PrintLeaf.lean",
+      "expected": "c121b8bb67edbb634a2b7017853324f0cc88bf0cd47df6517775ddad4ab95475",
+      "actual": "c121b8bb67edbb634a2b7017853324f0cc88bf0cd47df6517775ddad4ab95475"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Tuple.lean",
+      "expected": "0122974ffda6e77359cc5855313eee90fd60c44c9435fd055e0aa844e13c487b",
+      "actual": "0122974ffda6e77359cc5855313eee90fd60c44c9435fd055e0aa844e13c487b"
+    },
+    {
+      "source": "src/Effect4/Laws/Data/NatDecimal.lean",
+      "expected": "624e1448e965813bee57fdd215344507e769231a175b138f6bc687566991ea76",
+      "actual": "624e1448e965813bee57fdd215344507e769231a175b138f6bc687566991ea76"
+    },
+    {
+      "source": "src/Effect4/Codegen/Read.lean",
+      "expected": "f62af192a6d40223281d68242c8da42b8b208c015b1f7a08b18e3bbc7c21286f",
+      "actual": "f62af192a6d40223281d68242c8da42b8b208c015b1f7a08b18e3bbc7c21286f"
+    },
+    {
+      "source": "src/Effect4/Program/Table.lean",
+      "expected": "7f42c044fd545990f342fdf786aa1515b73903a3768f945d06b6f1890222f418",
+      "actual": "7f42c044fd545990f342fdf786aa1515b73903a3768f945d06b6f1890222f418"
+    },
+    {
+      "source": "src/Effect4/Codegen/Templates.lean",
+      "expected": "23440978faa16b1d8798dcb1336c3ba586e6fee8411e429650e279447ed1fe25",
+      "actual": "23440978faa16b1d8798dcb1336c3ba586e6fee8411e429650e279447ed1fe25"
+    },
+    {
+      "source": "src/Effect4/Codegen/Print.lean",
+      "expected": "f8233d800d2f638f03f2c89182f1d7e49de62701c45b8e90360a8e3ccd7b19bc",
+      "actual": "f8233d800d2f638f03f2c89182f1d7e49de62701c45b8e90360a8e3ccd7b19bc"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "expected": "d28e220c74fd6c5f6a3167ab93e21f256b0151c8c8bdbc12666b65f24075b3c2",
+      "actual": "d28e220c74fd6c5f6a3167ab93e21f256b0151c8c8bdbc12666b65f24075b3c2"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Definitions.lean",
+      "expected": "6d27ddeb64c7be9979868ef79c77cf9a2b86f5dbb7a03fd5839c9edc8d18fe00",
+      "actual": "6d27ddeb64c7be9979868ef79c77cf9a2b86f5dbb7a03fd5839c9edc8d18fe00"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Typing/Sound.lean",
+      "expected": "9a91398be3db0956bb37c7c1072067666955e9c8d2cce3925fd9f244813c7378",
+      "actual": "9a91398be3db0956bb37c7c1072067666955e9c8d2cce3925fd9f244813c7378"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Typing/CheckSound.lean",
+      "expected": "e46dc9da8e455da1bb1c7af878f0f97340c814b59095b70d66a01e41c8908191",
+      "actual": "e46dc9da8e455da1bb1c7af878f0f97340c814b59095b70d66a01e41c8908191"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Typing/CheckInversion.lean",
+      "expected": "a770bfe098d045162c90af96292bcd36865696915088f5a16635868b06c28fc1",
+      "actual": "a770bfe098d045162c90af96292bcd36865696915088f5a16635868b06c28fc1"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Typing/HasTy.lean",
+      "expected": "0cbb79c778911b82c69b74b7be66c97e5ae81da4319ccbffb9f768e1cb313e9e",
+      "actual": "0cbb79c778911b82c69b74b7be66c97e5ae81da4319ccbffb9f768e1cb313e9e"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Signature.lean",
+      "expected": "b2e6ecb3b87a124fed1697978634bdd0bb4fa2f112fe8752b1d781d1fc0c58bf",
+      "actual": "b2e6ecb3b87a124fed1697978634bdd0bb4fa2f112fe8752b1d781d1fc0c58bf"
+    },
+    {
+      "source": "src/Effect4/Program/SigApp.lean",
+      "expected": "1044807d77339dc6a22d99195ce02d3913cd7da307e8e10cbef1dc079a4cc400",
+      "actual": "1044807d77339dc6a22d99195ce02d3913cd7da307e8e10cbef1dc079a4cc400"
+    },
+    {
+      "source": "src/Effect4/Program/Columns.lean",
+      "expected": "7635389a99759ba1d892ea0c1f7efcdeb9fc1e281d4082974112bfa6f59721fe",
+      "actual": "7635389a99759ba1d892ea0c1f7efcdeb9fc1e281d4082974112bfa6f59721fe"
+    },
+    {
+      "source": "src/Effect4/Program/Typed.lean",
+      "expected": "b1ff9e8a6b4a6eb626218cb94889e7afa0eb09870650439d058ac54ed6513615",
+      "actual": "b1ff9e8a6b4a6eb626218cb94889e7afa0eb09870650439d058ac54ed6513615"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Template.lean",
+      "expected": "084ed00f41e7d4fe908645214ffe8396bcd26a2256e0eb872d76b2a5f3f36380",
+      "actual": "084ed00f41e7d4fe908645214ffe8396bcd26a2256e0eb872d76b2a5f3f36380"
+    },
+    {
+      "source": "src/Effect4/Laws/Auto/Obligations.lean",
+      "expected": "55b82b2b31842bf6f357462c17d4e13ab7e229cfa541095758fccbfc71b18db3",
+      "actual": "55b82b2b31842bf6f357462c17d4e13ab7e229cfa541095758fccbfc71b18db3"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/TypeAlgebra.lean",
+      "expected": "43af0c7b29695e5f75e9f03fbaf9296ae27505bbd4020124b31f87e088cc3015",
+      "actual": "43af0c7b29695e5f75e9f03fbaf9296ae27505bbd4020124b31f87e088cc3015"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Order.lean",
+      "expected": "e43050fe1bb46ae24fa6197492a4778b759a79e0798f14d9b24f778076cad365",
+      "actual": "e43050fe1bb46ae24fa6197492a4778b759a79e0798f14d9b24f778076cad365"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Admits.lean",
+      "expected": "ec75e8c4482586803ea3739bb50f4f865d858ef83be491b46ad7bc4c0d195cf9",
+      "actual": "ec75e8c4482586803ea3739bb50f4f865d858ef83be491b46ad7bc4c0d195cf9"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/TyView.lean",
+      "expected": "76a5db8b847839abec682eea3ecc31e2c8e01878bae3974430fea8dab5e5abf6",
+      "actual": "76a5db8b847839abec682eea3ecc31e2c8e01878bae3974430fea8dab5e5abf6"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Folds/Ty.lean",
+      "expected": "d65d43c25da207afac27f5d7c2af1f94fa47fe2ad47eaff8969ee56e366ddc94",
+      "actual": "d65d43c25da207afac27f5d7c2af1f94fa47fe2ad47eaff8969ee56e366ddc94"
+    },
+    {
+      "source": "src/Effect4/Schema/Codec.lean",
+      "expected": "2f417e14d292b815e12bcb6ac6f100ca2eea91a19386ce5feaf2f8c3f97add21",
+      "actual": "2f417e14d292b815e12bcb6ac6f100ca2eea91a19386ce5feaf2f8c3f97add21"
+    },
+    {
+      "source": "src/Effect4/Program/Profile.lean",
+      "expected": "034babfc0b860b172c0e94375f7f46fc4a211812b5b2b992cc3a14cf436bff64",
+      "actual": "034babfc0b860b172c0e94375f7f46fc4a211812b5b2b992cc3a14cf436bff64"
+    },
+    {
+      "source": "src/Effect4/Schema/Bridge.lean",
+      "expected": "f31d9c39b6f33876214e938f0b1da98bdb3c469ee7f1803284c99d79a211e473",
+      "actual": "f31d9c39b6f33876214e938f0b1da98bdb3c469ee7f1803284c99d79a211e473"
+    },
+    {
+      "source": "src/Effect4/Schema/Fold.lean",
+      "expected": "03600a5b78520d65c791d19144d08f92f52d3417ba05934a2f5f3ae9238cb7f3",
+      "actual": "03600a5b78520d65c791d19144d08f92f52d3417ba05934a2f5f3ae9238cb7f3"
+    },
+    {
+      "source": "src/Effect4/Program/Admission.lean",
+      "expected": "17b71f70d71ba753107cc126fd5b5568bd5b1fd98a8910ce8f4a0a840413b015",
+      "actual": "17b71f70d71ba753107cc126fd5b5568bd5b1fd98a8910ce8f4a0a840413b015"
+    },
+    {
+      "source": "src/Effect4/Program/Fragment.lean",
+      "expected": "e168ddfd3448df3aaf8fea364ec12087ceb17f495ccdf51259624ac04b5d7d82",
+      "actual": "e168ddfd3448df3aaf8fea364ec12087ceb17f495ccdf51259624ac04b5d7d82"
+    },
+    {
+      "source": "src/Effect4/Program/CheckedTyping.lean",
+      "expected": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75",
+      "actual": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75"
+    },
+    {
+      "source": "src/Effect4/Program/FoldOf.lean",
+      "expected": "69bcc1d32abf4af2315c065dcd986f9953086635eb86b9cfe14ff760ded2154c",
+      "actual": "69bcc1d32abf4af2315c065dcd986f9953086635eb86b9cfe14ff760ded2154c"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Folds/Checker.lean",
+      "expected": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "actual": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "expected": "55eb2e0cc1ce10e933be4d24329f6c20517fa999d392225aaa70792a9c5649df",
+      "actual": "55eb2e0cc1ce10e933be4d24329f6c20517fa999d392225aaa70792a9c5649df"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "expected": "1dde88617d32403c3712aa1d5402068d4b191d1900ca1a92eedbd9385fe35f69",
+      "actual": "1dde88617d32403c3712aa1d5402068d4b191d1900ca1a92eedbd9385fe35f69"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/PathFold.lean",
+      "expected": "a4fd20f2d58257fc8b486be556f2012655261b6be69d70fbf8f21ed4f9d8e962",
+      "actual": "a4fd20f2d58257fc8b486be556f2012655261b6be69d70fbf8f21ed4f9d8e962"
+    },
+    {
+      "source": "src/Effect4/Codegen/Checked.lean",
+      "expected": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+      "actual": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad"
+    },
+    {
+      "source": "src/Effect4/Codegen/Admit.lean",
+      "expected": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+      "actual": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781"
+    },
+    {
+      "source": "src/Effect4/Api.lean",
+      "expected": "e69fe8574de3c7d80beb07526f792d1e606fa6d6864531d93db74779b6e97aa0",
+      "actual": "e69fe8574de3c7d80beb07526f792d1e606fa6d6864531d93db74779b6e97aa0"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Cascade.lean",
+      "expected": "8944ca3b40680db395e670eb62360dbf68d5ab9649ef2700da976d0bdcd1928f",
+      "actual": "8944ca3b40680db395e670eb62360dbf68d5ab9649ef2700da976d0bdcd1928f"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Store.lean",
+      "expected": "c29f8d890559be292cdaa16681b074ce60087d5a3a4538ea089017c755b3cd08",
+      "actual": "c29f8d890559be292cdaa16681b074ce60087d5a3a4538ea089017c755b3cd08"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Node.lean",
+      "expected": "164577f9fc408eb8d02bac7e44fc015158497e1491d01a0cce15f34060b2a638",
+      "actual": "164577f9fc408eb8d02bac7e44fc015158497e1491d01a0cce15f34060b2a638"
+    },
+    {
+      "source": "src/Effect4/Codegen/Target.lean",
+      "expected": "af175df86d9fc90137dca60d4d10fb4c369e8b59740b1efc5331a62b7980bb4b",
+      "actual": "af175df86d9fc90137dca60d4d10fb4c369e8b59740b1efc5331a62b7980bb4b"
+    },
+    {
+      "source": "src/Effect4/Codegen/Schema.lean",
+      "expected": "4c1caec39b5f15d5222a9bb8eee4fda2221b67f4a4d2a707be6fe55ddb895a02",
+      "actual": "4c1caec39b5f15d5222a9bb8eee4fda2221b67f4a4d2a707be6fe55ddb895a02"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/ProgramWire.lean",
+      "expected": "b79062b8d8ab1c1573f5cd6241af7e1eeb22c1725b739d5c7892d4245993236a",
+      "actual": "b79062b8d8ab1c1573f5cd6241af7e1eeb22c1725b739d5c7892d4245993236a"
+    },
+    {
+      "source": "src/Effect4/Program/Packages.lean",
+      "expected": "554649f626a21101de442d562037e92eb02192e0b7e002150b6379b703c9d6f9",
+      "actual": "554649f626a21101de442d562037e92eb02192e0b7e002150b6379b703c9d6f9"
+    },
+    {
+      "source": "src/Effect4/Program/Packages/KeyValueStoreMemory.lean",
+      "expected": "1694e1e942c637ab82b5a5e4e41be7a7764ddaec23c443f827be5226d5b7c500",
+      "actual": "1694e1e942c637ab82b5a5e4e41be7a7764ddaec23c443f827be5226d5b7c500"
+    },
+    {
+      "source": "src/Effect4/Program/Packages/SqliteBun.lean",
+      "expected": "258240b381fcc19d92e8de4c620f1a2636eecc020af037c29e149cab9fcbac71",
+      "actual": "258240b381fcc19d92e8de4c620f1a2636eecc020af037c29e149cab9fcbac71"
+    },
+    {
+      "source": "src/Effect4/Api/Derived.lean",
+      "expected": "2815a83cbab938f6df5b5a6d766be51eb818711c487e7330dd2e46981d4c2895",
+      "actual": "2815a83cbab938f6df5b5a6d766be51eb818711c487e7330dd2e46981d4c2895"
+    },
+    {
+      "source": "src/Effect4/Store/Domain/Clock.lean",
+      "expected": "f897287779b083b6cab823191994e3f16a4dcdfb1d76731d97e471f492024195",
+      "actual": "f897287779b083b6cab823191994e3f16a4dcdfb1d76731d97e471f492024195"
+    },
+    {
+      "source": "src/Effect4/Api/Frontier.lean",
+      "expected": "9b8bab76e8969f0d21d3732f5f73912d85efb03cdf65835bd1ac2e018c18e506",
+      "actual": "9b8bab76e8969f0d21d3732f5f73912d85efb03cdf65835bd1ac2e018c18e506"
+    },
+    {
+      "source": "src/Effect4/Program/Admit.lean",
+      "expected": "7d7a57cc75b25466658ae39554bf3289c8813dd83bc1bb1accce25486e886ef3",
+      "actual": "7d7a57cc75b25466658ae39554bf3289c8813dd83bc1bb1accce25486e886ef3"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/Call.lean",
+      "expected": "10507b9bd38fd3213967f74399b63c1f82adc3e05a751ae1da6fb63c5be2df25",
+      "actual": "10507b9bd38fd3213967f74399b63c1f82adc3e05a751ae1da6fb63c5be2df25"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/Table.lean",
+      "expected": "6a8a856b8c0e5174544dfbca1fda93af616ddc82daf52e4bc7e73bd8ec8d3a04",
+      "actual": "6a8a856b8c0e5174544dfbca1fda93af616ddc82daf52e4bc7e73bd8ec8d3a04"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/Focus.lean",
+      "expected": "689ac84c53a93462b9952aed1d29fc4b3b52aa2241d52463ef47cc959b5a4e88",
+      "actual": "689ac84c53a93462b9952aed1d29fc4b3b52aa2241d52463ef47cc959b5a4e88"
+    },
+    {
+      "source": "src/Effect4/Program/Compile.lean",
+      "expected": "0f61f1c7fd9e25f3817b7cddecf2bfc16686eda0ca0ff011ad4453e8fa300e73",
+      "actual": "0f61f1c7fd9e25f3817b7cddecf2bfc16686eda0ca0ff011ad4453e8fa300e73"
+    },
+    {
+      "source": "src/Effect4/Program/Authoring/Folds.lean",
+      "expected": "760b18bc62745818c74d8a51add98d68aee17513774cf93d646a4464724768a7",
+      "actual": "760b18bc62745818c74d8a51add98d68aee17513774cf93d646a4464724768a7"
+    },
+    {
+      "source": "src/Effect4/Program/Authoring.lean",
+      "expected": "247f7a95d79920359964715015b41ee664ff33338bd63d63d4296599e9b26f08",
+      "actual": "247f7a95d79920359964715015b41ee664ff33338bd63d63d4296599e9b26f08"
+    },
+    {
+      "source": "src/Effect4/Program/Authoring/Tuples.lean",
+      "expected": "171a991c24fd62b0f0bba4f2538d6169544e26634ebf9508d97d4da126fee5cf",
+      "actual": "171a991c24fd62b0f0bba4f2538d6169544e26634ebf9508d97d4da126fee5cf"
+    },
+    {
+      "source": "src/Effect4/Program/Authoring/Maps.lean",
+      "expected": "8efb389e18953a4ba3c11e817e5a1ae7b62ca016670ece859cb35dffa212c6c5",
+      "actual": "8efb389e18953a4ba3c11e817e5a1ae7b62ca016670ece859cb35dffa212c6c5"
+    },
+    {
+      "source": "src/Effect4/Program/Authoring/Records.lean",
+      "expected": "f9a94903d05212ea4f7ebdb83fee6c3f94d35a6c8de9f03e060771b6470530a6",
+      "actual": "f9a94903d05212ea4f7ebdb83fee6c3f94d35a6c8de9f03e060771b6470530a6"
+    },
+    {
+      "source": "src/Effect4/Program/Authoring/Lifts.lean",
+      "expected": "9dbb32a9a0f8359dcd6f1e31cd4b532d4ef724c2726677fa8b02a07eab2e42d0",
+      "actual": "9dbb32a9a0f8359dcd6f1e31cd4b532d4ef724c2726677fa8b02a07eab2e42d0"
+    },
+    {
+      "source": "src/Effect4/Program/Typing/Agreement.lean",
+      "expected": "17a1d04b11a2b2398df2b32348f56378654820fe8b5d00d1e905db4158768f8c",
+      "actual": "17a1d04b11a2b2398df2b32348f56378654820fe8b5d00d1e905db4158768f8c"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Definitions.lean",
+      "expected": "e67933244dd3d980b0122ce0f718b2e8de98c8debba6505677c7b4c51163d82f",
+      "actual": "e67933244dd3d980b0122ce0f718b2e8de98c8debba6505677c7b4c51163d82f"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/PrintReadable.lean",
+      "expected": "3da6682c5133645f8d4d0fcd64e2ee17a97a2771780d271abe6f34f6d740e98b",
+      "actual": "3da6682c5133645f8d4d0fcd64e2ee17a97a2771780d271abe6f34f6d740e98b"
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Size.lean",
+      "expected": "1f54bbdc4238e6e97940cd67354303274941a16718bfddb4a5d0cdc1e8f2e897",
+      "actual": "1f54bbdc4238e6e97940cd67354303274941a16718bfddb4a5d0cdc1e8f2e897"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+      "expected": "2097a610dad9406f587d2a778b5005a41f992bc9be157958831ad1dae684c60a",
+      "actual": "2097a610dad9406f587d2a778b5005a41f992bc9be157958831ad1dae684c60a"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Read.lean",
+      "expected": "fd528c82fef59c5399925b3cbef0ca76574e1275e13ed1cd9e7fc16b9edcb746",
+      "actual": "fd528c82fef59c5399925b3cbef0ca76574e1275e13ed1cd9e7fc16b9edcb746"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Template.lean",
+      "expected": "384fda41e9a68cb53a0622bea4be50de2734350c54e94b3d044f7102cb113a69",
+      "actual": "384fda41e9a68cb53a0622bea4be50de2734350c54e94b3d044f7102cb113a69"
+    },
+    {
+      "source": "src/Effect4/Laws/Api/ModuleReadable.lean",
+      "expected": "35e4c81945f9196fa424ac951081ece75770d7ff18447b32ed31e291b1ac21ce",
+      "actual": "35e4c81945f9196fa424ac951081ece75770d7ff18447b32ed31e291b1ac21ce"
+    },
+    {
+      "source": "src/Effect4/Laws/Codegen/Module.lean",
+      "expected": "318b9c5da37cc6b229b0c51cc53b5dd8ce568f8a23a3b5ff8b2b0c50f4d2c265",
+      "actual": "318b9c5da37cc6b229b0c51cc53b5dd8ce568f8a23a3b5ff8b2b0c50f4d2c265"
+    },
+    {
+      "source": "scripts/lib/conservativity.py",
+      "expected": "a700535d6e5ae121064ea2b9d8b6793078016460ab15f02239167b462f37a456",
+      "actual": "a700535d6e5ae121064ea2b9d8b6793078016460ab15f02239167b462f37a456"
+    },
+    {
+      "source": "Test/fixtures/conservativity/mutations.json",
+      "expected": "fd6679373dc8590f6cb96663905413c30367855f7d61bc3865fac645fb7ff0ea",
+      "actual": "fd6679373dc8590f6cb96663905413c30367855f7d61bc3865fac645fb7ff0ea"
+    }
+  ],
+  "mismatches": []
+}
