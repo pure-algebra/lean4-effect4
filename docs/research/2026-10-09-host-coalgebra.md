@@ -334,9 +334,14 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   programs, compose, and make a host that meets the lower protocol meet the upper one
   (`Comodel.Meets.through`). So a stack of layers, each checked against its two protocols,
   needs only a host at its foot that meets the last one. The package's gate, parity receipt and
-  trust probes pass. Effect4 still pins `b0dd607`: moving the pin rebuilds the H8 chain, so it
-  moves with the next change at the law graph's base. Its consumer is a typed layer under the
-  row protocol: then `guardRows` changes nothing (`guardRows_of_meets`).
+  trust probes pass.
+- **Typed layers drive runs with no guard** (`src/Effect4/Laws/Api/HostDrive.lean`; Effect4 now
+  pins `Effects` v0.10.0, `24a91a1`). Take a layer typed from the rows' protocol to a lower one,
+  over a host that meets the lower protocol. The layered host is its own guard
+  (`hostGuard_through`). So H9 holds at the driver for it (`runWith_layer_denotes`). A retry is
+  typed at every protocol (`retry_typed`). The battery's flaky repository fails every other
+  call as locked. Behind the retry, it drives the to-do runs to the plain exits; without it, the
+  first call fails. The pin move rebuilt the law graph in under three minutes.
 - **CO-7's generic half: `Effects` v0.10.0** (`lean4-effects` commit `24a91a1`, local). An
   indexed signature has worlds, the operations each world offers, their answers, and the world
   after each answer (`ISignature`). Its programs end with a value whose type depends on the final

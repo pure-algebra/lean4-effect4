@@ -53,10 +53,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
   theorem: `drive_seg` (`src/Effect4/Laws/Program/Agreement/Segment.lean`). It relates a segment
   of commands to the local run with calls and counts its steps. `run_eq_meaning` follows from it.
 - **The coalgebra layer** (the [coalgebra note](research/2026-10-09-host-coalgebra.md)). The
-  `Effects` package, version 0.9.0, holds systems, bisimulations, protocols and runs. It holds
+  `Effects` package, version 0.10.0, holds systems, bisimulations, protocols and runs. It holds
   hosts as comodels, which compose by routing, renaming, admission, recording, and implementation
-  by programs over other operations. It is committed on branch `coalgebra` of `~/Dev/lean4-effects`
-  and pinned here, unpushed: push `lean4-effects` before this branch.
+  by programs over other operations. Typed handlers compose (0.9.1), and indexed signatures give
+  protocols of a higher order, where an answer opens operations (0.10.0). It is committed on
+  branch `coalgebra` of `~/Dev/lean4-effects` and pinned here, unpushed: push `lean4-effects`
+  before this branch. Any host of the row signature drives a run (`Reactor.ofHost`). A typed
+  layer over a host that meets its lower protocol needs no guard (`runWith_layer_denotes`).
 - **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import

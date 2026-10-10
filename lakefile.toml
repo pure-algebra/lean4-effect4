@@ -239,13 +239,14 @@ globs = ["Test.Dogfood.+"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The generic effect algebra, morphisms, transport, families, the shared trace
-# alphabet, and the coalgebra layer (systems, bisimulations, hosts as comodels).
-# Exact commit of v0.9.0 of pure-algebra/lean4-effects (branch `coalgebra`,
-# committed locally 2026-10-09; push it before this repository's branch).
+# alphabet, and the coalgebra layer (systems, bisimulations, hosts as comodels,
+# typed handlers, indexed signatures). Exact commit of v0.10.0 of
+# pure-algebra/lean4-effects (branch `coalgebra`, committed locally 2026-10-09;
+# push it before this repository's branch).
 [[require]]
 name = "effects"
 git = "https://github.com/pure-algebra/lean4-effects"
-rev = "b0dd60797244a04b47bcb1f6eecfe71f7a02ae04"
+rev = "24a91a151de80db402e38809f883ab6be59e4c8f"
 
 # TypeScript as a target: syntax, renderer, identifier profile, host pins.
 # Version 0.7.0 includes optional fields, element access and object key forms.

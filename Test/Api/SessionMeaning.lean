@@ -342,6 +342,46 @@ def recordReplay (main : Src NativeOp) (state : Repo) :
     (Run.runWith b (Run.Reactor.ofHost b.table (tapeHost b.table)).guardRows
       recorded.2.2.dropLast "todo").1.exit) = some none
 
+/-- A locked database: a typed failure that the rows' error column admits. -/
+def lockedExit : ExitV :=
+  match failed "SqlError" "locked" with
+  | .ofExit ex => ex
+  | _ => .success .unit
+
+/-- A flaky repository: every other call fails as locked, starting with the first. -/
+def flaky (table : RowTable) : Effects.Comodel (RowSig table) (Repo × Bool) where
+  answer op state :=
+    if state.2 then some (lockedExit, (state.1, false))
+    else ((Run.reactorHost table repository).answer op state.1).map fun result =>
+      (result.1, (result.2, true))
+
+/-- A drive of a to-do program by a host read as a reactor behind the rows' types: the premises
+of `runWith_host_denotes` (distinct keys and the fragment, funded and at rest), and the exit. -/
+def hostDrive (host : (table : RowTable) → Effects.Comodel (RowSig table) (Repo × Bool))
+    (main : Src NativeOp) (state : Repo) : Option (Bool × Bool × Option ExitV) :=
+  (built? (request main)).map fun b =>
+    let run := Run.runWith b (Run.Reactor.ofHost b.table (host b.table)).guardRows (state, true)
+      "todo"
+    (decide ((b.table.map rowKey).Nodup) && StraightRows b.table b.program,
+      funded run.1 && atRest run.1, run.1.exit)
+
+/-- The exit of the plain drive under the repository. -/
+def plainExit (main : Src NativeOp) (state : Repo) : Option (Option ExitV) :=
+  (built? (request main)).map fun b => (Run.runWith b repository state "todo").1.exit
+
+-- finite evaluation: behind the retry layer the flaky repository drives each run to the plain
+-- exit, and the run meets the premises of `runWith_layer_denotes` that a run can show
+#guard [(add (str "milk"), ((1, []) : Repo)), (list, (3, [(1, "milk", false), (2, "tea", true)])),
+    (complete (nat 1), (3, [(1, "milk", false), (2, "tea", true)])),
+    (remove (nat 7), (3, [(1, "milk", false)]))].all fun (main, state) =>
+  (hostDrive (fun table => (flaky table).through (Run.retry table)) main state).map
+      (fun result => (result.1, result.2.1, decide (some result.2.2 = plainExit main state))) =
+    some (true, true, true)
+
+-- control: without the retry the first call fails as locked, and the run's exit differs
+#guard ((hostDrive flaky (add (str "milk")) (1, [])).map fun result =>
+    decide (some result.2.2 = plainExit (add (str "milk")) (1, []))) = some false
+
 end repository
 
 end Test.Api.SessionMeaning

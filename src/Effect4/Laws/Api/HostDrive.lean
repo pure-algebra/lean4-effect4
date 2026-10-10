@@ -793,4 +793,69 @@ theorem runWith_host_denotes {σ : Type} (b : Api.Built) (host : Effects.Comodel
   exact runWith_guarded_denotes b (Reactor.ofHost b.table host) st id budget rounds hfrag hfund
     hrest ex hex
 
+/-! ## Typed layers need no guard
+
+A layer implements each row by a program over another signature (`Effects.Comodel.through`).
+Take a layer typed from the rows' protocol to a lower protocol (`Effects.Handler.Typed`). A host
+that meets the lower protocol meets the rows' protocol behind the layer
+(`Effects.Comodel.Meets.through`), so the layered host is its own guard (`hostGuard_through`).
+Then H9 holds at the driver for the layered host itself (`runWith_layer_denotes`). A retry is
+such a layer at every protocol (`retry_typed`). -/
+
+/-- The rows' protocol: the exits an external row admits at every machine. -/
+def externalProtocol (table : RowTable) : Effects.Protocol (RowSig table) :=
+  fun op ex => externalAdmitsAt table op ex = true
+
+/-- A host behind a typed layer is its own guard. -/
+theorem hostGuard_through (table : RowTable) {T : Effects.Signature.{0, 0}}
+    {PT : Effects.Protocol T} {impl : Effects.Handler (RowSig table) (Effects.Program T)}
+    (htyped : impl.Typed (externalProtocol table) PT) {σ : Type} {host : Effects.Comodel T σ}
+    (hmeets : host.Meets PT) : hostGuard table (host.through impl) = host.through impl :=
+  hostGuard_of_meets table (Effects.Comodel.Meets.through htyped hmeets)
+
+/-- **H9 at the driver, for a typed layer.** Implement the rows by a layer typed from the rows'
+protocol to a lower one, over a host that meets the lower protocol, and drive a `StraightRows`
+program with the layered host read as a reactor. When the run is funded, at rest and its root
+exited, the layered host itself runs the program's call tree to the root's exit with the run's
+stores, and ends at the drive's state. Reach and limits as `runWith_denotes`; the layer's typing
+and the host's protocol are premises. Concept `translation-simulation`, role simulation;
+requirement R6. Consumer: typed host utilities (the battery's retry), and the printed services
+of slice CO-6b, shape (c). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem runWith_layer_denotes {σ : Type} {T : Effects.Signature.{0, 0}} {PT : Effects.Protocol T}
+    (b : Api.Built) (impl : Effects.Handler (RowSig b.table) (Effects.Program T))
+    (htyped : impl.Typed (externalProtocol b.table) PT) (host : Effects.Comodel T σ)
+    (hmeets : host.Meets PT) (st : σ) (id : String) (budget : Api.Budget) (rounds : Nat)
+    (hkeys : (b.table.map rowKey).Nodup) (hfrag : StraightRows b.table b.program = true)
+    (hfund : funded (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id
+      budget rounds).1 = true)
+    (hrest : atRest (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id
+      budget rounds).1 = true)
+    (ex : ExitV)
+    (hex : (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id budget
+      rounds).1.exit = some ex) :
+    hostRun (host.through impl) b.program [] Stores.empty st =
+      some (ex, ((Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id budget
+        rounds).1.machine.state,
+        (Run.runWith b (Reactor.ofHost b.table (host.through impl)).guardRows st id budget
+          rounds).2)) := by
+  have h := runWith_host_denotes b (host.through impl) st id budget rounds hkeys hfrag hfund hrest ex
+    hex
+  rw [hostGuard_through b.table htyped hmeets] at h
+  exact h
+
+/-- **A retry**: each row is called, and called once more where its first exit is a failure. -/
+def retry (table : RowTable) : Effects.Handler (RowSig table) (Effects.Program (RowSig table)) where
+  handle op := .vis op fun ex => match ex with
+    | .failure _ => .vis op .pure
+    | .success _ => .pure ex
+
+/-- A retry is typed from any protocol to itself: each exit it answers is one that the host below
+gave. -/
+theorem retry_typed (table : RowTable) (P : Effects.Protocol (RowSig table)) :
+    (retry table).Typed P P :=
+  fun _ ex hex => match ex, hex with
+    | .failure _, _ => fun _ hex' => hex'
+    | .success _, hex => hex
+
 end Effect4.Run
