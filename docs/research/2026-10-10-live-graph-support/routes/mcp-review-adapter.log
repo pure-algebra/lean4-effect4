@@ -1,0 +1,11 @@
+some "{\"error\":{\"code\":-32600,\"message\":\"method must be a string\"},\"id\":null,\"jsonrpc\":\"2.0\"}"
+some "{\"error\":{\"code\":-32600,\"message\":\"method must be a string\"},\"id\":{},\"jsonrpc\":\"2.0\"}"
+some "{\"error\":{\"code\":-32600,\"message\":\"id must be a string or integer\"},\"jsonrpc\":\"2.0\"}"
+some
+  "{\"error\":{\"code\":-32022,\"message\":\"unsupported protocol version; use server/discover\"},\"id\":1,\"jsonrpc\":\"2.0\"}"
+/tmp/live-graph-preview-review.lean:10:0: error: (interpreter) unknown declaration 'Lean.List.toJson._at_.Tools.ProfileJson.rowJson.spec_2'
+(false, false)
+/tmp/live-graph-preview-review.lean:12:0: error: (interpreter) unknown declaration 'Lean.List.fromJson?._at_.Tools.Query.Request.fromJson?.spec_0'
+
+
+exit: 1

@@ -1,0 +1,20 @@
+{
+  "reviewed_parent_head": "066a6bcf2463abb917fe60fd2cdda10443ed090a",
+  "source_sha256": {
+    "tools/Tools/Session/Snapshot.lean": "2d7970a544525b8b0147efc94eed4e585b2b255ce574503a121520b946e42182",
+    "docs/research/2026-10-10-live-graph-support/mcp/Preview.lean": "c0fc44434b260f5b882f7d8dcb140f30daddcd71bb8bd82b2be79e6b1930f5a7",
+    "docs/research/2026-10-10-live-graph-support/PLAN.md": "bba99d3ce618618af97dc3048a571acb6b88cf32a479e828ec122dd0abc14f59"
+  },
+  "parent_files_written": false,
+  "parent_modules_built": false,
+  "existing_preview_artifact_fingerprinted": false,
+  "adapter_probe_exit": 1,
+  "adapter_probe_limit": "Existing interpreter specializations missing for discovery and call evaluations",
+  "evidence_kind": "finite evaluations and source inspection",
+  "later_parent_repairs_verified": false,
+  "sources": [
+    "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
+    "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/2026-07-28/schema.ts",
+    "https://json-schema.org/understanding-json-schema/reference/numeric"
+  ]
+}
