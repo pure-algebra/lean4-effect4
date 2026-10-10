@@ -1,0 +1,1 @@
+PASS check-language: no finding in docs/research/2026-10-10-cx-refusal-review/README.md, docs/research/2026-10-10-cx-refusal-review/NEXT-PROOFS.md, docs/research/2026-10-10-cx-refusal-review/PLAN.md; the other documents carry 1768 finding(s) (report: python3 scripts/check-language.py)

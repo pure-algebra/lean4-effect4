@@ -1,0 +1,58 @@
+{
+  "observed_utc": "2026-10-10T15:41:33.414596+00:00",
+  "reviewed_commit": "41ec1e0c1d55f05393f3b4e7f938a5d87f7a6214",
+  "previous_reviewed_commit": "3ef7aeb0f41bbb3796f44edc873e4185e760c6ca",
+  "observed_primary_head": "34a39a3840ee1bc277e706059e24a83567749274",
+  "primary_status": [
+    "M Test/Counterexamples/REGISTER.md",
+    " M Test/fixtures/target/selection.json",
+    " M src/Effect4/Laws/Program/TyView.lean",
+    "?? Test/Program/RowPolarity.lean",
+    "?? src/Effect4/Laws/Program/Polarity.lean",
+    "?? src/Effect4/Program/Polarity.lean"
+  ],
+  "working_file_sha256": {
+    "Test/fixtures/target/selection.json": "d16f5f9b779b94bf51ba0d0dcfa0060e1e5486f9c5f46627a1e9b2d4404bb1ce",
+    "src/Effect4/Laws/Program/TyView.lean": "76a5db8b847839abec682eea3ecc31e2c8e01878bae3974430fea8dab5e5abf6",
+    "Test/Program/RowPolarity.lean": "adf2d2ad41246df4639bfb04a6d7057ad6e68372b86ea3e14e87e8c4008730e1",
+    "src/Effect4/Laws/Program/Polarity.lean": "243bea7792d3c0015dbceee0585eda67d4de67959cce01667a5baade01d99d9d",
+    "src/Effect4/Program/Polarity.lean": "4ae942fd7760a2d1c7fa27c4f798f9e856801bb3a4cd5f381969127c84a7631c"
+  },
+  "session": {
+    "file": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50.jsonl",
+    "verified_cwds": [
+      "/Users/pooks/Dev/lean4-effect4",
+      "/Users/pooks/Dev/lean4-effect4/harness/schema-host"
+    ],
+    "maximum_tail_read_bytes": 220000,
+    "thinking_fields_read": false,
+    "reported_work": "Located refusals committed. Step2 root-aware module-layer order drafted. Pinned schema dependencies installed. Broad gates under investigation. Graph branch review and polarity implementation begin.",
+    "checks_evidence": "Session-reported only; review reproduces only the narrow packet checks."
+  },
+  "findings": [
+    {
+      "id": "CX-REFUSAL-PROJECTION",
+      "status": "confirmed finite authoring limitation",
+      "observation": "The tool summary drops target and specific fault; the generated carrier retains both."
+    },
+    {
+      "id": "CX-MODULE-TYPING",
+      "status": "next-slice proof obligation",
+      "observation": "Module declaration typing must reach the reference hop through SourceWF."
+    },
+    {
+      "id": "CX-CALL-OWNERSHIP",
+      "status": "next-slice proof obligation",
+      "observation": "StackTyped does not establish call ownership for empty parameter contexts."
+    },
+    {
+      "id": "SOURCE-REFERENCE-VIEW",
+      "status": "unchanged prior limitation; not a new notification",
+      "observation": "Source annotation still refuses the raw reference, with no marker on its layer line."
+    }
+  ],
+  "review_boundary": "Current polarity research and WIP are excluded. M7 closure and external behavior gates are not independently reproduced.",
+  "worktree": "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4",
+  "branch": "codex/cx-refusal-review-20261010",
+  "production_edits": []
+}
