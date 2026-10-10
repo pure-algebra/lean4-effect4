@@ -1,0 +1,2324 @@
+{
+  "captured_at_utc": "2026-10-10T04:27:08.158116+00:00",
+  "primary_head": "52faff49324e4ef3e14d246f4460b30c44c51abe",
+  "review_base": "33d1579b2e0c4895f37b4337257b5dd2ccfda15f",
+  "scope": "Live work in progress, not a claimed landing. Captured builder dependencies; Compile independently checked from retained source.",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "527f1f34dddd2cc836e13828127dd78276242e740a34bdda81c419072137f698",
+      "git_blob": "6169ee5c2139f2974b57fce6182d48fb470541a5"
+    },
+    {
+      "path": "docs/research/2026-10-09-program-parameters.md",
+      "sha256": "842c04745c3ecbf0412a9b57c942bcd2cc777eaeadc6ef5fd2842cf1a9f71bfc",
+      "git_blob": "7fbda5af64872d44429abebc2efa9aec9016558e"
+    },
+    {
+      "path": "src/Effect4/Program/Compile.lean",
+      "sha256": "bedc0b62a815e9f8cea23cc93365ee98b0e07cdfea12b7158eda80f233a38e09",
+      "git_blob": "4aa9d16525db0a7d69f5e442a156b0055ee82f2f"
+    },
+    {
+      "path": "src/Effect4/Machine/Stores.lean",
+      "sha256": "3c45a5f53c8c53bda4e1837c932741143c4afe90dd8cdb8422a184e22e053677",
+      "git_blob": "a4399c9dc3068f5844658b27d51541ce6f1ef9e4"
+    },
+    {
+      "path": "src/Effect4/Program/Eff.lean",
+      "sha256": "3b7c92f413c57ce55963e83047d7079ff8d03785e51785ac9322d6dd9e35c13a",
+      "git_blob": "8bc74672cc5f552b533a444bda4b674cf3f5c390"
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "sha256": "55ade7bde4176e22f845228b583653396826cb1deb801b1ef1007e557e26fb4a",
+      "git_blob": "6d675c9d8d78968e44e395167d85d898557eabda"
+    },
+    {
+      "path": "src/Effect4/Program/Definitions.lean",
+      "sha256": "b8c00574badecd22c66bb170653362d8ab91878f5bcd03c82dbbc9344cec9b58",
+      "git_blob": "dc19b4bfe68da37f00b4491b3c085bb654cd8ff7"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring.lean",
+      "sha256": "79d28d56f87a3f350990c06b4a22e00327475b93a13626780cb06d6ed02272fc",
+      "git_blob": "df8b3ce7ff7d9e366c6885849aaf8cf75c3bf40d"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Focus.lean",
+      "sha256": "7f5a6adc15024245d79a6c441d7f219f5f3886a8747bc91788cf410a59878617",
+      "git_blob": "fc6692f21e8b447f24eba984be7dab5a19e0356e"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Admission.lean",
+      "sha256": "74fd4978c1a9f6bb0dbe17c7d8b759344a067d3f87c651fca92a334c1e1dc49b",
+      "git_blob": "89ed1a44940a9c7b12fe03bf9c39e7a8dbb66d24"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "sha256": "3ba14101c56032bb075b84fc126265c66dffcc0e8112c08707ceb95e6eebaceb",
+      "git_blob": "441dfa773b78769f2754580a3773b64553cf9bd8"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/DenoteR.lean",
+      "sha256": "dabc771813dda9b19d0e298e4f916eadd8eee9db9fb2e6921b000ea90181239c",
+      "git_blob": "eb2c41102140c9a885c0c3e1181dc660be9f66e7"
+    },
+    {
+      "path": "src/Effect4/Library/Pool/Ops.lean",
+      "sha256": "a71a52f7f2c282024fc3a4483f000612c913584782d6264e3faf5db45b1c748b",
+      "git_blob": "fa2efbfdfb08d837218b5aeef1f33a6477f427d5"
+    },
+    {
+      "path": "src/Effect4/Laws/Library/Pool/Ops.lean",
+      "sha256": "d1ba8a422418868326e3b8058f8c72602c3ff6a56d1e39849ab50582cbb4b0cf",
+      "git_blob": "e776dc972102c0f06f15aea35f38df4cf9249352"
+    },
+    {
+      "path": "src/Effect4/Library/Waiting.lean",
+      "sha256": "928b2c92e1fab3feca41963a3a91f00ec438393c17be5d864656771e1f1ffb5d",
+      "git_blob": "f573555809f209aea8004697cf470f7c9dbf6734"
+    },
+    {
+      "path": "tools/ProofGraph/Registry.lean",
+      "sha256": "6d018c313c27c77b71393814f855b6260dc968e6248f369a019a85c0e055e8b6",
+      "git_blob": "e03d4bc180b6843caba8645d5451f681288566dc"
+    }
+  ],
+  "artifacts": [
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.olean",
+      "target": ".lake/context-layer-scope/Effect4/Data/Ascii.olean",
+      "sha256": "c1fdb4595967b90828413f484b7ab7e47ab508e1af796a55ebcec7c378638777"
+    },
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Data/Ascii.ilean",
+      "sha256": "47607e07aec1aec7880fe6b7e3e43a0f27b22ae90964723edcdf9ff947075c5f"
+    },
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Data/Ascii.olean.private",
+      "sha256": "d0deb2b6f6b63a51ecaf8bf3673e80c293279ce68f08bfce5812c6b8ccf3d091"
+    },
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Data/Ascii.olean.server",
+      "sha256": "4d4340333ea6b861ebcb8643fe5935248bf0d001e86af805f3dbbc2bd01be540"
+    },
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.ir",
+      "target": ".lake/context-layer-scope/Effect4/Data/Ascii.ir",
+      "sha256": "9b4b8a97a0dbdb63a11b36bae20acbd5881fd11e4f925023457510efa0d9388f"
+    },
+    {
+      "module": "Effect4.Data.Ascii",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Ascii.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Data/Ascii.ir.sig",
+      "sha256": "fe56446de0edfcc0102a44155968cbb420d1b3c8cf8863d267d834d582f725eb"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.olean",
+      "target": ".lake/context-layer-scope/Effect4/Data/ClockMillis.olean",
+      "sha256": "a0d8fcd15092e9a9ca084267f64611f3f32d794bb9e07ffac4b0a891d103ab35"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Data/ClockMillis.ilean",
+      "sha256": "4cd4fd1e0344d48d599e1b37d8a39944c658113108671760e0f5f3e9da361a54"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Data/ClockMillis.olean.private",
+      "sha256": "68d5d1f74246323ae6a360845be1ea8b84f3d46381122cd518d319df7888ed06"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Data/ClockMillis.olean.server",
+      "sha256": "b4962a6ca6e9dee183c9df1e6738b479cc7c70104fcbb7619852749c2ac9f5e6"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.ir",
+      "target": ".lake/context-layer-scope/Effect4/Data/ClockMillis.ir",
+      "sha256": "fd71c084d3887f361b6b144240f44193eb8233355c53e058a93b4272ad7a20bc"
+    },
+    {
+      "module": "Effect4.Data.ClockMillis",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/ClockMillis.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Data/ClockMillis.ir.sig",
+      "sha256": "11372cd3af3acfeef0af33a84d880d477497451d4153e0c10a5f886438a0ae57"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.olean",
+      "target": ".lake/context-layer-scope/Effect4/Data/Constructive.olean",
+      "sha256": "167c990bfb61482dd93d44926e68fc144f5d2d85ddc32d38885d7f931e692c2f"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Data/Constructive.ilean",
+      "sha256": "127278c515061720c7bfed7eb26846f3999431716e7b6aaab42fec01af32d6a2"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Data/Constructive.olean.private",
+      "sha256": "e7165925eed4d882419c3656c7126e421b94d4c2f4b7e2facaac5cf740b88027"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Data/Constructive.olean.server",
+      "sha256": "0cf015f77a638ebd596ffa120ecc33364ceacc1fc9fa1858523c95ab38946f4a"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.ir",
+      "target": ".lake/context-layer-scope/Effect4/Data/Constructive.ir",
+      "sha256": "b8170be1408d07f9ff12f80e3a4e7c4d4ec7b6bb1f4b3ff7faed2dc5876695ae"
+    },
+    {
+      "module": "Effect4.Data.Constructive",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Constructive.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Data/Constructive.ir.sig",
+      "sha256": "4196bbc2bf488063e3c2be32cf4a5abd1882d4cfe1f849d80ae1c4cf060f052a"
+    },
+    {
+      "module": "Effect4.Data.FieldOrder",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.olean",
+      "target": ".lake/context-layer-scope/Effect4/Data/FieldOrder.olean",
+      "sha256": "48c3c588804908bba72765dde528934ee62258f354c653e109898bbb039a5793"
+    },
+    {
+      "module": "Effect4.Data.FieldOrder",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Data/FieldOrder.ilean",
+      "sha256": "442feb4a82d1b0af7203526d453a9cd9102ae6210e13db7cd4fe49f760d99921"
+    },
+    {
+      "module": "Effect4.Data.FieldOrder",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Data/FieldOrder.olean.private",
+      "sha256": "585b5c1f190903eb75fe616c21aee49d761a89e2c4eef9e329bf2779eedd5a60"
+    },
+    {
+      "module": "Effect4.Data.FieldOrder",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Data/FieldOrder.olean.server",
+      "sha256": "26bafed20cb1fc78edc2cf8d7ae789a90a93956a1c42006ca8d031e44ec49b16"
+    },
+    {
+      "module": "Effect4.Data.FieldOrder",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.ir",
+      "target": ".lake/context-layer-scope/Effect4/Data/FieldOrder.ir",
+      "sha256": "8aabbf4cc2f08b074eaef400c1a7c7f2397996e9ed7ddb96479acea5391c72d3"
+    },
+    {
+      "module": "Effect4.Data.FieldOrder",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/FieldOrder.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Data/FieldOrder.ir.sig",
+      "sha256": "9f18d0a33e42fa7092fb6b9400d6c957d74fc31bd33a86d31b48dc7a4ab0a454"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.olean",
+      "target": ".lake/context-layer-scope/Effect4/Data/Row.olean",
+      "sha256": "e276bd54254370c46520f52cc1c59a98da827c7b6779cb496fe6872e2c68c452"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Data/Row.ilean",
+      "sha256": "486c3ea276f693815db5de5a365fb398ad99aa67d7f391598e2df5fb437112ea"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Data/Row.olean.private",
+      "sha256": "29d1981701dae4cccf0d337be5f6c05b55cc2b8f6fc10e1fc9858e47283aaedd"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Data/Row.olean.server",
+      "sha256": "026a22c20a0785645bac3e73d7a730cac5c455f4d501d11a799db63a22efdbd1"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.ir",
+      "target": ".lake/context-layer-scope/Effect4/Data/Row.ir",
+      "sha256": "aa5b9f28c41fc3ccc4ea99fffab0ac98b050030c16c585970cdc2c9f0332930a"
+    },
+    {
+      "module": "Effect4.Data.Row",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Data/Row.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Data/Row.ir.sig",
+      "sha256": "edbb1b5f32b3de7c88e6d3ff505a0fa4c2dfa2051a513ef5b3c82ab833dc81d3"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Alphabets.olean",
+      "sha256": "728264b3d0e84b09cb0a8877ab71f1e870aafaae061ae33f10516fd3fae93025"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Alphabets.ilean",
+      "sha256": "28030d35c68b746dafde4e7970243b05e27355c557a9d5e2f69b0ffc2b557578"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Alphabets.olean.private",
+      "sha256": "da29e91e7fe4d3c0d8b2994662bcc86b15be78c6b5ca81c39bc78ff47a148d36"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Alphabets.olean.server",
+      "sha256": "42e72f4ddbcd47bf88d372a25507b7eef18648d46ffc8cbe20cd40769f919dad"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Alphabets.ir",
+      "sha256": "4bb641835aeb71ffea66a35c6265eec725cd0d0abc5988891d3327c81e371946"
+    },
+    {
+      "module": "Effect4.Machine.Alphabets",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Alphabets.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Alphabets.ir.sig",
+      "sha256": "09111abd543d5b522ffb16c77303a6311aaea6ea4726ae097204cda807e4c9ad"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Cause.olean",
+      "sha256": "216225edd36b54f3040fe18d3529c3d899c66dc46fbf4c438d70f18f17535de0"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Cause.ilean",
+      "sha256": "64ccecae4fdd4b4559970256608db700080eb8673e1cfb0fc26abf16d6092787"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Cause.olean.private",
+      "sha256": "260068103066fb80f1f42fff6abab461f4b76460e66941b2c6765acd72c09034"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Cause.olean.server",
+      "sha256": "28c17122f152badf9b90de9436a655435b022822ee60e19090b981e783d68672"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Cause.ir",
+      "sha256": "c00a471d3ca22945bbf6de92ea98ec777997848eb54836b8808847a29adde2a5"
+    },
+    {
+      "module": "Effect4.Machine.Cause",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Cause.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Cause.ir.sig",
+      "sha256": "2346e3f10fac54309cdd11d513453362788d586750af3da00be5d091b71f92f7"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Completion.olean",
+      "sha256": "3b04dd763d70fffd34225f695a1e8066269ad34885ceae49a3b119ab1926a57e"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Completion.ilean",
+      "sha256": "82c3318c252283c9f9c055c15861b79466ad5eb900040b871bf2cc010978e3af"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Completion.olean.private",
+      "sha256": "0fe76cfa09a75295d70b82e461e161666027e459f54e5e283ef7b87713981eff"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Completion.olean.server",
+      "sha256": "279df3ec9beed55920895e9d9c634cfd5c760fcb208b91232b51c29708e30d71"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Completion.ir",
+      "sha256": "28656ec68c8536b1f5d96d5d14facce9cbda080b7e79bab51d47c04dc0ff18b6"
+    },
+    {
+      "module": "Effect4.Machine.Completion",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Completion.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Completion.ir.sig",
+      "sha256": "1e90a7d5edb02f1fc1ffb4b0230ecea945c0c2fd1caeff9560c9d4e93e93f69b"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Context.olean",
+      "sha256": "9071176c2cdc846311b8362ea5df9ab4e3d795905cda814934f354fffa17569c"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Context.ilean",
+      "sha256": "296ca2f4c8b9c4c5a5034b8de0715f21b47ad90cac4758f9b83d52ebecb8f67e"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Context.olean.private",
+      "sha256": "b28151b697552c126b2af2fc6ab8f54a27a53e3744abb2954bc80f9b5c9f6ca5"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Context.olean.server",
+      "sha256": "4812fe748bcedd6bea27e3b75fb79c59da45dc9e88e0ac74c34a700c63eba0c1"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Context.ir",
+      "sha256": "a5edb32de75372baedb11d7a02af2b8d753fcb640c7fb6f702a7ed1ed0e63488"
+    },
+    {
+      "module": "Effect4.Machine.Context",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Context.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Context.ir.sig",
+      "sha256": "e3e6e47f0e4ffc8c29649ec37d31fd938e9949d18ef12ab3c8756e3bfcb0b772"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/ContextMap.olean",
+      "sha256": "ad51582cb1dbbbcc3fa212192923810fbce48a528e4c58a2c8b0a3e2d840121f"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/ContextMap.ilean",
+      "sha256": "4a9077e110ac54c3a163e5409dc9b464323399aa2b644979589a840f2e38a240"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/ContextMap.olean.private",
+      "sha256": "2099f808e00add3b2f1067d160d07866b69140885d38d889df4d2612dbd638b6"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/ContextMap.olean.server",
+      "sha256": "1286d0022c617cbe23cf741e0b273c596a2bb744c7831b2d9358bb8b2483e5d4"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/ContextMap.ir",
+      "sha256": "19c9d986eab6b636db4be6e5727c0fdc6a048feed3d08b7677c3850192d3e171"
+    },
+    {
+      "module": "Effect4.Machine.ContextMap",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/ContextMap.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/ContextMap.ir.sig",
+      "sha256": "7470dc75e228624fe28e90c070bf732c2f6891c791e1161680e17ac9e145a42b"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Exit.olean",
+      "sha256": "1703a76ff316309584db52a6e7330c3e79f8d4ead000fa46ca4b602473db9bc2"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Exit.ilean",
+      "sha256": "03fe565ae4a62fd0ee112909ccac81b1c22e0c07f4536a7e0bbcc2adcae4e6b7"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Exit.olean.private",
+      "sha256": "0d9d079704e83caa93b14e8c8aed4ae74ffd8a01e9aff9da0551db727b5301dd"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Exit.olean.server",
+      "sha256": "235352de11295951ce64b3eb32aab687062dd82a6631d60fe09deb1f7f35718a"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Exit.ir",
+      "sha256": "eb8afe57263840dcc654143ab47ba634f24312a13c20bdb250c4e506bd6817e9"
+    },
+    {
+      "module": "Effect4.Machine.Exit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Exit.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Exit.ir.sig",
+      "sha256": "efe4e794ea9127602cf17cc63d3d9140487d00cafefa1e7b4ee2417efc095074"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fiber.olean",
+      "sha256": "9f0bb4b99ff0415fae372ac33564cb50781cca878c91a248422e23031e34df70"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fiber.ilean",
+      "sha256": "5f6d70d65634aa9b22137725350b106cb22d32f91769f98e455e747699e91208"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fiber.olean.private",
+      "sha256": "b8d1c6c31e1365062b5e0c478f4f40ce5fa165cdcef7e2a8716d2dd524e7ecee"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fiber.olean.server",
+      "sha256": "b421c839c554bfba9e46f82a8224c87bcca040c81fd7c3d460b1cb4bd54e5994"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fiber.ir",
+      "sha256": "ead2dd60a54091cba291f5d47e752ef12527e45e158286f78769463672e61fe1"
+    },
+    {
+      "module": "Effect4.Machine.Fiber",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fiber.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fiber.ir.sig",
+      "sha256": "7b49f05bc8b0b45e77c86423019eb93b2aaeeb9f55b7f754e0838e5e84bde417"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fibers.olean",
+      "sha256": "fee06e82c1e30126cb23d12e19f8ec35448dc7e17881ff5a6966192b66dd678a"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fibers.ilean",
+      "sha256": "3bc6f32a9e36047064f1876e6f5a08c3eb43d25411292332ee8a997ceb1441bc"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fibers.olean.private",
+      "sha256": "cf53e7135874c1b55671f914fb052a1526c79d066b693e262e9a9b3a17ae0dbc"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fibers.olean.server",
+      "sha256": "e51d95f12a59d68c7f5ca24be16ea38d9636665a5b100b3c77573400b8077c91"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fibers.ir",
+      "sha256": "79e5ae89952d10c4531dff9184a062527e10d3fde7c4061a01e85212e9cb2f9e"
+    },
+    {
+      "module": "Effect4.Machine.Fibers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Fibers.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Fibers.ir.sig",
+      "sha256": "d7648c82d1c59de7fbc6bcd38ae6443628d3bb210eacbc09a643825d6890ab18"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Frames.olean",
+      "sha256": "93b52cf99dfad038e560693174792c0ef5f7c786a4565df3f0b69e2a3a167f29"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Frames.ilean",
+      "sha256": "d8965e2fd90bd9a1c92d417412b625207966d9df3e50bd16df922505ef66a04c"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Frames.olean.private",
+      "sha256": "15fa5824b68bf121e158709c70bd67a097671947bdc8090d6e19402f594bd711"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Frames.olean.server",
+      "sha256": "faedd029a6557ce8391e475cfc1cd87777f7fdd819d7ce0fce78cfa76716261f"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Frames.ir",
+      "sha256": "3fe3f5c0da107a191d79205925c6083070e3bbee99574628f46dd1c00eb00f0d"
+    },
+    {
+      "module": "Effect4.Machine.Frames",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Frames.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Frames.ir.sig",
+      "sha256": "ae9bedd749527505c0eb97ba296bb6f8ff8c53aa3b56699ff5a1dd45d272b2f7"
+    },
+    {
+      "module": "Effect4.Machine.Integers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Integers.olean",
+      "sha256": "65e9e6c4e46e5b5be42cf516cbeb56d17bad009f2646dfd98317d17e512191e7"
+    },
+    {
+      "module": "Effect4.Machine.Integers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Integers.ilean",
+      "sha256": "7abfef5885e728039a61223df6c4e580d2c86a8220cb38dc083a16dbd8d2ba6b"
+    },
+    {
+      "module": "Effect4.Machine.Integers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Integers.olean.private",
+      "sha256": "f18a4aa00f37a272e31575a739d685882cf4b470b579ac37a0a8930e7b23a80a"
+    },
+    {
+      "module": "Effect4.Machine.Integers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Integers.olean.server",
+      "sha256": "e0351e0e56f883353d37795f368673c3a0dbc3d0191db64608389ee1a4337158"
+    },
+    {
+      "module": "Effect4.Machine.Integers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Integers.ir",
+      "sha256": "3ca5f8f5675de3a1fc308bb8fdce00a5bf9e2a7364c8908ba1b4d3f4e122e695"
+    },
+    {
+      "module": "Effect4.Machine.Integers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Integers.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Integers.ir.sig",
+      "sha256": "4674222787b9e2046c04a6d8b6c6e843dfb3c10bb692423e13e761b323457512"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Key.olean",
+      "sha256": "dc4874cf0519117e31ee7d5cc9a311625b7659dca357366d95c684a4f1aeaa25"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Key.ilean",
+      "sha256": "c55998dc7eac75dfd86cb8694ceadaeb8464cd8674cd7aeaf8fd4e846566d085"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Key.olean.private",
+      "sha256": "501243cdacb0c95fb0e0e82be114b53dc446ed6da5bc8c845103b2a750313e0d"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Key.olean.server",
+      "sha256": "fa9037507df7a79e950d68c9874b691904a785a77b1157a5ca7ff226bde8980e"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Key.ir",
+      "sha256": "856e702b9a7206503e24c245c5d9f006fc62f0c34f3769c31354bdcbc8e6b65c"
+    },
+    {
+      "module": "Effect4.Machine.Key",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Key.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Key.ir.sig",
+      "sha256": "ec641c1aba0320bcdfdf1490051f05d234f126c5c3d27ed5b7801dd8e7e5f4f3"
+    },
+    {
+      "module": "Effect4.Machine.Map",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Map.olean",
+      "sha256": "a217373db549c25110072526c671146e73b00e7af12196b503f86c2d6a578323"
+    },
+    {
+      "module": "Effect4.Machine.Map",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Map.ilean",
+      "sha256": "35fb0c7890d9ddecc84d77aac968e6992864e55aa392aa1f54925aff3f9c1a44"
+    },
+    {
+      "module": "Effect4.Machine.Map",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Map.olean.private",
+      "sha256": "b271e90d4c272de2dc0ce5d9012acf2acd3d0fa45c6d556a8c07b0d1627dd5ab"
+    },
+    {
+      "module": "Effect4.Machine.Map",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Map.olean.server",
+      "sha256": "503e4b52bc92c91abbc37617524df339eac6319f1cff2f43e5959b08cf2a0a73"
+    },
+    {
+      "module": "Effect4.Machine.Map",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Map.ir",
+      "sha256": "431acef52687ba885635d451fd926c4873271988f9626e335133e46769ed14ea"
+    },
+    {
+      "module": "Effect4.Machine.Map",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Map.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Map.ir.sig",
+      "sha256": "ba79013d706fff6c757b5bc1d084d1a1c071be5b49ee8ce786a1f4f788ef03af"
+    },
+    {
+      "module": "Effect4.Machine.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Record.olean",
+      "sha256": "cba5880d59d3c5995c70328920ee5ebb0e5015a85fc50d1a4732b5ac7a1f12bf"
+    },
+    {
+      "module": "Effect4.Machine.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Record.ilean",
+      "sha256": "710beac2cbe31667bbb59173effc35f38998f16a634666955499882323d2772a"
+    },
+    {
+      "module": "Effect4.Machine.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Record.olean.private",
+      "sha256": "a8557ca656189277acf2f5076f0a8f868897e47bc58528c4ab597c8c935da98f"
+    },
+    {
+      "module": "Effect4.Machine.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Record.olean.server",
+      "sha256": "908154e621c4788edf9e7d1b19a97c22823dea88f8670362e4fb11d9ee4f8ad3"
+    },
+    {
+      "module": "Effect4.Machine.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Record.ir",
+      "sha256": "78f7593a054110491289d803c96805adb4e59a03303e8f95f5b394dce902f07d"
+    },
+    {
+      "module": "Effect4.Machine.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Record.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Record.ir.sig",
+      "sha256": "abf8c15d6f73025afa8350511ec7522c534f0670240e3ddd9f7241698b6695df"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Scope.olean",
+      "sha256": "fad6ad39001c311121989c287a1c03d9fa0d189a723a6861f8888084ec956f6e"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Scope.ilean",
+      "sha256": "4957f0c837ef7b4a2d97e62b97abbf2aa3912fa2402810e9fe2cdf9b5a6bb367"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Scope.olean.private",
+      "sha256": "32559ef8641e64f3e19ab3a55a1dc27e1dc1e908d4641acdd1bdae561ddad644"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Scope.olean.server",
+      "sha256": "63ff9521ef17e95d82da1bdb53f8a6ef52c490d872b1e31f5b5a738c37bcce13"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Scope.ir",
+      "sha256": "afe40c4026c1ff091e09953d232f2fcbaf3d5b518cab0c778d58bdc266bfe53d"
+    },
+    {
+      "module": "Effect4.Machine.Scope",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Scope.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Scope.ir.sig",
+      "sha256": "872e0bed58e956a82f8d778e7a9663ca81f46589f78b5a03a7ff8d56541c9e35"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Stores.olean",
+      "sha256": "3ade01c4c5b216fd07d25769add1056fb2efe3b27f3a3dea46dfcb8fd4955979"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Stores.ilean",
+      "sha256": "32d1de2a151986618646e748f07e6753daedb53b4ad011862a9e615352c1ac9e"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Stores.olean.private",
+      "sha256": "0c4a897013c4d33af4c3a798fc448e15b08225562879b169b13a7f5f4d32e13a"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Stores.olean.server",
+      "sha256": "e258d96a2123b374fca00e12c7ebd5f0f47e507b6fcd6636c03f8918158d09df"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Stores.ir",
+      "sha256": "6198d1de11d5796ba62e541fbebcc7312caa3b4ca72299dd848d039ccffee085"
+    },
+    {
+      "module": "Effect4.Machine.Stores",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Stores.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Stores.ir.sig",
+      "sha256": "57998e99847ce9470fc4eaad16f39b151f55688eddb0f669300a861af0f85a15"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Supervision.olean",
+      "sha256": "b233ae4d63f902a89c9250824a2c372732be2824577fdcee13f5197fdd1d1c6c"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Supervision.ilean",
+      "sha256": "bcedec858535229d7b0bebab2b4348c4bf2308d5e7c90650bbf3ad0be0d9438a"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Supervision.olean.private",
+      "sha256": "d6476b5c4d6f14a96e3377db249a546e263702998d0aa9e105575e71aeb261d3"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Supervision.olean.server",
+      "sha256": "91283c2a4d3e99575ffd88437c478e0b3729b064a838b3c69c7c5ed0247f2d9d"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Supervision.ir",
+      "sha256": "9310aeaace7a0f158ff59403425ce4dfe8a29ddb23fc97968f65f5dfe6157727"
+    },
+    {
+      "module": "Effect4.Machine.Supervision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Supervision.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Supervision.ir.sig",
+      "sha256": "bc8665cb60b8bbd87667c70a604e20371e42eaf1f217466fc406b3cd14e9c3bc"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Term.olean",
+      "sha256": "60a8244cf701b7e654d56c9c097aecc322e01347e82c309fb333655b195b70ee"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Term.ilean",
+      "sha256": "3736321ad24dfbaeeb462773589a3fb12ac5ded039ee0fc02af8a64b17869e6b"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Term.olean.private",
+      "sha256": "15af3dd9439b9882b4a48d1c9e6b1ea25179b44ed00c6ec181059dc1be035fd0"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Term.olean.server",
+      "sha256": "55779a6cb85decebc1f703132c5afcb0f37617ddb8661aef3e74e8ccd6d8b764"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Term.ir",
+      "sha256": "fa6e7e2edaf6ef388c229152d85b837559f4a59437315b66e3b963f080645663"
+    },
+    {
+      "module": "Effect4.Machine.Term",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Term.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Term.ir.sig",
+      "sha256": "cf20356897d310a05db563885ac4398e75a6e516744ece2a5b3b3658ff6e126d"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Timer.olean",
+      "sha256": "3433bb56f8e65b47819b11910c4f0ca7a5e4e4e695b90e2dac4edb0a815024bc"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Timer.ilean",
+      "sha256": "91df53dd122775d882b88cc88787d9984efec5b40f149171af278c020071f315"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Timer.olean.private",
+      "sha256": "a23b935d776d268fb816618ec71c41f53e9e4e279a11837fb682399a9557275f"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Timer.olean.server",
+      "sha256": "fbb7f9def1dcfd6217b7ef6b95bd16734c2a75d0f3a87a32001abb6a11c95cda"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Timer.ir",
+      "sha256": "25ef7d5b32d5ad2644064022a5cd87d94868e673ea1eb3dc445a93b3e5a277b4"
+    },
+    {
+      "module": "Effect4.Machine.Timer",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Timer.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Timer.ir.sig",
+      "sha256": "288fac75c21ef190855562ac0abcd0b281c1e95edae2d946a78d7a86e45f4d83"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Value.olean",
+      "sha256": "125ba0cc59261b9f470d5af08ce00cdf3b4f8cfbde6872278120b0aa272c7e2a"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Value.ilean",
+      "sha256": "5018ffbbc4f3cb58cb92ef10a63a21a2f8901eda3c124846b980bd4923a192e4"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Value.olean.private",
+      "sha256": "369311f0b6ad3e93de959fe84401407eedac35aa7289eaed83a3ce4c0abe4e3d"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Value.olean.server",
+      "sha256": "b297834f1410f17bbb3993b825141a863c0bc0b8455c2a3fea6b001a90ee084d"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Value.ir",
+      "sha256": "01680a50cf630e459bde3dbf2bd0795bac155aee3ed3754a9cfd33941cd9f92c"
+    },
+    {
+      "module": "Effect4.Machine.Value",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Value.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Value.ir.sig",
+      "sha256": "76664fd015c3ae5824c0acd809140cd2bc049ab26cd70201fe673deb43b96e51"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.olean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Wake.olean",
+      "sha256": "789a063062f1833b9d704773d6991426bcd4e8bd386ca3cbfe7efcca9c944503"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Wake.ilean",
+      "sha256": "4905842fb543600859b69b91df3147ce10bb7ac5fd4873a19e3161957920d226"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Wake.olean.private",
+      "sha256": "4227d71fc0041c819fbbb5cb0a65d4f530b641def7667c9f714ad7bd83d269c7"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Wake.olean.server",
+      "sha256": "b7579bcd16a6d5c1497ab65a8d15e7f90f543811888fcde6ed8f6b6021fac726"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.ir",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Wake.ir",
+      "sha256": "cd382dfc0c73045a0fc47aa7a5ceb0920b41d2ea89ab157ce364cf0054443940"
+    },
+    {
+      "module": "Effect4.Machine.Wake",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Machine/Wake.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Machine/Wake.ir.sig",
+      "sha256": "d8012a4425234f01b4ba4a423545f3bc040502ab6700e26b586b6f0beb8a703d"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/AtomInventory.olean",
+      "sha256": "a70e4267dba53784c3a68c08d7b302f57993e79bbdf461a6ffb1a9ff10789362"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/AtomInventory.ilean",
+      "sha256": "c788c5ac8b4fa9be4a397e3483d17ba63976c83abbc3cb8deeed7be8d8702f6b"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/AtomInventory.olean.private",
+      "sha256": "66993033c3f857d20bcf4290b2aa6be54762ba8d69ee91db0923377b365847bd"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/AtomInventory.olean.server",
+      "sha256": "3033cf877f6f871c08a026027bcbb879f264f28afeb6395a4ef0e5a9801327bf"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/AtomInventory.ir",
+      "sha256": "94c991ec4cf2e5256691c6c1bddf05cb719fe68b599b8e99b9253b95ed47f7b0"
+    },
+    {
+      "module": "Effect4.Program.AtomInventory",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/AtomInventory.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/AtomInventory.ir.sig",
+      "sha256": "9f03795cf4a2ff7f63072906c68de209d80c94b4aed4f54b4b3dc450aebe4ed7"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Authoring.olean",
+      "sha256": "524ccc74f49f2952867c1d74a707ce2f5a4da93278206f2308e4d87f9ad45ce1"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Authoring.ilean",
+      "sha256": "0804caa39c4ed0a4c94dc90c9d4d0cc4c3a0c5cae6113bb832b471852d15e75d"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Authoring.olean.private",
+      "sha256": "7ffe9f889567af351e439ee8c81856d0e2fa5fea936eb582780734e8f735f7de"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Authoring.olean.server",
+      "sha256": "0290d6a715f582865ba88cf0522cdd05da07d2658be06fa84be08002b1c29ad4"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Authoring.ir",
+      "sha256": "29850790f7dc2836046b3a6f30195e0a4bec9cbf7455a5556be91f0383b9f563"
+    },
+    {
+      "module": "Effect4.Program.Authoring",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Authoring.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Authoring.ir.sig",
+      "sha256": "85897137b176987b5252bea7fec90cd163a3dcec58a8a2d5a617647edc06474b"
+    },
+    {
+      "module": "Effect4.Program.Bounds",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Bounds.olean",
+      "sha256": "623e3b7b22a918e5b74c315b691d7fae2350ba2d42058cf55de8d773b670cf5f"
+    },
+    {
+      "module": "Effect4.Program.Bounds",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Bounds.ilean",
+      "sha256": "1a7702e28957a43127fffc6a6f09412c5fbfe72b82b6aba847a4944fe0122d93"
+    },
+    {
+      "module": "Effect4.Program.Bounds",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Bounds.olean.private",
+      "sha256": "25206d15cc46508b303c5df3be9fea80ae1e04d2ec83e6d9b9e9e203cd864cef"
+    },
+    {
+      "module": "Effect4.Program.Bounds",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Bounds.olean.server",
+      "sha256": "330b4fefc3ac5a87c40bb0d6813a08a5a8625a6bcfdf05d41685d3cbc53b62b8"
+    },
+    {
+      "module": "Effect4.Program.Bounds",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Bounds.ir",
+      "sha256": "4193749694d22e767375fb31735a5729131bb0f8f064a9bd919fb5c0d8a033cc"
+    },
+    {
+      "module": "Effect4.Program.Bounds",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Bounds.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Bounds.ir.sig",
+      "sha256": "d912c7ca895329944fd3fc11bc4ed1887fa3375dc5f21f5d00031f637593d5a7"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Checker.olean",
+      "sha256": "91e8b4177625f3a09f7acecb3c46ce333091cbcfe203164492a0fc73f9f5f419"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Checker.ilean",
+      "sha256": "9307c9a2bae58dd009628dd006ca7cd41a1bd19863b0ef110acbefbe74d14663"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Checker.olean.private",
+      "sha256": "de9f249503e7675e255c7b4cb1455b75b75069ec2747e7c300eb2c409be1262d"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Checker.olean.server",
+      "sha256": "7d25c1922c89f47db95eb9ac4baf83706375142462ceb5e0031c208b0fe88f17"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Checker.ir",
+      "sha256": "356b59424ce5b79a4d9ab79ec9e1a6a453e6246f5985d1c4fecca610d0b34ce8"
+    },
+    {
+      "module": "Effect4.Program.Checker",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Checker.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Checker.ir.sig",
+      "sha256": "5f5cd4303d4f51a062ccec94605620e58caeb8176c279dd16e2f61148ed3851f"
+    },
+    {
+      "module": "Effect4.Program.Compile",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Compile.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Compile.olean",
+      "sha256": "480828b8b8e585dc1c15ab25b71cbe86b155c415e81c5111944d2b2f24658e2d"
+    },
+    {
+      "module": "Effect4.Program.Compile",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Compile.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Compile.ilean",
+      "sha256": "d1361c746a2eece90ae84797ce7daac02615f459f7076094a4305015caf09e8f"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Decision.olean",
+      "sha256": "739f4028007cf277a9e67c93812f4de60507270793c835fc0dbd60041aee0386"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Decision.ilean",
+      "sha256": "a1eabaf1ca8886a327292b2a0a83a0db90c681085ff1a8ae717b516bb89053ce"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Decision.olean.private",
+      "sha256": "c3495d4b26ae706c2343537bf3ae98c4746988c211fab43ce51562397a34403f"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Decision.olean.server",
+      "sha256": "6fb9b04f323b489bbf1981e92ac53d84e77a2d2600dfa3e2d2835fb04b303ed0"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Decision.ir",
+      "sha256": "fb9fcd1d282fee13c6ac22a19534beb3c164dd5ca249f99683396fca826ad361"
+    },
+    {
+      "module": "Effect4.Program.Decision",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Decision.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Decision.ir.sig",
+      "sha256": "f38257a4653c0d7951873dc2913417a6ab807d9fe671c1758d6f967370c2e851"
+    },
+    {
+      "module": "Effect4.Program.Definitions",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Definitions.olean",
+      "sha256": "2f91ecd8d994edaac9f587192c6cea3162c32053826b8565ce6ce7be6c762240"
+    },
+    {
+      "module": "Effect4.Program.Definitions",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Definitions.ilean",
+      "sha256": "b65eb31afa914fe27bebdcc366e4f06d4c4a136c676c0416cb1997cdf1bd2d67"
+    },
+    {
+      "module": "Effect4.Program.Definitions",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Definitions.olean.private",
+      "sha256": "5cd0b309fc227fe42a59666d97ae6affa81b252d7c3a1b240953f5eed1145427"
+    },
+    {
+      "module": "Effect4.Program.Definitions",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Definitions.olean.server",
+      "sha256": "31b88c65376f507c72f274c07f6eb67c4a489fd6aaaa4248030881086d395765"
+    },
+    {
+      "module": "Effect4.Program.Definitions",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Definitions.ir",
+      "sha256": "ec92bcdfd3b904a0b3ccb40a55401f1d38f9cae2dc3a916c3ef9c31635855770"
+    },
+    {
+      "module": "Effect4.Program.Definitions",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Definitions.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Definitions.ir.sig",
+      "sha256": "7aac1a1d52a2ca64877a005bcfaafcafa715cdedc0d98ba52fba692b671eb9f2"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Eff.olean",
+      "sha256": "3f008e66d58321d9a7fb52c15930ac86e56e6637e084ca3cf1de0688c5aa1ca1"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Eff.ilean",
+      "sha256": "22952d0757fe7203656ed6f7da77b1bc4916965fde9a133a9c0b572249721f1b"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Eff.olean.private",
+      "sha256": "d4386014517f944430b8fe89613018148bf0a652175a0aff7d5c7ef4e3889e2d"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Eff.olean.server",
+      "sha256": "83dc14f97467041ca955ac9e68781e48a7c2431bd269dd7c183624438f0f6761"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Eff.ir",
+      "sha256": "1d6a9224eb578cb3e80c3f2ceb78b55f2ac069dc39cd5682d60fd6c556126038"
+    },
+    {
+      "module": "Effect4.Program.Eff",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Eff.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Eff.ir.sig",
+      "sha256": "309d662de39beb3cf68bd6cdb4e0070a17210aaea2f64a666cd1a42ccca3ca66"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/ErrorImage.olean",
+      "sha256": "394910bfb3fd0381fda6d1f3a904aa803d610c244060498086d3364f1f057f98"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/ErrorImage.ilean",
+      "sha256": "f6114e27b6fb88e48b71ab1f7ff9ed57696f7b1a8c62eebf464593fe63c98c83"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/ErrorImage.olean.private",
+      "sha256": "73fb0173818464b4fa18690195eb2616cf4ef7e95c4c9bd6f121efbf8306dfaf"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/ErrorImage.olean.server",
+      "sha256": "3621d4539a84621991040085a0e0d99046a22eba38bd89f68eaae2fed5291301"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/ErrorImage.ir",
+      "sha256": "036d4f9a280e6c24951290223ff329d6a245d1f1f55e31aa9700172f97ef610b"
+    },
+    {
+      "module": "Effect4.Program.ErrorImage",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ErrorImage.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/ErrorImage.ir.sig",
+      "sha256": "b1d39a59daa73a2b2ac69e896608c20c41a17da1471af69d49f23ac785f33922"
+    },
+    {
+      "module": "Effect4.Program.FnName",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/FnName.olean",
+      "sha256": "d8da3fd8137f8ee304309418aefa5df79ad1e66a46ea412da05ceec1d101bcdd"
+    },
+    {
+      "module": "Effect4.Program.FnName",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/FnName.ilean",
+      "sha256": "d8cc065b8708bf9fb96af1d141c2d80f10f4d7af3cde3e035177554941ae1d1a"
+    },
+    {
+      "module": "Effect4.Program.FnName",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/FnName.olean.private",
+      "sha256": "cec865165b19e045f0bce38a7cad6f37c89f63f3a699edba0bd13c460c043af6"
+    },
+    {
+      "module": "Effect4.Program.FnName",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/FnName.olean.server",
+      "sha256": "d3d2fe6c5f8b3775451f794cfc09fd86932d773d204d86b78b43ed582272fa1f"
+    },
+    {
+      "module": "Effect4.Program.FnName",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/FnName.ir",
+      "sha256": "aacb0196d8bd7168ad54787270a0c99c26121460af4cc1b18823b2537e87cf5d"
+    },
+    {
+      "module": "Effect4.Program.FnName",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/FnName.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/FnName.ir.sig",
+      "sha256": "de30a679fe991ed0d6de77c7fa45339af8a5090e77b1fe62817c9b97e0fc9752"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Fold.olean",
+      "sha256": "0a0ed53c3ab3d96da0442823cf4e3e2d10dae5897734b0c102374e8cb0cb4a27"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Fold.ilean",
+      "sha256": "a751a103283d429a6f884d6e0e430a6fa53c94dc1d5770011a5e3e9e331abc6e"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Fold.olean.private",
+      "sha256": "74e6e454361afa6d2aad40a2a059ff08729529adfeb1730d8268757c313aa1e4"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Fold.olean.server",
+      "sha256": "fb92ced2a6152b961d0aeefe0d640a60b6d03d8aaecf7cfc69e198e93f4e2914"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Fold.ir",
+      "sha256": "8f0a18889d313d452e4174cc011a0c043b6678e673eba427c976db87c832bfc5"
+    },
+    {
+      "module": "Effect4.Program.Fold",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Fold.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Fold.ir.sig",
+      "sha256": "66a5eb6f3192d31117c944457966711035f3ebb630c21f9c4be1bb58d3d14a9c"
+    },
+    {
+      "module": "Effect4.Program.Formation",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Formation.olean",
+      "sha256": "339c86113e19e84ba3c7c2e334a1c011d42ff131dcdea27d739b898d0e321329"
+    },
+    {
+      "module": "Effect4.Program.Formation",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Formation.ilean",
+      "sha256": "18f3556f334226af40eeb8301b510d53f3f7464892f930f5fb1ab52b0005a77d"
+    },
+    {
+      "module": "Effect4.Program.Formation",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Formation.olean.private",
+      "sha256": "fc16363fa0220e8ef58978d8d08c2afbf0a4871da9db858d88cd02feae58cb30"
+    },
+    {
+      "module": "Effect4.Program.Formation",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Formation.olean.server",
+      "sha256": "f96fbddf67d6cc0a5054460387b50b1cd1a389237e215e2c82183d82f3072b37"
+    },
+    {
+      "module": "Effect4.Program.Formation",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Formation.ir",
+      "sha256": "f8d838ef0136c317433e7870cd0eeff21bed226b042e1bbbd3c5b1b2ac894eb9"
+    },
+    {
+      "module": "Effect4.Program.Formation",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Formation.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Formation.ir.sig",
+      "sha256": "75d9f806fbf1dbe24bebf8df9153d50231d770bcbd471a3b94bfde5024e6c3ad"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/LayerView.olean",
+      "sha256": "85c11b4c49b9bc7a3e88499e4f240b031c0bd00b644ee5d5be3a46cb0e3b633c"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/LayerView.ilean",
+      "sha256": "c422645d1ef043db42759d8227828d1532a015bc49c62482554595f9c5c020fd"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/LayerView.olean.private",
+      "sha256": "2b4eb2424d332ba23deabcefabe797461c73e9f2f44e0af75a191d4b61ac5541"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/LayerView.olean.server",
+      "sha256": "a095f53c70401b8178caba7d4f1a0e169d10493c04402bb7af2f7908b5c9a4b1"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/LayerView.ir",
+      "sha256": "6e644e5fae11cf1d3197fb6563d12a6bebe97732dd5ef249ecaf420e1021dc87"
+    },
+    {
+      "module": "Effect4.Program.LayerView",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/LayerView.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/LayerView.ir.sig",
+      "sha256": "2150908ad38361d540e8b6447012c715ec41627a219938d371e39d20c3b696ba"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Native.olean",
+      "sha256": "f568fb3e4d3075a22560246bd9d96653a1f8b212fde511bceb1146b6a30d1829"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Native.ilean",
+      "sha256": "9215bb1e77aef22c04a199f7418f470443a0bd440f6c3164ac944c5c6f7545ef"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Native.olean.private",
+      "sha256": "42926f3f7a944400095d0cad82c445a6a1d3feadedeb2c7e10b30a4dfd03a5a1"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Native.olean.server",
+      "sha256": "d24761a17849fba0355b02235e06061b6a29e7cf11a4b0fb81c22c8a0e69d491"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Native.ir",
+      "sha256": "c69d0391bed65be415f7773fc2cc23818401f3246a4715b5d294650994fc4351"
+    },
+    {
+      "module": "Effect4.Program.Native",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Native.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Native.ir.sig",
+      "sha256": "b13e6de608529a8190e285365986b10bb866b912f90ed0f96756e0b395ad8eda"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/NativeAtom.olean",
+      "sha256": "9a679962ffe977c5534f657bfbd3758034923fa246b50059025ec042eb1ef8d5"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/NativeAtom.ilean",
+      "sha256": "5815237e01b83e97586cbd7ac7c440174ee242070e75d95f02cc8f323224383d"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/NativeAtom.olean.private",
+      "sha256": "f9b95eecd17dcc5dfea835eb41a197b43023dfc73f576758a71703dc45bd28d8"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/NativeAtom.olean.server",
+      "sha256": "eb64d678383c2f1db9d848cd8b72208b1927509e1d37231e28150f31977b8582"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/NativeAtom.ir",
+      "sha256": "2c8a8c8912df50120c9a0fd4eac8e029e5cde82c2bf5ee76f602b5ffa4abaf71"
+    },
+    {
+      "module": "Effect4.Program.NativeAtom",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NativeAtom.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/NativeAtom.ir.sig",
+      "sha256": "8328377d8405342f991a4bc3721f4f51fd8590f41cbf5055c48c92bca4ae28db"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Node.olean",
+      "sha256": "0be8409449e58c25fb03b30e1298ccc4d3d89d38618bddde630710a1025af60d"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Node.ilean",
+      "sha256": "556d40aac3df3ead058e64b4e274c6c0928dc3784046de14f6258e3d11dbea69"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Node.olean.private",
+      "sha256": "e5f5dd0acb9081eb807ba4fe602e06031a2dcbc27edb0c81e35ce2773f21a616"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Node.olean.server",
+      "sha256": "5e095fe111993b263bd6c17ab5930cc65ccb983a1ad31c954ceb58bb2546b989"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Node.ir",
+      "sha256": "2914f8d2e3123182357abb7dade95b63af5207d9714d92a0a01eaa016d1e50aa"
+    },
+    {
+      "module": "Effect4.Program.Node",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Node.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Node.ir.sig",
+      "sha256": "be8a9f82075572965abf59a3bd973cf5b1fae93482baad44a18aaacf997083da"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/NodeLenses.olean",
+      "sha256": "1a2c9f6884dcce87ac3e97ae0bbe3c2016d9f0e059227c6a42c2c78f28b5385b"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/NodeLenses.ilean",
+      "sha256": "7fa31dcf2e646eb7c466dd9644a7a79ab7dbcc71346bf319061ab651e075f0fd"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/NodeLenses.olean.private",
+      "sha256": "2a317fb2087c5d4d191fe11ece285324a71d722575ad76f909807349a6ae90cb"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/NodeLenses.olean.server",
+      "sha256": "77ae2266c904b522ddaa3af4e27e6a52f97eb0d6c4b8c508d2d486208088372f"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/NodeLenses.ir",
+      "sha256": "728da57976eac530883bbf1491b8e6cb24932d61df637aef39ef22efd162e8b5"
+    },
+    {
+      "module": "Effect4.Program.NodeLenses",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/NodeLenses.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/NodeLenses.ir.sig",
+      "sha256": "61184be92dfb095fcff490bd377f8eef25ca4477626b00386731c3848a87f289"
+    },
+    {
+      "module": "Effect4.Program.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Record.olean",
+      "sha256": "e863653e57d88322b5d5d29c3dbacd178a595cb791ab5eae72f3a5e4451c6dc9"
+    },
+    {
+      "module": "Effect4.Program.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Record.ilean",
+      "sha256": "6d8f0fc69cadb719d77ea1d3314fbecadb76d24bb146bbd51cea31416398e3f7"
+    },
+    {
+      "module": "Effect4.Program.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Record.olean.private",
+      "sha256": "510b65b4dac83975756f5d6cdccadcc1d2ff7aa23182afa779dcfe78f38530c8"
+    },
+    {
+      "module": "Effect4.Program.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Record.olean.server",
+      "sha256": "2cb86609208ffa493d8c40841c1b88beaa0865a0f5e54040045df21c364abf92"
+    },
+    {
+      "module": "Effect4.Program.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Record.ir",
+      "sha256": "c6537daa5a7591e3ad1c0d91b9fb2b90b9dae40d68fba34f9fbfa7900859eaae"
+    },
+    {
+      "module": "Effect4.Program.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Record.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Record.ir.sig",
+      "sha256": "f3925ea8212a5b7829a121db06fd562b2dad55cfc5f2c56e47f32420463a4668"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Refs.olean",
+      "sha256": "d73c339191033598dd4de8e855a41f2561c1e5affdc24fd72aaf729bdb28d170"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Refs.ilean",
+      "sha256": "fd0f91e287761cd2a5093c52346d634acf0e0a52b8adaf1b63f85741ff9906b6"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Refs.olean.private",
+      "sha256": "cf8ea126ac192cc3be087d214949fb12e52fe3a03c9341e333a28903e31f0d8e"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Refs.olean.server",
+      "sha256": "104ee520461c27efb9f60591bb861ae673dc94779cc67e49b1618997395bb7ef"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Refs.ir",
+      "sha256": "6f53e9d48038b24aa506c37d0255566129fa765fb9679b5ad8bdf4cc822b3500"
+    },
+    {
+      "module": "Effect4.Program.Refs",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Refs.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Refs.ir.sig",
+      "sha256": "b4c6381655c61131e297cb762e53f40a4c0ad82a74eb47af934de8c6d2c9614d"
+    },
+    {
+      "module": "Effect4.Program.ScopedOp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/ScopedOp.olean",
+      "sha256": "a91e8a7cd770bc092f60ea7f0a1f22aaf5e3a604aa23536a94d73b1a91202145"
+    },
+    {
+      "module": "Effect4.Program.ScopedOp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/ScopedOp.ilean",
+      "sha256": "6223110f475b9553660a8d046beb8affea3b1443141cdefda79ed0bc148ce0d3"
+    },
+    {
+      "module": "Effect4.Program.ScopedOp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/ScopedOp.olean.private",
+      "sha256": "892679ef1054819c06d25f4cf467f5c4ae70a1f35230b19830616099b76c904e"
+    },
+    {
+      "module": "Effect4.Program.ScopedOp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/ScopedOp.olean.server",
+      "sha256": "03f9372e791af92214fe6d2c4923764f6331174ea4ffb14723733cce9cf0188e"
+    },
+    {
+      "module": "Effect4.Program.ScopedOp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/ScopedOp.ir",
+      "sha256": "41310cb9b5f53da3ec3620e713d8988576487a9f935dea34edcb9fa13cc1fd23"
+    },
+    {
+      "module": "Effect4.Program.ScopedOp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/ScopedOp.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/ScopedOp.ir.sig",
+      "sha256": "8118e3b9cab33dc70bc2f4a1a136ca159c0232fd49775f9b47a8b972e681ceb8"
+    },
+    {
+      "module": "Effect4.Program.Tuple",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Tuple.olean",
+      "sha256": "be09359af5d33415f9705e57d9c947fedc8fe17c26aff89968c7eb0a7af56c71"
+    },
+    {
+      "module": "Effect4.Program.Tuple",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Tuple.ilean",
+      "sha256": "e93d4f63053b5d75b543ce077277ebd997396d27f5807e4bd80077fc3746175f"
+    },
+    {
+      "module": "Effect4.Program.Tuple",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Tuple.olean.private",
+      "sha256": "6b2f4e23fe331e93aab286877446fefa0033844a728248e40acafdf5d45d3a5f"
+    },
+    {
+      "module": "Effect4.Program.Tuple",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Tuple.olean.server",
+      "sha256": "6e41d6bedc63ac0908d491fc8e69ec88dfcdc1c8c778bd84f2b01cf3a1144eba"
+    },
+    {
+      "module": "Effect4.Program.Tuple",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Tuple.ir",
+      "sha256": "688806ed2875fa7d594776042b55c61250f2365f63e9708d748b065f45ae42f0"
+    },
+    {
+      "module": "Effect4.Program.Tuple",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Tuple.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Tuple.ir.sig",
+      "sha256": "3d97cd0bc8ac43c9380c696bcab597cd03fab4ccc38e719c028264c8547669f3"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Ty.olean",
+      "sha256": "b547aecab0b94931e8fb657dee15aa814508a6210a056ca3d6f0bce2f2a0761a"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Ty.ilean",
+      "sha256": "6360cff5f3cc96bba1fa4a945b95eaa163166905f0d59af416439a9da723452b"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Ty.olean.private",
+      "sha256": "2d82f5291ca81e15d167c11ca0b73abfce019957c56271d8ed0598b634ed036f"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Ty.olean.server",
+      "sha256": "96b9a1058e7e1c1276d9b251f1d46761cc71ba642d2a8fbf7c849ca12b973d2f"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Ty.ir",
+      "sha256": "8921d551ea93f081b4cc6408196c4e645e41580166e3be314c82bec15162762f"
+    },
+    {
+      "module": "Effect4.Program.Ty",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Ty.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Ty.ir.sig",
+      "sha256": "57b0f6b6e3f5d589e6fe8203d4f2a7662c16532cd9451b90dd531afdbe3a1450"
+    },
+    {
+      "module": "Effect4.Program.TyCore",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyCore.olean",
+      "sha256": "87b7e8daccf07761027cb8dd8b764ae23705869f91b72df070bca7a1dfd71c40"
+    },
+    {
+      "module": "Effect4.Program.TyCore",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyCore.ilean",
+      "sha256": "c4ae09628345367badc1ad1309b08fca055227cb718d0dd992efeeeeab770fa7"
+    },
+    {
+      "module": "Effect4.Program.TyCore",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyCore.olean.private",
+      "sha256": "de7f788f2cfa892b3e5867e04b2f93d6861128058d622f8bf6865f37a2ba1221"
+    },
+    {
+      "module": "Effect4.Program.TyCore",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyCore.olean.server",
+      "sha256": "6801bc60096c605603fd31f8ba9d1e353e4299a72d8011f18045dd21ef8edf20"
+    },
+    {
+      "module": "Effect4.Program.TyCore",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyCore.ir",
+      "sha256": "4a739b1a3f98a382bf7ec3986b5547ab29191d92a5da50dc7297b87cc79934e5"
+    },
+    {
+      "module": "Effect4.Program.TyCore",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyCore.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyCore.ir.sig",
+      "sha256": "5605a2e05155b21e6654f711a44b2e7c884cf93f69709ca60669c3590830d946"
+    },
+    {
+      "module": "Effect4.Program.TyEq",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyEq.olean",
+      "sha256": "939e891c19b115bf89568bd90459273c5531bc1fe8b59c92b689be58b3c20b70"
+    },
+    {
+      "module": "Effect4.Program.TyEq",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyEq.ilean",
+      "sha256": "7f9f9f15c214e7db09f76861c35fd4632c1cf7dcdd4700994179d47c4c665788"
+    },
+    {
+      "module": "Effect4.Program.TyEq",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyEq.olean.private",
+      "sha256": "d0e556978913f87575b64f83c0ef6436e6021a128e53acbf7b50b46e1cabf0d1"
+    },
+    {
+      "module": "Effect4.Program.TyEq",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyEq.olean.server",
+      "sha256": "eea25a14bb21538b2a55bb7b3d84968e5dce4a3f0b7b3a46cdd8e5c21be7a04e"
+    },
+    {
+      "module": "Effect4.Program.TyEq",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyEq.ir",
+      "sha256": "e802b08c650454f8dddefa61558c44fbe5e01d5518f7730adc9726965b36739b"
+    },
+    {
+      "module": "Effect4.Program.TyEq",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyEq.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyEq.ir.sig",
+      "sha256": "5ec60fa56c292cde02db25e7cf5424c9e7d6f5eaeadb73e7c997ece0ae6fbbb6"
+    },
+    {
+      "module": "Effect4.Program.TyVariance",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyVariance.olean",
+      "sha256": "e73b3666fc2269f82070123b2d73884d3e0486286b07e09b3b239b72489ae68c"
+    },
+    {
+      "module": "Effect4.Program.TyVariance",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyVariance.ilean",
+      "sha256": "e172956cc30943d8b1f6402d0a7ff764f7d7e4b69122c55f7b819977246fbdff"
+    },
+    {
+      "module": "Effect4.Program.TyVariance",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyVariance.olean.private",
+      "sha256": "059a5f9a761831ddda0c0502a8f36f783923ef3a67ad214c839f09e47d5ee9cc"
+    },
+    {
+      "module": "Effect4.Program.TyVariance",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyVariance.olean.server",
+      "sha256": "4b77d874ebc0fbaf706b700ab55d84318b48b2001f558c2f8a41af494872c5db"
+    },
+    {
+      "module": "Effect4.Program.TyVariance",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyVariance.ir",
+      "sha256": "fa81c723e388494590b2dd5be64d1fc1ac5769f91938c573ae10f2b6ad48d0a0"
+    },
+    {
+      "module": "Effect4.Program.TyVariance",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/TyVariance.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/TyVariance.ir.sig",
+      "sha256": "bfd310b6d3d96dbd251a7a96f5c8eca2d0a78e5b678a6d8fe8346cec10c5a2bf"
+    },
+    {
+      "module": "Effect4.Program.Typed",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typed.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typed.olean",
+      "sha256": "9f1f1efce5aa1f3868fea2e47d85d45f560d2e3769f504915e3d292cf2d7c035"
+    },
+    {
+      "module": "Effect4.Program.Typed",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typed.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typed.ilean",
+      "sha256": "12618b7cc4ddb84f772532f2dcd5ad1e034927cae3daf76233950f85aa505740"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing.olean",
+      "sha256": "33e65eb8da11b62561d1db74ecb4468c16a4116d5fcef8cec34a6855095e8782"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing.ilean",
+      "sha256": "06cdc4ba6bfc4c872a1c37a50caec2fde6c8665d727a4e76a00b1c19c4d735e1"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing.olean.private",
+      "sha256": "6125e5e4cae6b49aae8be75181b3b04aa766b56f211f94596f6bd1c1585eb00a"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing.olean.server",
+      "sha256": "f2ebe041b16c72dacfb7f6b825c0d9221b37f026fb70c08a94537079c8783843"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing.ir",
+      "sha256": "e7a31e3fc0dd25fd1dddadf078daddfdcf8136eb094c5f790cfa5115e4a69e9c"
+    },
+    {
+      "module": "Effect4.Program.Typing",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing.ir.sig",
+      "sha256": "a64a9a7d606309f2bb933cc838b7932385a6b0bd522dba8480cdd73adeed8b9a"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Blame.olean",
+      "sha256": "94fd874ae718c7a9aa4bca19222a97e37e4f86e19f4bd8866f6ee13ef2fb7131"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Blame.ilean",
+      "sha256": "924ddea5568bcb8086d5b542634ad66ed7b34051b49b71ff1722b9f26f3974c8"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Blame.olean.private",
+      "sha256": "32eb26dbd74ed9d6a54404e66c32a20ced32f0aa917b601d60fd1e9c8427d7f1"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Blame.olean.server",
+      "sha256": "40521737efdc7a449ecad2e93f01e7f3c4e06cf24ae16332c9413a24bc73eefb"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Blame.ir",
+      "sha256": "4a3711ddf40abe2d768b006ee039cd09ba06143d0a5725bfb7a3a1310a33366e"
+    },
+    {
+      "module": "Effect4.Program.Typing.Blame",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Blame.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Blame.ir.sig",
+      "sha256": "65abc8f5d448b4f889a04e2bcfd4e95bc273838ec72effccca9bc8dd687f5f93"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Rules.olean",
+      "sha256": "11b6c86eb524d8a619e81d5a5b60b31578c7477a293fbfe5a5eb3fa48a51a5e4"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Rules.ilean",
+      "sha256": "6fb725c478ce5f68f21be7a722ba02ff5ea4a6cae70904b834e94f8b475c8016"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Rules.olean.private",
+      "sha256": "081f95cb73c793a865f9bb03fa6765335c1c3b53bd009ecdc0428400053540d9"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Rules.olean.server",
+      "sha256": "16287866f5d2c3cd76541e15b6dc8d82709b6fc6c031bfc24d149e7c9186a254"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Rules.ir",
+      "sha256": "0ff0693613f03f3fd861e13c5a90a9448ce9f9ae8b217c6f77b73e5b6bb170e8"
+    },
+    {
+      "module": "Effect4.Program.Typing.Rules",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/Rules.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/Rules.ir.sig",
+      "sha256": "73b2236fcf0cf44786ba9352721db82717c4cf64042928f9c03e7115b8e64df9"
+    },
+    {
+      "module": "Effect4.Program.Typing.TermRefusal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/TermRefusal.olean",
+      "sha256": "24735f81bfd60bbb47f6b52acfe1e07e7b443306f7edfc9df38c35a4f3f709e1"
+    },
+    {
+      "module": "Effect4.Program.Typing.TermRefusal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/TermRefusal.ilean",
+      "sha256": "a9e37119b14d89331d340c6182c434a874094afd8552f1dccb486e0c2e195fb8"
+    },
+    {
+      "module": "Effect4.Program.Typing.TermRefusal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/TermRefusal.olean.private",
+      "sha256": "70f8490b80ca6a7ed8f21ebab50dde97fab5b474b04e3f1139f553908e50db7b"
+    },
+    {
+      "module": "Effect4.Program.Typing.TermRefusal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/TermRefusal.olean.server",
+      "sha256": "83ae1dc3e44957594ef601c9c09e083d221eb94c23554f27adc243ade2726493"
+    },
+    {
+      "module": "Effect4.Program.Typing.TermRefusal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/TermRefusal.ir",
+      "sha256": "771bb5a005e7a76859ec6c66ceef6c26f8413315aad7d12923c2a8f2bf0f2927"
+    },
+    {
+      "module": "Effect4.Program.Typing.TermRefusal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/Typing/TermRefusal.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/Typing/TermRefusal.ir.sig",
+      "sha256": "6eb8970e0706e9fdad408b58c26c9cd376af7d3a4b63f4fe42ce08e1a35204a6"
+    },
+    {
+      "module": "Effect4.Program.UnionRule",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.olean",
+      "target": ".lake/context-layer-scope/Effect4/Program/UnionRule.olean",
+      "sha256": "ce40450986ae578dc175256b151e22130374f17394cd3745ccd3f93d3efb5f9e"
+    },
+    {
+      "module": "Effect4.Program.UnionRule",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Program/UnionRule.ilean",
+      "sha256": "16dc420323e3bdd8b731bec0e04df5d07ed798a9cc6d64197ff0070913001ac1"
+    },
+    {
+      "module": "Effect4.Program.UnionRule",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Program/UnionRule.olean.private",
+      "sha256": "e874e1a211659b400ed07837f9a3dbb428658eb3fc48694bb13d92232c49769d"
+    },
+    {
+      "module": "Effect4.Program.UnionRule",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Program/UnionRule.olean.server",
+      "sha256": "67d2160995256c983774687b5159403b43517ba45b1804f726b151f9082308b2"
+    },
+    {
+      "module": "Effect4.Program.UnionRule",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.ir",
+      "target": ".lake/context-layer-scope/Effect4/Program/UnionRule.ir",
+      "sha256": "18e867f3cd12253343c0db10d03fef8a2a74462fef78ffb82cecb1f22c83a55d"
+    },
+    {
+      "module": "Effect4.Program.UnionRule",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Program/UnionRule.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Program/UnionRule.ir.sig",
+      "sha256": "6520b6f24d2d77037f8a71dea41d460bf258ceb541b75c65f071de5444190a99"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.olean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Digits.olean",
+      "sha256": "555c249ea25ab9e82bfa699bf880c7da6756ae10619f3ae9b7f56e4f2d9baf50"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Digits.ilean",
+      "sha256": "38d2856954b217cde159672703703a8aab24615afa140699feb910e7f14603f7"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Digits.olean.private",
+      "sha256": "3bf7f52f61d54eff05886c39cde7c5eb934401fa116f21e6ea8fe80d166fb020"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Digits.olean.server",
+      "sha256": "1d28221306f1bf5ce7b03e17ac5d7391382dc0416c81a1e9a511b320e4570a46"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.ir",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Digits.ir",
+      "sha256": "7b56cb0551be89530412b2b320ff02b70f643a2c37efe7ac8fafcc3702bda319"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Digits",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Digits.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Digits.ir.sig",
+      "sha256": "af985fecf615500c40b82d32e77f9526a70b3d7db9094aca8ec8d760fc744722"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.olean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image.olean",
+      "sha256": "ae5f1537a8b2d98ee9feef5872af1b8c9cea6e99016a701231c7993c19e2f284"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image.ilean",
+      "sha256": "918808efa176574eebcc3b50dcb2db4e7bb37d44a6736d35c43d59be4ca4bd64"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image.olean.private",
+      "sha256": "63ea517e37d0af1e1e4b2208be3a4b29204c1bef7278cf2b5175055ae9cb57f3"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image.olean.server",
+      "sha256": "0c0a98f232b58cf35fe14f4019374e85a269e543183b206fcc2a52a7619414ff"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.ir",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image.ir",
+      "sha256": "7740703f6cf3e1feab00b7bd7f9e6016df05e1d0ee808c1de1469d3f5146dc08"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image.ir.sig",
+      "sha256": "2224ba490e4700cba6bfe29e40e1cfcf3d0bc0d4a1d6fcaca3e26fd958626cad"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Containers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.olean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Containers.olean",
+      "sha256": "c421f5aa8d68992ead31be058de1690dca7d6438f7759a3f06c1bae5b21ff0b9"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Containers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Containers.ilean",
+      "sha256": "d000c36e538744c022b95490a7a075b7c78979aeff0c5d2bfb2f606253ae6029"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Containers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Containers.olean.private",
+      "sha256": "8e523bb91a7b91d37ef7970d841d959f8bdb6ad064ffe893bf6db15eee856989"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Containers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Containers.olean.server",
+      "sha256": "4378961d6e95d7fe98c8d283bccf7b04018a39762865661b09c6fe954660f198"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Containers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.ir",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Containers.ir",
+      "sha256": "4f87ab97d481d12b02f7ea4b1ecb8840d4488e022df38f5534b4e1d1730760a2"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Containers",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Containers.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Containers.ir.sig",
+      "sha256": "497fbbaa42add8324e0a7ba750b2c401456f130cdc8f9eb37ef2f78729e8fe85"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.olean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Record.olean",
+      "sha256": "35cd9abe5fa19ccdb3bebe9771622c94a3ef532264b0eedc264a335f130da9e7"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Record.ilean",
+      "sha256": "556205e2551023c20dccc671400d2a3a757e242db7c6fefc5a8ca2e01eb06629"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Record.olean.private",
+      "sha256": "37f53e1469004ea091974c3bb366113c2a5365d5b403b646525695633bc45b68"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Record.olean.server",
+      "sha256": "efbe3e01349509017a83bd1c6210f1a0c639a8906007d3e4357438e9621573c6"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.ir",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Record.ir",
+      "sha256": "ce7a7ec78e041790efb77714eb2df7ee41287dfcbb645623b0b6f6abae787264"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Image.Record",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Image/Record.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Image/Record.ir.sig",
+      "sha256": "533c35f7c8c412a99cc8d9f7ea78eb2c1f7aee95e074223c5d5e727b913fb77b"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.olean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Utf8.olean",
+      "sha256": "d98b1832cb70320258e46cc080ca554a5aa917e6057efdc29804de6b7209041a"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Utf8.ilean",
+      "sha256": "0b85eb89d3dabcb16ae3a2f74d2fba4330ae0b65b5bf76a657c6138e4bcdb146"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Utf8.olean.private",
+      "sha256": "f4fa5085978c17bd89fd246789ee583a02655952363f8313050af492b2e79777"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Utf8.olean.server",
+      "sha256": "b026c7d9d5df2d36ac0c6a9109fa51f9a51d02351e54cc1333272b5f3a4bab68"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.ir",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Utf8.ir",
+      "sha256": "3c3dcd658732a4e1d2bcdb1aab70dfb3f1086d000ee83d92ffedfe0bace449d3"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Utf8",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Utf8.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Utf8.ir.sig",
+      "sha256": "91fd40d547a436704a129d6d7fb659c3bb0939fe26f8a0de86eb9d4d97cc0bcc"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.olean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Val.olean",
+      "sha256": "0a74a53f1df2eb7473a37850cc37e8bc1546aa0b1948fa1da02694e74bac7140"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.ilean",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Val.ilean",
+      "sha256": "7037a00061f93afde9539ba92a8b75395e5fd07bec29d256cf91bb3894ff97c0"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.olean.private",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Val.olean.private",
+      "sha256": "8cfb126d3dc6af042dcb0e8a9ad77d897f4d9a7b84ecf92e89b3dc39e9985784"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.olean.server",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Val.olean.server",
+      "sha256": "aeb0753b37444b521baf12edf05d60ae2f06202b438e8579b6f889c411815637"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.ir",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Val.ir",
+      "sha256": "f397eb5f62daeecbc882a8a7dd4801c8e21e646c2864f9367971d158c3c12441"
+    },
+    {
+      "module": "Effect4.Store.Carrier.Val",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Store/Carrier/Val.ir.sig",
+      "target": ".lake/context-layer-scope/Effect4/Store/Carrier/Val.ir.sig",
+      "sha256": "45e86596963ae2379437ecb7757b75ff47eb0af21a18ca08c91f10b9321c4635"
+    }
+  ],
+  "standard_library": [
+    "Init.Data.Nat.ToString",
+    "Init.Data.String.Defs",
+    "Std"
+  ],
+  "primary_changes": [
+    " M docs/research/2026-10-09-program-parameters.md",
+    " M ocaml/gen/roots.json",
+    " M src/Effect4/Api/RefusalsDerived.lean",
+    " M src/Effect4/Codegen/Diagnostics.lean",
+    " M src/Effect4/Codegen/Templates.lean",
+    " M src/Effect4/Laws/Program/Agreement.lean",
+    " M src/Effect4/Laws/Program/DenoteR.lean",
+    " M src/Effect4/Laws/Program/FragmentLooped.lean",
+    " M src/Effect4/Laws/Program/FragmentLoopedRows.lean",
+    " M src/Effect4/Laws/Program/FragmentRows.lean",
+    " M src/Effect4/Laws/Program/Intro.lean",
+    " M src/Effect4/Laws/Program/Intro/Elementary.lean",
+    " M src/Effect4/Laws/Program/Intro/Equations.lean",
+    " M src/Effect4/Laws/Program/Intro/Identity.lean",
+    " M src/Effect4/Laws/Program/Intro/Sequential.lean",
+    " M src/Effect4/Laws/Program/Intro/Weight.lean",
+    " M src/Effect4/Laws/Program/TyView.lean",
+    " M src/Effect4/Machine/Stores.lean",
+    " M src/Effect4/Program/Binders.lean",
+    " M src/Effect4/Program/Checker.lean",
+    " M src/Effect4/Program/Compile.lean",
+    " M src/Effect4/Program/Definitions.lean",
+    " M src/Effect4/Program/Eff.lean",
+    " M src/Effect4/Program/Fold.lean",
+    " M src/Effect4/Program/Fragment.lean",
+    " M src/Effect4/Program/LayerView.lean",
+    " M src/Effect4/Program/Native.lean",
+    " M src/Effect4/Program/NodeLenses.lean",
+    " M src/Effect4/Program/Scoped.lean",
+    " M src/Effect4/Program/Table.lean",
+    " M src/Effect4/Program/Typing.lean",
+    " M src/Effect4/Program/Typing/Annotate.lean",
+    " M src/Effect4/Program/Typing/Blame.lean",
+    " M src/Effect4/Program/Typing/Rules.lean",
+    " M src/Effect4/Store/Domain/Derived/Program.lean",
+    " M tools/Effect4Gen/Fragments.lean",
+    " M tools/Effect4Gen/binders.json",
+    " M tools/Effect4Gen/guards/binders.lean",
+    " M tools/Effect4Gen/guards/fold.lean",
+    " M tools/Effect4Gen/guards/refusals.lean",
+    " M tools/Effect4Gen/manifest.json",
+    " M tools/Effect4Gen/wire-tags.json",
+    " M tools/Tools/ProgramStructure.lean"
+  ]
+}

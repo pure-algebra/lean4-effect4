@@ -1,0 +1,36 @@
+[
+  {
+    "name": "Compile",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/context-layer-scope",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-context-layer-scope/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/context-layer-scope/Effect4/Program/Compile.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-context-layer-scope/snapshot/src/Effect4/Program/Compile.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "Controls",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/context-layer-scope",
+      "-DwarningAsError=true",
+      "--run",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-context-layer-scope/Controls.lean"
+    ],
+    "exit_code": 0
+  }
+]
