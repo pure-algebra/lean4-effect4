@@ -1,0 +1,3 @@
+import Lean
+#eval ["1", "1.0", "1e0", "0", "0.0", "-0", "-0.0"].map fun s =>
+  (s, (Lean.Json.parse s).map Lean.Json.getNat?, (Lean.Json.parse s).map Lean.Json.getInt?)

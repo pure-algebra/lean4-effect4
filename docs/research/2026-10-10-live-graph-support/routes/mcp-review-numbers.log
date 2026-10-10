@@ -1,0 +1,7 @@
+[("1", Except.ok (Except.ok 1), Except.ok (Except.ok 1)),
+ ("1.0", Except.ok (Except.error "Natural number expected"), Except.ok (Except.error "Integer expected")),
+ ("1e0", Except.ok (Except.ok 1), Except.ok (Except.ok 1)),
+ ("0", Except.ok (Except.ok 0), Except.ok (Except.ok 0)),
+ ("0.0", Except.ok (Except.error "Natural number expected"), Except.ok (Except.error "Integer expected")),
+ ("-0", Except.ok (Except.ok 0), Except.ok (Except.ok 0)),
+ ("-0.0", Except.ok (Except.error "Natural number expected"), Except.ok (Except.error "Integer expected"))]
