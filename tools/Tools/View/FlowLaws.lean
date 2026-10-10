@@ -67,6 +67,30 @@ theorem Reach.reindex {es : List Edge} (d : Nat) {i j : Nat} (r : Reach es i j) 
 
 /-! ## Heights along an order -/
 
+/-- Prepared height agreement helper: the materialized recurrence reads exactly as `assign`.
+This serves `preparePlacement_height` and retains every natural position. -/
+theorem assignHeights_agrees (h : Nat → Int) (es : List Edge) (start : Int)
+    (ord : List Nat) (initial : List (Nat × Int)) (i : Nat) :
+    heightAt start (assignHeights h es start ord initial) i =
+      assign h es start ord (heightAt start initial) i := by
+  induction ord generalizing initial with
+  | nil => rfl
+  | cons v vs ih =>
+    rw [assignHeights, ih, assign]
+    rfl
+
+/-- Prepared placement reads the independent `heightsOf` recurrence at every position.
+This serves `place_placed`, including raw boxes whose selected order uses outside positions. -/
+theorem preparePlacement_height (b : Box) (i : Nat) :
+    (preparePlacement b).height i = heightsOf b i := by
+  unfold preparePlacement PreparedPlacement.height heightsOf
+  exact assignHeights_agrees _ _ _ _ [] i
+
+/-- Prepared lane agreement: `placeWith` retains the original backs and wait-lane order. -/
+theorem preparePlacement_lanes (b : Box) :
+    (preparePlacement b).lanes =
+      b.backs ++ (acceptWaits b.items.length b.edges b.waitEdges).2 := rfl
+
 theorem relax_ge_start (h : Nat → Int) (y : Nat → Int) (v : Nat) :
     ∀ (l : List Edge) (m : Int),
       m ≤ l.foldl (fun m e => if e.to = v then max m (y e.fr + h e.fr + VGAP + e.pad) else m) m
@@ -1267,8 +1291,8 @@ theorem atHeights_get (y : Nat → Int) : ∀ (k : Nat) (l : List Placed) (i : N
 
 theorem place_placed (width : GNode → Int) (f : Flow) (i : Nat) :
     (placeWith width f).placed[i]? = ((layWith width f).items[i]?).map fun p => { p with y := heightsOf (layWith width f) i } := by
-  show (atHeights (heightsOf (layWith width f)) 0 (layWith width f).items)[i]? = _
-  rw [atHeights_get, Nat.zero_add]
+  show (atHeights (preparePlacement (layWith width f)).height 0 (layWith width f).items)[i]? = _
+  rw [atHeights_get, Nat.zero_add, preparePlacement_height]
 
 /-- **Every edge of a flow's layout descends** (slice D3): its target's top stands at or below its
 source's bottom. For every flow, at the level of item positions; the waits accepted as edges are
