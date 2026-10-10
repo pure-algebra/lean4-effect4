@@ -263,6 +263,9 @@ its arrows. Anything else is a leak.
     `simp` argument, a dead tactic or a `sorry` in an `example` fails the build where it is
     written.
   - A hand-written `simp` names its lemmas as `simp only [...]`.
+- Pass a table as data. Never bind one with `let` before a closure that a definition returns.
+  Lean compiles the closure's argument as one more parameter, so the table is built at every
+  call. `Test/Audit/ClosureAudit.lean` refuses the shape (`#closure_audit`).
 - The gates that run with a commit are the ones the change reaches:
   - `make check-cases` after a new match on a policy family;
   - `python3 scripts/generate.py --only <family>` after a generator or its input, whose output
