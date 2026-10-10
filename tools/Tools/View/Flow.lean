@@ -573,6 +573,21 @@ def assign (h : Nat → Int) (es : List Edge) (start : Int) : List Nat → (Nat 
     let r := relax h es y start v
     assign h es start vs fun k => if k = v then r else y k
 
+/-- Read a retained height, using the original start outside the assigned positions.
+The newest assignment stands first, including repeated or out-of-range positions. -/
+def heightAt (fallback : Int) : List (Nat × Int) → Nat → Int
+  | [], _ => fallback
+  | (position, value) :: rest, i => if i = position then value else heightAt fallback rest i
+
+/-- Materialize `assign`'s recurrence as data for prepared placement.
+Each assignment reads the retained table before adding its new height. -/
+def assignHeights (h : Nat → Int) (es : List Edge) (start : Int) :
+    List Nat → List (Nat × Int) → List (Nat × Int)
+  | [], heights => heights
+  | v :: vs, heights =>
+    let r := relax h es (heightAt start heights) start v
+    assignHeights h es start vs ((v, r) :: heights)
+
 /-- Whether `a` comes before `b` in an order: `a` stands in it, and `b` after it. -/
 def before : List Nat → Nat → Nat → Bool
   | [], _, _ => false
@@ -595,12 +610,17 @@ def kahn (n : Nat) (es : List Edge) : List Nat :=
       go fuel (queue ++ ready) rest (out ++ [k])
   go (n + 1) ((List.range n).filter fun k => indeg k es == 0) es []
 
+/-- The next bounded-search frontier, shared by reachability and path explanations. -/
+def searchNext (es : List Edge) (frontier seen : List Nat) : List Nat :=
+  (es.filterMap fun e =>
+    if frontier.contains e.fr && !seen.contains e.to then some e.to else none).eraseDups
+
 /-- Whether `v` reaches `u` along the edges, in at most `fuel` steps. -/
 def reaches (es : List Edge) : Nat → List Nat → List Nat → Nat → Bool
   | 0, _, _, _ => false
   | fuel + 1, frontier, seen, u =>
     if frontier.contains u then true else
-    let next := (es.filterMap fun e => if frontier.contains e.fr && !seen.contains e.to then some e.to else none).eraseDups
+    let next := searchNext es frontier seen
     if next.isEmpty then false else reaches es fuel next (seen ++ next) u
 
 /-- **A flow placed**: its part across, its items at their heights, and the waits drawn in lanes,
@@ -637,18 +657,37 @@ def heightsOf (b : Box) : Nat → Int :=
   let o := orderFor b.items.length b.edges (acceptWaits b.items.length b.edges b.waitEdges).1
   assign (hAt b.items) o.1 b.topPad o.2 fun _ => b.topPad
 
+/-- Retained placement analysis: materialized heights and the original lane order.
+This is analysis data; an arbitrary record carries no layout guarantee. -/
+structure PreparedPlacement where
+  fallback : Int
+  heights : List (Nat × Int)
+  lanes : List (Nat × Nat)
+
+/-- Read one height from explicit prepared data, without repeating wait analysis or assignment. -/
+def PreparedPlacement.height (prepared : PreparedPlacement) (i : Nat) : Int :=
+  heightAt prepared.fallback prepared.heights i
+
+/-- Analyze waits once and retain the selected order's assignments for every placement consumer. -/
+def preparePlacement (b : Box) : PreparedPlacement :=
+  let waits := acceptWaits b.items.length b.edges b.waitEdges
+  let order := orderFor b.items.length b.edges waits.1
+  { fallback := b.topPad,
+    heights := assignHeights (hAt b.items) order.1 b.topPad order.2 [],
+    lanes := b.backs ++ waits.2 }
+
 /-- Items at their heights, the first at position `k`. -/
 def atHeights (y : Nat → Int) : Nat → List Placed → List Placed
   | _, [] => []
   | k, p :: ps => { p with y := y k } :: atHeights y (k + 1) ps
 
-/-- **A flow placed**, its nodes at a given width. Across by the fold; down by `heightsOf`. A wait
-that would close a cycle is a deadlock: it constrains nothing, and its lane shows it. -/
+/-- **A flow placed**, its nodes at a given width. Across by the fold; down by prepared heights.
+A wait that closes a cycle in the selected constraints constrains nothing and keeps its lane. -/
 def placeWith (width : GNode → Int) (f : Flow) : Placement :=
   let b := layWith width f
-  let y := heightsOf b
-  { box := b, placed := atHeights y 0 b.items,
-    lanes := b.backs ++ (acceptWaits b.items.length b.edges b.waitEdges).2 }
+  let prepared := preparePlacement b
+  { box := b, placed := atHeights prepared.height 0 b.items,
+    lanes := prepared.lanes }
 
 /-- **A flow placed**, each node as wide as its lines. -/
 def place (f : Flow) : Placement := placeWith nodeWidth f
