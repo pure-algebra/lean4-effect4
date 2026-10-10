@@ -64,6 +64,9 @@ field Effect4.Program.Point.path @native_op node P.t
 field Effect4.Machine.Capture.path @native_op node P.t
 field Effect4.Program.Point.env E.t
 field Effect4.Machine.Capture.env E.t
+# The site of a program that a call passes (decisions row 340) holds the caller's environment,
+# and a parameter's run resumes there: the same carrier, so the hop is `E.snoc` and no copy.
+field Effect4.Machine.ArgSite.env E.t
 # A read-modify-write row of the store carries the environment of the node that performed it
 # (decisions row 43; the state plan's T3b): `NativeOp.syncOpOf` hands a term row the point's
 # `env`, so the eight `env` arguments of `SyncOp` are the same carrier.  `sh_ref_step` extends

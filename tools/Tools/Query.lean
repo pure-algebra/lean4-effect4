@@ -207,6 +207,9 @@ def nodeEnvJson : Option NodeEnv → Json
   | some (.body tys loop) =>
     Json.mkObj [("kind", .str "body"), ("tys", tysJson tys), ("loop", .bool loop)]
   | some .closed => Json.mkObj [("kind", .str "closed")]
+  | some (.slots tys params) =>
+    Json.mkObj [("kind", .str "slots"), ("tys", tysJson tys),
+      ("params", toJson (params.map (·.name))), ("requests", tysJson (params.map (·.request)))]
 
 /-- One entry of the address table. An address of no program has no result. -/
 def entryJson (e : Table.Entry) : Json :=

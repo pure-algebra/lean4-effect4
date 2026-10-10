@@ -126,7 +126,7 @@ theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List Ro
           rw [hname, base] at unspelled
           cases unspelled
     | some k =>
-      rw [Signature.withDefs_dom_call sig defs hc, decide_eq_true_eq] at hd
+      replace hd : k < defs.length := Signature.withDefs_dom_call_lt sig defs hc hd
       rw [Signature.withDefs_rowOf_call sig defs hc (List.getElem?_eq_getElem hd)]
       change defsSpell call defs spell defs[k].name [] = some (sig.face op)
       simp only [defsSpell, findIdx_name named.distinct hd, calls.face_call op k hc]
@@ -280,7 +280,7 @@ theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List Ro
       rw [Signature.withDefs_rowOf_of_none sig defs hc] at hp ⊢
       exact hl.literal_alone op v names hd hp
     | some k =>
-      rw [Signature.withDefs_dom_call sig defs hc, decide_eq_true_eq] at hd
+      replace hd : k < defs.length := Signature.withDefs_dom_call_lt sig defs hc hd
       rw [Signature.withDefs_rowOf_call sig defs hc (List.getElem?_eq_getElem hd)]
       exact named.unspelled defs[k] (List.getElem_mem hd) _
 

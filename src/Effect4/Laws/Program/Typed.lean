@@ -2013,6 +2013,7 @@ theorem syncOpOf_isSome (op : NativeOp) (σ : Ty.Subst) (env : List Val) (v : Va
   | deferredAwait => simp [NativeOp.row] at hk
   | external _ => simp [NativeOp.row, NativeOp.externalPlaceholder] at hk
   | call _ => cases hk
+  | param _ => cases hk
   | scopeMake strategy =>
     cases strategy with
     | sequential =>
@@ -2035,6 +2036,7 @@ theorem syncOpOf_async_none (op : NativeOp) (env : List Val) (v : Val)
   | deferredAwait => rfl
   | external _ => rfl
   | call _ => rfl
+  | param _ => rfl
   | sleep => rfl
   | scopeMake strategy => cases strategy <;> simp [NativeOp.row] at hk
   | _ => simp [NativeOp.row] at hk

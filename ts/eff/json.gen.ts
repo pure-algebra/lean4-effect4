@@ -12,7 +12,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, ParamDecl, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -125,6 +125,7 @@ export const nativeOpJson = (v: NativeOp): Json => {
     case "refModifyWith": return ["refModifyWith", termJson(v.f)]
     case "refModifySomeWith": return ["refModifySomeWith", termJson(v.f)]
     case "call": return ["call", v.index]
+    case "param": return ["param", v.index]
   }
 }
 
@@ -158,6 +159,13 @@ export const defRoleJson = (v: DefRole): Json => {
   }
 }
 
+export const paramDeclJson = (v: ParamDecl): Json => ({
+  name: v.name,
+  request: tyJson(v.request),
+  answer: tyJson(v.answer),
+  error: tyJson(v.error),
+})
+
 export const defDeclJson = (v: DefDecl): Json => ({
   name: v.name,
   request: tyJson(v.request),
@@ -165,6 +173,7 @@ export const defDeclJson = (v: DefDecl): Json => ({
   error: tyJson(v.error),
   requires: v.requires.map((y) => serviceKeyJson(y)),
   role: defRoleJson(v.role),
+  params: v.params.map((y) => paramDeclJson(y)),
 })
 
 export const effJson = (v: Eff): Json => {
@@ -196,6 +205,7 @@ export const effJson = (v: Eff): Json => {
     case "iterate": return ["iterate", (v.cursorTy === null ? null : tyJson(v.cursorTy)), termJson(v.initial), termJson(v.test), termJson(v.step), termJson(v.result), effJson(v.body)]
     case "restore": return ["restore", termJson(v.saved), effJson(v.body)]
     case "defs": return ["defs", v.decls.map((y) => defDeclJson(y)), effsJson(v.bodies), effJson(v.main)]
+    case "invoke": return ["invoke", v.index, termJson(v.request), effsJson(v.args)]
   }
 }
 

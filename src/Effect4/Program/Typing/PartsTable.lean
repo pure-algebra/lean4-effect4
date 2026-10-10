@@ -39,8 +39,8 @@ signature `sig`. A spine node has no environment and no answer. A body with a de
 part: its table at its base, in its declared request. A body past the declarations holds no part. -/
 def Table.bodies (sig : Signature Op) : List DefDecl → Effs Op → List Nat → List Table.Entry
   | d :: ds, .cons body rest, base =>
-    ⟨base, none, none⟩ :: ((Annotate.check sig [d.request.normalize] (base ++ [0]) body).1 ++
-      Table.bodies sig ds rest (base ++ [1]))
+    ⟨base, none, none⟩ :: ((Annotate.check (sig.withParams d.params) [d.request.normalize]
+      (base ++ [0]) body).1 ++ Table.bodies sig ds rest (base ++ [1]))
   | [], .cons body rest, base =>
     ⟨base, none, none⟩ :: ((Node.addresses (.eff body)).map (fun r => ⟨base ++ 0 :: r, none, none⟩) ++
       Table.bodies sig [] rest (base ++ [1]))

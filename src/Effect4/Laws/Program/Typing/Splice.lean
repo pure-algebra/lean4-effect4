@@ -304,7 +304,7 @@ theorem Node.childEnv_replace_kept {s : Signature Op} {n n' c c' : Node Op} {τ 
     change effTy s τ.env.tyEnv _ = effTy s τ.env.tyEnv _ at hk
     rcases j with _ | _ | _ | j <;> simp only [Node.childEnv, hk]
   -- a statement list's head: the tail reads a `bindYield`'s program
-  case h_45 =>
+  case h_46 =>
     simp only [Node.child, Option.some.injEq] at hci
     subst hci
     rcases j with _ | _ | _ | j
@@ -313,7 +313,7 @@ theorem Node.childEnv_replace_kept {s : Signature Op} {n n' c c' : Node Op} {τ 
     · rfl
     · rfl
   -- a statement list's tail: the tail's environment reads the head, which stays
-  case h_46 => rcases j with _ | _ | _ | j <;> cases ‹Stmt Op› <;> rfl
+  case h_47 => rcases j with _ | _ | _ | j <;> cases ‹Stmt Op› <;> rfl
   all_goals rcases j with _ | _ | _ | j <;> rfl
 
 /-- **The node's own entry is kept**: the edited node has the node's type, so the checker's

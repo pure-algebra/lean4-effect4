@@ -523,7 +523,7 @@ theorem runStmts_walkR (root : NativeEff) (p : Point) : ∀ (fuel : Nat) (pc : L
     intro pc env folded
     rw [runStmts, walkR]
     refine ⟨rfl, StepRel.resume _ ?_⟩
-    exact CodeMeans.frontier _ _ _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
+    exact CodeMeans.frontier _ _ _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
       rw [suspendBodyAt_zero' rfl]; rfl
   | succ fuel ih =>
     intro pc env folded
@@ -658,13 +658,15 @@ theorem loopAt_congr (root : NativeEff) {p p' : Point} (h : p'.path = p.path) :
 
 /-- Two points that differ at most in the captured view are one point at a given view. -/
 theorem point_congr {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
     (completed : List (FiberId × ExitV)) :
     ({ p' with completed } : Point) = ({ p with completed } : Point) :=
   by aesop
 
 theorem childWith_congr {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
     (completed : List (FiberId × ExitV)) (i : Nat) (v : Val) :
     ({ p' with completed } : Point).childWith i v = ({ p with completed } : Point).childWith i v :=
   by aesop
@@ -672,7 +674,8 @@ theorem childWith_congr {p p' : Point}
 /-- The loop hooks of loops named up to the captured view are related, entering and
 resuming. -/
 theorem loopEnter_means (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
     (cursor : Val) :
     LoopNextMeans root ((interpAt root completed table).loopEnter (.loop p') cursor)
       ((interpRAt root completed table).loopEnter (.loop p) cursor) := by
@@ -682,7 +685,8 @@ theorem loopEnter_means (root : NativeEff) (completed : List (FiberId × ExitV))
   exact loopNextAt_means root _ cursor
 
 theorem loopResume_means (root : NativeEff) (completed : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
     (cursor answer : Val) :
     LoopNextMeans root ((interpAt root completed table).loopResume (.loop p') cursor answer)
       ((interpRAt root completed table).loopResume (.loop p) cursor answer) := by

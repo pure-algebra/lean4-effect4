@@ -352,7 +352,8 @@ theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : L
     split <;> rfl
 
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
-    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
+    (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params) :
     (interpAt root cv table).iterNext (.gen p' [] false) Val.unit =
       (interpAt root cv table).iterNext (.gen p [] false) Val.unit := by
   show runStmts root { p' with completed := cv } p'.fuel [] (if false then _ else p'.env) [] =
@@ -571,7 +572,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     show CodeMeans root (suspendBodyAt root (.body { p' with completed := m₂.completedExits }))
       (.vis (.inr (.frontier reason p)) k)
     rw [hloop]
-    exact CodeMeans.frontier p _ reason k ⟨hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2⟩
+    exact CodeMeans.frontier p _ reason k ⟨hp.1, hp.2.1, hp.2.2.1, hp.2.2.2.1, hp.2.2.2.2.1, hp.2.2.2.2.2⟩
       (fun c' => hloop c')
   | yieldError p e k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,

@@ -157,8 +157,9 @@ def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : 
     ∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2
 
 /-- **The block's bodies are typed** (decisions row 328): each declaration of the program's block
-names a body at its path (`defBodyPath`), which the checker types at the source's signature, in
-the environment of the declared request, at a type the declaration admits; and the declaration is
+names a body at its path (`defBodyPath`), which the checker types at the source's signature
+extended by the definition's parameters (`Signature.withParams`, decisions row 340), in the
+environment of the declared request, at a type the declaration admits; and the declaration is
 formed. A program with no block has no declaration, so it holds outright. The load discharges it
 from the checker's verdict (`bodiesTyped_of_typeOf`, `Typed/Denotation.lean`), as it discharges
 the references' formation: it is a premise of M5, never a field of `ProgramSource`. The
@@ -168,8 +169,8 @@ def BodiesTyped (src : ProgramSource) : Prop :=
     ∃ (path : List Nat) (body : NativeEff) (tb : EffTy),
       defBodyPath src.program k = some path ∧
       Node.at_ (.eff src.program) path = some (.eff body) ∧
-      Checker.check src.signature [d.request.normalize] path (Eff.expandIn src.program body) =
-        .ok tb ∧
+      Checker.check (src.signature.withParams d.params) [d.request.normalize] path
+        (Eff.expandIn src.program body) = .ok tb ∧
       d.formed = true ∧ d.admits tb = true
 
 /-- **The source's formation, for M5** (decisions rows 170 and 328): its layer references are well

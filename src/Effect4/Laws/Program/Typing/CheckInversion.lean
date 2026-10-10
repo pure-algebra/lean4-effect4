@@ -246,6 +246,16 @@ theorem inv_restore (sig : Signature Op) (env : TyEnv) (p : List Nat) (saved : T
         check sig env (p ++ [0]) body = .ok t := by
   aesop (rule_sets := [Effect4.Checker])
 
+theorem inv_invoke (sig : Signature Op) (env : TyEnv) (p : List Nat) (k : Nat) (request : Term)
+    (args : Effs Op) :
+    ∀ t, check sig env p (.invoke k request args) = .ok t →
+      ∃ d requestTy t0 ts, sig.defOf k = some d ∧ d.params.isEmpty = false ∧
+        d.params.length = args.toList.length ∧ termTy sig env request = some requestTy ∧
+        rowTy d.row.normalizeTypes requestTy none = some t0 ∧
+        checkEffs sig env (p ++ [0]) d.params args = .ok ts ∧
+        t = ⟨t0.answer, t0.error, t0.requires.union ts.requires⟩ := by
+  aesop (rule_sets := [Effect4.Checker])
+
 /-! ## `checkStmts` under `afterRet := none` — eight lemmas (`ret` splits on its tail) -/
 
 theorem inv_stmts_nil (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat) :
@@ -309,16 +319,25 @@ theorem inv_stmts_breakLoop (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (
         ∃ r, checkStmts sig env inLoop none (p ++ [1]) rest = .ok r ∧ g = r.broken := by
   aesop (rule_sets := [Effect4.Checker])
 
-/-! ## `checkEffs` — two arms -/
+/-! ## `checkEffs` — three arms: the empty spine, an entrant past the slots, a slot -/
 
-theorem inv_effs_nil (sig : Signature Op) (env : TyEnv) (p : List Nat) :
-    ∀ t, checkEffs sig env p .nil = .ok t → t = ⟨.never, .never, Requirement.empty⟩ := by
+theorem inv_effs_nil (sig : Signature Op) (env : TyEnv) (p : List Nat) (qs : List ParamDecl) :
+    ∀ t, checkEffs sig env p qs .nil = .ok t → t = ⟨.never, .never, Requirement.empty⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_effs_cons (sig : Signature Op) (env : TyEnv) (p : List Nat) (head : Eff Op)
     (tail : Effs Op) :
-    ∀ t, checkEffs sig env p (.cons head tail) = .ok t →
-      ∃ h r, check sig env (p ++ [0]) head = .ok h ∧ checkEffs sig env (p ++ [1]) tail = .ok r ∧
+    ∀ t, checkEffs sig env p [] (.cons head tail) = .ok t →
+      ∃ h r, check sig env (p ++ [0]) head = .ok h ∧ checkEffs sig env (p ++ [1]) [] tail = .ok r ∧
+        t = ⟨Ty.join h.answer r.answer, h.error.join r.error, h.requires.union r.requires⟩ := by
+  aesop (rule_sets := [Effect4.Checker])
+
+/-- A program at its slot (decisions row 340). -/
+theorem inv_effs_slot (sig : Signature Op) (env : TyEnv) (p : List Nat) (q : ParamDecl)
+    (qs : List ParamDecl) (head : Eff Op) (tail : Effs Op) :
+    ∀ t, checkEffs sig env p (q :: qs) (.cons head tail) = .ok t →
+      ∃ h r, check sig (env ++ [q.request.normalize]) (p ++ [0]) head = .ok h ∧
+        q.admits h = true ∧ checkEffs sig env (p ++ [1]) qs tail = .ok r ∧
         t = ⟨Ty.join h.answer r.answer, h.error.join r.error, h.requires.union r.requires⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
@@ -417,7 +436,7 @@ theorem inv_action_awaitNewChildren (sig : Signature Op) (env : TyEnv) (p : List
 
 theorem inv_action_raceAll (sig : Signature Op) (env : TyEnv) (p : List Nat) (entrants : Effs Op) :
     ∀ t, checkAction sig env p (.raceAll entrants) = .ok t →
-      checkEffs sig env (p ++ [0]) entrants = .ok t := by
+      checkEffs sig env (p ++ [0]) [] entrants = .ok t := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_action_setContext (sig : Signature Op) (env : TyEnv) (p : List Nat) (context : Term) :

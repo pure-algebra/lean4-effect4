@@ -28,7 +28,8 @@ def rules : List (String × Rule) :=
    ("yieldNow", .reject), ("awaitFiber", .reject), ("withFiber", .reject), ("scoped", .reject),
    ("acquireRelease", .reject), ("provideLayer", .reject), ("service", .reject),
    ("provideService", .reject), ("catchIf", .conditional), ("select", .children),
-   ("iterate", .loop), ("restore", .reject), ("defs", .reject)]
+   ("iterate", .loop), ("restore", .reject), ("defs", .reject),
+   ("invoke", .reject)]
 
 /-- Classification covers exactly the declaration's constructors. Recursive rules visit only
 program children. An operation rule requires the operation and request fields. -/

@@ -71,6 +71,11 @@ structure Point where
   (direction-scout D6, 2026-09-07: added while the alphabet is open, so a later multi-root
   machine changes no format). -/
   root : Nat := 0
+  /-- **The stack of the programs that the running calls passed** (decisions row 340). The top
+  entry holds the sites that the innermost invocation passed, one for each parameter, and each
+  entry below is its caller's. A parameter's run pops the top entry, so the passed program runs
+  at its caller's stack. Empty outside a definition's body. -/
+  params : List (List ArgSite) := []
 deriving DecidableEq
 
 namespace Point
@@ -98,13 +103,15 @@ theorem layerBuild_fuel (p : Point) : p.layerBuild.fuel = p.fuel - 1 := rfl
 /-- The point a capture stores, at a completed-exit view: `Capture` (`Machine/Stores.lean`) is
 `Point` minus that view plus the context, and this is the isomorphism's one direction. -/
 def ofCapture (c : Capture) (completed : List (FiberId × ExitV) := []) : Point :=
-  { path := c.path, env := c.env, fuel := c.fuel, tape := c.tape, completed, root := c.root }
+  { path := c.path, env := c.env, fuel := c.fuel, tape := c.tape, completed, root := c.root,
+    params := c.params }
 
 /-- The capture of a release registered at this point (`internal/effect.ts:3976,3983`): the
 acquired value appended to the environment (the release is typed over `env ++ [a, exit]`,
 `Typing.lean`), and the context `contextWith` read. -/
 def capture (p : Point) (a : Val) (ctx : Ctx) : Capture :=
-  { path := p.path, env := p.env ++ [a], fuel := p.fuel, tape := p.tape, ctx, root := p.root }
+  { path := p.path, env := p.env ++ [a], fuel := p.fuel, tape := p.tape, ctx, root := p.root,
+    params := p.params }
 
 /-- The point of the child at index `i` with a value appended to the scope. -/
 def childWith (p : Point) (i : Nat) (v : Val) : Point :=
@@ -612,9 +619,9 @@ def compileEff : NativeEff → Point → NCode
       | .perform op request =>
         match op with
         | .external _ => asyncRoute op request p
-        -- an invocation (decisions row 328): one counted suspension, whose body
-        -- `suspendBodyAt` decides, as at a source `suspend`
-        | .call _ => Prim.suspend (EffThunk.body p)
+        -- an invocation (decisions row 328) and a parameter's run (decisions row 340): one
+        -- counted suspension, whose body `suspendBodyAt` decides, as at a source `suspend`
+        | .call _ | .param _ => Prim.suspend (EffThunk.body p)
         | _ => match op.kind with
           | .sync =>
             match evalTerm p.env request with
@@ -690,6 +697,8 @@ def compileEff : NativeEff → Point → NCode
         | none => badShape
       -- a definition block (decisions row 328): no step of its own; the main program at child 1
       | .defs _ _ main => compileEff main (p.child 1)
+      -- an invocation with programs (decisions row 340): one counted suspension, as `call`
+      | .invoke _ _ _ => Prim.suspend (EffThunk.body p)
 
 /-- The program at a point of the root: the subterm compiled there, or the frontier. -/
 def resolve (root : NativeEff) (p : Point) : NCode :=
@@ -1336,7 +1345,8 @@ complement (every other head's body is `compileEff` at the point), which stops b
 moment the match gains an arm this list lacks. -/
 def Eff.suspendDecided : NativeEff → Bool
   | .suspend _ | .select _ _ _ _ | .gen _
-  | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ | .perform (.call _) _ => true
+  | .iterate _ _ _ _ _ _ | .provideLayer _ _ _ | .perform (.call _) _ | .perform (.param _) _
+  | .invoke _ _ _ => true
   | _ => false
 
 /-- **The path of definition `k`'s body** in a program's root block (decisions row 328): the
@@ -1347,6 +1357,12 @@ def defBodyPath (root : NativeEff) (k : Nat) : Option (List Nat) :=
   | .defs _ bodies _ =>
     if k < bodies.toList.length then some (0 :: List.replicate k 1 ++ [0]) else none
   | _ => none
+
+/-- **The sites of an invocation's programs** (decisions row 340): the spine at `path`, under
+the caller's environment `env`. Program `j` stands at child `0` of the spine's `j`-th node. -/
+def argSitesAt (path : List Nat) (env : List Val) : Effs NativeOp → List ArgSite
+  | .nil => []
+  | .cons _ rest => { path := path ++ [0], env } :: argSitesAt (path ++ [1]) env rest
 
 /-- What a `suspend` thunk returns: a body compiled at its point, a branch decided by its
 point's environment, the iterator of a generator (`Effect.gen`'s `fromIteratorUnsafe`,
@@ -1385,6 +1401,26 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         -- the environment is built from the point's own (`take 0`, then the request's value), as
         -- `Point.layerBuild` builds an empty one: the engine keeps it in its environment carrier
         | some v, some path => resolve root { p.redirect path with env := p.env.take 0 ++ [v] }
+        | _, _ => badShape
+      -- an invocation with programs (decisions row 340): as an invocation, with the sites of the
+      -- call's programs, under this point's environment, pushed on the stack of parameters
+      | some (Node.eff (.invoke k request args)) =>
+        match evalTerm p.env request, defBodyPath root k with
+        | some v, some path =>
+          resolve root
+            { p.redirect path with
+              env := p.env.take 0 ++ [v]
+              params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+        | _, _ => badShape
+      -- a parameter's run (decisions row 340): the site of the program that the innermost call
+      -- passed, its environment extended by the request's value, at the stack below that call
+      | some (Node.eff (.perform (.param i) request)) =>
+        match evalTerm p.env request, p.params with
+        | some v, top :: rest =>
+          match top[i]? with
+          | some site =>
+            resolve root { p.redirect site.path with env := site.env ++ [v], params := rest }
+          | none => badShape
         | _, _ => badShape
       | some (Node.eff e) => compileEff e p
       | _ => badShape

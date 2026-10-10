@@ -4823,6 +4823,44 @@ theorem childEnv_length (s : Signature Op) (parent : NodeEnv) (node : Node Op) (
     simp only [Node.childEnv] at found
     rw [childScope_select_right]
     exact select_right_map_length s parent.tyEnv term decision found
+  -- An invocation's programs and their spine (decisions row 340), by hand: a search over the
+  -- spine's catch-all on the parent reaches `Classical.choice`.
+  case case28 k request args =>
+    simp only [Node.childEnv] at found
+    obtain ⟨d, _, invoked⟩ := Option.bind_eq_some_iff.mp found
+    cases params : d.params with
+    | nil => rw [params] at invoked; cases invoked
+    | cons q qs =>
+      rw [params] at invoked
+      cases invoked
+      simp only [NodeEnv.tyEnv, List.length_append, List.length_singleton]
+      rfl
+  case case52 head tail =>
+    simp only [Node.childEnv] at found
+    cases found
+    cases parent with
+    | slots tys qs => cases qs <;> rfl
+    | env tys => rfl
+    | body tys loop => rfl
+    | closed => rfl
+  case case53 head tail tys q0 q qs =>
+    simp only [Node.childEnv] at found
+    cases found
+    simp only [NodeEnv.tyEnv, List.length_append, List.length_singleton]
+    rfl
+  case case54 head tail env qs notTwo =>
+    cases qs with
+    | nil => simp only [Node.childEnv, reduceCtorEq] at found
+    | cons q0 rest =>
+      cases rest with
+      | nil => simp only [Node.childEnv, reduceCtorEq] at found
+      | cons q qs => exact (notTwo q0 q qs rfl).elim
+  case case55 head tail notTwo notSlots =>
+    cases parent with
+    | slots tys qs => exact (notSlots tys qs rfl).elim
+    | env tys => simp only [Node.childEnv] at found; cases found; rfl
+    | body tys loop => simp only [Node.childEnv] at found; cases found; rfl
+    | closed => simp only [Node.childEnv] at found; cases found; rfl
   all_goals
     aesop (add norm simp [Node.childEnv, childScope, Node.child, Node.childLevel,
       Node.binders, Node.closedChild, NodeEnv.tyEnv])
@@ -4948,9 +4986,11 @@ theorem rowChildOffset_source (row : Templates.Row) (member : row ∈ Templates.
 -- Splitting those indices makes each constructor proof a closed list calculation.
 -- No template table or successful typing premise enters this source metadata calculation.
 -- A definition block is excluded: its bodies bind the request, and its row is a refusal.
+-- An invocation is excluded too: its programs bind their parameter's request, and its row refuses.
 theorem view_eff_child_binders (source : Eff Op) (i : Nat) (childFam : EffFam)
     (child : EffSelfCarrier Op childFam)
     (notBlock : ∀ decls bodies main, source ≠ Eff.defs decls bodies main)
+    (notInvoke : ∀ k request programs, source ≠ Eff.invoke k request programs)
     (captured : (view_eff source).2[i]? = some (.child childFam child)) :
     (Node.eff source).binders (((view_eff source).2.take i).countP isChildArg) =
       sourceChildOffset (view_eff source).1 (view_eff source).2 i := by
@@ -4965,6 +5005,7 @@ theorem view_eff_child_binders (source : Eff Op) (i : Nat) (childFam : EffFam)
     | select scrutinee decision left right =>
       cases decision <;> cases captured <;> rfl
     | defs decls bodies main => exact absurd rfl (notBlock decls bodies main)
+    | invoke k request programs => exact absurd rfl (notInvoke k request programs)
     | _ => cases captured <;> rfl
 
 -- Only clause families own rows; spines use their existing list rules.
@@ -4972,6 +5013,15 @@ def rowClauseFamily (row : Templates.Row) : Bool :=
   decide (row.fam = .eff ∨ row.fam = .action ∨ row.fam = .stmt ∨ row.fam = .layer)
 
 theorem table_clauseFamilies : Templates.table.all rowClauseFamily = true := by decide
+
+-- The invocation's row refuses: no skeleton prints its programs yet (decisions row 340).
+-- Consumer: childEnv_template_depth, which excludes an invocation by it.
+def rowInvokeRefused (row : Templates.Row) : Bool :=
+  match row.out with
+  | .refuse _ => true
+  | _ => row.ctor != "invoke"
+
+theorem table_invokeRefused : Templates.table.all rowInvokeRefused = true := by decide
 
 theorem table_childDepth_at {row : Templates.Row} (member : row ∈ Templates.table)
     {sorts : List ArgSort} (hsorts : Effect4.Program.argSorts row.fam row.ctor = some sorts)
@@ -5043,7 +5093,8 @@ theorem childEnv_template_depth
     (selected : (Templates.table.find? fun row => row.selects fam ctor args) = some row)
     (captured : args[i]? = some (.child childFam child))
     (found : (Effect4.Codegen.nodeOfFamily fam source).childEnv s parent
-      ((args.take i).countP isChildArg) = some rho) :
+      ((args.take i).countP isChildArg) = some rho)
+    (printing : ∀ name, row.out ≠ .refuse name) :
     rho.tyEnv.length = argDepth fam (.child childFam) parent.tyEnv.length (row.out.levelAt i) := by
   have member := List.mem_of_find?_eq_some selected
   have selector := List.find?_some selected
@@ -5067,7 +5118,15 @@ theorem childEnv_template_depth
       rintro decls bodies main rfl
       have stops := childEnv_block_none s parent decls bodies main ((args.take i).countP isChildArg)
       exact nomatch stops.symm.trans found
-    have binder := view_eff_child_binders source i childFam child notBlock
+    have notInvoke : ∀ k request programs, source ≠ Eff.invoke k request programs := by
+      rintro k request programs rfl
+      have refused := List.all_eq_true.mp table_invokeRefused row member
+      have named : row.ctor = "invoke" := constructor.trans (congrArg Prod.fst viewed).symm
+      unfold rowInvokeRefused at refused
+      cases out : row.out with
+      | refuse name => exact printing name out
+      | _ => simp only [out, named, bne_self_eq_false, Bool.false_eq_true] at refused
+    have binder := view_eff_child_binders source i childFam child notBlock notInvoke
       (by rw [viewed]; exact captured)
     have offset := rowChildOffset_source row member args
       (by simpa only [constructor] using selector) i
@@ -5141,7 +5200,8 @@ theorem siteFocused_child {sig : Signature Op} {root : Eff Op} {env0 : TyEnv}
     (selected : Templates.table.find? (fun row => row.selects fam ctor args) = some row)
     (captured : args[i]? = some (.child childFam child))
     (found : PrintEliminators.contextAtTable (annotate sig env0 root) root
-      (path ++ [(args.take i).countP isChildArg]) = some ctx) :
+      (path ++ [(args.take i).countP isChildArg]) = some ctx)
+    (printing : ∀ name, row.out ≠ .refuse name) :
     SiteFocused root sig env0 (path ++ [(args.take i).countP isChildArg]) childFam child
       (argDepth fam (.child childFam) n (row.out.levelAt i)) := by
   obtain ⟨sourceAt, parent, parentAt, parentLength, _⟩ := focus
@@ -5158,7 +5218,7 @@ theorem siteFocused_child {sig : Signature Op} {root : Eff Op} {env0 : TyEnv}
     | none => rw [environment] at rhoAt; cases rhoAt
     | some rho' => simpa only [environment, Option.bind_some] using rhoAt
   have depth := PrintEliminators.childEnv_template_depth sig parent fam source ctor args row i
-    childFam child viewed selected captured envStep
+    childFam child viewed selected captured envStep printing
   rw [parentLength] at depth
   refine ⟨childAt, rho, rhoAt, depth, ?_⟩
   cases childFam with
@@ -5395,6 +5455,7 @@ theorem eraseSiteStmt_print
     intro i fam source hsource capture member depth hread htyped
     obtain ⟨childCtx, childFound⟩ := printedCaptureAt_context htyped
     have childFocus := siteFocused_child focus hview hfindSource hsource childFound
+      (fun _ refused => nomatch hout.symm.trans refused)
     rw [← hfamily] at childFocus
     have hslot : (args.map argSortOf)[i]? = some (.child fam) := by
       simp only [List.getElem?_map, hsource, Option.map_some, argSortOf]
@@ -5841,6 +5902,7 @@ theorem eraseT_site_rigid_step {fam : EffFam} {path : List Nat} {n : Nat}
     obtain ⟨childCtx, found⟩ := printedCaptureAt_context hp
     rw [depth, familyRow]
     exact siteFocused_child focus viewed selected sourceAt found
+      (fun _ refused => nomatch output.symm.trans refused)
   have childPrint : ∀ i fam d (child : EffSelfCarrier Op fam) value,
       args[i]? = some (.child fam child) →
       d = argDepth row.fam (.child fam) n (row.out.levelAt i) →
@@ -5889,21 +5951,45 @@ variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
   {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
   {root : Eff Op} {env0 : TyEnv}
 
-/-- The expression spine's head receives its parent's actual environment.
+/-- A focused node's child whose context the table records is focused at the child's scope.
+Placement: exact-codecs R8; consumer: the expression spine steps below. Inside an invocation's
+programs a spine child takes its environment from its parameter, so only the recorded context,
+not the parent's, fixes it (decisions row 340). -/
+theorem siteFocused_found {path : List Nat} {fam : EffFam} {source : EffSelfCarrier Op fam}
+    {n i d : Nat} {childFam : EffFam} {child : EffSelfCarrier Op childFam}
+    {ctx : PrintEliminators.Context Op}
+    (focus : SiteFocused root sig env0 path fam source n)
+    (step : (nodeOfFamily fam source).child i = some (nodeOfFamily childFam child))
+    (found : PrintEliminators.contextAtTable (annotate sig env0 root) root (path ++ [i]) = some ctx)
+    (depth : PrintEliminators.childScope n (nodeOfFamily fam source) i = d)
+    (closed : ClosedSiteLevel childFam d) :
+    SiteFocused root sig env0 (path ++ [i]) childFam child d := by
+  obtain ⟨sourceAt, parent, parentAt, parentLength, _⟩ := focus
+  obtain ⟨_, rho, rhoAt, _, _, _⟩ := PrintEliminators.contextAtTable_annotate_facts found
+  have envStep : (nodeOfFamily fam source).childEnv sig parent i = some rho := by
+    rw [Node.envAt_append, sourceAt, parentAt] at rhoAt
+    simp only [Option.bind_some, Node.envAt, step] at rhoAt
+    cases environment : (nodeOfFamily fam source).childEnv sig parent i with
+    | none => rw [environment] at rhoAt; cases rhoAt
+    | some rho' => simpa only [environment, Option.bind_some] using rhoAt
+  refine ⟨Node.at_child sourceAt step, rho, rhoAt, ?_, closed⟩
+  rw [PrintEliminators.childEnv_length sig parent _ i envStep, parentLength, depth]
+
+/-- The expression spine's head is focused at its parent's depth.
 Placement: exact-codecs R8; consumer: typed-site expression spine reconstruction. -/
 theorem siteFocused_effs_head {path : List Nat} {n : Nat} {head : Eff Op} {tail : Effs Op}
-    (focus : SiteFocused root sig env0 path .effs (.cons head tail) n) :
-    SiteFocused root sig env0 (path ++ [0]) .eff head n := by
-  obtain ⟨sourceAt, parent, envAt, length, _⟩ := focus
-  exact ⟨Node.at_child sourceAt rfl, .env parent.tyEnv,
-    Node.envAt_child sourceAt envAt rfl rfl, length, True.intro⟩
+    {ctx : PrintEliminators.Context Op}
+    (focus : SiteFocused root sig env0 path .effs (.cons head tail) n)
+    (found : PrintEliminators.contextAtTable (annotate sig env0 root) root (path ++ [0]) = some ctx) :
+    SiteFocused root sig env0 (path ++ [0]) .eff head n :=
+  siteFocused_found focus rfl found rfl True.intro
 
 theorem siteFocused_effs_tail {path : List Nat} {n : Nat} {head : Eff Op} {tail : Effs Op}
-    (focus : SiteFocused root sig env0 path .effs (.cons head tail) n) :
-    SiteFocused root sig env0 (path ++ [1]) .effs tail n := by
-  obtain ⟨sourceAt, parent, envAt, length, _⟩ := focus
-  exact ⟨Node.at_child sourceAt rfl, .env parent.tyEnv,
-    Node.envAt_child sourceAt envAt rfl rfl, length, True.intro⟩
+    {ctx : PrintEliminators.Context Op}
+    (focus : SiteFocused root sig env0 path .effs (.cons head tail) n)
+    (found : PrintEliminators.contextAtTable (annotate sig env0 root) root (path ++ [1]) = some ctx) :
+    SiteFocused root sig env0 (path ++ [1]) .effs tail n :=
+  siteFocused_found focus rfl found rfl True.intro
 
 /-- The layer spine and both children use the empty environment.
 Placement: exact-codecs R8; consumer: typed-site layer spine reconstruction. -/
@@ -5984,8 +6070,11 @@ theorem eraseSiteSpine_print_step {m : Nat}
       simp only [cataFam, dom_effs_cons, Option.bind_eq_some_iff] at hd
       obtain ⟨d1, hd1, d2, hd2, _⟩ := hd
       have hsz : sizeOf (y :: rest) = 1 + sizeOf y + sizeOf rest := List.cons.sizeOf_spec y rest
-      obtain ⟨plain, herase, hplain⟩ := hexpr .eff (path ++ [0]) n e y (by omega) (siteFocused_effs_head focus) ⟨d1, hd1⟩ hy
-      have htail := hlist .effs (path ++ [1]) n es rest (by omega) (siteFocused_effs_tail focus) ⟨d2, hd2⟩ hrest
+      obtain ⟨_, headFound⟩ := printedCaptureAt_context (fam := .eff) (source := e) (capture := .expr y) hy
+      obtain ⟨_, tailFound⟩ :=
+        printedCaptureAt_context (fam := .effs) (source := es) (capture := .exprs rest) hrest
+      obtain ⟨plain, herase, hplain⟩ := hexpr .eff (path ++ [0]) n e y (by omega) (siteFocused_effs_head focus headFound) ⟨d1, hd1⟩ hy
+      have htail := hlist .effs (path ++ [1]) n es rest (by omega) (siteFocused_effs_tail focus tailFound) ⟨d2, hd2⟩ hrest
       simp only [PrintsTo] at hplain htail ⊢
       rw [eraseSpine]
       change cata_effs (printAlg sig) (.cons e es) n = .ok
@@ -7445,6 +7534,7 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
             obtain ⟨ctxChild, ctxFound⟩ := childCtx
             have childFocus := siteFocused_child focus hview hfindSource
               (i := 0) (childFam := .action) (child := source) rfl ctxFound
+              (fun _ refused => nomatch hout.symm.trans refused)
             rw [hout, hlevel] at childFocus
             have he : e = .withFiber source := by
               (cases e <;> cases hview)

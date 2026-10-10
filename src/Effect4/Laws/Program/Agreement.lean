@@ -499,7 +499,7 @@ theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
     compileEff (.perform op r) p =
       (match op with
        | .external _ => asyncRoute op r p
-       | .call _ => Prim.suspend (EffThunk.body p)
+       | .call _ | .param _ => Prim.suspend (EffThunk.body p)
        | _ => match op.kind with
          | .sync =>
            match evalTerm p.env r with
@@ -526,6 +526,7 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
   | scopeMake strategy => cases strategy <;> rfl
   | external i => cases hkind
   | call k => cases hkind
+  | param i => cases hkind
   | deferredAwait => cases hkind
   | sleep => cases hkind
   | _ => rfl
@@ -534,6 +535,13 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
 328). -/
 theorem compileEff_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
     (hf : p.fuel = k + 1) : compileEff (.defs decls bodies main) p = compileEff main (p.child 1) := by
+  conv => lhs; unfold compileEff
+  rw [hf]
+
+/-- An invocation with programs (decisions row 340): one counted suspension, as an invocation's
+`perform`. Its consumer is `intro_invoke`. -/
+theorem compileEff_invoke (index : Nat) (r : Term) (args : Effs NativeOp) (hf : p.fuel = k + 1) :
+    compileEff (.invoke index r args) p = Prim.suspend (EffThunk.body p) := by
   conv => lhs; unfold compileEff
   rw [hf]
 
@@ -1414,6 +1422,39 @@ theorem suspendBodyAt_call {root : NativeEff} {q : Point} {k : Nat} {index : Nat
   simp only [suspendBodyAt, hf, h]
   rfl
 
+/-- An invocation with programs' suspension body (decisions row 340): as an invocation's, with the
+sites of the call's programs pushed on the stack. Its consumer is `intro_invoke`. -/
+theorem suspendBodyAt_invoke {root : NativeEff} {q : Point} {k : Nat} {index : Nat} {r : Term}
+    {args : Effs NativeOp} (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.invoke index r args))) :
+    suspendBodyAt root (EffThunk.body q) =
+      match evalTerm q.env r, defBodyPath root index with
+      | some v, some path =>
+        resolve root
+          { q.redirect path with
+            env := [v]
+            params := argSitesAt (q.path ++ [0]) q.env args :: q.params }
+      | _, _ => badShape := by
+  simp only [suspendBodyAt, hf, h]
+  rfl
+
+/-- A parameter's run's suspension body (decisions row 340): the site of the program that the
+innermost call passed, its environment extended by the request's value, at the stack below
+that call. Its consumer is `intro_param`. -/
+theorem suspendBodyAt_param {root : NativeEff} {q : Point} {k : Nat} {i : Nat} {r : Term}
+    (hf : q.fuel = k + 1)
+    (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.perform (.param i) r))) :
+    suspendBodyAt root (EffThunk.body q) =
+      match evalTerm q.env r, q.params with
+      | some v, top :: rest =>
+        match top[i]? with
+        | some site =>
+          resolve root { q.redirect site.path with env := site.env ++ [v], params := rest }
+        | none => badShape
+      | _, _ => badShape := by
+  simp only [suspendBodyAt, hf, h]
+  rfl
+
 /-- The law of the complement of `Eff.suspendDecided`: outside the heads the suspension
 decides itself, the thunk body is the node compiled at its point. -/
 theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : NativeEff}
@@ -1425,8 +1466,10 @@ theorem suspendBodyAt_of_at {root : NativeEff} {q : Point} {k : Nat} {e : Native
     cases op with
     -- an invocation is a decided head
     | call k => cases hnd
+    | param i => cases hnd
     | _ => simp [suspendBodyAt, hf, h]
-  | suspend _ | select _ _ _ _ | gen _ | iterate _ _ _ _ _ _ | provideLayer _ _ _ => cases hnd
+  | suspend _ | select _ _ _ _ | gen _ | iterate _ _ _ _ _ _ | provideLayer _ _ _
+  | invoke _ _ _ => cases hnd
   | _ => simp [suspendBodyAt, hf, h]
 
 /-- `Effect.provide`'s suspension answers the scope allocation (the join). -/

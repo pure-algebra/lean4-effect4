@@ -51,6 +51,7 @@ function eff(v: unknown): void {
     case "provideLayer": layer(a[1]); eff(a[3]); return
     case "provideService": eff(a[3]); return
     case "defs": chain(a[2], eff); eff(a[3]); return
+    case "invoke": chain(a[3], eff); return
     default: return noCase(tag, "Eff")
   }
 }

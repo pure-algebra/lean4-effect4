@@ -41,6 +41,7 @@ theorem nativeSignature_dom_sync (t : RowTable) (op : NativeOp) (h : op.kind = .
   cases op with
   | external i => cases h
   | call k => cases h
+  | param i => cases h
   | _ => rfl
 
 /-- **A looped program is a program of the built-in signature**: every operation it performs

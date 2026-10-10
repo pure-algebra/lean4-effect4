@@ -475,13 +475,50 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
         · next cursor hcursor => sub_tac using (evalTerm_point_keys _ p cursor hcursor)
         · exact List.nil_subset _
       · sub_tac
-      -- an invocation: the body's point holds the request's value and the completed view
+      -- an invocation: the body's point holds the request's value, the completed view and the
+      -- stack
       · split
         · next v path hv hp =>
           apply List.Subset.trans (resolve_keys root _)
           simp only [Point.keys, Point.redirect, List.take_zero, List.nil_append, List.flatMap_cons,
             List.flatMap_nil, List.append_nil]
-          exact List.append_subset.mpr ⟨List.subset_append_left _ _, evalTerm_point_keys _ p v hv⟩
+          exact List.append_subset.mpr ⟨List.append_subset.mpr
+            ⟨p.completed_keys_subset, p.params_keys_subset⟩, evalTerm_point_keys _ p v hv⟩
+        · exact List.nil_subset _
+      -- an invocation with programs (decisions row 340): as an invocation, and the call's sites,
+      -- which hold the caller's values
+      · split
+        · next v path hv hp =>
+          apply List.Subset.trans (resolve_keys root _)
+          simp only [Point.keys, Point.redirect, List.take_zero, List.nil_append, List.flatMap_cons,
+            List.flatMap_nil, List.append_nil]
+          exact List.append_subset.mpr ⟨List.append_subset.mpr
+            ⟨p.completed_keys_subset, List.append_subset.mpr
+              ⟨List.Subset.trans (argSitesAt_keys _ _ _) p.env_keys_subset, p.params_keys_subset⟩⟩,
+            evalTerm_point_keys _ p v hv⟩
+        · exact List.nil_subset _
+      -- a parameter's run (decisions row 340): the site's values are in the stack the point holds
+      · split
+        · next v top rest hv hps =>
+          split
+          · next site hsite =>
+            apply List.Subset.trans (resolve_keys root _)
+            have hstack : p.params.flatMap (·.flatMap ArgSite.keys) =
+                top.flatMap ArgSite.keys ++ rest.flatMap (·.flatMap ArgSite.keys) := by
+              rw [hps, List.flatMap_cons]
+            have hsiteKeys : ArgSite.keys site ⊆ p.keys :=
+              List.Subset.trans
+                (fun _ hx => List.mem_flatMap.mpr ⟨site, List.mem_of_getElem? hsite, hx⟩)
+                (List.Subset.trans (List.subset_append_left _ _)
+                  (hstack ▸ p.params_keys_subset))
+            have hrest : rest.flatMap (·.flatMap ArgSite.keys) ⊆ p.keys :=
+              List.Subset.trans (List.subset_append_right _ _) (hstack ▸ p.params_keys_subset)
+            have hsite' : site.env.flatMap Val.keys ⊆ p.keys := by
+              simpa only [ArgSite.keys, Val.keysList_eq_flatMap] using hsiteKeys
+            simp only [Point.keys, Point.redirect, List.flatMap_append, List.flatMap_cons,
+              List.flatMap_nil, List.append_nil, List.append_subset]
+            exact ⟨⟨p.completed_keys_subset, hrest⟩, hsite', evalTerm_point_keys _ p v hv⟩
+          · exact List.nil_subset _
         · exact List.nil_subset _
       · exact compileEff_keys _ p
       · exact List.nil_subset _

@@ -304,7 +304,7 @@ theorem command_token_distinguished : ¬ CmdOk readsMetadata () .root (.resume �
   have bad : (8 : Nat) = 7 := h.2
   cases bad
 
-def capture : Capture := ⟨[2], [], 0, [], emptyCtx, 7⟩
+def capture : Capture := ⟨[2], [], 0, [], emptyCtx, 7, []⟩
 theorem capture_accepted : CaptureOk readsMetadata () .root capture := ⟨rfl, rfl, rfl, rfl⟩
 theorem capture_path_distinguished :
     ¬ CaptureOk readsMetadata () .root { capture with path := [3] } := by

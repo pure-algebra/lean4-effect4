@@ -114,12 +114,22 @@ theorem ambientScope_withScope (c : Ctx) (scope : Nat) :
 
 end Ctx
 
+/-- **The site of a program that a call passed** (decisions row 340): its path in the root
+program and the caller's environment there. The run of a parameter resumes the site with the
+request's value appended. The parameters in scope at the site are the stack below the call's
+own entry (`Point.params`): the static chain of an Algol display, so a site holds no stack. -/
+structure ArgSite where
+  path : List Nat
+  env : List Effect4.Store.Val
+deriving DecidableEq, Repr
+
 /-- A compiled release, captured at registration (`internal/effect.ts:3976,3983`): the
-point's path and environment (the acquired value already appended), its fuel and tape, and
-the context `contextWith` read, under which the release runs. First-order; the compiler
-resolves it (`Program/Compile.lean`, `suspendBodyAt`). It is `Point` minus the completed-exit
-view plus the context (`Point.ofCapture` is the isomorphism), so it carries the point's
-`root` too (direction-scout D6). -/
+point's path and environment (the acquired value already appended), its fuel and tape, the
+stack of the programs that the running calls passed, and the context `contextWith` read, under
+which the release runs. First-order; the compiler resolves it (`Program/Compile.lean`,
+`suspendBodyAt`). It is `Point` minus the completed-exit view plus the context
+(`Point.ofCapture` is the isomorphism), so it carries the point's `root` too (direction-scout
+D6). -/
 structure Capture where
   path : List Nat
   env : List Effect4.Store.Val
@@ -128,6 +138,9 @@ structure Capture where
   ctx : Ctx
   /-- The root program the path addresses; `0` until a machine holds more than one. -/
   root : Nat := 0
+  /-- The stack of the programs that the running calls passed (decisions row 340), as
+  `Point.params`: a release in a definition's body runs the body's parameters. -/
+  params : List (List ArgSite) := []
 deriving DecidableEq, Repr
 
 /-- The scope finalizer *name* alphabet. `Effect4.Scope` stores a `φ`; giving `φ` these arms is

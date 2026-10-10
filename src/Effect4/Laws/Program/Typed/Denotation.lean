@@ -1951,7 +1951,7 @@ the checker's order. Private: the spine's rounds (`effsRounds`) are no definitio
 private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : List Ty} :
     ∀ (es : Effs NativeOp) (q : Point) (T : EffTy),
       Node.at_ (.eff root.program) q.path = some (.effs es) →
-      Checker.checkEffs root.signature env q.path
+      Checker.checkEffs root.signature env q.path []
           (effsRounds (Node.eff root.program)
             (List.range ((root.program.refSites []).length + 1)) es) = .ok T →
       EnvTyped w env q.env →
@@ -1961,7 +1961,7 @@ private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : Lis
         Ty.subN A T.answer = true ∧ Ty.subN E T.error = true
   | .nil, _, T, _, hc, _, _ => by
     rw [effsRounds_nil] at hc
-    have hT := Checker.inv_effs_nil _ _ _ _ hc
+    have hT := Checker.inv_effs_nil _ _ _ _ _ hc
     subst hT
     exact ⟨.never, .never, fun r hr => absurd hr List.not_mem_nil, Bounds.subN_never _, Bounds.subN_never _⟩
   | .cons h t, q, T, hat, hc, henv, hview => by
@@ -2870,7 +2870,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
       exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 1 post))
     | refMake | refGet | refSet | refGetAndSet | refSetAndGet | deferredIsDone | deferredPoll
     | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
-    | deferredMakeOf _ _ | call _ => cases hb
+    | deferredMakeOf _ _ | call _ | param _ => cases hb
   | none =>
   -- the rows without a term: the request's bindings stand
   have huse : root.signature.termUse tys op = none := by
@@ -3075,6 +3075,7 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
   | sleep => cases hk
   | external _ => cases hk
   | call _ => cases hk
+  | param _ => cases hk
 
 /-- A built-in operation reads its own row; only a host operation reads the table. -/
 theorem nativeRowOf_builtin (table : RowTable) {op : NativeOp}
@@ -3243,18 +3244,16 @@ theorem call_arm {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨reqTy, hdom, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
-  -- the block declares definition `k`, and the invocation reads its row
-  have hdomEq : root.signature.dom (.call k) = decide (k < root.program.defsOf.length) :=
-    root.sig.signature.withDefs_dom_call _ rfl
-  rw [hdomEq] at hdom
-  obtain ⟨d, hd⟩ : ∃ d, root.program.defsOf[k]? = some d :=
-    ⟨_, List.getElem?_eq_getElem (of_decide_eq_true hdom)⟩
+  -- the block declares definition `k`, which takes no program, and the invocation reads its row
+  obtain ⟨d, hd, hparams⟩ := root.sig.signature.withDefs_dom_call_some _ rfl hdom
   have hrowOf : root.signature.rowOf (.call k) = d.row.normalizeTypes :=
     root.sig.signature.withDefs_rowOf_call _ rfl hd
   rw [hrowOf] at hrow
   obtain ⟨path, body, tb, hpath, hbody, hbcheck, hformed, hadmits⟩ := hbodies k d hd
+  -- a body with no parameter is checked at the source's own signature
+  rw [hparams] at hbcheck
   simp only [DefDecl.formed, Bool.and_eq_true] at hformed
-  obtain ⟨⟨⟨hreqc, hansc⟩, herrc⟩, -⟩ := hformed
+  obtain ⟨⟨⟨⟨hreqc, hansc⟩, herrc⟩, -⟩, -⟩ := hformed
   obtain ⟨hsub, rfl⟩ := rowTy_closed_some (row := d.row.normalizeTypes)
     (Ty.closed_normalize _ hreqc) (Ty.closed_normalize _ hansc) (Ty.closed_normalize _ herrc) hrow
   simp only [DefDecl.admits, Bool.and_eq_true] at hadmits
@@ -3279,8 +3278,28 @@ theorem call_arm {k : Nat} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
         v (fits_mono o'' hfit)
     exact envTyped_append (envTyped_nil w'') hreqFit
 
-/-- **`perform`**: a host row, the two asynchronous built-in rows, a store row, or an invocation
-(`call_arm`), which reads the block's typing and the induction at the body's point. -/
+/-- **A parameter's run at a typed point** (decisions row 340): the source's signature keeps every
+run of a parameter outside its domain, so no point that `PointTyped` types stands at one. The
+arm of `denote-typed` until the typed points carry the parameters of the body they stand in
+(slice CX1, `docs/research/2026-10-09-program-parameters.md` §10). Its consumer is
+`perform_arm`. -/
+theorem param_arm {i : Nat} {r : Term}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform (.param i) r)))
+    (hpt : PointTyped root w p ty) :
+    TypedProg root w ty (denoteR root.program (.perform (.param i) r) p) := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  obtain ⟨_, hdom, -, -⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
+  have hout : root.signature.dom (.param i) = false := by
+    show (root.sig.signature.withDefs root.program.defsOf).dom (.param i) = false
+    rw [Signature.withDefs_dom_of_none _ _ rfl]
+    rfl
+  rw [hout] at hdom
+  cases hdom
+
+/-- **`perform`**: a host row, the two asynchronous built-in rows, a store row, an invocation
+(`call_arm`), which reads the block's typing and the induction at the body's point, or a
+parameter's run (`param_arm`). -/
 theorem perform_arm {op : NativeOp} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
@@ -3292,9 +3311,29 @@ theorem perform_arm {op : NativeOp} {r : Term} {f : Nat} (hfuel : p.fuel = f + 1
   cases op with
   | external i => exact external_arm hpos hat hpt
   | call k => exact call_arm hfuel hat hpt htie hbodies hden
+  | param i => exact param_arm hat hpt
   | deferredAwait => exact deferredAwait_arm hpos hat hpt
   | sleep => exact sleep_arm hpos hat hpt
   | _ => exact syncPerform_arm rfl hpos hat hpt
+
+/-- **An invocation with programs** (decisions row 340; the arm of `denote-typed`): the counted
+step, then the definition's body at its path, its one variable the request's value, and the
+sites of the call's programs pushed on the point's stack (`denoteR_invoke`). Planned: the body
+is typed at its definition's parameters (`BodiesTyped`), so its point is typed only once typed
+points carry the lexical parameters of their path and the stack's frames fit them (slices CX1
+and CX2, `docs/research/2026-10-09-program-parameters.md` §10, and the review
+`git:b459daec:docs/research/2026-10-09-context-layer-scope/README.md`). It is a goal, not a
+premise, so the milestones that consume `denote-typed` rest on it by name. Its consumer is
+`denote-typed`'s dispatch. -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {k : Nat}
+    {r : Term} {args : Effs NativeOp} {f : Nat} (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.invoke k r args)))
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hbodies : BodiesTyped root)
+    (hden : ∀ (c : NativeEff) (path : List Nat),
+      Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f c path) :
+    TypedProg root w ty (denoteR root.program (.invoke k r args) p)
 
 end PerformArms
 
@@ -3532,6 +3571,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         exact nomatch hinline
       -- an invocation has no immediate exit: its row is a program's (`NativeOp.kind`)
       | call k => exact nomatch hinline
+      | param i => exact nomatch hinline
       | sleep =>
         obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
         obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
@@ -3744,6 +3784,8 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt
       | restore saved b => exact restore_arm hq hat hqt htie (hch b 0 rfl)
       | defs decls bodies main => exact (defs_not_typed hat hqt).elim
+      | invoke k r args =>
+        exact invoke_arm hq hat hqt htie hbodies (fun c' path' hc' => ih f (Nat.le_refl f) c' path' hc')
 
 /-- **No node of the program is a `provideLayer`**: the fragment on which the layer family's arm
 cannot be reached. -/

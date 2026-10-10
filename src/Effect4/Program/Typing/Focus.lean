@@ -106,6 +106,10 @@ inductive NodeEnv where
   | body (env : TyEnv) (inLoop : Bool)
   /-- a layer, a layer spine: nothing, because a layer is typed closed -/
   | closed
+  /-- an invocation's spine of programs (decisions row 340): the caller's variables, and the
+  parameters that the spine's programs meet, in order, at least one. Each program binds its
+  slot's request, so the spine stands one variable below its caller, as the binder table says -/
+  | slots (env : TyEnv) (qs : List ParamDecl)
 deriving DecidableEq, Repr
 
 namespace NodeEnv
@@ -116,6 +120,14 @@ def tyEnv : NodeEnv → TyEnv
   | .env tys => tys
   | .body tys _ => tys
   | .closed => []
+  | .slots tys qs => tys ++ [(qs.head?.map fun q => q.request.normalize).getD .unknown]
+
+/-- **The environment of a spine at its slots** (decisions row 340): the slotted form while a
+parameter is left, the plain one after, so a race's entrants and the end of an invocation's
+spine are read alike. -/
+def spine (env : TyEnv) : List ParamDecl → NodeEnv
+  | [] => .env env
+  | q :: qs => .slots env (q :: qs)
 
 /-- Whether a loop encloses a statement. Every other sort answers `false`. -/
 def inLoop : NodeEnv → Bool
@@ -184,6 +196,11 @@ def childEnv (s : Signature Op) (ctx : NodeEnv) : Node Op → Nat → Option Nod
   | eff (.iterate cursorTy initial _ _ _ _), 0 =>
     (termTy s ctx.tyEnv initial).map fun c0 => .env (ctx.tyEnv ++ [cursorTy.getD c0])
   | eff (.restore _ _), 0 => some (.env ctx.tyEnv)
+  -- an invocation's programs (decisions row 340): the caller's variables and the definition's
+  -- parameters, where the signature declares the definition with at least one
+  | eff (.invoke k _ _), 0 => (s.defOf k).bind fun d => match d.params with
+    | [] => none
+    | q :: qs => some (.slots ctx.tyEnv (q :: qs))
   | action (.fork _ _), 0 => some (.env ctx.tyEnv)
   | action (.forkIn _ _ _), 0 => some (.env ctx.tyEnv)
   | action (.forkScoped _ _), 0 => some (.env ctx.tyEnv)
@@ -211,8 +228,15 @@ def childEnv (s : Signature Op) (ctx : NodeEnv) : Node Op → Nat → Option Nod
   | stmt (.ifElse _ _ _), 1 => some (.body ctx.tyEnv ctx.inLoop)
   -- the body of a loop is typed in a loop
   | stmt (.whileTrue _), 0 => some (.body ctx.tyEnv true)
-  | effs (.cons _ _), 0 => some (.env ctx.tyEnv)
-  | effs (.cons _ _), 1 => some (.env ctx.tyEnv)
+  -- a spine's program reads its slot's request, if it has one; the rest keeps the later slots
+  | effs (.cons _ _), 0 => some (match ctx with
+    | .slots tys (q :: _) => .env (tys ++ [q.request.normalize])
+    | _ => .env ctx.tyEnv)
+  -- past an invocation's last slot the spine holds no program of a typed call
+  | effs (.cons _ _), 1 => match ctx with
+    | .slots tys (_ :: q :: qs) => some (.slots tys (q :: qs))
+    | .slots _ _ => none
+    | _ => some (.env ctx.tyEnv)
   | layers (.cons _ _), 0 => some .closed
   | layers (.cons _ _), 1 => some .closed
   | _, _ => none

@@ -99,6 +99,12 @@ def mergeNonempty : List LayerTy → Option LayerTy
 
 end LayerTy
 
+/-- A passed program's type is below its parameter (decisions row 340): its answer and its error
+below the declared ones in the checker's order. Its requirements stay the call's, since the
+program is a child of the call. -/
+def ParamDecl.admits (d : ParamDecl) (t : EffTy) : Bool :=
+  Ty.sub t.answer.normalize d.answer.normalize && Ty.sub t.error.normalize d.error.normalize
+
 namespace Checker
 
 variable {Op : Type}
@@ -267,6 +273,18 @@ mutual
     -- A definition block is typed at the root of the whole program (`checkModule`,
     -- `Program/Definitions.lean`), never structurally (decisions row 328).
     | .defs _ _ _ => throw ⟨p, .definitionBlock⟩
+    -- an invocation with programs (decisions row 340): the request by the definition's row, as a
+    -- `perform` of its call; each program at its parameter, over the caller's environment
+    -- extended by the parameter's request; the call's requirements and the programs'
+    | .invoke k request args => do
+      let r ← term? sig env p request
+      let d ← expect ⟨p, .outsideDomain "call"⟩ (sig.defOf k)
+      if d.params.isEmpty || d.params.length != args.toList.length then
+        throw ⟨p, .invokeArity d.name d.params.length args.toList.length⟩
+      else
+        let t ← rowCheck d.row.normalizeTypes r none p
+        let ts ← checkEffs sig env (p ++ [0]) d.params args
+        pure ⟨t.answer, t.error, t.requires.union ts.requires⟩
 
   /-- `layerTy` and `explainLayer` as one. -/
   def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy
@@ -360,13 +378,26 @@ mutual
             let r ← checkStmts sig env inLoop none (p ++ [1]) rest
             pure r.broken)
 
-  /-- Race entrants: every entrant's answer joins, the errors union. -/
-  def checkEffs (sig : Signature Op) (env : TyEnv) (p : List Nat) : Effs Op → Except TypeRefusal EffTy
+  /-- **A spine of programs at its slots** (decisions row 340 for the slots): the program at slot
+  `j` reads the environment extended by parameter `j`'s request and stays below parameter `j`'s
+  answer and error; a program past the slots reads the environment as it is. Every answer
+  joins, and the errors and the rows unite. A race's entrants have no slot (`[]`); an
+  invocation's programs have one slot each, its definition's parameters. The program is child
+  `0` of its spine node, and the rest of the spine child `1`. -/
+  def checkEffs (sig : Signature Op) (env : TyEnv) (p : List Nat) (qs : List ParamDecl) :
+      Effs Op → Except TypeRefusal EffTy
     | .nil => pure ⟨.never, .never, Requirement.empty⟩
-    | .cons head tail => do
-      let h ← check sig env (p ++ [0]) head
-      let t ← checkEffs sig env (p ++ [1]) tail
-      pure ⟨Ty.join h.answer t.answer, h.error.join t.error, h.requires.union t.requires⟩
+    | .cons head tail =>
+      match qs with
+      | [] => do
+        let h ← check sig env (p ++ [0]) head
+        let t ← checkEffs sig env (p ++ [1]) [] tail
+        pure ⟨Ty.join h.answer t.answer, h.error.join t.error, h.requires.union t.requires⟩
+      | q :: qs => do
+        let h ← check sig (env ++ [q.request.normalize]) (p ++ [0]) head
+        unless q.admits h do throw ⟨p ++ [0], .bodyNotDeclared q.name h⟩
+        let t ← checkEffs sig env (p ++ [1]) qs tail
+        pure ⟨Ty.join h.answer t.answer, h.error.join t.error, h.requires.union t.requires⟩
 
   /-- `actionTy` and `explainAction` as one. -/
   def checkAction (sig : Signature Op) (env : TyEnv) (p : List Nat) :
@@ -421,7 +452,7 @@ mutual
       let s ← term? sig env p snapshot
       if Ty.sub s.normalize (.list (.fiberOf .unknown .unknown)) then pure (EffTy.pure .unit)
       else throw ⟨p, .snapshotExpected s⟩
-    | .raceAll entrants => checkEffs sig env (p ++ [0]) entrants
+    | .raceAll entrants => checkEffs sig env (p ++ [0]) [] entrants
     | .setContext context => do
       let c ← term? sig env p context
       if Ty.sub c.normalize Ty.context then pure (EffTy.pure .unit) else throw ⟨p, .contextExpected c⟩

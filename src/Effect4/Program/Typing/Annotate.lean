@@ -249,6 +249,28 @@ mutual
     | .defs decls bodies main =>
       atProgram p env (Checker.check s env p (.defs decls bodies main))
         (unreached (p ++ [0]) (.effs bodies) ++ unreached (p ++ [1]) (.eff main))
+    -- an invocation with programs (decisions row 340): the checker's steps at the node, the
+    -- programs' answer read from their own walk at the definition's parameters, and their
+    -- records at the caller's variables and those parameters (`Node.childEnv`). Where the
+    -- signature declares no definition `k`, no program is reached
+    | .invoke k request args =>
+      match s.defOf k with
+      | some d =>
+        let c := checkEffs s env (p ++ [0]) d.params args
+        atProgram p env (do
+          let r ← Checker.term? s env p request
+          if d.params.isEmpty || d.params.length != args.toList.length then
+            throw ⟨p, .invokeArity d.name d.params.length args.toList.length⟩
+          else
+            let t ← Checker.rowCheck d.row.normalizeTypes r none p
+            let ts ← c.2
+            pure ⟨t.answer, t.error, t.requires.union ts.requires⟩)
+          (match d.params with
+            | [] => unreached (p ++ [0]) (.effs args)
+            | _ :: _ => c.1)
+      | none =>
+        atProgram p env (Checker.check s env p (.invoke k request args))
+          (unreached (p ++ [0]) (.effs args))
 
   /-- `Checker.checkLayer` with a record at each node. -/
   def checkLayer (s : Signature Op) (p : List Nat) : LayerTerm Op → Out LayerTy
@@ -384,17 +406,33 @@ mutual
                 pure rt.broken))
         (h.1 ++ r.1)
 
-  /-- `Checker.checkEffs` with a record at each node. -/
-  def checkEffs (s : Signature Op) (env : TyEnv) (p : List Nat) : Effs Op → Out EffTy
-    | .nil => atNode p (.env env) (Checker.checkEffs s env p .nil) []
+  /-- `Checker.checkEffs` with a record at each node: a program at its slot is recorded at the
+  environment extended by its parameter's request (decisions row 340). -/
+  def checkEffs (s : Signature Op) (env : TyEnv) (p : List Nat) (qs : List ParamDecl) :
+      Effs Op → Out EffTy
+    | .nil => atNode p (NodeEnv.spine env qs) (Checker.checkEffs s env p qs .nil) []
     | .cons head tail =>
-      let h := check s env (p ++ [0]) head
-      let t := checkEffs s env (p ++ [1]) tail
-      atNode p (.env env) (do
-        let ht ← h.2
-        let tt ← t.2
-        pure ⟨Ty.join ht.answer tt.answer, ht.error.join tt.error, ht.requires.union tt.requires⟩)
-        (h.1 ++ t.1)
+      match qs with
+      | [] =>
+        let h := check s env (p ++ [0]) head
+        let t := checkEffs s env (p ++ [1]) [] tail
+        atNode p (.env env) (do
+          let ht ← h.2
+          let tt ← t.2
+          pure ⟨Ty.join ht.answer tt.answer, ht.error.join tt.error, ht.requires.union tt.requires⟩)
+          (h.1 ++ t.1)
+      | q :: qs =>
+        let h := check s (env ++ [q.request.normalize]) (p ++ [0]) head
+        let t := checkEffs s env (p ++ [1]) qs tail
+        -- past the last slot the table does not enter the spine (`Node.childEnv`)
+        atNode p (.slots env (q :: qs)) (do
+          let ht ← h.2
+          unless q.admits ht do throw ⟨p ++ [0], .bodyNotDeclared q.name ht⟩
+          let tt ← t.2
+          pure ⟨Ty.join ht.answer tt.answer, ht.error.join tt.error, ht.requires.union tt.requires⟩)
+          (h.1 ++ match qs with
+            | [] => unreached (p ++ [1]) (.effs tail)
+            | _ :: _ => t.1)
 
   /-- `Checker.checkAction` with a record at each node. -/
   def checkAction (s : Signature Op) (env : TyEnv) (p : List Nat) : ActionTerm Op → Out EffTy
@@ -429,7 +467,7 @@ mutual
     | .awaitNewChildren snapshot =>
       atNode p (.env env) (Checker.checkAction s env p (.awaitNewChildren snapshot)) []
     | .raceAll entrants =>
-      let c := checkEffs s env (p ++ [0]) entrants
+      let c := checkEffs s env (p ++ [0]) [] entrants
       atNode p (.env env) c.2 c.1
     | .setContext context =>
       atNode p (.env env) (Checker.checkAction s env p (.setContext context)) []

@@ -74,6 +74,7 @@ module type PROGRAM_TYPES = sig
   | NativeOp_refModifyWith of term
   | NativeOp_refModifySomeWith of term
   | NativeOp_call of int
+  | NativeOp_param of int
   type service_name = int
   type service_type_code = int
   type service_key = { name : service_name; service : service_type_code }
@@ -82,6 +83,12 @@ module type PROGRAM_TYPES = sig
   | Decision_tag of string
   | Decision_recordTag of string
   type def_role = DefRole_plain | DefRole_serviceInit of string | DefRole_serviceMethod of string * string * int
+  type param_decl = {
+  name : string;
+  request : ty;
+  answer : ty;
+  error : ty;
+}
   type def_decl = {
   name : string;
   request : ty;
@@ -89,6 +96,7 @@ module type PROGRAM_TYPES = sig
   error : ty;
   requires : service_key list;
   role : def_role;
+  params : param_decl list;
 }
   type 'op eff = | Eff_succeed of term
   | Eff_fail of term
@@ -117,6 +125,7 @@ module type PROGRAM_TYPES = sig
   | Eff_iterate of ty option * term * term * term * term * 'op eff
   | Eff_restore of term * 'op eff
   | Eff_defs of def_decl list * 'op effs * 'op eff
+  | Eff_invoke of int * term * 'op effs
   and 'op stmt = | Stmt_bindYield of 'op eff
   | Stmt_yieldDiscard of 'op eff
   | Stmt_ret of term
@@ -211,10 +220,10 @@ let engine_ctor_names = [
   ("mask_mode", ["interruptible"; "uninterruptible"; "inherit"]);
   ("observer_mode", ["awaitValue"; "joinEffect"]);
   ("finalizer_strategy", ["sequential"; "parallel"]);
-  ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"; "call"]);
+  ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"; "call"; "param"]);
   ("decision", ["bool"; "option"; "tag"; "recordTag"]);
   ("def_role", ["plain"; "serviceInit"; "serviceMethod"]);
-  ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"; "defs"]);
+  ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"; "defs"; "invoke"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("stmts", ["nil"; "cons"]);
   ("effs", ["nil"; "cons"]);

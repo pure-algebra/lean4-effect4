@@ -106,7 +106,8 @@ def reasons : List TypeReason :=
    .foldTerm ⟨[0], .notList .nat⟩,
    .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩,
    .maskRestoreExpected .bool, .definitionBlock, .definitionsMismatch 1 0,
-   .definitionColumns "count", .bodyNotDeclared "count" (EffTy.pure .string)]
+   .definitionColumns "count", .bodyNotDeclared "count" (EffTy.pure .string),
+   .invokeArity "use" 1 0]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

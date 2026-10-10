@@ -45,7 +45,8 @@ smaller signature: at a leaf it is the checker's answer, whose algebra agrees
 (`term?_ext`). A step of `omit-splices-table`. Its consumer is `Annotate.check_restrict`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
-    (Annotate.check.alg s').AgreeOn (Annotate.check.alg s) (SigOkOp s) (SigOkKey s) := by
+    (Annotate.check.alg s').AgreeOn (Annotate.check.alg s) (SigOkOp s) (SigOkKey s)
+      (SigOkDef s) := by
   have hterm := term?_ext h
   have hcause := cause?_ext h
   have hbody : bodyRequires s' = bodyRequires s := funext h.bodyRequires
@@ -84,6 +85,9 @@ theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
     eff_iterate := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     eff_restore := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     eff_defs := rfl
+    eff_invoke := fun k hk => by
+      obtain ⟨d, hd⟩ := Option.isSome_iff_exists.mp hk
+      simp only [Annotate.check.alg, h.defOf k d hd, hd, hterm]
     stmt_bindYield := rfl
     stmt_yieldDiscard := rfl
     stmt_ret := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
@@ -144,16 +148,13 @@ consumer is `annotateModule_restrict`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Table.bodies_restrict {s s' : Signature Op} (h : SigExtends s s') :
     ∀ (decls : List DefDecl) (bodies : Effs Op) (base : List Nat),
-      (∀ b ∈ bodies.toList, SigProgram s b) →
+      BodiesSigProgram s decls bodies →
       Table.bodies s' decls bodies base = Table.bodies s decls bodies base
-  | d :: ds, .cons body rest, base, hb => by
-    have hbody : SigProgram s body := hb body (List.mem_cons.mpr (Or.inl rfl))
-    have hrest : ∀ b ∈ rest.toList, SigProgram s b := fun b hm => hb b (List.mem_cons.mpr (Or.inr hm))
-    simp only [Table.bodies, Annotate.check_restrict h hbody,
+  | d :: ds, .cons body rest, base, ⟨hbody, hrest⟩ => by
+    simp only [Table.bodies, Annotate.check_restrict (h.withParams d.params) hbody,
       Table.bodies_restrict h ds rest (base ++ [1]) hrest]
-  | [], .cons body rest, base, hb => by
-    have hrest : ∀ b ∈ rest.toList, SigProgram s b := fun b hm => hb b (List.mem_cons.mpr (Or.inr hm))
-    simp only [Table.bodies, Table.bodies_restrict h [] rest (base ++ [1]) hrest]
+  | [], .cons body rest, base, _ => by
+    simp only [Table.bodies, Table.bodies_restrict h [] rest (base ++ [1]) trivial]
   | [], .nil, _, _ => rfl
   | _ :: _, .nil, _, _ => rfl
 
@@ -237,12 +238,14 @@ theorem hasTy_sigProgram {s : Signature Op} :
   | _, _, _, .restore _ _ hb =>
     have hbody := hasTy_sigProgram hb
     hbody
+  | _, _, _, .invoke hd _ _ _ _ ha =>
+    And.intro (Option.isSome_iff_exists.mpr ⟨_, hd⟩) (effsHasTy_sigProgram ha)
 
 /-- A typed generator body reads only its signature. A step of `hasTy_sigProgram`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem stmtsHasTy_sigProgram {s : Signature Op} :
     ∀ {env : TyEnv} {inLoop : Bool} {b : Stmts Op} {g : GenTy},
-      StmtsHasTy s env inLoop b g → cata_stmts (readsAlg (SigOkOp s) (SigOkKey s)) b
+      StmtsHasTy s env inLoop b g → cata_stmts (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) b
   | _, _, _, _, .nil => True.intro
   | _, _, _, _, .bindYield he hr => And.intro (hasTy_sigProgram he) (stmtsHasTy_sigProgram hr)
   | _, _, _, _, .yieldDiscard he hr => And.intro (hasTy_sigProgram he) (stmtsHasTy_sigProgram hr)
@@ -256,16 +259,17 @@ theorem stmtsHasTy_sigProgram {s : Signature Op} :
 /-- Typed race entrants read only their signature. A step of `hasTy_sigProgram`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem effsHasTy_sigProgram {s : Signature Op} :
-    ∀ {env : TyEnv} {es : Effs Op} {t : EffTy},
-      EffsHasTy s env es t → cata_effs (readsAlg (SigOkOp s) (SigOkKey s)) es
-  | _, _, _, .nil => True.intro
-  | _, _, _, .cons hh ht _ => And.intro (hasTy_sigProgram hh) (effsHasTy_sigProgram ht)
+    ∀ {env : TyEnv} {qs : List ParamDecl} {es : Effs Op} {t : EffTy},
+      EffsHasTy s env qs es t → cata_effs (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) es
+  | _, _, _, _, .nil => True.intro
+  | _, _, _, _, .cons hh ht _ => And.intro (hasTy_sigProgram hh) (effsHasTy_sigProgram ht)
+  | _, _, _, _, .slot hh _ ht _ => And.intro (hasTy_sigProgram hh) (effsHasTy_sigProgram ht)
 
 /-- A typed fiber action reads only its signature. A step of `hasTy_sigProgram`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem actionHasTy_sigProgram {s : Signature Op} :
     ∀ {env : TyEnv} {a : ActionTerm Op} {t : EffTy},
-      ActionHasTy s env a t → cata_action (readsAlg (SigOkOp s) (SigOkKey s)) a
+      ActionHasTy s env a t → cata_action (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) a
   | _, _, _, .fork _ hp =>
     have hchild := hasTy_sigProgram hp
     hchild
@@ -296,7 +300,7 @@ theorem actionHasTy_sigProgram {s : Signature Op} :
 /-- A typed layer reads only its signature. A step of `hasTy_sigProgram`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem layerHasTy_sigProgram {s : Signature Op} :
-    ∀ {l : LayerTerm Op} {t : LayerTy}, LayerHasTy s l t → cata_layer (readsAlg (SigOkOp s) (SigOkKey s)) l
+    ∀ {l : LayerTerm Op} {t : LayerTy}, LayerHasTy s l t → cata_layer (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) l
   | _, _, .succeed _ hk _ => sigOkKey_of_serviceTy hk
   | _, _, .effect hb hk _ => And.intro (sigOkKey_of_serviceTy hk) (hasTy_sigProgram hb)
   | _, _, .effectDiscard hb =>
@@ -319,7 +323,7 @@ theorem layerHasTy_sigProgram {s : Signature Op} :
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem layersHasTy_sigProgram {s : Signature Op} :
     ∀ {ls : LayerTerms Op} {t : LayerTy},
-      LayersHasTy s ls t → cata_layers (readsAlg (SigOkOp s) (SigOkKey s)) ls
+      LayersHasTy s ls t → cata_layers (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) ls
   | _, _, .one hl => And.intro (layerHasTy_sigProgram hl) True.intro
   | _, _, .cons hh ht => And.intro (layerHasTy_sigProgram hh) (layersHasTy_sigProgram ht)
 end
@@ -329,12 +333,9 @@ end
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem bodiesHasTy_sigProgram {s : Signature Op} :
     ∀ {decls : List DefDecl} {bodies : Effs Op},
-      BodiesHasTy s decls bodies → ∀ b ∈ bodies.toList, SigProgram s b
-  | _, _, .nil => fun _ hm => by cases hm
-  | _, _, .cons _ hb _ hrest => fun b hm => by
-    rcases List.mem_cons.mp hm with rfl | hm
-    · exact hasTy_sigProgram hb
-    · exact bodiesHasTy_sigProgram hrest b hm
+      BodiesHasTy s decls bodies → BodiesSigProgram s decls bodies
+  | _, _, .nil => trivial
+  | _, _, .cons _ hb _ hrest => ⟨hasTy_sigProgram hb, bodiesHasTy_sigProgram hrest⟩
 
 /-- **A typed whole program reads only its signature**, part by part. A step of
 `omit-splices-table`. Its consumer is `Sketch.table_more_holes`. -/

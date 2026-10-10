@@ -250,6 +250,8 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_refModifySomeWith f -> A.NativeOp_refModifySomeWith (of_term f)
     (* An invocation of definition [k] of the program's block (decisions row 328). *)
     | Eff_types.Native_op_call k -> A.NativeOp_call k
+    (* A run of the body's parameter [k], inside a definition's body (decisions row 340). *)
+    | Eff_types.Native_op_param k -> A.NativeOp_param k
 
   let of_decision : Eff_types.decision -> A.decision = function
     | Eff_types.Decision_bool -> A.Decision_bool
@@ -263,14 +265,24 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Def_role_serviceInit s -> A.DefRole_serviceInit s
     | Eff_types.Def_role_serviceMethod (s, m, n) -> A.DefRole_serviceMethod (s, m, n)
 
-  (* A definition's declaration (decisions row 328): its name, its row's columns and its role. *)
+  (* A definition's parameter whose argument is a program (decisions row 340): its name and its
+     row's columns. *)
+  let of_param_decl (q : Eff_types.param_decl) : A.param_decl =
+    { A.name = q.Eff_types.param_decl_name;
+      request = of_ty q.Eff_types.param_decl_request;
+      answer = of_ty q.Eff_types.param_decl_answer;
+      error = of_ty q.Eff_types.param_decl_error }
+
+  (* A definition's declaration (decisions row 328): its name, its row's columns, its role and
+     its parameters (row 340). *)
   let of_def_decl (d : Eff_types.def_decl) : A.def_decl =
     { A.name = d.Eff_types.def_decl_name;
       request = of_ty d.Eff_types.def_decl_request;
       answer = of_ty d.Eff_types.def_decl_answer;
       error = of_ty d.Eff_types.def_decl_error;
       requires = List.map of_service_key d.Eff_types.def_decl_requires;
-      role = of_def_role d.Eff_types.def_decl_role }
+      role = of_def_role d.Eff_types.def_decl_role;
+      params = List.map of_param_decl d.Eff_types.def_decl_params }
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
@@ -308,6 +320,8 @@ module Make (A : PROGRAM_TYPES) = struct
     (* A definition block at the root (decisions row 328): the declarations, the bodies, the main
        program. *)
     | Eff_types.Eff_defs (ds, bs, m) -> A.Eff_defs (List.map of_def_decl ds, of_effs bs, of_eff m)
+    (* An invocation of definition [k] with its request and the programs it passes (row 340). *)
+    | Eff_types.Eff_invoke (k, t, args) -> A.Eff_invoke (k, of_term t, of_effs args)
 
   and of_layer_term : Eff_types.layer_term -> A.native_op A.layer_term = function
     | Eff_types.Layer_term_succeed (k, l) ->
@@ -428,6 +442,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.NativeOp_refModifyWith _ -> 21
     | A.NativeOp_refModifySomeWith _ -> 22
     | A.NativeOp_call _ -> 23
+    | A.NativeOp_param _ -> 24
 
   let ctor_index_decision : A.decision -> int = function
     | A.Decision_bool -> 0 | A.Decision_option -> 1 | A.Decision_tag _ -> 2
@@ -461,6 +476,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_iterate _ -> 24
     | A.Eff_restore _ -> 25
     | A.Eff_defs _ -> 26
+    | A.Eff_invoke _ -> 27
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2

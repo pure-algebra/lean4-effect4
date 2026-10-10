@@ -533,7 +533,7 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     ∃ x, print sig 1 (.suspend body) = .ok x ∧ readDefHead c = .ok ({ d with role := .plain }, x) := by
   simp only [DefDecl.readable, Bool.and_eq_true, List.isEmpty_iff, Option.isNone_iff_eq_none]
     at readable
-  obtain ⟨⟨⟨⟨hreq, hans⟩, herr⟩, hrequires⟩, _⟩ := readable
+  obtain ⟨⟨⟨⟨⟨hreq, hans⟩, herr⟩, hrequires⟩, _⟩, hparams⟩ := readable
   unfold printDef at printed
   split at printed
   · cases printed
@@ -550,9 +550,10 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
       Except.ok.injEq] at hresult
     subst hresult
     refine ⟨x, hx, ?_⟩
-    obtain ⟨name, request, answer, error, requires, role⟩ := d
-    simp only at hrequires
+    obtain ⟨name, request, answer, error, requires, role, params⟩ := d
+    simp only at hrequires hparams
     subst hrequires
+    subst hparams
     simp only [readDefHead, requirementType_nil, ↓reduceIte,
       Effect4.Codegen.Classes.readTyChecked_of_readable hreq hreqT,
       Effect4.Codegen.Classes.readTyChecked_of_readable hans hansT,
@@ -598,7 +599,7 @@ theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
         rcases List.mem_cons.mp mem with rfl | rest'
         · simp only [DefDecl.readable, Bool.and_eq_true, Option.isNone_iff_eq_none] at hd
           rw [(printDef_plain hc).2.2.1]
-          exact hd.2
+          exact hd.1.2
         · exact hnames c' rest'
       · intro c' mem
         rcases List.mem_cons.mp mem with rfl | rest'

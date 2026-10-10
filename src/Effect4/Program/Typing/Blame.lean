@@ -112,6 +112,11 @@ inductive TypeReason
   /-- A definition's body whose type is not below its declaration: an answer or an error outside
   the declared one, or a service outside the declared requirement row. -/
   | bodyNotDeclared (name : String) (body : EffTy)
+  /-- An invocation whose programs do not match its definition (decisions row 340): definition
+  `name` declares `params` parameters whose values are programs, and the call passes `args`. A
+  definition with none is invoked by `perform (.call k)`, so an invocation with programs needs
+  at least one. -/
+  | invokeArity (name : String) (params args : Nat)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -157,6 +162,7 @@ def TypeReason.head : TypeReason → String
   | .definitionsMismatch _ _ => "definitionsMismatch"
   | .definitionColumns _ => "definitionColumns"
   | .bodyNotDeclared _ _ => "bodyNotDeclared"
+  | .invokeArity _ _ _ => "invokeArity"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

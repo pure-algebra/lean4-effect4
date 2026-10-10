@@ -57,8 +57,10 @@ open Effect4.Machine.Env (Requirement)
 variable {Op : Type}
 
 /-- **A block's signature** (decisions row 328): the invocation of definition `k` reads the row
-that definition `k` declares, in normal form, and it is in the domain exactly when the block has
-a definition `k`. Every other operation reads the signature's own row and domain. -/
+that definition `k` declares, in normal form. It is in the domain exactly when the block has a
+definition `k` with no parameter whose value is a program: a definition with one is invoked by
+`Eff.invoke`, which reads its declaration (`defOf`, decisions row 340). Every other operation
+reads the signature's own row and domain. -/
 def Signature.withDefs (sig : Signature Op) (decls : List DefDecl) : Signature Op :=
   { sig with
     rowOf := fun op => match sig.callOf op with
@@ -67,15 +69,40 @@ def Signature.withDefs (sig : Signature Op) (decls : List DefDecl) : Signature O
         | none => sig.rowOf op
       | none => sig.rowOf op
     dom := fun op => match sig.callOf op with
-      | some k => decide (k < decls.length)
-      | none => sig.dom op }
+      | some k => decls[k]?.any (·.params.isEmpty)
+      | none => sig.dom op
+    defOf := fun k => decls[k]?.or (sig.defOf k) }
+
+/-- **A body's signature** (decisions row 340): the run of parameter `i` reads the row that
+parameter `i` declares, in normal form, and it is in the domain exactly when the definition has a
+parameter `i`. Every other operation reads the signature's own row and domain. At no parameter
+the signature is unchanged, so a body with no parameter is checked as before: a signature built
+on `nativeSignature` keeps every run of a parameter outside its domain. -/
+def Signature.withParams (sig : Signature Op) : List ParamDecl → Signature Op
+  | [] => sig
+  | q :: qs =>
+    { sig with
+      rowOf := fun op => match sig.paramOf op with
+        | some i => match (q :: qs)[i]? with
+          | some d => d.row.normalizeTypes
+          | none => sig.rowOf op
+        | none => sig.rowOf op
+      dom := fun op => match sig.paramOf op with
+        | some i => decide (i < (q :: qs).length)
+        | none => sig.dom op }
+
+/-- A parameter of the first stage: its three type columns are closed, and the error alphabet
+admits its error column (decisions row 340). -/
+def ParamDecl.formed (d : ParamDecl) : Bool :=
+  d.request.closed && d.answer.closed && d.error.closed && admittedErrTy d.error.normalize
 
 namespace DefDecl
 
-/-- A declaration of the first stage: its three type columns are closed, and the error alphabet
-admits its error column. -/
+/-- A declaration of the first stage: its three type columns and each parameter's are closed,
+and the error alphabet admits its error column and each parameter's. -/
 def formed (d : DefDecl) : Bool :=
-  d.request.closed && d.answer.closed && d.error.closed && admittedErrTy d.error.normalize
+  d.request.closed && d.answer.closed && d.error.closed && admittedErrTy d.error.normalize &&
+    d.params.all ParamDecl.formed
 
 /-- A body's type is below its declaration: its answer and its error below the declared ones in
 the checker's order, and its requirement row inside the declared one. -/
@@ -88,13 +115,14 @@ end DefDecl
 namespace Checker
 
 /-- Check the bodies of a block at a signature, in order: each declaration is formed, and each
-body, checked at the environment of its declared request, is below its declaration. `p` is the
-path of the spine node; the body is its child `0` and the rest of the spine its child `1`. -/
+body, checked at the environment of its declared request and at the signature extended by its
+parameters (`Signature.withParams`), is below its declaration. `p` is the path of the spine
+node; the body is its child `0` and the rest of the spine its child `1`. -/
 def checkBodies (sig : Signature Op) (p : List Nat) :
     List DefDecl → Effs Op → Except TypeRefusal Unit
   | d :: ds, .cons body rest => do
     unless d.formed do throw ⟨p ++ [0], .definitionColumns d.name⟩
-    let t ← check sig [d.request.normalize] (p ++ [0]) body
+    let t ← check (sig.withParams d.params) [d.request.normalize] (p ++ [0]) body
     unless d.admits t do throw ⟨p ++ [0], .bodyNotDeclared d.name t⟩
     checkBodies sig (p ++ [1]) ds rest
   | _, _ => pure ()

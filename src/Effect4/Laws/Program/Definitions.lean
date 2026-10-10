@@ -75,11 +75,29 @@ theorem Signature.withDefs_rowOf_of_none (sig : Signature Op) (decls : List DefD
   simp only [Signature.withDefs, h]
 
 /-- The invocation of definition `k` is in the block's domain exactly when the block has a
-definition `k`. A step of `invoke_hasTy`. -/
+definition `k` that takes no program (decisions rows 328 and 340). A step of `invoke_hasTy`. -/
 theorem Signature.withDefs_dom_call (sig : Signature Op) (decls : List DefDecl) {op : Op}
     {k : Nat} (h : sig.callOf op = some k) :
-    (sig.withDefs decls).dom op = decide (k < decls.length) := by
+    (sig.withDefs decls).dom op = decls[k]?.any (·.params.isEmpty) := by
   simp only [Signature.withDefs, h]
+
+/-- An invocation in the block's domain names a definition of the block, and that definition
+takes no program (decisions row 340). The step that the readers and the typed run's
+invocation arm take from the domain bit. -/
+theorem Signature.withDefs_dom_call_some (sig : Signature Op) (decls : List DefDecl) {op : Op}
+    {k : Nat} (h : sig.callOf op = some k) (hd : (sig.withDefs decls).dom op = true) :
+    ∃ d, decls[k]? = some d ∧ d.params = [] := by
+  rw [sig.withDefs_dom_call decls h] at hd
+  cases hk : decls[k]? with
+  | none => rw [hk] at hd; cases hd
+  | some d => rw [hk] at hd; exact ⟨d, rfl, List.isEmpty_iff.mp hd⟩
+
+/-- An invocation in the block's domain names a position of the block. -/
+theorem Signature.withDefs_dom_call_lt (sig : Signature Op) (decls : List DefDecl) {op : Op}
+    {k : Nat} (h : sig.callOf op = some k) (hd : (sig.withDefs decls).dom op = true) :
+    k < decls.length := by
+  obtain ⟨d, hk, -⟩ := sig.withDefs_dom_call_some decls h hd
+  exact (List.getElem?_eq_some_iff.mp hk).1
 
 /-- The invocation of definition `k` reads the row that definition `k` declares, in normal form.
 A step of `invoke_hasTy`. -/
@@ -102,9 +120,13 @@ theorem Signature.withDefs_nil (sig : Signature Op)
     | none => exact sig.withDefs_dom_of_none [] hc
     | some k =>
       rw [sig.withDefs_dom_call [] hc, h op k hc]
-      exact decide_eq_false (Nat.not_lt_zero k)
-  show { sig with rowOf := (sig.withDefs []).rowOf, dom := (sig.withDefs []).dom } = sig
-  rw [e1, e2]
+      rfl
+  have e3 : (sig.withDefs []).defOf = sig.defOf := rfl
+  show { sig with
+    rowOf := (sig.withDefs []).rowOf
+    dom := (sig.withDefs []).dom
+    defOf := (sig.withDefs []).defOf } = sig
+  rw [e1, e2, e3]
 
 /-- An application's signature keeps every invocation outside its domain (`nativeSignature`). -/
 theorem SigApp.signature_callsOutside (app : SigApp) :
@@ -116,27 +138,31 @@ theorem SigApp.signature_callsOutside (app : SigApp) :
 
 /-- The signature with an empty domain and every other field of `sig`. Both `sig` and its block's
 signature extend it, so the reads that do not touch a row agree. A step of `defs_check_agreeOn`. -/
-def Signature.emptyDom (sig : Signature Op) : Signature Op := { sig with dom := fun _ => false }
+def Signature.emptyDom (sig : Signature Op) : Signature Op :=
+  { sig with dom := fun _ => false, defOf := fun _ => none }
 
 theorem Signature.emptyDom_extends (sig : Signature Op) : SigExtends sig.emptyDom sig :=
-  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl,
+    fun _ _ h => (by cases h), rfl⟩
 
 theorem Signature.emptyDom_extends_withDefs (sig : Signature Op) (decls : List DefDecl) :
     SigExtends sig.emptyDom (sig.withDefs decls) :=
-  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => absurd h Bool.false_ne_true, fun _ _ h => h, rfl, rfl,
+    fun _ _ h => (by cases h), rfl⟩
 
 /-! ## G1: conservative -/
 
 /-- **A program that invokes no definition**: no operation it performs is an invocation of
-`sig` (`Signature.callOf`). Every service key is allowed. -/
+`sig` (`Signature.callOf`), and it holds no invocation with programs (decisions row 340). Every
+service key is allowed. -/
 def NoInvocation (sig : Signature Op) (e : Eff Op) : Prop :=
-  cata_eff (readsAlg (fun op => sig.callOf op = none) (fun _ => True)) e
+  cata_eff (readsAlg (fun op => sig.callOf op = none) (fun _ => True) (fun _ => False)) e
 
 /-- **Along a block the checker's two algebras agree on every read but an invocation's**: field
 by field, outright where the field reads no row, and guarded at a `perform`. The step of G1. -/
 theorem defs_check_agreeOn (sig : Signature Op) (decls : List DefDecl) :
     (Checker.check.alg (sig.withDefs decls)).AgreeOn (Checker.check.alg sig)
-      (fun op => sig.callOf op = none) (fun _ => True) := by
+      (fun op => sig.callOf op = none) (fun _ => True) (fun _ => False) := by
   have h₁ := sig.emptyDom_extends_withDefs decls
   have h₂ := sig.emptyDom_extends
   have hterm : Checker.term? (sig.withDefs decls) = Checker.term? sig :=
@@ -179,6 +205,7 @@ theorem defs_check_agreeOn (sig : Signature Op) (decls : List DefDecl) :
     eff_iterate := by simp only [Checker.check.alg, hterm]
     eff_restore := by simp only [Checker.check.alg, hterm]
     eff_defs := rfl
+    eff_invoke := fun _ h => h.elim
     stmt_bindYield := rfl
     stmt_yieldDiscard := rfl
     stmt_ret := by simp only [Checker.check.alg, hterm]
@@ -262,8 +289,8 @@ form, at its request's type. It is `HasTy.perform` read at the block's signature
 added to `HasTy`. -/
 @[semantics "initial-algebras-folds" (requirement := R1)]
 theorem invoke_hasTy (sig : Signature Op) (decls : List DefDecl) {op : Op} {k : Nat}
-    {d : DefDecl} (hk : sig.callOf op = some k) (hd : decls[k]? = some d) (env : TyEnv)
-    (request : Term) (t : EffTy) :
+    {d : DefDecl} (hk : sig.callOf op = some k) (hd : decls[k]? = some d) (hp : d.params = [])
+    (env : TyEnv) (request : Term) (t : EffTy) :
     HasTy (sig.withDefs decls) env (.perform op request) t ↔
       ∃ requestTy, termTy sig env request = some requestTy ∧
         rowTy d.row.normalizeTypes requestTy (sig.termUse env op) = some t := by
@@ -273,7 +300,6 @@ theorem invoke_hasTy (sig : Signature Op) (decls : List DefDecl) {op : Op} {k : 
   have huse : (sig.withDefs decls).termUse env op = sig.termUse env op :=
     ((sig.emptyDom_extends_withDefs decls).termUse env op).trans
       (sig.emptyDom_extends.termUse env op).symm
-  have hlt : k < decls.length := (List.getElem?_eq_some_iff.mp hd).1
   constructor
   · intro h
     cases h with
@@ -283,8 +309,8 @@ theorem invoke_hasTy (sig : Signature Op) (decls : List DefDecl) {op : Op} {k : 
       exact ⟨_, hr, hrow⟩
   · rintro ⟨requestTy, hr, hrow⟩
     refine .perform ?_ (hterm.trans hr) ?_
-    · rw [sig.withDefs_dom_call decls hk]
-      exact decide_eq_true hlt
+    · rw [sig.withDefs_dom_call decls hk, hd]
+      exact List.isEmpty_iff.mpr hp
     · rw [sig.withDefs_rowOf_call decls hk hd, huse]
       exact hrow
 
@@ -294,8 +320,8 @@ declaration. One rule per arm of `Checker.checkBodies`, at equal lengths. -/
 inductive BodiesHasTy (sig : Signature Op) : List DefDecl → Effs Op → Prop
   | nil : BodiesHasTy sig [] .nil
   | cons {d : DefDecl} {ds : List DefDecl} {body : Eff Op} {rest : Effs Op} {t : EffTy} :
-      d.formed = true → HasTy sig [d.request.normalize] body t → d.admits t = true →
-      BodiesHasTy sig ds rest → BodiesHasTy sig (d :: ds) (.cons body rest)
+      d.formed = true → HasTy (sig.withParams d.params) [d.request.normalize] body t →
+      d.admits t = true → BodiesHasTy sig ds rest → BodiesHasTy sig (d :: ds) (.cons body rest)
 
 /-- **The module judgment** (decisions row 328): a module with a block has the type of its main
 program at the block's signature, when its bodies meet their declarations there; a program with
@@ -313,7 +339,8 @@ invocation arm. -/
 theorem BodiesHasTy.get {sig : Signature Op} :
     ∀ {decls : List DefDecl} {bodies : Effs Op}, BodiesHasTy sig decls bodies →
       ∀ {k : Nat} {d : DefDecl}, decls[k]? = some d →
-        ∃ body t, bodies.toList[k]? = some body ∧ HasTy sig [d.request.normalize] body t ∧
+        ∃ body t, bodies.toList[k]? = some body ∧
+          HasTy (sig.withParams d.params) [d.request.normalize] body t ∧
           d.formed = true ∧ d.admits t = true
   | _, _, .nil, _, _, h => by
     rw [List.getElem?_nil] at h
@@ -346,7 +373,7 @@ theorem checkBodies_sound (sig : Signature Op) :
       obtain ⟨t, ht, h⟩ := bind_eq_ok.mp h
       by_cases ha : d.admits t = true
       · rw [if_pos ha] at h
-        exact .cons hf (check_sound sig body _ _ t ht) ha (ih h)
+        exact .cons hf (check_sound _ body _ _ t ht) ha (ih h)
       · rw [if_neg ha] at h
         cases h
     · rw [if_neg hf] at h
@@ -362,7 +389,7 @@ theorem checkBodies_complete (sig : Signature Op) :
   | _, _, .cons (body := body) hf hb ht hrest => by
     obtain ⟨hlen, hcheck⟩ := checkBodies_complete sig hrest
     refine ⟨by simp only [Effs.toList, List.length_cons, hlen], fun p => ?_⟩
-    simp only [Checker.checkBodies, hf, check_complete sig body _ _ hb (p ++ [0]), ht,
+    simp only [Checker.checkBodies, hf, check_complete _ body _ _ hb (p ++ [0]), ht,
       hcheck (p ++ [1]), ↓reduceIte, bind, Except.bind]
 
 /-- **G2's soundness, the claim `module-check`**: what the module check accepts, the module
@@ -407,7 +434,20 @@ invocations (`SigExtends.callOf`), so it extends the block's signature too. A st
 `moduleHasTy_ext`. -/
 theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls : List DefDecl) :
     SigExtends (s.withDefs decls) (s'.withDefs decls) := by
-  refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf⟩
+  refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
+    fun k d hk => ?_, h.paramOf⟩
+  rotate_left
+  · -- the block's declaration first, then the signature's, which the extension keeps
+    show decls[k]?.or (s'.defOf k) = some d
+    cases hdk : decls[k]? with
+    | some d' =>
+      change decls[k]?.or (s.defOf k) = some d at hk
+      rw [hdk] at hk
+      exact hk
+    | none =>
+      change decls[k]?.or (s.defOf k) = some d at hk
+      rw [hdk] at hk
+      exact h.defOf k d hk
   cases hc : s.callOf op with
   | none =>
     have hc' : s'.callOf op = none := by rw [h.callOf]; exact hc
@@ -419,16 +459,65 @@ theorem SigExtends.withDefs {s s' : Signature Op} (h : SigExtends s s') (decls :
     have hc' : s'.callOf op = some k := by rw [h.callOf]; exact hc
     rw [s.withDefs_dom_call decls hc] at hd
     refine ⟨by rw [s'.withDefs_dom_call decls hc']; exact hd, ?_⟩
-    have hlt : k < decls.length := of_decide_eq_true hd
-    obtain ⟨d, hdk⟩ : ∃ d, decls[k]? = some d := ⟨decls[k], List.getElem?_eq_getElem hlt⟩
+    obtain ⟨d, hdk⟩ : ∃ d, decls[k]? = some d := by
+      cases hk : decls[k]? with
+      | none => rw [hk] at hd; cases hd
+      | some d => exact ⟨d, rfl⟩
     rw [s'.withDefs_rowOf_call decls hc' hdk, s.withDefs_rowOf_call decls hc hdk]
+
+/-- **A body's parameters extend both signatures alike** (decisions row 340): an extension keeps
+which operations run parameters (`SigExtends.paramOf`), so it extends the body's signature too.
+A step of `bodiesHasTy_ext`. -/
+theorem SigExtends.withParams {s s' : Signature Op} (h : SigExtends s s') :
+    ∀ ps : List ParamDecl, SigExtends (s.withParams ps) (s'.withParams ps)
+  | [] => h
+  | q :: qs => by
+    refine ⟨h.atomOf, h.constAtom, h.scopeKey, fun op hd => ?_, h.service, h.termOf, h.callOf,
+      h.defOf, h.paramOf⟩
+    have hp : s'.paramOf op = s.paramOf op := by rw [h.paramOf]
+    cases hc : s.paramOf op with
+    | none =>
+      have hc' : s'.paramOf op = none := by rw [hp, hc]
+      simp only [Signature.withParams, hc] at hd
+      simp only [Signature.withParams, hc, hc']
+      exact h.row op hd
+    | some i =>
+      have hc' : s'.paramOf op = some i := by rw [hp, hc]
+      constructor
+      · simp only [Signature.withParams, hc] at hd
+        simp only [Signature.withParams, hc']
+        exact hd
+      · simp only [Signature.withParams, hc', hc]
+        cases hi : (q :: qs)[i]? with
+        | some d => rfl
+        | none =>
+          simp only [Signature.withParams, hc] at hd
+          exact absurd (of_decide_eq_true hd) (Nat.not_lt.mpr (List.getElem?_eq_none_iff.mp hi))
+
+/-- **A body's parameters extend a signature that keeps every parameter's run outside its
+domain** (decisions row 340), as an application's signature does. A step of
+`Sketch.sigAt_extends`. -/
+theorem Signature.extends_withParams (sig : Signature Op)
+    (h : ∀ op i, sig.paramOf op = some i → sig.dom op = false) :
+    ∀ ps : List ParamDecl, SigExtends sig (sig.withParams ps)
+  | [] => SigExtends.refl sig
+  | q :: qs => by
+    refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl, fun _ _ hk => hk, rfl⟩
+    cases hc : sig.paramOf op with
+    | none =>
+      simp only [Signature.withParams, hc]
+      exact ⟨hd, trivial⟩
+    | some i =>
+      rw [h op i hc] at hd
+      cases hd
 
 /-- The bodies' judgment along an extension. A step of `moduleHasTy_ext`. -/
 theorem bodiesHasTy_ext {s s' : Signature Op} (h : SigExtends s s') :
     ∀ {decls : List DefDecl} {bodies : Effs Op}, BodiesHasTy s decls bodies →
       BodiesHasTy s' decls bodies
   | _, _, .nil => .nil
-  | _, _, .cons hf hb ht hrest => .cons hf (hasTy_ext h hb) ht (bodiesHasTy_ext h hrest)
+  | _, _, .cons hf hb ht hrest =>
+    .cons hf (hasTy_ext (h.withParams _) hb) ht (bodiesHasTy_ext h hrest)
 
 /-- **The module judgment along an extension** (C3's monotone half for a module): a module the
 judgment types under `s` it types under every extension `s'`, at the same type. -/

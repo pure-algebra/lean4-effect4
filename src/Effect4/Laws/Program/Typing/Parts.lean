@@ -161,7 +161,7 @@ theorem BodiesHasTy.bodyAt {sig : Signature Op} :
   | _, _, _ :: _, _, .nil, h => by cases h
   | _, _, [], _, .cons _ _ _ _, h => by cases h
   | _, _, 0 :: rest, _, .cons (body := body) (t := t) _ hb _ _, h =>
-    ⟨⟨sig, _, body⟩, rest, t, rfl, hb, h⟩
+    ⟨⟨sig.withParams _, _, body⟩, rest, t, rfl, hb, h⟩
   | _, _, 1 :: _, _, .cons _ _ _ hrest, h => by
     have hbody := BodiesHasTy.bodyAt hrest h
     exact hbody
@@ -272,12 +272,13 @@ checked at the signature of the part that holds its address, so a body or the ma
 invoke the block's definitions. Not established: a filling at the root of a block (the sketch
 answers the root), an edit of a declaration, or anything of a run. -/
 
-/-- **A body's part is at the block's signature.** A step of
-`moduleHasTy_replace_programFocusAt`. -/
+/-- **A body's part is at the block's signature extended by the body's parameters**
+(decisions row 340). A step of `Sketch.sigAt_extends`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Part.bodyAt_sig {sig : Signature Op} {part : Part Op} {rest : List Nat} :
     ∀ {decls : List DefDecl} {bodies : Effs Op} {path : List Nat},
-      Part.bodyAt sig decls bodies path = some (part, rest) → part.sig = sig := by
+      Part.bodyAt sig decls bodies path = some (part, rest) →
+        ∃ ps, part.sig = sig.withParams ps := by
   intro decls
   induction decls with
   | nil =>
@@ -293,7 +294,7 @@ theorem Part.bodyAt_sig {sig : Signature Op} {part : Part Op} {rest : List Nat} 
       | cons i r =>
         rcases i with _ | _ | i
         · cases h
-          rfl
+          exact ⟨d.params, rfl⟩
         · have hrest := ih (bodies := bodies) (path := r) h
           exact hrest
         · cases h
@@ -304,7 +305,7 @@ part. A step of `Eff.partAt_resig`. -/
 theorem Part.bodyAt_resig {sig sig' : Signature Op} {part : Part Op} {rest : List Nat} :
     ∀ {decls : List DefDecl} {bodies : Effs Op} {path : List Nat},
       Part.bodyAt sig decls bodies path = some (part, rest) →
-      Part.bodyAt sig' decls bodies path = some (⟨sig', part.env, part.program⟩, rest) := by
+      ∃ part', Part.bodyAt sig' decls bodies path = some (part', rest) := by
   intro decls
   induction decls with
   | nil =>
@@ -320,7 +321,7 @@ theorem Part.bodyAt_resig {sig sig' : Signature Op} {part : Part Op} {rest : Lis
       | cons i r =>
         rcases i with _ | _ | i
         · cases h
-          rfl
+          exact ⟨_, rfl⟩
         · have hrest := ih (bodies := bodies) (path := r) h
           exact hrest
         · cases h
@@ -334,7 +335,7 @@ theorem Eff.partAt_resig {s s' : Signature Op} {env0 : TyEnv} {p : Eff Op} {path
   unfold Eff.partAt at h ⊢
   split at h
   · split at h
-    · exact ⟨_, Part.bodyAt_resig h⟩
+    · exact Part.bodyAt_resig h
     · cases h
       exact ⟨_, rfl⟩
     · cases h
@@ -342,32 +343,35 @@ theorem Eff.partAt_resig {s s' : Signature Op} {env0 : TyEnv} {p : Eff Op} {path
     exact ⟨_, rfl⟩
 
 /-- **A typed spine of bodies takes a filling at the focus of a body**: the filling, typed at the
-focus's type in the focus's environment under an extension of the block's signature, replaces
-the body's sub-program, and the spine stays typed under the extension. Each body keeps its own
-type, so its declaration still admits it. A step of `moduleHasTy_replace_programFocusAt`. -/
+focus's type in the focus's environment at the signature of its part in the extended spine (the
+extended block's signature and the body's parameters, decisions row 340), replaces the body's
+sub-program, and the spine stays typed under the extension. Each body keeps its own type, so
+its declaration still admits it. A step of `moduleHasTy_replace_programFocusAt`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem BodiesHasTy.replace {sig sig' : Signature Op} (hext : SigExtends sig sig') {q' : Eff Op}
-    {part : Part Op} {rest : List Nat} {f : Focus Op} :
+    {part part' : Part Op} {rest rest' : List Nat} {f : Focus Op} :
     ∀ {decls : List DefDecl} {bodies : Effs Op} {path : List Nat},
       BodiesHasTy sig decls bodies → Part.bodyAt sig decls bodies path = some (part, rest) →
-      focusAt part.sig part.env part.program rest = some f → HasTy sig' f.env q' f.ty →
+      focusAt part.sig part.env part.program rest = some f →
+      Part.bodyAt sig' decls bodies path = some (part', rest') → HasTy part'.sig f.env q' f.ty →
       ∃ bodies', (Node.effs bodies).replaceAt path (.eff q') = some (.effs bodies') ∧
         BodiesHasTy sig' decls bodies'
-  | _, _, [], .nil, h, _, _ => by cases h
-  | _, _, _ :: _, .nil, h, _, _ => by cases h
-  | _, _, [], .cons _ _ _ _, h, _, _ => by cases h
-  | _, _, 0 :: _, .cons (body := body) (rest := bs) hfm hb ht hrest, h, hfoc, hq' => by
+  | _, _, [], .nil, h, _, _, _ => by cases h
+  | _, _, _ :: _, .nil, h, _, _, _ => by cases h
+  | _, _, [], .cons _ _ _ _, h, _, _, _ => by cases h
+  | _, _, 0 :: _, .cons (body := body) (rest := bs) hfm hb ht hrest, h, hfoc, h', hq' => by
     cases h
+    cases h'
     obtain ⟨body', hrep⟩ := Node.replaceAt_eff q' (focusAt_typed hfoc).1
-    have hb' := hasTy_replace_focusAt hb hfoc hext hq' hrep
+    have hb' := hasTy_replace_focusAt hb hfoc (hext.withParams _) hq' hrep
     refine ⟨.cons body' bs, ?_, .cons hfm hb' ht (bodiesHasTy_ext hext hrest)⟩
     simp only [Node.replaceAt, Node.child, Option.bind_some, hrep, Node.setChild]
-  | _, _, 1 :: _, .cons (body := body) hfm hb ht hrest, h, hfoc, hq' => by
-    have hnext := BodiesHasTy.replace hext hrest h hfoc hq'
+  | _, _, 1 :: _, .cons (body := body) hfm hb ht hrest, h, hfoc, h', hq' => by
+    have hnext := BodiesHasTy.replace hext hrest h hfoc h' hq'
     obtain ⟨bs', hrep, hbs'⟩ := hnext
-    refine ⟨.cons body bs', ?_, .cons hfm (hasTy_ext hext hb) ht hbs'⟩
+    refine ⟨.cons body bs', ?_, .cons hfm (hasTy_ext (hext.withParams _) hb) ht hbs'⟩
     simp only [Node.replaceAt, Node.child, Option.bind_some, hrep, Node.setChild]
-  | _, _, (_ + 2) :: _, .cons _ _ _ _, h, _, _ => by cases h
+  | _, _, (_ + 2) :: _, .cons _ _ _ _, h, _, _, _ => by cases h
 
 /-- **On a typed whole program the focus answers at every address of a program inside a part**:
 in a definition's body, in the main program, and in a program with no block. -/
@@ -414,10 +418,11 @@ theorem moduleHasTy_replace_programFocusAt {s s' : Signature Op} {p q' : Eff Op}
     | 0 :: r, hf, hpart' =>
       unfold programFocusAt Eff.partAt at hf
       obtain ⟨⟨part, rest⟩, hpart, hfoc⟩ := Option.bind_eq_some_iff.mp hf
-      have hsig : part'.sig = s'.withDefs decls := Part.bodyAt_sig hpart'
-      rw [hsig] at hq'
+      have hpart'' : Part.bodyAt (s'.withDefs decls) decls bodies r = some (part', rest') := by
+        unfold Eff.partAt at hpart'
+        exact hpart'
       obtain ⟨bodies', hrep, hb'⟩ :=
-        BodiesHasTy.replace (hext.withDefs decls) hb hpart hfoc hq'
+        BodiesHasTy.replace (hext.withDefs decls) hb hpart hfoc hpart'' hq'
       refine ⟨.defs decls bodies' main, ?_, .defs hb' (hasTy_ext (hext.withDefs decls) hm)⟩
       simp only [Node.replaceAt, Node.child, Option.bind_some, hrep, Node.setChild]
     | 1 :: r, hf, hpart' =>

@@ -64,7 +64,7 @@ theorem memo_typed : Program.typeOfProgram memoSrc.signature memoRoot = some (Ef
   decide +kernel
 
 /-- The root point, with fuel. -/
-def memoPoint : Point := ⟨[], [], 5, [], [], 0⟩
+def memoPoint : Point := ⟨[], [], 5, [], [], 0, []⟩
 
 theorem memo_check : Checker.check memoSrc.signature [] memoPoint.path
     (Eff.expandIn memoRoot memoRoot) = .ok (EffTy.pure .unit) := by

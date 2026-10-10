@@ -428,9 +428,10 @@ conditional the reader reads; its `.option` and `.tag` forms are still not drawn
 (decisions row 245) is not drawn: the arm table is the seed stream's reproducibility contract,
 and a new arm redraws every later program. Its round trip is held on the wire corpus's programs
 and in `Test/Program/MaskContract.lean`. A definition block (`defs`, decisions row 328) is not
-drawn: the printer prints no block until slice PROC-3. -/
+drawn: the printer prints no block until slice PROC-3. An invocation with programs (`invoke`,
+decisions row 340) is not drawn: the printer refuses it until slice HO-3. -/
 def pendingEffs : List String :=
-  ["iterate", "restore", "defs"]
+  ["iterate", "restore", "defs", "invoke"]
 
 /-- A fiber action the printer accepts and the corpus does not draw, for the same reason as
 `restore`: `getInterruptible` (decisions row 245). -/

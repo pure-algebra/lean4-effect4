@@ -6,7 +6,8 @@
 --    Effect4.Supervision.ObserverMode Effect4.Program.Decision Effect4.Program.Ty \
 --    Effect4.Program.FieldReadMode Effect4.Program.Term Effect4.Program.NativeOp \
 --    Effect4.Supervision.ForkOptions Effect4.Program.CauseTerm Effect4.ServiceName \
---    Effect4.ServiceTypeCode Effect4.ServiceKey Effect4.Program.DefRole Effect4.Program.DefDecl \
+--    Effect4.ServiceTypeCode Effect4.ServiceKey Effect4.Program.DefRole \
+--    Effect4.Program.ParamDecl Effect4.Program.DefDecl \
 --    Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.RowKind \
 --    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.RowArg \
 --    Effect4.Program.Row Effect4.Program.EffTy
@@ -1126,7 +1127,8 @@ def shapeDoc : ShapeDoc :=
       ("refUpdateSomeAndGetWith", 29, [("f", (shape _root_.Effect4.Program.Term).root)]),
       ("refModifyWith", 30, [("f", (shape _root_.Effect4.Program.Term).root)]),
       ("refModifySomeWith", 31, [("f", (shape _root_.Effect4.Program.Term).root)]),
-      ("call", 32, [("index", (shape _root_.Nat).root)])],
+      ("call", 32, [("index", (shape _root_.Nat).root)]),
+      ("param", 33, [("index", (shape _root_.Nat).root)])],
    (shape _root_.Effect4.FinalizerStrategy).defs ++ (shape _root_.Nat).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.Effect4.Program.Term).defs⟩
 
@@ -1155,6 +1157,7 @@ def toVal : _root_.Effect4.Program.NativeOp → Val
   | .refModifyWith a0 => .ctor 30 [Canonical.toVal a0]
   | .refModifySomeWith a0 => .ctor 31 [Canonical.toVal a0]
   | .call a0 => .ctor 32 [Canonical.toVal a0]
+  | .param a0 => .ctor 33 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.NativeOp)
   | .ctor 0 [] => some .refMake
@@ -1185,6 +1188,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.NativeOp)
   | .ctor 30 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refModifyWith
   | .ctor 31 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .refModifySomeWith
   | .ctor 32 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .call
+  | .ctor 33 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .param
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.NativeOp) : ofVal (toVal a) = some a := by
@@ -1213,6 +1217,7 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.NativeOp) : ofVal (toVal a) = so
   | «refModifyWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «refModifySomeWith» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «call» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
+  | «param» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.NativeOp} (h : ofVal v = some a) :
     v = toVal a := by
@@ -1269,6 +1274,10 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.NativeOp} (h : ofVal v
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
     all_goals exact nomatch h
+  · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+    subst hj
+    simp only [toVal]
+    rw [Canonical.ofVal_exact hx]
   · obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
     subst hj
     simp only [toVal]
@@ -1387,6 +1396,9 @@ theorem fits (a : _root_.Effect4.Program.NativeOp) : shapeDoc.accepts (toVal a) 
       (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0) (acceptsFields_nil _))
   | «call» a0 =>
     exact accepts_sum _ _ _ 32 "call" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
+  | «param» a0 =>
+    exact accepts_sum _ _ _ 33 "param" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.NativeOp) :=
@@ -1826,6 +1838,74 @@ instance instCanonical : Canonical (_root_.Effect4.Program.DefRole) :=
 
 end DefRoleC
 
+namespace ParamDeclC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "ParamDecl" [("name", (shape _root_.String).root),
+     ("request", (shape _root_.Effect4.Program.Ty).root),
+     ("answer", (shape _root_.Effect4.Program.Ty).root),
+     ("error", (shape _root_.Effect4.Program.Ty).root)],
+   (shape _root_.String).defs ++ (shape _root_.Effect4.Program.Ty).defs⟩
+
+def toVal : _root_.Effect4.Program.ParamDecl → Val
+  | .mk a0 a1 a2 a3 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
+      Canonical.toVal a3]
+
+def ofVal : Val → Option (_root_.Effect4.Program.ParamDecl)
+  | .ctor 0 [v0, v1, v2, v3] =>
+    match Canonical.ofVal (α := _root_.String) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v2,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v3 with
+    | some a0, some a1, some a2, some a3 => some ⟨a0, a1, a2, a3⟩
+    | _, _, _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.ParamDecl) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  simp only [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.ParamDecl} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 v2 v3 =>
+    split at h
+    · next b0 b1 b2 b3 h0 h1 h2 h3 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
+        Canonical.ofVal_exact h3]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_String (x : _root_.String) :
+    acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.ParamDecl) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1, a2, a3⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a2)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a3) (acceptsFields_nil _)))))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.ParamDecl) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end ParamDeclC
+
 namespace DefDeclC
 
 def shapeDoc : ShapeDoc :=
@@ -1834,67 +1914,78 @@ def shapeDoc : ShapeDoc :=
      ("answer", (shape _root_.Effect4.Program.Ty).root),
      ("error", (shape _root_.Effect4.Program.Ty).root),
      ("requires", (shape (@_root_.List (_root_.Effect4.ServiceKey))).root),
-     ("role", (shape _root_.Effect4.Program.DefRole).root)],
+     ("role", (shape _root_.Effect4.Program.DefRole).root),
+     ("params", (shape (@_root_.List (_root_.Effect4.Program.ParamDecl))).root)],
    (shape _root_.String).defs ++ (shape _root_.Effect4.Program.Ty).defs ++
      (shape (@_root_.List (_root_.Effect4.ServiceKey))).defs ++
-     (shape _root_.Effect4.Program.DefRole).defs⟩
+     (shape _root_.Effect4.Program.DefRole).defs ++
+     (shape (@_root_.List (_root_.Effect4.Program.ParamDecl))).defs⟩
 
 def toVal : _root_.Effect4.Program.DefDecl → Val
-  | .mk a0 a1 a2 a3 a4 a5 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2,
-      Canonical.toVal a3, Canonical.toVal a4, Canonical.toVal a5]
+  | .mk a0 a1 a2 a3 a4 a5 a6 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1,
+      Canonical.toVal a2, Canonical.toVal a3, Canonical.toVal a4, Canonical.toVal a5,
+      Canonical.toVal a6]
 
 def ofVal : Val → Option (_root_.Effect4.Program.DefDecl)
-  | .ctor 0 [v0, v1, v2, v3, v4, v5] =>
+  | .ctor 0 [v0, v1, v2, v3, v4, v5, v6] =>
     match Canonical.ofVal (α := _root_.String) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1,
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v2,
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v3,
         Canonical.ofVal (α := (@_root_.List (_root_.Effect4.ServiceKey))) v4,
-        Canonical.ofVal (α := _root_.Effect4.Program.DefRole) v5 with
-    | some a0, some a1, some a2, some a3, some a4, some a5 => some ⟨a0, a1, a2, a3, a4, a5⟩
-    | _, _, _, _, _, _ => none
+        Canonical.ofVal (α := _root_.Effect4.Program.DefRole) v5,
+        Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.ParamDecl))) v6 with
+    | some a0, some a1, some a2, some a3, some a4, some a5,
+      some a6 => some ⟨a0, a1, a2, a3, a4, a5, a6⟩
+    | _, _, _, _, _, _, _ => none
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.DefDecl) : ofVal (toVal a) = some a := by
-  obtain ⟨a0, a1, a2, a3, a4, a5⟩ := a
+  obtain ⟨a0, a1, a2, a3, a4, a5, a6⟩ := a
   simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.DefDecl} (h : ofVal v = some a) :
     v = toVal a := by
   unfold ofVal at h
   split at h
-  · next v0 v1 v2 v3 v4 v5 =>
+  · next v0 v1 v2 v3 v4 v5 v6 =>
     split at h
-    · next b0 b1 b2 b3 b4 b5 h0 h1 h2 h3 h4 h5 =>
+    · next b0 b1 b2 b3 b4 b5 b6 h0 h1 h2 h3 h4 h5 h6 =>
       injection h with h
       subst h
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2,
-        Canonical.ofVal_exact h3, Canonical.ofVal_exact h4, Canonical.ofVal_exact h5]
+        Canonical.ofVal_exact h3, Canonical.ofVal_exact h4, Canonical.ofVal_exact h5,
+        Canonical.ofVal_exact h6]
     · exact nomatch h
   · exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_ListServiceKey (x : (@_root_.List (_root_.Effect4.ServiceKey))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.ServiceKey))).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
     _ _ (Canonical.fits x)
 theorem lift_DefRole (x : _root_.Effect4.Program.DefRole) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.DefRole).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_ListParamDecl (x : (@_root_.List (_root_.Effect4.Program.ParamDecl))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Effect4.Program.ParamDecl))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
 
 theorem fits (a : _root_.Effect4.Program.DefDecl) : shapeDoc.accepts (toVal a) = true := by
-  obtain ⟨a0, a1, a2, a3, a4, a5⟩ := a
+  obtain ⟨a0, a1, a2, a3, a4, a5, a6⟩ := a
   apply accepts_struct
   exact
     (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
@@ -1902,7 +1993,8 @@ theorem fits (a : _root_.Effect4.Program.DefDecl) : shapeDoc.accepts (toVal a) =
         (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a2)
           (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a3)
             (acceptsFields_cons _ _ _ _ _ _ (lift_ListServiceKey a4)
-              (acceptsFields_cons _ _ _ _ _ _ (lift_DefRole a5) (acceptsFields_nil _)))))))
+              (acceptsFields_cons _ _ _ _ _ _ (lift_DefRole a5)
+                (acceptsFields_cons _ _ _ _ _ _ (lift_ListParamDecl a6) (acceptsFields_nil _))))))))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.DefDecl) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -1958,7 +2050,9 @@ def EffShape : Shape :=
       ("restore", 29, [("saved", (shape _root_.Effect4.Program.Term).root),
         ("body", .named "Eff")]),
       ("defs", 30, [("decls", (shape (@_root_.List (_root_.Effect4.Program.DefDecl))).root),
-        ("bodies", .named "Effs"), ("main", .named "Eff")])]
+        ("bodies", .named "Effs"), ("main", .named "Eff")]),
+      ("invoke", 31, [("index", (shape _root_.Nat).root),
+        ("request", (shape _root_.Effect4.Program.Term).root), ("args", .named "Effs")])]
 
 def StmtShape : Shape :=
   .sum "Stmt"
@@ -2072,6 +2166,7 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
       Canonical.toVal a2, Canonical.toVal a3, Canonical.toVal a4, toValEff a5]
   | .restore a0 a1 => .ctor 29 [Canonical.toVal a0, toValEff a1]
   | .defs a0 a1 a2 => .ctor 30 [Canonical.toVal a0, toValEffs a1, toValEff a2]
+  | .invoke a0 a1 a2 => .ctor 31 [Canonical.toVal a0, Canonical.toVal a1, toValEffs a2]
 def toValStmt : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp) → Val
   | .bindYield a0 => .ctor 0 [toValEff a0]
   | .yieldDiscard a0 => .ctor 1 [toValEff a0]
@@ -2240,6 +2335,11 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
     match Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.DefDecl))) v0, rawEffs v1,
         rawEff v2 with
     | some a0, some a1, some a2 => some (.defs a0 a1 a2)
+    | _, _, _ => none
+  | .ctor 31 [v0, v1, v2] =>
+    match Canonical.ofVal (α := _root_.Nat) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Term) v1, rawEffs v2 with
+    | some a0, some a1, some a2 => some (.invoke a0 a1 a2)
     | _, _, _ => none
   | _ => none
 def rawStmt : Val → Option (@_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp))
@@ -2455,6 +2555,8 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
   | «defs» a0 a1 a2 =>
     simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a1, rawEff_toValEff a2]
+  | «invoke» a0 a1 a2 =>
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a2]
 termination_by structural a
 theorem rawStmt_toValStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     rawStmt (toValStmt a) = some a := by
@@ -2776,6 +2878,11 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListDefDecl a0)
         (acceptsFields_cons _ _ _ _ _ _ (fitsEffs a1)
           (acceptsFields_cons _ _ _ _ _ _ (fitsEff a2) (acceptsFields_nil _))))
+  | «invoke» a0 a1 a2 =>
+    exact acceptsAt_sum _ _ _ 31 "invoke" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1)
+          (acceptsFields_cons _ _ _ _ _ _ (fitsEffs a2) (acceptsFields_nil _))))
 termination_by structural a
 theorem fitsStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     acceptsIn defs (.named "Stmt") (toValStmt a) = true := by

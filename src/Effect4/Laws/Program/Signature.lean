@@ -104,20 +104,27 @@ structure SigExtends {Op : Type} (s s' : Signature Op) : Prop where
   /-- The same invocations (decisions row 328): which operation invokes which definition is the
   operation's own data, so a block extends both signatures alike (`SigExtends.withDefs`). -/
   callOf : s'.callOf = s.callOf
+  /-- The declarations kept (decisions row 340): an invocation with programs reads definition
+  `k`'s declaration, which an extension keeps. -/
+  defOf : ∀ k d, s.defOf k = some d → s'.defOf k = some d
+  /-- The same runs of parameters (decisions row 340): which operation runs which parameter is
+  the operation's own data, so a body's parameters extend both signatures alike. -/
+  paramOf : s'.paramOf = s.paramOf
 
 namespace SigExtends
 
 variable {Op : Type} {s s' s'' : Signature Op}
 
 theorem refl (s : Signature Op) : SigExtends s s :=
-  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl, rfl, fun _ _ h => h, rfl⟩
 
 theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s s'' :=
   ⟨h₂.atomOf.trans h₁.atomOf, h₂.constAtom.trans h₁.constAtom, h₂.scopeKey.trans h₁.scopeKey,
     fun op hd =>
       ⟨(h₂.row op (h₁.row op hd).1).1, (h₂.row op (h₁.row op hd).1).2.trans (h₁.row op hd).2⟩,
     fun key ty hk => h₂.service key ty (h₁.service key ty hk), h₂.termOf.trans h₁.termOf,
-    h₂.callOf.trans h₁.callOf⟩
+    h₂.callOf.trans h₁.callOf, fun k d hk => h₂.defOf k d (h₁.defOf k d hk),
+    h₂.paramOf.trans h₁.paramOf⟩
 
 theorem termTy (h : SigExtends s s') (env : TyEnv) (t : Term) :
     Effect4.Program.termTy s' env t = Effect4.Program.termTy s env t :=
@@ -186,6 +193,8 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .provideService hk hv hsub hb =>
     .provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub (hasTy_ext h hb)
   | _, _, _, .restore hs hsub hb => .restore ((h.termTy _ _).trans hs) hsub (hasTy_ext h hb)
+  | _, _, _, .invoke hd hne hlen hreq hrow ha =>
+    .invoke (h.defOf _ _ hd) hne hlen ((h.termTy _ _).trans hreq) hrow (effsHasTy_ext h ha)
 
 theorem stmtsHasTy_ext (h : SigExtends s s') :
     ∀ {env : TyEnv} {inLoop : Bool} {b : Stmts Op} {g : GenTy},
@@ -201,9 +210,12 @@ theorem stmtsHasTy_ext (h : SigExtends s s') :
   | _, _, _, _, .breakLoop hr => .breakLoop (stmtsHasTy_ext h hr)
 
 theorem effsHasTy_ext (h : SigExtends s s') :
-    ∀ {env : TyEnv} {es : Effs Op} {t : EffTy}, EffsHasTy s env es t → EffsHasTy s' env es t
-  | _, _, _, .nil => .nil
-  | _, _, _, .cons hh ht hj => .cons (hasTy_ext h hh) (effsHasTy_ext h ht) hj
+    ∀ {env : TyEnv} {qs : List ParamDecl} {es : Effs Op} {t : EffTy},
+      EffsHasTy s env qs es t → EffsHasTy s' env qs es t
+  | _, _, _, _, .nil => .nil
+  | _, _, _, _, .cons hh ht hj => .cons (hasTy_ext h hh) (effsHasTy_ext h ht) hj
+  | _, _, _, _, .slot hh hadm ht hj =>
+    .slot (hasTy_ext h hh) hadm (effsHasTy_ext h ht) hj
 
 theorem actionHasTy_ext (h : SigExtends s s') :
     ∀ {env : TyEnv} {a : ActionTerm Op} {t : EffTy}, ActionHasTy s env a t → ActionHasTy s' env a t
@@ -271,7 +283,7 @@ end Extend
 admitted by the longer one at the same row. -/
 theorem rows_append (t t' : RowTable) :
     SigExtends (nativeSignature t) (nativeSignature (t ++ t')) := by
-  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl⟩
+  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl⟩
   intro op hd
   cases op with
   | external i =>
@@ -281,8 +293,9 @@ theorem rows_append (t t' : RowTable) :
     show ((nativeRowOf (t ++ t') (.external i)).normalizeTypes) =
       (nativeRowOf t (.external i)).normalizeTypes
     simp only [nativeRowOf, List.getElem?_append_left hi]
-  -- an invocation is in no native signature's domain
+  -- an invocation and a parameter's run are in no native signature's domain
   | call k => cases hd
+  | param i => cases hd
   | _ => exact ⟨rfl, rfl⟩
 
 /-! ## Σ_app (`SigApp`, `Program/SigApp.lean`) -/
@@ -311,7 +324,7 @@ theorem serviceTy_code (app : SigApp) {key key' : ServiceKey} (hcode : key.servi
 theorem rows_append (app : SigApp) (t' : RowTable) :
     SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services).signature := by
   have h := Effect4.Program.rows_append app.rows t'
-  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl⟩
+  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl, rfl, fun _ _ hk => hk, rfl⟩
 
 /-- A declaration appended at a code that neither the application nor the built-in table
 types. -/
@@ -323,7 +336,7 @@ types keeps its carrier. -/
 theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     (fresh : ∀ entry ∈ s', FreshCode app entry) :
     SigExtends app.signature (SigApp.mk app.rows (app.services ++ s')).signature := by
-  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl⟩
+  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl, rfl, fun _ _ hk => hk, rfl⟩
   intro key ty hk
   change app.serviceTy key = some ty at hk
   change SigApp.serviceTy ⟨app.rows, app.services ++ s'⟩ key = some ty
@@ -375,7 +388,7 @@ universe u
 or service key outright, and at the four that do (`perform`, `service`, `provideService`, the
 layers' `succeed` and `effect`) for the operations and keys the guards admit. -/
 structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ : EffAlgebra Op R)
-    (okOp : Op → Prop) (okKey : ServiceKey → Prop) : Prop where
+    (okOp : Op → Prop) (okKey : ServiceKey → Prop) (okDef : Nat → Prop) : Prop where
   eff_succeed : alg₁.eff_succeed = alg₂.eff_succeed
   eff_fail : alg₁.eff_fail = alg₂.eff_fail
   eff_failCause : alg₁.eff_failCause = alg₂.eff_failCause
@@ -403,6 +416,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   eff_iterate : alg₁.eff_iterate = alg₂.eff_iterate
   eff_restore : alg₁.eff_restore = alg₂.eff_restore
   eff_defs : alg₁.eff_defs = alg₂.eff_defs
+  eff_invoke : ∀ k, okDef k → alg₁.eff_invoke k = alg₂.eff_invoke k
   stmt_bindYield : alg₁.stmt_bindYield = alg₂.stmt_bindYield
   stmt_yieldDiscard : alg₁.stmt_yieldDiscard = alg₂.stmt_yieldDiscard
   stmt_ret : alg₁.stmt_ret = alg₂.stmt_ret
@@ -444,8 +458,9 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   layers_cons : alg₁.layers_cons = alg₂.layers_cons
 
 /-- The reads a program makes of a signature, as a fold: every operation it performs satisfies
-`okOp`, every service key it reads satisfies `okKey`. -/
-def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
+`okOp`, every service key it reads satisfies `okKey`, and every definition it invokes with
+programs satisfies `okDef` (decisions row 340). -/
+def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) (okDef : Nat → Prop) :
     EffAlgebra Op (fun _ => Prop) where
   eff_succeed _ := True
   eff_fail _ := True
@@ -474,6 +489,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
   eff_iterate _ _ _ _ _ r5 := r5
   eff_restore _ r1 := r1
   eff_defs _ r1 r2 := r1 ∧ r2
+  eff_invoke k _ r2 := okDef k ∧ r2
   stmt_bindYield r0 := r0
   stmt_yieldDiscard r0 := r0
   stmt_ret _ := True
@@ -515,12 +531,12 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
   layers_cons r0 r1 := r0 ∧ r1
 
 variable {Op : Type} {R : EffFam → Type u} {alg₁ alg₂ : EffAlgebra Op R}
-  {okOp : Op → Prop} {okKey : ServiceKey → Prop}
+  {okOp : Op → Prop} {okKey : ServiceKey → Prop} {okDef : Nat → Prop}
 
 mutual
 /-- Fold congruence at `Eff`. -/
-theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Eff Op)
-    (hr : cata_eff (readsAlg okOp okKey) e) : cata_eff alg₁ e = cata_eff alg₂ e := by
+theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : Eff Op)
+    (hr : cata_eff (readsAlg okOp okKey okDef) e) : cata_eff alg₁ e = cata_eff alg₂ e := by
   cases e with
   | succeed a0 =>
     show alg₁.eff_succeed a0 = alg₂.eff_succeed a0
@@ -615,11 +631,14 @@ theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Eff Op)
     show alg₁.eff_defs a0 (cata_effs alg₁ a1) (cata_eff alg₁ a2) =
       alg₂.eff_defs a0 (cata_effs alg₂ a1) (cata_eff alg₂ a2)
     rw [h.eff_defs, cata_effs_congr_on h a1 hr.1, cata_eff_congr_on h a2 hr.2]
+  | invoke a0 a1 a2 =>
+    show alg₁.eff_invoke a0 a1 (cata_effs alg₁ a2) = alg₂.eff_invoke a0 a1 (cata_effs alg₂ a2)
+    rw [h.eff_invoke a0 hr.1, cata_effs_congr_on h a2 hr.2]
 termination_by structural e
 
 /-- Fold congruence at `Stmt`. -/
-theorem cata_stmt_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Stmt Op)
-    (hr : cata_stmt (readsAlg okOp okKey) e) : cata_stmt alg₁ e = cata_stmt alg₂ e := by
+theorem cata_stmt_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : Stmt Op)
+    (hr : cata_stmt (readsAlg okOp okKey okDef) e) : cata_stmt alg₁ e = cata_stmt alg₂ e := by
   cases e with
   | bindYield a0 =>
     show alg₁.stmt_bindYield (cata_eff alg₁ a0) = alg₂.stmt_bindYield (cata_eff alg₂ a0)
@@ -643,8 +662,8 @@ theorem cata_stmt_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Stmt Op)
 termination_by structural e
 
 /-- Fold congruence at `Stmts`. -/
-theorem cata_stmts_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Stmts Op)
-    (hr : cata_stmts (readsAlg okOp okKey) e) : cata_stmts alg₁ e = cata_stmts alg₂ e := by
+theorem cata_stmts_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : Stmts Op)
+    (hr : cata_stmts (readsAlg okOp okKey okDef) e) : cata_stmts alg₁ e = cata_stmts alg₂ e := by
   cases e with
   | nil =>
     show alg₁.stmts_nil = alg₂.stmts_nil
@@ -656,8 +675,8 @@ theorem cata_stmts_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Stmts Op
 termination_by structural e
 
 /-- Fold congruence at `Effs`. -/
-theorem cata_effs_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Effs Op)
-    (hr : cata_effs (readsAlg okOp okKey) e) : cata_effs alg₁ e = cata_effs alg₂ e := by
+theorem cata_effs_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : Effs Op)
+    (hr : cata_effs (readsAlg okOp okKey okDef) e) : cata_effs alg₁ e = cata_effs alg₂ e := by
   cases e with
   | nil =>
     show alg₁.effs_nil = alg₂.effs_nil
@@ -669,8 +688,8 @@ theorem cata_effs_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Effs Op)
 termination_by structural e
 
 /-- Fold congruence at `ActionTerm`. -/
-theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : ActionTerm Op)
-    (hr : cata_action (readsAlg okOp okKey) e) : cata_action alg₁ e = cata_action alg₂ e := by
+theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : ActionTerm Op)
+    (hr : cata_action (readsAlg okOp okKey okDef) e) : cata_action alg₁ e = cata_action alg₂ e := by
   cases e with
   | fork a0 a1 =>
     show alg₁.action_fork (cata_eff alg₁ a0) a1 = alg₂.action_fork (cata_eff alg₂ a0) a1
@@ -726,8 +745,8 @@ theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : ActionT
 termination_by structural e
 
 /-- Fold congruence at `LayerTerm`. -/
-theorem cata_layer_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : LayerTerm Op)
-    (hr : cata_layer (readsAlg okOp okKey) e) : cata_layer alg₁ e = cata_layer alg₂ e := by
+theorem cata_layer_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : LayerTerm Op)
+    (hr : cata_layer (readsAlg okOp okKey okDef) e) : cata_layer alg₁ e = cata_layer alg₂ e := by
   cases e with
   | succeed a0 a1 =>
     show alg₁.layer_succeed a0 a1 = alg₂.layer_succeed a0 a1
@@ -765,8 +784,8 @@ theorem cata_layer_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : LayerTer
 termination_by structural e
 
 /-- Fold congruence at `LayerTerms`. -/
-theorem cata_layers_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : LayerTerms Op)
-    (hr : cata_layers (readsAlg okOp okKey) e) : cata_layers alg₁ e = cata_layers alg₂ e := by
+theorem cata_layers_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : LayerTerms Op)
+    (hr : cata_layers (readsAlg okOp okKey okDef) e) : cata_layers alg₁ e = cata_layers alg₂ e := by
   cases e with
   | nil =>
     show alg₁.layers_nil = alg₂.layers_nil
@@ -789,10 +808,15 @@ def SigOkOp {Op : Type} (s : Signature Op) (op : Op) : Prop := s.dom op = true
 /-- The service keys a signature types: the checker reads a key's carrier. -/
 def SigOkKey {Op : Type} (s : Signature Op) (key : ServiceKey) : Prop := (s.serviceTy key).isSome = true
 
+/-- The definitions a signature declares: an invocation with programs reads its definition's
+declaration (decisions row 340). -/
+def SigOkDef {Op : Type} (s : Signature Op) (k : Nat) : Prop := (s.defOf k).isSome = true
+
 /-- **A Σ-program** (TY-04): every operation it performs is in `dom s`, every service key it reads
-has a carrier in `s` — exactly the reads the checker's algebra makes of the signature. -/
+has a carrier in `s`, and every definition it invokes with programs is declared in `s` — exactly
+the reads the checker's algebra makes of the signature. -/
 def SigProgram {Op : Type} (s : Signature Op) (e : Eff Op) : Prop :=
-  cata_eff (readsAlg (SigOkOp s) (SigOkKey s)) e
+  cata_eff (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) e
 
 /-- Collection diagnostics read only atom typing and literal flags.
 This serves checker/refusal agreement through the extension helpers below. -/
@@ -829,9 +853,10 @@ theorem cause?_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
 
 /-- **Along an extension the checker's two algebras agree on the reads the smaller signature
 admits** (proved): field by field, outright where the field reads only atoms and the scope key,
-guarded where it reads an operation's row or a key's carrier. -/
+guarded where it reads an operation's row, a key's carrier or a definition's declaration. -/
 theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
-    (Checker.check.alg s').AgreeOn (Checker.check.alg s) (SigOkOp s) (SigOkKey s) := by
+    (Checker.check.alg s').AgreeOn (Checker.check.alg s) (SigOkOp s) (SigOkKey s)
+      (SigOkDef s) := by
   have hterm := term?_ext h
   have hcause := cause?_ext h
   have hbody : bodyRequires s' = bodyRequires s := funext h.bodyRequires
@@ -870,6 +895,9 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     eff_iterate := by simp only [Checker.check.alg, hterm]
     eff_restore := by simp only [Checker.check.alg, hterm]
     eff_defs := rfl
+    eff_invoke := fun k hk => by
+      obtain ⟨d, hd⟩ := Option.isSome_iff_exists.mp hk
+      simp only [Checker.check.alg, h.defOf k d hd, hd, hterm]
     stmt_bindYield := rfl
     stmt_yieldDiscard := rfl
     stmt_ret := by simp only [Checker.check.alg, hterm]

@@ -147,6 +147,7 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .maskRestoreExpected _ => []
   -- A definition block (decisions row 328): the printer prints no block yet, so no observation
   -- names these reasons.
-  | .definitionBlock | .definitionsMismatch _ _ | .definitionColumns _ | .bodyNotDeclared _ _ => []
+  | .definitionBlock | .definitionsMismatch _ _ | .definitionColumns _ | .bodyNotDeclared _ _
+  | .invokeArity _ _ _ => []
 
 end Effect4.Codegen

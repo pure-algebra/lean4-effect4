@@ -72,6 +72,98 @@ theorem intro_call (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (p : Po
         | layer _ => exact codeMeans_badShape root
         | layers _ => exact codeMeans_badShape root
 
+/-- **An invocation with programs** (decisions row 340): as an invocation (`intro_call`), with the
+sites of the call's programs pushed on the stack. The hop spends one fuel
+(`weight_redirect_params_lt`), so the introduction at every lighter point (`hres`) closes it. A
+step of `code_intro_aux`. -/
+theorem intro_invoke (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (args : Effs NativeOp)
+    (p : Point) (k : Nat) (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.invoke index r args)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (compileEff (.invoke index r args) p)
+      (denoteR root (.invoke index r args) p) := by
+  rw [compileEff_invoke index r args hf, denoteR_invoke (root := root) (p := p) index r args hpos]
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
+  rw [suspendBodyAt_invoke (q := { p with completed }) hf h]
+  simp only [prepareR_constructR]
+  cases hv : evalTerm p.env r with
+  | none => exact codeMeans_badShape root
+  | some v =>
+    cases hp : defBodyPath root index with
+    | none => exact codeMeans_badShape root
+    | some path =>
+      have hq := hres
+        { ({ p with completed } : Point).redirect path with
+          env := [v]
+          params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+        (Nat.lt_of_lt_of_le (weight_redirect_params_lt p path hpos completed [v] _) hle)
+      unfold denoteAt at hq
+      unfold resolve at hq ⊢
+      dsimp only [Point.redirect] at hq ⊢
+      cases hb : Node.at_ (Node.eff root) path with
+      | none => exact codeMeans_badShape root
+      | some node =>
+        rw [hb] at hq
+        cases node with
+        | eff body =>
+          rw [prepareR_denoteR]
+          exact hq
+        | stmts _ => exact codeMeans_badShape root
+        | stmt _ => exact codeMeans_badShape root
+        | action _ => exact codeMeans_badShape root
+        | effs _ => exact codeMeans_badShape root
+        | layer _ => exact codeMeans_badShape root
+        | layers _ => exact codeMeans_badShape root
+
+/-- **A parameter's run** (decisions row 340): one counted suspension on both sides, then the
+site of the program that the innermost call passed, its environment extended by the request's
+value, at the stack below that call. The hop spends one fuel (`weight_redirect_params_lt`). A
+step of `code_intro_aux`. -/
+theorem intro_param (root : NativeEff) (n : Nat) (i : Nat) (r : Term) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.perform (.param i) r)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q)) :
+    CodeMeans root (compileEff (.perform (.param i) r) p)
+      (denoteR root (.perform (.param i) r) p) := by
+  rw [compileEff_perform (.param i) r hf, denoteR_perform root (.param i) r hpos]
+  refine CodeMeans.suspendBody p _ fun completed => ?_
+  show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
+  rw [suspendBodyAt_param (q := { p with completed }) hf h]
+  simp only [prepareR_constructR]
+  cases hv : evalTerm p.env r with
+  | none => exact codeMeans_badShape root
+  | some v =>
+    cases hs : p.params with
+    | nil => exact codeMeans_badShape root
+    | cons top rest =>
+      dsimp only
+      cases ht : top[i]? with
+      | none => exact codeMeans_badShape root
+      | some site =>
+        have hq := hres
+          { ({ p with completed } : Point).redirect site.path with
+            env := site.env ++ [v]
+            params := rest }
+          (Nat.lt_of_lt_of_le (weight_redirect_params_lt p site.path hpos completed _ rest) hle)
+        unfold denoteAt at hq
+        unfold resolve at hq ⊢
+        dsimp only [Point.redirect] at hq ⊢
+        cases hb : Node.at_ (Node.eff root) site.path with
+        | none => exact codeMeans_badShape root
+        | some node =>
+          rw [hb] at hq
+          cases node with
+          | eff body =>
+            rw [prepareR_denoteR]
+            exact hq
+          | stmts _ => exact codeMeans_badShape root
+          | stmt _ => exact codeMeans_badShape root
+          | action _ => exact codeMeans_badShape root
+          | effs _ => exact codeMeans_badShape root
+          | layer _ => exact codeMeans_badShape root
+          | layers _ => exact codeMeans_badShape root
+
 /-- **A definition block** (decisions row 328): no step of its own on either side, its main
 program at child 1. A step of `code_intro_aux`. -/
 theorem intro_defs (root : NativeEff) (n : Nat) (decls : List DefDecl) (bodies : Effs NativeOp)
@@ -116,7 +208,7 @@ theorem intro_gen (root : NativeEff) (ss : Stmts NativeOp) (p : Point) (k : Nat)
   show CodeMeans root (suspendBodyAt root (.body { p with completed }))
     (prepareR completed (.vis (.inr (.gen p)) Effects.Program.pure))
   rw [suspendBodyAt_gen (q := { p with completed }) hf h]
-  exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
+  exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
 
 theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 a1 : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
@@ -183,7 +275,7 @@ theorem intro_iterate (root : NativeEff) (c : Option Ty) (i t s r : Term) (b : N
   dsimp only
   rcases hv : evalTerm p.env i with _ | cursor
   · exact codeMeans_badShape root
-  · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
+  · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
 
 theorem intro_onExit (root : NativeEff) (n : Nat) (b f : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)

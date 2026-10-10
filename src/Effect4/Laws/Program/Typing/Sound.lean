@@ -66,13 +66,13 @@ theorem stmtsTy_complete (sig : Signature Op) (body : Stmts Op) :
 
 theorem effsTy_sound (sig : Signature Op) (entrants : Effs Op) :
     ∀ (env : TyEnv) (t : EffTy), effsTy sig env entrants = some t →
-      EffsHasTy sig env entrants t :=
-  fun env t h => checkEffs_sound sig entrants env [] t (toOption_eq_some.mp h)
+      EffsHasTy sig env [] entrants t :=
+  fun env t h => checkEffs_sound sig entrants env [] [] t (toOption_eq_some.mp h)
 
 theorem effsTy_complete (sig : Signature Op) (entrants : Effs Op) :
-    ∀ (env : TyEnv) (t : EffTy), EffsHasTy sig env entrants t →
+    ∀ (env : TyEnv) (t : EffTy), EffsHasTy sig env [] entrants t →
       effsTy sig env entrants = some t :=
-  fun env t hd => by unfold effsTy; rw [checkEffs_complete sig entrants env t hd []]; rfl
+  fun env t hd => by unfold effsTy; rw [checkEffs_complete sig entrants env [] t hd []]; rfl
 
 theorem actionTy_sound (sig : Signature Op) (action : ActionTerm Op) :
     ∀ (env : TyEnv) (t : EffTy), actionTy sig env action = some t →
@@ -139,7 +139,7 @@ theorem stmtsHasTy_unique (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (b 
     ((stmtsTy_complete sig b env inLoop g₁ h₁).symm.trans (stmtsTy_complete sig b env inLoop g₂ h₂))
 
 theorem effsHasTy_unique (sig : Signature Op) (env : TyEnv) (es : Effs Op) {t₁ t₂ : EffTy}
-    (h₁ : EffsHasTy sig env es t₁) (h₂ : EffsHasTy sig env es t₂) : t₁ = t₂ :=
+    (h₁ : EffsHasTy sig env [] es t₁) (h₂ : EffsHasTy sig env [] es t₂) : t₁ = t₂ :=
   Option.some.inj ((effsTy_complete sig es env t₁ h₁).symm.trans (effsTy_complete sig es env t₂ h₂))
 
 theorem actionHasTy_unique (sig : Signature Op) (env : TyEnv) (a : ActionTerm Op)

@@ -29,13 +29,15 @@ section compileArms
 the context's. -/
 theorem Point.capture_keys (p : Point) (a : Val) (ctx : Ctx) :
     (FinName.foreign (p.capture a ctx)).keys ⊆ p.keys ++ a.keys ++ ctx.keys := by
-  simp only [FinName.keys, Point.capture, Val.keysList_eq_flatMap, List.flatMap_append,
-    List.flatMap_cons, List.flatMap_nil, List.append_nil]
-  refine List.append_subset.mpr ⟨List.append_subset.mpr ⟨?_, ?_⟩, ?_⟩
-  · exact List.Subset.trans p.env_keys_subset
-      (List.Subset.trans (List.subset_append_left _ _) (List.subset_append_left _ _))
-  · exact List.Subset.trans (List.subset_append_right _ _) (List.subset_append_left _ _)
-  · exact List.subset_append_right _ _
+  simp only [FinName.keys, Capture.valKeys, Point.capture, Point.keys, Val.keysList_eq_flatMap,
+    List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+  intro x hx
+  simp only [List.mem_append] at hx ⊢
+  rcases hx with (hP | hE | hA) | hC
+  · exact Or.inl (Or.inl (Or.inl (Or.inr hP)))
+  · exact Or.inl (Or.inl (Or.inr hE))
+  · exact Or.inl (Or.inr hA)
+  · exact Or.inr hC
 
 /-- DI-61. The shared async dispatcher names only handles already captured at the point. -/
 theorem asyncRoute_keys (register : NativeOp) (r : Term) (p : Point) :
@@ -69,9 +71,11 @@ theorem asyncRoute_keys (register : NativeOp) (r : Term) (p : Point) :
   | scopeMake strategy => cases strategy <;> exact List.nil_subset _
   | _ => exact List.nil_subset _
 
-/-- A capture's point names the capture's environment. -/
-theorem Point.ofCapture_keys (c : Capture) : (Point.ofCapture c).keys ⊆ Val.keysList c.env := by
-  simp only [Point.keys, Point.ofCapture, List.flatMap_nil, List.nil_append, Val.keysList_eq_flatMap]
+/-- A capture's point names the capture's values: its stack's sites' and its environment's
+(decisions row 340). -/
+theorem Point.ofCapture_keys (c : Capture) : (Point.ofCapture c).keys ⊆ c.valKeys := by
+  simp only [Point.keys, Point.ofCapture, Capture.valKeys, List.flatMap_nil, List.nil_append,
+    Val.keysList_eq_flatMap]
   exact List.Subset.refl _
 
 end compileArms
@@ -106,7 +110,8 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     · rw [compileEff_perform op r hf]
       split
       · exact asyncRoute_keys _ r p
-      -- an invocation's suspension names its point
+      -- an invocation's and a parameter's run's suspension names its point
+      · exact List.Subset.refl _
       · exact List.Subset.refl _
       · split
         · split
@@ -243,6 +248,11 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
     · rw [compileEff_defs _ _ main hf]
       exact compileEff_keys main (p.child 1)
+  -- an invocation with programs: one counted suspension, which names its point
+  | .invoke k' r args, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_invoke k' r args hf]; exact List.Subset.refl _
 
 theorem resolve_keys (root : NativeEff) (p : Point) : nativeKeys (resolve root p) ⊆ p.keys := by
   unfold resolve

@@ -82,7 +82,8 @@
       "types": [
         "Effect4.Program.RowShape",
         "Effect4.Program.DefDecl",
-        "Effect4.Program.DefRole"
+        "Effect4.Program.DefRole",
+        "Effect4.Program.ParamDecl"
       ],
       "roots": [
         "Effect4.Api.run",
@@ -100,7 +101,8 @@
         "Effect4.Machine.Origin",
         "Effect4.Machine.ForkRecord",
         "Effect4.Program.DefDecl",
-        "Effect4.Program.DefRole"
+        "Effect4.Program.DefRole",
+        "Effect4.Program.ParamDecl"
       ],
       "roots": [
         "Effect4.Api.run",

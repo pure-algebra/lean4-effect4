@@ -612,6 +612,21 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
           | some (Node.eff body) => rec body { p.redirect path with completed, env := [v] }
           | _ => .pure badShapeExit
         | _, _ => .pure badShapeExit)
+    -- a parameter's run (decisions row 340), as `suspendBodyAt` decides it: the counted step,
+    -- then the site of the program that the innermost call passed, its environment extended by
+    -- the request's value, at the stack below that call
+    | .param i => suspendR p (constructR fun completed =>
+        match evalTerm p.env request, p.params with
+        | some v, top :: rest =>
+          match top[i]? with
+          | some site =>
+            match Node.at_ (Node.eff root) site.path with
+            | some (Node.eff body) =>
+              rec body
+                { p.redirect site.path with completed, env := site.env ++ [v], params := rest }
+            | _ => .pure badShapeExit
+          | none => .pure badShapeExit
+        | _, _ => .pure badShapeExit)
     | _ => match (NativeOp.row op).kind with
       | .sync =>
         match (evalTerm p.env request).bind (NativeOp.syncOpOf op p.env) with
@@ -708,6 +723,21 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     | none => .pure badShapeExit
   -- a definition block (decisions row 328): no step of its own; the main program at child 1
   | .defs _ _ main, p => rec main (p.child 1)
+  -- an invocation with programs (decisions row 340), as `suspendBodyAt` decides it: the counted
+  -- step, then the definition's body with the request its one variable, and the sites of the
+  -- call's programs pushed on the stack
+  | .invoke k request args, p => suspendR p (constructR fun completed =>
+      match evalTerm p.env request, defBodyPath root k with
+      | some v, some path =>
+        match Node.at_ (Node.eff root) path with
+        | some (Node.eff body) =>
+          rec body
+            { p.redirect path with
+              completed
+              env := [v]
+              params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+        | _ => .pure badShapeExit
+      | _, _ => .pure badShapeExit)
 
 /-- `self.build(memoMap, scope)` at the term (`compileLayer`, `innerLayerAt`, `constructionAt`),
 the arms at a positive budget, every child at the predecessor budget through `recL`, a leaf's
@@ -962,6 +992,18 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
              | some (Node.eff body) => denoteR root body { p.redirect path with completed, env := [v] }
              | _ => .pure badShapeExit
            | _, _ => .pure badShapeExit)
+       | .param i => suspendR p (constructR fun completed =>
+           match evalTerm p.env r, p.params with
+           | some v, top :: rest =>
+             match top[i]? with
+             | some site =>
+               match Node.at_ (Node.eff root) site.path with
+               | some (Node.eff body) =>
+                 denoteR root body
+                   { p.redirect site.path with completed, env := site.env ++ [v], params := rest }
+               | _ => .pure badShapeExit
+             | none => .pure badShapeExit
+           | _, _ => .pure badShapeExit)
        | _ => match (NativeOp.row op).kind with
          | .sync =>
            match (evalTerm p.env r).bind (NativeOp.syncOpOf op p.env) with
@@ -985,6 +1027,7 @@ theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
   | scopeMake strategy => cases strategy <;> rfl
   | external _ => cases hk
   | call _ => cases hk
+  | param _ => cases hk
   | _ => simp_all [NativeOp.row]
 
 /-- A definition block has no step of its own: its main program at child 1 (decisions row
@@ -992,6 +1035,27 @@ theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
 theorem denoteR_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
     (h : p.fuel ≠ 0) :
     denoteR root (.defs decls bodies main) p = denoteR root main (p.child 1) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf
+
+/-- **An invocation with programs** (decisions row 340): the counted step, then the definition's
+body with the request its one variable and the call's sites pushed on the stack. The equation
+the agreement's and the typed run's invocation arms unfold. -/
+theorem denoteR_invoke (k : Nat) (r : Term) (args : Effs NativeOp) (h : p.fuel ≠ 0) :
+    denoteR root (.invoke k r args) p =
+      suspendR p (constructR fun completed =>
+        match evalTerm p.env r, defBodyPath root k with
+        | some v, some path =>
+          match Node.at_ (Node.eff root) path with
+          | some (Node.eff body) =>
+            denoteR root body
+              { p.redirect path with
+                completed
+                env := [v]
+                params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+          | _ => .pure badShapeExit
+        | _, _ => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf
@@ -1345,6 +1409,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       all_goals simp only [inlineYield, hf, Nat.succ_ne_zero, ↓reduceIte]
       case external i => exact inlineAsyncYield_eq_headExit (.external i) request p
       case call k => rfl
+      case param i => rfl
       case sleep => exact inlineAsyncYield_eq_headExit .sleep request p
       case deferredAwait => exact inlineAsyncYield_eq_headExit .deferredAwait request p
       all_goals first
@@ -1398,7 +1463,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | select _ _ _ _
     | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
-    | provideLayer _ _ _ | service _ =>
+    | provideLayer _ _ _ | service _ | invoke _ _ _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte, headExit]
 termination_by structural e
 

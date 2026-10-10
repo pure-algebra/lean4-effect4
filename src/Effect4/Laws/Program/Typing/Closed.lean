@@ -1415,6 +1415,10 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
     have b := hasTy_closed hsig hb henv hs.2
     ⟨b.1, b.2⟩
   | _, _, _, .restore _ _ hb, henv, hs => hasTy_closed hsig hb henv hs.2
+  -- an invocation answers its definition's row, instantiated: closed whatever its programs
+  | _, _, _, .invoke _ _ _ _ hrow _, _, _ =>
+    have t := closed_rowTy hrow
+    ⟨t.1, t.2⟩
 
 /-- A generator body leaves a closed state. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1445,10 +1449,10 @@ theorem stmtsHasTy_closed (hsig : ClosedSig sig) :
     have g := stmtsHasTy_closed hsig hr henv hs.2.2
     ⟨g.1, g.2⟩
 
-/-- A race's entrants have closed types. -/
+/-- A race's entrants have closed types: the spine with no slot (decisions row 340). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem effsHasTy_closed (hsig : ClosedSig sig) :
-    ∀ {env : TyEnv} {es : Effs Op} {t : EffTy}, EffsHasTy sig env es t → ClosedEnv env →
+    ∀ {env : TyEnv} {es : Effs Op} {t : EffTy}, EffsHasTy sig env [] es t → ClosedEnv env →
       AnnotationsClosed .effs es → t.Closed
   | _, _, _, .nil, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .cons hh ht hj, henv, hs =>

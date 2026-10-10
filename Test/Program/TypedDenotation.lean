@@ -148,7 +148,7 @@ theorem chain_refused : Program.typeOfProgram chainSrc.signature chainRoot = non
   decide +kernel
 
 /-- The point at `[1, 1]`, empty environment, fuel 5. -/
-def chainPoint : Point := ⟨[1, 1], [], 5, [], [], 0⟩
+def chainPoint : Point := ⟨[1, 1], [], 5, [], [], 0, []⟩
 
 theorem chain_node : Node.at_ (.eff chainSrc.program) chainPoint.path = some (.eff C) := by
   decide +kernel
@@ -264,7 +264,7 @@ theorem await_wf : awaitProg.layerRefsWF = true := by decide +kernel
 
 /-- The bind's continuation point, constructed with a completed view the world does not type:
 fiber 1, declared at `nat`, recorded as having answered a string. -/
-def viewPoint : Point := ⟨[1], [Val.fiber ⟨1⟩], 5, [], [(⟨1⟩, .success (Val.str "x"))], 0⟩
+def viewPoint : Point := ⟨[1], [Val.fiber ⟨1⟩], 5, [], [(⟨1⟩, .success (Val.str "x"))], 0, []⟩
 
 def w1 : W where
   ids := []

@@ -1100,13 +1100,14 @@ def readDefHead (c : TypeScript.ConstDecl) : Except ReadRefusal (DefDecl × Expr
   | _ => .error (.shape "definition")
 
 /-- **A declaration that reads back from its printed header**: its three columns are readable
-types (`ReadableTy`), its requirement row is empty, and its name carries no layer path. A header
+types (`ReadableTy`), its requirement row is empty, its name carries no layer path, and it
+takes no program: a header prints no parameter until slice HO-3 (decisions row 340). A header
 prints no role: a block's services give them back (`roleOf`). The domain of `readDefHead`'s
 retraction up to the role (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
 def DefDecl.readable (d : DefDecl) : Bool :=
   Effect4.Codegen.Classes.ReadableTy d.request && Effect4.Codegen.Classes.ReadableTy d.answer &&
     Effect4.Codegen.Classes.ReadableTy d.error && d.requires.isEmpty &&
-    (LayerTerm.readRefName d.name).isNone
+    (LayerTerm.readRefName d.name).isNone && d.params.isEmpty
 
 /-- The spelling map of a block: a definition's name, with no trailing arguments, spells the
 invocation of that definition (`call k`); every other spelling is the map's own. -/

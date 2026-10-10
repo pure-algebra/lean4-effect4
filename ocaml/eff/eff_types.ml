@@ -331,6 +331,7 @@ type native_op =
   | Native_op_refModifyWith of term
   | Native_op_refModifySomeWith of term
   | Native_op_call of int
+  | Native_op_param of int
 
 let ctor_index_native_op : native_op -> int = function
   | Native_op_refMake -> 0
@@ -357,6 +358,7 @@ let ctor_index_native_op : native_op -> int = function
   | Native_op_refModifyWith _ -> 21
   | Native_op_refModifySomeWith _ -> 22
   | Native_op_call _ -> 23
+  | Native_op_param _ -> 24
 let wire_tag_native_op : native_op -> int = function
   | Native_op_refMake -> 0
   | Native_op_refGet -> 1
@@ -382,6 +384,7 @@ let wire_tag_native_op : native_op -> int = function
   | Native_op_refModifyWith _ -> 30
   | Native_op_refModifySomeWith _ -> 31
   | Native_op_call _ -> 32
+  | Native_op_param _ -> 33
 let ctor_name_native_op : native_op -> string = function
   | Native_op_refMake -> "refMake"
   | Native_op_refGet -> "refGet"
@@ -407,7 +410,8 @@ let ctor_name_native_op : native_op -> string = function
   | Native_op_refModifyWith _ -> "refModifyWith"
   | Native_op_refModifySomeWith _ -> "refModifySomeWith"
   | Native_op_call _ -> "call"
-let ctor_names_native_op : string list = ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"; "call"]
+  | Native_op_param _ -> "param"
+let ctor_names_native_op : string list = ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"; "call"; "param"]
 
 
 type service_name = {
@@ -488,6 +492,20 @@ let ctor_name_def_role : def_role -> string = function
 let ctor_names_def_role : string list = ["plain"; "serviceInit"; "serviceMethod"]
 
 
+type param_decl = {
+  param_decl_name : string;
+  param_decl_request : ty;
+  param_decl_answer : ty;
+  param_decl_error : ty;
+}
+
+let ctor_index_param_decl (_ : param_decl) : int = 0
+let wire_tag_param_decl (_ : param_decl) : int = 0
+let ctor_name_param_decl (_ : param_decl) : string = "mk"
+let ctor_names_param_decl : string list = ["mk"]
+let field_names_param_decl : string list = ["name"; "request"; "answer"; "error"]
+
+
 type def_decl = {
   def_decl_name : string;
   def_decl_request : ty;
@@ -495,13 +513,14 @@ type def_decl = {
   def_decl_error : ty;
   def_decl_requires : service_key list;
   def_decl_role : def_role;
+  def_decl_params : param_decl list;
 }
 
 let ctor_index_def_decl (_ : def_decl) : int = 0
 let wire_tag_def_decl (_ : def_decl) : int = 0
 let ctor_name_def_decl (_ : def_decl) : string = "mk"
 let ctor_names_def_decl : string list = ["mk"]
-let field_names_def_decl : string list = ["name"; "request"; "answer"; "error"; "requires"; "role"]
+let field_names_def_decl : string list = ["name"; "request"; "answer"; "error"; "requires"; "role"; "params"]
 
 
 type eff =
@@ -532,6 +551,7 @@ type eff =
   | Eff_iterate of ty option * term * term * term * term * eff
   | Eff_restore of term * eff
   | Eff_defs of def_decl list * effs * eff
+  | Eff_invoke of int * term * effs
 
 and stmt =
   | Stmt_bindYield of eff
@@ -612,6 +632,7 @@ let ctor_index_eff : eff -> int = function
   | Eff_iterate _ -> 24
   | Eff_restore _ -> 25
   | Eff_defs _ -> 26
+  | Eff_invoke _ -> 27
 let wire_tag_eff : eff -> int = function
   | Eff_succeed _ -> 0
   | Eff_fail _ -> 1
@@ -640,6 +661,7 @@ let wire_tag_eff : eff -> int = function
   | Eff_iterate _ -> 28
   | Eff_restore _ -> 29
   | Eff_defs _ -> 30
+  | Eff_invoke _ -> 31
 let ctor_name_eff : eff -> string = function
   | Eff_succeed _ -> "succeed"
   | Eff_fail _ -> "fail"
@@ -668,7 +690,8 @@ let ctor_name_eff : eff -> string = function
   | Eff_iterate _ -> "iterate"
   | Eff_restore _ -> "restore"
   | Eff_defs _ -> "defs"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"; "defs"]
+  | Eff_invoke _ -> "invoke"
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"; "defs"; "invoke"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0

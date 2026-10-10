@@ -207,6 +207,7 @@ def opV : NativeOp → V
   | .clockNow => .ctor ``NativeOp.clockNow []
   | .external i => .ctor ``NativeOp.external [.nat i]
   | .call k => .ctor ``NativeOp.call [.nat k]
+  | .param i => .ctor ``NativeOp.param [.nat i]
 
 def keyV (k : ServiceKey) : V :=
   .struct ``Effect4.ServiceKey
@@ -219,12 +220,19 @@ def defRoleV : DefRole → V
   | .serviceInit s => .ctor ``DefRole.serviceInit [.str s]
   | .serviceMethod s m k => .ctor ``DefRole.serviceMethod [.str s, .str m, .nat k]
 
-/-- A definition's declaration (decisions rows 328 and 339): its name, its row's columns and its
-role. -/
+/-- A parameter whose value is a program (decisions row 340): its name and its columns. -/
+def paramDeclV (d : ParamDecl) : V :=
+  .struct ``ParamDecl
+    [ ("name", .str d.name), ("request", tyV d.request), ("answer", tyV d.answer)
+    , ("error", tyV d.error) ]
+
+/-- A definition's declaration (decisions rows 328, 339 and 340): its name, its row's columns, its
+role and its parameters whose values are programs. -/
 def defDeclV (d : DefDecl) : V :=
   .struct ``DefDecl
     [ ("name", .str d.name), ("request", tyV d.request), ("answer", tyV d.answer)
-    , ("error", tyV d.error), ("requires", .list (d.requires.map keyV)), ("role", defRoleV d.role) ]
+    , ("error", tyV d.error), ("requires", .list (d.requires.map keyV)), ("role", defRoleV d.role)
+    , ("params", .list (d.params.map paramDeclV)) ]
 
 def decisionV : Decision → V
   | .bool => .ctor ``Decision.bool []
@@ -264,6 +272,7 @@ partial def effV : Eff NativeOp → V
   | .provideService k v b => .ctor ``Eff.provideService [keyV k, termV v, effV b]
   | .restore s b => .ctor ``Eff.restore [termV s, effV b]
   | .defs decls bodies main => .ctor ``Eff.defs [.list (decls.map defDeclV), effsV bodies, effV main]
+  | .invoke k r args => .ctor ``Eff.invoke [.nat k, termV r, effsV args]
 partial def layerV : LayerTerm NativeOp → V
   | .succeed k v => .ctor ``LayerTerm.succeed [keyV k, litV v]
   | .effect k b => .ctor ``LayerTerm.effect [keyV k, effV b]
@@ -629,6 +638,24 @@ def pDefsService : P :=
     (.cons (.succeed (n 5)) (.cons (.succeed (v 0)) .nil))
     (.bind (.perform (.call 0) u) (.perform (.call 1) (v 0)))
 
+/-! A definition whose parameter is a program (decisions row 340): the call passes the program,
+which the body runs at its request. -/
+
+/-- `twice : number → number` with one parameter `f : number ⇒ number`. -/
+def twiceDecl : DefDecl :=
+  { name := "twice", request := .nat, answer := .nat,
+    params := [{ name := "f", request := .nat, answer := .nat }] }
+/-- The body runs `f` on its request, then on the answer. -/
+def twiceBody : P := .bind (.perform (.param 0) (v 0)) (.perform (.param 0) (v 1))
+/-- `twice(5, (a) => succeed(succ(a)))`: it answers 7. -/
+def pInvoke : P :=
+  .defs [twiceDecl] (.cons twiceBody .nil)
+    (.invoke 0 (n 5) (.cons (.succeed (.app "succ" (ts [v 0]))) .nil))
+
+-- ill-typed: an invocation that passes no program, and a parameter's run outside any body
+def pIllInvokeArity : P := .defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (n 5) .nil)
+def pIllParamOutside : P := .perform (.param 0) (n 5)
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -659,7 +686,9 @@ def corpus : List (String × P) :=
   , ("pMask", pMask), ("pMaskNested", pMaskNested), ("pMaskEscape", pMaskEscape)
   , ("pIllRestoreBool", pIllRestoreBool), ("pIllMaskAsBool", pIllMaskAsBool)
   , ("pDefs", pDefs), ("pDefsRec", pDefsRec), ("pIllDefsBody", pIllDefsBody)
-  , ("pIllCallOutside", pIllCallOutside), ("pDefsService", pDefsService) ]
+  , ("pIllCallOutside", pIllCallOutside), ("pDefsService", pDefsService)
+  , ("pInvoke", pInvoke), ("pIllInvokeArity", pIllInvokeArity)
+  , ("pIllParamOutside", pIllParamOutside) ]
 
 end Corpus
 

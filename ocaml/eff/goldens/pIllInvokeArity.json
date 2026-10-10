@@ -1,0 +1,1 @@
+["defs",[{"name":"twice","request":["nat"],"answer":["nat"],"error":["never"],"requires":[],"role":["plain"],"params":[{"name":"f","request":["nat"],"answer":["nat"],"error":["never"]}]}],["cons",["bind",["perform",["param",0],["var",0]],["perform",["param",0],["var",1]]],["nil"]],["invoke",0,["lit",["nat",5]],["nil"]]]

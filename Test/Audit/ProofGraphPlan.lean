@@ -9,7 +9,8 @@ proved, and the red controls pin each refusal:
 
 1. a theorem that uses a goal is proved modulo it, never proved. The real case is `m7_of_ledger`
    with `LoadsTyped` proved by `loadsTyped` and `DecisionKeeps` a goal; with `decision_preserves`
-   in its place, the same statement is proved within the ceiling;
+   in its place, the same statement rests on one goal, `invoke_arm`: the typed run of an
+   invocation with programs, which slice CX2 proves in place (decisions row 340);
 2. a node whose axioms leave the semantic ceiling is refused;
 3. a hand-written `sorry` is not a goal: the plan refuses it as an axiom outside the ceiling, and
    `tagGoal` refuses to tag a theorem whose body is not `sorry`, or a definition;
@@ -75,13 +76,18 @@ theorem m7Modulo (root : ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel :
 
 run_cmd liftTermElabM do
   let plan ← buildPlan [`Test] #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] (← IO.mkRef {})
+  let said : Standing → String
+    | .modulo goals => s!"modulo {goals}"
+    | standing => standing.word
   let some node := plan.find? ``m7Modulo | throwError "m7Modulo is not a node"
-  unless node.standing == .modulo #[``keeps] do
-    throwError "m7Modulo is {node.standing.word}, not modulo [keeps]"
+  unless node.standing == .modulo #[``Effect4.Program.Typed.invoke_arm, ``keeps] do
+    throwError "m7Modulo is {said node.standing}, not modulo [invoke_arm, keeps]"
   let some proved := plan.find? ``Effect4.Program.Typed.m7_proved | throwError "m7_proved is not a node"
-  unless proved.standing == .proved do throwError "m7_proved is {proved.standing.word}"
-  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] do
-    throwError "the next goal is not keeps"
+  unless proved.standing == .modulo #[``Effect4.Program.Typed.invoke_arm] do
+    throwError "m7_proved is {said proved.standing}, not modulo [invoke_arm]"
+  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] ==
+      #[``Effect4.Program.Typed.invoke_arm, ``keeps] do
+    throwError "the next goals are not keeps and invoke_arm"
 
 -- 2. A node outside the semantic ceiling is refused.
 /-- error: plan: Classical.em: disallowed axioms [Classical.choice] -/

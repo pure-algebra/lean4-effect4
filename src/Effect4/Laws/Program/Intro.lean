@@ -36,7 +36,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   cases hf : p.fuel with
   | zero =>
     rw [compileEff_at_zero e hf, denoteR_zero root e p hf]
-    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
+    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
       rw [suspendBodyAt_zero' (q := { p with completed }) hf]; rfl
   | succ k =>
   have hpos : p.fuel ≠ 0 := by rw [hf]; exact Nat.succ_ne_zero k
@@ -61,8 +61,10 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | perform op r =>
     cases op with
     | call index => exact intro_call root n index r p k hf hpos hle h hres
-    | _ => exact intro_perform root _ r p k hf hpos h (fun _ hi => nomatch hi)
+    | param i => exact intro_param root n i r p k hf hpos hle h hres
+    | _ => exact intro_perform root _ r p k hf hpos h (fun _ hi => nomatch hi) (fun _ hi => nomatch hi)
   | defs decls bodies main => exact intro_defs root n decls bodies main p k hf hpos hw0 h ih
+  | invoke index r args => exact intro_invoke root n index r args p k hf hpos hle h hres
   | bind a b => exact intro_bind root n a b p k hf hpos hw0 hwcw h ih
   | gen ss => exact intro_gen root ss p k hf hpos h
   | catchCause b hd => exact intro_catchCause root n b hd p k hf hpos hw0 hwcw h ih

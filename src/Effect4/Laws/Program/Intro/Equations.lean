@@ -21,13 +21,15 @@ variable {p : Point} {k : Nat}
 
 /-- Every non-sync native operation is an async built-in or an external index. -/
 theorem compileEff_perform_nonsync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
-    (hkind : (NativeOp.row op).kind ≠ .sync) (hcall : ∀ i, op ≠ .call i) :
+    (hkind : (NativeOp.row op).kind ≠ .sync) (hcall : ∀ i, op ≠ .call i)
+    (hparam : ∀ i, op ≠ .param i) :
     compileEff (.perform op r) p = asyncRoute op r p := by
   rw [compileEff_perform op r hf]
   cases op with
   | scopeMake strategy => cases strategy <;> exact absurd rfl hkind
   | external i => rfl
   | call i => exact absurd rfl (hcall i)
+  | param i => exact absurd rfl (hparam i)
   | deferredAwait => rfl
   | sleep => rfl
   | _ => exact absurd rfl hkind
@@ -36,23 +38,26 @@ theorem compileEff_perform_async (op : NativeOp) (r : Term) (hf : p.fuel = k + 1
     (hkind : (NativeOp.row op).kind = .async) :
     compileEff (.perform op r) p = asyncRoute op r p :=
   compileEff_perform_nonsync op r hf (by rw [hkind]; exact nofun)
-    (fun i hi => by subst hi; cases hkind)
+    (fun i hi => by subst hi; cases hkind) (fun i hi => by subst hi; cases hkind)
 
-/-- The native placeholders of program kind are external and an invocation (decisions row 328);
-an external one registers. -/
+/-- The native placeholders of program kind are external, an invocation (decisions row 328) and a
+parameter's run (decisions row 340); an external one registers. -/
 theorem compileEff_perform_program (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
-    (hkind : (NativeOp.row op).kind = .program) (hcall : ∀ i, op ≠ .call i) :
+    (hkind : (NativeOp.row op).kind = .program) (hcall : ∀ i, op ≠ .call i)
+    (hparam : ∀ i, op ≠ .param i) :
     compileEff (.perform op r) p = asyncRoute op r p :=
-  compileEff_perform_nonsync op r hf (by rw [hkind]; exact nofun) hcall
+  compileEff_perform_nonsync op r hf (by rw [hkind]; exact nofun) hcall hparam
 
 theorem denoteR_perform_nonsync (root : NativeEff) (op : NativeOp) (r : Term)
-    (hpos : p.fuel ≠ 0) (hkind : (NativeOp.row op).kind ≠ .sync) (hcall : ∀ i, op ≠ .call i) :
+    (hpos : p.fuel ≠ 0) (hkind : (NativeOp.row op).kind ≠ .sync) (hcall : ∀ i, op ≠ .call i)
+    (hparam : ∀ i, op ≠ .param i) :
     denoteR root (.perform op r) p = denoteAsyncRoute op r p := by
   rw [denoteR_perform root op r hpos]
   cases op with
   | scopeMake strategy => cases strategy <;> exact absurd rfl hkind
   | external i => rfl
   | call i => exact absurd rfl (hcall i)
+  | param i => exact absurd rfl (hparam i)
   | deferredAwait => rfl
   | sleep => rfl
   | _ => exact absurd rfl hkind

@@ -12,7 +12,7 @@ judgments, one relation per checker, one rule per arm, written to be **read**:
 | --- | --- | --- |
 | `HasTy sig env e t` | in `Σ`, under `Γ`, the program `e` has the effect type `t` | `effTy` |
 | `StmtsHasTy sig env inLoop b g` | a generator body's statements leave the generator state `g` | `stmtsTy` |
-| `EffsHasTy sig env es t` | a race's entrants agree on `t` | `effsTy` |
+| `EffsHasTy sig env qs es t` | a spine's programs at their slots agree on `t` | `checkEffs` |
 | `ActionHasTy sig env a t` | a fiber action has the effect type `t` | `actionTy` |
 | `LayerHasTy sig l s` | the (closed) layer term `l` has the layer signature `s` | `layerTy` |
 | `LayersHasTy sig ls s` | a `mergeAll` spine merges to `s` | `layersTy` |
@@ -259,6 +259,19 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       Ty.sub savedTy.normalize Ty.maskRestore = true →
       HasTy sig env body t →
       HasTy sig env (.restore saved body) t
+  /-- An invocation with programs (decisions row 340): the definition declares at least one
+  parameter, as many as the call passes; the request meets the definition's row, as a
+  `perform` of its call; each program meets its parameter, the spine's slots (`EffsHasTy`).
+  The node answers the row's columns and requires the row's services and the programs'. -/
+  | invoke {env : TyEnv} {k : Nat} {request : Term} {args : Effs Op} {d : DefDecl}
+      {requestTy : Ty} {t ts : EffTy} :
+      sig.defOf k = some d →
+      d.params.isEmpty = false →
+      d.params.length = args.toList.length →
+      termTy sig env request = some requestTy →
+      rowTy d.row.normalizeTypes requestTy none = some t →
+      EffsHasTy sig env d.params args ts →
+      HasTy sig env (.invoke k request args) ⟨t.answer, t.error, t.requires.union ts.requires⟩
 
 /-- `Σ; Γ; inLoop ⊢ b ⇒ g` — a generator body's statements leave the generator state `g`: the
 answer its `return`s agree on (absent before the first), the errors and requirements so far, and
@@ -318,20 +331,34 @@ inductive StmtsHasTy (sig : Signature Op) : TyEnv → Bool → Stmts Op → GenT
       StmtsHasTy sig env true rest g →
       StmtsHasTy sig env true (.cons .breakLoop rest) g.broken
 
-/-- `Σ; Γ ⊢ es ⇉ ⟨A, E, R⟩` — the entrants of a race: every entrant's answer joins with the
-rest, the errors union and the rows union. One rule per arm of `effsTy`
-(`Typing.lean:359-365`). -/
-inductive EffsHasTy (sig : Signature Op) : TyEnv → Effs Op → EffTy → Prop
-  /-- The empty race: it never answers and never fails (`Supervision.RaceAllState`: pending
-  until interrupted). -/
-  | nil {env : TyEnv} :
-      EffsHasTy sig env .nil ⟨.never, .never, Requirement.empty⟩
-  /-- One more entrant: its answer joins with the rest's as the least upper bound. -/
+/-- `Σ; Γ; Θ ⊢ es ⇉ ⟨A, E, R⟩` — a spine of programs at its slots `Θ`: the program at slot `j`
+reads the environment extended by parameter `j`'s request and stays below parameter `j`'s
+answer and error, and a program past the slots reads the environment as it is. Every answer
+joins with the rest's, the errors union and the rows union. A race's entrants have no slot; an
+invocation's programs have their definition's parameters (decisions row 340). One rule per arm
+of `checkEffs`. -/
+inductive EffsHasTy (sig : Signature Op) : TyEnv → List ParamDecl → Effs Op → EffTy → Prop
+  /-- The empty spine: it never answers and never fails (a race: `Supervision.RaceAllState`,
+  pending until interrupted). -/
+  | nil {env : TyEnv} {qs : List ParamDecl} :
+      EffsHasTy sig env qs .nil ⟨.never, .never, Requirement.empty⟩
+  /-- One more entrant past the slots: its answer joins with the rest's as the least upper
+  bound. -/
   | cons {env : TyEnv} {head : Eff Op} {tail : Effs Op} {h t : EffTy} {answer : Ty} :
       HasTy sig env head h →
-      EffsHasTy sig env tail t →
+      EffsHasTy sig env [] tail t →
       EffTy.joinAnswer h.answer t.answer = some answer →
-      EffsHasTy sig env (.cons head tail)
+      EffsHasTy sig env [] (.cons head tail)
+        ⟨answer, h.error.join t.error, h.requires.union t.requires⟩
+  /-- One more program at its slot: typed over the environment extended by the parameter's
+  request, below the parameter's answer and error. -/
+  | slot {env : TyEnv} {q : ParamDecl} {qs : List ParamDecl} {head : Eff Op} {tail : Effs Op}
+      {h t : EffTy} {answer : Ty} :
+      HasTy sig (env ++ [q.request.normalize]) head h →
+      q.admits h = true →
+      EffsHasTy sig env qs tail t →
+      EffTy.joinAnswer h.answer t.answer = some answer →
+      EffsHasTy sig env (q :: qs) (.cons head tail)
         ⟨answer, h.error.join t.error, h.requires.union t.requires⟩
 
 /-- `Σ; Γ ⊢ a ⊸ ⟨A, E, R⟩` — a fiber action's effect type. One rule per arm of `actionTy`
@@ -419,7 +446,7 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
       ActionHasTy sig env (.awaitNewChildren snapshot) (EffTy.pure .unit)
   /-- `raceAll`: the entrants' joined type, unchanged. -/
   | raceAll {env : TyEnv} {entrants : Effs Op} {t : EffTy} :
-      EffsHasTy sig env entrants t →
+      EffsHasTy sig env [] entrants t →
       ActionHasTy sig env (.raceAll entrants) t
   /-- `setContext` (`:709-727`): a `Context.Context<unknown>` handle in, `void` out. -/
   | setContext {env : TyEnv} {context : Term} {contextTy : Ty} :
@@ -528,7 +555,7 @@ variable (sig : Signature Op)
 
 example : TyEnv → Eff Op → EffTy → Prop := HasTy sig
 example : TyEnv → Bool → Stmts Op → GenTy → Prop := StmtsHasTy sig
-example : TyEnv → Effs Op → EffTy → Prop := EffsHasTy sig
+example : TyEnv → List ParamDecl → Effs Op → EffTy → Prop := EffsHasTy sig
 example : TyEnv → ActionTerm Op → EffTy → Prop := ActionHasTy sig
 example : LayerTerm Op → LayerTy → Prop := LayerHasTy sig
 example : LayerTerms Op → LayerTy → Prop := LayersHasTy sig

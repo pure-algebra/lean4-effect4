@@ -424,6 +424,32 @@ theorem Annotate.check_eq (s : Signature Op) (e : Eff Op) (env : TyEnv) (p : Lis
     conv in (occs := *) Node.child _ _ => all_goals whnf
     simp only [Option.bind_some, Node.childEnv, NodeEnv.tyEnv, List.append_nil]
     rfl
+  -- an invocation with programs (decisions row 340): the checker's steps at the node, and the
+  -- programs at the caller's variables and the definition's parameters; where the signature
+  -- declares no definition, no program is reached
+  | .invoke k request args => by
+    rw [tableAt_eq_cons]
+    cases hd : s.defOf k with
+    | none =>
+      simp only [Annotate.check, hd, nodeAnswer, childTableAt]
+      conv in (occs := *) Node.child _ _ => all_goals whnf
+      simp only [Node.childEnv, hd, Option.bind_none, Option.bind_some, tableAt_none,
+        List.append_nil]
+      rfl
+    | some d =>
+      simp only [Annotate.check, hd, Annotate.checkEffs_eq s args, nodeAnswer, childTableAt]
+      conv in (occs := *) Node.child _ _ => all_goals whnf
+      obtain ⟨name, request', answer', error', requires', role', params⟩ := d
+      cases params with
+      | nil =>
+        simp only [Node.childEnv, hd, Option.bind_some, tableAt_none, List.append_nil]
+        simp only [Checker.check, hd, Checker.expect]
+        rfl
+      | cons q qs =>
+        simp only [Node.childEnv, hd, Option.bind_some, NodeEnv.tyEnv, NodeEnv.spine,
+          List.append_nil]
+        simp only [Checker.check, hd, Checker.expect]
+        rfl
   -- the second child reads the first child's type
   | .bind body next | .catchCause body next | .onExit body next | .acquireRelease body next
   | .catchIf _ body next => by
@@ -622,22 +648,36 @@ theorem Annotate.checkStmts_eq (s : Signature Op) (ss : Stmts Op) (env : TyEnv) 
         simp only [Annotate.checkStmts_eq s rest]
         rfl
 
-/-- `Annotate.check_eq` at a race's entrants. -/
+/-- `Annotate.check_eq` at a spine of programs at its slots: a race's entrants, and an
+invocation's programs at their parameters (decisions row 340). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Annotate.checkEffs_eq (s : Signature Op) (es : Effs Op) (env : TyEnv) (p : List Nat) :
-    Annotate.checkEffs s env p es =
-      (tableAt s (some (.env env)) (.effs es) p, Checker.checkEffs s env p es) :=
-  match es with
-  | .nil => by
+theorem Annotate.checkEffs_eq (s : Signature Op) (es : Effs Op) (env : TyEnv) (p : List Nat)
+    (qs : List ParamDecl) :
+    Annotate.checkEffs s env p qs es =
+      (tableAt s (some (NodeEnv.spine env qs)) (.effs es) p, Checker.checkEffs s env p qs es) :=
+  match es, qs with
+  | .nil, _ => by
     rw [tableAt_eq_cons]
     rfl
-  | .cons head tail => by
+  | .cons head tail, [] => by
     rw [tableAt_eq_cons]
     simp only [Annotate.checkEffs, Annotate.check_eq s head, Annotate.checkEffs_eq s tail,
       nodeAnswer, childTableAt]
     conv in (occs := *) Node.child _ _ => all_goals whnf
-    simp only [Option.bind_some, Node.childEnv, NodeEnv.tyEnv, List.append_nil]
+    simp only [Option.bind_some, Node.childEnv, NodeEnv.spine, NodeEnv.tyEnv, List.append_nil]
     rfl
+  | .cons head tail, _ :: qs => by
+    rw [tableAt_eq_cons]
+    simp only [Annotate.checkEffs, Annotate.check_eq s head, Annotate.checkEffs_eq s tail,
+      nodeAnswer, childTableAt]
+    conv in (occs := *) Node.child _ _ => all_goals whnf
+    cases qs with
+    | nil =>
+      simp only [Option.bind_some, Node.childEnv, NodeEnv.spine, tableAt_none, List.append_nil]
+      rfl
+    | cons _ _ =>
+      simp only [Option.bind_some, Node.childEnv, NodeEnv.spine, List.append_nil]
+      rfl
 
 /-- `Annotate.check_eq` at a fiber action. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -661,7 +701,7 @@ theorem Annotate.checkAction_eq (s : Signature Op) (a : ActionTerm Op) (env : Ty
     rw [tableAt_eq_cons]
     simp only [Annotate.checkAction, Annotate.checkEffs_eq s entrants, nodeAnswer, childTableAt]
     conv in (occs := *) Node.child _ _ => all_goals whnf
-    simp only [Option.bind_some, Node.childEnv, NodeEnv.tyEnv, List.append_nil]
+    simp only [Option.bind_some, Node.childEnv, NodeEnv.spine, NodeEnv.tyEnv, List.append_nil]
     rfl
 
 end

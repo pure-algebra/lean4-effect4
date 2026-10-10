@@ -64,12 +64,14 @@ def builtinKeys : List (String × List RowArg) := NativeOp.spelled.map (rowKey �
 /-- **Every built-in operation has a built-in key**: a row's spelling and trailing names depend
 neither on the type arguments its operation carries nor on its binder term, which the faces print
 as a function after the request. So `NativeOp.spelled`'s keys cover every operation but an
-external one and an invocation, whose rows are the table's and the block's. -/
+external one, an invocation and a parameter's run, whose rows are the table's, the block's and
+the body's. -/
 theorem NativeOp.rowKey_mem (op : NativeOp) (h : ∀ i, op ≠ .external i)
-    (hc : ∀ k, op ≠ .call k) : rowKey op.row ∈ builtinKeys := by
+    (hc : ∀ k, op ≠ .call k) (hp : ∀ i, op ≠ .param i) : rowKey op.row ∈ builtinKeys := by
   cases op with
   | external i => exact absurd rfl (h i)
   | call k => exact absurd rfl (hc k)
+  | param i => exact absurd rfl (hp i)
   | deferredMakeOf _ _ => exact (by decide : ("Deferred.make", ([] : List RowArg)) ∈ builtinKeys)
   | scopeMake s => cases s <;> decide
   | refUpdateWith _ => exact (by decide : ("Ref.update", ([] : List RowArg)) ∈ builtinKeys)

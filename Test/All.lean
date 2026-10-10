@@ -61,6 +61,7 @@ import Test.Program.TermFits
 import Test.Program.SignatureControls
 import Test.Program.SketchControls
 import Test.Program.DefinitionsControls
+import Test.Program.InvokeControls
 import Test.Program.ReplaceControls
 import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns

@@ -221,7 +221,8 @@ is `Table.bodies_eq`. -/
 theorem Table.bodyEntry_head (sig : Signature Op) (d : DefDecl) (ds : List DefDecl) (body : Eff Op)
     (rest : Effs Op) (base b : List Nat) :
     Table.bodyEntry sig (d :: ds) (.cons body rest) base (0 :: b) =
-      tableEntryAt sig (some (.env [d.request.normalize])) (.eff body) (base ++ [0]) b := by
+      tableEntryAt (sig.withParams d.params) (some (.env [d.request.normalize])) (.eff body)
+        (base ++ [0]) b := by
   simp only [Table.bodyEntry, Part.bodyAt, tableEntryAt, Table.partEntry, List.append_assoc,
     List.singleton_append, Option.bind_some]
   rfl
@@ -416,12 +417,16 @@ theorem Table.bodies_splice {sig : Signature Op} {decls : List DefDecl} {bodies 
   | d :: ds, .cons body rest, 0 :: r0, hbody, hrep =>
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hbody)
     obtain ⟨body', hb', rfl⟩ := Node.replaceAt_effs_head hrep
-    have ht' : HasTy sig [d.request.normalize] body t := ht
+    have ht' : HasTy (sig.withParams d.params) [d.request.normalize] body t := ht
     obtain ⟨hat, henv, hty⟩ := focusAt_eq_some.mp hf
     have hat' : (Node.eff body).at_ r0 = some (.eff f.program) := hat
-    have hsp : tableAt sig (some (.env [d.request.normalize])) (.eff body') (base ++ [0]) =
-        Table.splice (tableAt sig (some (.env [d.request.normalize])) (.eff body) (base ++ [0]))
-          (base ++ 0 :: r0) (tableAt sig (some (.env f.env)) (.eff q') (base ++ 0 :: r0)) := by
+    have hsp : tableAt (sig.withParams d.params) (some (.env [d.request.normalize])) (.eff body')
+        (base ++ [0]) =
+        Table.splice
+          (tableAt (sig.withParams d.params) (some (.env [d.request.normalize])) (.eff body)
+            (base ++ [0]))
+          (base ++ 0 :: r0)
+          (tableAt (sig.withParams d.params) (some (.env f.env)) (.eff q') (base ++ 0 :: r0)) := by
       have h := tableAt_splice r0 (NodeHasTy.eff ht') hat henv (effTy_sound _ _ _ _ hty) hq' hb'
         (pre := base ++ [0])
       rw [List.append_assoc, List.singleton_append] at h
@@ -433,9 +438,11 @@ theorem Table.bodies_splice {sig : Signature Op} {decls : List DefDecl} {bodies 
       rw [List.mem_singleton] at he
       subst he
       exact Table.under_prefix_false base r0 0
-    obtain ⟨e, he, hpe⟩ := tableAt_mem_path (s := sig) (ctx := some (.env [d.request.normalize]))
+    obtain ⟨e, he, hpe⟩ := tableAt_mem_path (s := sig.withParams d.params)
+      (ctx := some (.env [d.request.normalize]))
       (pre := base ++ [0]) hat'
-    have hY : ∃ e ∈ tableAt sig (some (.env [d.request.normalize])) (.eff body) (base ++ [0]),
+    have hY : ∃ e ∈ tableAt (sig.withParams d.params) (some (.env [d.request.normalize])) (.eff body)
+        (base ++ [0]),
         Table.under (base ++ 0 :: r0) e.path = true := by
       refine ⟨e, he, ?_⟩
       rw [hpe, List.append_assoc, List.singleton_append]
@@ -454,7 +461,8 @@ theorem Table.bodies_splice {sig : Signature Op} {decls : List DefDecl} {bodies 
     rw [List.append_assoc, List.singleton_append] at ih
     simp only [Table.bodies]
     rw [ih]
-    have hX : ∀ e ∈ (⟨base, none, none⟩ :: (Annotate.check sig [d.request.normalize] (base ++ [0]) body).1 :
+    have hX : ∀ e ∈ (⟨base, none, none⟩ ::
+        (Annotate.check (sig.withParams d.params) [d.request.normalize] (base ++ [0]) body).1 :
         List Table.Entry),
         Table.under (base ++ 1 :: r1) e.path = false := by
       intro e he

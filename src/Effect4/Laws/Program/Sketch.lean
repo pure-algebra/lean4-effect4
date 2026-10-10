@@ -159,12 +159,19 @@ theorem Sketch.check_filled (s : Sketch) (app : SigApp)
 
 /-! ## H1 on a whole program -/
 
+/-- **A spine of bodies performs only its signature's operations**: each body at the signature
+extended by its definition's parameters (decisions row 340), as the module check reads it. A
+body with no declaration is not read. -/
+def BodiesSigProgram {Op : Type} (s : Signature Op) : List DefDecl → Effs Op → Prop
+  | d :: ds, .cons b rest => SigProgram (s.withParams d.params) b ∧ BodiesSigProgram s ds rest
+  | _, _ => True
+
 /-- **A whole program performs only the signature's operations**: at a definition block, each
-body and the main program at the block's signature, as the module check reads them; otherwise
-the program at the signature (`SigProgram`). -/
+body and the main program at the block's signature, each body with its own parameters, as the
+module check reads them; otherwise the program at the signature (`SigProgram`). -/
 def ModuleSigProgram {Op : Type} (s : Signature Op) : Eff Op → Prop
   | .defs decls bodies main =>
-    (∀ b ∈ bodies.toList, SigProgram (s.withDefs decls) b) ∧ SigProgram (s.withDefs decls) main
+    BodiesSigProgram (s.withDefs decls) decls bodies ∧ SigProgram (s.withDefs decls) main
   | e => SigProgram s e
 
 /-- The bodies' check is unchanged under an extension of the signature, when each body performs
@@ -173,16 +180,14 @@ only the smaller signature's operations. A step of `module-holes-conservative`. 
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem checkBodies_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s')
     (p : List Nat) (decls : List DefDecl) (bodies : Effs Op)
-    (hb : ∀ b ∈ bodies.toList, SigProgram s b) :
+    (hb : BodiesSigProgram s decls bodies) :
     Checker.checkBodies s' p decls bodies = Checker.checkBodies s p decls bodies := by
-  match decls, bodies with
-  | d :: ds, .cons body rest =>
-    have hbody : SigProgram s body := hb body (List.mem_cons.mpr (Or.inl rfl))
-    have hrest : ∀ b ∈ rest.toList, SigProgram s b := fun b hm => hb b (List.mem_cons.mpr (Or.inr hm))
-    simp only [Checker.checkBodies, check_restrict h hbody,
+  match decls, bodies, hb with
+  | d :: ds, .cons body rest, ⟨hbody, hrest⟩ =>
+    simp only [Checker.checkBodies, check_restrict (h.withParams d.params) hbody,
       checkBodies_restrict h (p ++ [1]) ds rest hrest]
-  | [], _ => rfl
-  | _ :: _, .nil => rfl
+  | [], _, _ => rfl
+  | _ :: _, .nil, _ => rfl
 
 /-- **The module check is unchanged under an extension of the signature**, for a whole program
 that performs only the smaller signature's operations: C3's restriction half (`check_restrict`)
@@ -299,13 +304,15 @@ theorem Sketch.hole_hasTy (app : SigApp) (holes : RowTable) (k : Nat) {name : St
 /-! ## The signature at an address -/
 
 /-- **An application's signature extends its block's**: a block adds rows to invocations only,
-and an application's signature keeps every invocation outside its domain. A step of
-`Sketch.sigAt_extends`. -/
+and an application's signature keeps every invocation outside its domain and declares no
+definition. A step of `Sketch.sigAt_extends`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Signature.extends_withDefs {Op : Type} (sig : Signature Op)
-    (h : ∀ op k, sig.callOf op = some k → sig.dom op = false) (decls : List DefDecl) :
+    (h : ∀ op k, sig.callOf op = some k → sig.dom op = false)
+    (hdef : ∀ k, sig.defOf k = none) (decls : List DefDecl) :
     SigExtends sig (sig.withDefs decls) := by
-  refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl⟩
+  refine ⟨rfl, rfl, rfl, fun op hd => ?_, fun _ _ hs => hs, rfl, rfl,
+    fun k d hk => (by rw [hdef k] at hk; cases hk), rfl⟩
   cases hc : sig.callOf op with
   | none =>
     exact ⟨by rw [sig.withDefs_dom_of_none decls hc]; exact hd,
@@ -329,10 +336,15 @@ theorem Sketch.sigAt_extends (s : Sketch) (app : SigApp) (path : List Nat) :
     unfold Eff.partAt at hpart
     split at hpart
     · split at hpart
-      · rw [Part.bodyAt_sig hpart]
-        exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) _
+      · obtain ⟨ps, hps⟩ := Part.bodyAt_sig hpart
+        rw [hps]
+        refine (Signature.extends_withDefs _ (SigApp.signature_callsOutside _) (fun _ => rfl) _).trans
+          (Signature.extends_withParams _ (fun op i hp => ?_) ps)
+        cases op with
+        | param j => rfl
+        | _ => cases hp
       · cases hpart
-        exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) _
+        exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) (fun _ => rfl) _
       · cases hpart
     · cases hpart
       exact SigExtends.refl _

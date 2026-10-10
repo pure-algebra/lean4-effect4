@@ -1,1 +1,1 @@
-["defs",[{"name":"spin","request":["nat"],"answer":["nat"],"error":["never"],"requires":[],"role":["plain"]}],["cons",["perform",["call",0],["var",0]],["nil"]],["perform",["call",0],["lit",["nat",1]]]]
+["defs",[{"name":"spin","request":["nat"],"answer":["nat"],"error":["never"],"requires":[],"role":["plain"],"params":[]}],["cons",["perform",["call",0],["var",0]],["nil"]],["perform",["call",0],["lit",["nat",1]]]]

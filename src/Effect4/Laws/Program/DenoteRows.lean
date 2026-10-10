@@ -235,6 +235,7 @@ theorem StraightRows.perform_sync {table : RowTable} {op : NativeOp} {r : Term}
   cases op with
   | external i => exact absurd rfl (hop i)
   | call _ => contradiction
+  | param _ => contradiction
   | sleep => contradiction
   | deferredAwait => contradiction
   | scopeMake strategy => cases strategy <;> rfl

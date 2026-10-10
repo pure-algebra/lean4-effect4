@@ -2222,6 +2222,9 @@ theorem NativeOp.row_hygiene (op : NativeOp) :
   | call k =>
     exact (by decide : (NativeOp.callPlaceholder.shape = .value →
       NativeOp.callPlaceholder.trailing = []) ∧ rowNamesSafe NativeOp.callPlaceholder = true)
+  | param i =>
+    exact (by decide : (NativeOp.paramPlaceholder.shape = .value →
+      NativeOp.paramPlaceholder.trailing = []) ∧ rowNamesSafe NativeOp.paramPlaceholder = true)
   | _ => decide
 
 /-- The three checks of a lawful table: the program plane's, the names', and the literals'. -/
@@ -2288,11 +2291,12 @@ theorem Row.printsRequest_normalizeTypes {row : Row} (h : row.printsRequest = fa
 `NativeOp.spelled`: a term row's at the unit literal, `Deferred.make`'s at `(nat, nat)`, and
 every other operation its own. -/
 theorem NativeOp.callColumns_spelled (op : NativeOp) (h : ∀ i, op ≠ .external i)
-    (hc : ∀ k, op ≠ .call k) :
+    (hc : ∀ k, op ≠ .call k) (hp : ∀ i, op ≠ .param i) :
     ∃ rep ∈ NativeOp.spelled, rep.row.callColumns = op.row.callColumns := by
   cases op with
   | external i => exact absurd rfl (h i)
   | call k => exact absurd rfl (hc k)
+  | param i => exact absurd rfl (hp i)
   | refUpdateWith f => exact ⟨.refUpdateWith (.lit .unit), by decide, rfl⟩
   | refGetAndUpdateWith f => exact ⟨.refGetAndUpdateWith (.lit .unit), by decide, rfl⟩
   | refUpdateAndGetWith f => exact ⟨.refUpdateAndGetWith (.lit .unit), by decide, rfl⟩
@@ -2307,16 +2311,17 @@ theorem NativeOp.callColumns_spelled (op : NativeOp) (h : ∀ i, op ≠ .externa
 
 /-- A built-in operation has the call columns of its representative's row in `nativeRows`. -/
 theorem nativeRows_rep_builtin (table : RowTable) (op : NativeOp) (h : ∀ i, op ≠ .external i)
-    (hc : ∀ k, op ≠ .call k) :
+    (hc : ∀ k, op ≠ .call k) (hp : ∀ i, op ≠ .param i) :
     ∃ r ∈ nativeRows table, r.callColumns = (nativeRowOf table op).callColumns := by
-  obtain ⟨rep, hm, heq⟩ := NativeOp.callColumns_spelled op h hc
+  obtain ⟨rep, hm, heq⟩ := NativeOp.callColumns_spelled op h hc hp
   rw [nativeRowOf_builtin table op h]
   exact ⟨rep.row, List.mem_append_left _ (List.mem_map_of_mem hm), heq⟩
 
-/-- An operation of the native signature that is no invocation and no external index past the
-table has the call columns of a row of `nativeRows`. -/
+/-- An operation of the native signature that is no invocation, no parameter's run and no
+external index past the table has the call columns of a row of `nativeRows`. -/
 theorem nativeRows_rep (table : RowTable) (op : NativeOp)
-    (hext : ∀ i, op = .external i → i < table.length) (hc : ∀ k, op ≠ .call k) :
+    (hext : ∀ i, op = .external i → i < table.length) (hc : ∀ k, op ≠ .call k)
+    (hp : ∀ i, op ≠ .param i) :
     ∃ r ∈ nativeRows table, r.callColumns = (nativeRowOf table op).callColumns := by
   cases op with
   | external i =>
@@ -2324,7 +2329,8 @@ theorem nativeRows_rep (table : RowTable) (op : NativeOp)
     rw [nativeRowOf_external table i hi]
     exact ⟨table[i], List.mem_append_right _ (List.getElem_mem hi), rfl⟩
   | call k => exact absurd rfl (hc k)
-  | _ => exact nativeRows_rep_builtin table _ (by intro i he; cases he) (by intro k he; cases he)
+  | param i => exact absurd rfl (hp i)
+  | _ => refine nativeRows_rep_builtin table _ ?_ ?_ ?_ <;> intro _ he <;> cases he
 
 /-- What `nativeSpell` answers is a row of `nativeRows` with the key it was asked: a built-in
 representative's or the table's. -/
@@ -2347,11 +2353,14 @@ theorem nativeSpell_mem (table : RowTable) {s : String} {names : List RowArg} {o
 theorem nativeRows_rep_of_dom (table : RowTable) (op : NativeOp)
     (hd : (nativeSignature table).dom op = true) :
     ∃ r ∈ nativeRows table, r.callColumns = (nativeRowOf table op).callColumns := by
-  refine nativeRows_rep table op ?_ ?_
+  refine nativeRows_rep table op ?_ ?_ ?_
   · intro i he
     subst he
     exact of_decide_eq_true hd
   · intro k he
+    subst he
+    exact absurd hd Bool.false_ne_true
+  · intro i he
     subst he
     exact absurd hd Bool.false_ne_true
 
@@ -2386,6 +2395,7 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     | deferredMakeOf value error => rfl
     -- an invocation is outside the native signature's domain: only a block's signature has it
     | call k => exact absurd hd Bool.false_ne_true
+    | param i => exact absurd hd Bool.false_ne_true
     | _ => rfl
   row_of_spell := by
     intro s names op hs

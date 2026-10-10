@@ -179,7 +179,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
     | zero =>
       -- no fuel for the hop: the live frontier at the reference's point, on both sides
       rw [denoteLayer_ref_zero root target q m scope hf]
-      exact CodeMeans.frontier q q _ _ ⟨rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
+      exact CodeMeans.frontier q q _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
         rw [suspendBodyAt_zero' (q := { q with completed }) hf]; rfl
     | succ k =>
       -- the hop: the target's term at the target's path, one fuel down, given by `hhop`; a

@@ -473,6 +473,7 @@ def opO : NativeOp → String
   | .clockNow => octor "native_op" "clockNow"
   | .external i => s!"({octor "native_op" "external"} {i})"
   | .call k => s!"({octor "native_op" "call"} {k})"
+  | .param k => s!"({octor "native_op" "param"} {k})"
 
 /-- The finite built-in alphabet, one operation per spelling key: the core's `NativeOp.spelled`
 (`src/Effect4/Program/Native.lean`), `Deferred.make` at its face, the instance `(nat, nat)`, and

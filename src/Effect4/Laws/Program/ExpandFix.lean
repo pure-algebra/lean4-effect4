@@ -78,6 +78,7 @@ theorem hasTy_expandRound :
   | _, _, _, .provideService _ _ _ hb =>
     congrArg (Eff.provideService _ _) (hasTy_expandRound hb)
   | _, _, _, .restore _ _ hb => congrArg (Eff.restore _) (hasTy_expandRound hb)
+  | _, _, _, .invoke _ _ _ _ _ ha => congrArg (Eff.invoke _ _) (effsHasTy_expandRound ha)
 
 theorem stmtsHasTy_expandRound :
     ∀ {env : TyEnv} {inLoop : Bool} {ss : Stmts Op} {g : GenTy},
@@ -102,9 +103,13 @@ theorem stmtsHasTy_expandRound :
     rw [stmtsHasTy_expandRound hr]
 
 theorem effsHasTy_expandRound :
-    ∀ {env : TyEnv} {es : Effs Op} {t : EffTy}, EffsHasTy sig env es t → Effs.expandRound orig es = es
-  | _, _, _, .nil => rfl
-  | _, _, _, .cons hh ht _ => congrArg₂ Effs.cons (hasTy_expandRound hh) (effsHasTy_expandRound ht)
+    ∀ {env : TyEnv} {qs : List ParamDecl} {es : Effs Op} {t : EffTy},
+      EffsHasTy sig env qs es t → Effs.expandRound orig es = es
+  | _, _, _, _, .nil => rfl
+  | _, _, _, _, .cons hh ht _ =>
+    congrArg₂ Effs.cons (hasTy_expandRound hh) (effsHasTy_expandRound ht)
+  | _, _, _, _, .slot hh _ ht _ =>
+    congrArg₂ Effs.cons (hasTy_expandRound hh) (effsHasTy_expandRound ht)
 
 theorem actionHasTy_expandRound :
     ∀ {env : TyEnv} {a : ActionTerm Op} {t : EffTy}, ActionHasTy sig env a t →

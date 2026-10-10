@@ -50,7 +50,7 @@ def stmtsTy (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (b : Stmts Op) : 
 
 /-- Race entrants' joined type. -/
 def effsTy (sig : Signature Op) (env : TyEnv) (es : Effs Op) : Option EffTy :=
-  (checkEffs sig env [] es).toOption
+  (checkEffs sig env [] [] es).toOption
 
 /-- A fiber action's type. -/
 def actionTy (sig : Signature Op) (env : TyEnv) (a : ActionTerm Op) : Option EffTy :=
@@ -126,6 +126,14 @@ theorem Signature.termUse_weaken [ScopedOp Op] {sig : Signature Op} (hw : sig.We
     simpa only [List.append_assoc, List.cons_append] using
       termTy_weaken sig pre (post ++ [A]) inserted b.term
 
+/-- Weakening keeps a spine's programs in number: an invocation's arity check reads the count
+(decisions row 340). A step of `check_weaken`'s invocation arm. -/
+theorem Effs.toList_length_weaken [ScopedOp Op] (cut : Nat) :
+    (es : Effs Op) → (Effs.weaken cut es).toList.length = es.toList.length
+  | .nil => rfl
+  | .cons _ rest => by
+    simp only [Effs.weaken, Effs.toList, List.length_cons, Effs.toList_length_weaken cut rest]
+
 mutual
   theorem check_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
       (pre post : TyEnv) (inserted : Ty) (p : List Nat) (program : Eff Op) :
@@ -150,6 +158,10 @@ mutual
         toOption_term?, toOption_cause?, apply_ite Except.toOption, termTy_weaken, causeTy_weaken,
         catchIfError_weaken, List.append_assoc, List.cons_append, check_weaken sig hw,
         checkStmts_weaken sig hw, checkAction_weaken sig hw]
+    | .invoke _ _ _ => by
+      simp only [Eff.weaken, check, toOption_bind, toOption_pure, toOption_throw, toOption_expect,
+        toOption_term?, apply_ite Except.toOption, termTy_weaken, Effs.toList_length_weaken,
+        checkEffs_weaken sig hw]
 
   theorem checkStmts_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
       (pre post : TyEnv) (inserted : Ty) (inLoop : Bool) (afterRet : Option (List Nat))
@@ -169,13 +181,18 @@ mutual
           List.append_assoc, List.cons_append, check_weaken sig hw, checkStmts_weaken sig hw]
 
   theorem checkEffs_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
-      (pre post : TyEnv) (inserted : Ty) (p : List Nat) (entrants : Effs Op) :
-      (checkEffs sig (pre ++ inserted :: post) p (Effs.weaken pre.length entrants)).toOption =
-        (checkEffs sig (pre ++ post) p entrants).toOption :=
-    match entrants with
-    | .nil => rfl
-    | .cons _ _ => by
+      (pre post : TyEnv) (inserted : Ty) (p : List Nat) (qs : List ParamDecl)
+      (entrants : Effs Op) :
+      (checkEffs sig (pre ++ inserted :: post) p qs (Effs.weaken pre.length entrants)).toOption =
+        (checkEffs sig (pre ++ post) p qs entrants).toOption :=
+    match entrants, qs with
+    | .nil, _ => rfl
+    | .cons _ _, [] => by
       simp only [Effs.weaken, checkEffs, toOption_bind, toOption_pure, check_weaken sig hw,
+        checkEffs_weaken sig hw]
+    | .cons _ _, _ :: _ => by
+      simp only [Effs.weaken, checkEffs, toOption_bind, toOption_pure, toOption_throw,
+        apply_ite Except.toOption, List.append_assoc, List.cons_append, check_weaken sig hw,
         checkEffs_weaken sig hw]
 
   theorem checkAction_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
@@ -213,7 +230,7 @@ theorem effsTy_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural
     (pre post : TyEnv) (inserted : Ty) (entrants : Effs Op) :
     effsTy sig (pre ++ inserted :: post) (Effs.weaken pre.length entrants) =
       effsTy sig (pre ++ post) entrants :=
-  checkEffs_weaken sig hw pre post inserted [] entrants
+  checkEffs_weaken sig hw pre post inserted [] [] entrants
 
 theorem actionTy_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
     (pre post : TyEnv) (inserted : Ty) (action : ActionTerm Op) :

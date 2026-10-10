@@ -119,6 +119,11 @@ inductive NativeOp
   signature supplies (`Signature.withDefs`); the definition's body answers it on the invoking
   fiber. No host answers it. Appended at wire tag 32. -/
   | call (index : Nat)
+  /-- **The run of a parameter** (decisions row 340): parameter `index` of the definition whose
+  body performs it, at the request. Its row is the parameter's declared row, which the body's
+  signature supplies (`Signature.withParams`); the program that the call passed answers it, on
+  the fiber that runs the body. No host answers it. Appended at wire tag 33. -/
+  | param (index : Nat)
 deriving DecidableEq
 
 namespace NativeOp
@@ -134,7 +139,7 @@ def binder? : NativeOp → Option (FnShape × Term)
   | refModifySomeWith f => some (.modifySome, f)
   | refMake | refGet | refSet | refGetAndSet | refSetAndGet | deferredIsDone | deferredPoll
   | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
-  | deferredMakeOf _ _ | call _ => none
+  | deferredMakeOf _ _ | call _ | param _ => none
 
 /-- The operation with its binder term replaced; an operation that carries none is unchanged. -/
 def withTerm : NativeOp → Term → NativeOp
@@ -162,6 +167,7 @@ def withTerm : NativeOp → Term → NativeOp
   | external index, _ => external index
   | deferredMakeOf value error, _ => deferredMakeOf value error
   | call index, _ => call index
+  | param index, _ => param index
 
 /-- Replacing the term keeps the shape and installs the term. -/
 theorem binder?_withTerm (op : NativeOp) (t : Term) :
@@ -196,7 +202,7 @@ def typeArgs : NativeOp → List Ty
   | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
   | refUpdateWith _ | refGetAndUpdateWith _ | refUpdateAndGetWith _ | refUpdateSomeWith _
   | refGetAndUpdateSomeWith _ | refUpdateSomeAndGetWith _ | refModifyWith _
-  | refModifySomeWith _ | call _ => []
+  | refModifySomeWith _ | call _ | param _ => []
 
 /-- The operation at other type arguments; an operation that carries none is unchanged.
 `Deferred.make` takes a list of two. At a list of another length it answers the instance that
@@ -230,6 +236,7 @@ def withTypeArgs : NativeOp → List Ty → NativeOp
   | clockNow, _ => clockNow
   | external index, _ => external index
   | call index, _ => call index
+  | param index, _ => param index
 
 /-- Replacing the type arguments by a list of the operation's own arity installs the list. -/
 theorem typeArgs_withTypeArgs (op : NativeOp) (tys : List Ty)
@@ -344,12 +351,19 @@ def callPlaceholder : Row :=
   { name := "call", spelling := "", shape := .call, kind := .program,
     request := .never, answer := .never, cite := "" }
 
+/-- The row of a parameter's run read outside a body. Its empty spelling is outside every domain:
+only a body's signature (`Signature.withParams`) gives `param i` the row that parameter `i`
+declares. -/
+def paramPlaceholder : Row :=
+  { name := "param", spelling := "", shape := .call, kind := .program,
+    request := .never, answer := .never, cite := "" }
+
 /-- The scheduling kind of each operation: `.async` for `deferredAwait` and `sleep`, `.program`
 for external placeholders, and `.sync` for every heap and deferred operation. Split off `row`
 so the compiler and engine closure do not drag `Row` or `Ty` into native engine headers (plan 3.5). -/
 @[simp] def kind : NativeOp → RowKind
   | deferredAwait | sleep => .async
-  | external _ | call _ => .program
+  | external _ | call _ | param _ => .program
   | refMake | refGet | refSet | refGetAndSet | refSetAndGet
   | refUpdateWith _ | refGetAndUpdateWith _ | refUpdateAndGetWith _
   | refUpdateSomeWith _ | refGetAndUpdateSomeWith _ | refUpdateSomeAndGetWith _
@@ -473,6 +487,7 @@ def row (op : NativeOp) : Row :=
 
   | external _ => externalPlaceholder
   | call _ => callPlaceholder
+  | param _ => paramPlaceholder
 
 @[simp] theorem row_kind (op : NativeOp) : (row op).kind = kind op := by
   cases op
@@ -590,7 +605,10 @@ and admission (`externalRow`). Raw table entries retain their source spelling/pr
 def nativeSignature (table : RowTable := []) : Signature NativeOp :=
   { rowOf := fun op => (nativeRowOf table op).normalizeTypes, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
     serviceTy := nativeServiceTy,
-    dom := fun | .external i => decide (i < table.length) | .call _ => false | _ => true,
+    dom := fun op => match op with
+      | .external i => decide (i < table.length)
+      | .call _ | .param _ => false
+      | _ => true,
     constAtom := nativeConstAtom,
     -- a read-modify-write row's binder term, at its shape's parameter and result templates
     termOf := fun op => op.binder?.map fun b => ⟨b.2, b.1.param, b.1.result⟩,
@@ -600,7 +618,9 @@ def nativeSignature (table : RowTable := []) : Signature NativeOp :=
     typeArgsOf := NativeOp.typeArgs,
     withTypeArgs := NativeOp.withTypeArgs,
     -- an invocation names its definition; outside a block it is outside the domain
-    callOf := fun | .call k => some k | _ => none }
+    callOf := fun | .call k => some k | _ => none
+    -- a parameter's run names its parameter; outside a body it is outside the domain
+    paramOf := fun | .param i => some i | _ => none }
 
 /-- **The native signature types an operation alike once its binder term is weakened**
 (`Signature.WeakenNatural`, `Program/Typing.lean`): weakening replaces a term row's term and

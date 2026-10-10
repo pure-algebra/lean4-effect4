@@ -534,6 +534,7 @@ src/Effect4/Laws/Program/DenoteR.lean	denoteR_fail	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_failCause	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_gen	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_interruptible	unread	1
+src/Effect4/Laws/Program/DenoteR.lean	denoteR_invoke	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_iterate	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_matchCause	unread	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteR_onExit	unread	1

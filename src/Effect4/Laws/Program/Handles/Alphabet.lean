@@ -18,13 +18,34 @@ open Agreement
 
 /-! ## The native alphabet's handles -/
 
-/-- The handles a point holds: captured exit values, then values in scope.
+/-- The handles a point holds: captured exit values, then the values that the sites of the
+calls' programs hold (decisions row 340), which a parameter's run reads, then values in scope.
 The captured fiber IDs are lookup keys, not dereferenced handles. -/
 def Point.keys (p : Point) : List Handle :=
-  p.completed.flatMap (fun entry => exitKeys entry.2) ++ p.env.flatMap Val.keys
+  p.completed.flatMap (fun entry => exitKeys entry.2) ++
+    p.params.flatMap (·.flatMap ArgSite.keys) ++ p.env.flatMap Val.keys
 
 theorem Point.env_keys_subset (p : Point) : p.env.flatMap Val.keys ⊆ p.keys :=
   List.subset_append_right _ _
+
+/-- A point holds its completed view's handles. -/
+theorem Point.completed_keys_subset (p : Point) :
+    p.completed.flatMap (fun entry => exitKeys entry.2) ⊆ p.keys :=
+  List.subset_append_of_subset_left _ (List.subset_append_left _ _)
+
+/-- A point holds the handles of the sites of its stack (decisions row 340). -/
+theorem Point.params_keys_subset (p : Point) : p.params.flatMap (·.flatMap ArgSite.keys) ⊆ p.keys :=
+  List.subset_append_of_subset_left _ (List.subset_append_right _ _)
+
+/-- **An invocation's sites hold the caller's values** (decisions row 340): each site's
+environment is the caller's. A step of `suspendBodyAt_keys`. -/
+theorem argSitesAt_keys (path : List Nat) (env : List Val) :
+    ∀ args : Effs NativeOp, (argSitesAt path env args).flatMap ArgSite.keys ⊆ env.flatMap Val.keys
+  | .nil => List.nil_subset _
+  | .cons _ rest => by
+    simp only [argSitesAt, List.flatMap_cons, ArgSite.keys, Val.keysList_eq_flatMap]
+    exact List.append_subset.mpr ⟨List.Subset.refl _, by
+      simpa only [ArgSite.keys, Val.keysList_eq_flatMap] using argSitesAt_keys (path ++ [1]) env rest⟩
 
 /-- The eager join/await answer uses only the captured exit's value handles.
 Both observer modes follow the same construction lookup (`internal/effect.ts:767-769,814-816`). -/
@@ -35,7 +56,7 @@ theorem Point.awaitExit_keys (p : Point) (target : FiberId) (mode : Supervision.
   have hentry := List.mem_of_find?_eq_some hfind
   have hkeys : exitKeys entry.2 ⊆ p.keys := by
     intro key hkey
-    exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨entry, hentry, hkey⟩)
+    exact List.mem_append_left _ (List.mem_append_left _ (List.mem_flatMap.mpr ⟨entry, hentry, hkey⟩))
   cases mode <;> simp only at hexit <;> subst exit
   · simpa only [exitKeys, Machine.reifyExitVal_keys] using hkeys
   · exact hkeys

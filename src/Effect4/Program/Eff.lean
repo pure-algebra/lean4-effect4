@@ -358,11 +358,30 @@ inductive DefRole where
   | serviceMethod (service method : String) (arity : Nat)
 deriving DecidableEq, Repr
 
-/-- **The declaration of a definition**: its name, the columns of its row, and its role. A
-definition is a closed program with a declared row, kept in the definition block at the root of
-a program (`Eff.defs`). Its body reads one variable, the request. The row is computed from these
-columns (`DefDecl.row`), so no field without meaning is stored. Several parameters are one
-request of a tuple type. -/
+/-- **A parameter of a definition whose value is a program** (decisions row 340): its name, the
+request that the passed program reads as its one variable, and the answer and error that bound
+the program. A parameter is never a value: no `Ty` names it, and only the body of its definition
+runs it (`NativeOp.param`). -/
+structure ParamDecl where
+  name : String
+  request : Ty
+  answer : Ty
+  error : Ty := .never
+deriving DecidableEq, Repr
+
+/-- The row a parameter declares: a program row, answered by the program that the call passes,
+on the fiber that runs the definition's body. It requires nothing: the passed program's
+requirements are the call's, since the program is a child of the call. -/
+def ParamDecl.row (d : ParamDecl) : Row :=
+  { name := d.name, spelling := d.name, kind := .program, request := d.request,
+    answer := d.answer, error := d.error, cite := "" }
+
+/-- **The declaration of a definition**: its name, the columns of its row, its role, and its
+parameters whose values are programs. A definition is a program with a declared row, kept in
+the definition block at the root of a program (`Eff.defs`). Its body reads one variable, the
+request, and runs its parameters by `NativeOp.param` (decisions row 340). The row is computed
+from these columns (`DefDecl.row`), so no field without meaning is stored. Several value
+parameters are one request of a tuple type. -/
 structure DefDecl where
   name : String
   request : Ty
@@ -370,6 +389,7 @@ structure DefDecl where
   error : Ty := .never
   requires : List ServiceKey := []
   role : DefRole := .plain
+  params : List ParamDecl := []
 deriving DecidableEq, Repr
 
 /-- The row a definition declares: a program row, answered by the definition's body on the
@@ -470,6 +490,13 @@ mutual
     program only (formation), so a program with no definition has no block and keeps its bytes.
     Appended, so no stored program's bytes move (`Wire.lean`). -/
     | defs (decls : List DefDecl) (bodies : Effs Op) (main : Eff Op)
+    /-- **An invocation with programs** (decisions row 340): definition `index` of the root
+    block, called with its request and one program for each of its parameters. Argument `j`
+    reads the caller's environment extended by one variable, parameter `j`'s request, and it
+    runs where the definition's body runs parameter `j` (`NativeOp.param`). A definition with no
+    parameter is invoked by `perform (.call k)` instead, so each call has one form. Appended, so
+    no stored program's bytes move (`Wire.lean`). -/
+    | invoke (index : Nat) (request : Term) (args : Effs Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/

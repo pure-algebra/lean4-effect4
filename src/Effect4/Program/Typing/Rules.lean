@@ -112,6 +112,14 @@ structure Signature (Op : Type) where
   program's definition block (decisions row 328), `none` for every other operation. A block's
   signature reads it (`Signature.withDefs`, `Program/Definitions.lean`). None by default. -/
   callOf : Op → Option Nat := fun _ => none
+  /-- The parameter an operation runs: `some i` for the run of parameter `i` of the definition
+  whose body performs it (decisions row 340), `none` for every other operation. A body's
+  signature reads it (`Signature.withParams`, `Program/Definitions.lean`). None by default. -/
+  paramOf : Op → Option Nat := fun _ => none
+  /-- The declaration of definition `k` of the program's definition block, which an invocation
+  with programs reads (`Eff.invoke`, decisions row 340). A block's signature supplies it
+  (`Signature.withDefs`). None by default. -/
+  defOf : Nat → Option DefDecl := fun _ => none
 
 variable {Op : Type}
 

@@ -68,11 +68,13 @@ structure Part (Op : Type) where
   program : Eff Op
 
 /-- **The body that holds an address of a block's bodies' spine**, at the block's signature
-`sig`, and the rest of the address inside it. In the spine the head is child `0` and the rest
-child `1`, as in `Checker.checkBodies`. -/
+`sig` extended by the body's parameters (`Signature.withParams`, decisions row 340), and the
+rest of the address inside it. In the spine the head is child `0` and the rest child `1`, as in
+`Checker.checkBodies`. -/
 def Part.bodyAt (sig : Signature Op) :
     List DefDecl → Effs Op → List Nat → Option (Part Op × List Nat)
-  | d :: _, .cons body _, 0 :: rest => some (⟨sig, [d.request.normalize], body⟩, rest)
+  | d :: _, .cons body _, 0 :: rest =>
+    some (⟨sig.withParams d.params, [d.request.normalize], body⟩, rest)
   | _ :: ds, .cons _ bodies, 1 :: rest => bodyAt sig ds bodies rest
   | _, _, _ => none
 

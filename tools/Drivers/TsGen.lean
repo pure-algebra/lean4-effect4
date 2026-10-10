@@ -443,7 +443,7 @@ run_cmd do
          ``Effect4.Program.NativeOp.refGetAndUpdateSomeWith,
          ``Effect4.Program.NativeOp.refUpdateSomeAndGetWith,
          ``Effect4.Program.NativeOp.refModifyWith, ``Effect4.Program.NativeOp.refModifySomeWith,
-         ``Effect4.Program.NativeOp.call])
+         ``Effect4.Program.NativeOp.call, ``Effect4.Program.NativeOp.param])
     , (``Effect4.Codegen.Forms.LambdaShape,
         [``Effect4.Codegen.Forms.LambdaShape.addOne, ``Effect4.Codegen.Forms.LambdaShape.multiplyTwo,
          ``Effect4.Codegen.Forms.LambdaShape.optionNone,
@@ -664,6 +664,8 @@ def opJs : Effect4.Program.NativeOp → String
   | .external i => tagged "external" [("index", toString i)]
   -- an invocation of a definition of the program's block (decisions row 328)
   | .call k => tagged "call" [("index", toString k)]
+  -- a run of a definition's parameter, inside its body (decisions row 340)
+  | .param k => tagged "param" [("index", toString k)]
 
 /-- The target metadata writers share one JSON view with the truth manifest. -/
 def tyJs (ty : Effect4.Program.Ty) : String := (Tools.ProfileJson.tyJson ty).compress

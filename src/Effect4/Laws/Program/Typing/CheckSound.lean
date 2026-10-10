@@ -153,6 +153,12 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     intro env p t h
     simp only [check] at h
     cases h
+  -- an invocation with programs (decisions row 340)
+  | invoke k request args =>
+    intro env p t h
+    obtain ⟨d, requestTy, t0, ts, hd, hne, hlen, hreq, hrow, hargs, rfl⟩ :=
+      inv_invoke sig env p k request args t h
+    exact .invoke hd hne hlen hreq hrow (checkEffs_sound sig args env _ d.params ts hargs)
 termination_by structural e
 
 theorem checkStmts_sound (sig : Signature Op) (body : Stmts Op) :
@@ -203,18 +209,24 @@ theorem checkStmts_sound (sig : Signature Op) (body : Stmts Op) :
 termination_by structural body
 
 theorem checkEffs_sound (sig : Signature Op) (entrants : Effs Op) :
-    ∀ (env : TyEnv) (p : List Nat) (t : EffTy), checkEffs sig env p entrants = .ok t →
-      EffsHasTy sig env entrants t := by
+    ∀ (env : TyEnv) (p : List Nat) (qs : List ParamDecl) (t : EffTy),
+      checkEffs sig env p qs entrants = .ok t → EffsHasTy sig env qs entrants t := by
   cases entrants with
   | nil =>
-    intro env p t h
-    obtain rfl := inv_effs_nil sig env p t h
+    intro env p qs t h
+    obtain rfl := inv_effs_nil sig env p qs t h
     exact .nil
   | cons head tail =>
-    intro env p t h
-    obtain ⟨hh, r, hhd, hr, rfl⟩ := inv_effs_cons sig env p head tail t h
-    exact .cons (check_sound sig head env _ hh hhd) (checkEffs_sound sig tail env _ r hr)
-      (EffTy.joinAnswer_eq _ _)
+    intro env p qs t h
+    cases qs with
+    | nil =>
+      obtain ⟨hh, r, hhd, hr, rfl⟩ := inv_effs_cons sig env p head tail t h
+      exact .cons (check_sound sig head env _ hh hhd) (checkEffs_sound sig tail env _ [] r hr)
+        (EffTy.joinAnswer_eq _ _)
+    | cons q qs =>
+      obtain ⟨hh, r, hhd, hadm, hr, rfl⟩ := inv_effs_slot sig env p q qs head tail t h
+      exact .slot (check_sound sig head _ _ hh hhd) hadm (checkEffs_sound sig tail env _ qs r hr)
+        (EffTy.joinAnswer_eq _ _)
 termination_by structural entrants
 
 theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
@@ -273,7 +285,7 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     exact .awaitNewChildren hs hsub
   | raceAll entrants =>
     intro env p t h
-    exact .raceAll (checkEffs_sound sig entrants env _ t (inv_action_raceAll sig env p entrants t h))
+    exact .raceAll (checkEffs_sound sig entrants env _ [] t (inv_action_raceAll sig env p entrants t h))
   | setContext context =>
     intro env p t h
     obtain ⟨contextTy, hc, hsub, rfl⟩ := inv_action_setContext sig env p context t h
@@ -469,6 +481,11 @@ theorem check_complete (sig : Signature Op) (e : Eff Op) :
     aesop (rule_sets := [Effect4.Checker])
   -- no rule derives a type for a definition block below the root
   | defs decls bodies main => intro env t hd p; cases hd
+  -- an invocation with programs (decisions row 340)
+  | invoke k request args =>
+    intro env t hd p; cases hd
+    have ih := checkEffs_complete sig args _ _ _ ‹EffsHasTy sig _ _ args _› (p ++ [0])
+    aesop (rule_sets := [Effect4.Checker])
 termination_by structural e
 
 theorem checkStmts_complete (sig : Signature Op) (body : Stmts Op) :
@@ -510,15 +527,21 @@ theorem checkStmts_complete (sig : Signature Op) (body : Stmts Op) :
 termination_by structural body
 
 theorem checkEffs_complete (sig : Signature Op) (entrants : Effs Op) :
-    ∀ (env : TyEnv) (t : EffTy), EffsHasTy sig env entrants t →
-      ∀ p, checkEffs sig env p entrants = .ok t := by
+    ∀ (env : TyEnv) (qs : List ParamDecl) (t : EffTy), EffsHasTy sig env qs entrants t →
+      ∀ p, checkEffs sig env p qs entrants = .ok t := by
   cases entrants with
-  | nil => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | nil => intro env qs t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | cons head tail =>
-    intro env t hd p; cases hd
-    have ihh := check_complete sig head _ _ ‹HasTy sig _ head _› (p ++ [0])
-    have ihr := checkEffs_complete sig tail _ _ ‹EffsHasTy sig _ tail _› (p ++ [1])
-    aesop (rule_sets := [Effect4.Checker])
+    intro env qs t hd p
+    cases hd with
+    | cons hh ht hj =>
+      have ihh := check_complete sig head _ _ hh (p ++ [0])
+      have ihr := checkEffs_complete sig tail _ _ _ ht (p ++ [1])
+      aesop (rule_sets := [Effect4.Checker])
+    | slot hh hadm ht hj =>
+      have ihh := check_complete sig head _ _ hh (p ++ [0])
+      have ihr := checkEffs_complete sig tail _ _ _ ht (p ++ [1])
+      aesop (rule_sets := [Effect4.Checker])
 termination_by structural entrants
 
 theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
@@ -551,7 +574,7 @@ theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
   | awaitNewChildren snapshot => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | raceAll entrants =>
     intro env t hd p; cases hd
-    have ih := checkEffs_complete sig entrants _ _ ‹EffsHasTy sig _ entrants _› (p ++ [0])
+    have ih := checkEffs_complete sig entrants _ _ _ ‹EffsHasTy sig _ [] entrants _› (p ++ [0])
     aesop (rule_sets := [Effect4.Checker])
   | setContext context => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | getContext => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])

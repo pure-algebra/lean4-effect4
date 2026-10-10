@@ -1788,7 +1788,9 @@ def shapeDoc : ShapeDoc :=
         ("bodies", (shape _root_.Nat).root)]),
       ("definitionColumns", 39, [("name", (shape _root_.String).root)]),
       ("bodyNotDeclared", 40, [("name", (shape _root_.String).root),
-        ("body", (shape _root_.Effect4.Program.EffTy).root)])],
+        ("body", (shape _root_.Effect4.Program.EffTy).root)]),
+      ("invokeArity", 41, [("name", (shape _root_.String).root),
+        ("params", (shape _root_.Nat).root), ("args", (shape _root_.Nat).root)])],
    (shape _root_.Effect4.Program.Term).defs ++ (shape _root_.Effect4.Program.CauseTerm).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.String).defs ++
      (shape _root_.Effect4.Program.Decision).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
@@ -1849,6 +1851,7 @@ def toVal : _root_.Effect4.Program.TypeReason → Val
   | .definitionsMismatch a0 a1 => .ctor 38 [Canonical.toVal a0, Canonical.toVal a1]
   | .definitionColumns a0 => .ctor 39 [Canonical.toVal a0]
   | .bodyNotDeclared a0 a1 => .ctor 40 [Canonical.toVal a0, Canonical.toVal a1]
+  | .invokeArity a0 a1 a2 => .ctor 41 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2]
 
 def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .term
@@ -1943,6 +1946,11 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
         Canonical.ofVal (α := _root_.Effect4.Program.EffTy) v1 with
     | some a0, some a1 => some (.bodyNotDeclared a0 a1)
     | _, _ => none
+  | .ctor 41 [v0, v1, v2] =>
+    match Canonical.ofVal (α := _root_.String) v0, Canonical.ofVal (α := _root_.Nat) v1,
+        Canonical.ofVal (α := _root_.Nat) v2 with
+    | some a0, some a1, some a2 => some (.invokeArity a0 a1 a2)
+    | _, _, _ => none
   | _ => none
 
 theorem ofVal_toVal (a : _root_.Effect4.Program.TypeReason) : ofVal (toVal a) = some a := by
@@ -1988,6 +1996,7 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.TypeReason) : ofVal (toVal a) = 
   | «definitionsMismatch» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «definitionColumns» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «bodyNotDeclared» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
+  | «invokeArity» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
 
 theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal v = some a) :
     v = toVal a := by
@@ -2187,6 +2196,13 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal
       subst h
       simp only [toVal]
       rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
+  · split at h
+    · rename_i b0 b1 b2 h0 h1 h2
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
     all_goals exact nomatch h
   all_goals exact nomatch h
 
@@ -2410,6 +2426,11 @@ theorem fits (a : _root_.Effect4.Program.TypeReason) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 40 "bodyNotDeclared" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_EffTy a1) (acceptsFields_nil _)))
+  | «invokeArity» a0 a1 a2 =>
+    exact accepts_sum _ _ _ 41 "invokeArity" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a2) (acceptsFields_nil _))))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.TypeReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -3099,7 +3120,8 @@ def reasons : List TypeReason :=
    .foldTerm ⟨[0], .notList .nat⟩,
    .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩,
    .maskRestoreExpected .bool, .definitionBlock, .definitionsMismatch 1 0,
-   .definitionColumns "count", .bodyNotDeclared "count" (EffTy.pure .string)]
+   .definitionColumns "count", .bodyNotDeclared "count" (EffTy.pure .string),
+   .invokeArity "use" 1 0]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

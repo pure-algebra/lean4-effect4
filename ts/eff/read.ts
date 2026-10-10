@@ -1740,6 +1740,7 @@ const withTerm = (op: NativeOp, f: Term): NativeOp | undefined => {
     case "external":
     case "deferredMakeOf":
     case "call":
+    case "param":
       return undefined
     default: {
       const unclassified: never = op
@@ -1781,6 +1782,7 @@ export const typeArgsOf = (op: NativeOp): ReadonlyArray<Ty> => {
     case "clockNow":
     case "external":
     case "call":
+    case "param":
       return []
     default: {
       const unclassified: never = op
@@ -2179,6 +2181,8 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         // a definition block (decisions row 328): its bodies' spine is child 0, its main program child 1
         case "defs":
           return [atEffs(e.bodies, (bodies) => kEff({ ...e, bodies })), atEff(e.main, (main) => kEff({ ...e, main }))]
+        // an invocation with programs (decisions row 340): its programs' spine is child 0
+        case "invoke": return [atEffs(e.args, (args) => kEff({ ...e, args }))]
         case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": case "service":
           return []
         default: return noChildCase(e)

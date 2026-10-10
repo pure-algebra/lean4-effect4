@@ -123,7 +123,8 @@ theorem check_rebase (sig : Signature Op) (q : List Nat) (env : TyEnv) (p : List
   case awaitFiber fiber mode =>
     cases mode <;> simp only [check, term?_rebase, expect_rebase, ExceptMap.mapError_bind, ExceptMap.mapError_pure]
   all_goals simp only [check, List.append_assoc, check_rebase sig q, checkLayer_rebase sig q,
-    checkStmts_rebase sig q, checkAction_rebase sig q, term?_rebase, cause?_rebase,
+    checkStmts_rebase sig q, checkEffs_rebase sig q, checkAction_rebase sig q, term?_rebase,
+    cause?_rebase,
     expect_rebase, rowCheck_rebase, ExceptMap.mapError_bind, ExceptMap.mapError_pure, ExceptMap.mapError_throw, ExceptMap.mapError_ite,
     rebase_mk]
 
@@ -172,13 +173,19 @@ theorem checkStmts_rebase (sig : Signature Op) (q : List Nat) (env : TyEnv) (inL
       (fun a => by simp only [checkStmts_some_rebase, ExceptMap.mapError_bind, ExceptMap.mapError_pure])
       (by simp only [checkStmts_rebase sig q, ExceptMap.mapError_bind, ExceptMap.mapError_pure])
 
-/-- `check_rebase` at a race's entrants. -/
+/-- `check_rebase` at a spine of programs at its slots: a race's entrants, an invocation's
+programs (decisions row 340). -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem checkEffs_rebase (sig : Signature Op) (q : List Nat) (env : TyEnv) (p : List Nat)
-    (es : Effs Op) :
-    checkEffs sig env (q ++ p) es = (checkEffs sig env p es).mapError (TypeRefusal.rebase q) := by
-  cases es <;> simp only [checkEffs, List.append_assoc, check_rebase sig q,
-    checkEffs_rebase sig q, ExceptMap.mapError_bind, ExceptMap.mapError_pure]
+    (qs : List ParamDecl) (es : Effs Op) :
+    checkEffs sig env (q ++ p) qs es =
+      (checkEffs sig env p qs es).mapError (TypeRefusal.rebase q) := by
+  cases es with
+  | nil => simp only [checkEffs, ExceptMap.mapError_pure]
+  | cons head tail =>
+    cases qs <;> simp only [checkEffs, List.append_assoc, check_rebase sig q,
+      checkEffs_rebase sig q, ExceptMap.mapError_bind, ExceptMap.mapError_pure,
+      ExceptMap.mapError_throw, ExceptMap.mapError_ite, rebase_mk]
 
 /-- `check_rebase` at a fiber action. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]

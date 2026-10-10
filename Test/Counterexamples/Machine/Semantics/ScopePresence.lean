@@ -62,7 +62,7 @@ def forkAfterMake : NativeEff :=
     (.withFiber (.forkIn (.succeed (.lit .unit)) ⟨true, false, .inherit⟩ (.var 0)))
 
 /-- The root point at fuel 20. -/
-def point : Point := ⟨[], [], 20, [], [], 0⟩
+def point : Point := ⟨[], [], 20, [], [], 0, []⟩
 
 /-- Codex's starting world: the root declared at the checked type, the empty store (no scope). -/
 def startingWorld : W where

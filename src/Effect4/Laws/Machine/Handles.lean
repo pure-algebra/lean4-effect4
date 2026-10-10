@@ -446,6 +446,14 @@ def ParkKind.keys : ParkKind → List Handle
   | ParkKind.race _ => []
   | ParkKind.awaitAll targets => targets.map Handle.fiber
 
+/-- The handles a program's site holds (decisions row 340): the values of its caller's scope. -/
+def ArgSite.keys (s : ArgSite) : List Handle := Val.keysList s.env
+
+/-- **The values a capture holds**: those of the sites of its stack (decisions row 340), which a
+parameter's run in the release reads, then those in scope at registration. -/
+def Capture.valKeys (c : Capture) : List Handle :=
+  c.params.flatMap (·.flatMap ArgSite.keys) ++ Val.keysList c.env
+
 /-- The handles a finalizer name carries. -/
 def FinName.keys : FinName → List Handle
   | FinName.interruptFiber fiber _ => [Handle.fiber fiber]
@@ -454,8 +462,9 @@ def FinName.keys : FinName → List Handle
   | FinName.release _ _ => []
   | FinName.awaitNewChildren snapshot => snapshot.map Handle.fiber
   | FinName.parkThen _ => []
-  -- a capture holds the values in scope at registration and the context it runs under
-  | FinName.foreign capture => Val.keysList capture.env ++ capture.ctx.keys
+  -- a capture holds its values (its stack's sites', those in scope at registration) and the
+  -- context it runs under
+  | FinName.foreign capture => capture.valKeys ++ capture.ctx.keys
   | FinName.closeChildOnFailure scope => [Handle.scope scope]
   | FinName.memoEntry _ memoMap => [Handle.memoMap memoMap.index]
   | FinName.memoDone _ memoMap => [Handle.memoMap memoMap.index]
@@ -583,7 +592,7 @@ def Thunk.keys : Thunk → List Handle
   | Thunk.act action => action.keys
   | Thunk.op operation => operation.keys
   | Thunk.body program => program.keys
-  | Thunk.foreign capture exit => Val.keysList capture.env ++ capture.ctx.keys ++ exitKeys exit
+  | Thunk.foreign capture exit => capture.valKeys ++ capture.ctx.keys ++ exitKeys exit
 
 /-! ## Code, at any name and thunk alphabet -/
 
@@ -5162,6 +5171,7 @@ section StoresInstance
 /-! From here on, the decision also unfolds the stores' own alphabets and the stores' key
 traversals. -/
 attribute [keys_norm] programKeys Name.keys Thunk.keys ActionName.keys FinName.keys ProgName.keys
+  Capture.valKeys
   SyncOp.keys Completion.keys ParkKind.keys DeferredStore.keys DeferredCell.keys ScopeStore.keys
   ScopeEntry.keys
 

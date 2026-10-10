@@ -123,7 +123,8 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   /-- A live frontier: the frame's suspension returns itself at every view, the term's
   frontier operation stays. The two points agree on everything but the captured view. -/
   | frontier (p p' : Point) (reason : PendingReason) (k : ExitV → RProgram)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
       (hloop : ∀ completed, suspendBodyAt root (.body { p' with completed }) =
         Prim.suspend (EffThunk.body { p' with completed })) :
       CodeMeans root (Prim.suspend (EffThunk.body p')) (.vis (.inr (.frontier reason p)) k)
@@ -193,11 +194,13 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   -- generator and loop entries: the term saves the entry's continuation as an answer
   -- slot, so it only delivers
   | genEntry (p p' : Point) (k : ExitV → RProgram)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
       (hk : Delivers k) :
       CodeMeans root (Prim.iterator (.gen p' [] false) Val.unit) (.vis (.inr (.gen p)) k)
   | loopEntry (p p' : Point) (cursor : Val) (k : ExitV → RProgram)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root)
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params)
       (hk : Delivers k) :
       CodeMeans root (Prim.whileLoop (.loop p') cursor) (.vis (.inr (.loop p cursor)) k)
   | closeIterSeq (order : List FinName) (ex : ExitV) (k : ExitV → RProgram) (hk : Delivers k) :
@@ -375,7 +378,8 @@ inductive SlotMeans (root : NativeEff) : NCode → ScopeFrame → Prop
   the refreshed suspension, the term's carries the point it was denoted at; the hooks read
   only the address and the environment. -/
   | whileLoop (p p' : Point) (cursor : Val)
-      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root) :
+      (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
+      p'.params = p.params) :
       SlotMeans root (Prim.whileLoop (.loop p') cursor) (.loop (.loop p) cursor)
   | mask (flag : Bool) : SlotMeans root (Prim.setInterruptible flag) (.restoreMask flag)
   | asyncFinalizer (name : EffName) : SlotMeans root (Prim.asyncFinalizer name) (.asyncFinalizer name)

@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, ParamDecl, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -269,6 +269,7 @@ const writeNativeOp = (w: Writer, v: NativeOp): void => {
     case "refModifyWith": return w.ctor(30, [() => writeTerm(w, v.f)])
     case "refModifySomeWith": return w.ctor(31, [() => writeTerm(w, v.f)])
     case "call": return w.ctor(32, [() => w.nat(v.index)])
+    case "param": return w.ctor(33, [() => w.nat(v.index)])
     default: throw new TypeError("wire NativeOp constructor")
   }
 }
@@ -328,8 +329,16 @@ export const defRoleWire = (v: DefRole): Uint8Array => {
   return w.finish(() => writeDefRole(w, v))
 }
 
+const writeParamDecl = (w: Writer, v: ParamDecl): void => {
+  w.ctor(0, [() => w.str(v.name), () => writeTy(w, v.request), () => writeTy(w, v.answer), () => writeTy(w, v.error)])
+}
+export const paramDeclWire = (v: ParamDecl): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeParamDecl(w, v))
+}
+
 const writeDefDecl = (w: Writer, v: DefDecl): void => {
-  w.ctor(0, [() => w.str(v.name), () => writeTy(w, v.request), () => writeTy(w, v.answer), () => writeTy(w, v.error), () => w.list(v.requires, (y) => writeServiceKey(w, y)), () => writeDefRole(w, v.role)])
+  w.ctor(0, [() => w.str(v.name), () => writeTy(w, v.request), () => writeTy(w, v.answer), () => writeTy(w, v.error), () => w.list(v.requires, (y) => writeServiceKey(w, y)), () => writeDefRole(w, v.role), () => w.list(v.params, (y) => writeParamDecl(w, y))])
 }
 export const defDeclWire = (v: DefDecl): Uint8Array => {
   const w = new Writer()
@@ -365,6 +374,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "iterate": return w.ctor(28, [() => w.option(v.cursorTy, (y) => writeTy(w, y)), () => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeTerm(w, v.result), () => writeEff(w, v.body)])
     case "restore": return w.ctor(29, [() => writeTerm(w, v.saved), () => writeEff(w, v.body)])
     case "defs": return w.ctor(30, [() => w.list(v.decls, (y) => writeDefDecl(w, y)), () => writeEffs(w, v.bodies), () => writeEff(w, v.main)])
+    case "invoke": return w.ctor(31, [() => w.nat(v.index), () => writeTerm(w, v.request), () => writeEffs(w, v.args)])
     default: throw new TypeError("wire Eff constructor")
   }
 }

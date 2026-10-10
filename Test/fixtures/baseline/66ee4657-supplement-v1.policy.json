@@ -116,7 +116,14 @@
     "service's initial program or one of its methods. The family `DefRole` is new, with `plain`",
     "(tag 0), `serviceInit` (tag 1) and `serviceMethod` (tag 2). Every program with a block takes",
     "new bytes, since the codec writes the role: the three block goldens migrate, and the golden",
-    "`pDefsService` is added. No old encoding is kept (the owner, row 339). No verdict moves."
+    "`pDefsService` is added. No old encoding is kept (the owner, row 339). No verdict moves.",
+    "",
+    "Definitions whose parameter is a program (2026-10-10, decisions row 340, slices HO-1 and",
+    "HO-2): `DefDecl.params` lists a definition's parameters, of the new family `ParamDecl`.",
+    "`NativeOp.param` (tag 33) runs one inside a body, and `Eff.invoke` (tag 31) passes one program",
+    "per parameter. Every program with a block takes new bytes, since the codec writes the list:",
+    "the four block goldens migrate, `pDefsService` among them, and `pInvoke`, `pIllInvokeArity`",
+    "and `pIllParamOutside` are added. No old encoding is kept. No verdict moves."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -150,7 +157,9 @@
     "Effect4.Program.RowArg.str",
     "Effect4.Program.DefRole.plain",
     "Effect4.Program.DefRole.serviceInit",
-    "Effect4.Program.DefRole.serviceMethod"
+    "Effect4.Program.DefRole.serviceMethod",
+    "Effect4.Program.NativeOp.param",
+    "Effect4.Program.Eff.invoke"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
@@ -171,7 +180,8 @@
     "Effect4.Program.Decision",
     "Effect4.Machine.Payload",
     "Effect4.Program.RowArg",
-    "Effect4.Program.DefRole"
+    "Effect4.Program.DefRole",
+    "Effect4.Program.ParamDecl"
   ],
   "family_retirements": [
     "Effect4.Machine.FnName"
@@ -266,7 +276,9 @@
     "eff/goldens/pDefsRec.bin",
     "eff/goldens/pDefsRec.json",
     "eff/goldens/pIllDefsBody.bin",
-    "eff/goldens/pIllDefsBody.json"
+    "eff/goldens/pIllDefsBody.json",
+    "eff/goldens/pDefsService.bin",
+    "eff/goldens/pDefsService.json"
   ],
   "verdict_moves": [
     "generated/corpus-index.tsv:g158",

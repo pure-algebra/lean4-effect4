@@ -504,6 +504,7 @@ let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   | Native_op_refModifyWith a0 -> Eff_frame.emit_ctor b 30 (fun b -> emit_term b a0)
   | Native_op_refModifySomeWith a0 -> Eff_frame.emit_ctor b 31 (fun b -> emit_term b a0)
   | Native_op_call a0 -> Eff_frame.emit_ctor b 32 (fun b -> Eff_frame.emit_nat b a0)
+  | Native_op_param a0 -> Eff_frame.emit_ctor b 33 (fun b -> Eff_frame.emit_nat b a0)
 
 let encode_native_op (v : native_op) : string = Eff_frame.to_string emit_native_op v
 
@@ -599,6 +600,11 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Native_op_call a0, next) else None)
+    | 33 ->
+      (match Eff_frame.decode_nat s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_param a0, next) else None)
     | _ -> None)
 
 let decode_native_op_exact (s : string) : native_op option = Eff_frame.exact decode_native_op s
@@ -730,8 +736,36 @@ let rec decode_def_role (s : string) (pos : int) (limit : int) : (def_role * int
 
 let decode_def_role_exact (s : string) : def_role option = Eff_frame.exact decode_def_role s
 
+let rec emit_param_decl (b : Buffer.t) (r : param_decl) : unit =
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.param_decl_name; emit_ty b r.param_decl_request; emit_ty b r.param_decl_answer; emit_ty b r.param_decl_error)
+
+let encode_param_decl (v : param_decl) : string = Eff_frame.to_string emit_param_decl v
+
+let rec decode_param_decl (s : string) (pos : int) (limit : int) : (param_decl * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_ty s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_ty s p e with
+           | None -> None
+           | Some (a2, p) ->
+            (match decode_ty s p e with
+             | None -> None
+             | Some (a3, p) ->
+              if p = e then Some ({ param_decl_name = a0; param_decl_request = a1; param_decl_answer = a2; param_decl_error = a3 }, next) else None))))
+    | _ -> None)
+
+let decode_param_decl_exact (s : string) : param_decl option = Eff_frame.exact decode_param_decl s
+
 let rec emit_def_decl (b : Buffer.t) (r : def_decl) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.def_decl_name; emit_ty b r.def_decl_request; emit_ty b r.def_decl_answer; emit_ty b r.def_decl_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.def_decl_requires; emit_def_role b r.def_decl_role)
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.def_decl_name; emit_ty b r.def_decl_request; emit_ty b r.def_decl_answer; emit_ty b r.def_decl_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.def_decl_requires; emit_def_role b r.def_decl_role; Eff_frame.emit_list b (fun b y -> emit_param_decl b y) r.def_decl_params)
 
 let encode_def_decl (v : def_decl) : string = Eff_frame.to_string emit_def_decl v
 
@@ -759,7 +793,10 @@ let rec decode_def_decl (s : string) (pos : int) (limit : int) : (def_decl * int
                 (match decode_def_role s p e with
                  | None -> None
                  | Some (a5, p) ->
-                  if p = e then Some ({ def_decl_name = a0; def_decl_request = a1; def_decl_answer = a2; def_decl_error = a3; def_decl_requires = a4; def_decl_role = a5 }, next) else None))))))
+                  (match (Eff_frame.decode_list decode_param_decl) s p e with
+                   | None -> None
+                   | Some (a6, p) ->
+                    if p = e then Some ({ def_decl_name = a0; def_decl_request = a1; def_decl_answer = a2; def_decl_error = a3; def_decl_requires = a4; def_decl_role = a5; def_decl_params = a6 }, next) else None)))))))
     | _ -> None)
 
 let decode_def_decl_exact (s : string) : def_decl option = Eff_frame.exact decode_def_decl s
@@ -793,6 +830,7 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
   | Eff_restore (a0, a1) -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0; emit_eff b a1)
   | Eff_defs (a0, a1, a2) -> Eff_frame.emit_ctor b 30 (fun b -> Eff_frame.emit_list b (fun b y -> emit_def_decl b y) a0; emit_effs b a1; emit_eff b a2)
+  | Eff_invoke (a0, a1, a2) -> Eff_frame.emit_ctor b 31 (fun b -> Eff_frame.emit_nat b a0; emit_term b a1; emit_effs b a2)
 and emit_stmt (b : Buffer.t) (v : stmt) : unit =
   match v with
   | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
@@ -1068,6 +1106,17 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
            | None -> None
            | Some (a2, p) ->
             if p = e then Some (Eff_defs (a0, a1, a2), next) else None)))
+    | 31 ->
+      (match Eff_frame.decode_nat s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_effs s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Eff_invoke (a0, a1, a2), next) else None)))
     | _ -> None)
 and decode_stmt (s : string) (pos : int) (limit : int) : (stmt * int) option =
   match Eff_frame.read_ctor s pos limit with

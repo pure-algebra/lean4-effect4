@@ -61,7 +61,7 @@ theorem draft_zero_not_straight : (Effects.Program.pure outsideExit : RProgram) 
   intro h
   cases h
 
-#guard compile pSucceed 0 = frontier ⟨[], [], 0, [], [], 0⟩
+#guard compile pSucceed 0 = frontier ⟨[], [], 0, [], [], 0, []⟩
 
 -- Async completion and a scoped fork can deliver failures through the caller's handlers.
 example : completionPrim (.ofExit (.failure (Cause.fail Err.boom))) =
@@ -76,7 +76,7 @@ def forkWithoutScope : NativeEff := .withFiber (.forkScoped pSucceed scopedChild
 #guard decide (FiberOp.yieldNow 0 = FiberOp.yieldNow 0) = true
 #guard decide (FiberOp.await ⟨1⟩ Supervision.ObserverMode.awaitValue =
   FiberOp.await ⟨1⟩ Supervision.ObserverMode.joinEffect) = false
-#guard decide (Body.at_ ⟨[], [], 0, [], [], 0⟩ = Body.raceCleanup 0) = false
+#guard decide (Body.at_ ⟨[], [], 0, [], [], 0, []⟩ = Body.raceCleanup 0) = false
 #guard decide (Body.fin (.release 1 false) (.success .unit) =
   Body.fin (.release 1 false) (.success .unit)) = true
 #guard decide (FiberOp.guard_ (.onExit false) = FiberOp.guard_ .onSuccess) = false
@@ -85,11 +85,11 @@ def forkWithoutScope : NativeEff := .withFiber (.forkScoped pSucceed scopedChild
 #guard (FiberOp.unguard (.failure (Cause.fail Err.boom))).defaultAnswer =
   .failure (Cause.fail Err.boom)
 #guard (FiberOp.finishFinalizer (.success (.nat 7))).defaultAnswer = .success (.nat 7)
-#guard (FiberOp.gen ⟨[], [], 0, [], [], 0⟩).defaultAnswer = .success .unit
-#guard (FiberOp.loop ⟨[], [], 0, [], [], 0⟩ (.nat 0)).defaultAnswer = .success .unit
-#guard decide (FiberOp.suspend ⟨[], [], 0, [], [], 0⟩ = FiberOp.sync .unit) = false
+#guard (FiberOp.gen ⟨[], [], 0, [], [], 0, []⟩).defaultAnswer = .success .unit
+#guard (FiberOp.loop ⟨[], [], 0, [], [], 0, []⟩ (.nat 0)).defaultAnswer = .success .unit
+#guard decide (FiberOp.suspend ⟨[], [], 0, [], [], 0, []⟩ = FiberOp.sync .unit) = false
 #guard FiberOp.construction.defaultAnswer = []
-#guard (FiberOp.scoped ⟨[], [], 0, [], [], 0⟩).defaultAnswer = .success .unit
+#guard (FiberOp.scoped ⟨[], [], 0, [], [], 0, []⟩).defaultAnswer = .success .unit
 #guard (FiberOp.scopeExit emptyCtx 0 (.failure (Cause.fail Err.boom))).defaultAnswer = .success .unit
 example : FiberOp.construction.answer = List (FiberId × ExitV) := rfl
 

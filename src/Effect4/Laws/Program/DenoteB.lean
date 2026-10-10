@@ -452,7 +452,7 @@ theorem denoteB_mono :
   | .provideLayer _ _ _, k, env, s, x, s', h | .service _, k, env, s, x, s', h
   | .provideService _ _ _, k, env, s, x, s', h
   | .catchIf _ _ _, k, env, s, x, s', h | .restore _ _, k, env, s, x, s', h
-  | .defs _ _ _, k, env, s, x, s', h => by
+  | .defs _ _ _, k, env, s, x, s', h | .invoke _ _ _, k, env, s, x, s', h => by
     unfold meaningB at h ⊢
     rw [denoteB_leaf k _ env rfl] at h
     rw [denoteB_leaf (k + 1) _ env rfl]

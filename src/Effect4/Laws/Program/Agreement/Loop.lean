@@ -267,7 +267,7 @@ theorem depthB_straight : ∀ (e : NativeEff), Straight e = true → depthB e = 
   | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
   | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _
-  | .defs _ _ _, _ => rfl
+  | .defs _ _ _, _ | .invoke _ _ _, _ => rfl
 
 /-- A bound on the local steps a program of the fragment takes at the budget `k`: `steps` with
 the loop's arm. A loop runs at most `k` rounds, so its bound is `k` bodies and their frame
@@ -319,7 +319,7 @@ theorem steps_le_boundB (k : Nat) : ∀ (e : NativeEff), Straight e = true → s
   | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
   | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _
-  | .defs _ _ _, _ => Nat.le_refl _
+  | .defs _ _ _, _ | .invoke _ _ _, _ => Nat.le_refl _
 
 theorem fuel_succB {e : NativeEff} {p : Point} (hd : depthB e ≤ p.fuel) :
     p.fuel = (p.fuel - 1) + 1 := by
@@ -388,7 +388,7 @@ theorem straight_of_asExit : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .acquireRelease _ _, _, _, hl, _ | .provideLayer _ _ _, _, _, hl, _
   | .service _, _, _, hl, _ | .provideService _ _ _, _, _, hl, _
   | .catchIf _ _ _, _, _, hl, _ | .restore _ _, _, _, hl, _
-  | .defs _ _ _, _, _, hl, _ => hl
+  | .defs _ _ _, _, _, hl, _ | .invoke _ _ _, _, _, hl, _ => hl
 
 /-- **The local run agrees with the budgeted meaning.** A program of `Looped` compiled at an
 address of the root, run by the local machine from any outer stack, reaches the fiber holding
@@ -812,7 +812,8 @@ theorem localRun_compileB (k : Nat) :
   | .provideService _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
   | .catchIf _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
   | .restore _ _, p, K, i, s, ex, s', hl, h, hd, hm
-  | .defs _ _ _, p, K, i, s, ex, s', hl, h, hd, hm =>
+  | .defs _ _ _, p, K, i, s, ex, s', hl, h, hd, hm
+  | .invoke _ _ _, p, K, i, s, ex, s', hl, h, hd, hm =>
     localRun_compileB_straight root k _ p K i s ex s' hl h hd hm
 
 /-- **At the root.** When the budgeted meaning of a `Looped` program finishes at the budget

@@ -45,5 +45,6 @@ def Straight : NativeEff → Bool
   | .iterate _ _ _ _ _ _ => false
   | .restore _ _ => false
   | .defs _ _ _ => false
+  | .invoke _ _ _ => false
 
 end Effect4.Program.Denote

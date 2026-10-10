@@ -1287,6 +1287,7 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   eff_iterate : (Option Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
   eff_restore : (Effect4.Program.Term) → R .eff → R .eff
   eff_defs : (List Effect4.Program.DefDecl) → R .effs → R .eff → R .eff
+  eff_invoke : (Nat) → (Effect4.Program.Term) → R .effs → R .eff
   stmt_bindYield : R .eff → R .stmt
   stmt_yieldDiscard : R .eff → R .stmt
   stmt_ret : (Effect4.Program.Term) → R .stmt
@@ -1358,6 +1359,7 @@ def cata_eff {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
   | .iterate a0 a1 a2 a3 a4 a5 => alg.eff_iterate a0 a1 a2 a3 a4 (cata_eff alg a5)
   | .restore a0 a1 => alg.eff_restore a0 (cata_eff alg a1)
   | .defs a0 a1 a2 => alg.eff_defs a0 (cata_effs alg a1) (cata_eff alg a2)
+  | .invoke a0 a1 a2 => alg.eff_invoke a0 a1 (cata_effs alg a2)
 termination_by structural node
 def cata_stmt {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
     (node : Effect4.Program.Stmt Op) : R .stmt :=
@@ -1459,6 +1461,7 @@ structure EffHom {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) whe
   h_eff_iterate : ∀ a0 a1 a2 a3 a4 a5, f_eff (.iterate a0 a1 a2 a3 a4 a5) = alg.eff_iterate a0 a1 a2 a3 a4 (f_eff a5)
   h_eff_restore : ∀ a0 a1, f_eff (.restore a0 a1) = alg.eff_restore a0 (f_eff a1)
   h_eff_defs : ∀ a0 a1 a2, f_eff (.defs a0 a1 a2) = alg.eff_defs a0 (f_effs a1) (f_eff a2)
+  h_eff_invoke : ∀ a0 a1 a2, f_eff (.invoke a0 a1 a2) = alg.eff_invoke a0 a1 (f_effs a2)
   h_stmt_bindYield : ∀ a0, f_stmt (.bindYield a0) = alg.stmt_bindYield (f_eff a0)
   h_stmt_yieldDiscard : ∀ a0, f_stmt (.yieldDiscard a0) = alg.stmt_yieldDiscard (f_eff a0)
   h_stmt_ret : ∀ a0, f_stmt (.ret a0) = alg.stmt_ret a0
@@ -1558,6 +1561,8 @@ theorem hom_eq_cata_eff {Op : Type} {R : EffFam → Type u}
     simp only [cata_eff, hom.h_eff_restore a0 a1, hom_eq_cata_eff hom a1]
   | .defs a0 a1 a2 =>
     simp only [cata_eff, hom.h_eff_defs a0 a1 a2, hom_eq_cata_effs hom a1, hom_eq_cata_eff hom a2]
+  | .invoke a0 a1 a2 =>
+    simp only [cata_eff, hom.h_eff_invoke a0 a1 a2, hom_eq_cata_effs hom a2]
 termination_by structural node
 theorem hom_eq_cata_stmt {Op : Type} {R : EffFam → Type u}
     {alg : EffAlgebra Op R} (hom : EffHom alg) (node : Effect4.Program.Stmt Op) :
@@ -1706,6 +1711,7 @@ def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
   eff_iterate a0 a1 a2 a3 a4 a5 := Effect4.Program.Eff.iterate a0 a1 a2 a3 a4 a5
   eff_restore a0 a1 := Effect4.Program.Eff.restore a0 a1
   eff_defs a0 a1 a2 := Effect4.Program.Eff.defs a0 a1 a2
+  eff_invoke a0 a1 a2 := Effect4.Program.Eff.invoke a0 a1 a2
   stmt_bindYield a0 := Effect4.Program.Stmt.bindYield a0
   stmt_yieldDiscard a0 := Effect4.Program.Stmt.yieldDiscard a0
   stmt_ret a0 := Effect4.Program.Stmt.ret a0
@@ -1830,6 +1836,9 @@ mutual
     rfl
   | .defs a0 a1 a2 =>
     simp only [cata_eff, cata_id_effs a1, cata_id_eff a2]
+    rfl
+  | .invoke a0 a1 a2 =>
+    simp only [cata_eff, cata_id_effs a2]
     rfl
 termination_by structural node
 @[simp] theorem cata_id_stmt {Op : Type} (node : Effect4.Program.Stmt Op) :
@@ -2039,6 +2048,8 @@ def foldMapAt_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : 
     op (f_eff (.restore a0 a1) p) ((foldMapAt_eff unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
   | .defs a0 a1 a2 =>
     op (f_eff (.defs a0 a1 a2) p) (op (foldMapAt_effs unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_eff unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .invoke a0 a1 a2 =>
+    op (f_eff (.invoke a0 a1 a2) p) ((foldMapAt_effs unit op (p ++ [0]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
 termination_by structural node
 def foldMapAt_stmt {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Stmt Op)
     (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
@@ -2202,6 +2213,8 @@ def foldMap_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node :
     op (f_eff (.restore a0 a1)) ((foldMap_eff unit op a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
   | .defs a0 a1 a2 =>
     op (f_eff (.defs a0 a1 a2)) (op (foldMap_effs unit op a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMap_eff unit op a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers)))
+  | .invoke a0 a1 a2 =>
+    op (f_eff (.invoke a0 a1 a2)) ((foldMap_effs unit op a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
 termination_by structural node
 def foldMap_stmt {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Stmt Op)
     (f_eff : Effect4.Program.Eff Op → M := fun _ => unit) (f_stmt : Effect4.Program.Stmt Op → M := fun _ => unit) (f_stmts : Effect4.Program.Stmts Op → M := fun _ => unit) (f_effs : Effect4.Program.Effs Op → M := fun _ => unit) (f_action : Effect4.Program.ActionTerm Op → M := fun _ => unit) (f_layer : Effect4.Program.LayerTerm Op → M := fun _ => unit) (f_layers : Effect4.Program.LayerTerms Op → M := fun _ => unit) : M :=
@@ -2335,6 +2348,7 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   eff_iterate : (Option Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → M (R .eff)
   eff_restore : (Effect4.Program.Term) → R .eff → M (R .eff)
   eff_defs : (List Effect4.Program.DefDecl) → R .effs → R .eff → M (R .eff)
+  eff_invoke : (Nat) → (Effect4.Program.Term) → R .effs → M (R .eff)
   stmt_bindYield : R .eff → M (R .stmt)
   stmt_yieldDiscard : R .eff → M (R .stmt)
   stmt_ret : (Effect4.Program.Term) → M (R .stmt)
@@ -2404,6 +2418,7 @@ def EffAlgebra.toM {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam →
   eff_iterate a0 a1 a2 a3 a4 a5 := pure (alg.eff_iterate a0 a1 a2 a3 a4 a5)
   eff_restore a0 a1 := pure (alg.eff_restore a0 a1)
   eff_defs a0 a1 a2 := pure (alg.eff_defs a0 a1 a2)
+  eff_invoke a0 a1 a2 := pure (alg.eff_invoke a0 a1 a2)
   stmt_bindYield a0 := pure (alg.stmt_bindYield a0)
   stmt_yieldDiscard a0 := pure (alg.stmt_yieldDiscard a0)
   stmt_ret a0 := pure (alg.stmt_ret a0)
@@ -2474,6 +2489,7 @@ def EffMAlgebra.map {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
   eff_iterate a0 a1 a2 a3 a4 a5 := φ (alg.eff_iterate a0 a1 a2 a3 a4 a5)
   eff_restore a0 a1 := φ (alg.eff_restore a0 a1)
   eff_defs a0 a1 a2 := φ (alg.eff_defs a0 a1 a2)
+  eff_invoke a0 a1 a2 := φ (alg.eff_invoke a0 a1 a2)
   stmt_bindYield a0 := φ (alg.stmt_bindYield a0)
   stmt_yieldDiscard a0 := φ (alg.stmt_yieldDiscard a0)
   stmt_ret a0 := φ (alg.stmt_ret a0)
@@ -2592,6 +2608,9 @@ def EffMAlgebra.toSeq {Op : Type} {M : Type u → Type v} [Monad M]
     let x1 ← a1
     let x2 ← a2
     alg.eff_defs a0 x1 x2
+  eff_invoke a0 a1 a2 := do
+    let x2 ← a2
+    alg.eff_invoke a0 a1 x2
   stmt_bindYield a0 := do
     let x0 ← a0
     alg.stmt_bindYield x0
@@ -2756,6 +2775,9 @@ def foldM_eff {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type
       let x1 ← foldM_effs alg a1
       let x2 ← foldM_eff alg a2
       alg.eff_defs a0 x1 x2
+  | .invoke a0 a1 a2 => do
+      let x2 ← foldM_effs alg a2
+      alg.eff_invoke a0 a1 x2
 termination_by structural node
 def foldM_stmt {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type u}
     (alg : EffMAlgebra Op M R) (node : Effect4.Program.Stmt Op) : M (R .stmt) :=
@@ -2926,6 +2948,8 @@ theorem foldM_eq_cata_eff {Op : Type} {M : Type u → Type v} [Monad M]
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_eff alg a1]
   | .defs a0 a1 a2 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a1, foldM_eq_cata_eff alg a2]
+  | .invoke a0 a1 a2 =>
+    simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a2]
 termination_by structural node
 theorem foldM_eq_cata_stmt {Op : Type} {M : Type u → Type v} [Monad M]
     {R : EffFam → Type u} (alg : EffMAlgebra Op M R) (node : Effect4.Program.Stmt Op) :
@@ -3139,6 +3163,8 @@ theorem foldM_natural_eff {Op : Type} {M : Type u → Type v} {N : Type u → Ty
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_eff φ alg a1]
   | .defs a0 a1 a2 =>
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a1, foldM_natural_eff φ alg a2]
+  | .invoke a0 a1 a2 =>
+    simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a2]
 termination_by structural node
 theorem foldM_natural_stmt {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
     [Monad M] [Monad N] {R : EffFam → Type u} (φ : MonadMorphism M N)
@@ -3293,6 +3319,7 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   eff_iterate : (Option Effect4.Program.Ty) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → (Effect4.Program.Term) → R .eff → R .eff
   eff_restore : (Effect4.Program.Term) → R .eff → R .eff
   eff_defs : (List Effect4.Program.DefDecl) → R .effs → R .eff → R .eff
+  eff_invoke : (Nat) → (Effect4.Program.Term) → R .effs → R .eff
   stmt_bindYield : R .eff → R .stmt
   stmt_yieldDiscard : R .eff → R .stmt
   stmt_ret : (Effect4.Program.Term) → R .stmt
@@ -3352,6 +3379,7 @@ def cata_frontier_eff {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFron
   | .iterate a0 a1 a2 a3 a4 a5 => alg.eff_iterate a0 a1 a2 a3 a4 (cata_frontier_eff alg a5)
   | .restore a0 a1 => alg.eff_restore a0 (cata_frontier_eff alg a1)
   | .defs a0 a1 a2 => alg.eff_defs a0 (cata_frontier_effs alg a1) (cata_frontier_eff alg a2)
+  | .invoke a0 a1 a2 => alg.eff_invoke a0 a1 (cata_frontier_effs alg a2)
 termination_by structural node
 def cata_frontier_stmt {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFrontierAlgebra Op R)
     (node : Effect4.Program.Stmt Op) : R .stmt :=
@@ -3438,6 +3466,7 @@ def frontierMap {Op : Type} [Effect4.Program.ScopedOp Op] (g : Effect4.Program.T
   eff_iterate a0 a1 a2 a3 a4 a5 := .iterate a0 (g a1) (g a2) (g a3) (g a4) a5
   eff_restore a0 a1 := .restore (g a0) a1
   eff_defs a0 a1 a2 := .defs a0 a1 a2
+  eff_invoke a0 a1 a2 := .invoke a0 (g a1) a2
   stmt_bindYield a0 := .bindYield a0
   stmt_yieldDiscard a0 := .yieldDiscard a0
   stmt_ret a0 := .ret (g a0)
@@ -3499,6 +3528,7 @@ def Eff.weaken {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : Effect4.P
   | .iterate a0 a1 a2 a3 a4 a5 => .iterate a0 (Effect4.Program.Term.weaken cut a1) (Effect4.Program.Term.weaken cut a2) (Effect4.Program.Term.weaken cut a3) (Effect4.Program.Term.weaken cut a4) (Eff.weaken cut a5)
   | .restore a0 a1 => .restore (Effect4.Program.Term.weaken cut a0) (Eff.weaken cut a1)
   | .defs a0 a1 a2 => .defs a0 (Effs.weaken cut a1) (Eff.weaken cut a2)
+  | .invoke a0 a1 a2 => .invoke a0 (Effect4.Program.Term.weaken cut a1) (Effs.weaken cut a2)
 def Stmt.weaken {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : Effect4.Program.Stmt Op → Effect4.Program.Stmt Op
   | .bindYield a0 => .bindYield (Eff.weaken cut a0)
   | .yieldDiscard a0 => .yieldDiscard (Eff.weaken cut a0)
@@ -3590,6 +3620,8 @@ theorem weaken_eq_cata_eff {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat)
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a1]
   | .defs a0 a1 a2 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_effs cut a1, weaken_eq_cata_eff cut a2]
+  | .invoke a0 a1 a2 =>
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_effs cut a2]
 termination_by structural node
 theorem weaken_eq_cata_stmt {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) (node : Effect4.Program.Stmt Op) :
     Effect4.Program.Stmt.weaken cut node = cata_frontier_stmt (weakenAlg cut) node := by
@@ -3799,6 +3831,7 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   eff_iterate _ _ _ _ _ x5 := s.acc s.atEff [x5]
   eff_restore _ x1 := s.acc s.atEff [x1]
   eff_defs _ x1 x2 := s.acc s.atEff [x1, x2]
+  eff_invoke _ _ x2 := s.acc s.atEff [x2]
   stmt_bindYield x0 := s.acc s.atStmt [x0]
   stmt_yieldDiscard x0 := s.acc s.atStmt [x0]
   stmt_ret _ := s.acc s.atStmt []

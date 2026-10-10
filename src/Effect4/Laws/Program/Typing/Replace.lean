@@ -99,8 +99,9 @@ inductive NodeTy (Op : Type) where
   | stmts (env : TyEnv) (inLoop : Bool) (g : GenTy)
   /-- a statement: the index of the list that it heads, and that list's tail -/
   | stmt (env : TyEnv) (inLoop : Bool) (tail : Stmts Op) (g : GenTy)
-  /-- the entrants of a race -/
-  | effs (env : TyEnv) (t : EffTy)
+  /-- a spine of programs: a race's entrants (`none`), or an invocation's programs at their
+  slots (`some qs`, decisions row 340) -/
+  | effs (env : TyEnv) (slots : Option (List ParamDecl)) (t : EffTy)
   /-- a fiber action -/
   | action (env : TyEnv) (t : EffTy)
   /-- a layer -/
@@ -115,7 +116,8 @@ def NodeTy.env : NodeTy Op → NodeEnv
   | .eff env _ => .env env
   | .stmts env inLoop _ => .body env inLoop
   | .stmt env inLoop _ _ => .body env inLoop
-  | .effs env _ => .env env
+  | .effs env none _ => .env env
+  | .effs env (some qs) _ => NodeEnv.spine env qs
   | .action env _ => .env env
   | .layer _ => .closed
   | .layers _ => .closed
@@ -132,7 +134,12 @@ inductive NodeHasTy (s : Signature Op) : Node Op → NodeTy Op → Prop where
       StmtsHasTy s env inLoop (.cons st tail) g →
       NodeHasTy s (.stmt st) (.stmt env inLoop tail g)
   | effs {env : TyEnv} {es : Effs Op} {t : EffTy} :
-      EffsHasTy s env es t → NodeHasTy s (.effs es) (.effs env t)
+      EffsHasTy s env [] es t → NodeHasTy s (.effs es) (.effs env none t)
+  /-- an invocation's programs (decisions row 340): one for each slot, as the invocation's rule
+  requires, so a spine that replaces them keeps their number -/
+  | spine {env : TyEnv} {qs : List ParamDecl} {es : Effs Op} {t : EffTy} :
+      EffsHasTy s env qs es t → qs.length = es.toList.length →
+      NodeHasTy s (.effs es) (.effs env (some qs) t)
   | action {env : TyEnv} {a : ActionTerm Op} {t : EffTy} :
       ActionHasTy s env a t → NodeHasTy s (.action a) (.action env t)
   | layer {l : LayerTerm Op} {L : LayerTy} :
@@ -178,6 +185,18 @@ earlier sibling. -/
 theorem effTy_map_of_hasTy {α : Type} {s : Signature Op} {env : TyEnv} {e : Eff Op} {t : EffTy}
     (h : HasTy s env e t) (g : EffTy → α) : (effTy s env e).map g = some (g t) :=
   Option.map_eq_some_iff.mpr ⟨t, effTy_complete s e env t h, rfl⟩
+
+/-- **A spine that holds a program is not empty.** A step of `NodeHasTy.child_step`'s arm past an
+invocation's last slot (decisions row 340). -/
+theorem Effs.length_pos_of_at_eff {es : Effs Op}
+    (h : ∃ rest q, (Node.effs es).at_ rest = some (.eff q)) : es.toList.length ≠ 0 := by
+  obtain ⟨r, q, hr⟩ := h
+  cases es with
+  | nil =>
+    cases r with
+    | nil => cases hr
+    | cons i r => simp only [Node.at_, Node.child, Option.bind_none, reduceCtorEq] at hr
+  | cons _ _ => simp only [Effs.toList, List.length_cons]; exact Nat.succ_ne_zero _
 
 /-- **One step of the law.** A typed node's child that leads to a program is typed, at the
 environment that the step function answers (`Node.childEnv`). A node of the child's type stands
@@ -336,6 +355,16 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
   -- eff (.defs _ a1 _), 0 and eff (.defs _ _ a2), 1: no rule types a block below the root
   · cases hn with | eff hp => cases hp
   · cases hn with | eff hp => cases hp
+  -- eff (.invoke _ _ a2), 0: the programs at the definition's parameters (decisions row 340)
+  · cases hn with | eff hp => cases hp with | @invoke _ _ _ _ d _ _ _ hd hne hlen hreq hrow ha =>
+    refine ⟨_, .spine ha hlen, ?_, fun h hc' hs => by
+      cases hc' with | spine hx hlen' =>
+        cases hs
+        exact .eff (.invoke (h.defOf _ _ hd) hne hlen' ((h.termTy _ _).trans hreq) hrow hx)⟩
+    cases hp : d.params with
+    | nil => rw [hp] at hne; cases hne
+    | cons q qs => simp only [Node.childEnv, hd, hp, Option.bind_some, NodeEnv.tyEnv, NodeTy.env,
+        NodeEnv.spine]
   -- action (.fork a0 _), 0
   · cases hn with | action ha => cases ha with | fork options hp =>
     exact ⟨_, .eff hp, rfl, fun _ hc' hs => by
@@ -458,14 +487,36 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
     exact ⟨_, .stmts hb, rfl, fun h hc' hs => by
       cases hc' with | stmts hx =>
         cases hs; exact .stmt (.whileTrue hx (stmtsHasTy_ext h hr) hg)⟩
-  -- effs (.cons a0 _), 0
-  · cases hn with | effs he => cases he with | cons hh ht hj =>
-    exact ⟨_, .eff hh, rfl, fun h hc' hs => by
-      cases hc' with | eff hx => cases hs; exact .effs (.cons hx (effsHasTy_ext h ht) hj)⟩
-  -- effs (.cons _ a1), 1
-  · cases hn with | effs he => cases he with | cons hh ht hj =>
-    exact ⟨_, .effs ht, rfl, fun h hc' hs => by
-      cases hc' with | effs hx => cases hs; exact .effs (.cons (hasTy_ext h hh) hx hj)⟩
+  -- effs (.cons a0 _), 0: an entrant at the spine's variables, or a program at its slot's
+  · cases hn with
+    | effs he => cases he with | cons hh ht hj =>
+      exact ⟨_, .eff hh, rfl, fun h hc' hs => by
+        cases hc' with | eff hx => cases hs; exact .effs (.cons hx (effsHasTy_ext h ht) hj)⟩
+    | spine he hlen => cases he with
+      | cons _ _ _ => exact absurd hlen (Nat.zero_ne_add_one _)
+      | slot hh hadm ht hj =>
+        exact ⟨_, .eff hh, rfl, fun h hc' hs => by
+          cases hc' with | eff hx =>
+            cases hs; exact .spine (.slot hx hadm (effsHasTy_ext h ht) hj) hlen⟩
+  -- effs (.cons _ a1), 1: the rest of the entrants, or the programs at the later slots
+  · cases hn with
+    | effs he => cases he with | cons hh ht hj =>
+      exact ⟨_, .effs ht, rfl, fun h hc' hs => by
+        cases hc' with | effs hx => cases hs; exact .effs (.cons (hasTy_ext h hh) hx hj)⟩
+    | spine he hlen => cases he with
+      | cons _ _ _ => exact absurd hlen (Nat.zero_ne_add_one _)
+      | @slot _ q qs _ _ _ _ _ hh hadm ht hj =>
+        cases qs with
+        -- past the last slot the spine is empty, and holds no program
+        | nil =>
+          have hpos := Effs.length_pos_of_at_eff hlead
+          simp only [List.length_cons, List.length_nil, Effs.toList] at hlen
+          exact (hpos (by omega)).elim
+        | cons q' qs' =>
+          exact ⟨_, .spine ht (Nat.add_right_cancel hlen), rfl, fun h hc' hs => by
+            cases hc' with | spine hx hlen' =>
+              cases hs
+              exact .spine (.slot (hasTy_ext h hh) hadm hx hj) (congrArg (· + 1) hlen')⟩
   -- layers (.cons a0 _), 0
   · cases hn with | layers hl =>
     cases hl with
@@ -571,11 +622,11 @@ theorem stmtsHasTy_replace {s : Signature Op} {env0 : TyEnv} {inLoop : Bool} {b 
 /-- The replacement law, at the entrants of a race. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem effsHasTy_replace {s : Signature Op} {env0 : TyEnv} {es : Effs Op} {q : Eff Op}
-    {T : EffTy} {path : List Nat} (he : EffsHasTy s env0 es T)
+    {T : EffTy} {path : List Nat} (he : EffsHasTy s env0 [] es T)
     (hat : (Node.effs es).at_ path = some (.eff q)) :
     ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
       ∀ {s' : Signature Op} {q' : Eff Op} {es' : Effs Op}, SigExtends s s' → HasTy s' env q' t →
-        (Node.effs es).replaceAt path (.eff q') = some (.effs es') → EffsHasTy s' env0 es' T := by
+        (Node.effs es).replaceAt path (.eff q') = some (.effs es') → EffsHasTy s' env0 [] es' T := by
   obtain ⟨env, t, hq, hfill⟩ := NodeHasTy.replace path (.effs he) hat
   exact ⟨env, t, hq, fun hext hq' hrep => by cases hfill hext hq' hrep with | effs h => exact h⟩
 

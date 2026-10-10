@@ -18,6 +18,7 @@
     "Effect4.ServiceKey",
     "Effect4.Program.Decision",
     "Effect4.Program.DefRole",
+    "Effect4.Program.ParamDecl",
     "Effect4.Program.DefDecl",
     "Effect4.Program.Eff",
     "Effect4.Program.Stmt",

@@ -42,6 +42,7 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | suspend b => rw [denoteR_suspend root b p hpos]; rfl
       | defs d bs m =>
         rw [denoteR_defs (root := root) (p := p) d bs m hpos, prepareR_denoteR root m (p.child 1) completed]
+      | invoke k r args => rw [denoteR_invoke (root := root) (p := p) k r args hpos]; rfl
       | perform op r =>
         by_cases hk : (NativeOp.row op).kind = .sync
         · rw [denoteR_perform_sync root op r hpos hk]
@@ -49,8 +50,11 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
         · cases op with
           -- an invocation: one counted suspension, as a source `suspend`
           | call i => rw [denoteR_perform root (.call i) r hpos]; rfl
+          -- a parameter's run (decisions row 340): one counted suspension, as an invocation
+          | param i => rw [denoteR_perform root (.param i) r hpos]; rfl
           | _ =>
-            rw [denoteR_perform_nonsync root _ r hpos hk (fun _ hi => nomatch hi)]
+            rw [denoteR_perform_nonsync root _ r hpos hk (fun _ hi => nomatch hi)
+              (fun _ hi => nomatch hi)]
             exact prepareR_denoteAsyncRoute _ r p completed
       | bind a b =>
         rw [denoteR_bind root a b p hpos, prepareR_guardR_bind,

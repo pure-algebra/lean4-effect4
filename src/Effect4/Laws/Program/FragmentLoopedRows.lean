@@ -43,5 +43,6 @@ def LoopedRows : NativeEff → Bool
   | .iterate _ _ _ _ _ a5 => LoopedRows a5
   | .restore _ _ => false
   | .defs _ _ _ => false
+  | .invoke _ _ _ => false
 
 end Effect4.Program.Denote

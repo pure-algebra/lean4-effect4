@@ -50,6 +50,10 @@ theorem compileEff_perform_eq_asyncRoute (op : NativeOp) (r : Term) (p : Point) 
     rcases h with ⟨_, hi⟩ | hk
     · cases hi
     · cases hk
+  | param i =>
+    rcases h with ⟨_, hi⟩ | hk
+    · cases hi
+    · cases hk
   | _ => simp [NativeOp.row] at h
 
 /-! ## The table check and the registration lookup -/

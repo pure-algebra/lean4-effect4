@@ -163,6 +163,7 @@ theorem Straight.perform_sync {op : NativeOp} {r : Term} (h : Straight (.perform
   cases op with
   | external _ => contradiction
   | call _ => contradiction
+  | param _ => contradiction
   | sleep => contradiction
   | deferredAwait => contradiction
   | scopeMake strategy => cases strategy <;> rfl

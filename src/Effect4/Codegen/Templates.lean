@@ -190,6 +190,8 @@ def effRows : List Row :=
   , ⟨.eff, "restore", [], .tpl (call "pipe" [h 1, h 0])⟩
   -- a definition block (decisions row 328): refused by name until slice PROC-3 prints the block
   , ⟨.eff, "defs", [], .refuse "defs"⟩
+  -- an invocation with programs (decisions row 340): refused by name until slice HO-3 prints it
+  , ⟨.eff, "invoke", [], .refuse "invoke"⟩
   , ⟨.eff, "gen", [], .tpl (call genHead [.generator (.hole 0)])⟩
   , ⟨.eff, "withFiber", [], .tpl (h 0)⟩
   , ⟨.eff, "perform", [], .rowCall⟩ ]
