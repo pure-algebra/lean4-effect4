@@ -271,7 +271,8 @@ partial def effV : Eff NativeOp → V
   | .service k => .ctor ``Eff.service [keyV k]
   | .provideService k v b => .ctor ``Eff.provideService [keyV k, termV v, effV b]
   | .restore s b => .ctor ``Eff.restore [termV s, effV b]
-  | .defs decls bodies main => .ctor ``Eff.defs [.list (decls.map defDeclV), effsV bodies, effV main]
+  | .defs decls bodies main ls =>
+    .ctor ``Eff.defs [.list (decls.map defDeclV), effsV bodies, effV main, layersV ls]
   | .invoke k r args => .ctor ``Eff.invoke [.nat k, termV r, effsV args]
 partial def layerV : LayerTerm NativeOp → V
   | .succeed k v => .ctor ``LayerTerm.succeed [keyV k, litV v]
@@ -620,14 +621,15 @@ The verdict is the whole module's check (`Checker.checkModule`). -/
 /-- `id : number → number`. -/
 def idDecl : DefDecl := { name := "id", request := .nat, answer := .nat }
 /-- The block and an invocation of its definition at `5`. -/
-def pDefs : P := .defs [idDecl] (.cons (.succeed (v 0)) .nil) (.perform (.call 0) (n 5))
+def pDefs : P := .defs [idDecl] (.cons (.succeed (v 0)) .nil) (.perform (.call 0) (n 5)) .nil
 /-- A definition that invokes itself: typed by its declaration, never by its body. -/
 def pDefsRec : P :=
   .defs [{ idDecl with name := "spin" }] (.cons (.perform (.call 0) (v 0)) .nil)
-    (.perform (.call 0) (n 1))
+    (.perform (.call 0) (n 1)) .nil
 
 -- ill-typed: a body above its declaration, and an invocation outside any block
 def pIllDefsBody : P := .defs [idDecl] (.cons (.succeed (.lit (.str "a"))) .nil) (.perform (.call 0) (n 5))
+    .nil
 def pIllCallOutside : P := .perform (.call 0) (n 5)
 
 /-- A block that declares a service (decisions row 339): `make` is its initial program and `get`
@@ -636,7 +638,13 @@ def pDefsService : P :=
   .defs [{ name := "make", request := .unit, answer := .nat, role := .serviceInit "Counter" },
          { idDecl with name := "get", role := .serviceMethod "Counter" "get" 0 }]
     (.cons (.succeed (n 5)) (.cons (.succeed (v 0)) .nil))
-    (.bind (.perform (.call 0) u) (.perform (.call 1) (v 0)))
+    (.bind (.perform (.call 0) u) (.perform (.call 1) (v 0))) .nil
+
+/-- A block with one module layer, which the main program names (decisions row 341, step 2): the
+reference hops into the block's layers child. -/
+def pDefsLayers : P :=
+  .defs [idDecl] (.cons (.succeed (v 0)) .nil)
+    (.provideLayer (.ref [2, 0]) false (.service kA)) (ls [.effect kA (.succeed (n 7))])
 
 /-! A definition whose parameter is a program (decisions row 340): the call passes the program,
 which the body runs at its request. -/
@@ -650,10 +658,10 @@ def twiceBody : P := .bind (.perform (.param 0) (v 0)) (.perform (.param 0) (v 1
 /-- `twice(5, (a) => succeed(succ(a)))`: it answers 7. -/
 def pInvoke : P :=
   .defs [twiceDecl] (.cons twiceBody .nil)
-    (.invoke 0 (n 5) (.cons (.succeed (.app "succ" (ts [v 0]))) .nil))
+    (.invoke 0 (n 5) (.cons (.succeed (.app "succ" (ts [v 0]))) .nil)) .nil
 
 -- ill-typed: an invocation that passes no program, and a parameter's run outside any body
-def pIllInvokeArity : P := .defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (n 5) .nil)
+def pIllInvokeArity : P := .defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (n 5) .nil) .nil
 def pIllParamOutside : P := .perform (.param 0) (n 5)
 
 def corpus : List (String × P) :=
@@ -686,7 +694,7 @@ def corpus : List (String × P) :=
   , ("pMask", pMask), ("pMaskNested", pMaskNested), ("pMaskEscape", pMaskEscape)
   , ("pIllRestoreBool", pIllRestoreBool), ("pIllMaskAsBool", pIllMaskAsBool)
   , ("pDefs", pDefs), ("pDefsRec", pDefsRec), ("pIllDefsBody", pIllDefsBody)
-  , ("pIllCallOutside", pIllCallOutside), ("pDefsService", pDefsService)
+  , ("pIllCallOutside", pIllCallOutside), ("pDefsService", pDefsService), ("pDefsLayers", pDefsLayers)
   , ("pInvoke", pInvoke), ("pIllInvokeArity", pIllInvokeArity)
   , ("pIllParamOutside", pIllParamOutside) ]
 

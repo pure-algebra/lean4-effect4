@@ -133,6 +133,36 @@ then agrees with, so a shared entry has one set of columns.
 - The reader reads the identifier in a body back as the reference.
 - `elaborateModule` places each shared layer at module level and turns every use into a reference.
 
+### 4.5 As landed: step 2a
+
+Step 2 lands in two parts. Part 2a is the syntax, the rule, the expansion bound, the typing and
+the run. Part 2b is the print, the read and the authoring placement of 4.4. Until 2b the printer
+refuses a block with module layers by name (`internalAction "defs:layers"`, `printModule`).
+
+Three points differ from 4.1 to 4.3:
+
+- **A reference into the module names a whole module layer.** The target is the head of the
+  spine's element, `2 :: 1 … 1 0` (`Path.spineHead`). A piece inside a module layer has no
+  name, as a sub-expression of a module-level `const` has none. The refusal is `otherScope`.
+- **The order is `Eff.refBefore`** (`Program/Refs.lean`), with the module test `Eff.inModule`.
+  It is a strict order (`Eff.refBefore_irrefl`, `Eff.refBefore_trans`,
+  `Laws/Program/PathOrder.lean`). The expansion's budget ranks by it (`Path.rankBy`).
+- **The typing needs no address lemma.** The load discharges a third formation fact,
+  `ModuleLayersTyped` (`Typed/Admission.lean`), from the module check
+  (`moduleLayersTyped_of_typeOf`). The hop's point is typed by the extension lemma
+  `checkLayer_ext`: the module's check at the source signature, extended to the site's, answers
+  the site's type (`layerPointTyped_redirect_module`, `Typed/LayerArm.lean`).
+
+The scope rule as a table:
+
+| Site | Target | Rule |
+| --- | --- | --- |
+| any | a whole module layer | admitted; within the module, the target comes first |
+| any | a piece inside a module layer | `otherScope` |
+| body `k` or the main program | a layer of the same scope | admitted when it comes first |
+| a module layer | a layer of a body or the main program | `notBefore`: the module's layers come first |
+| body `k` or the main program | a layer of another body, or of the main program | `notBefore` when it comes after the site in program order, else `otherScope` |
+
 ## 5. Step 3: a body's layers, one build per call
 
 ### 5.1 The key

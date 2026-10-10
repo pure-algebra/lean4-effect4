@@ -17,7 +17,9 @@ Readers and finite evaluations of the edit session (`src/Effect4/Program/Edit.le
     program alike, each edit below the root splices;
   - at a sketch with one hole, the hole filled at its declared type;
   - omissions at the focus's exact type, at the sketch battery's program and at every typed
-    address of the client's program.
+    address of the client's program;
+  - at a block with one module layer (decisions row 341, step 2), an edit inside the layer's
+    program that keeps its type, and one that changes it.
 * **Reader.** The undo law at the real session.
 -/
 
@@ -96,6 +98,24 @@ def omitExact (l : EditSession) (a : List Nat) : Option Edit :=
   let results : List (List Nat × Edit.Delta) := (Node.addresses (.eff s.program)).filterMap fun a =>
     if a = [] then none else (omitExact l a).map fun e => (a, (l.feed e).2)
   (results.length, (results.filter fun r => (shownOf r.2).isSome).length)) = some (103, 103)
+
+/-- A block with one module layer (decisions row 341, step 2): `Layer.effect` of a service whose
+program is `succeed 7`, at the block's layers child `[2, 0]`; its program is at `[2, 0, 0]`. -/
+def moduleLayered : Sketch :=
+  { program := .defs [{ name := "d", request := .nat, answer := .nat }] (.cons (.succeed (.var 0)) .nil)
+      (.succeed (.lit (.nat 1))) (.cons (.effect ⟨⟨4⟩, ⟨4⟩⟩ (.succeed (.lit (.nat 7)))) .nil) }
+
+/-- The session opened on the block with a module layer. -/
+def layered : EditSession := EditSession.open {} moduleLayered
+
+-- finite evaluation: after the main program's entries, the table holds the module's spine, its
+-- layer and the layer's program at their source paths, and the module is admitted
+#guard ((layered.table.map (·.path)).drop 5, layered.view.type.isSome,
+  layered.view.refusals.length) = ([[2], [2, 0], [2, 0, 0], [2, 1]], true, 0)
+-- finite evaluation: an edit inside the module layer's program that keeps its type splices
+-- there, and one that changes it checks the table again
+#guard (shownOf (layered.feed (.fill [2, 0, 0] (.succeed (.lit (.nat 8))))).2,
+  (layered.feed (.fill [2, 0, 0] (.succeed (.lit (.str "x"))))).2) = (some [[2, 0, 0]], .rechecked)
 
 -- reader: the undo law at the opened session; both premises are evaluations of the lens
 example : ((opened.feed keep).1.feed (.fill [0] (.succeed (.lit (.nat 5))))).1 = opened :=

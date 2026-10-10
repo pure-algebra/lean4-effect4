@@ -2178,9 +2178,11 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
           return [atLayer(e.layer, (layer) => kEff({ ...e, layer })), atEff(e.body, (body) => kEff({ ...e, body }))]
         case "provideService": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "restore": return [atEff(e.body, (body) => kEff({ ...e, body }))]
-        // a definition block (decisions row 328): its bodies' spine is child 0, its main program child 1
+        // a definition block (decisions row 328): its bodies' spine is child 0, its main program
+        // child 1, the module's layers' spine child 2 (decisions row 341)
         case "defs":
-          return [atEffs(e.bodies, (bodies) => kEff({ ...e, bodies })), atEff(e.main, (main) => kEff({ ...e, main }))]
+          return [atEffs(e.bodies, (bodies) => kEff({ ...e, bodies })), atEff(e.main, (main) => kEff({ ...e, main })),
+            atLayers(e.layers, (layers) => kEff({ ...e, layers }))]
         // an invocation with programs (decisions row 340): its programs' spine is child 0
         case "invoke": return [atEffs(e.args, (args) => kEff({ ...e, args }))]
         case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": case "service":

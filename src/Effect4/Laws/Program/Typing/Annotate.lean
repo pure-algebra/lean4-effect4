@@ -411,11 +411,11 @@ theorem Annotate.check_eq (s : Signature Op) (e : Eff Op) (env : TyEnv) (p : Lis
     simp only [Option.bind_some, Node.childEnv, NodeEnv.tyEnv, List.append_nil]
     rfl
   -- a definition block: the checker refuses at the node, and no child is reached
-  | .defs decls bodies main => by
+  | .defs decls bodies main layers => by
     rw [tableAt_eq_cons]
     simp only [Annotate.check, nodeAnswer, childTableAt]
     conv in (occs := *) Node.child _ _ => all_goals whnf
-    simp only [Option.bind_some, Node.childEnv, tableAt_none, List.append_nil]
+    simp only [Option.bind_some, Node.childEnv, tableAt_none]
     rfl
   | .provideLayer layer _ body => by
     rw [tableAt_eq_cons]

@@ -272,7 +272,7 @@ mutual
       else throw ⟨p, .maskRestoreExpected s⟩
     -- A definition block is typed at the root of the whole program (`checkModule`,
     -- `Program/Definitions.lean`), never structurally (decisions row 328).
-    | .defs _ _ _ => throw ⟨p, .definitionBlock⟩
+    | .defs _ _ _ _ => throw ⟨p, .definitionBlock⟩
     -- an invocation with programs (decisions row 340): the request by the definition's row, as a
     -- `perform` of its call; each program at its parameter, over the caller's environment
     -- extended by the parameter's request; the call's requirements and the programs'

@@ -20,7 +20,10 @@ written as real programs.
   with no block: a reference inside its own target, a forward reference, a target that is a
   reference, and a missing target. Each fails `Eff.layerRefsWF`, at its own fault
   (`Eff.refFault`), and the facade refuses it at the reference's site. Two block programs read
-  the fifth fault, a target in another scope (decisions row 341), and its green twin.
+  the fifth fault, a target in another scope (decisions row 341), and its green twin. Five more
+  read the module's layers (decisions row 341, step 2): the main program, a body and a later
+  module layer name a module layer, and they type and run; a module layer that names the main
+  program's layer, and a reference to a piece inside a module layer, are refused.
 - The two consumers are applied without the premise that they carried
   (`typeOfProgram_expandRefs`, `checkTypedProgram_of_hasTy`), and the checker's equation is
   evaluated (`typeOfProgram_eq_if_refsWF`). One red control drops the premise that
@@ -95,13 +98,41 @@ def missing : NativeEff := around (.merge leaf (.ref [0, 0, 5]))
 def otherScope : NativeEff :=
   .defs [{ name := "d", request := .unit, answer := .nat }]
     (.cons (.provideLayer leaf false (.service key)) .nil)
-    (.provideLayer (.ref [0, 0, 0]) false (.service key))
+    (.provideLayer (.ref [0, 0, 0]) false (.service key)) .nil
 
 /-- Green twin: the reference names a layer of its own body. -/
 def sameScope : NativeEff :=
   .defs [{ name := "d", request := .unit, answer := .nat }]
     (.cons (.provideLayer leaf false (.provideLayer (.ref [0, 0, 0]) false (.service key))) .nil)
-    (.succeed (.lit (.nat 1)))
+    (.succeed (.lit (.nat 1))) .nil
+
+/-- A definition that the module programs declare. -/
+def moduleDecl : DefDecl := { name := "d", request := .nat, answer := .nat }
+
+/-- Green: the main program names the module's one layer, at `[2, 0]`. -/
+def mainToModule : NativeEff :=
+  .defs [moduleDecl] (.cons (.succeed (.var 0)) .nil)
+    (.provideLayer (.ref [2, 0]) false (.service key)) (.cons leaf .nil)
+
+/-- Green: a body names the module's layer, and the main program invokes the body. -/
+def bodyToModule : NativeEff :=
+  .defs [moduleDecl] (.cons (.provideLayer (.ref [2, 0]) false (.service key)) .nil)
+    (.perform (.call 0) (.lit (.nat 0))) (.cons leaf .nil)
+
+/-- Green: the second module layer names the first, and the main program names the second. -/
+def moduleChain : NativeEff :=
+  .defs [moduleDecl] (.cons (.succeed (.var 0)) .nil)
+    (.provideLayer (.ref [2, 1, 0]) false (.service key)) (.cons leaf (.cons (.fresh (.ref [2, 0])) .nil))
+
+/-- Red: a module layer names a layer of the main program, which comes after the module's. -/
+def moduleToMain : NativeEff :=
+  .defs [moduleDecl] (.cons (.succeed (.var 0)) .nil)
+    (.provideLayer leaf false (.service key)) (.cons (.fresh (.ref [1, 0])) .nil)
+
+/-- Red: the main program names a piece inside a module layer, which has no name. -/
+def insideModule : NativeEff :=
+  .defs [moduleDecl] (.cons (.succeed (.var 0)) .nil)
+    (.provideLayer (.ref [2, 0, 0]) false (.service key)) (.cons (.fresh leaf) .nil)
 
 /-- The tenth program: `oneRef`'s layer, with well-formed references, and a body that the checker
 refuses, `fail` at a Boolean. The body is at the path `[1]`, past the reference site `[0, 1]`. -/
@@ -124,12 +155,12 @@ def counts (root : NativeEff) : List Nat :=
   (List.range ((root.refSites []).length + 2)).map fun k => ((rounds root k).refSites []).length
 
 /-- The three clauses of `Eff.layerRefsWF` at each reference site, in program order: the target
-precedes the site, the target does not enclose the site, and the target names a layer that is no
-reference. The third clause reads the layer through `LayerTerm.refSite`, which yields a site
+precedes the site in the reference order, the target does not enclose the site, and the target
+names a layer that is no reference. The third clause reads the layer through `LayerTerm.refSite`, which yields a site
 exactly at a reference, so this battery adds no case on the program family. -/
 def clauses (root : NativeEff) : List (Bool × Bool × Bool) :=
   (root.refSites []).map fun x =>
-    (Path.lt x.2 x.1, !Path.properPrefix x.2 x.1,
+    (root.refBefore x.2 x.1, !Path.properPrefix x.2 x.1,
       ((Node.eff root).layerAt x.2).any fun l => (LayerTerm.refSite l []).isEmpty)
 
 /-- The nine programs. -/
@@ -290,6 +321,21 @@ check states that a different value is not the answer. -/
 #guard !otherScope.layerRefsWF && sameScope.layerRefsWF
 #guard Api.explain sameScope == none
 #guard typeOfProgram sig sameScope == some (EffTy.pure .nat)
+-- The module's layers: the main program, a body and a later module layer name a module layer.
+#guard [mainToModule, bodyToModule, moduleChain].all fun p =>
+  p.layerRefsWF && Api.explain p == none && typeOfProgram sig p == some (EffTy.pure .nat)
+-- Each runs to the layer's value: the reference hops into the module's layers.
+#guard [mainToModule, bodyToModule, moduleChain].all fun p =>
+  match (Api.run p 200).exit with
+  | some (.success v) => v == .nat 7
+  | _ => false
+-- Red: a module layer cannot name the main program's layer, which comes after the module's.
+#guard Api.explain moduleToMain == some ⟨[2, 0, 0], .referenceIllFormed [1, 0] .notBefore⟩
+-- Red: a piece inside a module layer has no name.
+#guard Api.explain insideModule == some ⟨[1, 0], .referenceIllFormed [2, 0, 0] .otherScope⟩
+-- The order: a module path precedes every other path, so the reference from the main program
+-- is forward in program order and backward in the reference order.
+#guard Path.lt [2, 0] [1, 0] == false && mainToModule.refBefore [2, 0] [1, 0]
 -- Red: two of the four keep a reference site in the expansion, and the facade does not refuse
 -- there. The formation test refuses each at the reference first.
 #guard Api.explain insideTarget != some ⟨[0, 0, 0, 0], .layerReference [0]⟩

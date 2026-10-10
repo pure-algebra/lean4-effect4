@@ -16,6 +16,7 @@ program's table is unchanged when the signature grows.
 | --- | --- |
 | `Annotate.check_alg_agreeOn` | the annotating algebra agrees with itself across an extension, on the read guard |
 | `Annotate.check_restrict` | so the traversal answers the same at the extension |
+| `Table.moduleLayers_restrict` | and so does the module layers' table |
 | `annotateModule_restrict` | and so does a whole program's table, part by part |
 | `hasTy_sigProgram` | a typed program reads only its signature |
 | `moduleHasTy_sigProgram` | so does a typed whole program, part by part |
@@ -158,6 +159,20 @@ theorem Table.bodies_restrict {s s' : Signature Op} (h : SigExtends s s') :
   | [], .nil, _, _ => rfl
   | _ :: _, .nil, _, _ => rfl
 
+/-- The module layers' table answers the same at an extension, when the layers read only the
+smaller signature (decisions row 341). The fold congruence at `Annotate.check_alg_agreeOn`. A
+step of `omit-splices-table`. Its consumer is `annotateModule_restrict`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.moduleLayers_restrict {s s' : Signature Op} (h : SigExtends s s')
+    {ls : LayerTerms Op} (hp : cata_layers (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) ls) :
+    Table.moduleLayers s' ls = Table.moduleLayers s ls := by
+  cases ls with
+  | nil => rfl
+  | cons head tail =>
+    simp only [Table.moduleLayers]
+    rw [Annotate.checkLayers.eq_cata, Annotate.checkLayers.eq_cata,
+      cata_layers_congr_on (Annotate.check_alg_agreeOn h) _ hp]
+
 /-- **A whole program's table answers the same at an extension**, part by part, on a whole
 program that reads only the smaller signature. A step of `omit-splices-table`. Its consumer is
 `Sketch.table_more_holes`. -/
@@ -166,10 +181,10 @@ theorem annotateModule_restrict {s s' : Signature Op} (h : SigExtends s s')
     (root : Except TypeRefusal EffTy) {e : Eff Op} (hp : ModuleSigProgram s e) :
     annotateModule s' root e = annotateModule s root e := by
   cases e
-  case defs decls bodies main =>
-    obtain ⟨hb, hm⟩ := hp
+  case defs decls bodies main layers =>
+    obtain ⟨hb, hm, hl⟩ := hp
     simp only [annotateModule, Table.bodies_restrict (h.withDefs decls) decls bodies [0] hb,
-      Annotate.check_restrict (h.withDefs decls) hm]
+      Annotate.check_restrict (h.withDefs decls) hm, Table.moduleLayers_restrict (h.withDefs decls) hl]
   all_goals
     simp only [annotateModule, annotate]
     rw [Annotate.check_restrict h hp]
@@ -328,6 +343,14 @@ theorem layersHasTy_sigProgram {s : Signature Op} :
   | _, _, .cons hh ht => And.intro (layerHasTy_sigProgram hh) (layersHasTy_sigProgram ht)
 end
 
+/-- Typed module layers read only their signature (decisions row 341). A step of
+`moduleHasTy_sigProgram`. -/
+theorem layersTyped_sigProgram {s : Signature Op} :
+    ∀ {ls : LayerTerms Op}, LayersTyped s ls →
+      cata_layers (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) ls
+  | _, .nil => True.intro
+  | _, .cons hh ht => And.intro (layerHasTy_sigProgram hh) (layersTyped_sigProgram ht)
+
 /-- Typed bodies read only their signature. A step of `omit-splices-table`. Its consumer is
 `moduleHasTy_sigProgram`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -343,7 +366,7 @@ theorem bodiesHasTy_sigProgram {s : Signature Op} :
 theorem moduleHasTy_sigProgram {s : Signature Op} {e : Eff Op} {t : EffTy}
     (h : ModuleHasTy s e t) : ModuleSigProgram s e := by
   cases h with
-  | defs hb hm => exact ⟨bodiesHasTy_sigProgram hb, hasTy_sigProgram hm⟩
+  | defs hb hm hl => exact ⟨bodiesHasTy_sigProgram hb, hasTy_sigProgram hm, layersTyped_sigProgram hl⟩
   | plain hp =>
     cases e
     case defs => cases hp

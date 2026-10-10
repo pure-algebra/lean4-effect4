@@ -696,7 +696,7 @@ def compileEff : NativeEff → Point → NCode
         | some false => compileEff body (p.child 0)
         | none => badShape
       -- a definition block (decisions row 328): no step of its own; the main program at child 1
-      | .defs _ _ main => compileEff main (p.child 1)
+      | .defs _ _ main _ => compileEff main (p.child 1)
       -- an invocation with programs (decisions row 340): one counted suspension, as `call`
       | .invoke _ _ _ => Prim.suspend (EffThunk.body p)
 
@@ -1354,7 +1354,7 @@ bodies are the block's child `0`, and in their spine the head is child `0` and t
 `1`. `none` when the program has no block or no definition `k`. -/
 def defBodyPath (root : NativeEff) (k : Nat) : Option (List Nat) :=
   match root with
-  | .defs _ bodies _ =>
+  | .defs _ bodies _ _ =>
     if k < bodies.toList.length then some (0 :: List.replicate k 1 ++ [0]) else none
   | _ => none
 

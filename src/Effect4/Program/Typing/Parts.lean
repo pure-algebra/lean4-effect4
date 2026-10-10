@@ -78,19 +78,28 @@ def Part.bodyAt (sig : Signature Op) :
   | _ :: ds, .cons _ bodies, 1 :: rest => bodyAt sig ds bodies rest
   | _, _, _ => none
 
+/-- **The module's layers as one part** (decisions row 341, step 2): the program that provides
+them all, `provideLayer (mergeAll layers) (succeed unit)`. Its child `0 :: 0 :: rest` is the
+block's child `2 :: rest`, so every address inside a module layer is an address of this part. -/
+def Part.layersProgram (layers : LayerTerms Op) : Eff Op :=
+  .provideLayer (.mergeAll layers) false (.succeed (.lit .unit))
+
 /-- **The part that holds an address of a program**, and the rest of the address inside it. At
-a root block: a body at the block's signature and its declared request (`Part.bodyAt`), or the
+a root block: a body at the block's signature and its declared request (`Part.bodyAt`), the
 main program at the block's signature and the empty environment, as the module check checks
-them. Any other program is one part, at the signature `s` and the root's environment `env0`.
-The root of a block holds no part. -/
+them, or a nonempty spine of module layers, read as the program that provides them
+(`Part.layersProgram`). Any other program is one part, at the signature `s` and the root's
+environment `env0`. The root of a block holds no part. -/
 def Eff.partAt (s : Signature Op) (env0 : TyEnv) (p : Eff Op) (path : List Nat) :
     Option (Part Op × List Nat) :=
   match p with
-  | .defs decls bodies main =>
-    match path with
-    | 0 :: rest => Part.bodyAt (s.withDefs decls) decls bodies rest
-    | 1 :: rest => some (⟨s.withDefs decls, [], main⟩, rest)
-    | _ => none
+  | .defs decls bodies main layers =>
+    match path, layers with
+    | 0 :: rest, _ => Part.bodyAt (s.withDefs decls) decls bodies rest
+    | 1 :: rest, _ => some (⟨s.withDefs decls, [], main⟩, rest)
+    | 2 :: rest, .cons h t =>
+      some (⟨s.withDefs decls, [], Part.layersProgram (.cons h t)⟩, 0 :: 0 :: rest)
+    | _, _ => none
   | _ => some (⟨s, env0, p⟩, path)
 
 /-- **The focus at an address of a whole program**: `focusAt` at the part that holds it. -/

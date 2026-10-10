@@ -917,7 +917,7 @@ theorem genProtocol (root : ProgramSource) : GenProtocol root := by
   rw [expandIn_gen] at hcheck
   obtain ⟨gB, hgB, rfl⟩ := Checker.inv_gen _ _ _ _ _ hcheck
   refine Greatest.coind genSt_closed ⟨hwf, htie, rfl, fun h => h, p, [], false, rfl,
-    fun x hx => scopeParams_prefix hat (fun _ _ _ h => nomatch h) hx, hstack,
+    fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h) hx, hstack,
     fun w' o _ _ => ⟨.top, 0, rfl, ?_⟩⟩
   have hbody : Node.at_ (.eff root.program) (p.path ++ [0] ++ GenCtx.top.block) =
       some (.stmts body) := by

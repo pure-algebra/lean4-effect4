@@ -44,7 +44,7 @@ let children (f : family) (c : int) : (int * family) list =
   | Eff, 23 -> [ (2, Eff); (3, Eff) ] (* select *)
   | Eff, 24 -> [ (5, Eff) ] (* iterate *)
   | Eff, 25 -> [ (1, Eff) ] (* restore *)
-  | Eff, 26 -> [ (1, Effs); (2, Eff) ] (* defs *)
+  | Eff, 26 -> [ (1, Effs); (2, Eff); (3, Layers) ] (* defs *)
   | Eff, 27 -> [ (2, Effs) ] (* invoke *)
   | Stmts, 1 -> [ (0, Stmt); (1, Stmts) ] (* cons *)
   | Stmt, 0 -> [ (0, Eff) ] (* bindYield *)
@@ -205,8 +205,9 @@ let child (n : node) (i : int) : node option =
   | N_eff (Eff_types.Eff_select (_, _, _, a3)), 1 -> Some (N_eff a3)
   | N_eff (Eff_types.Eff_iterate (_, _, _, _, _, a5)), 0 -> Some (N_eff a5)
   | N_eff (Eff_types.Eff_restore (_, a1)), 0 -> Some (N_eff a1)
-  | N_eff (Eff_types.Eff_defs (_, a1, _)), 0 -> Some (N_effs a1)
-  | N_eff (Eff_types.Eff_defs (_, _, a2)), 1 -> Some (N_eff a2)
+  | N_eff (Eff_types.Eff_defs (_, a1, _, _)), 0 -> Some (N_effs a1)
+  | N_eff (Eff_types.Eff_defs (_, _, a2, _)), 1 -> Some (N_eff a2)
+  | N_eff (Eff_types.Eff_defs (_, _, _, a3)), 2 -> Some (N_layers a3)
   | N_eff (Eff_types.Eff_invoke (_, _, a2)), 0 -> Some (N_effs a2)
   | N_stmts (Eff_types.Stmts_cons (a0, _)), 0 -> Some (N_stmt a0)
   | N_stmts (Eff_types.Stmts_cons (_, a1)), 1 -> Some (N_stmts a1)
@@ -263,7 +264,7 @@ let witnesses : node list = [
   N_eff (Eff_types.Eff_select ((Eff_types.Term_var 1), (Eff_types.Decision_bool), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Eff_succeed (Eff_types.Term_var 4))));
   N_eff (Eff_types.Eff_iterate (None, (Eff_types.Term_var 2), (Eff_types.Term_var 3), (Eff_types.Term_var 4), (Eff_types.Term_var 5), (Eff_types.Eff_succeed (Eff_types.Term_var 6))));
   N_eff (Eff_types.Eff_restore ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
-  N_eff (Eff_types.Eff_defs ([], (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil))), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
+  N_eff (Eff_types.Eff_defs ([], (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil))), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Layer_terms_cons ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 4 }; service_key_service = { Eff_types.service_type_code_value = 4 } }, (Eff_types.Lit_nat 4))), (Eff_types.Layer_terms_nil)))));
   N_eff (Eff_types.Eff_invoke (1, (Eff_types.Term_var 2), (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Effs_nil)))));
   N_stmts (Eff_types.Stmts_nil);
   N_stmts (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1))), (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 2))), (Eff_types.Stmts_nil)))));

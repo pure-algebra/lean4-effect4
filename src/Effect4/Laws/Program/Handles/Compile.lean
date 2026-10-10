@@ -243,10 +243,10 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
       · exact compileEff_keys b (p.child 0)
       · exact List.nil_subset _
   -- a definition block: its main program at child 1 (decisions row 328)
-  | .defs _ _ main, p => by
+  | .defs _ _ main _, p => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; exact frontier_keys p
-    · rw [compileEff_defs _ _ main hf]
+    · rw [compileEff_defs _ _ main _ hf]
       exact compileEff_keys main (p.child 1)
   -- an invocation with programs: one counted suspension, which names its point
   | .invoke k' r args, p => by

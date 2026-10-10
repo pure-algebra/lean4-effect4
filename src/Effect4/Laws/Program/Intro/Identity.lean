@@ -40,8 +40,8 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | failCause c => rw [denoteR_failCause root c hpos]; rfl
       | sync t => rw [denoteR_sync root t hpos]; rfl
       | suspend b => rw [denoteR_suspend root b p hpos]; rfl
-      | defs d bs m =>
-        rw [denoteR_defs (root := root) (p := p) d bs m hpos, prepareR_denoteR root m (p.child 1) completed]
+      | defs d bs m _ =>
+        rw [denoteR_defs (root := root) (p := p) d bs m _ hpos, prepareR_denoteR root m (p.child 1) completed]
       | invoke k r args => rw [denoteR_invoke (root := root) (p := p) k r args hpos]; rfl
       | perform op r =>
         by_cases hk : (NativeOp.row op).kind = .sync

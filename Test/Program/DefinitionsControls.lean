@@ -49,32 +49,32 @@ def refusedAt (r : Except TypeRefusal EffTy) : Option (List Nat × String) :=
   (Checker.refusal r).map fun why => (why.path, why.reason.head)
 
 -- green (tested): the module is admitted at the declared answer
-#guard Checker.checkModule sig (.defs [idDecl] (.cons idBody .nil) invokeId) ==
+#guard Checker.checkModule sig (.defs [idDecl] (.cons idBody .nil) invokeId .nil) ==
   .ok ⟨.nat, .never, Requirement.empty⟩
 -- red (tested): the invocation outside its block is outside the domain
 #guard refusedAt (Checker.check sig [] [] invokeId) = some ([], "outsideDomain")
 -- red (tested): a body whose answer is above its declaration, at the body
 #guard refusedAt (Checker.checkModule sig
-    (.defs [idDecl] (.cons (.succeed (.lit (.str "a"))) .nil) invokeId)) =
+    (.defs [idDecl] (.cons (.succeed (.lit (.str "a"))) .nil) invokeId .nil)) =
   some ([0, 0], "bodyNotDeclared")
 -- red (tested): a declaration with an open column, at the body
 #guard refusedAt (Checker.checkModule sig
-    (.defs [{ idDecl with answer := .var 0 }] (.cons idBody .nil) invokeId)) =
+    (.defs [{ idDecl with answer := .var 0 }] (.cons idBody .nil) invokeId .nil)) =
   some ([0, 0], "definitionColumns")
 -- red (tested): an invocation of a definition the block lacks, at the invocation
 #guard refusedAt (Checker.checkModule sig
-    (.defs [idDecl] (.cons idBody .nil) (.perform (.call 1) (.lit (.nat 5))))) =
+    (.defs [idDecl] (.cons idBody .nil) (.perform (.call 1) (.lit (.nat 5))) .nil)) =
   some ([1], "outsideDomain")
 -- red (tested): a request that is not below the declared request, at the invocation
 #guard refusedAt (Checker.checkModule sig
-    (.defs [idDecl] (.cons idBody .nil) (.perform (.call 0) (.lit (.str "x"))))) =
+    (.defs [idDecl] (.cons idBody .nil) (.perform (.call 0) (.lit (.str "x"))) .nil)) =
   some ([1], "requestNotSubtype")
 -- red (tested): one declaration and no body, at the root
-#guard refusedAt (Checker.checkModule sig (.defs [idDecl] .nil invokeId)) =
+#guard refusedAt (Checker.checkModule sig (.defs [idDecl] .nil invokeId .nil)) =
   some ([], "definitionsMismatch")
 -- red (tested): a block below the root, at the block
 #guard refusedAt (Checker.checkModule sig
-    (.bind (.succeed (.lit (.nat 1))) (.defs [idDecl] (.cons idBody .nil) invokeId))) =
+    (.bind (.succeed (.lit (.nat 1))) (.defs [idDecl] (.cons idBody .nil) invokeId .nil))) =
   some ([1], "definitionBlock")
 
 /-- G1 at the example: a main program that invokes nothing is checked the same at the block's
@@ -93,7 +93,7 @@ def ap (name : String) (args : List Term) : Term :=
 def twiceDecl : DefDecl := { name := "twice", request := .nat, answer := .prod .nat .nat }
 def twiceProg : NativeEff :=
   .defs [twiceDecl] (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil)
-    (.perform (.call 0) (.lit (.nat 21)))
+    (.perform (.call 0) (.lit (.nat 21))) .nil
 
 /-- `isEven` and `isOdd`, each invoking the other on the predecessor, invoked at `k`. -/
 def evenOdd (k : Nat) : NativeEff :=
@@ -103,18 +103,18 @@ def evenOdd (k : Nat) : NativeEff :=
         (.perform (.call 1) (ap "pred" [.var 0])))
       (.cons (.select (ap "isZero" [.var 0]) .bool (.succeed (.lit (.bool false)))
         (.perform (.call 0) (ap "pred" [.var 0]))) .nil))
-    (.perform (.call 0) (.lit (.nat k)))
+    (.perform (.call 0) (.lit (.nat k))) .nil
 
 /-- A definition that invokes itself without end. -/
 def spinProg : NativeEff :=
   .defs [{ name := "spin", request := .nat, answer := .nat }]
-    (.cons (.perform (.call 0) (.var 0)) .nil) (.perform (.call 0) (.lit (.nat 1)))
+    (.cons (.perform (.call 0) (.var 0)) .nil) (.perform (.call 0) (.lit (.nat 1))) .nil
 
 /-- An invocation inside a fork, joined. -/
 def forkProg : NativeEff :=
   .defs [twiceDecl] (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil)
     (.bind (.withFiber (.fork (.perform (.call 0) (.lit (.nat 4))) ⟨true, false, .inherit⟩))
-      (.awaitFiber (.var 0) .joinEffect))
+      (.awaitFiber (.var 0) .joinEffect)) .nil
 
 /-- The value of a successful exit. -/
 def successVal : Option ExitV → Option Val
@@ -127,7 +127,7 @@ def successVal : Option ExitV → Option Val
 #guard Api.typeOf spinProg == some (EffTy.pure .nat)
 #guard (admitProgram twiceProg).toOption.isSome
 -- red (tested): through the interface, one declaration and no body, at the root
-#guard (Api.explain (.defs [twiceDecl] .nil (.perform (.call 0) (.lit (.nat 21))))).map
+#guard (Api.explain (.defs [twiceDecl] .nil (.perform (.call 0) (.lit (.nat 21))) .nil)).map
     (fun r => (r.path, r.reason.head)) = some ([], "definitionsMismatch")
 -- tested: one invocation answers its body's value
 #guard successVal (Api.run twiceProg 200).exit == some (.list [.nat 21, .nat 21])

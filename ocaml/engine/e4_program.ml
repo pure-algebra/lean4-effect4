@@ -319,7 +319,8 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_restore (t, e) -> A.Eff_restore (of_term t, of_eff e)
     (* A definition block at the root (decisions row 328): the declarations, the bodies, the main
        program. *)
-    | Eff_types.Eff_defs (ds, bs, m) -> A.Eff_defs (List.map of_def_decl ds, of_effs bs, of_eff m)
+    | Eff_types.Eff_defs (ds, bs, m, ls) ->
+      A.Eff_defs (List.map of_def_decl ds, of_effs bs, of_eff m, of_layer_terms ls)
     (* An invocation of definition [k] with its request and the programs it passes (row 340). *)
     | Eff_types.Eff_invoke (k, t, args) -> A.Eff_invoke (k, of_term t, of_effs args)
 

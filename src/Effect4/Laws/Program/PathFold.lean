@@ -226,12 +226,12 @@ theorem refSites_subset_of_layerAt {Op : Type} {root : Eff Op} {path : List Nat}
   · cases h
 
 /-- Well-formed references, read at a reference site: three clauses of `Eff.refFault`.
-The target precedes the site, it is no prefix of the site, and it names a layer that is no
-reference. Its consumers are `layerRefsWF_at` below and the reference expansion
+The target precedes the site in the reference order (`Eff.refBefore`), it is no prefix of the
+site, and it names a layer that is no reference. Its consumers are `layerRefsWF_at` below and the reference expansion
 (`target_refs_prior` and `refsWithin_round`, `Laws/Program/ReferenceExpansion.lean`). -/
 theorem layerRefsWF_mem {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = true)
     {site target : List Nat} (h : (site, target) ∈ root.refSites []) :
-    Path.lt target site = true ∧ Path.properPrefix target site = false ∧
+    root.refBefore target site = true ∧ Path.properPrefix target site = false ∧
       ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' := by
   have hall := List.all_eq_true.mp hwf (site, target) h
   simp only [Eff.refFault_isNone, Bool.and_eq_true, Bool.not_eq_true'] at hall
@@ -247,15 +247,32 @@ theorem layerRefsWF_mem {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = tr
     subst heq
     exact Bool.noConfusion hlayer
 
-/-- Well-formed references, read at a reference site: the target stands in the site's scope
-(decisions row 340, ruling of 2026-10-10). Its consumer is `scopeParams_ref`
+/-- Well-formed references, read at a reference site: a target outside the module's layers
+stands in the site's scope (decisions rows 340 and 341). Its consumer is `scopeParams_ref`
 (`Typed/LayerArm.lean`). -/
 theorem layerRefsWF_scopeOf {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = true)
-    {site target : List Nat} (h : (site, target) ∈ root.refSites []) :
+    {site target : List Nat} (h : (site, target) ∈ root.refSites [])
+    (hm : root.inModule target = false) :
     root.scopeOf target = root.scopeOf site := by
   have hall := List.all_eq_true.mp hwf (site, target) h
   simp only [Eff.refFault_isNone, Bool.and_eq_true] at hall
-  exact eq_of_beq hall.2
+  have hs := hall.2
+  unfold Eff.inScope at hs
+  rw [hm, if_neg Bool.false_ne_true, Bool.and_eq_true] at hs
+  exact eq_of_beq hs.2
+
+/-- Well-formed references, read at a reference site: a target in the module's layers is a whole
+module layer (decisions row 341, step 2), the head of the spine's element. Its consumer is
+`moduleLayer_at` (`Typed/LayerArm.lean`). -/
+theorem layerRefsWF_module {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = true)
+    {site target : List Nat} (h : (site, target) ∈ root.refSites [])
+    (hm : root.inModule target = true) :
+    Path.spineHead target.tail = true := by
+  have hall := List.all_eq_true.mp hwf (site, target) h
+  simp only [Eff.refFault_isNone, Bool.and_eq_true] at hall
+  have hs := hall.2
+  unfold Eff.inScope at hs
+  rwa [hm, if_pos rfl] at hs
 
 /-- Well-formed references, read at an address: the target names a layer that is no reference. -/
 theorem layerRefsWF_at {Op : Type} {root : Eff Op} {path target : List Nat}
@@ -336,7 +353,7 @@ theorem foldMapAt_eff_fuse (φ : M → N) {unit : M} {op : M → M → M} {unit'
     simp only [foldMapAt_eff, foldMap_eff, hop, h,
       foldMapAt_eff_fuse φ (unit' := unit') hop h, foldMapAt_stmts_fuse φ (unit' := unit') hop h,
       foldMapAt_effs_fuse φ (unit' := unit') hop h, foldMapAt_action_fuse φ (unit' := unit') hop h,
-      foldMapAt_layer_fuse φ (unit' := unit') hop h]
+      foldMapAt_layer_fuse φ (unit' := unit') hop h, foldMapAt_layers_fuse φ (unit' := unit') hop h]
 
 /-- `foldMapAt_eff_fuse` at a statement. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]

@@ -124,7 +124,7 @@ module type PROGRAM_TYPES = sig
   | Eff_select of term * decision * 'op eff * 'op eff
   | Eff_iterate of ty option * term * term * term * term * 'op eff
   | Eff_restore of term * 'op eff
-  | Eff_defs of def_decl list * 'op effs * 'op eff
+  | Eff_defs of def_decl list * 'op effs * 'op eff * 'op layer_terms
   | Eff_invoke of int * term * 'op effs
   and 'op stmt = | Stmt_bindYield of 'op eff
   | Stmt_yieldDiscard of 'op eff

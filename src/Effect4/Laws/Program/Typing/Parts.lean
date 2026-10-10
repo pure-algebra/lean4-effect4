@@ -86,6 +86,8 @@ theorem Eff.partAt_at {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {path : Lis
     · cases h
       rfl
     · cases h
+      rfl
+    · cases h
   · cases h
     rfl
 
@@ -167,6 +169,70 @@ theorem BodiesHasTy.bodyAt {sig : Signature Op} :
     exact hbody
   | _, _, (_ + 2) :: _, _, .cons _ _ _ _, h => by cases h
 
+/-! ## The module's layers as a part (decisions row 341, step 2)
+
+A block's module layers are one part, read as the program that provides them all
+(`Part.layersProgram`). Its addresses are the block's below child `2`, two steps deeper. -/
+
+/-- A typed spine merges. A step of `LayersTyped.layersProgram`. -/
+theorem LayersTyped.merge {sig : Signature Op} :
+    ∀ (h : LayerTerm Op) (t : LayerTerms Op), LayersTyped sig (.cons h t) →
+      ∃ m, LayersHasTy sig (.cons h t) m
+  | _, .nil, hl => by
+    cases hl with
+    | cons hh _ => exact ⟨_, .one hh⟩
+  | _, .cons h' t', hl => by
+    cases hl with
+    | cons hh ht =>
+      obtain ⟨m, hm⟩ := LayersTyped.merge h' t' ht
+      exact ⟨_, .cons hh hm⟩
+
+/-- A merged spine is typed layer by layer. A step of `moduleHasTy_replace_programFocusAt`. -/
+theorem LayersHasTy.layersTyped {sig : Signature Op} :
+    ∀ {ls : LayerTerms Op} {m : LayerTy}, LayersHasTy sig ls m → LayersTyped sig ls
+  | _, _, .one hh => .cons hh .nil
+  | _, _, .cons hh ht => .cons hh (LayersHasTy.layersTyped ht)
+
+/-- **The module's layers part is typed where the module's layers are.** -/
+theorem LayersTyped.layersProgram {sig : Signature Op} {h : LayerTerm Op} {t : LayerTerms Op}
+    (hl : LayersTyped sig (.cons h t)) : ∃ T, HasTy sig [] (Part.layersProgram (.cons h t)) T := by
+  obtain ⟨m, hm⟩ := LayersTyped.merge h t hl
+  exact ⟨_, .provideLayer false (.mergeAll hm) (.succeed (ty := .unit) rfl)⟩
+
+/-- The node at an address of the layers part is the block's, two steps up. -/
+theorem layersProgram_at (ls : LayerTerms Op) (r : List Nat) :
+    (Node.eff (Part.layersProgram ls)).at_ (0 :: 0 :: r) = (Node.layers ls).at_ r := rfl
+
+/-- The environment at an address of the layers part is the spine's, read from the closed
+environment a layer is checked in. A step of `Sketch.annotate_eq_table`. -/
+theorem layersProgram_envAt (sig : Signature Op) (ls : LayerTerms Op) (r : List Nat) :
+    (Node.eff (Part.layersProgram ls)).envAt sig (.env []) (0 :: 0 :: r) =
+      (Node.layers ls).envAt sig .closed r := by
+  simp only [Part.layersProgram, Node.envAt, Node.child, Node.childEnv, Option.bind_some]
+
+/-- A replacement in the layers part is a replacement in the spine. -/
+theorem layersProgram_replaceAt (ls : LayerTerms Op) (r : List Nat) (q : Eff Op) :
+    (Node.eff (Part.layersProgram ls)).replaceAt (0 :: 0 :: r) (.eff q) =
+      ((Node.layers ls).replaceAt r (.eff q)).bind fun n => match n with
+        | .layers ls' => some (.eff (Part.layersProgram ls'))
+        | _ => none := by
+  simp only [Part.layersProgram, Node.replaceAt, Node.child, Option.bind_some]
+  cases (Node.layers ls).replaceAt r (.eff q) with
+  | none => rfl
+  | some n => cases n <;> rfl
+
+/-- A replacement in the module's layers is a replacement in the spine. -/
+theorem defs_replaceAt_layers (decls : List DefDecl) (bodies : Effs Op) (main : Eff Op)
+    (ls : LayerTerms Op) (r : List Nat) (q : Eff Op) :
+    (Node.eff (.defs decls bodies main ls)).replaceAt (2 :: r) (.eff q) =
+      ((Node.layers ls).replaceAt r (.eff q)).bind fun n => match n with
+        | .layers ls' => some (.eff (.defs decls bodies main ls'))
+        | _ => none := by
+  simp only [Node.replaceAt, Node.child, Option.bind_some]
+  cases (Node.layers ls).replaceAt r (.eff q) with
+  | none => rfl
+  | some n => cases n <;> rfl
+
 /-! ## The claim -/
 
 /-- **On a typed whole program `programCallAt` answers at every call**, with the call's
@@ -178,7 +244,7 @@ theorem moduleHasTy_programCallAt {s : Signature Op} {p : Eff Op} {T : EffTy} {p
     (hat : (Node.eff p).at_ path = some (.eff (.perform op request))) :
     ∃ c, programCallAt s [] p path = some c ∧ c.op = op := by
   cases hp with
-  | defs hb hm =>
+  | defs hb hm hl =>
     match path, hat with
     | [], hat => cases hat
     | 0 :: rest, hat =>
@@ -190,7 +256,14 @@ theorem moduleHasTy_programCallAt {s : Signature Op} {p : Eff Op} {T : EffTy} {p
     | 1 :: rest, hat =>
       obtain ⟨c, hc, hop⟩ := hasTy_callAt hm hat
       exact ⟨c, hc, hop⟩
-    | (_ + 2) :: _, hat => cases hat
+    | 2 :: rest, hat =>
+      cases hl with
+      | nil => cases rest <;> cases hat
+      | cons hh ht =>
+        obtain ⟨T0, hT0⟩ := (LayersTyped.cons hh ht).layersProgram
+        obtain ⟨c, hc, hop⟩ := hasTy_callAt hT0 ((layersProgram_at _ rest).trans hat)
+        exact ⟨c, hc, hop⟩
+    | (_ + 3) :: _, hat => cases hat
   | plain h =>
     obtain ⟨c, hc, hop⟩ := hasTy_callAt h hat
     refine ⟨c, ?_, hop⟩
@@ -339,6 +412,8 @@ theorem Eff.partAt_resig {s s' : Signature Op} {env0 : TyEnv} {p : Eff Op} {path
     · cases h
       exact ⟨_, rfl⟩
     · cases h
+      exact ⟨_, rfl⟩
+    · cases h
   · cases h
     exact ⟨_, rfl⟩
 
@@ -380,7 +455,7 @@ theorem moduleHasTy_programFocusAt {s : Signature Op} {p q : Eff Op} {T : EffTy}
     {r : List Nat} (hp : ModuleHasTy s p T) (hat : (Node.eff p).at_ (i :: r) = some (.eff q)) :
     ∃ (env : TyEnv) (t : EffTy), programFocusAt s [] p (i :: r) = some ⟨q, env, t⟩ := by
   cases hp with
-  | defs hb hm =>
+  | defs hb hm hl =>
     match i, hat with
     | 0, hat =>
       obtain ⟨part, rest', _, hpart, hty, hat'⟩ := hb.bodyAt hat
@@ -391,7 +466,14 @@ theorem moduleHasTy_programFocusAt {s : Signature Op} {p q : Eff Op} {T : EffTy}
     | 1, hat =>
       obtain ⟨env, t, hf⟩ := hasTy_focusAt hm hat
       exact ⟨env, t, hf⟩
-    | _ + 2, hat => cases hat
+    | 2, hat =>
+      cases hl with
+      | nil => cases r <;> cases hat
+      | cons hh ht =>
+        obtain ⟨T0, hT0⟩ := (LayersTyped.cons hh ht).layersProgram
+        obtain ⟨env, t, hf⟩ := hasTy_focusAt hT0 ((layersProgram_at _ r).trans hat)
+        exact ⟨env, t, hf⟩
+    | _ + 3, hat => cases hat
   | plain h =>
     obtain ⟨env, t, hf⟩ := hasTy_focusAt h hat
     refine ⟨env, t, ?_⟩
@@ -411,8 +493,8 @@ theorem moduleHasTy_replace_programFocusAt {s s' : Signature Op} {p q' : Eff Op}
     (hq' : HasTy part'.sig f.env q' f.ty) :
     ∃ p', (Node.eff p).replaceAt path (.eff q') = some (.eff p') ∧ ModuleHasTy s' p' T := by
   cases hp with
-  | defs hb hm =>
-    rename_i decls bodies main
+  | defs hb hm hl =>
+    rename_i decls bodies main layers
     match path, hf, hpart' with
     | [], hf, _ => cases hf
     | 0 :: r, hf, hpart' =>
@@ -423,16 +505,48 @@ theorem moduleHasTy_replace_programFocusAt {s s' : Signature Op} {p q' : Eff Op}
         exact hpart'
       obtain ⟨bodies', hrep, hb'⟩ :=
         BodiesHasTy.replace (hext.withDefs decls) hb hpart hfoc hpart'' hq'
-      refine ⟨.defs decls bodies' main, ?_, .defs hb' (hasTy_ext (hext.withDefs decls) hm)⟩
+      refine ⟨.defs decls bodies' main layers, ?_, .defs hb' (hasTy_ext (hext.withDefs decls) hm)
+        (layersTyped_ext (hext.withDefs decls) hl)⟩
       simp only [Node.replaceAt, Node.child, Option.bind_some, hrep, Node.setChild]
     | 1 :: r, hf, hpart' =>
       have hfm : focusAt (s.withDefs decls) [] main r = some f := hf
       cases hpart'
       obtain ⟨main', hrep⟩ := Node.replaceAt_eff q' (focusAt_typed hfm).1
       have hm' := hasTy_replace_focusAt hm hfm (hext.withDefs decls) hq' hrep
-      refine ⟨.defs decls bodies main', ?_, .defs (bodiesHasTy_ext (hext.withDefs decls) hb) hm'⟩
+      refine ⟨.defs decls bodies main' layers, ?_,
+        .defs (bodiesHasTy_ext (hext.withDefs decls) hb) hm' (layersTyped_ext (hext.withDefs decls) hl)⟩
       simp only [Node.replaceAt, Node.child, Option.bind_some, hrep, Node.setChild]
-    | (_ + 2) :: _, hf, _ => cases hf
+    | 2 :: r, hf, hpart' =>
+      cases hl with
+      | nil => cases hf
+      | cons hh ht =>
+        have hfm : focusAt (s.withDefs decls) [] (Part.layersProgram (.cons _ _)) (0 :: 0 :: r) =
+            some f := hf
+        cases hpart'
+        obtain ⟨T0, hT0⟩ := (LayersTyped.cons hh ht).layersProgram
+        obtain ⟨P', hrep⟩ := Node.replaceAt_eff q' (focusAt_typed hfm).1
+        have hP' := hasTy_replace_focusAt hT0 hfm (hext.withDefs decls) hq' hrep
+        rw [layersProgram_replaceAt] at hrep
+        cases hr : (Node.layers (.cons _ _)).replaceAt r (.eff q') with
+        | none =>
+          rw [hr] at hrep
+          cases hrep
+        | some n =>
+          rw [hr] at hrep
+          match n, hrep with
+          | .layers ls', hrep =>
+            simp only [Option.bind_some, Option.some.injEq, Node.eff.injEq] at hrep
+            subst hrep
+            cases hP' with
+            | provideLayer _ hlay _ =>
+              cases hlay with
+              | mergeAll hm' =>
+                refine ⟨.defs decls bodies main ls', ?_, .defs
+                  (bodiesHasTy_ext (hext.withDefs decls) hb) (hasTy_ext (hext.withDefs decls) hm)
+                  (LayersHasTy.layersTyped hm')⟩
+                rw [defs_replaceAt_layers, hr]
+                rfl
+    | (_ + 3) :: _, hf, _ => cases hf
   | plain h =>
     have hfp : focusAt s [] p path = some f := by
       unfold programFocusAt at hf
@@ -504,12 +618,14 @@ theorem moduleHasTy_partAt_typed {Op : Type} {s : Signature Op} {p : Eff Op} {T 
     (h : p.partAt s [] a = some (part, rest)) :
     ∃ t, HasTy part.sig part.env part.program t := by
   cases hp with
-  | defs hb hm =>
+  | defs hb hm hl =>
     simp only [Eff.partAt] at h
     split at h
     · exact BodiesHasTy.bodyAt_typed hb h
     · cases h
       exact ⟨_, hm⟩
+    · cases h
+      exact hl.layersProgram
     · cases h
   | plain hd =>
     rw [Eff.partAt_of_hasTy hd a] at h

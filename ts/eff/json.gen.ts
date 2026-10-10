@@ -204,7 +204,7 @@ export const effJson = (v: Eff): Json => {
     case "select": return ["select", termJson(v.scrutinee), decisionJson(v.decision), effJson(v.arm0), effJson(v.arm1)]
     case "iterate": return ["iterate", (v.cursorTy === null ? null : tyJson(v.cursorTy)), termJson(v.initial), termJson(v.test), termJson(v.step), termJson(v.result), effJson(v.body)]
     case "restore": return ["restore", termJson(v.saved), effJson(v.body)]
-    case "defs": return ["defs", v.decls.map((y) => defDeclJson(y)), effsJson(v.bodies), effJson(v.main)]
+    case "defs": return ["defs", v.decls.map((y) => defDeclJson(y)), effsJson(v.bodies), effJson(v.main), layerTermsJson(v.layers)]
     case "invoke": return ["invoke", v.index, termJson(v.request), effsJson(v.args)]
   }
 }

@@ -142,8 +142,8 @@ theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
 
 /-- A program's definition block, when its root holds one: the declarations, the bodies and the
 main program. -/
-def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op)
-  | .defs decls bodies main => some (decls, bodies, main)
+def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op × LayerTerms Op)
+  | .defs decls bodies main layers => some (decls, bodies, main, layers)
   | _ => none
 
 /-- A program type as target syntax, refused by its rendering when it has none. -/
@@ -383,8 +383,10 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
       let declaration ← printDecl name ty m sig.scopeKey
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
-    | some ([], _, _) => .error (.internalAction "defs")
-    | some (d :: ds, bodies, body) => do
+    | some ([], _, _, _) => .error (.internalAction "defs")
+    -- the module's layers print with step 2's print (decisions row 341); until then refused
+    | some (_ :: _, _, _, .cons _ _) => .error (.internalAction "defs:layers")
+    | some (d :: ds, bodies, body, .nil) => do
       let defs := d :: ds
       let sig' := sig.withDefs defs
       let cs ← printDefs sig' defs bodies

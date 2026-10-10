@@ -17,8 +17,8 @@ reference `LayerTerm.ref target` names the defining occurrence of another layer 
 path: `const L = Layer.effect(…)` used at a second site (rc.112 keys its memo map on the
 layer object, `Layer.ts:411`, `:438`). Well-formedness (`layerRefsWF`): every target names a
 layer of the same program that is not itself a reference, and the target precedes the
-reference in program order (lexicographically on paths), which makes the references
-acyclic without a cycle walk. Typing resolves references by expansion (`expandRefs`): each
+reference in the reference order (the module's layers first, then program order, which is
+lexicographic on paths), which makes the references acyclic without a cycle walk. Typing resolves references by expansion (`expandRefs`): each
 reference is replaced by the term at its target, round after round, and a well-formed
 program is reference-free after at most as many rounds as it has reference sites
 (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`); the
@@ -160,7 +160,8 @@ def LayerTerms.expandRound {Op : Type} (orig : Node Op) (ls : LayerTerms Op) : L
 /-! ## The scope of a path
 
 A definition block stands only at the root (decisions row 340). Its bodies are child `0`, a spine
-whose head is child `0` and whose rest is child `1`; its main program is child `1`. -/
+whose head is child `0` and whose rest is child `1`; its main program is child `1`; the module's
+layers are child `2`, a spine of the same shape (decisions row 341, step 2). -/
 
 /-- The position of the body that holds a path of a block's bodies' spine; `none` on the spine
 itself. -/
@@ -174,13 +175,39 @@ it in the root block, and `none` outside every body. -/
 def Eff.scopeOf {Op : Type} (root : Eff Op) : List Nat → Option Nat
   | 0 :: rest =>
     match root with
-    | .defs _ _ _ => Path.spineIndex rest
+    | .defs _ _ _ _ => Path.spineIndex rest
     | _ => none
   | _ => none
 
+/-- A path is the head of a spine: `1 … 1 0`, the whole element at that position. -/
+def Path.spineHead : List Nat → Bool
+  | [0] => true
+  | 1 :: rest => Path.spineHead rest
+  | _ => false
+
+/-- **A path in the module's layers** (decisions row 341, step 2): the root block's child `2`. -/
+def Eff.inModule {Op : Type} (root : Eff Op) (p : List Nat) : Bool :=
+  match root with
+  | .defs _ _ _ _ => decide (p.head? = some 2)
+  | _ => false
+
+/-- **The reference order** (decisions row 341, step 2): the module's layers come before every
+other path, as a module-level `const` is declared before every function that names it; within
+the module's layers, and outside them, program order (`Path.lt`). -/
+def Eff.refBefore {Op : Type} (root : Eff Op) (a b : List Nat) : Bool :=
+  (root.inModule a && !root.inModule b) || (root.inModule a == root.inModule b && Path.lt a b)
+
+/-- **A target is in the reference's scope** (decisions row 341): a module layer, named whole,
+is in every scope, as a module-level `const` is visible in every function; a piece inside one
+has no name. Any other target stands in the reference's own scope: the same definition's body,
+or the main program, and never seen from the module's layers. -/
+def Eff.inScope {Op : Type} (root : Eff Op) (site target : List Nat) : Bool :=
+  if root.inModule target then Path.spineHead target.tail
+  else !root.inModule site && root.scopeOf target == root.scopeOf site
+
 /-- **Why a layer reference is ill formed**: the first condition of `Eff.refFault` it breaks. -/
 inductive RefFault where
-  /-- The target does not precede the reference in program order. -/
+  /-- The target does not precede the reference in the reference order (`Eff.refBefore`). -/
   | notBefore
   /-- The target encloses the reference: a `const` that names itself. -/
   | encloses
@@ -188,25 +215,26 @@ inductive RefFault where
   | noLayer
   /-- The target is itself a reference. -/
   | toReference
-  /-- The target stands in another scope: another definition's body, or a body while the
-  reference stands outside every body (decisions row 341). -/
+  /-- The target is in no scope of the reference (`Eff.inScope`): another definition's body, a
+  body or the main program while the reference stands in the module's layers, or a piece inside
+  a module layer (decisions row 341). -/
   | otherScope
 deriving DecidableEq, Repr
 
 /-- **The fault of a layer reference**, or `none` when it is well formed: its target names a
-layer of this program that is not itself a reference, precedes the reference in program order,
-does not enclose it (a reference inside its own target would be a `const` that names itself),
-and stands in the reference's scope: the same definition's body, or both outside every body
-(decisions row 341). A layer in a body is that body's own, as a `const` in a function body is
-visible in no other function; a hop to it from another scope would run it with the other
-scope's parameters. -/
+layer of this program that is not itself a reference, precedes the reference in the reference
+order (`Eff.refBefore`), does not enclose it (a reference inside its own target would be a
+`const` that names itself), and is in the reference's scope (`Eff.inScope`, decisions row 341).
+A layer in a body is that body's own, as a `const` in a function body is visible in no other
+function; a hop to it from another scope would run it with the other scope's parameters. A
+module layer has no parameters, so every scope may name it. -/
 def Eff.refFault {Op : Type} (root : Eff Op) (site target : List Nat) : Option RefFault :=
-  if !Path.lt target site then some .notBefore
+  if !root.refBefore target site then some .notBefore
   else if Path.properPrefix target site then some .encloses
   else match (Node.eff root).layerAt target with
     | none => some .noLayer
     | some (.ref _) => some .toReference
-    | some _ => if root.scopeOf target == root.scopeOf site then none else some .otherScope
+    | some _ => if root.inScope site target then none else some .otherScope
 
 /-- The layer references of a program are well formed: no reference has a fault
 (`Eff.refFault`). -/
@@ -217,17 +245,17 @@ def Eff.layerRefsWF {Op : Type} (root : Eff Op) : Bool :=
 conditions (`layerRefsWF_mem`, `Laws/Program/PathFold.lean`). -/
 theorem Eff.refFault_isNone {Op : Type} (root : Eff Op) (site target : List Nat) :
     (root.refFault site target).isNone =
-      (Path.lt target site && !Path.properPrefix target site &&
+      (root.refBefore target site && !Path.properPrefix target site &&
         (match (Node.eff root).layerAt target with
          | some (.ref _) => false
          | some _ => true
          | none => false) &&
-        root.scopeOf target == root.scopeOf site) := by
+        root.inScope site target) := by
   unfold Eff.refFault
-  cases Path.lt target site <;> cases Path.properPrefix target site <;>
+  cases root.refBefore target site <;> cases Path.properPrefix target site <;>
     cases (Node.eff root).layerAt target with
     | none => rfl
-    | some l => cases l <;> cases root.scopeOf target == root.scopeOf site <;> rfl
+    | some l => cases l <;> cases root.inScope site target <;> rfl
 
 /-- **The first ill-formed reference** of a program in program order: its site, its target and
 its fault. The facade locates its refusal there (`Api.explain`). -/

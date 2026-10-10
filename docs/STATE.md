@@ -37,9 +37,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
   sites is typed there (slices CX1 and CX2, the [note](research/2026-10-10-cx-lexical-scope.md)).
   The typed run of an invocation and of a parameter's run is proved (`invoke_arm`, `param_arm`).
   A layer reference stands in its target's scope: the same body, or both outside every body
-  (decisions row 341, the note's §11). So M5 and M7 rest on no goal. An ill-formed reference is
-  refused at its site with the condition it breaks (`Eff.refFault`, `Api.explain`). The printer
-  refuses `invoke` until HO-3.
+  (decisions row 341, the note's §11). A block holds the module's layers as its third child, and
+  every scope names a whole module layer by reference (step 2a,
+  [the note](research/2026-10-10-layer-scopes.md) §4.5). So M5 and M7 rest on no goal. An
+  ill-formed reference is refused at its site with the condition it breaks (`Eff.refFault`,
+  `Api.explain`). The printer refuses `invoke` until HO-3, and a block with module layers until
+  step 2b.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
@@ -205,9 +208,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
    Codex's three service findings repaired. Pool's service waits for a method whose parameter is
    a program: [the plan](research/2026-10-09-program-parameters.md), row 340. HO-1 and HO-2
    landed, and so did CX1 and CX2 (points typed at their lexical scope; `invoke_arm` and
-   `param_arm` proved). Row 341 keeps a layer reference in its target's scope. Next, its two
-   further steps: a body names a module-level layer, then a body's layers built once per call
-   (the note's §11, a design note first). Then CX3, which adds substitution and the builder's
+   `param_arm` proved). Row 341 keeps a layer reference in its target's scope, and its step 2a
+   landed: a block's module layers, which every scope names. Next, step 2b (the print, the read
+   and the authoring placement), then HO-3, then step 3, a body's layers built once per call
+   ([the note](research/2026-10-10-layer-scopes.md) §5). Then CX3, which adds substitution and the builder's
    certificate. CX4 adds bounded unfolding. Then HO-3 (authoring and print), HO-4 (generics), HO-5 (Pool's service). Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.

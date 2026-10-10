@@ -517,7 +517,7 @@ def elaborateTree {Op : Type} (m : Module Op) (env : Env) : Except Refusal (Eff 
   | defs => do
     let bodies ← defs.zipIdx.mapM fun (d, k) => d.elaborate env (bodyPath k)
     let main ← m.main env [1]
-    .ok (.defs (defs.map (·.decl)) (effsOfList bodies) main)
+    .ok (.defs (defs.map (·.decl)) (effsOfList bodies) main .nil)
 
 /-- The declared rows as a scope, or the first spelling declared twice: a table key is the
 spelling and the trailing names (`rowKey`), and `Table.lawful` requires it to be unique. -/

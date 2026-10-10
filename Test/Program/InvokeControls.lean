@@ -61,23 +61,23 @@ def twiceBody : NativeEff := .bind (.perform (.param 0) (.var 0)) (.perform (.pa
 def succArg : Effs NativeOp := .cons (.succeed (ap "succ" [.var 0])) .nil
 
 /-- `twice(5, (a) => succeed(succ(a)))`. -/
-def invokeProg : NativeEff := .defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (.lit (.nat 5)) succArg)
+def invokeProg : NativeEff := .defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (.lit (.nat 5)) succArg) .nil
 
 -- green (tested): the module is admitted at the declared answer
 #guard Checker.checkModule sig invokeProg == .ok ⟨.nat, .never, Requirement.empty⟩
 #guard Api.typeOf invokeProg == some (EffTy.pure .nat)
 -- red (tested): an invocation that passes no program, at the invocation
 #guard refusedAt (Checker.checkModule sig
-    (.defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (.lit (.nat 5)) .nil))) =
+    (.defs [twiceDecl] (.cons twiceBody .nil) (.invoke 0 (.lit (.nat 5)) .nil) .nil)) =
   some ([1], "invokeArity")
 -- red (tested): `perform` of a definition that takes a program is outside the domain
 #guard refusedAt (Checker.checkModule sig
-    (.defs [twiceDecl] (.cons twiceBody .nil) (.perform (.call 0) (.lit (.nat 5))))) =
+    (.defs [twiceDecl] (.cons twiceBody .nil) (.perform (.call 0) (.lit (.nat 5))) .nil)) =
   some ([1], "outsideDomain")
 -- red (tested): a program above its parameter's answer, at the program
 #guard refusedAt (Checker.checkModule sig
     (.defs [twiceDecl] (.cons twiceBody .nil)
-      (.invoke 0 (.lit (.nat 5)) (.cons (.succeed (.lit (.str "a"))) .nil)))) =
+      (.invoke 0 (.lit (.nat 5)) (.cons (.succeed (.lit (.str "a"))) .nil)) .nil)) =
   some ([1, 0, 0], "bodyNotDeclared")
 -- red (tested): a parameter's run outside every body is outside the domain
 #guard refusedAt (Checker.check sig [] [] (.perform (.param 0) (.lit (.nat 5)))) =
@@ -85,7 +85,7 @@ def invokeProg : NativeEff := .defs [twiceDecl] (.cons twiceBody .nil) (.invoke 
 -- red (tested): a body that runs a parameter its definition lacks, at the run
 #guard refusedAt (Checker.checkModule sig
     (.defs [{ twiceDecl with params := [] }] (.cons twiceBody .nil)
-      (.perform (.call 0) (.lit (.nat 5))))) =
+      (.perform (.call 0) (.lit (.nat 5))) .nil)) =
   some ([0, 0, 0], "outsideDomain")
 
 /-! ## The run -/
@@ -102,7 +102,7 @@ def outerBody : NativeEff := .invoke 0 (.var 0) (.cons (.perform (.param 0) (.va
 /-- `outer(5, (a) => succeed(succ(a)))`. -/
 def forwardProg : NativeEff :=
   .defs [twiceDecl, outerDecl] (.cons twiceBody (.cons outerBody .nil))
-    (.invoke 1 (.lit (.nat 5)) succArg)
+    (.invoke 1 (.lit (.nat 5)) succArg) .nil
 
 /-- `forked : number → number`, with `f`: its body forks `f` on its request and joins it. -/
 def forkedDecl : DefDecl :=
@@ -115,7 +115,7 @@ def forkedBody : NativeEff :=
 
 /-- `forked(5, (a) => succeed(succ(a)))`. -/
 def forkProg : NativeEff :=
-  .defs [forkedDecl] (.cons forkedBody .nil) (.invoke 0 (.lit (.nat 5)) succArg)
+  .defs [forkedDecl] (.cons forkedBody .nil) (.invoke 0 (.lit (.nat 5)) succArg) .nil
 
 #guard Api.typeOf forwardProg == some (EffTy.pure .nat)
 #guard Api.typeOf forkProg == some (EffTy.pure .nat)

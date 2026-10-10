@@ -3,6 +3,7 @@ import Effect4.Laws.Program.Typing.CheckInversion
 import Effect4.Laws.Program.Eliminators
 import Effect4.Laws.Program.Decision
 import Effect4.Laws.Program.Admit
+import Effect4.Laws.Program.ExpandFix
 
 /-!
 # Laws.Program.Typed.Denotation — M5's fundamental property (decisions rows 148, 170, 175)
@@ -94,6 +95,10 @@ private theorem rounds_fix : ∀ (e : NativeEff), Eff.expandRound orig e = e →
 private abbrev effsRounds (xs : List Nat) (es : Effs NativeOp) : Effs NativeOp :=
   xs.foldl (fun acc _ => Effs.expandRound orig acc) es
 
+/-- The rounds on a block's module layers (decisions row 341), layer by layer. -/
+private abbrev layersRounds (xs : List Nat) (ls : LayerTerms NativeOp) : LayerTerms NativeOp :=
+  xs.foldl (fun acc _ => LayerTerms.expandRound orig acc) ls
+
 private theorem rounds_raceAll : ∀ (xs : List Nat) (es : Effs NativeOp),
     rounds orig xs (.withFiber (.raceAll es)) = .withFiber (.raceAll (effsRounds orig xs es))
   | [], _ => rfl
@@ -118,24 +123,25 @@ private theorem effsRounds_cons : ∀ (xs : List Nat) (h : NativeEff) (t : Effs 
 /-- A block's rounds keep the block: its spine's rounds and its main program's (decisions row 328;
 private like `rounds_raceAll`). A step of `Eff.expandIn_defs`. -/
 private theorem rounds_defs : ∀ (xs : List Nat) (decls : List DefDecl) (bodies : Effs NativeOp)
-    (main : NativeEff),
-    rounds orig xs (.defs decls bodies main) =
-      .defs decls (effsRounds orig xs bodies) (rounds orig xs main)
-  | [], _, _, _ => rfl
-  | _ :: xs, decls, bodies, main =>
+    (main : NativeEff) (layers : LayerTerms NativeOp),
+    rounds orig xs (.defs decls bodies main layers) =
+      .defs decls (effsRounds orig xs bodies) (rounds orig xs main) (layersRounds orig xs layers)
+  | [], _, _, _, _ => rfl
+  | _ :: xs, decls, bodies, main, layers =>
     rounds_defs xs decls (Effs.expandRound orig bodies) (Eff.expandRound orig main)
+      (LayerTerms.expandRound orig layers)
 
 /-- One round keeps a node that is no block a node that is no block: the round is the identity
 fold but at a layer reference. A step of `Eff.expandIn_ne_defs`. -/
-private theorem expandRound_ne_defs (e : NativeEff) (he : ∀ d b m, e ≠ .defs d b m) :
-    ∀ d b m, Eff.expandRound orig e ≠ .defs d b m := by
-  intro d b m h
+private theorem expandRound_ne_defs (e : NativeEff) (he : ∀ d b m layers, e ≠ .defs d b m layers) :
+    ∀ d b m layers, Eff.expandRound orig e ≠ .defs d b m layers := by
+  intro d b m l h
   cases e with
-  | defs d' b' m' => exact he d' b' m' rfl
+  | defs d' b' m' l' => exact he d' b' m' l' rfl
   | _ => cases h
 
-private theorem rounds_ne_defs : ∀ (xs : List Nat) (e : NativeEff), (∀ d b m, e ≠ .defs d b m) →
-    ∀ d b m, rounds orig xs e ≠ .defs d b m
+private theorem rounds_ne_defs : ∀ (xs : List Nat) (e : NativeEff), (∀ d b m layers, e ≠ .defs d b m layers) →
+    ∀ d b m layers, rounds orig xs e ≠ .defs d b m layers
   | [], _, he => he
   | _ :: xs, e, he => rounds_ne_defs xs _ (expandRound_ne_defs orig e he)
 
@@ -206,28 +212,32 @@ theorem Eff.expandIn_scoped (b : NativeEff) :
 
 /-- A definition block keeps its head and its declarations through the expansion's rounds
 (decisions row 328): each round folds the block into a block. A step of `defs_not_typed`. -/
-theorem Eff.expandIn_defs_head (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff) :
-    ∃ bodies' main', Eff.expandIn root (.defs decls bodies main) = .defs decls bodies' main' := by
+theorem Eff.expandIn_defs_head (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
+    (layers : LayerTerms NativeOp) :
+    ∃ bodies' main' layers', Eff.expandIn root (.defs decls bodies main layers) =
+      .defs decls bodies' main' layers' := by
   unfold Eff.expandIn
   generalize List.range ((root.refSites []).length + 1) = rounds
-  induction rounds generalizing bodies main with
-  | nil => exact ⟨bodies, main, rfl⟩
+  induction rounds generalizing bodies main layers with
+  | nil => exact ⟨bodies, main, layers, rfl⟩
   | cons _ rest ih =>
     exact ih (Effs.expandRound (Node.eff root) bodies) (Eff.expandRound (Node.eff root) main)
+      (LayerTerms.expandRound (Node.eff root) layers)
 
 /-- **A block's expansion** (decisions row 328): the rounds keep the block and its declarations;
 each body and the main program is expanded in place, entry by entry. A step of
 `bodiesTyped_of_typeOf` and `mainChecked_of_typeOf`. -/
-theorem Eff.expandIn_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff) :
-    ∃ bodies' : Effs NativeOp, Eff.expandIn root (.defs decls bodies main) =
-        .defs decls bodies' (Eff.expandIn root main) ∧
+theorem Eff.expandIn_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
+    (layers : LayerTerms NativeOp) :
+    ∃ bodies' : Effs NativeOp, Eff.expandIn root (.defs decls bodies main layers) =
+        .defs decls bodies' (Eff.expandIn root main) (LayerTerms.expandIn root layers) ∧
       ∀ k : Nat, bodies'.toList[k]? = (bodies.toList[k]?).map (Eff.expandIn root) :=
-  ⟨_, rounds_defs _ _ decls bodies main, effsRounds_getElem? _ _ bodies⟩
+  ⟨_, rounds_defs _ _ decls bodies main layers, effsRounds_getElem? _ _ bodies⟩
 
 /-- The expansion keeps a program that is no block a program that is no block. A step of
 `rootCode_typed` (`Typed/Assembly.lean`). -/
-theorem Eff.expandIn_ne_defs {e : NativeEff} (he : ∀ d b m, e ≠ .defs d b m) :
-    ∀ d b m, Eff.expandIn root e ≠ .defs d b m :=
+theorem Eff.expandIn_ne_defs {e : NativeEff} (he : ∀ d b m layers, e ≠ .defs d b m layers) :
+    ∀ d b m layers, Eff.expandIn root e ≠ .defs d b m layers :=
   rounds_ne_defs _ _ e he
 
 theorem Eff.expandIn_restore (saved : Term) (b : NativeEff) :
@@ -1100,7 +1110,8 @@ theorem Node.at_effs_body : ∀ (bodies : Effs NativeOp) (k : Nat),
 
 /-- The source's signature for a program with a block: the tables' signature extended by it. -/
 theorem ProgramSource.signature_defs {root : ProgramSource} {decls : List DefDecl}
-    {bodies : Effs NativeOp} {main : NativeEff} (hprog : root.program = .defs decls bodies main) :
+    {bodies : Effs NativeOp} {main : NativeEff} {layers : LayerTerms NativeOp}
+    (hprog : root.program = .defs decls bodies main layers) :
     root.signature = root.sig.signature.withDefs decls := by
   show root.sig.signature.withDefs root.program.defsOf = _
   rw [hprog]
@@ -1110,26 +1121,29 @@ theorem ProgramSource.signature_defs {root : ProgramSource} {decls : List DefDec
 the whole program is the module check of its expansion (`typeOfProgram`), and the expansion keeps
 the block (`Eff.expandIn_defs`). A step of `bodiesTyped_of_typeOf` and `mainChecked_of_typeOf`. -/
 theorem moduleHasTy_of_typeOf {root : ProgramSource} {rootTy : EffTy} {decls : List DefDecl}
-    {bodies : Effs NativeOp} {main : NativeEff} (hprog : root.program = .defs decls bodies main)
+    {bodies : Effs NativeOp} {main : NativeEff} {layers : LayerTerms NativeOp}
+    (hprog : root.program = .defs decls bodies main layers)
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
     ∃ bodies' : Effs NativeOp,
       (∀ k : Nat, bodies'.toList[k]? = (bodies.toList[k]?).map (Eff.expandIn root.program)) ∧
       BodiesHasTy root.signature decls bodies' ∧
-      Conform.Effect4.Typing.HasTy root.signature [] (Eff.expandIn root.program main) rootTy := by
+      Conform.Effect4.Typing.HasTy root.signature [] (Eff.expandIn root.program main) rootTy ∧
+      LayersTyped root.signature (LayerTerms.expandIn root.program layers) := by
   have wf : root.program.layerRefsWF = true := by
     have c := checked
     unfold Program.typeOfProgram at c
     split at c
     · assumption
     · cases c
-  obtain ⟨bodies', hexp, hget⟩ := Eff.expandIn_defs root.program decls bodies main
-  have hexpand : root.program.expandRefs = .defs decls bodies' (Eff.expandIn root.program main) := by
+  obtain ⟨bodies', hexp, hget⟩ := Eff.expandIn_defs root.program decls bodies main layers
+  have hexpand : root.program.expandRefs =
+      .defs decls bodies' (Eff.expandIn root.program main) (LayerTerms.expandIn root.program layers) := by
     rw [← Eff.expandIn_self, ← hexp, ← hprog]
   rw [typeOfProgram_eq_if_refsWF, if_pos wf, hexpand] at checked
   have hm := checkModule_sound _ _ _ (Effect4.Laws.Auto.toOption_eq_some.mp checked)
   rw [ProgramSource.signature_defs hprog]
   cases hm with
-  | defs hb hmain => exact ⟨bodies', hget, hb, hmain⟩
+  | defs hb hmain hl => exact ⟨bodies', hget, hb, hmain, hl⟩
   | plain hd => cases hd
 
 /-- **The block's bodies are typed**, from the checker's verdict on the whole program (decisions
@@ -1139,14 +1153,14 @@ theorem bodiesTyped_of_typeOf {root : ProgramSource} {rootTy : EffTy}
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
     BodiesTyped root := by
   intro k d hd
-  have hcases : (∃ decls bodies main, root.program = .defs decls bodies main) ∨
+  have hcases : (∃ decls bodies main layers, root.program = .defs decls bodies main layers) ∨
       root.program.defsOf = [] := by
     cases root.program with
-    | defs decls bodies main => exact .inl ⟨decls, bodies, main, rfl⟩
+    | defs decls bodies main layers => exact .inl ⟨decls, bodies, main, layers, rfl⟩
     | _ => exact .inr rfl
-  rcases hcases with ⟨decls, bodies, main, hprog⟩ | hnil
+  rcases hcases with ⟨decls, bodies, main, layers, hprog⟩ | hnil
   · rw [hprog] at hd
-    obtain ⟨bodies', hget, hb, -⟩ := moduleHasTy_of_typeOf hprog checked
+    obtain ⟨bodies', hget, hb, -, -⟩ := moduleHasTy_of_typeOf hprog checked
     obtain ⟨body', tb, hbody', htyped, hformed, hadmits⟩ := hb.get hd
     rw [hget k] at hbody'
     obtain ⟨body, hbody, rfl⟩ := Option.map_eq_some_iff.mp hbody'
@@ -1162,14 +1176,64 @@ theorem bodiesTyped_of_typeOf {root : ProgramSource} {rootTy : EffTy}
   · rw [hnil, List.getElem?_nil] at hd
     cases hd
 
+/-- A whole layer of a typed spine is typed, read through the expansion: the head at `[0]`, and
+the rest's layers below `1`. A step of `moduleLayersTyped_of_typeOf`. -/
+theorem layersTyped_at {sig : Signature NativeOp} {P : NativeEff} :
+    ∀ (t : List Nat) (ls : LayerTerms NativeOp) (l : LayerTerm NativeOp),
+      Path.spineHead t = true → Node.at_ (.layers ls) t = some (.layer l) →
+      LayersTyped sig (LayerTerms.expandIn P ls) →
+        ∃ lt, Conform.Effect4.Typing.LayerHasTy sig (LayerTerm.expandIn P l) lt
+  | [0], .cons _ _, _, _, hat, hT => by
+    cases hat
+    rw [LayerTerms.expandIn_cons] at hT
+    cases hT with
+    | cons hh _ => exact ⟨_, hh⟩
+  | [0], .nil, _, _, hat, _ => by cases hat
+  | 1 :: r, .cons _ tl, l, hs, hat, hT => by
+    rw [LayerTerms.expandIn_cons] at hT
+    cases hT with
+    | cons _ ht => exact layersTyped_at r tl l hs hat ht
+  | 1 :: _, .nil, _, _, hat, _ => by cases hat
+  | [], _, _, hs, _, _ => by cases hs
+  | 0 :: _ :: _, _, _, hs, _, _ => by cases hs
+  | (_ + 2) :: _, _, _, hs, _, _ => by cases hs
+
+/-- **The module's layers are typed**, from the checker's verdict on the whole program (decisions
+row 341, step 2): `ModuleLayersTyped`, M5's premise for a reference into the module, discharged at
+the load as the bodies are. A path in the module's layers stands in a block. -/
+theorem moduleLayersTyped_of_typeOf {root : ProgramSource} {rootTy : EffTy}
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    ModuleLayersTyped root := by
+  intro target l hin hhead hl
+  have hblock : ∃ decls bodies main layers, root.program = .defs decls bodies main layers := by
+    unfold Eff.inModule at hin
+    split at hin
+    · rename_i decls bodies main layers hprog
+      exact ⟨decls, bodies, main, layers, hprog⟩
+    · cases hin
+  obtain ⟨decls, bodies, main, layers, hprog⟩ := hblock
+  obtain ⟨-, -, -, -, hlayers⟩ := moduleHasTy_of_typeOf hprog checked
+  have hh := Eff.inModule_head hin
+  cases target with
+  | nil => cases hh
+  | cons x t =>
+    cases hh
+    have hat : Node.at_ (.layers layers) t = some (.layer l) := by
+      have h0 := Node.at_of_layerAt hl
+      rw [hprog] at h0
+      exact h0
+    obtain ⟨lt, hty⟩ := layersTyped_at t layers l hhead hat hlayers
+    exact ⟨lt, Conform.Effect4.Typing.checkLayer_complete _ _ _ hty _⟩
+
 /-- **The main program of a checked block is checked** at the source's signature, at the
 whole program's type, at its path. The load's start (`rootCode_typed`) reads it: a block has no
 step of its own, and the run goes on at its main program (`denoteR_defs`). -/
 theorem mainChecked_of_typeOf {root : ProgramSource} {rootTy : EffTy} {decls : List DefDecl}
-    {bodies : Effs NativeOp} {main : NativeEff} (hprog : root.program = .defs decls bodies main)
+    {bodies : Effs NativeOp} {main : NativeEff} {layers : LayerTerms NativeOp}
+    (hprog : root.program = .defs decls bodies main layers)
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
     Checker.check root.signature [] [1] (Eff.expandIn root.program main) = .ok rootTy := by
-  obtain ⟨-, -, -, hmain⟩ := moduleHasTy_of_typeOf hprog checked
+  obtain ⟨-, -, -, hmain, -⟩ := moduleHasTy_of_typeOf hprog checked
   exact Conform.Effect4.Typing.check_complete _ _ _ _ hmain _
 
 /-! ## Arms: `bind`, `select` and the scoped shapes
@@ -2112,7 +2176,7 @@ theorem fork_arm {b : NativeEff} {options : Supervision.ForkOptions}
     rw [hat]
   rw [denoteAction_of _ _ hact]
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
       (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
@@ -2140,7 +2204,7 @@ theorem forkIn_arm {b : NativeEff} {options : Supervision.ForkOptions} {scope : 
     rfl
   rw [denoteAction_of _ _ hact]
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
       (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
@@ -2163,7 +2227,7 @@ theorem forkScoped_arm {b : NativeEff} {options : Supervision.ForkOptions}
     rw [hat]
   rw [denoteAction_of _ _ hact]
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
       (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   simp only [denoteFiberAction]
@@ -2462,7 +2526,7 @@ theorem raceAll_arm {es : Effs NativeOp}
   rw [Eff.expandIn_raceAll] at hcheck
   have hc := Checker.inv_action_raceAll _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
   obtain ⟨A, E, hpre, hA, hE⟩ := raceEntrants_typed es ((p.child 0).child 0) ty
-    (fun x hx => scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+    (fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans hx))
     (node_at_child (node_at_child hat rfl) rfl) hc henv hview hstack
   obtain ⟨ents, hact⟩ : ∃ ents, actionAt root.program p =
@@ -3291,10 +3355,12 @@ theorem external_arm {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
 the whole module's root (`TypeReason.definitionBlock`), so no point's check answers there. -/
 theorem defs_not_typed {decls : List DefDecl} {bodies : Effs NativeOp} {main : NativeEff}
     {q : Point} {t : EffTy}
-    (hat : Node.at_ (.eff root.program) q.path = some (.eff (.defs decls bodies main)))
+    {layers : LayerTerms NativeOp}
+    (hat : Node.at_ (.eff root.program) q.path = some (.eff (.defs decls bodies main layers)))
     (hpt : PointTyped root w q t) : False := by
   obtain ⟨env, hcheck, -, -, -⟩ := hpt.at_node hat
-  obtain ⟨bodies', main', heq⟩ := Eff.expandIn_defs_head (root := root.program) decls bodies main
+  obtain ⟨bodies', main', layers', heq⟩ :=
+    Eff.expandIn_defs_head (root := root.program) decls bodies main layers
   rw [heq] at hcheck
   exact nomatch hcheck
 
@@ -3591,7 +3657,7 @@ theorem invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {
   -- the frame the invocation pushes, typed at the definition's parameters
   have hframe : StackTyped root w d.params (argSitesAt (p.path ++ [0]) p.env args :: p.params) :=
     argSites_typed henv hstack d.params args (p.path ++ [0]) ts
-      (fun x hx => scopeParams_prefix hat (fun _ _ _ h => nomatch h)
+      (fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
         ((List.prefix_append _ _).trans hx))
       (node_at_child hat rfl) hlen hargs
   rw [denoteR_invoke _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
@@ -3932,7 +3998,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       | false =>
         exact ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
           (pointTyped_child hat rfl rfl hcb henv hview hstack) hinline
-    | defs decls bodies main => exact (defs_not_typed hat hpt).elim
+    | defs decls bodies main _ => exact (defs_not_typed hat hpt).elim
     | _ => exact nomatch hinline
 
 section ExitArm
@@ -4008,7 +4074,7 @@ import direction places after this module): at a well-formed program, given that
 every node at every fuel up to `f` denotes typed programs at its typed points, a typed
 `provideLayer` point with fuel `f + 1` denotes a typed program. -/
 def ProvideLayerArm (root : ProgramSource) : Prop :=
-  root.program.layerRefsWF = true → ∀ (f : Nat),
+  root.program.layerRefsWF = true → ModuleLayersTyped root → ∀ (f : Nat),
     (∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path) →
     ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (ty : EffTy)
@@ -4019,7 +4085,8 @@ def ProvideLayerArm (root : ProgramSource) : Prop :=
 /-- **The arms assembled** (by induction on fuel, given the layer family's arm): every node of a
 well-formed program, at every fuel up to `f`, denotes typed programs at its typed points. -/
 theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
-    (hwf : root.program.layerRefsWF = true) (hbodies : BodiesTyped root) :
+    (hwf : root.program.layerRefsWF = true) (hmod : ModuleLayersTyped root)
+    (hbodies : BodiesTyped root) :
     ∀ (f : Nat), ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path := by
   intro f
@@ -4059,14 +4126,14 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | withFiber a => exact withFiber_arm hpos hat hqt
       | «scoped» b => exact scoped_arm hq hat hqt
       | acquireRelease a r => exact acquireRelease_arm hq hat hqt
-      | provideLayer l i b => exact hlayer hwf f ih w htie q ty l i b hq hat hqt
+      | provideLayer l i b => exact hlayer hwf hmod f ih w htie q ty l i b hq hat hqt
       | service key => exact service_arm hpos htie hat hqt
       | provideService key value b => exact provideService_arm hq hat hqt htie (hch b 0 rfl)
       | catchIf test b h => exact catchIf_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl)
       | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl)
       | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt
       | restore saved b => exact restore_arm hq hat hqt htie (hch b 0 rfl)
-      | defs decls bodies main => exact (defs_not_typed hat hqt).elim
+      | defs decls bodies main _ => exact (defs_not_typed hat hqt).elim
       | invoke k r args =>
         exact invoke_arm hq hat hqt htie hbodies (fun c' path' hc' => ih f (Nat.le_refl f) c' path' hc')
 
@@ -4079,6 +4146,6 @@ def LayerFree (root : NativeEff) : Prop :=
 /-- On the layer-free fragment the layer family's arm holds: no point reaches it. -/
 theorem provideLayerArm_of_layerFree {root : ProgramSource} (h : LayerFree root.program) :
     ProvideLayerArm root :=
-  fun _ _ _ _ _ p _ l i b _ hat _ => absurd hat (h p.path l i b)
+  fun _ _ _ _ _ _ p _ l i b _ hat _ => absurd hat (h p.path l i b)
 
 end Effect4.Program.Typed

@@ -34,7 +34,7 @@ def counter (init : DefRole := .serviceInit "Counter") (initRequest : Ty := .uni
     (.cons (.succeed (.lit (.nat 5))) (.cons (.succeed (.var 0))
       (.cons (.succeed (.app "add" (.cons (.app "fst" (.cons (.var 0) .nil))
         (.cons (.app "snd" (.cons (.var 0) .nil)) .nil)))) .nil)))
-    main
+    main .nil
 
 /-- Whether a program's module reads back to the program. -/
 def roundTrips (p : NativeEff) : Bool :=
@@ -137,7 +137,7 @@ def colliding : NativeEff :=
            role := .serviceMethod "SLayer" "get" 0 }]
     (.cons (.succeed (.lit (.nat 1))) (.cons (.succeed (.var 0))
       (.cons (.succeed (.lit (.nat 2))) (.cons (.succeed (.var 0)) .nil))))
-    one
+    one .nil
 
 -- the program is admitted, and its services do not print
 #guard (Api.check colliding).isOk && (Api.printModule "main" colliding).isNone

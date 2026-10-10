@@ -415,14 +415,16 @@ theorem Eff.hoistAll_defsOf {root main : Eff Op} {history : List (List Nat × La
 
 /-- A program whose root holds a block is that block. -/
 theorem Eff.eq_of_block? {e : Eff Op} {defs : List DefDecl} {bodies : Effs Op} {body : Eff Op}
-    (h : e.block? = some (defs, bodies, body)) : e = .defs defs bodies body := by
+    {layers : LayerTerms Op} (h : e.block? = some (defs, bodies, body, layers)) :
+    e = .defs defs bodies body layers := by
   cases e <;> simp only [Eff.block?, reduceCtorEq, Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨rfl, rfl, rfl⟩ := h
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := h
   rfl
 
 /-- A program's block holds the program's declarations. -/
 theorem Eff.defsOf_of_block? {e : Eff Op} {defs : List DefDecl} {bodies : Effs Op}
-    {body : Eff Op} (h : e.block? = some (defs, bodies, body)) : e.defsOf = defs := by
+    {body : Eff Op} {layers : LayerTerms Op} (h : e.block? = some (defs, bodies, body, layers)) :
+    e.defsOf = defs := by
   rw [Eff.eq_of_block? h]
   rfl
 
@@ -497,8 +499,14 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
       cases heq
       exact ⟨ds, decl, body, rfl,
         mapM_ok_forall _ _ (fun t d hd => printCaptured_plain t d hd) _ hp, declaration⟩
-    | some triple =>
-      obtain ⟨defs, bodies, body⟩ := triple
+    | some quad =>
+      obtain ⟨defs, bodies, body, mlayers⟩ := quad
+      cases mlayers with
+      | cons _ _ =>
+        cases defs with
+        | nil => simp only [hb, reduceCtorEq] at printed
+        | cons _ _ => simp only [hb, reduceCtorEq] at printed
+      | nil => ?_
       cases defs with
       | nil => simp only [hb, reduceCtorEq] at printed
       | cons d ds =>
@@ -626,7 +634,7 @@ theorem readModule_printModule_defs {sig : Signature Op}
     {root main body : Eff Op} {defs : List DefDecl} {bodies : Effs Op}
     {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))
-    (block : main.block? = some (defs, bodies, body))
+    (block : main.block? = some (defs, bodies, body, .nil))
     {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
     (headsReadable : ∀ d ∈ defs, d.readable = true)
@@ -673,7 +681,7 @@ theorem readModule_printModule_defs {sig : Signature Op}
     have roles := restoreRoles hfault hdefs
     have hmain := mainReadable _ hm
     have hlayers := readCaptured_mapM layersReadable namesReadable _ hls
-    have restored : (Eff.defs (d :: ds) bodies body).restoreAll
+    have restored : (Eff.defs (d :: ds) bodies body .nil).restoreAll
         (selectHistory history (Path.sortBy Path.declBefore (history.map Prod.fst))) =
         some root := by
       have perm := selectHistory_ordered_perm history unique

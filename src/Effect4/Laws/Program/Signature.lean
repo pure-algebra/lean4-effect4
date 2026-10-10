@@ -488,7 +488,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) (okD
   eff_select _ _ r2 r3 := r2 ∧ r3
   eff_iterate _ _ _ _ _ r5 := r5
   eff_restore _ r1 := r1
-  eff_defs _ r1 r2 := r1 ∧ r2
+  eff_defs _ r1 r2 r3 := r1 ∧ r2 ∧ r3
   eff_invoke k _ r2 := okDef k ∧ r2
   stmt_bindYield r0 := r0
   stmt_yieldDiscard r0 := r0
@@ -627,10 +627,11 @@ theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : Eff 
   | restore a0 a1 =>
     show alg₁.eff_restore a0 (cata_eff alg₁ a1) = alg₂.eff_restore a0 (cata_eff alg₂ a1)
     rw [h.eff_restore, cata_eff_congr_on h a1 hr]
-  | defs a0 a1 a2 =>
-    show alg₁.eff_defs a0 (cata_effs alg₁ a1) (cata_eff alg₁ a2) =
-      alg₂.eff_defs a0 (cata_effs alg₂ a1) (cata_eff alg₂ a2)
-    rw [h.eff_defs, cata_effs_congr_on h a1 hr.1, cata_eff_congr_on h a2 hr.2]
+  | defs a0 a1 a2 a3 =>
+    show alg₁.eff_defs a0 (cata_effs alg₁ a1) (cata_eff alg₁ a2) (cata_layers alg₁ a3) =
+      alg₂.eff_defs a0 (cata_effs alg₂ a1) (cata_eff alg₂ a2) (cata_layers alg₂ a3)
+    rw [h.eff_defs, cata_effs_congr_on h a1 hr.1, cata_eff_congr_on h a2 hr.2.1,
+      cata_layers_congr_on h a3 hr.2.2]
   | invoke a0 a1 a2 =>
     show alg₁.eff_invoke a0 a1 (cata_effs alg₁ a2) = alg₂.eff_invoke a0 a1 (cata_effs alg₂ a2)
     rw [h.eff_invoke a0 hr.1, cata_effs_congr_on h a2 hr.2]

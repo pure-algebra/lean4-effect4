@@ -29,7 +29,10 @@ an unresolved revision or a failed git command (with the message); 2 on a usage 
                 The generated manifests (ocaml/eff/eff_manifest.txt, ocaml/goldens/eff/manifest.txt,
                 ocaml/goldens/eff/wire-tags.txt): each BASE family line, less the constructors the
                 policy names as retired (constructor_retirements), is a prefix of CAND's (names and
-                argument shapes), so an existing constructor is neither moved nor re-typed. A
+                argument shapes), so an existing constructor is neither moved nor re-typed, except
+                that a constructor the policy names as re-typed (constructor_retypings, decisions
+                row 210 as amended 2026-10-10) keeps its name and position and may change its
+                argument shapes. A
                 family's line may leave only when the policy names the family as retired from the
                 program world (family_retirements); its rows stay in wire-tags.json, tags reserved.
   C3 verdicts:  generated/corpus-index.tsv (Lean's wellTyped/readable verdict per program),
@@ -235,6 +238,18 @@ def retired_families(pol):
     return out
 
 
+def retyped_names(pol):
+    """The constructors the policy names as re-typed in place (`constructor_retypings`), as
+    (family, constructor) pairs, keyed as `retired_names` keys them. Each keeps its name, its
+    position and its tag; its argument shapes may change, and its byte vectors migrate by name."""
+    out = set()
+    for full in pol.get('constructor_retypings', []):
+        fam, _, name = full.rpartition('.')
+        out.add((fam, name))
+        out.add((fam.rpartition('.')[2], name))
+    return out
+
+
 def item_name(item):
     """A manifest item's constructor name: `lit(string)` and `lit=3` are `lit`."""
     return re.split(r'[(=]', item, maxsplit=1)[0]
@@ -331,7 +346,9 @@ def c2(base, cand, pol):
                     problems.append(f'wire-tags: new {fam}.{name} reuses tag {tag}')
     gone = retired_names(pol)
     gone_families = retired_families(pol)
+    retyped = retyped_names(pol)
     left = []
+    named_retypings = []
     for path in MANIFESTS:
         mb, mc = manifest_lines(base.read(path)), manifest_lines(cand.read(path))
         for fam, items in mb.items():
@@ -345,9 +362,16 @@ def c2(base, cand, pol):
                 continue
             # a constructor the policy names as retired leaves its family's line
             items = [x for x in items if (fam, item_name(x)) not in gone]
-            if got[:len(items)] != items:
-                i = next(i for i, (x, y) in enumerate(zip(items, got + [None] * len(items))) if x != y)
-                problems.append(f'{path}: {fam} position {i}: BASE {items[i]!r}, CAND {got[i] if i < len(got) else None!r}')
+            for i, x in enumerate(items):
+                y = got[i] if i < len(got) else None
+                if x == y:
+                    continue
+                # a constructor the policy names as re-typed keeps its name and position
+                if y is not None and item_name(x) == item_name(y) and (fam, item_name(x)) in retyped:
+                    named_retypings.append(f'{path}: {fam} position {i}: {x!r} -> {y!r}')
+                    continue
+                problems.append(f'{path}: {fam} position {i}: BASE {x!r}, CAND {y!r}')
+                break
     ok = not problems
     appended = {fam: [n for n in tc[fam]['active'] if n not in tb.get(fam, {}).get('active', {})]
                 for fam in tc}
@@ -356,6 +380,7 @@ def c2(base, cand, pol):
           f'appended {sum(map(len, appended.values()))} constructors {appended if appended else ""}')
     for p in problems: print(f'  {p}')
     for m in left: print(f'  family retired by policy name: {m}')
+    for m in named_retypings: print(f'  re-typed by policy name: {m}')
     return ok
 
 

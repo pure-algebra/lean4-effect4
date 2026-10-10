@@ -578,7 +578,7 @@ theorem LoopedRows.of_straightRows : ∀ (e : NativeEff), StraightRows table e =
       LoopedRows.of_straightRows c hc, Bool.and_self]
   | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h | .awaitFiber _ _, h
   | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h | .provideLayer _ _ _, h | .service _, h
-  | .provideService _ _ _, h | .iterate _ _ _ _ _ _, h | .restore _ _, h | .defs _ _ _, h => by
+  | .provideService _ _ _, h | .iterate _ _ _ _ _ _, h | .restore _ _, h | .defs _ _ _ _, h => by
     simp only [StraightRows, Bool.false_eq_true] at h
 
 /-- **The meaning at a settled machine with nothing armed** (H8, the closing step), under a host.

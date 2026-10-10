@@ -1186,7 +1186,7 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         let bodies ← readDefBodies classes sig' spell' heads
         let e ← readEff classes sig' spell' 0 main.value
         let ds ← layerDecls.mapM (readLayerDecl classes sig' spell')
-        match (Eff.defs defs bodies e).restoreAll ds with
+        match (Eff.defs defs bodies e .nil).restoreAll ds with
         | some e' => .ok e'
         | none => .error (.shape "module")
     | _, _ => .error (.shape "module")

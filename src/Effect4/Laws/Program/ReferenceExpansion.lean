@@ -18,12 +18,14 @@ Proof graph, each fact a step of `expanded_refs_nil_of_wf`:
   law at the expansion algebra (`Eff.refSites_expandRound`). A layer's reference sites move with
   its path (`LayerTerm.refSites_append`, `LayerTerm.refSites_move`): the law at the identity.
 * **The edge descends** (`target_refs_prior`): a reference inside a target is an original
-  reference of the program, and its site precedes the site of every reference to that target.
-  The target precedes the caller's site and is no prefix of it (`layerRefsWF_mem`,
+  reference of the program, and its site precedes the site of every reference to that target
+  in the reference order (`Eff.refBefore`: the module's layers first, then program order). The
+  target precedes the caller's site and is no prefix of it (`layerRefsWF_mem`,
   `Laws/Program/PathFold.lean`), and the nested site extends the target
-  (`Path.lt_append_of_lt`, `Laws/Program/PathOrder.lean`).
+  (`Eff.refBefore_append`, `Laws/Program/PathOrder.lean`).
 * **The budget** (`RefsWithin`): after `k` rounds, each reference left names the target of an
-  original occurrence whose rank (`Path.rank`) leaves room for `k` rounds. The program holds it
+  original occurrence whose rank in the reference order (`Path.rankBy`) leaves room for `k`
+  rounds. The program holds it
   at `k = 0` (`refsWithin_self`), and a round keeps it at `k + 1` (`refsWithin_round`). At the
   count of the original sites no reference is left (`refSites_nil_of_refsWithin`).
 
@@ -94,7 +96,8 @@ private theorem refSites_onRef_eff (f : List Nat → LayerTerm Op) (node : Eff O
       (foldMapAt_eff [] (· ++ ·) q node (f_layer := LayerTerm.refSite)).flatMap (sitesAt f p) := by
   cases node <;> simp only [cata_eff, EffAlgebra.id, foldMapAt_eff, List.flatMap_append,
     List.flatMap_nil, List.nil_append, List.append_assoc, refSites_onRef_eff f,
-    refSites_onRef_stmts f, refSites_onRef_effs f, refSites_onRef_action f, refSites_onRef_layer f]
+    refSites_onRef_stmts f, refSites_onRef_effs f, refSites_onRef_action f, refSites_onRef_layer f,
+    refSites_onRef_layers f]
 
 /-- The law at `Stmt`. -/
 private theorem refSites_onRef_stmt (f : List Nat → LayerTerm Op) (node : Stmt Op)
@@ -195,41 +198,49 @@ theorem LayerTerm.refSites_move {l : LayerTerm Op} {p q : List Nat} {x : List Na
 
 /-! ## The edge descends -/
 
+/-- A layer of a program stands below its root: the root is a program, no layer. A step of
+`target_refs_prior`. -/
+theorem layerAt_ne_nil {root : Eff Op} {target : List Nat} {l : LayerTerm Op}
+    (h : (Node.eff root).layerAt target = some l) : target ≠ [] := by
+  rintro rfl
+  cases h
+
 /-- **A reference inside a target is an original reference, and it precedes every reference to
 the target.** The target's layer is a layer of the program, so its sites are the program's
 (`refSites_subset_of_layerAt`). The target precedes the caller's site and is no prefix of it
 (`layerRefsWF_mem`), and the nested site extends the target (`LayerTerm.refSites_move`,
-`Path.lt_append_of_lt`). A step of `expanded_refs_nil_of_wf`; consumer `refsWithin_round`. -/
+`Eff.refBefore_append`). A step of `expanded_refs_nil_of_wf`; consumer `refsWithin_round`. -/
 theorem target_refs_prior (root : Eff Op) (valid : root.layerRefsWF = true)
     {site target nested next : List Nat} {layer : LayerTerm Op}
     (caller : (site, target) ∈ root.refSites [])
     (lookup : (Node.eff root).layerAt target = some layer)
     (inside : (nested, next) ∈ layer.refSites target) :
-    (nested, next) ∈ root.refSites [] ∧ Path.lt nested site = true := by
+    (nested, next) ∈ root.refSites [] ∧ root.refBefore nested site = true := by
   refine ⟨refSites_subset_of_layerAt lookup inside, ?_⟩
   obtain ⟨hlt, hpre, -⟩ := layerRefsWF_mem valid caller
   obtain ⟨r, hr, -⟩ := LayerTerm.refSites_move (q := []) inside
   have hnested : nested = target ++ r := hr
   rw [hnested]
-  exact Path.lt_append_of_lt hlt hpre r
+  exact root.refBefore_append (layerAt_ne_nil lookup) hlt hpre r
 
 /-! ## The budget -/
 
 /-- **The budget after `k` rounds.** Every reference that `e` holds names the target of an
-original occurrence of the program, and that occurrence's rank among the original sites
-(`Path.rank`) leaves room for `k` rounds below their count. A copy of a reference keeps no site
+original occurrence of the program, and that occurrence's rank among the original sites in the
+reference order (`Path.rankBy`) leaves room for `k` rounds below their count. A copy of a reference keeps no site
 of its own: the budget reads the target only. -/
 def RefsWithin (root : Eff Op) (k : Nat) (e : Eff Op) : Prop :=
   ∀ x ∈ e.refSites [], ∃ site, (site, x.2) ∈ root.refSites [] ∧
-    Path.rank ((root.refSites []).map Prod.fst) site + k < (root.refSites []).length
+    Path.rankBy root.refBefore ((root.refSites []).map Prod.fst) site + k <
+      (root.refSites []).length
 
 /-- The program holds its own budget before a round: a member's rank is below the count
-(`Path.rank_lt_length`). A step of `expanded_refs_nil_of_wf`; consumer
+(`Path.rankBy_lt_length`). A step of `expanded_refs_nil_of_wf`; consumer
 `foldl_expandRound_refSites_nil`. -/
 theorem refsWithin_self (root : Eff Op) : RefsWithin root 0 root := by
   intro x hx
   refine ⟨x.1, hx, ?_⟩
-  have hrank := Path.rank_lt_length
+  have hrank := Path.rankBy_lt_length root.refBefore_irrefl
     (List.mem_map.mpr ⟨x, hx, rfl⟩ : x.1 ∈ (root.refSites []).map Prod.fst)
   rw [List.length_map] at hrank
   omega
@@ -237,7 +248,7 @@ theorem refsWithin_self (root : Eff Op) : RefsWithin root 0 root := by
 /-- **A round keeps the budget, one round on.** A reference of the round's result is in the copy
 of a target's layer (`Eff.refSites_expandRound`). It names the target of an original occurrence
 inside that layer (`LayerTerm.refSites_move`), which precedes the occurrence that the replaced
-reference had (`target_refs_prior`). So its rank is smaller (`Path.rank_lt_rank`). A step of
+reference had (`target_refs_prior`). So its rank is smaller (`Path.rankBy_lt_rankBy`). A step of
 `expanded_refs_nil_of_wf`; consumer `refsWithin_rounds`. -/
 theorem refsWithin_round (root : Eff Op) (valid : root.layerRefsWF = true) {k : Nat} {e : Eff Op}
     (h : RefsWithin root k e) : RefsWithin root (k + 1) (Eff.expandRound (.eff root) e) := by
@@ -250,7 +261,7 @@ theorem refsWithin_round (root : Eff Op) (valid : root.layerRefsWF = true) {k : 
   obtain ⟨r, -, horig⟩ := LayerTerm.refSites_move (q := x.2) hyx
   obtain ⟨hmem, hlt⟩ := target_refs_prior root valid hsite hlayer horig
   refine ⟨x.2 ++ r, hmem, ?_⟩
-  have hless := Path.rank_lt_rank
+  have hless := Path.rankBy_lt_rankBy root.refBefore_irrefl root.refBefore_trans
     (List.mem_map.mpr ⟨_, hmem, rfl⟩ : x.2 ++ r ∈ (root.refSites []).map Prod.fst) hlt
   omega
 

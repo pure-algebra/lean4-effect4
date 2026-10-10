@@ -52,7 +52,8 @@ private theorem onRef_eq_self_eff {Op : Type} (f : List Nat → LayerTerm Op) (q
     List.append_eq_nil_iff, implies_true, onRef_eq_self_eff f (q ++ [0]),
     onRef_eq_self_eff f (q ++ [1]), onRef_eq_self_eff f (q ++ [2]),
     onRef_eq_self_stmts f (q ++ [0]), onRef_eq_self_effs f (q ++ [0]),
-    onRef_eq_self_action f (q ++ [0]), onRef_eq_self_layer f (q ++ [0])]
+    onRef_eq_self_action f (q ++ [0]), onRef_eq_self_layer f (q ++ [0]),
+    onRef_eq_self_layers f (q ++ [2])]
 
 /-- A substitution fixes a `Stmt` with no reference site. -/
 private theorem onRef_eq_self_stmt {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)

@@ -149,7 +149,7 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     obtain ⟨savedTy, hs, hsub, hb⟩ := inv_restore sig env p saved body t h
     exact .restore hs hsub (check_sound sig body env _ t hb)
   -- a definition block is refused structurally (decisions row 328)
-  | defs decls bodies main =>
+  | defs decls bodies main _ =>
     intro env p t h
     simp only [check] at h
     cases h
@@ -480,7 +480,7 @@ theorem check_complete (sig : Signature Op) (e : Eff Op) :
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     aesop (rule_sets := [Effect4.Checker])
   -- no rule derives a type for a definition block below the root
-  | defs decls bodies main => intro env t hd p; cases hd
+  | defs decls bodies main _ => intro env t hd p; cases hd
   -- an invocation with programs (decisions row 340)
   | invoke k request args =>
     intro env t hd p; cases hd

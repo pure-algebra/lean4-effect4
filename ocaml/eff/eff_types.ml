@@ -550,7 +550,7 @@ type eff =
   | Eff_select of term * decision * eff * eff
   | Eff_iterate of ty option * term * term * term * term * eff
   | Eff_restore of term * eff
-  | Eff_defs of def_decl list * effs * eff
+  | Eff_defs of def_decl list * effs * eff * layer_terms
   | Eff_invoke of int * term * effs
 
 and stmt =

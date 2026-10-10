@@ -42,7 +42,7 @@ def StraightRows (table : RowTable) : NativeEff → Bool
   | .select _ _ a2 a3 => StraightRows table a2 && StraightRows table a3
   | .iterate _ _ _ _ _ _ => false
   | .restore _ _ => false
-  | .defs _ _ _ => false
+  | .defs _ _ _ _ => false
   | .invoke _ _ _ => false
 
 end Effect4.Program.Denote

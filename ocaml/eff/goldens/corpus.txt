@@ -82,6 +82,7 @@ pDefsRec	well-typed
 pIllDefsBody	ill-typed
 pIllCallOutside	ill-typed
 pDefsService	well-typed
+pDefsLayers	ill-typed
 pInvoke	well-typed
 pIllInvokeArity	ill-typed
 pIllParamOutside	ill-typed

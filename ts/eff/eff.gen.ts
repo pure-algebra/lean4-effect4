@@ -29,7 +29,7 @@
 //   DefRole (Effect4.Program.DefRole, tagged union): plain serviceInit(service: string) serviceMethod(service: string, method: string, arity: number)
 //   ParamDecl (Effect4.Program.ParamDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty)
 //   DefDecl (Effect4.Program.DefDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, role: DefRole, params: ReadonlyArray<ParamDecl>)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff) defs(decls: ReadonlyArray<DefDecl>, bodies: ReadonlyArray<Eff>, main: Eff) invoke(index: number, request: Term, args: ReadonlyArray<Eff>)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff) defs(decls: ReadonlyArray<DefDecl>, bodies: ReadonlyArray<Eff>, main: Eff, layers: ReadonlyArray<LayerTerm>) invoke(index: number, request: Term, args: ReadonlyArray<Eff>)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
@@ -315,7 +315,7 @@ export type Eff =
   | { readonly _tag: "select"; readonly scrutinee: Term; readonly decision: Decision; readonly arm0: Eff; readonly arm1: Eff }
   | { readonly _tag: "iterate"; readonly cursorTy: Ty | null; readonly initial: Term; readonly test: Term; readonly step: Term; readonly result: Term; readonly body: Eff }
   | { readonly _tag: "restore"; readonly saved: Term; readonly body: Eff }
-  | { readonly _tag: "defs"; readonly decls: ReadonlyArray<DefDecl>; readonly bodies: ReadonlyArray<Eff>; readonly main: Eff }
+  | { readonly _tag: "defs"; readonly decls: ReadonlyArray<DefDecl>; readonly bodies: ReadonlyArray<Eff>; readonly main: Eff; readonly layers: ReadonlyArray<LayerTerm> }
   | { readonly _tag: "invoke"; readonly index: number; readonly request: Term; readonly args: ReadonlyArray<Eff> }
 
 export const Eff = Schema.TaggedUnion({
@@ -345,7 +345,7 @@ export const Eff = Schema.TaggedUnion({
   select: { scrutinee: Schema.suspend((): Schema.Codec<Term> => Term), decision: Schema.suspend((): Schema.Codec<Decision> => Decision), arm0: Schema.suspend((): Schema.Codec<Eff> => Eff), arm1: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   iterate: { cursorTy: Schema.NullOr(Schema.suspend((): Schema.Codec<Ty> => Ty)), initial: Schema.suspend((): Schema.Codec<Term> => Term), test: Schema.suspend((): Schema.Codec<Term> => Term), step: Schema.suspend((): Schema.Codec<Term> => Term), result: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   restore: { saved: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
-  defs: { decls: Schema.Array(DefDecl), bodies: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)), main: Schema.suspend((): Schema.Codec<Eff> => Eff) },
+  defs: { decls: Schema.Array(DefDecl), bodies: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)), main: Schema.suspend((): Schema.Codec<Eff> => Eff), layers: Schema.Array(Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm)) },
   invoke: { index: Schema.Int, request: Schema.suspend((): Schema.Codec<Term> => Term), args: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)) },
 })
 

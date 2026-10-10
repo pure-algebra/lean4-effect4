@@ -1349,12 +1349,13 @@ theorem layerRefsWF_of_typeOf {Op : Type} {sig : Signature Op} {program : Eff Op
     exact hc
   · cases h
 
-/-- **A checked source is formed for M5** (`SourceWF`, decisions rows 170 and 328): the checker's
-verdict gives its references' formation and its block's typing. -/
+/-- **A checked source is formed for M5** (`SourceWF`, decisions rows 170, 328 and 341): the
+checker's verdict gives its references' formation, its block's typing and its module layers'. -/
 theorem sourceWF_of_typeOf {root : ProgramSource} {rootTy : EffTy}
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
     SourceWF root :=
-  ⟨layerRefsWF_of_typeOf checked, bodiesTyped_of_typeOf checked⟩
+  ⟨layerRefsWF_of_typeOf checked, bodiesTyped_of_typeOf checked,
+    moduleLayersTyped_of_typeOf checked⟩
 
 /-- **The root's code is typed** (decisions rows 148, 153 (b), 175 and 328): at every world whose
 service table is the source's, the program at the root point denotes a program typed at the
@@ -1369,23 +1370,24 @@ theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Na
     (w : World) (htie : w.serviceTy = root.sig.serviceTy) :
     TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel)) := by
   have hwf := sourceWF_of_typeOf checked
-  have hcases : (∃ decls bodies main, root.program = .defs decls bodies main) ∨
-      ((∀ decls bodies main, root.program ≠ .defs decls bodies main) ∧
+  have hcases : (∃ decls bodies main layers, root.program = .defs decls bodies main layers) ∨
+      ((∀ decls bodies main layers, root.program ≠ .defs decls bodies main layers) ∧
         root.program.defsOf = []) := by
     cases root.program with
-    | defs decls bodies main => exact .inl ⟨decls, bodies, main, rfl⟩
-    | _ => exact .inr ⟨(fun _ _ _ h => nomatch h), rfl⟩
-  rcases hcases with ⟨decls, bodies, main, hprog⟩ | ⟨hne, hnil⟩
+    | defs decls bodies main layers => exact .inl ⟨decls, bodies, main, layers, rfl⟩
+    | _ => exact .inr ⟨(fun _ _ _ _ h => nomatch h), rfl⟩
+  rcases hcases with ⟨decls, bodies, main, layers, hprog⟩ | ⟨hne, hnil⟩
   · -- a block: no step of its own, then its main program at child 1
     by_cases hpos : (rootPoint compileFuel).fuel = 0
     · exact denoteR_zero_typed _ hpos
     · have hstep : denoteR root.program root.program (rootPoint compileFuel) =
           denoteR root.program main ((rootPoint compileFuel).child 1) := by
         have e1 : denoteR root.program root.program (rootPoint compileFuel) =
-            denoteR root.program (.defs decls bodies main) (rootPoint compileFuel) := by
+            denoteR root.program (.defs decls bodies main layers) (rootPoint compileFuel) := by
           rw [← hprog]
         rw [e1]
-        exact denoteR_defs (root := root.program) (p := rootPoint compileFuel) decls bodies main hpos
+        exact denoteR_defs (root := root.program) (p := rootPoint compileFuel) decls bodies main
+          layers hpos
       rw [hstep]
       have hat : Node.at_ (.eff root.program) ((rootPoint compileFuel).child 1).path =
           some (.eff main) := by
@@ -1428,7 +1430,8 @@ proved at every source in `Typed/LayerArm.lean` (`provideLayerArm`), where this 
 `denotesTyped` (`denotesTyped`). -/
 theorem denotesTyped_of_provideLayer (root : ProgramSource) (hlayer : ProvideLayerArm root) :
     DenotesTyped root := fun hwf w htie p e ty hat hpt =>
-  childDenotes_upto root hlayer hwf.refs hwf.bodies p.fuel p.fuel (Nat.le_refl _) e p.path hat w
+  childDenotes_upto root hlayer hwf.refs hwf.layers hwf.bodies p.fuel p.fuel (Nat.le_refl _) e p.path
+    hat w
     htie p ty rfl rfl hpt
 
 /-- **M5 on the layer-free fragment**: a program none of whose nodes is a `provideLayer` satisfies

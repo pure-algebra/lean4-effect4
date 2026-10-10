@@ -180,8 +180,12 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
         const body = eff(e.body, child(0))
         return { ...e, body, key: onKey(e.key) }
       }
-      // a definition block (decisions row 328): its bodies' spine is child 0, its main program child 1
-      case "defs": return { ...e, bodies: spine(e.bodies, child(0), eff), main: eff(e.main, child(1)) }
+      // a definition block (decisions row 328): its bodies' spine is child 0, its main program
+      // child 1, the module's layers' spine child 2 (decisions row 341)
+      case "defs": return {
+        ...e, bodies: spine(e.bodies, child(0), eff), main: eff(e.main, child(1)),
+        layers: spine(e.layers, child(2), layer)
+      }
       // an invocation with programs (decisions row 340): its programs' spine is child 0
       case "invoke": return { ...e, args: spine(e.args, child(0), eff) }
       case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": return e

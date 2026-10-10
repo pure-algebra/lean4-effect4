@@ -829,7 +829,7 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_select (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0; emit_decision b a1; emit_eff b a2; emit_eff b a3)
   | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
   | Eff_restore (a0, a1) -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0; emit_eff b a1)
-  | Eff_defs (a0, a1, a2) -> Eff_frame.emit_ctor b 30 (fun b -> Eff_frame.emit_list b (fun b y -> emit_def_decl b y) a0; emit_effs b a1; emit_eff b a2)
+  | Eff_defs (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 30 (fun b -> Eff_frame.emit_list b (fun b y -> emit_def_decl b y) a0; emit_effs b a1; emit_eff b a2; emit_layer_terms b a3)
   | Eff_invoke (a0, a1, a2) -> Eff_frame.emit_ctor b 31 (fun b -> Eff_frame.emit_nat b a0; emit_term b a1; emit_effs b a2)
 and emit_stmt (b : Buffer.t) (v : stmt) : unit =
   match v with
@@ -1105,7 +1105,10 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
           (match decode_eff s p e with
            | None -> None
            | Some (a2, p) ->
-            if p = e then Some (Eff_defs (a0, a1, a2), next) else None)))
+            (match decode_layer_terms s p e with
+             | None -> None
+             | Some (a3, p) ->
+              if p = e then Some (Eff_defs (a0, a1, a2, a3), next) else None))))
     | 31 ->
       (match Eff_frame.decode_nat s p e with
        | None -> None

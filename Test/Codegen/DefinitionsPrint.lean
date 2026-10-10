@@ -66,7 +66,7 @@ example : DefsNamed (nativeSpell [])
 /-- `twice`'s block with its definition renamed. -/
 def renamed (name : String) : NativeEff :=
   .defs [{ twiceDecl with name }] (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil)
-    (.perform (.call 0) (.lit (.nat 21)))
+    (.perform (.call 0) (.lit (.nat 21))) .nil
 
 /-- The printer's refusal of a program, when its emission is refused there. -/
 def printRefusal (p : NativeEff) : Option PrintRefusal :=
@@ -83,18 +83,18 @@ def printRefusal (p : NativeEff) : Option PrintRefusal :=
 #guard printRefusal (.defs [twiceDecl, twiceDecl]
     (.cons (.succeed (ap "pair" [.var 0, .var 0]))
       (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil))
-    (.perform (.call 0) (.lit (.nat 21)))) = some (.unsafeName "twice")
+    (.perform (.call 0) (.lit (.nat 21))) .nil) = some (.unsafeName "twice")
 
 -- an empty block would print as its main program alone, and read back as it
 #guard (Program.printModule (nativeSignature []) "main" (EffTy.pure .nat)
-    (.defs [] .nil (.succeed (.lit (.nat 1))) : NativeEff)).toOption.isNone
+    (.defs [] .nil (.succeed (.lit (.nat 1))) .nil : NativeEff)).toOption.isNone
 
 /-- `twice` with a layer inside its body. -/
 def layerInBody : NativeEff :=
   .defs [twiceDecl]
     (.cons (.provideLayer (.succeed ⟨⟨1⟩, ⟨1⟩⟩ .unit) false
       (.succeed (ap "pair" [.var 0, .var 0]))) .nil)
-    (.perform (.call 0) (.lit (.nat 21)))
+    (.perform (.call 0) (.lit (.nat 21))) .nil
 
 -- a layer inside a body is refused by name: rc.112 would build one layer object per invocation
 #guard (Program.printModule (nativeSignature []) "main" (EffTy.pure (.prod .nat .nat))
@@ -105,7 +105,7 @@ def layerInBody : NativeEff :=
 /-- `twice` declaring a service it does not need. -/
 def withService : NativeEff :=
   .defs [{ twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩] }]
-    (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil) (.perform (.call 0) (.lit (.nat 21)))
+    (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil) (.perform (.call 0) (.lit (.nat 21))) .nil
 
 -- a requirement row other than `never` is printed and not read: the declaration is outside the
 -- readable domain, and the reader refuses its header by name

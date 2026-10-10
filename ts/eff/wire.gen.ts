@@ -373,7 +373,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "select": return w.ctor(27, [() => writeTerm(w, v.scrutinee), () => writeDecision(w, v.decision), () => writeEff(w, v.arm0), () => writeEff(w, v.arm1)])
     case "iterate": return w.ctor(28, [() => w.option(v.cursorTy, (y) => writeTy(w, y)), () => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeTerm(w, v.result), () => writeEff(w, v.body)])
     case "restore": return w.ctor(29, [() => writeTerm(w, v.saved), () => writeEff(w, v.body)])
-    case "defs": return w.ctor(30, [() => w.list(v.decls, (y) => writeDefDecl(w, y)), () => writeEffs(w, v.bodies), () => writeEff(w, v.main)])
+    case "defs": return w.ctor(30, [() => w.list(v.decls, (y) => writeDefDecl(w, y)), () => writeEffs(w, v.bodies), () => writeEff(w, v.main), () => writeLayerTerms(w, v.layers)])
     case "invoke": return w.ctor(31, [() => w.nat(v.index), () => writeTerm(w, v.request), () => writeEffs(w, v.args)])
     default: throw new TypeError("wire Eff constructor")
   }

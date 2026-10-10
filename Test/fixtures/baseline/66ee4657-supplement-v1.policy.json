@@ -123,7 +123,15 @@
     "`NativeOp.param` (tag 33) runs one inside a body, and `Eff.invoke` (tag 31) passes one program",
     "per parameter. Every program with a block takes new bytes, since the codec writes the list:",
     "the four block goldens migrate, `pDefsService` among them, and `pInvoke`, `pIllInvokeArity`",
-    "and `pIllParamOutside` are added. No old encoding is kept. No verdict moves."
+    "and `pIllParamOutside` are added. No old encoding is kept. No verdict moves.",
+    "",
+    "The module's layers (2026-10-10, decisions row 341, step 2a): `Eff.defs` gains its last",
+    "field, the module's layers, a `LayerTerms` spine at the block's child 2. The constructor keeps",
+    "its name, its position and its tag 30, and is re-typed in place (`constructor_retypings`,",
+    "decisions row 210 as amended 2026-10-10, under the owner's ruling of row 341 (a) and the",
+    "restatement of 2026-10-09 that stored bytes are no compatibility constraint). Every program",
+    "with a block takes new bytes: the six block goldens migrate, and `pDefsLayers` is added. No",
+    "old encoding is kept. No verdict moves."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -160,6 +168,9 @@
     "Effect4.Program.DefRole.serviceMethod",
     "Effect4.Program.NativeOp.param",
     "Effect4.Program.Eff.invoke"
+  ],
+  "constructor_retypings": [
+    "Effect4.Program.Eff.defs"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
@@ -278,7 +289,11 @@
     "eff/goldens/pIllDefsBody.bin",
     "eff/goldens/pIllDefsBody.json",
     "eff/goldens/pDefsService.bin",
-    "eff/goldens/pDefsService.json"
+    "eff/goldens/pDefsService.json",
+    "eff/goldens/pInvoke.bin",
+    "eff/goldens/pInvoke.json",
+    "eff/goldens/pIllInvokeArity.bin",
+    "eff/goldens/pIllInvokeArity.json"
   ],
   "verdict_moves": [
     "generated/corpus-index.tsv:g158",

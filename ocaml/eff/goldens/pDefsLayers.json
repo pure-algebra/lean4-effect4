@@ -1,0 +1,1 @@
+["defs",[{"name":"id","request":["nat"],"answer":["nat"],"error":["never"],"requires":[],"role":["plain"],"params":[]}],["cons",["succeed",["var",0]],["nil"]],["provideLayer",["ref",[2,0]],false,["service",{"name":{"value":4},"service":{"value":4}}]],["cons",["effect",{"name":{"value":4},"service":{"value":4}},["succeed",["lit",["nat",7]]]],["nil"]]]

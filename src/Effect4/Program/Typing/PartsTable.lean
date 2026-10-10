@@ -46,13 +46,20 @@ def Table.bodies (sig : Signature Op) : List DefDecl → Effs Op → List Nat �
       Table.bodies sig [] rest (base ++ [1]))
   | _, .nil, base => [⟨base, none, none⟩]
 
+/-- **The entries of a block's module layers** (decisions row 341, step 2): a nonempty spine is
+the module layers' part (`Part.layersProgram`), each address with its environment, at the
+block's child `2`; an empty spine is in no part and has neither. -/
+def Table.moduleLayers (sig : Signature Op) : LayerTerms Op → List Table.Entry
+  | .nil => [⟨[2], none, none⟩]
+  | .cons head tail => (Annotate.checkLayers sig [2] (.cons head tail)).1
+
 /-- **A whole program's address table, part by part**, with `root` the module check's answer. A
 program with no block is one part: its table is `annotate`'s. -/
 def annotateModule (s : Signature Op) (root : Except TypeRefusal EffTy) :
     Eff Op → List Table.Entry
-  | .defs decls bodies main =>
+  | .defs decls bodies main layers =>
     ⟨[], some (.env []), some root⟩ :: (Table.bodies (s.withDefs decls) decls bodies [0] ++
-      (Annotate.check (s.withDefs decls) [] [1] main).1)
+      ((Annotate.check (s.withDefs decls) [] [1] main).1 ++ Table.moduleLayers (s.withDefs decls) layers))
   | p => annotate s [] p
 
 /-- **A sketch's address table, part by part**: its table (`Sketch.annotate_eq_table`,

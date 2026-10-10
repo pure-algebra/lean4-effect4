@@ -149,20 +149,20 @@ def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Boo
   match root.hoistAll with
   | .ok (main, history) =>
     match main.block? with
-    | some (defs, bodies, body) =>
+    | some (defs, bodies, body, .nil) =>
       defs.all DefDecl.readable &&
         bodies.toList.all (fun b => Readable classes (sig.withDefs defs) 1 (.suspend b)) &&
         Readable classes (sig.withDefs defs) 0 body && history.all fun entry =>
           (cata_layer (readableAlg classes (sig.withDefs defs)) entry.2 0).isSome &&
             decide (LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
-    | none => false
+    | _ => false
   | .error _ => false
 
 /-- What `blockReadable` says of the pieces. -/
 theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     (hr : blockReadable classes sig root = true) :
     ∃ main history defs bodies body, root.hoistAll = .ok (main, history) ∧
-      main.block? = some (defs, bodies, body) ∧ (∀ d ∈ defs, d.readable = true) ∧
+      main.block? = some (defs, bodies, body, .nil) ∧ (∀ d ∈ defs, d.readable = true) ∧
       (∀ b ∈ bodies.toList, Readable classes (sig.withDefs defs) 1 (.suspend b) = true) ∧
       Readable classes (sig.withDefs defs) 0 body = true ∧
       (∀ entry ∈ history, ReadableAt classes (sig.withDefs defs) .layer entry.2 0) ∧

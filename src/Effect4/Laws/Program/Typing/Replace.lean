@@ -352,7 +352,9 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
   · cases hn with | eff hp => cases hp with | restore hsv hsub hb =>
     exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.restore ((h.termTy _ _).trans hsv) hsub hx)⟩
-  -- eff (.defs _ a1 _), 0 and eff (.defs _ _ a2), 1: no rule types a block below the root
+  -- eff (.defs _ a1 _ _), 0, eff (.defs _ _ a2 _), 1 and eff (.defs _ _ _ a3), 2: no rule types
+  -- a block below the root
+  · cases hn with | eff hp => cases hp
   · cases hn with | eff hp => cases hp
   · cases hn with | eff hp => cases hp
   -- eff (.invoke _ _ a2), 0: the programs at the definition's parameters (decisions row 340)

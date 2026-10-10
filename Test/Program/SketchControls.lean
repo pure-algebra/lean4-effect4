@@ -95,7 +95,7 @@ theorem original_sigProgram : SigProgram ({} : SigApp).signature original :=
 the program no longer performs changes nothing. -/
 theorem filled_is_the_program :
     filled.check = Checker.check ({} : SigApp).signature [] [] original :=
-  Sketch.check_filled filled {} original_sigProgram (fun _ _ _ h => by cases h)
+  Sketch.check_filled filled {} original_sigProgram (fun _ _ _ _ h => by cases h)
 
 /-- **H2 at the example (proved).** A second hole is declared, and the sketch keeps its type. -/
 theorem more_holes_keep_the_type :

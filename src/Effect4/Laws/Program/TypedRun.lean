@@ -80,7 +80,7 @@ theorem typeOfProgram_looped (sig : Signature NativeOp) (e : NativeEff) (hl : Lo
   have hrefs := Looped.refSites_nil e [] hl
   rw [typeOfProgram_eq_if_refsWF, if_pos (layerRefsWF_of_refSites_nil e hrefs),
     expandRefs_eq_self_of_refSites_nil e hrefs,
-    Effect4.Program.checkModule_eq_check sig (fun _ _ _ heq => by subst heq; cases hl)]
+    Effect4.Program.checkModule_eq_check sig (fun _ _ _ _ heq => by subst heq; cases hl)]
   rfl
 
 /-- **A certified straight program runs to an exit of its type.** -/

@@ -69,7 +69,7 @@ def Table.bodyEntry (sig : Signature Op) (decls : List DefDecl) (bodies : Effs O
 
 /-- **Whether a program is a definition block.** -/
 def Eff.isBlock : Eff Op → Bool
-  | .defs _ _ _ => true
+  | .defs _ _ _ _ => true
   | _ => false
 
 /-- **Whether a node is a program that is a definition block.** -/
@@ -90,8 +90,8 @@ theorem HasTy.isBlock {s : Signature Op} {env : TyEnv} {e : Eff Op} {t : EffTy}
 `module-table-splices`. Its consumers are `annotateModule_plain` and `Eff.partAt_plain`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Eff.ne_defs_of_isBlock {e : Eff Op} (h : e.isBlock = false) :
-    ∀ decls bodies main, e ≠ .defs decls bodies main := by
-  intro decls bodies main he
+    ∀ decls bodies main layers, e ≠ .defs decls bodies main layers := by
+  intro decls bodies main layers he
   subst he
   cases h
 
@@ -99,10 +99,10 @@ theorem Eff.ne_defs_of_isBlock {e : Eff Op} (h : e.isBlock = false) :
 `annotateModule_fill`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Eff.eq_defs_of_isBlock {e : Eff Op} (h : e.isBlock = true) :
-    ∃ decls bodies main, e = .defs decls bodies main := by
+    ∃ decls bodies main layers, e = .defs decls bodies main layers := by
   unfold Eff.isBlock at h
   split at h
-  · exact ⟨_, _, _, rfl⟩
+  · exact ⟨_, _, _, _, rfl⟩
   · cases h
 
 /-- A child edit keeps whether a node is a block. A step of `module-table-splices`. Its consumer
@@ -157,8 +157,10 @@ theorem annotateModule_plain {s : Signature Op} {root : Except TypeRefusal EffTy
 `annotateModule_fill_main`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Node.replaceAt_defs_main {decls : List DefDecl} {bodies : Effs Op} {main p' q' : Eff Op}
-    {r : List Nat} (h : (Node.eff (.defs decls bodies main)).replaceAt (1 :: r) (.eff q') = some (.eff p')) :
-    ∃ main', (Node.eff main).replaceAt r (.eff q') = some (.eff main') ∧ p' = .defs decls bodies main' := by
+    {layers : LayerTerms Op} {r : List Nat}
+    (h : (Node.eff (.defs decls bodies main layers)).replaceAt (1 :: r) (.eff q') = some (.eff p')) :
+    ∃ main', (Node.eff main).replaceAt r (.eff q') = some (.eff main') ∧
+      p' = .defs decls bodies main' layers := by
   simp only [Node.replaceAt, Node.child, Option.bind_some] at h
   cases hr : (Node.eff main).replaceAt r (.eff q') with
   | none =>
@@ -176,9 +178,10 @@ theorem Node.replaceAt_defs_main {decls : List DefDecl} {bodies : Effs Op} {main
 `annotateModule_fill_body`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Node.replaceAt_defs_body {decls : List DefDecl} {bodies : Effs Op} {main p' q' : Eff Op}
-    {r : List Nat} (h : (Node.eff (.defs decls bodies main)).replaceAt (0 :: r) (.eff q') = some (.eff p')) :
+    {layers : LayerTerms Op} {r : List Nat}
+    (h : (Node.eff (.defs decls bodies main layers)).replaceAt (0 :: r) (.eff q') = some (.eff p')) :
     ∃ bodies', (Node.effs bodies).replaceAt r (.eff q') = some (.effs bodies') ∧
-      p' = .defs decls bodies' main := by
+      p' = .defs decls bodies' main layers := by
   simp only [Node.replaceAt, Node.child, Option.bind_some] at h
   cases hr : (Node.effs bodies).replaceAt r (.eff q') with
   | none =>
@@ -282,12 +285,11 @@ theorem Sketch.annotate_eq_table (s : Sketch) (app : SigApp) : s.annotate app = 
       generalize Node.envAt (app.withHoles s.holes).signature (NodeEnv.env []) (Node.eff s.program)
         (i :: r) = y
       rcases x with _ | (_ | _ | _ | _ | _ | _ | _) <;> rcases y with _ | (_ | _ | _) <;> rfl
-  · obtain ⟨decls, bodies, main, hp⟩ := Eff.eq_defs_of_isBlock hb
+  · obtain ⟨decls, bodies, main, layers, hp⟩ := Eff.eq_defs_of_isBlock hb
     rw [hp]
     simp only [annotateModule]
     rw [Node.addresses_eq_cons]
-    simp only [Node.childAddresses, Node.child, List.append_nil, List.map_cons, List.map_append,
-      List.map_map]
+    simp only [Node.childAddresses, Node.child, List.map_cons, List.map_append, List.map_map]
     rw [← Table.bodies_eq, Annotate.check_eq]
     unfold tableAt
     congr 1
@@ -303,14 +305,33 @@ theorem Sketch.annotate_eq_table (s : Sketch) (app : SigApp) : s.annotate app = 
         generalize (Node.eff part.program).at_ rest = x
         generalize Node.envAt part.sig (NodeEnv.env part.env) (Node.eff part.program) rest = y
         rcases x with _ | (_ | _ | _ | _ | _ | _ | _) <;> rcases y with _ | (_ | _ | _) <;> rfl
-    · apply List.map_congr_left
-      intro r _
-      simp only [Function.comp_def, Sketch.tableEntry, hp, Eff.partAt, tableEntryAt,
-        Option.bind_some, List.singleton_append]
-      generalize (Node.eff main).at_ r = x
-      generalize Node.envAt ((app.withHoles s.holes).signature.withDefs decls) (NodeEnv.env [])
-        (Node.eff main) r = y
-      rcases x with _ | (_ | _ | _ | _ | _ | _ | _) <;> rcases y with _ | (_ | _ | _) <;> rfl
+    · congr 1
+      · apply List.map_congr_left
+        intro r _
+        simp only [Function.comp_def, Sketch.tableEntry, hp, Eff.partAt, tableEntryAt,
+          Option.bind_some, List.singleton_append]
+        generalize (Node.eff main).at_ r = x
+        generalize Node.envAt ((app.withHoles s.holes).signature.withDefs decls) (NodeEnv.env [])
+          (Node.eff main) r = y
+        rcases x with _ | (_ | _ | _ | _ | _ | _ | _) <;> rcases y with _ | (_ | _ | _) <;> rfl
+      · -- the module's layers (decisions row 341): their part's entries, at the block's child 2
+        cases layers with
+        | nil =>
+          simp only [Function.comp_def, Sketch.tableEntry, hp, Eff.partAt, Table.moduleLayers,
+            Node.addresses_eq_cons, List.map_cons]
+          rfl
+        | cons head tail =>
+          simp only [Table.moduleLayers, Annotate.checkLayers_eq]
+          unfold tableAt
+          apply List.map_congr_left
+          intro r _
+          simp only [Function.comp_def, Sketch.tableEntry, hp, Eff.partAt, tableEntryAt,
+            Option.bind_some, List.singleton_append]
+          rw [layersProgram_envAt, layersProgram_at]
+          generalize (Node.layers (.cons head tail)).at_ r = x
+          generalize Node.envAt ((app.withHoles s.holes).signature.withDefs decls) NodeEnv.closed
+            (Node.layers (.cons head tail)) r = y
+          rcases x with _ | (_ | _ | _ | _ | _ | _ | _) <;> rcases y with _ | (_ | _ | _) <;> rfl
 
 /-! ## An edit inside a part -/
 
@@ -507,23 +528,68 @@ theorem annotateModule_fill_plain {s : Signature Op} {p p' q' : Eff Op} {T : Eff
   rw [checkModule_eq_check s (Eff.ne_defs_of_isBlock hb)] at hp
   exact table_splice (check_sound s p [] [] T hp) hf hq' hrep
 
+/-- Every entry of the module's layers stands under the block's child `2`. A step of
+`module-table-splices`. -/
+theorem Table.moduleLayers_under (sig : Signature Op) (ls : LayerTerms Op) :
+    ∀ e ∈ Table.moduleLayers sig ls, ∃ b, e.path = [2] ++ b := by
+  cases ls with
+  | nil =>
+    intro e he
+    rw [Table.moduleLayers, List.mem_singleton] at he
+    subst he
+    exact ⟨[], rfl⟩
+  | cons h t =>
+    intro e he
+    rw [Table.moduleLayers, Annotate.checkLayers_eq] at he
+    exact tableAt_path he
+
+/-- An edit below a nonempty spine keeps it nonempty. A step of `annotateModule_fill_layers`. -/
+theorem Node.replaceAt_layers_cons {h : LayerTerm Op} {t : LayerTerms Op} {r : List Nat}
+    {q : Eff Op} {ls : LayerTerms Op}
+    (hr : (Node.layers (.cons h t)).replaceAt r (.eff q) = some (.layers ls)) :
+    ∃ h' t', ls = .cons h' t' := by
+  match r, hr with
+  | [], hr =>
+    simp only [Node.replaceAt] at hr
+    split at hr
+    · cases hr
+    · cases hr
+  | i :: rest, hr =>
+    simp only [Node.replaceAt] at hr
+    cases hc : (Node.layers (.cons h t)).child i with
+    | none =>
+      rw [hc] at hr
+      cases hr
+    | some c =>
+      rw [hc, Option.bind_some] at hr
+      cases hr' : c.replaceAt rest (.eff q) with
+      | none =>
+        rw [hr'] at hr
+        cases hr
+      | some c' =>
+        rw [hr', Option.bind_some] at hr
+        unfold Node.setChild at hr
+        split at hr <;> cases hr
+        all_goals exact ⟨_, _, rfl⟩
+
 /-- **An edit inside a block's main program splices the whole table.** The splice law at the
 main program's base `[1]`. A step of `module-table-splices`. Its consumer is
 `annotateModule_fill`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem annotateModule_fill_main {s : Signature Op} {decls : List DefDecl} {bodies : Effs Op}
-    {main p' q' : Eff Op} {T : EffTy} {r : List Nat} {f : Focus Op}
-    (hp : Checker.checkModule s (.defs decls bodies main) = .ok T)
+    {main p' q' : Eff Op} {layers : LayerTerms Op} {T : EffTy} {r : List Nat} {f : Focus Op}
+    (hp : Checker.checkModule s (.defs decls bodies main layers) = .ok T)
     (hf : focusAt (s.withDefs decls) [] main r = some f)
     (hq' : HasTy (s.withDefs decls) f.env q' f.ty)
-    (hrep : (Node.eff (.defs decls bodies main)).replaceAt (1 :: r) (.eff q') = some (.eff p')) :
+    (hrep : (Node.eff (.defs decls bodies main layers)).replaceAt (1 :: r) (.eff q') =
+      some (.eff p')) :
     annotateModule s (.ok T) p' =
-      Table.splice (annotateModule s (.ok T) (.defs decls bodies main)) (1 :: r)
+      Table.splice (annotateModule s (.ok T) (.defs decls bodies main layers)) (1 :: r)
         (tableAt (s.withDefs decls) (some (.env f.env)) (.eff q') (1 :: r)) := by
   obtain ⟨main', hmain, rfl⟩ := Node.replaceAt_defs_main hrep
   obtain ⟨t, ht⟩ := moduleHasTy_partAt_typed (checkModule_sound _ _ _ hp)
-    (show (Eff.defs decls bodies main).partAt s [] (1 :: r) = some (⟨s.withDefs decls, [], main⟩, r)
-      from rfl)
+    (show (Eff.defs decls bodies main layers).partAt s [] (1 :: r) =
+      some (⟨s.withDefs decls, [], main⟩, r) from rfl)
   have ht' : HasTy (s.withDefs decls) [] main t := ht
   obtain ⟨hat, henv, hty⟩ := focusAt_eq_some.mp hf
   have hsplice : tableAt (s.withDefs decls) (some (.env [])) (.eff main') [1] =
@@ -541,23 +607,35 @@ theorem annotateModule_fill_main {s : Signature Op} {decls : List DefDecl} {bodi
     · obtain ⟨b, hb⟩ := Table.bodies_under _ _ _ _ e he
       rw [hb]
       exact Table.under_sibling_false [] r b (by decide)
-  rw [← List.cons_append, ← List.cons_append, Table.splice_append_out_left hX]
+  obtain ⟨e, he, hpath⟩ := tableAt_mem_path (s := s.withDefs decls) (ctx := some (.env []))
+    (pre := [1]) hat
+  have hY : ∃ e ∈ tableAt (s.withDefs decls) (some (.env [])) (.eff main) [1],
+      Table.under (1 :: r) e.path = true := ⟨e, he, by rw [hpath]; exact Table.under_self _⟩
+  have hZ : ∀ e ∈ Table.moduleLayers (s.withDefs decls) layers,
+      Table.under (1 :: r) e.path = false := by
+    intro e he
+    obtain ⟨b, hb⟩ := Table.moduleLayers_under _ _ e he
+    rw [hb]
+    exact Table.under_sibling_false [] r b (by decide)
+  rw [← List.cons_append, ← List.cons_append, Table.splice_three hX hY hZ]
 
 /-- **An edit inside one of a block's bodies splices the whole table.** A step of
 `module-table-splices`. Its consumer is `annotateModule_fill`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem annotateModule_fill_body {s : Signature Op} {decls : List DefDecl} {bodies : Effs Op}
-    {main p' q' : Eff Op} {T : EffTy} {r rest : List Nat} {part : Part Op} {f : Focus Op}
-    (hp : Checker.checkModule s (.defs decls bodies main) = .ok T)
+    {main p' q' : Eff Op} {layers : LayerTerms Op} {T : EffTy} {r rest : List Nat} {part : Part Op}
+    {f : Focus Op}
+    (hp : Checker.checkModule s (.defs decls bodies main layers) = .ok T)
     (hpart : Part.bodyAt (s.withDefs decls) decls bodies r = some (part, rest))
     (hf : focusAt part.sig part.env part.program rest = some f) (hq' : HasTy part.sig f.env q' f.ty)
-    (hrep : (Node.eff (.defs decls bodies main)).replaceAt (0 :: r) (.eff q') = some (.eff p')) :
+    (hrep : (Node.eff (.defs decls bodies main layers)).replaceAt (0 :: r) (.eff q') =
+      some (.eff p')) :
     annotateModule s (.ok T) p' =
-      Table.splice (annotateModule s (.ok T) (.defs decls bodies main)) (0 :: r)
+      Table.splice (annotateModule s (.ok T) (.defs decls bodies main layers)) (0 :: r)
         (tableAt part.sig (some (.env f.env)) (.eff q') (0 :: r)) := by
   obtain ⟨bodies', hb, rfl⟩ := Node.replaceAt_defs_body hrep
   obtain ⟨t, ht⟩ := moduleHasTy_partAt_typed (checkModule_sound _ _ _ hp)
-    (show (Eff.defs decls bodies main).partAt s [] (0 :: r) = some (part, rest) from hpart)
+    (show (Eff.defs decls bodies main layers).partAt s [] (0 :: r) = some (part, rest) from hpart)
   have hsplice := Table.bodies_splice [0] hpart ht hf hq' hb
   obtain ⟨hat, -, -⟩ := focusAt_eq_some.mp hf
   have hY := Table.bodies_mem_under [0] hpart hat
@@ -569,16 +647,84 @@ theorem annotateModule_fill_body {s : Signature Op} {decls : List DefDecl} {bodi
     rw [List.mem_singleton] at he
     subst he
     rfl
-  have hZ : ∀ e ∈ (Annotate.check (s.withDefs decls) [] [1] main).1,
-      Table.under (0 :: r) e.path = false := by
+  have hZ : ∀ e ∈ (Annotate.check (s.withDefs decls) [] [1] main).1 ++
+      Table.moduleLayers (s.withDefs decls) layers, Table.under (0 :: r) e.path = false := by
     intro e he
-    rw [Annotate.check_eq] at he
-    obtain ⟨b, hb⟩ := tableAt_path he
-    rw [hb]
-    exact Table.under_sibling_false [] r b (by decide)
+    rcases List.mem_append.mp he with he | he
+    · rw [Annotate.check_eq] at he
+      obtain ⟨b, hb⟩ := tableAt_path he
+      rw [hb]
+      exact Table.under_sibling_false [] r b (by decide)
+    · obtain ⟨b, hb⟩ := Table.moduleLayers_under _ _ e he
+      rw [hb]
+      exact Table.under_sibling_false [] r b (by decide)
   have h3 := Table.splice_three (sub := tableAt part.sig (some (.env f.env)) (.eff q') (0 :: r))
     hX hY hZ
   exact h3.symm
+
+/-- **An edit inside one of a block's module layers splices the whole table** (decisions row
+341): the module layers' segment is the splice law's at the layer spine, at base `[2]`, and the
+root's, the bodies' and the main program's entries stay. A step of `module-table-splices`. Its
+consumer is `annotateModule_fill`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem annotateModule_fill_layers {s : Signature Op} {decls : List DefDecl} {bodies : Effs Op}
+    {main p' q' : Eff Op} {head : LayerTerm Op} {tail : LayerTerms Op} {T : EffTy} {r : List Nat}
+    {f : Focus Op}
+    (hp : Checker.checkModule s (.defs decls bodies main (.cons head tail)) = .ok T)
+    (hf : focusAt (s.withDefs decls) [] (Part.layersProgram (.cons head tail)) (0 :: 0 :: r) =
+      some f)
+    (hq' : HasTy (s.withDefs decls) f.env q' f.ty)
+    (hrep : (Node.eff (.defs decls bodies main (.cons head tail))).replaceAt (2 :: r) (.eff q') =
+      some (.eff p')) :
+    annotateModule s (.ok T) p' =
+      Table.splice (annotateModule s (.ok T) (.defs decls bodies main (.cons head tail))) (2 :: r)
+        (tableAt (s.withDefs decls) (some (.env f.env)) (.eff q') (2 :: r)) := by
+  have hm := checkModule_sound _ _ _ hp
+  cases hm with
+  | defs _ _ hl =>
+    obtain ⟨M, hM⟩ := LayersTyped.merge head tail hl
+    obtain ⟨hat, henv, hty⟩ := focusAt_eq_some.mp hf
+    rw [layersProgram_at] at hat
+    rw [layersProgram_envAt] at henv
+    rw [defs_replaceAt_layers] at hrep
+    cases hr : (Node.layers (.cons head tail)).replaceAt r (.eff q') with
+    | none =>
+      rw [hr] at hrep
+      cases hrep
+    | some n =>
+      rw [hr] at hrep
+      match n, hr, hrep with
+      | .layers ls', hr, hrep =>
+        simp only [Option.bind_some, Option.some.injEq, Node.eff.injEq] at hrep
+        subst hrep
+        obtain ⟨h', t', rfl⟩ := Node.replaceAt_layers_cons hr
+        have hsplice := tableAt_splice r (NodeHasTy.layers hM) hat henv (effTy_sound _ _ _ _ hty)
+          hq' hr (pre := [2])
+        simp only [NodeTy.env] at hsplice
+        simp only [annotateModule, Table.moduleLayers, Annotate.checkLayers_eq]
+        rw [hsplice]
+        have hX : ∀ e ∈ (⟨[], some (.env []), some (.ok T)⟩ :: (Table.bodies (s.withDefs decls) decls
+            bodies [0] ++ (Annotate.check (s.withDefs decls) [] [1] main).1)),
+            Table.under (2 :: r) e.path = false := by
+          intro e he
+          rcases List.mem_cons.mp he with he | he
+          · subst he
+            rfl
+          · rcases List.mem_append.mp he with he | he
+            · obtain ⟨b, hb⟩ := Table.bodies_under _ _ _ _ e he
+              rw [hb]
+              exact Table.under_sibling_false [] r b (by decide)
+            · rw [Annotate.check_eq] at he
+              obtain ⟨b, hb⟩ := tableAt_path he
+              rw [hb]
+              exact Table.under_sibling_false [] r b (by decide)
+        have key := Table.splice_append_out_left (a := 2 :: r)
+          (Y := tableAt (s.withDefs decls) (some NodeEnv.closed)
+            (Node.layers (LayerTerms.cons head tail)) [2])
+          (sub := tableAt (s.withDefs decls) (some (NodeEnv.env f.env)) (Node.eff q') (2 :: r)) hX
+        simp only [List.cons_append, List.append_assoc, List.nil_append] at key ⊢
+        rw [key]
+  | plain hd => cases hd
 
 /-- **An edit inside one part splices a whole program's table**: the part's own table is spliced
 at its base, and the root's entry and the other parts' entries stay. A step of
@@ -596,14 +742,20 @@ theorem annotateModule_fill {s : Signature Op} {p p' q' : Eff Op} {T : EffTy} {p
   · rw [Eff.partAt_plain hb, Option.some.injEq, Prod.mk.injEq] at hpart
     obtain ⟨rfl, rfl⟩ := hpart
     exact annotateModule_fill_plain hb hp hf hq' hrep
-  · obtain ⟨decls, bodies, main, rfl⟩ := Eff.eq_defs_of_isBlock hb
+  · obtain ⟨decls, bodies, main, layers, rfl⟩ := Eff.eq_defs_of_isBlock hb
     match path, hpart with
     | 0 :: r, hpart => exact annotateModule_fill_body hp hpart hf hq' hrep
     | 1 :: r, hpart =>
       cases hpart
       exact annotateModule_fill_main hp hf hq' hrep
+    | 2 :: r, hpart =>
+      cases layers with
+      | nil => cases hpart
+      | cons head tail =>
+        cases hpart
+        exact annotateModule_fill_layers hp hf hq' hrep
     | [], hpart => cases hpart
-    | (_ + 2) :: _, hpart => cases hpart
+    | (_ + 3) :: _, hpart => cases hpart
 
 /-! ## A sketch -/
 

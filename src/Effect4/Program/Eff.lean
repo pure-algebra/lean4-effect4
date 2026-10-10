@@ -488,8 +488,11 @@ mutual
     It answers the operation `call k` of the alphabet (`NativeOp.call`). A body reads one
     variable, the request, and no other: it is closed. The block stands at the root of a
     program only (formation), so a program with no definition has no block and keeps its bytes.
-    Appended, so no stored program's bytes move (`Wire.lean`). -/
-    | defs (decls : List DefDecl) (bodies : Effs Op) (main : Eff Op)
+    Appended, so no stored program's bytes move (`Wire.lean`). The block's last child is the
+    module's layers (decisions row 341, step 2): layers that every body and the main program may
+    name by reference, each built once per memo map, as a module-level `const` is one rc.112
+    layer object. -/
+    | defs (decls : List DefDecl) (bodies : Effs Op) (main : Eff Op) (layers : LayerTerms Op)
     /-- **An invocation with programs** (decisions row 340): definition `index` of the root
     block, called with its request and one program for each of its parameters. Argument `j`
     reads the caller's environment extended by one variable, parameter `j`'s request, and it

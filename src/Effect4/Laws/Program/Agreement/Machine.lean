@@ -80,7 +80,7 @@ theorem LoopedRows.of_looped : ∀ (e : NativeEff), Looped e = true → LoopedRo
       Bool.and_self]
   | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h | .awaitFiber _ _, h
   | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h | .provideLayer _ _ _, h | .service _, h
-  | .provideService _ _ _, h | .catchIf _ _ _, h | .restore _ _, h | .defs _ _ _, h => by
+  | .provideService _ _ _, h | .catchIf _ _ _, h | .restore _ _, h | .defs _ _ _ _, h => by
     simp only [Looped, Bool.false_eq_true] at h
 
 theorem LoopedRows.bind {a b : NativeEff} (h : LoopedRows (.bind a b) = true) :

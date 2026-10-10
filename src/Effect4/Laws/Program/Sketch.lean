@@ -151,7 +151,7 @@ it. A program with a block is the whole-program form's (`Sketch.check_filled_mod
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Sketch.check_filled (s : Sketch) (app : SigApp)
     (hp : SigProgram app.signature s.program)
-    (hnb : ∀ decls bodies main, s.program ≠ .defs decls bodies main) :
+    (hnb : ∀ decls bodies main layers, s.program ≠ .defs decls bodies main layers) :
     s.check app = Checker.check app.signature [] [] s.program := by
   show Checker.checkModule _ s.program = _
   rw [checkModule_eq_check _ hnb]
@@ -170,9 +170,19 @@ def BodiesSigProgram {Op : Type} (s : Signature Op) : List DefDecl → Effs Op �
 body and the main program at the block's signature, each body with its own parameters, as the
 module check reads them; otherwise the program at the signature (`SigProgram`). -/
 def ModuleSigProgram {Op : Type} (s : Signature Op) : Eff Op → Prop
-  | .defs decls bodies main =>
-    BodiesSigProgram (s.withDefs decls) decls bodies ∧ SigProgram (s.withDefs decls) main
+  | .defs decls bodies main layers =>
+    BodiesSigProgram (s.withDefs decls) decls bodies ∧ SigProgram (s.withDefs decls) main ∧
+      cata_layers (readsAlg (SigOkOp (s.withDefs decls)) (SigOkKey (s.withDefs decls))
+        (SigOkDef (s.withDefs decls))) layers
   | e => SigProgram s e
+
+/-- The module layers' check is unchanged under an extension of the signature, when the layers
+read only the smaller signature (decisions row 341). A step of `checkModule_restrict`. -/
+theorem checkLayers_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s')
+    {ls : LayerTerms Op} (hp : cata_layers (readsAlg (SigOkOp s) (SigOkKey s) (SigOkDef s)) ls)
+    (p : List Nat) : Checker.checkLayers s' p ls = Checker.checkLayers s p ls := by
+  rw [Checker.checkLayers.eq_cata, Checker.checkLayers.eq_cata,
+    cata_layers_congr_on (check_alg_agreeOn h) ls hp]
 
 /-- The bodies' check is unchanged under an extension of the signature, when each body performs
 only the smaller signature's operations. A step of `module-holes-conservative`. Its consumer is
@@ -197,11 +207,11 @@ consumer is `Sketch.check_filled_module`. -/
 theorem checkModule_restrict {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op}
     (hp : ModuleSigProgram s e) : Checker.checkModule s' e = Checker.checkModule s e := by
   cases e
-  case defs decls bodies main =>
-    obtain ⟨hb, hm⟩ := hp
+  case defs decls bodies main layers =>
+    obtain ⟨hb, hm, hl⟩ := hp
     simp only [Checker.checkModule]
     rw [checkBodies_restrict (h.withDefs decls) [0] decls bodies hb,
-      check_restrict (h.withDefs decls) hm [] [1]]
+      check_restrict (h.withDefs decls) hm [] [1], checkLayers_restrict (h.withDefs decls) hl [2]]
   all_goals exact check_restrict h hp [] []
 
 /-- **H1 on a whole program**: a sketch whose program performs no hole is checked as its program by
@@ -346,6 +356,8 @@ theorem Sketch.sigAt_extends (s : Sketch) (app : SigApp) (path : List Nat) :
       · cases hpart
         exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) (fun _ => rfl) _
       · cases hpart
+        exact Signature.extends_withDefs _ (SigApp.signature_callsOutside _) (fun _ => rfl) _
+      · cases hpart
     · cases hpart
       exact SigExtends.refl _
 
@@ -428,7 +440,7 @@ theorem Sketch.check_fill_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path 
     cases hf
     rw [Sketch.sigAt_nil] at hq'
     have hd := check_sound _ q' [] pq T hq'
-    have hnb : ∀ decls bodies main, q' ≠ .defs decls bodies main := fun _ _ _ heq => by
+    have hnb : ∀ decls bodies main layers, q' ≠ .defs decls bodies main layers := fun _ _ _ _ heq => by
       subst heq
       cases hd
     have hrep : (Node.eff s.program).replaceAt [] (.eff q') = some (.eff q') := by
@@ -491,7 +503,7 @@ leaves it out. A consumer of `typed-replacement`. -/
 theorem Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {q : NativeEff} (hs : s.check app = .ok T)
     (hat : (Node.eff s.program).at_ path = some (.eff q))
-    (hroot : path = [] → ∀ decls bodies main, s.program ≠ .defs decls bodies main) :
+    (hroot : path = [] → ∀ decls bodies main layers, s.program ≠ .defs decls bodies main layers) :
     ∃ (env : TyEnv) (t : EffTy),
       (∀ pq, Checker.check (s.sigAt app path) env pq q = .ok t) ∧
       ∀ (more : RowTable) {q' : NativeEff} {pq : List Nat},
@@ -530,7 +542,7 @@ The root of a definition block is left out, as in `Sketch.check_fill`. A consume
 theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {q : NativeEff} (hs : s.check app = .ok T)
     (hat : (Node.eff s.program).at_ path = some (.eff q))
-    (hroot : path = [] → ∀ decls bodies main, s.program ≠ .defs decls bodies main) :
+    (hroot : path = [] → ∀ decls bodies main layers, s.program ≠ .defs decls bodies main layers) :
     ∃ (env : TyEnv) (t : EffTy),
       (∀ pq, Checker.check (s.sigAt app path) env pq q = .ok t) ∧
       ∀ (name : String), t.answer.closed = true → t.error.closed = true →

@@ -120,12 +120,12 @@ def idDecl : DefDecl := { name := "identity", request := .nat, answer := .nat }
 /-- An invocation of the identity. -/
 def callId : NativeEff := .perform (.call 0) (.lit (.nat 5))
 /-- A block that defines the identity, and whose main program invokes it. -/
-def idBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) callId
+def idBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) callId .nil
 /-- A loop that counts nothing, closed. -/
 def closedLoop : NativeEff :=
   .iterate none (.lit (.nat 0)) (.lit (.bool true)) (.var 1) (.var 0) (.succeed (.var 0))
 /-- The block whose main program runs the loop after the invocation. -/
-def loopBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) (.bind callId closedLoop)
+def loopBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) (.bind callId closedLoop) .nil
 
 -- control: the structural checker refuses the block, which the module check admits
 #guard (Checker.check sig [] [] idBlock).toOption.isNone && (Checker.checkModule sig idBlock).toOption.isSome

@@ -528,7 +528,7 @@ def inlineYield : NativeEff → Point → Option ExitV
       | some true => none
       | some false => inlineYield body (p.child 0)
       | none => some badShapeExit
-    | .defs _ _ main => inlineYield main (p.child 1)
+    | .defs _ _ main _ => inlineYield main (p.child 1)
     | _ => none
 
 /-- `Effect.provide`'s protocol after the counted step, at the point that carries the view
@@ -722,7 +722,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     | some false => rec body (p.child 0)
     | none => .pure badShapeExit
   -- a definition block (decisions row 328): no step of its own; the main program at child 1
-  | .defs _ _ main, p => rec main (p.child 1)
+  | .defs _ _ main _, p => rec main (p.child 1)
   -- an invocation with programs (decisions row 340), as `suspendBodyAt` decides it: the counted
   -- step, then the definition's body with the request its one variable, and the sites of the
   -- call's programs pushed on the stack
@@ -1033,8 +1033,8 @@ theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
 /-- A definition block has no step of its own: its main program at child 1 (decisions row
 328), as `compileEff_defs`. -/
 theorem denoteR_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
-    (h : p.fuel ≠ 0) :
-    denoteR root (.defs decls bodies main) p = denoteR root main (p.child 1) := by
+    (layers : LayerTerms NativeOp) (h : p.fuel ≠ 0) :
+    denoteR root (.defs decls bodies main layers) p = denoteR root main (p.child 1) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf
@@ -1400,7 +1400,7 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       rw [inlineYield_eq_headExit b (p.child 0), headExit_eq_asExit? (compileEff b (p.child 0))]
       cases hx : (compileEff b (p.child 0)).asExit? <;> rfl
-    | defs _ _ main =>
+    | defs _ _ main _ =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       exact inlineYield_eq_headExit main (p.child 1)
     | perform op request =>

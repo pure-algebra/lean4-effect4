@@ -19,7 +19,8 @@ tsgo_version="$($node_bin -p 'require(process.argv[1]).version' "$node_modules/@
 [[ "$typescript_version" == "7.0.2" ]]
 [[ "$tsgo_version" == "0.38.0" ]]
 
-host_compiler="$(find "$node_modules" -path '*/@typescript/typescript-*/lib/tsc.original' -type f -print -quit)"
+# the trailing slash follows a linked `node_modules` (a worktree links the main checkout's)
+host_compiler="$(find "$node_modules/" -path '*/@typescript/typescript-*/lib/tsc.original' -type f -print -quit)"
 if [[ -z "$host_compiler" ]]; then
   echo "schema TypeScript harness: unpatched TypeScript compiler not found" >&2
   exit 1

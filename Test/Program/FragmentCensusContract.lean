@@ -40,7 +40,7 @@ def samples : List (String × NativeEff) :=
   , ("service", .service ⟨⟨0⟩, ⟨0⟩⟩), ("provideService", .provideService ⟨⟨0⟩, ⟨0⟩⟩ t u)
   , ("catchIf", .catchIf t u u), ("select", .select t .bool u u)
   , ("iterate", .iterate none t t t t u), ("restore", .restore t u)
-  , ("defs", .defs [] .nil u), ("invoke", .invoke 0 t .nil) ]
+  , ("defs", .defs [] .nil u .nil), ("invoke", .invoke 0 t .nil) ]
 
 -- every constructor has a sample, and nothing else does
 #guard samples.map Prod.fst = Effect4.Program.ctorNames .eff

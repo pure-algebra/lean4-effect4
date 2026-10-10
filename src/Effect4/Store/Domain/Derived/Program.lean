@@ -2050,7 +2050,7 @@ def EffShape : Shape :=
       ("restore", 29, [("saved", (shape _root_.Effect4.Program.Term).root),
         ("body", .named "Eff")]),
       ("defs", 30, [("decls", (shape (@_root_.List (_root_.Effect4.Program.DefDecl))).root),
-        ("bodies", .named "Effs"), ("main", .named "Eff")]),
+        ("bodies", .named "Effs"), ("main", .named "Eff"), ("layers", .named "LayerTerms")]),
       ("invoke", 31, [("index", (shape _root_.Nat).root),
         ("request", (shape _root_.Effect4.Program.Term).root), ("args", .named "Effs")])]
 
@@ -2165,7 +2165,8 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
   | .iterate a0 a1 a2 a3 a4 a5 => .ctor 28 [Canonical.toVal a0, Canonical.toVal a1,
       Canonical.toVal a2, Canonical.toVal a3, Canonical.toVal a4, toValEff a5]
   | .restore a0 a1 => .ctor 29 [Canonical.toVal a0, toValEff a1]
-  | .defs a0 a1 a2 => .ctor 30 [Canonical.toVal a0, toValEffs a1, toValEff a2]
+  | .defs a0 a1 a2 a3 => .ctor 30 [Canonical.toVal a0, toValEffs a1, toValEff a2,
+      toValLayerTerms a3]
   | .invoke a0 a1 a2 => .ctor 31 [Canonical.toVal a0, Canonical.toVal a1, toValEffs a2]
 def toValStmt : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp) → Val
   | .bindYield a0 => .ctor 0 [toValEff a0]
@@ -2331,11 +2332,11 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
     match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawEff v1 with
     | some a0, some a1 => some (.restore a0 a1)
     | _, _ => none
-  | .ctor 30 [v0, v1, v2] =>
+  | .ctor 30 [v0, v1, v2, v3] =>
     match Canonical.ofVal (α := (@_root_.List (_root_.Effect4.Program.DefDecl))) v0, rawEffs v1,
-        rawEff v2 with
-    | some a0, some a1, some a2 => some (.defs a0 a1 a2)
-    | _, _, _ => none
+        rawEff v2, rawLayerTerms v3 with
+    | some a0, some a1, some a2, some a3 => some (.defs a0 a1 a2 a3)
+    | _, _, _, _ => none
   | .ctor 31 [v0, v1, v2] =>
     match Canonical.ofVal (α := _root_.Nat) v0,
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v1, rawEffs v2 with
@@ -2553,8 +2554,9 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a5]
   | «restore» a0 a1 =>
     simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
-  | «defs» a0 a1 a2 =>
-    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a1, rawEff_toValEff a2]
+  | «defs» a0 a1 a2 a3 =>
+    simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a1, rawEff_toValEff a2,
+      rawLayerTerms_toValLayerTerms a3]
   | «invoke» a0 a1 a2 =>
     simp only [toValEff, rawEff, Canonical.ofVal_toVal, rawEffs_toValEffs a2]
 termination_by structural a
@@ -2873,11 +2875,12 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
     exact acceptsAt_sum _ _ _ 29 "restore" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
         (acceptsFields_cons _ _ _ _ _ _ (fitsEff a1) (acceptsFields_nil _)))
-  | «defs» a0 a1 a2 =>
+  | «defs» a0 a1 a2 a3 =>
     exact acceptsAt_sum _ _ _ 30 "defs" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListDefDecl a0)
         (acceptsFields_cons _ _ _ _ _ _ (fitsEffs a1)
-          (acceptsFields_cons _ _ _ _ _ _ (fitsEff a2) (acceptsFields_nil _))))
+          (acceptsFields_cons _ _ _ _ _ _ (fitsEff a2)
+            (acceptsFields_cons _ _ _ _ _ _ (fitsLayerTerms a3) (acceptsFields_nil _)))))
   | «invoke» a0 a1 a2 =>
     exact acceptsAt_sum _ _ _ 31 "invoke" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0)

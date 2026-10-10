@@ -161,7 +161,8 @@ theorem foldMapAt_eff_base {M : Type u} (unit : M) (op : M → M → M) (e : Eff
         (fun x p => f3 x (q ++ p)) (fun x p => f4 x (q ++ p)) (fun x p => f5 x (q ++ p))
         (fun x p => f6 x (q ++ p)) (fun x p => f7 x (q ++ p)) := by
   cases e <;> simp only [foldMapAt_eff, List.append_assoc, foldMapAt_eff_base,
-    foldMapAt_stmts_base, foldMapAt_effs_base, foldMapAt_action_base, foldMapAt_layer_base]
+    foldMapAt_stmts_base, foldMapAt_effs_base, foldMapAt_action_base, foldMapAt_layer_base,
+    foldMapAt_layers_base]
 /-- `foldMapAt_eff_base` at a statement. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem foldMapAt_stmt_base {M : Type u} (unit : M) (op : M → M → M) (e : Stmt Op) (q r : List Nat)
@@ -257,7 +258,8 @@ theorem foldMapAt_eff_hom {M : Type u} {N : Type v} (φ : M → N) {unit : M} {o
         (fun x q => φ (f6 x q)) (fun x q => φ (f7 x q)) := by
   cases e <;> simp only [foldMapAt_eff, hop, foldMapAt_eff_hom φ (unit' := unit') hop,
     foldMapAt_stmts_hom φ (unit' := unit') hop, foldMapAt_effs_hom φ (unit' := unit') hop,
-    foldMapAt_action_hom φ (unit' := unit') hop, foldMapAt_layer_hom φ (unit' := unit') hop]
+    foldMapAt_action_hom φ (unit' := unit') hop, foldMapAt_layer_hom φ (unit' := unit') hop,
+    foldMapAt_layers_hom φ (unit' := unit') hop]
 /-- `foldMapAt_eff_hom` at a statement. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem foldMapAt_stmt_hom {M : Type u} {N : Type v} (φ : M → N) {unit : M} {op : M → M → M}

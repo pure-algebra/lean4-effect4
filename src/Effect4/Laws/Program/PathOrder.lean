@@ -284,7 +284,7 @@ consumer is the budget of the expansion there (`RefsWithin`), over the sites of 
 original references. -/
 
 /-- Counting is strictly monotone in its predicate at a witness: one member passes the larger
-predicate and fails the smaller one. A step of `rank_lt_length` and of `rank_lt_rank`. -/
+predicate and fails the smaller one. A step of `rankBy_lt_length` and of `rankBy_lt_rankBy`. -/
 private theorem countP_lt_countP {α : Type} {p q : α → Bool} {xs : List α} {a : α}
     (hpq : ∀ x ∈ xs, p x = true → q x = true) (ha : a ∈ xs) (hp : p a = false)
     (hq : q a = true) : xs.countP p < xs.countP q := by
@@ -307,20 +307,74 @@ private theorem countP_lt_countP {α : Type} {p q : α → Bool} {xs : List α} 
         simp only [hhead hpx, if_true]
         omega
 
-/-- The rank of a path in a finite list of paths: how many of them precede it. -/
-def rank (xs : List (List Nat)) (a : List Nat) : Nat := xs.countP (fun x => lt x a)
+/-- The rank of a path in a finite list of paths under a strict order `r`: how many of them
+precede it. -/
+def rankBy (r : List Nat → List Nat → Bool) (xs : List (List Nat)) (a : List Nat) : Nat :=
+  xs.countP (fun x => r x a)
 
 /-- A member's rank is below the list's length: a path does not precede itself. -/
-theorem rank_lt_length {xs : List (List Nat)} {a : List Nat} (ha : a ∈ xs) :
-    rank xs a < xs.length := by
-  have h := countP_lt_countP (p := fun x => lt x a) (q := fun _ => true) (fun _ _ _ => rfl) ha
-    (lt_irrefl a) rfl
+theorem rankBy_lt_length {r : List Nat → List Nat → Bool} (hirr : ∀ a, r a a = false)
+    {xs : List (List Nat)} {a : List Nat} (ha : a ∈ xs) : rankBy r xs a < xs.length := by
+  have h := countP_lt_countP (p := fun x => r x a) (q := fun _ => true) (fun _ _ _ => rfl) ha
+    (hirr a) rfl
   rwa [List.countP_true] at h
 
 /-- The rank is strictly monotone at a member: a member that precedes a path has the smaller
 rank. -/
-theorem rank_lt_rank {xs : List (List Nat)} {a b : List Nat} (ha : a ∈ xs) (hab : lt a b = true) :
-    rank xs a < rank xs b :=
-  countP_lt_countP (fun _ _ h => lt_trans h hab) ha (lt_irrefl a) hab
+theorem rankBy_lt_rankBy {r : List Nat → List Nat → Bool} (hirr : ∀ a, r a a = false)
+    (htrans : ∀ a b c, r a b = true → r b c = true → r a c = true)
+    {xs : List (List Nat)} {a b : List Nat} (ha : a ∈ xs) (hab : r a b = true) :
+    rankBy r xs a < rankBy r xs b :=
+  countP_lt_countP (fun _ _ h => htrans _ _ _ h hab) ha (hirr a) hab
 
 end Effect4.Program.Path
+
+/-! ## The reference order
+
+The order a well-formed reference descends (`Eff.refBefore`, decisions row 341, step 2): the
+module's layers first, then program order. It is a strict order, so the expansion's budget ranks
+the original sites by it (`RefsWithin`, `Laws/Program/ReferenceExpansion.lean`). -/
+
+namespace Effect4.Program
+
+variable {Op : Type}
+
+/-- The module test reads a path's head only, so it is unchanged by an extension. A step of
+`Eff.refBefore_append`. -/
+theorem Eff.inModule_append (root : Eff Op) {a : List Nat} (ha : a ≠ []) (r : List Nat) :
+    root.inModule (a ++ r) = root.inModule a := by
+  cases a with
+  | nil => exact absurd rfl ha
+  | cons x xs => rfl
+
+/-- No path precedes itself. A step of `expanded_refs_nil_of_wf`. -/
+theorem Eff.refBefore_irrefl (root : Eff Op) (a : List Nat) : root.refBefore a a = false := by
+  unfold Eff.refBefore
+  cases root.inModule a <;> simp only [Path.lt_irrefl, Bool.true_beq, Bool.false_beq,
+    Bool.not_true, Bool.not_false, Bool.and_false, Bool.and_true, Bool.or_false]
+
+/-- The reference order is transitive. A step of `expanded_refs_nil_of_wf`. -/
+theorem Eff.refBefore_trans (root : Eff Op) (a b c : List Nat) (hab : root.refBefore a b = true)
+    (hbc : root.refBefore b c = true) : root.refBefore a c = true := by
+  unfold Eff.refBefore at hab hbc ⊢
+  cases ha : root.inModule a <;> cases hb : root.inModule b <;> cases hc : root.inModule c <;>
+    simp only [ha, hb, hc, Bool.true_beq, Bool.false_beq, Bool.not_true, Bool.not_false,
+      Bool.and_false, Bool.and_true, Bool.false_and, Bool.true_and, Bool.or_false, Bool.false_or,
+      Bool.false_eq_true] at hab hbc ⊢ <;>
+    exact Path.lt_trans hab hbc
+
+/-- A path that precedes another in the reference order, and is no prefix of it, precedes it
+under every extension: the module test reads the head (`Eff.inModule_append`), and program order
+is kept (`Path.lt_append_of_lt`). A step of `target_refs_prior`. -/
+theorem Eff.refBefore_append (root : Eff Op) {a b : List Nat} (ha : a ≠ [])
+    (hab : root.refBefore a b = true) (hpre : Path.properPrefix a b = false) (r : List Nat) :
+    root.refBefore (a ++ r) b = true := by
+  unfold Eff.refBefore at hab ⊢
+  rw [root.inModule_append ha r]
+  cases hm : root.inModule a <;> cases hn : root.inModule b <;>
+    simp only [hm, hn, Bool.true_beq, Bool.false_beq, Bool.not_true, Bool.not_false, Bool.and_false,
+      Bool.and_true, Bool.false_and, Bool.true_and, Bool.or_false, Bool.false_or,
+      Bool.false_eq_true] at hab ⊢ <;>
+    exact Path.lt_append_of_lt hab hpre r
+
+end Effect4.Program

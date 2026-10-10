@@ -742,28 +742,15 @@ private theorem foldl_shift {α β : Type} (g : α → α) : ∀ (L : List β) (
     L.foldl (fun acc _ => g acc) (g x) = g (L.foldl (fun acc _ => g acc) x) :=
   fun _ _ => List.foldl_hom g (fun _ _ => rfl)
 
-/-- The node a layer lookup reads. -/
-theorem at_of_layerAt {n : Node NativeOp} {path : List Nat} {l : LayerTerm NativeOp}
-    (h : n.layerAt path = some l) : Node.at_ n path = some (.layer l) := by
-  unfold Node.layerAt at h
-  split at h
-  · rename_i l' hat
-    cases h
-    exact hat
-  · cases h
-
-/-- **The hop's point** (decisions rows 153 (b), 170): a reference's check reads the target's term
-after the expansion's rounds; that term, checked, is fixed by one more round (`ExpandFix`), so the
-target's own rounds give the same term, which the checker types at the target's path as at the
-site's (`checkLayer_path`). -/
-theorem layerPointTyped_redirect {w : World} {q : Point} {target : List Nat} {lt : LayerTy}
-    {l : LayerTerm NativeOp} (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))
-    (hs : scopeParams root.program target = scopeParams root.program q.path)
-    (hpt : LayerPointTyped root w q lt) (hlayer : (Node.eff root.program).layerAt target = some l) :
-    LayerPointTyped root w (q.redirect target) lt := by
-  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
-  -- the target stands in the reference's scope, so the reference's stack reads its parameters
-  refine layerPointTyped_scope hs (at_of_layerAt hlayer) ?_ henv hview hstack
+/-- **A reference's check is its target's**: the reference's check reads the target's term after
+the expansion's rounds; that term, checked, is fixed by one more round (`ExpandFix`), so the
+target's own rounds give the same term, at the same signature and path. A step of
+`layerPointTyped_redirect` and `layerPointTyped_redirect_module`. -/
+theorem checkLayer_ref_target {S : Signature NativeOp} {p target : List Nat} {lt : LayerTy}
+    {l : LayerTerm NativeOp}
+    (hcheck : Checker.checkLayer S p (LayerTerm.expandIn root.program (.ref target)) = .ok lt)
+    (hlayer : (Node.eff root.program).layerAt target = some l) :
+    Checker.checkLayer S p (LayerTerm.expandIn root.program l) = .ok lt := by
   have hsite : LayerTerm.expandIn root.program (.ref target) =
       (List.range (root.program.refSites []).length).foldl
         (fun acc _ => LayerTerm.expandRound (Node.eff root.program) acc) l := by
@@ -782,7 +769,50 @@ theorem layerPointTyped_redirect {w : World} {q : Point} {target : List Nat} {lt
     unfold LayerTerm.expandIn
     rw [List.range_succ, List.foldl_append, List.foldl_cons, List.foldl_nil, hfix]
   rw [htarget]
-  exact checkLayer_path hcheck target
+  exact hcheck
+
+/-- **The hop's point** (decisions rows 153 (b), 170): the target's term has the reference's
+check (`checkLayer_ref_target`), which the checker gives at the target's path as at the site's
+(`checkLayer_path`), and the target stands in the reference's scope. -/
+theorem layerPointTyped_redirect {w : World} {q : Point} {target : List Nat} {lt : LayerTy}
+    {l : LayerTerm NativeOp} (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))
+    (hs : scopeParams root.program target = scopeParams root.program q.path)
+    (hpt : LayerPointTyped root w q lt) (hlayer : (Node.eff root.program).layerAt target = some l) :
+    LayerPointTyped root w (q.redirect target) lt := by
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
+  -- the target stands in the reference's scope, so the reference's stack reads its parameters
+  exact layerPointTyped_scope hs (Node.at_of_layerAt hlayer)
+    (checkLayer_path (checkLayer_ref_target hcheck hlayer) target) henv hview hstack
+
+/-- **The hop's point into the module** (decisions row 341, step 2): a module layer has no
+parameters in scope (`scopeParams_module`), so every stack is typed there (`stackTyped_nil`).
+The module's own check types the target's term at the source's signature
+(`ModuleLayersTyped`), which the site's signature extends (`ProgramSource.scopeSig_extends`); the
+checker answers one verdict at both (`checkLayer_ext`), so the type is the reference's. A step of
+`ref_builds`. -/
+theorem layerPointTyped_redirect_module {w : World} {q : Point} {target : List Nat} {lt : LayerTy}
+    {l : LayerTerm NativeOp} (hmod : ModuleLayersTyped root)
+    (hin : root.program.inModule target = true) (hhead : Path.spineHead target.tail = true)
+    (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))
+    (hpt : LayerPointTyped root w q lt) (hlayer : (Node.eff root.program).layerAt target = some l) :
+    LayerPointTyped root w (q.redirect target) lt := by
+  obtain ⟨hcheck, henv, hview, hstack⟩ := hpt.at_layer hat
+  have hsite := checkLayer_path (checkLayer_ref_target hcheck hlayer) target
+  obtain ⟨lt', hmodule⟩ := hmod target l hin hhead hlayer
+  have hext := checkLayer_ext (root.scopeSig_extends q.path) hmodule
+  rw [hsite] at hext
+  cases hext
+  have hsig : root.scopeSig target = root.signature := by
+    unfold ProgramSource.scopeSig
+    rw [scopeParams_module hin]
+    rfl
+  refine ⟨l, Node.at_of_layerAt hlayer, ?_, henv, hview, ?_⟩
+  · show Checker.checkLayer (root.scopeSig target) target _ = _
+    rw [hsig]
+    exact hmodule
+  · show StackTyped root w (scopeParams root.program target) q.params
+    rw [scopeParams_module hin]
+    exact stackTyped_nil root w q.params
 
 /-- `orDie`'s failure (`internal/effect.ts:3289`, `orDieCause`) fits every error column: the first
 typed error becomes a user or error defect, never the shape one, since it read back; with no typed
@@ -1042,21 +1072,25 @@ theorem merge_builds {left right : LayerTerm NativeOp} {f K : Nat} :
       (layerPointTyped_child hat rfl hb henv (completed_mono o1 hview) (stackTyped_mono o1 hstack)))
 
 /-- **A reference and its target have the same parameters in scope** (decisions row 340, ruling
-of 2026-10-10, `docs/research/2026-10-10-cx-lexical-scope.md` §11): the formation check keeps a
-reference in its target's scope (`layerRefsWF_scopeOf`), and a path's parameters are its scope's
-(`scopeParams_eq`). So the stack a reference's hop keeps reads the target's parameters. A step of
-`denote-typed`; its consumer is `ref_builds`. -/
+of 2026-10-10, `docs/research/2026-10-10-cx-lexical-scope.md` §11), when the target stands outside
+the module's layers: the formation check keeps such a reference in its target's scope
+(`layerRefsWF_scopeOf`), and a path's parameters are its scope's (`scopeParams_eq`). So the stack
+a reference's hop keeps reads the target's parameters. A step of `denote-typed`; its consumer is
+`ref_builds`. -/
 @[semantics "residual-program-typing" (requirement := R4)]
 theorem scopeParams_ref {program : NativeEff} (hwf : program.layerRefsWF = true)
-    {site target : List Nat} (h : Node.at_ (.eff program) site = some (.layer (.ref target))) :
+    {site target : List Nat} (h : Node.at_ (.eff program) site = some (.layer (.ref target)))
+    (hm : program.inModule target = false) :
     scopeParams program target = scopeParams program site := by
-  rw [scopeParams_eq, scopeParams_eq, layerRefsWF_scopeOf hwf (mem_refSites_of_at h)]
+  rw [scopeParams_eq, scopeParams_eq, layerRefsWF_scopeOf hwf (mem_refSites_of_at h) hm]
 
-/-- **A layer reference** (decisions rows 153, 170, 185): no fuel is the frontier; else the hop to the
-target's term at the redirected point, one fuel down, by the hop hypothesis — well-formedness
-(`layerRefsWF_at`) gives a target that is a layer and no reference, in the reference's scope
-(`scopeParams_ref`), so the hop's point is typed (`layerPointTyped_redirect`). -/
+/-- **A layer reference** (decisions rows 153, 170, 185, 341): no fuel is the frontier; else the
+hop to the target's term at the redirected point, one fuel down, by the hop hypothesis —
+well-formedness (`layerRefsWF_at`) gives a target that is a layer and no reference, either in
+the reference's scope (`scopeParams_ref`, `layerPointTyped_redirect`) or a whole module layer
+(`layerRefsWF_module`, `layerPointTyped_redirect_module`), so the hop's point is typed. -/
 theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefsWF = true)
+    (hmod : ModuleLayersTyped root)
     (hhop : ∀ (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId)
       (scope : Nat), q.fuel < K → q.fuel ≤ f → w.serviceTy = root.sig.serviceTy →
       Node.at_ (.eff root.program) q.path = some (.layer l) → LayerPointTyped root w q lt →
@@ -1069,8 +1103,13 @@ theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefs
     exact pending_typed root w _ _ q
   | succ k =>
     obtain ⟨lt_t, hlayer, hnotref⟩ := layerRefsWF_at hwf hat
-    rw [denoteLayer_ref_succ _ _ _ _ _ hfq, at_of_layerAt hlayer]
-    have hredir := layerPointTyped_redirect hat (scopeParams_ref hwf hat) hpt hlayer
+    rw [denoteLayer_ref_succ _ _ _ _ _ hfq, Node.at_of_layerAt hlayer]
+    have hredir : LayerPointTyped root w (q.redirect target) lt := by
+      cases hin : root.program.inModule target with
+      | false => exact layerPointTyped_redirect hat (scopeParams_ref hwf hat hin) hpt hlayer
+      | true =>
+        exact layerPointTyped_redirect_module hmod hin
+          (layerRefsWF_module hwf (mem_refSites_of_at hat) hin) hat hpt hlayer
     have hk : (q.redirect target).fuel = k := by
       show q.fuel - 1 = k
       rw [hfq]
@@ -1080,7 +1119,8 @@ theorem ref_builds {target : List Nat} {f K : Nat} (hwf : root.program.layerRefs
     cases lt_t with
     | ref t' => exact absurd rfl (hnotref t')
     | _ =>
-      exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (at_of_layerAt hlayer) hredir hlive hmemo
+      exact hhop _ (q.redirect target) w lt m scope hKk hfk htie (Node.at_of_layerAt hlayer) hredir
+        hlive hmemo
 
 /-- Each layer of a nonempty merge errs below the merge (`Layer.ts:1652`, the errors joined). -/
 theorem mergeNonempty_error : ∀ (ls : List LayerTy) (lt : LayerTy),
@@ -1235,7 +1275,8 @@ layer point, at a world whose service table is the source's, into a present scop
 constructor's build answers the built context at the layer's checked error type. The leaves'
 bodies are typed by the program induction (`hIH`); the layer children structurally; a reference's
 hop, which leaves the term, by `hhop` at the next fuel down. -/
-theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
+theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (hmod : ModuleLayersTyped root)
+    (f : Nat)
     (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
     (K : Nat)
@@ -1245,21 +1286,22 @@ theorem layerTerm_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
       ScopeLive w scope → MemoLive w m → TypedProg root w (buildTy lt) (denoteLayer root.program l q m scope)) :
     ∀ l, BuildsTyped root f K l
   | .succeed _ _ => succeed_builds
-  | .fresh inner => fresh_builds (layerTerm_typed hwf f hIH K hhop inner)
-  | .orDie inner => orDie_builds (layerTerm_typed hwf f hIH K hhop inner)
+  | .fresh inner => fresh_builds (layerTerm_typed hwf hmod f hIH K hhop inner)
+  | .orDie inner => orDie_builds (layerTerm_typed hwf hmod f hIH K hhop inner)
   | .effect _ _ => effect_builds hIH
   | .effectDiscard _ => effectDiscard_builds hIH
   | .provide self that =>
-    provide_builds (layerTerm_typed hwf f hIH K hhop self) (layerTerm_typed hwf f hIH K hhop that)
+    provide_builds (layerTerm_typed hwf hmod f hIH K hhop self) (layerTerm_typed hwf hmod f hIH K hhop that)
   | .provideMerge self that =>
-    provideMerge_builds (layerTerm_typed hwf f hIH K hhop self)
-      (layerTerm_typed hwf f hIH K hhop that)
+    provideMerge_builds (layerTerm_typed hwf hmod f hIH K hhop self)
+      (layerTerm_typed hwf hmod f hIH K hhop that)
   | .merge _ _ => merge_builds
   | .mergeAll _ => mergeAll_builds
-  | .ref _ => ref_builds hwf hhop
+  | .ref _ => ref_builds hwf hmod hhop
 
 /-- **The layer family's build** (by induction on the fuel a reference's hop spends). -/
-theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
+theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (hmod : ModuleLayersTyped root)
+    (f : Nat)
     (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
     (l : LayerTerm NativeOp) (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat)
@@ -1276,9 +1318,9 @@ theorem layerBuild_typed (hwf : root.program.layerRefsWF = true) (f : Nat)
   intro K
   induction K with
   | zero =>
-    exact fun l => layerTerm_typed hwf f hIH 0 (fun _ _ _ _ _ _ hlt => absurd hlt (Nat.not_lt_zero _)) l
+    exact fun l => layerTerm_typed hwf hmod f hIH 0 (fun _ _ _ _ _ _ hlt => absurd hlt (Nat.not_lt_zero _)) l
   | succ K ih =>
-    exact fun l => layerTerm_typed hwf f hIH (K + 1) (fun l q w lt m scope hlt =>
+    exact fun l => layerTerm_typed hwf hmod f hIH (K + 1) (fun l q w lt m scope hlt =>
       ih l q w lt m scope (Nat.lt_succ_iff.mp hlt)) l
 
 /-! ## The join's protocol
@@ -1310,7 +1352,8 @@ theorem forkBuild_typed {w : World} {parent : Option MemoMapId} {build : MemoMap
 typed program. The build answers the built context at the layer's checked error type
 (`layerBuild_typed`); the body's exit, or its run under the merged context, is typed at the
 body's type, widened to the join of the two error columns the checker gives the node. -/
-theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
+theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (hmod : ModuleLayersTyped root)
+    (f : Nat)
     (hIH : ∀ f' ≤ f, ∀ (c : NativeEff) (path : List Nat),
       Node.at_ (.eff root.program) path = some (.eff c) → ChildDenotes root f' c path)
     {w : World} (htie : w.serviceTy = root.sig.serviceTy) {p : Point} {ty : EffTy}
@@ -1345,7 +1388,7 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
   -- the build: at every later world, through any map, the layer's build at the closed point
   have hbuild : ∀ w', w3.leHost w' → ∀ m, MemoLive w' m → TypedProg root w' (buildTy lt)
       (denoteLayer root.program l ({ p with completed } : Point).layerBuild m scope) :=
-    fun w' o m hm => layerBuild_typed hwf f hIH l _ w' lt m scope
+    fun w' o m hm => layerBuild_typed hwf hmod f hIH l _ w' lt m scope
       (by rw [Point.layerBuild_fuel]; show p.fuel - 1 ≤ f; omega)
       (serviceTy_leHost (leHost_trans _ _ _ o13 o) htie) hatl
       (layerPointTyped_scope (scopeParams_child hat 0) hatl hcl rfl
@@ -1388,7 +1431,8 @@ theorem provideLayer_arm (hwf : root.program.layerRefsWF = true) (f : Nat)
 
 /-- **`ProvideLayerArm` holds at every source**: the hypothesis the assembly was conditional on. -/
 theorem provideLayerArm (root : ProgramSource) : ProvideLayerArm root :=
-  fun hwf f hIH _ htie _ _ _ _ _ hfuel hat hpt => provideLayer_arm hwf f hIH htie hfuel hat hpt
+  fun hwf hmod f hIH _ htie _ _ _ _ _ hfuel hat hpt =>
+    provideLayer_arm hwf hmod f hIH htie hfuel hat hpt
 
 end Builds
 

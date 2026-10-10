@@ -167,14 +167,15 @@ theorem intro_param (root : NativeEff) (n : Nat) (i : Nat) (r : Term) (p : Point
 /-- **A definition block** (decisions row 328): no step of its own on either side, its main
 program at child 1. A step of `code_intro_aux`. -/
 theorem intro_defs (root : NativeEff) (n : Nat) (decls : List DefDecl) (bodies : Effs NativeOp)
-    (main : NativeEff) (p : Point) (k : Nat) (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
-    (hw0 : ∀ i, (p.child i).weight < n)
-    (h : Node.at_ (.eff root) p.path = some (.eff (.defs decls bodies main)))
+    (main : NativeEff) (layers : LayerTerms NativeOp) (p : Point) (k : Nat) (hf : p.fuel = k + 1)
+    (hpos : p.fuel ≠ 0) (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.defs decls bodies main layers)))
     (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
       Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
-    CodeMeans root (compileEff (.defs decls bodies main) p)
-      (denoteR root (.defs decls bodies main) p) := by
-  rw [compileEff_defs decls bodies main hf, denoteR_defs (root := root) (p := p) decls bodies main hpos]
+    CodeMeans root (compileEff (.defs decls bodies main layers) p)
+      (denoteR root (.defs decls bodies main layers) p) := by
+  rw [compileEff_defs decls bodies main layers hf,
+    denoteR_defs (root := root) (p := p) decls bodies main layers hpos]
   exact ih _ (hw0 1) main (at_child_of h 1)
 
 theorem intro_bind (root : NativeEff) (n : Nat) (a b : NativeEff) (p : Point) (k : Nat)

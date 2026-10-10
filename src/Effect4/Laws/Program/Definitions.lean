@@ -261,25 +261,32 @@ theorem defs_conservative (sig : Signature Op) (decls : List DefDecl) {e : Eff O
 /-- A program with no block is checked as the checker checks it, at the root. -/
 @[semantics "initial-algebras-folds" (requirement := R2)]
 theorem checkModule_eq_check (sig : Signature Op) {e : Eff Op}
-    (h : ∀ decls bodies main, e ≠ .defs decls bodies main) :
+    (h : ∀ decls bodies main layers, e ≠ .defs decls bodies main layers) :
     Checker.checkModule sig e = Checker.check sig [] [] e := by
   unfold Checker.checkModule
   split
-  · exact absurd rfl (h _ _ _)
+  · exact absurd rfl (h _ _ _ _)
   · rfl
 
-/-- **G1 at the root**: a module whose bodies the checker admits, and whose main program invokes
-no definition, has its main program's own verdict at the main program's path, refusals
-included. -/
+/-- **G1 at the root**: a module whose bodies and module layers the checker admits, and whose
+main program invokes no definition, has its main program's own verdict at the main program's
+path, refusals included. -/
 @[semantics "initial-algebras-folds" (requirement := R2)]
 theorem checkModule_conservative (sig : Signature Op) (decls : List DefDecl) (bodies : Effs Op)
-    {main : Eff Op} (hlen : decls.length = bodies.toList.length)
+    {main : Eff Op} {layers : LayerTerms Op} (hlen : decls.length = bodies.toList.length)
     (hb : Checker.checkBodies (sig.withDefs decls) [0] decls bodies = .ok ())
+    (hl : ∃ ls, Checker.checkLayers (sig.withDefs decls) [2] layers = .ok ls)
     (hn : NoInvocation sig main) :
-    Checker.checkModule sig (.defs decls bodies main) = Checker.check sig [] [1] main := by
+    Checker.checkModule sig (.defs decls bodies main layers) = Checker.check sig [] [1] main := by
   rw [← defs_conservative sig decls hn [] [1]]
+  obtain ⟨ls, hls⟩ := hl
   simp only [Checker.checkModule, hlen, hb]
-  rfl
+  cases Checker.check (sig.withDefs decls) [] [1] main with
+  | error _ => rfl
+  | ok _ =>
+    show (Checker.checkLayers (sig.withDefs decls) [2] layers >>= fun _ => pure _) = _
+    rw [hls]
+    rfl
 
 /-! ## G2: the invocation rule and the module judgment -/
 
@@ -323,13 +330,44 @@ inductive BodiesHasTy (sig : Signature Op) : List DefDecl → Effs Op → Prop
       d.formed = true → HasTy (sig.withParams d.params) [d.request.normalize] body t →
       d.admits t = true → BodiesHasTy sig ds rest → BodiesHasTy sig (d :: ds) (.cons body rest)
 
+/-- **The module's layers are typed** (decisions row 341, step 2): each layer of a block's layers
+child has a type at a signature. One rule per arm of `Checker.checkLayers`; the spine may be
+empty. -/
+inductive LayersTyped (sig : Signature Op) : LayerTerms Op → Prop
+  | nil : LayersTyped sig .nil
+  | cons {head : LayerTerm Op} {tail : LayerTerms Op} {lt : LayerTy} :
+      LayerHasTy sig head lt → LayersTyped sig tail → LayersTyped sig (.cons head tail)
+
+/-- What the layers' check accepts, the layers' judgment derives. A step of `checkModule_sound`. -/
+theorem checkLayers_layersTyped (sig : Signature Op) :
+    ∀ (p : List Nat) (layers : LayerTerms Op) (ls : List LayerTy),
+      Checker.checkLayers sig p layers = .ok ls → LayersTyped sig layers
+  | _, .nil, _, _ => .nil
+  | p, .cons head tail, ls, h => by
+    obtain ⟨hd, tl, hh, ht, rfl⟩ := Checker.inv_layers_cons sig p head tail ls h
+    exact .cons (checkLayer_sound sig head _ hd hh) (checkLayers_layersTyped sig (p ++ [1]) tail tl ht)
+
+/-- What the layers' judgment derives, the layers' check accepts, at every path. A step of
+`checkModule_complete`. -/
+theorem layersTyped_checkLayers (sig : Signature Op) :
+    ∀ {layers : LayerTerms Op}, LayersTyped sig layers →
+      ∀ p, ∃ ls, Checker.checkLayers sig p layers = .ok ls
+  | _, .nil, _ => ⟨[], rfl⟩
+  | _, .cons (head := head) (tail := tail) hh ht, p => by
+    have h1 := checkLayer_complete sig head _ hh (p ++ [0])
+    obtain ⟨ls, hls⟩ := layersTyped_checkLayers sig ht (p ++ [1])
+    exact ⟨_ :: ls, by simp only [Checker.checkLayers, h1, hls]; rfl⟩
+
 /-- **The module judgment** (decisions row 328): a module with a block has the type of its main
-program at the block's signature, when its bodies meet their declarations there; a program with
-no block has its type. `HasTy` derives no type for a block, so the two rules do not overlap. -/
+program at the block's signature, when its bodies meet their declarations there and its module
+layers are typed there (decisions row 341); a program with no block has its type. `HasTy`
+derives no type for a block, so the two rules do not overlap. -/
 inductive ModuleHasTy (sig : Signature Op) : Eff Op → EffTy → Prop
-  | defs {decls : List DefDecl} {bodies : Effs Op} {main : Eff Op} {t : EffTy} :
+  | defs {decls : List DefDecl} {bodies : Effs Op} {main : Eff Op} {layers : LayerTerms Op}
+      {t : EffTy} :
       BodiesHasTy (sig.withDefs decls) decls bodies → HasTy (sig.withDefs decls) [] main t →
-      ModuleHasTy sig (.defs decls bodies main) t
+      LayersTyped (sig.withDefs decls) layers →
+      ModuleHasTy sig (.defs decls bodies main layers) t
   | plain {e : Eff Op} {t : EffTy} : HasTy sig [] e t → ModuleHasTy sig e t
 
 /-- **The body of a declaration**: where the bodies' judgment holds, each declaration of the block
@@ -398,13 +436,17 @@ judgment derives. -/
 theorem checkModule_sound (sig : Signature Op) (e : Eff Op) (t : EffTy)
     (h : Checker.checkModule sig e = .ok t) : ModuleHasTy sig e t := by
   cases e with
-  | defs decls bodies main =>
+  | defs decls bodies main layers =>
     simp only [Checker.checkModule] at h
     by_cases hlen : decls.length = bodies.toList.length
     · have hb := checkBodies_sound (sig.withDefs decls) [0] decls bodies hlen
       rw [if_pos hlen] at h
       obtain ⟨_, hbody, hm⟩ := bind_eq_ok.mp h
-      exact .defs (hb hbody) (check_sound _ main [] [1] t hm)
+      obtain ⟨t', hmain, hrest⟩ := bind_eq_ok.mp hm
+      obtain ⟨ls, hls, hpure⟩ := bind_eq_ok.mp hrest
+      cases hpure
+      exact .defs (hb hbody) (check_sound _ main [] [1] _ hmain)
+        (checkLayers_layersTyped _ [2] layers ls hls)
     · rw [if_neg hlen] at h
       cases h
   | _ => exact .plain (check_sound sig _ [] [] t h)
@@ -415,12 +457,13 @@ check accepts. -/
 theorem checkModule_complete (sig : Signature Op) (e : Eff Op) (t : EffTy)
     (h : ModuleHasTy sig e t) : Checker.checkModule sig e = .ok t := by
   cases h with
-  | defs hb hm =>
+  | defs hb hm hl =>
     obtain ⟨hlen, hcheck⟩ := checkBodies_complete _ hb
-    simp only [Checker.checkModule, hlen, hcheck [0], check_complete _ _ _ _ hm [1]]
+    obtain ⟨ls, hls⟩ := layersTyped_checkLayers _ hl [2]
+    simp only [Checker.checkModule, hlen, hcheck [0], check_complete _ _ _ _ hm [1], hls]
     rfl
   | plain hd =>
-    rw [checkModule_eq_check sig (fun _ _ _ heq => by subst heq; cases hd)]
+    rw [checkModule_eq_check sig (fun _ _ _ _ heq => by subst heq; cases hd)]
     exact check_complete sig _ _ _ hd []
 
 /-! ## The whole program's typing
@@ -519,13 +562,22 @@ theorem bodiesHasTy_ext {s s' : Signature Op} (h : SigExtends s s') :
   | _, _, .cons hf hb ht hrest =>
     .cons hf (hasTy_ext (h.withParams _) hb) ht (bodiesHasTy_ext h hrest)
 
+/-- The module's layers along an extension: each keeps its type (`layerHasTy_ext`). A step of
+`moduleHasTy_ext`. -/
+theorem layersTyped_ext {s s' : Signature Op} (h : SigExtends s s') :
+    ∀ {layers : LayerTerms Op}, LayersTyped s layers → LayersTyped s' layers
+  | _, .nil => .nil
+  | _, .cons hh ht => .cons (layerHasTy_ext h hh) (layersTyped_ext h ht)
+
 /-- **The module judgment along an extension** (C3's monotone half for a module): a module the
 judgment types under `s` it types under every extension `s'`, at the same type. -/
 @[semantics "initial-algebras-folds" (requirement := R2)]
 theorem moduleHasTy_ext {s s' : Signature Op} (h : SigExtends s s') {e : Eff Op} {t : EffTy}
     (he : ModuleHasTy s e t) : ModuleHasTy s' e t := by
   cases he with
-  | defs hb hm => exact .defs (bodiesHasTy_ext (h.withDefs _) hb) (hasTy_ext (h.withDefs _) hm)
+  | defs hb hm hl =>
+    exact .defs (bodiesHasTy_ext (h.withDefs _) hb) (hasTy_ext (h.withDefs _) hm)
+      (layersTyped_ext (h.withDefs _) hl)
   | plain hd => exact .plain (hasTy_ext h hd)
 
 /-- **The whole program's typing along an extension**: a program `typeOfProgram` admits under
@@ -543,7 +595,7 @@ theorem typeOfProgram_ext {s s' : Signature Op} (h : SigExtends s s') {e : Eff O
 /-- **On a program whose expansion has no block, the whole program's typing is the checker's
 answer** at the empty environment. -/
 theorem typeOfProgram_eq_typeOf (sig : Signature Op) {e : Eff Op}
-    (h : ∀ decls bodies main, e.expandRefs ≠ .defs decls bodies main) :
+    (h : ∀ decls bodies main layers, e.expandRefs ≠ .defs decls bodies main layers) :
     typeOfProgram sig e = if e.layerRefsWF then typeOf sig e.expandRefs else none := by
   unfold typeOfProgram
   rw [checkModule_eq_check sig h]

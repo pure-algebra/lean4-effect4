@@ -4989,7 +4989,7 @@ theorem rowChildOffset_source (row : Templates.Row) (member : row ∈ Templates.
 -- An invocation is excluded too: its programs bind their parameter's request, and its row refuses.
 theorem view_eff_child_binders (source : Eff Op) (i : Nat) (childFam : EffFam)
     (child : EffSelfCarrier Op childFam)
-    (notBlock : ∀ decls bodies main, source ≠ Eff.defs decls bodies main)
+    (notBlock : ∀ decls bodies main layers, source ≠ Eff.defs decls bodies main layers)
     (notInvoke : ∀ k request programs, source ≠ Eff.invoke k request programs)
     (captured : (view_eff source).2[i]? = some (.child childFam child)) :
     (Node.eff source).binders (((view_eff source).2.take i).countP isChildArg) =
@@ -5004,7 +5004,7 @@ theorem view_eff_child_binders (source : Eff Op) (i : Nat) (childFam : EffFam)
     cases source with
     | select scrutinee decision left right =>
       cases decision <;> cases captured <;> rfl
-    | defs decls bodies main => exact absurd rfl (notBlock decls bodies main)
+    | defs decls bodies main layers => exact absurd rfl (notBlock decls bodies main layers)
     | invoke k request programs => exact absurd rfl (notInvoke k request programs)
     | _ => cases captured <;> rfl
 
@@ -5056,8 +5056,8 @@ variable {Op : Type}
 -- Placement: exact-codecs R8, typed-site erasure actual-context step.
 -- Consumer: childEnv_template_depth, which excludes a definition block by it.
 theorem childEnv_block_none (s : Signature Op) (parent : NodeEnv) (decls : List DefDecl)
-    (bodies : Effs Op) (main : Eff Op) (j : Nat) :
-    (Node.eff (.defs decls bodies main)).childEnv s parent j = none := by
+    (bodies : Effs Op) (main : Eff Op) (layers : LayerTerms Op) (j : Nat) :
+    (Node.eff (.defs decls bodies main layers)).childEnv s parent j = none := by
   cases j with
   | zero => rfl
   | succ j =>
@@ -5114,9 +5114,10 @@ theorem childEnv_template_depth
     rwa [family] at h'
   rcases familyKind with rfl | rfl | rfl | rfl
   · change view_eff source = (ctor,args) at viewed
-    have notBlock : ∀ decls bodies main, source ≠ Eff.defs decls bodies main := by
-      rintro decls bodies main rfl
-      have stops := childEnv_block_none s parent decls bodies main ((args.take i).countP isChildArg)
+    have notBlock : ∀ decls bodies main layers, source ≠ Eff.defs decls bodies main layers := by
+      rintro decls bodies main layers rfl
+      have stops := childEnv_block_none s parent decls bodies main layers
+        ((args.take i).countP isChildArg)
       exact nomatch stops.symm.trans found
     have notInvoke : ∀ k request programs, source ≠ Eff.invoke k request programs := by
       rintro k request programs rfl

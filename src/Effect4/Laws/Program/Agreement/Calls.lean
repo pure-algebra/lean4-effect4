@@ -706,7 +706,7 @@ theorem localRunC_compile {σ : Type} (host : Effects.Comodel (RowSig table) σ)
   | .provideService _ _ _, _, _, _, _, _, hpl, _
   | .iterate _ _ _ _ _ _, _, _, _, _, _, hpl, _
   | .restore _ _, _, _, _, _, _, hpl, _
-  | .defs _ _ _, _, _, _, _, _, hpl, _ => by
+  | .defs _ _ _ _, _, _, _, _, _, hpl, _ => by
     simp only [StraightRows, Bool.false_eq_true] at hpl
 
 end Effect4.Program.Agreement

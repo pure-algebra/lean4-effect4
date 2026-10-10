@@ -334,5 +334,21 @@
         "new": "g0\tfalse\ttrue\t21\tfalse\tnotFiber"
       }
     ]
+  },
+  {
+    "name": "G6 a constructor the policy names as re-typed keeps its name and position",
+    "expect": "PASS",
+    "edits": [
+      {
+        "path": "ocaml/eff/eff_manifest.txt",
+        "old": " lit(string) ",
+        "new": " lit(ty) "
+      },
+      {
+        "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
+        "old": "\"constructor_retypings\": [",
+        "new": "\"constructor_retypings\": [\n    \"Effect4.Program.Ty.lit\","
+      }
+    ]
   }
 ]

@@ -246,9 +246,10 @@ mutual
         else throw ⟨p, .maskRestoreExpected st⟩) b.1
     -- a definition block below the root: the checker refuses at the node, and no child is
     -- reached (decisions row 328; `Node.childEnv` answers none at a block's children)
-    | .defs decls bodies main =>
-      atProgram p env (Checker.check s env p (.defs decls bodies main))
-        (unreached (p ++ [0]) (.effs bodies) ++ unreached (p ++ [1]) (.eff main))
+    | .defs decls bodies main layers =>
+      atProgram p env (Checker.check s env p (.defs decls bodies main layers))
+        (unreached (p ++ [0]) (.effs bodies) ++
+          (unreached (p ++ [1]) (.eff main) ++ unreached (p ++ [2]) (.layers layers)))
     -- an invocation with programs (decisions row 340): the checker's steps at the node, the
     -- programs' answer read from their own walk at the definition's parameters, and their
     -- records at the caller's variables and those parameters (`Node.childEnv`). Where the

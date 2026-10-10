@@ -207,7 +207,7 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_select (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "select"; json_term a0; json_decision a1; json_eff a2; json_eff a3]
   | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_json_text.Array [Eff_json_text.String "iterate"; (match a0 with None -> Eff_json_text.Null | Some y -> json_ty y); json_term a1; json_term a2; json_term a3; json_term a4; json_eff a5]
   | Eff_restore (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "restore"; json_term a0; json_eff a1]
-  | Eff_defs (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "defs"; Eff_json_text.Array (List.map (fun y -> json_def_decl y) a0); json_effs a1; json_eff a2]
+  | Eff_defs (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "defs"; Eff_json_text.Array (List.map (fun y -> json_def_decl y) a0); json_effs a1; json_eff a2; json_layer_terms a3]
   | Eff_invoke (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "invoke"; Eff_json_text.Int a0; json_term a1; json_effs a2]
 and json_stmt (v : stmt) : Eff_json_text.t =
   match v with

@@ -132,7 +132,7 @@ theorem straightRows_of_asExit : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .yieldNow _, _, _, hl, _ | .awaitFiber _ _, _, _, hl, _ | .withFiber _, _, _, hl, _
   | .scoped _, _, _, hl, _ | .acquireRelease _ _, _, _, hl, _ | .provideLayer _ _ _, _, _, hl, _
   | .service _, _, _, hl, _ | .provideService _ _ _, _, _, hl, _ | .restore _ _, _, _, hl, _
-  | .defs _ _ _, _, _, hl, _ | .invoke _ _ _, _, _, hl, _ => absurd (hl : false = true) Bool.false_ne_true
+  | .defs _ _ _ _, _, _, hl, _ | .invoke _ _ _, _, _, hl, _ => absurd (hl : false = true) Bool.false_ne_true
 
 /-- A program of the fragment whose compile is already an exit means that exit, finished, with
 the stores and the host's state untouched (`hostRun_of_asExit` on the row fragment). -/
@@ -1088,7 +1088,7 @@ theorem compilesBO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root 
   | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h
   | .awaitFiber _ _, h | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h
   | .provideLayer _ _ _, h | .service _, h | .provideService _ _ _, h | .restore _ _, h
-  | .defs _ _ _, h | .invoke _ _ _, h => absurd (h : false = true) Bool.false_ne_true
+  | .defs _ _ _ _, h | .invoke _ _ _, h => absurd (h : false = true) Bool.false_ne_true
 
 /-- **The forward agreement on loops, detailed** (the core of Q6b): a program of the row fragment
 with loops, compiled at an address of the root, runs with calls where its detailed budgeted run

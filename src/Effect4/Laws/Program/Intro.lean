@@ -63,7 +63,8 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
     | call index => exact intro_call root n index r p k hf hpos hle h hres
     | param i => exact intro_param root n i r p k hf hpos hle h hres
     | _ => exact intro_perform root _ r p k hf hpos h (fun _ hi => nomatch hi) (fun _ hi => nomatch hi)
-  | defs decls bodies main => exact intro_defs root n decls bodies main p k hf hpos hw0 h ih
+  | defs decls bodies main layers =>
+    exact intro_defs root n decls bodies main layers p k hf hpos hw0 h ih
   | invoke index r args => exact intro_invoke root n index r args p k hf hpos hle h hres
   | bind a b => exact intro_bind root n a b p k hf hpos hw0 hwcw h ih
   | gen ss => exact intro_gen root ss p k hf hpos h

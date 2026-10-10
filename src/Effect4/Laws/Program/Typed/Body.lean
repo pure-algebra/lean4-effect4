@@ -128,8 +128,8 @@ theorem layerBuildR_typed (root : ProgramSource) {w : World} (hwf : SourceWF roo
   have unfolded : layerBuildR root.program q m scope = denoteLayer root.program l q m scope := by
     simp only [layerBuildR, hat]
   rw [unfolded]
-  exact layerBuild_typed hwf.refs q.fuel
-    (childDenotes_upto root (provideLayerArm root) hwf.refs hwf.bodies q.fuel) l q w
+  exact layerBuild_typed hwf.refs hwf.layers q.fuel
+    (childDenotes_upto root (provideLayerArm root) hwf.refs hwf.layers hwf.bodies q.fuel) l q w
     lt m scope (Nat.le_refl _) htie hat ⟨l, hat, hrest⟩ hlive hmemo
 
 /-- **The body bridge**: an admitted body's program, at any completed view, is typed at the

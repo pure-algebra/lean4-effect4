@@ -534,7 +534,8 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
 /-- A definition block has no step of its own: its main program at child 1 (decisions row
 328). -/
 theorem compileEff_defs (decls : List DefDecl) (bodies : Effs NativeOp) (main : NativeEff)
-    (hf : p.fuel = k + 1) : compileEff (.defs decls bodies main) p = compileEff main (p.child 1) := by
+    (layers : LayerTerms NativeOp) (hf : p.fuel = k + 1) :
+    compileEff (.defs decls bodies main layers) p = compileEff main (p.child 1) := by
   conv => lhs; unfold compileEff
   rw [hf]
 

@@ -259,14 +259,27 @@ def BodiesTyped (src : ProgramSource) : Prop :=
         (Eff.expandIn src.program body) = .ok tb ∧
       d.formed = true ∧ d.admits tb = true
 
-/-- **The source's formation, for M5** (decisions rows 170 and 328): its layer references are well
-formed, and its definition block's bodies are typed. Both are constant facts of the source,
-which the load discharges from the checker's verdict and every step keeps (`MachineTyped.sourceWF`).
-M5's fundamental property reads them (`DenotesTyped`): the first at a reference's target, the second
-at an invocation. Neither is a field of `ProgramSource`. -/
+/-- **The module's layers are typed** (decisions row 341, step 2): at a root block, each whole
+module layer, read through the expansion's rounds, is checked at the source's signature. The
+load discharges it from the checker's verdict (`moduleLayersTyped_of_typeOf`,
+`Typed/Denotation.lean`), as it discharges the bodies. A reference's hop into the module reads it
+(`layerPointTyped_redirect_module`, `Typed/LayerArm.lean`): the hop leaves the reference's scope
+for the module's, which has no parameters. -/
+def ModuleLayersTyped (src : ProgramSource) : Prop :=
+  ∀ (target : List Nat) (l : LayerTerm NativeOp), src.program.inModule target = true →
+    Path.spineHead target.tail = true → (Node.eff src.program).layerAt target = some l →
+    ∃ lt, Checker.checkLayer src.signature target (LayerTerm.expandIn src.program l) = .ok lt
+
+/-- **The source's formation, for M5** (decisions rows 170, 328 and 341): its layer references
+are well formed, its definition block's bodies are typed, and so are its module layers. Each is a
+constant fact of the source, which the load discharges from the checker's verdict and every step
+keeps (`MachineTyped.sourceWF`). M5's fundamental property reads them (`DenotesTyped`): the first
+at a reference's target, the second at an invocation, the third at a reference into the module.
+None is a field of `ProgramSource`. -/
 structure SourceWF (src : ProgramSource) : Prop where
   refs : src.program.layerRefsWF = true
   bodies : BodiesTyped src
+  layers : ModuleLayersTyped src
 
 /-- A program with no definition block has its bodies typed: it declares none. -/
 theorem BodiesTyped.of_nil {src : ProgramSource} (h : src.program.defsOf = []) : BodiesTyped src := by

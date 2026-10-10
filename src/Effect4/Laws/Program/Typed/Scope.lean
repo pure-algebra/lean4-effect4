@@ -40,9 +40,40 @@ at the block itself, and in every program with no block. -/
 def scopeParams (root : Eff Op) : List Nat → List ParamDecl
   | 0 :: rest =>
     match root with
-    | .defs decls _ _ => spineParams decls rest
+    | .defs decls _ _ _ => spineParams decls rest
     | _ => []
   | _ => []
+
+/-- The node a layer lookup reads. Its consumers are the reference arm (`ref_builds`,
+`Typed/LayerArm.lean`) and `moduleLayersTyped_of_typeOf`. -/
+theorem Node.at_of_layerAt {n : Node Op} {path : List Nat} {l : LayerTerm Op}
+    (h : n.layerAt path = some l) : Node.at_ n path = some (.layer l) := by
+  unfold Node.layerAt at h
+  split at h
+  · rename_i l' hat
+    cases h
+    exact hat
+  · cases h
+
+/-- A path in the module's layers starts at the block's child `2` (decisions row 341, step 2). A
+step of `scopeParams_module` and `moduleLayersTyped_of_typeOf`. -/
+theorem Eff.inModule_head {root : Eff Op} {p : List Nat} (h : root.inModule p = true) :
+    p.head? = some 2 := by
+  unfold Eff.inModule at h
+  split at h
+  · exact of_decide_eq_true h
+  · cases h
+
+/-- **A module layer has no parameters in scope** (decisions row 341, step 2): it stands outside
+every body. A step of `layerPointTyped_redirect_module` (`Typed/LayerArm.lean`). -/
+theorem scopeParams_module {root : Eff Op} {p : List Nat} (h : root.inModule p = true) :
+    scopeParams root p = [] := by
+  have hh := Eff.inModule_head h
+  cases p with
+  | nil => cases hh
+  | cons x r =>
+    cases hh
+    rfl
 
 /-- Below a node of a spine that is no spine itself, every path has the node's parameters: the
 node stands in one body, and the path stays in it. A step of `scopeParams_child`,
@@ -95,12 +126,12 @@ theorem scopeParams_child {root : Eff Op} {path : List Nat} {e : Eff Op}
     cases i with
     | zero =>
       cases root with
-      | defs decls _ _ => cases decls <;> rfl
+      | defs decls _ _ _ => cases decls <;> rfl
       | _ => rfl
     | succ _ => rfl
   | 0 :: rest, hat =>
     cases root with
-    | defs decls bodies main =>
+    | defs decls bodies main _ =>
       exact spineParams_append decls bodies rest _ hat (fun _ h => nomatch h) [i]
     | _ => rfl
   | (_ + 1) :: _, _ => rfl
@@ -110,20 +141,20 @@ theorem scopeParams_child {root : Eff Op} {path : List Nat} {e : Eff Op}
 invocation's programs stand below it. -/
 @[semantics "residual-program-typing" (requirement := R4)]
 theorem scopeParams_below {root : Eff Op} {path : List Nat} {e : Eff Op}
-    (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m, e ≠ .defs d b m)
+    (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m l, e ≠ .defs d b m l)
     (q : List Nat) : scopeParams root (path ++ q) = scopeParams root path := by
   match path, hat with
   | [], hat =>
     cases hat
     cases root with
-    | defs decls bodies main => exact absurd rfl (he decls bodies main)
+    | defs decls bodies main layers => exact absurd rfl (he decls bodies main layers)
     | _ => match q with
       | [] => rfl
       | 0 :: _ => rfl
       | (_ + 1) :: _ => rfl
   | 0 :: rest, hat =>
     cases root with
-    | defs decls bodies main =>
+    | defs decls bodies main _ =>
       exact spineParams_append decls bodies rest _ hat (fun _ h => nomatch h) q
     | _ => rfl
   | (_ + 1) :: _, _ => rfl
@@ -139,7 +170,7 @@ theorem scopeParams_layer_below {root : Eff Op} {path : List Nat} {l : LayerTerm
   | [], hat => nomatch hat
   | 0 :: rest, hat =>
     cases root with
-    | defs decls bodies main =>
+    | defs decls bodies main _ =>
       exact spineParams_append decls bodies rest _ hat (fun _ h => nomatch h) q
     | _ => rfl
   | (_ + 1) :: _, _ => rfl
@@ -155,7 +186,7 @@ theorem scopeParams_layer_prefix {root : Eff Op} {path q : List Nat} {l : LayerT
 (`scopeParams_below`, read along a prefix). A step of `denote-typed`; its consumers are the arms
 that type a grandchild (`fork_arm`, `raceAll_arm`, `Typed/Denotation.lean`). -/
 theorem scopeParams_prefix {root : Eff Op} {path q : List Nat} {e : Eff Op}
-    (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m, e ≠ .defs d b m)
+    (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m l, e ≠ .defs d b m l)
     (hq : path <+: q) : scopeParams root q = scopeParams root path := by
   obtain ⟨r, rfl⟩ := hq
   exact scopeParams_below hat he r
@@ -167,7 +198,7 @@ theorem scopeParams_body {root : NativeEff} {k : Nat} {path : List Nat} {d : Def
     (hpath : defBodyPath root k = some path) (hd : root.defsOf[k]? = some d) :
     scopeParams root path = d.params := by
   cases root with
-  | defs decls bodies main =>
+  | defs decls bodies main _ =>
     change (if k < bodies.toList.length then some (0 :: List.replicate k 1 ++ [0]) else none) =
       some path at hpath
     split at hpath
@@ -186,7 +217,7 @@ theorem scopeParams_decl (root : Eff Op) (path : List Nat) :
   match path with
   | 0 :: rest =>
     cases root with
-    | defs decls bodies main => exact spineParams_decl decls rest
+    | defs decls bodies main _ => exact spineParams_decl decls rest
     | _ => exact .inl rfl
   | [] => exact .inl rfl
   | (_ + 1) :: _ => exact .inl rfl
@@ -195,7 +226,7 @@ theorem scopeParams_decl (root : Eff Op) (path : List Nat) :
 declaration's at that position; none outside every body. -/
 def scopeParamsOf (root : Eff Op) (scope : Option Nat) : List ParamDecl :=
   match root with
-  | .defs decls _ _ => ((scope.bind (decls[·]?)).map (·.params)).getD []
+  | .defs decls _ _ _ => ((scope.bind (decls[·]?)).map (·.params)).getD []
   | _ => []
 
 /-- A spine path's parameters are those of the declaration at its body's position
@@ -227,7 +258,7 @@ theorem scopeParams_eq (root : Eff Op) (path : List Nat) :
   match path with
   | 0 :: rest =>
     cases root with
-    | defs decls bodies main => exact spineParams_index decls rest
+    | defs decls bodies main _ => exact spineParams_index decls rest
     | _ => rfl
   | [] => cases root <;> rfl
   | (_ + 1) :: _ => cases root <;> rfl

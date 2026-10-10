@@ -84,7 +84,7 @@ def EffAlgebra.ofLayer {Op : Type} {R : EffFam → Type u}
   eff_select a0 a1 a2 a3 := layer .eff "select" [.term a0, .decision a1, .child .eff a2, .child .eff a3]
   eff_iterate a0 a1 a2 a3 a4 a5 := layer .eff "iterate" [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5]
   eff_restore a0 a1 := layer .eff "restore" [.term a0, .child .eff a1]
-  eff_defs a0 a1 a2 := layer .eff "defs" [.decls a0, .child .effs a1, .child .eff a2]
+  eff_defs a0 a1 a2 a3 := layer .eff "defs" [.decls a0, .child .effs a1, .child .eff a2, .child .layers a3]
   eff_invoke a0 a1 a2 := layer .eff "invoke" [.nat a0, .term a1, .child .effs a2]
   stmt_bindYield a0 := layer .stmt "bindYield" [.child .eff a0]
   stmt_yieldDiscard a0 := layer .stmt "yieldDiscard" [.child .eff a0]
@@ -155,7 +155,7 @@ def argSorts : EffFam → String → Option (List ArgSort)
   | .eff, "select" => some [.term, .decision, .child .eff, .child .eff]
   | .eff, "iterate" => some [.optTy, .term, .term, .term, .term, .child .eff]
   | .eff, "restore" => some [.term, .child .eff]
-  | .eff, "defs" => some [.decls, .child .effs, .child .eff]
+  | .eff, "defs" => some [.decls, .child .effs, .child .eff, .child .layers]
   | .eff, "invoke" => some [.nat, .term, .child .effs]
   | .stmt, "bindYield" => some [.child .eff]
   | .stmt, "yieldDiscard" => some [.child .eff]
@@ -244,7 +244,7 @@ def makers {Op : Type} : (fam : EffFam) → List (Maker Op fam)
     , ⟨"select", fun | [.term a0, .decision a1, .child .eff a2, .child .eff a3] => some (Effect4.Program.Eff.select a0 a1 a2 a3) | _ => none⟩
     , ⟨"iterate", fun | [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5] => some (Effect4.Program.Eff.iterate a0 a1 a2 a3 a4 a5) | _ => none⟩
     , ⟨"restore", fun | [.term a0, .child .eff a1] => some (Effect4.Program.Eff.restore a0 a1) | _ => none⟩
-    , ⟨"defs", fun | [.decls a0, .child .effs a1, .child .eff a2] => some (Effect4.Program.Eff.defs a0 a1 a2) | _ => none⟩
+    , ⟨"defs", fun | [.decls a0, .child .effs a1, .child .eff a2, .child .layers a3] => some (Effect4.Program.Eff.defs a0 a1 a2 a3) | _ => none⟩
     , ⟨"invoke", fun | [.nat a0, .term a1, .child .effs a2] => some (Effect4.Program.Eff.invoke a0 a1 a2) | _ => none⟩ ]
   | .stmt =>
     [ ⟨"bindYield", fun | [.child .eff a0] => some (Effect4.Program.Stmt.bindYield a0) | _ => none⟩
@@ -354,8 +354,8 @@ theorem build_eff_iterate {Op : Type} (a0 : Option Effect4.Program.Ty) (a1 : Eff
     build (Op := Op) .eff "iterate" [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5] = some (Effect4.Program.Eff.iterate a0 a1 a2 a3 a4 a5) := rfl
 theorem build_eff_restore {Op : Type} (a0 : Effect4.Program.Term) (a1 : EffSelfCarrier Op .eff) :
     build (Op := Op) .eff "restore" [.term a0, .child .eff a1] = some (Effect4.Program.Eff.restore a0 a1) := rfl
-theorem build_eff_defs {Op : Type} (a0 : List Effect4.Program.DefDecl) (a1 : EffSelfCarrier Op .effs) (a2 : EffSelfCarrier Op .eff) :
-    build (Op := Op) .eff "defs" [.decls a0, .child .effs a1, .child .eff a2] = some (Effect4.Program.Eff.defs a0 a1 a2) := rfl
+theorem build_eff_defs {Op : Type} (a0 : List Effect4.Program.DefDecl) (a1 : EffSelfCarrier Op .effs) (a2 : EffSelfCarrier Op .eff) (a3 : EffSelfCarrier Op .layers) :
+    build (Op := Op) .eff "defs" [.decls a0, .child .effs a1, .child .eff a2, .child .layers a3] = some (Effect4.Program.Eff.defs a0 a1 a2 a3) := rfl
 theorem build_eff_invoke {Op : Type} (a0 : Nat) (a1 : Effect4.Program.Term) (a2 : EffSelfCarrier Op .effs) :
     build (Op := Op) .eff "invoke" [.nat a0, .term a1, .child .effs a2] = some (Effect4.Program.Eff.invoke a0 a1 a2) := rfl
 theorem build_stmt_bindYield {Op : Type} (a0 : EffSelfCarrier Op .eff) :
@@ -549,7 +549,7 @@ def view_eff {Op : Type} : Effect4.Program.Eff Op → String × List (ArgF Op (E
   | .select a0 a1 a2 a3 => ("select", [.term a0, .decision a1, .child .eff a2, .child .eff a3])
   | .iterate a0 a1 a2 a3 a4 a5 => ("iterate", [.optTy a0, .term a1, .term a2, .term a3, .term a4, .child .eff a5])
   | .restore a0 a1 => ("restore", [.term a0, .child .eff a1])
-  | .defs a0 a1 a2 => ("defs", [.decls a0, .child .effs a1, .child .eff a2])
+  | .defs a0 a1 a2 a3 => ("defs", [.decls a0, .child .effs a1, .child .eff a2, .child .layers a3])
   | .invoke a0 a1 a2 => ("invoke", [.nat a0, .term a1, .child .effs a2])
 
 theorem build_view_eff {Op : Type} (e : Effect4.Program.Eff Op) :

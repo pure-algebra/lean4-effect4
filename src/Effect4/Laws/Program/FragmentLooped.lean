@@ -40,7 +40,7 @@ def Looped : NativeEff → Bool
   | .select _ _ a2 a3 => Looped a2 && Looped a3
   | .iterate _ _ _ _ _ a5 => Looped a5
   | .restore _ _ => false
-  | .defs _ _ _ => false
+  | .defs _ _ _ _ => false
   | .invoke _ _ _ => false
 
 end Effect4.Program.Denote

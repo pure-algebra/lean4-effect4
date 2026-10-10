@@ -128,15 +128,17 @@ def checkBodies (sig : Signature Op) (p : List Nat) :
   | _, _ => pure ()
 
 /-- **The whole module's check** (decisions row 328). At a definition block it checks the
-declarations and the bodies, then the main program, each at the block's signature; the main
-program's type is the module's. Any program with no block is checked as `check` checks it. -/
+declarations and the bodies, then the main program, then the module's layers, each at the
+block's signature; the main program's type is the module's. Any program with no block is checked as `check` checks it. -/
 def checkModule (sig : Signature Op) : Eff Op → Except TypeRefusal EffTy
-  | .defs decls bodies main => do
+  | .defs decls bodies main layers => do
     unless decls.length = bodies.toList.length do
       throw ⟨[], .definitionsMismatch decls.length bodies.toList.length⟩
     let sig' := sig.withDefs decls
     checkBodies sig' [0] decls bodies
-    check sig' [] [1] main
+    let t ← check sig' [] [1] main
+    let _ ← checkLayers sig' [2] layers
+    pure t
   | e => check sig [] [] e
 
 end Checker
@@ -145,7 +147,7 @@ end Checker
 program with no block. A block's program is checked at its signature extended by them
 (`Signature.withDefs`). -/
 def Eff.defsOf : Eff Op → List DefDecl
-  | .defs decls _ _ => decls
+  | .defs decls _ _ _ => decls
   | _ => []
 
 end Effect4.Program

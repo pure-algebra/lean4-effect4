@@ -971,7 +971,7 @@ theorem effAll_onRef (P : Ty → Prop) (f : List Nat → LayerTerm Op)
     effAll P (cata_eff (refAlgebra f) node) = effAll P node := by
   cases node <;> simp only [effAll, cata_eff, EffAlgebra.id, foldMap_eff, NodeAll, view, view_eff,
     ArgsAll, ArgAll, effAll_onRef P f hf, stmtsAll_onRef P f hf, effsAll_onRef P f hf,
-    actionAll_onRef P f hf, layerAll_onRef P f hf]
+    actionAll_onRef P f hf, layerAll_onRef P f hf, layersAll_onRef P f hf]
 
 /-- `effAll_onRef` at a statement. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -1559,9 +1559,9 @@ theorem typeOfProgram_closed {Op : Type} [ScopedOp Op] (sig : Signature Op)
     cases hm with
     -- a block's main program is checked at the block's signature, whose atoms and carriers are
     -- the signature's (decisions row 328)
-    | @defs decls _ _ _ _ hmain =>
+    | @defs decls _ _ _ _ _ hmain _ =>
       exact hasTy_closed (sig := sig.withDefs decls) ⟨closed.atom, closed.service⟩ hmain
-        ClosedEnv.nil hann.2.2
+        ClosedEnv.nil hann.2.2.1
     | plain hd => exact hasTy_closed closed hd ClosedEnv.nil hann
   · exact nomatch h
 
