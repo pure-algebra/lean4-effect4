@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/mcp/probe.py", line 48, in <module>
+    discover = ask("server/discover", schema_name="DiscoverResultResponse")
+  File "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/mcp/probe.py", line 33, in ask
+    if not sel.select(45): raise RuntimeError("driver reply timeout")
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: driver reply timeout

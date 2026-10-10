@@ -1,0 +1,9 @@
+#axiom_audit: 690 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+Effect4.Run.rows_loop_frontier: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Run.rows_loop_frontier_host: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Program.Agreement.localWaitC_to_rowsB: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Program.Agreement.localRunC_compileBO: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0

@@ -1,0 +1,135 @@
+{
+  "reviewed_commit": "8ce5e1c4fed3512077b7aabc207414effd569056",
+  "branch": "codex/review-host-frontier-features",
+  "sources_sha256": {
+    "src/Effect4/Laws/Program/DenoteRowsB.lean": "38ae191ca9af07bbba090235b204f90373fd92fe1e78be14e5b5f43673afe1ab",
+    "src/Effect4/Laws/Program/Agreement/Segment.lean": "13af51a5ec7b93515d1058de08641905faf904988da797f7fa60a473e7dce2e8",
+    "src/Effect4/Laws/Program/Agreement/Hosted.lean": "6fdd1865a3cb4370deb8228dc1ed1a4ea8b51dd9bd98cb907d6e3aa6510db7a6",
+    "src/Effect4/Laws/Program/Agreement/LoopCalls.lean": "bdac255ba5ad3b30d529eb753151c5ab74c1507a391cd6d67790763ad2759718",
+    "src/Effect4/Laws/Program/Agreement/HostedLoop.lean": "c60d2abcdff5924f0bb2881eb05acea0fd98d467924c98f83f97c29e4ade69bb",
+    "src/Effect4/Laws/Api/SessionMeaningLoop.lean": "db9acd5e6b8ed50d6deeb8df795db0a17e1ccce81dc8046648e5b2feab496337",
+    "src/Effect4/Program/Edit.lean": "dd4dacdece7cabe17d1162119c83a3c039aa6cfb3e5fd0cfee4096fb89eeff15",
+    "src/Effect4/Program/Admit.lean": "7d7a57cc75b25466658ae39554bf3289c8813dd83bc1bb1accce25486e886ef3",
+    "src/Effect4/Api/HostSession.lean": "9a6e9091fa44e246d657d6dc0b31729123c57ea4e6b4fbd9e7994cab186b3175",
+    "tools/Tools/View/Run.lean": "9642fc61f0ca852c8c79c76700059859adcb7408f518bd4a2fdd4e6c20e302ed",
+    "tools/Tools/View/Flow.lean": "385d1aac374a81116455426b33327c89790686031112b4df7bf9dc5c03af46f9",
+    "tools/Tools/Query.lean": "ee0f25e2e98f670e2646652e717c0d44e51d35cbd77a667099a548a963d1824f",
+    "tools/Tools/Session.lean": "ccca864945273741a354eca221ed87a5fa88f02f4b7c8b1d6823e51bca7437a2",
+    "src/Effect4/Program/Refs.lean": "def356715b4c4cacccdcb17aa3b2c2bbb17e7bc3257b59a22bc27bb9e5fc6858",
+    "src/Effect4/Program/Compile.lean": "bedc0b62a815e9f8cea23cc93365ee98b0e07cdfea12b7158eda80f233a38e09",
+    "src/Effect4/Laws/Program/Typed/Scope.lean": "736df2b66de7032d9855639dd36e6acdfdae57ea1f140b1a063cc4e7f4986f8c",
+    "src/Effect4/Laws/Program/Typed/LayerArm.lean": "353403f3bc5b18d524fa90420225cfe75b4418019c4d89a33a2a786ef5b009a8",
+    "src/Effect4/Laws/Program/Typed/Admission.lean": "0b0ff6f1ab78881996dfb6178cd1786eefa6e0759f8a124b89c345838031e7ef",
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": "75c2abdb286ad37b4c35a8b2fca260623e8b2afff7aa74a7484a398df6f16d7f",
+    "src/Effect4/Codegen/Print.lean": "158b2fead531be3f25310d9dc216d66b36a4923985548bb3ce7ea045bff9a6b6",
+    "vendor/effect-4.0.0-rc.112/src/Layer.ts": "55f20d4a18913efc16f8bd5732d477e9455fb2ea1476e47d0a4ed14b12caed58"
+  },
+  "guard_counts": {
+    "Controls.lean": 30,
+    "LayerContextControls.lean": 33,
+    "CXControls.lean": 25,
+    "CX3Controls.lean": 10
+  },
+  "probe_sha256": {
+    "Controls.lean": "e031152240ecfde4be93485ccbb902b6d9f43c624ac92d58525e25ce0ef05c81",
+    "LayerContextControls.lean": "71941090123096cd0169c03157d495d615907d25234b3403f6e4c595d5e659b1",
+    "CXControls.lean": "ff85cd13e1430ac7ab60b838ef6436b80153675c139a688086ca515101210f77",
+    "CX3Controls.lean": "2d1e42ecad1f93d8b161678129041f7f36254bcaced4271daa394f3564f8d516"
+  },
+  "checks": {
+    "build": {
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Api.SessionMeaningLoop",
+        "Test.Dogfood.Scenario",
+        "ProofGraph.AxiomAudit",
+        "ProofGraph.Plan",
+        "Effect4.Laws.Program.Typed.Commands.Clauses.All"
+      ],
+      "started_utc": "2026-10-10T14:41:41.469925+00:00",
+      "exit": 0,
+      "log_sha256": "eb110c1bf7a15e99ef131c8524f58dfc2e42925e8c9a2e39a89b76e4e3b30786"
+    },
+    "controls": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/Controls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/Controls.lean"
+      ],
+      "started_utc": "2026-10-10T14:41:41.997950+00:00",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "layer-context-controls": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/LayerContextControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/LayerContextControls.lean"
+      ],
+      "started_utc": "2026-10-10T14:41:49.987707+00:00",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cx-controls": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/CXControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/CXControls.lean"
+      ],
+      "started_utc": "2026-10-10T14:41:51.519803+00:00",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cx3-controls": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/CX3Controls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/CX3Controls.lean"
+      ],
+      "started_utc": "2026-10-10T14:41:53.028370+00:00",
+      "exit": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "cx-audit": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/CXAudit.lean"
+      ],
+      "started_utc": "2026-10-10T14:41:54.459594+00:00",
+      "exit": 0,
+      "log_sha256": "9b8501977b16655c0928635e55407f13cb84e265f447d701632cfff68f250337"
+    },
+    "audit": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-authoring-support/Audit.lean"
+      ],
+      "started_utc": "2026-10-10T14:41:58.579076+00:00",
+      "exit": 0,
+      "log_sha256": "d79a56be6d7974544b06b421a91399c9d28cf7bd12dc7f92cb273ec9e5b90954"
+    }
+  }
+}

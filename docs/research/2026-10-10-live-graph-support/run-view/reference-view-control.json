@@ -1,0 +1,17 @@
+{
+  "isolated_head": "ae80ada13d5139419e76bd03997013da4847c028",
+  "command": [
+    "lake",
+    "env",
+    "sh",
+    "-c",
+    "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true \"$1/ReferenceViewControl.lean\"",
+    "run-view",
+    "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view"
+  ],
+  "exit": 0,
+  "LEAN_NUM_THREADS": 3,
+  "source_sha256": "98cc3ebb2f36b6b20fca123d860a9a755af492e1308c9617983f614c0cea348e",
+  "log": "reference-view-control.log",
+  "scope": "finite checks on ae80ada1; not a build, audit, or runtime check of 3ef7aeb0"
+}

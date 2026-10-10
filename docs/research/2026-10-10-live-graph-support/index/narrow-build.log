@@ -1,0 +1,8 @@
+✔ [383/389] Built Tools.Graph.Index (719ms)
+✔ [384/389] Built Tools.View.Flow (1.4s)
+✔ [385/389] Built Tools.View.FlowSpecimen (804ms)
+✔ [386/389] Built Tools.View.FlowLaws (2.2s)
+✔ [387/389] Built Tools.View.Build (2.6s)
+✔ [388/389] Built Tools.View.FlowPath (915ms)
+✔ [389/389] Built Tools.View.FlowOrder (916ms)
+Build completed successfully (389 jobs).

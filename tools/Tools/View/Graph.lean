@@ -560,17 +560,42 @@ def boxesApart (l : Laid) : Bool :=
     | p :: rest => rest.all (apart p) && go rest
   go boxes
 
-/-- Every edge drawn down descends: its target's top stands at or below its source's bottom (a
-point has no height). A finite check of a layout; the program graph's law is planned
-(`docs/research/2026-10-09-program-graph-design.md`, D3). -/
+/-- One downward segment descends when both keys resolve and the target top is at or below
+its source bottom. A point has no height. Lookup retains the first matching key. -/
+def segmentDescends (l : Laid) (u v : Key) : Bool :=
+  match l.find u, l.find v with
+  | some a, some b => a.y + (if a.node.isSome then ROWH * BOXROWS else 0) ≤ b.y
+  | _, _ => false
+
+/-- Check every adjacent pair of a downward route. Empty and singleton routes have no segment
+and pass. This finite geometry check states no route-shape or dimension judgment. -/
+def downRouteDescends (l : Laid) (ks : List Key) : Bool :=
+  (ks.zip ks.tail).all fun pair => l.segmentDescends pair.1 pair.2
+
+/-- The finite downward-route check accepts exactly when every adjacent pair descends.
+This named tool law serves R14 and decisions row 336(8). Its consumer is `edgesDescend_down_pairs`.
+Placement: `docs/research/2026-10-10-live-graph-support/routes/PLAN.md`. -/
+theorem downRouteDescends_iff (l : Laid) (ks : List Key) :
+    l.downRouteDescends ks = true ↔
+      ∀ pair ∈ ks.zip ks.tail, l.segmentDescends pair.1 pair.2 = true :=
+  List.all_eq_true
+
+/-- Every adjacent segment drawn down descends, with both endpoint keys resolved.
+Back and loop routes pass this downward-only finite check. -/
 def edgesDescend (l : Laid) : Bool :=
-  let bottom (p : Placed) : Int := p.y + (if p.node.isSome then ROWH * BOXROWS else 0)
   l.routes.toList.all fun
-    | .down _ [u, v] _ _ =>
-      match l.find u, l.find v with
-      | some a, some b => bottom a ≤ b.y
-      | _, _ => false
+    | .down _ ks _ _ => l.downRouteDescends ks
     | _ => true
+
+/-- A passing layout check checks every adjacent pair of each downward route.
+This named tool law serves R14. The view driver's `graph-edges-descend` result consumes the check.
+Placement: `docs/research/2026-10-10-live-graph-support/routes/PLAN.md`. -/
+theorem edgesDescend_down_pairs (l : Laid) (checked : l.edgesDescend = true)
+    (key : Key) (ks : List Key) (reveal share : Nat)
+    (member : Route.down key ks reveal share ∈ l.routes.toList) :
+    ∀ pair ∈ ks.zip ks.tail, l.segmentDescends pair.1 pair.2 = true := by
+  have route := List.all_eq_true.mp checked (.down key ks reveal share) member
+  exact (downRouteDescends_iff l ks).mp route
 
 /-- Every dimension of a layout is a size, and every place is inside the picture: the picture's
 width and height, each item's width and each region's width and height are at least zero, and each

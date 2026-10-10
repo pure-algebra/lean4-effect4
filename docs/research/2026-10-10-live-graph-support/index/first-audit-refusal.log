@@ -1,0 +1,38 @@
+docs/research/2026-10-10-live-graph-support/index/Audit.lean:5:0: error: #axiom_audit: 22 of 331 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.Graph.Index.bucket reaches [Classical.choice]
+  Tools.Graph.Index reaches [Classical.choice]
+  Tools.Graph.Index.bucket.eq_1 reaches [Classical.choice]
+  Tools.Graph.Index.ofList._f reaches [Classical.choice]
+  Tools.Graph.Index.ofList._unsafe_rec reaches [Classical.choice]
+  Tools.Graph.Index.ofList.eq_def reaches [Classical.choice]
+  Tools.Graph.Index.ofList._sunfold reaches [Classical.choice]
+  Tools.Graph.Index.ofList reaches [Classical.choice]
+  Tools.Graph.Index.bucket_ofList reaches [Classical.choice]
+  Tools.Graph.Index.ofList.eq_2 reaches [Classical.choice]
+  Tools.Graph.Index.ofList.eq_1 reaches [Classical.choice]
+  Tools.View.Flow.place_descends reaches [Classical.choice]
+  Tools.View.Flow.assignHeightsIndexed.eq_2 reaches [Classical.choice]
+  Tools.View.Flow.relaxIndexed_agrees reaches [Classical.choice]
+  Tools.View.Flow.assignHeightsIndexed.eq_def reaches [Classical.choice]
+  Tools.View.Flow.preparePlacement_lanes reaches [Classical.choice]
+  Tools.View.Flow.place_placed reaches [Classical.choice]
+  Tools.View.Flow.place_apart reaches [Classical.choice]
+  Tools.View.Flow.assignHeightsIndexed.eq_1 reaches [Classical.choice]
+  Tools.View.Flow.relaxIndexed.eq_1 reaches [Classical.choice]
+  Tools.View.Flow.preparePlacement_height reaches [Classical.choice]
+  Tools.View.Flow.assignHeightsIndexed_agrees reaches [Classical.choice]
+2 of them stand under no other; each one's path to its axiom:
+  Tools.Graph.Index  (Tools.Graph.Index)
+  → Std.TreeMap  (Std.Data.TreeMap.Basic)
+  → ⋯ 9 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Flow.preparePlacement_lanes  (Tools.View.FlowLaws)
+  → Tools.View.Flow.preparePlacement  (Tools.View.Flow)
+  → Tools.Graph.Index.ofList  (Tools.Graph.Index)
+  → Tools.Graph.Index.ofList._f  (Tools.Graph.Index)
+  → Std.TreeMap.insert  (Std.Data.TreeMap.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+docs/research/2026-10-10-live-graph-support/index/Audit.lean:7:0: error: Tools.View.Flow.relaxIndexed reaches Classical.choice

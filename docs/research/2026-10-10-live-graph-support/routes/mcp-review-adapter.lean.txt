@@ -1,0 +1,12 @@
+import Lean
+import Effect4.Store.Domain.ShapeRead
+
+import Preview
+open Lean
+#eval let j := (Json.parse "{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":0}").toOption.getD .null; (LiveGraphPreview.dispatch none j).2.map Json.compress
+#eval let j := (Json.parse "{\"jsonrpc\":\"2.0\",\"id\":{},\"method\":0}").toOption.getD .null; (LiveGraphPreview.dispatch none j).2.map Json.compress
+#eval let j := (Json.parse "{\"jsonrpc\":\"2.0\",\"id\":1.0,\"method\":\"ping\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"2026-07-28\",\"io.modelcontextprotocol/clientCapabilities\":{}}}}").toOption.getD .null; (LiveGraphPreview.dispatch none j).2.map Json.compress
+#eval let j := (Json.parse "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"1900-01-01\",\"io.modelcontextprotocol/clientCapabilities\":{}}}}").toOption.getD .null; (LiveGraphPreview.dispatch none j).2.map Json.compress
+#eval let j := (Json.parse "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"server/discover\",\"params\":{\"_meta\":{\"io.modelcontextprotocol/protocolVersion\":\"1900-01-01\",\"io.modelcontextprotocol/clientCapabilities\":{}}}}").toOption.getD .null; (LiveGraphPreview.dispatch none j).2.map Json.compress
+#eval (LiveGraphPreview.fieldValid .nat ((Json.parse "0.0").toOption.getD .null), LiveGraphPreview.fieldValid .bytes (.str "00\n"))
+#eval let args := Json.mkObj [("program", .str "00"), ("holes", .str "040000000000000000"), ("path", .arr #[])]; ((LiveGraphPreview.call none .inspect args).2).map Json.compress

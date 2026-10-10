@@ -1,0 +1,5 @@
+CHANGED AXIOMS Tools.View.Laid.segmentDescends: [propext]
+CHANGED AXIOMS Tools.View.Laid.downRouteDescends: [propext]
+CHANGED AXIOMS Tools.View.Laid.downRouteDescends_iff: [propext, Quot.sound]
+CHANGED AXIOMS Tools.View.Laid.edgesDescend: [propext]
+CHANGED AXIOMS Tools.View.Laid.edgesDescend_down_pairs: [propext, Quot.sound]

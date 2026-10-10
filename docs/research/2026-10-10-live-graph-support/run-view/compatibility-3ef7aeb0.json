@@ -1,0 +1,124 @@
+{
+  "assessed_primary_snapshot": "3ef7aeb0f41bbb3796f44edc873e4185e760c6ca",
+  "prepared_view_commit": "ae80ada13d5139419e76bd03997013da4847c028",
+  "integrated_view_snapshot": "e37402c3",
+  "prepared_view_blobs": {
+    "ae80ada1": "285a9468a764b799f2af9aa1723ec7f249a7329d",
+    "e37402c3": "285a9468a764b799f2af9aa1723ec7f249a7329d"
+  },
+  "method": "frozen git blobs and source inspection; no build of 3ef7aeb0",
+  "relevant_inputs": [
+    {
+      "path": "src/Effect4/Api/Built.lean",
+      "blobs": {
+        "ae80ada1": "f6884be13795e943cb512fb89db0feb05099ab1c",
+        "3ef7aeb0": "f6884be13795e943cb512fb89db0feb05099ab1c"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Api/Author.lean",
+      "blobs": {
+        "ae80ada1": "63230feddcab9b8864410936bf7c81f3ee326511",
+        "3ef7aeb0": "63230feddcab9b8864410936bf7c81f3ee326511"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Api.lean",
+      "blobs": {
+        "ae80ada1": "57fc77fec3478182411ed840d28edbba7012e82a",
+        "3ef7aeb0": "57fc77fec3478182411ed840d28edbba7012e82a"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Run/Basic.lean",
+      "blobs": {
+        "ae80ada1": "02976eae2607d1775e861d9c1cdafb8e8b02da8f",
+        "3ef7aeb0": "02976eae2607d1775e861d9c1cdafb8e8b02da8f"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Edit.lean",
+      "blobs": {
+        "ae80ada1": "06b175083935b56320a824af7a35e18221e953fa",
+        "3ef7aeb0": "06b175083935b56320a824af7a35e18221e953fa"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Sketch.lean",
+      "blobs": {
+        "ae80ada1": "3cc4288f4e9229c5b78bf034c860f762e60be39c",
+        "3ef7aeb0": "3cc4288f4e9229c5b78bf034c860f762e60be39c"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/PartsTable.lean",
+      "blobs": {
+        "ae80ada1": "3d78d304c8d4321ae619ef5a24e00ecfba9c4cbd",
+        "3ef7aeb0": "3d78d304c8d4321ae619ef5a24e00ecfba9c4cbd"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Annotate.lean",
+      "blobs": {
+        "ae80ada1": "8a78f6f64ad1802678448372cb0d4a2074e478f9",
+        "3ef7aeb0": "8a78f6f64ad1802678448372cb0d4a2074e478f9"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "blobs": {
+        "ae80ada1": "a158fa4ecc9e806622115c61f7c8043bdad7c213",
+        "3ef7aeb0": "a158fa4ecc9e806622115c61f7c8043bdad7c213"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Checker.lean",
+      "blobs": {
+        "ae80ada1": "17a9eacbdbc3c7ad7e41a713cd651a6eada42d46",
+        "3ef7aeb0": "17a9eacbdbc3c7ad7e41a713cd651a6eada42d46"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "blobs": {
+        "ae80ada1": "a3b99d055aa0a5c1e5efa3fbca28d6371aec1783",
+        "3ef7aeb0": "a3b99d055aa0a5c1e5efa3fbca28d6371aec1783"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "tools/Tools/View/Program.lean",
+      "blobs": {
+        "ae80ada1": "dd9395a0fc92d32ec9abc2df89320bd623c14297",
+        "3ef7aeb0": "dd9395a0fc92d32ec9abc2df89320bd623c14297"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "tools/Tools/Code/Module.lean",
+      "blobs": {
+        "ae80ada1": "3027c9f706d173bc4c25eedd20cfc5512fa98ac6",
+        "3ef7aeb0": "3027c9f706d173bc4c25eedd20cfc5512fa98ac6"
+      },
+      "unchanged": true
+    },
+    {
+      "path": "src/Effect4/Program/Refs.lean",
+      "blobs": {
+        "ae80ada1": "ec309afb1b807898d215665419bf687f7caed883",
+        "3ef7aeb0": "1051b91c902aac8f8b4dff019b7be3f785f81774"
+      },
+      "unchanged": false
+    }
+  ]
+}
