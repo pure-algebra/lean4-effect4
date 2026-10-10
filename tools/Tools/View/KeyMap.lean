@@ -21,8 +21,8 @@ those caches reads a lookup after an insert.
 
 They are tool laws, not registry claims (decisions row 334, point 3). They serve concept
 `initial-algebras-folds` and R14's live authoring. Their consumers are the stroke cache's law
-(`Laid.cachedStroke_valid`), the memo's law (`Inc.next_valid`) and the retained picture's
-(`Retained.apply_diff`).
+(`Laid.cachedStroke_valid`), the memo's law (`Inc.next_valid`) and the retained picture's laws
+(`Retained.of_flatten`, `Retained.apply_diff`).
 -/
 
 namespace Tools.Graph.Index
@@ -181,6 +181,27 @@ where
       · have hd : decide (e.1 = k) = false := decide_eq_false he
         simp only [List.filter_cons, hd, Bool.not_false, if_true, List.find?_cons]
         exact find?_none_of_filter l
+
+/-- A lookup with a default after an insert. A step of the retained picture's law. -/
+theorem getD_insert (m : KeyMap κ α) (k j : κ) (v d : α) :
+    (m.insert k v).getD j d = if k = j then v else m.getD j d := by
+  unfold getD
+  rw [get?_insert]
+  by_cases h : k = j
+  · rw [if_pos h, if_pos h]
+    rfl
+  · rw [if_neg h, if_neg h]
+
+/-- Whether a key has a value, after an insert. A step of the retained picture's law. -/
+theorem contains_insert (m : KeyMap κ α) (k j : κ) (v : α) :
+    (m.insert k v).contains j = (decide (k = j) || m.contains j) := by
+  unfold contains
+  rw [get?_insert]
+  by_cases h : k = j
+  · rw [if_pos h, decide_eq_true h]
+    rfl
+  · rw [if_neg h, decide_eq_false h]
+    rfl
 
 end KeyMap
 

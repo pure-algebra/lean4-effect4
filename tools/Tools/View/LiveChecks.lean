@@ -1,5 +1,6 @@
 import Tools.View.Build
 import Tools.View.Inc
+import Tools.View.Retained
 
 /-!
 # The live view's checks
@@ -180,5 +181,36 @@ def flowWithWaits (program : NativeEff) (ws : List (Key × List Key)) : Flow.Flo
 -- outside the edit, and the lines along the edit are then not the fresh lines.
 #guard (Inc.lines (Inc.Memo.next (Program.lines siblingNew)) (some [1]) siblingOld).map lineView !=
   (Program.lines siblingOld).map lineView
+
+/-! ## LV-5: the retained scene -/
+
+/-- The pictures of a program's frames, at the page width the driver uses. -/
+def picturesOf (p : NativeEff) : List (List (Keyed Call)) := (framesOf p).map fun f => pageCalls {} 1280 f.page
+
+-- The two laws of the retained scene, read at every picture and every two consecutive pictures of
+-- every build: a picture read as objects and flattened is the picture (`Retained.of_flatten`), and
+-- the scene of one picture patched by the diff to the next flattens to the next
+-- (`Retained.apply_diff`, whose premise every scene read from one group meets, `ofGroups_wf`).
+#guard programs.all fun p => (picturesOf p).all fun cs => (Retained.Scene.of cs).flatten == cs
+#guard programs.all fun p =>
+  let ps := picturesOf p
+  (ps.zip (ps.drop 1)).all fun (a, b) =>
+    let (sa, sb) := (Retained.Scene.of a, Retained.Scene.of b)
+    (sa.apply (Retained.diff sa sb)).flatten == b
+
+-- The ranks: a key that returns after another key starts a second run, so a second object.
+#guard (Retained.Scene.of [⟨"k", .uncut⟩, ⟨"j", .uncut⟩, ⟨"k", .uncut⟩]).order.map (·.nth) == [0, 0, 1]
+
+/-- A scene of one object in the group `g`, with the origin `o`, its groups listed `n` times. -/
+def oneObject (o : Int × Int) (n : Nat) : Retained.Scene :=
+  let s := Retained.Scene.ofGroups [{ name := "g", origin := o, calls := [⟨"k", .hit 0 0 8 8⟩] }]
+  { s with groups := List.replicate n "g" }
+
+-- The control of the premise that a scene lists each group once: a scene listing its group twice
+-- takes its shift twice, and the patched scene stands twice as far off.
+#guard ((oneObject (0, 0) 1).apply (Retained.diff (oneObject (0, 0) 1) (oneObject (5, 0) 1))).flatten ==
+  (oneObject (5, 0) 1).flatten
+#guard ((oneObject (0, 0) 1).apply (Retained.diff (oneObject (0, 0) 1) (oneObject (5, 0) 2))).flatten !=
+  (oneObject (5, 0) 2).flatten
 
 end Tools.View.LiveChecks

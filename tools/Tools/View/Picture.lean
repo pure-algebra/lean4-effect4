@@ -292,6 +292,23 @@ def Call.move (dx dy : Int) : Call → Call
   | .hit x y w h => .hit (x + dx) (y + dy) w h
   | .shape role value ps => .shape role value (ps.map (·.map (Cubic.move (1000 * dx) (1000 * dy))))
 
+/-- A call moved twice is the call moved by the sum. A step of the retained picture's law
+(`Retained.of_flatten`, `tools/Tools/View/Retained.lean`). -/
+theorem Call.move_move (a b x y : Int) (c : Call) : (c.move a b).move x y = c.move (a + x) (b + y) := by
+  cases c with
+  | curve role c wt => simp only [Call.move, Cubic.move_move]
+  | shape role value ps =>
+    simp only [Call.move, List.map_map, Function.comp_def, Cubic.move_move, Int.mul_add]
+  | _ => simp only [Call.move, Int.add_assoc]
+
+/-- A call moved by nothing is the call. A step of the retained picture's law. -/
+theorem Call.move_zero (c : Call) : c.move 0 0 = c := by
+  have hc : Cubic.move 0 0 = id := funext Cubic.move_zero
+  cases c with
+  | curve role c wt => simp only [Call.move, Cubic.move_zero]
+  | shape role value ps => simp only [Call.move, Int.mul_zero, hc, List.map_id, List.map_id']
+  | _ => simp only [Call.move, Int.add_zero]
+
 /-- A device call moved by whole logical pixels at the ratio `r`: a box by `r` times as many
 device pixels; a text and a cut, which stay in logical pixels, by the logical move. -/
 def Dev.move (r dx dy : Int) : Dev → Dev
