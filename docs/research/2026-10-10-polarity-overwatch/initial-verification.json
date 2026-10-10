@@ -1,0 +1,22 @@
+[
+  {
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "docs/research/2026-10-10-polarity-overwatch/Probe.lean"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 1.491
+  },
+  {
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "docs/research/2026-10-10-polarity-overwatch/Audit.lean"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 1.363
+  }
+]

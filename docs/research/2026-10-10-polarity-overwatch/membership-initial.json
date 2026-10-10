@@ -1,0 +1,21 @@
+[
+  {
+    "command": [
+      "lake",
+      "build",
+      "Effect4.Laws.Program.TypeAlgebra"
+    ],
+    "returncode": 0,
+    "elapsed_seconds": 0.304
+  },
+  {
+    "command": [
+      "lake",
+      "env",
+      "lean",
+      "docs/research/2026-10-10-polarity-overwatch/MembershipProbe.lean"
+    ],
+    "returncode": 1,
+    "elapsed_seconds": 3.318
+  }
+]

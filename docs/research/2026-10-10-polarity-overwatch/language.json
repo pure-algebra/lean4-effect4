@@ -1,0 +1,12 @@
+{
+  "command": [
+    "python3",
+    "scripts/check-language.py",
+    "--strict",
+    "docs/research/2026-10-10-polarity-overwatch/README.md",
+    "docs/research/2026-10-10-polarity-overwatch/PROOF-DAG.md",
+    "docs/research/2026-10-10-polarity-overwatch/PLAN.md"
+  ],
+  "returncode": 0,
+  "result": "No finding in the three reviewed documents; unrelated documents were not changed."
+}
