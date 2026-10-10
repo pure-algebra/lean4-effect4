@@ -331,6 +331,11 @@ the target's, so the redirected point is no `LayerPointTyped` point.
   the scope equality, `ref_builds`).
 - **Placed**: the other case, `crossScopeRef_builds` (`Typed/LayerArm.lean`). M5, M7 and their
   claims rest on it now, in place of `invoke_arm`.
+- **Probed**: [CrossScopeRef.lean](2026-10-10-cx-lexical-scope/CrossScopeRef.lean) elaborates
+  at `9e818b39` with `lake env lean`. A main program names, by a layer reference, the layer that a
+  definition's body provides. `layerRefsWF` holds, `Api.typeOf` admits it, and the two paths have
+  different scopes. So the goal's case is reachable at HEAD. It is a finite probe: in it, the
+  target runs no parameter, and its build is typed.
 - **Not known**: whether such a build is typed. The memo map keys a build on the target's path,
   and a forked map reads its parent's entries (`MemoWorld.lookup`; `forkMemoMapUnsafe`,
   `Layer.ts`), so one build can answer references in two scopes. A built context is typed by the
