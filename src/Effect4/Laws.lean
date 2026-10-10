@@ -271,6 +271,7 @@ import Effect4.Laws.Program.Typing.TermIntro
 import Effect4.Laws.Slice.Lattice
 -- The entry module of the laws an author reads (decisions row 332).
 import Effect4.Laws.Author
+import Effect4.Laws.Author.Explain
 import Effect4.Laws.Program.Typing.Splice
 import Effect4.Laws.Program.Edit
 import Effect4.Laws.Program.Address

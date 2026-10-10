@@ -27,7 +27,6 @@ import Effect4.Laws.Step.Table
 import Effect4.Laws.Step.Tuples
 import Effect4.Laws.Step.Waiting
 import Effect4.Laws.Step.Callback
-import Effect4.Laws.Author.Explain
 import Effect4.Laws.Program.Edit
 import Effect4.Laws.Program.SketchWire
 
@@ -43,8 +42,11 @@ re-exports:
 - the run API's laws: the journal, its rows and its tape;
 - the shared step laws: reading, typing, scope, the store's connectors, the encoding table, the
   lists, renaming and the wrappers' laws.
-- `#explain` and `#obligations`: a step's or a theorem's placement, standing and open goals,
-  as text or JSON (`src/Effect4/Laws/Author/Explain.lean`).
+
+`#explain` and `#obligations` (a step's or a theorem's placement, standing and open goals, as text
+or JSON) are their own import, `Effect4.Laws.Author.Explain`. They read the semantics registry,
+which changes at nearly every landing, so this module does not re-export them: a registry edit
+then rebuilds no author's module (decisions row 332, amended 2026-10-09).
 
 It declares nothing. A composed module's own laws are in `src/Effect4/Laws/Library/`.
 -/

@@ -16,9 +16,11 @@ open Tools.Architecture Tools.Exposure
 -- A composed module's directory is the module library; the shared step language is internal.
 #guard exposureOf "src/Effect4/Library/Queue/Ops.lean" == some .library
 #guard exposureOf "src/Effect4/Step.lean" == some .internal
+-- `#explain` and `#obligations` are an entry of their own, beside the proof graph's entry module
+-- (row 332, amended 2026-10-09).
+#guard exposureOf "src/Effect4/Laws/Author/Explain.lean" == some .entry
 -- The proof graph, the tools, the batteries.
 #guard exposureOf "src/Effect4/Laws/Step.lean" == some .proof
-#guard exposureOf "src/Effect4/Laws/Author/Explain.lean" == some .proof
 #guard exposureOf "tools/ProofGraph/Registry.lean" == some .tool
 #guard exposureOf "Test/Dogfood/P1HttpCache.lean" == some .test
 -- A path outside every declared prefix has no class.

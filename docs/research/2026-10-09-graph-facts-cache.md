@@ -1,6 +1,7 @@
 # 2026-10-09 Note: one cache of graph facts, shared by every proof and code tool
 
-Status: a proposal (history, not authority). Base: `refactor/phase1-phase3` after `889c0a74`
+Status: not pursued (history, not authority). The owner, 2026-10-09: after the report's fixes
+(87 s to 11 s) and the axiom gate's lookup fix, the gain is small; development comes first. Base: `refactor/phase1-phase3` after `889c0a74`
 and the rebuild cut that lands with this note. The owner asked for it on 2026-10-09: "we should
 be creating shared caches for all this build tooling".
 

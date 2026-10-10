@@ -284,6 +284,7 @@ def exposures : List (String × Exposure) := [
   ("src/Effect4/Emit.lean", .entry),
   ("src/Effect4/Library.lean", .entry),
   ("src/Effect4/Laws/Author.lean", .entry),
+  ("src/Effect4/Laws/Author/Explain.lean", .entry),
   ("src/Effect4/Library/Queue", .library),
   ("src/Effect4/Library/Semaphore", .library),
   ("src/Effect4/Library/Pool", .library),
