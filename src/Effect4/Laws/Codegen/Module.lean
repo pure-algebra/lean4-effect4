@@ -267,7 +267,7 @@ trip, the class section included.
 This is a structural AST equation: it does not validate the declaration's claimed
 type, imports, rendered TypeScript bytes, or target execution. -/
 theorem readModule_printModule {sig : Signature Op}
-    {spell : String → List RowArg → Option Op} {call : Nat → Op}
+    {spell : String → List RowArg → Option Op} {call param : Nat → Op}
     {root main : Eff Op} {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))
     (plain : main.block? = none)
@@ -279,7 +279,7 @@ theorem readModule_printModule {sig : Signature Op}
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
     (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call
+    readModule sig spell call param
       (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
   have ordered := Eff.hoistAll_ordered hoisted
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
@@ -441,6 +441,7 @@ theorem printDef_plain {sig : Signature Op} {d : DefDecl} {body : Eff Op}
   split at printed
   · cases printed
   · obtain ⟨_, _, rest⟩ := bind_eq_ok.mp printed
+    obtain ⟨_, _, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨_, _, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨_, _, heq⟩ := bind_eq_ok.mp rest
     cases heq
@@ -671,19 +672,56 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
                 exact ⟨rfl, rfl⟩) _ hms c hm
         · exact mapM_ok_forall _ _ (fun t d hd => printCaptured_plain t d hd) _ hls c hl
 
+/-- **A parameter's binder reads back** (slice HO-3): the binders `printDef` prints of readable
+parameters read as the parameters. A step of `readDefHead_printDef`. -/
+theorem readParams_printParams {sig : Signature Op} :
+    ∀ {ps : List ParamDecl} {fns : List TypeScript.TypeRef}, (∀ q ∈ ps, q.readable = true) →
+      ps.mapM (paramType sig) = .ok fns →
+      ((ps.zip fns).map fun p =>
+        ({ name := p.1.name, type := some p.2 } : TypeScript.Parameter)).mapM readParam = .ok ps
+  | [], fns, _, h => by
+    simp only [List.mapM_nil, pure, Except.pure, Except.ok.injEq] at h
+    subst h
+    rfl
+  | q :: qs, fns, readable, h => by
+    simp only [List.mapM_cons] at h
+    obtain ⟨t, ht, rest⟩ := bind_eq_ok.mp h
+    obtain ⟨ts, hts, heq⟩ := bind_eq_ok.mp rest
+    cases heq
+    have hq := readable q List.mem_cons_self
+    simp only [ParamDecl.readable, Bool.and_eq_true] at hq
+    obtain ⟨⟨hreq, hans⟩, herr⟩ := hq
+    obtain ⟨reqT, hreqT⟩ := Effect4.Codegen.Classes.ofTy_of_readable hreq
+    obtain ⟨ansT, hansT⟩ := Effect4.Codegen.Classes.ofTy_of_readable hans
+    obtain ⟨errT, herrT⟩ := Effect4.Codegen.Classes.ofTy_of_readable herr
+    simp only [paramType, typeRefOf, hreqT, declarationType, hansT, herrT, bind, Except.bind,
+      Except.ok.injEq] at ht
+    subst ht
+    have tail := readParams_printParams (fun q' h' => readable q' (List.mem_cons_of_mem _ h')) hts
+    obtain ⟨name, request, answer, error⟩ := q
+    simp only [List.zip_cons_cons, List.map_cons, List.mapM_cons, tail, readParam,
+      requirementType_nil, ↓reduceIte,
+      Effect4.Codegen.Classes.readTyChecked_of_readable hreq hreqT,
+      Effect4.Codegen.Classes.readTyChecked_of_readable hans hansT,
+      Effect4.Codegen.Classes.readTyChecked_of_readable herr herrT, ok_bind]
+    rfl
+
 /-- **A definition's header reads back**: the constant `printDef` prints of a readable declaration
-reads as that declaration and the printed suspension of its body. A step of
+reads as that declaration, its parameters included (slice HO-3), and the printed suspension of
+its body, printed at the signature its parameters extend. A step of
 `readModule_printModule_defs`. -/
 theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     {c : TypeScript.ConstDecl} (readable : d.readable = true) (printed : printDef sig d body = .ok c) :
-    ∃ x, print sig 1 (.suspend body) = .ok x ∧ readDefHead c = .ok ({ d with role := .plain }, x) := by
-  simp only [DefDecl.readable, Bool.and_eq_true, List.isEmpty_iff, Option.isNone_iff_eq_none]
-    at readable
+    ∃ x, print (sig.withParams d.params) 1 (.suspend body) = .ok x ∧
+      readDefHead c = .ok ({ d with role := .plain }, x) := by
+  simp only [DefDecl.readable, Bool.and_eq_true, List.isEmpty_iff, Option.isNone_iff_eq_none,
+    List.all_eq_true] at readable
   obtain ⟨⟨⟨⟨⟨hreq, hans⟩, herr⟩, hrequires⟩, _⟩, hparams⟩ := readable
   unfold printDef at printed
   split at printed
   · cases printed
   · obtain ⟨request, hrequest, rest⟩ := bind_eq_ok.mp printed
+    obtain ⟨fns, hfns, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨result, hresult, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨x, hx, heq⟩ := bind_eq_ok.mp rest
     cases heq
@@ -695,12 +733,12 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     simp only [declarationType, DefDecl.effTy, hansT, herrT, bind, Except.bind,
       Except.ok.injEq] at hresult
     subst hresult
+    have hps := readParams_printParams hparams hfns
     refine ⟨x, hx, ?_⟩
     obtain ⟨name, request, answer, error, requires, role, params⟩ := d
-    simp only at hrequires hparams
+    simp only at hrequires hps
     subst hrequires
-    subst hparams
-    simp only [readDefHead, requirementType_nil, ↓reduceIte,
+    simp only [readDefHead, requirementType_nil, ↓reduceIte, hps, ok_bind,
       Effect4.Codegen.Classes.readTyChecked_of_readable hreq hreqT,
       Effect4.Codegen.Classes.readTyChecked_of_readable hans hansT,
       Effect4.Codegen.Classes.readTyChecked_of_readable herr herrT]
@@ -709,13 +747,14 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
 read as the declarations, and their bodies read back where each body's printed suspension does.
 A step of `readModule_printModule_defs`. -/
 theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
-    {spell : String → List RowArg → Option Op} {defs : List DefDecl} {bodies : Effs Op}
-    {cs : List TypeScript.ConstDecl} (readable : ∀ d ∈ defs, d.readable = true)
-    (bodiesRead : ∀ b ∈ bodies.toList, ReadsBack classes sig spell 1 (.suspend b))
+    {spell : String → List RowArg → Option Op} {param : Nat → Op} {defs : List DefDecl}
+    {bodies : Effs Op} {cs : List TypeScript.ConstDecl} (readable : ∀ d ∈ defs, d.readable = true)
+    (bodiesRead : ∀ p ∈ defs.zip bodies.toList, ReadsBack classes (sig.withParams p.1.params)
+      (paramsSpell param p.1.params spell) 1 (.suspend p.2))
     (printed : printDefs sig defs bodies = .ok cs) :
     ∃ heads, cs.mapM readDefHead = .ok heads ∧
       heads.map (·.1) = defs.map (fun d => { d with role := .plain }) ∧
-      readDefBodies classes sig spell heads = .ok bodies ∧
+      readDefBodies classes sig spell param heads = .ok bodies ∧
       (∀ c ∈ cs, LayerTerm.readRefName c.name = none) ∧ ∀ c ∈ cs, isServiceConst c = false := by
   induction defs generalizing bodies cs with
   | nil =>
@@ -732,10 +771,12 @@ theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
       cases heq
       have hd := readable d List.mem_cons_self
       obtain ⟨x, hx, hhead⟩ := readDefHead_printDef hd hc
-      have hread := bodiesRead b (by simp only [Effs.toList, List.mem_cons, true_or]) _ hx
+      have hread := bodiesRead (d, b) (by simp only [Effs.toList, List.zip_cons_cons,
+        List.mem_cons, true_or]) _ hx
       obtain ⟨heads, hheads, hdefs, hbodies, hnames, hnot⟩ :=
         ih (fun d' h => readable d' (List.mem_cons_of_mem _ h))
-          (fun b' h => bodiesRead b' (by simp only [Effs.toList, List.mem_cons, h, or_true])) hcs
+          (fun p h => bodiesRead p (by simp only [Effs.toList, List.zip_cons_cons, List.mem_cons, h,
+            or_true])) hcs
       refine ⟨({ d with role := .plain }, x) :: heads, ?_, ?_, ?_, ?_, ?_⟩
       · simp only [List.mapM_cons, hhead, hheads, ok_bind]
         rfl
@@ -779,7 +820,7 @@ module round trip of the readable domain (`readModule_printModule_readable`) and
 module or how rc.112 runs it. -/
 @[semantics "exact-codecs" (requirement := R8)]
 theorem readModule_printModule_defs {sig : Signature Op}
-    {spell : String → List RowArg → Option Op} {call : Nat → Op}
+    {spell : String → List RowArg → Option Op} {call param : Nat → Op}
     {root main body : Eff Op} {defs : List DefDecl} {bodies : Effs Op} {layers : LayerTerms Op}
     {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))
@@ -787,8 +828,9 @@ theorem readModule_printModule_defs {sig : Signature Op}
     {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
     (headsReadable : ∀ d ∈ defs, d.readable = true)
-    (bodiesReadable : ∀ b ∈ bodies.toList,
-      ReadsBack classes (sig.withDefs defs) (defsSpell call defs spell) 1 (.suspend b))
+    (bodiesReadable : ∀ p ∈ defs.zip bodies.toList,
+      ReadsBack classes ((sig.withDefs defs).withParams p.1.params)
+        (paramsSpell param p.1.params (defsSpell call defs spell)) 1 (.suspend p.2))
     (mainReadable : ReadsBack classes (sig.withDefs defs) (defsSpell call defs spell) 0 body)
     (moduleReadable : ∀ l ∈ layers.toList,
       l.ReadsBack classes (sig.withDefs defs) (defsSpell call defs spell))
@@ -800,7 +842,7 @@ theorem readModule_printModule_defs {sig : Signature Op}
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
     (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call
+    readModule sig spell call param
       (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
   have ordered := Eff.hoistAll_ordered hoisted
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by

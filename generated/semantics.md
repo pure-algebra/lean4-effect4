@@ -1483,7 +1483,7 @@ Effect4.Program.MaskRowsPremises
 
 ```lean
 ∀ {Op : Type} {classes : Effect4.Codegen.Classes.Classes} {sig : Effect4.Program.Signature Op}
-  {spell : String → List Effect4.Program.RowArg → Option Op} {call : Nat → Op}
+  {spell : String → List Effect4.Program.RowArg → Option Op} {call param : Nat → Op}
   {root main body : Effect4.Program.Eff Op} {defs : List Effect4.Program.DefDecl}
   {bodies : Effect4.Program.Effs Op} {layers : Effect4.Program.LayerTerms Op}
   {history : List (Prod (List Nat) (Effect4.Program.LayerTerm Op))},
@@ -1495,10 +1495,12 @@ Effect4.Program.MaskRowsPremises
         Eq (Effect4.Codegen.Classes.readClassDecls classDecls) (Option.some classes) →
           (∀ (d : Effect4.Program.DefDecl),
               List.instMembership.mem defs d → Eq d.readable Bool.true) →
-            (∀ (b : Effect4.Program.Eff Op),
-                List.instMembership.mem bodies.toList b →
-                  Effect4.Program.ReadsBack classes (sig.withDefs defs)
-                    (Effect4.Program.defsSpell call defs spell) 1 b.suspend) →
+            (∀ (p : Prod Effect4.Program.DefDecl (Effect4.Program.Eff Op)),
+                List.instMembership.mem (defs.zip bodies.toList) p →
+                  Effect4.Program.ReadsBack classes ((sig.withDefs defs).withParams p.fst.params)
+                    (Effect4.Program.paramsSpell param p.fst.params
+                      (Effect4.Program.defsSpell call defs spell))
+                    1 p.snd.suspend) →
               Effect4.Program.ReadsBack classes (sig.withDefs defs)
                   (Effect4.Program.defsSpell call defs spell) 0 body →
                 (∀ (l : Effect4.Program.LayerTerm Op),
@@ -1525,7 +1527,7 @@ Effect4.Program.MaskRowsPremises
                           {decls : List TypeScript.ConstDecl},
                           Eq (Effect4.Program.printModule sig name ty root) (Except.ok decls) →
                             Eq
-                              (Effect4.Program.readModule sig spell call
+                              (Effect4.Program.readModule sig spell call param
                                 (instHAppendOfAppend.hAppend
                                   (List.map TypeScript.Decl.classDecl classDecls)
                                   (List.map TypeScript.Decl.const decls)))

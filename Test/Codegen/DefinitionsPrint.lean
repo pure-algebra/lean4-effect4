@@ -120,6 +120,49 @@ def layerInBody : NativeEff :=
 #guard (Program.printModule (nativeSignature []) "main" (EffTy.pure (.prod .nat .nat))
     layerInBody).toOption.isNone
 
+/-! ## A definition's parameters (decisions row 340, slice HO-3) -/
+
+/-- `apply : number → number`, with the parameter `f : number ⇒ number`. -/
+def applyDecl : DefDecl :=
+  { name := "apply", request := .nat, answer := .nat,
+    params := [{ name := "f", request := .nat, answer := .nat }] }
+
+/-- A block whose definition runs its parameter on its request. Nothing invokes it: an invocation
+with programs prints from slice HO-3b. -/
+def paramProg : NativeEff :=
+  .defs [applyDecl] (.cons (.perform (.param 0) (.var 0)) .nil) (.succeed (.lit (.nat 1))) .nil
+
+-- the module types
+#guard Api.typeOf paramProg == some (EffTy.pure .nat)
+-- the header prints the parameter after the request, as a function named by its declaration;
+-- the body runs it as the row call of its name
+#guard (Api.printModule "main" paramProg).map
+    (fun m => String.join (m.decls.map (TypeScript.Render.decl TypeScript.house0))) =
+  some ("export const apply = (a0: number, f: (a0: number) => Effect.Effect<number, never, " ++
+    "never>): Effect.Effect<number, never, never> => Effect.suspend(() => f(a0))\n" ++
+    "export const main: Effect.Effect<number, never, never> = Effect.succeed(1)\n")
+-- the program is in the readable domain of a block, and its module reads back to it
+#guard blockReadable [] (nativeSignature []) paramProg
+#guard (Api.printModule "main" paramProg).map (fun m =>
+  decide (Api.readModule m [] = .ok paramProg)) = some true
+
+/-- `paramProg` with its parameter renamed. -/
+def paramRenamed (name : String) : NativeEff :=
+  .defs [{ applyDecl with params := [{ name, request := .nat, answer := .nat }] }]
+    (.cons (.perform (.param 0) (.var 0)) .nil) (.succeed (.lit (.nat 1))) .nil
+
+-- control: a parameter's name is no definition's, no printed binder, no imported name and not
+-- the export name, each refused by name
+#guard printRefusal (paramRenamed "apply") = some (.unsafeName "apply")
+#guard printRefusal (paramRenamed "a0") = some (.unsafeName "a0")
+#guard printRefusal (paramRenamed "succ") = some (.unsafeName "succ")
+#guard printRefusal (paramRenamed "main") = some (.unsafeName "main")
+-- control: two parameters with one name
+#guard printRefusal (.defs [{ applyDecl with params :=
+    [{ name := "f", request := .nat, answer := .nat }, { name := "f", request := .nat, answer := .nat }] }]
+    (.cons (.perform (.param 0) (.var 0)) .nil) (.succeed (.lit (.nat 1))) .nil) =
+  some (.unsafeName "f")
+
 /-! ## Controls: what the reader refuses -/
 
 /-- `twice` declaring a service it does not need. -/

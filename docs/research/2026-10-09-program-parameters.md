@@ -305,3 +305,60 @@ Until CX2, `denote-typed` rests on the planned goal `invoke_arm`
 (`src/Effect4/Laws/Program/Typed/Denotation.lean`). The parameter's arm (`param_arm`) is proved:
 the source's signature keeps every run of a parameter outside its domain, so no typed point
 stands at one.
+
+## 11. HO-3 as planned (2026-10-10)
+
+HO-3 prints and reads a definition's parameters and an invocation with programs. It changes no
+program syntax, so it starts from §4.3's print. It lands in two parts. A service method with
+parameters (§4.3's last form) waits for HO-5, which first needs one.
+
+### 11.1 HO-3a: parameters in a header and a body (landed)
+
+- **Print** (`printDef`): each parameter prints after the request as a function parameter named
+  by its declaration, `use: (a0: A) => Effect.Effect<B, E, never>`. The body prints at
+  `sig.withParams d.params`, so `perform (.param i) x` prints as the row call `use(x)`.
+- **Names**: a parameter's name is a plain binding, distinct from the definition's other
+  parameters, from every definition, from the request's binder names and from every row's
+  spelling (`defsNameFault`).
+- **Read** (`readDefHead`, `readDefBody`): the header gives the parameters back, and a body
+  reads at the block's spelling map extended by its parameters' names (`paramsSpell`).
+- **Law**: `readModule_printModule_defs` holds with parameters: `DefDecl.readable` drops
+  `params.isEmpty` and asks each parameter's columns to be readable types.
+
+### 11.2 HO-3b: an invocation with programs
+
+- **Print**: a new printed form beside the row call (`RowOut.invoke`):
+  `invoke k r [p₀, …]` prints as `name(r, (aₙ) => p₀, …)`, with the name from `sig.defOf k`
+  and each program at environment length `n + 1`.
+- **Read**: a call whose head spells the invocation of a definition (`spell`, `sig.callOf`)
+  and whose further arguments are arrows of one binder, one for each parameter.
+- **Laws**: the arm of `read_print` for the new form; the typed print's arm, which replaces the
+  refusal law `table_invokeRefused`; `printTyped_eq_print` keeps its statement.
+- **Finite checks**: a truth program that invokes a definition with a program, on rc.112
+  (`make check-truth`); its print under tsgo 7 (`make check-target`); the TypeScript reader
+  (`make check-ts-reader`).
+
+### 11.3 HO-3b's law of names
+
+The invocation's arm of `read_print` (Law 11) and of `read_exact` needs three facts of the
+spelling map that `LawfulSpelling` does not state. They form one structure, `LawfulInvokes`:
+
+- **(A)** a definition `k` that takes programs has a name that the map spells as an invocation
+  of `k`;
+- **(D)** a name that spells an invocation of `k` is definition `k`'s name;
+- **(C)** no row in the domain carries the name of a definition that takes programs, so the
+  invocation's reader stands apart from every row call.
+
+The native signature meets them vacuously, since it declares no definition. A block's signature
+meets them under `DefsNamed`, and a body's keeps them under `ParamsNamed`. Both are instances of
+`LawfulSpelling.extend` with the invocation facts as one more premise.
+
+### 11.4 Placement
+
+| Point | HO-3a and HO-3b |
+| --- | --- |
+| Concept | `exact-codecs`: the module round trip |
+| Claim | `module-defs-round-trip`, pointer `readModule_printModule_defs`; consumer `Api.printModule_roundTrip`. HO-3b's arm serves Law 11, `read_print` |
+| Reach | readable programs whose definitions take programs, at the native signature; reconstruction through `readModule` |
+| Not established | that tsgo accepts the module or that rc.112 runs it (finite checks only); generic parameters (HO-4); a method with parameters (HO-5); admission of edited source through `Api.admitModule` |
+| Unlocks | R2's services with programs as arguments (HO-5, Pool's `use`); a helper that takes a program reaches TypeScript |

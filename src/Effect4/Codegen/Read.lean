@@ -1081,41 +1081,77 @@ def roleOf (services : List (String × String × List (String × String × Nat))
     | some (s, m, _, arity) => .serviceMethod s m arity
     | none => .plain
 
+/-- A parameter's declaration from its binder in a definition's header, the inverse of
+`paramType` (slice HO-3): `name: (a0: Request) => Effect.Effect<A, E, never>`, each column read
+by the checked type reader. -/
+def readParam (p : TypeScript.Parameter) : Except ReadRefusal ParamDecl :=
+  match p.type with
+  | some (.function [(binder, request)]
+      (.name ["Effect", "Effect"] [answer, error, .name ["never"] []])) =>
+    if binder = Var.name 0 then
+      match Effect4.Codegen.Classes.readTyChecked request,
+          Effect4.Codegen.Classes.readTyChecked answer,
+          Effect4.Codegen.Classes.readTyChecked error with
+      | some request, some answer, some error => .ok { name := p.name, request, answer, error }
+      | _, _, _ => .error (.shape "definition")
+    else .error (.shape "definition")
+  | _ => .error (.shape "definition")
+
 /-- A definition's declaration and its printed body from its constant, the inverse of
 `printDef`'s header: `(a0: Request): Effect.Effect<A, E, never> => body`. Each column is read by
 the checked type reader. A requirement row other than `never` is refused by name: it is printed
 and not read (decisions row 328, slice PROC-3). -/
 def readDefHead (c : TypeScript.ConstDecl) : Except ReadRefusal (DefDecl × Expr) :=
   match c.value with
-  | .lambda [⟨parameter, some request⟩] body
+  | .lambda (⟨parameter, some request⟩ :: ps) body
       (some (.name ["Effect", "Effect"] [answer, error, .name ["never"] []])) =>
     if parameter = Var.name 0 then
       match Effect4.Codegen.Classes.readTyChecked request,
           Effect4.Codegen.Classes.readTyChecked answer,
           Effect4.Codegen.Classes.readTyChecked error with
-      | some request, some answer, some error =>
-        .ok ({ name := c.name, request, answer, error }, body)
+      | some request, some answer, some error => do
+        let params ← ps.mapM readParam
+        .ok ({ name := c.name, request, answer, error, params }, body)
       | _, _, _ => .error (.shape "definition")
     else .error (.shape "definition")
   | _ => .error (.shape "definition")
 
+/-- A parameter whose binder reads back: its three columns are readable types (slice HO-3). -/
+def ParamDecl.readable (q : ParamDecl) : Bool :=
+  Effect4.Codegen.Classes.ReadableTy q.request && Effect4.Codegen.Classes.ReadableTy q.answer &&
+    Effect4.Codegen.Classes.ReadableTy q.error
+
 /-- **A declaration that reads back from its printed header**: its three columns are readable
-types (`ReadableTy`), its requirement row is empty, its name carries no layer path, and it
-takes no program: a header prints no parameter until slice HO-3 (decisions row 340). A header
-prints no role: a block's services give them back (`roleOf`). The domain of `readDefHead`'s
-retraction up to the role (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
+types (`ReadableTy`), its requirement row is empty, its name carries no layer path, and each
+parameter's columns are readable types (slice HO-3). A header prints no role: a block's services
+give them back (`roleOf`). The domain of `readDefHead`'s retraction up to the role
+(`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
 def DefDecl.readable (d : DefDecl) : Bool :=
   Effect4.Codegen.Classes.ReadableTy d.request && Effect4.Codegen.Classes.ReadableTy d.answer &&
     Effect4.Codegen.Classes.ReadableTy d.error && d.requires.isEmpty &&
-    (LayerTerm.readRefName d.name).isNone && d.params.isEmpty
+    (LayerTerm.readRefName d.name).isNone && d.params.all ParamDecl.readable
+
+/-- A spelling map extended by names: a name that `nameIdx` indexes, with no trailing arguments,
+spells the operation of its index (`mk k`); every other spelling is the map's own. A block's map
+(`defsSpell`) and a body's (`paramsSpell`) are two; their one law is `LawfulSpelling.extend`
+(`Laws/Codegen/Definitions.lean`). -/
+def namedSpell (mk : Nat → Op) (nameIdx : String → Option Nat)
+    (spell : String → List RowArg → Option Op) (s : String) (names : List RowArg) : Option Op :=
+  match names, nameIdx s with
+  | [], some k => some (mk k)
+  | _, _ => spell s names
 
 /-- The spelling map of a block: a definition's name, with no trailing arguments, spells the
 invocation of that definition (`call k`); every other spelling is the map's own. -/
-def defsSpell (call : Nat → Op) (decls : List DefDecl) (spell : String → List RowArg → Option Op)
-    (s : String) (names : List RowArg) : Option Op :=
-  match names, decls.findIdx? (·.name == s) with
-  | [], some k => some (call k)
-  | _, _ => spell s names
+def defsSpell (call : Nat → Op) (decls : List DefDecl) (spell : String → List RowArg → Option Op) :
+    String → List RowArg → Option Op :=
+  namedSpell call (fun s => decls.findIdx? (·.name == s)) spell
+
+/-- The spelling map of a body (slice HO-3): a parameter's name, with no trailing arguments,
+spells the run of that parameter (`param i`); every other spelling is the block's. -/
+def paramsSpell (param : Nat → Op) (ps : List ParamDecl)
+    (spell : String → List RowArg → Option Op) : String → List RowArg → Option Op :=
+  namedSpell param (fun s => ps.findIdx? (·.name == s)) spell
 
 /-- A definition's body from its printed suspension, read at environment length `1`. -/
 def readDefBody (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
@@ -1124,14 +1160,15 @@ def readDefBody (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
   | .suspend body => .ok body
   | _ => .error (.shape "definition")
 
-/-- The bodies of a block, in order. -/
+/-- The bodies of a block, in order, each at the signature and the spelling map its parameters
+extend (slice HO-3). -/
 def readDefBodies (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List RowArg → Option Op) :
+    (spell : String → List RowArg → Option Op) (param : Nat → Op) :
     List (DefDecl × Expr) → Except ReadRefusal (Effs Op)
   | [] => .ok .nil
-  | (_, x) :: rest => do
-    let body ← readDefBody classes sig spell x
-    let bodies ← readDefBodies classes sig spell rest
+  | (d, x) :: rest => do
+    let body ← readDefBody classes (sig.withParams d.params) (paramsSpell param d.params spell) x
+    let bodies ← readDefBodies classes sig spell param rest
     .ok (.cons body bodies)
 
 /-- A layer declaration back to its path and its layer: `const L_<path> = <layer>`. -/
@@ -1173,11 +1210,14 @@ layer paths and failed restoration return `shape "module"`.
 Leading definition constants (`defsPrefix`) read as a definition block: each header as its
 declaration (`readDefHead`), and the bodies, the layers and the main program at the block's
 signature, through the spelling map that the block extends (`defsSpell`). `call k` is the
-operation that invokes definition `k` (`NativeOp.call` at the native signature). The layers whose
+operation that invokes definition `k` (`NativeOp.call` at the native signature), and `param i`
+the run of a body's parameter `i` (`NativeOp.param`), whose name its body's spelling map reads
+(`paramsSpell`, slice HO-3). The layers whose
 paths stand in the module (`2 :: …`, decisions row 341, step 2) are the block's module layers,
 the `k`-th at `Path.layerPath k` (`moduleLayersOf`); the others are put back at their paths. -/
 def readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
-    (call : Nat → Op) (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
+    (call : Nat → Op) (param : Nat → Op) (decls : List TypeScript.Decl) :
+    Except ReadRefusal (Eff Op) :=
   match blockClasses decls with
   | none => .error (.shape "class")
   | some classes =>
@@ -1197,7 +1237,7 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         let defs := heads.map fun h => { h.1 with role := roleOf services h.1.name }
         let sig' := sig.withDefs defs
         let spell' := defsSpell call defs spell
-        let bodies ← readDefBodies classes sig' spell' heads
+        let bodies ← readDefBodies classes sig' spell' param heads
         let e ← readEff classes sig' spell' 0 main.value
         let ds ← layerDecls.mapM (readLayerDecl classes sig' spell')
         let some layers := moduleLayersOf ds | .error (.shape "module")

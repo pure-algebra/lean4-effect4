@@ -831,13 +831,19 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The constants stand before the layers and the main declaration.
   A definition is an arrow from its request, with its declared result type, around a
   suspension of its body.
+  Each parameter whose value is a program follows the request, as a function named by its
+  declaration (`paramType`, slice HO-3a), and its run prints as the call of that name.
   An invocation prints as the definition's name applied to its request.
   The statement fixes declarations with readable columns, an empty requirement row and names
   with no layer path (`DefDecl.readable`).
   The block's module layers print after the services, as constants named by their paths
   (`printModuleLayers`), and a reference to one prints as that name.
-  Each body's suspension, the main program, each layer and each module layer read back at the
-  block's signature, through the block's spelling map (`defsSpell`).
+  Each body's suspension reads back at the signature its parameters extend, through the
+  spelling map its parameters' names extend (`paramsSpell`).
+  The main program, each layer and each module layer read back at the block's signature,
+  through the block's spelling map (`defsSpell`).
+  Both maps are lawful by one law of named rows (`LawfulSpelling.extend`,
+  `src/Effect4/Laws/Codegen/Definitions.lean`).
   Each module layer's name decodes to its path.
   Then the module reads back to the program, its module layers rebuilt in order
   (`readModule_printModule_defs`, `src/Effect4/Laws/Codegen/Module.lean`; slice PROC-3, row 341).

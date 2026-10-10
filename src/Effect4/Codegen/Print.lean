@@ -163,9 +163,21 @@ def Eff.layersAreModuleRefs (body : Eff Op) : Bool :=
     | some (.ref t) => t.head? == some 2
     | _ => false
 
-/-- **A definition as a module constant**: `const name = (a0: Request): Effect.Effect<A, E, R> =>
-Effect.suspend(() => body)`. The parameter is the request, the body's one variable, so the body
-prints at environment length `1`. The body is a suspension, so an invocation is one
+/-- A parameter's type in its definition's header (decisions row 340, slice HO-3): a function
+from its request to an Effect of its declared columns, `(a0: Request) => Effect.Effect<A, E,
+never>`. A parameter requires nothing: the passed program's requirements are the call's. -/
+def paramType (sig : Signature Op) (q : ParamDecl) : Except PrintRefusal TypeScript.TypeRef :=
+  typeRefOf q.request >>= fun request =>
+  declarationType ⟨q.answer, q.error, Requirement.ofList []⟩ sig.scopeKey >>= fun
+    | some result => .ok (.function [(Var.name 0, request)] result)
+    | none => .error (.typeSpelling q.name)
+
+/-- **A definition as a module constant**: `const name = (a0: Request, p: (a0: B) =>
+Effect.Effect<…>, …): Effect.Effect<A, E, R> => Effect.suspend(() => body)`. The first parameter
+is the request, the body's one variable, so the body prints at environment length `1`. Each
+parameter whose value is a program follows it, named by its declaration and typed by
+`paramType`; the body prints at the signature its parameters extend (`Signature.withParams`),
+so the run of parameter `i` prints as the row call of its name (slice HO-3). The body is a suspension, so an invocation is one
 `Effect.suspend`, as the machine's is. The result type is `declarationType` of the declared
 columns: a recursive arrow needs it (TS7023). A body's own layer is refused by name: printed
 inside the arrow, rc.112 would build one layer object per invocation, where the machine keeps
@@ -176,10 +188,12 @@ def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op) :
   if !body.layersAreModuleRefs then .error (.internalAction "defs:layer")
   else
     typeRefOf d.request >>= fun request =>
+    d.params.mapM (paramType sig) >>= fun fns =>
     declarationType d.effTy sig.scopeKey >>= fun result =>
-    print sig 1 (.suspend body) >>= fun value =>
+    print (sig.withParams d.params) 1 (.suspend body) >>= fun value =>
     .ok { doc := [], name := d.name,
-          value := .lambda [{ name := Var.name 0, type := some request }] value result }
+          value := .lambda ({ name := Var.name 0, type := some request } ::
+            (d.params.zip fns).map fun p => { name := p.1.name, type := some p.2 }) value result }
 
 /-- The definitions of a block, in order, each against its body. A block whose declarations
 and bodies differ in number is refused, as the checker refuses it. -/
@@ -446,6 +460,22 @@ def defsNameFault (table : List Row) (name : String) : List DefDecl → Option S
         ds.any (·.name == d.name) then some d.name
     else defsNameFault table name ds
 
+/-- The first parameter name that is no safe binding in its definition's arrow, or `none`
+(slice HO-3). A parameter's name is an export name (`exportNameSafe`), so it shadows no binder,
+reserved head or imported name; it is not the main declaration's, not a row's spelling, not a
+definition's, which the body calls by name, and declared once in its definition. -/
+def paramsNameFault (table : List Row) (name : String) (defs : List DefDecl) :
+    List ParamDecl → Option String
+  | [] => none
+  | q :: qs =>
+    if !exportNameSafe q.name || q.name == name || table.any (·.spelling == q.name) ||
+        defs.any (·.name == q.name) || qs.any (·.name == q.name) then some q.name
+    else paramsNameFault table name defs qs
+
+/-- The first parameter name of a block that is no safe binding (`paramsNameFault`). -/
+def blockParamsFault (table : List Row) (name : String) (defs : List DefDecl) : Option String :=
+  defs.findSome? fun d => paramsNameFault table name defs d.params
+
 /-- A service's name and its layer's name, when one is not free: not an export name, the main
 declaration's name, or a row's spelling. `serviceFault` checks them against the definitions. -/
 def serviceNamesFault (table : List Row) (name : String) (defs : List DefDecl) : Option String :=
@@ -476,6 +506,9 @@ def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : Eff
       match defsNameFault table name e.defsOf with
       | some fault => .error (.unsafeName fault)
       | none =>
+      match blockParamsFault table name e.defsOf with
+      | some fault => .error (.unsafeName fault)
+      | none =>
       match serviceNamesFault table name e.defsOf with
       | some fault => .error (.unsafeName fault)
       | none =>
@@ -492,7 +525,8 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
-      defsNameFault table name e.defsOf = none ∧ serviceNamesFault table name e.defsOf = none ∧
+      defsNameFault table name e.defsOf = none ∧ blockParamsFault table name e.defsOf = none ∧
+      serviceNamesFault table name e.defsOf = none ∧
       (∃ classes, Effect4.Codegen.ClassTable.moduleClasses sig name ty e = .ok classes) ∧
       annotationRefusal e = none ∧ printModule sig name ty e = .ok decls := by
   cases hs : exportNameSafe name with
@@ -507,6 +541,10 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
       | some fault => simp only [hd] at h; cases h
       | none =>
       simp only [hd] at h
+      cases hp : blockParamsFault table name e.defsOf with
+      | some fault => simp only [hp] at h; cases h
+      | none =>
+      simp only [hp] at h
       cases hn : serviceNamesFault table name e.defsOf with
       | some fault => simp only [hn] at h; cases h
       | none =>
@@ -517,7 +555,7 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
         simp only [hc] at h
         cases ha : annotationRefusal e with
         | some why => simp only [ha] at h; cases h
-        | none => exact ⟨rfl, rfl, rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
+        | none => exact ⟨rfl, rfl, rfl, rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
 
 /-- Every successful entry retains safe names and the actual module-printer equation. -/
 theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
@@ -525,7 +563,7 @@ theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {t
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
       printModule sig name ty e = .ok decls := by
-  obtain ⟨safe, rows, _, _, _, _, printed⟩ := printEntry_checks h
+  obtain ⟨safe, rows, _, _, _, _, _, printed⟩ := printEntry_checks h
   exact ⟨safe, rows, printed⟩
 
 /-- A checked entry contains only representable stored annotations (`printed-modules`, R2/R3).
@@ -533,6 +571,6 @@ The exact hypothesis is successful `printEntry`; host execution remains outside 
 theorem printEntry_annotations {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) : annotationRefusal e = none :=
-  (printEntry_checks h).2.2.2.2.2.1
+  (printEntry_checks h).2.2.2.2.2.2.1
 
 end Effect4.Program

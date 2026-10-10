@@ -66,13 +66,14 @@ theorem moduleReadable_pieces {sig : Signature Op} {root : Eff Op}
 prints of a program whose pieces are readable under the module's classes, after class
 declarations that read back to those classes, reads back to the program. -/
 theorem readModule_printModule_readable {sig : Signature Op}
-    {spell : String → List RowArg → Option Op} {call : Nat → Op} (hl : LawfulSpelling sig spell)
+    {spell : String → List RowArg → Option Op} {call param : Nat → Op}
+    (hl : LawfulSpelling sig spell)
     {root : Eff Op}
     (hr : moduleReadable classes sig root = true) {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
     {name : String} {ty : EffTy}
     {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call
+    readModule sig spell call param
       (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, hoisted, plain, hmain, hlayers, hnames⟩ := moduleReadable_pieces hr
   exact readModule_printModule hoisted plain classesRead (ReadsBack.of_Readable hl hmain)
@@ -144,7 +145,7 @@ theorem printModule_readable {sig : Signature Op} {root : Eff Op}
 
 /-- The pieces of a hoisted program with a definition block are readable at the block's
 signature: each declaration (`DefDecl.readable`), each body's suspension at environment length
-`1`, the main program, each module layer (decisions row 341, step 2) and each hoisted layer, and
+`1` at the signature its parameters extend (slice HO-3), the main program, each module layer (decisions row 341, step 2) and each hoisted layer, and
 the layers' declared names decode. -/
 def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Bool :=
   match root.hoistAll with
@@ -152,7 +153,8 @@ def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Boo
     match main.block? with
     | some (defs, bodies, body, layers) =>
       defs.all DefDecl.readable &&
-        bodies.toList.all (fun b => Readable classes (sig.withDefs defs) 1 (.suspend b)) &&
+        (defs.zip bodies.toList).all (fun p =>
+          Readable classes ((sig.withDefs defs).withParams p.1.params) 1 (.suspend p.2)) &&
         Readable classes (sig.withDefs defs) 0 body &&
         layers.toList.all (fun l => (cata_layer (readableAlg classes (sig.withDefs defs)) l 0).isSome) &&
         (List.range layers.toList.length).all (fun k =>
@@ -169,7 +171,8 @@ theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     (hr : blockReadable classes sig root = true) :
     ∃ main history defs bodies body layers, root.hoistAll = .ok (main, history) ∧
       main.block? = some (defs, bodies, body, layers) ∧ (∀ d ∈ defs, d.readable = true) ∧
-      (∀ b ∈ bodies.toList, Readable classes (sig.withDefs defs) 1 (.suspend b) = true) ∧
+      (∀ p ∈ defs.zip bodies.toList,
+        Readable classes ((sig.withDefs defs).withParams p.1.params) 1 (.suspend p.2) = true) ∧
       Readable classes (sig.withDefs defs) 0 body = true ∧
       (∀ l ∈ layers.toList, ReadableAt classes (sig.withDefs defs) .layer l 0) ∧
       (∀ k < layers.toList.length,
@@ -196,29 +199,36 @@ theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
 
 /-- **The module inverse on the readable domain of a definition block.** The declaration block
 the module printer prints of a program with a block whose pieces are readable reads back to the
-program, at a lawful spelling whose invocations are lawful (`LawfulCalls`) and whose block names
-are readable (`DefsNamed`). The reader's laws hold at the block's signature
-(`LawfulSpelling.withDefs`), and the module law with a block composes them
-(`readModule_printModule_defs`). A step of the claim `module-defs-round-trip`; its consumer is
+program, at a lawful spelling whose invocations and parameter runs are lawful (`LawfulCalls`,
+`LawfulParams`, apart from each other) and whose block and parameter names are readable
+(`DefsNamed`, `ParamsNamed`). The reader's laws hold at the block's signature
+(`LawfulSpelling.withDefs`) and at each body's (`LawfulSpelling.withParams`, slice HO-3), and the
+module law with a block composes them (`readModule_printModule_defs`). A step of the claim `module-defs-round-trip`; its consumer is
 `ModuleEmission.readModule`. -/
 theorem readModule_printModule_defs_readable {sig : Signature Op}
-    {spell : String → List RowArg → Option Op} {call : Nat → Op} (hl : LawfulSpelling sig spell)
-    (calls : LawfulCalls sig spell call) {root : Eff Op}
+    {spell : String → List RowArg → Option Op} {call param : Nat → Op}
+    (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
+    (params : LawfulParams sig spell param)
+    (apart : ∀ op i, sig.paramOf op = some i → sig.callOf op = none) {root : Eff Op}
     (hr : blockReadable classes sig root = true) (named : DefsNamed spell root.defsOf)
+    (paramsNamed : ∀ d ∈ root.defsOf,
+      ParamsNamed (defsSpell call root.defsOf spell) d.params)
     {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
     {name : String} {ty : EffTy}
     {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call
+    readModule sig spell call param
       (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, defs, bodies, body, layers, hoisted, block, heads, hbodies, hmain, hmods,
     hmodNames, hlayers, hnames⟩ := blockReadable_pieces hr
   have same : root.defsOf = defs :=
     (Eff.hoistAll_defsOf hoisted).symm.trans (Eff.defsOf_of_block? block)
-  rw [same] at named
+  rw [same] at named paramsNamed
   have hl' := hl.withDefs calls named
+  have params' := params.withDefs calls apart defs
   exact readModule_printModule_defs hoisted block classesRead heads
-    (fun b mem => ReadsBack.of_Readable hl' (hbodies b mem))
+    (fun p mem => ReadsBack.of_Readable
+      (hl'.withParams params' (paramsNamed p.1 (List.of_mem_zip mem).1)) (hbodies p mem))
     (ReadsBack.of_Readable hl' hmain)
     (fun l hm x hp => readLayer_print hl' (hmods l hm) hp) hmodNames
     (fun entry hm x hp => readLayer_print hl' (hlayers entry hm) hp) hnames printed
@@ -231,20 +241,21 @@ open Effect4.Program
 
 /-- Reading the emitted declaration block recovers its program, when the program's pieces are
 readable under the native table: a program with no definition block (`moduleReadable`), or one
-with a block (`blockReadable`), whose names the printer's own check made readable
-(`defsNamed_of_fault`). -/
+with a block (`blockReadable`), whose names and parameter names the printer's own checks made
+readable (`defsNamed_of_fault`, `blockParamsNamed`). -/
 theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name : String}
     (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
     (readable : moduleReadable emission.classes (nativeSignature table) program = true ∨
       blockReadable emission.classes (nativeSignature table) program = true) :
-    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call emission.module.decls =
-      .ok program := by
-  obtain ⟨_, _, names, _, _, _, printed⟩ := Program.printEntry_checks emission.generated
+    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
+      emission.module.decls = .ok program := by
+  obtain ⟨_, _, names, paramNames, _, _, _, printed⟩ := Program.printEntry_checks emission.generated
   have classesRead := Classes.readClassDecls_checked (moduleClasses_checked emission.classified)
   rcases readable with plain | block
   · exact readModule_printModule_readable (nativeLawful table lawful) plain classesRead printed
   · exact readModule_printModule_defs_readable (nativeLawful table lawful) (nativeCalls table)
-      block (defsNamed_of_fault names) classesRead printed
+      (nativeParams table) (nativeApart table) block (defsNamed_of_fault names)
+      (blockParamsNamed paramNames) classesRead printed
 
 /-- Every row of a lawful table has safe names. -/
 theorem lawful_rowNamesSafe {table : RowTable} (lawful : LawfulTable table = true) :
@@ -273,7 +284,8 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
     (Eff.hoistAll_defsOf hoisted).symm.trans (Eff.defsOf_of_block?_none plain)
   have generated : printEntry table (nativeSignature table) name typing.ty program = .ok decls := by
     simp only [printEntry, safe, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
-      lawful_rowNamesSafe lawful, noDefs, defsNameFault, serviceNamesFault_nil, classified,
+      lawful_rowNamesSafe lawful, noDefs, defsNameFault, blockParamsFault, List.findSome?_nil,
+      serviceNamesFault_nil, classified,
       annotations, printed]
   exact ⟨⟨formed, typing, classes, classDecls, classified, decls, generated⟩,
     ModuleEmission.recheck _⟩
