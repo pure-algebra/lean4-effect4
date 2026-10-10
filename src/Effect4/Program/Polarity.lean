@@ -13,10 +13,13 @@ semiring (`Laws/Program/Polarity.lean`). It adapts the signed paths of the OpenA
 of the β-Barendregt–Geuvers–Klop conjecture (`openai/math` at `fd4aeeb2`,
 `lean/OAI/Computability/TypeSystem/Profiles.lean`, `SignedPath`).
 
-The tree held three partial copies: the declared alphabet `Ty.Variance` (no bivariant point, no
-composition), `Bounds.comp` (composition along a walk) and `Ty.valueVarsAlg` (a two-bit fold).
-`Var4` is the one carrier. `Ty.Variance` stays the declared alphabet that `Ty.sub` reads at `app`,
-and it embeds (`Ty.Variance.toVar4`). The bivariant point is what a phantom parameter has: no
+The tree held two partial copies: the declared alphabet `Ty.Variance` (no bivariant point, no
+composition) and `Bounds.comp` (composition along a walk). `Var4` is their one carrier.
+`Ty.Variance` stays the declared alphabet that `Ty.sub` reads at `app`, and it embeds
+(`Ty.Variance.toVar4`). The membership fold `Ty.valueVarsAlg` is no polarity: it keeps whether a
+parameter occurs at all, which an opaque application keeps and a cell then reads, and no reading
+of the heads reproduces it (Codex's POL-MEMBERSHIP,
+`docs/research/2026-10-10-polarity-overwatch/MembershipProbe.lean`). The bivariant point is what a phantom parameter has: no
 path reaches it, so it constrains nothing.
 
 The polarity of a parameter in a type is a fold of the generated `TyAlgebra` (`polarityAlg`).

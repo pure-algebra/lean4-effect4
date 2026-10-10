@@ -28,6 +28,10 @@ flowchart LR
 - **Connectors.** `Bounds.comp` is composition on the image of `toVar4`. `Ty.Variance.select`
   is `select4` there. `Ty.valueVars t` holds exactly when every parameter's membership polarity
   is at most co. The first two are the `#guard`s of `probes/RowPolarity.lean`, as theorems.
+  **The third is withdrawn** (2026-10-10, Codex's POL-MEMBERSHIP,
+  `docs/research/2026-10-10-polarity-overwatch/README.md`): no reading of the heads reproduces
+  `Ty.valueVars`, since an opaque application keeps whether a parameter occurs and a cell then
+  reads it (`refOf (app "Opaque" [var 0])`). The membership fold keeps its two bits.
 - **Placement.** Concept `subtyping-algebra`. A new claim `variance-semiring`, role groundwork,
   consumed by VAR-2 and by `Bounds`. Reach: the four variances and the two readings. It
   establishes no subtyping fact of `Ty`. It unlocks VAR-2.

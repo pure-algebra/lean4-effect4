@@ -11,10 +11,13 @@ polymorphic atom scheme (`NativeAtom.all`, `NativeAtom.spec`), read with `Ty.pol
 `Ty.sub`'s reading (`HeadReading.sub`, `src/Effect4/Program/Polarity.lean`).
 
 A smaller request gives smaller bindings (`Bounds.matchArgsB_monotone`). The answer is then
-smaller exactly where it reads every parameter at co or bi (the probe's
-`least_solution_least_answer`). So the census is `checker-monotone`'s hypothesis at the rows
-(`row-answer-polarity`): it holds at every built-in row and atom scheme except two, `Ref.make`
-and `Ref.set`, which read their parameter invariantly in the answer.
+smaller where it reads every parameter at co or bi (the probe's `least_solution_least_answer`):
+a sufficient condition, not a necessary one. An answer may relate in both directions at a
+parameter it reads invariantly (`union unknown (refOf (var 0))`, Codex's POL-SUFFICIENCY,
+`docs/research/2026-10-10-polarity-overwatch/README.md`). So the census reads
+`checker-monotone`'s sufficient hypothesis at the rows (`row-answer-polarity`): it holds at every
+built-in row and atom scheme except two, `Ref.make` and `Ref.set`, which read their parameter
+invariantly in the answer.
 
 The controls: the checker's verdicts on `cell = Ref.make(x); Ref.set(cell, y)` by the types of
 `x` and `y` (the environment half of `checker-monotone` fails at `refMake` at an ordinary type),
@@ -46,16 +49,17 @@ def atomTmpls : List Tmpl :=
     | .poly ps ans => some ⟨(NativeAtom.row a).name, ps, ans⟩
     | _ => none
 
-/-- The template parameters the built-in tables use. -/
-def params : List Nat := [0, 1, 2]
-
-/-- A template whose answer reads some parameter other than co or bi. -/
+/-- A template whose answer reads some parameter other than co or bi. The parameters read are
+the answer's own (`Ty.varsOf`), so no fixed bound on the indices is assumed (Codex's
+POL-CENSUS). -/
 def answerAboveCo (t : Tmpl) : Bool :=
-  params.any fun i => !Var4.le (t.answer.polarity .sub i) .co
+  t.answer.varsOf.any fun i => !Var4.le (t.answer.polarity .sub i) .co
 
 -- The census: exactly two rows read a parameter above co in their answer, and no atom scheme.
 #guard (rowTmpls.filter answerAboveCo).map (·.name) == ["refMake", "refSet"]
 #guard (atomTmpls.filter answerAboveCo).isEmpty
+-- Control: an answer that reads parameter 3 invariantly is caught, past any fixed bound.
+#guard answerAboveCo ⟨"probe", [], .refOf (.var 3)⟩
 -- The tables are not empty, so the census is no vacuous pass.
 #guard rowTmpls.length > 20 && atomTmpls.length > 5
 -- `refMake` reads its parameter co in the request and inv in the answer.
