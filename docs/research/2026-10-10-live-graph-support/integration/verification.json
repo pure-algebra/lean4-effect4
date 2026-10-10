@@ -194,6 +194,23 @@
       "seconds": 10.797785459086299,
       "finished_utc": "2026-10-10T15:14:34.041954+00:00",
       "log_sha256": "46c64d3cc1c1b297e9e6f2e0478604e3b91260e81a4986ba7dbae2cc929f4f22"
+    },
+    {
+      "name": "run-reference",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view",
+        "ReferenceViewControl"
+      ],
+      "exit_code": 0,
+      "seconds": 2.5574000000488013,
+      "finished_utc": "2026-10-10T15:23:41.527965+00:00",
+      "log_sha256": "932aa01879625a3084027573b08f7c1e2cf2860beed1340a1e80967452272a46"
     }
   ],
   "source_sha256": {

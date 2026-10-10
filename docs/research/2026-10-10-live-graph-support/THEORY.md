@@ -185,6 +185,7 @@ Each includes the five placement points from `AGENTS.md`.
 | Incremental page agrees | `initial-algebras-folds`; retained folds agree with fresh calculation | Proposed `page-update-agrees`, compatibility; live page updater | Coherent sessions; admitted edit; fixed rendering parameters; line and annotation observation | Layout speed, runtime meaning, or root publication | R14 live authoring |
 | Context reconstruction | `initial-algebras-folds`; generated context reconstructs syntax | Proposed helper of `typed-replacement`; focus navigator consumes it | Existing signature and child sorts; successful focus | Substitution under arbitrary contexts or variable capture repair | R14 local navigation |
 | Invalidated set is sufficient | `initial-algebras-folds`; unchanged dependencies retain fold values | Proposed `view-dependencies-sufficient`, preservation; incremental layout consumes it | Explicit read dependencies; unchanged external parameters; fixed layout policy | Minimal invalidation, amortized cost, or scheduler progress | R14 cheaper edits |
+| Source annotation agrees | `initial-algebras-folds`; address readings agree with the admitted checking route | Proposed `source-annotation-agrees`, compatibility; `Program.sessionPage` consumes it | Admitted source; explicit expansion provenance and lexical context; original source type and refusal observations | Raw paths equal expanded paths, runtime migration, or total coverage without a provenance relation | R14 reference-aware editing |
 | Expanded call corresponds | `translation-simulation`; source and expanded calls have a named observation | Existing open expansion-to-source connection; host call navigator consumes it | Admitted program and row table; expansion provenance; matching call instance | Equal raw paths or current fiber location | R13 and R14 linked run views |
 | Published edit has expected parent | `exact-codecs`; root moves retain expected version | Helper of the MCP commit claim; commit operation consumes `Store.putRoot` | Valid stored nodes, exact parent identity, next resident version | Automatic rebase or disjoint edit commutation | R14 multiple authors |
 
@@ -201,7 +202,16 @@ flowchart TD
   STORE[Existing root version authority] --> COMMIT[Expected-parent commit]
   REPLAY[Run journal replay] --> LINK[Linked runtime observations]
   EXP[Expansion provenance connector] --> LINK
+  EXP --> ANN[Source annotation agrees]
+  FOCUS --> ANN
+  ANN --> PAGE
 ```
+
+The checked example in `run-view/ReferenceViewControl.lean` motivates `source-annotation-agrees`.
+Whole-program admission accepts its layer reference after expansion.
+Raw source annotation has no root type, and the displayed reference has neither a type nor a refusal marker.
+Both the old and prepared renderer show that result.
+The missing connector concerns original source observations, not M7 runtime typing.
 
 ## 9. Order of work
 

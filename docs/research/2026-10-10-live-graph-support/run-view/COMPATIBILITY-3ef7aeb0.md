@@ -13,7 +13,7 @@ Its run-view blob equals `ae80ada1`'s blob.
 `Prepared built` still binds the original `built.program` and its exact `built.table`.
 Controls still retain `s.built`.
 The new `Eff.layerRefsWF` rule restricts references to the same lexical scope.
-It changes admission's domain, not the built input's structure or lifetime.
+It restricts the programs accepted by `typeOfProgram` and retains the built input's structure and lifetime.
 It introduces no source-address remapping.
 A newly rebuilt program needs its own preparation, as before.
 
@@ -52,9 +52,9 @@ The parent program entry carries the refusal at its child's path.
 Neither entry supplies that combination, so the page loses the marker.
 
 A future source-to-expansion connection must recover types and refusals at original source paths.
-It must account for the checker's expansion and each path's signature.
+It must account for the checker's expansion, lexical typing context, row table, and fixed program.
 Replacing the source with its expansion changes the address space and does not supply that connection.
-The new same-scope rule does not establish annotation completeness.
+The new same-scope rule proves no source-view annotation law.
 
 ## M7 evidence boundary
 
@@ -64,7 +64,7 @@ The frozen plan battery requires `m7_proved` to have proved status.
 The generated semantics file labels the M7 claims proved.
 Those are independently inspected source records; this check does not rerun their build or audit.
 
-`M7Fragment` in `src/Effect4/Laws/Program/Typed/Assembly.lean` requires a lawful checked source at an empty host table.
+`M7Fragment` in `src/Effect4/Laws/Program/Typed/Assembly.lean` requires a lawful checked source at an empty row table.
 It also requires an empty requirement row and an answer-free tape.
-M7 proof closure establishes no source-view annotation completeness, nonempty-table host agreement, performance bound or current source address for a fiber.
+M7 proof closure supplies no source-view annotation law, nonempty-table host agreement, performance bound or current source address for a fiber.
 No production file, primary checkout, root import or authority document changes here.

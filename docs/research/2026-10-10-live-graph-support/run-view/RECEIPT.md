@@ -18,7 +18,7 @@ The other changed files are this directory's finite controls and evidence.
 `prepare` uses `built.program` and `built.table` together.
 `framePrepared` requires preparation indexed by the frame's own built input.
 `framesBuilt` prepares once and transports that preparation across planned controls.
-`frame` also supports a run with a nonempty host table.
+`frame` also supports a run with a nonempty row table.
 
 ## Proof placement
 
@@ -64,7 +64,7 @@ Both images were opened and visually inspected.
 The completed fork frame retains its program, code and two completed fibers.
 The host frame displays its checked type, host call and parked fiber.
 
-## Axiom audit
+## Axiom gate
 
 `audit-raw.log` retains the refusal from `#axiom_audit Tools.View.Run`.
 It reports nine of 54 declarations reaching `Classical.choice`.
@@ -85,7 +85,7 @@ It admits `Classical.choice` only at these exact names:
 - `Tools.View.Run.framesBuilt.go._unsafe_rec`
 
 The last name is Lean's generated safe recursor twin.
-The audit admits no authored unsafe declaration.
+The audit rejects authored unsafe declarations.
 Every other declaration stays within `[propext, Quot.sound]`.
 No declaration reaches a planned goal.
 `audit-render.log` records the passing scan.

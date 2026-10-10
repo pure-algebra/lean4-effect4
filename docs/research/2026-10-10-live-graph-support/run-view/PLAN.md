@@ -16,7 +16,7 @@ Base: `9389e543`.
    Decisions rows 334 and 336 permit a named tool law.
    The control helper proves that a planned control keeps the built program.
 3. Reach: one built program, its exact row table, and each planned control's frame.
-   The finite comparison covers existing empty-table output and one nonempty host table.
+   The finite comparison covers existing empty-table output and one nonempty row table.
 4. Limits: preparation establishes no cost bound, scheduler progress, or host correspondence.
    Source addresses remain source addresses.
    The change assumes no connection between expanded call addresses and source addresses.
@@ -28,7 +28,7 @@ Base: `9389e543`.
 
 - Bind preparation to the run's built program through its type.
 - Compare representative frames with the former implementation.
-- Check the displayed type and code at a nonempty host table.
+- Check the displayed type and code at a nonempty row table.
 - Measure repeated preparation separately from frame rendering.
 - Build the changed module and its direct consumer.
 - Audit the changed module with the cycle-aware walk.

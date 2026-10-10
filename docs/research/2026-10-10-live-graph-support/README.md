@@ -14,6 +14,7 @@ The stable server's publication and protocol choices remain with the coordinator
 - [index/README.md](index/README.md) records the shared incoming index, its proofs, and actual Lean measurements.
 - [routes/RECEIPT.md](routes/RECEIPT.md) records the repaired downward-route check and its negative controls.
 - [run-view/RECEIPT.md](run-view/RECEIPT.md) records prepared frames, the exact row table, and finite view comparisons.
+- [run-view/COMPATIBILITY-3ef7aeb0.md](run-view/COMPATIBILITY-3ef7aeb0.md) records the layer-reference display gap and its checked example.
 - [mcp/README.md](mcp/README.md) records explicit snapshot tools, protocol controls, rendered output, and reproduction commands.
 - [routes/MCP-REVIEW.md](routes/MCP-REVIEW.md) retains the independent adapter findings and their original evidence limits.
 - [integration/verification.json](integration/verification.json) records the combined checks, commands, exits, and source hashes.
@@ -85,6 +86,7 @@ No full sweep runs.
 Base: `9389e543ad1325a603732b7802344d79b3b98c61`.
 This base already contains the earlier context-authoring review packet.
 The production checkpoint inspected at the start is `a2b589de`.
+The ownership checkpoint is [integration/claude-checkpoint.json](integration/claude-checkpoint.json).
 Claude subsequently commits `3ef7aeb0`, then continues the located-refusal and layer-scope slices.
 The bounded session reading verifies the primary repository directory and records that ownership.
 The claim that M7 rests on no goal comes from that landing; this packet does not rerun its whole proof graph.
@@ -96,10 +98,25 @@ The claim that M7 rests on no goal comes from that landing; this packet does not
 | `5cda1a93` | `cbf6ecef` | Shared incoming index |
 | `33bea448` | `24c33dd3` | Index evidence packet |
 | `7c1ff633` | `35efda38` | Independent protocol review |
+| `2ad3dc43` | `1fca5262` | Source-reference display control |
 
-The parent commit that contains this README adds the snapshot library, prototype, theory, literature, and combined receipt.
-Its identity is available with `git log -1 --format=%H -- docs/research/2026-10-10-live-graph-support/README.md`.
+`c4f6d559` adds the snapshot library, prototype, theory, literature, and combined receipt.
+The later receipt commits add the reference control and final persistence checks.
 No primary files, implementation sessions, owner rulings, or build configuration change.
+
+## Remaining source-view gap
+
+A checked example supplies one numeric layer and references it from another source position.
+Whole-program admission accepts it after expansion.
+The source view leaves the reference's type blank and misses its diagnostic marker.
+The old and prepared renderers produce the same result.
+This is an existing display gap, not a new runtime typing counterexample.
+The supplemental note records the declarations, finite control, and compatibility reading of `3ef7aeb0`.
+
+Repair source annotation through an explicit relation to expansion and its lexical context.
+Keep original source addresses visible.
+Replacing them with expanded addresses would conceal the missing connection.
+The proposed obligation appears in [THEORY.md](THEORY.md).
 
 ## Next support for Claude
 
