@@ -1,5 +1,6 @@
 import Tools.View.Program
 import Effect4.Program.Binders
+import Tools.Graph.Index
 
 /-!
 # A program's flow: its own graph as a fold, and its layout as a fold
@@ -565,6 +566,12 @@ that item's height, a gap and the edge's room. -/
 def relax (h : Nat → Int) (es : List Edge) (y : Nat → Int) (start : Int) (v : Nat) : Int :=
   es.foldl (fun m e => if e.to = v then max m (y e.fr + h e.fr + VGAP + e.pad) else m) start
 
+/-- Relax one position using only its retained incoming edge occurrences.
+The caller passes the index as data; no table is hidden before a returned closure. -/
+def relaxIndexed (h : Nat → Int) (incoming : Tools.Graph.Index Edge)
+    (y : Nat → Int) (start : Int) (v : Nat) : Int :=
+  (incoming.bucket v).foldl (fun m e => max m (y e.fr + h e.fr + VGAP + e.pad)) start
+
 /-- **Heights along an order**: each item in turn takes the highest place its edges allow, from
 the places of the items before it. -/
 def assign (h : Nat → Int) (es : List Edge) (start : Int) : List Nat → (Nat → Int) → Nat → Int
@@ -587,6 +594,15 @@ def assignHeights (h : Nat → Int) (es : List Edge) (start : Int) :
   | v :: vs, heights =>
     let r := relax h es (heightAt start heights) start v
     assignHeights h es start vs ((v, r) :: heights)
+
+/-- Retain assignments from explicit incoming buckets, keeping repeated and sparse positions.
+`assignHeights` remains the independent list-scanning specification. -/
+def assignHeightsIndexed (h : Nat → Int) (incoming : Tools.Graph.Index Edge) (start : Int) :
+    List Nat → List (Nat × Int) → List (Nat × Int)
+  | [], heights => heights
+  | v :: vs, heights =>
+    let r := relaxIndexed h incoming (heightAt start heights) start v
+    assignHeightsIndexed h incoming start vs ((v, r) :: heights)
 
 /-- Whether `a` comes before `b` in an order: `a` stands in it, and `b` after it. -/
 def before : List Nat → Nat → Nat → Bool
@@ -673,7 +689,8 @@ def preparePlacement (b : Box) : PreparedPlacement :=
   let waits := acceptWaits b.items.length b.edges b.waitEdges
   let order := orderFor b.items.length b.edges waits.1
   { fallback := b.topPad,
-    heights := assignHeights (hAt b.items) order.1 b.topPad order.2 [],
+    heights := assignHeightsIndexed (hAt b.items)
+      (Tools.Graph.Index.ofList (·.to) order.1) b.topPad order.2 [],
     lanes := b.backs ++ waits.2 }
 
 /-- Items at their heights, the first at position `k`. -/
