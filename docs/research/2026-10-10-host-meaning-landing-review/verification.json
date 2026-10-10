@@ -1,0 +1,164 @@
+{
+  "reviewed_commit": "74cc52c5c66d750d5875bb745fd26cdb00d8617a",
+  "commands": [
+    {
+      "label": "source-diff",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "74cc52c5c66d750d5875bb745fd26cdb00d8617a",
+        "--",
+        ".",
+        ":(exclude)docs/research/2026-10-10-host-meaning-landing-review/**"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.DenoteRowsB",
+        "Effect4.Laws.Program.Agreement.LoopCalls",
+        "Effect4.Laws.Program.Agreement.HostedLoop",
+        "Effect4.Laws.Api.SessionMeaningLoop",
+        "ProofGraph.Plan",
+        "ProofGraph.AxiomAudit",
+        "Test.Dogfood.Scenario.TodoPaged",
+        "Effect4.Laws.Machine.ScopeMachine"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "ReviewMeaning",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-landing-review",
+        "ReviewMeaning"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "ReviewControls",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-landing-review",
+        "ReviewControls"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "ReviewBoundaryControls",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-landing-review",
+        "ReviewBoundaryControls"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "FoldProbe",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-landing-review",
+        "FoldProbe"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "ReviewAudit",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-landing-review",
+        "ReviewAudit"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "language",
+      "command": [
+        "python3",
+        "scripts/check-language.py",
+        "--strict",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-landing-review/README.md"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0
+    }
+  ],
+  "guard_count": 44,
+  "package_pins": [
+    {
+      "name": "aesop",
+      "rev": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e"
+    },
+    {
+      "name": "hash",
+      "rev": "ab7eda433f0390fde7aa240189761540c9744c79"
+    },
+    {
+      "name": "typescript",
+      "rev": "f5878bf879bd5712db964c2cd12802748c707605"
+    },
+    {
+      "name": "effects",
+      "rev": "bf5ab8fd26ee009abbf465821a3664ea20948a49"
+    },
+    {
+      "name": "batteries",
+      "rev": "4488d40d070b9700d4d5a6aa342f0d40c31b2a2d"
+    }
+  ],
+  "file_sha256": {
+    "FoldProbe.lean": "4d5d92b9a5dd1484faeba415ceb9950f431a8792541899adf445ac3e5e1530f3",
+    "FoldProbe.log": "c0d6c5cfcaaae033d47457e809dd6d314d3e52dac7ba8106bead199681407b67",
+    "README.md": "bfb091bed7cdb6cbaf7d414e5c1be62d7953f1c29045286e6677e18f3a24a2ac",
+    "ReviewAudit.lean": "cd1dcd09f6a7003c13a6f2019f9714712c22c1cf0cf7bb8328be581862c25b67",
+    "ReviewAudit.log": "497cfd0660321543a66ba24f220f0d145543f30ec0e168151eb1efda9bcfe2ea",
+    "ReviewBoundaryControls.lean": "6ea9f5aed6ca2ff8d2cb44c015bc2e6e63c3240c28305040118fcdfe51af8acf",
+    "ReviewBoundaryControls.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "ReviewControls.lean": "a0563c5c8835aefa21ea710d59c0dd9d5921d16c4007244308176170a3206811",
+    "ReviewControls.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "ReviewMeaning.lean": "8ad0dface6002c453698db0c40a03a699650ba39d3a8f6259e7f8ae637376083",
+    "ReviewMeaning.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "build.log": "a9c460230942e614cac312e60036961aaef3f5fff821804d0ef1aacafd1f909c",
+    "diff-check.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "language.log": "55557cd5b723fbd4649e06d3d97f74a753ccc366c848452a59a3ded96dda9352",
+    "source-diff.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "verify.py": "c11063c820e8128e2a62726f36f25860cd40f342217141f8497d84e1e4ce2dbf"
+  }
+}
