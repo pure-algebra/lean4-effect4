@@ -257,13 +257,20 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Decision_tag t -> A.Decision_tag t
     | Eff_types.Decision_recordTag t -> A.Decision_recordTag t
 
-  (* A definition's declaration (decisions row 328): its name and its row's columns. *)
+  (* A definition's role in its block's services (decisions row 339). *)
+  let of_def_role : Eff_types.def_role -> A.def_role = function
+    | Eff_types.Def_role_plain -> A.DefRole_plain
+    | Eff_types.Def_role_serviceInit s -> A.DefRole_serviceInit s
+    | Eff_types.Def_role_serviceMethod (s, m, n) -> A.DefRole_serviceMethod (s, m, n)
+
+  (* A definition's declaration (decisions row 328): its name, its row's columns and its role. *)
   let of_def_decl (d : Eff_types.def_decl) : A.def_decl =
     { A.name = d.Eff_types.def_decl_name;
       request = of_ty d.Eff_types.def_decl_request;
       answer = of_ty d.Eff_types.def_decl_answer;
       error = of_ty d.Eff_types.def_decl_error;
-      requires = List.map of_service_key d.Eff_types.def_decl_requires }
+      requires = List.map of_service_key d.Eff_types.def_decl_requires;
+      role = of_def_role d.Eff_types.def_decl_role }
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)

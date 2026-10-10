@@ -13,7 +13,8 @@ ServiceName: value
 ServiceTypeCode: value
 ServiceKey: name service
 Decision: bool option tag recordTag
-DefDecl: name request answer error requires
+DefRole: plain serviceInit serviceMethod
+DefDecl: name request answer error requires role
 Eff: succeed fail failCause sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible yieldNow awaitFiber withFiber scoped acquireRelease provideLayer service provideService catchIf select iterate restore defs
 Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop
 Stmts: nil cons

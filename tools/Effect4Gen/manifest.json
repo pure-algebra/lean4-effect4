@@ -144,6 +144,7 @@
         "Effect4.ServiceName",
         "Effect4.ServiceTypeCode",
         "Effect4.ServiceKey",
+        "Effect4.Program.DefRole",
         "Effect4.Program.DefDecl",
         "Effect4.Program.Eff@Effect4.Program.NativeOp",
         "Effect4.Program.RowKind",

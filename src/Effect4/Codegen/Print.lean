@@ -183,6 +183,165 @@ def printDefs (sig : Signature Op) : List DefDecl → Effs Op →
     .ok (c :: cs)
   | _, _ => .error (.internalAction "defs")
 
+/-! ## A block's services (decisions rows 338 and 339, slice CO-6b)
+
+A block's roles declare its services (`DefRole`). A service prints as two constants after the
+definitions: its key, `const S = Context.Service<"S", Shape>("S")`, the form of every service key
+the printer writes (`printKey`); and its layer, `const SLayer = Layer.effect(S,
+Effect.map(init(), (a0) => { return { m: (a1, …) => d(pair(a0, …)), … } }))`. The layer runs
+the initial program once, and each method closes over its answer, the state (rc.112
+`Layer.effect`, `vendor/effect-4.0.0-rc.112/src/Layer.ts`). -/
+
+/-- A service of a block: its name, its initial program's position, and its methods, each with
+its name, its definition's position and its arity. -/
+structure Service where
+  name : String
+  init : Nat
+  methods : List (String × Nat × Nat)
+deriving DecidableEq, Repr
+
+/-- The method of service `s` that the definition at position `j` is, if it is one. -/
+def methodAt (s : String) (defs : List DefDecl) (j : Nat) : Option (String × Nat × Nat) :=
+  match defs[j]? with
+  | some d =>
+    match d.role with
+    | .serviceMethod s' m n => if s' = s then some (m, j, n) else none
+    | _ => none
+  | none => none
+
+/-- The methods of service `s` in a block, in block order. -/
+def serviceMethods (s : String) (defs : List DefDecl) : List (String × Nat × Nat) :=
+  (List.range defs.length).filterMap (methodAt s defs)
+
+/-- The service whose initial program is the definition at position `i`, if it is one. -/
+def serviceAt (defs : List DefDecl) (i : Nat) : Option Service :=
+  match defs[i]? with
+  | some d =>
+    match d.role with
+    | .serviceInit s => some ⟨s, i, serviceMethods s defs⟩
+    | _ => none
+  | none => none
+
+/-- The services a block's roles declare, in the order of their initial programs. -/
+def servicesOf (defs : List DefDecl) : List Service :=
+  (List.range defs.length).filterMap (serviceAt defs)
+
+/-- A method's arguments after the state: `arity` types read off the rest of its request. -/
+def methodArgTys : Nat → Ty → Option (List Ty)
+  | 0, _ => some []
+  | 1, t => some [t]
+  | n + 2, .prod a b => (methodArgTys (n + 1) b).map (a :: ·)
+  | _ + 2, _ => none
+
+/-- A method's arguments, from its definition's request and the service's state type. -/
+def methodArgs (state : Ty) (d : DefDecl) (arity : Nat) : Option (List Ty) :=
+  match arity, d.request with
+  | 0, request => if request = state then some [] else none
+  | n + 1, .prod first rest => if first = state then methodArgTys (n + 1) rest else none
+  | _ + 1, _ => none
+
+/-- The argument names `a1` to `an`. -/
+def argNames (n : Nat) : List String := (List.range n).map fun k => Var.name (k + 1)
+
+/-- The tuple of a method's arguments, as `Authoring.requestOf` builds it. -/
+def argTuple : List String → TypeScript.Expr
+  | [] => .ident "undefined"
+  | [a] => .ident a
+  | a :: rest => .call (.ident "pair") [.ident a, argTuple rest]
+
+/-- The request a method's closure passes its definition: the state `a0`, then its arguments. -/
+def methodRequest (args : List String) : TypeScript.Expr :=
+  match args with
+  | [] => .ident (Var.name 0)
+  | _ => .call (.ident "pair") [.ident (Var.name 0), argTuple args]
+
+/-- Why one service does not print, if it does not: its initial program is missing or takes a
+request other than `unit`; it has no method, or two with one name; its name or its layer's name
+is a definition's or carries a layer path; or a method's request is not the state and its
+arguments. -/
+def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
+  match defs[sv.init]? with
+  | none => some sv.name
+  | some init =>
+    if init.request ≠ .unit then some sv.name
+    else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty then some sv.name
+    else if defs.any (·.name == sv.name) || defs.any (·.name == sv.name ++ "Layer") ||
+        (LayerTerm.readRefName sv.name).isSome ||
+        (LayerTerm.readRefName (sv.name ++ "Layer")).isSome then
+      some sv.name
+    else sv.methods.findSome? fun (m, j, n) =>
+      match defs[j]? with
+      | some d => if (methodArgs init.answer d n).isSome then none else some (sv.name ++ "." ++ m)
+      | none => some (sv.name ++ "." ++ m)
+
+/-- Whether a definition is a method of a service that the block does not declare. -/
+def strayMethod (names : List String) (d : DefDecl) : Bool :=
+  match d.role with
+  | .serviceMethod s _ _ => !names.contains s
+  | _ => false
+
+/-- Why a block's services do not print, if they do not: definitions with one name in a block
+with a service, two services with one name, a method of no service, or a fault of one service
+(`serviceFaultOf`). -/
+def serviceFault (defs : List DefDecl) : Option String :=
+  if !(servicesOf defs).isEmpty && !decide ((defs.map (·.name)).Nodup) then some "service:names"
+  else if !decide (((servicesOf defs).map (·.name)).Nodup) then some "service:twice"
+  else if defs.any (strayMethod ((servicesOf defs).map (·.name))) then some "service:method"
+  else (servicesOf defs).findSome? (serviceFaultOf defs)
+
+/-- A method's type in the service's shape: `(a1: T1, …) => Effect.Effect<A, E, R>`. -/
+def methodType (sig : Signature Op) (state : Ty) (d : DefDecl) (arity : Nat) :
+    Except PrintRefusal TypeScript.TypeRef := do
+  let some tys := methodArgs state d arity | .error (.internalAction "service")
+  let params ← (argNames arity).zip tys |>.mapM fun (a, t) => do
+    let r ← typeRefOf t
+    .ok (a, r)
+  let result ← declarationType d.effTy sig.scopeKey
+  match result with
+  | some r => .ok (.function params r)
+  | none => .error (.internalAction "service")
+
+/-- A method's closure in its service's layer: `(a1: T1, …) => d(pair(a0, …))`. -/
+def methodClosure (init : DefDecl) (defs : List DefDecl) (x : String × Nat × Nat) :
+    Except PrintRefusal (String × TypeScript.Expr) := do
+  let some d := defs[x.2.1]? | .error (.internalAction "service")
+  let some tys := methodArgs init.answer d x.2.2 | .error (.internalAction "service")
+  let params ← ((argNames x.2.2).zip tys).mapM fun p => do
+    let r ← typeRefOf p.2
+    .ok ({ name := p.1, type := some r } : TypeScript.Parameter)
+  .ok (x.1, TypeScript.Expr.lambda params (.call (.ident d.name) [methodRequest (argNames x.2.2)]))
+
+/-- A method's field in its service's shape. -/
+def methodField (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
+    (x : String × Nat × Nat) : Except PrintRefusal TypeScript.TypeRef.Field := do
+  let some d := defs[x.2.1]? | .error (.internalAction "service")
+  let t ← methodType sig init.answer d x.2.2
+  .ok { name := x.1, readonly := true, type := t }
+
+/-- **A service's key and layer.** -/
+def printService (sig : Signature Op) (defs : List DefDecl) (sv : Service) :
+    Except PrintRefusal (List TypeScript.ConstDecl) := do
+  let some init := defs[sv.init]? | .error (.internalAction "service")
+  let fields ← sv.methods.mapM (methodField sig init defs)
+  let closures ← sv.methods.mapM (methodClosure init defs)
+  .ok [{ doc := [], name := sv.name,
+         value := .call (.generic (.ident "Context.Service") [.literal sv.name, .object fields])
+           [.str sv.name] },
+       { doc := [], name := sv.name ++ "Layer",
+         value := .call (.ident "Layer.effect") [.ident sv.name,
+           .call (.ident "Effect.map") [.call (.ident init.name) [],
+             .arrowBlock [{ name := Var.name 0 }] [.ret (.object closures)]]] }]
+
+/-- **A block's services**, each its key and its layer, in the order of their initial
+programs; refused by name where `serviceFault` names a fault. -/
+def printServices (sig : Signature Op) (defs : List DefDecl) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  match serviceFault defs with
+  | some why => .error (.internalAction why)
+  | none => do
+    let groups ← (servicesOf defs).mapM (printService sig defs)
+    .ok groups.flatten
+
 /-- The printed program as a declaration block (the host rows slice): one
 `const L_<path> = …` per referenced layer target, in declaration order (`Path.declBefore`: a
 target inside another first, then program order), each hoisted out of the program so that
@@ -218,6 +377,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
       let defs := d :: ds
       let sig' := sig.withDefs defs
       let cs ← printDefs sig' defs bodies
+      let svc ← printServices sig' defs
       let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
       let ds ← ordered.mapM fun t =>
         match decls.find? (·.1 == t) with
@@ -227,7 +387,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
         | none => .error (.layerRef t)
       let m ← print sig' 0 body
       let declaration ← printDecl name ty m sig.scopeKey
-      .ok (cs ++ ds ++ [declaration])
+      .ok (cs ++ svc ++ ds ++ [declaration])
 
 variable [ScopedOp Op]
 
@@ -251,6 +411,19 @@ def defsNameFault (table : List Row) (name : String) : List DefDecl → Option S
         ds.any (·.name == d.name) then some d.name
     else defsNameFault table name ds
 
+/-- A service's name and its layer's name, when one is not free: not an export name, the main
+declaration's name, or a row's spelling. `serviceFault` checks them against the definitions. -/
+def serviceNamesFault (table : List Row) (name : String) (defs : List DefDecl) : Option String :=
+  (servicesOf defs).findSome? fun sv =>
+    if !exportNameSafe sv.name || !exportNameSafe (sv.name ++ "Layer") || sv.name == name ||
+        sv.name ++ "Layer" == name || table.any (fun row => row.spelling == sv.name) then
+      some sv.name
+    else none
+
+/-- A program with no definitions has no service names to refuse. -/
+theorem serviceNamesFault_nil (table : List Row) (name : String) :
+    serviceNamesFault table name [] = none := rfl
+
 /-- Print an admitted program against its row table. Refuses by name if the requested
 export name is unsafe (a printed binder `a0`, a reserved head, a layer reference name, or
 no legal binding at all), then if any row carries an unsafe name, then if the module cannot
@@ -268,6 +441,9 @@ def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : Eff
       match defsNameFault table name e.defsOf with
       | some fault => .error (.unsafeName fault)
       | none =>
+      match serviceNamesFault table name e.defsOf with
+      | some fault => .error (.unsafeName fault)
+      | none =>
       match Effect4.Codegen.ClassTable.moduleClasses sig name ty e with
       | .error why => .error why
       | .ok _ =>
@@ -281,7 +457,7 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
-      defsNameFault table name e.defsOf = none ∧
+      defsNameFault table name e.defsOf = none ∧ serviceNamesFault table name e.defsOf = none ∧
       (∃ classes, Effect4.Codegen.ClassTable.moduleClasses sig name ty e = .ok classes) ∧
       annotationRefusal e = none ∧ printModule sig name ty e = .ok decls := by
   cases hs : exportNameSafe name with
@@ -296,13 +472,17 @@ theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String
       | some fault => simp only [hd] at h; cases h
       | none =>
       simp only [hd] at h
+      cases hn : serviceNamesFault table name e.defsOf with
+      | some fault => simp only [hn] at h; cases h
+      | none =>
+      simp only [hn] at h
       cases hc : Effect4.Codegen.ClassTable.moduleClasses sig name ty e with
       | error why => simp only [hc] at h; cases h
       | ok classes =>
         simp only [hc] at h
         cases ha : annotationRefusal e with
         | some why => simp only [ha] at h; cases h
-        | none => exact ⟨rfl, rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
+        | none => exact ⟨rfl, rfl, rfl, rfl, ⟨classes, rfl⟩, rfl, by simpa only [ha] using h⟩
 
 /-- Every successful entry retains safe names and the actual module-printer equation. -/
 theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
@@ -310,7 +490,7 @@ theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {t
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
       printModule sig name ty e = .ok decls := by
-  obtain ⟨safe, rows, _, _, _, printed⟩ := printEntry_checks h
+  obtain ⟨safe, rows, _, _, _, _, printed⟩ := printEntry_checks h
   exact ⟨safe, rows, printed⟩
 
 /-- A checked entry contains only representable stored annotations (`printed-modules`, R2/R3).
@@ -318,6 +498,6 @@ The exact hypothesis is successful `printEntry`; host execution remains outside 
 theorem printEntry_annotations {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) : annotationRefusal e = none :=
-  (printEntry_checks h).2.2.2.2.1
+  (printEntry_checks h).2.2.2.2.2.1
 
 end Effect4.Program

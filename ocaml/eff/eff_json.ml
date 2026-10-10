@@ -160,8 +160,16 @@ let rec json_decision (v : decision) : Eff_json_text.t =
 
 let print_decision (v : decision) : string = Eff_json_text.render (json_decision v)
 
+let rec json_def_role (v : def_role) : Eff_json_text.t =
+  match v with
+  | Def_role_plain -> Eff_json_text.Array [Eff_json_text.String "plain"]
+  | Def_role_serviceInit a0 -> Eff_json_text.Array [Eff_json_text.String "serviceInit"; Eff_json_text.String a0]
+  | Def_role_serviceMethod (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "serviceMethod"; Eff_json_text.String a0; Eff_json_text.String a1; Eff_json_text.Int a2]
+
+let print_def_role (v : def_role) : string = Eff_json_text.render (json_def_role v)
+
 let rec json_def_decl (r : def_decl) : Eff_json_text.t =
-  Eff_json_text.Object [("name", Eff_json_text.String r.def_decl_name); ("request", json_ty r.def_decl_request); ("answer", json_ty r.def_decl_answer); ("error", json_ty r.def_decl_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.def_decl_requires))]
+  Eff_json_text.Object [("name", Eff_json_text.String r.def_decl_name); ("request", json_ty r.def_decl_request); ("answer", json_ty r.def_decl_answer); ("error", json_ty r.def_decl_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.def_decl_requires)); ("role", json_def_role r.def_decl_role)]
 
 let print_def_decl (v : def_decl) : string = Eff_json_text.render (json_def_decl v)
 

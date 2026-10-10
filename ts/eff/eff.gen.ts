@@ -26,7 +26,8 @@
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
 //   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string) recordTag(tag: string)
-//   DefDecl (Effect4.Program.DefDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>)
+//   DefRole (Effect4.Program.DefRole, tagged union): plain serviceInit(service: string) serviceMethod(service: string, method: string, arity: number)
+//   DefDecl (Effect4.Program.DefDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, role: DefRole)
 //   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff) defs(decls: ReadonlyArray<DefDecl>, bodies: ReadonlyArray<Eff>, main: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
@@ -254,12 +255,24 @@ export const Decision = Schema.TaggedUnion({
   recordTag: { tag: Schema.String },
 })
 
+export type DefRole =
+  | { readonly _tag: "plain" }
+  | { readonly _tag: "serviceInit"; readonly service: string }
+  | { readonly _tag: "serviceMethod"; readonly service: string; readonly method: string; readonly arity: number }
+
+export const DefRole = Schema.TaggedUnion({
+  plain: {},
+  serviceInit: { service: Schema.String },
+  serviceMethod: { service: Schema.String, method: Schema.String, arity: Schema.Int },
+})
+
 export const DefDecl = Schema.Struct({
   name: Schema.String,
   request: Schema.suspend((): Schema.Codec<Ty> => Ty),
   answer: Schema.suspend((): Schema.Codec<Ty> => Ty),
   error: Schema.suspend((): Schema.Codec<Ty> => Ty),
   requires: Schema.Array(ServiceKey),
+  role: Schema.suspend((): Schema.Codec<DefRole> => DefRole),
 })
 export type DefDecl = typeof DefDecl.Type
 

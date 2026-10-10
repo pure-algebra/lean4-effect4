@@ -101,3 +101,34 @@ runs read no role (a law, section 6).
 - The printed layer is not proved to run as the machine does: that is the truth lane's finite
   evidence, for its fixtures.
 - Shape (c) and the typed layer's print are named, not designed.
+
+## 8. Progress
+
+S1 and S2 landed in one commit, after the owner's "land S2 now" (2026-10-09).
+
+- **The syntax.** `DefRole` and `DefDecl.role` (`src/Effect4/Program/Eff.lean`). The generated
+  codec writes the role, and the fixtures of programs with a block are regenerated (row 339).
+- **The authoring surface.** `DefSrc.role`, with `DefSrc.serviceInit` and `DefSrc.serviceMethod`
+  (`src/Effect4/Program/Authoring.lean`). `eff_module` has no `service` clause. The Queue declares
+  its service by `Queue.serviceDefs` (`src/Effect4/Library/Queue/Defs.lean`).
+- **The printer.** `printServices` (`src/Effect4/Codegen/Print.lean`) prints each service after
+  the definitions, as its key and its layer. The key takes the printer's one key form,
+  `const S = Context.Service<"S", Shape>("S")`, not the class of section 2.
+- **The reader.** `roleOf` (`src/Effect4/Codegen/Read.lean`) gives the roles back from the
+  layers.
+- **The round trip.** `readModule_printModule_defs` (`src/Effect4/Laws/Codegen/Module.lean`)
+  covers blocks with services, through `printServices_ok` and `restoreRoles`
+  (`src/Effect4/Laws/Codegen/Services.lean`). The claim `module-defs-round-trip` names them.
+- **The battery.** `Test/Codegen/ServicesPrint.lean`: the printed text of a counter service,
+  the counter's round trip, the Queue's printed service, and three refusals. The Queue's module
+  is outside the readable domain: its handle, a reference to the queue's record, is no readable
+  type. So the round trip says nothing of the Queue.
+
+Two choices differ from sections 4 and 5:
+
+- The printer checks a service, not formation. `serviceFault` and `serviceNamesFault` refuse by
+  name. So the admission of a program, its denotation and the machine read no role, by
+  construction. No theorem states that the roles are inert.
+- No theorem states that `serviceFault` decides a service's well-formedness.
+
+Open: S3, the truth lane; the services of Semaphore and Pool; shape (c).

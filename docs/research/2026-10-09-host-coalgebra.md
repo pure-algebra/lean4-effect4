@@ -364,9 +364,13 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   embed exactly. The battery's promise signature is the higher order of section 2. A world
   lists the open promises' codes, and an await's answer type is the code that its promise
   recorded. Left for CO-7: indexed systems, and Effect4's handle rows and call sites as worlds.
-- **CO-6b waits on a ruling** (section 8, item 4). The Queue's definitions take the queue's
-  state cell as their first argument. A service in Effect's own style builds that cell in its
-  layer. Its methods close over the cell. So the shape of a service is a representation choice.
+- **CO-6b's S1 and S2** (decisions rows 338 and 339; the
+  [plan](2026-10-09-co6b-service-plan.md), section 8). A definition's role marks a service's
+  initial program or one of its methods (`DefRole`). The printer prints each service after the
+  definitions, as its key and a layer that runs the initial program once (`printServices`). Each
+  method closes over the state that the layer built. The roles read back from the layers, and
+  the block's round trip covers them (`readModule_printModule_defs`). The Queue declares its
+  service (`Queue.serviceDefs`). Left: the truth lane (S3), Semaphore and Pool, and shape (c).
 
 ## 8. What the owner must decide
 

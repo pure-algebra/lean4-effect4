@@ -347,17 +347,29 @@ def CauseTerm.scoped (n : Nat) : CauseTerm → Bool
 
 /-! ## Definitions (decisions row 328) -/
 
-/-- **The declaration of a definition**: its name, and the columns of its row. A definition is
-a closed program with a declared row, kept in the definition block at the root of a program
-(`Eff.defs`). Its body reads one variable, the request. The row is computed from these columns
-(`DefDecl.row`), so no field without meaning is stored. Several parameters are one request of a
-tuple type. -/
+/-- **The part a definition plays in its block** (decisions row 339): a plain definition, the
+initial program of a service, or a method of a service. A service's initial program takes the
+request `unit` and answers the service's state. A method's request is the state, then its
+`arity` arguments, as one tuple. The roles are a block's exports: the checker, the denotation and
+the machine read none of them, and the printer prints a service from them (slice CO-6b). -/
+inductive DefRole where
+  | plain
+  | serviceInit (service : String)
+  | serviceMethod (service method : String) (arity : Nat)
+deriving DecidableEq, Repr
+
+/-- **The declaration of a definition**: its name, the columns of its row, and its role. A
+definition is a closed program with a declared row, kept in the definition block at the root of
+a program (`Eff.defs`). Its body reads one variable, the request. The row is computed from these
+columns (`DefDecl.row`), so no field without meaning is stored. Several parameters are one
+request of a tuple type. -/
 structure DefDecl where
   name : String
   request : Ty
   answer : Ty
   error : Ty := .never
   requires : List ServiceKey := []
+  role : DefRole := .plain
 deriving DecidableEq, Repr
 
 /-- The row a definition declares: a program row, answered by the definition's body on the

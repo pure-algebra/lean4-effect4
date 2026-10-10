@@ -164,6 +164,7 @@ import Test.Store.DerivedCheck
 import Test.Codegen.PrintContract
 import Test.Codegen.PrintTyped
 import Test.Codegen.DefinitionsPrint
+import Test.Codegen.ServicesPrint
 import Test.Codegen.ReadContract
 import Test.Codegen.SourceBindingsContract
 import Test.Ingest.TaxonomyContract

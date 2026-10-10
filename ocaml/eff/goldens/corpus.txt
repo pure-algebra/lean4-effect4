@@ -81,3 +81,4 @@ pDefs	well-typed
 pDefsRec	well-typed
 pIllDefsBody	ill-typed
 pIllCallOutside	ill-typed
+pDefsService	well-typed

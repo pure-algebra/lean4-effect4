@@ -1,1 +1,1 @@
-["defs",[{"name":"id","request":["nat"],"answer":["nat"],"error":["never"],"requires":[]}],["cons",["succeed",["lit",["str","a"]]],["nil"]],["perform",["call",0],["lit",["nat",5]]]]
+["defs",[{"name":"id","request":["nat"],"answer":["nat"],"error":["never"],"requires":[],"role":["plain"]}],["cons",["succeed",["lit",["str","a"]]],["nil"]],["perform",["call",0],["lit",["nat",5]]]]

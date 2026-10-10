@@ -977,15 +977,62 @@ def blockClasses (decls : List TypeScript.Decl) : Option Effect4.Codegen.Classes
 
 /-! ## A definition block (decisions row 328, slice PROC-3) -/
 
+/-- Whether a constant is a service's key or layer (`printService`): a call of
+`Context.Service` or of `Layer.effect`. A definition constant is an arrow, so it is neither. -/
+def isServiceConst (c : TypeScript.ConstDecl) : Bool :=
+  match c.value with
+  | .call (.generic (.ident "Context.Service") _) _ => true
+  | .call (.ident "Layer.effect") _ => true
+  | _ => false
+
 /-- The leading definition constants of a block's declarations, and the declarations after
-them. A definition constant is a constant whose name carries no layer path (`printDef`); the
-printer refuses a definition name that does. -/
+them. A definition constant is a constant whose name carries no layer path (`printDef`), and
+that is no service's key or layer; the printer refuses a definition name that carries a path. -/
 def defsPrefix : List TypeScript.Decl → List TypeScript.ConstDecl × List TypeScript.Decl
   | .const c :: rest =>
     match LayerTerm.readRefName c.name with
-    | none => ((defsPrefix rest).1.cons c, (defsPrefix rest).2)
+    | none =>
+      if isServiceConst c then ([], .const c :: rest)
+      else ((defsPrefix rest).1.cons c, (defsPrefix rest).2)
     | some _ => ([], .const c :: rest)
   | ds => ([], ds)
+
+/-- The service constants after a block's definitions, and the declarations after them. -/
+def servicePrefix : List TypeScript.Decl → List TypeScript.ConstDecl × List TypeScript.Decl
+  | .const c :: rest =>
+    match LayerTerm.readRefName c.name with
+    | none =>
+      if isServiceConst c then ((servicePrefix rest).1.cons c, (servicePrefix rest).2)
+      else ([], .const c :: rest)
+    | some _ => ([], .const c :: rest)
+  | ds => ([], ds)
+
+/-- A method's closure in a service's layer: its name, the name of the definition it calls, and
+its arity, the number of its parameters. -/
+def readServiceMethod : String × Expr → Option (String × String × Nat)
+  | (m, .lambda params (.call (.ident d) [_]) none) => some (m, d, params.length)
+  | _ => none
+
+/-- A service's layer (`printService`): its name, its initial program's name, and its methods. -/
+def readServiceLayer (c : TypeScript.ConstDecl) :
+    Option (String × String × List (String × String × Nat)) :=
+  match c.value with
+  | .call (.ident "Layer.effect") [.ident s, .call (.ident "Effect.map")
+      [.call (.ident init) [], .arrowBlock [_] [.ret (.object closures)] none]] =>
+    (closures.mapM readServiceMethod).map fun methods => (s, init, methods)
+  | _ => none
+
+/-- The role that a block's services give a definition, by its name: the initial program of the
+service whose layer runs it, the method of the service whose layer calls it, or plain. -/
+def roleOf (services : List (String × String × List (String × String × Nat))) (name : String) :
+    DefRole :=
+  match services.find? (fun sv => decide (sv.2.1 = name)) with
+  | some sv => .serviceInit sv.1
+  | none =>
+    match (services.flatMap fun sv => sv.2.2.map fun m => (sv.1, m)).find?
+        (fun x => decide (x.2.2.1 = name)) with
+    | some (s, m, _, arity) => .serviceMethod s m arity
+    | none => .plain
 
 /-- A definition's declaration and its printed body from its constant, the inverse of
 `printDef`'s header: `(a0: Request): Effect.Effect<A, E, never> => body`. Each column is read by
@@ -1006,8 +1053,9 @@ def readDefHead (c : TypeScript.ConstDecl) : Except ReadRefusal (DefDecl × Expr
   | _ => .error (.shape "definition")
 
 /-- **A declaration that reads back from its printed header**: its three columns are readable
-types (`ReadableTy`), its requirement row is empty, and its name carries no layer path. The
-domain of `readDefHead`'s retraction (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
+types (`ReadableTy`), its requirement row is empty, and its name carries no layer path. A header
+prints no role: a block's services give them back (`roleOf`). The domain of `readDefHead`'s
+retraction up to the role (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
 def DefDecl.readable (d : DefDecl) : Bool :=
   Effect4.Codegen.Classes.ReadableTy d.request && Effect4.Codegen.Classes.ReadableTy d.answer &&
     Effect4.Codegen.Classes.ReadableTy d.error && d.requires.isEmpty &&
@@ -1080,9 +1128,11 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         match e.restoreAll ds with
         | some e' => .ok e'
         | none => .error (.shape "module")
-      | (c :: cs, layerDecls) => do
+      | (c :: cs, afterDefs) => do
         let heads ← (c :: cs).mapM readDefHead
-        let defs := heads.map (·.1)
+        let (serviceConsts, layerDecls) := servicePrefix afterDefs
+        let services := serviceConsts.filterMap readServiceLayer
+        let defs := heads.map fun h => { h.1 with role := roleOf services h.1.name }
         let sig' := sig.withDefs defs
         let spell' := defsSpell call defs spell
         let bodies ← readDefBodies classes sig' spell' heads

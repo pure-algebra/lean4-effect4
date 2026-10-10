@@ -110,7 +110,13 @@
     "row's encoding moves only where a trailing list is not empty: no retained byte vector holds",
     "one (C1 passes), and the metadata fixture `row-populated` is re-encoded. That is no append:",
     "C2 refuses the re-typed field `Row.trailing` and C3 the fixture's line, and this policy has",
-    "no name for either. The change is the owner's to accept as a non-conservative row encoding."
+    "no name for either. The change is the owner's to accept as a non-conservative row encoding.",
+    "",
+    "A definition's role (2026-10-09, decisions row 339, slice CO-6b): `DefDecl.role` marks a",
+    "service's initial program or one of its methods. The family `DefRole` is new, with `plain`",
+    "(tag 0), `serviceInit` (tag 1) and `serviceMethod` (tag 2). Every program with a block takes",
+    "new bytes, since the codec writes the role: the three block goldens migrate, and the golden",
+    "`pDefsService` is added. No old encoding is kept (the owner, row 339). No verdict moves."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -141,7 +147,10 @@
     "Effect4.Program.Eff.restore",
     "Effect4.Program.ActionTerm.getInterruptible",
     "Effect4.Program.RowArg.name",
-    "Effect4.Program.RowArg.str"
+    "Effect4.Program.RowArg.str",
+    "Effect4.Program.DefRole.plain",
+    "Effect4.Program.DefRole.serviceInit",
+    "Effect4.Program.DefRole.serviceMethod"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
@@ -161,7 +170,8 @@
   "family_additions": [
     "Effect4.Program.Decision",
     "Effect4.Machine.Payload",
-    "Effect4.Program.RowArg"
+    "Effect4.Program.RowArg",
+    "Effect4.Program.DefRole"
   ],
   "family_retirements": [
     "Effect4.Machine.FnName"
@@ -175,6 +185,7 @@
     "wire:Effect4.Program.RowShape",
     "wire:Effect4.Program.Registration",
     "wire:Effect4.Program.RowArg",
+    "wire:Effect4.Program.DefRole",
     "wire:Effect4.Program.Row",
     "wire:Effect4.Program.EffTy",
     "deriving:Program:Effect4.Program.Decision",
@@ -183,6 +194,7 @@
     "deriving:Program:Effect4.Program.RowShape",
     "deriving:Program:Effect4.Program.Registration",
     "deriving:Program:Effect4.Program.RowArg",
+    "deriving:Program:Effect4.Program.DefRole",
     "deriving:Program:Effect4.Program.Row",
     "deriving:Program:Effect4.Program.EffTy",
     "deriving:Api:Effect4.FiberId",
@@ -248,7 +260,13 @@
     "eff/goldens/pCallback.json",
     "eff/goldens/pOps.json",
     "eff/goldens/pAcquire.ty",
-    "goldens/eff/pAwait.hex"
+    "goldens/eff/pAwait.hex",
+    "eff/goldens/pDefs.bin",
+    "eff/goldens/pDefs.json",
+    "eff/goldens/pDefsRec.bin",
+    "eff/goldens/pDefsRec.json",
+    "eff/goldens/pIllDefsBody.bin",
+    "eff/goldens/pIllDefsBody.json"
   ],
   "verdict_moves": [
     "generated/corpus-index.tsv:g158",

@@ -171,9 +171,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 0. **The host session as a coalgebra** (the
    [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
    landed, with CO-6 and the generic half of CO-7 (decisions row 338 ruled the note's questions).
-   Next, file the comodel and runner papers. Then plan and land CO-6b: a definition block
-   printed as an Effect service whose layer builds its state (shape (b)), for Queue, Semaphore
-   and Pool. Then CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
+   The comodel and runner papers are filed. CO-6b's S1 and S2 landed
+   ([plan](research/2026-10-09-co6b-service-plan.md), rows 338 and 339). A block's roles print as
+   an Effect service's key and layer, and the roles read back. Next, S3, the truth lane of a
+   client that uses a service through its key; then the services of Semaphore and Pool. Then
+   CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.

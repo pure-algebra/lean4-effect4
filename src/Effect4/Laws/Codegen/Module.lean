@@ -1,4 +1,5 @@
 import Effect4.Laws.Codegen.ReadLeaf
+import Effect4.Laws.Codegen.Services
 import Effect4.Laws.Program.Hoisting
 import Effect4.Laws.Program.HoistingTotal
 import Effect4.Laws.Auto.Semantics
@@ -176,18 +177,75 @@ private theorem defsPrefix_layers {sig : Signature Op} {history : History Op}
       rw [key] at named
       simp only [List.map_cons, defsPrefix, named]
 
+/-- Printed layer declarations begin with no service constant: the first one's name carries its
+path. A step of `readModule_printModule_defs`. -/
+private theorem servicePrefix_layers {sig : Signature Op} {history : History Op}
+    (names : ∀ entry ∈ history,
+      LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
+    {targets : List (List Nat)} {decls : List TypeScript.ConstDecl}
+    (printed : targets.mapM (printCaptured sig history) = .ok decls) :
+    servicePrefix (decls.map TypeScript.Decl.const) = ([], decls.map TypeScript.Decl.const) := by
+  cases targets with
+  | nil => cases printed; rfl
+  | cons target targets =>
+    simp only [List.mapM_cons] at printed
+    obtain ⟨decl, hp, htail⟩ := bind_eq_ok.mp printed
+    obtain ⟨rest, _, heq⟩ := bind_eq_ok.mp htail
+    cases heq
+    cases found : history.find? (·.1 == target) with
+    | none => simp only [printCaptured, found, reduceCtorEq] at hp
+    | some entry =>
+      have mem := List.mem_of_find?_eq_some found
+      have key : entry.1 = target := by
+        simpa only [beq_iff_eq] using List.find?_some found
+      simp only [printCaptured, found] at hp
+      obtain ⟨_, _, heq⟩ := bind_eq_ok.mp hp
+      cases heq
+      have named := names entry mem
+      rw [key] at named
+      simp only [List.map_cons, servicePrefix, named]
+
 /-- Definition constants, then declarations that begin with none, split there. A step of
 `readModule_printModule_defs`. -/
 theorem defsPrefix_append (cs : List TypeScript.ConstDecl) (rest : List TypeScript.Decl)
     (named : ∀ c ∈ cs, LayerTerm.readRefName c.name = none)
+    (notService : ∀ c ∈ cs, isServiceConst c = false)
     (after : defsPrefix rest = ([], rest)) :
     defsPrefix (cs.map TypeScript.Decl.const ++ rest) = (cs, rest) := by
   induction cs with
   | nil => simpa only [List.map_nil, List.nil_append] using after
   | cons c cs ih =>
     have hc := named c List.mem_cons_self
+    have hs := notService c List.mem_cons_self
     have hrest := ih (fun c' h => named c' (List.mem_cons_of_mem _ h))
-    simp only [List.map_cons, List.cons_append, defsPrefix, hc, hrest]
+      (fun c' h => notService c' (List.mem_cons_of_mem _ h))
+    simp only [List.map_cons, List.cons_append, defsPrefix, hc, hs, Bool.false_eq_true,
+      ↓reduceIte, hrest]
+
+/-- Printed service constants, then declarations that the service prefix stops at, split there.
+A step of `readModule_printModule_defs`. -/
+theorem servicePrefix_append (svc : List TypeScript.ConstDecl) (rest : List TypeScript.Decl)
+    (consts : ∀ c ∈ svc, isServiceConst c = true ∧ LayerTerm.readRefName c.name = none)
+    (after : servicePrefix rest = ([], rest)) :
+    servicePrefix (svc.map TypeScript.Decl.const ++ rest) = (svc, rest) := by
+  induction svc with
+  | nil => simpa only [List.map_nil, List.nil_append] using after
+  | cons c svc ih =>
+    obtain ⟨hs, hc⟩ := consts c List.mem_cons_self
+    have hrest := ih (fun c' h => consts c' (List.mem_cons_of_mem _ h))
+    simp only [List.map_cons, List.cons_append, servicePrefix, hc, hs, ↓reduceIte, hrest]
+
+/-- The definition prefix stops at a block's printed services, or at its layers when it has no
+service. A step of `readModule_printModule_defs`. -/
+theorem defsPrefix_services (svc : List TypeScript.ConstDecl) (rest : List TypeScript.Decl)
+    (consts : ∀ c ∈ svc, isServiceConst c = true ∧ LayerTerm.readRefName c.name = none)
+    (after : defsPrefix rest = ([], rest)) :
+    defsPrefix (svc.map TypeScript.Decl.const ++ rest) = ([], svc.map TypeScript.Decl.const ++ rest) := by
+  cases svc with
+  | nil => simpa only [List.map_nil, List.nil_append] using after
+  | cons c svc =>
+    obtain ⟨hs, hc⟩ := consts c List.mem_cons_self
+    simp only [List.map_cons, List.cons_append, defsPrefix, hc, hs, ↓reduceIte]
 
 /-- A block of class declarations, then constants, splits there. -/
 theorem splitClasses_append (cs : List TypeScript.ClassDecl) (ds : List TypeScript.ConstDecl) :
@@ -376,7 +434,7 @@ theorem Eff.defsOf_of_block?_none {e : Eff Op} (h : e.block? = none) : e.defsOf 
 `printModule_shape`. -/
 theorem printDef_plain {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     {c : TypeScript.ConstDecl} (printed : printDef sig d body = .ok c) :
-    c.type = none ∧ c.exported = true ∧ c.name = d.name := by
+    c.type = none ∧ c.exported = true ∧ c.name = d.name ∧ isServiceConst c = false := by
   unfold printDef at printed
   split at printed
   · cases printed
@@ -384,7 +442,7 @@ theorem printDef_plain {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     obtain ⟨_, _, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨_, _, heq⟩ := bind_eq_ok.mp rest
     cases heq
-    exact ⟨rfl, rfl, rfl⟩
+    exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- Every printed definition of a block is a plain constant. A step of `printModule_shape`. -/
 theorem printDefs_plain {sig : Signature Op} {defs : List DefDecl} {bodies : Effs Op}
@@ -446,20 +504,25 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
       | cons d ds =>
         simp only [hb] at printed
         change (printDefs (sig.withDefs (d :: ds)) (d :: ds) bodies >>= fun cs =>
+          printServices (sig.withDefs (d :: ds)) (d :: ds) >>= fun svc =>
           (Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
             (printCaptured (sig.withDefs (d :: ds)) history) >>= fun ls =>
           print (sig.withDefs (d :: ds)) 0 body >>= fun m =>
-          printDecl name ty m sig.scopeKey >>= fun decl => .ok (cs ++ ls ++ [decl])) =
+          printDecl name ty m sig.scopeKey >>= fun decl => .ok (cs ++ svc ++ ls ++ [decl])) =
             .ok block at printed
         obtain ⟨cs, hcs, rest⟩ := bind_eq_ok.mp printed
+        obtain ⟨svc, hsvc, rest⟩ := bind_eq_ok.mp rest
         obtain ⟨ls, hls, rest⟩ := bind_eq_ok.mp rest
         obtain ⟨m, _, rest⟩ := bind_eq_ok.mp rest
         obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp rest
         cases heq
-        refine ⟨cs ++ ls, decl, m, List.append_assoc cs ls [decl] ▸ rfl, ?_, declaration⟩
+        refine ⟨cs ++ svc ++ ls, decl, m, by simp only [List.append_assoc], ?_, declaration⟩
         intro c mem
         rcases List.mem_append.mp mem with hc | hl
-        · exact printDefs_plain hcs c hc
+        · rcases List.mem_append.mp hc with hc | hs
+          · exact printDefs_plain hcs c hc
+          · obtain ⟨-, hplain, -⟩ := printServices_ok hsvc
+            exact ⟨(hplain c hs).1, (hplain c hs).2.1⟩
         · exact mapM_ok_forall _ _ (fun t d hd => printCaptured_plain t d hd) _ hls c hl
 
 /-- **A definition's header reads back**: the constant `printDef` prints of a readable declaration
@@ -467,7 +530,7 @@ reads as that declaration and the printed suspension of its body. A step of
 `readModule_printModule_defs`. -/
 theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     {c : TypeScript.ConstDecl} (readable : d.readable = true) (printed : printDef sig d body = .ok c) :
-    ∃ x, print sig 1 (.suspend body) = .ok x ∧ readDefHead c = .ok (d, x) := by
+    ∃ x, print sig 1 (.suspend body) = .ok x ∧ readDefHead c = .ok ({ d with role := .plain }, x) := by
   simp only [DefDecl.readable, Bool.and_eq_true, List.isEmpty_iff, Option.isNone_iff_eq_none]
     at readable
   obtain ⟨⟨⟨⟨hreq, hans⟩, herr⟩, hrequires⟩, _⟩ := readable
@@ -487,7 +550,7 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
       Except.ok.injEq] at hresult
     subst hresult
     refine ⟨x, hx, ?_⟩
-    obtain ⟨name, request, answer, error, requires⟩ := d
+    obtain ⟨name, request, answer, error, requires, role⟩ := d
     simp only at hrequires
     subst hrequires
     simp only [readDefHead, requirementType_nil, ↓reduceIte,
@@ -503,13 +566,14 @@ theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
     {cs : List TypeScript.ConstDecl} (readable : ∀ d ∈ defs, d.readable = true)
     (bodiesRead : ∀ b ∈ bodies.toList, ReadsBack classes sig spell 1 (.suspend b))
     (printed : printDefs sig defs bodies = .ok cs) :
-    ∃ heads, cs.mapM readDefHead = .ok heads ∧ heads.map (·.1) = defs ∧
+    ∃ heads, cs.mapM readDefHead = .ok heads ∧
+      heads.map (·.1) = defs.map (fun d => { d with role := .plain }) ∧
       readDefBodies classes sig spell heads = .ok bodies ∧
-      ∀ c ∈ cs, LayerTerm.readRefName c.name = none := by
+      (∀ c ∈ cs, LayerTerm.readRefName c.name = none) ∧ ∀ c ∈ cs, isServiceConst c = false := by
   induction defs generalizing bodies cs with
   | nil =>
     cases bodies with
-    | nil => cases printed; exact ⟨[], rfl, rfl, rfl, fun c mem => nomatch mem⟩
+    | nil => cases printed; exact ⟨[], rfl, rfl, rfl, (fun _ mem => nomatch mem), (fun _ mem => nomatch mem)⟩
     | cons _ _ => cases printed
   | cons d ds ih =>
     cases bodies with
@@ -522,10 +586,10 @@ theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
       have hd := readable d List.mem_cons_self
       obtain ⟨x, hx, hhead⟩ := readDefHead_printDef hd hc
       have hread := bodiesRead b (by simp only [Effs.toList, List.mem_cons, true_or]) _ hx
-      obtain ⟨heads, hheads, hdefs, hbodies, hnames⟩ :=
+      obtain ⟨heads, hheads, hdefs, hbodies, hnames, hnot⟩ :=
         ih (fun d' h => readable d' (List.mem_cons_of_mem _ h))
           (fun b' h => bodiesRead b' (by simp only [Effs.toList, List.mem_cons, h, or_true])) hcs
-      refine ⟨(d, x) :: heads, ?_, ?_, ?_, ?_⟩
+      refine ⟨({ d with role := .plain }, x) :: heads, ?_, ?_, ?_, ?_, ?_⟩
       · simp only [List.mapM_cons, hhead, hheads, ok_bind]
         rfl
       · simp only [List.map_cons, hdefs]
@@ -533,16 +597,22 @@ theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
       · intro c' mem
         rcases List.mem_cons.mp mem with rfl | rest'
         · simp only [DefDecl.readable, Bool.and_eq_true, Option.isNone_iff_eq_none] at hd
-          rw [(printDef_plain hc).2.2]
+          rw [(printDef_plain hc).2.2.1]
           exact hd.2
         · exact hnames c' rest'
+      · intro c' mem
+        rcases List.mem_cons.mp mem with rfl | rest'
+        · exact (printDef_plain hc).2.2.2
+        · exact hnot c' rest'
 
 /-- **G6: the round trip of a module with a definition block** (decisions row 328). The module
-printer prints a block's definitions as constants before the layers and the main declaration
-(`printModule`). When each declaration is readable (`DefDecl.readable`: readable columns, an
-empty requirement row, a name with no layer path), and each body's suspension, the main program
-and each layer read back from their printing at the block's signature through the block's
-spelling map (`defsSpell`), the module reads back to the program. The premises concern the
+printer prints a block's definitions as constants, then its services' keys and layers (decisions
+rows 338 and 339), before the layers and the main declaration (`printModule`). When each
+declaration is readable (`DefDecl.readable`: readable columns, an empty requirement row, a name
+with no layer path), and each body's suspension, the main program and each layer read back from
+their printing at the block's signature through the block's spelling map (`defsSpell`), the
+module reads back to the program, with each definition's role given back by the services' layers
+(`roleOf`, `restoreRoles`). The premises concern the
 pieces, as `readModule_printModule`'s do, and they are stated of any reader.
 
 Placement: concept `exact-codecs`, claim `module-defs-round-trip`, requirement R8. Consumers: the
@@ -583,19 +653,24 @@ theorem readModule_printModule_defs {sig : Signature Op}
   | cons d ds =>
     simp only [block] at printed
     change (printDefs (sig.withDefs (d :: ds)) (d :: ds) bodies >>= fun cs =>
+      printServices (sig.withDefs (d :: ds)) (d :: ds) >>= fun svc =>
       (Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
         (printCaptured (sig.withDefs (d :: ds)) history) >>= fun ls =>
       print (sig.withDefs (d :: ds)) 0 body >>= fun m =>
-      printDecl name ty m sig.scopeKey >>= fun decl => .ok (cs ++ ls ++ [decl])) =
+      printDecl name ty m sig.scopeKey >>= fun decl => .ok (cs ++ svc ++ ls ++ [decl])) =
         .ok decls at printed
     obtain ⟨cs, hcs, rest⟩ := bind_eq_ok.mp printed
+    obtain ⟨svc, hsvc, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨ls, hls, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨m, hm, rest⟩ := bind_eq_ok.mp rest
     obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp rest
     cases heq
     have value := printDecl_value declaration
-    obtain ⟨heads, hheads, hdefs, hbodies, hnames⟩ :=
+    obtain ⟨heads, hheads, hdefs, hbodies, hnames, hnot⟩ :=
       readDefs_printDefs headsReadable bodiesReadable hcs
+    obtain ⟨hfault, hconsts, hread⟩ := printServices_ok hsvc
+    have roles := restoreRoles hfault hdefs
+    rw [← hread] at roles
     have hmain := mainReadable _ hm
     have hlayers := readCaptured_mapM layersReadable namesReadable _ hls
     have restored : (Eff.defs (d :: ds) bodies body).restoreAll
@@ -604,9 +679,20 @@ theorem readModule_printModule_defs {sig : Signature Op}
       have perm := selectHistory_ordered_perm history unique
       rw [← shape, Eff.restoreAll_perm main perm ((perm.map Prod.fst).symm.nodup unique)]
       exact Eff.restoreAll_hoistAll hoisted
-    have leading : defsPrefix (cs.map TypeScript.Decl.const ++ ls.map TypeScript.Decl.const) =
-        (cs, ls.map TypeScript.Decl.const) :=
-      defsPrefix_append cs _ hnames (defsPrefix_layers namesReadable hls)
+    have leading : defsPrefix (cs.map TypeScript.Decl.const ++ svc.map TypeScript.Decl.const ++
+        ls.map TypeScript.Decl.const) =
+        (cs, svc.map TypeScript.Decl.const ++ ls.map TypeScript.Decl.const) := by
+      rw [List.append_assoc]
+      exact defsPrefix_append cs _ hnames hnot (defsPrefix_services svc _
+        (fun c h => ⟨(hconsts c h).2.2.1, (hconsts c h).2.2.2⟩) (defsPrefix_layers namesReadable hls))
+    have services : servicePrefix (svc.map TypeScript.Decl.const ++ ls.map TypeScript.Decl.const) =
+        (svc, ls.map TypeScript.Decl.const) :=
+      servicePrefix_append svc _ (fun c h => ⟨(hconsts c h).2.2.1, (hconsts c h).2.2.2⟩)
+        (servicePrefix_layers namesReadable hls)
+    have hlayers' : (ls.map TypeScript.Decl.const).mapM (readLayerDecl classes
+        (sig.withDefs (d :: ds)) (defsSpell call (d :: ds) spell)) =
+        .ok (selectHistory history (Path.sortBy Path.declBefore (history.map Prod.fst))) :=
+      hlayers
     rw [readModule, blockClasses, splitClasses_append, classesRead]
     simp only [List.map_append, List.map_cons, List.map_nil,
       List.getLast?_append, List.getLast?_singleton, Option.some_or,
@@ -619,16 +705,6 @@ theorem readModule_printModule_defs {sig : Signature Op}
         obtain ⟨c, _, tail⟩ := bind_eq_ok.mp hcs
         obtain ⟨cs', _, heq⟩ := bind_eq_ok.mp tail
         exact ⟨c, cs', Except.ok.inj heq.symm⟩
-    change ((c :: cs').mapM readDefHead >>= fun heads =>
-      readDefBodies classes ((sig.withDefs (heads.map (·.1))))
-          (defsSpell call (heads.map (·.1)) spell) heads >>= fun bodies =>
-      readEff classes (sig.withDefs (heads.map (·.1))) (defsSpell call (heads.map (·.1)) spell) 0
-          m >>= fun e =>
-      (ls.map TypeScript.Decl.const).mapM (readCaptured classes (sig.withDefs (heads.map (·.1)))
-          (defsSpell call (heads.map (·.1)) spell)) >>= fun entries =>
-      match (Eff.defs (heads.map (·.1)) bodies e).restoreAll entries with
-      | some out => .ok out
-      | none => .error (.shape "module")) = .ok root
-    simp only [hheads, ok_bind, hdefs, hbodies, hmain, hlayers, restored]
+    simp only [hheads, ok_bind, services, roles, hbodies, hmain, hlayers', restored]
 
 end Effect4.Program

@@ -468,19 +468,40 @@ let ctor_name_decision : decision -> string = function
 let ctor_names_decision : string list = ["bool"; "option"; "tag"; "recordTag"]
 
 
+type def_role =
+  | Def_role_plain
+  | Def_role_serviceInit of string
+  | Def_role_serviceMethod of string * string * int
+
+let ctor_index_def_role : def_role -> int = function
+  | Def_role_plain -> 0
+  | Def_role_serviceInit _ -> 1
+  | Def_role_serviceMethod _ -> 2
+let wire_tag_def_role : def_role -> int = function
+  | Def_role_plain -> 0
+  | Def_role_serviceInit _ -> 1
+  | Def_role_serviceMethod _ -> 2
+let ctor_name_def_role : def_role -> string = function
+  | Def_role_plain -> "plain"
+  | Def_role_serviceInit _ -> "serviceInit"
+  | Def_role_serviceMethod _ -> "serviceMethod"
+let ctor_names_def_role : string list = ["plain"; "serviceInit"; "serviceMethod"]
+
+
 type def_decl = {
   def_decl_name : string;
   def_decl_request : ty;
   def_decl_answer : ty;
   def_decl_error : ty;
   def_decl_requires : service_key list;
+  def_decl_role : def_role;
 }
 
 let ctor_index_def_decl (_ : def_decl) : int = 0
 let wire_tag_def_decl (_ : def_decl) : int = 0
 let ctor_name_def_decl (_ : def_decl) : string = "mk"
 let ctor_names_def_decl : string list = ["mk"]
-let field_names_def_decl : string list = ["name"; "request"; "answer"; "error"; "requires"]
+let field_names_def_decl : string list = ["name"; "request"; "answer"; "error"; "requires"; "role"]
 
 
 type eff =

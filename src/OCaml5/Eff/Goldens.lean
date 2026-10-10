@@ -213,11 +213,18 @@ def keyV (k : ServiceKey) : V :=
     [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
     , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
 
-/-- A definition's declaration (decisions row 328): its name and its row's columns. -/
+/-- A definition's role in its block's services (decisions row 339). -/
+def defRoleV : DefRole → V
+  | .plain => .ctor ``DefRole.plain []
+  | .serviceInit s => .ctor ``DefRole.serviceInit [.str s]
+  | .serviceMethod s m k => .ctor ``DefRole.serviceMethod [.str s, .str m, .nat k]
+
+/-- A definition's declaration (decisions rows 328 and 339): its name, its row's columns and its
+role. -/
 def defDeclV (d : DefDecl) : V :=
   .struct ``DefDecl
     [ ("name", .str d.name), ("request", tyV d.request), ("answer", tyV d.answer)
-    , ("error", tyV d.error), ("requires", .list (d.requires.map keyV)) ]
+    , ("error", tyV d.error), ("requires", .list (d.requires.map keyV)), ("role", defRoleV d.role) ]
 
 def decisionV : Decision → V
   | .bool => .ctor ``Decision.bool []
@@ -614,6 +621,14 @@ def pDefsRec : P :=
 def pIllDefsBody : P := .defs [idDecl] (.cons (.succeed (.lit (.str "a"))) .nil) (.perform (.call 0) (n 5))
 def pIllCallOutside : P := .perform (.call 0) (n 5)
 
+/-- A block that declares a service (decisions row 339): `make` is its initial program and `get`
+its one method. Roles change no verdict. -/
+def pDefsService : P :=
+  .defs [{ name := "make", request := .unit, answer := .nat, role := .serviceInit "Counter" },
+         { idDecl with name := "get", role := .serviceMethod "Counter" "get" 0 }]
+    (.cons (.succeed (n 5)) (.cons (.succeed (v 0)) .nil))
+    (.bind (.perform (.call 0) u) (.perform (.call 1) (v 0)))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -644,7 +659,7 @@ def corpus : List (String × P) :=
   , ("pMask", pMask), ("pMaskNested", pMaskNested), ("pMaskEscape", pMaskEscape)
   , ("pIllRestoreBool", pIllRestoreBool), ("pIllMaskAsBool", pIllMaskAsBool)
   , ("pDefs", pDefs), ("pDefsRec", pDefsRec), ("pIllDefsBody", pIllDefsBody)
-  , ("pIllCallOutside", pIllCallOutside) ]
+  , ("pIllCallOutside", pIllCallOutside), ("pDefsService", pDefsService) ]
 
 end Corpus
 

@@ -81,12 +81,14 @@ module type PROGRAM_TYPES = sig
   | Decision_option
   | Decision_tag of string
   | Decision_recordTag of string
+  type def_role = DefRole_plain | DefRole_serviceInit of string | DefRole_serviceMethod of string * string * int
   type def_decl = {
   name : string;
   request : ty;
   answer : ty;
   error : ty;
   requires : service_key list;
+  role : def_role;
 }
   type 'op eff = | Eff_succeed of term
   | Eff_fail of term
@@ -186,6 +188,7 @@ let source_ctor_names = [
   ("finalizer_strategy", Eff_types.ctor_names_finalizer_strategy);
   ("native_op", Eff_types.ctor_names_native_op);
   ("decision", Eff_types.ctor_names_decision);
+  ("def_role", Eff_types.ctor_names_def_role);
   ("eff", Eff_types.ctor_names_eff);
   ("stmt", Eff_types.ctor_names_stmt);
   ("stmts", Eff_types.ctor_names_stmts);
@@ -210,6 +213,7 @@ let engine_ctor_names = [
   ("finalizer_strategy", ["sequential"; "parallel"]);
   ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"; "call"]);
   ("decision", ["bool"; "option"; "tag"; "recordTag"]);
+  ("def_role", ["plain"; "serviceInit"; "serviceMethod"]);
   ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"; "defs"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("stmts", ["nil"; "cons"]);

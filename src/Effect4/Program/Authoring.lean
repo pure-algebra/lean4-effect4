@@ -385,8 +385,9 @@ def requestOf : List TermSrc → TermSrc
   | a :: rest => app "pair" [a, requestOf rest]
 
 /-- A definition an author declares once: its name, its parameters with their names and types,
-its declared columns, and its body as a function of its parameters' terms. The names document
-the parameters; the body reads each through a part of the request. -/
+its declared columns, its body as a function of its parameters' terms, and its role in the
+block's services (decisions row 339). The names document the parameters; the body reads each
+through a part of the request. -/
 structure DefSrc (Op : Type) where
   name : String
   params : List (String × Ty)
@@ -394,12 +395,23 @@ structure DefSrc (Op : Type) where
   error : Ty := .never
   requires : List Effect4.ServiceKey := []
   body : List TermSrc → Src Op
+  role : DefRole := .plain
 
-/-- The declaration a definition stores in the block: its name, its request type and its three
-columns. -/
+/-- The declaration a definition stores in the block: its name, its request type, its three
+columns and its role. -/
 def DefSrc.decl {Op : Type} (d : DefSrc Op) : DefDecl :=
   { name := d.name, request := requestTy (d.params.map (·.2)), answer := d.answer,
-    error := d.error, requires := d.requires }
+    error := d.error, requires := d.requires, role := d.role }
+
+/-- A definition as the initial program of service `service`: it takes no parameter, and it
+answers the service's state. -/
+def DefSrc.serviceInit {Op : Type} (service : String) (d : DefSrc Op) : DefSrc Op :=
+  { d with role := .serviceInit service }
+
+/-- A definition as method `method` of service `service`: its first parameter is the state, and
+its other parameters are the method's arguments. -/
+def DefSrc.serviceMethod {Op : Type} (service method : String) (d : DefSrc Op) : DefSrc Op :=
+  { d with role := .serviceMethod service method (d.params.length - 1) }
 
 /-- A definition's body, at the closed scope with one minted name for its request: each
 parameter reads a part of it. `p` is the body's path in the block. -/

@@ -12,7 +12,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -150,12 +150,21 @@ export const decisionJson = (v: Decision): Json => {
   }
 }
 
+export const defRoleJson = (v: DefRole): Json => {
+  switch (v._tag) {
+    case "plain": return ["plain"]
+    case "serviceInit": return ["serviceInit", v.service]
+    case "serviceMethod": return ["serviceMethod", v.service, v.method, v.arity]
+  }
+}
+
 export const defDeclJson = (v: DefDecl): Json => ({
   name: v.name,
   request: tyJson(v.request),
   answer: tyJson(v.answer),
   error: tyJson(v.error),
   requires: v.requires.map((y) => serviceKeyJson(y)),
+  role: defRoleJson(v.role),
 })
 
 export const effJson = (v: Eff): Json => {

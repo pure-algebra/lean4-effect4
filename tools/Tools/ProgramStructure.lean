@@ -35,6 +35,7 @@ def blocks : List (List Spec) :=
   , [⟨`Effect4.Program.Decision, "decision", []⟩]
   -- the declaration of a definition before the `Eff` group (decisions row 328): `defs` carries
   -- a list of them
+  , [⟨`Effect4.Program.DefRole, "def_role", []⟩]
   , [⟨`Effect4.Program.DefDecl, "def_decl", []⟩]
   , [ ⟨`Effect4.Program.Eff, "eff", [`Effect4.Program.NativeOp]⟩, ⟨`Effect4.Program.Stmt, "stmt", [`Effect4.Program.NativeOp]⟩
     , ⟨`Effect4.Program.Stmts, "stmts", [`Effect4.Program.NativeOp]⟩, ⟨`Effect4.Program.Effs, "effs", [`Effect4.Program.NativeOp]⟩

@@ -81,7 +81,8 @@
       "cap": 2000,
       "types": [
         "Effect4.Program.RowShape",
-        "Effect4.Program.DefDecl"
+        "Effect4.Program.DefDecl",
+        "Effect4.Program.DefRole"
       ],
       "roots": [
         "Effect4.Api.run",
@@ -98,7 +99,8 @@
         "Effect4.Program.RowShape",
         "Effect4.Machine.Origin",
         "Effect4.Machine.ForkRecord",
-        "Effect4.Program.DefDecl"
+        "Effect4.Program.DefDecl",
+        "Effect4.Program.DefRole"
       ],
       "roots": [
         "Effect4.Api.run",

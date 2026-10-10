@@ -77,4 +77,18 @@ def sizeD (A : Ty) (suffix : String := "") : Defined (TermSrc → Src NativeOp) 
 def defs (A : Ty) (suffix : String := "") : List (DefSrc NativeOp) :=
   [(takeD A suffix).src, (offerD A suffix).src, (pollD A suffix).src, (sizeD A suffix).src]
 
+/-- **The Queue as a service** (decisions rows 338 and 339, slice CO-6b): an initial program that
+builds an empty queue of `capacity`, and the four operations as the service's methods. The block
+prints them as an Effect service named `name`, whose layer builds the queue once
+(`printServices`, `src/Effect4/Codegen/Print.lean`). -/
+def serviceDefs (A : Ty) (name : String) (capacity : Nat) (positive : 0 < capacity := by decide)
+    (suffix : String := "") : List (DefSrc NativeOp) :=
+  [ DefSrc.serviceInit name
+      { name := "queueMake" ++ suffix, params := [], answer := handleTy A,
+        body := fun _ => bounded A capacity positive },
+    DefSrc.serviceMethod name "take" (takeD A suffix).src,
+    DefSrc.serviceMethod name "offer" (offerD A suffix).src,
+    DefSrc.serviceMethod name "poll" (pollD A suffix).src,
+    DefSrc.serviceMethod name "size" (sizeD A suffix).src ]
+
 end Effect4.Queue

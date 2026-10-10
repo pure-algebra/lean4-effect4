@@ -695,8 +695,43 @@ let rec decode_decision (s : string) (pos : int) (limit : int) : (decision * int
 
 let decode_decision_exact (s : string) : decision option = Eff_frame.exact decode_decision s
 
+let rec emit_def_role (b : Buffer.t) (v : def_role) : unit =
+  match v with
+  | Def_role_plain -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+  | Def_role_serviceInit a0 -> Eff_frame.emit_ctor b 1 (fun b -> Eff_frame.emit_string b a0)
+  | Def_role_serviceMethod (a0, a1, a2) -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0; Eff_frame.emit_string b a1; Eff_frame.emit_nat b a2)
+
+let encode_def_role (v : def_role) : string = Eff_frame.to_string emit_def_role v
+
+let rec decode_def_role (s : string) (pos : int) (limit : int) : (def_role * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      if p = e then Some (Def_role_plain, next) else None
+    | 1 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Def_role_serviceInit a0, next) else None)
+    | 2 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match Eff_frame.decode_string s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match Eff_frame.decode_nat s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Def_role_serviceMethod (a0, a1, a2), next) else None)))
+    | _ -> None)
+
+let decode_def_role_exact (s : string) : def_role option = Eff_frame.exact decode_def_role s
+
 let rec emit_def_decl (b : Buffer.t) (r : def_decl) : unit =
-  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.def_decl_name; emit_ty b r.def_decl_request; emit_ty b r.def_decl_answer; emit_ty b r.def_decl_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.def_decl_requires)
+  Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_string b r.def_decl_name; emit_ty b r.def_decl_request; emit_ty b r.def_decl_answer; emit_ty b r.def_decl_error; Eff_frame.emit_list b (fun b y -> emit_service_key b y) r.def_decl_requires; emit_def_role b r.def_decl_role)
 
 let encode_def_decl (v : def_decl) : string = Eff_frame.to_string emit_def_decl v
 
@@ -721,7 +756,10 @@ let rec decode_def_decl (s : string) (pos : int) (limit : int) : (def_decl * int
               (match (Eff_frame.decode_list decode_service_key) s p e with
                | None -> None
                | Some (a4, p) ->
-                if p = e then Some ({ def_decl_name = a0; def_decl_request = a1; def_decl_answer = a2; def_decl_error = a3; def_decl_requires = a4 }, next) else None)))))
+                (match decode_def_role s p e with
+                 | None -> None
+                 | Some (a5, p) ->
+                  if p = e then Some ({ def_decl_name = a0; def_decl_request = a1; def_decl_answer = a2; def_decl_error = a3; def_decl_requires = a4; def_decl_role = a5 }, next) else None))))))
     | _ -> None)
 
 let decode_def_decl_exact (s : string) : def_decl option = Eff_frame.exact decode_def_decl s
