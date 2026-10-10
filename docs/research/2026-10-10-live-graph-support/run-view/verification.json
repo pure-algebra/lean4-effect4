@@ -1,0 +1,174 @@
+{
+  "base": "9389e543",
+  "head_before_commit": "9389e543ad1325a603732b7802344d79b3b98c61",
+  "threads": 3,
+  "source_sha256": "6e9926cd03e8cb897f5e1a95dd1da6f046ffdfdafb70e46ce176606dafc672d8",
+  "rendered_svg_frames": 3,
+  "commands": [
+    {
+      "command": [
+        "lake",
+        "build",
+        "Tools.View.Run",
+        "Tools.View.Build"
+      ],
+      "log": "narrow-build.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "build",
+        "ProofGraph.AxiomAudit"
+      ],
+      "log": "audit-build.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "build",
+        "Tools.View.Specimen",
+        "Tools.View.FlowSpecimen",
+        "Tools.View.Tokens",
+        "Tools.View.Output"
+      ],
+      "log": "driver-imports-build.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/Baseline.olean\" \"$1/Baseline.lean\"",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view"
+      ],
+      "log": "baseline-build.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/Compare.olean\" \"$1/Compare.lean\"",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view"
+      ],
+      "log": "comparison.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view/Reuse.lean"
+      ],
+      "log": "reuse.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view/Audit.lean"
+      ],
+      "log": "audit-raw.log",
+      "exit": 1,
+      "expected_exit": 1
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view/AuditRender.lean"
+      ],
+      "log": "audit-render.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "tools/Drivers/View.lean"
+      ],
+      "log": "driver-build.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" --run \"$1/Bench.lean\" 3",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view"
+      ],
+      "log": "benchmark.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" --run \"$1/Bench.lean\" 30",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view"
+      ],
+      "log": "benchmark-long.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" --run \"$1/HostRender.lean\" \"$1/render/host.svg\"",
+        "run-view",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view"
+      ],
+      "log": "host-render.log",
+      "exit": 0,
+      "expected_exit": 0
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "--run",
+        "tools/Drivers/View.lean",
+        "--motion",
+        "1",
+        "run",
+        "pFork",
+        "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view/render"
+      ],
+      "log": "driver-run.log",
+      "exit": 0,
+      "expected_exit": 0
+    }
+  ]
+}

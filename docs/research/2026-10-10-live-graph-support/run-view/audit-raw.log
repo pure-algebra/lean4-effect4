@@ -1,0 +1,30 @@
+/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4/docs/research/2026-10-10-live-graph-support/run-view/Audit.lean:3:0: error: #axiom_audit: 9 of 54 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.Run.framesBuilt.go._f reaches [Classical.choice]
+  Tools.View.Run.frame reaches [Classical.choice]
+  Tools.View.Run.framesBuilt.go._sunfold reaches [Classical.choice]
+  Tools.View.Run.framesBuilt reaches [Classical.choice]
+  Tools.View.Run.framePrepared reaches [Classical.choice]
+  Tools.View.Run.framesBuilt.go reaches [Classical.choice]
+  Tools.View.Run.prepare reaches [Classical.choice]
+  Tools.View.Run.framesBuilt.go._unsafe_rec reaches [Classical.choice]
+  Tools.View.Run.frames reaches [Classical.choice]
+2 of them stand under no other; each one's path to its axiom:
+  Tools.View.Run.framePrepared  (Tools.View.Run)
+  → Tools.View.Graph.layout  (Tools.View.Graph)
+  → Tools.View.Graph.items  (Tools.View.Graph)
+  → Tools.View.Graph.boxWidth  (Tools.View.Graph)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Run.prepare  (Tools.View.Run)
+  → Tools.View.Program.lines  (Tools.View.Program)
+  → Tools.View.Program.layer  (Tools.View.Program)
+  → Tools.View.Program.ownText  (Tools.View.Program)
+  → Tools.View.Program.argText  (Tools.View.Program)
+  → Tools.View.Program.plain  (Tools.View.Program)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep  (Init.Data.String.Pattern.String)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_28  (Init.Data.String.Pattern.String)
+  → _private.Init.Data.String.Pattern.String.0.String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_27  (Init.Data.String.Pattern.String)
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

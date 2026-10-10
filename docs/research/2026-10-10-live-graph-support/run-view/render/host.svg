@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" class="e4-view" data-look="dark" width="1280" height="360" viewBox="0 0 1280 360">
+<rect class="e4-fill-ground" x="0" y="0" width="1280" height="360" fill="#14110d" fill-opacity="1"/>
+<text x="24" y="120" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve" data-key="[]">[]</text>
+<clipPath id="c2"><rect x="81" y="104" width="496" height="24"/></clipPath><g clip-path="url(#c2)">
+<text x="88" y="120" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve" data-key="[]">perform (external 0) (lit 3)</text>
+<text x="336" y="120" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve" data-key="[]">:</text>
+<text x="352" y="120" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve" data-key="[]">number</text>
+<rect class="e4-fill-ink" x="424" y="113" width="7" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="424" y="119" width="7" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="424" y="114" width="1" height="5" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="430" y="114" width="1" height="5" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="433" y="116" width="1" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="436" y="116" width="1" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="439" y="116" width="1" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="442" y="116" width="1" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="445" y="116" width="1" height="1" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-host" x="450" y="109" width="2" height="15" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+<rect class="e4-fill-ink" x="456" y="113" width="7" height="7" fill="#f3f4f6" fill-opacity="1" data-key="[]"/>
+</g>
+<rect x="0" y="104" width="496" height="24" fill="none" pointer-events="all" data-key="[]"/>
+<rect class="e4-fill-rule" x="504" y="96" width="1" height="104" fill="#45433f" fill-opacity="1"/>
+<text x="528" y="120" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">import { type Effect } from &quot;effect&quot;</text>
+<text x="528" y="144" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">import { Host } from &quot;../prelude/prelude.ts&quot;</text>
+<text x="528" y="192" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">export const main: Effect.Effect&lt;number, never, never&gt; = Host.read(3)</text>
+<text x="24" y="240" class="e4-text e4-face-label" font-family="Georgia, Charter, serif" font-style="italic" font-weight="400" font-size="13.5" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">fibers</text>
+<path class="e4-fill-ground" d="M 28 256 C 28 256, 92 256, 92 256 C 94.208 256, 96 257.792, 96 260 C 96 260, 96 300, 96 300 C 96 302.208, 94.208 304, 92 304 C 92 304, 28 304, 28 304 C 25.792 304, 24 302.208, 24 300 C 24 300, 24 260, 24 260 C 24 257.792, 25.792 256, 28 256 Z" fill-rule="evenodd" fill="#14110d" fill-opacity="1" data-key="fiber 0"/>
+<path class="e4-fill-rule" d="M 28 256 C 28 256, 92 256, 92 256 C 94.208 256, 96 257.792, 96 260 C 96 260, 96 300, 96 300 C 96 302.208, 94.208 304, 92 304 C 92 304, 28 304, 28 304 C 25.792 304, 24 302.208, 24 300 C 24 300, 24 260, 24 260 C 24 257.792, 25.792 256, 28 256 Z" fill-rule="evenodd" fill="#45433f" fill-opacity="0.5" data-key="fiber 0"/>
+<path class="e4-fill-ink" d="M 28 256 C 28 256, 92 256, 92 256 C 94.208 256, 96 257.792, 96 260 C 96 260, 96 300, 96 300 C 96 302.208, 94.208 304, 92 304 C 92 304, 28 304, 28 304 C 25.792 304, 24 302.208, 24 300 C 24 300, 24 260, 24 260 C 24 257.792, 25.792 256, 28 256 Z M 28 257 C 28 257, 92 257, 92 257 C 93.656 257, 95 258.344, 95 260 C 95 260, 95 300, 95 300 C 95 301.656, 93.656 303, 92 303 C 92 303, 28 303, 28 303 C 26.344 303, 25 301.656, 25 300 C 25 300, 25 260, 25 260 C 25 258.344, 26.344 257, 28 257 Z" fill-rule="evenodd" fill="#f3f4f6" fill-opacity="1" data-key="fiber 0"/>
+<text x="32" y="272" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve" data-key="fiber 0">fiber 0</text>
+<text x="32" y="296" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve" data-key="fiber 0">parked</text>
+<rect x="24" y="256" width="72" height="48" fill="none" pointer-events="all" data-key="fiber 0"/>
+<text x="1216" y="40" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">2 / 2</text>
+<text x="24" y="40" class="e4-text e4-face-title" font-family="Georgia, Charter, serif" font-style="normal" font-weight="400" font-size="20" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">host · run · evaluate fiber 0</text>
+<text x="24" y="64" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">1 fiber live, 1 calls outstanding</text>
+<text x="24" y="88" class="e4-text e4-face-label" font-family="Georgia, Charter, serif" font-style="italic" font-weight="400" font-size="13.5" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">path</text>
+<text x="88" y="88" class="e4-text e4-face-label" font-family="Georgia, Charter, serif" font-style="italic" font-weight="400" font-size="13.5" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">node</text>
+<text x="528" y="88" class="e4-text e4-face-label" font-family="Georgia, Charter, serif" font-style="italic" font-weight="400" font-size="13.5" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">typescript</text>
+<rect class="e4-fill-rule" x="24" y="96" width="1232" height="1" fill="#45433f" fill-opacity="1"/>
+<rect class="e4-fill-rule" x="24" y="328" width="1232" height="1" fill="#45433f" fill-opacity="1"/>
+<text x="24" y="348" class="e4-text e4-face-data" font-family="Menlo, &apos;DejaVu Sans Mono&apos;, monospace" font-style="normal" font-weight="400" font-size="13.288" fill="#f3f4f6" transform="scale(1)" xml:space="preserve">journal: 1 rows</text>
+</svg>

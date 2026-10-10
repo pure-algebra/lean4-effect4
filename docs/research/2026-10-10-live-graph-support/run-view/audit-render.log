@@ -1,0 +1,10 @@
+Rendering exclusion: Tools.View.Run.framesBuilt.go._f: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.frame: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.framesBuilt.go._sunfold: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.framesBuilt: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.framePrepared: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.framesBuilt.go: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.prepare: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.framesBuilt.go._unsafe_rec: [propext, Quot.sound, Classical.choice]
+Rendering exclusion: Tools.View.Run.frames: [propext, Quot.sound, Classical.choice]
+PASS: 54 declarations; 9 exact rendering exclusions; no goals or forbidden declarations.
