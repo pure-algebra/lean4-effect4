@@ -1,0 +1,9 @@
+Command: lake env sh -c 'LEAN_PATH="$1:$LEAN_PATH" lean --root="$1" -DwarningAsError=true -o "$1/$2.olean" "$1/$2.lean"' host-meaning-check /Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening Audit
+LEAN_NUM_THREADS=3
+Started: 2026-10-10T07:44:51.327586+00:00
+#axiom_audit: 188 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 1 planned goals
+Test.HostMeaningWidening.h8_loopedRows: goal; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Test.HostMeaningWidening.h8_loopedRows : Test.HostMeaningWidening.H8LoopedRows
+[("paged stream", true), ("host and request history", true), ("budget cut", true), ("waiting retains stores", true),
+  ("past answers do not stop a host", true), ("wrong request refused", true)]

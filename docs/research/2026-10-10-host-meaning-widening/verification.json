@@ -1,0 +1,177 @@
+{
+  "base": "540ee8ccb279dc8b808487e428e0e9a02d500a3f",
+  "started_utc": "2026-10-10T07:44:40.762710+00:00",
+  "evidence_kind": "theory, finite Lean evaluations, and a local axiom gate",
+  "commands": [
+    {
+      "label": "source-base",
+      "argv": [
+        "git",
+        "diff",
+        "--exit-code",
+        "540ee8ccb279dc8b808487e428e0e9a02d500a3f",
+        "--",
+        ".",
+        ":(exclude)docs/research/2026-10-10-host-meaning-widening/**"
+      ],
+      "exit_code": 0,
+      "log": "source-base.log",
+      "started_utc": "2026-10-10T07:44:40.762897+00:00",
+      "finished_utc": "2026-10-10T07:44:40.782286+00:00"
+    },
+    {
+      "label": "narrow-build",
+      "argv": [
+        "lake",
+        "build",
+        "Effect4.Laws.Api.SessionMeaning",
+        "Effect4.Laws.Api.HostDrive",
+        "Effect4.Laws.Program.Folds.DenoteRows",
+        "Test.Dogfood.Scenario.TodoPaged",
+        "ProofGraph.AxiomAudit",
+        "ProofGraph.Plan",
+        "Effect4.Laws.Machine.ScopeMachine"
+      ],
+      "exit_code": 0,
+      "log": "narrow-build.log",
+      "started_utc": "2026-10-10T07:44:40.795125+00:00",
+      "finished_utc": "2026-10-10T07:44:41.184091+00:00"
+    },
+    {
+      "label": "Meaning",
+      "argv": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "host-meaning-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening",
+        "Meaning"
+      ],
+      "exit_code": 0,
+      "log": "Meaning.log",
+      "started_utc": "2026-10-10T07:44:41.184348+00:00",
+      "finished_utc": "2026-10-10T07:44:45.064411+00:00"
+    },
+    {
+      "label": "Goals",
+      "argv": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "host-meaning-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening",
+        "Goals"
+      ],
+      "exit_code": 0,
+      "log": "Goals.log",
+      "started_utc": "2026-10-10T07:44:45.064734+00:00",
+      "finished_utc": "2026-10-10T07:44:46.954171+00:00"
+    },
+    {
+      "label": "Controls",
+      "argv": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "host-meaning-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening",
+        "Controls"
+      ],
+      "exit_code": 0,
+      "log": "Controls.log",
+      "started_utc": "2026-10-10T07:44:46.954452+00:00",
+      "finished_utc": "2026-10-10T07:44:49.617770+00:00"
+    },
+    {
+      "label": "BoundaryControls",
+      "argv": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "host-meaning-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening",
+        "BoundaryControls"
+      ],
+      "exit_code": 0,
+      "log": "BoundaryControls.log",
+      "started_utc": "2026-10-10T07:44:49.618040+00:00",
+      "finished_utc": "2026-10-10T07:44:51.327247+00:00"
+    },
+    {
+      "label": "Audit",
+      "argv": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "host-meaning-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening",
+        "Audit"
+      ],
+      "exit_code": 0,
+      "log": "Audit.log",
+      "started_utc": "2026-10-10T07:44:51.327586+00:00",
+      "finished_utc": "2026-10-10T07:44:53.202065+00:00"
+    },
+    {
+      "label": "language",
+      "argv": [
+        "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+        "scripts/check-language.py",
+        "--strict",
+        "docs/research/2026-10-10-host-meaning-widening/README.md"
+      ],
+      "exit_code": 0,
+      "log": "language.log",
+      "started_utc": "2026-10-10T07:44:53.202446+00:00",
+      "finished_utc": "2026-10-10T07:44:58.482192+00:00"
+    },
+    {
+      "label": "diff-check",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "diff-check.log",
+      "started_utc": "2026-10-10T07:44:58.482497+00:00",
+      "finished_utc": "2026-10-10T07:44:58.506965+00:00"
+    }
+  ],
+  "passed": true,
+  "effects_expected": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+  "effects_actual": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+  "finite_guards": 44,
+  "planned_goals": 1,
+  "source_sha256": {
+    "Meaning.lean": "cdf5ca362a80ffd9d2cc520b61a887c5f229f3c3e4c7dc9cfc9b237089460ce9",
+    "Goals.lean": "f0b8d935c4b27d7f4a11527e6075ed05e0f31a5132c428d83f55b90617522420",
+    "Controls.lean": "e34fddcb959359267e9a869680d75002b27d6b64cec47cbba86080294c3c902b",
+    "BoundaryControls.lean": "9aea58a082242920ca4876d5812f642e200bb8e9a237bdc1e951f7f1d56f0b8c",
+    "Audit.lean": "d22f747fd1856b38a105a80154634cfdeea53717b4c4e0d7a1b9a0b08e754ef5",
+    "README.md": "a327d958f9d7630fc8167b6e5c036247c401813fa30cfae3143ffb0f0ef249af",
+    "verify.py": "c92a69bc152c384a3f233bf3eb222356fc65f30e68d83a5fa23cc06ffb62fbe6"
+  },
+  "log_sha256": {
+    "source-base.log": "cd7331764e84578a7a49aced4d3899cdcb8800a86a45e8e2248dfe5e47329107",
+    "narrow-build.log": "c5eb3da566bea60c050d5de3e1c8b1874956fc376e885e419f4ec79222a1b9ad",
+    "Meaning.log": "383d3693e6d1c4f86182617fc06e3bfdb4436f8479d95ccd033907d2f0cb07e5",
+    "Goals.log": "84f6019e43256a8e4cdf38e26bcdd447473e73e81334922b4ed906b3d9747a66",
+    "Controls.log": "3708bcf04ef9a01f67668725ad492d0645af0103c1fde18c147ade8dc86a71d9",
+    "BoundaryControls.log": "9672c775d49566ce797c33e4e3258eb83750334b5797f1f42e0aa11fd987f31e",
+    "Audit.log": "ec0ca029c4220c66f54c72dd1c38cc721ea415c20524f7612128a0effc14d060",
+    "language.log": "21a44e0b4e86cd533818d8c7208f1d62bd7412f35271aa1289c922540982f437",
+    "diff-check.log": "7ea6273be39155da4f28c2e46ee655d7740c3fc1ffae8dc189937ccb645380a4"
+  },
+  "finished_utc": "2026-10-10T07:44:58.509117+00:00"
+}

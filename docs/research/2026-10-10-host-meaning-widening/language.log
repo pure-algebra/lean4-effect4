@@ -1,0 +1,4 @@
+Command: /Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3 scripts/check-language.py --strict docs/research/2026-10-10-host-meaning-widening/README.md
+LEAN_NUM_THREADS=3
+Started: 2026-10-10T07:44:53.202446+00:00
+PASS check-language: no finding in docs/research/2026-10-10-host-meaning-widening/README.md; the other documents carry 1769 finding(s) (report: python3 scripts/check-language.py)

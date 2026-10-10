@@ -1,0 +1,4 @@
+Command: lake build Effect4.Laws.Api.SessionMeaning Effect4.Laws.Api.HostDrive Effect4.Laws.Program.Folds.DenoteRows Test.Dogfood.Scenario.TodoPaged ProofGraph.AxiomAudit ProofGraph.Plan Effect4.Laws.Machine.ScopeMachine
+LEAN_NUM_THREADS=3
+Started: 2026-10-10T07:44:40.795125+00:00
+Build completed successfully (1030 jobs).

@@ -1,0 +1,3 @@
+Command: lake env sh -c 'LEAN_PATH="$1:$LEAN_PATH" lean --root="$1" -DwarningAsError=true -o "$1/$2.olean" "$1/$2.lean"' host-meaning-check /Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-host-meaning-widening BoundaryControls
+LEAN_NUM_THREADS=3
+Started: 2026-10-10T07:44:49.618040+00:00
