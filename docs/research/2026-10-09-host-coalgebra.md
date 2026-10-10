@@ -320,8 +320,8 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   column, and the guard leaves that call waiting. A row whose answer column allocates a handle
   answers nothing through the guard.
 - **Typed handlers in `Effects` v0.9.1** (`lean4-effects` commit `e6028a4`, local). A program is
-  typed under a protocol into a postcondition (`Program.Sat`), by structure on the tree. The
-  typing is sound for every host that meets the protocol. A handler is typed from an upper
+  typed under a protocol into a postcondition (`Program.Sat`), by structure on the tree. A host
+  that meets the protocol runs it only to values in the postcondition (`Program.Sat.sound`). A handler is typed from an upper
   protocol to a lower one (`Handler.Typed`). Typed handlers take typed programs to typed
   programs, compose, and make a host that meets the lower protocol meet the upper one
   (`Comodel.Meets.through`). So a stack of layers, each checked against its two protocols,
