@@ -72,7 +72,8 @@ TY_VARIANCE = 'src/Effect4/Program/TyVariance.lean'
 # an input, so a fixture that changed alone left that battery's evidence stale. This family is
 # what holds a committed fixture to Lean's text: it runs each writer into a temporary folder and
 # installs or compares. The writer is the one hand input: its imports are the modules built
-# first, and the files it writes are the lane's fixtures.
+# first, the native libraries those modules load are loaded into its run, and the files it
+# writes are the lane's fixtures.
 FIXTURE_LANES = 'ocaml/engine/test'
 
 
@@ -99,6 +100,27 @@ def fixture_lanes():
     return lanes
 
 
+def native_libraries(modules):
+    """The shared libraries that Lake loads to elaborate `modules`, in its load order, each by
+    its path on this platform.
+
+    The writers import modules of `TestProgram` and `TestDogfood`, which load the core and the
+    packages it calls as native code (lakefile `dynlibs`, decisions row 327). `lean --run` loads
+    none of them unless asked, and then interprets the machine: the scenarios' writer took 172 s,
+    and 14 s to 24 s native, on a machine with other Lean builds running (2026-10-10; the group
+    192 s, and 25 s to 47 s). The list is the module setup that Lake hands `lean`
+    (`lake query -J +<module>:setup`), so the lakefile stays its one source, and the file names
+    are Lake's (a `.dylib` written here would break the PC).
+    """
+    lines = run(['lake', 'query', '-J', *(f'+{module}:setup' for module in modules)], True)
+    libraries = []
+    for line in lines.splitlines():
+        for path in json.loads(line)['dynlibs']:
+            if path not in libraries:
+                libraries.append(path)
+    return libraries
+
+
 def fixtures(out, checking):
     """Write each lane's fixtures from Lean, then install them or refuse a difference.
 
@@ -121,7 +143,9 @@ def fixtures(out, checking):
         for stale in temp.glob('*.txt'):
             stale.unlink()
         run(['lake', 'build', *modules])
-        run(['lake', 'env', 'lean', '-M4096', '--run', folder + '/write.lean', str(temp)])
+        libraries = native_libraries(modules)
+        run(['lake', 'env', 'lean', '-M4096', *(f'--load-dynlib={path}' for path in libraries),
+             '--run', folder + '/write.lean', str(temp)])
         written = sorted(path.name for path in temp.glob('*.txt'))
         if not written:
             raise ValueError(f'{folder}/write.lean wrote no fixture')
