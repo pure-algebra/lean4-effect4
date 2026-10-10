@@ -158,6 +158,8 @@ its arrows. Anything else is a leak.
   "preserves", "fully reified" or "complete". Name its assumptions and the remaining host
   boundary too.
 - Report a compiling finite probe as a finite probe.
+- Audit a landing's modules with `#axiom_audit M …` (`tools/ProofGraph/AxiomAudit.lean`), never with
+  `#print axioms`: Lean's collector misses axioms behind a cycle.
 - **Every proof obligation is placed in the theory before it is worked** (owner, 2026-10-02: no
   proofs to nowhere). Before a theorem is stated, proved, repaired or put in a brief, write down
   five things:

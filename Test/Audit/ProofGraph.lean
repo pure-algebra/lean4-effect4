@@ -2,6 +2,7 @@ import Test.Audit.ProofGraphSearch
 import Effect4.Laws.Auto.Census
 import Effect4.Laws.Auto.RuleSets
 import ProofGraph.Search
+import ProofGraph.AxiomAudit
 
 namespace Test.ProofGraph
 open Lean Meta Elab Command
@@ -87,5 +88,21 @@ run_cmd do
   let expected ← withEnv env <| Lean.collectAxioms `AxiomTypeControl.a
   unless got.qsort Name.lt == expected do throwError "an axiom's type: {got} versus {expected}"
   unless ((← getEnv).find? `AxiomTypeControl.A).isNone do throwError "a local axiom escaped"
+
+/-! ## `#axiom_audit`
+
+The seat's audit of named modules applies no admission: the walk module's own metaprograms reach
+`Classical.choice`, which the gate admits for that module, and the command names each of them. -/
+
+/--
+error: #axiom_audit: 5 of 43 declarations reach axioms outside [propext, Quot.sound]:
+  ProofGraph.reachedAxioms reaches [Classical.choice]
+  ProofGraph.exactAxioms reaches [Classical.choice]
+  ProofGraph.reachedAxiomsMany reaches [Classical.choice]
+  _private.ProofGraph.Axioms.0.ProofGraph.deps reaches [Classical.choice]
+  _private.ProofGraph.Axioms.0.ProofGraph.selfAxiom reaches [Classical.choice]
+-/
+#guard_msgs in
+#axiom_audit ProofGraph.Axioms
 
 end Test.ProofGraph

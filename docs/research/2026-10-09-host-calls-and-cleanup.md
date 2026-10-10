@@ -197,6 +197,12 @@ Codex compared them, and every other moved statement, against the base (its rece
 The line count of the four agreement modules barely moved (3828 to 3782 lines with the new
 module). The gain is one drive induction where there were two.
 
+**C7 landed later on 2026-10-09.** `#axiom_audit M₁ M₂ …` (`tools/ProofGraph/AxiomAudit.lean`)
+walks every declaration of the named modules with the gate's scan and walk, and it stops at
+planned goals. It names each declaration that reaches an axiom outside `[propext, Quot.sound]`.
+It applies no admission, so a module that the gate admits still shows its crossings. Its control
+is in `Test/Audit/ProofGraph.lean`.
+
 **Space.** On 2026-10-09 the data volume held 10 GB free of 460 GB. The cleanup removed eight
 merged and clean Claude worktrees and their branches. It then ran `lake cache clean`, which freed
 the 9.7 GB that no build directory used. The volume then held 28 GB free. The uncommitted changes
