@@ -1,0 +1,15 @@
+{
+  "full_check_exit": 2,
+  "full_check_output": "docs/research/2026-10-10-live-view-invalidation-review/src/ProbeView/Fast.lean:253: new blank line at EOF.\n",
+  "exception": "Exact pinned Fast.lean source has one extra blank line at EOF; its bytes match the reviewed git blob",
+  "remaining_command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check",
+    "--",
+    ".",
+    ":(exclude)docs/research/2026-10-10-live-view-invalidation-review/src/ProbeView/Fast.lean"
+  ],
+  "remaining_exit": 0
+}
