@@ -1,0 +1,517 @@
+import Effect4.Laws.Program.RowProtocol
+
+/-!
+# Api.HostDrive — the driver's run is answered by its reactor
+
+`Run.runWith` opens a program, evaluates its root and then drives it with a reactor
+(`Run.driveFrom`, `src/Effect4/Run/Basic.lean`): it answers each fresh call with the reactor's
+completion and flushes between rounds. Read the reactor as a host (`reactorHost`). When the
+reactor stays inside the envelope (`Reactor.Envelops`) and answers with exits only, every answer
+the drive plays is one the host gives, at the machine's own request. So a funded run of the
+driver meets H9's premises (`runWith_hostAnswered`), and H9 gives its meaning
+(`runWith_denotes`): the reactor's run of the program's call tree is the root's exit with the
+stores, and the reactor ends where the drive left it.
+
+Placement: concept `translation-simulation`, role simulation; claim `rows-denotation-driver`;
+requirement R6, the part "the host as a relation between the machine's calls and its answers".
+Reach: H9's reach (`StraightRows`, one fiber, finished runs), a reactor inside the envelope that
+answers with exits, and a funded run at rest. It does not establish that a drive finishes or
+that its rounds suffice (progress), that a run is funded (the open claim
+`embedded-budget-sufficient`), or anything of a reactor outside the envelope, whose refused
+answers move its state with no decision on the tape. Consumer: the run interface's hosts
+composed by `Effects.Comodel` (`docs/research/2026-10-09-host-coalgebra.md`, slice CO-6).
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Run
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Program.Agreement
+open Effect4.Api.HostSession (Key Call Reply Answer Phase BoundCall Session ReplySlot)
+open Effect4.Api.Runner (Command)
+
+/-- A reactor that answers each call with an exit, never with a read of a cell. -/
+def Reactor.ExitsOnly {σ : Type} (r : Reactor σ) : Prop :=
+  ∀ (row : Program.Row) (request : Val) (st : σ) (c : Answer) (next : σ),
+    r row request st = some (c, next) → ∃ ex, c = .ofExit ex
+
+/-- The machine that the raw stepper leaves on a tape of decisions. -/
+def stepsBy (program : Api.Program) (fuel : Nat) (table : RowTable) (m : Api.Machine)
+    (tape : List Api.Decision) : Api.Machine :=
+  tape.foldl (steppedBy program fuel table) m
+
+/-! ## Two tapes in a row -/
+
+/-- Step of `drive_hostAnswered`: a host that answers two tapes in a row answers the two as one
+tape. -/
+theorem hostAnswered_append (table : RowTable) {σ : Type}
+    (host : Effects.Comodel (RowSig table) σ) (program : Api.Program) (fuel : Nat) :
+    ∀ (T₁ T₂ : List Api.Decision) (m : Api.Machine) (st st' st'' : σ),
+      HostAnswered table host program fuel T₁ m st st' →
+      HostAnswered table host program fuel T₂ (stepsBy program fuel table m T₁) st' st'' →
+      HostAnswered table host program fuel (T₁ ++ T₂) m st st''
+  | [], _, _, _, _, _, h₁, h₂ => by
+    subst h₁
+    exact h₂
+  | .answerAsync f t (.ofExit ex) :: T, T₂, m, st, st', st'', h₁, h₂ => by
+    obtain ⟨i, v, hi, s₁, hrq, hans, hA⟩ := h₁
+    exact ⟨i, v, hi, s₁, hrq, hans, hostAnswered_append table host program fuel T T₂ _ s₁ st' st''
+      hA h₂⟩
+  | .answerAsync _ _ (.ofRefGet _) :: T, T₂, _, st, st', st'', h₁, h₂ =>
+    hostAnswered_append table host program fuel T T₂ _ st st' st'' h₁ h₂
+  | .fire _ :: T, T₂, _, st, st', st'', h₁, h₂ | .flush :: T, T₂, _, st, st', st'', h₁, h₂
+  | .evaluate _ :: T, T₂, _, st, st', st'', h₁, h₂
+  | .yieldVerdict _ _ :: T, T₂, _, st, st', st'', h₁, h₂
+  | .interruptFrom _ _ _ :: T, T₂, _, st, st', st'', h₁, h₂
+  | .installMiddleware :: T, T₂, _, st, st', st'', h₁, h₂
+  | .advance _ :: T, T₂, _, st, st', st'', h₁, h₂ =>
+    hostAnswered_append table host program fuel T T₂ _ st st' st'' h₁ h₂
+
+/-- Step of `drive_hostAnswered`: a tape with no answer decision asks the host nothing. -/
+theorem hostAnswered_quiet (table : RowTable) {σ : Type}
+    (host : Effects.Comodel (RowSig table) σ) (program : Api.Program) (fuel : Nat) (st : σ) :
+    ∀ (T : List Api.Decision) (m : Api.Machine),
+      (∀ d ∈ T, d = Api.flush ∨ d = Api.evaluate) →
+      HostAnswered table host program fuel T m st st
+  | [], _, _ => rfl
+  | d :: T, m, h => by
+    rcases h d List.mem_cons_self with rfl | rfl
+    · exact hostAnswered_quiet table host program fuel st T _
+        fun d' hd' => h d' (List.mem_cons_of_mem _ hd')
+    · exact hostAnswered_quiet table host program fuel st T _
+        fun d' hd' => h d' (List.mem_cons_of_mem _ hd')
+
+/-! ## The machine after rows is the raw stepper's on their tape -/
+
+/-- Step of `drive_hostAnswered`: when the tape reads every row, the machine that the rows leave
+is the raw stepper's on the tape's decisions. It is `tape_replays` with the stepper in place of
+the replay, which stops where the stepper does not. -/
+theorem play_machine_stepsBy (s : Run) (rows : List Command) (h : (tapeFrom s rows).2 = []) :
+    (s.play rows).machine =
+      stepsBy s.built.program s.budget.fuel s.built.table s.machine
+        ((tapeFrom s rows).1.map (·.decision)) := by
+  induction rows generalizing s with
+  | nil => rfl
+  | cons c rest ih =>
+    rw [Run.play_cons]
+    cases hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) with
+    | true =>
+      rw [tapeFrom_frontier s c rest hfront] at h
+      cases h
+    | false =>
+      cases hdec : decisionOf s c (Api.Runner.result s.runner c).phase with
+      | none =>
+        rw [tapeFrom_skip s c rest hfront hdec] at h ⊢
+        rw [ih (s.step c) h, Run.step_built, Run.step_budget, step_keeps_machine s c hfront hdec]
+      | some decision =>
+        cases hreads : readsOn s decision with
+        | false =>
+          rw [tapeFrom_stop s c rest decision hfront hdec hreads] at h
+          cases h
+        | true =>
+          rw [tapeFrom_take s c rest decision hfront hdec hreads] at h ⊢
+          rw [ih (s.step c) h, Run.step_built, Run.step_budget,
+            step_takes_decision s c decision hdec]
+          rfl
+
+/-- Step of `drive_hostAnswered`: the tape of rows played in two parts, when the whole tape reads
+every row. -/
+theorem tapeFrom_append_read (s : Run) (a b : List Command) (h : (tapeFrom s (a ++ b)).2 = []) :
+    (tapeFrom s a).2 = [] ∧ (tapeFrom (s.play a) b).2 = [] ∧
+      (tapeFrom s (a ++ b)).1 = (tapeFrom s a).1 ++ (tapeFrom (s.play a) b).1 := by
+  rw [tapeFrom_append] at h ⊢
+  by_cases ha : (tapeFrom s a).2 = []
+  · rw [if_pos ha] at h ⊢
+    exact ⟨ha, h, rfl⟩
+  · rw [if_neg ha] at h
+    exact absurd (List.append_eq_nil_iff.mp h).1 ha
+
+/-! ## The tape of a control row and of an answer -/
+
+/-- Step of `drive_hostAnswered`: a control row gives its own decision or none. -/
+theorem tapeFrom_control (s : Run) (d : Api.Decision) :
+    ∀ x ∈ (tapeFrom s [.control d]).1.map (·.decision), x = d := by
+  intro x hx
+  cases hfront : ((Api.Runner.result s.runner (.control d)).phase == Phase.frontier) with
+  | true =>
+    rw [tapeFrom_frontier s _ [] hfront] at hx
+    cases hx
+  | false =>
+    cases hdec : decisionOf s (.control d) (Api.Runner.result s.runner (.control d)).phase with
+    | none =>
+      rw [tapeFrom_skip s _ [] hfront hdec] at hx
+      cases hx
+    | some decision =>
+      cases hreads : readsOn s decision with
+      | false =>
+        rw [tapeFrom_stop s _ [] decision hfront hdec hreads] at hx
+        cases hx
+      | true =>
+        rw [tapeFrom_take s _ [] decision hfront hdec hreads] at hx
+        rcases List.mem_cons.mp hx with rfl | hrest
+        · generalize (Api.Runner.result s.runner (.control d)).phase = phase at hdec
+          cases phase <;> cases hdec
+          rfl
+        · cases hrest
+
+/-- Step of `drive_hostAnswered`: an answer that the session accepts, read on the tape. A call
+the machine is holding at a key the session has no record of, answered with a completion the
+machine admits: when the tape reads its three rows, it holds one decision, the answer. The
+session facts are `answer_accepted`'s. -/
+theorem answer_tape (s : Run) (key : Key) (c : Answer) (call : Call)
+    (hat : Api.HostSession.Call.at s key = some call)
+    (hfresh : s.session.active.any (fun b => b.key == key) = false)
+    (hslot : s.session.pending.any (fun slot => slot.key == key) = false)
+    (hfits : admit s.built.table s.machine (.answerAsync key.fiber key.token c) = none)
+    (hread : (tapeFrom s (Rows.answer s key c)).2 = []) :
+    (tapeFrom s (Rows.answer s key c)).1.map (·.decision) = [.answerAsync key.fiber key.token c] := by
+  obtain ⟨op, request, hr, hshape⟩ := at_eq s key call hat
+  have hfib : call.fiber = key.fiber := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have hop : call.op = op := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have hreq : call.request = request := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have htab : call.table = s.built.table := by
+    simp only [hshape, Api.HostSession.Call.claim]
+  have hbkey : (⟨call, key.token⟩ : BoundCall).key = key := by
+    show (⟨call.fiber, key.token⟩ : Key) = key
+    rw [hfib]
+  have hobs : Api.HostProtocol.observe s.session.machine = .awaitingAsync :=
+    observe_awaitingAsync s.session.machine key.fiber key.token op request hr
+  -- the run after the bind row
+  have hb := bindCall_at_bound s key call hat hfresh
+  have ha1 : (s.step (.bind call key.token)).session.active =
+      s.session.active ++ [(⟨call, key.token⟩ : BoundCall)] := by
+    rw [step_session_bind, hb]
+  have hp1 : (s.step (.bind call key.token)).session.pending =
+      s.session.pending ++ [(⟨key, none⟩ : ReplySlot)] := by
+    rw [step_session_bind, hb]
+  have hm1 : (s.step (.bind call key.token)).session.machine = s.session.machine := by
+    rw [step_session_bind, hb]
+  have hh1 : (s.step (.bind call key.token)).session.header = s.session.header := by
+    rw [step_session_bind, hb]
+  -- the receipt is accepted
+  have hfind : (s.step (.bind call key.token)).session.active.find?
+      (fun b => b.key == (Rows.reply s call key c).key) = some ⟨call, key.token⟩ := by
+    rw [ha1]
+    exact find_append_fresh s.session.active ⟨call, key.token⟩ key hbkey hfresh
+  have hslot1 : Api.HostSession.readReply (s.step (.bind call key.token)).session.pending
+      (Rows.reply s call key c).key = none := by
+    rw [hp1]
+    exact readReply_append_fresh s.session.pending key hslot
+  have hany1 : (s.step (.bind call key.token)).session.pending.any
+      (fun slot => slot.key == (Rows.reply s call key c).key) = true := by
+    rw [hp1]
+    exact any_append_key s.session.pending key
+  have henv : Envelope s.built.table (s.step (.bind call key.token)).session.machine
+      ((⟨call, key.token⟩ : BoundCall).record (Rows.reply s call key c)) := by
+    rw [hm1]
+    refine ⟨htab, ?_, ?_⟩
+    · show requestOf s.session.machine call.fiber key.token = some (call.op, call.request)
+      rw [hfib, hop, hreq]
+      exact hr
+    · show admit s.built.table s.session.machine (.answerAsync call.fiber key.token c) = none
+      rw [hfib]
+      exact hfits
+  have hobs1 : Api.HostProtocol.observe (s.step (.bind call key.token)).session.machine =
+      .awaitingAsync := by
+    rw [hm1]
+    exact hobs
+  have hsub := submit_accepted (s.step (.bind call key.token)).session (Rows.reply s call key c)
+    ⟨call, key.token⟩ rfl (by rw [hh1]; rfl) hfind rfl hslot1 hany1 henv hobs1
+  have hpre := preflight_ok (s.step (.bind call key.token)).session (Rows.reply s call key c)
+    ⟨call, key.token⟩ rfl (by rw [hh1]; rfl) hfind rfl henv
+  -- the run after the receipt row
+  have ha2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).session.active
+      = (s.step (.bind call key.token)).session.active := by
+    rw [step_session_submit, hsub]
+  have hp2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).session.pending
+      = Api.HostSession.storeReply (s.step (.bind call key.token)).session.pending
+        (Rows.reply s call key c) := by
+    rw [step_session_submit, hsub]
+  have hm2 : ((s.step (.bind call key.token)).step (.submit (Rows.reply s call key c))).session.machine
+      = (s.step (.bind call key.token)).session.machine := by
+    rw [step_session_submit, hsub]
+  have hfind2 : ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session.active.find? (fun b => b.key == key)
+      = some ⟨call, key.token⟩ := by
+    rw [ha2]
+    exact hfind
+  have hread2 : Api.HostSession.readReply ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session.pending key
+      = some (Rows.reply s call key c) := by
+    rw [hp2]
+    exact Api.HostSession.readReply_store_self (s.step (.bind call key.token)).session.pending
+      (Rows.reply s call key c) hany1
+  have hpre2 : Api.HostSession.preflight ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session (Rows.reply s call key c)
+      = .ok (.answerAsync call.fiber key.token c) := by
+    rw [step_session_submit, hsub]
+    exact hpre
+  have hobs2 : Api.HostProtocol.observe ((s.step (.bind call key.token)).step
+      (.submit (Rows.reply s call key c))).session.machine = .awaitingAsync := by
+    rw [hm2]
+    exact hobs1
+  have happly := applyReply_accepted ((s.step (.bind call key.token)).step
+    (.submit (Rows.reply s call key c))).session key s.budget.fuel ⟨call, key.token⟩
+    (Rows.reply s call key c) (.answerAsync call.fiber key.token c) hfind2 hread2 hpre2 hobs2
+  -- the tape of the three rows
+  have hfront1 : ((Api.Runner.result s.runner (.bind call key.token)).phase == Phase.frontier)
+      = false := by
+    show ((Api.HostSession.bindCall s.session call key.token).phase == Phase.frontier) = false
+    rw [hb]
+    rfl
+  have hfront2 : ((Api.Runner.result (s.step (.bind call key.token)).runner
+      (.submit (Rows.reply s call key c))).phase == Phase.frontier) = false := by
+    show ((Api.HostSession.submit (s.step (.bind call key.token)).session
+      (Rows.reply s call key c)).phase == Phase.frontier) = false
+    rw [hsub]
+    rfl
+  rw [answer_rows_three s key c call hat] at hread ⊢
+  rw [tapeFrom_skip s _ _ hfront1 rfl, tapeFrom_skip _ _ _ hfront2 rfl] at hread ⊢
+  rcases happly with happlied | hfrontier
+  · have hfront3 : ((Api.Runner.result ((s.step (.bind call key.token)).step
+        (.submit (Rows.reply s call key c))).runner (.apply key)).phase == Phase.frontier)
+        = false := by
+      show ((Api.HostSession.applyReply ((s.step (.bind call key.token)).step
+        (.submit (Rows.reply s call key c))).session key s.budget.fuel).phase == Phase.frontier)
+        = false
+      rw [happlied]
+      rfl
+    have hdec3 : decisionOf ((s.step (.bind call key.token)).step
+        (.submit (Rows.reply s call key c))) (.apply key)
+        (Api.Runner.result ((s.step (.bind call key.token)).step
+          (.submit (Rows.reply s call key c))).runner (.apply key)).phase
+        = some (.answerAsync key.fiber key.token c) := by
+      show decisionOf _ (.apply key) (Api.HostSession.applyReply ((s.step (.bind call
+        key.token)).step (.submit (Rows.reply s call key c))).session key s.budget.fuel).phase = _
+      rw [happlied]
+      show (Api.HostSession.readReply _ key).map replyDecision = _
+      rw [hread2]
+      rfl
+    cases hreads : readsOn ((s.step (.bind call key.token)).step
+        (.submit (Rows.reply s call key c))) (.answerAsync key.fiber key.token c) with
+    | false =>
+      rw [tapeFrom_stop _ _ _ _ hfront3 hdec3 hreads] at hread
+      cases hread
+    | true =>
+      rw [tapeFrom_take _ _ _ _ hfront3 hdec3 hreads]
+      rfl
+  · have hfront3 : ((Api.Runner.result ((s.step (.bind call key.token)).step
+        (.submit (Rows.reply s call key c))).runner (.apply key)).phase == Phase.frontier)
+        = true := by
+      show ((Api.HostSession.applyReply ((s.step (.bind call key.token)).step
+        (.submit (Rows.reply s call key c))).session key s.budget.fuel).phase == Phase.frontier)
+        = true
+      rw [hfrontier]
+      rfl
+    rw [tapeFrom_frontier _ _ _ hfront3] at hread
+    cases hread
+
+/-! ## The drive -/
+
+/-- The reactor read as a host answers a call on a table row as the reactor does. -/
+theorem reactorHost_answer (table : RowTable) {σ : Type} (r : Reactor σ) {i : Nat}
+    (hi : i < table.length) {row : Program.Row} {request : Val} {st next : σ} {ex : ExitV}
+    (hrow : externalRow table i = some row) (h : r row request st = some (.ofExit ex, next)) :
+    (reactorHost table r).answer ⟨⟨i, hi⟩, request⟩ st = some (ex, next) := by
+  show (match externalRow table i with
+    | none => none
+    | some row =>
+      match r row request st with
+      | some (.ofExit ex, next) => some (ex, next)
+      | _ => none) = some (ex, next)
+  rw [hrow]
+  dsimp only
+  rw [h]
+
+/-- **The drive's answers are its reactor's.** From any run, a reactor inside the envelope that
+answers with exits drives rows whose tape, when it reads every row, the reactor read as a host
+answered: at each answer, the host gives the machine's request the answer's exit, and its state
+moves as the reactor's did. Every decision of the tape is a host's (`hostDecision`). Reach: any
+run of the table, any rounds. Not established: that the drive finishes or reads every row. -/
+theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
+    (henv : r.Envelops table) (hexits : r.ExitsOnly) :
+    ∀ (rounds : Nat) (s : Run) (st : σ), s.built.table = table →
+      (tapeFrom s (driveFrom r rounds s st).2.1).2 = [] →
+      HostAnswered table (reactorHost table r) s.built.program s.budget.fuel
+          ((tapeFrom s (driveFrom r rounds s st).2.1).1.map (·.decision)) s.machine st
+          (driveFrom r rounds s st).2.2 ∧
+        ((tapeFrom s (driveFrom r rounds s st).2.1).1.map (·.decision)).all hostDecision = true
+  | 0, _, _, _, _ => ⟨rfl, rfl⟩
+  | rounds + 1, s, st, htable, hread => by
+    rw [driveFrom] at hread ⊢
+    split at hread
+    · rename_i await hfreshCall
+      split at hread
+      · rename_i hrow
+        exact ⟨rfl, rfl⟩
+      · rename_i row hrow
+        split at hread
+        · rename_i hreact
+          exact ⟨rfl, rfl⟩
+        · rename_i c next hreact
+          dsimp only at hread ⊢
+          obtain ⟨hmem, hactive, hpending⟩ := freshCall_facts s await hfreshCall
+          obtain ⟨i, hop, hext⟩ := rowOf_external s await.op row hrow
+          rw [htable] at hext
+          obtain ⟨ex, rfl⟩ := hexits row await.request st c next hreact
+          have hreq : requestOf s.machine await.fiber await.token =
+              some (.external i, await.request) := by
+            rw [← hop]
+            exact requestOf_of_mem_awaits s.machine await hmem
+          have hfits : admit s.built.table s.machine
+              (.answerAsync (⟨await.fiber, await.token⟩ : Key).fiber
+                (⟨await.fiber, await.token⟩ : Key).token (.ofExit ex)) = none := by
+            rw [htable]
+            exact henv s.machine await.fiber await.token i row await.request st (.ofExit ex) next
+              hreq hext hreact
+          obtain ⟨hA, hB, htape⟩ := tapeFrom_append_read s _ _ hread
+          have hans := answer_tape s ⟨await.fiber, await.token⟩ (.ofExit ex)
+            (Api.HostSession.Call.claim s ⟨await.fiber, await.token⟩ (.external i) await.request)
+            (at_of_requestOf s ⟨await.fiber, await.token⟩ (.external i) await.request hreq)
+            hactive hpending hfits hA
+          have hmach := play_machine_stepsBy s _ hA
+          rw [hans] at hmach
+          obtain ⟨hrest, hall⟩ := drive_hostAnswered table r henv hexits rounds
+            (s.play (Rows.answer s ⟨await.fiber, await.token⟩ (.ofExit ex))) next
+            (by rw [play_built]; exact htable) hB
+          rw [hmach, play_built, play_budget, htable] at hrest
+          rw [htape, List.map_append, hans]
+          refine ⟨hostAnswered_append table (reactorHost table r) _ _ _ _ _ st next _
+            ⟨i, await.request, lt_of_externalRow hext, next, hreq,
+              reactorHost_answer table r (lt_of_externalRow hext) hext hreact, rfl⟩ hrest, ?_⟩
+          rw [List.cons_append, List.nil_append, List.all_cons, hall]
+          rfl
+    · rename_i hfreshCall
+      split at hread
+      · rename_i hout
+        rw [if_pos hout]
+        exact ⟨rfl, rfl⟩
+      · rename_i hout
+        rw [if_neg hout]
+        dsimp only at hread ⊢
+        have hflush : ∀ x ∈ (tapeFrom s Rows.flush).1.map (·.decision), x = Api.flush :=
+          tapeFrom_control s Api.flush
+        split at hread
+        · rename_i hdone
+          rw [if_pos hdone]
+          refine ⟨hostAnswered_quiet table _ _ _ st _ _ fun d hd => Or.inl (hflush d hd), ?_⟩
+          rw [List.all_eq_true]
+          intro d hd
+          rw [hflush d hd]
+          rfl
+        · rename_i hdone
+          rw [if_neg hdone]
+          dsimp only at hread ⊢
+          obtain ⟨hA, hB, htape⟩ := tapeFrom_append_read s _ _ hread
+          have hmach := play_machine_stepsBy s _ hA
+          obtain ⟨hrest, hall⟩ := drive_hostAnswered table r henv hexits rounds
+            (s.play Rows.flush) st (by rw [play_built]; exact htable) hB
+          rw [hmach, play_built, play_budget, htable] at hrest
+          rw [htape, List.map_append]
+          refine ⟨hostAnswered_append table (reactorHost table r) _ _ _ _ _ st st _
+            (hostAnswered_quiet table _ _ _ st _ _ fun d hd => Or.inl (hflush d hd)) hrest, ?_⟩
+          rw [List.all_append, hall, Bool.and_true, List.all_eq_true]
+          intro d hd
+          rw [hflush d hd]
+          rfl
+
+/-! ## The driver's run -/
+
+/-- Step of `runWith_hostAnswered`: playing rows appends them to the journal. -/
+theorem play_journal (s : Run) (rows : List Command) : (s.play rows).journal = s.journal ++ rows := by
+  induction rows generalizing s with
+  | nil => exact (List.append_nil _).symm
+  | cons c rest ih => rw [Run.play_cons, ih, Run.step_journal, List.append_assoc]; rfl
+
+/-- Step of `runWith_hostAnswered`: a run played from a fresh open was opened as that open. -/
+theorem openedOf_play_open (b : Api.Built) (id : String) (budget : Api.Budget)
+    (rows : List Command) : openedOf ((Run.open b id budget).play rows) = Run.open b id budget := by
+  rw [openedOf, play_built, play_id, play_budget, play_profile]
+  rfl
+
+/-- **The driver's run is answered by its reactor.** Open a program, evaluate its root, and
+drive it with a reactor inside the envelope that answers with exits. When the run is funded, the
+reactor read as a host answered the run's tape from the program's load, its state going from the
+start to the drive's end, and every decision of the tape is a host's. -/
+theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (hfund : funded (Run.runWith b r st id budget rounds).1 = true) :
+    HostAnswered b.table (reactorHost b.table r) b.program budget.fuel
+        (tapeOf (Run.runWith b r st id budget rounds).1)
+        (Api.load b.program budget.compileFuel) st (Run.runWith b r st id budget rounds).2 ∧
+      hostDriven (Run.runWith b r st id budget rounds).1 = true := by
+  have hrun : (Run.runWith b r st id budget rounds).1 =
+      (Run.open b id budget).play (Rows.start ++
+        (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).2.1) := by
+    show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1 = _
+    rw [drive_eq_play, play_append]
+  have hjournal : (Run.runWith b r st id budget rounds).1.journal = Rows.start ++
+      (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).2.1 := by
+    rw [hrun, play_journal, open_journal]
+    rfl
+  have htapeOf : tapeOf (Run.runWith b r st id budget rounds).1 =
+      (tapeFrom (Run.open b id budget) (Rows.start ++
+        (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).2.1)).1.map
+          (·.decision) := by
+    rw [tapeOf, ← hjournal, hrun, openedOf_play_open]
+  have hread : (tapeFrom (Run.open b id budget) (Rows.start ++
+      (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).2.1)).2 = [] := by
+    have h := List.isEmpty_iff.mp hfund
+    rw [hrun, openedOf_play_open, play_journal, open_journal] at h
+    exact h
+  obtain ⟨hA, hB, htape⟩ := tapeFrom_append_read _ _ _ hread
+  have hstart : ∀ x ∈ (tapeFrom (Run.open b id budget) Rows.start).1.map (·.decision),
+      x = Api.evaluate := tapeFrom_control _ Api.evaluate
+  obtain ⟨hdrive, hall⟩ := drive_hostAnswered b.table r henv hexits rounds
+    ((Run.open b id budget).play Rows.start) st (by rw [play_built]; rfl) hB
+  rw [play_built, play_budget, play_machine_stepsBy _ _ hA] at hdrive
+  refine ⟨?_, ?_⟩
+  · rw [htapeOf, htape, List.map_append]
+    exact hostAnswered_append b.table (reactorHost b.table r) _ _ _ _ _ st st _
+      (hostAnswered_quiet b.table _ _ _ st _ _ fun d hd => Or.inr (hstart d hd)) hdrive
+  · show (tapeOf (Run.runWith b r st id budget rounds).1).all hostDecision = true
+    rw [htapeOf, htape, List.map_append, List.all_append, hall, Bool.and_true, List.all_eq_true]
+    intro d hd
+    rw [hstart d hd]
+    rfl
+
+/-- **H9 at the driver**: the reactor's run of the call tree is the driver's. Open a program of
+the fragment, evaluate its root and drive it with a reactor inside the envelope that answers
+with exits. When the run is funded, at rest and its root exited, the reactor read as a host runs
+the program's call tree to the root's exit with the run's stores, and ends at the drive's state.
+Reach: `StraightRows`, one fiber, a reactor inside the envelope that answers with exits. It does
+not establish that the drive finishes, that its rounds suffice, or that the run is funded.
+Concept `translation-simulation`, role simulation; requirement R6. Consumer: the run
+interface's hosts, composed by `Effects.Comodel` (slice CO-6). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem runWith_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
+    (budget : Api.Budget) (rounds : Nat) (henv : r.Envelops b.table) (hexits : r.ExitsOnly)
+    (hfrag : StraightRows b.table b.program = true)
+    (hfund : funded (Run.runWith b r st id budget rounds).1 = true)
+    (hrest : atRest (Run.runWith b r st id budget rounds).1 = true)
+    (ex : ExitV) (hex : (Run.runWith b r st id budget rounds).1.exit = some ex) :
+    hostRun (reactorHost b.table r) b.program [] Stores.empty st =
+      some (ex, ((Run.runWith b r st id budget rounds).1.machine.state,
+        (Run.runWith b r st id budget rounds).2)) := by
+  obtain ⟨hA, hhost⟩ := runWith_hostAnswered b r st id budget rounds henv hexits hfund
+  have hreach : Run.Reached (Run.runWith b r st id budget rounds).1 := by
+    show Run.Reached (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1
+    rw [drive_eq_play]
+    exact Run.Reached.play _ _ (Run.Reached.play _ _ (Run.Reached.open b id budget))
+  have hbuilt : (Run.runWith b r st id budget rounds).1.built = b := by
+    show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1.built = b
+    rw [drive_eq_play, play_built, play_built]
+    rfl
+  have hbudget : (Run.runWith b r st id budget rounds).1.budget = budget := by
+    show (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).1.budget = budget
+    rw [drive_eq_play, play_budget, play_budget]
+    rfl
+  have h := denoteRows_eq_session_host (Run.runWith b r st id budget rounds).1 hreach hfund hrest
+    hhost
+  rw [hbuilt, hbudget] at h
+  exact h hfrag (reactorHost b.table r) st _ hA ex hex
+
+end Effect4.Run

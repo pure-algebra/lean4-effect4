@@ -305,6 +305,16 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   holds for the typed host. The session's reply admission also reads a call's checked instance,
   which depends on the call's site. A protocol at sites needs a signature indexed by the call site: the program's
   call tree labelled by addresses, and a lens that forgets them. That is part of CO-7.
+- **CO-6, H9 at the driver** (`src/Effect4/Laws/Api/HostDrive.lean`, claim
+  `rows-denotation-driver`). `Run.runWith` drives a program with a reactor. Read the reactor as a
+  host (`reactorHost`). Take a reactor inside the envelope (`Reactor.Envelops`) that answers with
+  exits. Then each answer of a funded drive is one the host gives at the machine's request
+  (`drive_hostAnswered`, `runWith_hostAnswered`). So H9 gives the meaning of the driver's run
+  (`runWith_denotes`): the reactor's run of the call tree is the root's exit with the stores.
+  Its axioms are `[propext, Quot.sound]`. The premise `Envelops` quantifies over machines, and
+  no concrete reactor proves it yet. The next step is a guard: a reactor behind the row
+  protocol envelops the table, at rows whose columns allocate nothing. Then the battery's
+  repository runs read the theorem.
 
 ## 8. What the owner must decide
 
@@ -321,7 +331,7 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
 
 ## 9. What this note does not establish
 
-- No theorem of section 5 exists yet.
+- Section 5's theorems are those of section 7.1; the session's system for pictures is not built.
 - The bialgebra statement of section 3.1 is Jacobs'; nothing here shows that our machine has a
   distributive law. The plan uses bisimulation, which needs no such law.
 - Fairness, liveness and several fibers are named, not designed.

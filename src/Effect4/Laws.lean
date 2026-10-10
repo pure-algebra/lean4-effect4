@@ -44,6 +44,7 @@ import Effect4.Laws.Program.Agreement.Calls
 import Effect4.Laws.Program.Agreement.Hosted
 import Effect4.Laws.Program.HostRuns
 import Effect4.Laws.Program.RowProtocol
+import Effect4.Laws.Api.HostDrive
 import Effect4.Laws.Program.MeaningEq
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.DenoteR
