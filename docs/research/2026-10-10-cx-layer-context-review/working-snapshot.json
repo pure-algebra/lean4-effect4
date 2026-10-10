@@ -1,0 +1,41 @@
+{
+  "captured_utc": "2026-10-10T13:39:43.841883+00:00",
+  "primary_head": "f00008eeaef00b67fe93cfd0327754c9f42694ee",
+  "primary_status": [
+    " M Test/Audit/ProofGraphPlan.lean",
+    " M Test/Counterexamples/Machine/Semantics/ScopePresence.lean",
+    " M Test/Counterexamples/Machine/Semantics/TrivialPosts.lean",
+    " M Test/Program/LayerDenotation.lean",
+    " M Test/Program/LayerRefs.lean",
+    " M Test/Program/ProtocolPosts.lean",
+    " M Test/Program/TypedDenotation.lean",
+    " M docs/research/2026-10-10-cx-lexical-scope.md",
+    " M src/Effect4/Laws/Program/MeaningSound.lean",
+    " M src/Effect4/Laws/Program/TyView.lean",
+    " M src/Effect4/Laws/Program/Typed/Adequacy.lean",
+    " M src/Effect4/Laws/Program/Typed/Admission.lean",
+    " M src/Effect4/Laws/Program/Typed/Assembly.lean",
+    " M src/Effect4/Laws/Program/Typed/Body.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+    " M src/Effect4/Laws/Program/Typed/Commands/Clauses/Loop.lean",
+    " M src/Effect4/Laws/Program/Typed/Denotation.lean",
+    " M src/Effect4/Laws/Program/Typed/LayerArm.lean",
+    " M src/Effect4/Laws/Program/Typed/Mask.lean",
+    " M src/Effect4/Laws/Program/Typed/Residual.lean",
+    " M src/Effect4/Laws/Program/Typed/Scope.lean"
+  ],
+  "source_sha256": {
+    "src/Effect4/Laws/Program/Typed/LayerArm.lean": "353403f3bc5b18d524fa90420225cfe75b4418019c4d89a33a2a786ef5b009a8",
+    "src/Effect4/Laws/Program/Typed/Scope.lean": "736df2b66de7032d9855639dd36e6acdfdae57ea1f140b1a063cc4e7f4986f8c",
+    "src/Effect4/Laws/Program/Typed/Admission.lean": "0b0ff6f1ab78881996dfb6178cd1786eefa6e0759f8a124b89c345838031e7ef",
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": "75c2abdb286ad37b4c35a8b2fca260623e8b2afff7aa74a7484a398df6f16d7f",
+    "src/Effect4/Laws/Program/Typed/Denotation.lean": "2b82f6614a24eeccfa52541b8880cb546ec4ee1351d97480979c9e91c05473fb",
+    "src/Effect4/Laws/Program/Typed/Adequacy.lean": "e68dbebfccbccde2b48a74e7bbfa230d95ffd43929a5e27f5caaff57169e3ebf",
+    "docs/research/2026-10-10-cx-lexical-scope.md": "23a8cae30cbf268dcd34dd7c8d8f4edf9d302bc44642dc3efddad1ccd0c293fc"
+  },
+  "evidence": "Read-only working source snapshot; these changed proofs were not rebuilt in the review worktree.",
+  "crossScopeRef_builds_source": "/-- **A layer reference whose target stands in another scope** (slice CX1,\n`docs/research/2026-10-10-cx-lexical-scope.md` \u00a710). The reference's hop runs the target's term at\nthe target's path with the reference's stack (`denoteLayer_ref_redirect`), and the memo map keys\nthe build on the target's path. The checker types the reference at its own scope (the expansion),\nand `layerRefsWF` reads no scope, so the checker admits a reference whose target's path reads\nother parameters than the stack holds; the hop's point is then no typed point (`LayerPointTyped`\nreads its path's scope). Open: whether such a build is typed at the reference's type, or the\nchecker refuses such a reference (an owner's ruling). M5 and M7 rest on it in place of\n`invoke_arm`. Concept `residual-program-typing`, claim `denote-typed`, requirement R4; its\nconsumer is `ref_builds`. -/\n@[semantics \"residual-program-typing\" (requirement := R4)]\nproof_goal crossScopeRef_builds {root : ProgramSource} {f : Nat} {target : List Nat}\n    (hwf : root.program.layerRefsWF = true)\n    (hIH : \u2200 f' \u2264 f, \u2200 (c : NativeEff) (path : List Nat),\n      Node.at_ (.eff root.program) path = some (.eff c) \u2192 ChildDenotes root f' c path)\n    (q : Point) (w : World) (lt : LayerTy) (m : MemoMapId) (scope : Nat) (hf : q.fuel \u2264 f)\n    (htie : w.serviceTy = root.sig.serviceTy)\n    (hat : Node.at_ (.eff root.program) q.path = some (.layer (.ref target)))\n    (hcross : scopeParams root.program target \u2260 scopeParams root.program q.path)\n    (hpt : LayerPointTyped root w q lt) (hlive : ScopeLive w scope) (hmemo : MemoLive w m) :\n    TypedProg root w (buildTy lt) (denoteLayer root.program (.ref target) q m scope)\n\n",
+  "design_section_10": "## 10. Finding: a layer reference may leave its target's scope (during CX1)\n\nThe typed points read their path's scope. A layer reference `LayerTerm.ref target` hops: the run\nbuilds the target's term at the target's path, with the reference's stack\n(`denoteLayer_ref_redirect`). The checker types the reference at its own position, as the target's\nterm expanded there (`Eff.expandIn`). `Eff.layerRefsWF` (`src/Effect4/Program/Refs.lean`) checks a\ntarget's order and kind, not its scope. So the checker admits a reference whose target stands in\nanother scope: one in the main program naming a layer in a definition's body, or one in a body\nnaming a layer in another body. At such a hop the stack is typed for the reference's scope, not\nthe target's, so the redirected point is no `LayerPointTyped` point.\n\n- **Proved**: a reference whose target stands in its own scope (`layerPointTyped_redirect` with\n  the scope equality, `ref_builds`).\n- **Placed**: the other case, `crossScopeRef_builds` (`Typed/LayerArm.lean`). M5, M7 and their\n  claims rest on it now, in place of `invoke_arm`.\n- **Not known**: whether such a build is typed. The memo map keys a build on the target's path,\n  and a forked map reads its parent's entries (`MemoWorld.lookup`; `forkMemoMapUnsafe`,\n  `Layer.ts`), so one build can answer references in two scopes. A built context is typed by the\n  service table, which no scope changes, and a failed build stops the provide whose body would read\n  the map, so a shared success is typed. Whether a failure built in one scope can reach another is\n  not established: it needs a construction that reads the map it is building.\n\nThe decision is the owner's, because it is one of representation and meaning:\n\n| Option | What changes | Effect on the goal |\n| --- | --- | --- |\n| (a) the checker refuses a reference that leaves its target's scope | `layerRefsWF` reads `scopeParams`; the API's refusal gains a reason | vacuous: proved from `SourceWF` |\n| (b) a layer point carries its scope instead of reading its path's | `LayerPointTyped`, the memo rows and the memo table take the scope | proved with the memo argument above |\n| (c) the checker refuses a parameter's run inside a layer | the checker's layer rules | still needs the stack at the target |\n\nOption (a) is the TypeScript reading: a `const` in a function body is visible in no other\nfunction, and the printer already hoists every target to a module-level constant\n(`printModule`). Under (a) a reference from a body to a layer outside every body is refused too,\nunless a lemma types a target outside every body at the reference's scope. That lemma is not\nwritten.\n\nA related observation on meaning, not checked: the memo map keys a layer in a definition's body\non its path, so an invocation nested inside a provide of that layer reuses the outer\ninvocation's build. rc.112 builds a new layer object for each call that constructs one.\n",
+  "current_draft_observation": "The earlier LayerRefsScoped admission premise and layerRefsScoped_of_typeOf goal have been removed. crossScopeRef_builds now records the unresolved reference case."
+}

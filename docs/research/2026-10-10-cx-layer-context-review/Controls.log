@@ -1,0 +1,3 @@
+$ lake env sh -c 'LEAN_PATH="$1:$LEAN_PATH" lean --root="$1" -DwarningAsError=true -o "$1/$2.olean" "$1/$2.lean"' cx-layer-context-review /Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-layer-context-review Controls
+
+Exit: 0
