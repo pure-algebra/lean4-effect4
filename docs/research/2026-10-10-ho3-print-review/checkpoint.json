@@ -11,7 +11,8 @@
   "open_design_findings": [
     "HO3-REQ-01",
     "HO3-NAME-01",
-    "HO3-SVC-01"
+    "HO3-SVC-01",
+    "HO3-ANN-01"
   ],
   "landed_resolutions": {
     "ML2B-TRUST-01": "54ed060e6f12ebad49c05acd791a75e4425bd2f9; source matches independently audited candidate",
@@ -29,5 +30,6 @@
   "no_production_edits": true,
   "no_push_or_merge": true,
   "draft_snapshot": "owner-draft.json",
-  "landed_source_comparison": "landed-source-comparison.json"
+  "landed_source_comparison": "landed-source-comparison.json",
+  "latest_followup": "followup-1945/checkpoint.json"
 }

@@ -4,6 +4,8 @@ Before widening HO-3 acceptance, carry callback requirements into the printed Ty
 Close the name-capture cases and refuse deferred service forms explicitly.
 These are findings about the proposed design and working changes, not regressions in shipped HO-3 support.
 
+[The generated-output follow-up](followup-1945/README.md) adds a shared annotation finding and completes the reconstruction audit.
+
 ## Scope and evidence
 
 The landed base is `54ed060e6f12ebad49c05acd791a75e4425bd2f9`.
