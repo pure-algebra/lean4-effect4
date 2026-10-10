@@ -98,9 +98,12 @@ program against a comodel is interpreting it in the state monad. Comodels compos
 - **recording**: a host can write a transcript of row, request and answer beside its state.
 
 Each construction has one law at `interpret`. These are the composable utilities the host-call
-note listed. The literature names this structure: Plotkin and Power's comodels, Uustalu's
-stateful runners, and Ahman and Bauer's runners. None of these texts is filed here, so this note
-cites none of their statements; filing them is section 8's third question.
+note listed. The literature names this structure. The texts are filed in
+`docs/research/2026-10-09-comodel-papers/`, whose README gives the locators. Plotkin and Power
+define comodels (Definition 3.1). Uustalu proves that stateful runners are comodels
+(Proposition 3.1). Ahman and Bauer's effectful runners land in a monad (Definition 2,
+Proposition 3); a comodel of `Effects` is one at `StateT σ Option`. Setzer and Hancock's
+dependent interfaces (section 3) are the indexed signatures of section 3.3.
 
 ### 3.3 Protocols, of the first and of a higher order
 
