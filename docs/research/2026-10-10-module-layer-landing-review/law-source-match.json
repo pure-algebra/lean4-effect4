@@ -1,0 +1,72 @@
+{
+  "previous_review": "16fb2477b93d2944622d0beae519fef003a90663",
+  "reviewed_landing": "235403a03b8843d4b86cb05759df4090a9d9bdb1",
+  "matches": [
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Admission.lean",
+      "previous_sha256": "5aeb41e4b1a24d1eced877dd4cfd46b42e18f28210b85750a10d0287369639f3",
+      "committed_sha256": "5aeb41e4b1a24d1eced877dd4cfd46b42e18f28210b85750a10d0287369639f3",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scope.lean",
+      "previous_sha256": "d84998807236211fa4a39a98a4d541adf3a6cb4dbdbe018d37027cecc3a8684b",
+      "committed_sha256": "d84998807236211fa4a39a98a4d541adf3a6cb4dbdbe018d37027cecc3a8684b",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/LayerArm.lean",
+      "previous_sha256": "43cfb380165a2de016865de219da47ca0a523a64368fe933ab2e7e1daf86954e",
+      "committed_sha256": "43cfb380165a2de016865de219da47ca0a523a64368fe933ab2e7e1daf86954e",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "previous_sha256": "761f2996cbfaca58af2a72a12cae2694bdef28b0126a3ccba7900c78a2af1969",
+      "committed_sha256": "761f2996cbfaca58af2a72a12cae2694bdef28b0126a3ccba7900c78a2af1969",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "previous_sha256": "8c9e3282af6dd3f15078c8f308691e1eb108acecc0ecd859685bb10bbe6dff95",
+      "committed_sha256": "8c9e3282af6dd3f15078c8f308691e1eb108acecc0ecd859685bb10bbe6dff95",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Body.lean",
+      "previous_sha256": "f5973632247238ef06e090381dc5d1e6fa8b849d126bb686578b175ddd252bfd",
+      "committed_sha256": "f5973632247238ef06e090381dc5d1e6fa8b849d126bb686578b175ddd252bfd",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/PartsTable.lean",
+      "previous_sha256": "b166f999e8cfb3cc8e2119d4d899e22d161b0b85a1c89462d79c158b8a89f66e",
+      "committed_sha256": "b166f999e8cfb3cc8e2119d4d899e22d161b0b85a1c89462d79c158b8a89f66e",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Parts.lean",
+      "previous_sha256": "80ca91a6077528a3c1cbccd0ebc3c1ac8de1a14db9ed1209015ca5b8ca08436a",
+      "committed_sha256": "80ca91a6077528a3c1cbccd0ebc3c1ac8de1a14db9ed1209015ca5b8ca08436a",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "previous_sha256": "dd18f5f169b32e042fd9ecd84aa3ddf7bcb960a21f00358260bcb9fe10f291e6",
+      "committed_sha256": "dd18f5f169b32e042fd9ecd84aa3ddf7bcb960a21f00358260bcb9fe10f291e6",
+      "match": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "previous_sha256": "1dde88617d32403c3712aa1d5402068d4b191d1900ca1a92eedbd9385fe35f69",
+      "committed_sha256": "1dde88617d32403c3712aa1d5402068d4b191d1900ca1a92eedbd9385fe35f69",
+      "match": true
+    },
+    {
+      "path": "docs/research/2026-10-10-layer-scopes.md",
+      "previous_sha256": "c5d5575eda33dcbbeea397984b416efb3af8ed52aa9a5ef831093e778b4285e9",
+      "committed_sha256": "c5d5575eda33dcbbeea397984b416efb3af8ed52aa9a5ef831093e778b4285e9",
+      "match": true
+    }
+  ]
+}

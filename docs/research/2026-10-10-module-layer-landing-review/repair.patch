@@ -1,0 +1,11 @@
+--- a/scripts/lib/conservativity.py
++++ b/scripts/lib/conservativity.py
+@@ -367,7 +367,7 @@
+                 if x == y:
+                     continue
+                 # a constructor the policy names as re-typed keeps its name and position
+-                if y is not None and item_name(x) == item_name(y) and (fam, item_name(x)) in retyped:
++                if path != 'ocaml/goldens/eff/wire-tags.txt' and y is not None and item_name(x) == item_name(y) and (fam, item_name(x)) in retyped:
+                     named_retypings.append(f'{path}: {fam} position {i}: {x!r} -> {y!r}')
+                     continue
+                 problems.append(f'{path}: {fam} position {i}: BASE {x!r}, CAND {y!r}')
