@@ -202,10 +202,18 @@ its arrows. Anything else is a leak.
 - The change lands as commits by explicit paths, each after a narrow build of the modules it
   touches. A narrow build is `lake build <Module>` and its direct dependents, or
   `lake env lean <file>` for a test.
+- A landing owes two things (owner, 2026-10-10):
+  - the proofs: the narrow build, then `#axiom_audit` over the landing's modules;
+  - the behaviour gates the change reaches: the runs that compare with an outside implementation.
+- The behaviour gates are the targets of `make check-full` (`make check` is the build alone):
+  - the codec against rc.112: `check-schema-codec`, `check-schema-ts`;
+  - the machine and the OCaml route: `check-compiler`, `check-native`, `check-ocaml`;
+  - the meaning against the Effect runtime: `check-truth`, `check-host-protocol`;
+  - the printed TypeScript under tsgo: `check-target`, `check-ts-reader`, `check-corpus`, `check-tsdiag`.
+- No other run is owed. The batteries (`lake build Test`) and the whole-tree axiom gate run when
+  the owner asks. So do the ratchets, the policies, the drift and the document checks.
 - A gate depends on its sources and builds exactly what its tool imports (`build_imports` in the
-  `Makefile`). It never depends on `build`, which builds every battery and the axiom gate.
-- No closure or battery run is owed for an integration. The whole battery (`lake build Test`, the
-  axiom gate) and `make check` and `make check-full` run when the owner asks for a sweep.
+  `Makefile`).
 - A docstring or comment edit needs no build of a dependent module.
 - An agent commits the same way, on its own branch in its own worktree. It starts from the base the
   coordinator names and edits the files its brief names.
@@ -227,7 +235,7 @@ its arrows. Anything else is a leak.
   - the claims by status and the open planned goals;
   - the registers;
   - the documents' stale references.
-- `make check-docs`, part of `make check`, refuses a path, link, `git:<rev>:<path>` citation or make
+- `make check-docs` refuses a path, link, `git:<rev>:<path>` citation or make
   target that an authority document names and that does not resolve. A cited research note must be
   tracked (force-added).
 - History (`docs/research/`, the archives, `ATTACKS.md`) is not checked. What these tools measure
@@ -268,10 +276,8 @@ its arrows. Anything else is a leak.
 - Pass a table as data. Never bind one with `let` before a closure that a definition returns.
   Lean compiles the closure's argument as one more parameter, so the table is built at every
   call. `Test/Audit/ClosureAudit.lean` refuses the shape (`#closure_audit`).
-- The gates that run with a commit are the ones the change reaches:
-  - `make check-cases` after a new match on a policy family;
-  - `python3 scripts/generate.py --only <family>` after a generator or its input, whose output
-    must be byte-identical or committed;
+- Regenerate what a change reaches, so the behaviour gates run the current code:
+  - `python3 scripts/generate.py --only <family>` after a generator or its input;
   - `dune build`, only through `opam exec --switch=effect4`, after the OCaml estate.
 - On Windows the shell is PowerShell, and the bash gate scripts run through WSL.
 - TypeScript is checked by one compiler, tsgo 7 (owner, 2026-09-18, restated 2026-10-01):
@@ -283,8 +289,8 @@ its arrows. Anything else is a leak.
   (seat J, 2026-10-01).
 - The ingest parses with `oxc-parser` (one entry, `ts/eff/ingest/oxc.ts`). `check-styles.ts` asks
   tsgo's own API (`unstable/sync`, under node) for the oracle's grammar (decisions row 168, seat J2).
-- No `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`, and `make check-tsgo`,
-  part of `make check`, refuses one.
+- No `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`. `make check-tsgo`
+  refuses one.
 - A proof graph is mandatory only for these kinds of work:
   - an admission or a refusal of any input (a program, a table, a reply, a codec value, …);
   - judgments or denotations;

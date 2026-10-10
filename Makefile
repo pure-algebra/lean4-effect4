@@ -69,9 +69,9 @@ VENDOR_SOURCES := $(wildcard vendor/effect-4.0.0-rc.112/src/*.ts vendor/effect-4
 # ---------------------------------------------------------------------------- build
 
 .PHONY: build build-tools
-build: ## lake build: the core, the proof graph, the batteries and the axiom gate; the log feeds `make build-profile`
+build: ## lake build: the core and the law graph, the proofs; the log feeds `make build-profile`
 	@mkdir -p $(GEN)
-	set -o pipefail; $(LAKE) build 2>&1 | tee $(GEN)/build.log
+	set -o pipefail; $(LAKE) build Effect4 Effect4Laws 2>&1 | tee $(GEN)/build.log
 
 .PHONY: build-profile
 build-profile: ## where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
@@ -373,8 +373,11 @@ CHECKS := roots proof-style cases native compiler ts-reader truth truth-release 
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-proof-style check-gen check-tsgo check-docs ## after every change: the build with its axiom gate, the fresh root elaboration, the proof-style ratchet, the generated-file drift, no TypeScript below 7, the authority documents' references
-check-full: check check-slow check-cases check-native check-compiler check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
+# The aggregates hold only the gates that test behaviour (owner, 2026-10-10): the proofs, and the
+# runs compared with an outside implementation. The batteries, the axiom gate over the whole tree,
+# the ratchets, the policies, the drift and the document checks stay callable by name, at a sweep.
+check: build ## after a change: the core and the law graph; audit the landing's modules with `#axiom_audit`
+check-full: check check-native check-compiler check-ocaml check-schema-codec check-schema-ts check-truth check-target check-ts-reader check-host-protocol check-corpus check-tsdiag check-ingest-smoke ## the behaviour gates: every outside oracle, at a landing that reaches it
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -441,7 +444,8 @@ clean-check: ## forget the check markers (the next `make check` runs every check
 $(CHK)/inventory: FORCE
 	@mkdir -p $(CHK); printf '%s\n' $(sort $(LEAN_SOURCES)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
-$(CHK)/roots: $(CHK)/inventory lakefile.toml lean-toolchain | build
+$(CHK)/roots: $(CHK)/inventory lakefile.toml lean-toolchain
+	$(LAKE) build Test
 	$(LAKE) env lean -DwarningAsError=true Test/All.lean
 	@echo 'PASS check-roots: the module-closure, library-root and axiom gates'
 	@mkdir -p $(CHK) && touch $@
@@ -702,7 +706,8 @@ $(CHK)/schema-pins: $(SCHEMA_PIN) src/Effect4/Schema/Representation.lean scripts
 # The one tool harness: the exact `Classical.choice` admissions against compiled declarations.
 SELFTEST_SOURCES := scripts/test-trust-boundaries.sh Test/Audit/AxiomGate.lean \
   $(shell find Test/fixtures/trust-gate -type f)
-$(CHK)/tools: $(SELFTEST_SOURCES) | build
+$(CHK)/tools: $(SELFTEST_SOURCES)
+	$(LAKE) build Test.Audit.RuntimeCoverage Test.Program.ConfigContract Test.Audit.SemanticsCensus
 	bash scripts/test-trust-boundaries.sh
 	@mkdir -p $(CHK) && touch $@
 
