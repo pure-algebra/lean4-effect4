@@ -101,8 +101,85 @@ error: #axiom_audit: 5 of 43 declarations reach axioms outside [propext, Quot.so
   ProofGraph.reachedAxiomsMany reaches [Classical.choice]
   _private.ProofGraph.Axioms.0.ProofGraph.deps reaches [Classical.choice]
   _private.ProofGraph.Axioms.0.ProofGraph.selfAxiom reaches [Classical.choice]
+2 of them stand under no other; each one's path to its axiom:
+  _private.ProofGraph.Axioms.0.ProofGraph.deps  (ProofGraph.Axioms)
+  → Lean.Environment  (Lean.Environment)
+  → ⋯ 12 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  _private.ProofGraph.Axioms.0.ProofGraph.selfAxiom  (ProofGraph.Axioms)
+  → Lean.Environment  (Lean.Environment)
+  → ⋯ 12 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
 -/
 #guard_msgs in
 #axiom_audit ProofGraph.Axioms
+
+/-! ## `#why` and `#goal_impact` (`ProofGraph.Why`)
+
+A chain of two theorems over one planned goal. `#why` answers a checked path to the goal, and
+refuses a dependency that does not exist. The search enters no constant its policy stops at: with
+`mid` stopped, `top` reaches the goal by no path. A goal's statement is no hidden route: every use
+of a goal carries its statement as a type argument. A supplied path whose edge the walk does not
+read, or whose endpoints do not chain, is refused; `goalTable` names the claims and the
+requirements whose nodes rest on a goal, and counts apart a witness the environment does not
+hold. -/
+
+namespace WhyControl
+
+def Holds (n : Nat) : Prop := n = n
+
+proof_goal leaf : ∀ n, Holds n
+
+theorem mid (n : Nat) : Holds n := leaf n
+
+theorem top (n : Nat) : Holds n ∧ Holds n := ⟨mid n, rfl⟩
+
+end WhyControl
+
+/--
+info: Test.ProofGraph.WhyControl.leaf, 2 step(s):
+  Test.ProofGraph.WhyControl.top  (Test.Audit.ProofGraph)
+  → Test.ProofGraph.WhyControl.mid  (Test.Audit.ProofGraph)
+  → Test.ProofGraph.WhyControl.leaf  (Test.Audit.ProofGraph)
+-/
+#guard_msgs in
+#why WhyControl.top
+
+/-- error: #why: Test.ProofGraph.WhyControl.mid does not depend on Test.ProofGraph.WhyControl.top: the walk read every constant Test.ProofGraph.WhyControl.mid reaches, entering no planned goal -/
+#guard_msgs in
+#why WhyControl.mid WhyControl.top
+
+run_cmd liftTermElabM do
+  let env ← getEnv
+  let top := ``WhyControl.top
+  let mid := ``WhyControl.mid
+  let leaf := ``WhyControl.leaf
+  let stop := pathStop env top leaf
+  -- the edge top → leaf is not one the walk reads: `top`'s proof names `mid`
+  unless checkPath env stop top leaf [(top, leaf)] matches .error _ do
+    throwError "a skipped edge was accepted"
+  -- the edges in the wrong order do not chain from `top`
+  unless checkPath env stop top leaf [(mid, leaf), (top, mid)] matches .error _ do
+    throwError "a path out of order was accepted"
+  unless checkPath env stop top leaf [(top, mid), (mid, leaf)] matches .ok _ do
+    throwError "the actual path was refused"
+  -- the search enters no constant its policy stops at
+  unless proposePath env (· == mid) (· == leaf) top matches .absent _ do
+    throwError "the search entered a stopped constant"
+  unless proposePath env (fun _ => false) (· == leaf) top matches .path [(_, _), (_, _)] do
+    throwError "the unstopped search missed the two-step path"
+  let claim (id : String) (pointer : Tools.Semantics.Pointer) : Tools.Semantics.Claim :=
+    { id, concept := "control", role := .adequacy, title := id, pointer }
+  let claims := [claim "rests" (.witness top), claim "free" (.witness ``WhyControl.Holds),
+    claim "elsewhere" (.witness `Test.ProofGraph.WhyControl.absent), claim "open" (.absent "control")]
+  let requirements : List Tools.Semantics.Requirement :=
+    [{ id := "RX", title := "control", top := [mid] }, { id := "RY", title := "control", top := [] }]
+  let table := goalTable env claims requirements
+  let blocked := table.claims.getD leaf #[]
+  let reqs := table.requirements.getD leaf #[]
+  unless blocked == #["rests"] && reqs == #["RX"] && table.missing == 1 do
+    throwError "impact: {blocked} {reqs} {table.missing}"
 
 end Test.ProofGraph

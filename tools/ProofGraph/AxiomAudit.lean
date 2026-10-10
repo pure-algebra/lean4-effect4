@@ -1,5 +1,6 @@
 import ProofGraph.Goal
 import ProofGraph.Audit
+import ProofGraph.Why
 
 /-!
 # `#axiom_audit`: the gate's exact walk over named modules
@@ -8,7 +9,10 @@ import ProofGraph.Audit
 (`reachedAxiomsMany`, one memo for the whole command), and stops at planned goals as the gate
 does (`isGoal`, decisions row 203). A declaration that reaches an axiom outside
 `[propext, Quot.sound]`, or whose walk ran out of its step budget, is an error that names it.
-Otherwise the command reports how many declarations it walked, and how many rest on goals.
+Otherwise the command reports how many declarations it walked, and how many rest on goals. A
+refusal also names its causes: the offenders that no other offender stands under, each with a
+checked path to its axiom (`auditCauses`, `ProofGraph.Why`), so a seat reads where the axiom
+enters instead of every declaration above that point.
 
 It is a seat's audit of a landing (cleanup C7 of the host-call note,
 `docs/research/2026-10-09-host-calls-and-cleanup.md`). Lean's own collector misses axioms behind
@@ -38,6 +42,7 @@ syntax (name := axiomAudit) "#axiom_audit" (ppSpace ident)+ : command
   let walked := roots.filter (!isGoal env ·)
   let (results, _) := reachedAxiomsMany env walked {} (isGoal env)
   let mut offenders : Array MessageData := #[]
+  let mut reaching : Array (Name × Array Name) := #[]
   let mut modulo : Nat := 0
   for (name, result) in walked.zip results do
     match result with
@@ -45,13 +50,17 @@ syntax (name := axiomAudit) "#axiom_audit" (ppSpace ident)+ : command
     | some reached =>
       let outside := reached.filter fun axiomName =>
         !trustedAxioms.contains axiomName && !isGoal env axiomName
-      if !outside.isEmpty then offenders := offenders.push m!"{name} reaches {outside}"
+      if !outside.isEmpty then
+        offenders := offenders.push m!"{name} reaches {outside}"
+        reaching := reaching.push (name, outside)
       if reached.any (isGoal env) then modulo := modulo + 1
   if offenders.isEmpty then
     logInfo m!"#axiom_audit: {walked.size} declarations within [propext, Quot.sound], \
       {modulo} of them modulo planned goals; {goals.size} planned goals"
   else
+    let causes := if reaching.isEmpty then m!"" else m!"\n" ++ auditCauses env reaching
     throwError m!"#axiom_audit: {offenders.size} of {walked.size} declarations reach axioms \
-      outside [propext, Quot.sound]:{indentD (MessageData.joinSep offenders.toList Format.line)}"
+      outside [propext, Quot.sound]:{indentD (MessageData.joinSep offenders.toList Format.line)}" ++
+      causes
 
 end ProofGraph

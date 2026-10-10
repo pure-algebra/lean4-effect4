@@ -3,6 +3,7 @@ import Lean.Util.CollectAxioms
 import ProofGraph.Audit
 import ProofGraph.Axioms
 import ProofGraph.Goal
+import ProofGraph.Why
 import Effect4
 import Effect4.Laws.Auto.Semantics
 
@@ -421,6 +422,8 @@ private def restingPin : Array Name := #[
   `Test.LandingPlanControls.pendingTop,
   `Test.Obligations.resting,
   `Test.ProofGraphPlan.m7Modulo,
+  `Test.ProofGraph.WhyControl.mid,
+  `Test.ProofGraph.WhyControl.top,
   `Test.ProofGraphPlan.sketched,
   `Test.ProofGraphPlan.top,
   -- The typed run's chain, resting on `invoke_arm` (the typed run of an invocation with programs,
@@ -573,6 +576,9 @@ elab "#effect4_axiom_gate" : command => do
   let mut memo : ProofGraph.AxiomMemo := memoAll
   let mut goalCount := 0
   let mut resting : Array Name := #[]
+  let mut restingGoals : Std.HashMap Name (Array Name) := {}
+  -- every offender is collected, so one run names them all and the roots they stand under
+  let mut offenders : Array (Name × Array Name) := #[]
   for (declaration, reached) in declarations.zip reachedAll do
     let some axioms := reached
       | throwError "Effect4 axiom gate: axiom collection exhausted its step budget at {declaration}"
@@ -592,7 +598,9 @@ elab "#effect4_axiom_gate" : command => do
           throwError "Effect4 goal gate: goal {declaration} carries no requirement; place it with @[semantics \"concept\" (requirement := Rn)] (decisions row 207)"
       goalCount := goalCount + 1
       continue
-    if axioms.any isGoal then resting := resting.push declaration
+    if axioms.any isGoal then
+      resting := resting.push declaration
+      restingGoals := restingGoals.insert declaration (axioms.filter isGoal)
     -- An auxiliary or equation lemma inherits the admission of the declaration
     -- it was generated from; see `admissionAncestors` for which parents count.
     let bound :=
@@ -600,14 +608,17 @@ elab "#effect4_axiom_gate" : command => do
         auditImplementationAxioms
       else
         allowedAxioms
-    for axiomName in axioms do
-      if isGoal axiomName then continue
-      if forbiddenAxioms.contains axiomName then
-        throwError
-          "Effect4 axiom gate: declaration {declaration} reaches forbidden axiom {axiomName}"
-      if !bound.contains axiomName then
-        throwError
-          "Effect4 axiom gate: declaration {declaration} reaches unexpected axiom {axiomName}; allowed axioms are {bound}"
+    let outside := axioms.filter fun axiomName =>
+      !isGoal axiomName && (forbiddenAxioms.contains axiomName || !bound.contains axiomName)
+    if !outside.isEmpty then offenders := offenders.push (declaration, outside)
+  if !offenders.isEmpty then
+    let shown := (offenders.toList.take 20).map fun (d, xs) => m!"{d} reaches {xs}"
+    let more := if offenders.size > 20 then m!"\n… and {offenders.size - 20} more" else m!""
+    throwError (m!"Effect4 axiom gate: {offenders.size} declaration(s) reach axioms outside \
+      their bound ({allowedAxioms}; the exact implementation boundary adds Classical.choice; \
+      {forbiddenAxioms} are forbidden everywhere):\
+      {indentD (MessageData.joinSep shown Format.line)}{more}\n" ++
+      ProofGraph.auditCauses environment offenders)
 
   let t5 ← liftIO IO.monoMsNow
   -- The exemption list must not outlive its reason. A named implementation
@@ -649,7 +660,19 @@ elab "#effect4_axiom_gate" : command => do
     m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; phases (ms): sources and closure {t1 - t0}, library roots {t2 - t1}, declarations {t3 - t2}, resolution {t4 - t3}, axioms {t5 - t4}, exemptions {t6 - t5}; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
   let (added, removed) := restingDifference restingPin resting
   if !slowRoot && (!added.isEmpty || !removed.isEmpty) then
-    throwError "Effect4 goal gate: declarations resting on planned goals changed; added: {added}; removed: {removed}; review the dependencies, then update `restingPin` in Test/Audit/AxiomGate.lean"
+    -- the added names, by the goal each rests on; `#why D` prints one's path to its goal
+    let mut byGoal : Array (Name × Array Name) := #[]
+    for d in added do
+      for g in restingGoals.getD d #[] do
+        match byGoal.findIdx? (·.1 == g) with
+        | some i => byGoal := byGoal.modify i fun (g, ds) => (g, ds.push d)
+        | none => byGoal := byGoal.push (g, #[d])
+    let grouped := byGoal.toList.map fun (g, ds) => m!"resting on {g} ({ds.size}): {ds}"
+    throwError (m!"Effect4 goal gate: declarations resting on planned goals changed; \
+      {added.size} added, {removed.size} removed\
+      {indentD (MessageData.joinSep grouped Format.line)}\nremoved: {removed}\n\
+      review the dependencies (`#why D` prints one's path to its goal), then update \
+      `restingPin` in Test/Audit/AxiomGate.lean")
   logInfo m!"Effect4 goal gate: {goalCount} planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; {resting.size} declaration(s) rest on goals; no other declaration reaches sorryAx"
 
 /-!
