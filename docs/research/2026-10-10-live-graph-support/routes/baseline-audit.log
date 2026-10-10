@@ -1,0 +1,20 @@
+docs/research/2026-10-10-live-graph-support/routes/Audit.lean:4:0: error: #axiom_audit: 7 of 312 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.Graph.layout reaches [Classical.choice]
+  Tools.View.Laid.routeCalls reaches [Classical.choice]
+  Tools.View.Laid.calls reaches [Classical.choice]
+  Tools.View.Graph.items reaches [Classical.choice]
+  Tools.View.Laid.organicCalls reaches [Classical.choice]
+  Tools.View.Graph.orders reaches [Classical.choice]
+  Tools.View.Graph.boxWidth reaches [Classical.choice]
+2 of them stand under no other; each one's path to its axiom:
+  Tools.View.Laid.organicCalls  (Tools.View.Graph)
+  → Tools.View.Grow.seedOf  (Tools.View.Organic)
+  → String.foldl  (Init.Data.String.Iterate)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Graph.boxWidth  (Tools.View.Graph)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

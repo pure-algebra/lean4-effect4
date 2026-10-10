@@ -1,0 +1,32 @@
+{
+  "base": "9389e543ad1325a603732b7802344d79b3b98c61",
+  "checks": {
+    "baseline_false_positives": true,
+    "focused_build": true,
+    "consumer_build": true,
+    "specimen_build": true,
+    "controls": true,
+    "specimens": true,
+    "changed_axioms": true,
+    "unchanged_render_axiom_offenders": true,
+    "documents_language": true
+  },
+  "all_passed": true,
+  "existing_render_axiom_offenders": [
+    "Tools.View.Graph.layout",
+    "Tools.View.Laid.routeCalls",
+    "Tools.View.Laid.calls",
+    "Tools.View.Graph.items",
+    "Tools.View.Laid.organicCalls",
+    "Tools.View.Graph.orders",
+    "Tools.View.Graph.boxWidth"
+  ],
+  "control_guards": 18,
+  "changed_axiom_output": [
+    "CHANGED AXIOMS Tools.View.Laid.segmentDescends: [propext]",
+    "CHANGED AXIOMS Tools.View.Laid.downRouteDescends: [propext]",
+    "CHANGED AXIOMS Tools.View.Laid.downRouteDescends_iff: [propext, Quot.sound]",
+    "CHANGED AXIOMS Tools.View.Laid.edgesDescend: [propext]",
+    "CHANGED AXIOMS Tools.View.Laid.edgesDescend_down_pairs: [propext, Quot.sound]"
+  ]
+}
