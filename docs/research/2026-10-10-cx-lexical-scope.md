@@ -336,12 +336,25 @@ the target's, so the redirected point is no `LayerPointTyped` point.
   definition's body provides. `layerRefsWF` holds, `Api.typeOf` admits it, and the two paths have
   different scopes. So the goal's case is reachable at HEAD. It is a finite probe: in it, the
   target runs no parameter, and its build is typed.
-- **Not known**: whether such a build is typed. The memo map keys a build on the target's path,
+- **Answered by Codex's review** (`git:514a6d9f:docs/research/2026-10-10-cx-layer-context-review/README.md`):
+  not in general. Its admitted `failureProgram` forks, inside an outer definition's layer
+  construction, an inner definition whose layer references the outer layer. The child inherits the
+  enclosing memo map, awaits the pending entry, and receives the outer parameter's `nat` failure,
+  while the fork's checked error type is `never`. So the goal is false for the typed world the
+  proofs keep; the packet refutes no goal-free theorem (`M7Exits` fixes only the root's type).
+- **Before that answer**: the memo map keys a build on the target's path,
   and a forked map reads its parent's entries (`MemoWorld.lookup`; `forkMemoMapUnsafe`,
   `Layer.ts`), so one build can answer references in two scopes. A built context is typed by the
   service table, which no scope changes, and a failed build stops the provide whose body would read
   the map, so a shared success is typed. Whether a failure built in one scope can reach another is
   not established: it needs a construction that reads the map it is building.
+
+Codex's earlier review (`git:ddab43db:docs/research/2026-10-10-cx-lexical-review/README.md`)
+proposed option (b) below: a point's typing witnesses its active parameter context, which a
+reference keeps. The later packet shows that (b) alone does not type a shared memo entry read
+from two contexts. It proposes a conservative source rule: refuse a reference whose expanded
+target reads a parameter that the two contexts type differently, comparing normalized request,
+answer and error columns; with (b), every reader of one entry then agrees on its columns.
 
 The decision is the owner's, because it is one of representation and meaning:
 
@@ -350,6 +363,7 @@ The decision is the owner's, because it is one of representation and meaning:
 | (a) the checker refuses a reference that leaves its target's scope | `layerRefsWF` reads `scopeParams`; the API's refusal gains a reason | vacuous: proved from `SourceWF` |
 | (b) a layer point carries its scope instead of reading its path's | `LayerPointTyped`, the memo rows and the memo table take the scope | proved with the memo argument above |
 | (c) the checker refuses a parameter's run inside a layer | the checker's layer rules | still needs the stack at the target |
+| (d) Codex's rule with (b): refuse a reference whose target reads a parameter the two contexts type differently | `layerRefsWF` or admission reads the expanded target's parameter reads | proved with a fold agreement on the read parameters and the memo invariant |
 
 Option (a) is the TypeScript reading: a `const` in a function body is visible in no other
 function, and the printer already hoists every target to a module-level constant

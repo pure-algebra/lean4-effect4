@@ -246,8 +246,10 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
 - **A layer reference whose target stands in another scope** (the
-  [CX note](research/2026-10-10-cx-lexical-scope.md), §10). Either the checker refuses it, or a
-  layer point carries its scope. M7 rests on the goal `crossScopeRef_builds` until then.
+  [CX note](research/2026-10-10-cx-lexical-scope.md), §10). Codex's admitted program delivers a
+  shared layer's failure to a fork typed `never`, so admission must change. The options: refuse
+  such references, or refuse those whose target reads a parameter typed differently (Codex's
+  rule). M7 rests on the goal `crossScopeRef_builds` until then.
 
 ## Process
 
