@@ -421,14 +421,38 @@ def normEs : List (String × Json) → List (String × Json)
   | (k, j) :: es => (k, normJ j) :: normEs es
 end
 
+/-- A prepared wire interpretation bound to its exact source type.
+The functions interpret values; they are not stored program syntax. -/
+structure Prepared (source : Ty) where
+  normal : Ty
+  interpreter : Wire
+  normal_eq : normal = source.normalize
+  interpreter_eq : interpreter = wire (layout normal)
+
+/-- Normalize and interpret the wire layout once for repeated boundary operations. -/
+def prepare (source : Ty) : Prepared source :=
+  let normal := source.normalize
+  { normal, interpreter := wire (layout normal), normal_eq := rfl, interpreter_eq := rfl }
+
+/-- Encode only members whose JSON image recovers their exact value. -/
+def Prepared.encode {source : Ty} (prepared : Prepared source) (v : Val) : Option Json :=
+  if Val.hasTy v prepared.normal then
+    match prepared.interpreter.encode v with
+    | none => none
+    | some j => if prepared.interpreter.decode j = some v then some j else none
+  else none
+
+/-- Decode and retain only members of the normalized source type, including literals. -/
+def Prepared.decode {source : Ty} (prepared : Prepared source) (j : Json) : Option Val :=
+  (prepared.interpreter.decode j).filter (fun v => Val.hasTy v prepared.normal)
+
+/-- Value admission uses the same membership and exact-recovery policy as encoding. -/
+def Prepared.isValue {source : Ty} (prepared : Prepared source) (v : Val) : Bool :=
+  (prepared.encode v).isSome
+
 /-- Executable value admission after type normalization: membership, a JSON image,
-and exact recovery.
-This is deliberately stronger than type support and ordinary machine membership. -/
-def isValue (t : Ty) (v : Val) : Bool :=
-  let t := t.normalize
-  match encodeRaw (layout t) v with
-  | none => false
-  | some j => Val.hasTy v t && decide (decodeRaw (layout t) j = some v)
+and exact recovery. Type support remains a separate judgment. -/
+def isValue (t : Ty) (v : Val) : Bool := (prepare t).isValue v
 
 end Effect4.Schema.Codec
 
@@ -436,18 +460,10 @@ namespace Effect4.Schema
 open Effect4.Program Effect4.Machine
 
 /-- Normalize the type and encode only values whose JSON image recovers exactly. -/
-def encode (t : Ty) (v : Val) : Option Json :=
-  let t := t.normalize
-  if Val.hasTy v t then
-    match Codec.encodeRaw (Codec.layout t) v with
-    | none => none
-    | some j => if Codec.decodeRaw (Codec.layout t) j = some v then some j else none
-  else none
+def encode (t : Ty) (v : Val) : Option Json := (Codec.prepare t).encode v
 
 /-- Normalize the type, decode a JSON value, and check membership including literals. -/
-def decode (t : Ty) (j : Json) : Option Val :=
-  let t := t.normalize
-  (Codec.decodeRaw (Codec.layout t) j).filter (fun v => Val.hasTy v t)
+def decode (t : Ty) (j : Json) : Option Val := (Codec.prepare t).decode j
 
 end Effect4.Schema
 

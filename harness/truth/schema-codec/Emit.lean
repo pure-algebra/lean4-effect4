@@ -108,9 +108,10 @@ def main (args : List String) : IO Unit := do
     (name, Json.obj [("input", j), ("refused", .bool (Ty.decode t j).isNone)])
   -- jsonSource transports binary64 data by bits. JSON text would erase negative zero.
   let numericDecodings := numeric.map fun (name, t, v, input) =>
-    let decoded := Ty.decode t input
+    let prepared := Schema.Codec.prepare t
+    let decoded := prepared.decode input
     (name, Json.obj [("input", input), ("decoded", .bool (decoded == some v)),
-      ("reencoded", (decoded.bind (Ty.encode t)).getD .null)])
+      ("reencoded", (decoded.bind prepared.encode).getD .null)])
   let encodingRefusals := SchemaCodecHost.encodingRefusals.map fun (name, t, v) =>
     (name, Json.bool (Ty.encode t v).isNone)
   IO.FS.writeFile output

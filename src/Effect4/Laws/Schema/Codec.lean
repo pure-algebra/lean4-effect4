@@ -31,6 +31,50 @@ set_option autoImplicit false
 namespace Effect4.Schema.Codec
 open Effect4 Effect4.Program Effect4.Machine
 
+/-- Prepared encoding serves `decode-encode` and `decode-iff` without changing value admission. -/
+theorem Prepared.encode_agrees {source : Ty} (prepared : Prepared source) (v : Val) :
+    prepared.encode v = Effect4.Schema.encode source v := by
+  unfold Prepared.encode
+  rw [prepared.interpreter_eq, prepared.normal_eq]
+  rfl
+
+/-- Prepared decoding serves `decode-iff`; the cached interpreter remains bound to its source. -/
+theorem Prepared.decode_agrees {source : Ty} (prepared : Prepared source) (j : Json) :
+    prepared.decode j = Effect4.Schema.decode source j := by
+  unfold Prepared.decode
+  rw [prepared.interpreter_eq, prepared.normal_eq]
+  rfl
+
+/-- Prepared codec admission serves the checked domain of `decode-encode`. -/
+theorem Prepared.isValue_agrees {source : Ty} (prepared : Prepared source) (v : Val) :
+    prepared.isValue v = Effect4.Schema.Codec.isValue source v := by
+  unfold Prepared.isValue Effect4.Schema.Codec.isValue
+  rw [Prepared.encode_agrees]
+  rfl
+
+/-- The original encode-first admission policy; used by existing checked-domain laws. -/
+theorem isValue_policy (t : Ty) (v : Val) :
+    isValue t v =
+      (match encodeRaw (layout t.normalize) v with
+      | none => false
+      | some j => Val.hasTy v t.normalize && decide (decodeRaw (layout t.normalize) j = some v)) := by
+  change (if Val.hasTy v t.normalize then
+    (match encodeRaw (layout t.normalize) v with
+    | none => none
+    | some j => if decodeRaw (layout t.normalize) j = some v then some j else none)
+    else none).isSome = _
+  cases Val.hasTy v t.normalize with
+  | false => cases encodeRaw (layout t.normalize) v <;> rfl
+  | true =>
+    cases encodeRaw (layout t.normalize) v with
+    | none => rfl
+    | some j =>
+      by_cases hd : decodeRaw (layout t.normalize) j = some v
+      · simp only [hd, ↓reduceIte, decide_true]
+        rfl
+      · simp only [hd, ↓reduceIte, decide_false]
+        rfl
+
 /-- The codec fold retains each raw type exactly.
 This supplies original union membership tests to both raw codec laws. -/
 theorem wire_type (t : Ty) : (wire t).type = t := by
@@ -1544,39 +1588,51 @@ end Effect4.Schema.Codec
 namespace Effect4.Schema
 open Effect4.Program Effect4.Machine
 
+/-- The original checked-encoding policy; serves the unchanged exact embedding laws. -/
+theorem encode_policy (t : Ty) (v : Val) :
+    encode t v =
+      (if Val.hasTy v t.normalize then
+        match Codec.encodeRaw (Codec.layout t.normalize) v with
+        | none => none
+        | some j => if Codec.decodeRaw (Codec.layout t.normalize) j = some v then some j else none
+      else none) := rfl
+
+/-- The original membership-filtered decoding policy; serves the unchanged exact embedding laws. -/
+theorem decode_policy (t : Ty) (j : Json) :
+    decode t j = (Codec.decodeRaw (Codec.layout t.normalize) j).filter
+      (fun v => Val.hasTy v t.normalize) := rfl
+
 /-- The exact three checks behind a successful encoding. -/
 theorem encode_eq_some {t : CTy} {v : Val} {j : Json} :
     encode t.toRaw v = some j ↔
       Val.hasTy v t.toRaw = true ∧ Codec.encodeRaw (Codec.layout t.toRaw) v = some j ∧
         Codec.decodeRaw (Codec.layout t.toRaw) j = some v := by
   have hn : t.toRaw.normalize = t.toRaw := t.property
-  by_cases ht : Val.hasTy v t.toRaw = true
-  · cases he : Codec.encodeRaw (Codec.layout t.toRaw) v with
-    | none => simp [encode, hn, ht, he]
-    | some k =>
-      by_cases hd : Codec.decodeRaw (Codec.layout t.toRaw) k = some v
-      · simp [encode, hn, ht, he, hd]
-        intro h
-        subst j
-        exact hd
-      · simp [encode, hn, ht, he, hd]
-        intro h
-        subst j
-        exact hd
-  · simp [encode, hn, ht]
+  rw [encode_policy, hn]
+  constructor
+  · intro h
+    split at h
+    · rename_i ht
+      cases he : Codec.encodeRaw (Codec.layout t.toRaw) v with
+      | none => rw [he] at h; exact nomatch h
+      | some k =>
+        rw [he] at h
+        dsimp only at h
+        split at h
+        · rename_i hd
+          cases h
+          exact ⟨ht, rfl, hd⟩
+        · exact nomatch h
+    · exact nomatch h
+  · rintro ⟨ht, he, hd⟩
+    rw [if_pos ht, he]
+    dsimp only
+    rw [if_pos hd]
 
 /-- Executable admission is exactly the successful domain of the checked encoder. -/
 theorem encode_isSome_iff {t : CTy} {v : Val} :
     (encode t.toRaw v).isSome = true ↔ Ty.isCodecValue t.toRaw v = true := by
-  have hn : t.toRaw.normalize = t.toRaw := t.property
-  by_cases ht : Val.hasTy v t.toRaw = true
-  · cases he : Codec.encodeRaw (Codec.layout t.toRaw) v with
-    | none => simp [encode, Codec.isValue, Ty.isCodecValue, hn, ht, he]
-    | some j =>
-      by_cases hd : Codec.decodeRaw (Codec.layout t.toRaw) j = some v <;>
-        simp [encode, Codec.isValue, Ty.isCodecValue, hn, ht, he, hd]
-  · cases he : Codec.encodeRaw (Codec.layout t.toRaw) v <;>
-      simp [encode, Codec.isValue, Ty.isCodecValue, hn, ht, he]
+  rfl
 
 /-- S-3 totality on the checked JSON value domain. Type support alone is insufficient. -/
 theorem encode_of_hasTy {t : CTy} {v : Val} (_h : Val.hasTy v t.toRaw = true)
@@ -1588,8 +1644,8 @@ retraction half of exactness (`decode_iff`). At every type: `encode` and `decode
 alike, so no canonicity is needed (until row 128's commit this was stated at `CTy`). -/
 theorem decode_of_encode {t : Ty} {v : Val} {j : Json}
     (h : encode t v = some j) : decode t j = some v := by
-  unfold encode at h
-  dsimp only at h
+  rw [encode_policy] at h
+  rw [decode_policy]
   split at h
   · rename_i hv
     split at h
@@ -1605,6 +1661,7 @@ theorem decode_of_encode {t : Ty} {v : Val} {j : Json}
 reads is, up to the order of object entries, the checked encoder's image of the value it returns. -/
 theorem encode_of_decode {t : Ty} {j : Json} {v : Val} (h : decode t j = some v) :
     ∃ j', encode t v = some j' ∧ Codec.normJ j' = Codec.normJ j := by
+  rw [decode_policy] at h
   obtain ⟨hd, hv⟩ := Option.filter_eq_some_iff.mp h
   obtain ⟨j', he, hn⟩ := Codec.decodeRaw_exact _ j v hd
   refine ⟨j', ?_, hn⟩
@@ -1648,11 +1705,8 @@ theorem decode_encode {t : CTy} {v : Val} (h : Val.hasTy v t.toRaw = true)
 theorem hasTy_decode {t : CTy} {j : Json} {v : Val}
     (h : decode t.toRaw j = some v) : Val.hasTy v t.toRaw = true := by
   have hn : t.toRaw.normalize = t.toRaw := t.property
-  cases hd : Codec.decodeRaw (Codec.layout t.toRaw) j with
-  | none => simp [decode, hn, hd] at h
-  | some w =>
-    simp [decode, hn, hd] at h
-    exact h.2
+  rw [decode_policy, hn] at h
+  exact (Option.filter_eq_some_iff.mp h).2
 
 /-- S-3 subtype agreement for a shared JSON layout. This includes literal refinements
 through products, options, arrays, Results, Exits and Causes. Union selectors are retained. -/
@@ -1663,7 +1717,7 @@ theorem encode_sub {s t : CTy} {v : Val}
   have hs : s.toRaw.normalize = s.toRaw := s.property
   have hn : t.toRaw.normalize = t.toRaw := t.property
   have ht := hasTy_sub s.toRaw t.toRaw v [] hsub hv
-  simp only [encode, hs, hn, hv, ht, ↓reduceIte]
+  simp only [encode_policy, hs, hn, hv, ht, ↓reduceIte]
   rw [show Codec.layout s.toRaw = Codec.layout t.toRaw from compatible]
 
 /-- Admitted encodings cannot identify distinct values at one type. -/

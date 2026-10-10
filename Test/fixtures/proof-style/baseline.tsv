@@ -907,9 +907,6 @@ src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	elabTypedState	unread	1
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	emitOwner	unread	1
 src/Effect4/Laws/Program/Typing/Check.lean	checkTyping_refuses_iff	simp_all	1
 src/Effect4/Laws/Program/Typing/Check.lean	checkTyping_spec	unread	1
-src/Effect4/Laws/Schema/Codec.lean	encode_eq_some	simp-without-only	4
-src/Effect4/Laws/Schema/Codec.lean	encode_isSome_iff	simp-without-only	3
-src/Effect4/Laws/Schema/Codec.lean	hasTy_decode	simp-without-only	2
 src/Effect4/Laws/Store/CanonicalSpec.lean	mapM_ofVal_spec	unread	1
 src/Effect4/Laws/Store/CanonicalSpec.lean	ofVal_spec	unread	1
 src/Effect4/Machine/Alphabets.lean	Defect.image	try	2
