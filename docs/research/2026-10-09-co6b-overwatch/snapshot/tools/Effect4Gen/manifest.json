@@ -1,0 +1,512 @@
+{
+  "format": "effect4gen-manifest-v1",
+  "comment": [
+    "The derived-code manifest: one group per emitted file, its imports, its carriers in",
+    "dependency order, the `--kind` requests (a `Content` instance right after that carrier's",
+    "`Canonical` one), and the acceptance guards appended verbatim after the generated",
+    "declarations. It is the manifest of docs/research/2026-09-04-cas-trait-plan.md \u00a74 at its",
+    "landing paths, read by tools/Effect4Gen/Driver.lean on every machine with a Lean",
+    "toolchain. The manifest is the authority on the group's arguments.",
+    "",
+    "Adding a group -- Machine, Tape and Log are owed at X2 -- is an entry here and no code",
+    "change in the driver.",
+    "",
+    "Out and Guards retain their legacy backslash argument spelling. The driver stages",
+    "those paths for the host filesystem. Main prints forward-slash reproduction paths",
+    "in the generated header, including when a checker redirects the output to a temporary file.",
+    "",
+    "An applied type is one word with `@` for the space, so no shell ever splits it.",
+    "",
+    "A group's `Flags` may hold `--module` (and `--meta-imports A,B`): the emitter writes the",
+    "file with the header of Lean's module system (decisions row 200), and a `meta import` of each",
+    "module whose code the appended guards run. Absent, the file keeps its bytes. The top-level",
+    "`VariancesFlags` does the same for tools/Tools/Variances.lean's core module."
+  ],
+  "VariancesFlags": ["--module"],
+  "groups": [
+    {
+      "Name": "Fragments",
+      "Tool": "tools/Effect4Gen/Fragments.lean",
+      "Flags": [
+        "--module"
+      ],
+      "Imports": "Effect4.Program.Native",
+      "Out": "src\\Effect4\\Program\\Fragment.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Name": "FragmentLooped",
+      "Tool": "tools/Effect4Gen/Fragments.lean",
+      "Imports": "Effect4.Program.Native",
+      "Out": "src\\Effect4\\Laws\\Program\\FragmentLooped.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Name": "FragmentRows",
+      "Tool": "tools/Effect4Gen/Fragments.lean",
+      "Imports": "Effect4.Laws.Program.FragmentRowAdmission",
+      "Out": "src\\Effect4\\Laws\\Program\\FragmentRows.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Name": "FragmentLoopedRows",
+      "Tool": "tools/Effect4Gen/Fragments.lean",
+      "Imports": "Effect4.Program.Native",
+      "Out": "src\\Effect4\\Laws\\Program\\FragmentLoopedRows.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The nested companions of `Ty` (decisions rows 119, 162, 171): the data wave's record, tuple and reference heads hold a list of children, so Lean derives no `induction`, no `DecidableEq` and only a partial `Repr`; the fold generator's `elim` kind writes the single-motive eliminator (registered `@[induction_eliminator]`), the structural equality with its `iff` and the `DecidableEq` instance, and the structural `Repr`, from the declaration alone. First, because every group that reads `Ty` reads its equality.",
+      "Name": "TyEq",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Flags": ["--module"],
+      "Imports": "Effect4.Program.TyCore",
+      "Out": "src\\Effect4\\Program\\TyEq.lean",
+      "Guards": "",
+      "Kinds": [
+        "Effect4.Program.Ty=elim"
+      ],
+      "Types": [
+        "Effect4.Program.Ty"
+      ]
+    },
+    {
+      "Name": "Json",
+      "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Canonical"],
+      "Imports": "Effect4.Store.Domain.Canonical",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Json.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\json.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Float64",
+        "Effect4.Json"
+      ]
+    },
+    {
+      "Note": "The Schema carriers hold `Json` and `Float64` fields, whose instances are the Json group's.",
+      "Name": "Schema",
+      "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Derived.Json"],
+      "Imports": "Effect4.Store.Domain.Derived.Json",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Schema.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\schema.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.ReferenceKey",
+        "Effect4.GlobalSymbolKey",
+        "Effect4.AnnotationEntry",
+        "Effect4.LiteralValue",
+        "Effect4.EnumValue",
+        "Effect4.EnumEntry",
+        "Effect4.PropertyKey",
+        "Effect4.RepresentationAnnotation",
+        "Effect4.UnionMode",
+        "Effect4.Representation",
+        "Effect4.ReferenceEntry",
+        "Effect4.Document",
+        "Effect4.MultiDocument"
+      ]
+    },
+    {
+      "Name": "Program",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Native,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.RowCanonical"],
+      "Imports": "Effect4.Program.Native,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.RowCanonical",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Program.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\program.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Lit",
+        "Effect4.FinalizerStrategy",
+        "Effect4.Supervision.MaskMode",
+        "Effect4.Supervision.ObserverMode",
+        "Effect4.Program.Decision",
+        "Effect4.Program.Ty",
+        "Effect4.Program.FieldReadMode",
+        "Effect4.Program.Term",
+        "Effect4.Program.NativeOp",
+        "Effect4.Supervision.ForkOptions",
+        "Effect4.Program.CauseTerm",
+        "Effect4.ServiceName",
+        "Effect4.ServiceTypeCode",
+        "Effect4.ServiceKey",
+        "Effect4.Program.DefRole",
+        "Effect4.Program.DefDecl",
+        "Effect4.Program.Eff@Effect4.Program.NativeOp",
+        "Effect4.Program.RowKind",
+        "Effect4.Program.RowShape",
+        "Effect4.Program.Registration",
+        "Effect4.Program.RowArg",
+        "Effect4.Program.Row",
+        "Effect4.Program.EffTy"
+      ]
+    },
+    {
+      "Note": "`Tree` is the store's own carrier (a name space as content, Store/Node.lean); its instance is emitted here beside `Pin`'s so no area above the store supplies a store type's instance (coordinator, 2026-09-05, after lane C's note).",
+      "Name": "Pin",
+      "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node"],
+      "Imports": "Effect4.Store.Domain.Pin,Effect4.Store.Domain.Node",
+      "Out": "src\\Effect4\\Store\\Domain\\PinDerived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\pin.lean",
+      "Kinds": [
+        "Effect4.Store.Pin=source",
+        "Effect4.Store.Tree=tree"
+      ],
+      "Types": [
+        "Effect4.Store.PinRole",
+        "Effect4.Store.Pin",
+        "Effect4.Store.Tree"
+      ]
+    },
+    {
+      "Name": "Api",
+      "Imports": "Effect4.Api.Frontier,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.Clock",
+      "Out": "src\\Effect4\\Api\\Derived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\api.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.FiberId",
+        "Effect4.Api.HostProtocol.Key",
+        "Effect4.Machine.Exhaustion",
+        "Effect4.Api.FrontierReason"
+      ]
+    },
+    {
+      "Note": "A value tree, a shape and a shape document written as content: what lets a schema and a plain value cross a boundary as canonical bytes.",
+      "Name": "Value",
+      "Flags": ["--module", "--meta-imports", "Effect4.Store.Domain.Canonical"],
+      "Imports": "Effect4.Store.Domain.Canonical",
+      "Out": "src\\Effect4\\Store\\Domain\\Derived\\Value.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\value.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Store.Val",
+        "Effect4.Store.Kind",
+        "Effect4.Store.Shape",
+        "Effect4.Store.ShapeDoc"
+      ]
+    },
+    {
+      "Note": "The refusals an agent can be shown, as content (decisions row 17): the scope reader's, the checker's, the authoring call's, the printer's, the reader's and the build's (the eight of the row's source, scout C 3.3), with admission's and the table's, which the Runner group carried before, and the signature's that admission reports (decisions row 21). Placed before Runner, which imports it. The build refusal is declared in Effect4.Api.Author; importing it brings no keyword since the authoring syntax is scoped (seat J2). The host session's refusal stays in Runner: the generator names a type's section by its last name, and Authoring.Refusal is here.",
+      "Name": "Refusals",
+      "Imports": "Effect4.Api,Effect4.Api.HostSession,Effect4.Store.Domain.Derived.Program,Effect4.Api.Author",
+      "Out": "src\\Effect4\\Api\\RefusalsDerived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\refusals.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.TableRefusal",
+        "Effect4.Program.FormationReason",
+        "Effect4.Program.FormationRefusal",
+        "Effect4.Program.RowReason",
+        "Effect4.Program.ServiceReason",
+        "Effect4.Program.SigRefusal",
+        "Effect4.Program.AdmitRefusal",
+        "Effect4.Program.Authoring.Reason",
+        "Effect4.Program.Authoring.Refusal",
+        "Effect4.Program.RecordTypingReason",
+        "Effect4.Program.RecordTermRefusal",
+        "Effect4.Program.RecordCauseRefusal",
+        "Effect4.Program.TupleTypingReason",
+        "Effect4.Program.TupleTermRefusal",
+        "Effect4.Program.TupleCauseRefusal",
+        "Effect4.Program.FoldTypingReason",
+        "Effect4.Program.FoldTermRefusal",
+        "Effect4.Program.FoldCauseRefusal",
+        "Effect4.Program.TermTypingRefusal",
+        "Effect4.Program.CauseTypingRefusal",
+        "Effect4.Program.TypeReason",
+        "Effect4.Program.TypeRefusal",
+        "Effect4.Api.AuthorRefusal",
+        "Effect4.Program.ClassRefusal",
+        "Effect4.Program.PrintRefusal",
+        "Effect4.Program.ReadRefusal",
+        "Effect4.Api.BuildRefusal"
+      ]
+    },
+    {
+      "Note": "The runner's byte boundary: a journal row, its verdict and what a holder observes. `ReasonAnnotations` and the error payload `Payload` (decisions row 120) have a proof field, so their instances are the hand ones in Store/Domain/AnnotationsCanonical.lean and Store/Domain/PayloadCanonical.lean, imported before `Err`; every applied carrier is listed before the type that holds it. Admission's and the table's refusals are the Refusals group's; a call the machine waits on (a record, decisions row 16), a fiber's status and a run's observation are the readings of Run.observe (decisions row 17).",
+      "Name": "Runner",
+      "Imports": "Effect4.Api.Runner,Effect4.Store.Domain.Derived.Value,Effect4.Store.Domain.AnnotationsCanonical,Effect4.Store.Domain.PayloadCanonical,Effect4.Store.Domain.Clock,Effect4.Store.Domain.Derived.Program,Effect4.Api.Derived,Effect4.Api.RefusalsDerived,Effect4.Run",
+      "Out": "src\\Effect4\\Api\\RunnerDerived.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\runner.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Machine.RefKey",
+        "Effect4.Machine.Err",
+        "Effect4.Machine.Defect",
+        "Effect4.Reason@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Cause@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Exit@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Machine.Completion@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Machine.RunDecision@Effect4.Program.EffName@Effect4.Program.EffThunk@Effect4.Store.Val@Effect4.Machine.Err@Effect4.Machine.Defect@Effect4.FiberId@Unit",
+        "Effect4.Api.HostSession.Header",
+        "Effect4.Api.HostSession.Call",
+        "Effect4.Api.HostSession.Reply",
+        "Effect4.Api.HostSession.Refusal",
+        "Effect4.Api.HostSession.Phase",
+        "Effect4.Api.Runner.Command",
+        "Effect4.Api.HostProtocol.State",
+        "Effect4.Machine.Stuck",
+        "Effect4.Api.Outcome",
+        "Effect4.Program.Await",
+        "Effect4.Api.FiberStatus",
+        "Effect4.Run.Observation"
+      ]
+    },
+    {
+      "Name": "Fold",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Eff,Effect4.Program.Ty,Effect4.Program.ScopedOp"],
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Program.Eff,Effect4.Program.Ty,Effect4.Program.ScopedOp",
+      "Out": "src\\Effect4\\Program\\Fold.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\fold.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Ty",
+        "Effect4.Program.Term",
+        "Effect4.Program.CauseTerm",
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The relational view of `Ty` (tooling plan 1.4): the children of a node with the variance the order reads them at, the head test, and the one law `sub_eq_args` -- `sub` between members is the variance-wise comparison of corresponding arguments -- so the proofs of the order name no constructor. Variance is NOT declared here: tools/Tools/Variances.lean reads it off rc.112 into tools/Effect4Gen/variances.json. The output is under Laws because the one proof is `fun_cases` plus `aesop`, and nothing under the core root imports aesop.",
+      "Name": "TyView",
+      "Tool": "tools/Effect4Gen/View.lean",
+      "Imports": "Effect4.Laws.Program.Folds.Ty,Effect4.Laws.Auto.RuleSets",
+      "Out": "src\\Effect4\\Laws\\Program\\TyView.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\tyview.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Ty"
+      ]
+    },
+    {
+      "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",
+      "Name": "ValFold",
+      "Flags": ["--module"],
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Store.Carrier.Val",
+      "Out": "src\\Effect4\\Store\\Carrier\\Fold.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Store.Val"
+      ]
+    },
+    {
+      "Note": "The fold of the persisted schema carrier: Representation and Check together, their children under List, Option and the four one-parameter records included. A block with a composite position emits no monadic half and no foldMapAt: a foldM over a nested position needs a sequence per position type and has no consumer on this family.",
+      "Name": "SchemaFold",
+      "Flags": ["--module", "--meta-imports", "Effect4.Schema.Representation"],
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Schema.Representation",
+      "Out": "src\\Effect4\\Schema\\Fold.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\schemafold.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Representation"
+      ]
+    },
+    {
+      "Note": "The one-layer view of the program family, from the constructor declarations: an argument by sort (ArgF), a generic layer function as an EffAlgebra (ofLayer), the argument sorts and constructor names, and build with one rfl equation per constructor. What a table-driven printer and reader stand on (R4.2).",
+      "Name": "LayerView",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Fold"],
+      "Tool": "tools/Effect4Gen/LayerView.lean",
+      "Imports": "Effect4.Program.Fold",
+      "Out": "src\\Effect4\\Program\\LayerView.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\layerview.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The generic fold families of `Ty` (decisions row 182 (a), probe U): the one-layer view (TyCtor, TyLeaf, tyKids, tyBuild with tyBuild_view), the per-constructor table type TyTable, the layer algebra TyAlgebra.ofLayer with its view and invariant laws, the head and paired folds with their connectors, fusion and the banana split, all from the declaration of `Ty` alone. What the classifier and face tables stand on (slice C).",
+      "Name": "TyExtras",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Flags": [
+        "--extras",
+        "--module"
+      ],
+      "Imports": "Effect4.Program.Fold",
+      "Out": "src\\Effect4\\Program\\TyFoldExtras.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Ty"
+      ]
+    },
+    {
+      "Note": "The fold of the TypeScript syntax of the pinned lean4-typescript (`TypeScript.Expr`, `Stmt` and `ObjectEntry`, one mutual block nested through lists and pairs): its algebra, its fold, its homomorphism with uniqueness, the identity algebra and the monoid fold. The view's code plane states the pinned renderer and its readable layout as two algebras of it (docs/research/2026-10-09-view-algebra-audit.md, slice F). In tools until the algebra moves to lean4-typescript.",
+      "Name": "TsFold",
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "TypeScript.Syntax",
+      "Out": "tools\\Tools\\Code\\TsFold.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "TypeScript.Expr"
+      ]
+    },
+    {
+      "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
+      "Name": "NodeLenses",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Node"],
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Node",
+      "Out": "src\\Effect4\\Program\\NodeLenses.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\nodelenses.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The binder table (review log B17): Node.binders, closedChild and childLevel from tools/Effect4Gen/binders.json, read by the hoisting proofs and the authoring lifts.",
+      "Name": "Binders",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Refs"],
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Refs",
+      "Out": "src\\Effect4\\Program\\Binders.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\binders.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The scope predicate (every variable below its level) as the binder table's algebra on the carrier Nat -> Bool, run by the fold; one equation per constructor. An operation's own data is read by the alphabet's ScopedOp instance (state plan T0).",
+      "Name": "Scoped",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Fold,Effect4.Program.Refs,Effect4.Program.ScopedOp"],
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Fold,Effect4.Program.Refs,Effect4.Program.ScopedOp",
+      "Out": "src\\Effect4\\Program\\Scoped.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\scoped.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The authoring lifts (DI-83, DI-84): one per constructor an author may write, from the same table.",
+      "Name": "Authoring",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Authoring"],
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Program.Authoring",
+      "Out": "src\\Effect4\\Program\\Authoring\\Lifts.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\authoring.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The native rows as authoring wrappers, named as the printed image spells them, from NativeOp.spelled and the NativeOp declarations (DI-89's native half).",
+      "Name": "Rows",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Authoring.Lifts"],
+      "Tool": "tools/Effect4Gen/Rows.lean",
+      "Imports": "Effect4.Program.Authoring.Lifts",
+      "Out": "src\\Effect4\\Program\\Authoring\\Rows.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\rows.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The atom inventory from the NativeAtom constructor list: `all` and its two projections, with all_complete and covers_iff appended as the acceptance guards. The hand-written list is retired; a constructor cannot be left out of a list read off the environment.",
+      "Name": "AtomInventory",
+      "Flags": ["--module"],
+      "Tool": "tools/Effect4Gen/Atoms.lean",
+      "Imports": "Effect4.Machine.Term",
+      "Out": "src\\Effect4\\Program\\AtomInventory.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\atominventory.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The TypeScript prelude's atom block: one export per atom, the body from AtomRow.prelude and the doc from Spec.cite. The last hand-transcribed face of the alphabet; prelude.ts re-exports it and keeps the hand-written self-test table.",
+      "Name": "PreludeAtoms",
+      "Tool": "tools/Effect4Gen/PreludeAtoms.lean",
+      "Imports": "Effect4.Program.NativeAtom",
+      "Out": "harness\\truth\\prelude-atoms.gen.ts",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The derived forms as authoring combinators, from Codegen.Forms.all: each template read on the scope reader, with a drift guard per form against the printer's Template.expand.",
+      "Name": "Forms",
+      "Tool": "tools/Effect4Gen/Forms.lean",
+      "Imports": "Effect4.Program.Authoring.Lifts,Effect4.Program.Authoring.Sugar,Effect4.Codegen.Forms",
+      "Out": "src\\Effect4\\Codegen\\Authoring\\Forms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The scope-preservation lemma of every authoring lift, from the same rows; the base and the tactic are hand-written in Laws/Program/Authoring.lean.",
+      "Name": "ScopedLaws",
+      "Tool": "tools/Effect4Gen/Authoring.lean",
+      "Imports": "Effect4.Laws.Program.Authoring,Effect4.Program.Authoring.Lifts",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Lifts.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\scopedlaws.lean",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Program.Eff"
+      ]
+    },
+    {
+      "Note": "The scope lemma of every row wrapper.",
+      "Name": "RowsLaws",
+      "Tool": "tools/Effect4Gen/Rows.lean",
+      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Program.Authoring.Rows",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Rows.lean",
+      "Guards": "tools\\Effect4Gen\\guards\\rowslaws.lean",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The scope lemma of every form combinator.",
+      "Name": "FormsLaws",
+      "Tool": "tools/Effect4Gen/Forms.lean",
+      "Imports": "Effect4.Laws.Program.Authoring.Lifts,Effect4.Laws.Program.Authoring.Sugar,Effect4.Codegen.Authoring.Forms,Effect4.Codegen.Forms",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Forms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The authoring functions for native atoms, in namespace Authoring.Atom, from NativeAtom.all and NativeAtom.row.",
+      "Name": "Atoms",
+      "Flags": ["--module"],
+      "Tool": "tools/Effect4Gen/AtomLifts.lean",
+      "Imports": "Effect4.Program.Authoring",
+      "Out": "src\\Effect4\\Program\\Authoring\\Atoms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    },
+    {
+      "Note": "The scope lemma of every native atom authoring function.",
+      "Name": "AtomsLaws",
+      "Tool": "tools/Effect4Gen/AtomLifts.lean",
+      "Imports": "Effect4.Laws.Program.Authoring,Effect4.Program.Authoring.Atoms",
+      "Out": "src\\Effect4\\Laws\\Program\\Authoring\\Atoms.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": []
+    }
+  ]
+}

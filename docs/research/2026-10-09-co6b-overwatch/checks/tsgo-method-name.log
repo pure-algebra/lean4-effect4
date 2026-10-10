@@ -1,0 +1,5 @@
+docs/research/2026-10-09-co6b-overwatch/method-name.ts(9,15): error TS1005: ',' expected.
+docs/research/2026-10-09-co6b-overwatch/method-name.ts(9,20): error TS1005: ';' expected.
+docs/research/2026-10-09-co6b-overwatch/method-name.ts(10,1): error TS1005: ',' expected.
+docs/research/2026-10-09-co6b-overwatch/method-name.ts(10,2): error TS1128: Declaration or statement expected.
+docs/research/2026-10-09-co6b-overwatch/method-name.ts(10,3): error TS1128: Declaration or statement expected.
