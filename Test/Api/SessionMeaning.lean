@@ -1,4 +1,5 @@
 import Effect4.Laws.Api.SessionMeaning
+import Effect4.Laws.Api.HostDrive
 import Test.Dogfood.Scenario.Todo
 import Test.Dogfood.Scenario.Routing
 
@@ -275,6 +276,33 @@ def hostPremises (main : Src NativeOp) (state : Repo) : Option (Bool × Bool × 
     let run : Run × Repo := Run.runWith b repository (1, []) "todo"
     Run.hostAnsweredCheck b.table (Run.reactorHost b.table repository) b.program run.1.budget.fuel
       (tapeOf run.1) (Api.load b.program run.1.budget.compileFuel) (5, [])) = some none
+
+/-- A drive under the repository behind its rows' types (`Run.Reactor.guardRows`): the
+premises of `runWith_guarded_denotes` (the fragment, funded, at rest, the root exited), and
+whether the guarded drive ends as the unguarded one, at the exit and the repository's state. -/
+def guardedPremises (reactor : Run.Reactor Repo) (main : Src NativeOp) (state : Repo) :
+    Option (Bool × Bool × Bool × Bool × Bool) :=
+  (built? (request main)).map fun b =>
+    let run : Run × Repo := Run.runWith b reactor state "todo"
+    let guarded : Run × Repo := Run.runWith b reactor.guardRows state "todo"
+    (StraightRows b.table b.program, funded guarded.1, atRest guarded.1, guarded.1.exit.isSome,
+      decide (guarded.1.exit = run.1.exit) && decide (guarded.2 = run.2))
+
+-- finite evaluation: behind its rows' types the repository drives each run as before, and the
+-- run meets the premises of `runWith_guarded_denotes`, which needs no envelope premise
+#guard [guardedPremises repository (add (str "milk")) (1, []),
+    guardedPremises repository list (3, [(1, "milk", false), (2, "tea", true)]),
+    guardedPremises repository (complete (nat 1)) (3, [(1, "milk", false), (2, "tea", true)]),
+    guardedPremises repository (remove (nat 7)) (3, [(1, "milk", false)])].all
+  (· = some (true, true, true, true, true))
+
+/-- The repository with its listing answered by a string, outside the row's answer column. -/
+def mislisting : Run.Reactor Repo := fun row sent state =>
+  if row.spelling == "TodoRepo.all" then some (ok (.str "oops"), state) else repository row sent state
+
+-- control: the guard refuses the answer outside the row's columns, so the guarded drive leaves
+-- the call waiting and the root has no exit, where the theorem says nothing
+#guard (guardedPremises mislisting list (1, [])).map (fun p => p.2.2.2.1) = some false
 
 end repository
 

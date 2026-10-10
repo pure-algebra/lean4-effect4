@@ -311,10 +311,14 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   exits. Then each answer of a funded drive is one the host gives at the machine's request
   (`drive_hostAnswered`, `runWith_hostAnswered`). So H9 gives the meaning of the driver's run
   (`runWith_denotes`): the reactor's run of the call tree is the root's exit with the stores.
-  Its axioms are `[propext, Quot.sound]`. The premise `Envelops` quantifies over machines, and
-  no concrete reactor proves it yet. The next step is a guard: a reactor behind the row
-  protocol envelops the table, at rows whose columns allocate nothing. Then the battery's
-  repository runs read the theorem.
+  Its axioms are `[propext, Quot.sound]`. The premise `Envelops` quantifies over machines. A
+  reactor behind its rows' types (`Reactor.guardRows`) meets it at every table
+  (`guardRows_envelops`), since membership at the empty allocation table is membership at every
+  table (`hasTy_append`). So H9 holds at the driver for any guarded reactor
+  (`runWith_guarded_denotes`). The battery drives four repository runs behind the guard: each
+  ends as before and meets the premises. Its control answers a listing outside the row's
+  column, and the guard leaves that call waiting. A row whose answer column allocates a handle
+  answers nothing through the guard.
 
 ## 8. What the owner must decide
 

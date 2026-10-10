@@ -12,6 +12,11 @@ driver meets H9's premises (`runWith_hostAnswered`), and H9 gives its meaning
 (`runWith_denotes`): the reactor's run of the program's call tree is the root's exit with the
 stores, and the reactor ends where the drive left it.
 
+The envelope quantifies over machines. A reactor behind its rows' types (`Reactor.guardRows`)
+meets it at every table (`guardRows_envelops`): it answers only exits that a row's columns
+admit at every machine. So H9 holds at the driver for any reactor so guarded
+(`runWith_guarded_denotes`).
+
 Placement: concept `translation-simulation`, role simulation; claim `rows-denotation-driver`;
 requirement R6, the part "the host as a relation between the machine's calls and its answers".
 Reach: H9's reach (`StraightRows`, one fiber, finished runs), a reactor inside the envelope that
@@ -513,5 +518,118 @@ theorem runWith_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (
     hhost
   rw [hbuilt, hbudget] at h
   exact h hfrag (reactorHost b.table r) st _ hA ex hex
+
+/-! ## A reactor behind its rows' types
+
+The envelope asks a reactor's answers to be admitted at every machine that holds the call. A
+row's columns decide it, except at a column that allocates an external handle: a success is a
+member of the answer column and holds no handle, and a failure holds no reserved defect and fits
+the error column. Membership at the empty allocation table is membership at every table
+(`hasTy_append`), so a reactor that answers only such exits is inside the envelope, whatever
+the machine. `Reactor.guardRows` makes any reactor one: it refuses every other answer. -/
+
+/-- Whether a row's columns admit an answer at every machine: a success that is a member of an
+answer column that allocates nothing and that holds no handle, or a failure with no reserved
+defect whose reasons fit the error column. A delayed cell read is never admitted here. -/
+def answerAdmits (row : Program.Row) : Answer → Bool
+  | .ofExit (.success v) =>
+    !allocates row.answer && Val.hasTy v row.answer [] && (Store.Val.handles v).isEmpty
+  | .ofExit (.failure cause) =>
+    !cause.reasons.any reservedDie && cause.reasons.all (errAdmits row.error)
+  | .ofRefGet _ => false
+
+/-- A reactor behind its rows' types: it gives the reactor's answer where the row admits it at
+every machine (`answerAdmits`), and no answer otherwise. -/
+def Reactor.guardRows {σ : Type} (r : Reactor σ) : Reactor σ :=
+  fun row request st => (r row request st).filter fun result => answerAdmits row result.1
+
+/-- Step of `guardRows_envelops`: the machine admits an answer at a call it holds, on a table
+row, where the row admits it at every machine. -/
+theorem admit_of_answerAdmits (table : RowTable) (m : Api.Machine) (fiber : FiberId)
+    (token i : Nat) (row : Program.Row) (request : Val) (c : Answer)
+    (hreq : requestOf m fiber token = some (.external i, request))
+    (hrow : externalRow table i = some row) (hadmits : answerAdmits row c = true) :
+    admit table m (.answerAsync fiber token c) = none := by
+  obtain ⟨f, controller, cancel, origin, hf, hp, -⟩ := requestOf_current m fiber token _ _ hreq
+  have hanswer : admitAnswer row m fiber token c = none := by
+    cases c with
+    | ofExit ex =>
+      cases ex with
+      | success v =>
+        simp only [answerAdmits, Bool.and_eq_true, Bool.not_eq_true'] at hadmits
+        obtain ⟨⟨halloc, hty⟩, hhandles⟩ := hadmits
+        have hmember : Val.hasTy v row.answer m.state.externals.allocated = true :=
+          hasTy_append row.answer v [] m.state.externals.allocated hty
+        have hvalue : (externalValue row.answer m.state.externals.allocated v).isNone = false := by
+          rw [externalValue_unallocating halloc, hmember, hhandles]
+          rfl
+        have hminted : mintedIn m v = true := by
+          rw [mintedIn, List.isEmpty_iff.mp hhandles]
+          rfl
+        simp only [admitAnswer, hvalue, hminted, Bool.not_true, Bool.false_eq_true, if_false]
+      | failure cause =>
+        simp only [answerAdmits, Bool.and_eq_true, Bool.not_eq_true'] at hadmits
+        obtain ⟨hreserved, herr⟩ := hadmits
+        simp only [admitAnswer, hreserved, herr, Bool.false_eq_true, if_false, if_true]
+    | ofRefGet cell => cases hadmits
+  simp only [admit, hf, hp, ne_eq, not_true_eq_false, if_false, hreq, hrow]
+  exact hanswer
+
+/-- **A reactor behind its rows' types is inside the envelope**, at every table: each answer it
+gives at a call a machine holds is one the machine admits. -/
+theorem guardRows_envelops {σ : Type} (r : Reactor σ) (table : RowTable) :
+    r.guardRows.Envelops table := by
+  intro m fiber token i row request st c next hreq hrow hguard
+  have hadmits : answerAdmits row c = true := by
+    unfold Reactor.guardRows at hguard
+    cases hr : r row request st with
+    | none =>
+      rw [hr] at hguard
+      cases hguard
+    | some result =>
+      rw [hr, Option.filter_some] at hguard
+      split at hguard
+      · cases hguard
+        assumption
+      · cases hguard
+  exact admit_of_answerAdmits table m fiber token i row request c hreq hrow hadmits
+
+/-- A reactor behind its rows' types answers with exits. -/
+theorem guardRows_exitsOnly {σ : Type} (r : Reactor σ) : r.guardRows.ExitsOnly := by
+  intro row request st c next hguard
+  unfold Reactor.guardRows at hguard
+  cases hr : r row request st with
+  | none =>
+    rw [hr] at hguard
+    cases hguard
+  | some result =>
+    rw [hr, Option.filter_some] at hguard
+    split at hguard
+    · rename_i hadmits
+      cases hguard
+      cases c with
+      | ofExit ex => exact ⟨ex, rfl⟩
+      | ofRefGet cell => cases hadmits
+    · cases hguard
+
+/-- **H9 at the driver, for any reactor behind its rows' types.** Guard a reactor by its rows'
+columns and drive a `StraightRows` program with it. When the run is funded, at rest and its root
+exited, the guarded reactor, read as a host, runs the program's call tree to the root's exit
+with the run's stores, and ends at the drive's state. It is `runWith_denotes` with the envelope
+supplied by the guard. Reach and limits as there; a row whose answer column allocates an
+external handle answers nothing through the guard. Concept `translation-simulation`, role
+simulation; requirement R6. Consumer: the battery's repository runs
+(`Test/Api/SessionMeaning.lean`). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem runWith_guarded_denotes {σ : Type} (b : Api.Built) (r : Reactor σ) (st : σ) (id : String)
+    (budget : Api.Budget) (rounds : Nat) (hfrag : StraightRows b.table b.program = true)
+    (hfund : funded (Run.runWith b r.guardRows st id budget rounds).1 = true)
+    (hrest : atRest (Run.runWith b r.guardRows st id budget rounds).1 = true)
+    (ex : ExitV) (hex : (Run.runWith b r.guardRows st id budget rounds).1.exit = some ex) :
+    hostRun (reactorHost b.table r.guardRows) b.program [] Stores.empty st =
+      some (ex, ((Run.runWith b r.guardRows st id budget rounds).1.machine.state,
+        (Run.runWith b r.guardRows st id budget rounds).2)) :=
+  runWith_denotes b r.guardRows st id budget rounds (guardRows_envelops r b.table)
+    (guardRows_exitsOnly r) hfrag hfund hrest ex hex
 
 end Effect4.Run
