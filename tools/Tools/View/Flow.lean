@@ -1,6 +1,8 @@
 import Tools.View.Program
 import Effect4.Program.Binders
 import Tools.Graph.Index
+import Std.Data.HashMap
+import Std.Data.HashSet
 
 /-!
 # A program's flow: its own graph as a fold, and its layout as a fold
@@ -605,6 +607,20 @@ def assignHeightsIndexed (h : Nat → Int) (incoming : Tools.Graph.Index Edge) (
     let r := relaxIndexed h incoming (heightAt start heights) start v
     assignHeightsIndexed h incoming start vs ((v, r) :: heights)
 
+/-- **`assignHeightsIndexed` from no height, with the heights also in a sparse index by position**:
+the same newest-first list, and a read takes a position's newest height without a scan of the list
+(`assignTable_eq`, `Tools.View.FlowLaws`). -/
+def assignTable (h : Nat → Int) (incoming : Tools.Graph.Index Edge) (start : Int) (ord : List Nat) :
+    List (Nat × Int) :=
+  go ord [] .empty
+where
+  /-- The heights so far, newest first, and the same heights by position. -/
+  go : List Nat → List (Nat × Int) → Tools.Graph.Index Int → List (Nat × Int)
+    | [], heights, _ => heights
+    | v :: vs, heights, table =>
+      let r := relaxIndexed h incoming (fun i => ((table.bucket i).head?).getD start) start v
+      go vs ((v, r) :: heights) (table.push v r)
+
 /-- Whether `a` comes before `b` in an order: `a` stands in it, and `b` after it. -/
 def before : List Nat → Nat → Nat → Bool
   | [], _, _ => false
@@ -614,6 +630,33 @@ def before : List Nat → Nat → Nat → Bool
 target. -/
 def orders (ord : List Nat) (es : List Edge) : Bool :=
   decide ord.Nodup && es.all fun e => before ord e.fr e.to
+
+/-- The first position of `v` in an order, counting from `k`. -/
+def posFrom : List Nat → Nat → Nat → Option Nat
+  | [], _, _ => none
+  | x :: xs, k, v => if x = v then some k else posFrom xs (k + 1) v
+
+/-- An order's positions by value, on the sparse index: each value's bucket holds its positions,
+the first first. -/
+def positionsOf (ord : List Nat) : Tools.Graph.Index (Nat × Nat) :=
+  Tools.Graph.Index.ofList (·.1) ord.zipIdx
+
+/-- A value's first position, by the index of positions. -/
+def firstAt (pos : Tools.Graph.Index (Nat × Nat)) (v : Nat) : Option Nat :=
+  ((pos.bucket v).head?).map (·.2)
+
+/-- Whether one first position comes before another: both stand, the first lower. -/
+def posBefore : Option Nat → Option Nat → Bool
+  | some i, some j => decide (i < j)
+  | _, _ => false
+
+/-- **`orders` by positions**: each value's first position is its own, so no value stands twice,
+and each edge's source has a first position before its target's (`ordersTable_eq`,
+`Tools.View.FlowLaws`). -/
+def ordersTable (ord : List Nat) (es : List Edge) : Bool :=
+  let pos := positionsOf ord
+  ord.zipIdx.all (fun x => decide (firstAt pos x.1 = some x.2)) &&
+    es.all fun e => posBefore (firstAt pos e.fr) (firstAt pos e.to)
 
 /-- **Kahn's order** of `n` items under the edges: an item once every edge to it is spent. -/
 def kahn (n : Nat) (es : List Edge) : List Nat :=
@@ -626,6 +669,42 @@ def kahn (n : Nat) (es : List Edge) : List Nat :=
       let ready := ((es.filter (·.fr == k)).map (·.to)).eraseDups.filter fun v => indeg v rest == 0
       go fuel (queue ++ ready) rest (out ++ [k])
   go (n + 1) ((List.range n).filter fun k => indeg k es == 0) es []
+
+/-- Take the item `k` of Kahn's order: spend its out-edges, and answer its targets that no edge
+reaches any more, the last first, each once, with the in-degrees after. -/
+def kahnTake (outs : Std.HashMap Nat (Array Nat)) (k : Nat) (indeg : Std.HashMap Nat Nat) :
+    List Nat × Std.HashMap Nat Nat :=
+  let targets := outs.getD k #[]
+  let indeg := targets.foldl (fun m v => m.insert v (m.getD v 0 - 1)) indeg
+  let ready := (targets.foldl (fun (acc : List Nat × Std.HashSet Nat) v =>
+    if acc.2.contains v then acc
+    else (if indeg.getD v 0 == 0 then v :: acc.1 else acc.1, acc.2.insert v)) ([], {})).1
+  (ready, indeg)
+
+/-- Kahn's order from a queue, a front list and a reversed back list, within the fuel. -/
+def kahnGo (outs : Std.HashMap Nat (Array Nat)) :
+    Nat → List Nat → List Nat → Std.HashMap Nat Nat → Array Nat → Array Nat
+  | 0, _, _, _, out => out
+  | fuel + 1, k :: front, back, indeg, out =>
+    let (ready, indeg) := kahnTake outs k indeg
+    kahnGo outs fuel front (ready ++ back) indeg (out.push k)
+  | fuel + 1, [], back, indeg, out =>
+    match back.reverse with
+    | k :: front =>
+      let (ready, indeg) := kahnTake outs k indeg
+      kahnGo outs fuel front ready indeg (out.push k)
+    | [] => out
+
+/-- **Kahn's order by in-degree counts**: `kahn`'s queue and fuel, with each item's out-edges and
+the in-degrees in tables. An item taken spends all its out-edges; then its targets that no edge
+reaches any more join the queue, in the order of their first edge from it. Checked equal to `kahn`
+on every sketch of the view's builds (`Tools.View.LiveChecks`). No law reads it: `orderFor` checks
+the order it takes. -/
+def kahnTable (n : Nat) (es : List Edge) : List Nat :=
+  let outs : Std.HashMap Nat (Array Nat) :=
+    es.foldl (fun m e => m.insert e.fr ((m.getD e.fr #[]).push e.to)) {}
+  let indeg : Std.HashMap Nat Nat := es.foldl (fun m e => m.insert e.to (m.getD e.to 0 + 1)) {}
+  (kahnGo outs (n + 1) ((List.range n).filter fun k => indeg.getD k 0 == 0) [] indeg #[]).toList
 
 /-- The next bounded-search frontier, shared by reachability and path explanations. -/
 def searchNext (es : List Edge) (frontier seen : List Nat) : List Nat :=
@@ -659,10 +738,10 @@ def acceptWaits (n : Nat) (es : List Edge) (candidates : List (Nat × Nat)) : Li
 
 /-- **The order the heights follow**, with the edges it serves: Kahn's order of the flow's edges and
 the accepted waits, when it serves them all; else the items' own order, which serves the flow's
-edges. -/
+edges. Both the order and its check read tables (`kahnTable`, `ordersTable`). -/
 def orderFor (n : Nat) (own dag : List Edge) : List Edge × List Nat :=
-  let ord := kahn n dag
-  if orders ord dag then (dag, ord) else (own, List.range n)
+  let ord := kahnTable n dag
+  if ordersTable ord dag then (dag, ord) else (own, List.range n)
 
 /-- A part's waits, each the exit of the fiber an await waits for, and that await. -/
 def Box.waitEdges (b : Box) : List (Nat × Nat) :=
@@ -686,13 +765,25 @@ deriving DecidableEq
 def PreparedPlacement.height (prepared : PreparedPlacement) (i : Nat) : Int :=
   heightAt prepared.fallback prepared.heights i
 
-/-- Analyze waits once and retain the selected order's assignments for every placement consumer. -/
+/-- A prepared placement's heights by position, on the sparse index: each position's bucket holds
+its heights, the newest first. -/
+def heightTable (prepared : PreparedPlacement) : Tools.Graph.Index (Nat × Int) :=
+  Tools.Graph.Index.ofList (·.1) prepared.heights
+
+/-- A position's height read from the table: its newest, or the fallback. It reads as
+`PreparedPlacement.height` (`heightTable_eq`, `Tools.View.FlowLaws`). -/
+def heightIn (prepared : PreparedPlacement) (table : Tools.Graph.Index (Nat × Int)) (i : Nat) : Int :=
+  (((table.bucket i).head?).map (·.2)).getD prepared.fallback
+
+/-- Analyze waits once and retain the selected order's assignments for every placement consumer.
+The items' heights are read from an array, and the assignments from a table (`assignTable`). -/
 def preparePlacement (b : Box) : PreparedPlacement :=
+  let items := b.items.toArray
   let waits := acceptWaits b.items.length b.edges b.waitEdges
   let order := orderFor b.items.length b.edges waits.1
   { fallback := b.topPad,
-    heights := assignHeightsIndexed (hAt b.items)
-      (Tools.Graph.Index.ofList (·.to) order.1) b.topPad order.2 [],
+    heights := assignTable (fun i => ((items[i]?).map itemH).getD 0)
+      (Tools.Graph.Index.ofList (·.to) order.1) b.topPad order.2,
     lanes := b.backs ++ waits.2 }
 
 /-- Items at their heights, the first at position `k`. -/
@@ -705,7 +796,8 @@ A wait that closes a cycle in the selected constraints constrains nothing and ke
 def placeWith (width : GNode → Int) (f : Flow) : Placement :=
   let b := layWith width f
   let prepared := preparePlacement b
-  { box := b, placed := atHeights prepared.height 0 b.items,
+  let table := heightTable prepared
+  { box := b, placed := atHeights (heightIn prepared table) 0 b.items,
     lanes := prepared.lanes }
 
 /-- **A flow placed**, each node as wide as its lines. -/
@@ -717,7 +809,8 @@ def layout (f : Flow) : Laid :=
   let pl := place f
   let b := pl.box
   let placed := pl.placed
-  let at_ (i : Nat) : Option Placed := placed[i]?
+  let arr := placed.toArray
+  let at_ (i : Nat) : Option Placed := arr[i]?
   let keyAt (i : Nat) : Key := ((at_ i).map (·.key)).getD ""
   let bottomOf (p : Placed) : Int := p.y + itemH p
   let rects := b.frames.reverse.foldl (fun (rs : List (Key × Region)) fr =>
@@ -746,7 +839,7 @@ def layout (f : Flow) : Laid :=
       let v := keyAt j
       if i == j then Route.loop (u ++ "↺") u else Route.back (u ++ "↺" ++ v) u v lane
   let height := (placed.map bottomOf ++ rects.map fun (p : Key × Region) => p.2.y + p.2.h).foldl max 0
-  { placed := placed.toArray, routes := routes.toArray, regions := (rects.map (·.2)).reverse.toArray,
+  { placed := arr, routes := routes.toArray, regions := (rects.map (·.2)).reverse.toArray,
     marks := marks.toArray,
     width := b.w + (if pl.lanes.isEmpty then 0 else CELL * (GAP + 2 * pl.lanes.length)), height }
 

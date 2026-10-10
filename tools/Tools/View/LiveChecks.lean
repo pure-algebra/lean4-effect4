@@ -83,4 +83,35 @@ def twice : Laid := { placed := #[{ key := "k", x := 0, y := 0, w := 8 }, { key 
 #guard (((twice.placed.toList.foldl (fun m p => m.insert p.key p) ({} : KeyMap Key Placed)).get? "k").map (·.x)) ==
   some 40
 
+/-! ## LV-3: the layout in linear time -/
+
+/-- Every intermediate program of a build: each answered request's sketch. -/
+def sketchesOf (p : NativeEff) : List NativeEff :=
+  match requests p with
+  | none => []
+  | some reqs => (reqs.foldl (fun (acc : Tools.Session.State × List NativeEff) r =>
+      let (st, _) := Tools.Session.answer acc.1 r
+      (st, acc.2 ++ (st.session.map (·.sketch.program)).toList)) ({}, [])).2
+
+/-- Kahn's order by tables is Kahn's order on a flow's edges and accepted waits, as `orderFor`
+takes it. -/
+def kahnAgrees (f : Flow.Flow) : Bool :=
+  let b := Flow.lay f
+  let dag := (Flow.acceptWaits b.items.length b.edges b.waitEdges).1
+  Flow.kahnTable b.items.length dag == Flow.kahn b.items.length dag
+
+-- On the flow of every sketch of every build, and on every program at once as one flow in
+-- parallel. A finite evaluation: no law reads the order, since `orderFor` checks it, but the
+-- picture does.
+#guard programs.all fun p => (sketchesOf p).all fun q => kahnAgrees (Flow.ofProgram q)
+#guard kahnAgrees (Flow.Flow.par .fork "[]" (programs.map Flow.ofProgram))
+
+-- The controls of the order's check. An order with a repeat serves no edge, though its first
+-- positions stand in the edge's direction; a cycle has no order, so the check falls back.
+#guard Flow.ordersTable [0, 1, 0] [{ fr := 0, to := 1 }] == false
+#guard Flow.posBefore (Flow.firstAt (Flow.positionsOf [0, 1, 0]) 0) (Flow.firstAt (Flow.positionsOf [0, 1, 0]) 1)
+#guard Flow.kahnTable 2 [{ fr := 0, to := 1 }, { fr := 1, to := 0 }] == []
+#guard Flow.ordersTable (Flow.kahnTable 2 [{ fr := 0, to := 1 }, { fr := 1, to := 0 }])
+  [{ fr := 0, to := 1 }, { fr := 1, to := 0 }] == false
+
 end Tools.View.LiveChecks

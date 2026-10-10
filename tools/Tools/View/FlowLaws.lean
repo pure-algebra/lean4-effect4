@@ -17,6 +17,13 @@ the flow (`lay`), and its invariant is proved by fold induction. Each is a tool'
   bottom.
 - `place_apart`: in every flow's placement, any two boxes stand apart.
 
+**The tables keep them.** The placement reads its order's check, its assignments and its heights
+from tables (the live view's slice LV-3, `docs/research/2026-10-10-live-view/LANDING.md`). Three
+connectors keep every law above: `ordersTable_eq` (the positions' table answers `orders`),
+`assignTable_eq` (the heights' table assigns as `assignHeightsIndexed` does) and `heightTable_eq`
+(the table of a newest-first list answers `heightAt`). Kahn's order by tables (`kahnTable`) needs
+no connector: `orderFor_serves` reads no fact of the order, since the order is checked.
+
 **The reach.** The laws hold for every flow, at every width of the nodes no less than zero
 (`layWith`), at the level of item positions. The view's width (`nodeWidth`) reads the lines'
 lengths, which reach `Classical.choice` through core's `String.length`; the laws, stated over the
@@ -99,13 +106,67 @@ theorem assignHeightsIndexed_agrees (h : Nat → Int) (es : List Edge) (start : 
   | cons v vs ih =>
     rw [assignHeightsIndexed, relaxIndexed_agrees, ih, assignHeights]
 
+/-- The heights' table, read so far, answers as the newest-first list it keeps. A step of
+`assignTable_eq`. -/
+theorem assignTable_go (h : Nat → Int) (incoming : Tools.Graph.Index Edge) (start : Int) :
+    ∀ (ord : List Nat) (heights : List (Nat × Int)) (table : Tools.Graph.Index Int),
+      (∀ i, ((table.bucket i).head?).getD start = heightAt start heights i) →
+      assignTable.go h incoming start ord heights table = assignHeightsIndexed h incoming start ord heights
+  | [], _, _, _ => rfl
+  | v :: vs, heights, table, ht => by
+    have hread : (fun i => ((table.bucket i).head?).getD start) = heightAt start heights := funext ht
+    simp only [assignTable.go, assignHeightsIndexed, hread]
+    refine assignTable_go h incoming start vs _ _ fun i => ?_
+    rw [Tools.Graph.Index.bucket_push]
+    by_cases hv : v = i
+    · subst hv
+      simp only [if_true, List.head?_cons, Option.getD_some, heightAt]
+    · have hi : i ≠ v := fun e => hv e.symm
+      simp only [hv, if_false, ht i, heightAt, hi]
+
+/-- **The heights' table assigns as the list does**: `assignTable` is `assignHeightsIndexed` from
+no height. A connector of the live view's slice LV-3; it serves `preparePlacement_height`, so the
+layout's laws stand on the table. Placement: concept `initial-algebras-folds`, R14's live
+authoring. -/
+theorem assignTable_eq (h : Nat → Int) (incoming : Tools.Graph.Index Edge) (start : Int)
+    (ord : List Nat) : assignTable h incoming start ord = assignHeightsIndexed h incoming start ord [] :=
+  assignTable_go h incoming start ord [] .empty fun i => by
+    rw [Tools.Graph.Index.bucket_empty]
+    rfl
+
+/-- A newest-first list's first height at a position, from its filter. A step of
+`heightTable_eq`. -/
+theorem firstHeight (fallback : Int) : ∀ (hs : List (Nat × Int)) (i : Nat),
+    (((hs.filter fun e => decide (e.1 = i)).head?).map (·.2)).getD fallback = heightAt fallback hs i
+  | [], _ => rfl
+  | (p, y) :: rest, i => by
+    by_cases h : p = i
+    · subst h
+      simp only [List.filter_cons, decide_true, if_true, List.head?_cons, Option.map_some,
+        Option.getD_some, heightAt]
+    · have hi : i ≠ p := fun e => h e.symm
+      simp only [List.filter_cons, h, decide_false, Bool.false_eq_true, if_false, heightAt, hi]
+      exact firstHeight fallback rest i
+
+/-- **The table of a newest-first list answers `heightAt`**: a position's newest height, or the
+fallback. A connector of the live view's slice LV-3; it serves `place_placed`, at every position.
+Placement: concept `initial-algebras-folds`, R14's live authoring. -/
+theorem heightTable_eq (prepared : PreparedPlacement) (i : Nat) :
+    heightIn prepared (heightTable prepared) i = prepared.height i := by
+  unfold heightIn heightTable PreparedPlacement.height
+  rw [Tools.Graph.Index.bucket_ofList]
+  exact firstHeight prepared.fallback prepared.heights i
+
 /-- Prepared placement reads the independent `heightsOf` recurrence at every position.
 This serves `place_placed`, including raw boxes whose selected order uses outside positions. -/
 theorem preparePlacement_height (b : Box) (i : Nat) :
     (preparePlacement b).height i = heightsOf b i := by
   unfold preparePlacement PreparedPlacement.height heightsOf
   dsimp only
-  rw [assignHeightsIndexed_agrees]
+  have hh : (fun j => ((b.items.toArray[j]?).map itemH).getD 0) = hAt b.items := by
+    funext j
+    simp only [hAt, List.getElem?_toArray]
+  rw [assignTable_eq, hh, assignHeightsIndexed_agrees]
   exact assignHeights_agrees _ _ _ _ [] i
 
 /-- Prepared lane agreement: `placeWith` retains the original backs and wait-lane order. -/
@@ -1228,6 +1289,180 @@ theorem orders_serves {ord : List Nat} {es : List Edge} (h : orders ord es = tru
   rw [Bool.and_eq_true, decide_eq_true_iff, List.all_eq_true] at h
   exact ⟨h.1, fun e he => before_spec ord e.fr e.to (h.2 e he)⟩
 
+/-! ### The positions' table answers `orders` -/
+
+/-- A value's first position in an order's positions, filtered, is its first position. A step of
+`ordersTable_eq`. -/
+theorem firstPos : ∀ (l : List Nat) (k v : Nat),
+    (((l.zipIdx k).filter fun e => decide (e.1 = v)).head?).map (·.2) = posFrom l k v
+  | [], _, _ => rfl
+  | x :: xs, k, v => by
+    by_cases h : x = v
+    · subst h
+      simp only [List.zipIdx_cons, List.filter_cons, decide_true, if_true, List.head?_cons,
+        Option.map_some, posFrom]
+    · simp only [List.zipIdx_cons, List.filter_cons, h, decide_false, Bool.false_eq_true, if_false,
+        posFrom]
+      exact firstPos xs (k + 1) v
+
+/-- **The positions' index answers each value's first position.** A step of `ordersTable_eq`. -/
+theorem firstAt_positionsOf (ord : List Nat) (v : Nat) : firstAt (positionsOf ord) v = posFrom ord 0 v := by
+  unfold firstAt positionsOf
+  rw [Tools.Graph.Index.bucket_ofList]
+  exact firstPos ord 0 v
+
+/-- A first position counted from `k` is `k` at least. A step of `ordersTable_eq`. -/
+theorem posFrom_ge : ∀ (l : List Nat) (k v i : Nat), posFrom l k v = some i → k ≤ i
+  | [], _, _, _, h => by cases h
+  | x :: xs, k, v, i, h => by
+    by_cases hx : x = v
+    · simp only [posFrom, hx, if_true, Option.some.injEq] at h
+      exact Nat.le_of_eq h
+    · simp only [posFrom, hx, if_false] at h
+      exact Nat.le_of_succ_le (posFrom_ge xs (k + 1) v i h)
+
+/-- A value has a first position exactly when it stands in the order. A step of
+`ordersTable_eq`. -/
+theorem posFrom_isSome : ∀ (l : List Nat) (k v : Nat), (posFrom l k v).isSome = decide (v ∈ l)
+  | [], _, v => by
+    simp only [posFrom, Option.isSome_none]
+    exact (decide_eq_false List.not_mem_nil).symm
+  | x :: xs, k, v => by
+    by_cases hx : x = v
+    · simp only [posFrom, hx, if_true, Option.isSome_some]
+      exact (decide_eq_true (List.mem_cons.mpr (Or.inl rfl))).symm
+    · simp only [posFrom, hx, if_false, posFrom_isSome xs (k + 1) v]
+      by_cases hm : v ∈ xs
+      · rw [decide_eq_true hm, decide_eq_true (List.mem_cons_of_mem x hm)]
+      · have hn : v ∉ x :: xs := fun hv => (List.mem_cons.mp hv).elim (fun e => hx e.symm) hm
+        rw [decide_eq_false hm, decide_eq_false hn]
+
+/-- **`before` reads the first positions**: one value comes before another when both stand and the
+first's first position is lower. For every order, a repeat included. A step of `ordersTable_eq`. -/
+theorem before_posFrom : ∀ (ord : List Nat) (k a b : Nat),
+    before ord a b = posBefore (posFrom ord k a) (posFrom ord k b)
+  | [], _, _, _ => rfl
+  | x :: xs, k, a, b => by
+    have hdef : before (x :: xs) a b =
+        if x = b then false else if x = a then decide (b ∈ xs) else before xs a b := rfl
+    have hpa : posFrom (x :: xs) k a = if x = a then some k else posFrom xs (k + 1) a := rfl
+    have hpb : posFrom (x :: xs) k b = if x = b then some k else posFrom xs (k + 1) b := rfl
+    rw [hdef, hpa, hpb]
+    by_cases hb : x = b
+    · rw [if_pos hb, if_pos hb]
+      by_cases ha : x = a
+      · rw [if_pos ha]
+        exact (decide_eq_false (Nat.lt_irrefl k)).symm
+      · rw [if_neg ha]
+        cases hs : posFrom xs (k + 1) a with
+        | none => rfl
+        | some i =>
+          have hi := posFrom_ge xs (k + 1) a i hs
+          exact (decide_eq_false (Nat.not_lt.mpr (Nat.le_of_succ_le hi))).symm
+    · rw [if_neg hb, if_neg hb]
+      by_cases ha : x = a
+      · rw [if_pos ha, if_pos ha]
+        have hm := posFrom_isSome xs (k + 1) b
+        cases hs : posFrom xs (k + 1) b with
+        | none =>
+          rw [hs, Option.isSome_none] at hm
+          exact hm.symm
+        | some j =>
+          have hj := posFrom_ge xs (k + 1) b j hs
+          rw [hs, Option.isSome_some] at hm
+          rw [← hm]
+          exact (decide_eq_true (Nat.lt_of_succ_le hj)).symm
+      · rw [if_neg ha, if_neg ha]
+        exact before_posFrom xs (k + 1) a b
+
+/-- A list's entries from `k` have positions `k` at least. A step of `ordersTable_eq`. -/
+theorem zipIdx_ge : ∀ (l : List Nat) (k : Nat) (y : Nat × Nat), y ∈ l.zipIdx k → k ≤ y.2
+  | [], _, _, h => absurd h List.not_mem_nil
+  | x :: xs, k, y, h => by
+    rw [List.zipIdx_cons, List.mem_cons] at h
+    rcases h with rfl | h
+    · exact Nat.le_refl k
+    · exact Nat.le_of_succ_le (zipIdx_ge xs (k + 1) y h)
+
+/-- Two tests of every member agree when they agree at each. A step of `ordersTable_eq`. -/
+theorem all_congr_mem {α : Type} {f g : α → Bool} : ∀ (l : List α), (∀ y ∈ l, f y = g y) → l.all f = l.all g
+  | [], _ => rfl
+  | y :: ys, h => by
+    simp only [List.all_cons, h y List.mem_cons_self,
+      all_congr_mem ys fun z hz => h z (List.mem_cons_of_mem y hz)]
+
+/-- A test of two parts at every member is both tests at every member. A step of
+`ordersTable_eq`. -/
+theorem all_and {α : Type} (f g : α → Bool) : ∀ (l : List α), l.all (fun y => f y && g y) = (l.all f && l.all g)
+  | [] => rfl
+  | y :: ys => by
+    simp only [List.all_cons, all_and f g ys]
+    cases f y <;> cases g y <;> cases ys.all f <;> cases ys.all g <;> rfl
+
+/-- No entry from `k` holds `x` exactly when `x` stands nowhere in the list. A step of
+`ordersTable_eq`. -/
+theorem all_ne (x : Nat) : ∀ (xs : List Nat) (k : Nat),
+    (xs.zipIdx k).all (fun y => !decide (x = y.1)) = !decide (x ∈ xs)
+  | [], _ => by
+    simp only [List.zipIdx_nil, List.all_nil]
+    rw [decide_eq_false List.not_mem_nil]
+    rfl
+  | z :: zs, k => by
+    rw [List.zipIdx_cons, List.all_cons, all_ne x zs (k + 1)]
+    by_cases h1 : x = z
+    · rw [decide_eq_true h1, decide_eq_true (List.mem_cons.mpr (Or.inl h1))]
+      rfl
+    · by_cases h2 : x ∈ zs
+      · rw [decide_eq_false h1, decide_eq_true h2, decide_eq_true (List.mem_cons_of_mem z h2)]
+        rfl
+      · have hn : x ∉ z :: zs := fun hv => (List.mem_cons.mp hv).elim h1 h2
+        rw [decide_eq_false h1, decide_eq_false h2, decide_eq_false hn]
+        rfl
+
+/-- **An order holds no value twice exactly when each value's first position is its own.** A step
+of `ordersTable_eq`. -/
+theorem nodup_posFrom : ∀ (l : List Nat) (k : Nat),
+    decide l.Nodup = (l.zipIdx k).all (fun x => decide (posFrom l k x.1 = some x.2))
+  | [], _ => decide_eq_true List.nodup_nil
+  | x :: xs, k => by
+    have hstep : (xs.zipIdx (k + 1)).all (fun y => decide (posFrom (x :: xs) k y.1 = some y.2)) =
+        (xs.zipIdx (k + 1)).all (fun y => !decide (x = y.1) && decide (posFrom xs (k + 1) y.1 = some y.2)) := by
+      apply all_congr_mem
+      intro y hy
+      have hge := zipIdx_ge xs (k + 1) y hy
+      by_cases h : x = y.1
+      · have hne : posFrom (x :: xs) k y.1 ≠ some y.2 := by
+          simp only [posFrom, h, if_true, ne_eq, Option.some.injEq]
+          exact Nat.ne_of_lt hge
+        rw [decide_eq_false hne, decide_eq_true h]
+        rfl
+      · simp only [posFrom, h, if_false, decide_false, Bool.not_false, Bool.true_and]
+    have hself : decide (posFrom (x :: xs) k x = some k) = true := by
+      simp only [posFrom, if_true, decide_true]
+    rw [List.zipIdx_cons, List.all_cons, hself, hstep, all_and, all_ne, ← nodup_posFrom xs (k + 1)]
+    by_cases hx : x ∈ xs
+    · have hn : ¬ (x :: xs).Nodup := fun hd => (List.nodup_cons.mp hd).1 hx
+      rw [decide_eq_false hn, decide_eq_true hx]
+      rfl
+    · by_cases hd : xs.Nodup
+      · rw [decide_eq_true (List.nodup_cons.mpr ⟨hx, hd⟩), decide_eq_false hx, decide_eq_true hd]
+        rfl
+      · have hn : ¬ (x :: xs).Nodup := fun h => hd (List.nodup_cons.mp h).2
+        rw [decide_eq_false hn, decide_eq_false hx, decide_eq_false hd]
+        rfl
+
+/-- **The positions' table answers `orders`**: on every order, a repeat included, and every list of
+edges. A connector of the live view's slice LV-3; it serves `orderFor_serves`, so the layout's laws
+stand on the table. Placement: concept `initial-algebras-folds`, R14's live authoring. -/
+theorem ordersTable_eq (ord : List Nat) (es : List Edge) : ordersTable ord es = orders ord es := by
+  unfold ordersTable orders
+  simp only [firstAt_positionsOf]
+  rw [← nodup_posFrom ord 0]
+  congr 1
+  apply all_congr_mem
+  intro e _
+  exact (before_posFrom ord 0 e.fr e.to).symm
+
 theorem acceptWaits_keeps (n : Nat) (es : List Edge) (c : List (Nat × Nat)) :
     ∀ e ∈ es, e ∈ (acceptWaits n es c).1 := by
   have key : ∀ (c : List (Nat × Nat)) (acc : List Edge × List (Nat × Nat) × List (Nat × Nat)),
@@ -1263,8 +1498,10 @@ theorem orderFor_serves {n : Nat} {own dag : List Edge} (hsub : ∀ e ∈ own, e
     (hfwd : ∀ e ∈ own, e.fr < e.to ∧ e.to < n) :
     (∀ e ∈ own, e ∈ (orderFor n own dag).1) ∧ Serves (orderFor n own dag).1 (orderFor n own dag).2 := by
   unfold orderFor
-  by_cases h : orders (kahn n dag) dag = true
-  · rw [if_pos h]; exact ⟨hsub, orders_serves h⟩
+  by_cases h : ordersTable (kahnTable n dag) dag = true
+  · rw [if_pos h]
+    rw [ordersTable_eq] at h
+    exact ⟨hsub, orders_serves h⟩
   · rw [if_neg h]
     refine ⟨fun e he => he, nodup_range' n, fun e he => ⟨e.fr, e.to, (hfwd e he).1, ?_, ?_⟩⟩
     · rw [List.getElem?_range (by have := hfwd e he; omega)]
@@ -1313,8 +1550,9 @@ theorem atHeights_get (y : Nat → Int) : ∀ (k : Nat) (l : List Placed) (i : N
 
 theorem place_placed (width : GNode → Int) (f : Flow) (i : Nat) :
     (placeWith width f).placed[i]? = ((layWith width f).items[i]?).map fun p => { p with y := heightsOf (layWith width f) i } := by
-  show (atHeights (preparePlacement (layWith width f)).height 0 (layWith width f).items)[i]? = _
-  rw [atHeights_get, Nat.zero_add, preparePlacement_height]
+  show (atHeights (heightIn (preparePlacement (layWith width f)) (heightTable (preparePlacement (layWith width f))))
+    0 (layWith width f).items)[i]? = _
+  rw [atHeights_get, Nat.zero_add, heightTable_eq, preparePlacement_height]
 
 /-- **Every edge of a flow's layout descends** (slice D3): its target's top stands at or below its
 source's bottom. For every flow, at the level of item positions; the waits accepted as edges are
