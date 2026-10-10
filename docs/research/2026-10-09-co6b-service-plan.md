@@ -47,7 +47,7 @@ types and function types (`TypeScript.TypeRef`).
 | | Representation | Cost |
 | --- | --- | --- |
 | R1 | a fourth field of `Eff.defs`: the block's services | the program family changes: 64 files read `.defs`, the generated algebras and folds, the wire bytes |
-| R2 | a role on each definition (`DefDecl.role`): plain, a service's initial program, or a service's method with its arity | one structure field with a default; 34 files read `DefDecl`; a program with no role keeps its bytes when the role is encoded only where it is not plain |
+| R2 | a role on each definition (`DefDecl.role`): plain, a service's initial program, or a service's method with its arity | one structure field with a default; 34 files read `DefDecl`; the programs with a block take new bytes |
 | R3 | outside the program: a service specification passed to the emitter | no program change; the program's bytes and digest do not say that it exports a service |
 
 Recommended: **R2**. The ruling says that the block declares the service, which R3 does not do.
@@ -70,8 +70,8 @@ runs read no role (a law, section 6).
 
 ## 5. Slices, in order
 
-1. **S1, the program syntax** (a day). `DefDecl.role` takes its default. The wire encoding
-   appends the role where it is not plain. The authoring surface declares a service
+1. **S1, the program syntax** (a day). `DefDecl.role` takes its default, and the generated
+   codec writes it; the fixtures of programs with a block are regenerated. The authoring surface declares a service
    (`eff_module` gains a `service` clause). Formation checks a service, with its refusals.
    Queue, Semaphore and Pool declare their services. The narrow builds and the program
    batteries that the field reaches run.
