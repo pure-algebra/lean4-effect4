@@ -131,4 +131,12 @@ Two choices differ from sections 4 and 5:
   construction. No theorem states that the roles are inert.
 - No theorem states that `serviceFault` decides a service's well-formedness.
 
-Open: S3, the truth lane; the services of Semaphore and Pool; shape (c).
+S3 landed after them: the truth lane's `pQueueService` (`harness/truth/Truth.lean`) is the
+Queue's service block, whose main program is the client over the definitions. Its entry carries
+a TypeScript client through the key (`Effect.flatMap(NumberQueue, …)`, provided with
+`NumberQueueLayer`). The runner appends it to the printed module and runs it beside `main`. Its
+verdict is `clientAgree` (`harness/truth/run-truth.ts`). tsgo 7 checks the module with the client, and
+rc.112's run of the client answers the machine's exit, `success [true, 1]`. This is a finite
+check of one fixture, host-only.
+
+Open: the services of Semaphore and Pool; shape (c).

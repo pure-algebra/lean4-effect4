@@ -139,6 +139,9 @@ interface Entry {
   declInferred: string | null
   run: LeanRun
   runSync: { exit: Json; exitKind: string; sync: boolean }
+  /** A service's client through its key (slice CO-6b S3): TypeScript appended to the printed
+   * module, exporting `client`, which the runner runs beside `main`. */
+  client?: string
 }
 interface Manifest { format: string; fuel: number; programs: Entry[] }
 
@@ -197,7 +200,7 @@ const importHeader = [
  * hoisted layer, `main` last (`printModule`) — or `export const main = <expr>` when the
  * manifest has no declaration (ill-typed: `printDecl` refuses, `print` does not). */
 const moduleFor = (entry: Entry): { text: string; source: "decl" | "expr" } | null => {
-  if (entry.decl !== null) return { text: importHeader + entry.decl, source: "decl" }
+  if (entry.decl !== null) return { text: importHeader + entry.decl + (entry.client ?? ""), source: "decl" }
   if (entry.expr !== null) return { text: importHeader + `export const main = ${entry.expr}\n`, source: "expr" }
   return null
 }
@@ -827,6 +830,9 @@ interface Row {
   exitAgree: boolean | null
   scheduleAgree: boolean | null
   runSyncAgree: boolean | null
+  /** Present when the program has a client through a service's key: whether the client's exit
+   * on rc.112 is the machine's exit of `main`, the same client over the definitions. */
+  clientAgree?: boolean
   exception?: "U-01"
   scenario?: string
   notes: string[]
@@ -929,6 +935,22 @@ const main = async (): Promise<number> => {
       notes.push(`tape: ${hostFork.tape.length} calls`)
       if (JSON.stringify(hostSync.tape) !== JSON.stringify(hostFork.tape)) notes.push("the runSyncExit entry's tape differs from the runFork entry's")
     }
+    // A service's client through its key (slice CO-6b S3): the layer builds the service, and the
+    // client reaches it only through the methods. Its exit is compared with the machine's exit
+    // of `main`, the same client written over the definitions; its schedule is not, since the
+    // layer's build is work that `main` does not do.
+    let clientAgree: boolean | undefined
+    if (entry.client !== undefined) {
+      if (!Effect.isEffect(loaded.client)) {
+        clientAgree = false
+        notes.push("the module exports no client Effect")
+      } else {
+        const hostClient = await runPromiseEntry(loaded.client)
+        const clientExits = compareExits(lean, hostClient)
+        clientAgree = clientExits.agree
+        notes.push(`client through the service key: ${clientExits.agree ? "agrees" : "disagrees"} (${renderExit(hostClient.exit)})`)
+      }
+    }
     const exception = signedU01(entry.name, entry.scenario, entry.run.exit, hostFork.exit,
       entry.run.schedule, hostFork.schedule, runSyncAgree, hostFork.parked)
     if (exception) notes.push("U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42")
@@ -936,7 +958,8 @@ const main = async (): Promise<number> => {
       ...(exception ? { exception: "U-01" as const } : {}),
       ...(entry.scenario == null ? {} : { scenario: entry.scenario }),
       program: entry.name, leanExit: lean.text, hostExit: host.parked ? "parked (deadline)" : renderExit(host.exit),
-      entry: host.entry, exitAgree: exits.agree, scheduleAgree: schedule.agree, runSyncAgree, notes, host: hostFork, hostSync
+      entry: host.entry, exitAgree: exits.agree, scheduleAgree: schedule.agree, runSyncAgree,
+      ...(clientAgree === undefined ? {} : { clientAgree }), notes, host: hostFork, hostSync
     })
   }
 
@@ -953,7 +976,7 @@ const main = async (): Promise<number> => {
   // the sync entry's exit (a program whose `runSyncExit` disagrees is a disagreement, whatever
   // the other two say).
   const disagreements = rows.filter((r) => r.exception !== "U-01" &&
-    (r.program === "pInterruptEscape" || r.scenario != null || r.exitAgree === false || r.scheduleAgree === false || r.runSyncAgree === false))
+    (r.program === "pInterruptEscape" || r.scenario != null || r.exitAgree === false || r.scheduleAgree === false || r.runSyncAgree === false || r.clientAgree === false))
   const signed = rows.filter((r) => r.exception === "U-01").length
   const summary = disagreements.length === 0
     ? `PASS: ${rows.length - signed} programs agree on exits, schedules and sync exits; ${signed} signed divergence(s)`

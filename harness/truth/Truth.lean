@@ -8,6 +8,7 @@ import Test.Program.SemaphoreScenarios
 import Test.Program.PoolPublic
 import Test.Program.DefinitionsControls
 import Test.Program.QueueDefs
+import Test.Codegen.ServicesPrint
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -375,7 +376,7 @@ def fixtureRuntimeTable (name : String) (p : Api.Program) (table : RowTable) : O
   guard (table.length == 1)
   let row ← table[0]?
   let sig := nativeSignature table
-  guard ((Program.calls sig [] p).length == 1)
+  guard ((Program.programCalls sig [] p).length == 1)
   let call ← Program.callAt sig [] p [1]
   guard (call.op == .external 0)
   return [{ row with request := call.request, answer := call.answer, error := call.error }]
@@ -941,8 +942,8 @@ of an operation's binder term (the fold in a `Ref.modify`, and a step of the Que
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
 interrupt wakes, the two programs of the mask that restores, the five programs of the
 Queue's first operations, the ten programs of Semaphore's first operations, the ten
-programs of Pool's first operations, four programs with a definition block, and the Queue's
-scenario R4 over its definitions. Every listed program contributes one manifest entry. -/
+programs of Pool's first operations, four programs with a definition block, the Queue's
+scenario R4 over its definitions, and the Queue as a service, with its client through the key. Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 /-- Four programs with a definition block (decisions row 328, slice PROC-3): one invocation,
@@ -962,6 +963,26 @@ def pQueueDefs : Api.Program :=
       (Test.Program.QueueDefs.mkDefs (Test.Program.QueueScenarios.r4With Test.Program.QueueDefs.invoked)) with
   | .ok p => p
   | .error _ => .fail (.lit (.str "pQueueDefs: the source does not elaborate"))
+
+/-- **The Queue as a service** (decisions rows 338 and 339, slice CO-6b S3): the Queue's
+definitions with their roles, so the module prints the service's key `NumberQueue` and its layer
+`NumberQueueLayer` (`printServices`). Its main program is the client written over the
+definitions: it builds the queue once, offers `1` and takes, and answers both. -/
+def pQueueService : Api.Program :=
+  Test.Codegen.ServicesPrint.queueProgram.getD
+    (.fail (.lit (.str "pQueueService: the module does not build")))
+
+/-- The same client through the service's key, in TypeScript: the layer builds the queue once,
+and the client reaches it only through the methods. The runner appends it to the printed
+module, so tsgo checks it against the printed key, and runs it on rc.112 beside `main`. -/
+def queueServiceClient : String :=
+  "export const client = Effect.provide(\n" ++
+  "  Effect.flatMap(NumberQueue, (q) =>\n" ++
+  "    Effect.flatMap(q.offer(1), (a) => Effect.map(q.take(), (x) => tuple(a, x)))),\n" ++
+  "  NumberQueueLayer)\n"
+
+/-- The programs whose module exports a service, each with its client through the key. -/
+def serviceClients : List (String × String) := [("pQueueService", queueServiceClient)]
 
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
@@ -993,7 +1014,7 @@ def corpus : List (String × Api.Program) :=
     ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
     ("pPoolClosing", pPoolClosing),
     ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
-    ("pDefsFork", pDefsFork), ("pQueueDefs", pQueueDefs)]
+    ("pDefsFork", pDefsFork), ("pQueueDefs", pQueueDefs), ("pQueueService", pQueueService)]
 
 /-! ## The value wire -/
 
@@ -1644,7 +1665,11 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
        ("runtimeInstanceRows", match runtimeTable with
         | some rows => Lean.Json.arr (rows.map Tools.ProfileJson.rowJson).toArray
         | none => Lean.Json.null)]
-     else [])
+     else []) ++
+    -- a service's client through its key (slice CO-6b S3): only the programs that have one
+    (match serviceClients.lookup name with
+     | some client => [("client", Lean.Json.str client)]
+     | none => [])
 
 /-- The whole manifest; `tapes` gives each program the answers rc.112 recorded for its package
 rows (the empty list for a program without a tape, which then parks at its first row). -/
@@ -1767,7 +1792,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
    "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pQueueDefs"]
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pQueueDefs", "pQueueService"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩

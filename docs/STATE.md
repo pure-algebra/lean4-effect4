@@ -173,8 +173,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
    landed, with CO-6 and the generic half of CO-7 (decisions row 338 ruled the note's questions).
    The comodel and runner papers are filed. CO-6b's S1 and S2 landed
    ([plan](research/2026-10-09-co6b-service-plan.md), rows 338 and 339). A block's roles print as
-   an Effect service's key and layer, and the roles read back. Next, S3, the truth lane of a
-   client that uses a service through its key; then the services of Semaphore and Pool. Then
+   an Effect service's key and layer, and the roles read back. S3 checks a client that uses the
+   Queue's service through its key, on tsgo 7 and rc.112. Next, the services of Semaphore and
+   Pool. Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:

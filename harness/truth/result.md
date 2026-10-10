@@ -86,5 +86,6 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pDefsOdd | success false | success false | yes | yes | yes | runPromiseExit | same value |
 | pDefsFork | success [4,4] | success [4,4] | yes | yes | yes | runPromiseExit | same value |
 | pQueueDefs | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runPromiseExit | same value |
+| pQueueService | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [true,1]) |
 
-PASS: 81 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 82 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
