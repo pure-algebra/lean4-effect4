@@ -12,15 +12,16 @@
  */
 import { createHash } from "node:crypto"
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
-import { isAbsolute, join, relative, resolve } from "node:path"
+import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 import {
   API, NodeBuilderFlags, type Project, SignatureKind, SymbolFlags, type Type, TypeFlags,
 } from "../../ts/eff/node_modules/@typescript/native-preview/dist/api/sync/api.js"
 import type { Diagnostic as CompilerDiagnostic } from "../../ts/eff/node_modules/@typescript/native-preview/dist/api/sync/types.js"
 import type { CallExpression, Node, SourceFile } from "../../ts/eff/node_modules/@typescript/native-preview/dist/ast/index.js"
 import {
-  isArrowFunction, isCallExpression, isFunctionTypeNode, isIdentifier, isIndexedAccessTypeNode, isParameterDeclaration, isPropertyAccessExpression,
-  isTypeAliasDeclaration, isTypeReferenceNode, isUnionTypeNode, isVariableDeclaration, SyntaxKind,
+  isArrowFunction, isCallExpression, isExportDeclaration, isFunctionDeclaration, isFunctionTypeNode, isIdentifier, isIndexedAccessTypeNode,
+  isNamedExports, isParameterDeclaration, isPropertyAccessExpression, isStringLiteral, isTypeAliasDeclaration, isTypeReferenceNode,
+  isUnionTypeNode, isVariableDeclaration, isVariableStatement, SyntaxKind,
 } from "../../ts/eff/node_modules/@typescript/native-preview/dist/ast/index.js"
 import {
   bindingName, pairBindingName, pairImports, pairSource, querySource,
@@ -85,6 +86,41 @@ function names(file: SourceFile) {
   }
   file.forEachChild(walk)
   return { variables, aliases }
+}
+
+/** The values a module declares at its top level. The compiler's node lists subclass `Array`
+ * with a constructor of their own, so they are copied before `flatMap` builds a new list. */
+const topLevelValues = (file: SourceFile) => new Set([...file.statements].flatMap(statement =>
+  isVariableStatement(statement) ? [...statement.declarationList.declarations].flatMap(d => isIdentifier(d.name) ? [d.name.text] : []) :
+  isFunctionDeclaration(statement) && statement.name ? [statement.name.text] : []))
+
+/** The file that declares a printed head, read from the sources instead of kept beside them. A
+ * namespaced head (`Fiber.join`) is declared by the pinned `effect` module of its namespace.
+ * Any other head is the prelude's, found through the prelude's own exports: the module a named
+ * re-export takes it from, else the prelude itself, else the one `export *` module that declares
+ * it. A helper that moves between the prelude's sibling files (`846ed8c0` moved `fold`,
+ * `optionCase` and `caseTag` to `control.ts`) moves here with the prelude's export line. */
+function bindingOwner(repo: string, project: Project, prelude: string, head: string): string {
+  const dot = head.indexOf(".")
+  if (dot >= 0) return join(repo, "ts/eff/node_modules/effect/dist", head.slice(0, dot) + ".d.ts")
+  const source = (path: string) => {
+    const file = project.program.getSourceFile(path)
+    if (!file) throw new Error(`P2b: the compiler did not open ${localPath(repo, path)}`)
+    return file
+  }
+  const wildcards: string[] = []
+  for (const statement of source(prelude).statements) {
+    if (!isExportDeclaration(statement) || statement.isTypeOnly || !statement.moduleSpecifier ||
+      !isStringLiteral(statement.moduleSpecifier)) continue
+    const target = resolve(dirname(prelude), statement.moduleSpecifier.text)
+    if (!statement.exportClause) wildcards.push(target)
+    else if (isNamedExports(statement.exportClause) &&
+      statement.exportClause.elements.some(e => !e.isTypeOnly && e.name.text === head)) return target
+  }
+  if (topLevelValues(source(prelude)).has(head)) return prelude
+  const declaring = wildcards.filter(path => topLevelValues(source(path)).has(head))
+  if (declaring.length !== 1) throw new Error(`P2b: the prelude's exports name no single owner of ${head}`)
+  return declaring[0]!
 }
 
 const lineAndColumn = (text: string, position: number) => {
@@ -832,10 +868,7 @@ function p2bTarget(repo: string, request: P2bRequest): P2bReport {
       const resolved = project.checker.getResolvedSignature(call)?.declaration?.resolve(project)
       if (!resolved) throw new Error(`P2b: ${spec.name} actual call has no selected declaration`)
       const declarationFile = resolved.getSourceFile()
-      const owner = spec.head.startsWith("Fiber.") ? join(repo, "ts/eff/node_modules/effect/dist/Fiber.d.ts") :
-        spec.head.startsWith("Scope.") ? join(repo, "ts/eff/node_modules/effect/dist/Scope.d.ts") :
-        spec.head.startsWith("cause") ? join(work, "prelude-atoms.gen.ts") :
-        ["recordRequired", "recordOptional", "recordSet", "caseTagR"].includes(spec.head) ? join(work, "records.ts") : join(work, "prelude.ts")
+      const owner = bindingOwner(repo, project, join(work, "prelude.ts"), spec.head)
       if (realpathSync(declarationFile.fileName) !== realpathSync(owner)) throw new Error(`P2b: ${spec.name} resolves outside its actual binding owner`)
       edits.set(file, { changedSpan: { start, end, replacement },
         intendedSpan: { start: shifted(argument.getStart(parsed)), end: shifted(argument.end) },
