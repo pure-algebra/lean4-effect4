@@ -364,6 +364,10 @@ def layer (sig : Signature Op) (ctx : Context Op) (inferred : Option (List Ty))
       | .rowCall => match args with
         | [.op op, .term request] => perform sig ctx op request inferred
         | _ => throw (Templates.tableDefect ctor)
+      | .invoke => match args with
+        | [.nat k, .term request, .child .effs programs] =>
+          programs (n + 1) >>= printInvoke sig n k request
+        | _ => throw (Templates.tableDefect ctor)
       | .tpl tpl =>
         let subst ← printArgs sig ctx fam n (.tpl tpl) args 0
         let printed ← need ctor (Template.inst n subst tpl)

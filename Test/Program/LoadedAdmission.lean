@@ -49,7 +49,7 @@ theorem fork_admitted (w : W) :
     TypedProg forked w (EffTy.pure (.fiberOf .nat .never)) (denoteR forked forked (rootPoint 20)) := by
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) (EffTy.pure .nat)
-    (BodyTyped.at_ _ _ ⟨one, [], rfl, by decide +kernel, env0 w, fun _ h => nomatch h⟩) ?_
+    (BodyTyped.at_ _ _ ⟨one, [], rfl, by decide +kernel, env0 w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩) ?_
   intro w' _ ans hpost
   obtain ⟨id, rfl, hid⟩ := hpost
   exact TypedProg.pure ⟨⟨_, hid, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
@@ -57,7 +57,7 @@ theorem fork_admitted (w : W) :
 theorem scoped_admitted (w : W) :
     TypedProg scopedOne w (EffTy.pure .nat) (denoteR scopedOne scopedOne (rootPoint 20)) :=
   TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (EffTy.pure .nat) ⟨one, [], rfl, by decide +kernel, env0 w, fun _ h => nomatch h⟩
+    (fun _ _ _ h => nomatch h) (EffTy.pure .nat) ⟨one, [], rfl, by decide +kernel, env0 w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
     (fun _ _ _ hpost => TypedProg.pure hpost)
 
 /-! ## A race -/
@@ -72,10 +72,10 @@ theorem race_admitted (w : W) :
     (fun _ _ _ h => nomatch h) (EffTy.pure .nat) ?_ (fun _ _ _ hpost => TypedProg.pure hpost)
   intro p hp
   cases hp with
-  | head => exact ⟨_, ⟨one, [], rfl, by decide +kernel, env0 w, fun _ h => nomatch h⟩, Ty.sub_refl _, Ty.sub_refl _⟩
+  | head => exact ⟨_, ⟨one, [], rfl, by decide +kernel, env0 w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩, Ty.sub_refl _, Ty.sub_refl _⟩
   | tail _ hp =>
     cases hp with
-    | head => exact ⟨_, ⟨two, [], rfl, by decide +kernel, env0 w, fun _ h => nomatch h⟩, Ty.sub_refl _, Ty.sub_refl _⟩
+    | head => exact ⟨_, ⟨two, [], rfl, by decide +kernel, env0 w, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩, Ty.sub_refl _, Ty.sub_refl _⟩
     | tail _ hp => cases hp
 
 /-! ## A generator -/
@@ -93,7 +93,7 @@ theorem generator_admitted (w : W) :
   intro w' _ _ _
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) (EffTy.pure .nat)
-    ⟨⟨generator, [], rfl, generator_checks, env0 w', fun _ h => nomatch h⟩, _, rfl⟩
+    ⟨⟨generator, [], rfl, generator_checks, env0 w', (fun _ h => nomatch h), stackTyped_nil _ _ _⟩, _, rfl⟩
     (fun _ _ _ hpost => TypedProg.pure hpost)
 
 /-! ## Contexts (decision row 90)

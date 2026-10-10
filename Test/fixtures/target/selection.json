@@ -82,6 +82,9 @@
     "pDefsOdd",
     "pDefsFork",
     "pDefsModuleLayer",
+    "pInvokeTwice",
+    "pInvokeForward",
+    "pInvokeForked",
     "pQueueDefs",
     "pQueueService",
     "pSemaphoreService"

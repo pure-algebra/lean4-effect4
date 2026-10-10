@@ -2494,6 +2494,10 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
       typeArgsOf_withTerm := NativeOp.typeArgs_withTerm }
   -- a key that begins with a literal is a row of `nativeRows` (`Scope.make("parallel")`'s);
   -- the table's check decides that no row of its spelling there prints a request
+  -- the native signature declares no definition: the invocation facts hold vacuously
+  invoke_spell _ _ h := nomatch h
+  invoke_name _ _ _ _ _ _ h := nomatch h
+  invoke_apart _ _ _ _ _ _ _ _ h := nomatch h
   literal_alone := by
     intro op v names hd hp
     cases hsp : nativeSpell table ((nativeSignature table).rowOf op).spelling (.str v :: names)

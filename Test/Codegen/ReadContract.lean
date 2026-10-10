@@ -93,6 +93,10 @@ def spell (s : String) (names : List RowArg) : Option (Fin 4) :=
   else none
 
 theorem lawful : LawfulSpelling sig spell where
+  -- the fixture declares no definition: the invocation facts hold vacuously
+  invoke_spell _ _ h := nomatch h
+  invoke_name _ _ _ _ _ _ h := nomatch h
+  invoke_apart _ _ _ _ _ _ _ _ h := nomatch h
   spell_row := by decide
   row_of_spell := by
     intro s names op h
@@ -214,6 +218,10 @@ def tupleSpell (s : String) (names : List RowArg) : Option Bool :=
   else none
 
 theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
+  -- the fixture declares no definition: the invocation facts hold vacuously
+  invoke_spell _ _ h := nomatch h
+  invoke_name _ _ _ _ _ _ h := nomatch h
+  invoke_apart _ _ _ _ _ _ _ _ h := nomatch h
   spell_row := by decide
   row_of_spell := by
     intro s names op h

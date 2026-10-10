@@ -3617,7 +3617,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 284; inherited (provisional): 2386; unplaced: 0.
+Tagged: 284; inherited (provisional): 2403; unplaced: 0.
 
 ## Plan
 

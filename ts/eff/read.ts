@@ -1952,6 +1952,9 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
       }
       return r
     }
+    // an invocation with programs (decisions row 340, slice HO-3b) names a definition of the
+    // module's block, which this reader does not read: its call stays `unknownHead`
+    if (row.out._tag === "invoke") continue
     if (row.out._tag !== "tpl") continue // a statement row is read by `readStmts`
     const sorts = argSortsOf(fam, row.ctor)
     const names = argNamesOf(fam, row.ctor)

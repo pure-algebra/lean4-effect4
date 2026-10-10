@@ -228,7 +228,7 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
   have params' := params.withDefs calls apart defs
   exact readModule_printModule_defs hoisted block classesRead heads
     (fun p mem => ReadsBack.of_Readable
-      (hl'.withParams params' (paramsNamed p.1 (List.of_mem_zip mem).1)) (hbodies p mem))
+      (hl'.withParams params' apart (paramsNamed p.1 (List.of_mem_zip mem).1)) (hbodies p mem))
     (ReadsBack.of_Readable hl' hmain)
     (fun l hm x hp => readLayer_print hl' (hmods l hm) hp) hmodNames
     (fun entry hm x hp => readLayer_print hl' (hlayers entry hm) hp) hnames printed

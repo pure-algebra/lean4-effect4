@@ -325,15 +325,17 @@ parameters (§4.3's last form) waits for HO-5, which first needs one.
 - **Law**: `readModule_printModule_defs` holds with parameters: `DefDecl.readable` drops
   `params.isEmpty` and asks each parameter's columns to be readable types.
 
-### 11.2 HO-3b: an invocation with programs
+### 11.2 HO-3b: an invocation with programs (landed)
 
 - **Print**: a new printed form beside the row call (`RowOut.invoke`):
   `invoke k r [p₀, …]` prints as `name(r, (aₙ) => p₀, …)`, with the name from `sig.defOf k`
   and each program at environment length `n + 1`.
 - **Read**: a call whose head spells the invocation of a definition (`spell`, `sig.callOf`)
   and whose further arguments are arrows of one binder, one for each parameter.
-- **Laws**: the arm of `read_print` for the new form; the typed print's arm, which replaces the
-  refusal law `table_invokeRefused`; `printTyped_eq_print` keeps its statement.
+- **Laws**: the arm of `read_print` for the new form, of `read_exact`, of `print_node`, and of
+  both typed erasures (`eraseT_print`, `eraseT_site_print`); the refusal law
+  `table_invokeRefused` is gone. The programs bind one value each, so the row's level at them is
+  one (`RowOut.levelAt`), as the binder table says.
 - **Finite checks**: a truth program that invokes a definition with a program, on rc.112
   (`make check-truth`); its print under tsgo 7 (`make check-target`); the TypeScript reader
   (`make check-ts-reader`).

@@ -156,6 +156,9 @@ theorem wrong_certificate_refused (w : W) :
   rintro ⟨l, lt, node, checked, err⟩
   rw [memo_layer_node] at node
   cases node
+  -- outside every body the scope's signature is the source's (decisions row 341)
+  change Checker.checkLayer memoSrc.signature [0] (LayerTerm.expandIn memoSrc.program memoLayer) =
+    .ok lt at checked
   rw [memo_layer_check] at checked
   cases checked
   cases err

@@ -128,6 +128,24 @@ def eraseExprRow (classes : Classes.Classes) (sig : Signature Op)
         | .ok _ => some erased
         | .error _ => none
       | _ => none
+    -- an invocation with programs (slice HO-3b): its request erased as a term at `n`, and each
+    -- program inside its function erased at `n + 1`
+    | .invoke => match fam with
+      | .eff =>
+        match hx : invokeView x with
+        | none => none
+        | some (s, rq, fns) =>
+          match invokedDef sig spell s with
+          | none => none
+          | some _ =>
+            match hb : fns.mapM (Binders.read n [0]) with
+            | none => none
+            | some bodies =>
+              some (.call (.ident s) (EraseTermTypes.eraseTerm n rq ::
+                (children .effs (n + 1) bodies (Nat.lt_of_le_of_lt
+                  (Binders.mapM_read_size n [0] fns bodies hb)
+                  (invokeView_size hx))).map (Binders.write n [0])))
+      | _ => none
     | _ => none
   else none
 

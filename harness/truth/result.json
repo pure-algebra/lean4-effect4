@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 84 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 87 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -21844,6 +21844,198 @@
           "0:Success",
           "0:OnSuccess",
           "0:Suspend",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pInvokeTwice",
+      "leanExit": "success 7",
+      "hostExit": "success 7",
+      "entry": "runPromiseExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": 7
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":7}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": 7
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":7}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pInvokeForward",
+      "leanExit": "success 7",
+      "hostExit": "success 7",
+      "entry": "runPromiseExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": 7
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":7}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": 7
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":7}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pInvokeForked",
+      "leanExit": "success 6",
+      "hostExit": "success 6",
+      "entry": "runPromiseExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": 6
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "forked 0 1",
+          "started 1",
+          "exited 1 success",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "forked 0->1",
+          "started 1",
+          "exited 1 {\"success\":6}",
+          "exited 0 {\"success\":6}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "1:Success",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": 6
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "forked 0 1",
+          "started 1",
+          "exited 1 success",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "forked 0->1",
+          "started 1",
+          "exited 1 {\"success\":6}",
+          "exited 0 {\"success\":6}"
+        ],
+        "frames": [
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "1:Success",
           "0:Success",
           "0:Success"
         ],

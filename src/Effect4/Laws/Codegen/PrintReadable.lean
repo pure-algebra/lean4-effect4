@@ -590,7 +590,8 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
       tableLayer sig fam ctor (args.map (ArgF.fold (printAlg sig))) :=
     cata_build (tableLayer sig) fam ctor args e hbuild
   rw [hcata]
-  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, r, hout, hargs, hd', hreq, _, _, htypes, hterm⟩
+  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, r, hout, hargs, hd', hreq, _, _, htypes, hterm⟩ |
+    ⟨k, r, progsDom, d, hout, hargs, hdef, hparams, _, _, _, hprogs⟩
   · -- a skeleton row: the arguments print and the skeleton instantiates
     obtain ⟨τ, hτ⟩ := printArgs_ok args 0 hr' ih'
     have hkinds : Kinds τ (RowOut.holeKinds row.out) := by
@@ -613,6 +614,21 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
     rcases hfam with rfl | rfl | rfl <;>
       exact ⟨x, by simp only [tableLayer, tableLayer.rowPrint, List.map_cons, List.map_nil,
         ArgF.fold, hfind'', hout, hx]⟩
+  · -- an invocation with programs (slice HO-3b): its programs print at `n + 1`
+    obtain ⟨progs, rfl, hdomCata⟩ := fold_eq_invoke (readableAlg classes sig) hargs
+    obtain ⟨bodies, hbodies⟩ := ih' .effs progs (n + 1)
+      (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
+      (by rw [← hdomCata] at hprogs; exact Option.isSome_iff_exists.mp hprogs)
+    simp only [cataFam] at hbodies
+    have hfind'' : (table.find? fun r' => r'.selects fam ctor
+        ([.nat k, .term r, .child .effs (cata_effs (printAlg sig) progs)] :
+          List (ArgF Op Carrier))) = some row := by
+      simpa only [List.map_cons, List.map_nil, ArgF.fold, cataFam] using hfind'
+    rcases hfam with rfl | rfl | rfl <;>
+      exact ⟨.call (.ident d.name) (printTerm n r :: bodies.map (Binders.write n [0])), by
+        simp only [tableLayer, tableLayer.rowPrint, List.map_cons, List.map_nil, ArgF.fold,
+          cataFam, hfind'', hout, hbodies, ok_bind, printInvoke, hdef, hparams,
+          Bool.false_eq_true, ↓reduceIte]⟩
 
 /-- A readable statement prints, with the binders the domain counted. -/
 theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableAlg classes sig) st n = some d)

@@ -673,13 +673,44 @@ theorem eraseExprRow_none_of_same {row : Templates.Row} {i : Nat} (hout : row.ou
   unfold eraseExprRow
   aesop (add norm simp [Tpl.rigid, hsame])
 
+/-- The invocation's row erases nothing of a tree whose head spells no definition that takes
+programs (slice HO-3b). -/
+theorem eraseExprRow_invoke_none {row : Templates.Row} (hout : row.out = .invoke)
+    (h : ∀ s rq fns, invokeView x = some (s, rq, fns) → invokedDef sig spell s = none) :
+    eraseExprRow classes sig spell fam n x row child children block same = none := by
+  unfold eraseExprRow
+  split
+  · rw [hout]
+    simp only
+    cases fam with
+    | eff =>
+      simp only
+      split
+      · rfl
+      · rename_i s rq fns hv
+        rw [h s rq fns hv]
+    | _ => rfl
+  · rfl
+
+/-- A tree headed by a reserved name is no invocation the eraser takes. -/
+theorem eraseExprRow_invoke_none_of_head (lawful : LawfulSpelling sig spell)
+    {row : Templates.Row} (hout : row.out = .invoke) {h : String} (hx : exprHead? x = some h)
+    (hres : h ∈ reserved) :
+    eraseExprRow classes sig spell fam n x row child children block same = none :=
+  eraseExprRow_invoke_none hout fun s rq fns hv => by
+    rw [invokeView_some hv] at hx
+    simp only [exprHead?, Option.some.injEq] at hx
+    subst hx
+    exact invokedDef_none_of_reserved lawful hres
+
 section Earlier
 
 variable {rj : Templates.Row} {row : Templates.Row} (hap : rowsApart rj row = true)
 include hap
 
 /-- Before a rigid printing row. -/
-theorem erase_earlier_none_rigid {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = true)
+theorem erase_earlier_none_rigid (lawful : LawfulSpelling sig spell) {t : Tpl}
+    (hout : row.out = .tpl t) (hrigid : t.rigid = true)
     {sorts : List ArgSort} (hsorts : argSorts row.fam row.ctor = some sorts) {τ : Subst}
     (hinst : inst n τ t = some x)
     (hnode : ∀ i y, childHole sorts i = true → i ∈ holes t → lookup τ i = some (.expr y) →
@@ -692,12 +723,19 @@ theorem erase_earlier_none_rigid {t : Tpl} (hout : row.out = .tpl t) (hrigid : t
   · rename_i name h; exact eraseExprRow_none_of_refuse h
   · rename_i st h; exact eraseExprRow_none_of_stmt h
   · cases hap
+  · -- the invocation's row: the image's head is the skeleton's, a reserved name
+    rename_i h
+    simp only [Option.any_eq_true] at hap
+    obtain ⟨name, hh, hres⟩ := hap
+    exact eraseExprRow_invoke_none_of_head lawful h (head_of_inst n τ t x hinst hh)
+      (List.mem_of_elem_eq_true hres)
   · rename_i t' h
     simp only [Bool.and_eq_true] at hap
     exact eraseExprRow_none_of_nomatch h (match_apart n τ sorts t' t x hap.2 hinst hnode)
 
 /-- Before the transparent row that hands to the action family: the image is an action's. -/
-theorem erase_earlier_none_action {i : Nat} (hout : row.out = .tpl (.hole i))
+theorem erase_earlier_none_action (lawful : LawfulSpelling sig spell) {i : Nat}
+    (hout : row.out = .tpl (.hole i))
     (hsorts : argSorts row.fam row.ctor = some [.child .action]) {h : String}
     (hx : exprHead? x = some h) (hact : h ∈ actionHeads) :
     eraseExprRow classes sig spell fam n x rj child children block same = none := by
@@ -708,6 +746,10 @@ theorem erase_earlier_none_action {i : Nat} (hout : row.out = .tpl (.hole i))
   · rename_i name h; exact eraseExprRow_none_of_refuse h
   · rename_i st h; exact eraseExprRow_none_of_stmt h
   · cases hap
+  · -- the invocation's row: an action's head is reserved
+    rename_i h'
+    exact eraseExprRow_invoke_none_of_head lawful h' hx
+      (List.mem_of_elem_eq_true (List.all_eq_true.mp actionHeads_reserved h hact))
   · rename_i t' h'
     simp only [Bool.and_eq_true, Option.any_eq_true] at hap
     obtain ⟨_, h'', hh, hnot⟩ := hap
@@ -731,6 +773,7 @@ theorem erase_earlier_none_path {i : Nat} (hout : row.out = .tpl (.hole i))
   · rename_i name h; exact eraseExprRow_none_of_refuse h
   · rename_i st h; exact eraseExprRow_none_of_stmt h
   · cases hap
+  · cases hap
   · rename_i t' h'
     simp only [Bool.and_eq_true] at hap
     subst hx
@@ -741,7 +784,8 @@ The consumer supplies the printed call's head separation; no erasure equality is
 theorem erase_earlier_none_rowCall (hrow : row.out = .rowCall)
     (hreserved : ∀ (t : Tpl) (h : String), t.head? = some h → h ∈ reserved →
       matchT n t x = none)
-    (hsame : ∀ hk d, same .action hk d = none) :
+    (hsame : ∀ hk d, same .action hk d = none)
+    (hinvoke : ∀ s rq fns, invokeView x = some (s, rq, fns) → invokedDef sig spell s = none) :
     eraseExprRow classes sig spell fam n x rj child children block same = none := by
   unfold rowsApart at hap
   rw [hrow] at hap
@@ -750,12 +794,45 @@ theorem erase_earlier_none_rowCall (hrow : row.out = .rowCall)
   · rename_i name h; exact eraseExprRow_none_of_refuse h
   · rename_i st h; exact eraseExprRow_none_of_stmt h
   · cases hap
+  · rename_i h'
+    exact eraseExprRow_invoke_none h' hinvoke
   · rename_i t' h'
     simp only [Bool.or_eq_true, Bool.and_eq_true, Option.any_eq_true, Bool.not_eq_true',
       beq_iff_eq] at hap
     rcases hap with ⟨_, h, hh, hres⟩ | ⟨hnr, hsorts⟩
     · exact eraseExprRow_none_of_nomatch h'
         (hreserved t' h hh (List.mem_of_elem_eq_true hres))
+    · cases t' with
+      | hole i => exact eraseExprRow_none_of_same h' hsorts hsame
+      | _ => cases hnr
+
+/-- Before the invocation (slice HO-3b): a skeleton's head is reserved and the image's is a
+definition's name; the transparent row hands the image to the action family, which erases
+nothing of it. -/
+theorem erase_earlier_none_invoke (hrow : row.out = .invoke) {s : String} {args : List Expr}
+    (hx : x = .call (.ident s) args) (hs : s ∉ reserved) (hsame : ∀ hk d, same .action hk d = none) :
+    eraseExprRow classes sig spell fam n x rj child children block same = none := by
+  unfold rowsApart at hap
+  rw [hrow] at hap
+  simp only at hap
+  split at hap
+  · rename_i name h; exact eraseExprRow_none_of_refuse h
+  · rename_i st h; exact eraseExprRow_none_of_stmt h
+  · cases hap
+  · cases hap
+  · rename_i t' h'
+    simp only [Bool.or_eq_true, Bool.and_eq_true, Option.any_eq_true, Bool.not_eq_true',
+      beq_iff_eq] at hap
+    rcases hap with ⟨_, h, hh, hres⟩ | ⟨hnr, hsorts⟩
+    · refine eraseExprRow_none_of_nomatch h' ?_
+      cases hm : matchT n t' x with
+      | none => rfl
+      | some σ =>
+        have h1 := head_of_match n t' x σ hm hh
+        rw [hx] at h1
+        simp only [exprHead?, Option.some.injEq] at h1
+        subst h1
+        exact absurd (List.mem_of_elem_eq_true hres) hs
     · cases t' with
       | hole i => exact eraseExprRow_none_of_same h' hsorts hsame
       | _ => cases hnr
@@ -2026,6 +2103,29 @@ theorem printPerformAt_no_reserved (hl : LawfulSpelling sig spell) {n : Nat} {op
         rw [hactual] at hnone
         exact nomatch hnone
 
+/-- A typed row call in the domain names no definition that takes programs (slice HO-3b): its
+head is its row's spelling, or no name at all when it carries type arguments. -/
+theorem printPerformAt_invoke_none (hl : LawfulSpelling sig spell) {n : Nat} {op : Op}
+    {r : Term} {annotation : Option (List Ty)} {x : Expr}
+    (hp : Templates.printPerformAt sig n op r annotation = .ok x) (hd : sig.dom op = true)
+    (hhead : rowHeadReadable (sig.rowOf op) = true) :
+    ∀ s rq fns, invokeView x = some (s, rq, fns) → invokedDef sig spell s = none := by
+  intro s rq fns hv
+  have hx := invokeView_some hv
+  have head : exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling := by
+    cases annotation with
+    | none => exact printPerform_head hp
+    | some types =>
+      cases types with
+      | nil => exact printPerform_head hp
+      | cons ty tys =>
+        obtain ⟨plain, target, targets, _, hhead'⟩ := printPerformAt_head hp
+        exact Or.inl (withHeadTypes_head hhead').1
+  rcases head with h2 | h2 <;> rw [hx] at h2 <;>
+    simp only [exprHead?, reduceCtorEq, Option.some.injEq] at h2
+  subst h2
+  exact invokedDef_none_of_row hl hd hhead
+
 /-- The node inverse cannot erase a nonreserved generic identifier call.
 Unlike exprHead?, this premise observes the actual generic head spelling. -/
 theorem eraseNode_of_genericHead_not_reserved {x : Expr}
@@ -2745,6 +2845,20 @@ theorem find_perform_row {R : EffFam → Type} (args : List (ArgF Op R)) :
     Templates.table.find? (fun row => row.selects .eff "perform" args) =
       some ⟨.eff, "perform", [], .rowCall⟩ := rfl
 
+/-- The typed layer at the invocation's row is the table's layer at addressed arguments: only
+`perform` has a typed print of its own (slice HO-3b). -/
+theorem typedLayer_invokeRow (sig : Signature Op) (ann : List Nat → Option (List Ty))
+    {fam : EffFam} {ctor : String} {args : List (ArgF Op TCarrier)} {row : Templates.Row}
+    (selected : Templates.table.find? (fun r => r.selects fam ctor args) = some row)
+    (output : row.out = .invoke) :
+    typedLayer sig ann fam ctor args = fun path => tableLayer sig fam ctor (atAddress path args 0) := by
+  unfold typedLayer
+  split
+  · have eq := Option.some.inj ((find_perform_row _).symm.trans selected)
+    subst row
+    cases output
+  · rfl
+
 theorem typedLayer_template (sig : Signature Op) (ann : List Nat → Option (List Ty))
     {fam : EffFam} {ctor : String} {args : List (ArgF Op TCarrier)}
     {row : Templates.Row} {t : Tpl}
@@ -3031,12 +3145,15 @@ theorem typed_action_image_head (ann : List Nat → Option (List Ty))
     exact (selects_fam_ctor h).1
   have hshape := table_fact table_actionHeaded hmem
   simp only [actionRowHeaded, hfam, bne_self_eq_false, Bool.false_or] at hshape
-  rcases hcase with ⟨t, substitution, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩
+  rcases hcase with ⟨t, substitution, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩ |
+    ⟨_, _, _, _, hout, _⟩
   · rw [hout] at hshape
     simp only [Bool.and_eq_true, Option.any_eq_true] at hshape
     obtain ⟨_, h, hh, _⟩ := hshape
     exact ⟨h, head_of_inst d substitution t x hinst hh,
       mem_actionHeads hmem hfam hout hh⟩
+  · rw [hout] at hshape
+    cases hshape
   · rw [hout] at hshape
     cases hshape
 
@@ -3063,10 +3180,13 @@ theorem typed_action_image_normal (ann : List Nat → Option (List Ty))
     exact (selects_fam_ctor h).1
   have hshape := table_fact table_actionHeaded hmem
   simp only [actionRowHeaded, hfam, bne_self_eq_false, Bool.false_or] at hshape
-  rcases hcase with ⟨t, substitution, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩
+  rcases hcase with ⟨t, substitution, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩ |
+    ⟨_, _, _, _, hout, _⟩
   · rw [hout] at hshape
     simp only [Bool.and_eq_true] at hshape
     exact eraseNode_of_table_inst hmem hout hshape.1 hinst
+  · rw [hout] at hshape
+    cases hshape
   · rw [hout] at hshape
     cases hshape
 end Effect4.Codegen
@@ -3082,6 +3202,40 @@ namespace Effect4.Codegen
 open TypeScript Effect4.Program Template Templates
 variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
   {spell : String → List RowArg → Option Op} {ann : List Nat → Option (List Ty)}
+
+/-- The transparent action head is reserved. -/
+theorem withFiber_reserved : "Effect.withFiber" ∈ reserved := by decide
+
+/-- The invocation's image erases to itself at its node (slice HO-3b): its head is a
+definition's name, never the transparent `Effect.withFiber`. -/
+theorem eraseNode_invoke {n : Nat} {s : String} {args : List Expr} (hs : s ∉ reserved) :
+    EraseTermTypes.eraseNode n (.call (.ident s) args) = .call (.ident s) args :=
+  eraseNode_of_exprHead_except_runIn n _ rfl (fun h => hs (h ▸ withFiber_reserved))
+
+/-- No action row erases a call headed by a name that is not reserved. -/
+theorem eraseT_action_none_of_head {s : String} {args : List Expr} (hs : s ∉ reserved) (d : Nat) :
+    eraseT classes sig spell .action d (.call (.ident s) args) = none := by
+  rw [eraseT, eraseNode_invoke hs, List.findSome?_eq_none_iff]
+  intro row hmem
+  have hshape := table_fact table_actionHeaded hmem
+  simp only [actionRowHeaded, bne_iff_ne, ne_eq, Bool.or_eq_true] at hshape
+  rcases hshape with hfam | hshape
+  · exact eraseExprRow_none_of_fam hfam
+  · split at hshape
+    · rename_i t hout
+      simp only [Bool.and_eq_true, Option.any_eq_true] at hshape
+      obtain ⟨_, h, hh, hres⟩ := hshape
+      refine eraseExprRow_none_of_nomatch hout ?_
+      cases hm : matchT d t (.call (.ident s) args) with
+      | none => rfl
+      | some σ =>
+        have h1 := head_of_match d t _ σ hm hh
+        simp only [exprHead?, Option.some.injEq] at h1
+        subst h1
+        exact absurd (List.mem_of_elem_eq_true hres) hs
+    · rename_i name hout
+      exact eraseExprRow_none_of_refuse hout
+    · cases hshape
 
 theorem readable_expr_prints {fam : EffFam} {e : EffSelfCarrier Op fam} {n : Nat}
     (family : fam = .eff ∨ fam = .action ∨ fam = .layer)
@@ -3160,9 +3314,12 @@ theorem eraseT_print (lawful : LawfulSpelling sig spell)
     obtain ⟨plain, erased, printed⟩ := (hchild path fam d source y smaller hr ht).1
     rw [erased, Option.getD_some]
     exact printed
-  rcases hcase with ⟨t, τplain, hout, hτplain, hinstplain⟩ | ⟨op, request, hout, hargs, hpplain⟩
-  · rcases hcase' with ⟨t', hout', hr⟩ | ⟨_, _, hout', _⟩
-    swap; · rw [hout] at hout'; cases hout'
+  rcases hcase with ⟨t, τplain, hout, hτplain, hinstplain⟩ | ⟨op, request, hout, hargs, hpplain⟩ |
+    ⟨kd, request, programs, bodies, hout, hargs, hprog, hpplain⟩
+  · rcases hcase' with ⟨t', hout', hr⟩ | ⟨_, _, hout', _⟩ | ⟨_, _, _, _, hout', _⟩
+    rotate_left
+    · rw [hout] at hout'; cases hout'
+    · rw [hout] at hout'; cases hout'
     rw [hout, RowOut.tpl.injEq] at hout'
     subst hout'
     have hfindTyped : Templates.table.find? (fun r => r.selects fam ctor (args.map (ArgF.fold (typedAlg sig ann)))) = some row := by
@@ -3176,8 +3333,10 @@ theorem eraseT_print (lawful : LawfulSpelling sig spell)
       simpa only [selects_atAddress, selects_fold] using hfindTypedRow
     have typedRowEq : typedRow = row := Option.some.inj (hfindTypedSource.symm.trans hfindSource)
     subst typedRow
-    rcases typedCase with ⟨t', τ, hout', hτ, hinst⟩ | ⟨_, _, hout', _⟩
-    swap; · rw [hout] at hout'; cases hout'
+    rcases typedCase with ⟨t', τ, hout', hτ, hinst⟩ | ⟨_, _, hout', _⟩ | ⟨_, _, _, _, hout', _⟩
+    rotate_left
+    · rw [hout] at hout'; cases hout'
+    · rw [hout] at hout'; cases hout'
     rw [hout, RowOut.tpl.injEq] at hout'
     subst hout'
     by_cases hrigid : t.rigid = true
@@ -3187,7 +3346,7 @@ theorem eraseT_print (lawful : LawfulSpelling sig spell)
       refine ⟨⟨plain, eraseT_of_row hnormal hk (fun j hj rj hrj => ?_) ?_, ordinary⟩, ?_⟩
       · rcases hother j hj rj hrj with hne | apart
         · exact eraseExprRow_none_of_fam hne
-        · exact erase_earlier_none_rigid apart hout hrigid hsortsRow hinst hnode
+        · exact erase_earlier_none_rigid apart lawful hout hrigid hsortsRow hinst hnode
       · exact eraseExprRow_source_rigid hmem hsel hsortsRow hout hrigid
           (by rw [hfamrow, hout]; exact hτ) hinst (by rw [hfamrow, hout]; exact hr)
           (by rw [hfamrow, hout]; exact hτplain) hinstplain childPlain hchildren hblock
@@ -3247,7 +3406,8 @@ theorem eraseT_print (lawful : LawfulSpelling sig spell)
             refine ⟨⟨plain, eraseT_of_row normal hk (fun j hj rj hrj => ?_) ?_, ordinary⟩, hnode⟩
             · rcases hother j hj rj hrj with hne | apart
               · exact eraseExprRow_none_of_fam hne
-              · exact erase_earlier_none_action apart hout (by rw [hsortsRow, hact]) hhead haction
+              · exact erase_earlier_none_action apart lawful hout (by rw [hsortsRow, hact]) hhead
+                  haction
             · simp only [eraseExprRow, hfamrow, hout, ↓reduceIte,
                 show argSorts .eff row.ctor = some [.child .action] from by rw [hsortsCtor, hact],
                 Tpl.rigid, Bool.false_eq_true, ↓reduceDIte, lower, herase]
@@ -3289,8 +3449,9 @@ theorem eraseT_print (lawful : LawfulSpelling sig spell)
           | _ => cases ha
       | _ => exact absurd rfl hrigid
   · rcases hcase' with ⟨_, hout', _⟩ |
-      ⟨op', request', hout', hargs', hd', hreq, hcover, hun, htypes, hterm⟩
+      ⟨op', request', hout', hargs', hd', hreq, hcover, hun, htypes, hterm⟩ | ⟨_, _, _, _, hout', _⟩
     · rw [hout] at hout'; cases hout'
+    swap; · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
     rw [hfamily] at hfamrow
@@ -3318,6 +3479,98 @@ theorem eraseT_print (lawful : LawfulSpelling sig spell)
     · exact erase_earlier_none_rowCall apart hout
         (fun t head headed reserved => TypedRowShapeSupport.printPerformAt_no_reserved lawful typed n t head headed reserved)
         (fun _ d => TypedRowShapeSupport.eraseT_action_none_of_printPerformAt lawful typed d)
+        (TypedRowShapeSupport.printPerformAt_invoke_none lawful typed hd'
+          (rowHeadReadable_of_request hreq))
+  · -- an invocation with programs (slice HO-3b)
+    rcases hcase' with ⟨_, hout', _⟩ | ⟨_, _, hout', _⟩ |
+      ⟨k', r', progsDom, d, hout', hargs', hdef, hparams, hscoped, hcov, hun, hprogs⟩
+    · rw [hout] at hout'; cases hout'
+    · rw [hout] at hout'; cases hout'
+    have hfamily := table_fact table_family hmem
+    simp only [rowFamily, hout, beq_iff_eq] at hfamily
+    rw [hfamily] at hfamrow
+    subst hfamrow
+    have hnamed := table_fact table_invokeNamed hmem
+    simp only [rowInvokeNamed, hout, Bool.and_eq_true, beq_iff_eq] at hnamed
+    rw [hnamed.2] at hctor
+    subst hctor
+    obtain ⟨progs, rfl, hcata⟩ := fold_eq_invoke (printAlg sig) hargs
+    obtain ⟨progs', hsame, hdomCata⟩ := fold_eq_invoke (readableAlg classes sig) hargs'
+    simp only [List.cons.injEq, ArgF.nat.injEq, ArgF.term.injEq, ArgF.child.injEq, heq_eq_eq,
+      true_and, and_true] at hsame
+    obtain ⟨rfl, rfl, rfl⟩ := hsame
+    rw [build_eff_invoke, Option.some.injEq] at hbuild
+    subst hbuild
+    rw [← hcata] at hprog
+    simp only [cataFam] at hprog
+    have hplain : plain = .call (.ident d.name)
+        (printTerm n request :: bodies.map (Binders.write n [0])) := by
+      simp only [printInvoke, hdef, hparams, Bool.false_eq_true, ↓reduceIte, Except.ok.injEq]
+        at hpplain
+      exact hpplain.symm
+    -- the typed image: the table's layer at addressed arguments
+    have hfindTyped : Templates.table.find? (fun r => r.selects .eff "invoke"
+        (([.nat kd, .term request, .child .effs progs] : List (ArgF Op (EffSelfCarrier Op))).map
+          (ArgF.fold (typedAlg sig ann)))) = some row := by
+      simpa only [selects_fold] using hfindSource
+    have hpTyped : tableLayer.rowPrint sig .eff "invoke"
+        (atAddress path (([.nat kd, .term request, .child .effs progs] :
+          List (ArgF Op (EffSelfCarrier Op))).map (ArgF.fold (typedAlg sig ann))) 0) n = .ok x := by
+      simp only [TypedPrintsTo, cataFam] at typed htyped
+      rw [htyped, typedLayer_invokeRow sig ann hfindTyped hout] at typed
+      exact typed
+    have hfindAddr : Templates.table.find? (fun r => r.selects .eff "invoke"
+        (atAddress path (([.nat kd, .term request, .child .effs progs] :
+          List (ArgF Op (EffSelfCarrier Op))).map (ArgF.fold (typedAlg sig ann))) 0)) = some row := by
+      simpa only [selects_atAddress, selects_fold] using hfindSource
+    have haddr : atAddress path (([.nat kd, .term request, .child .effs progs] :
+          List (ArgF Op (EffSelfCarrier Op))).map (ArgF.fold (typedAlg sig ann))) 0 =
+        [.nat kd, .term request, .child .effs (cata_effs (typedAlg sig ann) progs (path ++ [0]))] :=
+      rfl
+    rw [haddr] at hpTyped hfindAddr
+    simp only [tableLayer.rowPrint, hfindAddr, hout] at hpTyped
+    obtain ⟨typedBodies, htypedBodies, htypedInvoke⟩ := bind_eq_ok.mp hpTyped
+    have himage : x = .call (.ident d.name)
+        (printTerm n request :: typedBodies.map (Binders.write n [0])) := by
+      simp only [printInvoke, hdef, hparams, Bool.false_eq_true, ↓reduceIte, Except.ok.injEq]
+        at htypedInvoke
+      exact htypedInvoke.symm
+    have hnot := Program.defName_not_reserved lawful hdef hparams
+    have hsize : sizeOf typedBodies < sizeOf x := by
+      have h1 := Binders.mapM_read_size n [0] (typedBodies.map (Binders.write n [0])) typedBodies
+        (Program.mapM_read_write n [0] typedBodies)
+      have h2 := invokeView_size (x := x) (s := d.name) (rq := printTerm n request)
+        (fns := typedBodies.map (Binders.write n [0])) (by rw [himage]; rfl)
+      omega
+    have hread : ReadableAt classes sig .effs progs (n + 1) := by
+      rw [← hdomCata] at hprogs
+      exact Option.isSome_iff_exists.mp hprogs
+    have herased := hchildren (path ++ [0]) .effs (n + 1) progs typedBodies hsize hread
+      (by simp only [TypedPrintsTo]; exact htypedBodies)
+    simp only [PrintsTo] at herased
+    have hsameBodies : eraseSpine classes sig spell .effs (n + 1) typedBodies = bodies :=
+      Except.ok.inj (herased.symm.trans hprog)
+    have normal : EraseTermTypes.eraseNode n x = x := by rw [himage]; exact eraseNode_invoke hnot
+    refine ⟨⟨plain, eraseT_of_row normal hk (fun j hj rj hrj => ?_) ?_, ordinary⟩,
+      by rw [himage]; rfl⟩
+    · rcases hother j hj rj hrj with hne | apart
+      · exact eraseExprRow_none_of_fam hne
+      · exact erase_earlier_none_invoke apart hout himage hnot
+          (fun _ d' => by rw [himage]; exact eraseT_action_none_of_head hnot d')
+    · rw [himage, hplain]
+      obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+      simp only at hfamily hout
+      subst hfamily hout
+      unfold eraseExprRow
+      simp only [↓reduceIte, invokeView, Program.invokedDef_of_def lawful hdef hparams]
+      split
+      · rename_i hb
+        rw [Program.mapM_read_write] at hb
+        cases hb
+      · rename_i bodies' hb
+        rw [Program.mapM_read_write, Option.some.injEq] at hb
+        subst hb
+        simp only [hsameBodies, EraseTermTypes.eraseTerm_printTerm_identity]
 
 end Effect4.Codegen
 
@@ -4895,6 +5148,8 @@ def constructorChildOffset (ctor : String) (binds : Nat × Nat) (i : Nat) : Nat 
     if i = 1 then 2 else 0
   else if ctor = "iterate" then
     if i = 5 then 1 else 0
+  else if ctor = "invoke" then
+    if i = 2 then 1 else 0
   else if ctor = "select" then
     if i = 2 then binds.1 else if i = 3 then binds.2 else 0
   else 0
@@ -4986,11 +5241,11 @@ theorem rowChildOffset_source (row : Templates.Row) (member : row ∈ Templates.
 -- Splitting those indices makes each constructor proof a closed list calculation.
 -- No template table or successful typing premise enters this source metadata calculation.
 -- A definition block is excluded: its bodies bind the request, and its row is a refusal.
--- An invocation is excluded too: its programs bind their parameter's request, and its row refuses.
+-- An invocation's programs bind their parameter's request, and its row's level says so
+-- (`RowOut.levelAt`, slice HO-3b).
 theorem view_eff_child_binders (source : Eff Op) (i : Nat) (childFam : EffFam)
     (child : EffSelfCarrier Op childFam)
     (notBlock : ∀ decls bodies main layers, source ≠ Eff.defs decls bodies main layers)
-    (notInvoke : ∀ k request programs, source ≠ Eff.invoke k request programs)
     (captured : (view_eff source).2[i]? = some (.child childFam child)) :
     (Node.eff source).binders (((view_eff source).2.take i).countP isChildArg) =
       sourceChildOffset (view_eff source).1 (view_eff source).2 i := by
@@ -5005,7 +5260,6 @@ theorem view_eff_child_binders (source : Eff Op) (i : Nat) (childFam : EffFam)
     | select scrutinee decision left right =>
       cases decision <;> cases captured <;> rfl
     | defs decls bodies main layers => exact absurd rfl (notBlock decls bodies main layers)
-    | invoke k request programs => exact absurd rfl (notInvoke k request programs)
     | _ => cases captured <;> rfl
 
 -- Only clause families own rows; spines use their existing list rules.
@@ -5013,15 +5267,6 @@ def rowClauseFamily (row : Templates.Row) : Bool :=
   decide (row.fam = .eff ∨ row.fam = .action ∨ row.fam = .stmt ∨ row.fam = .layer)
 
 theorem table_clauseFamilies : Templates.table.all rowClauseFamily = true := by decide
-
--- The invocation's row refuses: no skeleton prints its programs yet (decisions row 340).
--- Consumer: childEnv_template_depth, which excludes an invocation by it.
-def rowInvokeRefused (row : Templates.Row) : Bool :=
-  match row.out with
-  | .refuse _ => true
-  | _ => row.ctor != "invoke"
-
-theorem table_invokeRefused : Templates.table.all rowInvokeRefused = true := by decide
 
 theorem table_childDepth_at {row : Templates.Row} (member : row ∈ Templates.table)
     {sorts : List ArgSort} (hsorts : Effect4.Program.argSorts row.fam row.ctor = some sorts)
@@ -5093,8 +5338,7 @@ theorem childEnv_template_depth
     (selected : (Templates.table.find? fun row => row.selects fam ctor args) = some row)
     (captured : args[i]? = some (.child childFam child))
     (found : (Effect4.Codegen.nodeOfFamily fam source).childEnv s parent
-      ((args.take i).countP isChildArg) = some rho)
-    (printing : ∀ name, row.out ≠ .refuse name) :
+      ((args.take i).countP isChildArg) = some rho) :
     rho.tyEnv.length = argDepth fam (.child childFam) parent.tyEnv.length (row.out.levelAt i) := by
   have member := List.mem_of_find?_eq_some selected
   have selector := List.find?_some selected
@@ -5119,15 +5363,7 @@ theorem childEnv_template_depth
       have stops := childEnv_block_none s parent decls bodies main layers
         ((args.take i).countP isChildArg)
       exact nomatch stops.symm.trans found
-    have notInvoke : ∀ k request programs, source ≠ Eff.invoke k request programs := by
-      rintro k request programs rfl
-      have refused := List.all_eq_true.mp table_invokeRefused row member
-      have named : row.ctor = "invoke" := constructor.trans (congrArg Prod.fst viewed).symm
-      unfold rowInvokeRefused at refused
-      cases out : row.out with
-      | refuse name => exact printing name out
-      | _ => simp only [out, named, bne_self_eq_false, Bool.false_eq_true] at refused
-    have binder := view_eff_child_binders source i childFam child notBlock notInvoke
+    have binder := view_eff_child_binders source i childFam child notBlock
       (by rw [viewed]; exact captured)
     have offset := rowChildOffset_source row member args
       (by simpa only [constructor] using selector) i
@@ -5201,8 +5437,7 @@ theorem siteFocused_child {sig : Signature Op} {root : Eff Op} {env0 : TyEnv}
     (selected : Templates.table.find? (fun row => row.selects fam ctor args) = some row)
     (captured : args[i]? = some (.child childFam child))
     (found : PrintEliminators.contextAtTable (annotate sig env0 root) root
-      (path ++ [(args.take i).countP isChildArg]) = some ctx)
-    (printing : ∀ name, row.out ≠ .refuse name) :
+      (path ++ [(args.take i).countP isChildArg]) = some ctx) :
     SiteFocused root sig env0 (path ++ [(args.take i).countP isChildArg]) childFam child
       (argDepth fam (.child childFam) n (row.out.levelAt i)) := by
   obtain ⟨sourceAt, parent, parentAt, parentLength, _⟩ := focus
@@ -5219,7 +5454,7 @@ theorem siteFocused_child {sig : Signature Op} {root : Eff Op} {env0 : TyEnv}
     | none => rw [environment] at rhoAt; cases rhoAt
     | some rho' => simpa only [environment, Option.bind_some] using rhoAt
   have depth := PrintEliminators.childEnv_template_depth sig parent fam source ctor args row i
-    childFam child viewed selected captured envStep printing
+    childFam child viewed selected captured envStep
   rw [parentLength] at depth
   refine ⟨childAt, rho, rhoAt, depth, ?_⟩
   cases childFam with
@@ -5456,7 +5691,6 @@ theorem eraseSiteStmt_print
     intro i fam source hsource capture member depth hread htyped
     obtain ⟨childCtx, childFound⟩ := printedCaptureAt_context htyped
     have childFocus := siteFocused_child focus hview hfindSource hsource childFound
-      (fun _ refused => nomatch hout.symm.trans refused)
     rw [← hfamily] at childFocus
     have hslot : (args.map argSortOf)[i]? = some (.child fam) := by
       simp only [List.getElem?_map, hsource, Option.map_some, argSortOf]
@@ -5847,7 +6081,8 @@ set_option maxHeartbeats 3000000 in
 /-- A normalized rigid site reconstructs the ordinary row at its actual source address.
 Placement: exact-codecs R8; consumer: the expression clause of SitesEraseUpTo.
 Normalization is the finite local decorate inverse, not a whole-print certificate. -/
-theorem eraseT_site_rigid_step {fam : EffFam} {path : List Nat} {n : Nat}
+theorem eraseT_site_rigid_step (lawful : LawfulSpelling sig spell) {fam : EffFam}
+    {path : List Nat} {n : Nat}
     {source : EffSelfCarrier Op fam} {ctor : String} {args : List (ArgF Op (EffSelfCarrier Op))}
     {row : Templates.Row} {t : Tpl} {τ τplain : Subst} {ctx : PrintEliminators.Context Op}
     {x y plain : Expr} {k : Nat}
@@ -5903,7 +6138,6 @@ theorem eraseT_site_rigid_step {fam : EffFam} {path : List Nat} {n : Nat}
     obtain ⟨childCtx, found⟩ := printedCaptureAt_context hp
     rw [depth, familyRow]
     exact siteFocused_child focus viewed selected sourceAt found
-      (fun _ refused => nomatch output.symm.trans refused)
   have childPrint : ∀ i fam d (child : EffSelfCarrier Op fam) value,
       args[i]? = some (.child fam child) →
       d = argDepth row.fam (.child fam) n (row.out.levelAt i) →
@@ -5933,7 +6167,7 @@ theorem eraseT_site_rigid_step {fam : EffFam} {path : List Nat} {n : Nat}
       (fun j earlier rj atIndex => ?_) atRow
     rcases apart_of_lt atIndex index earlier with different | apart
     · exact eraseExprRow_none_of_fam (by rwa [familyRow] at different)
-    · exact erase_earlier_none_rigid apart output rigid sorts instantiated nodeChildren
+    · exact erase_earlier_none_rigid apart lawful output rigid sorts instantiated nodeChildren
   have erased : eraseT classes sig spell fam n x = some plain := by
     rw [← eraseT_normalize_root classes sig spell fam n x, normalized]
     exact selectedErased
@@ -7385,7 +7619,12 @@ theorem site_action_normalized_head
   have family := (selects_fam_ctor selectedSource).1
   have actionShape := table_fact table_actionHeaded member
   simp only [actionRowHeaded, family, bne_self_eq_false, Bool.false_or] at actionShape
-  rcases rowCase with ⟨t, output, _⟩ | ⟨_, _, output, _⟩
+  rcases rowCase with ⟨t, output, _⟩ | ⟨_, _, output, _⟩ | ⟨_, _, _, _, output, _⟩
+  rotate_left
+  · rw [output] at actionShape
+    cases actionShape
+  · rw [output] at actionShape
+    cases actionShape
   · rw [output] at actionShape
     simp only [Bool.and_eq_true, Option.any_eq_true] at actionShape
     obtain ⟨rigid, head, headAt, _⟩ := actionShape
@@ -7400,8 +7639,6 @@ theorem site_action_normalized_head
     · rw [normal]
       exact head_of_inst n τ t y instantiated headAt
     · exact mem_actionHeads member family output headAt
-  · rw [output] at actionShape
-    cases actionShape
 
 end Effect4.Codegen
 
@@ -7415,6 +7652,53 @@ variable {Op : Type} {classes : Classes.Classes} {sig : Signature Op}
 Consumer: SitesEraseUpTo and the public successful typed print connector.
 The source focus is discharged through actual checked contexts. -/
 set_option maxHeartbeats 4000000 in
+/-- A checked row call in the domain names no definition that takes programs (slice HO-3b): its
+head, when it has one, is its row's spelling (`typedPerform_rowHeadOwned`). -/
+theorem typedPerform_invoke_none (hl : LawfulSpelling sig spell)
+    {ctx : PrintEliminators.Context Op} {op : Op} {request : Term}
+    {annotation : Option (List Ty)} {x : Expr} (hn : ctx.node = .eff (.perform op request))
+    (hp : PrintEliminators.perform sig ctx op request annotation = .ok x) (hd : sig.dom op = true)
+    (hhead : rowHeadReadable (sig.rowOf op) = true) :
+    ∀ s rq fns, invokeView x = some (s, rq, fns) → invokedDef sig spell s = none := by
+  intro s rq fns hv
+  have owned := typedPerform_rowHeadOwned hn hp
+  rw [owned.1 s (rq :: fns) (invokeView_some hv)]
+  exact invokedDef_none_of_row hl hd hhead
+
+/-- What the checked printer did at an invocation (slice HO-3b): it found the address's
+context, printed the programs at the next address one level up, and applied the definition's
+name to the request and to each. -/
+theorem site_invoke_inv {contexts : List Nat → Option (PrintEliminators.Context Op)}
+    {path : List Nat} {n : Nat} {x : Expr} {k : Nat} {request : Term} {progs : Effs Op}
+    {row : Templates.Row}
+    (selected : Templates.table.find? (fun row => row.selects .eff "invoke"
+      ([.nat k, .term request, .child .effs progs] : List (ArgF Op (EffSelfCarrier Op)))) = some row)
+    (output : row.out = .invoke)
+    (printed : PrintedCaptureAt (typedSitesAlg sig ann contexts) path n .eff
+      (Eff.invoke k request progs) (.expr x)) :
+    ∃ ctx bodies, contexts path = some ctx ∧
+      cata_effs (typedSitesAlg sig ann contexts) progs (path ++ [0]) (n + 1) = .ok bodies ∧
+      printInvoke sig n k request bodies = .ok x := by
+  obtain ⟨ctx, found⟩ := printedCaptureAt_context printed
+  have haddr : atAddress path (([.nat k, .term request, .child .effs progs] :
+        List (ArgF Op (EffSelfCarrier Op))).map (ArgF.fold (typedSitesAlg sig ann contexts))) 0 =
+      [.nat k, .term request,
+        .child .effs (cata_effs (typedSitesAlg sig ann contexts) progs (path ++ [0]))] := rfl
+  have selectTyped : Templates.table.find? (fun row => row.selects .eff "invoke"
+      ([.nat k, .term request,
+        .child .effs (cata_effs (typedSitesAlg sig ann contexts) progs (path ++ [0]))] :
+          List (ArgF Op Carrier))) = some row := by
+    rw [← haddr]
+    simpa only [selects_atAddress, selects_fold] using selected
+  have equation := typedSites_cata_build sig ann contexts .eff "invoke"
+    [.nat k, .term request, .child .effs progs] (.invoke k request progs) rfl path
+  simp only [PrintedCaptureAt] at printed
+  simp only [cataFam] at equation
+  rw [equation, found, haddr] at printed
+  simp only [PrintEliminators.layer, selectTyped, output] at printed
+  obtain ⟨bodies, hbodies, hinv⟩ := bind_eq_ok.mp printed
+  exact ⟨ctx, bodies, found, hbodies, hinv⟩
+
 theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
     {fam : EffFam} {path : List Nat} {n : Nat} {e : EffSelfCarrier Op fam} {x : Expr}
     (hchild : ∀ path fam d (source : EffSelfCarrier Op fam) y,
@@ -7475,9 +7759,12 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
   have hsortsCtor : argSorts fam row.ctor = some (args.map argSortOf) := by rwa [hctor]
   have hother : ∀ j < k, ∀ rj, Templates.table[j]? = some rj → rj.fam ≠ fam ∨ rowsApart rj row = true :=
     fun j hj rj hrj => by rw [← hfamrow]; exact apart_of_lt hrj hk hj
-  rcases hcase with ⟨t, τplain, hout, hτplain, hinstplain⟩ | ⟨op, request, hout, hargs, hpplain⟩
-  · rcases hcase' with ⟨t', hout', hr⟩ | ⟨_, _, hout', _⟩
-    swap; · rw [hout] at hout'; cases hout'
+  rcases hcase with ⟨t, τplain, hout, hτplain, hinstplain⟩ | ⟨op, request, hout, hargs, hpplain⟩ |
+    ⟨kd, request, programs, bodies, hout, hargs, hprog, hpplain⟩
+  · rcases hcase' with ⟨t', hout', hr⟩ | ⟨_, _, hout', _⟩ | ⟨_, _, _, _, hout', _⟩
+    rotate_left
+    · rw [hout] at hout'; cases hout'
+    · rw [hout] at hout'; cases hout'
     rw [hout, RowOut.tpl.injEq] at hout'
     subst hout'
     obtain ⟨ctx', τ, y, hctx', hτ, hinst, hdecorate⟩ :=
@@ -7488,7 +7775,7 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
     · have hnormal := PrintEliminators.decorate_table_inst_erases sig
         (typedSitesAlg sig ann (PrintEliminators.contextAtTable (annotate sig env0 root) root)) ctx n fam e ctor args row t path τ y x
         hctxnode hctxdepth hview hfindSource hout hrigid hτ hinst hdecorate
-      obtain ⟨erased, node⟩ := eraseT_site_rigid_step family focus hview hfindSource hk
+      obtain ⟨erased, node⟩ := eraseT_site_rigid_step lawful family focus hview hfindSource hk
         hsortsRow hout hrigid (by rw [hfamrow, hout]; exact hτ) hinst hnormal
         (by rw [hfamrow, hout]; exact hr) (by rw [hfamrow, hout]; exact hτplain)
         hinstplain hchild hchildren hblock
@@ -7535,7 +7822,6 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
             obtain ⟨ctxChild, ctxFound⟩ := childCtx
             have childFocus := siteFocused_child focus hview hfindSource
               (i := 0) (childFam := .action) (child := source) rfl ctxFound
-              (fun _ refused => nomatch hout.symm.trans refused)
             rw [hout, hlevel] at childFocus
             have he : e = .withFiber source := by
               (cases e <;> cases hview)
@@ -7561,7 +7847,8 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
               refine eraseT_of_row normal hk (fun j hj rj hrj => ?_) ?_
               · rcases hother j hj rj hrj with hne | apart
                 · exact eraseExprRow_none_of_fam hne
-                · exact erase_earlier_none_action apart hout (by rw [hsortsRow, hact]) hhead haction
+                · exact erase_earlier_none_action apart lawful hout (by rw [hsortsRow, hact]) hhead
+                    haction
               · simp only [eraseExprRow, hfamrow, hout, ↓reduceIte,
                   show argSorts .eff row.ctor = some [.child .action] from by rw [hsortsCtor, hact],
                   Tpl.rigid, Bool.false_eq_true, ↓reduceDIte, lower, matchT, argDepth,
@@ -7612,8 +7899,9 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
           | _ => cases ha
       | _ => exact absurd rfl hrigid
   · rcases hcase' with ⟨_, hout', _⟩ |
-      ⟨op', request', hout', hargs', hd', hreq, hcover, hun, htypes, hterm⟩
+      ⟨op', request', hout', hargs', hd', hreq, hcover, hun, htypes, hterm⟩ | ⟨_, _, _, _, hout', _⟩
     · rw [hout] at hout'; cases hout'
+    swap; · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
     rw [hfamily] at hfamrow
@@ -7647,6 +7935,85 @@ theorem eraseT_site_print (lawful : LawfulSpelling sig spell)
     · exact erase_earlier_none_rowCall apart hout
         (fun t head headed reserved => typedPerform_no_reserved lawful hctxnode typed n t head headed reserved)
         (fun _ d => eraseT_action_none_of_typedPerform lawful hctxnode typed d)
+        (typedPerform_invoke_none lawful hctxnode typed hd' (rowHeadReadable_of_request hreq))
+  · -- an invocation with programs (slice HO-3b)
+    rcases hcase' with ⟨_, hout', _⟩ | ⟨_, _, hout', _⟩ |
+      ⟨k', r', progsDom, d, hout', hargs', hdef, hparams, hscoped, hcov, hun, hprogs⟩
+    · rw [hout] at hout'; cases hout'
+    · rw [hout] at hout'; cases hout'
+    have hfamily := table_fact table_family hmem
+    simp only [rowFamily, hout, beq_iff_eq] at hfamily
+    rw [hfamily] at hfamrow
+    subst hfamrow
+    have hnamed := table_fact table_invokeNamed hmem
+    simp only [rowInvokeNamed, hout, Bool.and_eq_true, beq_iff_eq] at hnamed
+    rw [hnamed.2] at hctor
+    subst hctor
+    obtain ⟨progs, rfl, hcata⟩ := fold_eq_invoke (printAlg sig) hargs
+    obtain ⟨progs', hsame, hdomCata⟩ := fold_eq_invoke (readableAlg classes sig) hargs'
+    simp only [List.cons.injEq, ArgF.nat.injEq, ArgF.term.injEq, ArgF.child.injEq, heq_eq_eq,
+      true_and, and_true] at hsame
+    obtain ⟨rfl, rfl, rfl⟩ := hsame
+    rw [build_eff_invoke, Option.some.injEq] at hbuild
+    subst hbuild
+    rw [← hcata] at hprog
+    simp only [cataFam] at hprog
+    have hplain : plain = .call (.ident d.name)
+        (printTerm n request :: bodies.map (Binders.write n [0])) := by
+      simp only [printInvoke, hdef, hparams, Bool.false_eq_true, ↓reduceIte, Except.ok.injEq]
+        at hpplain
+      exact hpplain.symm
+    obtain ⟨ctx', typedBodies, _, htypedBodies, htypedInvoke⟩ :=
+      site_invoke_inv hfindSource hout typed
+    have himage : x = .call (.ident d.name)
+        (printTerm n request :: typedBodies.map (Binders.write n [0])) := by
+      simp only [printInvoke, hdef, hparams, Bool.false_eq_true, ↓reduceIte, Except.ok.injEq]
+        at htypedInvoke
+      exact htypedInvoke.symm
+    have hnot := Program.defName_not_reserved lawful hdef hparams
+    have hsize : sizeOf typedBodies < sizeOf x := by
+      have h1 := Binders.mapM_read_size n [0] (typedBodies.map (Binders.write n [0])) typedBodies
+        (Program.mapM_read_write n [0] typedBodies)
+      have h2 := invokeView_size (x := x) (s := d.name) (rq := printTerm n request)
+        (fns := typedBodies.map (Binders.write n [0])) (by rw [himage]; rfl)
+      omega
+    have hread : ReadableAt classes sig .effs progs (n + 1) := by
+      rw [← hdomCata] at hprogs
+      exact Option.isSome_iff_exists.mp hprogs
+    have hcapture : PrintedCaptureAt (typedSitesAlg sig ann
+        (PrintEliminators.contextAtTable (annotate sig env0 root) root)) (path ++ [0]) (n + 1) .effs
+        progs (.exprs typedBodies) := htypedBodies
+    obtain ⟨childCtx, childFound⟩ := printedCaptureAt_context hcapture
+    have childFocus := siteFocused_child focus hview hfindSource
+      (i := 2) (childFam := .effs) (child := progs) rfl childFound
+    rw [hout] at childFocus
+    change SiteFocused root sig env0 (path ++ [0]) .effs progs (n + 1) at childFocus
+    have herased := hchildren (path ++ [0]) .effs (n + 1) progs typedBodies hsize childFocus hread
+      hcapture
+    simp only [PrintsTo] at herased
+    have hsameBodies : eraseSpine classes sig spell .effs (n + 1) typedBodies = bodies :=
+      Except.ok.inj (herased.symm.trans hprog)
+    have normal : EraseTermTypes.eraseNode n x = x := by rw [himage]; exact eraseNode_invoke hnot
+    refine ⟨⟨plain, eraseT_of_row normal hk (fun j hj rj hrj => ?_) ?_, ordinary⟩,
+      by rw [normal, himage]; rfl⟩
+    · rcases hother j hj rj hrj with hne | apart
+      · exact eraseExprRow_none_of_fam hne
+      · exact erase_earlier_none_invoke apart hout himage hnot
+          (fun _ d' => by rw [himage]; exact eraseT_action_none_of_head hnot d')
+    · rw [himage, hplain]
+      obtain ⟨rfam, rctor, rfixed, rout⟩ := row
+      simp only at hfamily hout
+      subst hfamily hout
+      unfold eraseExprRow
+      simp only [↓reduceIte, invokeView, Program.invokedDef_of_def lawful hdef hparams]
+      split
+      · rename_i hb
+        rw [Program.mapM_read_write] at hb
+        cases hb
+      · rename_i bodies' hb
+        rw [Program.mapM_read_write, Option.some.injEq] at hb
+        subst hb
+        simp only [hsameBodies, EraseTermTypes.eraseTerm_printTerm_identity]
 
 end Effect4.Codegen
 

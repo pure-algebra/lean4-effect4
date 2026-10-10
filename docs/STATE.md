@@ -43,9 +43,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
   constants, read back, and an authored module with definitions declares its layers there. So M5
   and M7 rest on no goal. An ill-formed reference is refused at its site with the condition it
   breaks (`Eff.refFault`, `Api.explain`), and the tools' summary carries the whole refusal. A
-  definition's parameters print as functions named by their declarations and read back (HO-3a,
-  one law of named rows for a block's and a body's spelling, `LawfulSpelling.extend`). The
-  printer refuses `invoke` until HO-3b, and a body's own layer until step 3.
+  definition's parameters print as functions named by their declarations, and an invocation
+  with programs as the definition's name on its request and its programs as arrows; both read
+  back (HO-3a, HO-3b: one law of named rows for a block's and a body's spelling,
+  `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). The printer refuses a
+  body's own layer until step 3.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
@@ -213,9 +215,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    landed, and so did CX1 and CX2 (points typed at their lexical scope; `invoke_arm` and
    `param_arm` proved). Row 341 keeps a layer reference in its target's scope, and its step 2
    landed: a block's module layers, which every scope names, printed, read and authored. HO-3a
-   landed: a definition's parameters print and read back. Next, HO-3b, an invocation with
-   programs printed and read ([the plan](research/2026-10-09-program-parameters.md) §11), then
-   step 3, a body's layers built once per call
+   and HO-3b landed: definitions with parameters and invocations with programs print and read
+   back ([the plan](research/2026-10-09-program-parameters.md) §11). Next, the repairs of Codex's
+   HO-3 review (callback columns in the type inventory, parameter names against row roots,
+   trailing names and payload classes, service roles with parameters, a callback's
+   requirements), then step 3, a body's layers built once per call
    ([the note](research/2026-10-10-layer-scopes.md) §5). Then CX3, which adds substitution and the builder's
    certificate. CX4 adds bounded unfolding. Then HO-4 (generics), HO-5 (Pool's service). Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the

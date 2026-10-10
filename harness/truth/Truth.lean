@@ -7,6 +7,7 @@ import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
 import Test.Program.PoolPublic
 import Test.Program.DefinitionsControls
+import Test.Program.InvokeControls
 import Test.Program.QueueDefs
 import Test.Codegen.ServicesPrint
 import Tools.GeneratedStamp
@@ -960,6 +961,14 @@ program each provide the module's one layer by reference. It prints as a module 
 one constant, `L_2_0`, named in both. -/
 def pDefsModuleLayer : Api.Program := Test.Program.DefinitionsControls.moduleLayerProg
 
+/-- Invocations with programs (decisions row 340, slice HO-3b): `twice` runs its parameter on its
+request and on the answer; `outer` passes its own parameter on to `twice`; `forked` runs its
+parameter in a fork it joins. Each prints as the definition's name on the request and on the
+program as an arrow. -/
+def pInvokeTwice : Api.Program := Test.Program.InvokeControls.invokeProg
+def pInvokeForward : Api.Program := Test.Program.InvokeControls.forwardProg
+def pInvokeForked : Api.Program := Test.Program.InvokeControls.forkProg
+
 /-- **The scenario R4 over the Queue's definitions** (decisions row 328, slice PROC-4): a second
 offer waits at capacity one, and the take that frees room accepts it. Each operation is an
 invocation of a definition of the module's block, and the printed module declares each
@@ -1035,7 +1044,9 @@ def corpus : List (String × Api.Program) :=
     ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
     ("pPoolClosing", pPoolClosing),
     ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
-    ("pDefsFork", pDefsFork), ("pDefsModuleLayer", pDefsModuleLayer), ("pQueueDefs", pQueueDefs),
+    ("pDefsFork", pDefsFork), ("pDefsModuleLayer", pDefsModuleLayer),
+    ("pInvokeTwice", pInvokeTwice), ("pInvokeForward", pInvokeForward),
+    ("pInvokeForked", pInvokeForked), ("pQueueDefs", pQueueDefs),
     ("pQueueService", pQueueService),
     ("pSemaphoreService", pSemaphoreService)]
 
@@ -1815,7 +1826,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
    "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer", "pQueueDefs",
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer", "pInvokeTwice",
+   "pInvokeForward", "pInvokeForked", "pQueueDefs",
    "pQueueService", "pSemaphoreService"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.

@@ -53,6 +53,23 @@ theorem read_size (n : Nat) (bs : List Nat) (e body : Expr) (h : read n bs e = s
     · exact nomatch h
   · exact nomatch h
 
+/-- The bodies of a list of such functions are no larger than the list (an invocation's
+programs, slice HO-3b): the reader's termination. -/
+theorem mapM_read_size (n : Nat) (bs : List Nat) :
+    ∀ (fns bodies : List Expr), fns.mapM (read n bs) = some bodies → sizeOf bodies ≤ sizeOf fns
+  | [], bodies, h => by
+    simp only [List.mapM_nil, pure, Option.some.injEq] at h
+    subst h
+    exact Nat.le_refl _
+  | f :: fs, bodies, h => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, pure,
+      Option.some.injEq] at h
+    obtain ⟨b, hb, rest, hrest, rfl⟩ := h
+    have h1 := read_size n bs f b hb
+    have h2 := mapM_read_size n bs fs rest hrest
+    simp only [List.cons.sizeOf_spec]
+    omega
+
 end Effect4.Codegen.Binders
 
 namespace Effect4.Codegen.ListFold

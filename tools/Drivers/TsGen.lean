@@ -1073,13 +1073,14 @@ def rowJs' (row : Effect4.Codegen.Templates.Row) : Except String String := do
   let closed := match row.out with
     | .tpl t => listsClosed t
     | .stmt t => listsClosedStmt t
-    | .rowCall | .refuse _ => true
+    | .rowCall | .invoke | .refuse _ => true
   unless closed do
     throw s!"row {row.ctor}: a statement list that ends in a captured rest"
   let out := match row.out with
     | .tpl t => tagged "tpl" [("tpl", tplJs t)]
     | .stmt t => tagged "stmt" [("stmt", stmtTplJs t), ("declares", toString t.declares)]
     | .rowCall => tagged "rowCall" []
+    | .invoke => tagged "invoke" []
     | .refuse name => tagged "refuse" [("name", lit name)]
   let sorts := (Effect4.Program.argSorts row.fam row.ctor).getD []
   let depth := sorts.zipIdx.map fun (sort, i) => depthJs row.fam sort (row.out.levelAt i)
@@ -1134,6 +1135,7 @@ def templateTypes : String :=
   "    | { readonly _tag: \"tpl\"; readonly tpl: Tpl }\n" ++
   "    | { readonly _tag: \"stmt\"; readonly stmt: StmtTpl; readonly declares: number }\n" ++
   "    | { readonly _tag: \"rowCall\" }\n" ++
+  "    | { readonly _tag: \"invoke\" }\n" ++
   "    | { readonly _tag: \"refuse\"; readonly name: string }\n}\n" ++
   "export const rowsOf = (fam: Fam): ReadonlyArray<TemplateRow> => (templates.rows as ReadonlyArray<TemplateRow>).filter((row) => row.fam === fam)\n" ++
   "export const argSortsOf = (fam: Fam, ctor: string): ReadonlyArray<ArgSort> | undefined =>\n" ++
@@ -1201,7 +1203,7 @@ def tableIdents : List String :=
   (table.flatMap fun row => match row.out with
     | .tpl t => tplIdents t
     | .stmt t => stmtTplIdents t
-    | .rowCall | .refuse _ => []).eraseDups
+    | .rowCall | .invoke | .refuse _ => []).eraseDups
 
 end Templates
 

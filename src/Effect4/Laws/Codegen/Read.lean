@@ -68,7 +68,7 @@ def rowFamily (row : Templates.Row) : Bool :=
   match row.out with
   | .tpl _ => row.fam == .eff || row.fam == .action || row.fam == .layer
   | .stmt _ => row.fam == .stmt
-  | .rowCall => row.fam == .eff
+  | .rowCall | .invoke => row.fam == .eff
   | .refuse _ => true
 
 /-- An argument the classifier fixes has no hole: it is no part of the image. -/
@@ -552,6 +552,68 @@ theorem accepted_prints {n : Nat} {row : Templates.Row} {k : Nat} (hk : table[k]
     · exact .inr (.inl hf)
     · exact .inr (.inr hf)) hcata hrow
 
+/-- What `invokedDef` found (slice HO-3b): the invocation the name spells, and the definition,
+which takes programs. A step of `read_exact` and `read_print`. -/
+theorem invokedDef_some {sig : Signature Op} {spell : String → List RowArg → Option Op} {s : String}
+    {j : Nat} (h : invokedDef sig spell s = some j) :
+    ∃ op d, spell s [] = some op ∧ sig.callOf op = some j ∧ sig.defOf j = some d ∧
+      d.params.isEmpty = false := by
+  unfold invokedDef at h
+  split at h
+  · rename_i op hop
+    split at h
+    · rename_i k hk
+      split at h
+      · rename_i d hd
+        split at h
+        · cases h
+        · rename_i hp
+          cases h
+          exact ⟨op, d, hop, hk, hd, by simpa only [Bool.not_eq_true] using hp⟩
+      · cases h
+    · cases h
+  · cases h
+
+/-- Exactness of the functions' bodies: what reads as a list of functions of these binders is
+the bodies, each written back. A step of `read_exact`'s invocation arm. -/
+theorem mapM_read_exact (n : Nat) (bs : List Nat) :
+    ∀ (fns bodies : List Expr), fns.mapM (Binders.read n bs) = some bodies →
+      bodies.map (Binders.write n bs) = fns
+  | [], bodies, h => by
+    simp only [List.mapM_nil, pure, Option.some.injEq] at h
+    subst h
+    rfl
+  | f :: fs, bodies, h => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, pure,
+      Option.some.injEq] at h
+    obtain ⟨b, hb, rest, hrest, rfl⟩ := h
+    simp only [List.map_cons, Binders.read_exact n bs f b hb, mapM_read_exact n bs fs rest hrest]
+
+/-- **An accepted invocation prints** (decisions row 340, slice HO-3b): the node `buildRow`
+accepted at the invocation's row folds to the row's printer on its folded arguments
+(`cata_build`); its programs print to the bodies, at `n + 1`, and the printer applies the
+definition's name to the request and to each body as a function. A step of `read_exact` and
+`read_print`. -/
+theorem invoke_prints {n k j : Nat} {row : Templates.Row} (hk : table[k]? = some row)
+    (hout : row.out = .invoke) {request : Term} {programs : Effs Op} {v : Eff Op} {d : DefDecl}
+    (hdef : sig.defOf j = some d) (hparams : d.params.isEmpty = false) {bodies : List Expr}
+    (hprog : cata_effs (printAlg sig) programs (n + 1) = .ok bodies)
+    (hb : buildRow .eff "invoke" [.nat j, .term request, .child .effs programs] k = .ok v) :
+    cata_eff (printAlg sig) v n = .ok (.call (.ident d.name)
+      (printTerm n request :: bodies.map (Binders.write n [0]))) := by
+  obtain ⟨hp, hbuild⟩ := buildRow_ok hb
+  have hcata : cataFam (printAlg sig) .eff v =
+      tableLayer sig .eff "invoke"
+        (([.nat j, .term request, .child .effs programs] : List (ArgF Op (EffSelfCarrier Op))).map
+          (ArgF.fold (printAlg sig))) :=
+    cata_build (tableLayer sig) .eff "invoke" _ v hbuild
+  show cata_eff (printAlg sig) v n = _
+  rw [show cata_eff (printAlg sig) v = _ from hcata]
+  have hfind := find?_selects_of_printedRow sig hp hk
+  simp only [List.map_cons, List.map_nil, ArgF.fold, cataFam] at hfind
+  simp only [tableLayer, tableLayer.rowPrint, List.map_cons, List.map_nil, ArgF.fold, cataFam,
+    hfind, hout, hprog, ok_bind, printInvoke, hdef, hparams, Bool.false_eq_true, ↓reduceIte]
+
 /-- What one row read, the printer prints: the row law of `read_exact`, with the recursion as
 hypotheses (`readRow` has none of its own). -/
 theorem readRow_exact (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {x : Expr}
@@ -585,6 +647,36 @@ theorem readRow_exact (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {
     | eff =>
       simp only [Option.some.injEq] at h
       exact readPerform_exact hl (Laws.Auto.mapError_eq_ok.mp h)
+    | stmt => cases h
+    | stmts => cases h
+    | effs => cases h
+    | action => cases h
+    | layer => cases h
+    | layers => cases h
+  · -- an invocation with programs (slice HO-3b)
+    rename_i hout
+    cases fam with
+    | eff =>
+      simp only at h
+      split at h
+      · cases h
+      · rename_i s rq fns hx
+        split at h
+        · cases h
+        · rename_i j hj
+          split at h
+          · cases h
+          · rename_i bodies hb
+            simp only [Option.some.injEq] at h
+            obtain ⟨request, hreq, rest⟩ := bind_eq_ok.mp h
+            obtain ⟨programs, hprog, hbuild⟩ := bind_eq_ok.mp rest
+            obtain ⟨op, d, hop, hcall, hdef, hparams⟩ := invokedDef_some hj
+            have hname := hl.invoke_name s op j d hop hcall hdef
+            have hprint := invoke_prints hk hout hdef hparams
+              (hchildren .effs (n + 1) bodies _ programs (Laws.Auto.mapError_eq_ok.mp hprog)) hbuild
+            show cata_eff (printAlg sig) v n = .ok x
+            rw [hprint, hname, readTerm_exact rq (Laws.Auto.mapError_eq_ok.mp hreq),
+              mapM_read_exact n [0] fns bodies hb, invokeView_some hx]
     | stmt => cases h
     | stmts => cases h
     | effs => cases h

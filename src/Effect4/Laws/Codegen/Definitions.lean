@@ -161,7 +161,8 @@ at a body's. A step of the claim `module-defs-round-trip`; its consumers are
 theorem LawfulSpelling.extend {sig ext : Signature Op} {spell : String → List RowArg → Option Op}
     {ix : Op → Option Nat} {mk : Nat → Op} {rows : List Row} {nameIdx : String → Option Nat}
     (hl : LawfulSpelling sig spell) (hx : NamedRows sig ext ix rows)
-    (index : LawfulIndex sig spell ix mk) (named : RowsNamed spell rows nameIdx) :
+    (index : LawfulIndex sig spell ix mk) (named : RowsNamed spell rows nameIdx)
+    (invokes : LawfulInvokes ext (namedSpell mk nameIdx spell)) :
     LawfulSpelling ext (namedSpell mk nameIdx spell) := by
   have face : ∀ op, ext.face op = sig.face op := fun op => by
     simp only [Signature.face, hx.withTerm, hx.withTypeArgs]
@@ -182,7 +183,10 @@ theorem LawfulSpelling.extend {sig ext : Signature Op} {spell : String → List 
     intro k h
     simp only [namedSpell, named.idx_row k h]
   exact
-  { spell_row := by
+  { invoke_spell := invokes.invoke_spell
+    invoke_name := invokes.invoke_name
+    invoke_apart := invokes.invoke_apart
+    spell_row := by
       intro op hd hh
       rw [face]
       cases hi : ix op with
@@ -374,6 +378,89 @@ theorem LawfulCalls.index {sig : Signature Op} {spell : String → List RowArg �
   ix_withTypeArgs := calls.callOf_withTypeArgs
   spell_plain := calls.spell_plain
 
+/-- **A block's invocations with programs are lawful** (slice HO-3b): under the block's names
+(`DefsNamed`) and the signature's invocations (`LawfulCalls`), a block's definition that takes
+programs is spelled by its name, a name that spells an invocation is its definition's, and no
+row in the block's domain carries such a name: a definition of the block in the domain takes no
+program, and the signature's own rows spell no block name. A step of `LawfulSpelling.withDefs`. -/
+theorem LawfulInvokes.withDefs {sig : Signature Op} {spell : String → List RowArg → Option Op}
+    {call : Nat → Op} (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
+    {defs : List DefDecl} (named : DefsNamed spell defs) :
+    LawfulInvokes (sig.withDefs defs) (defsSpell call defs spell) where
+  invoke_spell k d hd hp := by
+    change defs[k]?.or (sig.defOf k) = some d at hd
+    cases hk : defs[k]? with
+    | some d' =>
+      rw [hk, Option.some_or] at hd
+      cases hd
+      obtain ⟨hlt, heq⟩ := List.getElem?_eq_some_iff.mp hk
+      refine ⟨call k, ?_, calls.callOf_call k⟩
+      simp only [defsSpell, namedSpell]
+      rw [← heq, findIdx_name named.distinct hlt]
+    | none =>
+      rw [hk, Option.none_or] at hd
+      obtain ⟨op, hop, hc⟩ := hl.invoke_spell k d hd hp
+      refine ⟨op, ?_, hc⟩
+      have absent : defs.findIdx? (·.name == d.name) = none := by
+        apply List.findIdx?_eq_none_iff.mpr
+        intro d'' mem
+        cases same : (d''.name == d.name) with
+        | false => rfl
+        | true =>
+          have spelled := named.unspelled d'' mem []
+          rw [beq_iff_eq.mp same, hop] at spelled
+          cases spelled
+      simp only [defsSpell, namedSpell, absent, hop]
+  invoke_name s op k d hs hc hd := by
+    change defs[k]?.or (sig.defOf k) = some d at hd
+    change sig.callOf op = some k at hc
+    cases hf : defs.findIdx? (·.name == s) with
+    | none =>
+      simp only [defsSpell, namedSpell, hf] at hs
+      rw [calls.spell_plain s [] op hs] at hc
+      cases hc
+    | some j =>
+      simp only [defsSpell, namedSpell, hf, Option.some.injEq] at hs
+      subst hs
+      rw [calls.callOf_call] at hc
+      cases hc
+      obtain ⟨d', hd', hname⟩ := findIdx_some hf
+      rw [hd', Option.some_or] at hd
+      cases hd
+      exact hname
+  invoke_apart op' op k d hdom hhead hs hc hd := by
+    change defs[k]?.or (sig.defOf k) = some d at hd
+    change sig.callOf op = some k at hc
+    cases hc' : sig.callOf op' with
+    | some k' =>
+      obtain ⟨d', hk', hparams⟩ := sig.withDefs_dom_call_some defs hc' hdom
+      rw [sig.withDefs_rowOf_call defs hc' hk'] at hs
+      obtain ⟨hlt, heq⟩ := List.getElem?_eq_some_iff.mp hk'
+      have hidx : defs.findIdx? (·.name == d'.name) = some k' := by
+        rw [← heq]
+        exact findIdx_name named.distinct hlt
+      change defsSpell call defs spell d'.name [] = some op at hs
+      simp only [defsSpell, namedSpell, hidx, Option.some.injEq] at hs
+      subst hs
+      rw [calls.callOf_call] at hc
+      cases hc
+      rw [hk', Option.some_or] at hd
+      cases hd
+      exact hparams
+    | none =>
+      rw [Signature.withDefs_rowOf_of_none sig defs hc'] at hs hhead
+      rw [Signature.withDefs_dom_of_none sig defs hc'] at hdom
+      cases hf : defs.findIdx? (·.name == (sig.rowOf op').spelling) with
+      | none =>
+        simp only [defsSpell, namedSpell, hf] at hs
+        rw [calls.spell_plain _ [] op hs] at hc
+        cases hc
+      | some j =>
+        obtain ⟨dj, hdj, hname⟩ := findIdx_some hf
+        have base := hl.spell_row op' hdom hhead
+        rw [← hname, named.unspelled dj (List.mem_of_getElem? hdj)] at base
+        cases base
+
 /-- **The spelling map of a block is lawful** (decisions row 328, slice PROC-3): at a lawful
 spelling, under the signature's `LawfulCalls` and a block whose names are `DefsNamed`, the
 block's spelling map is lawful at the block's signature. So `read_print` and `read_exact` hold
@@ -383,7 +470,7 @@ theorem LawfulSpelling.withDefs {sig : Signature Op} {spell : String → List Ro
     {call : Nat → Op} (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
     {defs : List DefDecl} (named : DefsNamed spell defs) :
     LawfulSpelling (sig.withDefs defs) (defsSpell call defs spell) :=
-  hl.extend (namedRows_withDefs sig defs) calls.index named.rows
+  hl.extend (namedRows_withDefs sig defs) calls.index named.rows (LawfulInvokes.withDefs hl calls named)
 
 /-! ## A body's signature (slice HO-3) -/
 
@@ -503,6 +590,72 @@ theorem namedRows_withParams (sig : Signature Op) (ps : List ParamDecl)
       typeArgsOf := rfl
       withTypeArgs := rfl }
 
+/-- A body's signature keeps the declarations and the invocations. -/
+theorem withParams_defOf_callOf (sig : Signature Op) (ps : List ParamDecl) :
+    (sig.withParams ps).defOf = sig.defOf ∧ (sig.withParams ps).callOf = sig.callOf := by
+  cases ps <;> exact ⟨rfl, rfl⟩
+
+/-- **A body keeps the invocations with programs lawful** (slice HO-3b): a parameter's name
+shadows no definition's, and a parameter's run invokes no definition. A step of
+`LawfulSpelling.withParams`. -/
+theorem LawfulInvokes.withParams {sig : Signature Op} {spell : String → List RowArg → Option Op}
+    {param : Nat → Op} (hl : LawfulSpelling sig spell) (params : LawfulParams sig spell param)
+    (apart : ∀ op i, sig.paramOf op = some i → sig.callOf op = none) {ps : List ParamDecl}
+    (named : ParamsNamed spell ps) :
+    LawfulInvokes (sig.withParams ps) (paramsSpell param ps spell) where
+  invoke_spell k d hd hp := by
+    rw [(withParams_defOf_callOf sig ps).1] at hd
+    obtain ⟨op, hop, hc⟩ := hl.invoke_spell k d hd hp
+    refine ⟨op, ?_, by rw [(withParams_defOf_callOf sig ps).2]; exact hc⟩
+    have absent : ps.findIdx? (·.name == d.name) = none := by
+      apply List.findIdx?_eq_none_iff.mpr
+      intro q mem
+      cases same : (q.name == d.name) with
+      | false => rfl
+      | true =>
+        have spelled := named.unspelled q mem []
+        rw [beq_iff_eq.mp same, hop] at spelled
+        cases spelled
+    simp only [paramsSpell, namedSpell, absent, hop]
+  invoke_name s op k d hs hc hd := by
+    rw [(withParams_defOf_callOf sig ps).1] at hd
+    rw [(withParams_defOf_callOf sig ps).2] at hc
+    cases hf : ps.findIdx? (·.name == s) with
+    | none =>
+      simp only [paramsSpell, namedSpell, hf] at hs
+      exact hl.invoke_name s op k d hs hc hd
+    | some i =>
+      simp only [paramsSpell, namedSpell, hf, Option.some.injEq] at hs
+      subst hs
+      rw [apart _ i (params.ix_mk i)] at hc
+      cases hc
+  invoke_apart op' op k d hdom hhead hs hc hd := by
+    rw [(withParams_defOf_callOf sig ps).1] at hd
+    rw [(withParams_defOf_callOf sig ps).2] at hc
+    have hx := namedRows_withParams sig ps params.outside
+    cases hp : sig.paramOf op' with
+    | none =>
+      rw [hx.rowOf_none op' hp] at hhead hs
+      rw [hx.dom_none op' hp] at hdom
+      cases hf : ps.findIdx? (·.name == (sig.rowOf op').spelling) with
+      | none =>
+        simp only [paramsSpell, namedSpell, hf] at hs
+        exact hl.invoke_apart op' op k d hdom hhead hs hc hd
+      | some i =>
+        simp only [paramsSpell, namedSpell, hf, Option.some.injEq] at hs
+        subst hs
+        rw [apart _ i (params.ix_mk i)] at hc
+        cases hc
+    | some i =>
+      have hlt := hx.dom_lt op' i hp hdom
+      rw [List.length_map] at hlt
+      rw [hx.rowOf_ix op' i hp, List.getElem?_map, List.getElem?_eq_getElem hlt] at hs
+      change paramsSpell param ps spell ps[i].name [] = some op at hs
+      simp only [paramsSpell, namedSpell, findIdx_param named.distinct hlt, Option.some.injEq] at hs
+      subst hs
+      rw [apart _ i (params.ix_mk i)] at hc
+      cases hc
+
 /-- **The spelling map of a body is lawful** (decisions row 340, slice HO-3): at a lawful
 spelling, under the signature's `LawfulParams` and parameters whose names are `ParamsNamed`, the
 body's spelling map is lawful at the body's signature. So `read_print` holds at a body's
@@ -510,9 +663,11 @@ signature. A step of the claim `module-defs-round-trip`; its consumer is the mod
 the readable domain. -/
 theorem LawfulSpelling.withParams {sig : Signature Op} {spell : String → List RowArg → Option Op}
     {param : Nat → Op} (hl : LawfulSpelling sig spell) (params : LawfulParams sig spell param)
+    (apart : ∀ op i, sig.paramOf op = some i → sig.callOf op = none)
     {ps : List ParamDecl} (named : ParamsNamed spell ps) :
     LawfulSpelling (sig.withParams ps) (paramsSpell param ps spell) :=
   hl.extend (namedRows_withParams sig ps params.outside) params.toLawfulIndex named.rows
+    (LawfulInvokes.withParams hl params apart named)
 
 /-- **A block keeps its signature's parameter runs lawful**: at a block's signature and spelling
 map, the runs of a parameter are as lawful as at the signature, when no invocation runs a

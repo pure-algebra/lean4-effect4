@@ -1,5 +1,6 @@
 import Effect4.Laws.Api.ModuleReadable
 import Test.Program.DefinitionsControls
+import Test.Program.InvokeControls
 
 /-!
 # A printed definition block (decisions row 328, slice PROC-3)
@@ -162,6 +163,24 @@ def paramRenamed (name : String) : NativeEff :=
     [{ name := "f", request := .nat, answer := .nat }, { name := "f", request := .nat, answer := .nat }] }]
     (.cons (.perform (.param 0) (.var 0)) .nil) (.succeed (.lit (.nat 1))) .nil) =
   some (.unsafeName "f")
+
+/-! ## An invocation with programs (decisions row 340, slice HO-3b) -/
+
+-- the invocation prints as the definition's name on the request and on each program as a
+-- function of the binder due at the call (`invokeProg`, Test/Program/InvokeControls.lean)
+#guard (Api.printModule "main" Test.Program.InvokeControls.invokeProg).map
+    (fun m => String.join (m.decls.map (TypeScript.Render.decl TypeScript.house0))) =
+  some ("export const twice = (a0: number, f: (a0: number) => Effect.Effect<number, never, " ++
+    "never>): Effect.Effect<number, never, never> => Effect.suspend(() => " ++
+    "Effect.flatMap(f(a0), (a1) => f(a1)))\n" ++
+    "export const main: Effect.Effect<number, never, never> = " ++
+    "twice(5, (a0) => Effect.succeed(succ(a0)))\n")
+-- each invocation program is in the readable domain of a block, and its module reads back to it:
+-- one invocation, a program passed on through a second definition, and a run inside a fork
+#guard [Test.Program.InvokeControls.invokeProg, Test.Program.InvokeControls.forwardProg,
+    Test.Program.InvokeControls.forkProg].all fun p =>
+  blockReadable [] (nativeSignature []) p &&
+    (Api.printModule "main" p).any fun m => decide (Api.readModule m [] = .ok p)
 
 /-! ## Controls: what the reader refuses -/
 

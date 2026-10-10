@@ -287,6 +287,19 @@ theorem BodiesTyped.of_nil {src : ProgramSource} (h : src.program.defsOf = []) :
   rw [h, List.getElem?_nil] at hd
   cases hd
 
+/-- A program with no definition block has its module layers typed: it has no module
+(decisions row 341). The third part of `SourceWF` for every program outside a block. -/
+theorem ModuleLayersTyped.of_noBlock {src : ProgramSource} (h : src.program.block? = none) :
+    ModuleLayersTyped src := by
+  intro target l hin
+  cases hprog : src.program with
+  | defs decls bodies main layers =>
+    rw [hprog] at h
+    cases h
+  | _ =>
+    rw [hprog] at hin
+    simp only [Eff.inModule, Bool.false_eq_true] at hin
+
 /-- A capture's release is admitted: its path addresses an `acquireRelease` the checker types
 under an environment its values fit, extended by the acquired value, and its context's
 services are typed. The checker reads the node through the expansion's rounds, as `PointTyped`

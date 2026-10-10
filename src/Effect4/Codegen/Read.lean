@@ -795,6 +795,42 @@ def nearestRow (n : Nat) (x : Expr) : Option (List String × String) :=
       | .tpl t => if t.head? = some head then Template.explainT n t x else none
       | _ => none
 
+/-- An invocation's printed shape (slice HO-3b): a call of a name on a request and on further
+arguments. -/
+def invokeView : Expr → Option (String × Expr × List Expr)
+  | .call (.ident s) (rq :: fns) => some (s, rq, fns)
+  | _ => none
+
+/-- The shape is the tree. -/
+theorem invokeView_some {x : Expr} {s : String} {rq : Expr} {fns : List Expr}
+    (h : invokeView x = some (s, rq, fns)) : x = .call (.ident s) (rq :: fns) := by
+  unfold invokeView at h
+  split at h
+  · cases h
+    rfl
+  · cases h
+
+/-- The further arguments are inside the tree: the reader's termination. -/
+theorem invokeView_size {x : Expr} {s : String} {rq : Expr} {fns : List Expr}
+    (h : invokeView x = some (s, rq, fns)) : sizeOf fns < sizeOf x := by
+  rw [invokeView_some h]
+  simp only [Expr.call.sizeOf_spec, List.cons.sizeOf_spec]
+  omega
+
+/-- The definition a name invokes with programs (decisions row 340, slice HO-3b): the index of
+the invocation the name spells, when that definition takes programs. -/
+def invokedDef (sig : Signature Op) (spell : String → List RowArg → Option Op) (s : String) :
+    Option Nat :=
+  match spell s [] with
+  | some op =>
+    match sig.callOf op with
+    | some k =>
+      match sig.defOf k with
+      | some d => if d.params.isEmpty then none else some k
+      | none => none
+    | none => none
+  | none => none
+
 /-- One row against a tree; `none` when the row does not match. It has no recursion of its own:
 the readers of what it captures are handed in, each with the fact that makes the recursion
 terminate (a rigid skeleton's captures are strictly inside the tree, `match_below`; a
@@ -819,6 +855,28 @@ def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (sp
       match fam with
       | .eff => some ((readPerform classes sig spell n x).mapError fun why =>
           { why, expected := nearestRow n x })
+      | _ => none
+    -- an invocation with programs (slice HO-3b): a call whose head spells the invocation of a
+    -- definition that takes programs, on its request and on one function of the binder due at
+    -- `n` for each program; the programs read at `n + 1`
+    | .invoke =>
+      match fam with
+      | .eff =>
+        match hx : invokeView x with
+        | none => none
+        | some (s, rq, fns) =>
+          match invokedDef sig spell s with
+          | none => none
+          | some j =>
+            match hb : fns.mapM (Effect4.Codegen.Binders.read n [0]) with
+            | none => none
+            | some bodies => some do
+              let request ← (readTerm classes n rq).mapError fun why =>
+                (ReadFailure.here why).under "invoke" 1
+              let programs ← (children .effs (n + 1) bodies (Nat.lt_of_le_of_lt
+                (Effect4.Codegen.Binders.mapM_read_size n [0] fns bodies hb)
+                (invokeView_size hx))).mapError (·.under "invoke" 2)
+              buildRow .eff "invoke" [.nat j, .term request, .child .effs programs] k
       | _ => none
     | .tpl t =>
       match hσ : matchT n t x with
@@ -1479,6 +1537,23 @@ structure LawfulKeys (sig : Signature Op) (spell : String → List RowArg → Op
   /-- The laws of an operation's type arguments, and their independence of the term's. -/
   typeArgs : LawfulTypeArgs sig
 
+/-- **What a reader needs of a signature's invocations with programs** (decisions row 340, slice
+HO-3b): a definition `k` that takes programs has a name that the map spells as an invocation of
+`k` (A); a name that spells an invocation of `k` is definition `k`'s name (D); and no row of the
+domain whose head reads back carries the name of a definition that takes programs (C), so the
+invocation's reader stands apart from every row call. The native signature declares no
+definition and meets them vacuously; a block's signature meets them under the names its printer
+checks (`LawfulInvokes.withDefs`, `Laws/Codegen/Definitions.lean`). -/
+structure LawfulInvokes (sig : Signature Op) (spell : String → List RowArg → Option Op) :
+    Prop where
+  invoke_spell : ∀ k d, sig.defOf k = some d → d.params ≠ [] →
+    ∃ op, spell d.name [] = some op ∧ sig.callOf op = some k
+  invoke_name : ∀ s op k d, spell s [] = some op → sig.callOf op = some k →
+    sig.defOf k = some d → d.name = s
+  invoke_apart : ∀ op' op k d, sig.dom op' = true → rowHeadReadable (sig.rowOf op') = true →
+    spell (sig.rowOf op').spelling [] = some op → sig.callOf op = some k →
+    sig.defOf k = some d → d.params = []
+
 /-- **What a reader needs of a signature**: the laws of its keys (`LawfulKeys`), and that a
 trailing string literal is told apart from a printed request. `s("v")` is the call of a row
 whose request prints as `"v"`, and the call of a row of the same spelling whose trailing
@@ -1488,7 +1563,7 @@ prints its request (`Row.printsRequest`), no key begins with a string literal.
 method view does not keep this law, since there every non-method row prints a request; it reads
 method rows alone, and for those the law of the signature itself is what it needs. -/
 structure LawfulSpelling (sig : Signature Op) (spell : String → List RowArg → Option Op) : Prop
-    extends LawfulKeys sig spell where
+    extends LawfulKeys sig spell, LawfulInvokes sig spell where
   literal_alone : ∀ op v names, sig.dom op = true → (sig.rowOf op).printsRequest = true →
     spell (sig.rowOf op).spelling (.str v :: names) = none
 

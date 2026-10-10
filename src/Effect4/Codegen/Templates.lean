@@ -76,13 +76,19 @@ inductive RowOut where
   inverse. It is a codec with its own round trip, parametrised by the signature, and not a
   skeleton; the row says where in the reading order it stands. -/
   | rowCall
+  /-- An invocation with programs (decisions row 340, slice HO-3b): printed as the definition's
+  name applied to the request and to each program as a function (`printInvoke`), read by its
+  inverse. Like the row call, it is a codec parametrised by the signature, not a skeleton. -/
+  | invoke
   | refuse (name : String)
 
 /-- The binders in scope at argument `i` of a row, read off its skeleton. -/
 def RowOut.levelAt : RowOut → Nat → Nat
   | .tpl t, i => Template.levelAt t i
   | .stmt t, i => t.levelAt i
-  | .rowCall, _ | .refuse _, _ => 0
+  -- an invocation's programs, its argument `2`, each bind their parameter's request
+  | .invoke, 2 => 1
+  | .rowCall, _ | .invoke, _ | .refuse _, _ => 0
 
 structure Row where
   fam : EffFam
@@ -190,8 +196,9 @@ def effRows : List Row :=
   , ⟨.eff, "restore", [], .tpl (call "pipe" [h 1, h 0])⟩
   -- a definition block (decisions row 328): refused by name until slice PROC-3 prints the block
   , ⟨.eff, "defs", [], .refuse "defs"⟩
-  -- an invocation with programs (decisions row 340): refused by name until slice HO-3 prints it
-  , ⟨.eff, "invoke", [], .refuse "invoke"⟩
+  -- an invocation with programs (decisions row 340, slice HO-3b): before the row call, which
+  -- reads every call that is nothing else
+  , ⟨.eff, "invoke", [], .invoke⟩
   , ⟨.eff, "gen", [], .tpl (call genHead [.generator (.hole 0)])⟩
   , ⟨.eff, "withFiber", [], .tpl (h 0)⟩
   , ⟨.eff, "perform", [], .rowCall⟩ ]
@@ -441,6 +448,11 @@ where
       | .rowCall => match args with
         -- the row's call, and after it the operation's binder term as a function (`printPerform`)
         | [.op op, .term request] => printPerform sig n op request
+        | _ => .error (tableDefect ctor)
+      | .invoke => match args with
+        -- the definition's name on the request and the programs, each at `n + 1`
+        | [.nat k, .term request, .child .effs programs] =>
+          programs (n + 1) >>= printInvoke sig n k request
         | _ => .error (tableDefect ctor)
       | .tpl t => do
         let σ ← printArgs sig fam n (.tpl t) args 0

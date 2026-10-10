@@ -940,6 +940,10 @@ def bothSpell (s : String) (names : List RowArg) : Option BothOp :=
 /-- The fixture meets the reader's laws, the type arguments' and the term's with their
 independence among them. -/
 theorem bothLawful : LawfulSpelling bothSig bothSpell where
+  -- the fixture declares no definition: the invocation facts hold vacuously
+  invoke_spell _ _ h := nomatch h
+  invoke_name _ _ _ _ _ _ h := nomatch h
+  invoke_apart _ _ _ _ _ _ _ _ h := nomatch h
   spell_row := by
     intro op _ _
     cases op <;> rfl

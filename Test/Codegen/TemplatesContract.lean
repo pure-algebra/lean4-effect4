@@ -93,7 +93,7 @@ def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
 #guard table.all fun row => match row.out with
   | .tpl tp => decide (Linear tp)
   | .stmt tp => decide (holesStmt tp).Nodup
-  | .rowCall | .refuse _ => true
+  | .rowCall | .invoke | .refuse _ => true
 
 -- every row names a constructor of its family
 #guard table.all fun row => (argSorts row.fam row.ctor).isSome

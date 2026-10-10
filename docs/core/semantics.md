@@ -834,6 +834,10 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   Each parameter whose value is a program follows the request, as a function named by its
   declaration (`paramType`, slice HO-3a), and its run prints as the call of that name.
   An invocation prints as the definition's name applied to its request.
+  An invocation with programs prints as that name applied to the request and to each program,
+  as an arrow of the binder due at the call (`printInvoke`, slice HO-3b).
+  It reads back under the block's laws of invocations (`LawfulInvokes`): a name spells its
+  definition, and no row of the domain carries the name of a definition that takes programs.
   The statement fixes declarations with readable columns, an empty requirement row and names
   with no layer path (`DefDecl.readable`).
   The block's module layers print after the services, as constants named by their paths
