@@ -42,7 +42,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
   fragment is `StraightRows`, at every compile budget. A recorded run that is funded, at rest and
   host-driven observes the program's meaning under its reply tape (H8). A finished run observes
   the meaning under any host whose answers are the run's (H9). A host is a comodel of the row
-  signature (`Effects.Comodel`), and the reply tape is one host. Between decisions the machine is in one of four
+  signature (`Effects.Comodel`), and the reply tape is one host. The driver `Run.runWith` meets
+  H9's premises when its reactor stays inside the envelope and answers with exits
+  (`runWith_denotes`, `src/Effect4/Laws/Api/HostDrive.lean`). A reactor behind its rows' types
+  (`Reactor.guardRows`) always does. The row table's types are also a protocol of its hosts
+  (`src/Effect4/Laws/Program/RowProtocol.lean`). Between decisions the machine is in one of four
   forms: loaded, parked on a yield, parked on a host call, exited
   (`src/Effect4/Laws/Program/Agreement/Hosted.lean`). Each host decision moves it to another,
   and the local run with calls moves the same way. One drive law serves H8 and the packet's
@@ -163,9 +167,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 0. **The host session as a coalgebra** (the
    [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
-   landed. Next is CO-6: the drive with a host and its law at the run level, the host utilities,
-   and the typed protocol. Then CO-6b prints a verified handler as an Effect service, and CO-7
-   adds promises. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
+   landed, and CO-6's typed protocol and its law at the driver. Left in CO-6: a reactor that
+   names its row (a core change, batched), so `Effects`' constructions drive runs. Then CO-6b
+   prints a verified handler as an Effect service, and CO-7 adds promises. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
