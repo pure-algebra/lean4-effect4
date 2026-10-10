@@ -307,7 +307,7 @@ Each entry is one row of six columns:
 | **`#guard`** | A check that a battery runs during Lean elaboration. Rendered bytes stay inside it. | — | — | — | — |
 | **definitional equality** | Equality by the kernel's reduction (`rfl`). Fold uniqueness is a theorem, not a definitional equality. | `hom_eq_cata_eff` (`src/Effect4/Program/Fold.lean`) | — | — | — |
 | **aesop bank** (bank) | A named aesop rule set of the law graph. | `src/Effect4/Laws/Auto/RuleSets.lean` | aesop, by name | — | — |
-| **`proof_goal`** | The command that declares a planned goal: a theorem with its statement and a `sorry` body. Its attributes are the theorem's, so a goal carries its placement (`@[semantics "concept" (requirement := Rn)]`, decisions row 207). | `elabGoal` (`tools/ProofGraph/Goal.lean`) | Mathlib's `proof_wanted`, by analogy | `#proof_wanted` | — |
+| **`proof_goal`** | The command that declares a planned goal: a theorem with its statement and a `sorry` body. Its attributes are the theorem's, so a goal carries its placement (`@[semantics "concept" (requirement := Rn)]`, decisions row 207). | `elabGoal` (`tools/ProofGraph/GoalTag.lean`) | Mathlib's `proof_wanted`, by analogy | `#proof_wanted` | — |
 | **`proof_sketch`** | The command that proves a theorem by a script and declares the script's open goals as planned goals. The parts carry the sketch's attributes. | `elabSketch` (`tools/ProofGraph/Sketch.lean`) | lean-mlir's `extract_goals`, by name | `#extract_obligations` | — |
 | **delaboration** | Lean's display of an expression as syntax for people. It is not our printer, and it keeps no inverse. | — | the Lean 4 metaprogramming book, by name; Lean: `Lean.PrettyPrinter.delab` | — | — |
 | **generated declaration** | A declaration that a command or a generator writes. | `fold_of` (`src/Effect4/Program/FoldOf.lean`) | — | — | — |
@@ -329,7 +329,7 @@ Each entry is one row of six columns:
 | **literature relation** | How a claim uses a source: definition used, proof technique, adapted result, analogy, excluded feature. | `LiteratureRef` (`tools/ProofGraph/Registry.lean`) | — | — | — |
 | **planned goal** (goal) | A theorem whose body is `sorry`, declared by `proof_goal` and tagged. Downstream proofs use it; its proof replaces it in place. No open planned goal does not mean the semantics is finished. | `isGoal` (`tools/ProofGraph/Goal.lean`) | a blueprint's stated lemma (leanblueprint, LeanArchitect, by name) | ledger goal | — |
 | **modulo** | Of a theorem: its proof reaches planned goals, so it is proved from them, not proved. | `Standing` (`tools/ProofGraph/Goal.lean`) | — | — | — |
-| **obligation** | A statement owed for a named purpose: a planned goal, a claim or a contract item. | `elabGoal` (`tools/ProofGraph/Goal.lean`) | proof obligation (standard) | — | — |
+| **obligation** | A statement owed for a named purpose: a planned goal, a claim or a contract item. | `elabGoal` (`tools/ProofGraph/GoalTag.lean`) | proof obligation (standard) | — | — |
 | **placement** (obligation placement) | The five things written before an obligation is worked (§6.5). The registry's declaration placement, tagged or inherited, is a different term. | — | — | — | — |
 | **consumer** | The declaration or claim that uses a lemma. | — | — | — | — |
 | **premise** (hypothesis) | An assumption of a theorem. A conditional theorem leaves its premises open. | — | — | — | — |
