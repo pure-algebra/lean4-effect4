@@ -207,3 +207,97 @@ flowchart LR
 - No termination: a body that invokes itself without end runs to its budget's frontier.
 - No equal-observation theorem: `denote-typed` is a typing of the run, not a simulation.
 - The host boundary stays where `docs/core/host-boundary.md` puts it.
+
+## 9. The proof DAG (2026-10-10, before implementation)
+
+### 9.1 One revision of §4.2: no new signature
+
+The tree already holds the two laws that §4.2's `Signature.lexical` was for:
+`Signature.extends_withParams` (a body's signature extends a signature that keeps every
+parameter's run outside its domain) and `SigExtends.withParams` (an extension of the outer
+signature extends the body's), both in `src/Effect4/Laws/Program/Definitions.lean`. So the
+scope signature is `withParams` itself, at the path's parameters:
+
+```text
+src.scopeSig path := src.signature.withParams (scopeParams src.program path)
+```
+
+At `[]` it is `src.signature` by `withParams`'s own equation, so no `lexical_nil` is owed. The
+facts that §4.2 read by `rfl` are read through `scopeSig_extends : SigExtends src.signature
+(src.scopeSig path)`, and three small laws about `withParams` (W1–W3 below). `Eff.partAt`
+(`src/Effect4/Program/Typing/Parts.lean`) computes the same body signature for the sketch's
+focus, but it records no parameter list, and `StackTyped` needs one; `scopeParams` follows
+`Part.bodyAt`'s spine walk.
+
+### 9.2 The nodes
+
+Concept `residual-program-typing`, claim `denote-typed`, requirement R4 for every node. Each
+helper names its consumer.
+
+| Node | Statement | Module | Consumer | Plan |
+| --- | --- | --- | --- | --- |
+| `scopeParams` | the parameters of the body that holds a path, `[]` outside every body | `Typed/Scope.lean` | `scopeSig`, `StackTyped` | definition |
+| S1 `scopeParams_child` | a child of a program node has the node's scope | `Typed/Scope.lean` | `pointTyped_child` | goal, then proof |
+| S2 `scopeParams_below` | below a program node that is no block, every path has the node's scope | `Typed/Scope.lean` | `argSites_typed` | goal, then proof |
+| S3 `scopeParams_body` | body `k` has definition `k`'s parameters | `Typed/Scope.lean` | `call_arm`, `invoke_arm` | goal, then proof |
+| S4 `scopeParams_decl` | the scope is `[]` or some declaration's parameters | `Typed/Scope.lean` | `param_arm` (formation) | goal, then proof |
+| W1 `withParams_of_none` | an operation that runs no parameter reads the outer row and domain | `Typed/Scope.lean` | `builtinPerform_inv`, the row arms | goal, then proof |
+| W2 `withParams_serviceTy` | the body's signature keeps the service table | `Typed/Scope.lean` | `service_arm`, `serviceTy_flat` | goal, then proof |
+| W3 `withParams_param` | a parameter's run in the domain reads its declaration's row | `Typed/Scope.lean` | `param_arm` | goal, then proof |
+| `scopeSig`, `scopeSig_extends` | the scope signature extends the source's | `Typed/Admission.lean` | every arm's term and row facts | definition; `extends_withParams` |
+| `StackTyped` | §4.3, by recursion on the stack | `Typed/Admission.lean` | the four point typings | definition |
+| K1 `stackTyped_nil` | no parameter in scope: any stack | `Typed/Admission.lean` | `call_arm`, the load | proof |
+| K2 `stackTyped_mono` | along the world order | `Typed/Residual.lean` | `pointTyped_mono`, every arm | proof |
+| K3 `stackTyped_rows_append` | along an appended table | `Typed/Residual.lean` | `pointTyped_rows_append` | proof, `SigExtends.withParams` |
+| `PointTyped.at_node`, `pointTyped_child` | the frame read and rebuilt, with the stack | `Typed/Denotation.lean` | every arm | proof |
+| K4 `argSites_typed` | the frame an invocation pushes is typed at its definition's parameters | `Typed/Denotation.lean` | `invoke_arm` | goal, then proof |
+| `hop_typed` | a hop to a checked node with a typed frame denotes a typed program, widened | `Typed/Denotation.lean` | `call_arm`, `invoke_arm`, `param_arm` | proof |
+| `invoke_arm` | §5 | `Typed/Denotation.lean` | `childDenotes_upto` | goal now; CX2 |
+| `param_arm` | §5 | `Typed/Denotation.lean` | `perform_arm` | proved by vacuity now; goal in CX1; CX2 |
+
+```mermaid
+flowchart TD
+  SP[scopeParams] --> S1[S1 child]
+  SP --> S2[S2 below]
+  SP --> S3[S3 body]
+  SP --> S4[S4 decl]
+  WP[withParams laws W1 W2 W3] --> SS[scopeSig, scopeSig_extends]
+  SP --> SS
+  SS --> ST[StackTyped]
+  ST --> K1[K1 nil]
+  ST --> K2[K2 mono]
+  ST --> K3[K3 rows_append]
+  ST --> PT[the four point typings]
+  K2 --> PT
+  K3 --> PT
+  S1 --> PC[at_node, pointTyped_child]
+  PT --> PC
+  PC --> ARMS[the arms, frame threaded]
+  WP --> ARMS
+  S2 --> K4[K4 argSites_typed]
+  PC --> HOP[hop_typed]
+  S3 --> CALL[call_arm]
+  K1 --> CALL
+  S3 --> INV[invoke_arm]
+  K4 --> INV
+  HOP --> INV
+  S4 --> PAR[param_arm]
+  WP --> PAR
+  HOP --> PAR
+  ARMS --> IND[childDenotes_upto]
+  CALL --> IND
+  INV --> IND
+  PAR --> IND
+  IND --> M7[M5, M6, M7 and the 17 claims]
+```
+
+### 9.3 Order of work
+
+1. **CX1a**, a leaf module, no rebuild of the law graph: `Typed/Scope.lean` with `scopeParams`,
+   S1–S4 and W1–W3, placed as goals, then proved in place. Build the module alone.
+2. **CX1b**, the one rebuild: `Admission.lean` imports `Scope.lean` and gains `scopeSig`,
+   `StackTyped` and K1; the four point typings and the memo rows read the scope signature and
+   carry the stack; every arm threads the frame. `param_arm` becomes a goal. Build the typed
+   chain in import order, then `Effect4Laws`.
+3. **CX2**: K4, `hop_typed`, `invoke_arm`, `param_arm` in `Denotation.lean`. `#plan_status`
+   then shows `childDenotes_upto` proved and `#goal_impact` no claim on either arm.
