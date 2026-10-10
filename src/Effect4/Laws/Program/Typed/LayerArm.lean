@@ -1047,10 +1047,14 @@ the target's path with the reference's stack (`denoteLayer_ref_redirect`), and t
 the build on the target's path. The checker types the reference at its own scope (the expansion),
 and `layerRefsWF` reads no scope, so the checker admits a reference whose target's path reads
 other parameters than the stack holds; the hop's point is then no typed point (`LayerPointTyped`
-reads its path's scope). Open: whether such a build is typed at the reference's type, or the
-checker refuses such a reference (an owner's ruling). M5 and M7 rest on it in place of
-`invoke_arm`. Concept `residual-program-typing`, claim `denote-typed`, requirement R4; its
-consumer is `ref_builds`. -/
+reads its path's scope). Not true of every admitted program: Codex's review
+(`git:514a6d9f:docs/research/2026-10-10-cx-layer-context-review/README.md`) runs an admitted
+program in which a fork inside one definition's layer construction awaits that shared entry and
+receives a failure its own checked type does not admit. So the goal waits on a source rule
+(`docs/research/2026-10-10-cx-lexical-scope.md` §10, an owner's ruling): either the checker
+refuses such a reference, or a narrower rule with a typing that carries the scope. M5 and M7
+rest on it in place of `invoke_arm`. Concept `residual-program-typing`, claim `denote-typed`,
+requirement R4; its consumer is `ref_builds`. -/
 @[semantics "residual-program-typing" (requirement := R4)]
 proof_goal crossScopeRef_builds {root : ProgramSource} {f : Nat} {target : List Nat}
     (hwf : root.program.layerRefsWF = true)

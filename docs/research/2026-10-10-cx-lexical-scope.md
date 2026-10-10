@@ -365,6 +365,11 @@ The decision is the owner's, because it is one of representation and meaning:
 | (c) the checker refuses a parameter's run inside a layer | the checker's layer rules | still needs the stack at the target |
 | (d) Codex's rule with (b): refuse a reference whose target reads a parameter the two contexts type differently | `layerRefsWF` or admission reads the expanded target's parameter reads | proved with a fold agreement on the read parameters and the memo invariant |
 
+Survey, 2026-10-10, by search: no test program or library module holds both a definition that
+takes a program (`Eff.invoke`) and a layer reference (`LayerTerm.ref`). So option (a) refuses no
+program the tree holds today; Codex's closed-layer control and this note's probe are the
+programs it would refuse.
+
 Option (a) is the TypeScript reading: a `const` in a function body is visible in no other
 function, and the printer already hoists every target to a module-level constant
 (`printModule`). Under (a) a reference from a body to a layer outside every body is refused too,
