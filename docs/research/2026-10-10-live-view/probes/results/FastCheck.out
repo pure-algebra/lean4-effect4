@@ -1,0 +1,12 @@
+built ProbeView.Fast
+built ProbeView.Layout
+built ProbeView.Retained
+built ProbeView.Inc
+built ProbeView.Live
+== FastCheck
+chain 6: 44 frames, 42 routes; last graph: tree 46 ms, fast 37 ms; whole sequence: tree 1052 ms, fast with one cache 204 ms
+chain 12: 86 frames, 84 routes; last graph: tree 84 ms, fast 63 ms; whole sequence: tree 4060 ms, fast with one cache 623 ms
+chain 18: 128 frames, 126 routes; last graph: tree 199 ms, fast 142 ms; whole sequence: tree 10762 ms, fast with one cache 1476 ms
+forksInOrder 6: 44 frames, 36 routes; last graph: tree 27 ms, fast 23 ms; whole sequence: tree 648 ms, fast with one cache 145 ms
+chain 12: session page of 97 lines: tree 34 ms, indexed 35 ms
+chain 18: session page of 145 lines: tree 73 ms, indexed 68 ms

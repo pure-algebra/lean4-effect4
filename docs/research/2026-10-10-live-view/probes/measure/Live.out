@@ -1,0 +1,75 @@
+Sat Oct 10 12:42:39 CDT 2026
+9fb3b66cd
+p42: 2 frames, 1 lines, 1 graph nodes
+  mean ms per frame: answer 9.96, page 7.89, code 37.66, flow 2.88, calls 2.19, lower+stream 3.26
+  last frame ms: answer 1.30, page 0.57, code 3.54, flow 0.49, calls 0.26, lower+stream 1.51
+  retained delta over all edits: 0 group moves + 1 nodes inside the edit, against 1 nodes redrawn by a full frame
+  stability: 0 node motions outside the edit, 0 moved; 0 unchanged parts, 0 split across, 0 split down; largest shift 0 px
+  gutter: own widths [8], changes between frames 0
+pBind: 4 frames, 3 lines, 2 graph nodes
+  mean ms per frame: answer 1.49, page 0.58, code 1.59, flow 1.03, calls 2.22, lower+stream 2.90
+  last frame ms: answer 0.58, page 0.31, code 1.36, flow 0.33, calls 1.27, lower+stream 3.03
+  retained delta over all edits: 2 group moves + 4 nodes inside the edit, against 6 nodes redrawn by a full frame
+  stability: 2 node motions outside the edit, 2 moved; 2 unchanged parts, 0 split across, 0 split down; largest shift 32 px
+  gutter: own widths [8], changes between frames 0
+pFork: 7 frames, 7 lines, 3 graph nodes
+  mean ms per frame: answer 1.54, page 2.72, code 2.89, flow 4.99, calls 7.43, lower+stream 11.72
+  last frame ms: answer 0.78, page 4.65, code 6.65, flow 18.93, calls 30.91, lower+stream 47.27
+  retained delta over all edits: 4 group moves + 8 nodes inside the edit, against 16 nodes redrawn by a full frame
+  stability: 8 node motions outside the edit, 5 moved; 7 unchanged parts, 0 split across, 0 split down; largest shift 156 px
+  gutter: own widths [8, 9, 11], changes between frames 2
+pAwait: 4 frames, 3 lines, 2 graph nodes
+  mean ms per frame: answer 1.84, page 2.58, code 2.63, flow 1.82, calls 1.86, lower+stream 4.36
+  last frame ms: answer 1.92, page 2.20, code 2.59, flow 3.16, calls 1.73, lower+stream 4.44
+  retained delta over all edits: 0 group moves + 4 nodes inside the edit, against 6 nodes redrawn by a full frame
+  stability: 2 node motions outside the edit, 0 moved; 2 unchanged parts, 0 split across, 0 split down; largest shift 0 px
+  gutter: own widths [8], changes between frames 0
+pGen: 3 frames, 6 lines, 3 graph nodes
+  mean ms per frame: answer 1.44, page 0.80, code 2.28, flow 1.14, calls 5.19, lower+stream 5.68
+  last frame ms: answer 0.43, page 0.68, code 1.78, flow 1.09, calls 7.03, lower+stream 7.10
+  retained delta over all edits: 0 group moves + 4 nodes inside the edit, against 6 nodes redrawn by a full frame
+  stability: 2 node motions outside the edit, 0 moved; 1 unchanged parts, 0 split across, 0 split down; largest shift 0 px
+  gutter: own widths [8, 13], changes between frames 1
+pLoop: 5 frames, 4 lines, 3 graph nodes
+  mean ms per frame: answer 1.38, page 1.29, code 2.11, flow 1.53, calls 1.74, lower+stream 4.07
+  last frame ms: answer 0.79, page 3.21, code 3.69, flow 3.13, calls 2.99, lower+stream 6.70
+  retained delta over all edits: 2 group moves + 6 nodes inside the edit, against 10 nodes redrawn by a full frame
+  stability: 4 node motions outside the edit, 2 moved; 4 unchanged parts, 0 split across, 0 split down; largest shift 32 px
+  gutter: own widths [8], changes between frames 0
+pCatch: 4 frames, 3 lines, 2 graph nodes
+  mean ms per frame: answer 1.35, page 1.81, code 1.93, flow 1.80, calls 5.36, lower+stream 4.35
+  last frame ms: answer 0.38, page 2.45, code 2.22, flow 2.55, calls 6.67, lower+stream 5.21
+  retained delta over all edits: 1 group moves + 4 nodes inside the edit, against 6 nodes redrawn by a full frame
+  stability: 2 node motions outside the edit, 1 moved; 2 unchanged parts, 0 split across, 0 split down; largest shift 56 px
+  gutter: own widths [8], changes between frames 0
+pScope: 8 frames, 8 lines, 3 graph nodes
+  mean ms per frame: answer 1.15, page 1.53, code 1.64, flow 1.67, calls 1.94, lower+stream 4.84
+  last frame ms: answer 0.48, page 1.74, code 1.95, flow 2.30, calls 2.96, lower+stream 6.26
+  retained delta over all edits: 1 group moves + 9 nodes inside the edit, against 17 nodes redrawn by a full frame
+  stability: 8 node motions outside the edit, 1 moved; 8 unchanged parts, 0 split across, 0 split down; largest shift 68 px
+  gutter: own widths [8, 9, 11], changes between frames 2
+chain 6: 44 frames, 49 lines, 19 graph nodes
+  mean ms per frame: answer 1.98, page 31.84, code 16.03, flow 42.91, calls 131.67, lower+stream 77.11
+  last frame ms: answer 1.18, page 46.26, code 36.04, flow 320.41, calls 1116.09, lower+stream 351.86
+  retained delta over all edits: 97 group moves + 61 nodes inside the edit, against 460 nodes redrawn by a full frame
+  stability: 399 node motions outside the edit, 139 moved; 276 unchanged parts, 0 split across, 0 split down; largest shift 168 px
+  gutter: own widths [8, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31], changes between frames 12
+chain 12: 86 frames, 97 lines, 37 graph nodes
+  mean ms per frame: answer 3.14, page 22.64, code 14.31, flow 32.51, calls 249.37, lower+stream 97.19
+  last frame ms: answer 1.18, page 37.50, code 21.61, flow 62.92, calls 713.47, lower+stream 169.18
+  retained delta over all edits: 337 group moves + 121 nodes inside the edit, against 1675 nodes redrawn by a full frame
+  stability: 1554 node motions outside the edit, 493 moved; 1056 unchanged parts, 0 split across, 0 split down; largest shift 168 px
+  gutter: own widths [8, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55], changes between frames 24
+forksThen 4: 30 frames, 33 lines, 13 graph nodes
+  mean ms per frame: answer 1.16, page 7.13, code 4.42, flow 9.25, calls 23.32, lower+stream 19.31
+  last frame ms: answer 0.67, page 13.36, code 8.17, flow 18.33, calls 70.32, lower+stream 45.58
+  retained delta over all edits: 48 group moves + 41 nodes inside the edit, against 217 nodes redrawn by a full frame
+  stability: 176 node motions outside the edit, 80 moved; 110 unchanged parts, 0 split across, 0 split down; largest shift 168 px
+  gutter: own widths [8, 9, 11, 13, 15, 17, 19], changes between frames 6
+forksThen 8: 58 frames, 65 lines, 25 graph nodes
+  mean ms per frame: answer 1.52, page 11.68, code 6.70, flow 14.56, calls 66.01, lower+stream 37.76
+  last frame ms: answer 0.39, page 12.99, code 7.75, flow 20.81, calls 134.13, lower+stream 53.17
+  retained delta over all edits: 160 group moves + 81 nodes inside the edit, against 753 nodes redrawn by a full frame
+  stability: 672 node motions outside the edit, 288 moved; 396 unchanged parts, 0 split across, 0 split down; largest shift 168 px
+  gutter: own widths [8, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35], changes between frames 14
+[exit 0]

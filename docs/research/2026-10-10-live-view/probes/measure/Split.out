@@ -1,0 +1,12 @@
+Sat Oct 10 12:43:46 CDT 2026
+9fb3b66cd
+chain 6: segments of 42 routes 1 ms; 84 finds 1 ms; plain strokes 42 calls 1 ms
+chain 6: pageCalls 630 in 33 ms; lowerAll 630 in 3 ms; stream 641 lines in 61 ms; svg 189479 chars in 246 ms
+chain 6: lines 332 calls 1 ms; code 66 calls 0 ms; graph 222 calls 36 ms (routes 114 calls 32 ms, boxes 95 calls 0 ms); chrome 9 calls 0 ms; lower graph 222 dev 3 ms; 61 placed, 42 routes
+chain 12: segments of 84 routes 4 ms; 168 finds 4 ms; plain strokes 84 calls 4 ms
+chain 12: pageCalls 1260 in 61 ms; lowerAll 1260 in 5 ms; stream 1271 lines in 132 ms; svg 396781 chars in 479 ms
+chain 12: lines 656 calls 1 ms; code 156 calls 0 ms; graph 438 calls 60 ms (routes 228 calls 60 ms, boxes 185 calls 0 ms); chrome 9 calls 0 ms; lower graph 438 dev 5 ms; 121 placed, 84 routes
+chain 18: segments of 126 routes 19 ms; 252 finds 78 ms; plain strokes 126 calls 93 ms
+chain 18: pageCalls 1914 in 417 ms; lowerAll 1914 in 26 ms; stream 1925 lines in 1040 ms; svg 632642 chars in 1814 ms
+chain 18: lines 980 calls 3 ms; code 270 calls 0 ms; graph 654 calls 367 ms (routes 342 calls 421 ms, boxes 275 calls 1 ms); chrome 9 calls 0 ms; lower graph 654 dev 17 ms; 181 placed, 126 routes
+[exit 0]

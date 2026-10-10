@@ -1,0 +1,10 @@
+built ProbeView.Fast
+built ProbeView.Layout
+built ProbeView.Retained
+built ProbeView.Inc
+built ProbeView.Live
+== LiveBench
+pFork: 7 frames; batch 82.75 ms, 747 stream rows; live 69.90 ms (mean 9.98, worst 13.62), 730 patch rows; the page moves across 4 times live against 3 with each page's own columns
+chain 6: 44 frames; batch 3698.28 ms, 16470 stream rows; live 1629.30 ms (mean 37.02, worst 105.68), 7207 patch rows; the page moves across 10 times live against 13 with each page's own columns
+chain 12: 86 frames; batch 12778.25 ms, 58965 stream rows; live 4835.56 ms (mean 56.22, worst 141.82), 19263 patch rows; the page moves across 17 times live against 25 with each page's own columns
+chain 18: 128 frames; batch 32000.04 ms, 128278 stream rows; live 14521.20 ms (mean 113.44, worst 610.94), 39484 patch rows; the page moves across 25 times live against 37 with each page's own columns

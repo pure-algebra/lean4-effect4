@@ -1,0 +1,9 @@
+built ProbeView.Fast
+built ProbeView.Layout
+built ProbeView.Retained
+built ProbeView.Inc
+built ProbeView.Live
+== PatchFiles
+pFork: 7 frames in docs/research/2026-10-10-live-view/probes/out/pFork
+pScope: 8 frames in docs/research/2026-10-10-live-view/probes/out/pScope
+chain6: 44 frames in docs/research/2026-10-10-live-view/probes/out/chain6

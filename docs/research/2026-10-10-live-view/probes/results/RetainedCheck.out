@@ -1,0 +1,16 @@
+built ProbeView.Fast
+built ProbeView.Layout
+built ProbeView.Retained
+built ProbeView.Inc
+built ProbeView.Live
+== RetainedCheck
+p42: 1 steps; full pictures 27 calls in 5 objects; patches: 0 moves, 0 new, 5 changed, 0 dropped, 27 calls carried, 0 reorders
+pBind: 3 steps; full pictures 185 calls in 27 objects; patches: 4 moves, 5 new, 15 changed, 1 dropped, 160 calls carried, 0 reorders
+pFork: 6 steps; full pictures 602 calls in 98 objects; patches: 12 moves, 23 new, 37 changed, 7 dropped, 398 calls carried, 1 reorders
+pAwait: 3 steps; full pictures 193 calls in 27 objects; patches: 2 moves, 5 new, 16 changed, 1 dropped, 169 calls carried, 0 reorders
+pGen: 2 steps; full pictures 198 calls in 42 objects; patches: 11 moves, 17 new, 14 changed, 1 dropped, 170 calls carried, 0 reorders
+pLoop: 4 steps; full pictures 306 calls in 44 objects; patches: 8 moves, 9 new, 23 changed, 1 dropped, 251 calls carried, 0 reorders
+pCatch: 3 steps; full pictures 229 calls in 51 objects; patches: 18 moves, 13 new, 18 changed, 1 dropped, 177 calls carried, 0 reorders
+pScope: 7 steps; full pictures 614 calls in 93 objects; patches: 7 moves, 21 new, 39 changed, 9 dropped, 431 calls carried, 0 reorders
+chain 6: 43 steps; full pictures 15714 calls in 2969 objects; patches: 1039 moves, 190 new, 281 changed, 70 dropped, 4206 calls carried, 6 reorders
+chain 12: 85 steps; full pictures 57513 calls in 10973 objects; patches: 4101 moves, 382 new, 559 changed, 142 dropped, 11825 calls carried, 12 reorders

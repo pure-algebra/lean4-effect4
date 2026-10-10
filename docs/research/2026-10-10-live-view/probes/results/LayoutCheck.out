@@ -1,0 +1,10 @@
+built ProbeView.Fast
+built ProbeView.Layout
+built ProbeView.Retained
+built ProbeView.Inc
+built ProbeView.Live
+== LayoutCheck
+chain 12: 121 placed; layout, tenths of ms: tree 312, fast 82; equal true
+chain 24: 241 placed; layout, tenths of ms: tree 815, fast 139; equal true
+chain 48: 481 placed; layout, tenths of ms: tree 2815, fast 247; equal true
+forksInOrder 12: 87 placed; layout, tenths of ms: tree 176, fast 119; equal true

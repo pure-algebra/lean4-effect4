@@ -1,0 +1,15 @@
+Sat Oct 10 12:44:13 CDT 2026
+9fb3b66cd
+p42: 1 boxes, 0 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+pBind: 2 boxes, 1 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+pFork: 3 boxes, 6 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+pAwait: 2 boxes, 1 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+pGen: 3 boxes, 7 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+pLoop: 3 boxes, 2 down, 1 lane routes; crossings down×down 0, down×back 0, back×back 0
+pCatch: 2 boxes, 7 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+pScope: 3 boxes, 2 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+chain 4: 13 boxes, 28 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+forksInOrder 3: 10 boxes, 16 down, 2 lane routes; crossings down×down 0, down×back 1, back×back 1
+forksThen 3: 10 boxes, 19 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+forksThen 5: 16 boxes, 31 down, 0 lane routes; crossings down×down 0, down×back 0, back×back 0
+[exit 0]

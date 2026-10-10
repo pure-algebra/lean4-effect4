@@ -1,0 +1,12 @@
+Sat Oct 10 12:44:25 CDT 2026
+9fb3b66cd
+pIndepY: trace lengths 61 and 53; per-fiber histories equal as multisets: false; frame events [25, 3, 3] and [21, 3, 3]
+    kinds, first order:  [(started, 7), (frame, 31), (forked, 2), (scheduledTask, 2), (parkedOn, 4), (ranTask, 4), (resumedWith, 4), (exited, 3), (observerFired, 4)]
+    kinds, second order: [(started, 6), (frame, 27), (forked, 2), (scheduledTask, 2), (parkedOn, 3), (ranTask, 4), (resumedWith, 3), (exited, 3), (observerFired, 3)]
+pCommuteY: trace lengths 55 and 47; per-fiber histories equal as multisets: false; frame events [19, 3, 3] and [15, 3, 3]
+    kinds, first order:  [(started, 7), (frame, 25), (forked, 2), (scheduledTask, 2), (parkedOn, 4), (ranTask, 4), (resumedWith, 4), (exited, 3), (observerFired, 4)]
+    kinds, second order: [(started, 6), (frame, 21), (forked, 2), (scheduledTask, 2), (parkedOn, 3), (ranTask, 4), (resumedWith, 3), (exited, 3), (observerFired, 3)]
+pRaceY: trace lengths 55 and 47; per-fiber histories equal as multisets: false; frame events [19, 3, 3] and [15, 3, 3]
+    kinds, first order:  [(started, 7), (frame, 25), (forked, 2), (scheduledTask, 2), (parkedOn, 4), (ranTask, 4), (resumedWith, 4), (exited, 3), (observerFired, 4)]
+    kinds, second order: [(started, 6), (frame, 21), (forked, 2), (scheduledTask, 2), (parkedOn, 3), (ranTask, 4), (resumedWith, 3), (exited, 3), (observerFired, 3)]
+[exit 0]
