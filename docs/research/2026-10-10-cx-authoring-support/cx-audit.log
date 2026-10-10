@@ -1,0 +1,49 @@
+#axiom_audit: 55 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+Effect4.Program.Typed.crossScopeRef_builds: goal; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Effect4.Program.Typed.crossScopeRef_builds : ∀ {root : Effect4.Program.Typed.ProgramSource} {f : Nat} {target : List Nat},
+  Effect4.Program.Eff.layerRefsWF root.program = true →
+    (∀ (f' : Nat),
+        f' ≤ f →
+          ∀ (c : Effect4.Program.NativeEff) (path : List Nat),
+            (Effect4.Program.Node.eff root.program).at_ path = some (Effect4.Program.Node.eff c) →
+              Effect4.Program.Typed.ChildDenotes root f' c path) →
+      ∀ (q : Effect4.Program.Point) (w : Effect4.Program.Typed.World) (lt : Effect4.Program.LayerTy)
+        (m : Effect4.Machine.MemoMapId) (scope : Nat),
+        q.fuel ≤ f →
+          w.serviceTy = root.sig.serviceTy →
+            (Effect4.Program.Node.eff root.program).at_ q.path =
+                some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.ref target)) →
+              Effect4.Program.scopeParams root.program target ≠ Effect4.Program.scopeParams root.program q.path →
+                Effect4.Program.Typed.LayerPointTyped root w q lt →
+                  Effect4.Program.Typed.ScopeLive w scope →
+                    Effect4.Program.Typed.MemoLive w m →
+                      Effect4.Program.Typed.TypedProg root w (Effect4.Program.Typed.buildTy lt)
+                        (Effect4.Program.Sched.denoteLayer root.program (Effect4.Program.LayerTerm.ref target) q m
+                          scope)
+Effect4.Program.Typed.invoke_arm: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Program.Typed.param_arm: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Program.Typed.m7_proved: modulo [Effect4.Program.Typed.crossScopeRef_builds]; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Effect4.Program.Typed.crossScopeRef_builds : ∀ {root : Effect4.Program.Typed.ProgramSource} {f : Nat} {target : List Nat},
+  Effect4.Program.Eff.layerRefsWF root.program = true →
+    (∀ (f' : Nat),
+        f' ≤ f →
+          ∀ (c : Effect4.Program.NativeEff) (path : List Nat),
+            (Effect4.Program.Node.eff root.program).at_ path = some (Effect4.Program.Node.eff c) →
+              Effect4.Program.Typed.ChildDenotes root f' c path) →
+      ∀ (q : Effect4.Program.Point) (w : Effect4.Program.Typed.World) (lt : Effect4.Program.LayerTy)
+        (m : Effect4.Machine.MemoMapId) (scope : Nat),
+        q.fuel ≤ f →
+          w.serviceTy = root.sig.serviceTy →
+            (Effect4.Program.Node.eff root.program).at_ q.path =
+                some (Effect4.Program.Node.layer (Effect4.Program.LayerTerm.ref target)) →
+              Effect4.Program.scopeParams root.program target ≠ Effect4.Program.scopeParams root.program q.path →
+                Effect4.Program.Typed.LayerPointTyped root w q lt →
+                  Effect4.Program.Typed.ScopeLive w scope →
+                    Effect4.Program.Typed.MemoLive w m →
+                      Effect4.Program.Typed.TypedProg root w (Effect4.Program.Typed.buildTy lt)
+                        (Effect4.Program.Sched.denoteLayer root.program (Effect4.Program.LayerTerm.ref target) q m
+                          scope)
