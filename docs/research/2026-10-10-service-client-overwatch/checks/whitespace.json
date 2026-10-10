@@ -1,0 +1,6 @@
+{
+  "full_exit_code": 2,
+  "full_output": "docs/research/2026-10-10-service-client-overwatch/snapshot/harness/truth/control.ts:57: new blank line at EOF.\n",
+  "exception": "Exact committed source snapshot; hash matches pins.json.",
+  "other_staged_paths_exit_code": 0
+}

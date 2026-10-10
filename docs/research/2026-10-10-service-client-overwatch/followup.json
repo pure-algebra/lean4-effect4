@@ -1,0 +1,21 @@
+{
+  "observed_head": "e7931623287bedd4a7a6afbeb8817b106906e8c2",
+  "tested_files_unchanged_in_later_commit": true,
+  "primary_working_tree_status": [
+    " M Test/Codegen/ServicesPrint.lean",
+    " M docs/STATE.md",
+    " M docs/research/2026-10-09-co6b-service-plan.md",
+    " M harness/truth/Truth.lean",
+    " M harness/truth/corpus.json",
+    " M harness/truth/result.json",
+    " M harness/truth/result.md",
+    " M src/Effect4/Codegen/Print.lean",
+    " M src/Effect4/Codegen/Read.lean",
+    " M src/Effect4/Laws/Codegen/Module.lean",
+    " M src/Effect4/Laws/Codegen/Services.lean",
+    " M src/Effect4/Laws/Program/TyView.lean",
+    " M src/Effect4/Library/Semaphore/Defs.lean",
+    "?? harness/truth/generated/pSemaphoreService.ts"
+  ],
+  "review_only": true
+}
