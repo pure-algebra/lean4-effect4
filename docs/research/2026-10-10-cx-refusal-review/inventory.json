@@ -1,0 +1,66 @@
+{
+  "files": {
+    "Audit.lean": {
+      "bytes": 155,
+      "sha256": "f3578aa57c0e5f9a560416a282fc743b4293ceaa56c1e54953c56c8314272463"
+    },
+    "NEXT-PROOFS.md": {
+      "bytes": 10521,
+      "sha256": "6671300b4aa05cb49632887c77b5b30ad5832bc971900b550040b0baa5bf47ea"
+    },
+    "PLAN.md": {
+      "bytes": 2320,
+      "sha256": "67205acdbb5d9eaab1f7e537098871b77648730f09e9a7c3757ad0e70846f301"
+    },
+    "Probe.lean": {
+      "bytes": 4904,
+      "sha256": "776a02bd58eabf759bff3d8b9ce81215a0f7c17eec419e384b674707a5a712f0"
+    },
+    "README.md": {
+      "bytes": 6146,
+      "sha256": "01a5957d7cf4e2e355a5ce767cf21582d1d2e3b088f40a2fe973ed3ee0cbe26b"
+    },
+    "audit.log": {
+      "bytes": 110,
+      "sha256": "162070a6017917147d2ff44598c112db3e36473209b7b889fdd187c3fbc162ea"
+    },
+    "build-codec.log": {
+      "bytes": 41,
+      "sha256": "b4e0bd8d4efa0f28b43ee86df0b6a162e08d9fe8f84f2d11c40c8eb72138eef2"
+    },
+    "build.log": {
+      "bytes": 1157,
+      "sha256": "ed33b852cdaf155bdaef8f32ee39d838aa3b1f9585279040e140b3dc7094c801"
+    },
+    "checkpoint.json": {
+      "bytes": 2885,
+      "sha256": "610456154b0fb370d60fc42a1d02a96ec6b419ee1dd12110283de53a5cc15300"
+    },
+    "language.log": {
+      "bytes": 286,
+      "sha256": "49eb1f365b17a4ce28a9cb0386e7cd19a655a398867cee6017d0e087e713e858"
+    },
+    "preflight.json": {
+      "bytes": 1436,
+      "sha256": "8d7c04ada0005e435d5d8c5dc800d3ced114609c3fdf1560fc7095df23f725ea"
+    },
+    "probe-preflight.log": {
+      "bytes": 250,
+      "sha256": "bd44cf585a81027a7581d68fc857ec6cdc07042d6f94b05189273547899c1238"
+    },
+    "probe.log": {
+      "bytes": 250,
+      "sha256": "a4500036309a9126db54c7803362fa17382c01cb60c4f3215d67f2bcb3ea7c2d"
+    },
+    "verification.json": {
+      "bytes": 1781,
+      "sha256": "4d79a8aa80e4db03b71817046693e0aa6a40e8f466021f7ff04558306e831ff9"
+    },
+    "verify.py": {
+      "bytes": 2442,
+      "sha256": "56267279e01cae2031d780a53dc47a5e93791e0f5c1f46eb0dc2a63d14892c9a"
+    }
+  },
+  "count": 15,
+  "scope": "All other files in this packet; no compiled outputs."
+}
