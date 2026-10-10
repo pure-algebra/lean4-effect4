@@ -337,6 +337,16 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   trust probes pass. Effect4 still pins `b0dd607`: moving the pin rebuilds the H8 chain, so it
   moves with the next change at the law graph's base. Its consumer is a typed layer under the
   row protocol: then `guardRows` changes nothing (`guardRows_of_meets`).
+- **CO-7's generic half: `Effects` v0.10.0** (`lean4-effects` commit `24a91a1`, local). An
+  indexed signature has worlds, the operations each world offers, their answers, and the world
+  after each answer (`ISignature`). Its programs end with a value whose type depends on the final
+  world (`IProgram`). Its hosts answer each world's operations from a state, and a run returns
+  the final world, the value and the state (`IComodel.run`). Its protocols type its programs,
+  and a host that meets one runs a typed program only into its postcondition
+  (`IProgram.Sat.sound`). A first-order signature is the one-world case, and programs and runs
+  embed exactly. The battery's promise signature is the higher order of section 2. A world
+  lists the open promises' codes, and an await's answer type is the code that its promise
+  recorded. Left for CO-7: indexed systems, and Effect4's handle rows and call sites as worlds.
 - **CO-6b waits on a ruling** (section 8, item 4). The Queue's definitions take the queue's
   state cell as their first argument. A service in Effect's own style builds that cell in its
   layer. Its methods close over the cell. So the shape of a service is a representation choice.

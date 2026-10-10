@@ -1,7 +1,9 @@
 # 2026-10-09 Brief for Codex: review and break the coalgebra layer and H9
 
 Status: a brief (history, not authority). Base: the head of `refactor/phase1-phase3` that carries
-this file, and branch `coalgebra` of `~/Dev/lean4-effects` (commits `8ddb936`, `b0dd607`, local).
+this file, and branch `coalgebra` of `~/Dev/lean4-effects` (commits `8ddb936`, `b0dd607`,
+`e6028a4` and `24a91a1`, local). The last two add typed handlers (v0.9.1) and indexed signatures
+(v0.10.0); Effect4 still pins `b0dd607`.
 The plan under review: `docs/research/2026-10-09-host-coalgebra.md`.
 
 ## 1. The one thing to know first
@@ -27,9 +29,15 @@ under `src/`, `tools/` or the `Effects` library; write probes and a receipt.
    `meaning_settled_tape`, `preflight_row`, `Holds.tapeAnswer`) has no gap.
 5. **H9** (`denoteRows_eq_session_host`, `src/Effect4/Laws/Api/SessionMeaning.lean`). Attack the
    premise `HostAnswered`: is it the right reading of "the host gave the run's answers"? Probe
-   three runs: one where a reply is refused, one under a host that answers outside the row's
-   columns, and one that ends at a waiting call. Check `hostAnsweredCheck_sound`.
-6. **What H9 does not reach.** The drive lemma says that `Run.drive` with a reactor makes its run
+   three runs. In the first, a reply is refused. In the second, a host answers outside the row's
+   columns. The third ends at a waiting call. Check `hostAnsweredCheck_sound`.
+6. **The typed and indexed layers** (`Effects/Coalgebra/Sat.lean`, `Indexed.lean`). Attack
+   ENSURES 8 to 14. Is `Program.Sat` the right typing, given that it is not complete for runs?
+   Does the one-world embedding lose anything? Is a host state indexed by the world needed?
+7. **H9 at the driver** (`src/Effect4/Laws/Api/HostDrive.lean`). Attack `Reactor.guardRows`,
+   `Reactor.ofHost` and `reactorHost_ofHost`. Check the premise of distinct keys against
+   `Table.lawful`.
+8. **What H9 does not reach.** The drive lemma says that `Run.drive` with a reactor makes its run
    `HostAnswered`. Say what it needs. Say whether a finished one-fiber run can hold a refused
    reply.
 
