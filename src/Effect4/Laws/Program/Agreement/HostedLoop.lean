@@ -10,10 +10,11 @@ the machine half of H8 and H9 on loops. `Agreement/Hosted.lean` closes the strai
 Everything else it reads (`Leads`, `Settled`, `tape_holds_host`) already holds on `LoopedRows`.
 So the loop closing step needs three facts about the budgeted meaning (`denoteRowsB`):
 
-* **forward** (Q5, `localRunC_compileB`): at every budget, the local run with calls goes where
-  the budgeted meaning goes, or diverges at the compile's frontier; a budget cut says nothing;
+* **forward** (Q5, `localRunC_compileB`, the one goal): at every budget, the local run with
+  calls goes where the budgeted meaning goes, or diverges at the compile's frontier; at a budget
+  cut it is still going after the budget's count of steps;
 * **reverse** (Q6a, `localRunC_to_rowsB`): a finite local exit is some budget's finished
-  approximant;
+  approximant, by Q5 at that budget and the run's determinism;
 * **stability** (Q2, `hostRunB_stable`, `Laws/Program/DenoteRowsB.lean`): a finished approximant
   stays finished at every larger budget.
 
@@ -33,37 +34,69 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
 variable {table : RowTable}
 
-/-- Where the local run with calls goes for a budgeted outcome: a finished approximant's exit or an
-unanswered call, as `RunsToD` says of the meaning; a budget cut says nothing. -/
+/-- Where the local run with calls goes for an outcome of the meaning at budget `k`: a finished
+approximant's exit or an unanswered call, as `RunsToD` says of the meaning; at a budget cut the
+run is still going after at least `k` steps, or diverges. Each loop test costs a step, so a cut
+at `k` is at least `k` steps away. -/
 def RunsToDB {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (K : List NCode) (i : Bool) (fr : NFiber) (s : Stores) (r : σ) :
+    (K : List NCode) (i : Bool) (k : Nat) (fr : NFiber) (s : Stores) (r : σ) :
     Option (Option ExitV × (Stores × σ)) → Prop
   | some (some ex, st) => RunsToD host root K i fr s r (some (ex, st))
-  | some (none, _) => True
+  | some (none, _) =>
+    (∃ c fr' s' r', k ≤ c ∧ ReachesC host root c fr s r fr' s' r') ∨ Diverges host root fr s r
   | none => RunsToD host root K i fr s r none
 
 /-- **The forward agreement on loops** (Q5): a program of the row fragment with loops, compiled at
 an address of the root, runs with calls where its budgeted meaning goes at any budget, from any
-outer stack, or diverges at the compile's frontier. `localRunC_compile` is its straight
-instance, `localRun_compileB` its host-free one. A step of `h8_loopedRows`, through
-`hostRunB_waits`. It does not recover a meaning from a run (Q6a). -/
+outer stack, or diverges at the compile's frontier; at a budget cut the run is still going after
+the budget's count of steps. `localRunC_compile` is its straight instance, `localRun_compileB`
+its host-free one. The one goal under `h8_loopedRows` and `denoteRowsB_eq_session_host`. -/
 @[semantics "translation-simulation" (requirement := R6)]
 proof_goal localRunC_compileB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) (e : NativeEff) (p : Point) (K : List NCode) (i : Bool)
     (s : Stores) (r : σ) (hfrag : LoopedDataRows table e = true)
     (hat : Node.at_ (Node.eff root) p.path = some (Node.eff e)) :
-    RunsToDB host root K i (fiberOf (compileEff e p) K i) s r (hostRunB host k e p.env s r)
+    RunsToDB host root K i k (fiberOf (compileEff e p) K i) s r (hostRunB host k e p.env s r)
 
 /-- **The reverse agreement on loops** (Q6a): a local run with calls that exits from the root's
-start is some budget's finished approximant, with the same exit, stores and host state. The loop
-counts of a finite run bound the budget. A step of `h8_loopedRows` and
-`denoteRowsB_eq_session_host`, through `hostRunB_exits`. It says nothing of a waiting run (Q6b). -/
+start within `c` steps is the finished approximant at budget `c`, with the same exit, stores and
+host state. Q5 at budget `c`: a wait or a divergence never exits, a cut is still going after `c`
+steps, so the approximant finishes, and the run is deterministic (`localRunC_agree`). A step of
+`h8_loopedRows` and `denoteRowsB_eq_session_host`, through `hostRunB_exits`. It says nothing of
+a waiting run (Q6b). -/
 @[semantics "translation-simulation" (requirement := R6)]
-proof_goal localRunC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
+theorem localRunC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (hfrag : LoopedDataRows table root = true) (cf : Nat) (R : σ) {c : Nat}
     {ex : ExitV} {s' : Stores} {r' : σ}
     (h : localRunC host root c (fiberOf (compile root cf) []) Stores.empty R = some (.exit ex s' r')) :
-    ∃ k, hostRunB host k root [] Stores.empty R = some (some ex, (s', r'))
+    ∃ k, hostRunB host k root [] Stores.empty R = some (some ex, (s', r')) := by
+  refine ⟨c, ?_⟩
+  have hR : RunsToDB host root [] true c (fiberOf (compile root cf) []) Stores.empty R
+      (hostRunB host c root [] Stores.empty R) :=
+    localRunC_compileB host root c root (rootPoint cf) [] true Stores.empty R hfrag rfl
+  have hnodiv : ¬ Diverges host root (fiberOf (compile root cf) []) Stores.empty R := by
+    rintro ⟨d, fr', s₁, r₁, hd, hfront⟩
+    have h₁ := localRunC_mono c d _ _ _ h
+    rw [hd c, localRunC_frontier _ s₁ r₁ hfront] at h₁
+    cases h₁
+  rcases hm : hostRunB host c root [] Stores.empty R with _ | ⟨_ | ex₂, s₂, r₂⟩
+  · rw [hm] at hR
+    rcases hR with ⟨d, fr', s₁, r₁, hd, hc, ha⟩ | hdiv
+    · have hw := (hd 1).trans (localRunC_waits hc ha s₁ 0)
+      cases localRunC_agree h hw
+    · exact absurd hdiv hnodiv
+  · rw [hm] at hR
+    rcases hR with ⟨d, fr', s₁, r₁, hkd, hd⟩ | hdiv
+    · have h₁ := localRunC_mono c (d - c) _ _ _ h
+      rw [Nat.add_sub_cancel' hkd, ← Nat.zero_add d, hd 0] at h₁
+      cases h₁
+    · exact absurd hdiv hnodiv
+  · rw [hm] at hR
+    rcases hR with ⟨d, hd⟩ | hdiv
+    · have he := (hd 1).trans (localRunC_ofExit_nil ex₂ true s₂ r₂ 0)
+      cases localRunC_agree h he
+      rfl
+    · exact absurd hdiv hnodiv
 
 /-- **A root waiting on a call the host does not answer has no finished approximant**, at any
 budget. Q5 at the root: a finished approximant would make the run exit, or reach the compile's
@@ -77,7 +110,7 @@ theorem hostRunB_waits {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
   obtain ⟨c, hreach⟩ := hL
   have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
       some .waits := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
-  have hR : RunsToDB host root [] true (fiberOf (compile root cf) []) Stores.empty R
+  have hR : RunsToDB host root [] true k (fiberOf (compile root cf) []) Stores.empty R
       (hostRunB host k root [] Stores.empty R) :=
     localRunC_compileB host root k root (rootPoint cf) [] true Stores.empty R hfrag rfl
   obtain ⟨s₂, r₂⟩ := r
