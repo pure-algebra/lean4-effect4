@@ -313,8 +313,8 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   (`runWith_denotes`): the reactor's run of the call tree is the root's exit with the stores.
   Its axioms are `[propext, Quot.sound]`. The premise `Envelops` quantifies over machines. A
   reactor behind its rows' types (`Reactor.guardRows`) meets it at every table
-  (`guardRows_envelops`), since membership at the empty allocation table is membership at every
-  table (`hasTy_append`). So H9 holds at the driver for any guarded reactor
+  (`guardRows_envelops`). The reason: membership at the empty allocation table is membership at
+  every table (`hasTy_append`). So H9 holds at the driver for any guarded reactor
   (`runWith_guarded_denotes`). The battery drives four repository runs behind the guard: each
   ends as before and meets the premises. Its control answers a listing outside the row's
   column, and the guard leaves that call waiting. A row whose answer column allocates a handle
