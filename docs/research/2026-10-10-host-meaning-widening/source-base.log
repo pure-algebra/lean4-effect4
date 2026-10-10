@@ -1,0 +1,3 @@
+Command: git diff --exit-code 540ee8ccb279dc8b808487e428e0e9a02d500a3f -- . ':(exclude)docs/research/2026-10-10-host-meaning-widening/**'
+LEAN_NUM_THREADS=3
+Started: 2026-10-10T07:44:40.762897+00:00
