@@ -136,8 +136,7 @@ then agrees with, so a shared entry has one set of columns.
 ### 4.5 As landed: step 2a
 
 Step 2 lands in two parts. Part 2a is the syntax, the rule, the expansion bound, the typing and
-the run. Part 2b is the print, the read and the authoring placement of 4.4. Until 2b the printer
-refuses a block with module layers by name (`internalAction "defs:layers"`, `printModule`).
+the run. Part 2b is the print, the read and the authoring placement of 4.4 (§4.6).
 
 Three points differ from 4.1 to 4.3:
 
@@ -162,6 +161,38 @@ The scope rule as a table:
 | body `k` or the main program | a layer of the same scope | admitted when it comes first |
 | a module layer | a layer of a body or the main program | `notBefore`: the module's layers come first |
 | body `k` or the main program | a layer of another body, or of the main program | `notBefore` when it comes after the site in program order, else `otherScope` |
+
+### 4.6 As landed: step 2b
+
+- **Print** (`printModuleLayers`, `Codegen/Print.lean`): each module layer is a constant named by
+  its path, `const L_2_0 = …` for `Path.layerPath 0`, after the definitions and the services
+  (a layer's body may invoke them) and before the hoisted layers (which may name it). Hoisting
+  leaves the module's layers out (`Eff.refTargets`), so a reference to one prints as its name. A
+  body may hold references into the module (`Eff.layersAreModuleRefs`); its own layer stays
+  refused until step 3.
+- **Read** (`readModule`, `moduleLayersOf`, `Codegen/Read.lean`): the declarations whose paths
+  stand in the module rebuild the layers child, and they must be `Path.layerPath 0`, `1`, … in
+  order; the others are put back at their paths.
+- **The round trip** (`readModule_printModule_defs`, `Laws/Codegen/Module.lean`, claim
+  `module-defs-round-trip`): restated for any module layers, with two premises more (each module
+  layer reads back, and its name decodes). No hoisted layer stands in the module
+  (`Eff.hoistAll_outside`, `Laws/Program/Hoisting.lean`). `blockReadable` checks both premises.
+- **Author** (`elaborateModule`, `Program/Authoring.lean`): in a module with definitions, every
+  declared layer is the block's module layer of its position, and every use, in a body, the main
+  program or a later layer, is a reference to it. A declared layer nobody uses stays, as a
+  module-level `const` does. A module with no definition places its layers at first use, as before.
+- **Evidence.** The truth lane runs `pDefsModuleLayer` (`Test/Program/DefinitionsControls.lean`,
+  `moduleLayerProg`) on rc.112 and agrees: success 7 (`make check-truth`). tsgo 7 admits its
+  print (`make check-target`). Codex's review (`2026-10-10-module-layer-step2b-review/`) found a
+  filter lemma reaching `Classical.choice` in `moduleLayersOf_split`; its proof-only repair is
+  taken, and `#axiom_audit` over the slice's modules is within `[propext, Quot.sound]`.
+- **Not established.**
+  - The round trip is through `Api.readModule`, not `Api.admitModule`. `SourceBindings`
+    (`Codegen/SourceBindings.lean`) refuses a forward reference inside a deferred closure, and a
+    definition printed before the module constant it names meets that refusal. Admitting such a
+    reference to a top-level constant needs its own design and refusal controls.
+  - A module layer whose build invokes a definition that names the same module layer waits on its
+    own build (Codex's observation). The checker does not refuse it, and no run here checks it.
 
 ## 5. Step 3: a body's layers, one build per call
 

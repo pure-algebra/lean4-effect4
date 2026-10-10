@@ -350,5 +350,17 @@
         "new": "\"constructor_retypings\": [\n    \"Effect4.Program.Ty.lit\","
       }
     ]
+  },
+  {
+    "name": "R17 a constructor the policy names as re-typed changes its tag in the text manifest",
+    "clause": "C2",
+    "expect": "REFUSE",
+    "edits": [
+      {
+        "path": "ocaml/goldens/eff/wire-tags.txt",
+        "old": "defs=30",
+        "new": "defs=99"
+      }
+    ]
   }
 ]

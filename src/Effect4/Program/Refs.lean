@@ -297,9 +297,16 @@ def Eff.expandRefs {Op : Type} (root : Eff Op) : Eff Op :=
 
 /-! ## The declaration block's arithmetic -/
 
-/-- The distinct targets of a program's references, in declaration order (`Path.declBefore`). -/
+/-- The path of the module's `k`-th layer (decisions row 341, step 2): the block's child `2`, the
+head of the spine's element `k`. -/
+def Path.layerPath (k : Nat) : List Nat := 2 :: (List.replicate k 1 ++ [0])
+
+/-- The distinct targets of a program's references outside the module's layers, in declaration
+order (`Path.declBefore`). A module layer is a declaration of the block already: the printer
+prints each by its path (`printModuleLayers`), and a reference to it is that name. -/
 def Eff.refTargets {Op : Type} (root : Eff Op) : List (List Nat) :=
-  Path.sortBy Path.declBefore ((root.refSites []).map (·.2)).eraseDups
+  Path.sortBy Path.declBefore
+    (((root.refSites []).map (·.2)).filter fun t => !root.inModule t).eraseDups
 
 /-- Every target hoisted out of the program: the term at each target captured and its site
 replaced by a reference to itself, targets nested in others captured first (descending

@@ -144,15 +144,21 @@ theorem printModule_readable {sig : Signature Op} {root : Eff Op}
 
 /-- The pieces of a hoisted program with a definition block are readable at the block's
 signature: each declaration (`DefDecl.readable`), each body's suspension at environment length
-`1`, the main program and each layer, and the layers' declared names decode. -/
+`1`, the main program, each module layer (decisions row 341, step 2) and each hoisted layer, and
+the layers' declared names decode. -/
 def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Bool :=
   match root.hoistAll with
   | .ok (main, history) =>
     match main.block? with
-    | some (defs, bodies, body, .nil) =>
+    | some (defs, bodies, body, layers) =>
       defs.all DefDecl.readable &&
         bodies.toList.all (fun b => Readable classes (sig.withDefs defs) 1 (.suspend b)) &&
-        Readable classes (sig.withDefs defs) 0 body && history.all fun entry =>
+        Readable classes (sig.withDefs defs) 0 body &&
+        layers.toList.all (fun l => (cata_layer (readableAlg classes (sig.withDefs defs)) l 0).isSome) &&
+        (List.range layers.toList.length).all (fun k =>
+          decide (LayerTerm.readRefName (LayerTerm.refName (Path.layerPath k)) =
+            some (Path.layerPath k))) &&
+        history.all fun entry =>
           (cata_layer (readableAlg classes (sig.withDefs defs)) entry.2 0).isSome &&
             decide (LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     | _ => false
@@ -161,24 +167,30 @@ def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Boo
 /-- What `blockReadable` says of the pieces. -/
 theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     (hr : blockReadable classes sig root = true) :
-    ∃ main history defs bodies body, root.hoistAll = .ok (main, history) ∧
-      main.block? = some (defs, bodies, body, .nil) ∧ (∀ d ∈ defs, d.readable = true) ∧
+    ∃ main history defs bodies body layers, root.hoistAll = .ok (main, history) ∧
+      main.block? = some (defs, bodies, body, layers) ∧ (∀ d ∈ defs, d.readable = true) ∧
       (∀ b ∈ bodies.toList, Readable classes (sig.withDefs defs) 1 (.suspend b) = true) ∧
       Readable classes (sig.withDefs defs) 0 body = true ∧
+      (∀ l ∈ layers.toList, ReadableAt classes (sig.withDefs defs) .layer l 0) ∧
+      (∀ k < layers.toList.length,
+        LayerTerm.readRefName (LayerTerm.refName (Path.layerPath k)) = some (Path.layerPath k)) ∧
       (∀ entry ∈ history, ReadableAt classes (sig.withDefs defs) .layer entry.2 0) ∧
       (∀ entry ∈ history, LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1) := by
   unfold blockReadable at hr
   split at hr
   · rename_i main history hh
     split at hr
-    · rename_i defs bodies body hb
-      simp only [Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hr
-      obtain ⟨⟨⟨heads, hbodies⟩, hmain⟩, hlayers⟩ := hr
-      refine ⟨main, history, defs, bodies, body, hh, hb, heads, hbodies, hmain,
-        fun entry hm => ?_, fun entry hm => (hlayers entry hm).2⟩
-      have := (hlayers entry hm).1
-      unfold ReadableAt
-      simpa only [cataFam, Option.isSome_iff_exists] using this
+    · rename_i defs bodies body layers hb
+      simp only [Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq, List.mem_range] at hr
+      obtain ⟨⟨⟨⟨⟨heads, hbodies⟩, hmain⟩, hmods⟩, hnames⟩, hlayers⟩ := hr
+      refine ⟨main, history, defs, bodies, body, layers, hh, hb, heads, hbodies, hmain,
+        fun l hm => ?_, hnames, fun entry hm => ?_, fun entry hm => (hlayers entry hm).2⟩
+      · have := hmods l hm
+        unfold ReadableAt
+        simpa only [cataFam, Option.isSome_iff_exists] using this
+      · have := (hlayers entry hm).1
+        unfold ReadableAt
+        simpa only [cataFam, Option.isSome_iff_exists] using this
     · cases hr
   · cases hr
 
@@ -199,8 +211,8 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
     {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
     readModule sig spell call
       (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
-  obtain ⟨main, history, defs, bodies, body, hoisted, block, heads, hbodies, hmain, hlayers,
-    hnames⟩ := blockReadable_pieces hr
+  obtain ⟨main, history, defs, bodies, body, layers, hoisted, block, heads, hbodies, hmain, hmods,
+    hmodNames, hlayers, hnames⟩ := blockReadable_pieces hr
   have same : root.defsOf = defs :=
     (Eff.hoistAll_defsOf hoisted).symm.trans (Eff.defsOf_of_block? block)
   rw [same] at named
@@ -208,6 +220,7 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
   exact readModule_printModule_defs hoisted block classesRead heads
     (fun b mem => ReadsBack.of_Readable hl' (hbodies b mem))
     (ReadsBack.of_Readable hl' hmain)
+    (fun l hm x hp => readLayer_print hl' (hmods l hm) hp) hmodNames
     (fun entry hm x hp => readLayer_print hl' (hlayers entry hm) hp) hnames printed
 
 end Effect4.Program

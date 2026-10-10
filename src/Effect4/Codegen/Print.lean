@@ -155,16 +155,25 @@ def typeRefOf (ty : Ty) : Except PrintRefusal TypeScript.TypeRef :=
 /-- A definition's declared type: its answer and error columns, and its requirement row. -/
 def DefDecl.effTy (d : DefDecl) : EffTy := ⟨d.answer, d.error, Requirement.ofList d.requires⟩
 
+/-- Every layer of a body is a reference into the module's layers (decisions row 341, step 2):
+the body names module layers and holds none of its own. -/
+def Eff.layersAreModuleRefs (body : Eff Op) : Bool :=
+  (body.layerPaths []).all fun p =>
+    match (Node.eff body).layerAt p with
+    | some (.ref t) => t.head? == some 2
+    | _ => false
+
 /-- **A definition as a module constant**: `const name = (a0: Request): Effect.Effect<A, E, R> =>
 Effect.suspend(() => body)`. The parameter is the request, the body's one variable, so the body
 prints at environment length `1`. The body is a suspension, so an invocation is one
 `Effect.suspend`, as the machine's is. The result type is `declarationType` of the declared
-columns: a recursive arrow needs it (TS7023). A layer inside a body is refused by name: printed
+columns: a recursive arrow needs it (TS7023). A body's own layer is refused by name: printed
 inside the arrow, rc.112 would build one layer object per invocation, where the machine keeps
-one memo entry per path (DB-12). -/
+one memo entry per path (DB-12; per-call layers are decisions row 341's step 3). A reference to
+a module layer is admitted (step 2): it prints as the module constant's name, one object. -/
 def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op) :
     Except PrintRefusal TypeScript.ConstDecl :=
-  if !(body.layerPaths []).isEmpty then .error (.internalAction "defs:layer")
+  if !body.layersAreModuleRefs then .error (.internalAction "defs:layer")
   else
     typeRefOf d.request >>= fun request =>
     declarationType d.effTy sig.scopeKey >>= fun result =>
@@ -353,6 +362,19 @@ def printServices (sig : Signature Op) (defs : List DefDecl) :
     let groups ← (servicesOf defs).mapM (printService sig defs)
     .ok groups.flatten
 
+/-- **The module's layers** (decisions row 341, step 2): one `const L_<path> = …` per layer, the
+`k`-th named by `Path.layerPath k`, in order. They stand after the definitions and the services,
+which a layer's body may invoke, and before the hoisted layers, which may name them. -/
+def printModuleLayers (sig : Signature Op) (layers : LayerTerms Op) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  layers.toList.zipIdx.mapM (printModuleLayer sig)
+where
+  /-- The module's layer `k`: `const L_<Path.layerPath k> = <layer>`. -/
+  printModuleLayer (sig : Signature Op) (p : LayerTerm Op × Nat) :
+      Except PrintRefusal TypeScript.ConstDecl := do
+    let x ← printLayer sig p.1
+    .ok { doc := [], name := LayerTerm.refName (Path.layerPath p.2), value := x }
+
 /-- The printed program as a declaration block (the host rows slice): one
 `const L_<path> = …` per referenced layer target, in declaration order (`Path.declBefore`: a
 target inside another first, then program order), each hoisted out of the program so that
@@ -364,6 +386,7 @@ is the inverse on what this prints.
 A program with a definition block prints its definitions first (`printDef`), each at the
 block's signature, so that an invocation prints as the definition's name. They stand before the
 layers: a layer's body runs when its constant is evaluated, and it may invoke a definition. The
+module's layers come next (`printModuleLayers`), then the hoisted ones, which may name them. The
 main declaration is the block's main program. -/
 def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     Except PrintRefusal (List TypeScript.ConstDecl) :=
@@ -384,13 +407,12 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
     | some ([], _, _, _) => .error (.internalAction "defs")
-    -- the module's layers print with step 2's print (decisions row 341); until then refused
-    | some (_ :: _, _, _, .cons _ _) => .error (.internalAction "defs:layers")
-    | some (d :: ds, bodies, body, .nil) => do
+    | some (d :: ds, bodies, body, layers) => do
       let defs := d :: ds
       let sig' := sig.withDefs defs
       let cs ← printDefs sig' defs bodies
       let svc ← printServices sig' defs
+      let ms ← printModuleLayers sig' layers
       let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
       let ds ← ordered.mapM fun t =>
         match decls.find? (·.1 == t) with
@@ -400,7 +422,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
         | none => .error (.layerRef t)
       let m ← print sig' 0 body
       let declaration ← printDecl name ty m sig.scopeKey
-      .ok (cs ++ svc ++ ds ++ [declaration])
+      .ok (cs ++ svc ++ ms ++ ds ++ [declaration])
 
 variable [ScopedOp Op]
 

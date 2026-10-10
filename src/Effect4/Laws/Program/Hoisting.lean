@@ -137,4 +137,23 @@ theorem Eff.restoreAll_hoistAll {root main : Eff Op} {history : History Op}
   exact captureFold_undo
     (Path.sortBy (fun a b => Path.lt b a) root.refTargets) h
 
+/-- **No hoisted declaration is a module layer** (decisions row 341, step 2): the hoist captures
+the targets of `Eff.refTargets`, which leaves the module's layers out. The module reader splits
+a block's layer declarations by that fact (`readModule`). A step of
+`readModule_printModule_defs`. -/
+theorem Eff.hoistAll_outside {root main : Eff Op} {history : History Op}
+    (h : root.hoistAll = .ok (main, history)) :
+    ∀ entry ∈ history, root.inModule entry.1 = false := by
+  intro entry mem
+  have keys := captureFold_keys (Path.sortBy (fun a b => Path.lt b a) root.refTargets) h
+  simp only [List.map_nil, List.append_nil] at keys
+  have inKeys : entry.1 ∈ history.map Prod.fst := List.mem_map.mpr ⟨entry, mem, rfl⟩
+  rw [keys, List.mem_reverse] at inKeys
+  have inTargets := (Path.sortBy_perm (fun a b => Path.lt b a) root.refTargets).mem_iff.mp inKeys
+  have inDistinct := (Path.sortBy_perm Path.declBefore
+    (((root.refSites []).map Prod.snd).filter fun t => !root.inModule t).eraseDups).mem_iff.mp
+      inTargets
+  have outside := (List.mem_filter.mp (List.mem_eraseDups.mp inDistinct)).2
+  simpa only [Bool.not_eq_true'] using outside
+
 end Effect4.Program

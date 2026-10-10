@@ -259,6 +259,29 @@ def twiceByName : Module NativeOp :=
 #guard elaborateModule twiceByName = .ok twice
 #guard (elaborateModule twiceByName).toOption.map Api.wellTyped = some true
 
+/-- A definition whose body names the counter declared at module level (decisions row 341,
+step 2): it requires the `Ref` the counter reads. -/
+def readCounter : DefSrc NativeOp :=
+  { name := "readCounter", params := [], answer := .nat, requires := [kRef],
+    body := fun _ => provideLayer (Layer.ref "Counter") false (service kA) }
+
+/-- The main program provides the `Ref` and invokes the definition. -/
+def moduleCounter : Module NativeOp :=
+  { layers := [("Counter", counter)], defs := [readCounter]
+    main :=
+      bind "r" (Ref.make (nat 0)) <|
+      provideService kRef (var "r") <|
+      Def.invoke "readCounter" [] }
+
+-- In a module with definitions the counter is the block's module layer, at `[2, 0]`, and the
+-- body's use is a reference to it; the module types and runs to the counter's value.
+#guard (elaborateModule moduleCounter).toOption.map (·.refSites []) = some [([0, 0, 0], [2, 0])]
+#guard (elaborateModule moduleCounter).toOption.map Api.wellTyped = some true
+#guard (elaborateModule moduleCounter).toOption.map (fun p =>
+  match (Api.run p 200).exit with
+  | some (.success v) => v == .nat 5
+  | _ => false) = some true
+
 -- A layer nobody declared refuses at the site that names it.
 #guard elaborateModule
     ({ layers := [], main := provideLayer (Layer.ref "Counter") false (service kA) } : Module NativeOp)

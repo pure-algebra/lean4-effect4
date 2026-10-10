@@ -1148,6 +1148,18 @@ def readLayerDecl (classes : Effect4.Codegen.Classes.Classes) (sig : Signature O
     | none => .error (.shape "module")
   | _ => .error (.shape "module")
 
+/-- A path in a block's module layers: its head is the block's child `2`. -/
+def inModulePath (p : List Nat) : Bool := decide (p.head? = some 2)
+
+/-- The block's module layers from its read layer declarations (decisions row 341, step 2): the
+declarations whose paths stand in the module, which must be `Path.layerPath 0`, `1`, … in order,
+as the printer writes them (`printModuleLayers`); `none` otherwise. -/
+def moduleLayersOf (ds : List (List Nat × LayerTerm Op)) : Option (LayerTerms Op) :=
+  let ms := ds.filter fun d => inModulePath d.1
+  if ms.map (·.1) = (List.range ms.length).map Path.layerPath then
+    some (LayerTerms.ofList (ms.map (·.2)))
+  else none
+
 /-- A declaration block back to the program (the host rows slice): its leading class
 declarations read as the payload classes the rest is read under (decisions row 120), every
 `const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
@@ -1161,7 +1173,9 @@ layer paths and failed restoration return `shape "module"`.
 Leading definition constants (`defsPrefix`) read as a definition block: each header as its
 declaration (`readDefHead`), and the bodies, the layers and the main program at the block's
 signature, through the spelling map that the block extends (`defsSpell`). `call k` is the
-operation that invokes definition `k` (`NativeOp.call` at the native signature). -/
+operation that invokes definition `k` (`NativeOp.call` at the native signature). The layers whose
+paths stand in the module (`2 :: …`, decisions row 341, step 2) are the block's module layers,
+the `k`-th at `Path.layerPath k` (`moduleLayersOf`); the others are put back at their paths. -/
 def readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (call : Nat → Op) (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
   match blockClasses decls with
@@ -1186,7 +1200,8 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         let bodies ← readDefBodies classes sig' spell' heads
         let e ← readEff classes sig' spell' 0 main.value
         let ds ← layerDecls.mapM (readLayerDecl classes sig' spell')
-        match (Eff.defs defs bodies e .nil).restoreAll ds with
+        let some layers := moduleLayersOf ds | .error (.shape "module")
+        match (Eff.defs defs bodies e layers).restoreAll (ds.filter fun d => !inModulePath d.1) with
         | some e' => .ok e'
         | none => .error (.shape "module")
     | _, _ => .error (.shape "module")

@@ -110,6 +110,18 @@ def spinProg : NativeEff :=
   .defs [{ name := "spin", request := .nat, answer := .nat }]
     (.cons (.perform (.call 0) (.var 0)) .nil) (.perform (.call 0) (.lit (.nat 1))) .nil
 
+/-- A service key the module layer provides. -/
+def layerKey : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+
+/-- **A block with a module layer** (decisions row 341, step 2): `readKey : number → number`
+reads the service of the module's one layer, at `[2, 0]`, which provides `7`; the main program
+invokes it and then reads the service itself. Both name the layer by reference. -/
+def moduleLayerProg : NativeEff :=
+  .defs [{ name := "readKey", request := .nat, answer := .nat }]
+    (.cons (.provideLayer (.ref [2, 0]) false (.service layerKey)) .nil)
+    (.bind (.perform (.call 0) (.lit (.nat 1))) (.provideLayer (.ref [2, 0]) false (.service layerKey)))
+    (.cons (.succeed layerKey (.nat 7)) .nil)
+
 /-- An invocation inside a fork, joined. -/
 def forkProg : NativeEff :=
   .defs [twiceDecl] (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil)

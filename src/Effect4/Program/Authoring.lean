@@ -28,9 +28,11 @@ index. Nothing here is stored: the certificate, the printer and the machine see 
 first-order `Eff` (DI-78).
 
 Shared layers are the hoisted presentation with names in place of paths. A `Module` declares
-each shared layer once by name; `elaborateModule` places every named layer at its first use
-in program order and turns each later use into `LayerTerm.ref` of that path, which is what
-`Eff.restoreAll` (`Program/Refs.lean`) does with a declaration block. Nobody writes a path.
+each shared layer once by name; with no definition, `elaborateModule` places every named layer
+at its first use in program order and turns each later use into `LayerTerm.ref` of that path,
+which is what `Eff.restoreAll` (`Program/Refs.lean`) does with a declaration block. With
+definitions, the named layers are the block's module layers, which every body and the main
+program name by reference (decisions row 341, step 2). Nobody writes a path.
 -/
 
 @[expose] public section
@@ -509,15 +511,16 @@ def defNamesOf {Op : Type} (defs : List (DefSrc Op)) : Except Refusal DefNames :
     if acc.any (·.1 == d.name) then .error ⟨[], .duplicateDef d.name⟩ else .ok (acc ++ [(d.name, k)])
 
 /-- The module's tree before its layers are placed: the main program, or, when the module
-declares a definition, the block at the root with each body and then the main program, each
-elaborated at its path in the block. -/
-def elaborateTree {Op : Type} (m : Module Op) (env : Env) : Except Refusal (Eff Op) :=
+declares a definition, the block at the root with each body, the main program and the module's
+layers, each elaborated at its path in the block. -/
+def elaborateTree {Op : Type} (m : Module Op) (env : Env) (layers : LayerTerms Op) :
+    Except Refusal (Eff Op) :=
   match m.defs with
   | [] => m.main env []
   | defs => do
     let bodies ← defs.zipIdx.mapM fun (d, k) => d.elaborate env (bodyPath k)
     let main ← m.main env [1]
-    .ok (.defs (defs.map (·.decl)) (effsOfList bodies) main .nil)
+    .ok (.defs (defs.map (·.decl)) (effsOfList bodies) main layers)
 
 /-- The declared rows as a scope, or the first spelling declared twice: a table key is the
 spelling and the trailing names (`rowKey`), and `Table.lawful` requires it to be unique. -/
@@ -528,19 +531,28 @@ def rowNamesOf (rows : List RowDef) : Except Refusal RowNames :=
 
 set_option backward.privateInPublic true in
 set_option backward.privateInPublic.warn false in
-/-- The one first-order tree of an authored module: main elaborated in the empty scope, every
-declared layer placed at its first use in program order, every later use a reference to that
-path. A declared layer nobody uses is dropped; a declared row nobody calls keeps its position,
-because the table's positions are the declaration order. A module that declares a definition
-has its block at the root (`elaborateTree`); a declared definition nobody invokes stays in it. -/
+/-- The one first-order tree of an authored module. With no definition, main is elaborated in
+the empty scope, every declared layer placed at its first use in program order, every later use
+a reference to that path, and a declared layer nobody uses dropped. A module that declares a
+definition has its block at the root (`elaborateTree`), and every declared layer is the block's
+module layer of its position (`Path.layerPath k`, decisions row 341, step 2): each use, in a
+body, in the main program or in a later layer, is a reference to it, and one nobody uses stays,
+as a module-level `const` does. A declared row nobody calls keeps its position, because the
+table's positions are the declaration order; a declared definition nobody invokes stays. -/
 def elaborateModule {Op : Type} (m : Module Op) : Except Refusal (Eff Op) := do
   let names ← layerNamesOf m.layers
   let rows ← rowNamesOf m.rowDefs
   let defs ← defNamesOf m.defs
   let env : Env := { layers := names, rows := rows, defs := defs }
-  let main ← elaborateTree m env
-  let terms ← m.layers.zipIdx.mapM fun ((_, l), k) => l env (placeholder k)
-  let (tree, placed) ← placeRounds terms names (m.layers.length + 1) main []
-  pointAtPlaced placed tree
+  match m.defs with
+  | [] =>
+    let main ← elaborateTree m env .nil
+    let terms ← m.layers.zipIdx.mapM fun ((_, l), k) => l env (placeholder k)
+    let (tree, placed) ← placeRounds terms names (m.layers.length + 1) main []
+    pointAtPlaced placed tree
+  | _ :: _ =>
+    let terms ← m.layers.zipIdx.mapM fun ((_, l), k) => l env (Path.layerPath k)
+    let tree ← elaborateTree m env (LayerTerms.ofList terms)
+    pointAtPlaced ((List.range terms.length).map fun k => (k, Path.layerPath k)) tree
 
 end Effect4.Program.Authoring

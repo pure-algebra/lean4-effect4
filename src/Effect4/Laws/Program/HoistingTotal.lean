@@ -68,8 +68,9 @@ theorem Eff.hoistAll_exists_of_targets (root : Eff Op)
   intro target member
   have inTargets := (Path.sortBy_perm (fun a b => Path.lt b a) root.refTargets).mem_iff.mp member
   have inDistinct := (Path.sortBy_perm Path.declBefore
-    ((root.refSites []).map Prod.snd).eraseDups).mem_iff.mp inTargets
-  have inSites := List.mem_eraseDups.mp inDistinct
+    (((root.refSites []).map Prod.snd).filter fun t => !root.inModule t).eraseDups).mem_iff.mp
+      inTargets
+  have inSites := (List.mem_filter.mp (List.mem_eraseDups.mp inDistinct)).1
   obtain ⟨⟨site, named⟩, atSite, same⟩ := List.mem_map.mp inSites
   cases same
   exact targetsExist site named atSite

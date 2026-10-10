@@ -81,6 +81,7 @@
     "pDefsEven",
     "pDefsOdd",
     "pDefsFork",
+    "pDefsModuleLayer",
     "pQueueDefs",
     "pQueueService",
     "pSemaphoreService"

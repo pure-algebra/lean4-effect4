@@ -81,7 +81,8 @@ FROZEN = 'Test/fixtures/baseline/66ee4657/families.json'
 WIRE_TAGS = 'tools/Effect4Gen/wire-tags.json'
 GOLDEN_DIRS = ['ocaml/eff/goldens', 'ocaml/goldens/eff', 'ocaml/engine/cas/goldens']
 VECTOR_EXT = ('.bin', '.json', '.ty', '.hex')
-MANIFESTS = ['ocaml/eff/eff_manifest.txt', 'ocaml/goldens/eff/manifest.txt', 'ocaml/goldens/eff/wire-tags.txt']
+TAG_MANIFEST = 'ocaml/goldens/eff/wire-tags.txt'
+MANIFESTS = ['ocaml/eff/eff_manifest.txt', 'ocaml/goldens/eff/manifest.txt', TAG_MANIFEST]
 VERDICTS = ['generated/corpus-index.tsv', 'ocaml/eff/goldens/corpus.txt', 'harness/truth/corpus-results.tsv']
 ORDERED_TABLES = ['ocaml/eff/goldens/metadata.tsv', 'ocaml/engine/cas/goldens/cases.txt',
                   'ocaml/engine/cas/goldens/manifest.txt', 'ocaml/goldens/eff/same-programs.txt']
@@ -366,8 +367,10 @@ def c2(base, cand, pol):
                 y = got[i] if i < len(got) else None
                 if x == y:
                     continue
-                # a constructor the policy names as re-typed keeps its name and position
-                if y is not None and item_name(x) == item_name(y) and (fam, item_name(x)) in retyped:
+                # a constructor the policy names as re-typed keeps its name, position and tag:
+                # its argument shapes may change, its tag line never (Codex's ML2-C2-01)
+                if (path != TAG_MANIFEST and y is not None and item_name(x) == item_name(y)
+                        and (fam, item_name(x)) in retyped):
                     named_retypings.append(f'{path}: {fam} position {i}: {x!r} -> {y!r}')
                     continue
                 problems.append(f'{path}: {fam} position {i}: BASE {x!r}, CAND {y!r}')

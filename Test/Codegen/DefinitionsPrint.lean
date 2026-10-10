@@ -53,6 +53,26 @@ open Effect4 Effect4.Program Test.Program.DefinitionsControls
 #guard moduleReadable [] (nativeSignature []) (.succeed (.lit (.nat 1)) : NativeEff)
 #guard !moduleReadable [] (nativeSignature []) twiceProg
 
+/-! ## The module's layers (decisions row 341, step 2) -/
+
+/-- The block with a module layer (`moduleLayerProg`, Test/Program/DefinitionsControls.lean). -/
+def moduleLayered : NativeEff := moduleLayerProg
+
+-- the module types, and runs to the layer's value
+#guard Api.typeOf moduleLayered == some (EffTy.pure .nat)
+#guard (match (Api.run moduleLayered 200).exit with
+  | some (.success v) => v == .nat 7
+  | _ => false)
+-- the printer writes the module layer as a constant named by its path, after the definition
+-- and before the main declaration, and both uses print as that name
+#guard (Api.printModule "main" moduleLayered).map (fun m => m.decls.filterMap fun
+    | .const c => some c.name
+    | _ => none) = some ["readKey", "L_2_0", "main"]
+-- the program is in the readable domain of a block, and its module reads back to it
+#guard blockReadable [] (nativeSignature []) moduleLayered
+#guard (Api.printModule "main" moduleLayered).map (fun m =>
+  decide (Api.readModule m [] = .ok moduleLayered)) = some true
+
 /-! ## The name bridge (a reader) -/
 
 -- the printer's name check gives the names the block's spelling map reads back

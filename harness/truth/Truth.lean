@@ -955,6 +955,11 @@ def pDefsEven : Api.Program := Test.Program.DefinitionsControls.evenOdd 6
 def pDefsOdd : Api.Program := Test.Program.DefinitionsControls.evenOdd 7
 def pDefsFork : Api.Program := Test.Program.DefinitionsControls.forkProg
 
+/-- A block with a module layer (decisions row 341, step 2): a definition's body and the main
+program each provide the module's one layer by reference. It prints as a module whose layer is
+one constant, `L_2_0`, named in both. -/
+def pDefsModuleLayer : Api.Program := Test.Program.DefinitionsControls.moduleLayerProg
+
 /-- **The scenario R4 over the Queue's definitions** (decisions row 328, slice PROC-4): a second
 offer waits at capacity one, and the take that frees room accepts it. Each operation is an
 invocation of a definition of the module's block, and the printed module declares each
@@ -1030,7 +1035,8 @@ def corpus : List (String × Api.Program) :=
     ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
     ("pPoolClosing", pPoolClosing),
     ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
-    ("pDefsFork", pDefsFork), ("pQueueDefs", pQueueDefs), ("pQueueService", pQueueService),
+    ("pDefsFork", pDefsFork), ("pDefsModuleLayer", pDefsModuleLayer), ("pQueueDefs", pQueueDefs),
+    ("pQueueService", pQueueService),
     ("pSemaphoreService", pSemaphoreService)]
 
 /-! ## The value wire -/
@@ -1809,8 +1815,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
    "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pQueueDefs", "pQueueService",
-   "pSemaphoreService"]
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer", "pQueueDefs",
+   "pQueueService", "pSemaphoreService"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
