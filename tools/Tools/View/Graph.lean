@@ -41,7 +41,7 @@ structure GNode where
   line1 : String
   line2 : String := ""
   lit : Bool := false
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- An edge between two nodes, by their positions in the graph's order. -/
 structure GEdge where
@@ -154,7 +154,7 @@ structure Placed where
   node : Option GNode := none
   /-- how far a box has grown about its centre, per mille; 1000 at rest -/
   grow : Nat := 1000
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A route: a forward edge through its items, from its source to its target; a back edge, with
 its source, its target and its lane at the right; or an edge from a node to itself. Each is drawn
@@ -164,7 +164,7 @@ inductive Route where
   | down (key : Key) (items : List Key) (reveal : Nat := 1000) (share : Nat := 1000000)
   | back (key : Key) (src dst : Key) (lane : Nat) (reveal : Nat := 1000)
   | loop (key : Key) (node : Key) (reveal : Nat := 1000)
-deriving Repr
+deriving DecidableEq, Repr
 
 namespace Route
 
@@ -197,7 +197,7 @@ structure Region where
   y : Int
   w : Int
   h : Int
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A mark of a program's flow, in the notation of UML's activity diagrams: a bar where branches
 that all run part or meet, across `[x0, x1)` at the height `y`; a diamond where alternatives part
@@ -205,7 +205,7 @@ or meet, centred at `(x, y)`. -/
 inductive FlowMark where
   | bar (key : Key) (x0 x1 y : Int)
   | diamond (key : Key) (x y : Int)
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A laid-out graph: its placed items, its routes, its regions and its marks, and its size in
 logical pixels. -/
@@ -216,7 +216,7 @@ structure Laid where
   height : Int := 0
   regions : Array Region := #[]
   marks : Array FlowMark := #[]
-deriving Repr
+deriving DecidableEq, Repr
 
 
 namespace Graph

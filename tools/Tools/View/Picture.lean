@@ -61,7 +61,7 @@ structure Cubic where
   p1 : Int × Int
   p2 : Int × Int
   p3 : Int × Int
-deriving DecidableEq, Repr
+deriving DecidableEq, Repr, Hashable
 
 /-- A segment moved by whole pixels. -/
 def Cubic.move (dx dy : Int) (c : Cubic) : Cubic :=
@@ -118,7 +118,7 @@ inductive Call where
   | uncut
   | hit (x y w h : Int)
   | shape (role : Role) (value : Nat) (paths : List (List Cubic))
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- One call that reaches the target. A curve's points and weight are in device pixels. -/
 inductive Dev where
@@ -136,7 +136,7 @@ deriving Repr
 structure Keyed (α : Type) where
   key : Key
   call : α
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A horizontal rule of `w` logical pixels at `(x, y)`: a fill of the rule's weight. At a whole
 ratio the painter's weight (P2, `paint_weight`) and a fill's height snap alike, so a rule is no

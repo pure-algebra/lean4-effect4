@@ -43,6 +43,7 @@ inductive Flow where
   | par (how : Branching) (key : Key) (branches : List Flow)
   | region (name : String) (key : Key) (body : Flow)
   | loop (key : Key) (body : Flow)
+deriving BEq
 
 /-- A flow's parts in series: a series is its parts; any other flow is one part. -/
 def Flow.parts : Flow → List Flow
@@ -679,6 +680,7 @@ structure PreparedPlacement where
   fallback : Int
   heights : List (Nat × Int)
   lanes : List (Nat × Nat)
+deriving DecidableEq
 
 /-- Read one height from explicit prepared data, without repeating wait analysis or assignment. -/
 def PreparedPlacement.height (prepared : PreparedPlacement) (i : Nat) : Int :=

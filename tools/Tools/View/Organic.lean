@@ -33,14 +33,16 @@ open Tools.View
 
 /-! ## Integers -/
 
-/-- The integer square root by Newton's steps from `n`: the greatest `s` with `s * s ≤ n`, when
-the steps settle within the fuel (`#guard`s below). -/
+/-- The integer square root by Newton's steps from `2 ^ (log₂ n / 2 + 1)`, which lies above `√n`:
+the greatest `s` with `s * s ≤ n` (`#guard`s below). Every start above `⌊√n⌋` falls to `⌊√n⌋`, and a
+start below it stops at once (the controls below). This start takes about five steps on a squared
+distance in thousandths, where a start from `n` takes about twenty. -/
 def isqrt (n : Nat) : Nat :=
   if n < 2 then n else
   let rec go : Nat → Nat → Nat
     | 0, x => x
     | fuel + 1, x => let y := (x + n / x) / 2; if y < x then go fuel y else x
-  go 128 n
+  go 128 (1 <<< (n.log2 / 2 + 1))
 
 /-- **da Vinci's split**: the share of each of `n` parallel parts, in millionths: `1/√n`. -/
 def split (n : Nat) : Nat := if n ≤ 1 then 1000000 else isqrt (1000000000000 / n)
@@ -184,6 +186,15 @@ def collar (x y w R : Int) (down : Bool) : List Cubic :=
     ⟨r0, (x + hw + R - k, y), (x + hw, y + s * (R - k)), r3⟩,
     line r3 l0 ]
 
+/-- The distance from each sample of a centre line to the next. -/
+def steps (ss : List (P × P)) : List Nat := (ss.zip (ss.drop 1)).map fun x => dist x.1.1 x.2.1
+
+/-- The running lengths along a centre line's samples, from `0`: each is the one before plus the
+step to the next sample. They are built newest first and turned once, so `m` samples take `m`
+steps, where appending each length to the end took `m²` (the check below). -/
+def runningLengths (ss : List (P × P)) : List Nat :=
+  ((steps ss).foldl (fun (acc : List Nat × Nat) d => ((acc.2 + d) :: acc.1, acc.2 + d)) ([0], 0)).1.reverse
+
 /-- **An organic stroke** along a centre line of logical pixels: a closed outline, in thousandths,
 whose half-width is `w / 2` moved by the noise inside its band, the noise faded out at the ends.
 With `tip`, the line narrows to its last point, as a growing shoot does. -/
@@ -193,8 +204,7 @@ def stroke (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic) (tip : Bool) :
   | [] => []
   | _ =>
     -- the length along the line at each sample
-    let lens := (ss.zip (ss.drop 1)).foldl (fun (acc : List Nat) ((a, _), (b, _)) =>
-      acc ++ [acc.getLast?.getD 0 + dist a b]) [0]
+    let lens := runningLengths ss
     let S := lens.getLast?.getD 0
     let ramp := o.wave / 2
     let hw := w / 2
@@ -303,5 +313,37 @@ theorem halfWidth_band {hw : Int} {amp env : Nat} {v : Int} (hw0 : 0 ≤ hw) (ha
 -- count, comes within a millionth's rounding of the whole: a finite evaluation
 #guard split 1 = 1000000
 #guard [2, 3, 4, 5, 8, 16].all fun n => n * split n * split n ≤ 1000000000000 ∧ 1000000000000 < n * (split n + 1) * (split n + 1)
+
+-- `isqrt` answers the greatest `s` with `s * s ≤ n`: at every value below 2^15; at the powers of two
+-- to 2^60, their neighbours, their squares and the squares' neighbours; and at four large values.
+-- A finite evaluation.
+#guard (List.range 32768).all fun n => let s := isqrt n; s * s ≤ n && n < (s + 1) * (s + 1)
+#guard (List.range 61).all fun k =>
+  let p := 2 ^ k
+  [p - 1, p, p + 1, p * p - 1, p * p, p * p + 1, 3 * p + 7].all fun n =>
+    let s := isqrt n; s * s ≤ n && n < (s + 1) * (s + 1)
+#guard [999999999999, 1000000000000, 123456789012345, 4611686018427387903].all fun n =>
+  let s := isqrt n; s * s ≤ n && n < (s + 1) * (s + 1)
+-- The controls: Newton's steps from a start below the root stop at the start. So the start must
+-- lie above `√n`: without its `+ 1`, the start for 15 is 2, below the root 3.
+#guard isqrt.go 100 128 1 == 1
+#guard isqrt.go 15 128 (1 <<< (Nat.log2 15 / 2)) == 2
+#guard isqrt 15 == 3
+
+/-- Centre lines for the checks of the running lengths: none, a straight drop, a bump and a
+straight run, and a back arc. -/
+def lengthSpecimens : List (List Cubic) :=
+  [[], [line (0, 0) (0, 30)], [⟨(0, 0), (0, 12), (40, 18), (40, 30)⟩, line (40, 30) (40, 60)],
+    [⟨(120, 40), (171, 40), (171, 230), (120, 230)⟩]]
+
+-- The running lengths built newest first are the lengths built by appending each to the end, on
+-- each specimen's samples. The control: unturned, they stand newest first.
+#guard lengthSpecimens.all fun cs =>
+  let ss := samples 8 cs
+  runningLengths ss == (ss.zip (ss.drop 1)).foldl (fun (acc : List Nat) ((a, _), (b, _)) =>
+    acc ++ [acc.getLast?.getD 0 + dist a b]) [0]
+#guard let ss := samples 8 [line (0, 0) (0, 30)]
+  ((steps ss).foldl (fun (acc : List Nat × Nat) d => ((acc.2 + d) :: acc.1, acc.2 + d)) ([0], 0)).1 !=
+    runningLengths ss
 
 end Tools.View.Grow
