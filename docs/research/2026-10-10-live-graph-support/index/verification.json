@@ -1,0 +1,140 @@
+{
+  "checks": {
+    "audit": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/Audit.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.611,
+      "finished_utc": "2026-10-10T15:02:13.662062+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "log": "docs/research/2026-10-10-live-graph-support/index/audit.log",
+      "log_sha256": "e6fe7619ecd31e738a447306d247ef78dbf1da4cead7464c1cc1d6d813e615d6"
+    },
+    "controls": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/Controls.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.912,
+      "finished_utc": "2026-10-10T15:02:14.575157+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "log": "docs/research/2026-10-10-live-graph-support/index/controls.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "benchmark": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "--run",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/Benchmark.lean"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 4.648,
+      "finished_utc": "2026-10-10T15:03:30.657579+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "log": "docs/research/2026-10-10-live-graph-support/index/benchmark.log",
+      "log_sha256": "f47c23b35663b4250169800e6cf78214ef4fb9489f9e0a6de0155a0c73a71167"
+    },
+    "narrow-build": {
+      "command": [
+        "lake",
+        "build",
+        "Tools.Graph.Index",
+        "Tools.View.Flow",
+        "Tools.View.FlowLaws",
+        "Tools.View.FlowPath",
+        "Tools.View.FlowOrder",
+        "Tools.View.FlowSpecimen",
+        "Tools.View.Build"
+      ],
+      "exit_code": 0,
+      "log": "docs/research/2026-10-10-live-graph-support/index/narrow-build.log",
+      "log_sha256": "e7f9ef30b877686e69df7ffae79d033abf7647e97de6cbbb45c4a8a913fbb371",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "note": "Executed before the packet runner; its tool result returned exit code zero."
+    },
+    "inspection": {
+      "command": [
+        "python3",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/inspect.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.041,
+      "finished_utc": "2026-10-10T15:10:05.944411+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "log": "docs/research/2026-10-10-live-graph-support/index/inspection.log",
+      "log_sha256": "412f825a186d0f895de5d50375e6d023bd6d6078c10cd3c2e13ec0c2f545022f"
+    },
+    "summary": {
+      "command": [
+        "python3",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/summarize.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.063,
+      "finished_utc": "2026-10-10T15:10:06.009827+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "log": "docs/research/2026-10-10-live-graph-support/index/summary.log",
+      "log_sha256": "d0a1f7ec20ddaa8915ce8172ddf70803808eaf2d314760242740880454256197"
+    },
+    "language": {
+      "command": [
+        "python3",
+        "scripts/check-language.py",
+        "--strict",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/PLAN.md",
+        "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4/docs/research/2026-10-10-live-graph-support/index/README.md"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 15.942,
+      "finished_utc": "2026-10-10T15:10:37.804503+00:00",
+      "production_sha256": {
+        "tools/Tools/Graph/Index.lean": "e6941bb0b51d845e71f3769931e0420e91fd87eb5473e5ed9d6e4f30ff474cb9",
+        "tools/Tools/View/Flow.lean": "90aeb04cd11674caa5ae6fa5ed29e6650a36026e0ae5047c5cdc6ae353f03ea0",
+        "tools/Tools/View/FlowLaws.lean": "42db25146b27eaefb2c2429be137720fd1a7912d0226fdc0862ef6bf62aaee11"
+      },
+      "log": "docs/research/2026-10-10-live-graph-support/index/language.log",
+      "log_sha256": "dfccff9593e268d45e7ce4ba60f1b0b702b273a64e21eef00bce2db4749bd4a3"
+    }
+  },
+  "base": "9389e543ad1325a603732b7802344d79b3b98c61",
+  "lean_num_threads": 3,
+  "scope": "Exact local proofs and finite controls; Lean assignment timings, no renderer timing.",
+  "all_passed": true,
+  "source_head": "5cda1a936f07c65a1f25f1c788847c9d6421a807"
+}
