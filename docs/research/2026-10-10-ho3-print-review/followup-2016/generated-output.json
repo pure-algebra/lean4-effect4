@@ -1,0 +1,82 @@
+[
+  {
+    "expected": 5,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "identity",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const main: Effect.Effect<number, never, never> = applyProgram(5, (a0) => Effect.succeed(a0))\n"
+  },
+  {
+    "expected": 11,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "capture-outer",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(11), (a0) => applyProgram(5, (a1) => Effect.succeed(a0)))\n"
+  },
+  {
+    "expected": 5,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "capture-request",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(11), (a0) => applyProgram(5, (a1) => Effect.succeed(a1)))\n"
+  },
+  {
+    "expected": 11,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "nested-outer",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(11), (a0) => applyProgram(5, (a1) => applyProgram(3, (a2) => Effect.succeed(a0))))\n"
+  },
+  {
+    "expected": 5,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "nested-middle",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(11), (a0) => applyProgram(5, (a1) => applyProgram(3, (a2) => Effect.succeed(a1))))\n"
+  },
+  {
+    "expected": 3,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "nested-inner",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(11), (a0) => applyProgram(5, (a1) => applyProgram(3, (a2) => Effect.succeed(a2))))\n"
+  },
+  {
+    "expected": 29,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "forwarded",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const applyProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => use(a0))\n\nexport const relayProgram = (a0: number, forwarded: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => applyProgram(a0, (a1) => forwarded(a1)))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(29), (a0) => relayProgram(5, (a1) => Effect.succeed(a0)))\n"
+  },
+  {
+    "expected": 11,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "select-first",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const selectedProgram = (a0: number, firstTask: (a0: number) => Effect.Effect<number, never, never>, secondTask: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => firstTask(a0))\n\nexport const main: Effect.Effect<number, never, never> = selectedProgram(5, (a0) => Effect.succeed(11), (a0) => Effect.succeed(17))\n"
+  },
+  {
+    "expected": 17,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "select-second",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const selectedProgram = (a0: number, firstTask: (a0: number) => Effect.Effect<number, never, never>, secondTask: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => secondTask(a0))\n\nexport const main: Effect.Effect<number, never, never> = selectedProgram(5, (a0) => Effect.succeed(11), (a0) => Effect.succeed(17))\n"
+  },
+  {
+    "expected": 37,
+    "machineAgrees": true,
+    "machineBudget": 600,
+    "name": "forked-capture",
+    "readsBack": true,
+    "source": "/**\n\n */\n\nexport const forkedProgram = (a0: number, use: (a0: number) => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => Effect.suspend(() => Effect.flatMap(Effect.forkChild(use(a0), { startImmediately: true, uninterruptible: \"inherit\" }), (a1) => Fiber.join(a1)))\n\nexport const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(37), (a0) => forkedProgram(5, (a1) => Effect.succeed(a0)))\n"
+  }
+]
