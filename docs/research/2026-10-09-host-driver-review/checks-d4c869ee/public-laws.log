@@ -1,0 +1,3 @@
+Effect4.Run.journal_replays (s : Effect4.Run) (h : s.Reached) :
+  (Effect4.Run.open s.built s.id s.budget s.profile).play s.journal = s
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-driver-review/PublicLawsControls.lean:4:7: error(lean.unknownIdentifier): Unknown constant `Effect4.Run.Reactor.ofHost`
