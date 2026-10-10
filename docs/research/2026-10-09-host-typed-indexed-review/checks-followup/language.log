@@ -1,0 +1,1 @@
+PASS check-language: no finding in /Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/README.md, /Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/PLAN.md; the other documents carry 1767 finding(s) (report: python3 scripts/check-language.py)
