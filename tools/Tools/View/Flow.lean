@@ -256,19 +256,25 @@ def flowOf (fam : EffFam) (ctor : String) (key : Key) (leaf : Flow) (kids : List
 registers its release. A scope runs the releases registered inside it as it closes. A provided
 layer's own scope closes after the body it serves, and runs the layer's releases; the body's
 releases belong to the scope around it (`Effect.provide`, `internal/layer.ts:8-22` at the pin).
-Every other part passes its children's releases up, in order. -/
-def flowLayer (waitsOf : Key → List Key) (fam : EffFam) (ctor : String) (args : List (ArgF NativeOp FlowAt)) :
-    FlowAt fam :=
+Every other part passes its children's releases up, in order. A leaf's text is `leafText` of its
+address and of the computation of its own text: the fresh flow computes it (`flowLayer`), and the
+flow along an edit reads it from a memo (`Tools.View.Inc.flow`). -/
+def flowLayerWith (leafText : List Nat → (Unit → String) → String) (waitsOf : Key → List Key)
+    (fam : EffFam) (ctor : String) (args : List (ArgF NativeOp FlowAt)) : FlowAt fam :=
   fun p =>
     let parts := (args.filterMap childFlow).zipIdx.map fun (r, i) => r (p ++ [i])
     let key := bracket p
-    let leaf := Flow.node key (ownText ctor args) "" (waitsOf key)
+    let leaf := Flow.node key (leafText p fun _ => ownText ctor args) "" (waitsOf key)
     match fam, ctor, parts with
     | .eff, "acquireRelease", [a, r] => { flow := a.flow, releases := a.releases ++ r.flow :: r.releases }
     | .eff, "scoped", [e] => { flow := .region "scoped" key (e.flow.closing e.releases) }
     | .eff, "provideLayer", [l, e] =>
       { flow := .region "provide" key ((l.flow.andThen e.flow).closing l.releases), releases := e.releases }
     | _, _, _ => { flow := flowOf fam ctor key leaf (parts.map (·.flow)), releases := parts.flatMap (·.releases) }
+
+/-- The generic layer of the flow, each leaf's own text computed. -/
+def flowLayer (waitsOf : Key → List Key) : (fam : EffFam) → String → List (ArgF NativeOp FlowAt) → FlowAt fam :=
+  flowLayerWith (fun _ text => text ()) waitsOf
 
 /-- **A program's flow**, the fold of its generic layer. The releases no scope of the program
 holds run as the scope around the whole program closes, after it. -/

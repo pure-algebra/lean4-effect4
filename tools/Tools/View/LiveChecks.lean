@@ -1,4 +1,5 @@
 import Tools.View.Build
+import Tools.View.Inc
 
 /-!
 # The live view's checks
@@ -113,5 +114,71 @@ def kahnAgrees (f : Flow.Flow) : Bool :=
 #guard Flow.kahnTable 2 [{ fr := 0, to := 1 }, { fr := 1, to := 0 }] == []
 #guard Flow.ordersTable (Flow.kahnTable 2 [{ fr := 0, to := 1 }, { fr := 1, to := 0 }])
   [{ fr := 0, to := 1 }, { fr := 1, to := 0 }] == false
+
+/-! ## LV-4: the folds along an edit -/
+
+/-- A line as the checks compare it: its address, depth, text and operation. -/
+def lineView (n : Program.Node) : List Nat × Nat × String × Option NativeOp := (n.path, n.depth, n.text, n.op)
+
+/-- At every step of a build, the lines along the edit are the fresh lines, and the flow along the
+edit is the fresh flow. -/
+def incAgrees (p : NativeEff) : Bool :=
+  match requests p with
+  | none => false
+  | some reqs =>
+    (reqs.foldl (fun (acc : Bool × Tools.Session.State × Inc.Memo) r =>
+      let (ok, st, memo) := acc
+      let (st', _) := Tools.Session.answer st r
+      match st'.session with
+      | none => (ok, st', memo)
+      | some l =>
+        let prog := l.sketch.program
+        let edited := if r.op == "fill" || r.op == "omit" then some r.path else none
+        let ls := Inc.lines memo edited prog
+        (ok && ls.map lineView == (Program.lines prog).map lineView &&
+          Inc.flow memo edited prog == Flow.ofProgram prog, st', Inc.Memo.next ls)) (true, {}, {})).1
+
+-- The text law (`Inc.linesWith_eq`) and the memo's (`Inc.next_valid`), read at every step of every
+-- build, where `ownText` stands for the text: the lines along each edit are the fresh lines. The
+-- flow along each edit is the fresh flow: a finite evaluation that no theorem covers.
+#guard programs.all incAgrees
+
+/-- Codex's sibling edit (LV-OW-01): a fork, then an await of it, at the address `[1]`. -/
+def siblingSource : NativeEff := .withFiber (.fork (.succeed (.lit .unit)) later)
+def siblingOld : NativeEff := .bind siblingSource (.awaitFiber (.var 0) .awaitValue)
+def siblingFill : NativeEff := .bind (.yieldNow 0) siblingSource
+def siblingNew : NativeEff := .bind siblingFill (.awaitFiber (.var 0) .awaitValue)
+
+-- The edit keeps its focus's type and splices the table; the await stays at `[1]`.
+#guard match ((EditSession.open {} { program := siblingOld }).feedStep (.fill [0] siblingFill)).2.delta with
+  | .spliced _ => true
+  | _ => false
+#guard ((EditSession.open {} { program := siblingOld }).feedStep (.fill [0] siblingFill)).1.sketch.program ==
+  siblingNew
+
+/-- A program's flow drawn with given waits, for the controls. -/
+def flowWithWaits (program : NativeEff) (ws : List (Key × List Key)) : Flow.Flow :=
+  let part := cata_eff (EffAlgebra.ofLayer (Flow.flowLayer fun k => (ws.lookup k).getD [])) program []
+  part.flow.closing part.releases
+
+-- The controls: the await's wait reads the fork beside it, outside the edited subtree. A wait kept
+-- from the old program is a stale edge in the new one; a wait kept from the new program misses the
+-- edge in the old one.
+#guard Flow.waits siblingOld == [("[1]", ["[0 0]"])]
+#guard Flow.waits siblingNew == []
+#guard flowWithWaits siblingNew (Flow.waits siblingOld) != Flow.ofProgram siblingNew
+#guard flowWithWaits siblingOld (Flow.waits siblingNew) != Flow.ofProgram siblingOld
+
+-- The flow along the edit computes the waits fresh: it is the fresh flow, both ways; and the text
+-- memo stays valid across the same edit.
+#guard Inc.flow (Inc.Memo.next (Program.lines siblingOld)) (some [0]) siblingNew == Flow.ofProgram siblingNew
+#guard Inc.flow (Inc.Memo.next (Program.lines siblingNew)) (some [0]) siblingOld == Flow.ofProgram siblingOld
+#guard (Inc.lines (Inc.Memo.next (Program.lines siblingOld)) (some [0]) siblingNew).map lineView ==
+  (Program.lines siblingNew).map lineView
+
+-- The control of the text law's premise: a memo kept from another program answers its own texts
+-- outside the edit, and the lines along the edit are then not the fresh lines.
+#guard (Inc.lines (Inc.Memo.next (Program.lines siblingNew)) (some [1]) siblingOld).map lineView !=
+  (Program.lines siblingOld).map lineView
 
 end Tools.View.LiveChecks
