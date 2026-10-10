@@ -1,0 +1,5 @@
+== LayoutCheck
+chain 12: 121 placed; layout, tenths of ms: tree 74, fast 46; equal true
+chain 24: 241 placed; layout, tenths of ms: tree 155, fast 98; equal true
+chain 48: 481 placed; layout, tenths of ms: tree 357, fast 200; equal true
+forksInOrder 12: 87 placed; layout, tenths of ms: tree 147, fast 128; equal true

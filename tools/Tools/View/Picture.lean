@@ -61,12 +61,21 @@ structure Cubic where
   p1 : Int × Int
   p2 : Int × Int
   p3 : Int × Int
-deriving DecidableEq, Repr
+deriving DecidableEq, Repr, Hashable
 
 /-- A segment moved by whole pixels. -/
 def Cubic.move (dx dy : Int) (c : Cubic) : Cubic :=
   ⟨(c.p0.1 + dx, c.p0.2 + dy), (c.p1.1 + dx, c.p1.2 + dy), (c.p2.1 + dx, c.p2.2 + dy),
     (c.p3.1 + dx, c.p3.2 + dy)⟩
+
+/-- A segment moved twice is the segment moved by the sum. A step of the stroke cache's law
+(`Laid.cachedStroke_eq`). -/
+theorem Cubic.move_move (a b x y : Int) (c : Cubic) : (c.move a b).move x y = c.move (a + x) (b + y) := by
+  simp only [Cubic.move, Int.add_assoc]
+
+/-- A segment moved by nothing is the segment. A step of the stroke cache's law. -/
+theorem Cubic.move_zero (c : Cubic) : c.move 0 0 = c := by
+  simp only [Cubic.move, Int.add_zero]
 
 /-- A segment at the ratio `r`: each point in device pixels. -/
 def Cubic.scale (r : Int) (c : Cubic) : Cubic :=
@@ -118,7 +127,7 @@ inductive Call where
   | uncut
   | hit (x y w h : Int)
   | shape (role : Role) (value : Nat) (paths : List (List Cubic))
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- One call that reaches the target. A curve's points and weight are in device pixels. -/
 inductive Dev where
@@ -136,7 +145,7 @@ deriving Repr
 structure Keyed (α : Type) where
   key : Key
   call : α
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A horizontal rule of `w` logical pixels at `(x, y)`: a fill of the rule's weight. At a whole
 ratio the painter's weight (P2, `paint_weight`) and a fill's height snap alike, so a rule is no
@@ -282,6 +291,23 @@ def Call.move (dx dy : Int) : Call → Call
   | .uncut => .uncut
   | .hit x y w h => .hit (x + dx) (y + dy) w h
   | .shape role value ps => .shape role value (ps.map (·.map (Cubic.move (1000 * dx) (1000 * dy))))
+
+/-- A call moved twice is the call moved by the sum. A step of the retained picture's law
+(`Retained.of_flatten`, `tools/Tools/View/Retained.lean`). -/
+theorem Call.move_move (a b x y : Int) (c : Call) : (c.move a b).move x y = c.move (a + x) (b + y) := by
+  cases c with
+  | curve role c wt => simp only [Call.move, Cubic.move_move]
+  | shape role value ps =>
+    simp only [Call.move, List.map_map, Function.comp_def, Cubic.move_move, Int.mul_add]
+  | _ => simp only [Call.move, Int.add_assoc]
+
+/-- A call moved by nothing is the call. A step of the retained picture's law. -/
+theorem Call.move_zero (c : Call) : c.move 0 0 = c := by
+  have hc : Cubic.move 0 0 = id := funext Cubic.move_zero
+  cases c with
+  | curve role c wt => simp only [Call.move, Cubic.move_zero]
+  | shape role value ps => simp only [Call.move, Int.mul_zero, hc, List.map_id, List.map_id']
+  | _ => simp only [Call.move, Int.add_zero]
 
 /-- A device call moved by whole logical pixels at the ratio `r`: a box by `r` times as many
 device pixels; a text and a cut, which stay in logical pixels, by the logical move. -/

@@ -13,6 +13,10 @@
 #   v -P ...         no marks: the plain page (the marks wait for the owner's ruling)
 #   v -l LOOK ...    in a look: a name of tools/view/looks (paper, hue, sans, ...) or a token file
 #   v -L             every look side by side: tools/view/out/looks/index.html and a PNG of each
+#   v -w NAME        the live loop in a window: each edit of NAME's build (or of -f FILE) answered
+#                    by a patch, which a retained store applies (tools/Drivers/Live.lean, play --live)
+#   v -c NAME        check the retained store: every frame of NAME's build (or of -f FILE) patched
+#                    in C equals Lean's whole stream, byte for byte, under two sanitizers
 #
 # NAME is a program of the wire corpus: p42 pBind pFork pAwait pGen pLoop pCatch pScope.
 # The frames go to tools/view/out/NAME. In the window: Right or Space plays to the next frame,
@@ -27,6 +31,8 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -t) mode=text ;;
     -p) mode=png ;;
+    -w) mode=live ;;
+    -c) mode=check ;;
     -f) shift; file=$1 ;;
     -m) shift; motion=$1 ;;
     -P) plain=--plain ;;
@@ -35,7 +41,7 @@ while [ $# -gt 0 ]; do
     -r) cmd=run ;;
     -g) cmd=specimen ;;
     -F) cmd=flows ;;
-    -h|--help) sed -n 2,19p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n 2,23p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) break ;;
   esac
   shift
@@ -44,7 +50,7 @@ if [ "$cmd" = looks ]; then
   out="$here/out/looks"
   rm -rf "$out"
   (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean looks tools/view/looks "$out")
-  "$here/build.sh"
+  "$here/build.sh" draw
   for f in "$out"/*/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done
   echo "$out/index.html"
   exit 0
@@ -56,6 +62,30 @@ esac
 case $look in
   */*) look=$(cd "$(dirname "$look")" && pwd)/$(basename "$look") ;;
 esac
+if [ "$mode" = live ] || [ "$mode" = check ]; then
+  # the live driver reads the requests of a file on its input, or builds a corpus program
+  input=/dev/null
+  if [ -n "$file" ]; then
+    input=$(cd "$(dirname "$file")" && pwd)/$(basename "$file"); name=$(basename "$file" .jsonl)
+    set --
+  else
+    name=${1:?usage: v (-w | -c) (NAME | -f FILE)}
+    set -- build "$name"
+  fi
+  if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
+  if [ "$mode" = check ]; then
+    out="$here/out/$name-live"
+    rm -rf "$out"; mkdir -p "$out"
+    (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/Live.lean --check "$out" "$@" \
+      < "$input" > "$out/rows.txt" 2> "$out/answers.jsonl")
+    "$here/build.sh" scene_test
+    exec "$here/scene_test" "$out"
+  fi
+  "$here/build.sh" play
+  (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/Live.lean "$@" < "$input" 2> /dev/null) |
+    "$here/play" --live
+  exit
+fi
 if [ "$cmd" = specimen ] || [ "$cmd" = flows ]; then
   name=$cmd; out="$here/out/$cmd"
   set -- "$cmd" "$out"
@@ -70,9 +100,11 @@ fi
 rm -rf "$out"
 if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
 (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean --motion "$motion" $plain "$@")
-"$here/build.sh"
+# each mode builds only the program it runs: the console none, PNG files draw, the window play
 case $mode in
   text) cat "$out/frames.txt" ;;
-  png) for f in "$out"/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done; echo "$out" ;;
-  window) exec "$here/play" "$out" ;;
+  png)
+    "$here/build.sh" draw
+    for f in "$out"/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done; echo "$out" ;;
+  window) "$here/build.sh" play; exec "$here/play" "$out" ;;
 esac

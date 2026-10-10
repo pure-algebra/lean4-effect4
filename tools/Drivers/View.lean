@@ -59,15 +59,20 @@ def writePicture (L : Look) (out : System.FilePath) (name : String) (W H : Int) 
     ("\n".intercalate (stream L W.toNat H.toNat 2 (lowerAll 2 calls)) ++ "\n")
   IO.FS.writeFile (out / s!"{name}.svg") (svg L W.toNat H.toNat 1 (lowerAll 1 calls) ++ "\n")
 
-/-- Write one page, in a look. -/
-def writePage (L : Look) (out : System.FilePath) (name : String) (g : Page) : IO Unit := do
+/-- Write one page, in a look, on a stroke cache (`Laid.StrokeCache`); answer the cache. -/
+def writePage (L : Look) (out : System.FilePath) (name : String) (g : Page)
+    (cache : Laid.StrokeCache := {}) : IO Laid.StrokeCache := do
   let (W, H) := pageSize width g
-  writePicture L out name W H (pageCalls L width g)
+  let (calls, cache) := pageCallsCached L width g cache
+  writePicture L out name W H calls
+  pure cache
 
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
 first: the moments of the step from the frame before (`sample`). Each step's moment at its end is
-the next frame by `sample_end`, so no check repeats it. Report the splice check: the lines
-outside each spliced edit's subtree keep their text, type and note (`keptUnchanged`). -/
+the next frame by `sample_end`, so no check repeats it. One stroke cache threads the frames and the
+moments between them, so a route that only moved reuses its stroke (`Laid.cachedStroke_eq`).
+Report the splice check: the lines outside each spliced edit's subtree keep their text, type and
+note (`keptUnchanged`). -/
 def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (motion : Nat) : IO Unit := do
   IO.FS.createDirAll out
   let mut text : Array String := #[]
@@ -75,19 +80,20 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
   let mut kept := 0
   let mut same := 0
   let mut spliced := 0
+  let mut cache : Laid.StrokeCache := {}
   for (f, i) in frames.zipIdx do
     let g := f.page
     let name := frameName (i + 1)
     if let some g0 := prev then
       for k in List.range' 1 (motion - 1) do
-        writePage L out s!"{name}-{frameName k}" (sample L.motion g0 g (k * 1000 / motion))
+        cache ← writePage L out s!"{name}-{frameName k}" (sample L.motion g0 g (k * 1000 / motion)) cache
       if f.spliced then
         if let some a := f.edit then
           let (n, k) := keptUnchanged g0 g (Program.bracket a)
           kept := kept + n
           same := same + k
           spliced := spliced + 1
-    writePage L out name g
+    cache ← writePage L out name g cache
     text := text ++ (pageText g).toArray ++ #[""]
     prev := some g
   IO.FS.writeFile (out / "frames.txt") ("\n".intercalate text.toList)
@@ -192,8 +198,8 @@ def writeLooks (dir out : System.FilePath) : IO UInt32 := do
     IO.FS.createDirAll dirL
     IO.FS.writeFile (dirL / s!"{L.name}.tokens.json") (Tokens.render L)
     IO.FS.writeFile (dirL / s!"{L.name}.css") (Tokens.css L)
-    writePage L dirL "specimen" specimen
-    writePage L dirL "program" program
+    let _ ← writePage L dirL "specimen" specimen
+    let _ ← writePage L dirL "program" program
   IO.FS.writeFile (out / "looks.css") (String.join (looks.map Tokens.css) ++ Tokens.rules)
   IO.FS.writeFile (out / "index.html") (looksIndex looks)
   let back := looks.filter (Tokens.roundTrips {})

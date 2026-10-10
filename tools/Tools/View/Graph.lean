@@ -1,5 +1,6 @@
 import Tools.View.Place
 import Tools.View.Organic
+import Tools.View.KeyMap
 
 /-!
 # A graph: ranks, order, places, routes
@@ -41,7 +42,7 @@ structure GNode where
   line1 : String
   line2 : String := ""
   lit : Bool := false
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- An edge between two nodes, by their positions in the graph's order. -/
 structure GEdge where
@@ -154,7 +155,7 @@ structure Placed where
   node : Option GNode := none
   /-- how far a box has grown about its centre, per mille; 1000 at rest -/
   grow : Nat := 1000
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A route: a forward edge through its items, from its source to its target; a back edge, with
 its source, its target and its lane at the right; or an edge from a node to itself. Each is drawn
@@ -164,7 +165,7 @@ inductive Route where
   | down (key : Key) (items : List Key) (reveal : Nat := 1000) (share : Nat := 1000000)
   | back (key : Key) (src dst : Key) (lane : Nat) (reveal : Nat := 1000)
   | loop (key : Key) (node : Key) (reveal : Nat := 1000)
-deriving Repr
+deriving DecidableEq, Repr
 
 namespace Route
 
@@ -197,7 +198,7 @@ structure Region where
   y : Int
   w : Int
   h : Int
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A mark of a program's flow, in the notation of UML's activity diagrams: a bar where branches
 that all run part or meet, across `[x0, x1)` at the height `y`; a diamond where alternatives part
@@ -205,7 +206,7 @@ or meet, centred at `(x, y)`. -/
 inductive FlowMark where
   | bar (key : Key) (x0 x1 y : Int)
   | diamond (key : Key) (x y : Int)
-deriving Repr
+deriving DecidableEq, Repr
 
 /-- A laid-out graph: its placed items, its routes, its regions and its marks, and its size in
 logical pixels. -/
@@ -216,7 +217,7 @@ structure Laid where
   height : Int := 0
   regions : Array Region := #[]
   marks : Array FlowMark := #[]
-deriving Repr
+deriving DecidableEq, Repr
 
 
 namespace Graph
@@ -392,10 +393,11 @@ def stepDown (L : Look) (a b : Pt) : List Cubic :=
 middle of its source's bottom, steps down to each point and passes straight through the point's
 rank, then steps down to the middle of its target's top. A back route is one arc: out of its source's right side, around
 through its lane, into its target's right side, so a return reads as a return. A loop is a small
-drop off a box's right side. -/
-def segments (L : Look) (l : Laid) : Route → List Cubic
+drop off a box's right side. `find` answers an item's place by its key, and `width` is the graph's
+width, whose right side holds the lanes. -/
+def segments (L : Look) (find : Key → Option Placed) (width : Int) : Route → List Cubic
   | .down _ ks _ _ =>
-    let ps := ks.filterMap l.find
+    let ps := ks.filterMap find
     if ps.length != ks.length then [] else
     match ps with
     | [] => []
@@ -410,9 +412,9 @@ def segments (L : Look) (l : Laid) : Route → List Cubic
           let out : Pt := (middle b, b.y + ROWH * BOXROWS)
           (acc.1 ++ stepDown L acc.2 into ++ [straight into out], out)) ([], exitAt a)).1
   | .back _ s d lane _ =>
-    match l.find s, l.find d with
+    match find s, find d with
     | some a, some b =>
-      let lx := l.width - CELL * (2 * lane + 1)
+      let lx := width - CELL * (2 * lane + 1)
       -- a box's side at its middle row; a point has no height, and is its own side
       let side (p : Placed) (rise : Int) : Pt :=
         if p.node.isSome then (p.x + p.w, p.y + ROWH - rise) else (p.x + 2 * CELL, p.y)
@@ -423,7 +425,7 @@ def segments (L : Look) (l : Laid) : Route → List Cubic
       [⟨p, (cx, p.2), (cx, q.2), q⟩]
     | _, _ => []
   | .loop _ k _ =>
-    match l.find k with
+    match find k with
     | some a =>
       let x := a.x + a.w
       let y := a.y + ROWH
@@ -481,41 +483,189 @@ def onBar (l : Laid) (p : Placed) : Bool :=
     | .bar _ x0 x1 y => y == p.y && x0 ≤ middle p && middle p ≤ x1
     | _ => false
 
-/-- **A forward edge as an organic stroke** (`Tools.View.Grow`): its width the trunk's times its
-share of the work, never finer than the look's finest line; its edges moved by the noise its key
-seeds, inside their band; a collar where it leaves a box or a bar, and, once it is whole, where it
-meets one. While it grows, its tip narrows. -/
-def organicCalls (l : Laid) (L : Look) (key : Key) (ks : List Key) (share : Nat)
-    (cs : List Cubic) (whole : Bool) : List (Keyed Call) :=
+/-! ### The drawing on a key index and a stroke cache
+
+`Laid.find` scans the placed items at every key a route names, and `Laid.onBar` scans every mark.
+A drawing builds the index of its places once (`Ix`), which answers as they do (`Ix.find_of`,
+`Ix.onBar_of`). An organic stroke costs most, and a route that only moved draws the same stroke,
+moved (`Grow.stroke_move`). So a cache keeps each stroke at the origin by what it reads
+(`StrokeCache`), and a sequence of frames threads one cache: it answers the stroke itself
+(`cachedStroke_eq`) and stays valid (`cachedStroke_valid`). -/
+
+/-- **A laid graph's places by key**, built once per drawing, and the bars of its marks. -/
+structure Ix where
+  places : KeyMap Key Placed
+  bars : List (Int × Int × Int)
+
+/-- The index of a laid graph. Its places are put last first, so the first place of a key stands,
+as `Laid.find` answers. -/
+def Ix.of (l : Laid) : Ix where
+  places := l.placed.toList.foldr (fun p m => m.insert p.key p) {}
+  bars := l.marks.toList.filterMap fun
+    | .bar _ x0 x1 y => some (x0, x1, y)
+    | _ => none
+
+/-- The place of a key, by the index. -/
+def Ix.find (ix : Ix) (k : Key) : Option Placed := ix.places.get? k
+
+/-- Whether an item is a point on a bar, by the index. -/
+def Ix.onBar (ix : Ix) (p : Placed) : Bool :=
+  p.node.isNone && ix.bars.any fun (x0, x1, y) => y == p.y && x0 ≤ middle p && middle p ≤ x1
+
+/-- **The index answers as `Laid.find` does**, at every key. A tool law; its consumer is the
+drawing on the index (`callsCached`). Placement: concept `initial-algebras-folds`, R14's live
+authoring. -/
+theorem Ix.find_of (l : Laid) (k : Key) : (Ix.of l).find k = l.find k := by
+  simp only [Ix.of, Ix.find, Laid.find, ← Array.find?_toList]
+  induction l.placed.toList with
+  | nil => exact KeyMap.get?_empty k
+  | cons p ps ih =>
+    rw [List.foldr_cons, KeyMap.get?_insert, ih, List.find?_cons]
+    by_cases h : p.key = k
+    · rw [if_pos h, show (p.key == k) = true from decide_eq_true h]
+    · rw [if_neg h, show (p.key == k) = false from decide_eq_false h]
+
+/-- **The index answers as `Laid.onBar` does**, at every item. A tool law; its consumer is the
+drawing on the index (`callsCached`). Placement: concept `initial-algebras-folds`, R14's live
+authoring. -/
+theorem Ix.onBar_of (l : Laid) (p : Placed) : (Ix.of l).onBar p = l.onBar p := by
+  simp only [Ix.of, Ix.onBar, Laid.onBar]
+  congr 1
+  induction l.marks.toList with
+  | nil => rfl
+  | cons m ms ih =>
+    cases m with
+    | bar k x0 x1 y => simp only [List.filterMap_cons, List.any_cons, ih]
+    | diamond k x y => simp only [List.filterMap_cons, List.any_cons, ih, Bool.false_or]
+
+/-- What an organic stroke reads: its seed, its look's noise and wave, its width, whether it grows
+to a tip, and its segments, moved to the origin. -/
+structure StrokeKey where
+  seed : Nat
+  noise : Nat
+  wave : Nat
+  width : Int
+  tip : Bool
+  segments : List Cubic
+deriving DecidableEq, Hashable
+
+/-- **The stroke cache**: an organic stroke kept at the origin by what it reads (`StrokeKey`). -/
+abbrev StrokeCache := KeyMap StrokeKey (List Cubic)
+
+/-- A cache is valid when each stroke it keeps is the stroke of its key, at any organic settings
+with the key's noise and wave. -/
+def StrokeCache.Valid (cache : StrokeCache) : Prop :=
+  ∀ (k : StrokeKey) (s : List Cubic), cache.get? k = some s →
+    ∀ o : Organic, o.noise = k.noise → o.wave = k.wave → s = Grow.stroke k.seed o k.width k.segments k.tip
+
+/-- **A stroke from the cache**, moved into place; or computed at the origin, kept and moved. A
+line is moved to the origin by its first point, in logical pixels. -/
+def cachedStroke (cache : StrokeCache) (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic)
+    (tip : Bool) : List Cubic × StrokeCache :=
+  match cs with
+  | [] => ([], cache)
+  | c :: _ =>
+    let rel := cs.map (Cubic.move (-c.p0.1) (-c.p0.2))
+    let key : StrokeKey := ⟨seed, o.noise, o.wave, w, tip, rel⟩
+    match cache.get? key with
+    | some s => (s.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)), cache)
+    | none =>
+      let s := Grow.stroke seed o w rel tip
+      (s.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)), cache.insert key s)
+
+/-- The empty cache is valid. -/
+theorem StrokeCache.valid_empty : StrokeCache.Valid {} := by
+  intro k s h
+  rw [KeyMap.get?_empty] at h
+  cases h
+
+/-- A line moved to the origin by its first point, and back, is the line. A step of
+`cachedStroke_eq`. -/
+theorem move_back (cs : List Cubic) (x y : Int) :
+    (cs.map (Cubic.move (-x) (-y))).map (Cubic.move x y) = cs := by
+  simp only [List.map_map, Function.comp_def, Cubic.move_move, Int.add_left_neg, Cubic.move_zero,
+    List.map_id']
+
+/-- **A stroke from a valid cache is the stroke.** By `Grow.stroke_move`: the stroke kept at the
+origin, moved back into place, is the stroke where the line stands. A tool law; its consumer is
+the drawing on the cache (`callsCached`), which a sequence of frames threads. Placement: concept
+`initial-algebras-folds`, R14's live authoring. -/
+theorem cachedStroke_eq {cache : StrokeCache} (hv : cache.Valid) (seed : Nat) (o : Organic) (w : Int)
+    (cs : List Cubic) (tip : Bool) : (cachedStroke cache seed o w cs tip).1 = Grow.stroke seed o w cs tip := by
+  cases cs with
+  | nil => rfl
+  | cons c rest =>
+    have hmoved : (Grow.stroke seed o w ((c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))) tip).map
+        (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)) = Grow.stroke seed o w (c :: rest) tip := by
+      rw [← Grow.stroke_move, move_back]
+    simp only [cachedStroke]
+    cases h : cache.get? ⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ with
+    | some s =>
+      rw [hv _ _ h o rfl rfl]
+      exact hmoved
+    | none => exact hmoved
+
+/-- **A cache stays valid** through a stroke drawn on it. A tool law; its consumer is a sequence
+of frames that threads one cache. Placement: concept `initial-algebras-folds`, R14's live
+authoring. -/
+theorem cachedStroke_valid {cache : StrokeCache} (hv : cache.Valid) (seed : Nat) (o : Organic)
+    (w : Int) (cs : List Cubic) (tip : Bool) : (cachedStroke cache seed o w cs tip).2.Valid := by
+  cases cs with
+  | nil => exact hv
+  | cons c rest =>
+    simp only [cachedStroke]
+    cases h : cache.get? ⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ with
+    | some s => exact hv
+    | none =>
+      intro k s' hs o' hn hw
+      rw [KeyMap.get?_insert] at hs
+      by_cases hk : (⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ : StrokeKey) = k
+      · rw [if_pos hk] at hs
+        subst hk
+        cases hs
+        exact Grow.stroke_organic seed hn.symm hw.symm w _ tip
+      · rw [if_neg hk] at hs
+        exact hv _ _ hs o' hn hw
+
+/-- **A forward edge as an organic stroke** (`Tools.View.Grow`), on a stroke cache: its width the
+trunk's times its share of the work, never finer than the look's finest line; its edges moved by
+the noise its key seeds, inside their band; a collar where it leaves a box or a bar, and, once it
+is whole, where it meets one. While it grows, its tip narrows. -/
+def organicCalls (find : Key → Option Placed) (onBar : Placed → Bool) (L : Look) (cache : StrokeCache)
+    (key : Key) (ks : List Key) (share : Nat) (cs : List Cubic) (whole : Bool) :
+    List (Keyed Call) × StrokeCache :=
   let o := L.organic
   let w : Int := max (o.fine : Int) ((o.trunk : Int) * share / 1000000)
   let R : Int := (o.flare : Int) * w / max 1 (o.trunk : Int)
   -- the surface a line meets: a box's edge, at the line's end; a bar's edge, half its thickness away
-  let surface (k : Key) : Option Int := (l.find k).bind fun p =>
-    if p.node.isSome then some 0 else if l.onBar p then some (500 * BAR) else none
-  let body := Grow.stroke (Grow.seedOf key) o w cs (!whole)
+  let surface (k : Key) : Option Int := (find k).bind fun p =>
+    if p.node.isSome then some 0 else if onBar p then some (500 * BAR) else none
+  let (body, cache) := cachedStroke cache (Grow.seedOf key) o w cs (!whole)
   let start := match cs.head?, ks.head?.bind surface with
     | some c, some off => [Grow.collar (1000 * c.p0.1) (1000 * c.p0.2 + off) w R true]
     | _, _ => []
   let finish := match whole, cs.getLast?, ks.getLast?.bind surface with
     | true, some c, some off => [Grow.collar (1000 * c.p3.1) (1000 * c.p3.2 - off) w R false]
     | _, _, _ => []
-  if body.isEmpty then [] else
-    ([body] ++ start ++ finish).map fun path => ⟨key, .shape .ink 1000 [path]⟩
+  if body.isEmpty then ([], cache) else
+    (([body] ++ start ++ finish).map fun path => ⟨key, .shape .ink 1000 [path]⟩, cache)
 
-/-- A route's calls: its segments, drawn as far as its reveal, at the look's weight of an edge, or,
-for a forward edge in a look with a trunk, as an organic stroke; an arc in a lane, drawn whole,
-ends in an arrowhead. -/
-def routeCalls (L : Look) (l : Laid) (dx dy : Int) (rt : Route) : List (Keyed Call) :=
-  let cs := l.segments L rt
+/-- A route's calls, on a stroke cache: its segments, drawn as far as its reveal, at the look's
+weight of an edge, or, for a forward edge in a look with a trunk, as an organic stroke; an arc in a
+lane, drawn whole, ends in an arrowhead. -/
+def routeCalls (L : Look) (find : Key → Option Placed) (onBar : Placed → Bool) (width : Int)
+    (dx dy : Int) (cache : StrokeCache) (rt : Route) : List (Keyed Call) × StrokeCache :=
+  let cs := segments L find width rt
   let budget : Int := (cs.map (·.size)).foldl (· + ·) 0 * rt.reveal / 1000
   let body := drawn rt.key L.strokes.edge dx dy cs budget
   match rt, cs.getLast? with
   | .down key ks _ share, _ =>
-    if L.organic.trunk = 0 then body
-    else l.organicCalls L key ks share ((revealed cs budget).map (Cubic.move dx dy)) (1000 ≤ rt.reveal)
-  | .back .., some last => if 1000 ≤ rt.reveal then body ++ arrowhead rt.key L.strokes.edge dx dy last else body
-  | _, _ => body
+    if L.organic.trunk = 0 then (body, cache)
+    else organicCalls find onBar L cache key ks share ((revealed cs budget).map (Cubic.move dx dy))
+      (1000 ≤ rt.reveal)
+  | .back .., some last =>
+    (if 1000 ≤ rt.reveal then body ++ arrowhead rt.key L.strokes.edge dx dy last else body, cache)
+  | _, _ => (body, cache)
 
 /-- A region's bracket: a frame in the rule's tone around its items, and its name in the label
 face above its top left corner. -/
@@ -540,15 +690,24 @@ def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
     let w := (c.1 - DIAMOND, c.2)
     [n, e, s, w].zip [e, s, w, n] |>.map fun (a, b) => ⟨k, .curve .ink (straight a b) L.strokes.edge⟩
 
-/-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the regions behind, then the
-routes, then the marks and the boxes over them. -/
-def calls (L : Look) (l : Laid) (dx dy : Int) : List (Keyed Call) :=
-  l.regions.toList.flatMap (regionCalls L dx dy) ++
-  l.routes.toList.flatMap (l.routeCalls L dx dy) ++
-  l.marks.toList.flatMap (markCalls L dx dy) ++
-    l.placed.toList.flatMap fun p => match p.node with
+/-- **A laid-out graph as calls, on a stroke cache**, with its top left at `(dx, dy)`: the regions
+behind, then the routes, then the marks and the boxes over them. The places are read by the
+index, built once. -/
+def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) :
+    List (Keyed Call) × StrokeCache :=
+  let ix := Ix.of l
+  let (routes, cache) := l.routes.toList.foldl (fun (acc : List (List (Keyed Call)) × StrokeCache) rt =>
+    let (cs, c) := routeCalls L ix.find ix.onBar l.width dx dy acc.2 rt
+    (cs :: acc.1, c)) ([], cache)
+  (l.regions.toList.flatMap (regionCalls L dx dy) ++ routes.reverse.flatten ++
+    l.marks.toList.flatMap (markCalls L dx dy) ++
+    l.placed.toList.flatMap (fun p => match p.node with
       | some n => boxCalls L dx dy p n
-      | none => []
+      | none => []), cache)
+
+/-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the drawing on a fresh stroke
+cache. -/
+def calls (L : Look) (l : Laid) (dx dy : Int) : List (Keyed Call) := (callsCached L l dx dy {}).1
 
 /-- No two boxes share a pixel: a finite check of a layout. -/
 def boxesApart (l : Laid) : Bool :=

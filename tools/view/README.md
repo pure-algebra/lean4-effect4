@@ -8,13 +8,14 @@ The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and de
 
 - Lean through elan: `lake` on the `PATH`. The command `v` also finds `~/.elan/bin` itself.
 - From Homebrew: `pkg-config`, `cairo`, `pango` and `cmake`.
-- The network, once: the first build fetches SDL3's pinned source, verifies it and builds it
-  (`vendor/SDL3-3.4.16/build.sh`, about 40 seconds).
+- The network, once, for a window: the first build of `play` fetches SDL3's pinned source,
+  verifies it and builds it (`vendor/SDL3-3.4.16/build.sh`, about 40 seconds). The terminal, the
+  PNG files and the store's check need no SDL3.
 
 ## Commands
 
-Run from the repository's root. `v` builds what is stale, writes the frames to
-`tools/view/out/`, and shows them.
+Run from the repository's root. `v` builds the stale programs that its mode runs, writes the
+frames to `tools/view/out/`, and shows them.
 
 ```sh
 tools/view/v pFork          # build a corpus program top-down, in a window
@@ -27,7 +28,27 @@ tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
 tools/view/v -l paper pFork # in a look of tools/view/looks/
 tools/view/v -L             # every look side by side: tools/view/out/looks/index.html
+tools/view/v -w pFork       # the live loop in a window: each edit answered by a patch
+tools/view/v -c pFork       # check the retained store: each frame patched in C equals Lean's stream
 ```
+
+## The live loop
+
+The live loop holds one edit session and its picture (`tools/Tools/View/Live.lean`). A patch
+answers each request that changes the session. It puts, moves or drops objects, moves panels, and
+orders the painting (`tools/Tools/View/Retained.lean`). Its driver reads one session
+request a line and writes the patch rows (`tools/Drivers/Live.lean`):
+
+```sh
+lake env lean --run tools/Drivers/Live.lean build pFork | tools/view/play --live
+lake env lean --run tools/Drivers/Live.lean < requests.jsonl | tools/view/play --live
+```
+
+`play --live` applies each row to a retained store (`scene.h`) and paints the store's stream at
+each patch's end. The store decides nothing: the patch law (`Retained.apply_diff`) says a scene
+patched by the diff flattens to the next picture. `v -c` checks the C store against Lean's whole
+streams, byte for byte, under the address and undefined-behaviour sanitizers (`scene_test.c`).
+A move is shown at its end: the motion of a move is not drawn yet.
 
 ## Looks
 
@@ -100,6 +121,11 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/FlowSpecimen.lean` | the program graph's specimen, one case a page |
 | `tools/Tools/View/Motion.lean` | the data join and the moments of a step; `sample` and its end law |
 | `tools/Tools/View/Program.lean`, `Build.lean`, `Run.lean` | the frames of a program built by edits, and of a run |
+| `tools/Tools/View/KeyMap.lean` | a table by key on the sparse index (`Tools.Graph.Index`), with its lookup laws |
+| `tools/Tools/View/Inc.lean` | the page's lines and flow along an edit, from the texts the frame before left |
+| `tools/Tools/View/Retained.lean` | a picture as objects in groups; the patch from one frame to the next, and its laws |
+| `tools/Tools/View/Live.lean` | the live step: one request in, one patch out |
+| `tools/Tools/View/LiveChecks.lean` | the live view's checks at every frame of the view's builds |
 | `tools/Tools/View/Specimen.lean` | the graph specimen |
 | `tools/Tools/Code/Doc.lean` | a document and its layout at a width: groups lie flat when they fit |
 | `tools/Tools/Code/TsFold.lean` | the fold of TypeScript's syntax: its algebra and uniqueness (generated, group `TsFold`) |
@@ -107,7 +133,9 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/Code/Module.lean` | a generated module: its exact imports, its header, its checks; the code plane |
 | `tools/Drivers/Emit.lean` | the driver: the generated folder |
 | `tools/Drivers/View.lean` | the driver: frames to `.draw`, `.svg` and text |
-| `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG, the window, the shared replay, the painter |
+| `tools/Drivers/Live.lean` | the live driver: session requests in, patch rows out |
+| `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG, the window and its live mode, the shared replay, the painter |
+| `scene.h`, `scene_test.c` | the retained store that applies patch rows, and its check against Lean's streams |
 | `build.sh`, `v` | the C build (every warning an error), and the one command |
 
 ## The laws of the picture
@@ -127,6 +155,15 @@ Proved in `tools/Tools/View/`, each resting on `[propext, Quot.sound]` or less:
 - `cata_keeps`: a property that each layer keeps holds of every fold.
 - `lines_at`: a program's lines at any address and depth are its lines at the root, moved there.
   So a splice redraws its own subtree alone.
+- `Grow.stroke_move`: an organic stroke of a moved line is the stroke, moved; so a stroke cache
+  answers the stroke itself (`Laid.cachedStroke_eq`) and stays valid (`cachedStroke_valid`).
+- `Laid.Ix.find_of`, `Ix.onBar_of`: a drawing's index of places answers as the scans do.
+- `ordersTable_eq`, `assignTable_eq`, `heightTable_eq`: the layout's tables answer as its lists,
+  so the layout's laws stand on the tables.
+- `Inc.linesWith_eq`: the lines along an edit, from a valid memo, are the fresh lines.
+- `Inc.next_valid`: the memo a frame leaves is valid after any fill or omit.
+- `Retained.of_flatten`, `Retained.apply_diff`: a picture read as objects flattens to the picture,
+  and a scene patched by the diff to another flattens to the other.
 - `undo_layout`: undo the breaks a layout took, and the flat print comes back, at every width.
 - `render_eq_expr` (`tools/Tools/Code/TypeScript.lean`): the pinned renderer is the fold of the
   house's algebra of TypeScript's syntax (`renderAlg`).

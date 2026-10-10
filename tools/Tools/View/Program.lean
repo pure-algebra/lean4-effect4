@@ -240,10 +240,11 @@ def rowMark (row : Row) : Option Mark :=
   | .async, .external => some [.hollow, .dotted, .bar, .filled]
   | .program, _ => none
 
-/-- The page of an edit session: one line for each node of its sketch, with the type of each
-typed address, the refusal at the address it locates, each hole's name, and the mark of each
-operation, by its row in the session's table (`nativeRowOf`). The lines under `lit` are lit. -/
-def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment place foot : String) :
+/-- The page of an edit session on given lines of its sketch: one line for each, with the type of
+each typed address, the refusal at the address it locates, each hole's name, and the mark of each
+operation, by its row in the session's table (`nativeRowOf`). The lines under `lit` are lit. The
+live loop gives the lines along an edit (`Tools.View.Inc.lines`). -/
+def sessionPageOf (l : EditSession) (ls : List Node) (lit : Option (List Nat)) (title judgment place foot : String) :
     Page :=
   let line (n : Node) : Tools.View.Line :=
     let entry := l.table.find? fun e => decide (e.path = n.path)
@@ -267,7 +268,12 @@ def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment plac
       | none => n.text
     let mark := n.op.bind fun op => rowMark (nativeRowOf (l.app.withHoles l.sketch.holes).rows op)
     { gutter := bracket n.path, depth := n.depth, text, type, mark, note, key := bracket n.path, state }
-  { title, judgment, place, foot, lines := ((lines l.sketch.program).map line).toArray }
+  { title, judgment, place, foot, lines := (ls.map line).toArray }
+
+/-- The page of an edit session: one line for each node of its sketch (`sessionPageOf`). -/
+def sessionPage (l : EditSession) (lit : Option (List Nat)) (title judgment place foot : String) :
+    Page :=
+  sessionPageOf l (lines l.sketch.program) lit title judgment place foot
 
 /-! ## The code plane and the tree's text -/
 
