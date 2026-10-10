@@ -1,0 +1,28 @@
+{
+  "time_utc": "2026-10-10T16:39:43.195745+00:00",
+  "primary_reviewed_commit": "f6ee9ae5941e418837380809070063899f03fe3b",
+  "primary_code_checkpoint": "cd61d93378275c276a2c0206a8391b881b1f9864",
+  "draft_base": "cd61d93378275c276a2c0206a8391b881b1f9864",
+  "draft_status": "uncommitted; module-layer migration continues",
+  "new_support": [
+    "module-layer part address and replacement controls",
+    "source-located annotations via existing Annotate.checkLayers",
+    "empty-list and refusal-path controls"
+  ],
+  "not_a_landed_regression": "annotateModule has not yet migrated its child-2 segment",
+  "resolved_ruling": "row342 adopted: retain cell refusal; explicit type argument with HO4",
+  "unchanged_findings": [
+    "CX-REFUSAL-PROJECTION",
+    "CX-MODULE-TYPING",
+    "CX-CALL-OWNERSHIP",
+    "SOURCE-REFERENCE-VIEW",
+    "POL-MEMBERSHIP",
+    "POL-CENSUS",
+    "POL-SUFFICIENCY"
+  ],
+  "limits": [
+    "21 finite controls over existing committed dependencies",
+    "Whole-module edit and undo controls remain pending the new constructor",
+    "No production edits, full sweep, external behavior gate, merge, push or Claude message"
+  ]
+}
