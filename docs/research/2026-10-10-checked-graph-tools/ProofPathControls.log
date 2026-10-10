@@ -1,0 +1,3 @@
+PASS: 71 captured edge occurrences; checked theorem-to-observation path [(Tools.View.Flow.preparePlacement_height,
+  Tools.View.Flow.assignHeights_agrees),
+ (Tools.View.Flow.assignHeights_agrees, Tools.View.Flow.heightAt)]

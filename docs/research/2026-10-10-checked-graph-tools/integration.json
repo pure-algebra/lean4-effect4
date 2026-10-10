@@ -1,0 +1,32 @@
+{
+  "production_base": "969ed613b582bbdd4013ac21d949eb6f159369d8",
+  "production_head": "30af611a6484edee548678f7b0a33a9697599477",
+  "primary_head_before": "52faff49324e4ef3e14d246f4460b30c44c51abe",
+  "primary_head_after": "52faff49324e4ef3e14d246f4460b30c44c51abe",
+  "primary_sha256_before": {
+    "tools/Tools/Graph/Path.lean": null,
+    "tools/Tools/View/Flow.lean": "e99a3f4732992f9e5a7a73810917e94ab5128a137b8cb05b10d8678babb8d1df",
+    "tools/Tools/View/FlowLaws.lean": "2d6cb89258d57321895decc7198604c33c5a6231151a7bd8c6a39b28067faa74",
+    "tools/Tools/View/FlowPath.lean": null
+  },
+  "primary_sha256_after": {
+    "tools/Tools/Graph/Path.lean": null,
+    "tools/Tools/View/Flow.lean": "e99a3f4732992f9e5a7a73810917e94ab5128a137b8cb05b10d8678babb8d1df",
+    "tools/Tools/View/FlowLaws.lean": "2d6cb89258d57321895decc7198604c33c5a6231151a7bd8c6a39b28067faa74",
+    "tools/Tools/View/FlowPath.lean": null
+  },
+  "primary_scoped_paths_unchanged": true,
+  "patch_sha256": "e6866e312ea0f9f39132fa33f60ea442cdf4267b5260577a248b7ffeabf6ab5b",
+  "command": [
+    "git",
+    "apply",
+    "--check",
+    "/private/tmp/2026-10-10-graph-tools.patch"
+  ],
+  "cwd": "/Users/pooks/Dev/lean4-effect4",
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "",
+  "checked_utc": "2026-10-10T06:32:31.425748+00:00",
+  "scope": "Read-only patch applicability against these working files. No application, integrated build, merge, or push."
+}

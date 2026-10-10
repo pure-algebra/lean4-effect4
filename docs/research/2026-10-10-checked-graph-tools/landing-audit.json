@@ -1,0 +1,21 @@
+{
+  "head": "30af611a6484edee548678f7b0a33a9697599477",
+  "base": "969ed613b582bbdd4013ac21d949eb6f159369d8",
+  "checked_utc": "2026-10-10T06:33:08.954481+00:00",
+  "evidence_hashes_match": [
+    "narrow-build",
+    "Baseline",
+    "PathControls",
+    "PlacementControls",
+    "FlowPathControls",
+    "ProofPathControls",
+    "Reuse"
+  ],
+  "existing_FlowLaws_statements_unchanged": 65,
+  "new_FlowLaws_theorems": [
+    "assignHeights_agrees",
+    "preparePlacement_height",
+    "preparePlacement_lanes"
+  ],
+  "scope": "Source and retained evidence integrity; theorem declaration headers compared with the pre-change base."
+}
