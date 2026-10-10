@@ -255,16 +255,26 @@ def methodRequest (args : List String) : TypeScript.Expr :=
   | [] => .ident (Var.name 0)
   | _ => .call (.ident "pair") [.ident (Var.name 0), argTuple args]
 
+/-- A method's name, written as a plain key of the layer's object and a plain member of the
+key's shape: a target identifier other than `__proto__`, which a literal would read as the
+prototype (the record policy's plain key, `Codegen.Record.keyForm`; Codex's CO6B-KEYS). -/
+def plainMethodName (m : String) : Bool := TypeScript.targetIdentifier m && m != "__proto__"
+
+/-- Every name that a block's services declare: each service's key and its layer. -/
+def serviceNames (services : List Service) : List String :=
+  services.flatMap fun sv => [sv.name, sv.name ++ "Layer"]
+
 /-- Why one service does not print, if it does not: its initial program is missing or takes a
-request other than `unit`; it has no method, or two with one name; its name or its layer's name
-is a definition's or carries a layer path; or a method's request is not the state and its
-arguments. -/
+request other than `unit`; it has no method, two with one name, or one whose name is no plain
+key (`plainMethodName`); its name or its layer's name is a definition's or carries a layer path;
+or a method's request is not the state and its arguments. -/
 def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
   match defs[sv.init]? with
   | none => some sv.name
   | some init =>
     if init.request ≠ .unit then some sv.name
-    else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty then some sv.name
+    else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty ||
+        sv.methods.any (fun x => !plainMethodName x.1) then some sv.name
     else if defs.any (·.name == sv.name) || defs.any (·.name == sv.name ++ "Layer") ||
         (LayerTerm.readRefName sv.name).isSome ||
         (LayerTerm.readRefName (sv.name ++ "Layer")).isSome then
@@ -281,11 +291,12 @@ def strayMethod (names : List String) (d : DefDecl) : Bool :=
   | _ => false
 
 /-- Why a block's services do not print, if they do not: definitions with one name in a block
-with a service, two services with one name, a method of no service, or a fault of one service
+with a service, two of the names the services declare that are one (a key and another service's
+layer among them, Codex's CO6B-NAMES), a method of no service, or a fault of one service
 (`serviceFaultOf`). -/
 def serviceFault (defs : List DefDecl) : Option String :=
   if !(servicesOf defs).isEmpty && !decide ((defs.map (·.name)).Nodup) then some "service:names"
-  else if !decide (((servicesOf defs).map (·.name)).Nodup) then some "service:twice"
+  else if !decide ((serviceNames (servicesOf defs)).Nodup) then some "service:twice"
   else if defs.any (strayMethod ((servicesOf defs).map (·.name))) then some "service:method"
   else (servicesOf defs).findSome? (serviceFaultOf defs)
 

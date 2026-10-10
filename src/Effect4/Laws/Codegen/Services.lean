@@ -150,6 +150,43 @@ theorem length_methodArgs {state : Ty} {d : DefDecl} {n : Nat} {tys : List Ty}
     · cases h
   · cases h
 
+/-- The names of what `mapM` builds, when each built value is named by the first component of its
+input. A step of `readServiceMethods_ok`: a closure's parameters are named `a1` to `an`. -/
+theorem names_of_mapM {f : String × Ty → Except PrintRefusal TypeScript.Parameter}
+    (hf : ∀ p q, f p = .ok q → q.name = p.1) :
+    ∀ {l : List (String × Ty)} {params : List TypeScript.Parameter},
+      l.mapM f = .ok params → params.map (·.name) = l.map (·.1)
+  | [], params, h => by
+    cases h
+    rfl
+  | p :: l, params, h => by
+    rw [List.mapM_cons] at h
+    obtain ⟨q, hq, rest⟩ := bind_eq_ok.mp h
+    obtain ⟨qs, hqs, heq⟩ := bind_eq_ok.mp rest
+    cases heq
+    simp only [List.map_cons, hf p q hq, names_of_mapM hf hqs]
+
+/-- The tuple of a nonempty list of arguments is recognized as that tuple. A step of
+`readServiceMethods_ok`. -/
+theorem isArgTuple_argTuple : ∀ {args : List String}, args ≠ [] → isArgTuple args (argTuple args) = true
+  | [a], _ => decide_eq_true rfl
+  | a :: b :: rest, _ => by
+    show (decide (a = a) && isArgTuple (b :: rest) (argTuple (b :: rest))) = true
+    rw [decide_eq_true rfl, isArgTuple_argTuple (List.cons_ne_nil b rest)]
+    rfl
+
+/-- A method's request is recognized as the request of its arguments. A step of
+`readServiceMethods_ok`. -/
+theorem isMethodRequest_methodRequest : ∀ (args : List String),
+    isMethodRequest args (methodRequest args) = true
+  | [] => by
+    show decide (Var.name 0 = Var.name 0) = true
+    exact decide_eq_true rfl
+  | a :: rest => by
+    show (decide (Var.name 0 = Var.name 0) && isArgTuple (a :: rest) (argTuple (a :: rest))) = true
+    rw [decide_eq_true rfl, isArgTuple_argTuple (List.cons_ne_nil a rest)]
+    rfl
+
 /-- The closures of a printed layer read back as its methods' information. -/
 theorem readServiceMethods_ok {defs : List DefDecl} {init : DefDecl} :
     ∀ {methods : List (String × Nat × Nat)} {closures : List (String × TypeScript.Expr)},
@@ -182,21 +219,34 @@ theorem readServiceMethods_ok {defs : List DefDecl} {init : DefDecl} :
         rw [htys] at hc
         obtain ⟨params, hparams, heq⟩ := bind_eq_ok.mp hc
         cases heq
+        have hargs : (argNames n).length = n := by
+          simp only [argNames, List.length_map, List.length_range]
         have hlen : params.length = n := by
-          rw [length_of_mapM_ok hparams, List.length_zip, length_methodArgs htys]
-          simp only [argNames, List.length_map, List.length_range, Nat.min_self]
-        rw [List.mapM_cons, readServiceMethods_ok hcs]
-        simp only [readServiceMethod, hlen, hd, Option.map_some, Option.getD_some, List.map_cons]
+          rw [length_of_mapM_ok hparams, List.length_zip, length_methodArgs htys, hargs,
+            Nat.min_self]
+        have hnames : params.map (·.name) = argNames n := by
+          rw [names_of_mapM (fun p q hpq => by
+              obtain ⟨r, -, heq⟩ := bind_eq_ok.mp hpq
+              cases heq
+              rfl) hparams,
+            List.map_fst_zip (by rw [hargs, length_methodArgs htys]; exact Nat.le_refl n)]
+        have hread : readServiceMethod
+            (m, .lambda params (.call (.ident d.name) [methodRequest (argNames n)]) none) =
+            some (m, d.name, n) := by
+          simp only [readServiceMethod, hlen, hnames, isMethodRequest_methodRequest, decide_true,
+            Bool.and_self, ↓reduceIte]
+        rw [List.mapM_cons, readServiceMethods_ok hcs, hread]
+        simp only [hd, Option.map_some, Option.getD_some, List.map_cons]
         rfl
 
 /-- **A printed service**: its key and its layer, both plain service constants named for the
-service, and the layer reads back as the service's information. -/
+service; the key is the service's key, and the layer reads back as the service's information. -/
 theorem printService_ok {sig : Signature Op} {defs : List DefDecl} {sv : Service}
     {cs : List TypeScript.ConstDecl} (h : printService sig defs sv = .ok cs) :
     ∃ key layer, cs = [key, layer] ∧ key.type = none ∧ key.exported = true ∧
       layer.type = none ∧ layer.exported = true ∧ isServiceConst key = true ∧
       isServiceConst layer = true ∧ key.name = sv.name ∧ layer.name = sv.name ++ "Layer" ∧
-      readServiceLayer key = none ∧ readServiceLayer layer = some (serviceInfo defs sv) := by
+      isServiceKey sv.name key = true ∧ readServiceLayer layer = some (serviceInfo defs sv) := by
   unfold printService at h
   cases hinit : defs[sv.init]? with
   | none =>
@@ -208,10 +258,16 @@ theorem printService_ok {sig : Signature Op} {defs : List DefDecl} {sv : Service
     obtain ⟨fields, -, rest⟩ := bind_eq_ok.mp h
     obtain ⟨closures, hclosures, heq⟩ := bind_eq_ok.mp rest
     cases heq
-    refine ⟨_, _, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
-    show (closures.mapM readServiceMethod).map (fun methods => (sv.name, init.name, methods)) = _
-    rw [readServiceMethods_ok hclosures]
-    simp only [serviceInfo, hinit, Option.map_some, Option.getD_some]
+    refine ⟨_, _, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_⟩
+    · show (decide (sv.name = sv.name) && (decide (sv.name = sv.name) &&
+        decide (sv.name = sv.name))) = true
+      rw [decide_eq_true rfl]
+      rfl
+    · show (if decide ((({ name := Var.name 0 } : TypeScript.Parameter)) = { name := Var.name 0 })
+        then (closures.mapM readServiceMethod).map (fun methods => (sv.name, init.name, methods))
+        else none) = _
+      rw [decide_eq_true rfl, if_pos rfl, readServiceMethods_ok hclosures]
+      simp only [serviceInfo, hinit, Option.map_some, Option.getD_some]
 
 /-! ## What a block whose services print satisfies -/
 
@@ -277,7 +333,7 @@ theorem printServiceList_ok {sig : Signature Op} {defs : List DefDecl} :
       services.mapM (printService sig defs) = .ok groups →
       (∀ c ∈ groups.flatten, c.type = none ∧ c.exported = true ∧ isServiceConst c = true ∧
         LayerTerm.readRefName c.name = none) ∧
-      groups.flatten.filterMap readServiceLayer = services.map (serviceInfo defs)
+      readServices groups.flatten = some (services.map (serviceInfo defs))
   | [], groups, _, h => by
     cases h
     exact ⟨(fun _ mem => nomatch mem), rfl⟩
@@ -286,7 +342,7 @@ theorem printServiceList_ok {sig : Signature Op} {defs : List DefDecl} :
     obtain ⟨cs, hcs, tail⟩ := bind_eq_ok.mp h
     obtain ⟨gs, hgs, heq⟩ := bind_eq_ok.mp tail
     cases heq
-    obtain ⟨key, layer, rfl, kt, ke, lt, le, ks, ls, kn, ln, kr, lr⟩ := printService_ok hcs
+    obtain ⟨key, layer, rfl, kt, ke, lt, le, ks, ls, kn, ln, kk, lr⟩ := printService_ok hcs
     obtain ⟨knames, lnames⟩ := serviceFaultOf_names (faults sv List.mem_cons_self)
     obtain ⟨hrest, hread⟩ :=
       printServiceList_ok (fun sv' h' => faults sv' (List.mem_cons_of_mem _ h')) hgs
@@ -300,8 +356,12 @@ theorem printServiceList_ok {sig : Signature Op} {defs : List DefDecl} :
           · exact ⟨lt, le, ls, by rw [ln]; exact lnames⟩
           · cases mem
       · exact hrest c mem
-    · rw [List.flatten_cons, List.filterMap_append, hread]
-      simp only [List.filterMap_cons, kr, lr, List.filterMap_nil, List.map_cons]
+    · show readServices (key :: layer :: gs.flatten) = _
+      have hkey : isServiceKey (serviceInfo defs sv).1 key = true := kk
+      have hlayer : decide (layer.name = (serviceInfo defs sv).1 ++ "Layer") = true :=
+        decide_eq_true ln
+      simp only [readServices, lr, Option.bind_eq_bind, Option.bind_some, hkey, hlayer,
+        Bool.and_self, ↓reduceIte, hread, List.map_cons]
       rfl
 
 /-- **A block's printed services**: their constants are plain service constants free of a layer
@@ -311,7 +371,7 @@ theorem printServices_ok {sig : Signature Op} {defs : List DefDecl}
     serviceFault defs = none ∧
       (∀ c ∈ svc, c.type = none ∧ c.exported = true ∧ isServiceConst c = true ∧
         LayerTerm.readRefName c.name = none) ∧
-      svc.filterMap readServiceLayer = (servicesOf defs).map (serviceInfo defs) := by
+      readServices svc = some ((servicesOf defs).map (serviceInfo defs)) := by
   unfold printServices at h
   cases hf : serviceFault defs with
   | some why =>

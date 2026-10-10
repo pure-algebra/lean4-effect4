@@ -139,4 +139,27 @@ verdict is `clientAgree` (`harness/truth/run-truth.ts`). tsgo 7 checks the modul
 rc.112's run of the client answers the machine's exit, `success [true, 1]`. This is a finite
 check of one fixture, host-only.
 
-Open: the services of Semaphore and Pool; shape (c).
+**Codex's review** (`codex/host-followup-review`, `docs/research/2026-10-09-co6b-overwatch` and
+`docs/research/2026-10-09-co6b-public-boundary`) found three defects, each repaired with its
+control in `Test/Codegen/ServicesPrint.lean`:
+
+- CO6B-NAMES: services named `S` and `SLayer` printed two `SLayer` declarations. `serviceFault`
+  now refuses any repeat among the names that the services declare (`serviceNames`).
+- CO6B-KEYS: a method named `bad-name` or `__proto__` printed an invalid or a prototype key. A
+  method's name is now a plain key (`plainMethodName`), else the printer refuses.
+- CO6B-READ: the reader ignored a closure's call argument, so a module whose `get` passed `99`
+  read back as the original. The reader now reads each service as its key and then its layer
+  (`readServices`). A closure must pass exactly the printer's request (`isMethodRequest`), and an
+  unmatched constant refuses instead of being dropped. The reader still skips the type annotations
+  of the shape and of the parameters. They are erased in the run, so they cannot change an answer.
+
+**The Semaphore** declares its service (`Semaphore.serviceDefs`): its three first-order operations
+are the methods. The truth lane's `pSemaphoreService` agrees on rc.112, the client through the key
+`Permits` included. Its protected forms take a program body, so no first-order method holds them.
+
+**Pool waits.** Its public operations are `use pool body`, which takes a program body, and `make`,
+which registers the close in its scope. Shape (b) has first-order methods only, and lending
+`lease` and `giveBack` apart would break the one mask that `use` holds. Pool's service needs a
+method whose parameter is a program.
+
+Open: Pool's service; shape (c).

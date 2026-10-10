@@ -670,7 +670,6 @@ theorem readModule_printModule_defs {sig : Signature Op}
       readDefs_printDefs headsReadable bodiesReadable hcs
     obtain ⟨hfault, hconsts, hread⟩ := printServices_ok hsvc
     have roles := restoreRoles hfault hdefs
-    rw [← hread] at roles
     have hmain := mainReadable _ hm
     have hlayers := readCaptured_mapM layersReadable namesReadable _ hls
     have restored : (Eff.defs (d :: ds) bodies body).restoreAll
@@ -705,6 +704,6 @@ theorem readModule_printModule_defs {sig : Signature Op}
         obtain ⟨c, _, tail⟩ := bind_eq_ok.mp hcs
         obtain ⟨cs', _, heq⟩ := bind_eq_ok.mp tail
         exact ⟨c, cs', Except.ok.inj heq.symm⟩
-    simp only [hheads, ok_bind, services, roles, hbodies, hmain, hlayers', restored]
+    simp only [hheads, ok_bind, services, hread, roles, hbodies, hmain, hlayers', restored]
 
 end Effect4.Program

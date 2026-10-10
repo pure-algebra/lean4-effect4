@@ -1007,20 +1007,67 @@ def servicePrefix : List TypeScript.Decl → List TypeScript.ConstDecl × List T
     | some _ => ([], .const c :: rest)
   | ds => ([], ds)
 
+/-- Whether an expression is the tuple of the arguments `args`, as `argTuple` writes it. -/
+def isArgTuple : List String → Expr → Bool
+  | [a], .ident x => decide (x = a)
+  | a :: rest@(_ :: _), .call (.ident "pair") [.ident x, t] => decide (x = a) && isArgTuple rest t
+  | _, _ => false
+
+/-- Whether an expression is the request that a method's closure passes its definition, the
+state `a0` and then its arguments, as `methodRequest` writes it. -/
+def isMethodRequest (args : List String) (e : Expr) : Bool :=
+  match args, e with
+  | [], .ident x => decide (x = Var.name 0)
+  | _ :: _, .call (.ident "pair") [.ident x, t] => decide (x = Var.name 0) && isArgTuple args t
+  | _, _ => false
+
 /-- A method's closure in a service's layer: its name, the name of the definition it calls, and
-its arity, the number of its parameters. -/
+its arity, the number of its parameters. The closure is the printer's whole: its parameters are
+`a1` to `an`, and it passes its definition exactly the state and them (`methodRequest`); any
+other closure refuses, since its call answers otherwise (Codex's CO6B-READ). Its parameters'
+type annotations are not read: they are erased in the run. -/
 def readServiceMethod : String × Expr → Option (String × String × Nat)
-  | (m, .lambda params (.call (.ident d) [_]) none) => some (m, d, params.length)
+  | (m, .lambda params (.call (.ident d) [arg]) none) =>
+    if decide (params.map (·.name) = argNames params.length) &&
+        isMethodRequest (argNames params.length) arg then some (m, d, params.length)
+    else none
   | _ => none
 
-/-- A service's layer (`printService`): its name, its initial program's name, and its methods. -/
+/-- A service's layer (`printService`): its name, its initial program's name, and its methods.
+The state's binder is the printer's `a0`, with no annotation. -/
 def readServiceLayer (c : TypeScript.ConstDecl) :
     Option (String × String × List (String × String × Nat)) :=
   match c.value with
   | .call (.ident "Layer.effect") [.ident s, .call (.ident "Effect.map")
-      [.call (.ident init) [], .arrowBlock [_] [.ret (.object closures)] none]] =>
-    (closures.mapM readServiceMethod).map fun methods => (s, init, methods)
+      [.call (.ident init) [], .arrowBlock [p] [.ret (.object closures)] none]] =>
+    if decide (p = { name := Var.name 0 }) then
+      (closures.mapM readServiceMethod).map fun methods => (s, init, methods)
+    else none
   | _ => none
+
+/-- Whether a constant is the key of service `s`, as `printService` writes it:
+`const s = Context.Service<"s", Shape>("s")`. The shape's types are not read: they are erased in
+the run. -/
+def isServiceKey (s : String) (key : TypeScript.ConstDecl) : Bool :=
+  decide (key.name = s) &&
+    match key.value with
+    | .call (.generic (.ident "Context.Service") [.literal l, .object _]) [.str s'] =>
+      decide (l = s) && decide (s' = s)
+    | _ => false
+
+/-- A block's service constants, read as `printServices` writes them: each service's key and
+then its layer, the layer named for the key. Every constant is one of these, or the reading
+refuses: none is dropped (Codex's CO6B-READ). -/
+def readServices : List TypeScript.ConstDecl →
+    Option (List (String × String × List (String × String × Nat)))
+  | [] => some []
+  | key :: layer :: rest => do
+    let info ← readServiceLayer layer
+    if isServiceKey info.1 key && decide (layer.name = info.1 ++ "Layer") then
+      let infos ← readServices rest
+      pure (info :: infos)
+    else none
+  | [_] => none
 
 /-- The role that a block's services give a definition, by its name: the initial program of the
 service whose layer runs it, the method of the service whose layer calls it, or plain. -/
@@ -1131,7 +1178,7 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
       | (c :: cs, afterDefs) => do
         let heads ← (c :: cs).mapM readDefHead
         let (serviceConsts, layerDecls) := servicePrefix afterDefs
-        let services := serviceConsts.filterMap readServiceLayer
+        let some services := readServices serviceConsts | .error (.shape "service")
         let defs := heads.map fun h => { h.1 with role := roleOf services h.1.name }
         let sig' := sig.withDefs defs
         let spell' := defsSpell call defs spell

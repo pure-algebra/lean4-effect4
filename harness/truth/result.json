@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 82 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 83 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -22254,6 +22254,142 @@
           "0:Success",
           "0:Success",
           "0:Suspend",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pSemaphoreService",
+      "leanExit": "success [1,false,2]",
+      "hostExit": "success [1,false,2]",
+      "entry": "runPromiseExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "clientAgree": true,
+      "notes": [
+        "same value",
+        "client through the service key: agrees (success [1,false,2])"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": [
+            1,
+            false,
+            2
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":[1,false,2]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "0:Success",
+          "0:WithFiber",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:While",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Suspend",
+          "0:Success",
+          "0:Success",
+          "0:Success",
+          "0:Suspend",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:WithFiber",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Success",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": [
+            1,
+            false,
+            2
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":[1,false,2]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "0:Success",
+          "0:WithFiber",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:OnSuccess",
+          "0:While",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Suspend",
+          "0:Success",
+          "0:Success",
+          "0:Success",
+          "0:Suspend",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:WithFiber",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Suspend",
+          "0:Success",
           "0:Success",
           "0:Success"
         ],

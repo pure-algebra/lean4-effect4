@@ -943,7 +943,8 @@ the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber th
 interrupt wakes, the two programs of the mask that restores, the five programs of the
 Queue's first operations, the ten programs of Semaphore's first operations, the ten
 programs of Pool's first operations, four programs with a definition block, the Queue's
-scenario R4 over its definitions, and the Queue as a service, with its client through the key. Every listed program contributes one manifest entry. -/
+scenario R4 over its definitions, and the Queue and the Semaphore as services, each with its
+client through the key. Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 /-- Four programs with a definition block (decisions row 328, slice PROC-3): one invocation,
@@ -981,8 +982,23 @@ def queueServiceClient : String :=
   "    Effect.flatMap(q.offer(1), (a) => Effect.map(q.take(), (x) => tuple(a, x)))),\n" ++
   "  NumberQueueLayer)\n"
 
+/-- **The Semaphore as a service** (decisions rows 338 and 339, slice CO-6b): two permits; the
+main program takes one, tries to take five, and releases one, each through a definition. -/
+def pSemaphoreService : Api.Program :=
+  Test.Codegen.ServicesPrint.semaphoreProgram.getD
+    (.fail (.lit (.str "pSemaphoreService: the module does not build")))
+
+/-- The same client through the `Permits` key, in TypeScript. -/
+def semaphoreServiceClient : String :=
+  "export const client = Effect.provide(\n" ++
+  "  Effect.flatMap(Permits, (s) =>\n" ++
+  "    Effect.flatMap(s.take(1), (a) =>\n" ++
+  "      Effect.flatMap(s.takeIfAvailable(5), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),\n" ++
+  "  PermitsLayer)\n"
+
 /-- The programs whose module exports a service, each with its client through the key. -/
-def serviceClients : List (String × String) := [("pQueueService", queueServiceClient)]
+def serviceClients : List (String × String) :=
+  [("pQueueService", queueServiceClient), ("pSemaphoreService", semaphoreServiceClient)]
 
 def corpus : List (String × Api.Program) :=
   Wire.Corpus.all ++ [("pTwo", pTwo), ("pAcquire", pAcquire), ("pAcquireClosed", pAcquireClosed),
@@ -1014,7 +1030,8 @@ def corpus : List (String × Api.Program) :=
     ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
     ("pPoolClosing", pPoolClosing),
     ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
-    ("pDefsFork", pDefsFork), ("pQueueDefs", pQueueDefs), ("pQueueService", pQueueService)]
+    ("pDefsFork", pDefsFork), ("pQueueDefs", pQueueDefs), ("pQueueService", pQueueService),
+    ("pSemaphoreService", pSemaphoreService)]
 
 /-! ## The value wire -/
 
@@ -1792,7 +1809,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
    "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pQueueDefs", "pQueueService"]
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pQueueDefs", "pQueueService",
+   "pSemaphoreService"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩

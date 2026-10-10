@@ -28,4 +28,20 @@ eff_module Definitions where
   takeIfAvailable (self : .refOf cellTy) (count : .nat) : .bool :=
     Effect4.Semaphore.takeIfAvailable self count
 
+/-- **The Semaphore as a service** (decisions rows 338 and 339, slice CO-6b): an initial program
+that makes a semaphore of `permits`, and the three first-order operations as the service's
+methods. The block prints them as an Effect service named `name`, whose layer makes the
+semaphore once (`printServices`, `src/Effect4/Codegen/Print.lean`). The protected forms take a
+program body, so no method of a first-order service holds them. -/
+def serviceDefs (name : String) (permits : Nat) (positive : 0 < permits := by decide)
+    (suffix : String := "") : List (DefSrc NativeOp) :=
+  [ DefSrc.serviceInit name
+      { name := "semaphoreMake" ++ suffix, params := [], answer := .refOf cellTy,
+        body := fun _ => make permits positive },
+    DefSrc.serviceMethod name "take" (Definitions.definition.take ("semaphoreTake" ++ suffix)).src,
+    DefSrc.serviceMethod name "release"
+      (Definitions.definition.release ("semaphoreRelease" ++ suffix)).src,
+    DefSrc.serviceMethod name "takeIfAvailable"
+      (Definitions.definition.takeIfAvailable ("semaphoreTakeIfAvailable" ++ suffix)).src ]
+
 end Effect4.Semaphore
