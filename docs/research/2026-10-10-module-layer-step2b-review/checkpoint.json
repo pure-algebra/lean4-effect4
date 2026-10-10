@@ -13,5 +13,20 @@
     "LV-OW-01"
   ],
   "candidate_applied_to_implementation": false,
-  "candidate_patch_sha256": "c9b3b610d259fbcb341e174029f1b2e02292b6692ba3d05f3cb91d3800e82e2f"
+  "candidate_patch_sha256": "c9b3b610d259fbcb341e174029f1b2e02292b6692ba3d05f3cb91d3800e82e2f",
+  "refreshed_at": "2026-10-10T19:10:49.408002+00:00",
+  "current_draft_sha256": "f63c411db1d50bf8126675ba89dff2ac449d9952ffc84f8b9aa40afaa5387485",
+  "open_new_findings": [
+    "ML2B-TRUST-01"
+  ],
+  "owner_source_repairs": {
+    "ML2B-TEST-01": {
+      "source_sha256": "a6a502917e16d890a894da5ffaa87a988f7b967037f89a15ededa5a1c6125b82",
+      "independently_compiled_current_fixture": false
+    }
+  },
+  "remaining_patch": "proof-only.patch",
+  "remaining_patch_sha256": "4885b44dfb05e4df1170c4147275cf8ca13804a1b2dec973fe95db2c0d8ea753",
+  "owner_law_build_report": "896 jobs; completed successfully; observed log",
+  "owner_runtime_check": "gen-truth running; no result claimed"
 }

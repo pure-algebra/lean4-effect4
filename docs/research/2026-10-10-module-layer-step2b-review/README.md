@@ -1,8 +1,10 @@
 # Module-layer step 2b review
 
-The draft has two landing blockers.
-The round-trip proof exceeds the project's axiom boundary, and its new TypeScript printing fixture does not compile.
-The isolated candidate repairs both without changing a theorem statement or the program representation.
+The current draft has one remaining landing blocker.
+The round-trip proof exceeds the project's axiom boundary.
+The isolated proof repair passes the audit without changing a theorem statement or the program representation.
+Claude repairs the separate TypeScript printing fixture during this review.
+Apply only `proof-only.patch` to the current draft.
 
 ## Reviewed state
 
@@ -44,7 +46,7 @@ The placement and dependency outline are in [PLAN.md](PLAN.md).
 ## ML2B-TEST-01: the declaration fixture selects a missing field
 
 Evidence kind: compilation of an exact copy of the draft fixture.
-Status: confirmed in the reviewed draft.
+Status: confirmed in the first draft; the owner repairs its source during this review.
 Scope: `moduleLayered`'s declaration-order control in `Test/Codegen/DefinitionsPrint.lean`.
 
 The control selects `.name` from `TypeScript.Decl`.
@@ -54,6 +56,14 @@ The name belongs to the constant declaration held by `.const`.
 The candidate matches `.const` and returns its name.
 Other declarations return `none`, so the assertion still checks that every declaration is a constant.
 No new helper enters the public API.
+
+Claude subsequently moves the program to `moduleLayerProg` in `Test/Program/DefinitionsControls.lean`.
+The current printing fixture matches constants through `filterMap`.
+It no longer selects the missing field.
+The owner also registers the program in the runtime comparison corpus and starts regeneration.
+That run remains pending at this checkpoint.
+This review verifies the source correction; it does not rerun the owner's revised fixture.
+The earlier candidate fixture's successful compilation remains separate evidence.
 
 ## Finite controls
 
@@ -116,8 +126,9 @@ It exits with status 0.
 Exact Lean commands, durations, outputs, and hashes are in `candidate-result.json`.
 The draft axiom failure is in `audit.out`.
 The repaired dependency graph is in `candidate-audit.out`.
-The patch passes `git apply --check` against the unchanged implementation draft.
-The whitespace check excludes only `draft.patch` and `initial/draft.patch`.
+The combined candidate patch passes `git apply --check` before the owner's test correction.
+After that correction, `proof-only.patch` passes the same check against the current draft.
+The whitespace check excludes only the three retained draft patch files.
 Their blank diff-context lines retain the exact captured bytes.
 All other staged files pass the whitespace check.
 
@@ -129,7 +140,7 @@ The review does not claim those results.
 
 ## Handoff
 
-Apply `candidate.patch` only after checking it against the implementation draft.
+Apply `proof-only.patch` after checking it against the implementation draft.
 Run the narrow builds and cycle-aware audit before committing the landing.
 Run the affected target and runtime comparison gates under the repository's build rules.
 Keep the readable-domain premises on the public round-trip claim.
@@ -141,6 +152,7 @@ The anchors are `module-defs-round-trip` in `tools/ProofGraph/Registry.lean` and
 ## Checkpoint
 
 The primary HEAD remains `e9d6863eed613a40fe90444925daf5e3bec818c5` at the start of this review.
-ML2B-TRUST-01 and ML2B-TEST-01 are new findings against uncommitted step 2b.
+ML2B-TRUST-01 remains open against uncommitted step 2b.
+ML2B-TEST-01 has its source correction in the owner's working tree.
 ML2-C2-01 and LV-OW-01 remain unchanged from their saved receipts.
 The candidate does not apply either earlier repair.
