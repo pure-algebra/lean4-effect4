@@ -50,7 +50,7 @@ if [ "$cmd" = looks ]; then
   out="$here/out/looks"
   rm -rf "$out"
   (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean looks tools/view/looks "$out")
-  "$here/build.sh"
+  "$here/build.sh" draw
   for f in "$out"/*/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done
   echo "$out/index.html"
   exit 0
@@ -100,9 +100,11 @@ fi
 rm -rf "$out"
 if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
 (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean --motion "$motion" $plain "$@")
-"$here/build.sh"
+# each mode builds only the program it runs: the console none, PNG files draw, the window play
 case $mode in
   text) cat "$out/frames.txt" ;;
-  png) for f in "$out"/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done; echo "$out" ;;
-  window) exec "$here/play" "$out" ;;
+  png)
+    "$here/build.sh" draw
+    for f in "$out"/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done; echo "$out" ;;
+  window) "$here/build.sh" play; exec "$here/play" "$out" ;;
 esac

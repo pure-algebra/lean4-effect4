@@ -5,14 +5,6 @@ import Tools.View.Build
 
 open Effect4 Effect4.Program Tools.View Tools.View.Build
 
-deriving instance DecidableEq for Tools.View.GNode
-deriving instance DecidableEq for Tools.View.Placed
-deriving instance DecidableEq for Tools.View.Route
-deriving instance DecidableEq for Tools.View.Region
-deriving instance DecidableEq for Tools.View.FlowMark
-deriving instance DecidableEq for Tools.View.Laid
-deriving instance DecidableEq for Tools.View.Flow.PreparedPlacement
-
 namespace Tools.View.LayoutCheck
 def later : Supervision.ForkOptions := ⟨false, false, .inherit⟩
 def chain : Nat → Nat → NativeEff

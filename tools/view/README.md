@@ -8,13 +8,14 @@ The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and de
 
 - Lean through elan: `lake` on the `PATH`. The command `v` also finds `~/.elan/bin` itself.
 - From Homebrew: `pkg-config`, `cairo`, `pango` and `cmake`.
-- The network, once: the first build fetches SDL3's pinned source, verifies it and builds it
-  (`vendor/SDL3-3.4.16/build.sh`, about 40 seconds).
+- The network, once, for a window: the first build of `play` fetches SDL3's pinned source,
+  verifies it and builds it (`vendor/SDL3-3.4.16/build.sh`, about 40 seconds). The terminal, the
+  PNG files and the store's check need no SDL3.
 
 ## Commands
 
-Run from the repository's root. `v` builds what is stale, writes the frames to
-`tools/view/out/`, and shows them.
+Run from the repository's root. `v` builds the stale programs that its mode runs, writes the
+frames to `tools/view/out/`, and shows them.
 
 ```sh
 tools/view/v pFork          # build a corpus program top-down, in a window

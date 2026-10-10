@@ -26,11 +26,8 @@ The timings are of Lean's interpreter (`lake env lean`), so their ratios matter,
 
 open Effect4 Effect4.Program Tools.View Tools.View.Build
 
-/-! The tree derives no equality for these; the landing adds `DecidableEq` to `Call` and `Keyed`
-and `Hashable` to `Cubic` at their declarations (`tools/Tools/View/Picture.lean`). -/
-deriving instance DecidableEq for Tools.View.Call
-deriving instance DecidableEq for Tools.View.Keyed
-deriving instance Hashable for Tools.View.Cubic
+/-! The tree derives no equality for these three. Since LV-0, `Call` and `Keyed` derive
+`DecidableEq` and `Cubic` derives `Hashable` at their declarations (`tools/Tools/View/Picture.lean`). -/
 deriving instance DecidableEq for Tools.View.Shape
 deriving instance DecidableEq for Tools.View.Part
 deriving instance DecidableEq for Tools.View.Line

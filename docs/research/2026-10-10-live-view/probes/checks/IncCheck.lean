@@ -4,9 +4,6 @@ import ProbeView.Inc
 
 open Effect4 Effect4.Program Tools.View Tools.View.Build
 
-
-deriving instance BEq for Tools.View.Flow.Flow
-
 namespace Tools.View.IncCheck
 def later : Supervision.ForkOptions := ⟨false, false, .inherit⟩
 def chain : Nat → Nat → NativeEff
