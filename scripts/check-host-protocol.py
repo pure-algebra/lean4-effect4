@@ -18,6 +18,8 @@ import subprocess
 import tempfile
 import sys
 
+from generate import native_libraries
+
 ROOT = Path(__file__).resolve().parent.parent
 SESSION = ROOT / 'harness/truth/session'
 MODULES = ROOT / 'ts/eff/node_modules'
@@ -39,8 +41,16 @@ def run(*args, output=None, timeout=180):
     else:
         subprocess.run(args, cwd=ROOT, check=True, timeout=timeout)
 
+# The shared libraries of the scenarios' modules, which `Keyed.lean` imports: `lean --run` then
+# runs the machine as native code, where it interprets it otherwise (172 s for the scenarios'
+# writer, against 14 s to 24 s native; `native_libraries`, `scripts/generate.py`).
+LIBRARIES = []
+
 def lean(path, *args, output=None):
-    run('lake', 'env', 'lean', '-DwarningAsError=true', '-M4096', '--run', path,
+    if not LIBRARIES:
+        LIBRARIES.extend(native_libraries(SCENARIOS))
+    run('lake', 'env', 'lean', '-DwarningAsError=true', '-M4096',
+        *(f'--load-dynlib={library}' for library in LIBRARIES), '--run', path,
         *map(str, args), output=output)
 
 def main():
