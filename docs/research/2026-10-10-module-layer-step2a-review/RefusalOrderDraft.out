@@ -1,0 +1,5 @@
+[some ([2, 0, 0, 0], [2, 0, 0], Effect4.Program.RefFault.encloses),
+ some ([2, 0, 0], [2, 0, 1], Effect4.Program.RefFault.notBefore),
+ some ([2, 1, 0, 1], [2, 1, 0, 0], Effect4.Program.RefFault.toReference),
+ some ([1, 0], [2, 0, 0], Effect4.Program.RefFault.otherScope),
+ some ([1, 0], [2, 999], Effect4.Program.RefFault.noLayer)]
