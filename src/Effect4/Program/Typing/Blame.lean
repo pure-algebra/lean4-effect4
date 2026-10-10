@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Program.Typing.TermRefusal
+public import Effect4.Program.Refs
 
 /-!
 # Program.Typing.Blame — the vocabulary of the located refusal (DI-86)
@@ -62,9 +63,10 @@ inductive TypeReason
   | valueNotSubtype (key : ServiceKey) (value carrier : Ty)
   /-- A bare reference is typed by the whole program after expansion, never structurally. -/
   | layerReference (target : List Nat)
-  /-- A reference of the whole program is ill formed (`Eff.layerRefsWF`): its target is not a
-  preceding non-reference layer. Reported at the root by the facade. -/
-  | referencesIllFormed
+  /-- A layer reference is ill formed (`Eff.refFault`): it names `target`, and `why` is the
+  condition it breaks. Reported at the reference's site by the facade (`Api.explain`), the first
+  such site in program order. -/
+  | referenceIllFormed (target : List Nat) (why : RefFault)
   | mergeAllEmpty
   | returnNotLast
   | breakOutsideLoop
@@ -141,7 +143,7 @@ def TypeReason.head : TypeReason → String
   | .serviceUnknown _ => "serviceUnknown"
   | .valueNotSubtype _ _ _ => "valueNotSubtype"
   | .layerReference _ => "layerReference"
-  | .referencesIllFormed => "referencesIllFormed"
+  | .referenceIllFormed _ _ => "referenceIllFormed"
   | .mergeAllEmpty => "mergeAllEmpty"
   | .returnNotLast => "returnNotLast"
   | .breakOutsideLoop => "breakOutsideLoop"

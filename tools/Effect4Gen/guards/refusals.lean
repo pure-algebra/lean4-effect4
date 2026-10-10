@@ -32,6 +32,9 @@ def rowReasons : List RowReason :=
 
 def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
 
+/-- Every fault of a layer reference, in declaration order (decisions row 341). -/
+def refFaults : List RefFault := [.notBefore, .encloses, .noLayer, .toReference, .otherScope]
+
 def signatures : List SigRefusal :=
   rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", [.name "get"])] ++
     serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
@@ -53,7 +56,8 @@ def typings : List TypeRefusal :=
    ⟨[2], .notSelectable (.tag "Some") (.option .nat)⟩, ⟨[], .stepNotCursor .string .nat⟩,
    ⟨[], .initialNotCursor .bool .nat⟩, ⟨[], .releaseFails .string⟩, ⟨[], .notFiber .unit⟩,
    ⟨[], .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩⟩, ⟨[], .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat⟩,
-   ⟨[], .layerReference [0, 1]⟩, ⟨[], .referencesIllFormed⟩, ⟨[], .mergeAllEmpty⟩,
+   ⟨[], .layerReference [0, 1]⟩, ⟨[1, 0], .referenceIllFormed [0, 0] .otherScope⟩,
+   ⟨[0, 1], .referenceIllFormed [1] .notBefore⟩, ⟨[], .mergeAllEmpty⟩,
    ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩,
    ⟨[], .errorPayloadField (.record [("_tag", false, .lit "E"), ("id", false, .int)]) ["id"] .int⟩,
    ⟨[], .errorSpelling (.record [("_tag", false, .lit "E"), ("message", false, .string)])
@@ -92,7 +96,8 @@ def reasons : List TypeReason :=
    .initialNotCursor .bool .nat, .releaseFails .string, .notFiber .unit, .scopeExpected .nat,
    .natExpected .string, .listOfFibersExpected .nat, .contextExpected .unit,
    .snapshotExpected .bool, .exitExpected .string, .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩,
-   .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1], .referencesIllFormed,
+   .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1],
+   .referenceIllFormed [0, 0] .encloses,
    .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x"),
    .instantiatedFormation "Db.get" ⟨["row", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
    .recordTerm ⟨[0], .missingRequired "x"⟩,
@@ -140,6 +145,9 @@ def printedHead : Effect4.Json → String
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
 #guard rowReasons.all fun x => Canonical.decode (α := RowReason) (Canonical.encode x) = some x
 #guard serviceReasons.all fun x => Canonical.decode (α := ServiceReason) (Canonical.encode x) = some x
+#guard refFaults.all fun x => Canonical.decode (α := RefFault) (Canonical.encode x) = some x
+#guard refFaults.map Canonical.head == Canonical.heads RefFault
+#guard refFaults.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x) = some x
 #guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x ++ [0]) = none
 #guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x).dropLast = none

@@ -478,7 +478,7 @@ private def danglingReferenceEdit : Option (Except Api.BuildRefusal Api.Built) :
 
 #guard danglingReferenceEdit.map (fun result => match result with
   | .error (.typing refusal) => some refusal
-  | _ => none) = some (some ⟨[], .referencesIllFormed⟩)
+  | _ => none) = some (some ⟨[1, 0], .referenceIllFormed [0, 0, 0] .noLayer⟩)
 
 -- Complete admission also retains non-typing refusals: a cursor type with a repeated field is
 -- refused by formation.

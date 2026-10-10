@@ -31,8 +31,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   sites is typed there (slices CX1 and CX2, the [note](research/2026-10-10-cx-lexical-scope.md)).
   The typed run of an invocation and of a parameter's run is proved (`invoke_arm`, `param_arm`).
   A layer reference stands in its target's scope: the same body, or both outside every body
-  (decisions row 341, the note's §11). So M5 and M7 rest on no goal. The printer refuses
-  `invoke` until HO-3.
+  (decisions row 341, the note's §11). So M5 and M7 rest on no goal. An ill-formed reference is
+  refused at its site with the condition it breaks (`Eff.refFault`, `Api.explain`). The printer
+  refuses `invoke` until HO-3.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by

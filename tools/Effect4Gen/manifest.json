@@ -229,6 +229,7 @@
         "Effect4.Program.FoldCauseRefusal",
         "Effect4.Program.TermTypingRefusal",
         "Effect4.Program.CauseTypingRefusal",
+        "Effect4.Program.RefFault",
         "Effect4.Program.TypeReason",
         "Effect4.Program.TypeRefusal",
         "Effect4.Api.AuthorRefusal",

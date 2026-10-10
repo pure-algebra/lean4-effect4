@@ -39,9 +39,9 @@ theorem checkTyping_type (program : Program) (table : RowTable) :
 
 /-- **The facade's equation.** `Api.explain` tests one thing before it answers the whole module's
 refusal of the expansion (`Checker.checkModule`, decisions row 328): the references are well
-formed. The equation is the facade's
-definition, so its proof is `rfl`. Until 2026-10-06 the facade had one more arm, for a reference
-site that the expansion keeps. A well-formed program's expansion keeps none
+formed. Where they are not, it refuses at the first ill-formed reference, with its fault
+(`Eff.firstRefFault`, decisions row 341). Until 2026-10-06 the facade had one more arm, for a
+reference site that the expansion keeps. A well-formed program's expansion keeps none
 (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`). The proof at
 `git:a467ce77:src/Effect4/Laws/Api/Codegen.lean` shows this statement over that arm, so no
 refusal changed. The equation is the facade's twin of the checker's
@@ -53,7 +53,21 @@ theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
       if program.layerRefsWF then
         Effect4.Program.Checker.refusal
           (Effect4.Program.Checker.checkModule (nativeSignature table) program.expandRefs)
-      else some ⟨[], .referencesIllFormed⟩ := rfl
+      else program.firstRefFault.map fun (site, target, why) =>
+        ⟨site, .referenceIllFormed target why⟩ := by
+  unfold explain
+  cases h : program.firstRefFault with
+  | none => rw [if_pos ((Effect4.Program.Eff.firstRefFault_eq_none program).mp h)]
+  | some f =>
+    obtain ⟨site, target, why⟩ := f
+    have hwf : program.layerRefsWF = false := by
+      cases hw : program.layerRefsWF with
+      | false => rfl
+      | true =>
+        rw [(Effect4.Program.Eff.firstRefFault_eq_none program).mpr hw] at h
+        cases h
+    rw [hwf]
+    rfl
 
 /-- On raw formed input, evidence retention keeps the existing module output. -/
 theorem printModule_erasure (name : String) (program : Program) (table : RowTable)

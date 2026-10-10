@@ -81,7 +81,9 @@ theorem Eff.hoistAll_exists (root : Eff Op) (valid : root.layerRefsWF = true) :
   intro site target member
   have admitted := List.all_eq_true.mp valid (site, target) member
   cases lookup : (Node.eff root).layerAt target with
-  | none => simp [lookup] at admitted
+  | none =>
+    simp only [Eff.refFault_isNone, lookup, Bool.and_false, Bool.false_and,
+      Bool.false_eq_true] at admitted
   | some layer => exact ⟨layer, rfl⟩
 
 /-- Well-formed references admit a hoist whose restoration recovers the same tree.

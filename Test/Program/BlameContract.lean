@@ -47,9 +47,9 @@ def refused : Api.Program := .fail (.lit (.bool true))
 #guard Api.explain (.gen (.cons .breakLoop .nil)) = some ⟨[0, 0], .breakOutsideLoop⟩
 #guard Api.explain (.provideLayer (.mergeAll .nil) false (.succeed (.lit .unit)))
   = some ⟨[0, 0], .mergeAllEmpty⟩
--- A reference with no preceding target is refused at the root, before typing.
+-- A reference with no preceding target is refused at its site, before typing, with its fault.
 #guard Api.explain (.provideLayer (.ref [0]) false (.succeed (.lit .unit)))
-  = some ⟨[], .referencesIllFormed⟩
+  = some ⟨[0], .referenceIllFormed [0] .notBefore⟩
 
 /-! ## A typed program has no refusal -/
 
@@ -119,9 +119,10 @@ private def unitP : Api.Program := .succeed (.lit .unit)
 #guard (Api.explain (.perform (.external 3) (.lit .unit))).map (·.reason.head)
   = some "outsideDomain"
 -- A reference that reaches the walker is `layerReference`. Through `Api.explain` an ill-formed
--- one is caught at the root first, and a well-formed one is expanded away, so the walker's own
+-- one is caught at its site first, and a well-formed one is expanded away, so the walker's own
 -- arm is reached only on the unexpanded tree (`Program.explain`, the check's refusal).
-#guard Api.explain (.provideLayer (.ref [0]) false unitP) = some ⟨[], .referencesIllFormed⟩
+#guard Api.explain (.provideLayer (.ref [0]) false unitP)
+  = some ⟨[0], .referenceIllFormed [0] .notBefore⟩
 #guard Effect4.Program.explain (nativeSignature []) [] (.provideLayer (.ref [0]) false unitP)
   = some ⟨[0], .layerReference [0]⟩
 

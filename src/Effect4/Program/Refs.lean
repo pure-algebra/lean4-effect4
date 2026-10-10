@@ -178,21 +178,69 @@ def Eff.scopeOf {Op : Type} (root : Eff Op) : List Nat → Option Nat
     | _ => none
   | _ => none
 
-/-- The layer references of a program are well formed: every target names a layer of this
-program that is not itself a reference, precedes the reference in program order, does not
-enclose it (a reference inside its own target would be a `const` that names itself), and stands
-in the reference's scope: the same definition's body, or both outside every body (decisions row
-340, ruling of 2026-10-10). A layer in a body is that body's own, as a `const` in a function body
-is visible in no other function; a hop to it from another scope would run it with the other
+/-- **Why a layer reference is ill formed**: the first condition of `Eff.refFault` it breaks. -/
+inductive RefFault where
+  /-- The target does not precede the reference in program order. -/
+  | notBefore
+  /-- The target encloses the reference: a `const` that names itself. -/
+  | encloses
+  /-- The target names no layer of the program. -/
+  | noLayer
+  /-- The target is itself a reference. -/
+  | toReference
+  /-- The target stands in another scope: another definition's body, or a body while the
+  reference stands outside every body (decisions row 341). -/
+  | otherScope
+deriving DecidableEq, Repr
+
+/-- **The fault of a layer reference**, or `none` when it is well formed: its target names a
+layer of this program that is not itself a reference, precedes the reference in program order,
+does not enclose it (a reference inside its own target would be a `const` that names itself),
+and stands in the reference's scope: the same definition's body, or both outside every body
+(decisions row 341). A layer in a body is that body's own, as a `const` in a function body is
+visible in no other function; a hop to it from another scope would run it with the other
 scope's parameters. -/
+def Eff.refFault {Op : Type} (root : Eff Op) (site target : List Nat) : Option RefFault :=
+  if !Path.lt target site then some .notBefore
+  else if Path.properPrefix target site then some .encloses
+  else match (Node.eff root).layerAt target with
+    | none => some .noLayer
+    | some (.ref _) => some .toReference
+    | some _ => if root.scopeOf target == root.scopeOf site then none else some .otherScope
+
+/-- The layer references of a program are well formed: no reference has a fault
+(`Eff.refFault`). -/
 def Eff.layerRefsWF {Op : Type} (root : Eff Op) : Bool :=
-  (root.refSites []).all fun (site, target) =>
-    Path.lt target site && !Path.properPrefix target site &&
-      (match (Node.eff root).layerAt target with
-       | some (.ref _) => false
-       | some _ => true
-       | none => false) &&
-      root.scopeOf target == root.scopeOf site
+  (root.refSites []).all fun x => (root.refFault x.1 x.2).isNone
+
+/-- A reference has no fault exactly when its four conditions hold. The laws read the
+conditions (`layerRefsWF_mem`, `Laws/Program/PathFold.lean`). -/
+theorem Eff.refFault_isNone {Op : Type} (root : Eff Op) (site target : List Nat) :
+    (root.refFault site target).isNone =
+      (Path.lt target site && !Path.properPrefix target site &&
+        (match (Node.eff root).layerAt target with
+         | some (.ref _) => false
+         | some _ => true
+         | none => false) &&
+        root.scopeOf target == root.scopeOf site) := by
+  unfold Eff.refFault
+  cases Path.lt target site <;> cases Path.properPrefix target site <;>
+    cases (Node.eff root).layerAt target with
+    | none => rfl
+    | some l => cases l <;> cases root.scopeOf target == root.scopeOf site <;> rfl
+
+/-- **The first ill-formed reference** of a program in program order: its site, its target and
+its fault. The facade locates its refusal there (`Api.explain`). -/
+def Eff.firstRefFault {Op : Type} (root : Eff Op) : Option (List Nat × List Nat × RefFault) :=
+  (root.refSites []).findSome? fun x => (root.refFault x.1 x.2).map ((x.1, x.2, ·))
+
+/-- A program has no ill-formed reference exactly when its references are well formed. -/
+theorem Eff.firstRefFault_eq_none {Op : Type} (root : Eff Op) :
+    root.firstRefFault = none ↔ root.layerRefsWF = true := by
+  unfold Eff.firstRefFault Eff.layerRefsWF
+  rw [List.findSome?_eq_none_iff, List.all_eq_true]
+  refine forall_congr' fun x => imp_congr_right fun _ => ?_
+  rw [Option.map_eq_none_iff, ← Option.isNone_iff_eq_none]
 
 /-- The path of every layer under a program, in program order (a layer before the layers
 inside it), the root at `p`: the path fold yielding every layer's path. -/

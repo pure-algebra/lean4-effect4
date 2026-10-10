@@ -16,9 +16,11 @@ written as real programs.
   references, a diamond, and targets nested in a target. Each expands to a program with no
   reference site. The count of the sites is pinned round by round, and the diamond's count grows
   before it falls.
-- Four programs are the red controls, one for each way that `Eff.layerRefsWF` refuses: a
-  reference inside its own target, a forward reference, a target that is a reference, and a
-  missing target. Each fails `Eff.layerRefsWF`, at its own clause.
+- Four programs are the red controls, one for each way that `Eff.layerRefsWF` refuses a program
+  with no block: a reference inside its own target, a forward reference, a target that is a
+  reference, and a missing target. Each fails `Eff.layerRefsWF`, at its own fault
+  (`Eff.refFault`), and the facade refuses it at the reference's site. Two block programs read
+  the fifth fault, a target in another scope (decisions row 341), and its green twin.
 - The two consumers are applied without the premise that they carried
   (`typeOfProgram_expandRefs`, `checkTypedProgram_of_hasTy`), and the checker's equation is
   evaluated (`typeOfProgram_eq_if_refsWF`). One red control drops the premise that
@@ -88,6 +90,18 @@ def refTarget : NativeEff := around (.merge leaf (.merge (.ref [0, 0]) (.ref [0,
 
 /-- Red: a target that names no layer. -/
 def missing : NativeEff := around (.merge leaf (.ref [0, 0, 5]))
+
+/-- Red: the main program names a layer in a definition's body (decisions row 341). -/
+def otherScope : NativeEff :=
+  .defs [{ name := "d", request := .unit, answer := .nat }]
+    (.cons (.provideLayer leaf false (.service key)) .nil)
+    (.provideLayer (.ref [0, 0, 0]) false (.service key))
+
+/-- Green twin: the reference names a layer of its own body. -/
+def sameScope : NativeEff :=
+  .defs [{ name := "d", request := .unit, answer := .nat }]
+    (.cons (.provideLayer leaf false (.provideLayer (.ref [0, 0, 0]) false (.service key))) .nil)
+    (.succeed (.lit (.nat 1)))
 
 /-- The tenth program: `oneRef`'s layer, with well-formed references, and a body that the checker
 refuses, `fail` at a Boolean. The body is at the path `[1]`, past the reference site `[0, 1]`. -/
@@ -263,12 +277,21 @@ check states that a different value is not the answer. -/
 -- The facade's verdict is the checker's, on the nine.
 #guard programs.all fun p => Api.typeOf p == typeOfProgram sig p
 
--- The facade's refusal on the nine: none for the five, and the root refusal for the four.
+-- The facade's refusal on the nine: none for the five, and for each of the four the first
+-- ill-formed reference, at its site, with its fault.
 #guard [noRef, oneRef, chain, diamond, nestedTargets].all fun p => Api.explain p == none
-#guard [insideTarget, forward, refTarget, missing].all fun p =>
-  Api.explain p == some ⟨[], .referencesIllFormed⟩
+#guard Api.explain insideTarget == some ⟨[0, 0], .referenceIllFormed [0] .encloses⟩
+#guard Api.explain forward == some ⟨[0, 0], .referenceIllFormed [0, 1] .notBefore⟩
+#guard Api.explain refTarget == some ⟨[0, 1, 1], .referenceIllFormed [0, 1, 0] .toReference⟩
+#guard Api.explain missing == some ⟨[0, 1], .referenceIllFormed [0, 0, 5] .noLayer⟩
+-- The fifth fault: the main program's reference to a body's layer is refused at its site; the
+-- same reference inside the body is admitted, and the block types.
+#guard Api.explain otherScope == some ⟨[1, 0], .referenceIllFormed [0, 0, 0] .otherScope⟩
+#guard !otherScope.layerRefsWF && sameScope.layerRefsWF
+#guard Api.explain sameScope == none
+#guard typeOfProgram sig sameScope == some (EffTy.pure .nat)
 -- Red: two of the four keep a reference site in the expansion, and the facade does not refuse
--- there. The formation test refuses each at the root first.
+-- there. The formation test refuses each at the reference first.
 #guard Api.explain insideTarget != some ⟨[0, 0, 0, 0], .layerReference [0]⟩
 #guard Api.explain missing != some ⟨[0, 1], .layerReference [0, 0, 5]⟩
 
@@ -288,7 +311,8 @@ check states that a different value is not the answer. -/
 branch that the program takes. The statement's pin below holds both branches. -/
 example : Api.explain refusedBody =
     if refusedBody.layerRefsWF then Effect4.Program.explain sig [] refusedBody.expandRefs
-    else some ⟨[], .referencesIllFormed⟩ :=
+    else refusedBody.firstRefFault.map fun (site, target, why) =>
+      ⟨site, .referenceIllFormed target why⟩ :=
   Api.explain_eq_if_refsWF refusedBody []
 
 /-- **No program is at the arm that the facade lost** (proved). The arm answered where the

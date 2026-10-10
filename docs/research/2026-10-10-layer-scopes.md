@@ -84,6 +84,30 @@ Ruled (a), by the owner, 2026-10-10. It is the representation the printer alread
 declaration per module-level layer, before the main program. The authoring surface already keeps
 `Module.layers` as that list. (b) refuses an ordinary Effect program.
 
+The field comes last: `.defs decls bodies main layers`, the module's layers at child `2`. Every
+existing path keeps its meaning: the bodies stay child `0`, the main program child `1`, and no
+printed `L_<path>` name or golden byte moves. Three scopes follow, by the path's first index:
+
+| Path | Scope | Visible to |
+| --- | --- | --- |
+| `0 :: …` in body `k` | body `k`, with its parameters | body `k` |
+| `1 :: …` | the main program | the main program |
+| `2 :: …` | the module | every scope |
+
+A module-level layer names only module-level layers. So a reference never leaves the module once
+it enters it, and the order below is acyclic.
+
+The reference order ranks module-level sites before every other site, and program order within
+each class (`Path.refBefore`). Within one scope a target still precedes its site in program
+order. The expansion bound's rank argument (`target_refs_prior`) reads that order in place of
+`Path.lt`.
+
+The field reaches what a new constructor field reaches (the new-field checklist): the generated
+folds and lenses, the OCaml emitter and its goldens (`src/OCaml5/Eff/Goldens.lean`), the LCNF
+roots, the engine bridge (`ocaml/engine/e4_program.ml`), the TypeScript generator and reader
+switches (`tools/Drivers/TsGen.lean`, `ts/eff`), the foreign corpus driver, the compatibility
+policy and the case policy.
+
 ### 4.3 The typing
 
 The target's scope has no parameter, so every stack is typed there (`stackTyped_nil`). Its

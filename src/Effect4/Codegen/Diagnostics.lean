@@ -126,7 +126,7 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .serviceUnknown _ => []
   | .valueNotSubtype _ _ _ => if c.exactOptionalPropertyTypes then [2345, 2375, 2322] else [2345, 2322]
   | .layerReference _ => []
-  | .referencesIllFormed => []
+  | .referenceIllFormed _ _ => []
   | .mergeAllEmpty => []
   | .returnNotLast => []
   | .breakOutsideLoop => [1107]

@@ -11,10 +11,10 @@
 --    Effect4.Program.TupleCauseRefusal Effect4.Program.FoldTypingReason \
 --    Effect4.Program.FoldTermRefusal Effect4.Program.FoldCauseRefusal \
 --    Effect4.Program.TermTypingRefusal Effect4.Program.CauseTypingRefusal \
---    Effect4.Program.TypeReason Effect4.Program.TypeRefusal Effect4.Api.AuthorRefusal \
---    Effect4.Program.ClassRefusal Effect4.Program.PrintRefusal Effect4.Program.ReadRefusal \
---    Effect4.Api.BuildRefusal
--- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.SigApp, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.PrintLeaf, Effect4.Codegen.Read, Effect4.Api.Author
+--    Effect4.Program.RefFault Effect4.Program.TypeReason Effect4.Program.TypeRefusal \
+--    Effect4.Api.AuthorRefusal Effect4.Program.ClassRefusal Effect4.Program.PrintRefusal \
+--    Effect4.Program.ReadRefusal Effect4.Api.BuildRefusal
+-- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.SigApp, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Refs, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.PrintLeaf, Effect4.Codegen.Read, Effect4.Api.Author
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/refusals.lean
 import Effect4.Api
 import Effect4.Api.HostSession
@@ -1726,6 +1726,82 @@ instance instCanonical : Canonical (_root_.Effect4.Program.CauseTypingRefusal) :
 
 end CauseTypingRefusalC
 
+namespace RefFaultC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "RefFault"
+     [("notBefore", 0, []),
+      ("encloses", 1, []),
+      ("noLayer", 2, []),
+      ("toReference", 3, []),
+      ("otherScope", 4, [])],
+   []⟩
+
+def toVal : _root_.Effect4.Program.RefFault → Val
+  | .notBefore => .ctor 0 []
+  | .encloses => .ctor 1 []
+  | .noLayer => .ctor 2 []
+  | .toReference => .ctor 3 []
+  | .otherScope => .ctor 4 []
+
+def ofVal : Val → Option (_root_.Effect4.Program.RefFault)
+  | .ctor 0 [] => some .notBefore
+  | .ctor 1 [] => some .encloses
+  | .ctor 2 [] => some .noLayer
+  | .ctor 3 [] => some .toReference
+  | .ctor 4 [] => some .otherScope
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.RefFault) : ofVal (toVal a) = some a := by
+  cases a with
+  | «notBefore» => simp only [toVal, ofVal]
+  | «encloses» => simp only [toVal, ofVal]
+  | «noLayer» => simp only [toVal, ofVal]
+  | «toReference» => simp only [toVal, ofVal]
+  | «otherScope» => simp only [toVal, ofVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.RefFault} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  · injection h with h
+    subst h
+    rfl
+  all_goals exact nomatch h
+
+theorem fits (a : _root_.Effect4.Program.RefFault) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «notBefore» =>
+    exact accepts_sum _ _ _ 0 "notBefore" [] [] rfl (acceptsFields_nil _)
+  | «encloses» =>
+    exact accepts_sum _ _ _ 1 "encloses" [] [] rfl (acceptsFields_nil _)
+  | «noLayer» =>
+    exact accepts_sum _ _ _ 2 "noLayer" [] [] rfl (acceptsFields_nil _)
+  | «toReference» =>
+    exact accepts_sum _ _ _ 3 "toReference" [] [] rfl (acceptsFields_nil _)
+  | «otherScope» =>
+    exact accepts_sum _ _ _ 4 "otherScope" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Program.RefFault) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end RefFaultC
+
 namespace TypeReasonC
 
 set_option maxHeartbeats 600000
@@ -1759,7 +1835,8 @@ def shapeDoc : ShapeDoc :=
         ("value", (shape _root_.Effect4.Program.Ty).root),
         ("carrier", (shape _root_.Effect4.Program.Ty).root)]),
       ("layerReference", 19, [("target", (shape (@_root_.List (_root_.Nat))).root)]),
-      ("referencesIllFormed", 20, []),
+      ("referenceIllFormed", 20, [("target", (shape (@_root_.List (_root_.Nat))).root),
+        ("why", (shape _root_.Effect4.Program.RefFault).root)]),
       ("mergeAllEmpty", 21, []),
       ("returnNotLast", 22, []),
       ("breakOutsideLoop", 23, []),
@@ -1794,7 +1871,8 @@ def shapeDoc : ShapeDoc :=
    (shape _root_.Effect4.Program.Term).defs ++ (shape _root_.Effect4.Program.CauseTerm).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.String).defs ++
      (shape _root_.Effect4.Program.Decision).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
-     (shape (@_root_.List (_root_.Nat))).defs ++ (shape _root_.Effect4.Program.Lit).defs ++
+     (shape (@_root_.List (_root_.Nat))).defs ++ (shape _root_.Effect4.Program.RefFault).defs ++
+     (shape _root_.Effect4.Program.Lit).defs ++
      (shape _root_.Effect4.Program.FormationRefusal).defs ++
      (shape _root_.Effect4.Program.RecordTermRefusal).defs ++
      (shape _root_.Effect4.Program.RecordCauseRefusal).defs ++
@@ -1828,7 +1906,7 @@ def toVal : _root_.Effect4.Program.TypeReason → Val
   | .valueNotSubtype a0 a1 a2 => .ctor 18 [Canonical.toVal a0, Canonical.toVal a1,
       Canonical.toVal a2]
   | .layerReference a0 => .ctor 19 [Canonical.toVal a0]
-  | .referencesIllFormed => .ctor 20 []
+  | .referenceIllFormed a0 a1 => .ctor 20 [Canonical.toVal a0, Canonical.toVal a1]
   | .mergeAllEmpty => .ctor 21 []
   | .returnNotLast => .ctor 22 []
   | .breakOutsideLoop => .ctor 23 []
@@ -1896,7 +1974,11 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
     | some a0, some a1, some a2 => some (.valueNotSubtype a0 a1 a2)
     | _, _, _ => none
   | .ctor 19 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0).map .layerReference
-  | .ctor 20 [] => some .referencesIllFormed
+  | .ctor 20 [v0, v1] =>
+    match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.RefFault) v1 with
+    | some a0, some a1 => some (.referenceIllFormed a0 a1)
+    | _, _ => none
   | .ctor 21 [] => some .mergeAllEmpty
   | .ctor 22 [] => some .returnNotLast
   | .ctor 23 [] => some .breakOutsideLoop
@@ -1975,7 +2057,7 @@ theorem ofVal_toVal (a : _root_.Effect4.Program.TypeReason) : ofVal (toVal a) = 
   | «serviceUnknown» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
   | «valueNotSubtype» a0 a1 a2 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «layerReference» a0 => simp only [toVal, ofVal, Canonical.ofVal_toVal, Option.map_some]
-  | «referencesIllFormed» => simp only [toVal, ofVal]
+  | «referenceIllFormed» a0 a1 => simp only [toVal, ofVal, Canonical.ofVal_toVal]
   | «mergeAllEmpty» => simp only [toVal, ofVal]
   | «returnNotLast» => simp only [toVal, ofVal]
   | «breakOutsideLoop» => simp only [toVal, ofVal]
@@ -2097,9 +2179,13 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal
     subst hj
     simp only [toVal]
     rw [Canonical.ofVal_exact hx]
-  · injection h with h
-    subst h
-    rfl
+  · split at h
+    · rename_i b0 b1 h0 h1
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    all_goals exact nomatch h
   · injection h with h
     subst h
     rfl
@@ -2208,32 +2294,37 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal
 
 theorem lift_Term (x : _root_.Effect4.Program.Term) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Term).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_CauseTerm (x : _root_.Effect4.Program.CauseTerm) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.CauseTerm).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Decision (x : _root_.Effect4.Program.Decision) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Decision).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ListNat (x : (@_root_.List (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
+    _ _ (Canonical.fits x)
+theorem lift_RefFault (x : _root_.Effect4.Program.RefFault) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RefFault).root
+      (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Lit (x : _root_.Effect4.Program.Lit) :
@@ -2359,8 +2450,10 @@ theorem fits (a : _root_.Effect4.Program.TypeReason) : shapeDoc.accepts (toVal a
   | «layerReference» a0 =>
     exact accepts_sum _ _ _ 19 "layerReference" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_ListNat a0) (acceptsFields_nil _))
-  | «referencesIllFormed» =>
-    exact accepts_sum _ _ _ 20 "referencesIllFormed" [] [] rfl (acceptsFields_nil _)
+  | «referenceIllFormed» a0 a1 =>
+    exact accepts_sum _ _ _ 20 "referenceIllFormed" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_ListNat a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_RefFault a1) (acceptsFields_nil _)))
   | «mergeAllEmpty» =>
     exact accepts_sum _ _ _ 21 "mergeAllEmpty" [] [] rfl (acceptsFields_nil _)
   | «returnNotLast» =>
@@ -3046,6 +3139,9 @@ def rowReasons : List RowReason :=
 
 def serviceReasons : List ServiceReason := [.reservedName, .nonFlatCarrier, .conflictsBuiltin]
 
+/-- Every fault of a layer reference, in declaration order (decisions row 341). -/
+def refFaults : List RefFault := [.notBefore, .encloses, .noLayer, .toReference, .otherScope]
+
 def signatures : List SigRefusal :=
   rowReasons.map (SigRefusal.row 0) ++ [.duplicateRow ("Db", [.name "get"])] ++
     serviceReasons.map (SigRefusal.service 1) ++ [.duplicateCode ⟨7⟩, .unservedKey 2 ⟨⟨30⟩, ⟨30⟩⟩]
@@ -3067,7 +3163,8 @@ def typings : List TypeRefusal :=
    ⟨[2], .notSelectable (.tag "Some") (.option .nat)⟩, ⟨[], .stepNotCursor .string .nat⟩,
    ⟨[], .initialNotCursor .bool .nat⟩, ⟨[], .releaseFails .string⟩, ⟨[], .notFiber .unit⟩,
    ⟨[], .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩⟩, ⟨[], .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat⟩,
-   ⟨[], .layerReference [0, 1]⟩, ⟨[], .referencesIllFormed⟩, ⟨[], .mergeAllEmpty⟩,
+   ⟨[], .layerReference [0, 1]⟩, ⟨[1, 0], .referenceIllFormed [0, 0] .otherScope⟩,
+   ⟨[0, 1], .referenceIllFormed [1] .notBefore⟩, ⟨[], .mergeAllEmpty⟩,
    ⟨[], .returnNotLast⟩, ⟨[], .breakOutsideLoop⟩, ⟨[], .literalOutsideAlphabet (.str "x")⟩,
    ⟨[], .errorPayloadField (.record [("_tag", false, .lit "E"), ("id", false, .int)]) ["id"] .int⟩,
    ⟨[], .errorSpelling (.record [("_tag", false, .lit "E"), ("message", false, .string)])
@@ -3106,7 +3203,8 @@ def reasons : List TypeReason :=
    .initialNotCursor .bool .nat, .releaseFails .string, .notFiber .unit, .scopeExpected .nat,
    .natExpected .string, .listOfFibersExpected .nat, .contextExpected .unit,
    .snapshotExpected .bool, .exitExpected .string, .serviceUnknown ⟨⟨3⟩, ⟨7⟩⟩,
-   .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1], .referencesIllFormed,
+   .valueNotSubtype ⟨⟨3⟩, ⟨7⟩⟩ .string .nat, .layerReference [0, 1],
+   .referenceIllFormed [0, 0] .encloses,
    .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x"),
    .instantiatedFormation "Db.get" ⟨["row", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
    .recordTerm ⟨[0], .missingRequired "x"⟩,
@@ -3154,6 +3252,9 @@ def printedHead : Effect4.Json → String
 #guard tables.all fun x => Canonical.decode (α := TableRefusal) (Canonical.encode x) = some x
 #guard rowReasons.all fun x => Canonical.decode (α := RowReason) (Canonical.encode x) = some x
 #guard serviceReasons.all fun x => Canonical.decode (α := ServiceReason) (Canonical.encode x) = some x
+#guard refFaults.all fun x => Canonical.decode (α := RefFault) (Canonical.encode x) = some x
+#guard refFaults.map Canonical.head == Canonical.heads RefFault
+#guard refFaults.all fun x => Canonical.head x == printedHead (Canonical.print x)
 #guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x) = some x
 #guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x ++ [0]) = none
 #guard signatures.all fun x => Canonical.decode (α := SigRefusal) (Canonical.encode x).dropLast = none

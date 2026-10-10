@@ -225,7 +225,7 @@ theorem refSites_subset_of_layerAt {Op : Type} {root : Eff Op} {path : List Nat}
     exact hsub
   · cases h
 
-/-- Well-formed references, read at a reference site: the three clauses of `Eff.layerRefsWF`.
+/-- Well-formed references, read at a reference site: three clauses of `Eff.refFault`.
 The target precedes the site, it is no prefix of the site, and it names a layer that is no
 reference. Its consumers are `layerRefsWF_at` below and the reference expansion
 (`target_refs_prior` and `refsWithin_round`, `Laws/Program/ReferenceExpansion.lean`). -/
@@ -234,7 +234,7 @@ theorem layerRefsWF_mem {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = tr
     Path.lt target site = true ∧ Path.properPrefix target site = false ∧
       ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' := by
   have hall := List.all_eq_true.mp hwf (site, target) h
-  simp only [Bool.and_eq_true, Bool.not_eq_true'] at hall
+  simp only [Eff.refFault_isNone, Bool.and_eq_true, Bool.not_eq_true'] at hall
   obtain ⟨⟨⟨hlt, hpre⟩, hlayer⟩, -⟩ := hall
   refine ⟨hlt, hpre, ?_⟩
   cases hl : (Node.eff root).layerAt target with
@@ -254,7 +254,7 @@ theorem layerRefsWF_scopeOf {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF 
     {site target : List Nat} (h : (site, target) ∈ root.refSites []) :
     root.scopeOf target = root.scopeOf site := by
   have hall := List.all_eq_true.mp hwf (site, target) h
-  simp only [Bool.and_eq_true] at hall
+  simp only [Eff.refFault_isNone, Bool.and_eq_true] at hall
   exact eq_of_beq hall.2
 
 /-- Well-formed references, read at an address: the target names a layer that is no reference. -/

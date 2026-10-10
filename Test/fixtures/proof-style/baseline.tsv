@@ -795,7 +795,6 @@ src/Effect4/Laws/Program/Hoisting.lean	captureStep_undo	simp-without-only	3
 src/Effect4/Laws/Program/Hoisting.lean	captureStep_undo	try	1
 src/Effect4/Laws/Program/Hoisting.lean	restoreAll_eq_undo	simp-without-only	1
 src/Effect4/Laws/Program/Hoisting.lean	restoreFold_eq_undo	simp-without-only	1
-src/Effect4/Laws/Program/HoistingTotal.lean	Eff.hoistAll_exists	simp-without-only	1
 src/Effect4/Laws/Program/HoistingTotal.lean	captureFold_exists	simp-without-only	1
 src/Effect4/Laws/Program/HostBoundary.lean	owned_cleanup_closes_slots	simp-without-only	1
 src/Effect4/Laws/Program/Intro/Fibers.lean	intro_interruptible	simp-without-only	1
