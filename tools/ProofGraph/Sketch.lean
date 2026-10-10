@@ -1,4 +1,4 @@
-import ProofGraph.Goal
+import ProofGraph.GoalTag
 
 /-!
 # Sketches: a proof whose holes become planned goals

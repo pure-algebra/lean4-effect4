@@ -14,7 +14,8 @@ open Lean
 /-- The module a declaration was declared in. -/
 def moduleOf? (env : Environment) (declaration : Name) : Option Name := do
   let index ← env.getModuleIdxFor? declaration
-  env.header.moduleNames[index.toNat]?
+  -- `moduleNames` builds an array per call; the header's entry is one lookup
+  (env.header.modules[index.toNat]?).map (·.module)
 
 /-- The synthesised values Lean gives a bodyless `opaque`. -/
 def synthesizedOpaqueBodies : List Name :=

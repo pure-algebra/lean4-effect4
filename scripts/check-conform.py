@@ -311,7 +311,7 @@ def main():
         parser.error(f"unknown profiles: {sorted(unknown)}; choose from {list(PROFILES)}")
     if len(args.profiles) != len(set(args.profiles)):
         parser.error("each profile may be requested only once")
-    build = subprocess.run(["lake", "build", "Conform", "Effect4.Laws.Program.Typing.Check"], cwd=ROOT)
+    build = subprocess.run(["lake", "build", "Conform", "Effect4", "Effect4.Laws.Program.Typing.Check"], cwd=ROOT)
     if build.returncode:
         return build.returncode
     worst = 0

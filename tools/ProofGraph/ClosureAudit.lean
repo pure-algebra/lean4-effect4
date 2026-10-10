@@ -16,6 +16,10 @@ parameter.
 after its parameters, binds a `let` or a `have` and then returns a `fun`. It reads the elaborated
 values, so it sees the shape that the compiler sees. Propositions, type formers and the
 elaborator's auxiliaries are skipped: they do not run.
+
+It refuses one more table built per use: an index into `EnvironmentHeader.moduleNames`, which maps
+every imported module on each call. The header's own entry, `env.header.modules[i].module`, is
+one lookup.
 -/
 
 namespace ProofGraph
@@ -33,6 +37,12 @@ where
     | .mdata _ e, acc => bound e acc
     | .lam .., acc => acc
     | _, _ => #[]
+
+/-- Whether a value indexes `EnvironmentHeader.moduleNames` directly. -/
+def indexesModuleNames (value : Expr) : Bool :=
+  let getters := [``GetElem.getElem, ``GetElem?.getElem?, ``GetElem?.getElem!, ``Array.get!Internal]
+  (value.find? fun e => getters.any e.isAppOf &&
+    e.getAppArgs.any (·.isAppOf ``EnvironmentHeader.moduleNames)).isSome
 
 /-- `#closure_audit P₁ P₂ …`: the definitions of the modules under the prefixes that bind a table
 before the closure they return. -/
@@ -55,14 +65,17 @@ syntax (name := closureAudit) "#closure_audit" (ppSpace ident)+ : command
       if isAuxiliary env name then return none
       if (← Meta.isProp d.type) || (← Meta.isTypeFormerType d.type) then return none
       let lets := letsBeforeClosure d.value
-      if lets.isEmpty then return none
-      return some (name, lets)
+      if !lets.isEmpty then
+        return some (name, m!"{name} binds {lets.toList} before the closure it returns")
+      if indexesModuleNames d.value then
+        return some (name,
+          m!"{name} indexes `EnvironmentHeader.moduleNames`, which builds an array per call")
+      return none
   if offenders.isEmpty then
     logInfo m!"#closure_audit: {names.size} declarations; none binds a table before a returned closure"
   else
-    let lines := (offenders.qsort fun a b => a.1.toString < b.1.toString).toList.map fun (name, lets) =>
-      m!"{name} binds {lets.toList} before the closure it returns"
-    throwError m!"#closure_audit: {offenders.size} definitions bind a table before the closure \
-      they return; pass the table as data:{indentD (MessageData.joinSep lines Format.line)}"
+    let lines := (offenders.qsort (·.1.toString < ·.1.toString)).toList.map (·.2)
+    throwError m!"#closure_audit: {offenders.size} definitions build a table per use; build it \
+      once and pass it as data:{indentD (MessageData.joinSep lines Format.line)}"
 
 end ProofGraph

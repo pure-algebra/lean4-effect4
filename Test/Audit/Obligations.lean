@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.Obligations
+import ProofGraph.Goal
 
 /-! Controls of the law graph's entry point for planned goals (`Effect4.Laws.Auto.Obligations`,
 decisions row 203): a goal declared through the law import, with a docstring, binders and a

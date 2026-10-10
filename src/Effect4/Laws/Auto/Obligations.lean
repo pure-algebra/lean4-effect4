@@ -1,6 +1,6 @@
-import Effect4.Laws.Auto.Census
+import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.RuleSets
-import ProofGraph.Goal
+import ProofGraph.GoalTag
 import ProofGraph.Sketch
 
 /-!
@@ -15,5 +15,6 @@ proved. Proving a goal replaces `proof_goal G : P` by `theorem G : P := …` in 
 Before a goal is declared, it is placed in the theory (`AGENTS.md`, "Every proof obligation is
 placed in the theory"). The axiom gate (`Test/Audit/AxiomGate.lean`) admits `sorryAx` only as a
 goal's own body and refuses a goal in a module the `Effect4` root reaches. `#auto_census`
-(`Effect4.Laws.Auto.Census`) reports which goals a search already closes from their statements.
+(`Effect4.Laws.Auto.Census`) reports which goals a search already closes from their statements;
+a module that runs it imports it, so the search tools stay out of the law graph's imports.
 -/

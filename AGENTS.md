@@ -202,6 +202,8 @@ its arrows. Anything else is a leak.
 - The change lands as commits by explicit paths, each after a narrow build of the modules it
   touches. A narrow build is `lake build <Module>` and its direct dependents, or
   `lake env lean <file>` for a test.
+- A gate depends on its sources and builds exactly what its tool imports (`build_imports` in the
+  `Makefile`). It never depends on `build`, which builds every battery and the axiom gate.
 - No closure or battery run is owed for an integration. The whole battery (`lake build Test`, the
   axiom gate) and `make check` and `make check-full` run when the owner asks for a sweep.
 - A docstring or comment edit needs no build of a dependent module.

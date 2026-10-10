@@ -44,12 +44,16 @@ export LEAN_NUM_THREADS ?= 3
 .DEFAULT_GOAL := help
 .NOTPARALLEL:
 
-# Lake's trace of the whole core (src/Effect4.lean imports every core module) and of
-# the proof graph. A change anywhere beneath either rewrites the file.
-CORE := .lake/build/lib/lean/Effect4.trace
-LAWS := .lake/build/lib/lean/Effect4/Laws.trace
-TRACE := .lake/build/lib/lean/Effect4
 LEAN_SOURCES := $(shell find src Test -name '*.lean')
+# The core's sources: the Effect4 root without the law graph. A gate whose tool reads the core
+# depends on these, or on all the Lean sources, and builds exactly what its tool imports; no gate
+# depends on `build`, which builds every battery and the axiom gate (2026-10-09). The few that
+# load the whole tree (the root elaboration, the trust harness, the architecture map) are the
+# exceptions, named where they stand.
+CORE_SOURCES := $(filter-out src/Effect4/Laws/%,$(filter src/Effect4.lean src/Effect4/%,$(LEAN_SOURCES)))
+# Build exactly the workspace modules that Lean files import, before `lake env lean` runs them
+# (`lake env` builds nothing).
+build_imports = $(LAKE) build $$($(PY) scripts/lean-imports.py $(1))
 # Every folder that a lane of `ts/eff` reads (seat LANES, decisions row 295): the ingest's fidelity,
 # census and fixture folders and the red twins of the tests stood outside this list.
 TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/test/red/* ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts \
@@ -147,29 +151,29 @@ $(GEN)/derived: $(GEN)/variances $(DERIVED_SOURCES) $(DERIVED_INPUTS) $(wildcard
 # and by the check-ocaml CI job.
 LCNF_SOURCES := src/OCaml5/Tools/LcnfGen.lean $(wildcard src/OCaml5/Lcnf/*.lean) \
   ocaml/gen/roots.json ocaml/engine/externs.txt ocaml/engine/tools/api_engine_prelude.ml $(PRODUCER_COMMON)
-$(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE)
+$(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only lcnf
 	@mkdir -p $(GEN) && touch $@
 
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
   scripts/generate-engine-structure.py scripts/lib/program_structure.py \
   ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml $(PRODUCER_COMMON)
-$(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE)
+$(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/wire: $(GEN)/eff src/OCaml5/Tools/EffWire.lean $(PRODUCER_COMMON) $(CORE)
+$(GEN)/wire: $(GEN)/eff src/OCaml5/Tools/EffWire.lean $(PRODUCER_COMMON) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only wire
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(PRODUCER_COMMON) $(CORE)
+$(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(PRODUCER_COMMON) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
 TS_SOURCES := $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) $(WIRE_TAGS) $(VARIANCES) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
   vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts scripts/generate.py
-$(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
+$(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only ts
 	@mkdir -p $(GEN) && touch $@
 
@@ -186,18 +190,21 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
 TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/control.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
-$(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(CORE) $(LAWS)
+$(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(LEAN_SOURCES)
+	$(call build_imports,harness/truth/Truth.lean)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
 	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/host-protocol: $(GEN)/truth tools/Tools/HostProtocol.lean $(TRACE)/Api/HostSession.trace
+$(GEN)/host-protocol: $(GEN)/truth tools/Tools/HostProtocol.lean $(CORE_SOURCES)
 	$(LAKE) build Effect4.Api.HostSession
+	$(call build_imports,tools/Tools/HostProtocol.lean)
 	$(LAKE) env lean -M4096 --run tools/Tools/HostProtocol.lean harness/truth/session
 	@mkdir -p $(GEN) && touch $@
 
 SCHEMA_TS_DIR := harness/schema-generation
-$(GEN)/schema-ts: $(GEN)/host-protocol $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(TRACE)/Codegen/Schema.trace
+$(GEN)/schema-ts: $(GEN)/host-protocol $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(LEAN_SOURCES)
+	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean))
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitFixture.lean > $(SCHEMA_TS_DIR)/Person.generated.ts
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitCoverageFixture.lean > $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitMultiFixture.lean > $(SCHEMA_TS_DIR)/TwoRoots.generated.ts
@@ -241,12 +248,6 @@ SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst
 # made the build fail.
 ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 
-# Lake rewrites these traces while `build` runs. Make reads a prerequisite that has no rule once,
-# before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
-# a second run (seat T1, 2026-10-04). As targets of `build` with an empty recipe, they are read
-# again after `build`: a rule reruns exactly when a trace moved.
-$(CORE) $(LAWS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
-  .lake/build/lib/lean/Test/Program/Gen.trace: build ;
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
@@ -317,7 +318,7 @@ CORPUS_TRACE := .lake/build/lib/lean/Drivers/Corpus.trace
 export E4_LEAN_CORPUS := $(abspath $(CORPUS))
 export EFFECT4_CORPUS := $(abspath $(CORPUS))
 
-$(CORPUS_TRACE): $(LEAN_SOURCES) $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) | build
+$(CORPUS_TRACE): $(LEAN_SOURCES) $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean)
 	$(LAKE) build Drivers.Corpus
 
 $(CORPUS)/index.tsv: $(CORPUS_TRACE)
@@ -401,7 +402,8 @@ $(CHK)/proof-style: $(filter src/Effect4/%,$(LEAN_SOURCES)) Test/fixtures/proof-
   Test/fixtures/proof-style/red/Sample.lean Test/fixtures/proof-style/red-baseline.tsv \
   Test/fixtures/proof-style/red-stale.tsv Test/fixtures/proof-style/under/Sample.lean \
   $(CHK)/inventory \
-  tools/ProofGraph/ProofStyle.lean Test/Audit/ProofStyle.lean | build
+  tools/ProofGraph/ProofStyle.lean Test/Audit/ProofStyle.lean
+	$(call build_imports,Test/Audit/ProofStyle.lean)
 	$(LAKE) env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
 	@mkdir -p $(CHK) && touch $@
 
@@ -476,11 +478,11 @@ $(CHK)/language: $(CHK)/paths $(DOCS) $(LANGUAGE_SOURCES)
 	@mkdir -p $(CHK) && touch $@
 
 CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.py scripts/lib/conform_report.py
-$(CHK)/cases: $(CORE) $(CONFORM_SOURCES)
+$(CHK)/cases: $(CORE_SOURCES) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py cases
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/native: $(CORE) $(CONFORM_SOURCES)
+$(CHK)/native: $(CORE_SOURCES) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
 	@mkdir -p $(CHK) && touch $@
 
@@ -488,7 +490,7 @@ $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
 # normalization, compiled and run, with its emitted-code mutations. It is the command of CI's
 # OCaml job (`check-ocaml`), joined to the local sweep. It needs `ocamlopt` of the effect4 switch.
 CONFORM_COMPILER_SOURCES := $(shell find src/OCaml5/Lcnf src/OCaml5/Ml -name '*.lean')
-$(CHK)/compiler: $(CORE) $(CONFORM_SOURCES) $(CONFORM_COMPILER_SOURCES)
+$(CHK)/compiler: $(CORE_SOURCES) $(CONFORM_SOURCES) $(CONFORM_COMPILER_SOURCES)
 	$(PY) scripts/check-conform.py compiler
 	@mkdir -p $(CHK) && touch $@
 
@@ -506,9 +508,10 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 # and the inventory guard (every generated atom has a prelude case that runs). Named one by
 # one: `bun test harness/truth` would also pick up the lane's work directories.
 TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts harness/truth/if-case.test.ts
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts harness/truth/mask.typecheck.ts \
+$(CHK)/truth: $(LEAN_SOURCES) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts harness/truth/mask.typecheck.ts \
     harness/truth/P2b.lean tools/target/checker.ts tools/target/oracle.ts \
     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
+	$(call build_imports,harness/truth/Truth.lean harness/truth/P2b.lean)
 	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
@@ -554,12 +557,14 @@ CORPUS_LANE := scripts/check-corpus.py scripts/lib/truth_host.py tools/target/co
   harness/truth/corpus-results.tsv harness/truth/corpus-known-differences.md Test/fixtures/target/selection.json \
   harness/truth/tsconfig.json harness/truth/prelude-inventory.ts $(wildcard harness/truth/session/*.ts) \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json
-$(CHK)/corpus: $(CORE) $(LAWS) .lake/build/lib/lean/Test/Program/Gen.trace $(TRUTH_SOURCES) $(CORPUS_LANE) ts/eff/node_modules | build harness/truth/node_modules
+$(CHK)/corpus: $(LEAN_SOURCES) $(TRUTH_SOURCES) $(CORPUS_LANE) ts/eff/node_modules | harness/truth/node_modules
+	$(call build_imports,harness/truth/Truth.lean)
 	$(PY) scripts/check-corpus.py
 	@mkdir -p $(CHK) && touch $@
 
 .PHONY: gen-corpus-results
-gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
+gen-corpus-results: | harness/truth/node_modules ## promote a fresh corpus run to harness/truth/corpus-results.tsv
+	$(call build_imports,harness/truth/Truth.lean)
 	$(PY) scripts/check-corpus.py --promote
 
 # The architecture map (docs/GENERATED.md, group `architecture`): measured from the tree by a
@@ -586,10 +591,11 @@ gen-architecture: gen-semantics | build ## the architecture map, measured from t
 # than reading it, since a stale signature is a wrong expectation, not a missing one. Then
 # the tool type-checks itself under the same compiler it drives — nothing did before, and
 # `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
-$(CHK)/target: $(CORE) $(LAWS) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json \
+$(CHK)/target: $(LEAN_SOURCES) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json \
   $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean generated/row-types.tsv \
   tools/Tools/TyVectors.lean generated/assignability.tsv \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json ts/eff/node_modules lean-toolchain
+	$(call build_imports,tools/Tools/RowTypes.lean tools/Tools/TyVectors.lean)
 	$(LAKE) env lean -M4096 --run tools/Tools/RowTypes.lean generated/row-types.tsv --check
 	$(NODE) ts/eff/node_modules/@typescript/native-preview/bin/tsgo --noEmit -p tools/target/tsconfig.json
 	$(BUN) test tools/target
@@ -600,17 +606,19 @@ $(CHK)/target: $(CORE) $(LAWS) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/
 	@mkdir -p $(CHK) && touch $@
 
 .PHONY: gen-assignability
-gen-assignability: | build ## promote a fresh assignability differential to generated/assignability.tsv
+gen-assignability: ## promote a fresh assignability differential to generated/assignability.tsv
+	$(call build_imports,tools/Tools/TyVectors.lean)
 	@mkdir -p .lake/target && $(LAKE) env lean -M4096 --run tools/Tools/TyVectors.lean .lake/target/ty-vectors.tsv
 	$(BUN) tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv --promote
 
 .PHONY: gen-row-citations
-gen-row-citations: | build ## promote a fresh rows/atoms report to generated/row-citations.tsv
+gen-row-citations: ## promote a fresh rows/atoms report to generated/row-citations.tsv
 	$(BUN) tools/target/rows.ts --repo . --promote
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
 # rc.112's `Schema.toCodecJson` on the host; nothing committed.
-$(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build harness/truth/node_modules
+$(CHK)/schema-codec: $(LEAN_SOURCES) $(wildcard harness/truth/schema-codec/*) | harness/truth/node_modules
+	$(call build_imports,harness/truth/schema-codec/Emit.lean)
 	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
 	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
 	  $(NODE) harness/truth/node_modules/@typescript/native-preview/bin/tsgo --project harness/truth/schema-codec/tsconfig.json && \
@@ -658,7 +666,7 @@ $(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/D
 # The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
 # `harness/truth/session/Keyed.lean` imports are its inputs, by their sources.
 HOST_PROTOCOL_SCENARIOS := $(wildcard Test/Dogfood/*.lean Test/Dogfood/Scenario/*.lean)
-$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) harness/truth/prelude.ts tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
+$(CHK)/host-protocol: $(LEAN_SOURCES) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) harness/truth/prelude.ts tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 

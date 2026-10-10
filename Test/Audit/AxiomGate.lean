@@ -240,6 +240,10 @@ private def choiceImplementationDeclarations : List Name :=
   , `Tools.Explain.stepFacts?
   , `Tools.Explain.stringsOf?
   , `Tools.Explain.tyText
+  -- `#closure_audit`'s controls of the module-name rule read Lean's environment header, whose
+  -- types reach `Classical.choice`; each is evaluated by the audit, never proved about.
+  , `Test.Audit.ClosureAudit.moduleByEntry
+  , `Test.Audit.ClosureAudit.moduleByNames
   ]
 
 /-- Private rendering helpers are identified by exact owner and original name,

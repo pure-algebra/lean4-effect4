@@ -21,11 +21,21 @@ def rebuilt (n : Nat) : Nat → Bool := let table := List.range n; fun k => tabl
 /-- The same table passed as data: the caller builds it once. -/
 def asData (table : List Nat) (k : Nat) : Bool := table.contains k
 
+open Lean in
+/-- A module name read through `moduleNames`, which maps every module per call. -/
+def moduleByNames (env : Environment) (i : Nat) : Option Name := env.header.moduleNames[i]?
+
+open Lean in
+/-- The same name read from the header's entry: one lookup. -/
+def moduleByEntry (env : Environment) (i : Nat) : Option Name :=
+  (env.header.modules[i]?).map (·.module)
+
 end Test.Audit.ClosureAudit
 
--- control: the audit of this module refuses `rebuilt`, and only it
+-- control: the audit of this module refuses `rebuilt` and `moduleByNames`, and only them
 /--
-error: #closure_audit: 1 definitions bind a table before the closure they return; pass the table as data:
+error: #closure_audit: 2 definitions build a table per use; build it once and pass it as data:
+  Test.Audit.ClosureAudit.moduleByNames indexes `EnvironmentHeader.moduleNames`, which builds an array per call
   Test.Audit.ClosureAudit.rebuilt binds [table] before the closure it returns
 -/
 #guard_msgs in

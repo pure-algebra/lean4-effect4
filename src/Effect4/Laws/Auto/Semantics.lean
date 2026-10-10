@@ -1,6 +1,6 @@
 import Lean
 import ProofGraph.Population
-import ProofGraph.Goal
+import ProofGraph.GoalTag
 
 /-!
 Placement metadata for declarations, separate from claims and proof status: a declaration's
@@ -59,7 +59,7 @@ initialize semanticsAttribute : ParametricAttribute Placement ← do
 
 def semanticsModule (env : Environment) (name : Name) : Name :=
   match env.getModuleIdxFor? name with
-  | some idx => env.header.moduleNames[idx.toNat]!
+  | some idx => env.header.modules[idx.toNat]!.module
   | none => env.mainModule
 
 /-- Eligible theorem names, sorted: the authored theorems, planned goals excluded (decisions row
