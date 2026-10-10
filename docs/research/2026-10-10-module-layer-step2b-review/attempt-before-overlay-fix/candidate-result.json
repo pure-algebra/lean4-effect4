@@ -1,0 +1,49 @@
+{
+  "started": "2026-10-10T18:59:43.828600+00:00",
+  "checks": [
+    {
+      "command": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Diagnostic.lean"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "seconds": 8.017,
+      "output_sha256": "468a8fd88f5ca8f193241793f5e0f6b8f7de79d9d426f5902f0ecac80fb60225"
+    },
+    {
+      "command": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/OwnerDefinitionsPrint.lean"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "seconds": 8.834,
+      "output_sha256": "95a678e7676cec1336993691cf2df7645629894b9a97a4fd9c5a166160110619"
+    },
+    {
+      "command": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/candidate/src",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/candidate/.build/Effect4/Laws/Codegen/Module.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/candidate/src/Effect4/Laws/Codegen/Module.lean"
+      ],
+      "exit": 1,
+      "expected_exit": 0,
+      "seconds": 0.779,
+      "output_sha256": "14d38838674516074ab548db108c4220611d30ddbdcfb5a533ac5d6ef2422586"
+    }
+  ],
+  "inputs": 873,
+  "changed_inputs": [],
+  "implementation_base": "1c98dd94831c060e591cd7e5bef19d6528c5d22a",
+  "lean_path": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/candidate/.build:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/.audit-lib:/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean",
+  "candidate_artifacts": {}
+}

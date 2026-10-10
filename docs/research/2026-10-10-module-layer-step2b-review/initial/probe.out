@@ -1,0 +1,24 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:23:0: error: Expression
+  Api.typeOf block == some (EffTy.pure Ty.nat)
+did not evaluate to `true`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:24:0: error: Expression
+  succeedsWith block 7
+did not evaluate to `true`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:27:67: error(lean.invalidField): Invalid field `name`: The environment does not contain `TypeScript.Decl.name`, so it is not possible to project the field `name` from an expression
+  x✝
+of type `TypeScript.Decl`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:27:0: error: cannot evaluate code because 'List.mapTR.loop._at_._private.Probe.0._tmp._@.Probe.636400888._hygCtx._hyg.40.spec_1' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:29:0: error: Expression
+  Option.map (fun m => decide (Api.readModule m = Except.ok block)) (Api.printModule "main" block) == some true
+did not evaluate to `true`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:39:0: error: Expression
+  Api.typeOf mixed == some (EffTy.pure Ty.nat)
+did not evaluate to `true`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:43:67: error(lean.invalidField): Invalid field `name`: The environment does not contain `TypeScript.Decl.name`, so it is not possible to project the field `name` from an expression
+  x✝
+of type `TypeScript.Decl`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:43:0: error: cannot evaluate code because 'List.mapTR.loop._at_._private.Probe.0._tmp._@.Probe.684493490._hygCtx._hyg.42.spec_1' uses 'sorry' and/or contains errors
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/Probe.lean:45:0: error: Expression
+  Option.map (fun m => decide (Api.readModule m = Except.ok mixed)) (Api.printModule "main" mixed) == some true
+did not evaluate to `true`
+([], [[1, 0, 0]], false, true)

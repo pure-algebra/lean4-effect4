@@ -1,0 +1,66 @@
+("pIndep", [("success (Val.list [(Val.nat 1), (Val.nat 2)]) | refs [(Val.nat 1), (Val.nat 2)]", [1])], ["complete"])
+("pIndep diamonds", [])
+("pIndep preempt", [("success (Val.list [(Val.nat 1), (Val.nat 2)]) | refs [(Val.nat 1), (Val.nat 2)]", [1, 3, 5, 4])])
+("pRace", [("success (Val.nat 2) | refs [(Val.nat 2)]", [1])], ["complete"])
+("pRace diamonds", [])
+("pRace preempt",
+ [("success (Val.nat 2) | refs [(Val.nat 2)]", [1, 3, 5, 4]), ("success (Val.nat 1) | refs [(Val.nat 1)]", [5, 3, 4])])
+("pCommute", [("success (Val.nat 2) | refs [(Val.nat 2)]", [1])], ["complete"])
+("pCommute diamonds", [])
+("pCommute preempt", [("success (Val.nat 2) | refs [(Val.nat 2)]", [1, 3, 5, 4])])
+("pNoCommute", [("success (Val.nat 4) | refs [(Val.nat 4)]", [1])], ["complete"])
+("pNoCommute diamonds", [])
+("pNoCommute preempt",
+ [("success (Val.nat 4) | refs [(Val.nat 4)]", [1, 3, 5, 4]), ("success (Val.nat 3) | refs [(Val.nat 3)]", [5, 3, 4])])
+("pKahn", [("success (Val.nat 5) | refs []", [1])], ["complete"])
+("pKahn diamonds", [])
+("pKahn preempt", [("success (Val.nat 5) | refs []", [1, 3, 5, 4])])
+("pPoll", [("success (Val.bool false) | refs []", [1])], ["complete"])
+("pPoll diamonds", [])
+("pPoll preempt", [("success (Val.bool false) | refs []", [1])])
+("pYield", [("success (Val.nat 1) | refs [(Val.nat 3), (Val.nat 1)]", [2])], ["complete"])
+("pYield diamonds", [])
+("pYield preempt",
+ [("success (Val.nat 1) | refs [(Val.nat 3), (Val.nat 1)]", [2, 4, 6, 5]),
+  ("success (Val.nat 0) | refs [(Val.nat 3), (Val.nat 0)]", [6, 4, 5]),
+  ("success (Val.nat 3) | refs [(Val.nat 3), (Val.nat 3)]", [6, 4, 5])])
+("pRaceY",
+ [("success (Val.nat 2) | refs [(Val.nat 2)]", [3]), ("success (Val.nat 1) | refs [(Val.nat 1)]", [3])],
+ ["complete"])
+("pRaceY diamonds", [(["f0"], 1, 2, ["stores", "exits", "fiber records", "nextToken 4 vs 3", "trace length"])])
+("pRaceY preempt",
+ [("success (Val.nat 2) | refs [(Val.nat 2)]", [3, 5, 7, 6]),
+  ("success (Val.nat 1) | refs [(Val.nat 1)]", [3, 5, 7, 6])])
+("pIndepY", [("success (Val.list [(Val.nat 1), (Val.nat 2)]) | refs [(Val.nat 1), (Val.nat 2)]", [3])], ["complete"])
+("pIndepY diamonds", [(["f0"], 1, 2, ["nextToken 4 vs 3", "trace length"])])
+("pIndepY preempt", [("success (Val.list [(Val.nat 1), (Val.nat 2)]) | refs [(Val.nat 1), (Val.nat 2)]", [3, 5, 7, 6])])
+("pCommuteY", [("success (Val.nat 2) | refs [(Val.nat 2)]", [3])], ["complete"])
+("pCommuteY diamonds", [(["f0"], 1, 2, ["nextToken 4 vs 3", "trace length"])])
+("pCommuteY preempt", [("success (Val.nat 2) | refs [(Val.nat 2)]", [3, 5, 7, 6])])
+("pNoCommuteY",
+ [("success (Val.nat 4) | refs [(Val.nat 4)]", [3]), ("success (Val.nat 3) | refs [(Val.nat 3)]", [3])],
+ ["complete"])
+("pNoCommuteY diamonds", [(["f0"], 1, 2, ["stores", "exits", "fiber records", "nextToken 4 vs 3", "trace length"])])
+("pNoCommuteY preempt",
+ [("success (Val.nat 4) | refs [(Val.nat 4)]", [3, 5, 7, 6]),
+  ("success (Val.nat 3) | refs [(Val.nat 3)]", [3, 5, 7, 6])])
+("pKahnY", [("success (Val.nat 5) | refs []", [2])], ["complete"])
+("pKahnY diamonds", [])
+("pKahnY preempt", [("success (Val.nat 5) | refs []", [2, 4, 6, 5])])
+("pForkInChild", [("success (Val.list [(Val.nat 1), (Val.nat 2)]) | refs [(Val.nat 1), (Val.nat 2)]", [5])])
+("pForkInChild diamonds",
+ [(["f0"],
+   1,
+   2,
+   ["armed order", "fiber records",
+    "parks [(0, Effect4.Machine.Parked.withGuard 0), (1, Effect4.Machine.Parked.withGuard 3), (2, Effect4.Machine.Parked.withGuard 4), (3, Effect4.Machine.Parked.notParked), (4, Effect4.Machine.Parked.notParked)] vs [(0, Effect4.Machine.Parked.withGuard 0), (1, Effect4.Machine.Parked.withGuard 4), (2, Effect4.Machine.Parked.withGuard 3), (3, Effect4.Machine.Parked.notParked), (4, Effect4.Machine.Parked.notParked)]"]),
+  (["f0", "f1"],
+   1,
+   2,
+   ["fiber records",
+    "parks [(0, Effect4.Machine.Parked.withGuard 4), (1, Effect4.Machine.Parked.notParked), (2, Effect4.Machine.Parked.withGuard 5), (3, Effect4.Machine.Parked.notParked), (4, Effect4.Machine.Parked.notParked)] vs [(0, Effect4.Machine.Parked.withGuard 5), (1, Effect4.Machine.Parked.notParked), (2, Effect4.Machine.Parked.withGuard 4), (3, Effect4.Machine.Parked.notParked), (4, Effect4.Machine.Parked.notParked)]"]),
+  (["f0", "f1", "f2"], 1, 2, ["nextToken 6 vs 5", "trace length"]),
+  (["f0", "f2", "f1"], 1, 2, ["nextToken 6 vs 5", "trace length"])])
+("pPoll, root preempted", [(["f0", "f0"], "complete", "success (Val.bool false) | refs []")])
+("pKahn, root preempted", [("complete", "success (Val.nat 5) | refs []")])
+("pIndepY trace growth, 1 then 2 and 2 then 1", 38, 30)

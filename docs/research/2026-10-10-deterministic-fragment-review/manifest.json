@@ -1,0 +1,180 @@
+{
+  "reviewed_head": "9fb3b66cd0c80fe26468e9bef143e993fd3bf3f8",
+  "created_utc": "2026-10-10T17:33:29.533249+00:00",
+  "lean_toolchain": "leanprover/lean4:v4.33.1",
+  "build": {
+    "command": "LEAN_NUM_THREADS=3 lake build Effect4.Author Effect4.Program.LayerView Effect4.Laws.Machine.Behaviour Tools.Graph.Path Tools.Session.Snapshot ProofGraph.AxiomAudit",
+    "exit": 0,
+    "output": "probes/dependency-build.out"
+  },
+  "checks": [
+    {
+      "file": "ReviewRandomDescent.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewRandomDescent.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewRandomDescent.lean"
+      ],
+      "exit": 0,
+      "seconds": 0.812,
+      "recorded_by": "probes/results-ReviewRandomDescent-Audit-ReviewTapes.json",
+      "record_time_utc": "2026-10-10T17:06:01.791282+00:00",
+      "source_sha256": "2bfc6ad2ffc114e6a6351e6bf4274b66c266e607a4e738566dea8d4fb2e2f14b",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "Audit.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Audit.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Audit.lean"
+      ],
+      "exit": 0,
+      "seconds": 3.175,
+      "recorded_by": "probes/results-ReviewRandomDescent-Audit-ReviewTapes.json",
+      "record_time_utc": "2026-10-10T17:06:01.791282+00:00",
+      "source_sha256": "c1120afd107caab246911a77f11090546cfbfc8893f9a765534b2c1a5084572b",
+      "output_sha256": "5e3043f98677dc8436020882a8b3ca63e86864b0a9028dee03c86fd75eb5d90b"
+    },
+    {
+      "file": "ReviewTapes.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewTapes.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewTapes.lean"
+      ],
+      "exit": 0,
+      "seconds": 2.022,
+      "recorded_by": "probes/results-ReviewRandomDescent-Audit-ReviewTapes.json",
+      "record_time_utc": "2026-10-10T17:06:01.791282+00:00",
+      "source_sha256": "de95d06b5434e1b0003ebb4451d0fd0cebed4bb4372fa7efab62bc0a32f0c22f",
+      "output_sha256": "ae56c3e8957e10e76e606cea515da5004f0c70d38d471b236075047e15e50292"
+    },
+    {
+      "file": "Fragment.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Fragment.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Fragment.lean"
+      ],
+      "exit": 0,
+      "seconds": 2.288,
+      "recorded_by": "probes/results-Fragment-Controls-PromiseControls-FragmentAudit.json",
+      "record_time_utc": "2026-10-10T17:16:57.875279+00:00",
+      "source_sha256": "8367168c78618de16a363e32630f77896c289f57bb2f90862e1945b00b9da885",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "Controls.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Controls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Controls.lean"
+      ],
+      "exit": 0,
+      "seconds": 5.627,
+      "recorded_by": "probes/results-Controls-PromiseControls-LiveView-LiveAudit.json",
+      "record_time_utc": "2026-10-10T17:21:07.726609+00:00",
+      "source_sha256": "9db475d4dd2d6782c41d5bae6d33390a497f4f9ecb32b70f5a262a812fd57bfb",
+      "output_sha256": "f877fca3dcbc5f81d60e9933e0e1c2d897ee157b044d165a09a7fd505097177f"
+    },
+    {
+      "file": "PromiseControls.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/PromiseControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/PromiseControls.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.454,
+      "recorded_by": "probes/results-Controls-PromiseControls-LiveView-LiveAudit.json",
+      "record_time_utc": "2026-10-10T17:21:07.726609+00:00",
+      "source_sha256": "78c648122c8b7871be7dcb4a76a3190a9e31b0e5b298e76c87cd309f5c6df664",
+      "output_sha256": "68a04870b38fcfe23cc0aaaa2b5c9567cfadc2217b09dfcba293e64140b33d88"
+    },
+    {
+      "file": "FragmentAudit.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/FragmentAudit.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/FragmentAudit.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.333,
+      "recorded_by": "probes/results-LiveView-LiveAudit-FragmentAudit.json",
+      "record_time_utc": "2026-10-10T17:19:52.706282+00:00",
+      "source_sha256": "9389e95ef8698e0244fd92dd5c812ef9084108e436db2aaa99631979e2e66424",
+      "output_sha256": "ff3ff11ba165eb53b9b9b57e6a910d3ba6c1bdb965906318e37f6f94660010f2"
+    },
+    {
+      "file": "LiveView.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/LiveView.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/LiveView.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.401,
+      "recorded_by": "probes/results-Controls-PromiseControls-LiveView-LiveAudit.json",
+      "record_time_utc": "2026-10-10T17:21:07.726609+00:00",
+      "source_sha256": "41c8b4269e489a3a028595046b54a6673f845ab2fd670ca1b1e22081144a8eaf",
+      "output_sha256": "7e1076d621b7dc3a46df61d112ab670d47214d89743fd4524b864337100f15bb"
+    },
+    {
+      "file": "LiveAudit.lean",
+      "command": [
+        "lean",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/LiveAudit.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/LiveAudit.lean"
+      ],
+      "exit": 0,
+      "seconds": 1.517,
+      "recorded_by": "probes/results-Controls-PromiseControls-LiveView-LiveAudit.json",
+      "record_time_utc": "2026-10-10T17:21:07.726609+00:00",
+      "source_sha256": "90ce104f907d2a6374307d231cae331342aa763a9968c9f06f704deaa79e7381",
+      "output_sha256": "6efb7d0500334090cd3eaa8321a431a4cd7eeeb24f071234e8fda454fcd3113a"
+    }
+  ],
+  "upstream_copies": {
+    "RandomDescent.lean": "2bfc6ad2ffc114e6a6351e6bf4274b66c266e607a4e738566dea8d4fb2e2f14b",
+    "Tapes.lean": "de95d06b5434e1b0003ebb4451d0fd0cebed4bb4372fa7efab62bc0a32f0c22f"
+  },
+  "files": {
+    "PLAN.md": "e8b488d3ac837d08a739ae1997349858833505f7b555b9278fe5222b6fcd9e9b",
+    "README.md": "b95665ac6e8e098eb42bf32afc0c4b3de2079bafc8a1098061b9cf316ba3bc1e",
+    "DESIGN.md": "ad18d0bb0cd181d09e046607a860bc2ce55280ac69db8102ebfd224677e67744",
+    "PROOF-DAG.md": "c3a11a3e4550b0753d3fd7272bbc10de056db01cdd67ab71b238934c3a37cd7b",
+    "REVIEW.md": "31ea3134ea070d318d25f0bf34e3f53dbb8de0802510ab959ef477fe8fe66cfd",
+    "LITERATURE.md": "9a4ba6cddfab558af59eef4ebdacc61912edcf946ef942f2723777baa076c05e",
+    "RECEIPT.md": "2a8af2791454f9e54b33eeb5ea5bff97479f3742031d55b3e9d7981cb2ed5f2b",
+    "probes/ReviewRandomDescent.lean": "2bfc6ad2ffc114e6a6351e6bf4274b66c266e607a4e738566dea8d4fb2e2f14b",
+    "probes/ReviewRandomDescent.out": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "probes/Audit.lean": "c1120afd107caab246911a77f11090546cfbfc8893f9a765534b2c1a5084572b",
+    "probes/Audit.out": "5e3043f98677dc8436020882a8b3ca63e86864b0a9028dee03c86fd75eb5d90b",
+    "probes/ReviewTapes.lean": "de95d06b5434e1b0003ebb4451d0fd0cebed4bb4372fa7efab62bc0a32f0c22f",
+    "probes/ReviewTapes.out": "ae56c3e8957e10e76e606cea515da5004f0c70d38d471b236075047e15e50292",
+    "probes/Fragment.lean": "8367168c78618de16a363e32630f77896c289f57bb2f90862e1945b00b9da885",
+    "probes/Fragment.out": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "probes/Controls.lean": "9db475d4dd2d6782c41d5bae6d33390a497f4f9ecb32b70f5a262a812fd57bfb",
+    "probes/Controls.out": "f877fca3dcbc5f81d60e9933e0e1c2d897ee157b044d165a09a7fd505097177f",
+    "probes/PromiseControls.lean": "78c648122c8b7871be7dcb4a76a3190a9e31b0e5b298e76c87cd309f5c6df664",
+    "probes/PromiseControls.out": "68a04870b38fcfe23cc0aaaa2b5c9567cfadc2217b09dfcba293e64140b33d88",
+    "probes/FragmentAudit.lean": "9389e95ef8698e0244fd92dd5c812ef9084108e436db2aaa99631979e2e66424",
+    "probes/FragmentAudit.out": "ff3ff11ba165eb53b9b9b57e6a910d3ba6c1bdb965906318e37f6f94660010f2",
+    "probes/LiveView.lean": "41c8b4269e489a3a028595046b54a6673f845ab2fd670ca1b1e22081144a8eaf",
+    "probes/LiveView.out": "7e1076d621b7dc3a46df61d112ab670d47214d89743fd4524b864337100f15bb",
+    "probes/LiveAudit.lean": "90ce104f907d2a6374307d231cae331342aa763a9968c9f06f704deaa79e7381",
+    "probes/LiveAudit.out": "6efb7d0500334090cd3eaa8321a431a4cd7eeeb24f071234e8fda454fcd3113a",
+    "probes/run_checks.py": "6faf7070aee884a2dc487c82b2bd87e981f8bc4d7db9cadf03fdc3ba7a92b91c",
+    "probes/dependency-build.out": "71a5099b08ffa928478531c92a4484c1b47743fe9f2e5c816069597d573aa68c"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "lean",
+    "-M6144",
+    "-DwarningAsError=true",
+    "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2a-review/Audit.lean"
+  ],
+  "exit": 1,
+  "seconds": 3.324,
+  "module_sha256": "29acb6ff7b2a8bc52d14677f9fd41c2ee8084297b8db1d9506f0ff92fabf84c7"
+}

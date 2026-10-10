@@ -1,0 +1,4 @@
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/OwnerDefinitionsPrint.lean:75:75: error(lean.invalidField): Invalid field `name`: The environment does not contain `TypeScript.Decl.name`, so it is not possible to project the field `name` from an expression
+  x✝
+of type `TypeScript.Decl`
+/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/OwnerDefinitionsPrint.lean:75:0: error: cannot evaluate code because 'List.mapTR.loop._at_._private.docs.research.2026-10-10-module-layer-step2b-review.OwnerDefinitionsPrint.0._tmp._@.docs.research.2026-10-10-module-layer-step2b-review.OwnerDefinitionsPrint.3565798142._hygCtx._hyg.38.spec_0' uses 'sorry' and/or contains errors

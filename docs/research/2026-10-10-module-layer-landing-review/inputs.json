@@ -1,0 +1,14 @@
+{
+  "1c98dd94831c060e591cd7e5bef19d6528c5d22a:scripts/lib/conservativity.py": "2041c45df3839c317d87e7940b4a515c9d590a18fada58f64a84d081fae79df7",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:Test/fixtures/baseline/66ee4657-supplement-v1.policy.json": "e7ec3f2c4af2ea09c6bf573b754396cb000d4ae2a1ce460a530fda693ac46791",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:Test/fixtures/conservativity/mutations.json": "113a525f5ee366754b0f6f9158939240a6ac6e76064b120aaa826ed8fe704f2c",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:ocaml/eff/eff_manifest.txt": "1e425eaba8c37c6381d274ad483366b2e88c535cbb8dd7b105e8d729b37533fe",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:ocaml/goldens/eff/manifest.txt": "e0429394cbec6276e3a51922846352b7dc144057bea2a16a18b30fd887634fe4",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:ocaml/goldens/eff/wire-tags.txt": "03ca45e93c24c23fb03254b2dba6188ec7400ef1b36b6b196b932f4e8b9de558",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:scripts/lib/conservativity.py": "2041c45df3839c317d87e7940b4a515c9d590a18fada58f64a84d081fae79df7",
+  "235403a03b8843d4b86cb05759df4090a9d9bdb1:tools/Effect4Gen/wire-tags.json": "1488f9ed8ef7d5c100026e7b48b225cbc14923736b1239f22529f40cfa76c831",
+  "9fb3b66cd0c80fe26468e9bef143e993fd3bf3f8:ocaml/eff/eff_manifest.txt": "681afb69f6925ef67a4764b3f896063df45d35db8cbb874381e7e7556ecc30fb",
+  "9fb3b66cd0c80fe26468e9bef143e993fd3bf3f8:ocaml/goldens/eff/manifest.txt": "e0429394cbec6276e3a51922846352b7dc144057bea2a16a18b30fd887634fe4",
+  "9fb3b66cd0c80fe26468e9bef143e993fd3bf3f8:ocaml/goldens/eff/wire-tags.txt": "03ca45e93c24c23fb03254b2dba6188ec7400ef1b36b6b196b932f4e8b9de558",
+  "9fb3b66cd0c80fe26468e9bef143e993fd3bf3f8:tools/Effect4Gen/wire-tags.json": "1488f9ed8ef7d5c100026e7b48b225cbc14923736b1239f22529f40cfa76c831"
+}

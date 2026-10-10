@@ -1,0 +1,13 @@
+ M Test/Codegen/DefinitionsPrint.lean
+ M Test/Program/AuthoringContract.lean
+ M docs/STATE.md
+ M docs/core/decisions.md
+ M docs/research/2026-10-10-layer-scopes.md
+ M src/Effect4/Codegen/Print.lean
+ M src/Effect4/Codegen/Read.lean
+ M src/Effect4/Laws/Api/ModuleReadable.lean
+ M src/Effect4/Laws/Codegen/Module.lean
+ M src/Effect4/Laws/Program/Hoisting.lean
+ M src/Effect4/Laws/Program/HoistingTotal.lean
+ M src/Effect4/Program/Authoring.lean
+ M src/Effect4/Program/Refs.lean

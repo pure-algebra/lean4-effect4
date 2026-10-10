@@ -1,0 +1,10 @@
+{
+  "initial_exit": 2,
+  "excluded_evidence": [
+    "docs/research/2026-10-10-module-layer-law-review/owner-editor-controls.diff",
+    "docs/research/2026-10-10-module-layer-law-review/reviewed-laws.diff"
+  ],
+  "reason": "Exact git diff context lines consist of one space; retaining evidence bytes. Every trailing-space line in the exclusions is exactly one space.",
+  "check": "git diff --cached --check over each other packet path",
+  "exit": 0
+}

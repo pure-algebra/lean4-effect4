@@ -1,0 +1,25 @@
+{
+  "started": "2026-10-10T18:40:53.967708+00:00",
+  "reviewed_commit": "e9d6863eed613a40fe90444925daf5e3bec818c5",
+  "review_base": "8e19acb2110a53df66121c9710024ab723b90ea9",
+  "lean_version": "Lean (version 4.33.1, arm64-apple-darwin24.6.0, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "lean_path": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-view-invalidation-review/build:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean",
+  "source_modules": 207,
+  "inputs": 739,
+  "changed_inputs": [],
+  "commands": [
+    {
+      "command": [
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-live-view-invalidation-review/SiblingWait.lean"
+      ],
+      "exit_code": 0,
+      "seconds": 16.85,
+      "output": "consumer-command-0.out",
+      "sha256": "28f30fa6e2ef7612acff30adaf39dc71e7034d79bcb7077061265a0133f928d8"
+    }
+  ],
+  "all_commands_passed": true,
+  "scope": "Finite probe; pinned research sources compiled here against recorded primary dependency artifacts; no universal theorem or runtime observation"
+}

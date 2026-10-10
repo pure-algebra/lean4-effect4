@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python3",
+    "/Users/pooks/Dev/lean4-effect4/scripts/check-language.py",
+    "--strict",
+    "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/README.md",
+    "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/PLAN.md"
+  ],
+  "exit": 0
+}

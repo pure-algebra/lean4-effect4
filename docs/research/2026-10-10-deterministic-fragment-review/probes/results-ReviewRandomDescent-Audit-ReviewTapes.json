@@ -1,0 +1,35 @@
+[
+  {
+    "file": "ReviewRandomDescent.lean",
+    "command": [
+      "lean",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewRandomDescent.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewRandomDescent.lean"
+    ],
+    "exit": 0,
+    "seconds": 0.812
+  },
+  {
+    "file": "Audit.lean",
+    "command": [
+      "lean",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Audit.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/Audit.lean"
+    ],
+    "exit": 0,
+    "seconds": 3.175
+  },
+  {
+    "file": "ReviewTapes.lean",
+    "command": [
+      "lean",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewTapes.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-deterministic-fragment-review/probes/ReviewTapes.lean"
+    ],
+    "exit": 0,
+    "seconds": 2.022
+  }
+]

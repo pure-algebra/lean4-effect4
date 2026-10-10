@@ -1,0 +1,38 @@
+{
+  "observed_at": "2026-10-10T18:29:31.726686+00:00",
+  "primary": "1c98dd94831c060e591cd7e5bef19d6528c5d22a",
+  "reviewed_landing": "235403a03b8843d4b86cb05759df4090a9d9bdb1",
+  "landing_parent": "9fb3b66cd0c80fe26468e9bef143e993fd3bf3f8",
+  "previous_review": "16fb2477b93d2944622d0beae519fef003a90663",
+  "branch": "codex/schedule-independence-review-20261010",
+  "claude_session": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50",
+  "session_cwd": "/Users/pooks/Dev/lean4-effect4",
+  "session_read": "bounded recent tail; internal thinking excluded",
+  "implementation_worktree": "/Users/pooks/Dev/lean4-effect4-wt/module-layers",
+  "active_work": "step 2b printing, reading, authoring and related laws; do not edit",
+  "reproduced": [
+    "ML2-C2-01: named field-change exemption accepts changed text tag",
+    "in-memory path restriction rejects changed text tag and retains G6 and authorized defs field change"
+  ],
+  "source_reviewed_resolutions": [
+    "selected step2a law sources match the prior audited draft",
+    "refusal canonical detail added at 1c98dd948; owner build observed, not independently reproduced"
+  ],
+  "outstanding_findings": [
+    "ML2-C2-01: text-tag exemption; proposed patch checked but unapplied",
+    "ML2-OW-01: missing child-2 target has changed reason; same refused program and path",
+    "ML2-OW-02: earlier reference guards precede otherScope; note table requires qualification",
+    "editor structural layer-reference reasons remain less precise than checker reasons"
+  ],
+  "deferred": [
+    "step 2b printing, reading and authoring placement",
+    "per-call layer identity"
+  ],
+  "evidence_limits": [
+    "C2 only, no full compatibility command",
+    "no new Lean build or axiom audit",
+    "owner behavior gate logs observed, not independently reproduced"
+  ],
+  "production_changes": false,
+  "messages_to_claude": false
+}
