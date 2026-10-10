@@ -1,5 +1,4 @@
-import Effect4.Laws.Program.Agreement.Hosted
-import Effect4.Laws.Program.DenoteRowsB
+import Effect4.Laws.Program.Agreement.LoopCalls
 
 /-!
 # Program.Agreement.HostedLoop — the local run with calls against the budgeted meaning
@@ -10,9 +9,9 @@ the machine half of H8 and H9 on loops. `Agreement/Hosted.lean` closes the strai
 Everything else it reads (`Leads`, `Settled`, `tape_holds_host`) already holds on `LoopedRows`.
 So the loop closing step needs three facts about the budgeted meaning (`denoteRowsB`):
 
-* **forward** (Q5, `localRunC_compileB`, the one goal): at every budget, the local run with
-  calls goes where the budgeted meaning goes, or diverges at the compile's frontier; at a budget
-  cut it is still going after the budget's count of steps;
+* **forward** (Q5, `localRunC_compileB`, `Agreement/LoopCalls.lean`): at every budget, the local
+  run with calls goes where the budgeted meaning goes, or diverges at the compile's frontier; at
+  a budget cut it is still going after the budget's count of steps;
 * **reverse** (Q6a, `localRunC_to_rowsB`): a finite local exit is some budget's finished
   approximant, by Q5 at that budget and the run's determinism;
 * **stability** (Q2, `hostRunB_stable`, `Laws/Program/DenoteRowsB.lean`): a finished approximant
@@ -33,30 +32,6 @@ namespace Effect4.Program.Agreement
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
 
 variable {table : RowTable}
-
-/-- Where the local run with calls goes for an outcome of the meaning at budget `k`: a finished
-approximant's exit or an unanswered call, as `RunsToD` says of the meaning; at a budget cut the
-run is still going after at least `k` steps, or diverges. Each loop test costs a step, so a cut
-at `k` is at least `k` steps away. -/
-def RunsToDB {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (K : List NCode) (i : Bool) (k : Nat) (fr : NFiber) (s : Stores) (r : σ) :
-    Option (Option ExitV × (Stores × σ)) → Prop
-  | some (some ex, st) => RunsToD host root K i fr s r (some (ex, st))
-  | some (none, _) =>
-    (∃ c fr' s' r', k ≤ c ∧ ReachesC host root c fr s r fr' s' r') ∨ Diverges host root fr s r
-  | none => RunsToD host root K i fr s r none
-
-/-- **The forward agreement on loops** (Q5): a program of the row fragment with loops, compiled at
-an address of the root, runs with calls where its budgeted meaning goes at any budget, from any
-outer stack, or diverges at the compile's frontier; at a budget cut the run is still going after
-the budget's count of steps. `localRunC_compile` is its straight instance, `localRun_compileB`
-its host-free one. The one goal under `h8_loopedRows` and `denoteRowsB_eq_session_host`. -/
-@[semantics "translation-simulation" (requirement := R6)]
-proof_goal localRunC_compileB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
-    (root : NativeEff) (k : Nat) (e : NativeEff) (p : Point) (K : List NCode) (i : Bool)
-    (s : Stores) (r : σ) (hfrag : LoopedDataRows table e = true)
-    (hat : Node.at_ (Node.eff root) p.path = some (Node.eff e)) :
-    RunsToDB host root K i k (fiberOf (compileEff e p) K i) s r (hostRunB host k e p.env s r)
 
 /-- **The reverse agreement on loops** (Q6a): a local run with calls that exits from the root's
 start within `c` steps is the finished approximant at budget `c`, with the same exit, stores and
