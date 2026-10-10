@@ -170,9 +170,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 0. **The host session as a coalgebra** (the
    [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
-   landed, and CO-6's typed protocol and its law at the driver. Left in CO-6: a reactor that
-   names its row (a core change, batched), so `Effects`' constructions drive runs. Then CO-6b
-   prints a verified handler as an Effect service, and CO-7 adds promises. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
+   landed, with CO-6 and the generic half of CO-7 (decisions row 338 ruled the note's questions).
+   Next, file the comodel and runner papers. Then plan and land CO-6b: a definition block
+   printed as an Effect service whose layer builds its state (shape (b)), for Queue, Semaphore
+   and Pool. Then CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
@@ -218,9 +219,7 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
-- **The coalgebra note's four questions** (its section 8). Is `Effects` the home of the generic
-  layer? Is Codex the breaker of its packet? Should the comodel and runner papers be filed? Which
-  carrier does a printed service take (slice CO-6b)? Push `lean4-effects` before this branch.
+- **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
 
 ## Process
 

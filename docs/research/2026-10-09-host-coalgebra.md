@@ -348,6 +348,9 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   of a session, top to bottom. Under H9's premises, every finished run of the system at every
   depth is the session's observation (`sessionSystem_finished`). The battery unfolds four to-do
   runs deep enough, and each finishes at its drive's exit and state; at depth zero it is cut.
+  The converse holds too (`sessionSystem_finishes`, with `Effects` v0.10.1's
+  `System.run_peel_complete`): the system finishes at some depth, at the session's observation.
+  So the unfolding is the session.
 - **CO-7's generic half: `Effects` v0.10.0** (`lean4-effects` commit `24a91a1`, local). An
   indexed signature has worlds, the operations each world offers, their answers, and the world
   after each answer (`ISignature`). Its programs end with a value whose type depends on the final
@@ -363,6 +366,10 @@ This order replaces HC-1, HC-3, HC-4 and HC-5 of the host-call note. HC-2, HC-6 
   layer. Its methods close over the cell. So the shape of a service is a representation choice.
 
 ## 8. What the owner must decide
+
+**Ruled 2026-10-09, evening** (decisions row 338): all four as recommended. `Effects` is the
+home, Codex reviews after, and the papers are filed. A printed service takes shape (b) now, and
+shape (c) when a host row is a service.
 
 1. **`Effects` as the home of the generic layer** (representation). The coalgebra layer lands
    there as version 0.9.0. Effect4 pins a local commit until you push `lean4-effects`. This

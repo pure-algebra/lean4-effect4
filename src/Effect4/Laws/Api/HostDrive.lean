@@ -900,4 +900,24 @@ theorem sessionSystem_finished (s : Run) (hreach : Run.Reached s) (hfund : funde
   rw [Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at heq
   exact ⟨Prod.ext heq.1 heq.2.1, heq.2.2⟩
 
+/-- **The session's system finishes, at the session's observation.** Under H9's premises, the
+session's system, run against the host, finishes at some depth with the root's exit and the
+run's stores, the host ending where the answers left it. With `sessionSystem_finished`, the
+system's finished runs are exactly the session's observation: the unfolding is the session.
+Reach and limits as H9. Concept `translation-simulation`, role simulation; requirement R6.
+Consumer: the picture of a session as its system's unfolding (the coalgebra note, section 5.3). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem sessionSystem_finishes (s : Run) (hreach : Run.Reached s) (hfund : funded s = true)
+    (hrest : atRest s = true) (hhost : hostDriven s = true)
+    (hfrag : StraightRows s.built.table s.built.program = true) {σ : Type}
+    (host : Effects.Comodel (RowSig s.built.table) σ) (st st' : σ)
+    (hA : HostAnswered s.built.table host s.built.program s.budget.fuel (tapeOf s)
+      (Api.load s.built.program s.budget.compileFuel) st st')
+    (ex : ExitV) (hex : s.exit = some ex) :
+    ∃ depth, (sessionSystem s.built.table).run host depth
+      (denoteRows s.built.table s.built.program [], Stores.empty) st =
+        some (some (ex, s.machine.state), st') :=
+  Effects.System.run_peel_complete storeStep host (denoteRows s.built.table s.built.program [])
+    Stores.empty st (denoteRows_eq_session_host s hreach hfund hrest hhost hfrag host st st' hA ex hex)
+
 end Effect4.Run
