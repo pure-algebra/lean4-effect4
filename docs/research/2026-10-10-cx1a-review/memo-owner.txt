@@ -1,0 +1,6 @@
+def LayerCellTyped (root : ProgramSource) (w : World) (layer : LayerId) (cell : DeferredKey) :
+    Prop :=
+  ∀ l lt, Node.at_ (.eff root.program) layer = some (.layer l) →
+    Checker.checkLayer root.signature layer (LayerTerm.expandIn root.program l) = .ok lt →
+      w.«Π» cell = some (.handle Ty.contextTarget, lt.error)
+
