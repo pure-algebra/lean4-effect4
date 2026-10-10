@@ -9,24 +9,59 @@
     "ML2B-TEST-01"
   ],
   "earlier_open_unchanged": [
-    "ML2-C2-01",
     "LV-OW-01"
   ],
   "candidate_applied_to_implementation": false,
   "candidate_patch_sha256": "c9b3b610d259fbcb341e174029f1b2e02292b6692ba3d05f3cb91d3800e82e2f",
-  "refreshed_at": "2026-10-10T19:10:49.408002+00:00",
-  "current_draft_sha256": "f63c411db1d50bf8126675ba89dff2ac449d9952ffc84f8b9aa40afaa5387485",
-  "open_new_findings": [
-    "ML2B-TRUST-01"
-  ],
+  "refreshed_at": "2026-10-10T19:20:32.366773+00:00",
+  "current_draft_sha256": "6bf2da5b99e4b90acfc14e0313ce239883445ad64e91e55cebe4e42d5d817b6a",
+  "open_new_findings": [],
   "owner_source_repairs": {
     "ML2B-TEST-01": {
       "source_sha256": "a6a502917e16d890a894da5ffaa87a988f7b967037f89a15ededa5a1c6125b82",
       "independently_compiled_current_fixture": false
     }
   },
-  "remaining_patch": "proof-only.patch",
+  "remaining_patch": null,
   "remaining_patch_sha256": "4885b44dfb05e4df1170c4147275cf8ca13804a1b2dec973fe95db2c0d8ea753",
   "owner_law_build_report": "896 jobs; completed successfully; observed log",
-  "owner_runtime_check": "gen-truth running; no result claimed"
+  "owner_runtime_check": "Truth log reports PASS; first target check fails order and the rerun exits 0. Owner evidence only.",
+  "working_tree_repairs": {
+    "ML2B-TRUST-01": "Exact source match to independently audited candidate; uncommitted",
+    "ML2B-TEST-01": "Owner source correction; current fixture not independently rebuilt",
+    "ML2-C2-01": "Independent finite controls verify current C2 repair; uncommitted"
+  },
+  "proof_patch_applied_by_owner": true,
+  "independent_target_followup": "followup-1913/result.json",
+  "current_implementation_status": [
+    " M Test/Codegen/DefinitionsPrint.lean",
+    " M Test/Program/AuthoringContract.lean",
+    " M Test/Program/DefinitionsControls.lean",
+    " M Test/fixtures/conservativity/mutations.json",
+    " M Test/fixtures/target/selection.json",
+    " M docs/STATE.md",
+    " M docs/core/decisions.md",
+    " M docs/core/semantics.md",
+    " M docs/research/2026-10-10-layer-scopes.md",
+    " M harness/truth/Truth.lean",
+    " M harness/truth/corpus.json",
+    " M harness/truth/result.json",
+    " M harness/truth/result.md",
+    " M scripts/lib/conservativity.py",
+    " M src/Effect4/Codegen/Print.lean",
+    " M src/Effect4/Codegen/Read.lean",
+    " M src/Effect4/Laws/Api/ModuleReadable.lean",
+    " M src/Effect4/Laws/Codegen/Module.lean",
+    " M src/Effect4/Laws/Program/Hoisting.lean",
+    " M src/Effect4/Laws/Program/HoistingTotal.lean",
+    " M src/Effect4/Program/Authoring.lean",
+    " M src/Effect4/Program/Refs.lean",
+    " M tools/ProofGraph/Registry.lean",
+    "?? harness/truth/generated/pDefsModuleLayer.ts"
+  ],
+  "proof_patch_reverse_check": {
+    "exit": 0,
+    "output": ""
+  },
+  "compatibility_followup": "followup-1913/compatibility/README.md"
 }
