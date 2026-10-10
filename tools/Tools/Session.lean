@@ -44,6 +44,7 @@ namespace Tools.Session
 open Lean (Json ToJson toJson)
 open Effect4.Program Effect4.Program.Wire Effect4.Store
 open Tools.Query (Answer refused effTyJson refusalJson entryJson focusJson holeRow optField)
+open Tools.JsonBridge (printJson)
 
 /-- **The tool's state**: the session, once opened, and its journal, the latest step first. -/
 structure State where
@@ -104,9 +105,6 @@ def programFrom? (hex : Option String) (json : Option Json) : Option NativeEff �
   | none, some j => (programOfJson j, [``Tools.JsonBridge.ofLeanJson_num, ``Canonical.ofJson_exact])
   | none, none => (none, [])
 
-/-- A value's JSON print, as Lean's JSON. -/
-def printJson {α : Type} [Canonical α] (a : α) : Json :=
-  Tools.JsonBridge.toLeanJson (Canonical.print a)
 
 /-- A hole table from its hex bytes. -/
 def holesOfHex (hex : String) : Option RowTable := (bytesOfHex hex.toList).bind decodeHoles

@@ -81,4 +81,9 @@ def toLeanEntries : List (String × Effect4.Json) → List (String × Lean.Json)
   | (k, j) :: entries => (k, toLeanJson j) :: toLeanEntries entries
 end
 
+/-- **A value's JSON print, as Lean's JSON**: its generated canonical print (`Canonical.print`),
+the one structured projection the tools give of a carrier. -/
+def printJson {α : Type} [Canonical α] (a : α) : Lean.Json :=
+  toLeanJson (Canonical.print a)
+
 end Tools.JsonBridge

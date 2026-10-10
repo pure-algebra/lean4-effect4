@@ -84,9 +84,15 @@ def text : NativeEff := .succeed (.lit (.str "x"))
 
 -- tested: no refusal at the example, and both refusals of the body with two refused statements
 #guard (answer (ask "refusals" original)).result == Json.arr #[]
-#guard (answer (ask "refusals" twoBad)).result == Json.arr #[
-  Json.mkObj [("path", toJson ([0, 0, 0] : List Nat)), ("reason", .str "requestNotSubtype")],
-  Json.mkObj [("path", toJson ([0, 1, 0, 0] : List Nat)), ("reason", .str "requestNotSubtype")]]
+#guard ((answer (ask "refusals" twoBad)).result.getArr?.toOption.map fun rs =>
+    rs.toList.map fun r => (r.getObjValD "path", r.getObjValD "reason")) ==
+  some [(toJson ([0, 0, 0] : List Nat), .str "requestNotSubtype"),
+    (toJson ([0, 1, 0, 0] : List Nat), .str "requestNotSubtype")]
+-- tested: each refusal carries the whole refusal as its canonical print, its reason's fields
+-- among them (Codex's cx-refusal review)
+#guard ((answer (ask "refusals" twoBad)).result.getArr?.toOption.map fun rs =>
+    rs.toList.map fun r => ((r.getObjValD "detail").getObjValD "reason").getObjValD "_tag") ==
+  some [.str "requestNotSubtype", .str "requestNotSubtype"]
 
 /-! ## `slots` -/
 

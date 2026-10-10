@@ -7,6 +7,8 @@ import Effect4.Laws.Program.Sketch
 import Effect4.Laws.Program.Typing.Table
 import Lean.Data.Json
 import Tools.ProfileJson
+import Tools.JsonBridge
+import Effect4.Api.RefusalsDerived
 
 /-!
 # Tools.Query — one function that answers a request about a program (slice QUERY)
@@ -191,9 +193,12 @@ def effTyJson (t : EffTy) : Json :=
     ("error", Tools.ProfileJson.tyJson t.error),
     ("requires", Json.arr (t.requires.elems.map Tools.ProfileJson.keyJson).toArray)]
 
-/-- A refusal: its address and the name of its reason. -/
+/-- A refusal: its address, the name of its reason, and the whole refusal as its generated
+canonical print (`detail`, `Tools.JsonBridge.printJson`), so a reason's own fields reach the
+author: a reference's target and the condition it breaks, among them. -/
 def refusalJson (r : TypeRefusal) : Json :=
-  Json.mkObj [("path", toJson r.path), ("reason", .str r.reason.head)]
+  Json.mkObj [("path", toJson r.path), ("reason", .str r.reason.head),
+    ("detail", Tools.JsonBridge.printJson r)]
 
 /-- The checker's answer: a type or a refusal. -/
 def checkJson : Except TypeRefusal EffTy → Json
