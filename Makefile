@@ -50,10 +50,15 @@ LEAN_SOURCES := $(shell find src Test -name '*.lean')
 # depends on `build`, which builds every battery and the axiom gate (2026-10-09). The few that
 # load the whole tree (the root elaboration, the trust harness, the architecture map) are the
 # exceptions, named where they stand.
-CORE_SOURCES := $(filter-out src/Effect4/Laws/%,$(filter src/Effect4.lean src/Effect4/%,$(LEAN_SOURCES)))
+# The build's pins: a change to the toolchain, the Lake configuration or a package pin changes
+# every compiled output, so every gate below depends on them too (Codex's BUILD-PINS, 2026-10-10).
+BUILD_PINS := lean-toolchain lakefile.toml lake-manifest.json
+CORE_SOURCES := $(filter-out src/Effect4/Laws/%,$(filter src/Effect4.lean src/Effect4/%,$(LEAN_SOURCES))) $(BUILD_PINS)
+LEAN_INPUTS := $(LEAN_SOURCES) $(BUILD_PINS)
 # Build exactly the workspace modules that Lean files import, before `lake env lean` runs them
-# (`lake env` builds nothing).
-build_imports = $(LAKE) build $$($(PY) scripts/lean-imports.py $(1))
+# (`lake env` builds nothing). An unreadable file stops the recipe; an empty list builds nothing,
+# since a bare `lake build` is every default target (Codex's BUILD-IMPORTS, 2026-10-10).
+build_imports = @modules="$$($(PY) scripts/lean-imports.py $(1))" && { [ -z "$$modules" ] || $(LAKE) build $$modules; }
 # Every folder that a lane of `ts/eff` reads (seat LANES, decisions row 295): the ingest's fidelity,
 # census and fixture folders and the red twins of the tests stood outside this list.
 TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/test/red/* ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts \
@@ -190,7 +195,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
 TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean Test/Codegen/ServicesPrint.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/control.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
-$(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(LEAN_SOURCES)
+$(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(LEAN_INPUTS)
 	$(call build_imports,harness/truth/Truth.lean)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
 	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
@@ -203,7 +208,7 @@ $(GEN)/host-protocol: $(GEN)/truth tools/Tools/HostProtocol.lean $(CORE_SOURCES)
 	@mkdir -p $(GEN) && touch $@
 
 SCHEMA_TS_DIR := harness/schema-generation
-$(GEN)/schema-ts: $(GEN)/host-protocol $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(LEAN_SOURCES)
+$(GEN)/schema-ts: $(GEN)/host-protocol $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(LEAN_INPUTS)
 	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean))
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitFixture.lean > $(SCHEMA_TS_DIR)/Person.generated.ts
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitCoverageFixture.lean > $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts
@@ -252,7 +257,7 @@ SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
-$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_SOURCES)
+$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
 	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts $(SEMANTICS_DOGFOOD)
 	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
 	$(LAKE) exe semantics-report $(GEN)/semantics-report
@@ -508,7 +513,7 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 # and the inventory guard (every generated atom has a prelude case that runs). Named one by
 # one: `bun test harness/truth` would also pick up the lane's work directories.
 TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts harness/truth/if-case.test.ts
-$(CHK)/truth: $(LEAN_SOURCES) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts harness/truth/mask.typecheck.ts \
+$(CHK)/truth: $(LEAN_INPUTS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts harness/truth/mask.typecheck.ts \
     harness/truth/P2b.lean tools/target/checker.ts tools/target/oracle.ts \
     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
 	$(call build_imports,harness/truth/Truth.lean harness/truth/P2b.lean)
@@ -557,7 +562,7 @@ CORPUS_LANE := scripts/check-corpus.py scripts/lib/truth_host.py tools/target/co
   harness/truth/corpus-results.tsv harness/truth/corpus-known-differences.md Test/fixtures/target/selection.json \
   harness/truth/tsconfig.json harness/truth/prelude-inventory.ts $(wildcard harness/truth/session/*.ts) \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json
-$(CHK)/corpus: $(LEAN_SOURCES) $(TRUTH_SOURCES) $(CORPUS_LANE) ts/eff/node_modules | harness/truth/node_modules
+$(CHK)/corpus: $(LEAN_INPUTS) $(TRUTH_SOURCES) $(CORPUS_LANE) ts/eff/node_modules | harness/truth/node_modules
 	$(call build_imports,harness/truth/Truth.lean)
 	$(PY) scripts/check-corpus.py
 	@mkdir -p $(CHK) && touch $@
@@ -591,7 +596,7 @@ gen-architecture: gen-semantics | build ## the architecture map, measured from t
 # than reading it, since a stale signature is a wrong expectation, not a missing one. Then
 # the tool type-checks itself under the same compiler it drives — nothing did before, and
 # `renderTy`, the hand copy of the printer it replaced, had fallen four constructors behind.
-$(CHK)/target: $(LEAN_SOURCES) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json \
+$(CHK)/target: $(LEAN_INPUTS) $(TRUTH_GENERATED) harness/truth/prelude.ts Test/fixtures/target/selection.json \
   $(wildcard tools/target/*.ts tools/target/*.json) tools/Tools/RowTypes.lean generated/row-types.tsv \
   tools/Tools/TyVectors.lean generated/assignability.tsv \
   ts/eff/profile.gen.ts ts/eff/eff.gen.ts ts/eff/packages.gen.ts ts/eff/tsconfig.json ts/eff/package.json ts/eff/node_modules lean-toolchain
@@ -617,7 +622,7 @@ gen-row-citations: ## promote a fresh rows/atoms report to generated/row-citatio
 
 # The schema codec: Lean's `Ty.encode` results for the contract's cases, compared with
 # rc.112's `Schema.toCodecJson` on the host; nothing committed.
-$(CHK)/schema-codec: $(LEAN_SOURCES) $(wildcard harness/truth/schema-codec/*) | harness/truth/node_modules
+$(CHK)/schema-codec: $(LEAN_INPUTS) $(wildcard harness/truth/schema-codec/*) | harness/truth/node_modules
 	$(call build_imports,harness/truth/schema-codec/Emit.lean)
 	@tmp="$$(mktemp -d "$${TMPDIR:-/tmp}/effect4-schema-codec.XXXXXX")"; \
 	  $(LAKE) env lean -M4096 --run harness/truth/schema-codec/Emit.lean "$$tmp/values.ts" && \
@@ -666,7 +671,7 @@ $(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/D
 # The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
 # `harness/truth/session/Keyed.lean` imports are its inputs, by their sources.
 HOST_PROTOCOL_SCENARIOS := $(wildcard Test/Dogfood/*.lean Test/Dogfood/Scenario/*.lean)
-$(CHK)/host-protocol: $(LEAN_SOURCES) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) harness/truth/prelude.ts tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
+$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) harness/truth/prelude.ts tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 
@@ -676,7 +681,7 @@ $(CHK)/census: $(VENDOR_SOURCES) generated/effect-runtime-census.tsv Test/Audit/
 
 # The semantics report's refusal controls: a registry naming an unloaded root, a stale witness or
 # a malformed register row is refused with its reason. The report's own drift is `check-gen`'s.
-$(CHK)/semantics: $(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean $(LEAN_SOURCES)
+$(CHK)/semantics: $(SEMANTICS_SOURCES) tools/Drivers/SemanticsControls.lean $(LEAN_INPUTS)
 	$(LAKE) build semantics-controls Test.Audit.SemanticsCensus
 	$(LAKE) exe semantics-controls
 	@mkdir -p $(CHK) && touch $@

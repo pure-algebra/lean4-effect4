@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
-"""Print the workspace modules that the given Lean files import, one per line.
+"""Print the workspace modules that the given Lean files import, on one line.
 
-A recipe that runs `lake env lean --run FILE` builds exactly these first:
-`lake build $(python3 scripts/lean-imports.py FILE)`. `lake env` builds nothing, and depending on
-`build` (the whole battery) to get them built made every such gate pay for every module. A module
-of the toolchain (`Lean`, `Std`, `Init`, `Lake`) needs no build and is left out.
+A recipe that runs `lake env lean --run FILE` builds exactly these first (`build_imports` in the
+`Makefile`): `lake env` builds nothing. The header is read by the one shared reader,
+`scripts/lib/lean_imports.py`, which reads comments as Lean's header grammar does. This adapter
+keeps only the workspace's modules (a toolchain module needs no build) and drops repeats. A file
+that cannot be read stops the recipe with exit 1, before Lake runs.
 """
-import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.lean_imports import imports_of  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIRS = [ROOT / 'src', ROOT / 'tools', ROOT]
-IMPORT = re.compile(r'^\s*(?:public\s+|meta\s+|private\s+)*import\s+(?:all\s+)?([A-Za-z0-9_.]+)', re.M)
 
 
 def is_workspace(module: str) -> bool:
     relative = Path(*module.split('.')).with_suffix('.lean')
     return any((base / relative).is_file() for base in SOURCE_DIRS)
-
-
-def imports(path: Path) -> list[str]:
-    text = path.read_text(encoding='utf-8')
-    # the header ends at the first command; a docstring or a declaration ends it soonest
-    header = re.split(r'^\s*(?:/-|namespace|open|set_option|def|theorem|#)', text, maxsplit=1, flags=re.M)[0]
-    return IMPORT.findall(header)
 
 
 def main(argv: list[str]) -> int:
@@ -33,7 +28,12 @@ def main(argv: list[str]) -> int:
         return 2
     seen: list[str] = []
     for name in argv:
-        for module in imports(Path(name)):
+        try:
+            modules = imports_of(Path(name))
+        except OSError as error:
+            print(f'lean-imports: cannot read {name}: {error}', file=sys.stderr)
+            return 1
+        for module in modules:
             if module not in seen and is_workspace(module):
                 seen.append(module)
     print(' '.join(seen))
