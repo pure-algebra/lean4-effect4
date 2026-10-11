@@ -211,3 +211,39 @@ Open work: timeout observation, retained counterexample and the coordinator's re
 
 The audit checks 910 declarations within `[propext, Quot.sound]`.
 It finds zero planned goals and zero declarations depending on planned goals.
+
+## Timeout form and completed-outcome model
+
+The first-exit timeout form observes the attempt and timer directly.
+It retains the complete selected exit and uses the existing cleanup-before-publication path.
+The scenario logs the completed form's captured exit after that cleanup and before retry consumes it.
+The observation pairs each log entry with its retained selected child and attempt or timer role.
+Acceptance without a completed log entry does not count as a returned timeout result.
+
+The owner rules: “Follow Effect: retry only after the timeout form returns a declared failure, retaining the four-attempt bound (Recommended).”
+The new predicate checks each completed predecessor result, predecessor existence, and the four-attempt bound.
+The original reply-based predicate and proposition remain named in the scenario.
+The implementation repair and the approved contract amendment remain separate changes.
+
+The stale-reply and cleanup propositions keep their original statements.
+The budgets remain fuel 2000 and compile fuel 4000.
+The direct race changes call identities: first fiber 1/token 1; second fiber 3/token 6.
+The original observation-column controls use those measured identities.
+Additional controls read complete returned exits, selected roles, and the four completed timeout results.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Test.Dogfood.P1HttpCache`: passed, 1021 jobs.
+- `LEAN_NUM_THREADS=3 lake build Test.Dogfood.Scenario.Timeout`: passed, 1027 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/TimeoutModelAudit.lean`: passed.
+
+The scenario gate remains active and all sixteen named runs pass their controls.
+The model audit checks 396 declarations within `[propext, Quot.sound]`.
+It reports one declaration depending on planned goals and three planned goals.
+Those goals remain `retries_declared`, `stale_never_applies`, and `cleanup_keeps`.
+The finite controls do not close them.
+
+Placement: translation simulation R10 for returned timeout outcomes; host session protocol R6 and finalization R11 for the unchanged companion goals.
+Dependencies: first-exit backend and source slices, source typed bridge `1b24c34a`, coordinator bookkeeping `a741a709`, and source launch clauses `32f5fdbf`.
+The coordinator owns root imports and the reached behaviour gates.
+The retained kernel counterexample follows in a separate checked slice.

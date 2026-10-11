@@ -25,7 +25,8 @@ This battery ports the model probe's program 1 and its form laws
 * Records landed (row 119). A host row may now answer a `Quote` record, and two quotes' prices
   add (section 6). The key-value cache holds strings (DB-15), so the program still keeps the
   body as text.
-* The forms and the program are the probe's, unchanged.
+* The timeout form directly observes the attempt and timer through first-exit selection.
+  The retry form and cache program retain the probe's structure.
 * The error payload landed (decisions row 120, parts E1 and E2). `HttpError{status, url}` with a
   natural `status` builds as a typed failure and runs to `Err.payload` carrying rc.112's recorded
   404 error. It prints as a module that declares its `Data.TaggedError` class and fails with
@@ -61,21 +62,12 @@ A form is a Lean function over the authoring lifts (DI-89's third route). DI-89 
 typing lemma and one behaviour law; requirement R10 adds lexical well-scoping, reader admission,
 a readable expansion and a stable identity. These two forms meet lexical well-scoping only. -/
 
-/-- `Effect.timeout(body, millis)` as rc.112 builds it
-(`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3677-3727`: `raceFirst(self, sleep(d) *>
-fail(TimeoutError))`, where the first exit wins). The first success wins the language's race
-(`raceAll`, `vendor/effect-4.0.0-rc.112/src/internal/effect.ts:1477-1533`), and nothing re-raises
-a captured exit. So the form forks both entrants and races their `await`s, which never fail. It
-interrupts the loser, which waits for it, and joins the winner, which re-raises its failure. -/
+/-- `Effect.timeout(body, millis)` follows rc.112's first-exit race
+(`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3677-3727`).
+The machine observes the attempt and timer directly, retains the complete first exit,
+and waits for loser cleanup before returning it. -/
 def timeoutForm (body : Src NativeOp) (millis : TermSrc) (timedOut : TermSrc) : Src NativeOp :=
-  eff do
-    let entrant ← fork body
-    let timer ← fork (andThen (Effect.sleep millis) (fail timedOut))
-    let winner ← withFiber (Action.raceAll
-      [andThen (await entrant) (succeed (nat 0)), andThen (await timer) (succeed (nat 1))])
-    ifElse (app "eq" [winner, nat 0])
-      (andThen (withFiber (Action.interrupt timer)) (join entrant))
-      (andThen (withFiber (Action.interrupt entrant)) (join timer))
+  withFiber (Action.raceAllFirst [body, andThen (Effect.sleep millis) (fail timedOut)])
 
 /-- `Effect.retry(attempt, { schedule: exponential(base) ∘ upTo(times), while })`
 (`vendor/effect-4.0.0-rc.112/src/internal/schedule.ts:51-80`). The attempt runs once, and again

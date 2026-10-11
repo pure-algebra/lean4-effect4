@@ -12,15 +12,15 @@ race between an attempt and a timer on the logical clock, a retry loop with a ty
 host call that the session answers by key, an interruption that retires a held call, and a
 finalizer.
 
-* **Program.** `fetch`: p1's quote fetch with two cells. Each attempt counts itself before its
+* **Program.** `fetch`: p1's quote fetch with counting, cleanup and completed-outcome cells. Each attempt counts itself before its
   host call, so the count is committed before the call. Each attempt's finalizer notes the
   attempt's number and whether an interruption ended it.
 * **Script.** The host holds the first attempt's call. Its reply comes before the timeout, or
   after it, or its reply receipt comes before and its reply application after. Then the second
   attempt gets its own reply. `runsOf` lists each script once, as a named run.
-* **Observation.** `Observation`, nine fields: what became of each held call, the accepted reply
+* **Observation.** `Observation`: what became of each held call, the accepted reply
   receipts, the reply applications, the retired calls, the stored replies, the attempts started,
-  the cleanup log, the root's ending and the timer work.
+  the cleanup log, the root's ending, timer work and completed timeout outcomes.
 * **Claim.** `timeout` assembles three clauses, each a planned goal over scripts:
   `retries_declared`, `stale_never_applies` and `cleanup_keeps`. Three laws stand beside them as
   associated laws: an application at budget zero stops at a frontier (`applyReply_zero`), the
@@ -70,15 +70,21 @@ def attempt (resets : Bool) (count ended : TermSrc) : Src NativeOp :=
 
 /-- The client: p1's fetch over the counting attempt. A 2000 ms timeout bounds each attempt, and
 `retries` is the retry form's test of a typed failure. The form allows three retries, on the
-delays 100, 200 and 400 ms. The cells are the count and the cleanup log, in allocation order. -/
+delays 100, 200 and 400 ms. The cells are the count, cleanup log and completed-form log, in allocation order. -/
 def client (retries : TermSrc → TermSrc) (resets : Bool) : Module NativeOp :=
   { rows := [getQuote]
     main := eff do
       let count ← Ref.make (nat 0)
       let ended ← Ref.make (ascribe (.list (.prod .nat .bool)) (app "nil" []))
+      let completed ← Ref.make
+        (ascribe (.list (.prod .nat (.exitOf .string (.prod .string .string)))) (app "nil" []))
       retryForm
-        (timeoutForm (attempt resets count ended) (nat 2000)
-          (app "pair" [str "Timeout", str "2000 ms"]))
+        (onExit "timeout.exit"
+          (timeoutForm (attempt resets count ended) (nat 2000)
+            (app "pair" [str "Timeout", str "2000 ms"]))
+          (eff do
+            let n ← Ref.get count
+            note completed (app "pair" [n, var "timeout.exit"])))
         retries 3 100 .string (.prod .string .string) }
 
 /-- The scenario's program: the client with p1's retry test. It retries a `NetworkError`, a
@@ -99,12 +105,12 @@ def http : Sel := .row "Http.getQuote"
 /-- The first attempt's call: its entrant is fiber 1. -/
 def first : Sel := .fiber ⟨1⟩
 
-/-- The second attempt's call: its entrant is fiber 5. -/
-def second : Sel := .fiber ⟨5⟩
+/-- The second attempt's call: its entrant is fiber 3. -/
+def second : Sel := .fiber ⟨3⟩
 
 /-- The keys of the first two attempts' calls. -/
-def key1 : Key := ⟨⟨1⟩, 0⟩
-def key2 : Key := ⟨⟨5⟩, 7⟩
+def key1 : Key := ⟨⟨1⟩, 1⟩
+def key2 : Key := ⟨⟨3⟩, 6⟩
 
 /-- The bodies the host answers the first and the second attempt with. -/
 def body1 : Val := .str "body-1"
@@ -195,6 +201,45 @@ def fateOf (s : Run) (call : Seen) : Fate :=
     | some entry => .retired entry.2
     | none => if (live s).contains call then .live else .other
 
+/-- Which timeout entrant supplied the selected exit. -/
+inductive WinnerRole
+  | attempt
+  | timer
+  | unknown
+  deriving DecidableEq
+
+/-- A timeout form that finished cleanup and returned its complete exit.
+Selection identity comes from the race's retained observer data. -/
+structure FormOutcome where
+  attempt : Nat
+  selected : Option FiberId
+  role : WinnerRole
+  exit : ExitV
+  deriving DecidableEq
+
+/-- Completed forms pair the finalizer log with the corresponding retained first-exit race.
+An accepted race without a completed log entry stays outside this observation. -/
+def completedForms (s : Run) : List FormOutcome :=
+  let races := s.machine.races.filter (fun r => r.mode == .firstExit)
+  let entries := match cell s 2 with
+    | some (.list entries) => entries
+    | _ => []
+  entries.zipIdx.filterMap fun (entry, index) =>
+    match entry with
+    | .list [.nat attempt, written] =>
+      (exitImage.ofVal written).map fun exit =>
+        let selected := (races[index]?).bind (·.selected)
+        let role : WinnerRole := match selected with
+          | none => .unknown
+          | some child =>
+            match s.machine.forks.find? (·.child == child) with
+            | none => .unknown
+            | some record =>
+              if record.site.getLast? == some 0 then .attempt
+              else if record.site.getLast? == some 1 then .timer else .unknown
+        ⟨attempt, selected, role, exit⟩
+    | _ => none
+
 /-- The scenario's one observation. -/
 structure Observation where
   /-- What became of each attempt's call that the host held, in the order it got them. -/
@@ -215,6 +260,8 @@ structure Observation where
   root : Ending
   /-- The timer work: each sleeping fiber's number with the clock reading it wakes at. -/
   timers : List (Nat × Nat)
+  /-- Completed timeout outcomes, after loser cleanup and before retry consumes the result. -/
+  forms : List FormOutcome := []
 deriving DecidableEq
 
 /-- The observation of a run. -/
@@ -230,6 +277,7 @@ def observe (s : Run) : Observation :=
     cleanups := match cell s 1 with
       | some (.list entries) => entries
       | _ => []
+    forms := completedForms s
     root := endingOf s.exit
     timers := s.work.timers.map fun timer => (timer.1.value, timer.2.toNat) }
 
@@ -251,9 +299,25 @@ def Fate.retries : Fate → Bool
 /-- Whether only the declared failures retried. Every held call but the last ended in a declared
 failure or a retirement. The held calls are no more than the attempts, and the attempts are no
 more than four: the first one and three retries. -/
-def Observation.retriesDeclared (o : Observation) : Bool :=
+def Observation.replyBasedRetriesDeclared (o : Observation) : Bool :=
   o.calls.dropLast.all Fate.retries && decide (o.calls.length ≤ o.attempts) &&
     decide (o.attempts ≤ 4)
+
+/-- Only a returned declared typed failure permits the next attempt.
+The prefix records each predecessor's completed form, with the four-attempt bound retained. -/
+def FormOutcome.retries (outcome : FormOutcome) : Bool :=
+  match outcome.exit with
+  | .failure cause =>
+    match cause.reasons with
+    | [Reason.fail (.tagged tag message) _] =>
+      tag == "NetworkError" || tag == "Timeout" || message == "503"
+    | _ => false
+  | .success _ => false
+
+/-- Retry decisions read completed timeout results rather than host reply applications. -/
+def Observation.retriesDeclared (o : Observation) : Bool :=
+  (o.forms.take (o.attempts - 1)).all FormOutcome.retries &&
+    decide (o.attempts ≤ o.forms.length + 1) && decide (o.attempts ≤ 4)
 
 /-- Whether no reply of a retired call reached an attempt. No retired call has a reply
 application. No two receipts, and no two applications, share a key. The root answers only the
@@ -273,23 +337,26 @@ def Observation.cleanupKeeps (o : Observation) : Bool :=
 
 /-! ## 4. The claim -/
 
+/-- The original reply-based claim, retained as a refuted proposition.
+An applied success can yield before the attempt exits, allowing the timer to win. -/
+def ReplyBasedRetriesDeclared : Prop :=
+  ∀ (b : Api.Built) (moves : List Move), Effect4.Api.Author.build fetch = .ok b →
+    moves.all Move.plain = true →
+    (observe (Scenario.play (opened b) moves)).replyBasedRetriesDeclared = true
+
 /-- The proposition of `retries_declared`. -/
 def RetriesDeclared : Prop :=
   ∀ (b : Api.Built) (moves : List Move), Effect4.Api.Author.build fetch = .ok b →
     moves.all Move.plain = true →
     (observe (Scenario.play (opened b) moves)).retriesDeclared = true
 
-/-- **Only the declared failures retry.** Under every script of plain moves the observation
-satisfies `Observation.retriesDeclared`. A later attempt's call follows a held call only when
-that call ended in a declared failure or a retirement, and the client starts four attempts at
-most. Reach: the program `fetch`, the battery's budgets, and scripts whose host answers are a
-success or one tagged failure (`Move.plain`). A retirement counts as a reason to retry, by the
-timer or by the host: the observation does not tell the two apart. The statement reads the
-calls that the host held: an attempt whose call the host never held leaves no record. It is a
-behaviour law of p1's two forms on one program, and no law of the forms. It does not establish
-a Cache contract, deadline fairness or a physical clock. Concept `translation-simulation`, R10.
-Consumer: the timeout scenario. Its controls are finite runs, and the seat's receipt records a
-bounded search. -/
+/-- **Only returned declared failures retry.** Each later attempt follows a completed timeout
+form that returns a declared typed failure. The client starts at most four attempts.
+Reach: `fetch`, the battery's budgets, and every plain script.
+The observation keeps host reply application separate from the form's complete returned exit.
+The selected entrant identifies its attempt or timer role at the actual exit observer.
+The statement establishes no fairness, physical deadline, or general law of either form.
+Concept: translation-simulation, R10. Consumer: the timeout scenario. -/
 @[semantics "translation-simulation" (requirement := R10)]
 proof_goal retries_declared : RetriesDeclared
 
@@ -353,7 +420,7 @@ def atTimedOut : Observation :=
     retired := [(key1, false)]
     attempts := 2
     cleanups := [ended 1 true]
-    timers := [(6, 4100)] }
+    timers := [(4, 4100)] }
 
 /-- The second attempt's reply was applied, and the root answered it. -/
 def atSecond : Observation :=
@@ -365,8 +432,10 @@ def atSecond : Observation :=
     root := .answered body2
     timers := [] }
 
-/-- Whether a run shows an observation. -/
-def shows (s : Run) (expected : Observation) : Bool := observe s == expected
+/-- Whether the original observation columns match.
+The declared controls separately read completed timeout outcomes through `retriesDeclared`. -/
+def shows (s : Run) (expected : Observation) : Bool :=
+  { observe s with forms := [] } == { expected with forms := [] }
 
 /-- The scenario's named runs: each script of a control, once, from one build of each program.
 The first fourteen are on the fetch. The last two are on the client that retries every failure
@@ -388,7 +457,7 @@ def runsOf (b eager resetting : Api.Built) : List NamedRun :=
   , run "late" [timedOut, answer first (ok body1)]
   , run "kept" [parked, [.receive http (ok body1), .tick 2000, .apply first]]
   , run "crossed" [timedOut, [.row (.submit (forged 0 key2 (ok body1)))]]
-  , run "direct" [timedOut, [.control (.answerAsync ⟨5⟩ 7 (ok body1))]]
+  , run "direct" [timedOut, [.control (.answerAsync ⟨3⟩ 6 (ok body1))]]
   , run "timer-interrupt" [parked, [.tick 2000]]
   , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
   , run "received" [parked, [.receive http (ok body1)]]
@@ -412,11 +481,15 @@ def controlsOf (b : Api.Built) : List Control :=
             receipts := [key1, key2]
             applications := [key1, key2]
             retired := []
-            cleanups := [ended 1 false, ended 2 false] }
+            cleanups := [ended 1 false, ended 2 false] } &&
+          (observe retried).retriesDeclared
       | _ => false
   , green "declared" "a timeout is declared: the second attempt calls under its own key"
       ["timed-out"] fun
-      | [retrying] => shows retrying atTimedOut && (observe retrying).retriesDeclared
+      | [retrying] =>
+        shows retrying atTimedOut && (observe retrying).retriesDeclared &&
+          (observe retrying).forms ==
+            [⟨1, some ⟨2⟩, .timer, .failure (Cause.fail (.tagged "Timeout" "2000 ms"))⟩]
       | _ => false
   , green "declared" "four timeouts end the retries: the root fails with the timeout"
       ["four"] fun
@@ -427,7 +500,10 @@ def controlsOf (b : Api.Built) : List Control :=
             attempts := 4
             cleanups := [ended 1 true, ended 2 true, ended 3 true, ended 4 true]
             root := .failed "Timeout" "2000 ms"
-            timers := [] }
+            timers := [] } &&
+          (observe exhausted).retriesDeclared &&
+          (observe exhausted).forms.length == 4 &&
+          (observe exhausted).forms.all (fun result => result.role == .timer)
       | _ => false
   , red "declared" "a 404 is not declared: the root fails with it, and no second attempt comes"
       ["404"] fun
@@ -458,7 +534,8 @@ def controlsOf (b : Api.Built) : List Control :=
             applications := [key1]
             cleanups := [ended 1 false]
             root := .answered body1
-            timers := [] }
+            timers := [] } &&
+          (observe early).forms == [⟨1, some ⟨1⟩, .attempt, .success body1⟩]
       | _ => false
   , green "stale" "the second attempt's reply at its own key answers the root" ["second"] fun
       | [recorded] => shows recorded atSecond && (observe recorded).staleNeverApplies
