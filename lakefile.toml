@@ -249,8 +249,7 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 # The generic effect algebra, morphisms, transport, families, the shared trace
 # alphabet, and the coalgebra layer (systems, bisimulations, hosts as comodels,
 # typed handlers, indexed signatures). Exact commit of v0.10.1 of
-# pure-algebra/lean4-effects (branch `coalgebra`, committed locally 2026-10-09;
-# push it before this repository's branch).
+# pure-algebra/lean4-effects (its `main` since 2026-10-11).
 [[require]]
 name = "effects"
 git = "https://github.com/pure-algebra/lean4-effects"
@@ -270,6 +269,15 @@ rev = "f5878bf879bd5712db964c2cd12802748c707605"
 name = "hash"
 git = "https://github.com/pure-algebra/lean4-hash"
 rev = "ab7eda433f0390fde7aa240189761540c9744c79"
+
+# HTML for the generated documents (`tools/Tools/Document/Html.lean`): the HTML Standard's content
+# model, typed tree and serializer, exact commit of pure-algebra/lean4-whatwg branch `html-h7`.
+# Only the `Tools` library imports it, and only `Whatwg.Html.*`, whose import closure is Lean
+# alone; the core and the law graph never do.
+[[require]]
+name = "whatwg"
+git = "https://github.com/pure-algebra/lean4-whatwg"
+rev = "2c6e3bc7539a1b71c9bbca3a1567fa6d873e71c0"
 
 
 # Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the
