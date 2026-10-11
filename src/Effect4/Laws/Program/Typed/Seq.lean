@@ -48,20 +48,8 @@ type: every leaf becomes a closing marker carrying the leaf's exit. -/
 @[semantics "residual-program-typing"]
 theorem close_typed (root : ProgramSource) {w : World} {T : EffTy} {a : RProgram}
     (h : TypedProg root w T a) (g : ExitV → RProgram) :
-    TypedProg root w T (a.bind (fun ex => .vis (.inr (.unguard ex)) g)) := by
-  induction h with
-  | pure exit => exact .unguard exit
-  | store cert pre _ ih => exact .store cert pre (fun w' o ans post => ih w' o ans post)
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ ih =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun w' o ans post => ih w' o ans post)
-  | guard mid _ _ skip ihBody ihRun =>
-    exact .guard mid ihBody (fun w' o ex post => ihRun w' o ex post) skip
-  | unguard payload => exact .unguard payload
-  | finishFinalizer payload => exact .finishFinalizer payload
-  | scopedGuard mid prev sc _ callback live services widen ihBody =>
-    exact .scopedGuard mid prev sc ihBody
-      (fun ex => Contracts.scopeExitCallback?_bind (callback ex) _) live services widen
+    TypedProg root w T (a.bind (fun ex => .vis (.inr (.unguard ex)) g)) :=
+  ProgramArrow.close h g
 
 /-- A failed exit's judgment moves along the checker's order on error columns: only `Fail`
 reasons read the column, and the shape exclusion reads no type. -/
@@ -184,6 +172,9 @@ type above it in both columns. Every exit the program carries moves up
 theorem typedProg_widen (root : ProgramSource) {w : World} {T T' : EffTy} {p : RProgram}
     (hans : Ty.subN T.answer T'.answer = true) (herr : Ty.subN T.error T'.error = true)
     (h : TypedProg root w T p) : TypedProg root w T' p := by
+  unfold TypedProg at h
+  generalize unit_eq : () = input at h
+  clear unit_eq
   induction h with
   | pure exit => exact .pure (exitOk_widen hans herr exit)
   | store cert pre _ ih => exact .store cert pre (fun w' o ans post => ih w' o ans post hans herr)

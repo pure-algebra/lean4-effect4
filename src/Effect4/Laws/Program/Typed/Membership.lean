@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Typed.Validity
 import Effect4.Laws.Program.Handles.Layer
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.MapValues
+import Effect4.Program.Provision
 import Effect4.Program.FoldOf
 import Effect4.Laws.Program.Signature
 import Effect4.Program.TyClasses
@@ -127,6 +128,30 @@ theorem flatMap_live {w : World} {es : List (Env.Service Env.ValU)}
   intro x hx
   obtain ⟨e, he, hxe⟩ := List.mem_flatMap.mp hx
   exact h e he x hxe
+
+/-- A context whose services fit is live: the value contains only their raw handles.
+The typed context reader and provider use this liveness premise. -/
+theorem live_context_of_servicesFit {w : World} {ctx : Ctx} (h : ServicesFit w ctx.services) :
+    Live w (Val.context ctx) := fun x hx =>
+  flatMap_live h.2 x (by rw [Val.handles_context] at hx; exact hx)
+
+/-- The right-biased merge keeps every declared service at its actual carrier.
+The provider's context transition and the layer merge use this fact. -/
+theorem servicesFit_merge {w : World} {a b : Env.Ctx} (ha : ServicesFit w a)
+    (hb : ServicesFit w b) : ServicesFit w (a.merge b) := by
+  refine ⟨fun key sv sty hget hty => ?_, entriesLive_of_flatMap fun x hx => ?_⟩
+  · rw [Env.Context.getV_merge] at hget
+    cases hbk : b.getV key with
+    | some x =>
+      rw [hbk] at hget
+      cases hget
+      exact hb.1 key _ sty hbk hty
+    | none =>
+      rw [hbk] at hget
+      exact ha.1 key sv sty hget hty
+  · rcases List.mem_append.mp (Env.Context.rawHandles_merge a b hx) with h | h
+    · exact flatMap_live ha.2 x h
+    · exact flatMap_live hb.2 x h
 
 /-- The empty map's services fit vacuously (`Context.empty()`, `Layer.ts:1515`). -/
 theorem servicesFit_empty (w : World) : ServicesFit w Env.Context.empty := by
@@ -2379,6 +2404,62 @@ theorem fits_option_inv {w : World} {v : Val} {a : Ty} (h : Fits w v (.option a)
   · rename_i x
     exact Or.inr ⟨x, rfl, h⟩
   · exact h.elim
+
+/-- Actual coverage and service declarations make the current context a strong typed member.
+The context reader consumes both premises; key presence alone supplies no carrier evidence. -/
+theorem fits_contextOf_intro {w : World} {ctx : Ctx} {keys : Env.Requirement}
+    (services : ServicesFit w ctx.services) (coverage : ctx.services.Satisfies keys)
+    (declared : ∀ key ∈ keys.elems, (w.serviceTy key).isSome = true) :
+    Fits w (Val.context ctx) (.contextOf keys) := by
+  refine ⟨ctx, Val.context?_context ctx, coverage, services,
+    live_context_of_servicesFit services, ?_⟩
+  intro key member
+  obtain ⟨carrier, hcarrier⟩ := Option.isSome_iff_exists.mp (declared key member)
+  obtain ⟨value, hvalue⟩ := Option.isSome_iff_exists.mp (coverage key member)
+  exact ⟨carrier, value, hcarrier, hvalue, services.1 key value carrier hvalue hcarrier⟩
+
+/-- A strong typed context retains the exact promised coverage and declared carrier members.
+The provider's discharged-row transition reads these fields before merging services. -/
+theorem fits_contextOf_inv {w : World} {v : Val} {keys : Env.Requirement}
+    (fit : Fits w v (.contextOf keys)) :
+    ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧
+      ctx.services.Satisfies keys ∧
+      ∀ key ∈ keys.elems, ∃ carrier value, w.serviceTy key = some carrier ∧
+        ctx.services.getV key = some value ∧ FlatFits w value carrier := by
+  obtain ⟨ctx, decoded, coverage, services, _, members⟩ := fit
+  exact ⟨ctx, decoded, services, coverage, members⟩
+
+/-- Providing a typed context supplies the removed keys at their actual declared carriers.
+The provider's entry transition consumes the old row difference and the supplied row. -/
+theorem fits_contextOf_provide {w : World} {previous supplied : Ctx}
+    {required keys : Env.Requirement}
+    (ambient : Fits w (Val.context previous) (.contextOf (Row.diff required keys)))
+    (given : Fits w (Val.context supplied) (.contextOf keys)) :
+    Fits w (Val.context (Ctx.withServices (previous.services.merge supplied.services)))
+      (.contextOf required) := by
+  obtain ⟨before, decoded, beforeServices, beforeKeys, beforeMembers⟩ := fits_contextOf_inv ambient
+  have same : before = previous := Option.some.inj (((Val.context?_context previous).symm.trans decoded).symm)
+  subst before
+  obtain ⟨provided, decoded, providedServices, providedKeys, providedMembers⟩ := fits_contextOf_inv given
+  have same : provided = supplied := Option.some.inj (((Val.context?_context supplied).symm.trans decoded).symm)
+  subst provided
+  have fromBefore := Provision.satisfies_merge_left previous.services supplied.services
+    (Row.diff required keys) beforeKeys
+  have fromGiven := Provision.satisfies_merge_right previous.services supplied.services keys providedKeys
+  refine fits_contextOf_intro (servicesFit_merge beforeServices providedServices) ?_ ?_
+  · intro key member
+    by_cases bound : key ∈ keys
+    · exact fromGiven key bound
+    · exact fromBefore key ((Row.mem_diff key required keys).mpr ⟨member, bound⟩)
+  · intro key member
+    by_cases bound : key ∈ keys
+    · obtain ⟨carrier, _, declared, _, _⟩ := providedMembers key bound
+      rw [declared]
+      rfl
+    · obtain ⟨carrier, _, declared, _, _⟩ := beforeMembers key
+        ((Row.mem_diff key required keys).mpr ⟨member, bound⟩)
+      rw [declared]
+      rfl
 
 /-- A member of the context handle type is a context whose services fit: no handle kind takes
 the context target (the context read's answer, `getContext_answers`, read back; decisions row 151

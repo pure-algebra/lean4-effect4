@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Validity
+import Effect4.Laws.Contracts.FramePath
 
 /-!
 Typed saved-stack interfaces (foundations plan D3–D5). These are judgments over the existing
@@ -24,10 +25,10 @@ open Effect4 Effect4.Machine Effect4.Program.Sched Effect4.Program.Denote
 /-- Named continuations need M3a's interpreter protocols. Keeping these requirements as
 parameters avoids assuming meanings for names from their spelling alone. Each is an arrow
 from the incoming exit type to the type expected by the remaining stack. -/
-structure FrameProtocols where
-  asyncFinalizer : World → EffTy → EffTy → EffName → Prop
-  iterator : World → EffTy → EffTy → EffName → Prop
-  loop : World → EffTy → EffTy → EffName → Val → Prop
+structure FrameProtocols (Object : Type := EffTy) where
+  asyncFinalizer : World → Object → Object → EffName → Prop
+  iterator : World → Object → Object → EffName → Prop
+  loop : World → Object → Object → EffName → Val → Prop
   /-- What a scope's exit callback needs of the world when it runs: the scope it closes and the
   context it restores (decisions row 188 (a)). -/
   scopeExit : World → Ctx → Nat → Prop
@@ -55,10 +56,6 @@ theorem scopeExitCallback?_bind {p : RProgram} {t : Ctx × Nat × ExitV}
     | inl op => rfl
     | inr op => cases op <;> rfl
 
-section
-variable (TypedProg : World → EffTy → RProgram → Prop)
-  (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols)
-
 /-- Seven arms of `ScopeFrame` as typed arrows, and the `scoped` guard's slot, `scopedResume` (row 188 (a)) (slice 5 R3, ruled 2026-09-21), closed under
 later worlds (row 135). `resume` types the running arm and the guard miss separately; a
 preempted skip passes the sanitized exit, which carries no `Fail` and fits every type
@@ -66,44 +63,78 @@ preempted skip passes the sanitized exit, which carries no `Fail` and fits every
 disjunct stood in for preemption and rejected every error-removing catch. Masks pass the exit
 type through; named hooks retain their protocol premise at every later world, including the
 cursor for a loop. Connection to `popR` is `Typed/Stack.lean`'s `popR_typed`. -/
-inductive FrameAccepts (w : World) : EffTy → EffTy → ScopeFrame → Prop
-  | resume {tin tout : EffTy} (kind : GuardKind) (next : ExitV → RProgram)
-      (run : ∀ w', w.leHost w' → ∀ ex, Exits w' tin ex → kind.hasExitArm ex = true →
-        TypedProg w' tout (next ex))
-      (skip : ∀ w', w.leHost w' → ∀ ex, Exits w' tin ex → kind.hasExitArm ex = false →
-        Exits w' tout ex) :
-      FrameAccepts w tin tout (.resume kind next)
-  | answer {tin tout : EffTy} (next : ExitV → RProgram)
-      (run : ∀ w', w.leHost w' → ∀ ex, Exits w' tin ex → TypedProg w' tout (next ex)) :
-      FrameAccepts w tin tout (.answer next)
-  | restoreMask (ty : EffTy) (flag : Bool) : FrameAccepts w ty ty (.restoreMask flag)
-  | asyncFinalizer {tin tout : EffTy} (name : EffName)
+inductive FrameArrow {Object Input : Type}
+    (TypedProg : World → Input → Object → RProgram → Prop)
+    (Exits : World → Input → Object → ExitV → Prop) (hooks : FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (w : World) : Object → Object → ScopeFrame → Prop
+  | resume {tin tout : Object} (kind : GuardKind) (next : ExitV → RProgram)
+      (run : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex → kind.hasExitArm ex = true →
+        TypedProg w' (inputOf tin ex) tout (next ex))
+      (skip : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex → kind.hasExitArm ex = false →
+        Exits w' (inputOf tin ex) tout ex) :
+      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.resume kind next)
+  | answer {tin tout : Object} (next : ExitV → RProgram)
+      (run : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex → TypedProg w' (inputOf tin ex) tout (next ex)) :
+      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.answer next)
+  | restoreMask (ty : Object) (flag : Bool) : FrameArrow TypedProg Exits hooks inputOf restoreInput w ty ty (.restoreMask flag)
+  | asyncFinalizer {tin tout : Object} (name : EffName)
       (protocol : ∀ w', w.leHost w' → hooks.asyncFinalizer w' tin tout name) :
-      FrameAccepts w tin tout (.asyncFinalizer name)
-  | finalizerMask (ty : EffTy) (flag : Bool) : FrameAccepts w ty ty (.finalizerMask flag)
-  | iter {tin tout : EffTy} (name : EffName)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.asyncFinalizer name)
+  | finalizerMask (ty : Object) (flag : Bool) : FrameArrow TypedProg Exits hooks inputOf restoreInput w ty ty (.finalizerMask flag)
+  | iter {tin tout : Object} (name : EffName)
       (protocol : ∀ w', w.leHost w' → hooks.iterator w' tin tout name) :
-      FrameAccepts w tin tout (.iter name)
-  | loop {tin tout : EffTy} (name : EffName) (cursor : Val)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.iter name)
+  | loop {tin tout : Object} (name : EffName) (cursor : Val)
       (protocol : ∀ w', w.leHost w' → hooks.loop w' tin tout name cursor) :
-      FrameAccepts w tin tout (.loop name cursor)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.loop name cursor)
   /-- The slot a `scoped` guard saves (decisions row 188 (a)): on every exit it runs that scope's
   exit callback, which `prepareScopedExitR` consumes by closing the scope and continuing with the
   exit the callback carries, or with that exit combined with a finalizer's failure
   (`finalizerR`); the frame types the carried exit by widening `tin` to `tout`. An `onExit false`
   slot always runs (`popR` masks first). -/
-  | scopedResume {tin tout : EffTy} (next : ExitV → RProgram) (prev : Ctx) (sc : Nat)
+  | scopedResume {tin tout : Object} (next : ExitV → RProgram) (prev : Ctx) (sc : Nat)
       (callback : ∀ ex, scopeExitCallback? (next ex) = some (prev, sc, ex))
       (hook : ∀ w', w.leHost w' → hooks.scopeExit w' prev sc)
-      (widen : ∀ w', w.leHost w' → ∀ ex, Exits w' tin ex → Exits w' tout ex) :
-      FrameAccepts w tin tout (.resume (.onExit false) next)
+      (widen : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex →
+        Exits w' (restoreInput prev) tout ex) :
+      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.resume (.onExit false) next)
 
-/-- A stack composes arrows through a shared middle type, not one type at every frame. -/
-inductive StackAccepts (w : World) : EffTy → EffTy → List ScopeFrame → Prop
-  | nil (ty : EffTy) : StackAccepts w ty ty []
-  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
-      (head : FrameAccepts TypedProg Exits hooks w tin middle frame)
-      (tail : StackAccepts w middle tout rest) : StackAccepts w tin tout (frame :: rest)
+/-- The existing type-only judgment is the unit-input instance of the same frame arrows.
+Typed context positions use `FrameArrow` with their actual continuation context. -/
+abbrev FrameAccepts (TypedProg : World → EffTy → RProgram → Prop)
+    (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols) :=
+  FrameArrow (fun w (_ : Unit) => TypedProg w) (fun w (_ : Unit) => Exits w)
+    hooks (fun _ _ => ()) (fun _ => ())
+
+namespace FrameAccepts
+variable {TP : World → EffTy → RProgram → Prop} {Ex : World → EffTy → ExitV → Prop}
+  {hooks : FrameProtocols} {w : World}
+abbrev resume := @FrameArrow.resume EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev answer := @FrameArrow.answer EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev restoreMask := @FrameArrow.restoreMask EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev asyncFinalizer := @FrameArrow.asyncFinalizer EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev finalizerMask := @FrameArrow.finalizerMask EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev iter := @FrameArrow.iter EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev loop := @FrameArrow.loop EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+abbrev scopedResume := @FrameArrow.scopedResume EffTy Unit (fun w (_ : Unit) => TP w)
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+end FrameAccepts
+
+section
+variable (TypedProg : World → EffTy → RProgram → Prop)
+  (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols)
+
+/-- A stack is the shared path over typed frame arrows, with one exact middle index. -/
+abbrev StackAccepts (w : World) : EffTy → EffTy → List ScopeFrame → Prop :=
+  Effect4.Contracts.Path (FrameAccepts TypedProg Exits hooks w)
 
 /-- Structural scheduler provenance: recorded reasons are interrupts, not typed failures;
 a deferred interrupt has a recorded cause. Proving that reachable scheduler states satisfy
@@ -145,9 +176,15 @@ section Laws
 variable {TP : World → EffTy → RProgram → Prop} {Ex : World → EffTy → ExitV → Prop}
   {hooks : FrameProtocols}
 
-/-- One frame transports along the host order. -/
-theorem frameAccepts_mono {w w' : World} (ord : w.leHost w') {a b : EffTy} {f : ScopeFrame}
-    (h : FrameAccepts TP Ex hooks w a b f) : FrameAccepts TP Ex hooks w' a b f := by
+/-- The same frame arrows transport annotated positions along the host order.
+The context getter and saved restoration use this instance without a second frame judgment. -/
+theorem frameArrow_mono {Object Input : Type}
+    {TP : World → Input → Object → RProgram → Prop}
+    {Ex : World → Input → Object → ExitV → Prop} {hooks : FrameProtocols Object}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    {w w' : World} (ord : w.leHost w') {a b : Object} {f : ScopeFrame}
+    (h : FrameArrow TP Ex hooks inputOf restoreInput w a b f) :
+    FrameArrow TP Ex hooks inputOf restoreInput w' a b f := by
   cases h with
   | resume kind next run skip =>
     exact .resume kind next (fun w'' o ex hx hk => run w'' (leHost_trans _ _ _ ord o) ex hx hk)
@@ -164,6 +201,11 @@ theorem frameAccepts_mono {w w' : World} (ord : w.leHost w') {a b : EffTy} {f : 
   | scopedResume next prev sc callback hook widen =>
     exact .scopedResume next prev sc callback (fun w'' o => hook w'' (leHost_trans _ _ _ ord o))
       (fun w'' o ex hx => widen w'' (leHost_trans _ _ _ ord o) ex hx)
+
+/-- One frame of the original type-only instance transports along the host order. -/
+theorem frameAccepts_mono {w w' : World} (ord : w.leHost w') {a b : EffTy} {f : ScopeFrame}
+    (h : FrameAccepts TP Ex hooks w a b f) : FrameAccepts TP Ex hooks w' a b f :=
+  frameArrow_mono ord h
 
 /-- **A saved stack transports along the host order** (row 135), with no premise on the
 program judgment, the exit judgment or the hooks. -/
@@ -227,38 +269,27 @@ adds machine-correlated registration arrows (`HostStack`) and their machine-free
 (`PositionStack`). One path type over an edge relation owns identity, composition, decomposition
 and mapping; each instance keeps its own edge relation, and an edge map carries the semantic
 proof (forgetting a correlation is one-way). -/
-inductive FramePath (Edge : EffTy → EffTy → ScopeFrame → Prop) :
-    EffTy → EffTy → List ScopeFrame → Prop
-  | nil (ty : EffTy) : FramePath Edge ty ty []
-  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
-      (head : Edge tin middle frame) (tail : FramePath Edge middle tout rest) :
-      FramePath Edge tin tout (frame :: rest)
+abbrev FramePath (Edge : EffTy → EffTy → ScopeFrame → Prop) :=
+  Effect4.Contracts.Path Edge
 
 namespace FramePath
 variable {E E' : EffTy → EffTy → ScopeFrame → Prop}
 
+abbrev nil (ty : EffTy) : FramePath E ty ty [] := Effect4.Contracts.Path.nil ty
+abbrev cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
+    (head : E tin middle frame) (tail : FramePath E middle tout rest) :
+    FramePath E tin tout (frame :: rest) := Effect4.Contracts.Path.cons head tail
+
 /-- An edge map, endpoints and frames kept, maps paths. -/
 theorem map (f : ∀ a b frame, E a b frame → E' a b frame) {a b : EffTy} {s : List ScopeFrame}
-    (h : FramePath E a b s) : FramePath E' a b s := by
-  induction h with
-  | nil ty => exact .nil ty
-  | cons head _ ih => exact .cons (f _ _ _ head) ih
+    (h : FramePath E a b s) : FramePath E' a b s := Effect4.Contracts.Path.map f h
 
 theorem append {a b c : EffTy} {s₁ s₂ : List ScopeFrame} (h₁ : FramePath E a b s₁)
-    (h₂ : FramePath E b c s₂) : FramePath E a c (s₁ ++ s₂) := by
-  induction h₁ with
-  | nil ty => exact h₂
-  | cons head _ ih => exact .cons head (ih h₂)
+    (h₂ : FramePath E b c s₂) : FramePath E a c (s₁ ++ s₂) :=
+  Effect4.Contracts.Path.append h₁ h₂
 
-theorem split : ∀ (s₁ s₂ : List ScopeFrame) {a c : EffTy}, FramePath E a c (s₁ ++ s₂) →
-    ∃ b, FramePath E a b s₁ ∧ FramePath E b c s₂
-  | [], _, a, _, h => ⟨a, .nil a, h⟩
-  | f :: s₁, s₂, _, _, h => by
-    rw [List.cons_append] at h
-    cases h with
-    | cons head tail =>
-      obtain ⟨b, h₁, h₂⟩ := split s₁ s₂ tail
-      exact ⟨b, .cons head h₁, h₂⟩
+theorem split (s₁ s₂ : List ScopeFrame) {a c : EffTy} (h : FramePath E a c (s₁ ++ s₂)) :
+    ∃ b, FramePath E a b s₁ ∧ FramePath E b c s₂ := Effect4.Contracts.Path.split s₁ s₂ h
 
 end FramePath
 
