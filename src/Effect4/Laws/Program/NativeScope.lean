@@ -1,0 +1,240 @@
+import Effect4.Laws.Program.ScopeFragment
+import Effect4.Laws.Program.SourceOrigin
+
+/-!
+# Native residual source ownership
+
+Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
+These predicates inspect existing native code, source points and stored names.
+Callback addresses retain the lexical length their invocation supplies.
+Stored finalizers retain their release address through every synthetic wrapper.
+The direct lexical fragment excludes raw generators, layers and definition invocation.
+-/
+set_option autoImplicit false
+namespace Effect4.Program.SourceScope
+open Effect4 Effect4.Machine Effect4.Program
+
+/-- The lexical length at the child a callback resolves after appending its arguments. -/
+def NextAt (root : NativeEff) (p : Point) (i added : Nat) : Prop :=
+  levelAt (.eff root) 0 (p.path ++ [i]) = some (p.env.length + added)
+
+/-- A stored foreign finalizer resolves one exit argument beyond its saved environment. -/
+def FinAt (root : NativeEff) : FinName → Prop
+  | .foreign capture => NextAt root (Point.ofCapture capture) 1 1
+  | _ => True
+
+/-- Only source operations can write references; administrative operations retain captures. -/
+def OpAt (root : NativeEff) (op : SyncOp) : Prop :=
+  match op with
+  | .refMake _ | .refSet _ _ | .refGetAndSet _ _ | .refSetAndGet _ _
+  | .refUpdate _ _ _ | .refGetAndUpdate _ _ _ | .refUpdateAndGet _ _ _
+  | .refUpdateSome _ _ _ | .refGetAndUpdateSome _ _ _ | .refUpdateSomeAndGet _ _ _
+  | .refModify _ _ _ | .refModifySome _ _ _ => OpOrigin root op
+  | .scopeAdd _ fin => FinAt root fin
+  | _ => True
+
+/-- Stored program wrappers retain every operation and finalizer they can expose. -/
+def ProgAt (root : NativeEff) : ProgName → Prop
+  | .syncOp op => OpAt root op
+  | .intoDeferred body _ | .intoBody body _ | .forkThen body _ _ | .forkOnly body _
+  | .forkInScope body _ _ | .forkScopedOf body _ | .awaitAllNew body => ProgAt root body
+  | .finalizerOf fin _ => FinAt root fin
+  | .onExitOf body fin _ => ProgAt root body ∧ FinAt root fin
+  | .seqOf first second => ProgAt root first ∧ ProgAt root second
+  | .closeWalk _ order _ => ∀ fin ∈ order, FinAt root fin
+  | _ => True
+
+/-- Stored continuation wrappers retain their delayed programs and captures. -/
+def StoreNameAt (root : NativeEff) : Name → Prop
+  | .seq next | .snapshotThen next => ProgAt root next
+  | .withWaiter base _ _ => StoreNameAt root base
+  | .finalizerName fin => FinAt root fin
+  | .closeSeq order _ _ => ∀ fin ∈ order, FinAt root fin
+  | _ => True
+
+/-- Stored fiber actions retain their forked, masked and finalizer programs. -/
+def StoreActionAt (root : NativeEff) : ActionName → Prop
+  | .fork body _ | .forkIn body _ _ | .forkScoped body _ | .setInterruptible body _ =>
+    ProgAt root body
+  | .closePar order _ => ∀ fin ∈ order, FinAt root fin
+  | _ => True
+
+/-- Stored thunks retain the syntax they expose when evaluated. -/
+def StoreThunkAt (root : NativeEff) : Thunk → Prop
+  | .op op => OpAt root op
+  | .body body => ProgAt root body
+  | .act action => StoreActionAt root action
+  | .foreign capture _ => FinAt root (.foreign capture)
+  | .park _ => True
+
+/-- Source service regions retain their program address; layer regions are outside this fragment. -/
+def RegionAt (root : NativeEff) : Region → Prop
+  | .program p => At root p
+  | _ => False
+
+/-- Source continuation names record the child length their actual invocation supplies. -/
+def NameAt (root : NativeEff) : EffName → Prop
+  | .cont p | .caught p | .onValue p | .fin p | .caughtError p => NextAt root p 1 1
+  | .onCause p => NextAt root p 2 1
+  | .loop p => At root p
+  | .scopeOpen p | .scopeProvide p _ | .scopeBody p _ => NextAt root p 0 0
+  | .forkScopedIn p => At root p
+  | .acquireCtx p | .acquireIn p _ => NextAt root p 0 0 ∧ NextAt root p 1 2
+  | .acquired p _ _ => NextAt root p 1 2
+  | .afterScopeAdd _ fin => FinAt root fin
+  | .releaseUnder p _ _ | .releaseBody p _ _ => NextAt root p 1 1
+  | .withWaiter base _ _ => NameAt root base
+  | .store name => StoreNameAt root name
+  | .updateThen _ region | .bodyThen region _ => RegionAt root region
+  | .gen _ _ _ | .provideLayerWith _ | .provideLayerBody _
+  | .buildWithScopeFromContext _ _ | .withMemoMapThen _ _ | .fromBuildThen _ _
+  | .memoize _ _ _ | .buildIntoLayerScope _ _ _ | .thenBuildInto _ _ _
+  | .freshThen _ _ | .provideThen _ _ _ _ | .mergeChildren _ _ | .mergeForkOne _ _ _ _ _
+  | .mergeForkNext _ _ _ _ _ | .mergeAllChildren _ _ | .mergeAllForkOne _ _ _ _ _
+  | .mergeAllForkNext _ _ _ _ _ => False
+  | _ => True
+
+/-- Native thunks retain the point, operation or stored syntax their interpreter reads. -/
+def ThunkAt (root : NativeEff) : EffThunk → Prop
+  | .pure p | .body p | .act p | .forkInAt p _ | .releaseMasked p _ => At root p
+  | .op op => OpAt root op
+  | .store thunk => StoreThunkAt root thunk
+  | .acquireMasked p _ => NextAt root p 0 0 ∧ NextAt root p 1 2
+  | .memoLookup _ _ _ | .forkLayer _ _ _ => False
+  | _ => True
+
+/-- The finite primitive syntax retains every source-bearing residual slot. -/
+def CodeAt (root : NativeEff) : NCode → Prop
+  | .sync thunk | .suspend thunk | .withFiber thunk => ThunkAt root thunk
+  | .iterator name _ | .whileLoop name _ | .asyncFinalizer name => NameAt root name
+  | .onSuccess body name | .onFailure body name | .onExit body name _ =>
+    CodeAt root body ∧ NameAt root name
+  | .onSuccessConst body next => CodeAt root body ∧ CodeAt root next
+  | .onSuccessAndFailure body success failure =>
+    CodeAt root body ∧ NameAt root success ∧ NameAt root failure
+  | .exitFrame body => CodeAt root body
+  | .async register _ cancel => NameAt root register ∧ ∀ name ∈ cancel, NameAt root name
+  | _ => True
+
+/-- The source walk transports a generated child level to a saved callback address. -/
+theorem next_of_at (root : NativeEff) (p : Point) (e : NativeEff) (i added : Nat)
+    (found : Node.at_ (.eff root) p.path = some (.eff e)) (hs : At root p)
+    (child : levelAt (.eff e) p.env.length [i] = some (p.env.length + added)) :
+    NextAt root p i added := by
+  unfold NextAt
+  rw [levelAt_suffix _ _ p.path [i] 0 found, hs]
+  exact child
+
+/-- A callback with no new argument retains its source child scope. -/
+theorem child_at (root : NativeEff) (p : Point) (i : Nat) (h : NextAt root p i 0) :
+    At root (p.child i) := by
+  exact h
+
+/-- A callback with one new argument retains its source child scope. -/
+theorem childWith_at (root : NativeEff) (p : Point) (i : Nat) (value : Val)
+    (h : NextAt root p i 1) : At root (p.childWith i value) := by
+  unfold At
+  change levelAt (.eff root) 0 (p.path ++ [i]) = some (p.env ++ [value]).length
+  rw [List.length_append, List.length_singleton]
+  exact h
+
+/-- A source row cannot synthesize a captured finalizer registration. -/
+theorem source_no_scopeAdd (row : NativeOp) (env : List Val) (value : Val)
+    (scope : Nat) (fin : FinName) : row.syncOpOf env value ≠ some (.scopeAdd scope fin) := by
+  fun_cases NativeOp.syncOpOf row env value
+  all_goals aesop
+
+/-- A source-owned operation supplies every residual scope condition of its native operation. -/
+theorem opAt_origin (root : NativeEff) (op : SyncOp) (origin : OpOrigin root op) :
+    OpAt root op := by
+  have noAdd : ∀ scope fin, op ≠ .scopeAdd scope fin := by
+    intro scope fin eq
+    obtain ⟨p, row, request, value, _, _, _, operation⟩ := origin
+    rw [eq] at operation
+    exact source_no_scopeAdd row p.env value scope fin operation
+  cases op <;> dsimp only [OpAt]
+  all_goals aesop
+
+/-- A refused shape carries no callback or writer. -/
+theorem badShape_at (root : NativeEff) : CodeAt root badShape := trivial
+
+/-- Asynchronous rows only produce registration and cancel names, without reference writers. -/
+theorem asyncRoute_at (root : NativeEff) (row : NativeOp) (request : Term) (p : Point) :
+    CodeAt root (asyncRoute row request p) := by
+  fun_cases asyncRoute row request p
+  all_goals aesop (add norm simp [CodeAt, ThunkAt, NameAt, StoreNameAt, badShape])
+
+/-- The compiler retains source scope in every residual slot of this source fragment. -/
+theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff) (p : Point)
+    (found : Node.at_ (.eff root) p.path = some (.eff e)) (hs : At root p) :
+    CodeAt root (compileEff e p) := by
+  revert found hs
+  fun_induction compileEff e p
+  case case13 p n hf row request kind value hval operation hop nex ncall nparam =>
+    intro found hs
+    simp only [kind, hval, hop]
+    exact opAt_origin root operation ⟨p, row, request, value, found, hs, hval, hop⟩
+  case case18 p n hf first rest ih =>
+    intro found hs
+    exact ⟨ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
+      next_of_at root p _ 1 1 found hs (by rfl)⟩
+  case case20 p n hf body handler ih =>
+    intro found hs
+    exact ⟨ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
+      next_of_at root p _ 1 1 found hs (by rfl)⟩
+  case case21 p n hf test body handler ih =>
+    intro found hs
+    exact ⟨ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
+      next_of_at root p _ 1 1 found hs (by rfl)⟩
+  case case22 p n hf body success failure ih =>
+    intro found hs
+    exact ⟨ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
+      next_of_at root p _ 1 1 found hs (by rfl),
+      next_of_at root p _ 2 1 found hs (by rfl)⟩
+  case case23 p n hf body finalizer ih =>
+    intro found hs
+    exact ⟨ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
+      next_of_at root p _ 1 1 found hs (by rfl)⟩
+  case case25 p n hf body noexit ih =>
+    intro found hs
+    exact ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl)))
+  case case37 p n hf acquire release =>
+    intro found hs
+    exact ⟨trivial, next_of_at root p _ 0 0 found hs (by rfl),
+      next_of_at root p _ 1 2 found hs (by rfl)⟩
+  case case40 p n hf key value body val read =>
+    intro found hs
+    exact ⟨trivial, child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))⟩
+  case case43 p n hf saved body mask ih =>
+    intro found hs
+    exact ih (Agreement.at_child found 0)
+      (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl)))
+  all_goals intro found hs
+  all_goals have head := fragment.at found
+  all_goals aesop (add norm simp [asyncRoute_at, badShape_at, CodeAt, NameAt, ThunkAt, directHead, Prim.ofExit]) (add norm unfold [frontier, badShape, updateContextAt]) (add safe apply [asyncRoute_at])
+
+/-- Resolving any scoped source point retains every residual source slot. -/
+theorem resolve_scoped (root : NativeEff) (fragment : Fragment root) (p : Point)
+    (hs : At root p) : CodeAt root (resolve root p) := by
+  unfold resolve
+  split
+  · rename_i e found
+    exact compile_at root fragment e p found hs
+  · exact badShape_at root
+
+/-- Appending the acquired value leaves precisely one future exit binder for its release. -/
+theorem capture_at (root : NativeEff) (p : Point) (value : Val) (ctx : Ctx)
+    (hs : NextAt root p 1 2) : FinAt root (.foreign (p.capture value ctx)) := by
+  unfold FinAt
+  unfold NextAt at hs ⊢
+  change levelAt (.eff root) 0 (p.path ++ [1]) = some ((p.env ++ [value]).length + 1)
+  rw [List.length_append, List.length_singleton]
+  exact hs
+
+end Effect4.Program.SourceScope
