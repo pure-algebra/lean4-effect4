@@ -1,0 +1,24 @@
+{
+  "reviewedCommit": "ec1cce6fa0e3cd62dee1c19c7230faa1aa16a13e",
+  "previousLayoutReview": "6d21c721",
+  "newFindings": [
+    {
+      "id": "D1R-1",
+      "kind": "wording correction",
+      "source": "tools/Tools/View/FlowOrder.lean",
+      "recommendation": "Structural precedence implies vertical separation; the converse is false."
+    }
+  ],
+  "unchangedFindings": [
+    "D3R-1",
+    "keyed endpoint connection",
+    "D3R-2"
+  ],
+  "productionEdits": false,
+  "ghosttyPin": "246f702876b924a1cb7cade1e99274d1470302fc",
+  "observedPrimaryHead": "232e71c5",
+  "newerWorkNotReviewed": [
+    "RowArg merge 232e71c5",
+    "working path, organic drawing and token edits"
+  ]
+}

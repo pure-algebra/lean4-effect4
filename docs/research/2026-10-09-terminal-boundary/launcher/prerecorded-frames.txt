@@ -1,0 +1,2 @@
+fixture title
+fixture body

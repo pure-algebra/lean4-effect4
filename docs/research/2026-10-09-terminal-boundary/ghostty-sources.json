@@ -1,0 +1,110 @@
+{
+  "pin": "246f702876b924a1cb7cade1e99274d1470302fc",
+  "kind": "source inspection; no native execution",
+  "sources": [
+    {
+      "path": "src/terminal/render.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/render.zig",
+      "sha256": "91fc044a64201a9c4121b7be3440da566f2d49bdf80689b291507005fbfb867e",
+      "bytes": 113608,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/render.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/terminal/c/render.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/c/render.zig",
+      "sha256": "54e78624e7e04192b4b8a8b909d1008f15f3254acd298a34a896125d4276058a",
+      "bytes": 100897,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/c/render.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/terminal/c/terminal.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/c/terminal.zig",
+      "sha256": "65ac5166ce02cc6a4e90df6b5673eaeebfb104393f95d0f2dd3e05ede87eb389",
+      "bytes": 250592,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/c/terminal.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/terminal/stream_terminal.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/stream_terminal.zig",
+      "sha256": "bd143733b7ca2baff24ec820dcc92d44a775586c223f1cb8fbf9c99f3c3dda55",
+      "bytes": 287788,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/stream_terminal.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/terminal/PageList.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/PageList.zig",
+      "sha256": "f78db57000f7d6690dce94798a596f3a2bcbe12780b7f03b9dbfc8cec02ef066",
+      "bytes": 731500,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/PageList.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/renderer/generic.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/renderer/generic.zig",
+      "sha256": "a6e5315955b90ae635094b603ebc70b72cafd7270e657bbb3e1194ec1823567f",
+      "bytes": 157773,
+      "cachePath": "/private/tmp/ghostty-renderer-review/src/renderer/generic.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/renderer/Thread.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/renderer/Thread.zig",
+      "sha256": "3421a71a216dab2b9c63081ae779bb9a3d883c32d34c9cffb3cbc0580034f724",
+      "bytes": 28745,
+      "cachePath": "/private/tmp/ghostty-public-review/src/renderer/Thread.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/font/shaper/Cache.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/font/shaper/Cache.zig",
+      "sha256": "97125de15dc42dd9083c2c284ee6d4fc0d1c886db364570e84402ff3f9d2b5a0",
+      "bytes": 2925,
+      "cachePath": "/private/tmp/ghostty-renderer-review/src/font/shaper/Cache.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/font/SharedGrid.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/font/SharedGrid.zig",
+      "sha256": "772d83dd1203ff60a2244f218108f58e52e51f5793eacdfa3d7d9b90395765be",
+      "bytes": 21627,
+      "cachePath": "/private/tmp/ghostty-public-review/src/font/SharedGrid.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/renderer.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/renderer.zig",
+      "sha256": "e28c74524f65af35c3a3fd6fc2562a54167eb4563eb11cb4caf5496b4cf7ca49",
+      "bytes": 2442,
+      "cachePath": "/private/tmp/ghostty-public-review/src/renderer.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/build/GhosttyLibVt.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/build/GhosttyLibVt.zig",
+      "sha256": "cfaa8ecc23407128fab02c87ef67d9d36ec4c0e43274b359600014a38eb8c89f",
+      "bytes": 22236,
+      "cachePath": "/private/tmp/ghostty-public-review/src/build/GhosttyLibVt.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/terminal/snapshot/snapshot.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/snapshot/snapshot.zig",
+      "sha256": "da983d7a44b6a6e998d82cb1af1ac6560f5177332a28cdf674c7e1286fc3d596",
+      "bytes": 79103,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/snapshot/snapshot.zig",
+      "refetchedMatch": true
+    },
+    {
+      "path": "src/terminal/snapshot/terminal.zig",
+      "url": "https://raw.githubusercontent.com/ghostty-org/ghostty/246f702876b924a1cb7cade1e99274d1470302fc/src/terminal/snapshot/terminal.zig",
+      "sha256": "d6a9b8ba87bca7575d7260391ff62e9b3188d861413562410933b00fd4020522",
+      "bytes": 65341,
+      "cachePath": "/private/tmp/ghostty-public-review/src/terminal/snapshot/terminal.zig",
+      "refetchedMatch": true
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "format": "effect4-terminal-launcher-fixture-v1",
+  "sourcePin": "21d8e031f31318db62afea392b3d043beef2e0be",
+  "originalSha256": "ccf2fb5dded2b10102ce33a95706155a1266f06db9e7c5595ac9c8b04e583fbc",
+  "candidateSha256": "cf07904e946c3aba094e571b96366ec738fadf3b540e3013c6c852c5ed0e8766",
+  "invocation": [
+    "python3",
+    "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-terminal-boundary/launcher/probe.py"
+  ],
+  "limits": [
+    "Fixture evidence only; no real Lake, graphical dependency build, window, terminal emulator, or terminal conformance run.",
+    "Candidate changes only the final normal-mode build dispatch; looks mode is unchanged."
+  ],
+  "rows": [
+    {
+      "variant": "original",
+      "mode": "text",
+      "command": [
+        "/bin/sh",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/v",
+        "-t",
+        "fixture"
+      ],
+      "commandShell": "/bin/sh /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/v -t fixture",
+      "exit": 73,
+      "stdout": "",
+      "stderr": "DISTINCTIVE_GRAPHICAL_BUILD_FAILURE\n",
+      "calls": [
+        "fake-lake env lean --run tools/Drivers/View.lean --motion 20 build fixture /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/out/fixture-build",
+        "BUILD_STUB_CALLED"
+      ],
+      "passControl": true
+    },
+    {
+      "variant": "original",
+      "mode": "window",
+      "command": [
+        "/bin/sh",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/v",
+        "fixture"
+      ],
+      "commandShell": "/bin/sh /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/v fixture",
+      "exit": 73,
+      "stdout": "",
+      "stderr": "DISTINCTIVE_GRAPHICAL_BUILD_FAILURE\n",
+      "calls": [
+        "fake-lake env lean --run tools/Drivers/View.lean --motion 20 build fixture /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/out/fixture-build",
+        "BUILD_STUB_CALLED"
+      ],
+      "passControl": true
+    },
+    {
+      "variant": "original",
+      "mode": "png",
+      "command": [
+        "/bin/sh",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/v",
+        "-p",
+        "fixture"
+      ],
+      "commandShell": "/bin/sh /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/v -p fixture",
+      "exit": 73,
+      "stdout": "",
+      "stderr": "DISTINCTIVE_GRAPHICAL_BUILD_FAILURE\n",
+      "calls": [
+        "fake-lake env lean --run tools/Drivers/View.lean --motion 20 build fixture /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/original/tools/view/out/fixture-build",
+        "BUILD_STUB_CALLED"
+      ],
+      "passControl": true
+    },
+    {
+      "variant": "candidate",
+      "mode": "text",
+      "command": [
+        "/bin/sh",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/v",
+        "-t",
+        "fixture"
+      ],
+      "commandShell": "/bin/sh /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/v -t fixture",
+      "exit": 0,
+      "stdout": "fixture title\nfixture body\n",
+      "stderr": "",
+      "calls": [
+        "fake-lake env lean --run tools/Drivers/View.lean --motion 20 build fixture /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/out/fixture-build"
+      ],
+      "passControl": true
+    },
+    {
+      "variant": "candidate",
+      "mode": "window",
+      "command": [
+        "/bin/sh",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/v",
+        "fixture"
+      ],
+      "commandShell": "/bin/sh /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/v fixture",
+      "exit": 73,
+      "stdout": "",
+      "stderr": "DISTINCTIVE_GRAPHICAL_BUILD_FAILURE\n",
+      "calls": [
+        "fake-lake env lean --run tools/Drivers/View.lean --motion 20 build fixture /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/out/fixture-build",
+        "BUILD_STUB_CALLED"
+      ],
+      "passControl": true
+    },
+    {
+      "variant": "candidate",
+      "mode": "png",
+      "command": [
+        "/bin/sh",
+        "/var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/v",
+        "-p",
+        "fixture"
+      ],
+      "commandShell": "/bin/sh /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/v -p fixture",
+      "exit": 73,
+      "stdout": "",
+      "stderr": "DISTINCTIVE_GRAPHICAL_BUILD_FAILURE\n",
+      "calls": [
+        "fake-lake env lean --run tools/Drivers/View.lean --motion 20 build fixture /var/folders/_2/d22zd5lj2_v9xrps05xl2sr80000gn/T/effect4-terminal-launcher-9beqf1d7/candidate/tools/view/out/fixture-build",
+        "BUILD_STUB_CALLED"
+      ],
+      "passControl": true
+    }
+  ]
+}
