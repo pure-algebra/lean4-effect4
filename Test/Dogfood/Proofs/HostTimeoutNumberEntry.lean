@@ -128,9 +128,33 @@ theorem count_sync (state : Stores) (count delay : Nat) (n : Fin 4) (error : Val
       some ({state with refs := numberHeap (count + 1) cleanups completed}, .unit) := by
   exact count_update [] state 0 count delay n error cleanups completed
 
+/-- The checked count prefix retains both actual saved callbacks in their source order. -/
+def countedFiber (fiber : NativeFiber) (captured : Point) (fuel delay : Nat) (n : Fin 4)
+    (error : Val) : NativeFiber :=
+  let point := attemptPoint captured fuel delay n error
+  let sync : NCode := .sync (.op (.refUpdate ⟨0⟩ countTerm point.env))
+  let body : NCode := .onSuccess sync (.cont (point.child 0))
+  let first := exitPushed fiber body (.fin point)
+  let second := successPushed first sync (.cont (point.child 0))
+  {countOp second with frame := {second.frame with current := .success .unit}}
+
+/-- The checked count prefix records the actual two pushes and the committed reference write. -/
+def countedMachine (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)
+    (captured : Point) (fuel delay count : Nat) (n : Fin 4) (error : Val)
+    (cleanups completed : List Val) : Effect4.Program.NativeMachine :=
+  let point := attemptPoint captured fuel delay n error
+  let sync : NCode := .sync (.op (.refUpdate ⟨0⟩ countTerm point.env))
+  let body : NCode := .onSuccess sync (.cont (point.child 0))
+  let first := exitPushed fiber body (.fin point)
+  let one := (machine.emit [.frame fiber.id (.pushed (.onExit body (.fin point) false))]).update first
+  let second := successPushed first sync (.cont (point.child 0))
+  let two := (one.emit [.frame first.id (.pushed (.onSuccess sync (.cont (point.child 0))))]).update second
+  ({two with state := {two.state with refs := numberHeap (count + 1) cleanups completed}}).update
+    (countedFiber fiber captured fuel delay n error)
+
 /-- Three actual loop commands commit the count before the first owed resume or delivery.
 The command residue remains symbolic; no later command runs inside this prefix. -/
-theorem count_prefix (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)
+theorem count_prefix_exact (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)
     (captured : Point) (fuel delay count : Nat) (n : Fin 4) (error : Val)
     (cleanups completed : List Val) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
     (live : machine.stuck = none) (found : machine.fiber? fiber.id = some fiber)
@@ -138,12 +162,11 @@ theorem count_prefix (machine : Effect4.Program.NativeMachine) (fiber : NativeFi
     (heap : machine.state.refs = numberHeap count cleanups completed)
     (interrupt : fiber.frame.deferredInterrupt = false) (override : fiber.yieldOverride = none)
     (budget : fiber.currentOpCount + 3 < fiber.maxOpsBeforeYield) :
-    ∃ after,
-      driveState (evaluator := evaluatorFor HostTimeoutSource.program Scenario.Timeout.fetch.table)
-        (interpOf HostTimeoutSource.program Scenario.Timeout.fetch.table) 3 machine
-        (.loop fiber.id false :: rest) =
-        (after, [.drainDue, .deliver fiber.id false] ++ rest) ∧
-      after.state.refs = numberHeap (count + 1) cleanups completed := by
+    driveState (evaluator := evaluatorFor HostTimeoutSource.program Scenario.Timeout.fetch.table)
+      (interpOf HostTimeoutSource.program Scenario.Timeout.fetch.table) 3 machine
+      (.loop fiber.id false :: rest) =
+      (countedMachine machine fiber captured fuel delay count n error cleanups completed,
+        [.drainDue, .deliver fiber.id false] ++ rest) := by
   letI := evaluatorFor HostTimeoutSource.program Scenario.Timeout.fetch.table
   let point := attemptPoint captured fuel delay n error
   let sync : NCode := .sync (.op (.refUpdate ⟨0⟩ countTerm point.env))
@@ -175,8 +198,7 @@ theorem count_prefix (machine : Effect4.Program.NativeMachine) (fiber : NativeFi
     {two.state with refs := numberHeap (count + 1) cleanups completed} .unit false rest
     foundTwo rfl interrupt override
     (by change fiber.currentOpCount + 1 + 1 + 1 < fiber.maxOpsBeforeYield; omega) counted
-  refine ⟨({two with state := {two.state with refs := numberHeap (count + 1) cleanups completed}}).update
-    {countOp second with frame := {second.frame with current := .success .unit}}, ?_, rfl⟩
+  dsimp only [countedMachine, countedFiber]
   rw [driveState_succ_cons, show machine.stuck.isSome = false by rw [live]; rfl]
   simp only [Bool.false_eq_true, ↓reduceIte]
   rw [stepOne]
@@ -193,6 +215,26 @@ theorem count_prefix (machine : Effect4.Program.NativeMachine) (fiber : NativeFi
   simp only [Bool.false_eq_true, ↓reduceIte]
   rw [stepThree]
   rfl
+
+/-- Three actual loop commands commit the count before the first owed resume or delivery.
+The command residue remains symbolic; no later command runs inside this prefix. -/
+theorem count_prefix (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)
+    (captured : Point) (fuel delay count : Nat) (n : Fin 4) (error : Val)
+    (cleanups completed : List Val) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
+    (live : machine.stuck = none) (found : machine.fiber? fiber.id = some fiber)
+    (current : fiber.frame.current = resolve HostTimeoutSource.program (attemptPoint captured fuel delay n error))
+    (heap : machine.state.refs = numberHeap count cleanups completed)
+    (interrupt : fiber.frame.deferredInterrupt = false) (override : fiber.yieldOverride = none)
+    (budget : fiber.currentOpCount + 3 < fiber.maxOpsBeforeYield) :
+    ∃ after,
+      driveState (evaluator := evaluatorFor HostTimeoutSource.program Scenario.Timeout.fetch.table)
+        (interpOf HostTimeoutSource.program Scenario.Timeout.fetch.table) 3 machine
+        (.loop fiber.id false :: rest) =
+        (after, [.drainDue, .deliver fiber.id false] ++ rest) ∧
+      after.state.refs = numberHeap (count + 1) cleanups completed := by
+  refine ⟨countedMachine machine fiber captured fuel delay count n error cleanups completed,
+    count_prefix_exact machine fiber captured fuel delay count n error cleanups completed rest
+      live found current heap interrupt override budget, rfl⟩
 
 /-- A real evaluate command resets the operation counter and commits the source count in four commands.
 The source producer uses this bound under the original 2000-command budget. -/

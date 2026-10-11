@@ -49,6 +49,10 @@ inductive Kind
   | read (image : Image)
   | unit (image : Image)
   | restored (image : Image) (exit : ExitV)
+  | at (image : Image)
+  | cleanupExit (image : Image) (own : image.count = image.cleanups.length + 1)
+  | formExit (image : Image) (cleanupComplete : image.cleanups.length = image.count)
+      (own : image.exits.length + 1 = image.count)
 
 /-- A count or cleanup answer is valid only at the exact post-operation heap. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
@@ -56,6 +60,10 @@ def ValueAt (state : Stores) : Kind → Val → Prop
   | .unit image, value => ImageAt image state ∧ value = .unit
   | .restored image (.success saved), value => ImageAt image state ∧ value = saved
   | .restored _ (.failure _), _ => False
+  | .at image, _ => ImageAt image state
+  | .cleanupExit image own, _ => ∃ saved, ImageAt (image.cleanup own saved) state
+  | .formExit image cleanupComplete own, value =>
+    ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧ saved = .success value
 
 /-- Interruption cleanup retains no typed failure for the declared retry handler to select. -/
 def NoTypedFailure (cause : CauseV) : Prop :=
@@ -65,6 +73,11 @@ def NoTypedFailure (cause : CauseV) : Prop :=
 def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .restored image (.failure saved), cause => ImageAt image state ∧ (cause = saved ∨ NoTypedFailure cause)
   | .restored image (.success _), cause => ImageAt image state ∧ NoTypedFailure cause
+  | .at image, _ => ImageAt image state
+  | .cleanupExit image own, _ => ∃ saved, ImageAt (image.cleanup own saved) state
+  | .formExit image cleanupComplete own, cause =>
+    ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧
+      (saved = .failure cause ∨ NoTypedFailure cause)
   | _, _ => False
 
 /-- The future relation retains monotone allocated storage, rather than assuming arbitrary store changes. -/
@@ -112,6 +125,21 @@ inductive CodeAt (state : Stores) : Kind → NCode → Prop
         (resolve HostTimeoutSource.program
           ({completedPoint captured fuel delay n error exit with completed := view}.childWith 1
             (.nat image.count)))
+  | attemptBody (image : Image) (captured : Point) (fuel delay : Nat) (n : Fin 4) (error : Val)
+      (count : image.count = n.val + 1) (heap : ImageAt image state) :
+      CodeAt state (.at image)
+        (resolve HostTimeoutSource.program
+          (((HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n error).child 0).childWith 1 .unit))
+  | merge (image : Image) (exit : ExitV) (program : NCode)
+      (cleanup : CodeAt state (.unit image) program) :
+      CodeAt state (.unit image) (.onFailure program (.merge exit))
+  | cleanupReturn (image : Image) (own : image.count = image.cleanups.length + 1)
+      (exit : ExitV) (program : NCode) (cleanup : CodeAt state (.unit (image.cleanup own exit)) program) :
+      CodeAt state (.cleanupExit image own) (.onSuccess program (.restore exit))
+  | formReturn (image : Image) (cleanupComplete : image.cleanups.length = image.count)
+      (own : image.exits.length + 1 = image.count) (exit : ExitV) (program : NCode)
+      (cleanup : CodeAt state (.unit (image.form cleanupComplete own exit)) program) :
+      CodeAt state (.formExit image cleanupComplete own) (.onSuccess program (.restore exit))
   | restore (image : Image) (exit : ExitV) (program : NCode)
       (cleanup : CodeAt state (.unit image) program) :
       CodeAt state (.restored image exit) (.onSuccess program (.restore exit))
@@ -484,6 +512,33 @@ theorem restored_sanitize (state : Stores) (image : Image) (exit : ExitV) (cause
   cases exit with
   | success value => exact ⟨good.1, cleared⟩
   | failure saved => exact ⟨good.1, Or.inr cleared⟩
+
+/-- Every committed numeric cause class survives stripping typed failures at an actual skipped handler. -/
+theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
+    (good : CauseAt state kind cause) : CauseAt state kind cause.stripFail := by
+  cases kind with
+  | read image => exact False.elim good
+  | unit image => exact False.elim good
+  | restored image exit => exact restored_strip state image exit cause good
+  | «at» image => exact good
+  | cleanupExit image own => exact good
+  | formExit image cleanupComplete own =>
+    obtain ⟨saved, heap, _⟩ := good
+    exact ⟨saved, heap, Or.inr (no_typed_strip cause)⟩
+
+/-- Actual handler sanitization retains committed numeric phases under the explicit recorded interruption cut. -/
+theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : CauseV)
+    (good : CauseAt state kind cause) (recorded : NoTypedFailure interrupted) :
+    CauseAt state kind (Cause.sanitize cause interrupted) := by
+  cases kind with
+  | read image => exact False.elim good
+  | unit image => exact False.elim good
+  | restored image exit => exact restored_sanitize state image exit cause interrupted good recorded
+  | «at» image => exact good
+  | cleanupExit image own => exact good
+  | formExit image cleanupComplete own =>
+    obtain ⟨saved, heap, _⟩ := good
+    exact ⟨saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
 
 /-- An interrupted cause has no first typed error for the concrete retry predicate to test. -/
 theorem no_typed_error (cause : CauseV) (cleared : NoTypedFailure cause) :
