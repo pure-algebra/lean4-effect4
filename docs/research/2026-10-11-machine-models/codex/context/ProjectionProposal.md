@@ -1,31 +1,23 @@
 # Context type projection for central integration
 
-`Codegen.Types.ofNormalized` needs the `Ty.contextOf` case before `Ty.handle`.
-This file proposes that case; it does not edit the deferred `Codegen.Types` module.
+`Codegen.Types.ofNormalized` lacks the `Ty.contextOf` case.
+The coordinator owns this target migration.
 
-```lean
-  | .contextOf keys =>
-    let services := keys.elems.map fun key =>
-      if key = Effect4.Machine.Env.scopeKey then TypeRef.name ["Scope", "Scope"] []
-      else TypeRef.literal ("k" ++ toString key.name.value ++ "_" ++ toString key.service.value)
-    some (.name ["Context", "Context"] [match services with
-      | [] => .name ["never"] []
-      | [service] => service
-      | many => .union many])
-```
-
+A context row names promised static keys, not service values.
 The empty row projects to `Context.Context<never>`.
-An ordinary key projects to its full name and carrier-code identity.
-Scope projects to Effect's existing `Scope.Scope` identity.
-This is the rule `Codegen.keyIdentifier` uses in `src/Effect4/Codegen/PrintLeaf.lean`.
-The reference contains a union when the row names several services.
-This projection describes promised static keys, not actual service values or execution.
+Ordinary keys use their full name and carrier-code identity.
+A nonempty row projects through a union of these service references.
 
-`Ty.renderRaw` currently renders every nonempty key as its full literal identity.
-The central projection should also align that printer's Scope case with `Scope.Scope`.
-A shared key reference belongs below both printers; it should not create a dependency cycle.
+`Codegen.keyIdentifier` treats the signature's `scopeKey` specially.
+`Codegen.Print.declarationType` accepts signatures with different Scope keys.
+A projection that hardcodes `Env.scopeKey` therefore fails for some signatures.
+The earlier proposed hardcoded arm is withdrawn after the coordinator's review.
 
-The full derived scheduler reaches this missing case through its existing authoring and Laws imports.
+The target projection needs the active signature's Scope key or a located refusal.
+`Ty.renderRaw` remains signature-free diagnostic spelling.
+It prints every key's full literal identity and makes no target Scope claim.
+
 The source checker, annotation, admission, compiler, canonical image and native controls compile separately.
-Automatic approval review refuses the delegated printer edit twice because the target slice is deferred.
-The coordinator owns the required projection and the later behaviour sweep.
+The full derived scheduler reaches the missing target case through existing imports.
+Automatic approval review refuses the delegated printer edit because the target slice is deferred.
+The coordinator owns the projection and later behaviour sweep.
