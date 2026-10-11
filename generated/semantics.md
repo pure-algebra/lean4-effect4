@@ -5706,11 +5706,11 @@ flowchart LR
   n6354e20d["at_append<br/>proved"]
   nc0798bf4["funded_replays<br/>proved"]
   nc91d9978["journal_replays<br/>proved"]
-  nda3a4d32["denoteRows_straight<br/>proved"]
+  nab6f0c7["denoteRowsB_straight<br/>proved"]
   ne99a7734["allows_answer<br/>proved"]
   n3d4b1714["observe_awaitingAsync_iff<br/>proved"]
   n5d660191["tapeFrom_append<br/>proved"]
-  nab6f0c7["denoteRowsB_straight<br/>proved"]
+  nda3a4d32["denoteRows_straight<br/>proved"]
   nf68b98e1["checkModule_sound<br/>proved"]
   n7bb00e3b["checkRow_rowBindings<br/>proved"]
   nb1d1993["focusAt_typed<br/>proved"]
@@ -5838,8 +5838,8 @@ flowchart LR
   nc03c8cac --> nef2c2e1
   nc03c8cac --> nc91d9978
   nc03c8cac --> nc0798bf4
-  n96d17391 --> n6354e20d
-  n96d17391 --> nda3a4d32
+  n96d17391 --> nab6f0c7
+  n96d17391 --> n8e3192a8
   n96d17391 --> nc0798bf4
   nb72421ed --> n96d17391
   nb72421ed --> ne99a7734
@@ -5877,7 +5877,6 @@ flowchart LR
   n1e53da28 --> nd1e14921
   n1e53da28 --> nac106427
   n1e53da28 --> nab6f0c7
-  n1e53da28 --> n6354e20d
   n1e53da28 --> nda3a4d32
   n79164e62 --> n8e3192a8
   n5d89494d --> n1e53da28
@@ -5895,8 +5894,8 @@ flowchart LR
   ne242169a --> n37a040a7
   n41d79352 --> n42ab45ca
   n41d79352 --> nded34831
-  ne9e063db --> n6354e20d
-  ne9e063db --> nda3a4d32
+  ne9e063db --> nab6f0c7
+  ne9e063db --> n8e3192a8
   ne9e063db --> nc0798bf4
   naef44113 --> n13d3cdb0
   naef44113 --> nb72421ed
@@ -6319,7 +6318,7 @@ flowchart LR
 | `origin_addresses_call` | proved | — | `at_append`, `funded_replays` |
 | `reached_callInstance` | proved | — | `lookup_programCalls` |
 | `session_eq_ref` | proved | — | `run_eq_ref_table`, `journal_replays`, `funded_replays` |
-| `denoteRows_eq_session_host` | proved | — | `at_append`, `denoteRows_straight`, `funded_replays` |
+| `denoteRows_eq_session_host` | proved | — | `denoteRowsB_straight`, `localRunC_compileB`, `funded_replays` |
 | `runWith_denotes` | proved | — | `denoteRows_eq_session_host`, `allows_answer`, `observe_awaitingAsync_iff`, `tapeFrom_append` |
 | `h8_loopedRows` | proved | — | `hostRunB_stable`, `localRunC_to_rowsB`, `localRunC_compileB`, `funded_replays` |
 | `denoteRowsB_eq_session_host` | proved | — | `hostRunB_stable`, `localRunC_to_rowsB`, `funded_replays` |
@@ -6334,7 +6333,7 @@ flowchart LR
 | `compilesBO_select` | proved | — | `at_append` |
 | `compilesBO_suspend` | proved | — | `at_append` |
 | `localRunC_compileB` | proved | — | `localRunC_compileBO` |
-| `localRunC_compileBO` | proved | — | `compilesBO_onExit`, `compilesBO_matchCause`, `compilesBO_catchIf`, `compilesBO_catchCause`, `compilesBO_select`, `compilesBO_bind`, `compilesBO_iterate`, `compilesBO_exit`, `compilesBO_suspend`, `denoteRowsB_straight`, `at_append`, `denoteRows_straight` |
+| `localRunC_compileBO` | proved | — | `compilesBO_onExit`, `compilesBO_matchCause`, `compilesBO_catchIf`, `compilesBO_catchCause`, `compilesBO_select`, `compilesBO_bind`, `compilesBO_iterate`, `compilesBO_exit`, `compilesBO_suspend`, `denoteRowsB_straight`, `denoteRows_straight` |
 | `localRunC_to_rowsB` | proved | — | `localRunC_compileB` |
 | `localWaitC_to_rowsB` | proved | — | `localRunC_compileBO` |
 | `bodyAt` | proved | — | — |
@@ -6352,7 +6351,7 @@ flowchart LR
 | `programCallAt_rowTy` | proved | — | `partAt_at`, `callAt_rowTy` |
 | `applied_selects` | proved | — | — |
 | `control_retires` | proved | — | — |
-| `denoteRows_eq_session` | proved | — | `at_append`, `denoteRows_straight`, `funded_replays` |
+| `denoteRows_eq_session` | proved | — | `denoteRowsB_straight`, `localRunC_compileB`, `funded_replays` |
 | `runWith_guarded_denotes` | proved | — | `hom_eq_cata_ty`, `runWith_denotes` |
 | `runWith_guarded_denotesB` | proved | — | `hom_eq_cata_ty`, `runWith_denotesB` |
 | `runWith_host_denotes` | proved | — | `runWith_guarded_denotes` |
@@ -6371,11 +6370,11 @@ flowchart LR
 | `at_append` | proved | — | — |
 | `funded_replays` | proved | — | `journal_replays`, `tape_replays` |
 | `journal_replays` | proved | — | — |
-| `denoteRows_straight` | proved | — | — |
+| `denoteRowsB_straight` | proved | — | — |
 | `allows_answer` | proved | — | — |
 | `observe_awaitingAsync_iff` | proved | — | — |
 | `tapeFrom_append` | proved | — | — |
-| `denoteRowsB_straight` | proved | — | — |
+| `denoteRows_straight` | proved | — | — |
 | `checkModule_sound` | proved | — | `check_sound` |
 | `checkRow_rowBindings` | proved | — | — |
 | `focusAt_typed` | proved | — | `check_sound`, `focusAt_eq_some` |
@@ -8350,8 +8349,8 @@ flowchart LR
   nd1e14921["compilesBO_exit<br/>proved"]
   nac106427["compilesBO_suspend<br/>proved"]
   nab6f0c7["denoteRowsB_straight<br/>proved"]
-  n6354e20d["at_append<br/>proved"]
   nda3a4d32["denoteRows_straight<br/>proved"]
+  n6354e20d["at_append<br/>proved"]
   n2d904ec8 --> n5d89494d
   n2d904ec8 --> nc0798bf4
   n3074a4b0 --> n5d89494d
@@ -8376,7 +8375,6 @@ flowchart LR
   n1e53da28 --> nd1e14921
   n1e53da28 --> nac106427
   n1e53da28 --> nab6f0c7
-  n1e53da28 --> n6354e20d
   n1e53da28 --> nda3a4d32
   n9edb9fa3 --> n6354e20d
   n610bea28 --> n6354e20d
@@ -8409,7 +8407,7 @@ flowchart LR
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` |
 | `first_profile_closed` | proved | — | — |
 | `checkInput_eq_none_iff` | proved | — | — |
-| `localRunC_compileBO` | proved | — | `compilesBO_onExit`, `compilesBO_matchCause`, `compilesBO_catchIf`, `compilesBO_catchCause`, `compilesBO_select`, `compilesBO_bind`, `compilesBO_iterate`, `compilesBO_exit`, `compilesBO_suspend`, `denoteRowsB_straight`, `at_append`, `denoteRows_straight` |
+| `localRunC_compileBO` | proved | — | `compilesBO_onExit`, `compilesBO_matchCause`, `compilesBO_catchIf`, `compilesBO_catchCause`, `compilesBO_select`, `compilesBO_bind`, `compilesBO_iterate`, `compilesBO_exit`, `compilesBO_suspend`, `denoteRowsB_straight`, `denoteRows_straight` |
 | `journal_replays` | proved | — | — |
 | `tape_replays` | proved | — | — |
 | `acceptLoop_length_le` | proved | — | — |
@@ -8423,8 +8421,8 @@ flowchart LR
 | `compilesBO_exit` | proved | — | `denoteRowsB_straight`, `at_append` |
 | `compilesBO_suspend` | proved | — | `at_append` |
 | `denoteRowsB_straight` | proved | — | — |
-| `at_append` | proved | — | — |
 | `denoteRows_straight` | proved | — | — |
+| `at_append` | proved | — | — |
 
 ### R13: A run's inputs are data: equal recorded inputs give equal replay observations
 
