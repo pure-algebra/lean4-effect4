@@ -890,6 +890,38 @@ let clock_profile_check () =
   check_instance (module En_fast);
   check_instance (module En_ref)
 
+(* Public engine inputs refuse before narrowing or constructing a decision. *)
+let numeric_ingress_check () =
+  let refused f = match f () with
+    | _ -> false | exception E4_clock.Profile_refusal _ -> true
+  in
+  let check_instance (module En : E4_engine.ENGINE) =
+    let prefix = En.name ^ " numeric ingress: " in
+    check (prefix ^ "negative natural refused")
+      (refused (fun () -> En.answer_async_success 0 0 (-1)));
+    check (prefix ^ "large natural refused")
+      (refused (fun () -> En.answer_async_success 0 0 (Int64.to_int 9007199254740992L)));
+    ignore (En.answer_async_success 0 0 0);
+    ignore (En.answer_async_success 0 0 (Int64.to_int 9007199254740991L));
+    check (prefix ^ "negative literal refused")
+      (refused (fun () -> En.compile (E.Eff_succeed (E.Term_lit (E.Lit_nat (-1))))));
+    check (prefix ^ "large literal refused")
+      (refused (fun () -> En.compile
+        (E.Eff_succeed (E.Term_lit (E.Lit_nat (Int64.to_int 9007199254740992L))))));
+    check (prefix ^ "large wire literal refused")
+      (refused (fun () -> En.of_bytes (Eff_wire.encode_program
+        (E.Eff_succeed (E.Term_lit (E.Lit_nat (Int64.to_int 9007199254740992L)))))));
+    ignore (En.answer_async_float 0 0 0.0);
+    ignore (En.answer_async_float 0 0 1.5);
+    ignore (En.answer_async_float 0 0 (Int64.float_of_bits (Int64.of_int max_int)));
+    List.iter (fun value ->
+      check (prefix ^ "unrepresentable float refused")
+        (refused (fun () -> En.answer_async_float 0 0 value)))
+      [2.0; -0.0; -1.0; infinity; nan]
+  in
+  check_instance (module En_fast);
+  check_instance (module En_ref)
+
 (* ================================================================ the bench *)
 
 let best_of k f =
@@ -992,6 +1024,7 @@ let () =
   ordinals ();
   replay_steps_check ();
   clock_profile_check ();
+  numeric_ingress_check ();
   origin_prelude_check ();
   layer_environment_check ();
   print_endline "";

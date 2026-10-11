@@ -1,5 +1,5 @@
 (** Exact logical milliseconds, the target of Effect4.ClockMillis.
-    Depends on Zarith. Properties: nonnegative immutable values and exact addition/order
+    Depends on Zarith. Properties: nonnegative immutable values and exact addition/multiplication/order
     [by construction]; canonical decimal transport and checked numeric observation
     [tested in test_clock]. This module does not read a physical clock or mutate a timer. *)
 type t
@@ -12,6 +12,7 @@ val positive : int -> t
 val of_nat : int -> t
 val to_profile_nat : t -> int
 val add : t -> t -> t
+val mul : t -> t -> t
 val equal : t -> t -> bool
 val le : t -> t -> bool
 val lt : t -> t -> bool

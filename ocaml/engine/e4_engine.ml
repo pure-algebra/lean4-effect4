@@ -249,6 +249,7 @@ module type ENGINE = sig
   val fire : int -> decision
   val yield_verdict : int -> bool -> decision
   val answer_async_success : int -> int -> int -> decision
+  val answer_async_float : int -> int -> float -> decision
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
   val advance : int -> decision
@@ -284,6 +285,10 @@ end
 (* ------------------------------------------------------------------------- the loop *)
 
 module Make (I : INSTANCE) = struct
+  let () =
+    if Sys.int_size <> 63 then
+      raise (E4_clock.Profile_refusal "engine: a 63-bit integer host is required")
+
   module P = E4_program.Make (I)
 
   let name = I.name
@@ -309,8 +314,16 @@ module Make (I : INSTANCE) = struct
   let yield_verdict id b : decision = I.RunDecision_yieldVerdict (id, b)
 
   let answer_async_success fiber token n : decision =
+    let n = E4_clock.to_profile_nat (E4_clock.of_nat n) in
     I.RunDecision_answerAsync
       (fiber, token, I.Completion_ofExit (I.Exit_success (I.Val_nat n)))
+
+  let answer_async_float fiber token value : decision =
+    let bits = Int64.bits_of_float value in
+    if Int64.compare bits 0L < 0 || Int64.compare bits (Int64.of_int max_int) > 0 then
+      raise (E4_clock.Profile_refusal "reply: float bits do not fit the value carrier");
+    I.RunDecision_answerAsync
+      (fiber, token, I.Completion_ofExit (I.Exit_success (I.Val_float (Int64.to_int bits))))
 
   let interrupt_from who target : decision =
     I.RunDecision_interruptFrom (who, [], target)

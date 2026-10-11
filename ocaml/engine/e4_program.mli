@@ -23,6 +23,9 @@
    Depends on: effect4_eff (Eff_types, Eff_wire), stdlib.
 
    Behaviours:
+   P7  Natural literals pass the checked numeric profile before conversion.
+       All source and byte-loading routes call this same converter.
+                                                        tested (numeric_ingress_check)
    P1  `of_eff` covers every source constructor, with explicit refusal for constructors
        the frozen engine cannot execute. Exhaustiveness does not establish total admission.
    P2  Ordinal-preserving: for every arm, `Eff_types.ctor_index_<t> v` equals
@@ -81,6 +84,8 @@ val check_manifest : string -> (unit, string) result
 
 module Make (A : PROGRAM_TYPES) : sig
   val of_lit : Eff_types.lit -> A.lit
+  (** @raise E4_clock.Profile_refusal for a negative or out-of-profile natural. *)
+
   val of_field_read_mode : Eff_types.field_read_mode -> A.field_read_mode
   val of_term : Eff_types.term -> A.term
   val of_terms : Eff_types.terms -> A.terms
